@@ -86,3 +86,22 @@ def find_missing_identities(gather_results, tax_assign):
 
     print(f'of {len(gather_results)}, missed {n_missed} lineage assignments.')
     return n_missed, ident_missed
+
+def format_for_krona(rank, csv_in, tsv_out):
+    rank = rank.lower()
+    krona_results = [('fraction', 'superkingdom', "phylum", "class", "order", "family", "genus", "species")]
+    if rank not in krona_results[0][1:]:
+        raise ValueError(f"Rank {rank} not present in header!")
+        
+    summarize_tax_results = csv_in
+    with open(summarize_tax_results, 'r') as fp:
+        r = csv.DictReader(fp)
+        for n, row in enumerate(r):
+            if row["rank"] == rank:
+                lineage = row["lineage"].split(";")
+                krona_results.append((row["fraction"], *lineage))
+    
+    with open(tsv_out, 'w', newline='') as f_output:
+        tsv_output = csv.writer(f_output, delimiter='\t')
+        for row in krona_results:
+            tsv_output.writerow(row)
