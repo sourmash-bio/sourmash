@@ -74,12 +74,49 @@ def test_summarize_csv_out(runtmp):
 
 ## some test ideas to start with -- see test_lca.py for add'l ideas
 
-#def test_summarize_empty_gather_results():
-#    pass
+# test empty gather results
+
+def test_summarize_empty_gather_results(runtmp):
+    c = runtmp
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    outcsv = c.output('out.csv')
+    g_csv = c.output('g.csv')
+    with open(g_csv, "w") as fp:
+        fp.write("")
+    print("g_csv: ", g_csv)
+
+    with pytest.raises(ValueError) as exc:
+        runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax, '--split-identifiers', '-o', outcsv)
+        assert str(exc.value) == "local variable 'n' referenced before assignment"
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status != 0
+
+
+
 #def test_summarize_bad_gather_results():
 #    pass
-#def test_summarize_empty_lineage_input():
-#    pass
+
+def test_summarize_empty_lineage_input(runtmp):
+    c = runtmp
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    g_csv = c.output('g.csv')
+    with open(g_csv, "w") as fp:
+        fp.write("")
+    print("g_csv: ", g_csv)
+
+    c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax, '--split-identifiers', '-o', g_csv)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert os.path.exists(g_csv)
+    pass
+
 #def test_summarize_bad_lineage_input():
 #    pass
 #def test_summarize_bad_rank():
