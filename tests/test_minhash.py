@@ -562,9 +562,10 @@ def test_similarity_1(track_abundance):
 def test_copy(track_abundance):
     a = MinHash(20, 21, track_abundance=track_abundance)
     a.add_hash(5)
-    a.add_hash(6)
     b = a.copy()
     assert a == b
+    a.add_hash(6)
+    assert a != b
 
 
 def test_frozen_copy(track_abundance):

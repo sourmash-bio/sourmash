@@ -40,11 +40,11 @@ def test_sig_copy_frozen_mutable(track_abundance):
     e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add_kmer("AT" * 10)
     sig1 = SourmashSignature(e, name='foo')
-    sig1.minhash.to_mutable()
+    sig1.minhash = sig1.minhash.to_mutable()
     sig2 = sig1.copy()
     assert sig1 == sig2
     with pytest.raises(TypeError) as e:
-        sig1.minhash.add_hash(5)
+        sig2.minhash.add_hash(5)
     assert 'FrozenMinHash does not support modification' in str(e.value)
 
 
