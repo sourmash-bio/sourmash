@@ -6,7 +6,7 @@ from sourmash.logging import notify, print_results, error
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('summarize')
-    subparser.add_argument('gather_results', nargs='+')
+    subparser.add_argument('gather_results')
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'

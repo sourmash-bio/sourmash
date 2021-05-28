@@ -76,16 +76,8 @@ def classify(args):
     ## currently reports a single rank. do we want to optionally report at all ranks? (no, bc summarize does that?)
     set_quiet(args.quiet)
 
-    # load gather results and taxonomy assignments
-    gather_results = tax_utils.load_gather_results(args.gather_results)
+    # load taxonomy assignments
     tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, use_headers=True, force=False, split_identifiers=args.split_identifiers, keep_identifier_versions = args.keep_identifier_versions)
-
-    # check for match identites not found in lineage spreadsheets
-    n_missed, ident_missed = tax_utils.find_missing_identities(gather_results, tax_assign)
-    if n_missed:
-        notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
-    assert n_missed == 0
-
 
     # write output csv
     header= ["rank", "fraction", "lineage"]
@@ -93,23 +85,35 @@ def classify(args):
     with FileOutputCSV(args.output) as csv_fp:
         w = csv.writer(csv_fp)
         w.writerow(header)
-        # if --rank is specified, classify to that rank
-        # to do, what to do if don't have gather results at desired rank (e.g. strain)?
-        if args.rank:
-            # todo: check we have gather results at this rank
-            #if not tax_utils.check_taxonomy_exists(tax_assign, args.rank):
-            #    notify(f"No taxonomic information at rank {args.rank}: cannot classify at this rank")
-            (lineage,containment) = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, best_only=True)
-            w.writerow([args.rank, f'{containment:.3f}', sourmash.lca.display_lineage(lineage)])
-            if containment <= args.containment_threshold:
-                notify(f"WARNING: classifying at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
-        else:
-            # classify to the match that passes the containment threshold. To do - do we want to report anything if nothing >= containment threshold?
-            for rank in tax_utils.ascending_taxlist(include_strain=False):
-                (lineage,containment) = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, best_only=True)
-                if containment >= args.containment_threshold:
-                    w.writerow([rank, f'{containment:.3f}', sourmash.lca.display_lineage(lineage)])
-                    break
+
+        # load gather results and taxonomy assignments
+        for g_result in args.gather_results:
+            gather_results = tax_utils.load_gather_results(g_result)
+
+            # check for match identites not found in lineage spreadsheets
+            n_missed, ident_missed = tax_utils.find_missing_identities(gather_results, tax_assign)
+            if n_missed:
+                notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
+            assert n_missed == 0
+
+
+            # if --rank is specified, classify to that rank
+            # to do, what to do if don't have gather results at desired rank (e.g. strain)?
+            if args.rank:
+                # todo: check we have gather results at this rank
+                #if not tax_utils.check_taxonomy_exists(tax_assign, args.rank):
+                #    notify(f"No taxonomic information at rank {args.rank}: cannot classify at this rank")
+                (lineage,containment) = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, best_only=True)
+                w.writerow([args.rank, f'{containment:.3f}', sourmash.lca.display_lineage(lineage)])
+                if containment <= args.containment_threshold:
+                    notify(f"WARNING: classifying at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
+            else:
+                # classify to the match that passes the containment threshold. To do - do we want to report anything if nothing >= containment threshold?
+                for rank in tax_utils.ascending_taxlist(include_strain=False):
+                    (lineage,containment) = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, best_only=True)
+                    if containment >= args.containment_threshold:
+                        w.writerow([rank, f'{containment:.3f}', sourmash.lca.display_lineage(lineage)])
+                        break
     if csv_fp:
         csv_fp.close()
 

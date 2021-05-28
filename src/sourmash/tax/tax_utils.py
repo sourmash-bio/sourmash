@@ -38,16 +38,14 @@ def ascending_taxlist(include_strain=True):
         yield k
 
 # load and aggregate all gather results
-def load_gather_results(gather_csvs):
+def load_gather_results(gather_csv):
     gather_results = []
-    for g_csv in gather_csvs:
-        with open(g_csv, 'rt') as fp:
-            r = csv.DictReader(fp)
-            #todo: add a check for all gather column names
-            for n, row in enumerate(r):
-                gather_results.append(row)
-        print(f'loaded {str(n+1)} gather results from {g_csv}.')
-    print(f'loaded {len(gather_results)} gather results in total.')
+    with open(gather_csv, 'rt') as fp:
+        r = csv.DictReader(fp)
+        #todo: add a check for all gather column names
+        for n, row in enumerate(r):
+            gather_results.append(row)
+    print(f'loaded {len(gather_results)} gather results.')
     return gather_results
 
 
