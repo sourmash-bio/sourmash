@@ -55,9 +55,11 @@ def summarize(args):
     assert n_missed == 0
 
     # write output csv
+    header= ["rank", "fraction", "lineage"]
     csv_fp = None
     with FileOutputCSV(args.output) as csv_fp:
         w = csv.writer(csv_fp)
+        w.writerow(header)
         # actually summarize at rank
         for rank in sourmash.lca.taxlist(include_strain=False): # do we need to do this at all ranks?
             g_at_rank = tax_utils.summarize_gather_at(rank, tax_assign, gather_results)
@@ -86,9 +88,11 @@ def classify(args):
 
 
     # write output csv
+    header= ["rank", "fraction", "lineage"]
     csv_fp = None
     with FileOutputCSV(args.output) as csv_fp:
         w = csv.writer(csv_fp)
+        w.writerow(header)
         # if --rank is specified, classify to that rank
         # to do, what to do if don't have gather results at desired rank (e.g. strain)?
         if args.rank:
