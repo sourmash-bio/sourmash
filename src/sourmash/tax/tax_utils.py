@@ -113,3 +113,12 @@ def write_krona(rank, krona_results, out_fp, sep='\t'):
     tsv_output.writerow(header)
     for res in krona_results:
         tsv_output.writerow(res)
+
+def write_summary(summarized_gather, csv_fp, sep='\t'):
+    header= ["rank", "fraction", "lineage"]
+    w = csv.writer(csv_fp)
+    w.writerow(header)
+    for rank, rank_results in summarized_gather.items():
+        for sorted_result in rank_results:
+            lin,val = sorted_result
+            w.writerow([rank, f'{val:.3f}', display_lineage(lin)])

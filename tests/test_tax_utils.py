@@ -9,6 +9,7 @@ import sourmash_tst_utils as utils
 from sourmash.tax import tax_utils
 from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_results,
                                     summarize_gather_at, find_missing_identities,
+                                    write_summary,
                                     make_krona_header, format_for_krona, write_krona)
 
 # import lca utils as needed for now
@@ -161,14 +162,14 @@ def test_summarize_gather_at_best_only_0():
     taxD = make_mini_taxonomy([gA_tax,gB_tax])
     # run summarize_gather_at and check results!
     sk_sum = summarize_gather_at("superkingdom", taxD, g_res, best_only=True)
-    assert sk_sum == ((LineagePair(rank='superkingdom', name='a'),), 0.7)
+    assert sk_sum == [((LineagePair(rank='superkingdom', name='a'),), 0.7)]
     phy_sum = summarize_gather_at("phylum", taxD, g_res, best_only=True)
-    assert phy_sum == ((LineagePair(rank='superkingdom', name='a'),
-                         LineagePair(rank='phylum', name='b')),0.7)
+    assert phy_sum == [((LineagePair(rank='superkingdom', name='a'),
+                         LineagePair(rank='phylum', name='b')),0.7)]
     cl_sum = summarize_gather_at("class", taxD, g_res, best_only=True)
-    assert cl_sum == ((LineagePair(rank='superkingdom', name='a'),
+    assert cl_sum == [((LineagePair(rank='superkingdom', name='a'),
                         LineagePair(rank='phylum', name='b'),
-                        LineagePair(rank='class', name='c')),0.6)
+                        LineagePair(rank='class', name='c')),0.6)]
 
 def test_summarize_gather_at_best_only_equal_choose_first():
     """test two matches, equal f_unique_weighted. best_only chooses first"""
@@ -183,15 +184,32 @@ def test_summarize_gather_at_best_only_equal_choose_first():
     taxD = make_mini_taxonomy([gA_tax,gB_tax])
     # run summarize_gather_at and check results!
     sk_sum = summarize_gather_at("superkingdom", taxD, g_res, best_only=True)
-    assert sk_sum == ((LineagePair(rank='superkingdom', name='a'),), 1.0)
+    assert sk_sum == [((LineagePair(rank='superkingdom', name='a'),), 1.0)]
     phy_sum = summarize_gather_at("phylum", taxD, g_res, best_only=True)
-    assert phy_sum == ((LineagePair(rank='superkingdom', name='a'),
-                         LineagePair(rank='phylum', name='b')),1.0)
+    assert phy_sum == [((LineagePair(rank='superkingdom', name='a'),
+                         LineagePair(rank='phylum', name='b')),1.0)]
     cl_sum = summarize_gather_at("class", taxD, g_res, best_only=True)
-    assert cl_sum == ((LineagePair(rank='superkingdom', name='a'),
+    assert cl_sum == [((LineagePair(rank='superkingdom', name='a'),
                         LineagePair(rank='phylum', name='b'),
-                        LineagePair(rank='class', name='c')),0.5)
+                        LineagePair(rank='class', name='c')),0.5)]
 
+
+def test_write_summary_csv(runtmp):
+    """test summary csv write function"""
+
+    sum_gather = {'superkingdom': [((LineagePair(rank='superkingdom', name='a'),), 1.0)],
+                  'phylum': [((LineagePair(rank='superkingdom', name='a'),
+                               LineagePair(rank='phylum', name='b')), 1.0)]}
+
+    outs= runtmp.output("outsum.csv")
+    with open(outs, 'w') as out_fp:
+        write_summary(sum_gather, out_fp)
+
+    sr = [x.rstrip().split(',') for x in open(outs, 'r')]
+    print("gather_summary_results_from_file: \n", sr)
+    assert sr[0] ==  ['rank', 'fraction', 'lineage']
+    assert sr[1] ==  ['superkingdom', '1.000', 'a']
+    assert sr[2] ==  ['phylum', '1.000', 'a;b']
 
 def test_make_krona_header_0():
     hd = make_krona_header("species")
@@ -306,3 +324,4 @@ def test_write_krona(runtmp):
     assert kr[0] == ["fraction", "superkingdom", "phylum", "class"]
     assert kr[1] == ["0.5", "a", "b", "c"]
     assert kr[2] == ["0.5", "a", "b", "d"]
+

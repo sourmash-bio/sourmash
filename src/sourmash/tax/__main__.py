@@ -65,18 +65,11 @@ def summarize(args):
     for rank in sourmash.lca.taxlist(include_strain=False):
         summarized_gather[rank] = tax_utils.summarize_gather_at(rank, tax_assign, gather_results)
 
-    # write summarozed output csv
+    # write summarized output csv
     if "summary" in args.output_format:
         summary_outfile = make_outfile(args.output_base, ".summarized.csv")
-        header= ["rank", "fraction", "lineage"]
-        csv_fp = None
         with FileOutputCSV(summary_outfile) as csv_fp:
-            w = csv.writer(csv_fp)
-            w.writerow(header)
-            for rank, rank_results in summarized_gather.items():
-                for sorted_result in rank_results:
-                    lin,val = sorted_result
-                    w.writerow([rank, f'{val:.3f}', sourmash.lca.display_lineage(lin)])
+            tax_utils.write_summary(summarized_gather, csv_fp)
 
     # write summarized --> krona output csv
     if "krona" in args.output_format:
@@ -98,44 +91,55 @@ def classify(args):
     # load taxonomy assignments
     tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, use_headers=True, force=False, split_identifiers=args.split_identifiers, keep_identifier_versions = args.keep_identifier_versions)
 
+    # load gather results for each genome and summarize with --best-only to classify
+    classifications = []
+    for g_result in args.gather_results:
+        gather_results = tax_utils.load_gather_results(g_result)
+
+        # check for match identites not found in lineage spreadsheets
+        n_missed, ident_missed = tax_utils.find_missing_identities(gather_results, tax_assign)
+        if n_missed:
+            notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
+        assert n_missed == 0
+
+        # if --rank is specified, classify to that rank
+        # to do, what to do if don't have gather results at desired rank (e.g. strain)?
+        if args.rank:
+            # todo: check we have gather results at this rank
+            #if not tax_utils.check_taxonomy_exists(tax_assign, args.rank):
+            #    notify(f"No taxonomic information at rank {args.rank}: cannot classify at this rank")
+            best_at_rank = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, best_only=True)
+            classification.append(genome_name, best_at_rank)
+
+            w.writerow([args.rank, f'{containment:.3f}', sourmash.lca.display_lineage(lineage)])
+            if containment <= args.containment_threshold:
+                notify(f"WARNING: classifying at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
+        else:
+            # classify to the match that passes the containment threshold. To do - do we want to report anything if nothing >= containment threshold?
+            for rank in tax_utils.ascending_taxlist(include_strain=False):
+                (lineage,containment) = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, best_only=True)
+                if containment >= args.containment_threshold:
+                    w.writerow([rank, f'{containment:.3f}', sourmash.lca.display_lineage(lineage)])
+                    break
+
+
+
+            #(lineage,containment) = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, best_only=True)
+
+            #w.writerow([args.rank, f'{containment:.3f}', sourmash.lca.display_lineage(lineage)])
+            #if containment <= args.containment_threshold:
+            #    notify(f"WARNING: classifying at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
+#
+#                if containment >= args.containment_threshold:
+#                    w.writerow([rank, f'{containment:.3f}', sourmash.lca.display_lineage(lineage)])
+#                    break
+
     # write output csv
     header= ["rank", "fraction", "lineage"]
     csv_fp = None
     with FileOutputCSV(args.output) as csv_fp:
         w = csv.writer(csv_fp)
         w.writerow(header)
-
-        # load gather results and taxonomy assignments
-        for g_result in args.gather_results:
-            gather_results = tax_utils.load_gather_results(g_result)
-
-            # check for match identites not found in lineage spreadsheets
-            n_missed, ident_missed = tax_utils.find_missing_identities(gather_results, tax_assign)
-            if n_missed:
-                notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
-            assert n_missed == 0
-
-
-            # if --rank is specified, classify to that rank
-            # to do, what to do if don't have gather results at desired rank (e.g. strain)?
-            if args.rank:
-                # todo: check we have gather results at this rank
-                #if not tax_utils.check_taxonomy_exists(tax_assign, args.rank):
-                #    notify(f"No taxonomic information at rank {args.rank}: cannot classify at this rank")
-                (lineage,containment) = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, best_only=True)
-                w.writerow([args.rank, f'{containment:.3f}', sourmash.lca.display_lineage(lineage)])
-                if containment <= args.containment_threshold:
-                    notify(f"WARNING: classifying at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
-            else:
-                # classify to the match that passes the containment threshold. To do - do we want to report anything if nothing >= containment threshold?
-                for rank in tax_utils.ascending_taxlist(include_strain=False):
-                    (lineage,containment) = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, best_only=True)
-                    if containment >= args.containment_threshold:
-                        w.writerow([rank, f'{containment:.3f}', sourmash.lca.display_lineage(lineage)])
-                        break
-    if csv_fp:
-        csv_fp.close()
-
 
 def main(arglist=None):
     args = sourmash.cli.get_parser().parse_args(arglist)
