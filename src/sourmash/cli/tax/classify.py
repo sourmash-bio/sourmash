@@ -1,25 +1,21 @@
 """classify genomes"""
 
+import argparse
 import sourmash
 from sourmash.logging import notify, print_results, error
 
-#https://stackoverflow.com/questions/12116685/how-can-i-require-my-python-scripts-argument-to-be-a-float-between-0-0-1-0-usin
-class Range(object):
-    def __init__(self, start, end):
-        self.start = start
-        self.end = end
-
-    def __eq__(self, other):
-        return self.start <= other <= self.end
-
-    def __contains__(self, item):
-        return self.__eq__(item)
-
-    def __iter__(self):
-        yield self
-
-    def __repr__(self):
-        return f'[{self.start}, {self.end}]'
+#https://stackoverflow.com/questions/55324449/how-to-specify-a-minimum-or-maximum-float-value-with-argparse#55410582
+def range_limited_float_type(arg):
+    """ Type function for argparse - a float within some predefined bounds """
+    min_val = 0
+    max_val = 1
+    try:
+        f = float(arg)
+    except ValueError:
+        raise argparse.ArgumentTypeError("Must be a floating point number")
+    if f < min_val or f > max_val:
+        raise argparse.ArgumentTypeError(f"Argument must be >{str(min_val)} and <{str(max_val)}")
+    return f
 
 
 def subparser(subparsers):
@@ -42,7 +38,7 @@ def subparser(subparsers):
         help='Summarize genome taxonomy at this rank and above'
     )
     subparser.add_argument(
-        '--containment-threshold', type=float, default=0.1, choices=[Range(0.0, 1.0)],
+        '--containment-threshold', type=range_limited_float_type, default=0.1,
         help='minimum containment for classification'
     )
     subparser.add_argument(
