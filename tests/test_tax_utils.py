@@ -50,7 +50,7 @@ def test_get_ident():
     assert n_id == "GCF_001881345"
 
 def test_load_gather_results():
-    gather_csv = utils.get_test_data('tax/hs_x_gtdb-rs202.k31.gather.csv')
+    gather_csv = utils.get_test_data('tax/test1.gather.csv')
     gather_results = tax_utils.load_gather_results([gather_csv])
     assert len(gather_results) == 4
 
