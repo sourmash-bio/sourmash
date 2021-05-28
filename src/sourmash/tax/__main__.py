@@ -36,6 +36,12 @@ classify <gather_results> [<gather_results> ... ]   - taxonomic classification o
 sourmash taxonomy summarize -h
 '''
 
+# some utils
+def make_outfile(base, ext):
+    if base == "-":
+        return base
+    return base + ext
+
 ##### taxonomy command line functions
 
 def summarize(args):
@@ -54,21 +60,34 @@ def summarize(args):
         notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
     assert n_missed == 0
 
-    # write output csv
-    header= ["rank", "fraction", "lineage"]
-    csv_fp = None
-    with FileOutputCSV(args.output) as csv_fp:
-        w = csv.writer(csv_fp)
-        w.writerow(header)
-        # actually summarize at rank
-        for rank in sourmash.lca.taxlist(include_strain=False): # do we need to do this at all ranks?
-            g_at_rank = tax_utils.summarize_gather_at(rank, tax_assign, gather_results)
-            for k, v in g_at_rank:
-                w.writerow([rank, f'{v:.3f}', sourmash.lca.display_lineage(k)])
-    if csv_fp:
-        csv_fp.close()
+    # actually summarize at rank
+    summarized_gather = {}
+    for rank in sourmash.lca.taxlist(include_strain=False):
+        summarized_gather[rank] = tax_utils.summarize_gather_at(rank, tax_assign, gather_results)
+
+    # write summarozed output csv
+    if "summary" in args.output_format:
+        summary_outfile = make_outfile(args.output_base, ".summarized.csv")
+        header= ["rank", "fraction", "lineage"]
+        csv_fp = None
+        with FileOutputCSV(summary_outfile) as csv_fp:
+            w = csv.writer(csv_fp)
+            w.writerow(header)
+            for rank, rank_results in summarized_gather.items():
+                for sorted_result in rank_results:
+                    lin,val = sorted_result
+                    w.writerow([rank, f'{val:.3f}', sourmash.lca.display_lineage(lin)])
+
+    # write summarized --> krona output csv
+    if "krona" in args.output_format:
+        krona_resultslist = tax_utils.format_for_krona(args.rank, summarized_gather)
+
+        krona_outfile = make_outfile(args.output_base, ".krona.tsv")
+        with FileOutputCSV(krona_outfile) as out_fp:
+            tax_utils.write_krona(args.rank, krona_resultslist, out_fp)
 
 
+# todo -- fix for new output file format
 def classify(args):
     """
     taxonomic classification of genomes from gather results

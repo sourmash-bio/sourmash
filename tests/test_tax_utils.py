@@ -8,8 +8,8 @@ import sourmash_tst_utils as utils
 
 from sourmash.tax import tax_utils
 from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_results,
-                                    summarize_gather_at, find_missing_identities)#,
-                                    #gather_at_rank)
+                                    summarize_gather_at, find_missing_identities,
+                                    make_krona_header, format_for_krona, write_krona)
 
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
@@ -51,7 +51,7 @@ def test_get_ident():
 
 def test_load_gather_results():
     gather_csv = utils.get_test_data('tax/test1.gather.csv')
-    gather_results = tax_utils.load_gather_results([gather_csv])
+    gather_results = tax_utils.load_gather_results(gather_csv)
     assert len(gather_results) == 4
 
 def test_find_missing_identities():
@@ -191,3 +191,118 @@ def test_summarize_gather_at_best_only_equal_choose_first():
     assert cl_sum == ((LineagePair(rank='superkingdom', name='a'),
                         LineagePair(rank='phylum', name='b'),
                         LineagePair(rank='class', name='c')),0.5)
+
+
+def test_make_krona_header_0():
+    hd = make_krona_header("species")
+    print("header: ", hd)
+    assert hd == ("fraction", "superkingdom", "phylum", "class", "order", "family", "genus", "species")
+
+def test_make_krona_header_1():
+    hd = make_krona_header("order")
+    print("header: ", hd)
+    assert hd == ("fraction", "superkingdom", "phylum", "class", "order")
+
+def test_make_krona_header_strain():
+    hd = make_krona_header("strain", include_strain=True)
+    print("header: ", hd)
+    assert hd == ("fraction", "superkingdom", "phylum", "class", "order", "family", "genus", "species", "strain")
+
+def test_make_krona_header_fail():
+    with pytest.raises(ValueError) as exc:
+        hd = make_krona_header("strain")
+        assert str(exc.value) == "Rank strain not present in available ranks"
+
+def test_format_for_krona_0():
+    """test two matches, equal f_unique_weighted"""
+    # make gather results
+    gA = ["gA","0.5","0.5"]
+    gB = ["gB","0.3","0.5"]
+    g_res = make_mini_gather_results([gA,gB])
+
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b;c")
+    gB_tax = ("gB", "a;b;d")
+    taxD = make_mini_taxonomy([gA_tax,gB_tax])
+
+    # check krona format and check results!
+    sk_sum = summarize_gather_at("superkingdom", taxD, g_res)
+    krona_res = format_for_krona("superkingdom", {"superkingdom": sk_sum})
+    print("krona_res: ", krona_res)
+    assert krona_res == [(1.0, 'a')]
+
+    phy_sum = summarize_gather_at("phylum", taxD, g_res)
+    krona_res = format_for_krona("phylum", {"phylum": phy_sum})
+    print("krona_res: ", krona_res)
+    assert krona_res == [(1.0, 'a', 'b')]
+
+def test_format_for_krona_1():
+    """test two matches, equal f_unique_weighted"""
+    # make gather results
+    gA = ["gA","0.5","0.5"]
+    gB = ["gB","0.3","0.5"]
+    g_res = make_mini_gather_results([gA,gB])
+
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b;c")
+    gB_tax = ("gB", "a;b;d")
+    taxD = make_mini_taxonomy([gA_tax,gB_tax])
+
+    # summarize with all ranks
+    sum_res = {}
+    #for rank in lca_utils.taxlist(include_strain=False):
+    for rank in ['superkingdom', 'phylum', 'class']:
+        sum_res[rank] = summarize_gather_at(rank, taxD, g_res)
+    print('summarized gather: ', sum_res)
+    # check krona format
+    sk_krona = format_for_krona("superkingdom", sum_res)
+    print("sk_krona: ", sk_krona)
+    assert sk_krona == [(1.0, 'a')]
+    phy_krona = format_for_krona("phylum", sum_res)
+    print("phy_krona: ", phy_krona)
+    assert phy_krona ==  [(1.0, 'a', 'b')]
+    cl_krona = format_for_krona("class", sum_res)
+    print("cl_krona: ", cl_krona)
+    assert cl_krona ==  [(0.5, 'a', 'b', 'c'), (0.5, 'a', 'b', 'd')]
+
+def test_format_for_krona_best_only():
+    """test two matches, equal f_unique_weighted"""
+    # make gather results
+    gA = ["gA","0.5","0.5"]
+    gB = ["gB","0.3","0.5"]
+    g_res = make_mini_gather_results([gA,gB])
+
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b;c")
+    gB_tax = ("gB", "a;b;d")
+    taxD = make_mini_taxonomy([gA_tax,gB_tax])
+
+    # summarize with all ranks
+    sum_res = {}
+    #for rank in lca_utils.taxlist(include_strain=False):
+    for rank in ['superkingdom', 'phylum', 'class']:
+        sum_res[rank] = summarize_gather_at(rank, taxD, g_res, best_only=True)
+    print('summarized gather: ', sum_res)
+    # check krona format
+    sk_krona = format_for_krona("superkingdom", sum_res)
+    print("sk_krona: ", sk_krona)
+    assert sk_krona == [(1.0, 'a')]
+    phy_krona = format_for_krona("phylum", sum_res)
+    print("phy_krona: ", phy_krona)
+    assert phy_krona ==  [(1.0, 'a', 'b')]
+    cl_krona = format_for_krona("class", sum_res)
+    print("cl_krona: ", cl_krona)
+    assert cl_krona ==  [(0.5, 'a', 'b', 'c')]
+
+def test_write_krona(runtmp):
+    """test two matches, equal f_unique_weighted"""
+    class_krona_results =  [(0.5, 'a', 'b', 'c'), (0.5, 'a', 'b', 'd')]
+    outk= runtmp.output("outkrona.tsv")
+    with open(outk, 'w') as out_fp:
+        write_krona("class", class_krona_results, out_fp)
+
+    kr = [x.strip().split('\t') for x in open(outk, 'r')]
+    print("krona_results_from_file: \n", kr)
+    assert kr[0] == ["fraction", "superkingdom", "phylum", "class"]
+    assert kr[1] == ["0.5", "a", "b", "c"]
+    assert kr[2] == ["0.5", "a", "b", "d"]

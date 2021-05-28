@@ -71,7 +71,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, best_only=False):
     items = list(sum_uniq_weighted.items())
     items.sort(key = lambda x: -x[1])
     if best_only:
-        return items[0]
+        return [items[0]]# return list to keep formatting the same as non best-only
     return items
 
 def find_missing_identities(gather_results, tax_assign):
@@ -87,21 +87,29 @@ def find_missing_identities(gather_results, tax_assign):
     print(f'of {len(gather_results)}, missed {n_missed} lineage assignments.')
     return n_missed, ident_missed
 
-def format_for_krona(rank, csv_in, tsv_out):
-    rank = rank.lower()
-    krona_results = [('fraction', 'superkingdom', "phylum", "class", "order", "family", "genus", "species")]
-    if rank not in krona_results[0][1:]:
-        raise ValueError(f"Rank {rank} not present in header!")
-        
-    summarize_tax_results = csv_in
-    with open(summarize_tax_results, 'r') as fp:
-        r = csv.DictReader(fp)
-        for n, row in enumerate(r):
-            if row["rank"] == rank:
-                lineage = row["lineage"].split(";")
-                krona_results.append((row["fraction"], *lineage))
-    
-    with open(tsv_out, 'w', newline='') as f_output:
-        tsv_output = csv.writer(f_output, delimiter='\t')
-        for row in krona_results:
-            tsv_output.writerow(row)
+# pass ranks; have ranks=[default_ranks]
+def make_krona_header(min_rank, include_strain=False):
+    header = ["fraction"]
+    tl = list(taxlist(include_strain=include_strain))
+    try:
+        rank_index = tl.index(min_rank)
+    except ValueError:
+        raise ValueError(f"Rank {min_rank} not present in available ranks!")
+    return tuple(header + tl[:rank_index+1])
+
+def format_for_krona(rank, summarized_gather):
+    krona_results = []
+    for gather_rank, rank_results in summarized_gather.items():
+        if gather_rank == rank:
+            for sorted_result in rank_results:
+                lin,fraction = sorted_result
+                lin_list = display_lineage(lin).split(';')
+                krona_results.append((fraction, *lin_list))
+    return krona_results
+
+def write_krona(rank, krona_results, out_fp, sep='\t'):
+    header = make_krona_header(rank)
+    tsv_output = csv.writer(out_fp, delimiter='\t')
+    tsv_output.writerow(header)
+    for res in krona_results:
+        tsv_output.writerow(res)
