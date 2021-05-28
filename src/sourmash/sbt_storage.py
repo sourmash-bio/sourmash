@@ -207,7 +207,7 @@ class ZipStorage(Storage):
             zf_names = set(self.zipfile.namelist())
             if buffer_names:
                 new_data = buffer_names - zf_names
-                duplicated = buffer_names.intersection(zf_names)
+                duplicated = buffer_names & zf_names
 
                 if duplicated:
                     # bad news, need to create new file...
