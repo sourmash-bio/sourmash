@@ -73,7 +73,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, best_only=False):
     items = list(sum_uniq_weighted.items())
     items.sort(key = lambda x: -x[1])
     if best_only:
-        return [items[0]]
+        return items[0]
     return items
 
 def find_missing_identities(gather_results, tax_assign):

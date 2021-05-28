@@ -20,7 +20,7 @@ def subparser(subparsers):
         help='database lineages csv'
     )
     subparser.add_argument(
-        '-r', '--rank',
+        '-r', '--rank', choices=['strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'],
         help='Summarize genome taxonomy at this rank and above'
     )
     subparser.add_argument(
