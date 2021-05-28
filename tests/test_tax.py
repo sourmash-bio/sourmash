@@ -66,8 +66,7 @@ def test_summarize_summary_csv_out(runtmp):
     assert runtmp.last_result.status == 0
     assert os.path.exists(csvout)
 
-    #expected_intersect_bp = [2529000, 5177000]
-    sum_gather_results = [x.rsplit('\n') for x in open(csvout)]
+    sum_gather_results = [x.rstrip() for x in open(csvout)]
     assert "rank,fraction,lineage" in sum_gather_results[0]
     assert 'superkingdom,0.131,d__Bacteria' in sum_gather_results[1]
     assert "phylum,0.073,d__Bacteria;p__Bacteroidota" in sum_gather_results[2]
@@ -84,6 +83,30 @@ def test_summarize_summary_csv_out(runtmp):
     assert "species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in sum_gather_results[13]
     assert "species,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in sum_gather_results[14]
     assert "species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus" in sum_gather_results[15]
+
+def test_summarize_krona_tsv_out(runtmp):
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+    kr_csv = csv_base + ".krona.tsv"
+    csvout = runtmp.output(kr_csv)
+    print("csvout: ", csvout)
+
+    runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax, '--split-identifiers', '-o', csv_base, '--output-format', 'krona', '--rank', 'genus')
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    gn_krona_results = [x.rstrip().split('\t') for x in open(csvout)]
+    print("species krona results: \n", gn_krona_results)
+    assert ['fraction', 'superkingdom', 'phylum', 'class', 'order', 'family', 'genus'] == gn_krona_results[0]
+    assert ['0.05815279361459521', 'd__Bacteria', 'p__Proteobacteria', 'c__Gammaproteobacteria', 'o__Enterobacterales', 'f__Enterobacteriaceae', 'g__Escherichia']  == gn_krona_results[1]
+    assert ['0.05701254275940707', 'd__Bacteria', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Prevotella'] == gn_krona_results[2]
+    assert ['0.015637726014008795', 'd__Bacteria', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Phocaeicola'] == gn_krona_results[3]
 
 
 ## some test ideas to start with -- see test_lca.py for add'l ideas
