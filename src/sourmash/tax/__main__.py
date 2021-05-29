@@ -10,7 +10,7 @@ from collections import defaultdict
 import sourmash
 import copy
 from sourmash.sourmash_args import FileOutput
-from sourmash.lca.lca_utils import pop_to_rank
+from sourmash.lca.lca_utils import pop_to_rank, display_lineage
 from sourmash.lca.command_index import load_taxonomy_assignments
 
 from ..sourmash_args import FileOutputCSV
@@ -92,9 +92,25 @@ def classify(args):
     tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, use_headers=True, force=False, split_identifiers=args.split_identifiers, keep_identifier_versions = args.keep_identifier_versions)
 
     # load gather results for each genome and summarize with --best-only to classify
-    classifications = []
-    for g_result in args.gather_results:
-        gather_results = tax_utils.load_gather_results(g_result)
+    gather_info = []
+    if args.gather_results:
+        query_name = args.query_name
+        gather_info.append((query_name, args.gather_results))
+    if args.from_csv:
+        seen_names, gather_info = tax_utils.load_gather_files_from_csv(args.from_csv)
+        if query_name in seen_names:
+            notify("query name is also found in --from-csv filelist! Ignoring commandline input")
+            gather_info = from_csv_gather_info
+        else:
+            #add --from-csv files to commandline input
+            gather_info +=from_csv_gather_info
+
+    classifications = defaultdict(list)
+    krona_results = []
+
+    for n, (name, g_results) in enumerate(gather_info):
+
+        gather_results = tax_utils.load_gather_results(g_results)
 
         # check for match identites not found in lineage spreadsheets
         n_missed, ident_missed = tax_utils.find_missing_identities(gather_results, tax_assign)
@@ -108,38 +124,37 @@ def classify(args):
             # todo: check we have gather results at this rank
             #if not tax_utils.check_taxonomy_exists(tax_assign, args.rank):
             #    notify(f"No taxonomic information at rank {args.rank}: cannot classify at this rank")
-            best_at_rank = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, best_only=True)
-            classification.append(genome_name, best_at_rank)
-
-            w.writerow([args.rank, f'{containment:.3f}', sourmash.lca.display_lineage(lineage)])
+            best_at_rank = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, best_only=True)[0]
+            (lineage,containment) = best_at_rank
             if containment <= args.containment_threshold:
                 notify(f"WARNING: classifying at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
+            classifications[args.rank].append((name, best_at_rank))
+            if "krona" in args.output_format:
+                lin_list = display_lineage(lineage).split(';')
+                krona_results.append((containment, *lin_list))
         else:
             # classify to the match that passes the containment threshold. To do - do we want to report anything if nothing >= containment threshold?
             for rank in tax_utils.ascending_taxlist(include_strain=False):
-                (lineage,containment) = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, best_only=True)
+                best_at_rank = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, best_only=True)[0]
+                (lineage,containment) = best_at_rank
                 if containment >= args.containment_threshold:
-                    w.writerow([rank, f'{containment:.3f}', sourmash.lca.display_lineage(lineage)])
+                    classifications[rank].append((name, best_at_rank))
+                    if "krona" in args.output_format:
+                        lin_list = display_lineage(lineage).split(';')
+                        krona_results.append((containment, *lin_list))
                     break
 
 
-
-            #(lineage,containment) = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, best_only=True)
-
-            #w.writerow([args.rank, f'{containment:.3f}', sourmash.lca.display_lineage(lineage)])
-            #if containment <= args.containment_threshold:
-            #    notify(f"WARNING: classifying at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
-#
-#                if containment >= args.containment_threshold:
-#                    w.writerow([rank, f'{containment:.3f}', sourmash.lca.display_lineage(lineage)])
-#                    break
-
     # write output csv
-    header= ["rank", "fraction", "lineage"]
-    csv_fp = None
-    with FileOutputCSV(args.output) as csv_fp:
-        w = csv.writer(csv_fp)
-        w.writerow(header)
+    if "summary" in args.output_format:
+        summary_outfile = make_outfile(args.output_base, ".classifications.csv")
+        with FileOutputCSV(summary_outfile) as csv_fp:
+            tax_utils.write_classifications(classifications, csv_fp)
+
+    if "krona" in args.output_format:
+        krona_outfile = make_outfile(args.output_base, ".krona.tsv")
+        with FileOutputCSV(krona_outfile) as csv_fp:
+            tax_utils.write_krona(args.rank, krona_results, csv_fp)
 
 def main(arglist=None):
     args = sourmash.cli.get_parser().parse_args(arglist)

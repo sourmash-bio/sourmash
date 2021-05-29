@@ -9,7 +9,7 @@ import sourmash_tst_utils as utils
 from sourmash.tax import tax_utils
 from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_results,
                                     summarize_gather_at, find_missing_identities,
-                                    write_summary,
+                                    write_summary, load_gather_files_from_csv,
                                     make_krona_header, format_for_krona, write_krona)
 
 # import lca utils as needed for now
@@ -49,6 +49,13 @@ def test_get_ident():
     ident = "GCF_001881345.1"
     n_id = tax_utils.get_ident(ident)
     assert n_id == "GCF_001881345"
+
+def test_load_gatherfiles_from_csv():
+    from_csv = utils.get_test_data('tax/from-csv.csv')
+    gather_files = load_gather_files_from_csv(from_csv)
+    print("gather_files: ", gather_files)
+    assert len(gather_files) == 1
+    assert gather_files == [('test1', 'test1.gather.csv')]
 
 def test_load_gather_results():
     gather_csv = utils.get_test_data('tax/test1.gather.csv')

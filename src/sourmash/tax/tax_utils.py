@@ -37,6 +37,21 @@ def ascending_taxlist(include_strain=True):
     for k in ascending_taxlist:
         yield k
 
+def load_gather_files_from_csv(from_csv):
+    gather_files = []
+    seen = set()
+    with open(from_csv, 'rt') as fp:
+        r = csv.DictReader(fp, fieldnames=['name', 'filepath'])
+        for n, row in enumerate(r):
+            name = row["name"]
+            if name in seen:
+                notify(f"found duplicate name: {name}. Ignoring...")
+            else:
+                seen.add(name)
+                gather_files.append((name, row["filepath"]))
+    print(f'loaded {len(gather_files)} gather files for classification.')
+    return gather_files
+
 # load and aggregate all gather results
 def load_gather_results(gather_csv):
     gather_results = []
@@ -122,3 +137,15 @@ def write_summary(summarized_gather, csv_fp, sep='\t'):
         for sorted_result in rank_results:
             lin,val = sorted_result
             w.writerow([rank, f'{val:.3f}', display_lineage(lin)])
+
+def write_classifications(classifications, csv_fp, sep='\t'):
+    header= ["query_name", "classification_rank", "fraction_matched_at_rank", "lineage"]
+    w = csv.writer(csv_fp)
+    w.writerow(header)
+    for rank, rank_results in classifications.items():
+        # do we want to sort the results somehow?
+        #items = list(sum_uniq_weighted.items())
+        #items.sort(key = lambda x: -x[1])
+        for result in rank_results:
+            name, (lin,val) = result
+            w.writerow([rank, name, f'{val:.3f}', display_lineage(lin)])
