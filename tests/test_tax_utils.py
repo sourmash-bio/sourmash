@@ -10,6 +10,7 @@ from sourmash.tax import tax_utils
 from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_results,
                                     summarize_gather_at, find_missing_identities,
                                     write_summary, load_gather_files_from_csv,
+                                    write_classifications,
                                     make_krona_header, format_for_krona, write_krona)
 
 # import lca utils as needed for now
@@ -217,6 +218,23 @@ def test_write_summary_csv(runtmp):
     assert sr[0] ==  ['rank', 'fraction', 'lineage']
     assert sr[1] ==  ['superkingdom', '1.000', 'a']
     assert sr[2] ==  ['phylum', '1.000', 'a;b']
+
+def test_write_classification_csv(runtmp):
+    """test classification csv write function"""
+
+    classif = {'superkingdom': [("x",((LineagePair(rank='superkingdom', name='a'),), 1.0))],
+                  'phylum': [("y", ((LineagePair(rank='superkingdom', name='a'),
+                               LineagePair(rank='phylum', name='b')), 1.0))]}
+
+    outc= runtmp.output("outclass.csv")
+    with open(outc, 'w') as out_fp:
+        write_classifications(classif, out_fp)
+
+    cr = [x.rstrip().split(',') for x in open(outc, 'r')]
+    print("classification_summary_results_from_file: \n", cr)
+    assert cr[0] == ['query_name', 'classification_rank', 'fraction_matched_at_rank', 'lineage']
+    assert cr[1] == ['superkingdom', 'x', '1.000', 'a']
+    assert cr[2] == ['phylum', 'y', '1.000', 'a;b']
 
 def test_make_krona_header_0():
     hd = make_krona_header("species")
