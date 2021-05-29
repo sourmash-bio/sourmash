@@ -108,6 +108,48 @@ def test_summarize_krona_tsv_out(runtmp):
     assert ['0.05701254275940707', 'd__Bacteria', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Prevotella'] == gn_krona_results[2]
     assert ['0.015637726014008795', 'd__Bacteria', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Phocaeicola'] == gn_krona_results[3]
 
+def test_classify_rank_stdout_0(runtmp):
+    # test basic summarize
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+
+    c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--split-identifiers', '--rank', 'species')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
+    assert "species,,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+
+def test_classify_rank_csv_0(runtmp):
+    # test basic summarize
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+    cl_csv = csv_base + ".classifications.csv"
+    csvout = runtmp.output(cl_csv)
+    print("csvout: ", csvout)
+
+    c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--split-identifiers', '--rank', 'species', '-o', csv_base)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    cl_results = [x.rstrip() for x in open(csvout)]
+    assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in cl_results[0]
+    assert "species,,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in cl_results[1]
+
+
 
 ## some test ideas to start with -- see test_lca.py for add'l ideas
 
