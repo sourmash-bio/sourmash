@@ -203,7 +203,7 @@ def test_summarize_missing_taxonomy_fail(runtmp):
 
 
 def test_classify_rank_stdout_0(runtmp):
-    # test basic summarize
+    # test basic classify
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
@@ -222,7 +222,7 @@ def test_classify_rank_stdout_0(runtmp):
 
 
 def test_classify_rank_csv_0(runtmp):
-    # test basic summarize
+    # test basic classify - output csv
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
@@ -246,6 +246,7 @@ def test_classify_rank_csv_0(runtmp):
 
 
 def test_classify_gather_with_name(runtmp):
+    # input query name for cli classify
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
