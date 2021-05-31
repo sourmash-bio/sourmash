@@ -61,12 +61,14 @@ def summarize(args):
     n_missed, ident_missed = tax_utils.find_missing_identities(gather_results, tax_assign)
     if n_missed:
         notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
-    assert n_missed == 0
+        if args.fail_on_missing_taxonomy:
+            notify(f'Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
+            sys.exit(-1)
 
     # actually summarize at rank
     summarized_gather = {}
     for rank in sourmash.lca.taxlist(include_strain=False):
-        summarized_gather[rank] = tax_utils.summarize_gather_at(rank, tax_assign, gather_results)
+        summarized_gather[rank] = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=ident_missed)
 
     # write summarized output csv
     if "summary" in args.output_format:
@@ -108,7 +110,7 @@ def classify(args):
             notify("query name is also found in --from-csv filelist! Ignoring commandline input")
             gather_info = from_csv_gather_info
         else:
-            #add --from-csv files to commandline input
+            #add --from-csv files from commandline input
             gather_info +=from_csv_gather_info
 
     classifications = defaultdict(list)
@@ -122,7 +124,9 @@ def classify(args):
         n_missed, ident_missed = tax_utils.find_missing_identities(gather_results, tax_assign)
         if n_missed:
             notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
-        assert n_missed == 0
+            if args.fail_on_missing_taxonomy:
+                notify(f'Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
+                sys.exit(-1)
 
         # if --rank is specified, classify to that rank
         # to do, what to do if don't have gather results at desired rank (e.g. strain)?
@@ -130,7 +134,7 @@ def classify(args):
             # todo: check we have gather results at this rank
             #if not tax_utils.check_taxonomy_exists(tax_assign, args.rank):
             #    notify(f"No taxonomic information at rank {args.rank}: cannot classify at this rank")
-            best_at_rank = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, best_only=True)[0]
+            best_at_rank = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=ident_missed, best_only=True)[0]
             (lineage,containment) = best_at_rank
             if containment <= args.containment_threshold:
                 notify(f"WARNING: classifying at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
@@ -141,7 +145,7 @@ def classify(args):
         else:
             # classify to the match that passes the containment threshold. To do - do we want to report anything if nothing >= containment threshold?
             for rank in tax_utils.ascending_taxlist(include_strain=False):
-                best_at_rank = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, best_only=True)[0]
+                best_at_rank = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=ident_missed, best_only=True)[0]
                 (lineage,containment) = best_at_rank
                 if containment >= args.containment_threshold:
                     classifications[rank].append((name, best_at_rank))

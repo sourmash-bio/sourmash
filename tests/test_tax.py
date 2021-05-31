@@ -149,6 +149,55 @@ def test_summarize_duplicated_taxonomy_force(runtmp):
     assert "phylum,0.073,d__Bacteria;p__Bacteroidota" in c.last_result.out
     assert "phylum,0.058,d__Bacteria;p__Proteobacteria" in c.last_result.out
 
+def test_summarize_missing_taxonomy(runtmp):
+    c = runtmp
+    # write temp taxonomy with missing entry
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    subset_csv = runtmp.output("subset_taxonomy.csv")
+    with open(subset_csv, 'w') as subset:
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        subset.write("\n".join(tax[:4]))
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', subset_csv, '--split-identifiers')
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "The following are missing from the taxonomy information: GCF_003471795" in c.last_result.err
+    assert "rank,fraction,lineage" in c.last_result.out
+
+    assert "superkingdom,0.124,d__Bacteria" in c.last_result.out
+    assert "phylum,0.066,d__Bacteria;p__Bacteroidota" in c.last_result.out
+    assert "phylum,0.058,d__Bacteria;p__Proteobacteria" in c.last_result.out
+    assert "class,0.066,d__Bacteria;p__Bacteroidota;c__Bacteroidia" in c.last_result.out
+    assert "class,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria" in c.last_result.out
+    assert "order,0.066,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales" in c.last_result.out
+
+
+def test_summarize_missing_taxonomy_fail(runtmp):
+    c = runtmp
+    # write temp taxonomy with missing entry
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    subset_csv = runtmp.output("subset_taxonomy.csv")
+    with open(subset_csv, 'w') as subset:
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        subset.write("\n".join(tax[:4]))
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
+        c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', subset_csv, '--split-identifiers', '--fail-on-missing-taxonomy', fail_ok=True)
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert "The following are missing from the taxonomy information: GCF_003471795" in c.last_result.err
+    assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in c.last_result.err
+    assert c.last_result.status == -1
+
+
 def test_classify_rank_stdout_0(runtmp):
     # test basic summarize
     c = runtmp
@@ -232,6 +281,94 @@ def test_classify_rank_duplicated_taxonomy_force(runtmp):
     assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
     assert "species,,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
+def test_classify_missing_taxonomy_ignore_threshold(runtmp):
+    c = runtmp
+    # write temp taxonomy with missing entry
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    subset_csv = runtmp.output("subset_taxonomy.csv")
+    with open(subset_csv, 'w') as subset:
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [tax[0]] + tax[2:] # remove the best match (1st tax entry)
+        subset.write("\n".join(tax))
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', subset_csv, '--split-identifiers', '--containment-threshold', '0')
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "The following are missing from the taxonomy information: GCF_001881345" in c.last_result.err
+    assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
+    assert "species,,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in c.last_result.out
+
+def test_classify_missing_taxonomy_ignore_rank(runtmp):
+    c = runtmp
+    # write temp taxonomy with missing entry
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    subset_csv = runtmp.output("subset_taxonomy.csv")
+    with open(subset_csv, 'w') as subset:
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [tax[0]] + tax[2:] # remove the best match (1st tax entry)
+        subset.write("\n".join(tax))
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', subset_csv, '--split-identifiers', '--rank', 'species')
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "The following are missing from the taxonomy information: GCF_001881345" in c.last_result.err
+    assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
+    assert "species,,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in c.last_result.out
+
+
+def test_classify_missing_taxonomy_fail_threshold(runtmp):
+    c = runtmp
+    # write temp taxonomy with missing entry
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    subset_csv = runtmp.output("subset_taxonomy.csv")
+    with open(subset_csv, 'w') as subset:
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [tax[0]] + tax[2:] # remove the best match (1st tax entry)
+        subset.write("\n".join(tax))
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
+        c.run_sourmash('tax', 'classify', '-g',  g_csv, '--taxonomy-csv', subset_csv,
+                       '--split-identifiers', '--fail-on-missing-taxonomy', '--containment-threshold', '0', fail_ok=True)
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert "The following are missing from the taxonomy information: GCF_001881345" in c.last_result.err
+    assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in c.last_result.err
+    assert c.last_result.status == -1
+
+def test_classify_missing_taxonomy_fail_rank(runtmp):
+    c = runtmp
+    # write temp taxonomy with missing entry
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    subset_csv = runtmp.output("subset_taxonomy.csv")
+    with open(subset_csv, 'w') as subset:
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [tax[0]] + tax[2:] # remove the best match (1st tax entry)
+        subset.write("\n".join(tax))
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
+        c.run_sourmash('tax', 'classify', '-g',  g_csv, '--taxonomy-csv', subset_csv,
+                       '--split-identifiers', '--fail-on-missing-taxonomy', '--rank', 'species', fail_ok=True)
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert "The following are missing from the taxonomy information: GCF_001881345" in c.last_result.err
+    assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in c.last_result.err
+    assert c.last_result.status == -1
 
 ## some test ideas to start with -- see test_lca.py for add'l ideas
 

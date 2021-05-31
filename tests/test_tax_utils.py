@@ -237,6 +237,45 @@ def test_summarize_gather_at_over100percent_f_unique_weighted():
                         LineagePair(rank='phylum', name='b'),
                         LineagePair(rank='class', name='c')),0.5)]
 
+def test_summarize_gather_at_missing_ignore():
+    """test two matches, equal f_unique_weighted"""
+    # make gather results
+    gA = ["gA","0.5","0.5"]
+    gB = ["gB","0.3","0.5"]
+    g_res = make_mini_gather_results([gA,gB])
+
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b;c")
+    taxD = make_mini_taxonomy([gA_tax])
+
+    # run summarize_gather_at and check results!
+    sk_sum = summarize_gather_at("superkingdom", taxD, g_res, skip_idents=['gB'])
+    print("sk_sum: ", sk_sum)
+    assert sk_sum == [((LineagePair(rank='superkingdom', name='a'),), 0.5)]
+    phy_sum = summarize_gather_at("phylum", taxD, g_res, skip_idents=['gB'])
+    assert phy_sum == [((LineagePair(rank='superkingdom', name='a'),
+                         LineagePair(rank='phylum', name='b')),0.5)]
+    cl_sum = summarize_gather_at("class", taxD, g_res, skip_idents=['gB'])
+    assert cl_sum == [((LineagePair(rank='superkingdom', name='a'),
+                        LineagePair(rank='phylum', name='b'),
+                        LineagePair(rank='class', name='c')),0.5)]
+
+def test_summarize_gather_at_missing_fail():
+    """test two matches, equal f_unique_weighted"""
+    # make gather results
+    gA = ["gA","0.5","0.5"]
+    gB = ["gB","0.3","0.5"]
+    g_res = make_mini_gather_results([gA,gB])
+
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b;c")
+    taxD = make_mini_taxonomy([gA_tax])
+
+    # run summarize_gather_at and check results!
+    with pytest.raises(KeyError) as exc:
+        sk_sum = summarize_gather_at("superkingdom", taxD, g_res)
+        assert exc.value == "ident gB is not in the taxonomy database."
+
 def test_summarize_gather_at_best_only_0():
     """test two matches, diff f_unique_weighted"""
     # make mini gather_results

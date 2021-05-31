@@ -67,14 +67,20 @@ def load_gather_results(gather_csv):
 # this summarizes at a specific rank.
 # want to also have a flexible version that goes up a rank
 # if needed for good lca
-def summarize_gather_at(rank, tax_assign, gather_results, best_only=False):
+def summarize_gather_at(rank, tax_assign, gather_results, skip_idents = [], best_only=False):
     # collect!
     sum_uniq_weighted = defaultdict(float)
     for row in gather_results:
         # move these checks to loading function!
         match_ident = row['name']
         match_ident = get_ident(match_ident)
-        lineage = tax_assign[match_ident]
+        # if identity not in lineage database, and not --fail-on-missing-taxonomy, skip summarizing this match
+        if match_ident in skip_idents:
+            continue
+        try:
+            lineage = tax_assign[match_ident]
+        except KeyError:
+            raise KeyError(f"ident {match_ident} is not in the taxonomy database.")
         # actual summarization code
         lineage = pop_to_rank(lineage, rank)
         assert lineage[-1].rank == rank, lineage[-1]
