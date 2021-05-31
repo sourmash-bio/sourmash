@@ -19,10 +19,14 @@ from sourmash.lca.lca_utils import (LineagePair, build_tree, find_lca,
                                     pop_to_rank)
 
 
-def get_ident(ident):
+def get_ident(ident, split_identifiers=True, keep_identifier_versions=False):
+    # split identifiers = split on whitespace
+    # keep identifiers = don't split .[12] from assembly accessions
     "Hack and slash identifiers."
-    ident = ident.split()[0]
-    ident = ident.split('.')[0]
+    if split_identifiers:
+        ident = ident.split(' ')[0]
+        if not keep_identifier_versions:
+            ident = ident.split('.')[0]
     return ident
 
 
@@ -65,13 +69,13 @@ def load_gather_results(gather_csv):
 
 
 # this summarizes at a specific rank.
-def summarize_gather_at(rank, tax_assign, gather_results, skip_idents = [], best_only=False):
+def summarize_gather_at(rank, tax_assign, gather_results, skip_idents = [], split_identifiers=True, keep_identifier_versions=False, best_only=False):
     # collect!
     sum_uniq_weighted = defaultdict(float)
     for row in gather_results:
         # move these checks to loading function!
         match_ident = row['name']
-        match_ident = get_ident(match_ident)
+        match_ident = get_ident(match_ident, split_identifiers, keep_identifier_versions)
         # if identity not in lineage database, and not --fail-on-missing-taxonomy, skip summarizing this match
         if match_ident in skip_idents:
             continue

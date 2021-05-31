@@ -44,10 +44,20 @@ def test_ascending_taxlist_2():
     assert list(ascending_taxlist(include_strain=False)) ==  ['species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom']
 
 
-def test_get_ident():
+def test_get_ident_default():
     ident = "GCF_001881345.1"
     n_id = tax_utils.get_ident(ident)
     assert n_id == "GCF_001881345"
+
+def test_get_ident_split_but_keep_version():
+    ident = "GCF_001881345.1"
+    n_id = tax_utils.get_ident(ident, keep_identifier_versions=True)
+    assert n_id == "GCF_001881345.1"
+
+def test_get_ident_no_split():
+    ident = "GCF_001881345.1 secondname"
+    n_id = tax_utils.get_ident(ident, split_identifiers=False)
+    assert n_id == "GCF_001881345.1 secondname"
 
 
 def test_load_gatherfiles_from_csv():

@@ -23,8 +23,7 @@ def test_summarize_stdout_0(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
-    c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax,
-                   '--split-identifiers')
+    c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax)
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -57,7 +56,7 @@ def test_summarize_summary_csv_out(runtmp):
     csvout = runtmp.output(sum_csv)
     print("csvout: ", csvout)
 
-    runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax, '--split-identifiers', '-o', csv_base)
+    runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax, '-o', csv_base)
 
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
@@ -92,7 +91,7 @@ def test_summarize_krona_tsv_out(runtmp):
     csvout = runtmp.output(kr_csv)
     print("csvout: ", csvout)
 
-    runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax, '--split-identifiers', '-o', csv_base, '--output-format', 'krona', '--rank', 'genus')
+    runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona', '--rank', 'genus')
 
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
@@ -121,7 +120,7 @@ def test_summarize_duplicated_taxonomy_fail(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
     with pytest.raises(Exception) as exc:
-        c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', duplicated_csv, '--split-identifiers')
+        c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', duplicated_csv)
         assert str(exc.value == "multiple lineages for identifier GCF_001881345")
 
 def test_summarize_duplicated_taxonomy_force(runtmp):
@@ -136,7 +135,7 @@ def test_summarize_duplicated_taxonomy_force(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', duplicated_csv, '--split-identifiers', '--force')
+    c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', duplicated_csv, '--force')
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -160,7 +159,7 @@ def test_summarize_missing_taxonomy(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', subset_csv, '--split-identifiers')
+    c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', subset_csv)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -189,7 +188,7 @@ def test_summarize_missing_taxonomy_fail(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
     with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
-        c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', subset_csv, '--split-identifiers', '--fail-on-missing-taxonomy', fail_ok=True)
+        c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', subset_csv, '--fail-on-missing-taxonomy', fail_ok=True)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -206,7 +205,7 @@ def test_classify_rank_stdout_0(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
     c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', tax,
-                   '--split-identifiers', '--rank', 'species')
+                   '--rank', 'species')
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -228,7 +227,7 @@ def test_classify_rank_csv_0(runtmp):
     print("csvout: ", csvout)
 
     c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', tax,
-                   '--split-identifiers', '--rank', 'species', '-o', csv_base)
+                   '--rank', 'species', '-o', csv_base)
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -246,8 +245,7 @@ def test_classify_gather_with_name(runtmp):
     g_res = utils.get_test_data('tax/test1.gather.csv')
 
     c.run_sourmash('tax', 'classify', '-g', g_res, '--query-name', 'test1',
-                   '--taxonomy-csv', taxonomy_csv, '--split-identifiers',
-                   '--rank', 'species')
+                   '--taxonomy-csv', taxonomy_csv, '--rank', 'species')
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -267,7 +265,7 @@ def test_classify_gather_from_csv_rank(runtmp):
         f_csv.write(f"test1,{g_res}\n")
 
     c.run_sourmash('tax', 'classify', '--from-csv', g_from_csv, '--taxonomy-csv', taxonomy_csv,
-                   '--split-identifiers', '--rank', 'species')
+                   '--rank', 'species')
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -288,7 +286,7 @@ def test_classify_gather_from_csv_duplicate(runtmp):
         f_csv.write(f"test1,{g_res}\n")
 
     c.run_sourmash('tax', 'classify', '--from-csv', g_from_csv, '--taxonomy-csv', taxonomy_csv,
-                   '--split-identifiers', '--rank', 'species')
+                   '--rank', 'species')
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -308,7 +306,7 @@ def test_classify_gather_cli_and_from_csv(runtmp):
         f_csv.write(f"test2,{g_res}\n")
 
     c.run_sourmash('tax', 'classify','-g', g_res, '-n', 'test1', '--from-csv', g_from_csv, '--taxonomy-csv', taxonomy_csv,
-                   '--split-identifiers', '--rank', 'species')
+                   '--rank', 'species')
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -330,7 +328,7 @@ def test_classify_gather_from_csv_threshold_0(runtmp):
         f_csv.write(f"test1,{g_res}\n")
 
     c.run_sourmash('tax', 'classify', '--from-csv', g_from_csv, '--taxonomy-csv', taxonomy_csv,
-                   '--split-identifiers', '--containment-threshold', '0')
+                   '--containment-threshold', '0')
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -356,7 +354,7 @@ def test_classify_rank_duplicated_taxonomy_fail(runtmp):
 
     with pytest.raises(Exception) as exc:
         c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', duplicated_csv,
-                       '--split-identifiers', '--rank', 'species')
+                       '--rank', 'species')
         assert str(exc.value == "multiple lineages for identifier GCF_001881345")
 
 def test_classify_rank_duplicated_taxonomy_force(runtmp):
@@ -373,7 +371,7 @@ def test_classify_rank_duplicated_taxonomy_force(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
     c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', duplicated_csv,
-                   '--split-identifiers', '--rank', 'species', '--force')
+                   '--rank', 'species', '--force')
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -395,7 +393,7 @@ def test_classify_missing_taxonomy_ignore_threshold(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', subset_csv, '--split-identifiers', '--containment-threshold', '0')
+    c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', subset_csv, '--containment-threshold', '0')
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -417,7 +415,7 @@ def test_classify_missing_taxonomy_ignore_rank(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', subset_csv, '--split-identifiers', '--rank', 'species')
+    c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', subset_csv, '--rank', 'species')
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -442,13 +440,16 @@ def test_classify_missing_taxonomy_fail_threshold(runtmp):
 
     with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
         c.run_sourmash('tax', 'classify', '-g',  g_csv, '--taxonomy-csv', subset_csv,
-                       '--split-identifiers', '--fail-on-missing-taxonomy', '--containment-threshold', '0', fail_ok=True)
+                       '--fail-on-missing-taxonomy', '--containment-threshold', '0', fail_ok=True)
+
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
+
     assert "The following are missing from the taxonomy information: GCF_001881345" in c.last_result.err
     assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in c.last_result.err
     assert c.last_result.status == -1
+
 
 def test_classify_missing_taxonomy_fail_rank(runtmp):
     c = runtmp
@@ -464,10 +465,12 @@ def test_classify_missing_taxonomy_fail_rank(runtmp):
 
     with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
         c.run_sourmash('tax', 'classify', '-g',  g_csv, '--taxonomy-csv', subset_csv,
-                       '--split-identifiers', '--fail-on-missing-taxonomy', '--rank', 'species', fail_ok=True)
+                       '--fail-on-missing-taxonomy', '--rank', 'species', fail_ok=True)
+
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
+
     assert "The following are missing from the taxonomy information: GCF_001881345" in c.last_result.err
     assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in c.last_result.err
     assert c.last_result.status == -1
@@ -484,13 +487,13 @@ def test_classify_empty_gather_results_with_header_single(runtmp):
         fp.write(gather_results[0])
 
     with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
-        c.run_sourmash('tax', 'classify', '-g', empty_tax_with_header, '--taxonomy-csv', taxonomy_csv,
-                       '--split-identifiers', fail_ok=True)
+        c.run_sourmash('tax', 'classify', '-g', empty_tax_with_header, '--taxonomy-csv', taxonomy_csv, fail_ok=True)
 
 
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
+
     assert c.last_result.status == -1
     assert f'No gather results loaded from {empty_tax_with_header}.' in c.last_result.err
     assert 'Exiting.' in c.last_result.err
@@ -506,8 +509,7 @@ def test_classify_empty_gather_results_single(runtmp):
         fp.write("")
 
     with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
-        c.run_sourmash('tax', 'classify', '-g', empty_tax, '--taxonomy-csv', taxonomy_csv,
-                       '--split-identifiers', fail_ok=True)
+        c.run_sourmash('tax', 'classify', '-g', empty_tax, '--taxonomy-csv', taxonomy_csv, fail_ok=True)
 
 
     print(c.last_result.status)
@@ -528,7 +530,7 @@ def test_classify_empty_gather_results_single_force(runtmp):
 
     with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
         c.run_sourmash('tax', 'classify', '-g', empty_tax, '--taxonomy-csv', taxonomy_csv,
-                       '--split-identifiers', '--force', fail_ok=True)
+                       '--force', fail_ok=True)
 
 
     print(c.last_result.status)
@@ -555,8 +557,7 @@ def test_classify_empty_gather_results_with_empty_csv_force(runtmp):
 
     with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
         c.run_sourmash('tax', 'classify', '-g', empty_tax, '--from-csv', g_from_csv,
-                       '--taxonomy-csv', taxonomy_csv, '--rank', 'species',
-                       '--split-identifiers', '--force')
+                       '--taxonomy-csv', taxonomy_csv, '--rank', 'species', '--force')
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -584,8 +585,7 @@ def test_classify_empty_gather_results_with_csv_force(runtmp):
 
     #with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
     c.run_sourmash('tax', 'classify', '-g', empty_tax, '--from-csv', g_from_csv,
-                   '--taxonomy-csv', taxonomy_csv, '--rank', 'species',
-                   '--split-identifiers', '--force')
+                   '--taxonomy-csv', taxonomy_csv, '--rank', 'species', '--force')
 
     print(c.last_result.status)
     print(c.last_result.out)

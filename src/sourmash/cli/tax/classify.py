@@ -55,12 +55,12 @@ def subparser(subparsers):
         help='minimum containment for classification'
     )
     subparser.add_argument(
-        '--split-identifiers', action='store_true',
-        help='split names in signatures on whitespace'
+        '--keep-full-identifiers', action='store_true',
+        help='do not split identifiers on whitespace'
     )
     subparser.add_argument(
         '--keep-identifier-versions', action='store_true',
-        help='do not remove accession versions'
+        help='after splitting identifiers, do not remove accession versions'
     )
     subparser.add_argument(
         '--fail-on-missing-taxonomy', action='store_true',
