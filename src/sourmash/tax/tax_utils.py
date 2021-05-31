@@ -49,8 +49,8 @@ def load_gather_files_from_csv(from_csv):
             else:
                 seen.add(name)
                 gather_files.append((name, row["filepath"]))
-    print(f'loaded {len(gather_files)} gather files for classification.')
-    return gather_files
+    notify(f'loaded {len(gather_files)} gather files from csv input.')
+    return gather_files, seen
 
 # load and aggregate all gather results
 def load_gather_results(gather_csv):
@@ -60,13 +60,11 @@ def load_gather_results(gather_csv):
         #todo: add a check for all gather column names
         for n, row in enumerate(r):
             gather_results.append(row)
-    print(f'loaded {len(gather_results)} gather results.')
+    notify(f'loaded {len(gather_results)} gather results.')
     return gather_results
 
 
 # this summarizes at a specific rank.
-# want to also have a flexible version that goes up a rank
-# if needed for good lca
 def summarize_gather_at(rank, tax_assign, gather_results, skip_idents = [], best_only=False):
     # collect!
     sum_uniq_weighted = defaultdict(float)
@@ -105,7 +103,7 @@ def find_missing_identities(gather_results, tax_assign):
             n_missed += 1
             ident_missed.append(match_ident)
 
-    print(f'of {len(gather_results)}, missed {n_missed} lineage assignments.')
+    notify(f'of {len(gather_results)}, missed {n_missed} lineage assignments.')
     return n_missed, ident_missed
 
 # pass ranks; have ranks=[default_ranks]

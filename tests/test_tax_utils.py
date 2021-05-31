@@ -52,10 +52,11 @@ def test_get_ident():
 
 def test_load_gatherfiles_from_csv():
     from_csv = utils.get_test_data('tax/from-csv.csv')
-    gather_files = load_gather_files_from_csv(from_csv)
+    gather_files, seen_idents = load_gather_files_from_csv(from_csv)
     print("gather_files: ", gather_files)
     assert len(gather_files) == 1
     assert gather_files == [('test1', 'test1.gather.csv')]
+    assert "test1" in seen_idents
 
 
 def test_load_gather_results():

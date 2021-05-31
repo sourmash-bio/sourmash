@@ -72,7 +72,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-f', '--force', action = 'store_true',
-        help='continue past errors in taxonomy database loading',
+        help='continue past survivable errors in loading taxonomy database or gather results',
     )
 
 

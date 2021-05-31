@@ -52,10 +52,16 @@ def summarize(args):
 
     # load gather results and taxonomy assignments
     gather_results = tax_utils.load_gather_results(args.gather_results)
+    if not gather_results:
+        notify(f'No gather results loaded from {args.gather_results}. Exiting.')
+        sys.exit(-1)
     tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, use_headers=True,
                                               split_identifiers=args.split_identifiers,
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
+    if not tax_assign:
+        notify(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
+        sys.exit(-1)
 
     # check for match identites not found in lineage spreadsheets
     n_missed, ident_missed = tax_utils.find_missing_identities(gather_results, tax_assign)
@@ -85,7 +91,6 @@ def summarize(args):
             tax_utils.write_krona(args.rank, krona_resultslist, out_fp)
 
 
-# todo -- fix for new output file format
 def classify(args):
     """
     taxonomic classification of genomes from gather results
@@ -99,26 +104,50 @@ def classify(args):
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
 
+    if not tax_assign:
+        notify(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
+        sys.exit(-1)
+
     # load gather results for each genome and summarize with --best-only to classify
-    gather_info = []
+    gather_info, cli_gather_res, csv_gather_res = [],[],[]
+    query_name = None
     if args.gather_results:
         query_name = args.query_name
-        gather_info.append((query_name, args.gather_results))
+        cli_gather_res = [(query_name, args.gather_results)]
     if args.from_csv:
-        seen_names, gather_info = tax_utils.load_gather_files_from_csv(args.from_csv)
-        if query_name in seen_names:
-            notify("query name is also found in --from-csv filelist! Ignoring commandline input")
-            gather_info = from_csv_gather_info
-        else:
-            #add --from-csv files from commandline input
-            gather_info +=from_csv_gather_info
+        csv_gather_res, seen_idents = tax_utils.load_gather_files_from_csv(args.from_csv)
+        if query_name and query_name in seen_idents:
+            notify("query name is also found in --from-csv filelist!")
+            if args.force:
+                fixed_csv_res = []
+                #remove query_name result line from csv_gather_res -- is this a good desired behavior?
+                notify(f"--force is set. Removing {query_name} entry from the --from-csv gather results in favor of cli input.")
+                for (ident, gather_res) in csv_gather_res:
+                    if ident != query_name:
+                        fixed_csv_res.append((ident, gather_res))
+                csv_gather_res = fixed_csv_res
+            else:
+                notify('Exiting.')
+                sys.exit(-1)
+
+    # full list of (ident,gather_results)
+    gather_info = cli_gather_res + csv_gather_res
 
     classifications = defaultdict(list)
     krona_results = []
-
+    num_empty=0
     for n, (name, g_results) in enumerate(gather_info):
 
         gather_results = tax_utils.load_gather_results(g_results)
+        if not gather_results:
+            notify(f'No gather results loaded from {args.gather_results}.')
+            num_empty+=1
+            if args.force:
+                notify('--force is set. Attempting to continue to next set of gather results.')
+                continue
+            else:
+                notify('Exiting.')
+                sys.exit(-1)
 
         # check for match identites not found in lineage spreadsheets
         n_missed, ident_missed = tax_utils.find_missing_identities(gather_results, tax_assign)
@@ -154,6 +183,11 @@ def classify(args):
                         krona_results.append((containment, *lin_list))
                     break
 
+    notify(f'loaded {n+1-num_empty} gather files for classification.')
+
+    if not any([classifications,krona_results]):
+        notify(f'No results for classification. Exiting.')
+        sys.exit(-1)
 
     # write output csv
     if "summary" in args.output_format:
