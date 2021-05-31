@@ -15,11 +15,9 @@ from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_re
 
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
-from sourmash.lca.lca_utils import LineagePair#, build_tree, find_lca,
-#                                    taxlist, count_lca_for_assignments,
-#                                    zip_lineage, display_lineage,
-#                                    make_lineage, is_lineage_match,
-#                                    pop_to_rank)
+from sourmash.lca.lca_utils import LineagePair
+
+from sourmash.lca.command_index import load_taxonomy_assignments
 
 # utility functions for testing
 def make_mini_gather_results(g_infolist):
@@ -51,6 +49,7 @@ def test_get_ident():
     n_id = tax_utils.get_ident(ident)
     assert n_id == "GCF_001881345"
 
+
 def test_load_gatherfiles_from_csv():
     from_csv = utils.get_test_data('tax/from-csv.csv')
     gather_files = load_gather_files_from_csv(from_csv)
@@ -58,10 +57,91 @@ def test_load_gatherfiles_from_csv():
     assert len(gather_files) == 1
     assert gather_files == [('test1', 'test1.gather.csv')]
 
+
 def test_load_gather_results():
     gather_csv = utils.get_test_data('tax/test1.gather.csv')
     gather_results = tax_utils.load_gather_results(gather_csv)
     assert len(gather_results) == 4
+
+
+# this function is in lca.command_index for now, but not tested there
+def test_load_taxonomy_assignments():
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    tax_assign, num_rows = load_taxonomy_assignments(taxonomy_csv)
+    print("taxonomy assignments: \n", tax_assign)
+    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1']
+    assert num_rows == 4 # should have read 4 rows
+
+
+def test_load_taxonomy_assignments_split_id():
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    tax_assign, num_rows = load_taxonomy_assignments(taxonomy_csv, split_identifiers=True)
+    print("taxonomy assignments: \n", tax_assign)
+    assert list(tax_assign.keys()) == ['GCF_001881345', 'GCF_009494285', 'GCF_013368705', 'GCF_003471795']
+    assert num_rows == 4 # should have read 4 rows
+
+
+def test_load_taxonomy_assignments_with_ncbi_id(runtmp):
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    upd_csv = runtmp.output("updated_taxonomy.csv")
+    with open(upd_csv, 'w') as new_tax:
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        ncbi_id = "ncbi_id after_space"
+        fake_lin = [ncbi_id] + ["sk", "phy", "cls", "ord", "fam", "gen", "sp"]
+        ncbi_tax = ",".join(fake_lin)
+        tax.append(ncbi_tax)
+        new_tax.write("\n".join(tax))
+
+    tax_assign, num_rows = load_taxonomy_assignments(upd_csv)
+    print("taxonomy assignments: \n", tax_assign)
+    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', "ncbi_id after_space"]
+    assert num_rows == 5  # should have read 5 rows
+
+
+def test_load_taxonomy_assignments_split_id_ncbi(runtmp):
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    upd_csv = runtmp.output("updated_taxonomy.csv")
+    with open(upd_csv, 'w') as new_tax:
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        ncbi_id = "ncbi_id after_space"
+        fake_lin = [ncbi_id] + ["sk", "phy", "cls", "ord", "fam", "gen", "sp"]
+        ncbi_tax = ",".join(fake_lin)
+        tax.append(ncbi_tax)
+        new_tax.write("\n".join(tax))
+
+    tax_assign, num_rows = load_taxonomy_assignments(upd_csv, split_identifiers=True)
+    print("taxonomy assignments: \n", tax_assign)
+    assert list(tax_assign.keys()) == ['GCF_001881345', 'GCF_009494285', 'GCF_013368705', 'GCF_003471795', "ncbi_id"]
+    assert num_rows == 5 # should have read 5 rows
+
+
+def test_load_taxonomy_assignments_duplicate(runtmp):
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
+    with open(duplicated_csv, 'w') as dup:
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax.append(tax[1]) # add first tax_assign again
+        dup.write("\n".join(tax))
+
+    with pytest.raises(Exception) as exc:
+        tax_assign, num_rows = load_taxonomy_assignments(duplicated_csv)
+        assert str(exc.value == "multiple lineages for identifier GCF_001881345.1")
+
+
+def test_load_taxonomy_assignments_duplicate_force(runtmp):
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
+    with open(duplicated_csv, 'w') as dup:
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax.append(tax[1]) # add first tax_assign again
+        dup.write("\n".join(tax))
+
+    # now force
+    tax_assign, num_rows = load_taxonomy_assignments(duplicated_csv, force=True)
+    print("taxonomy assignments: \n", tax_assign)
+    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1']
+    assert num_rows == 5 # should have read 5 rows
+
 
 def test_find_missing_identities():
     # make gather results
