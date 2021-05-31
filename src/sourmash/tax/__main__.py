@@ -52,7 +52,10 @@ def summarize(args):
 
     # load gather results and taxonomy assignments
     gather_results = tax_utils.load_gather_results(args.gather_results)
-    tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, use_headers=True, force=False, split_identifiers=args.split_identifiers, keep_identifier_versions = args.keep_identifier_versions)
+    tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, use_headers=True,
+                                              split_identifiers=args.split_identifiers,
+                                              keep_identifier_versions = args.keep_identifier_versions,
+                                              force=args.force)
 
     # check for match identites not found in lineage spreadsheets
     n_missed, ident_missed = tax_utils.find_missing_identities(gather_results, tax_assign)
@@ -89,7 +92,10 @@ def classify(args):
     set_quiet(args.quiet)
 
     # load taxonomy assignments
-    tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, use_headers=True, force=False, split_identifiers=args.split_identifiers, keep_identifier_versions = args.keep_identifier_versions)
+    tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, use_headers=True,
+                                              split_identifiers=args.split_identifiers,
+                                              keep_identifier_versions = args.keep_identifier_versions,
+                                              force=args.force)
 
     # load gather results for each genome and summarize with --best-only to classify
     gather_info = []

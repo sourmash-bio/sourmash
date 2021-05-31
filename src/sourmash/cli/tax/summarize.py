@@ -39,6 +39,10 @@ def subparser(subparsers):
         '-r', '--rank', choices=['strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'],
         help='For non-default output formats: Summarize genome taxonomy at this rank and above'
     )
+    subparser.add_argument(
+        '-f', '--force', action = 'store_true',
+        help='continue past errors in taxonomy database loading',
+    )
 
 def main(args):
     import sourmash

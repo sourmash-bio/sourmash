@@ -108,6 +108,47 @@ def test_summarize_krona_tsv_out(runtmp):
     assert ['0.05701254275940707', 'd__Bacteria', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Prevotella'] == gn_krona_results[2]
     assert ['0.015637726014008795', 'd__Bacteria', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Phocaeicola'] == gn_krona_results[3]
 
+def test_summarize_duplicated_taxonomy_fail(runtmp):
+    c = runtmp
+    # write temp taxonomy with duplicates
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
+    with open(duplicated_csv, 'w') as dup:
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax.append(tax[1]) # add first tax_assign again
+        dup.write("\n".join(tax))
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    with pytest.raises(Exception) as exc:
+        c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', duplicated_csv, '--split-identifiers')
+        assert str(exc.value == "multiple lineages for identifier GCF_001881345")
+
+def test_summarize_duplicated_taxonomy_force(runtmp):
+    c = runtmp
+    # write temp taxonomy with duplicates
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
+    with open(duplicated_csv, 'w') as dup:
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax.append(tax[1]) # add first tax_assign again
+        dup.write("\n".join(tax))
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', duplicated_csv, '--split-identifiers', '--force')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    # same as stdout test - just check the first few lines
+    assert c.last_result.status == 0
+    assert "rank,fraction,lineage" in c.last_result.out
+    assert 'superkingdom,0.131,d__Bacteria' in c.last_result.out
+    assert "phylum,0.073,d__Bacteria;p__Bacteroidota" in c.last_result.out
+    assert "phylum,0.058,d__Bacteria;p__Proteobacteria" in c.last_result.out
+
 def test_classify_rank_stdout_0(runtmp):
     # test basic summarize
     c = runtmp
@@ -149,6 +190,47 @@ def test_classify_rank_csv_0(runtmp):
     assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in cl_results[0]
     assert "species,,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in cl_results[1]
 
+def test_classify_rank_duplicated_taxonomy_fail(runtmp):
+    # test basic summarize
+    c = runtmp
+    # write temp taxonomy with duplicates
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
+    with open(duplicated_csv, 'w') as dup:
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax.append(tax[1]) # add first tax_assign again
+        dup.write("\n".join(tax))
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    with pytest.raises(Exception) as exc:
+        c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', duplicated_csv,
+                       '--split-identifiers', '--rank', 'species')
+        assert str(exc.value == "multiple lineages for identifier GCF_001881345")
+
+def test_classify_rank_duplicated_taxonomy_force(runtmp):
+    # test basic summarize
+    c = runtmp
+    # write temp taxonomy with duplicates
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
+    with open(duplicated_csv, 'w') as dup:
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax.append(tax[1]) # add first tax_assign again
+        dup.write("\n".join(tax))
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', duplicated_csv,
+                   '--split-identifiers', '--rank', 'species', '--force')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
+    assert "species,,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
 ## some test ideas to start with -- see test_lca.py for add'l ideas

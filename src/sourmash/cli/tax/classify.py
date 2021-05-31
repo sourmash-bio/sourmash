@@ -70,6 +70,10 @@ def subparser(subparsers):
         '--output-format', default=['summary'], nargs='+', choices=["summary", "krona"],
         help='choose output format(s)',
     )
+    subparser.add_argument(
+        '-f', '--force', action = 'store_true',
+        help='continue past errors in taxonomy database loading',
+    )
 
 
 def main(args):
