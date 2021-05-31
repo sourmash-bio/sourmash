@@ -29,6 +29,7 @@ def make_mini_gather_results(g_infolist):
         gather_results.append(inf)
     return gather_results
 
+
 def make_mini_taxonomy(tax_info):
     #pass in list of tuples: (name, lineage)
     taxD = {}
@@ -36,9 +37,11 @@ def make_mini_taxonomy(tax_info):
         taxD[name] = lca_utils.make_lineage(lin)
     return taxD
 
+
 ## tests
 def test_ascending_taxlist_1():
     assert list(ascending_taxlist()) ==  ['strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom']
+
 
 def test_ascending_taxlist_2():
     assert list(ascending_taxlist(include_strain=False)) ==  ['species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom']
@@ -49,10 +52,12 @@ def test_get_ident_default():
     n_id = tax_utils.get_ident(ident)
     assert n_id == "GCF_001881345"
 
+
 def test_get_ident_split_but_keep_version():
     ident = "GCF_001881345.1"
     n_id = tax_utils.get_ident(ident, keep_identifier_versions=True)
     assert n_id == "GCF_001881345.1"
+
 
 def test_get_ident_no_split():
     ident = "GCF_001881345.1 secondname"
@@ -197,6 +202,7 @@ def test_summarize_gather_at_0():
                         LineagePair(rank='phylum', name='b'),
                         LineagePair(rank='class', name='d')),0.5)]
 
+
 def test_summarize_gather_at_1():
     """test two matches, diff f_unique_weighted"""
     # make mini gather_results
@@ -221,6 +227,7 @@ def test_summarize_gather_at_1():
                       ((LineagePair(rank='superkingdom', name='a'),
                         LineagePair(rank='phylum', name='b'),
                         LineagePair(rank='class', name='d')),0.1)]
+
 
 def test_summarize_gather_at_over100percent_f_unique_weighted():
     """gather matches that add up to >100% f_unique_weighted"""
@@ -248,6 +255,7 @@ def test_summarize_gather_at_over100percent_f_unique_weighted():
                         LineagePair(rank='phylum', name='b'),
                         LineagePair(rank='class', name='c')),0.5)]
 
+
 def test_summarize_gather_at_missing_ignore():
     """test two matches, equal f_unique_weighted"""
     # make gather results
@@ -271,6 +279,7 @@ def test_summarize_gather_at_missing_ignore():
                         LineagePair(rank='phylum', name='b'),
                         LineagePair(rank='class', name='c')),0.5)]
 
+
 def test_summarize_gather_at_missing_fail():
     """test two matches, equal f_unique_weighted"""
     # make gather results
@@ -286,6 +295,7 @@ def test_summarize_gather_at_missing_fail():
     with pytest.raises(KeyError) as exc:
         sk_sum = summarize_gather_at("superkingdom", taxD, g_res)
         assert exc.value == "ident gB is not in the taxonomy database."
+
 
 def test_summarize_gather_at_best_only_0():
     """test two matches, diff f_unique_weighted"""
@@ -308,6 +318,7 @@ def test_summarize_gather_at_best_only_0():
     assert cl_sum == [((LineagePair(rank='superkingdom', name='a'),
                         LineagePair(rank='phylum', name='b'),
                         LineagePair(rank='class', name='c')),0.6)]
+
 
 def test_summarize_gather_at_best_only_equal_choose_first():
     """test two matches, equal f_unique_weighted. best_only chooses first"""
@@ -349,6 +360,7 @@ def test_write_summary_csv(runtmp):
     assert sr[1] ==  ['superkingdom', '1.000', 'a']
     assert sr[2] ==  ['phylum', '1.000', 'a;b']
 
+
 def test_write_classification_csv(runtmp):
     """test classification csv write function"""
 
@@ -366,25 +378,30 @@ def test_write_classification_csv(runtmp):
     assert cr[1] == ['superkingdom', 'x', '1.000', 'a']
     assert cr[2] == ['phylum', 'y', '1.000', 'a;b']
 
+
 def test_make_krona_header_0():
     hd = make_krona_header("species")
     print("header: ", hd)
     assert hd == ("fraction", "superkingdom", "phylum", "class", "order", "family", "genus", "species")
+
 
 def test_make_krona_header_1():
     hd = make_krona_header("order")
     print("header: ", hd)
     assert hd == ("fraction", "superkingdom", "phylum", "class", "order")
 
+
 def test_make_krona_header_strain():
     hd = make_krona_header("strain", include_strain=True)
     print("header: ", hd)
     assert hd == ("fraction", "superkingdom", "phylum", "class", "order", "family", "genus", "species", "strain")
 
+
 def test_make_krona_header_fail():
     with pytest.raises(ValueError) as exc:
         hd = make_krona_header("strain")
         assert str(exc.value) == "Rank strain not present in available ranks"
+
 
 def test_format_for_krona_0():
     """test two matches, equal f_unique_weighted"""
@@ -408,6 +425,7 @@ def test_format_for_krona_0():
     krona_res = format_for_krona("phylum", {"phylum": phy_sum})
     print("krona_res: ", krona_res)
     assert krona_res == [(1.0, 'a', 'b')]
+
 
 def test_format_for_krona_1():
     """test two matches, equal f_unique_weighted"""
@@ -438,6 +456,7 @@ def test_format_for_krona_1():
     print("cl_krona: ", cl_krona)
     assert cl_krona ==  [(0.5, 'a', 'b', 'c'), (0.5, 'a', 'b', 'd')]
 
+
 def test_format_for_krona_best_only():
     """test two matches, equal f_unique_weighted"""
     # make gather results
@@ -466,6 +485,7 @@ def test_format_for_krona_best_only():
     cl_krona = format_for_krona("class", sum_res)
     print("cl_krona: ", cl_krona)
     assert cl_krona ==  [(0.5, 'a', 'b', 'c')]
+
 
 def test_write_krona(runtmp):
     """test two matches, equal f_unique_weighted"""

@@ -16,6 +16,7 @@ def test_run_sourmash_tax():
     status, out, err = utils.runscript('sourmash', ['tax'], fail_ok=True)
     assert status != 0                    # no args provided, ok ;)
 
+
 def test_summarize_stdout_0(runtmp):
     # test basic summarize
     c = runtmp
@@ -83,6 +84,7 @@ def test_summarize_summary_csv_out(runtmp):
     assert "species,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in sum_gather_results[14]
     assert "species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus" in sum_gather_results[15]
 
+
 def test_summarize_krona_tsv_out(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
@@ -107,6 +109,7 @@ def test_summarize_krona_tsv_out(runtmp):
     assert ['0.05701254275940707', 'd__Bacteria', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Prevotella'] == gn_krona_results[2]
     assert ['0.015637726014008795', 'd__Bacteria', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Phocaeicola'] == gn_krona_results[3]
 
+
 def test_summarize_duplicated_taxonomy_fail(runtmp):
     c = runtmp
     # write temp taxonomy with duplicates
@@ -122,6 +125,7 @@ def test_summarize_duplicated_taxonomy_fail(runtmp):
     with pytest.raises(Exception) as exc:
         c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', duplicated_csv)
         assert str(exc.value == "multiple lineages for identifier GCF_001881345")
+
 
 def test_summarize_duplicated_taxonomy_force(runtmp):
     c = runtmp
@@ -147,6 +151,7 @@ def test_summarize_duplicated_taxonomy_force(runtmp):
     assert 'superkingdom,0.131,d__Bacteria' in c.last_result.out
     assert "phylum,0.073,d__Bacteria;p__Bacteroidota" in c.last_result.out
     assert "phylum,0.058,d__Bacteria;p__Proteobacteria" in c.last_result.out
+
 
 def test_summarize_missing_taxonomy(runtmp):
     c = runtmp
@@ -215,6 +220,7 @@ def test_classify_rank_stdout_0(runtmp):
     assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
     assert "species,,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
+
 def test_classify_rank_csv_0(runtmp):
     # test basic summarize
     c = runtmp
@@ -256,6 +262,7 @@ def test_classify_gather_with_name(runtmp):
     assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
     assert "species,test1,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
+
 def test_classify_gather_from_csv_rank(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -275,6 +282,7 @@ def test_classify_gather_from_csv_rank(runtmp):
     assert 'loaded 1 gather files for classification' in c.last_result.err
     assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
     assert "species,test1,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+
 
 def test_classify_gather_from_csv_duplicate(runtmp):
     c = runtmp
@@ -297,6 +305,7 @@ def test_classify_gather_from_csv_duplicate(runtmp):
     assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
     assert "species,test1,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
+
 def test_classify_gather_cli_and_from_csv(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -318,6 +327,7 @@ def test_classify_gather_cli_and_from_csv(runtmp):
     assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
     assert "species,test1,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
     assert "species,test2,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+
 
 def test_classify_gather_from_csv_threshold_0(runtmp):
     c = runtmp
@@ -357,6 +367,7 @@ def test_classify_rank_duplicated_taxonomy_fail(runtmp):
                        '--rank', 'species')
         assert str(exc.value == "multiple lineages for identifier GCF_001881345")
 
+
 def test_classify_rank_duplicated_taxonomy_force(runtmp):
     # test basic summarize
     c = runtmp
@@ -381,6 +392,7 @@ def test_classify_rank_duplicated_taxonomy_force(runtmp):
     assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
     assert "species,,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
+
 def test_classify_missing_taxonomy_ignore_threshold(runtmp):
     c = runtmp
     # write temp taxonomy with missing entry
@@ -402,6 +414,7 @@ def test_classify_missing_taxonomy_ignore_threshold(runtmp):
     assert "The following are missing from the taxonomy information: GCF_001881345" in c.last_result.err
     assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
     assert "species,,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in c.last_result.out
+
 
 def test_classify_missing_taxonomy_ignore_rank(runtmp):
     c = runtmp
@@ -475,6 +488,7 @@ def test_classify_missing_taxonomy_fail_rank(runtmp):
     assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in c.last_result.err
     assert c.last_result.status == -1
 
+
 def test_classify_empty_gather_results_with_header_single(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -518,6 +532,7 @@ def test_classify_empty_gather_results_single(runtmp):
     assert c.last_result.status == -1
     assert f'No gather results loaded from {empty_tax}.' in c.last_result.err
     assert 'Exiting.' in c.last_result.err
+
 
 def test_classify_empty_gather_results_single_force(runtmp):
     c = runtmp
