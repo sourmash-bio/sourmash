@@ -70,15 +70,24 @@ There are seven main subcommands: `sketch`, `compare`, `plot`,
 * `prefetch` selects signatures of interest from a very large collection of signatures, for later processing.
 
 There are also a number of commands that work with taxonomic
-information; these are grouped under the `sourmash lca`
-subcommand. See [the LCA tutorial](tutorials-lca.md) for a
-walkthrough of these commands.
+information; these are grouped under the `sourmash tax` and
+`sourmash lca` subcommands.
+
+`sourmash tax` commands:
+
+* `tax summarize` - summarize metagenome gather results at each taxonomic rank.
+* `tax classify` - summarize single-genome gather results and report most likely classification
+
+`sourmash lca` commands:
 
 * `lca classify` classifies many signatures against an LCA database.
 * `lca summarize` summarizes the content of metagenomes using an LCA database.
 * `lca index` creates a database for use with LCA subcommands.
 * `lca rankinfo` summarizes the content of a database.
 * `lca compare_csv` compares lineage spreadsheets, e.g. those output by `lca classify`.
+
+> See [the LCA tutorial](tutorials-lca.md) for a
+walkthrough of some of these commands.
 
 Finally, there are a number of utility and information commands:
 
