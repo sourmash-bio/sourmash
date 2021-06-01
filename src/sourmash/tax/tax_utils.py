@@ -4,6 +4,7 @@ Utility functions for taxonomy analysis tools.
 import csv
 from os.path import exists
 from collections import namedtuple, defaultdict, Counter
+import itertools
 
 __all__ = ['get_ident', 'load_gather_results',
            'summarize_gather_at', 'find_missing_identities']
