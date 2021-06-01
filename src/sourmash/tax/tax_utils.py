@@ -4,6 +4,7 @@ Utility functions for taxonomy analysis tools.
 import csv
 from os.path import exists
 from collections import namedtuple, defaultdict, Counter
+import itertools
 
 __all__ = ['get_ident', 'load_gather_results',
            'summarize_gather_at', 'find_missing_identities']
@@ -157,3 +158,65 @@ def write_classifications(classifications, csv_fp, sep='\t'):
         for result in rank_results:
             name, (lin,val) = result
             w.writerow([rank, name, f'{val:.3f}', display_lineage(lin)])
+
+def format_tax_to_frac(taxonomy_csvs, rank, output_csv):
+    '''
+    takes the output for sourmash taxonomy summarize and produces a 
+    tab-separated file with fractions for each sample. Sample names
+    are based on csv file names, with ".csv" removed
+    lineage	sample1	sample2	sample3	
+    lin_a	.4	.17	.6
+    lin_b	0	0	.1
+    lin_c	0	.3	0
+    lin_d	.2	.1	0
+    lin_e	0	0	.01
+    lin_f	0	.07	0
+    lin_g	0	0	0
+    lin_h	.3	.4	.2
+    '''
+    samples = [csv.split(".")[0] for csv in csvs]
+
+    possible_ranks = ['superkingdom', "phylum", "class", "order", "family", "genus", "species"]
+    if rank not in possible_ranks:
+        raise ValueError(f"Rank {rank} not available")
+
+    
+    lineage_dict = {}
+    sample_name_dict = {}
+    seen_lineages = set()
+
+    # create dictionary that holds all of the sample names
+    for file in csvs:
+        sample_name = file.split('.')[0]
+        sample_name_dict[sample_name] = 0 
+
+    for file in csvs:
+        with open(file, 'r') as fp:
+            r = csv.DictReader(fp)
+            for n, row in enumerate(r):
+                if row["rank"] == rank:
+                    seen_lineages.add(row["lineage"])
+            fp.close()
+
+    for lineage in seen_lineages:
+        lineage_dict[lineage] = sample_name_dict.copy()
+
+    for sample in sample_name_dict:
+        with open(sample + ".csv", "r") as fp:
+            r = csv.DictReader(fp)
+            for n, row in enumerate(r):
+                if row["rank"] == rank:
+                    lineage = (row["lineage"])
+                    fraction = (row["fraction"])
+                    lineage_dict[lineage][sample] = fraction
+            fp.close()
+
+
+    samples.insert(0, "lineage")
+    with open(output_csv, 'w') as f_output:
+        w = csv.DictWriter(f_output, samples)
+        w.writeheader()
+        for key,val in sorted(lineage_dict.items()):
+            row = {'lineage': key}
+            row.update(val)
+            w.writerow(row)
