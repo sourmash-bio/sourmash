@@ -2928,12 +2928,14 @@ def test_gather_csv(linear_gather, prefetch_gather):
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['compute', testdata1, testdata2,
-                                            '--scaled', '10'],
+                                            '--scaled', '10',
+                                            '--name-from-first'],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
                                            ['compute', testdata2,
                                             '--scaled', '10',
+                                            '--name-from-first',
                                             '-o', 'query.fa.sig'],
                                            in_directory=location)
 
@@ -2968,9 +2970,13 @@ def test_gather_csv(linear_gather, prefetch_gather):
             assert float(row['f_unique_to_query']) == 1.0
             assert float(row['f_match']) == 1.0
             assert row['filename'] == 'zzz'
-            assert row['name'].endswith('short2.fa')
+            assert row['name'] == 'tr1 4'
             assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
             assert row['gather_result_rank'] == '0'
+            assert row['query_filename'].endswith('short2.fa')
+            assert row['query_name'] == 'tr1 4'
+            assert row['query_md5'] == 'c9d5a795'
+            assert row['query_bp'] == '910'
 
 
 def test_gather_abund_x_abund(runtmp, prefetch_gather, linear_gather):
