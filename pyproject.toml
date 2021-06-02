@@ -3,8 +3,9 @@ requires = [
     "setuptools >= 48",
     "setuptools_scm[toml] >= 4, <6",
     "setuptools_scm_git_archive",
-    "milksnake",
+    "setuptools_rust",
     "wheel >= 0.29.0",
+    "cffi>=1.0.0",
 ]
 build-backend = 'setuptools.build_meta'
 

@@ -1,33 +1,13 @@
-import os
-import sys
-
 from setuptools import setup
-
-
-DEBUG_BUILD = os.environ.get("SOURMASH_DEBUG") == "1"
-
-
-def build_native(spec):
-    cmd = ["cargo", "build", "--manifest-path", "src/core/Cargo.toml", "--lib"]
-
-    target = "debug"
-    if not DEBUG_BUILD:
-        cmd.append("--release")
-        target = "release"
-
-    build = spec.add_external_build(cmd=cmd, path=".")
-
-    rtld_flags = ["NOW"]
-    if sys.platform == "darwin":
-        rtld_flags.append("NODELETE")
-    spec.add_cffi_module(
-        module_path="sourmash._lowlevel",
-        dylib=lambda: build.find_dylib("sourmash", in_path="target/%s" % target),
-        header_filename=lambda: build.find_header("sourmash.h", in_path="include"),
-        rtld_flags=rtld_flags,
-    )
+from setuptools_rust import RustExtension, Binding
 
 setup(
-  milksnake_tasks=[build_native],
   package_dir={"": "src"},
+  rust_extensions=[
+    RustExtension("sourmash._lowlevel__lib",
+                  py_limited_api="auto",
+                  path="src/core/Cargo.toml",
+                  binding=Binding.NoBinding),
+  ],
+  cffi_modules=["src/sourmash/ffi_build.py:ffibuilder"],
 )

@@ -12,7 +12,7 @@
     "html_dir": ".asv/html",
     "build_cache_size": 8,
     "build_command": [
-      "python -m pip install 'setuptools_scm[toml]>=4,<6' milksnake",
+      "python -m pip install 'setuptools_scm[toml]>=4,<6' setuptools_rust",
       "python setup.py build",
       "PIP_NO_BUILD_ISOLATION=false python -mpip wheel --no-deps --no-index -w {build_cache_dir} {build_dir}"
     ]

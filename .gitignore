@@ -21,7 +21,7 @@ sourmash.egg-info
 src/sourmash/version.py
 *.DS_Store
 .tox
-src/sourmash/_lowlevel*.py
+src/sourmash/_lowlevel__*.py
 .env
 Pipfile
 Pipfile.lock
