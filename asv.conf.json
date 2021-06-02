@@ -5,15 +5,16 @@
     "repo": ".",
     "branches": ["latest"],
     "dvcs": "git",
-    "environment_type": "virtualenv",
-    "pythons": ["3.7"],
+    "environment_type": "conda",
+    "pythons": ["3.9"],
     "env_dir": ".asv/env",
     "results_dir": ".asv/results",
     "html_dir": ".asv/html",
     "build_cache_size": 8,
+    "conda_channels": ["conda-forge", "bioconda", "defaults"],
     "build_command": [
-      "python -m pip install 'setuptools_scm[toml]>=4,<6' setuptools_rust cffi>=1.14.0",
-      "python setup.py build",
-      "PIP_NO_BUILD_ISOLATION=false python -mpip wheel --no-deps --no-index -w {build_cache_dir} {build_dir}"
+       "python -m pip install 'setuptools_scm[toml]>=4,<6' setuptools_rust cffi>=1.14.0",
+       "python setup.py build -j4",
+       "PIP_NO_BUILD_ISOLATION=false python -mpip wheel --no-deps --no-index -w {build_cache_dir} {build_dir}"
     ]
 }
