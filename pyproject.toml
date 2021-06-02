@@ -5,7 +5,7 @@ requires = [
     "setuptools_scm_git_archive",
     "setuptools_rust",
     "wheel >= 0.29.0",
-    "cffi>=1.0.0",
+    "cffi>=1.14.0",
 ]
 build-backend = 'setuptools.build_meta'
 
