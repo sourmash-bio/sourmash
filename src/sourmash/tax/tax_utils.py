@@ -159,12 +159,25 @@ def write_classifications(classifications, csv_fp, sep='\t'):
             w.writerow([rank, name, f'{val:.3f}', display_lineage(lin)])
 
 
-def agg_sumgather_by_lineage(gather_csvs, rank="species", accept_ranks = list(lca_utils.taxlist(include_strain=False)), force=False):
+def agg_sumgather_csvs_by_lineage(gather_csvs, rank="species", accept_ranks = list(lca_utils.taxlist(include_strain=False)), force=False):
     '''
     Takes in one or more output csvs from `sourmash taxonomy summarize`
     and aggregates the results into a nested dictionary with lineages
     as the keys {lineage: {sample1: frac1, sample2: frac2}}.
     Uses the file basename (minus .csv extension) as sample identifier.
+
+    usage:
+
+        linD, all_samples = agg_sumgather_by_lineage(["sample1.csv", "sample2.csv"], rank="genus")
+
+    output:
+
+        linD = {lin_a: {'sample1': 0.4, 'sample2': 0.17, 'sample3': 0.6}
+                lin_b: {'sample1': 0.0, 'sample2': 0.0,  'sample3': 0.1}
+                lin_c: {'sample1': 0.3, 'sample2': 0.4,  'sample3': 0.2} }
+
+        all_samples = ['sample1','sample2','sample3']
+
     '''
     if rank not in accept_ranks:
         raise ValueError(f"Rank {rank} not available.")
