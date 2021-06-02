@@ -11,7 +11,8 @@ from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_re
                                     summarize_gather_at, find_missing_identities,
                                     write_summary, load_gather_files_from_csv,
                                     write_classifications,
-                                    make_krona_header, format_for_krona, write_krona)
+                                    make_krona_header, format_for_krona, write_krona,
+                                    agg_sumgather_by_lineage, write_lineage_sample_frac)
 
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
@@ -500,3 +501,76 @@ def test_write_krona(runtmp):
     assert kr[1] == ["0.5", "a", "b", "c"]
     assert kr[2] == ["0.5", "a", "b", "d"]
 
+
+def test_agg_sumgather_by_lineage(runtmp):
+    # some summarized gather dicts
+    sum_gather1 = {'superkingdom': [((LineagePair(rank='superkingdom', name='a'),), 0.5)],
+                  'phylum': [((LineagePair(rank='superkingdom', name='a'),
+                               LineagePair(rank='phylum', name='b')), 0.5)]}
+
+    sum_gather2 = {'superkingdom': [((LineagePair(rank='superkingdom', name='a'),), 0.7)],
+                  'phylum': [((LineagePair(rank='superkingdom', name='a'),
+                               LineagePair(rank='phylum', name='c')), 0.7)]}
+
+    # write summarized gather results csvs
+    sg1= runtmp.output("sample1.csv")
+    with open(sg1, 'w') as out_fp:
+        write_summary(sum_gather1, out_fp)
+
+    sg2= runtmp.output("sample2.csv")
+    with open(sg2, 'w') as out_fp:
+        write_summary(sum_gather2, out_fp)
+
+    # test agg_summarized_gather_csvs_by_lineage_at_rank
+    linD, sample_names = agg_sumgather_by_lineage([sg1,sg2], rank="phylum")
+    print("lineage dict: \n", linD)
+    assert linD == {'a;b': {'sample1': '0.500', 'sample2': 0.0}, 'a;c': {'sample1': 0.0, 'sample2': '0.700'}}
+    assert sample_names == ['sample1', 'sample2']
+    linD, sample_names = agg_sumgather_by_lineage([sg1,sg2], rank="superkingdom")
+    print("lineage dict: \n", linD)
+    assert linD == {'a': {'sample1': '0.500' ,'sample2': '0.700'}}
+    assert sample_names == ['sample1', 'sample2']
+
+
+def test_write_lineage_sample_frac(runtmp):
+    outfrac = runtmp.output('outfrac.csv')
+    sample_names = ['sample1', 'sample2']
+    sk_linD = {'a': {'sample1': '0.500' ,'sample2': '0.700'}}
+    with open(outfrac, 'w') as out_fp:
+        write_lineage_sample_frac(sample_names, sk_linD, out_fp)
+
+    frac_lines = [x.strip().split('\t') for x in open(outfrac, 'r')]
+    print("csv_lines: ", frac_lines)
+    assert frac_lines == [['lineage', 'sample1', 'sample2'], ['a', '0.500', '0.700']]
+
+    phy_linD = {'a;b': {'sample1': '0.500', 'sample2': '0'}, 'a;c': {'sample1': '0', 'sample2': '0.700'}}
+    with open(outfrac, 'w') as out_fp:
+        write_lineage_sample_frac(sample_names, phy_linD, out_fp)
+
+    frac_lines = [x.strip().split('\t') for x in open(outfrac, 'r')]
+    print("csv_lines: ", frac_lines)
+    assert frac_lines == [['lineage', 'sample1', 'sample2'], ['a;b', '0.500', '0'],  ['a;c', '0', '0.700']]
+
+def test_agg_sumgather_by_lineage_improper_rank(runtmp):
+    # some summarized gather dicts
+    sum_gather1 = {'superkingdom': [((LineagePair(rank='superkingdom', name='a'),), 0.5)],
+                  'phylum': [((LineagePair(rank='superkingdom', name='a'),
+                               LineagePair(rank='phylum', name='b')), 0.5)]}
+    sum_gather2 = {'superkingdom': [((LineagePair(rank='superkingdom', name='a'),), 0.7)],
+                  'phylum': [((LineagePair(rank='superkingdom', name='a'),
+                               LineagePair(rank='phylum', name='c')), 0.7)]}
+
+    # write summarized gather results csvs
+    sg1= runtmp.output("sample1.csv")
+    with open(sg1, 'w') as out_fp:
+        write_summary(sum_gather1, out_fp)
+
+    sg2= runtmp.output("sample2.csv")
+    with open(sg2, 'w') as out_fp:
+        write_summary(sum_gather2, out_fp)
+
+    # test agg_summarized_gather_csvs_by_lineage_at_rank
+    with pytest.raises(ValueError) as exc:
+        linD, sample_names = agg_sumgather_by_lineage([sg1,sg2], rank="strain")
+        print("ValueError: ", exc.value)
+        assert exc.value == "Rank strain not available."

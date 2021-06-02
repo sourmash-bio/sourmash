@@ -2,9 +2,8 @@
 Utility functions for taxonomy analysis tools.
 """
 import csv
-from os.path import exists
+from os.path import exists, basename
 from collections import namedtuple, defaultdict, Counter
-import itertools
 
 __all__ = ['get_ident', 'load_gather_results',
            'summarize_gather_at', 'find_missing_identities']
@@ -159,64 +158,57 @@ def write_classifications(classifications, csv_fp, sep='\t'):
             name, (lin,val) = result
             w.writerow([rank, name, f'{val:.3f}', display_lineage(lin)])
 
-def format_tax_to_frac(taxonomy_csvs, rank, output_csv):
+
+def agg_sumgather_by_lineage(gather_csvs, rank="species", accept_ranks = list(lca_utils.taxlist(include_strain=False)), force=False):
     '''
-    takes the output for sourmash taxonomy summarize and produces a 
-    tab-separated file with fractions for each sample. Sample names
-    are based on csv file names, with ".csv" removed
-    lineage	sample1	sample2	sample3	
-    lin_a	.4	.17	.6
-    lin_b	0	0	.1
-    lin_c	0	.3	0
-    lin_d	.2	.1	0
-    lin_e	0	0	.01
-    lin_f	0	.07	0
-    lin_g	0	0	0
-    lin_h	.3	.4	.2
+    Takes in one or more output csvs from `sourmash taxonomy summarize`
+    and aggregates the results into a nested dictionary with lineages
+    as the keys {lineage: {sample1: frac1, sample2: frac2}}.
+    Uses the file basename (minus .csv extension) as sample identifier.
     '''
-    samples = [csv.split(".")[0] for csv in csvs]
+    if rank not in accept_ranks:
+        raise ValueError(f"Rank {rank} not available.")
 
-    possible_ranks = ['superkingdom', "phylum", "class", "order", "family", "genus", "species"]
-    if rank not in possible_ranks:
-        raise ValueError(f"Rank {rank} not available")
+    all_samples = [basename(g_csv).rsplit(".csv", 1)[0] for g_csv in gather_csvs]
 
-    
-    lineage_dict = {}
-    sample_name_dict = {}
-    seen_lineages = set()
+    # default dict to store lineage: {sample_id: fraction} info. better way to do this?
+    sgD = defaultdict(lambda: {sample_id : 0.0 for sample_id in all_samples})
+    for g_csv in gather_csvs:
+        sample_id = basename(g_csv).rsplit(".csv", 1)[0]
 
-    # create dictionary that holds all of the sample names
-    for file in csvs:
-        sample_name = file.split('.')[0]
-        sample_name_dict[sample_name] = 0 
-
-    for file in csvs:
-        with open(file, 'r') as fp:
+        # collect lineage info for this sample
+        with open(g_csv, 'r') as fp:
             r = csv.DictReader(fp)
             for n, row in enumerate(r):
                 if row["rank"] == rank:
-                    seen_lineages.add(row["lineage"])
+                    lin = row["lineage"]
+                    frac = row["fraction"]
+                    sgD[lin][sample_id] = frac
             fp.close()
-
-    for lineage in seen_lineages:
-        lineage_dict[lineage] = sample_name_dict.copy()
-
-    for sample in sample_name_dict:
-        with open(sample + ".csv", "r") as fp:
-            r = csv.DictReader(fp)
-            for n, row in enumerate(r):
-                if row["rank"] == rank:
-                    lineage = (row["lineage"])
-                    fraction = (row["fraction"])
-                    lineage_dict[lineage][sample] = fraction
-            fp.close()
+    return sgD, all_samples
 
 
-    samples.insert(0, "lineage")
-    with open(output_csv, 'w') as f_output:
-        w = csv.DictWriter(f_output, samples)
-        w.writeheader()
-        for key,val in sorted(lineage_dict.items()):
-            row = {'lineage': key}
-            row.update(val)
-            w.writerow(row)
+def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, sep='\t'):
+    '''
+    takes in a lineage dictionary with sample counts (output of agg_sumgather_by_lineage)
+    and produces a tab-separated file with fractions for each sample.
+
+    input: {lin_a: {sample1: 0.4, sample2: 0.17, sample3: 0.6}
+            lin_b: {sample1: 0.0, sample2: 0.0, sample3: 0.1}
+            lin_c: {sample1: 0.3, sample2: 0.4, sample3: 0.2}}
+
+    output:
+
+    lineage    sample1	sample2	sample3
+    lin_a	  0.4    0.17     0.6
+    lin_b	  0.0    0.0      0.1
+    lin_c	  0.3    0.4      0.2
+    '''
+
+    header = ["lineage"] + sample_names
+    w = csv.DictWriter(out_fp, header, delimiter=sep)
+    w.writeheader()
+    for lin, sampleinfo in sorted(lineage_dict.items()):
+        row = {'lineage': lin}
+        row.update(sampleinfo)
+        w.writerow(row)
