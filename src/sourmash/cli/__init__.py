@@ -93,7 +93,7 @@ class SourmashParser(ArgumentParser):
 
 def get_parser():
     module_descs = {
-        'tax': 'Summarize taxonomy information',
+        'tax': 'Integrate taxonomy information',
         'lca': 'Taxonomic operations',
         'sketch': 'Create signatures',
         'sig': 'Manipulate signature files',

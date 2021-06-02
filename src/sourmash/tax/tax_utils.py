@@ -159,16 +159,16 @@ def write_classifications(classifications, csv_fp, sep='\t'):
             w.writerow([rank, name, f'{val:.3f}', display_lineage(lin)])
 
 
-def agg_sumgather_csvs_by_lineage(gather_csvs, rank="species", accept_ranks = list(lca_utils.taxlist(include_strain=False)), force=False):
+def combine_sumgather_csvs_by_lineage(gather_csvs, rank="species", accept_ranks = list(lca_utils.taxlist(include_strain=False)), force=False):
     '''
     Takes in one or more output csvs from `sourmash taxonomy summarize`
-    and aggregates the results into a nested dictionary with lineages
+    and combines the results into a nested dictionary with lineages
     as the keys {lineage: {sample1: frac1, sample2: frac2}}.
     Uses the file basename (minus .csv extension) as sample identifier.
 
     usage:
 
-        linD, all_samples = agg_sumgather_by_lineage(["sample1.csv", "sample2.csv"], rank="genus")
+        linD, all_samples = combine_sumgather_by_lineage(["sample1.csv", "sample2.csv"], rank="genus")
 
     output:
 
@@ -182,12 +182,12 @@ def agg_sumgather_csvs_by_lineage(gather_csvs, rank="species", accept_ranks = li
     if rank not in accept_ranks:
         raise ValueError(f"Rank {rank} not available.")
 
-    all_samples = [basename(g_csv).rsplit(".csv", 1)[0] for g_csv in gather_csvs]
+    all_samples = [basename(g_csv).rsplit(".csv", 1)[0].rsplit('.summarized')[0] for g_csv in gather_csvs]
 
     # default dict to store lineage: {sample_id: fraction} info. better way to do this?
     sgD = defaultdict(lambda: {sample_id : 0.0 for sample_id in all_samples})
     for g_csv in gather_csvs:
-        sample_id = basename(g_csv).rsplit(".csv", 1)[0]
+        sample_id = basename(g_csv).rsplit(".csv", 1)[0].rsplit('.summarized')[0]
 
         # collect lineage info for this sample
         with open(g_csv, 'r') as fp:
@@ -203,7 +203,7 @@ def agg_sumgather_csvs_by_lineage(gather_csvs, rank="species", accept_ranks = li
 
 def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, sep='\t'):
     '''
-    takes in a lineage dictionary with sample counts (output of agg_sumgather_by_lineage)
+    takes in a lineage dictionary with sample counts (output of combine_sumgather_by_lineage)
     and produces a tab-separated file with fractions for each sample.
 
     input: {lin_a: {sample1: 0.4, sample2: 0.17, sample3: 0.6}

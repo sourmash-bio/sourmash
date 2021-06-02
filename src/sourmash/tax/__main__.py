@@ -29,6 +29,7 @@ sourmash tax <command> [<args>]
 ** Commands can be:
 
 summarize <gather_results> [<gather_results> ... ]        - summarize taxonomic information for metagenome gather results
+combine <summarized_gather_results> [<summarized_gather_results> ... ] - combine outputs of `summarize` for multiple samples
 classify <gather_results> [<gather_results> ... ]   - taxonomic classification of genomes from gather results
 
 ** Use '-h' to get subcommand-specific help, e.g.
@@ -208,6 +209,43 @@ def classify(args):
         krona_outfile = make_outfile(args.output_base, ".krona.tsv")
         with FileOutputCSV(krona_outfile) as csv_fp:
             tax_utils.write_krona(args.rank, krona_results, csv_fp)
+
+def combine(args):
+    """
+    Combine summarize gather results by lineage and sample.
+
+    Takes in one or more output csvs from `sourmash taxonomy summarize`
+    and produces a tab-separated file with fractions for each sample.
+
+    Uses the file basename (minus .csv extension) as sample identifier.
+
+    example output:
+
+    lineage    sample1  sample2 sample3
+    lin_a     0.4    0.17     0.6
+    lin_b     0.0    0.0      0.1
+    lin_c     0.3    0.4      0.2
+
+    """
+
+    set_quiet(args.quiet)
+
+    # load summarized gather csvs into lineage dictionary
+    linD, all_samples = tax_utils.combine_sumgather_csvs_by_lineage(args.summarized_gather_results, rank=args.rank)
+    #if not linD:
+    #    notify(f'No summarized gather results loaded from {args.summarized_gather_results}. Exiting.')
+    #    sys.exit(-1)
+
+    # write output csv
+    if "csv" in args.output_format:
+        outfile = make_outfile(args.output_base, ".combined.csv")
+        with FileOutputCSV(outfile) as csv_fp:
+            tax_utils.write_lineage_sample_frac(all_samples, linD, csv_fp, sep=",")
+    if "tsv" in args.output_format:
+        outfile = make_outfile(args.output_base, ".combined.tsv")
+        with FileOutputCSV(outfile) as csv_fp:
+            tax_utils.write_lineage_sample_frac(all_samples, linD, csv_fp, sep="\t")
+
 
 def main(arglist=None):
     args = sourmash.cli.get_parser().parse_args(arglist)

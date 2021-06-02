@@ -75,7 +75,13 @@ information; these are grouped under the `sourmash tax` and
 
 `sourmash tax` commands:
 
+for metagenomes:
+
 * `tax summarize` - summarize metagenome gather results at each taxonomic rank.
+* `tax combine` - combine summarized metagenome gather results from many samples by lineage (at a specific rank)
+
+for genomes:
+
 * `tax classify` - summarize single-genome gather results and report most likely classification
 
 `sourmash lca` commands:
