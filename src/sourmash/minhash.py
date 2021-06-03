@@ -222,8 +222,6 @@ class MinHash(RustObject):
         a.merge(self)
         return a
 
-    copy = __copy__
-
     def __getstate__(self):
         "support pickling via __getstate__/__setstate__"
         return (
@@ -751,4 +749,3 @@ class FrozenMinHash(MinHash):
 
     def __copy__(self):
         return self
-    copy = __copy__
