@@ -571,7 +571,7 @@ def test_copy(track_abundance):
 def test_frozen_copy(track_abundance):
     a = MinHash(20, 21, track_abundance=track_abundance)
     a.add_hash(5)
-    b = a.to_frozen()
+    b = a.copy()
     assert 5 in b.hashes
     a.add_hash(6)
     assert 6 not in b.hashes
