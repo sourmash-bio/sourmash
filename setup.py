@@ -11,6 +11,14 @@ DEBUG_BUILD = True if os.environ.get("SOURMASH_DEBUG") == "1" else None
 
 setup(
   package_dir={"": "src"},
+  entry_points={
+    'console_scripts': [
+      'sourmash = sourmash.__main__:main'
+    ],
+    'distutils.setup_keywords': [
+      'universal_wheel = sourmash.dist:universal_wheel',
+    ],
+  },
   rust_extensions=[
     RustExtension("sourmash._lowlevel__lib",
                   py_limited_api="auto",
@@ -20,4 +28,5 @@ setup(
                   ),
   ],
   cffi_modules=["src/sourmash/ffi_build.py:ffibuilder"],
+  universal_wheel=True
 )
