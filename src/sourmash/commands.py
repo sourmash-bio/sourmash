@@ -347,6 +347,18 @@ def index(args):
         error('sparseness must be in range [0.0, 1.0].')
 
     if args.scaled:
+        if args.scaled < 1:
+            error('ERROR: --scaled value must be >= 1')
+            sys.exit(-1)
+        if args.scaled != round(args.scaled, 0):
+            error('ERROR: --scaled value must be integer value')
+            sys.exit(-1)
+        if args.scaled < 100:
+            error('ERROR: --scaled value must be >= 100')
+            sys.exit(-1)
+        if args.scaled > 1e6:
+            error('ERROR: --scaled value must be <= 1e6')
+            sys.exit(-1)
         args.scaled = int(args.scaled)
         notify('downsampling signatures to scaled={}', args.scaled)
 
@@ -383,6 +395,18 @@ def index(args):
             nums.add(ss.minhash.num)
 
             if args.scaled:
+                if args.scaled < 1:
+                    error('ERROR: --scaled value must be >= 1')
+                    sys.exit(-1)
+                if args.scaled != round(args.scaled, 0):
+                    error('ERROR: --scaled value must be integer value')
+                    sys.exit(-1)
+                if args.scaled < 100:
+                    error('ERROR: --scaled value must be >= 100')
+                    sys.exit(-1)
+                if args.scaled > 1e6:
+                    error('ERROR: --scaled value must be <= 1e6')
+                    sys.exit(-1)
                 ss.minhash = ss.minhash.downsample(scaled=args.scaled)
             if ss.minhash.track_abundance:
                 ss.minhash = ss.minhash.flatten()
@@ -442,6 +466,18 @@ def search(args):
 
     # downsample if requested
     if args.scaled:
+        if args.scaled < 1:
+            error('ERROR: --scaled value must be >= 1')
+            sys.exit(-1)
+        if args.scaled != round(args.scaled, 0):
+            error('ERROR: --scaled value must be integer value')
+            sys.exit(-1)
+        if args.scaled < 100:
+            error('ERROR: --scaled value must be >= 100')
+            sys.exit(-1)
+        if args.scaled > 1e6:
+            error('ERROR: --scaled value must be <= 1e6')
+            sys.exit(-1)
         if not query.minhash.scaled:
             error('cannot downsample a signature not created with --scaled')
             sys.exit(-1)
@@ -633,6 +669,18 @@ def gather(args):
 
     # downsample if requested
     if args.scaled:
+        if args.scaled < 1:
+            error('ERROR: --scaled value must be >= 1')
+            sys.exit(-1)
+        if args.scaled != round(args.scaled, 0):
+            error('ERROR: --scaled value must be integer value')
+            sys.exit(-1)
+        if args.scaled < 100:
+            error('ERROR: --scaled value must be >= 100')
+            sys.exit(-1)
+        if args.scaled > 1e6:
+            error('ERROR: --scaled value must be <= 1e6')
+            sys.exit(-1)
         notify('downsampling query from scaled={} to {}',
                query.minhash.scaled, int(args.scaled))
         query.minhash = query.minhash.downsample(scaled=args.scaled)
@@ -820,6 +868,18 @@ def multigather(args):
 
             # downsample if requested
             if args.scaled:
+                if args.scaled < 1:
+                    error('ERROR: --scaled value must be >= 1')
+                    sys.exit(-1)
+                if args.scaled != round(args.scaled, 0):
+                    error('ERROR: --scaled value must be integer value')
+                    sys.exit(-1)
+                if args.scaled < 100:
+                    error('ERROR: --scaled value must be >= 100')
+                    sys.exit(-1)
+                if args.scaled > 1e6:
+                    error('ERROR: --scaled value must be <= 1e6')
+                    sys.exit(-1)
                 notify('downsampling query from scaled={} to {}',
                        query.minhash.scaled, int(args.scaled))
                 query.minhash = query.minhash.downsample(scaled=args.scaled)
@@ -1073,6 +1133,18 @@ def prefetch(args):
 
     # downsample if/as requested
     if args.scaled:
+        if args.scaled < 1:
+            error('ERROR: --scaled value must be >= 1')
+            sys.exit(-1)
+        if args.scaled != round(args.scaled, 0):
+            error('ERROR: --scaled value must be integer value')
+            sys.exit(-1)
+        if args.scaled < 100:
+            error('ERROR: --scaled value must be >= 100')
+            sys.exit(-1)
+        if args.scaled > 1e6:
+            error('ERROR: --scaled value must be <= 1e6')
+            sys.exit(-1)
         notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
         query_mh = query_mh.downsample(scaled=args.scaled)
     notify(f"all sketches will be downsampled to scaled={query_mh.scaled}")
