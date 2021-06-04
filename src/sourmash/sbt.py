@@ -216,7 +216,8 @@ class SBT(Index):
 
         return self
 
-    def new_node_pos(self, node):
+    def new_node_pos(self, node_XXX):
+        # node is not used here?! CTB
         if not self._nodes:
             self.next_node = 1
             return 0
@@ -659,7 +660,10 @@ class SBT(Index):
                 node.storage = storage
 
                 if kind == "Zip":
-                    node.save(os.path.join(subdir, data['filename']))
+                    new_name = node.save(os.path.join(subdir, data['filename']))
+                    assert new_name.startswith(subdir + '/')
+                    new_name = new_name[len(subdir) + 1:]
+                    data['filename'] = new_name
                 elif kind == "FS":
                     data['filename'] = node.save(data['filename'])
 
