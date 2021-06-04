@@ -149,10 +149,6 @@ class SBT(Index):
         self._nodescache = _NodesCache(maxsize=cache_size)
         self._location = None
 
-        self.branch1 = 0
-        self.branch2 = 0
-        self.branch3 = 0
-
     @property
     def location(self):
         return self._location
@@ -252,8 +248,6 @@ class SBT(Index):
         self.add_node(leaf)
 
     def add_node(self, node):
-        old_n = len(self._leaves)
-
         pos = self.new_node_pos(node)
 
         if pos == 0:  # empty tree; initialize w/node.
@@ -271,8 +265,6 @@ class SBT(Index):
         #    this can happen with d != 2, in this case create the parent node
         p = self.parent(pos)
         if isinstance(p.node, Leaf):
-            self.branch1 += 1
-
             # Create a new internal node
             # node and parent are children of new internal node
             n = Node(self.factory, name="internal." + str(p.pos))
@@ -289,13 +281,9 @@ class SBT(Index):
             for child in (p.node, node):
                 child.update(n)
         elif isinstance(p.node, Node):
-            self.branch2 += 1
-
             self._leaves[pos] = node 
             node.update(p.node)
         elif p.node is None:
-            self.branch3 += 1
-
             n = Node(self.factory, name="internal." + str(p.pos))
             self._nodes[p.pos] = n
             c1 = self.children(p.pos)[0]
@@ -310,10 +298,6 @@ class SBT(Index):
             self._rebuild_node(p.pos)
             node.update(self._nodes[p.pos])
             p = self.parent(p.pos)
-
-        new_n = len(self._leaves)
-        if new_n != old_n + 1:
-            print('XXX', old_n, new_n)
 
     def _find_nodes(self, search_fn, *args, **kwargs):
         "Search the tree using `search_fn`."
@@ -662,6 +646,8 @@ class SBT(Index):
                 if kind == "Zip":
                     new_name = node.save(os.path.join(subdir, data['filename']))
                     assert new_name.startswith(subdir + '/')
+
+                    # strip off prefix
                     new_name = new_name[len(subdir) + 1:]
                     data['filename'] = new_name
                 elif kind == "FS":
