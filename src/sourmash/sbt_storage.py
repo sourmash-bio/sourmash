@@ -154,6 +154,8 @@ class ZipStorage(Storage):
                 self.zipfile.writestr(newpath, content)
             except (ValueError, RuntimeError):
                 # Can't write in the zipfile, write in buffer instead
+                # CTB: do we need to generate a new filename wrt to the
+                # bufferzip, too? Not sure this code is working as intended...
                 if self.bufferzip:
                     self.bufferzip.writestr(newpath, content)
                 else:
