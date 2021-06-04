@@ -145,29 +145,23 @@ class ZipStorage(Storage):
     def _save_to_zf(self, zf, path, content):
         # we repeat these steps for self.zipfile and self.bufferzip,
         # so better to have an auxiliary method
-        newpath, do_write = self._generate_filename(zf, path, content)
-
-        if do_write:
-            zf.writestr(newpath, content)
-        return newpath
+        zf.writestr(path, content)
 
     def save(self, path, content):
         # First try to save to self.zipfile, if it is not writable
         # or would introduce duplicates then try to save it in the buffer
-        try:
-            newpath = self._save_to_zf(self.zipfile, path, content)
-        except (ValueError, RuntimeError):
-            # Can't write in the zipfile, write in buffer instead
-            print('EEE 1')
-            if self.bufferzip:
-                print('EEE 2')
-                # path here needs to be updated.
-                newpath = self._save_to_zf(self.bufferzip, path, content)
-                print('EEE 3')
-            else:
-                print('EEE 4')
-                # Throw error, can't write the data
-                raise ValueError("can't write data")
+        newpath, do_write = self._generate_filename(self.zipfile, path, content)
+        if do_write:
+            try:
+                self._save_to_zf(self.zipfile, newpath, content)
+            except (ValueError, RuntimeError):
+                # Can't write in the zipfile, write in buffer instead
+                if self.bufferzip:
+                    # path here needs to be updated.
+                    self._save_to_zf(self.bufferzip, newpath, content)
+                else:
+                    # Throw error, can't write the data
+                    raise ValueError("can't write data")
 
         return newpath
 
