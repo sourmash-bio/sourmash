@@ -19,6 +19,9 @@ class Storage(ABC):
     def load(self, path):
         pass
 
+    def list_sbts(self):
+        return []
+
     def init_args(self):
         return {}
 
