@@ -423,6 +423,8 @@ def index(args):
     if tree.storage:
         tree.storage.close()
 
+    print('XYZ', tree.branch1, tree.branch2, tree.branch3)
+
 
 def search(args):
     from .search import (search_databases_with_flat_query,
