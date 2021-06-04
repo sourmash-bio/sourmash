@@ -12,7 +12,7 @@ from pathlib import Path
 class Storage(ABC):
 
     @abc.abstractmethod
-    def save(self, path, content, overwrite=False):
+    def save(self, path, content, *, overwrite=False):
         pass
 
     @abc.abstractmethod
