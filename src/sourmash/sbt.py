@@ -711,18 +711,18 @@ class SBT(Index):
                     if ZipStorage.can_open(location2):
                         storage = ZipStorage(location2)
 
-            if storage:
-                sbts = storage.list_sbts()
-                if len(sbts) == 1:
-                    tree_data = storage.load(sbts[0])
+        if storage:
+            sbts = storage.list_sbts()
+            if len(sbts) == 1:
+                tree_data = storage.load(sbts[0])
 
-                tempfile = NamedTemporaryFile()
+            tempfile = NamedTemporaryFile()
 
-                tempfile.write(tree_data)
-                tempfile.flush()
+            tempfile.write(tree_data)
+            tempfile.flush()
 
-                dirname = os.path.dirname(tempfile.name)
-                sbt_name = os.path.basename(tempfile.name)
+            dirname = os.path.dirname(tempfile.name)
+            sbt_name = os.path.basename(tempfile.name)
 
         if sbt_name is None:
             dirname = os.path.dirname(os.path.abspath(location))
@@ -735,9 +735,6 @@ class SBT(Index):
             sbt_fn += '.sbt.json'
         with open(sbt_fn) as fp:
             jnodes = json.load(fp)
-
-        #json_str = storage.load(sbt_fn)
-        #jnodes = json.loads(json_str)
 
         if tempfile is not None:
             tempfile.close()
