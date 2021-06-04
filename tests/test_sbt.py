@@ -367,10 +367,10 @@ def test_sbt_zipstorage(tmpdir):
     print(*old_result, sep='\n')
 
     with ZipStorage(str(tmpdir.join("tree.sbt.zip"))) as storage:
-        tree.save(str(tmpdir.join("tree.sbt.json")), storage=storage)
+        tree.save("tree.sbt.json", storage=storage)
 
     with ZipStorage(str(tmpdir.join("tree.sbt.zip"))) as storage:
-        tree = SBT.load(str(tmpdir.join("tree.sbt.json")),
+        tree = SBT.load("tree.sbt.json",
                         leaf_loader=SigLeaf.load,
                         storage=storage)
 
