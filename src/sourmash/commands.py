@@ -354,11 +354,9 @@ def index(args):
             error('ERROR: --scaled value must be integer value')
             sys.exit(-1)
         if args.scaled < 100:
-            error('ERROR: --scaled value must be >= 100')
-            sys.exit(-1)
+            notify('WARNING: scaled value should be >= 100. Continuing anyway.')
         if args.scaled > 1e6:
-            error('ERROR: --scaled value must be <= 1e6')
-            sys.exit(-1)
+            notify('WARNING: scaled value should be <= 1e6. Continuing anyway.')
         args.scaled = int(args.scaled)
         notify('downsampling signatures to scaled={}', args.scaled)
 
@@ -402,11 +400,9 @@ def index(args):
                     error('ERROR: --scaled value must be integer value')
                     sys.exit(-1)
                 if args.scaled < 100:
-                    error('ERROR: --scaled value must be >= 100')
-                    sys.exit(-1)
+                    notify('WARNING: scaled value should be >= 100. Continuing anyway.')
                 if args.scaled > 1e6:
-                    error('ERROR: --scaled value must be <= 1e6')
-                    sys.exit(-1)
+                    notify('WARNING: scaled value should be <= 1e6. Continuing anyway.')
                 ss.minhash = ss.minhash.downsample(scaled=args.scaled)
             if ss.minhash.track_abundance:
                 ss.minhash = ss.minhash.flatten()
@@ -473,11 +469,9 @@ def search(args):
             error('ERROR: --scaled value must be integer value')
             sys.exit(-1)
         if args.scaled < 100:
-            error('ERROR: --scaled value must be >= 100')
-            sys.exit(-1)
+            notify('WARNING: scaled value should be >= 100. Continuing anyway.')
         if args.scaled > 1e6:
-            error('ERROR: --scaled value must be <= 1e6')
-            sys.exit(-1)
+            notify('WARNING: scaled value should be <= 1e6. Continuing anyway.')
         if not query.minhash.scaled:
             error('cannot downsample a signature not created with --scaled')
             sys.exit(-1)
@@ -676,11 +670,9 @@ def gather(args):
             error('ERROR: --scaled value must be integer value')
             sys.exit(-1)
         if args.scaled < 100:
-            error('ERROR: --scaled value must be >= 100')
-            sys.exit(-1)
+            notify('WARNING: scaled value should be >= 100. Continuing anyway.')
         if args.scaled > 1e6:
-            error('ERROR: --scaled value must be <= 1e6')
-            sys.exit(-1)
+            notify('WARNING: scaled value should be <= 1e6. Continuing anyway.')
         notify('downsampling query from scaled={} to {}',
                query.minhash.scaled, int(args.scaled))
         query.minhash = query.minhash.downsample(scaled=args.scaled)
@@ -875,11 +867,9 @@ def multigather(args):
                     error('ERROR: --scaled value must be integer value')
                     sys.exit(-1)
                 if args.scaled < 100:
-                    error('ERROR: --scaled value must be >= 100')
-                    sys.exit(-1)
+                    notify('WARNING: scaled value should be >= 100. Continuing anyway.')
                 if args.scaled > 1e6:
-                    error('ERROR: --scaled value must be <= 1e6')
-                    sys.exit(-1)
+                    notify('WARNING: scaled value should be <= 1e6. Continuing anyway.')
                 notify('downsampling query from scaled={} to {}',
                        query.minhash.scaled, int(args.scaled))
                 query.minhash = query.minhash.downsample(scaled=args.scaled)
@@ -1140,11 +1130,9 @@ def prefetch(args):
             error('ERROR: --scaled value must be integer value')
             sys.exit(-1)
         if args.scaled < 100:
-            error('ERROR: --scaled value must be >= 100')
-            sys.exit(-1)
+            notify('WARNING: scaled value should be >= 100. Continuing anyway.')
         if args.scaled > 1e6:
-            error('ERROR: --scaled value must be <= 1e6')
-            sys.exit(-1)
+            notify('WARNING: scaled value should be <= 1e6. Continuing anyway.')
         notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
         query_mh = query_mh.downsample(scaled=args.scaled)
     notify(f"all sketches will be downsampled to scaled={query_mh.scaled}")
