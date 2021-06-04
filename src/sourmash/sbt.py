@@ -288,6 +288,7 @@ class SBT(Index):
             self._leaves[c1.pos] = node 
             node.update(n)
         else:
+            # this branch should never be reached; put guard in to make sure!
             assert 0
 
         # update all parents!
@@ -666,12 +667,12 @@ class SBT(Index):
         if kind == "Zip":
             tree_data = json.dumps(info).encode("utf-8")
             save_path = "{}.sbt.json".format(name)
-            storage.save_exact(save_path, tree_data)
+            storage.save(save_path, tree_data, overwrite=True)
             storage.flush()
 
         elif kind == "FS":
-            with open(index_filename, 'w') as fp:
-                json.dump(info, fp)
+            content = json.dumps(info).encode('utf-8')
+            storage.save(index_filename, content, overwrite=True)
 
         notify("Finished saving SBT index, available at {0}\n".format(index_filename))
 
@@ -734,6 +735,9 @@ class SBT(Index):
             sbt_fn += '.sbt.json'
         with open(sbt_fn) as fp:
             jnodes = json.load(fp)
+
+        #json_str = storage.load(sbt_fn)
+        #jnodes = json.loads(json_str)
 
         if tempfile is not None:
             tempfile.close()
@@ -1193,7 +1197,7 @@ class Node(object):
 
     def save(self, path):
         buf = self.data.to_bytes(compression=1)
-        return self.storage.save_exact(path, buf)
+        return self.storage.save(path, buf, overwrite=True)
 
     @property
     def data(self):
