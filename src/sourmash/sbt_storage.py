@@ -1,5 +1,6 @@
 import abc
 from io import BytesIO
+import contextlib
 import os
 import shutil
 import sys
@@ -18,6 +19,9 @@ class Storage(ABC):
     @abc.abstractmethod
     def load(self, path):
         pass
+
+    def save_exact(self, path, content):
+        return self.save(path, content)
 
     def init_args(self):
         return {}
@@ -163,6 +167,18 @@ class ZipStorage(Storage):
                     raise ValueError("can't write data")
 
         return newpath
+
+    def save_exact(self, path, content):
+        # overwrite
+        try:
+            self.zipfile.writestr(path, content)
+        except (ValueError, RuntimeError):
+            if self.bufferzip:
+                self.bufferzip.writestr(path, content)
+            else:
+                raise ValueError("can't write data")
+
+        return path
 
     def _load_from_zf(self, zf, path):
         # we repeat these steps for self.zipfile and self.bufferzip,

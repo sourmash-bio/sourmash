@@ -666,7 +666,7 @@ class SBT(Index):
         if kind == "Zip":
             tree_data = json.dumps(info).encode("utf-8")
             save_path = "{}.sbt.json".format(name)
-            storage.save(save_path, tree_data)
+            storage.save_exact(save_path, tree_data)
             storage.flush()
 
         elif kind == "FS":
@@ -1193,7 +1193,7 @@ class Node(object):
 
     def save(self, path):
         buf = self.data.to_bytes(compression=1)
-        return self.storage.save(path, buf)
+        return self.storage.save_exact(path, buf)
 
     @property
     def data(self):
