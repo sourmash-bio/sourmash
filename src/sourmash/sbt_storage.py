@@ -113,20 +113,20 @@ class ZipStorage(Storage):
         if len(subdirs) == 1:
             self.subdir = subdirs[0]
 
-    def _save_to_zf(self, zf, path, content):
+    def _generate_filename(self, zf, path, content):
         # we repeat these steps for self.zipfile and self.bufferzip,
         # so better to have an auxiliary method
         try:
             info = zf.getinfo(path)
         except KeyError:
-            # entry not there yet, write a new one
-            newpath = path
+            # entry not there yet, use that path
+            return path, True
         else:
             entry_content = zf.read(info)
 
             if entry_content == content:
-                # skip writing
-                return path
+                # keep path
+                return path, False
 
             # Trying to write new content:
             # create newpath based on path
@@ -137,12 +137,18 @@ class ZipStorage(Storage):
                 try:
                     zf.getinfo(testpath)
                 except KeyError:
-                    # testpath is available, use it as newpath
                     newpath = testpath
                 else:
                     n += 1
+            return newpath, True
 
-        zf.writestr(newpath, content)
+    def _save_to_zf(self, zf, path, content):
+        # we repeat these steps for self.zipfile and self.bufferzip,
+        # so better to have an auxiliary method
+        newpath, do_write = self._generate_filename(zf, path, content)
+
+        if do_write:
+            zf.writestr(newpath, content)
         return newpath
 
     def save(self, path, content):
@@ -152,9 +158,14 @@ class ZipStorage(Storage):
             newpath = self._save_to_zf(self.zipfile, path, content)
         except (ValueError, RuntimeError):
             # Can't write in the zipfile, write in buffer instead
+            print('EEE 1')
             if self.bufferzip:
+                print('EEE 2')
+                # path here needs to be updated.
                 newpath = self._save_to_zf(self.bufferzip, path, content)
+                print('EEE 3')
             else:
+                print('EEE 4')
                 # Throw error, can't write the data
                 raise ValueError("can't write data")
 
