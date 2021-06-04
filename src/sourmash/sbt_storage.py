@@ -113,39 +113,37 @@ class ZipStorage(Storage):
         if len(subdirs) == 1:
             self.subdir = subdirs[0]
 
+    def _content_matches(self, zf, path, content):
+        info = zf.getinfo(path)
+        entry_content = zf.read(info)
+        if entry_content == content:
+            return True
+        return False
+
     def _generate_filename(self, zf, path, content):
-        # we repeat these steps for self.zipfile and self.bufferzip,
-        # so better to have an auxiliary method
         try:
-            info = zf.getinfo(path)
+            matches = self._content_matches(zf, path, content)
+            if matches:
+                return path, False
         except KeyError:
             # entry not there yet, use that path
             return path, True
-        else:
-            entry_content = zf.read(info)
 
-            if entry_content == content:
-                # keep path
-                return path, False
-
-            # Trying to write new content:
-            # create newpath based on path
-            newpath = None
-            n = 0
-            while newpath is None:
-                testpath = "{}_{}".format(path, n)
-                try:
-                    zf.getinfo(testpath)
-                except KeyError:
-                    newpath = testpath
+        # content does not match - generate new path based on path
+        newpath = None
+        n = 0
+        while newpath is None:
+            testpath = "{}_{}".format(path, n)
+            try:
+                matches = self._content_matches(zf, testpath, content)
+                if matches:
+                    return testpath, False
                 else:
                     n += 1
-            return newpath, True
+            except KeyError:
+                return testpath, True
 
-    def _save_to_zf(self, zf, path, content):
-        # we repeat these steps for self.zipfile and self.bufferzip,
-        # so better to have an auxiliary method
-        zf.writestr(path, content)
+        assert 0 # should never get here!
 
     def save(self, path, content):
         # First try to save to self.zipfile, if it is not writable
@@ -153,12 +151,11 @@ class ZipStorage(Storage):
         newpath, do_write = self._generate_filename(self.zipfile, path, content)
         if do_write:
             try:
-                self._save_to_zf(self.zipfile, newpath, content)
+                self.zipfile.writestr(newpath, content)
             except (ValueError, RuntimeError):
                 # Can't write in the zipfile, write in buffer instead
                 if self.bufferzip:
-                    # path here needs to be updated.
-                    self._save_to_zf(self.bufferzip, newpath, content)
+                    self.bufferzip.writestr(newpath, content)
                 else:
                     # Throw error, can't write the data
                     raise ValueError("can't write data")

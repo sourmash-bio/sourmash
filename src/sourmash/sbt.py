@@ -212,8 +212,8 @@ class SBT(Index):
 
         return self
 
-    def new_node_pos(self, node_XXX):
-        # node is not used here?! CTB
+    def new_node_pos(self, node):
+        # note: node is not actually used in this function! CTB
         if not self._nodes:
             self.next_node = 1
             return 0
@@ -272,8 +272,6 @@ class SBT(Index):
 
             c1, c2 = self.children(p.pos)[:2]
 
-            assert not c1.pos in self._leaves
-            assert not c2.pos in self._leaves
             self._leaves[c1.pos] = p.node
             self._leaves[c2.pos] = node 
             del self._leaves[p.pos]
