@@ -367,10 +367,10 @@ def test_sbt_zipstorage(tmpdir):
     print(*old_result, sep='\n')
 
     with ZipStorage(str(tmpdir.join("tree.sbt.zip"))) as storage:
-        tree.save("tree.sbt.json", storage=storage)
+        tree.save(str(tmpdir.join("tree.sbt.json")), storage=storage)
 
     with ZipStorage(str(tmpdir.join("tree.sbt.zip"))) as storage:
-        tree = SBT.load("tree.sbt.json",
+        tree = SBT.load(str(tmpdir.join("tree.sbt.json")),
                         leaf_loader=SigLeaf.load,
                         storage=storage)
 
@@ -444,14 +444,12 @@ def test_sbt_redisstorage():
 
         try:
             with RedisStorage() as storage:
-                tree.save('tree.sbt.json', storage=storage)
+                tree.save(os.path.join(location, 'tree.sbt.json'), storage=storage)
         except redis.exceptions.ConnectionError:
             pytest.xfail("Couldn't connect to redis server")
 
-        print('XXX tree saved!')
-
         with RedisStorage() as storage:
-            tree = SBT.load('tree.sbt.json',
+            tree = SBT.load(os.path.join(location, 'tree.sbt.json'),
                             leaf_loader=SigLeaf.load,
                             storage=storage)
 
