@@ -661,6 +661,15 @@ class SBT(Index):
             if n % 100 == 0:
                 notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
 
+        # now, save the index file.
+        #
+        # for zipfiles, it gets saved in the zip file.
+        # for FSStorage, we use the storage.save function.
+        #
+        # for everything else (Redis, IPFS), the index gets saved locally.
+        # the nodes/leaves are saved/loaded from the datatabase, and
+        # the index is used to get their names for loading.
+        #
         notify("Finished saving nodes, now saving SBT index file.")
         info['nodes'] = nodes
         info['signatures'] = leaves
