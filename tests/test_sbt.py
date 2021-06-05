@@ -367,10 +367,10 @@ def test_sbt_zipstorage(tmpdir):
     print(*old_result, sep='\n')
 
     with ZipStorage(str(tmpdir.join("tree.sbt.zip"))) as storage:
-        tree.save(str(tmpdir.join("tree.sbt.json")), storage=storage)
+        tree.save("tree.sbt.json", storage=storage)
 
     with ZipStorage(str(tmpdir.join("tree.sbt.zip"))) as storage:
-        tree = SBT.load(str(tmpdir.join("tree.sbt.json")),
+        tree = SBT.load("tree.sbt.json",
                         leaf_loader=SigLeaf.load,
                         storage=storage)
 
@@ -983,3 +983,71 @@ def test_sbt_no_containment_on_num():
         results = list(tree.find(search_obj, to_search))
 
     assert "this search requires a scaled signature" in str(exc)
+
+
+def test_build_sbt_zip_with_dups(runtmp):
+    dups_data = utils.get_test_data('duplicate-sigs')
+
+    all_sigs = set(sourmash.load_file_as_signatures(dups_data))
+    assert len(all_sigs) == 4
+
+    runtmp.run_sourmash('index', 'dups.sbt.zip', dups_data)
+    outfile = runtmp.output('dups.sbt.zip')
+
+    sbt_sigs = set(sourmash.load_file_as_signatures(outfile))
+    assert len(sbt_sigs) == 4
+
+    assert all_sigs == sbt_sigs
+
+
+def test_build_sbt_zip_with_dups_exists(runtmp):
+    dups_data = utils.get_test_data('duplicate-sigs')
+
+    all_sigs = set(sourmash.load_file_as_signatures(dups_data))
+    assert len(all_sigs) == 4
+
+    runtmp.run_sourmash('index', 'dups.sbt.zip', dups_data)
+    outfile = runtmp.output('dups.sbt.zip')
+
+    # run again, to see what happens :)
+    runtmp.run_sourmash('index', 'dups.sbt.zip', dups_data)
+    outfile = runtmp.output('dups.sbt.zip')
+
+    sbt_sigs = set(sourmash.load_file_as_signatures(outfile))
+    assert len(sbt_sigs) == 4
+
+    assert all_sigs == sbt_sigs
+
+
+def test_build_sbt_json_with_dups(runtmp):
+    dups_data = utils.get_test_data('duplicate-sigs')
+
+    all_sigs = set(sourmash.load_file_as_signatures(dups_data))
+    assert len(all_sigs) == 4
+
+    runtmp.run_sourmash('index', 'dups.sbt.json', dups_data)
+    outfile = runtmp.output('dups.sbt.json')
+
+    sbt_sigs = set(sourmash.load_file_as_signatures(outfile))
+    assert len(sbt_sigs) == 4
+
+    assert all_sigs == sbt_sigs
+
+
+def test_build_sbt_json_with_dups_exists(runtmp):
+    dups_data = utils.get_test_data('duplicate-sigs')
+
+    all_sigs = set(sourmash.load_file_as_signatures(dups_data))
+    assert len(all_sigs) == 4
+
+    runtmp.run_sourmash('index', 'dups.sbt.json', dups_data)
+    outfile = runtmp.output('dups.sbt.json')
+
+    # run again, see what happens!
+    runtmp.run_sourmash('index', 'dups.sbt.json', dups_data)
+    outfile = runtmp.output('dups.sbt.json')
+
+    sbt_sigs = set(sourmash.load_file_as_signatures(outfile))
+    assert len(sbt_sigs) == 4
+
+    assert all_sigs == sbt_sigs
