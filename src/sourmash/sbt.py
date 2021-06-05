@@ -716,13 +716,13 @@ class SBT(Index):
             if len(sbts) == 1:
                 tree_data = storage.load(sbts[0])
 
-            tempfile = NamedTemporaryFile()
+                tempfile = NamedTemporaryFile()
 
-            tempfile.write(tree_data)
-            tempfile.flush()
+                tempfile.write(tree_data)
+                tempfile.flush()
 
-            dirname = os.path.dirname(tempfile.name)
-            sbt_name = os.path.basename(tempfile.name)
+                dirname = os.path.dirname(tempfile.name)
+                sbt_name = os.path.basename(tempfile.name)
 
         if sbt_name is None:
             dirname = os.path.dirname(os.path.abspath(location))

@@ -444,12 +444,14 @@ def test_sbt_redisstorage():
 
         try:
             with RedisStorage() as storage:
-                tree.save(os.path.join(location, 'tree.sbt.json'), storage=storage)
+                tree.save('tree.sbt.json', storage=storage)
         except redis.exceptions.ConnectionError:
             pytest.xfail("Couldn't connect to redis server")
 
+        print('XXX tree saved!')
+
         with RedisStorage() as storage:
-            tree = SBT.load(os.path.join(location, 'tree.sbt.json'),
+            tree = SBT.load('tree.sbt.json',
                             leaf_loader=SigLeaf.load,
                             storage=storage)
 
