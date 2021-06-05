@@ -242,7 +242,7 @@ class Index(ABC):
         scaled = max(query_mh.scaled, match_mh.scaled)
         match_mh = match_mh.downsample(scaled=scaled).flatten()
         query_mh = query_mh.downsample(scaled=scaled)
-        intersect_mh = match_mh.intersection(query_mh)
+        intersect_mh = match_mh & query_mh
 
         return [sr, intersect_mh]
 
@@ -623,7 +623,7 @@ class CounterGather:
 
         # calculate intersection of this "best match" with query.
         match_mh = match.minhash.downsample(scaled=scaled).flatten()
-        intersect_mh = cur_query_mh.intersection(match_mh)
+        intersect_mh = cur_query_mh & match_mh
         location = self.locations[dataset_id]
 
         # build result & return intersection
