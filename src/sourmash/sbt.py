@@ -573,6 +573,7 @@ class SBT(Index):
         info["index_type"] = self.__class__.__name__  # TODO: check
 
         # choose between ZipStorage and FS (file system/directory) storage.
+        kind = None
         if not path.endswith(".sbt.json"):
             kind = "Zip"
             if not path.endswith('.sbt.zip'):
@@ -587,12 +588,12 @@ class SBT(Index):
             index_filename = os.path.abspath(path)
         else:                             # path.endswith('.sbt.json')
             assert path.endswith('.sbt.json')
-            kind = "FS"
             name = os.path.basename(path)
             name = name[:-9]
             index_filename = os.path.abspath(path)
 
             if storage is None:
+                kind = "FS"
                 # default storage
                 location = os.path.dirname(index_filename)
                 subdir = '.sbt.{}'.format(name)
@@ -649,7 +650,7 @@ class SBT(Index):
                     # strip off prefix
                     new_name = new_name[len(subdir) + 1:]
                     data['filename'] = new_name
-                elif kind == "FS":
+                else:
                     data['filename'] = node.save(data['filename'])
 
             if isinstance(node, Node):
@@ -664,15 +665,18 @@ class SBT(Index):
         info['nodes'] = nodes
         info['signatures'] = leaves
 
+        tree_data = json.dumps(info).encode("utf-8")
         if kind == "Zip":
-            tree_data = json.dumps(info).encode("utf-8")
             save_path = "{}.sbt.json".format(name)
             storage.save(save_path, tree_data, overwrite=True)
             storage.flush()
 
         elif kind == "FS":
-            content = json.dumps(info).encode('utf-8')
-            storage.save(index_filename, content, overwrite=True)
+            storage.save(index_filename, tree_data, overwrite=True)
+        else:
+            # save tree locally.
+            with open(index_filename, 'wb') as tree_fp:
+                tree_fp.write(tree_data)
 
         notify("Finished saving SBT index, available at {0}\n".format(index_filename))
 
