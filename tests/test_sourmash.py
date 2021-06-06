@@ -1940,6 +1940,37 @@ def test_search_traverse_incompatible(c):
 # explanation: you cannot downsample a scaled SBT to match a scaled
 # signature, so make sure that when you try such a search, it fails!
 # (you *can* downsample a signature to match an SBT.)
+
+
+def test_check_scaled_bounds_zero():
+
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = ['index', 'gcf_all']
+        cmd.extend(testdata_sigs)
+        cmd.extend(['-k', '21'])
+
+        status, out, err = utils.runscript('sourmash', cmd,
+                                            in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
+
+        cmd = 'search {} gcf_all -k 21 --scaled 0'.format(query_sig)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                            in_directory=location, fail_ok=True)
+        assert status == -1
+
+        print(out)
+        print(err)
+
+        assert "ERROR: cannot use 'gcf_all' for this query." in err
+        assert "search scaled value 0 is less than database scaled value of 10000" in err
+
+
 def test_search_metagenome_downsample():
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
