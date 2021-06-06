@@ -1415,9 +1415,7 @@ def test_remove_many(track_abundance):
     assert all(c % 6 != 0 for c in a.hashes)
 
 # tmp name / draft test case
-def test_remove_many(track_abundance):
-    import sys
-    
+def test_remove_many_new(track_abundance):
     original_mh = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
     added_mh = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
     tested_mh = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
