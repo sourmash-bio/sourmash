@@ -8,7 +8,6 @@ import os
 from collections import defaultdict
 
 import sourmash
-import copy
 from sourmash.sourmash_args import FileOutput
 
 from sourmash.logging import set_quiet, error, notify, set_quiet, print_results, debug
@@ -725,7 +724,7 @@ def downsample(args):
                     if max(mins) < max_hash:
                         raise ValueError("this num MinHash does not have enough hashes to convert it into a scaled MinHash.")
 
-                    mh_new = copy.copy(mh)
+                    mh_new = mh.copy()
                     _set_num_scaled(mh_new, 0, args.scaled)
             elif args.num:
                 if mh.num:
@@ -735,7 +734,7 @@ def downsample(args):
                     if len(mh) < args.num:
                         raise ValueError("this scaled MinHash has only {} hashes")
 
-                    mh_new = copy.copy(mh)
+                    mh_new = mh.copy()
                     _set_num_scaled(mh_new, args.num, 0)
 
             sigobj.minhash = mh_new
