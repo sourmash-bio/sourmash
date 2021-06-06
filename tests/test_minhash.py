@@ -1414,6 +1414,30 @@ def test_remove_many(track_abundance):
     assert len(a) == 33
     assert all(c % 6 != 0 for c in a.hashes)
 
+# tmp name / draft test case
+def test_remove_many(track_abundance):
+    import sys
+    
+    original_mh = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
+    added_mh = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
+    tested_mh = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
+
+    original_mh.add_many(list(range(101)))
+    added_mh.add_many(list(range(101,201))) # contains original in it
+    tested_mh.add_many(list(range(201))) # original + added
+
+    # Now we should expect tested_minhash == original_minhash
+    tested_mh.remove_many(added_mh)
+
+    # Assertion
+    original_sig = signature.SourmashSignature(original_mh)
+    tested_sig = signature.SourmashSignature(tested_mh)
+
+    # Should pass if the hashes list in the same order
+    assert original_mh.hashes == tested_mh.hashes
+    assert len(original_mh) == len(tested_mh)
+    assert original_sig.md5sum() == tested_sig.md5sum()
+
 
 def test_add_many(track_abundance):
     a = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
