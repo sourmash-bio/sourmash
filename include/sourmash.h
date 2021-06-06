@@ -227,6 +227,8 @@ uint32_t kmerminhash_num(const SourmashKmerMinHash *ptr);
 
 void kmerminhash_remove_hash(SourmashKmerMinHash *ptr, uint64_t h);
 
+void kmerminhash_remove_from(SourmashKmerMinHash *ptr, const SourmashKmerMinHash *other);
+
 void kmerminhash_remove_many(SourmashKmerMinHash *ptr,
                              const uint64_t *hashes_ptr,
                              uintptr_t insize);
