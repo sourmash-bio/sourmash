@@ -5,7 +5,6 @@ import csv
 import os
 import os.path
 import sys
-import copy
 
 import screed
 from .compare import (compare_all_pairs, compare_serial_containment,
@@ -578,7 +577,7 @@ def categorize(args):
                orig_query.minhash.ksize, orig_query.minhash.moltype)
 
         if args.ignore_abundance:
-            query = copy.copy(orig_query)
+            query = orig_query.copy()
             query.minhash = query.minhash.flatten()
         else:
             if orig_query.minhash.track_abundance:
@@ -658,7 +657,7 @@ def gather(args):
 
     if args.prefetch:           # note: on by default!
         notify("Starting prefetch sweep across databases.")
-        prefetch_query = copy.copy(query)
+        prefetch_query = query.copy()
         prefetch_query.minhash = prefetch_query.minhash.flatten()
         save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
         save_prefetch.open()
@@ -831,7 +830,7 @@ def multigather(args):
                 continue
 
             counters = []
-            prefetch_query = copy.copy(query)
+            prefetch_query = query.copy()
             prefetch_query.minhash = prefetch_query.minhash.flatten()
 
             counters = []
