@@ -242,7 +242,7 @@ def search_databases_with_abund_query(query, databases, **kwargs):
 ###
 
 GatherResult = namedtuple('GatherResult',
-                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, match, f_match_orig, unique_intersect_bp, gather_result_rank, remaining_bp')
+                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, match, f_match_orig, unique_intersect_bp, gather_result_rank, remaining_bp, query_filename, query_name, query_md5, query_bp')
 
 
 def _find_best(counters, query, threshold_bp):
@@ -281,6 +281,10 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
     """
     # track original query information for later usage.
     track_abundance = query.minhash.track_abundance and not ignore_abundance
+    orig_query_bp = len(query.minhash) * query.minhash.scaled
+    orig_query_filename = query.filename
+    orig_query_name = query.name
+    orig_query_md5 = query.md5sum()[:8]
     orig_query_mh = query.minhash
 
     # do we pay attention to abundances?
@@ -322,7 +326,7 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
 
         # calculate intersection with query hashes:
         unique_intersect_bp = cmp_scaled * len(intersect_mh)
-        intersect_orig_mh = orig_query_mh.intersection(found_mh)
+        intersect_orig_mh = orig_query_mh & found_mh
         intersect_bp = cmp_scaled * len(intersect_orig_mh)
 
         # calculate fractions wrt first denominator - genome size
@@ -381,7 +385,12 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
                               name=str(best_match),
                               match=best_match,
                               gather_result_rank=result_n,
-                              remaining_bp=remaining_bp)
+                              remaining_bp=remaining_bp,
+                              query_bp = orig_query_bp,
+                              query_filename=orig_query_filename,
+                              query_name=orig_query_name,
+                              query_md5=orig_query_md5,
+                              )
         result_n += 1
 
         yield result, weighted_missed, new_query
@@ -416,7 +425,7 @@ def prefetch_database(query, database, threshold_bp):
         db_mh = match.minhash.flatten().downsample(scaled=scaled)
 
         # calculate db match intersection with query hashes:
-        intersect_mh = query_mh.intersection(db_mh)
+        intersect_mh = query_mh & db_mh
         assert len(intersect_mh) >= threshold
 
         f_query_match = db_mh.contained_by(query_mh)

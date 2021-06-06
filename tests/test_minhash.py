@@ -1693,10 +1693,27 @@ def test_intersection_1_num():
     mh2.add_hash(2)
 
     mh3 = mh1.intersection(mh2)
-    print(set(mh3.hashes))
+    print("mh.intersection INTERSECTION HASHES:",set(mh3.hashes))
     assert len(mh3) == 1
     assert 0 in mh3.hashes
 
+def test_and_operator():
+    mh1 = MinHash(20, 21)
+    mh1.add_hash(5)
+    mh1.add_hash(6)
+    mh2 = MinHash(20, 21)
+    mh2.add_hash(6)
+    mh2.add_hash(7)
+
+    print("\n \n mh1 EQUALS ", mh1.hashes, "\n mh2 EQUALS", mh2.hashes)
+
+    mh3 = mh1.intersection(mh2)
+    mh4 = mh1 & mh2
+
+    print("\n Intersection hashes (mh3): ", mh3.hashes, "\n '&' hashes: (mh4)", mh4.hashes)
+
+    assert mh3
+    assert mh3 == mh4
 
 def test_intersection_2_scaled():
     mh1 = MinHash(0, 21, scaled=1)
@@ -1810,6 +1827,8 @@ def test_merge_abund():
     ret = mh1.merge(mh2)
     assert ret is None
 
+    print("MH1 EQUALS ", mh1.hashes)
+
     hashcounts = mh1.hashes
     assert len(hashcounts) == 1
     assert hashcounts[0] == 4
@@ -1876,12 +1895,8 @@ def test_merge_scaled():
     assert len(mh1) == 100
     assert len(mh2) == 100
 
-    # add is symmetric:
-    mh3 = mh1 + mh2
-    mh4 = mh2 + mh1
-    assert mh3 == mh4
-
     # merge contains all the things
+    mh3 = mh1 + mh2
     assert len(mh3) == 150
 
     # everything in either one is in union
@@ -1890,6 +1905,30 @@ def test_merge_scaled():
     for k in mh2.hashes:
         assert k in mh3.hashes
 
+def test_add_is_symmetric():
+    mh1 = MinHash(20, 21)
+    mh1.add_hash(5)
+    mh2 = MinHash(20, 21)
+    mh2.add_hash(6)
+    print("\n mh1 EQUALS ", mh1.hashes, "\n mh2 EQUALS", mh2.hashes)
+    mh3 = mh1 + mh2
+    mh4 = mh2 + mh1
+    print("\n mh3 EQUALS ", mh3.hashes, "\n mh4 EQUALS", mh4.hashes)
+    #if mh3 != 0, then it is "true", so it passes
+    assert mh3
+    assert mh3 == mh4
+
+def test_or_equals_add():
+    mh1 = MinHash(20, 21)
+    mh1.add_hash(5)
+    mh2 = MinHash(20, 21)
+    mh2.add_hash(6)
+    print("\n mh1 EQUALS ", mh1.hashes, "\n mh2 EQUALS", mh2.hashes)
+    mh3 = mh1 + mh2
+    mh4 = mh1 | mh2
+    print("\n mh3 EQUALS ", mh3.hashes, "\n mh4 EQUALS", mh4.hashes)
+    assert mh3
+    assert mh3 == mh4
 
 def test_max_containment():
     mh1 = MinHash(0, 21, scaled=1, track_abundance=False)

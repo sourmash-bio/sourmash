@@ -593,6 +593,7 @@ class MinHash(RustObject):
         new_obj = self.to_mutable()
         new_obj += other
         return new_obj
+    __or__ = __add__
 
     def __iadd__(self, other):
         if not isinstance(other, MinHash):
@@ -613,6 +614,7 @@ class MinHash(RustObject):
 
         ptr = self._methodcall(lib.kmerminhash_intersection, other._get_objptr())
         return MinHash._from_objptr(ptr)
+    __and__ = intersection
 
     def set_abundances(self, values, clear=True):
         """Set abundances for hashes from ``values``, where

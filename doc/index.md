@@ -104,7 +104,7 @@ many other software programs used for genome search and taxonomic
 classification.
 
 `sourmash search` and `sourmash gather` can be used to search 100k
-genbank microbial genomes ([using our prepared databases](databases.md)
+genbank microbial genomes ([using our prepared databases](databases.md))
 with about 20 GB of disk and in under 1 GB of RAM.
 Typically a search for a single genome takes about 30 seconds on a laptop.
 

@@ -596,8 +596,8 @@ Now, let's load in all of the signatures from the test directory:
 ...    hashes_inserted = db.insert(sig)
 ...    print(f"Inserted {hashes_inserted} hashes into db.")
 Inserted 493 hashes into db.
-Inserted 525 hashes into db.
 Inserted 490 hashes into db.
+Inserted 525 hashes into db.
 
 ```
 
