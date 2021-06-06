@@ -1414,8 +1414,7 @@ def test_remove_many(track_abundance):
     assert len(a) == 33
     assert all(c % 6 != 0 for c in a.hashes)
 
-# tmp name / draft test case
-def test_remove_many_new(track_abundance):
+def test_remove_minhash(track_abundance):
     original_mh = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
     added_mh = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
     tested_mh = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
@@ -1425,6 +1424,7 @@ def test_remove_many_new(track_abundance):
     tested_mh.add_many(list(range(201))) # original + added
 
     # Now we should expect tested_minhash == original_minhash
+    # Note we are passing a MinHash object instead of an iterable object
     tested_mh.remove_many(added_mh)
 
     # Assertion
