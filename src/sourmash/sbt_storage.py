@@ -151,7 +151,7 @@ class ZipStorage(Storage):
 
         assert 0 # should never get here!
 
-    def save(self, path, content, overwrite=False):
+    def save(self, path, content, *, overwrite=False):
         # First try to save to self.zipfile, if it is not writable
         # or would introduce duplicates then try to save it in the buffer
         if overwrite:
@@ -282,7 +282,7 @@ class IPFSStorage(Storage):
         self.pin_on_add = pin_on_add
         self.api = ipfshttpclient.connect(**self.ipfs_args)
 
-    def save(self, path, content, overwrite=False):
+    def save(self, path, content, *, overwrite=False):
         new_obj = self.api.add_bytes(content)
         if self.pin_on_add:
             self.api.pin.add(new_obj)
@@ -320,7 +320,7 @@ class RedisStorage(Storage):
         self.redis_args = kwargs
         self.conn = redis.Redis(**self.redis_args)
 
-    def save(self, path, content, overwrite=False):
+    def save(self, path, content, *, overwrite=False):
         if not isinstance(content, bytes):
             content = bytes(content)
         self.conn.set(path, content)
