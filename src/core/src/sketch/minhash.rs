@@ -415,7 +415,6 @@ impl KmerMinHash {
         };
     }
 
-    
     pub fn remove_from(&mut self, other: &KmerMinHash) -> Result<(), Error> {
         for min in &other.mins {
             self.remove_hash(*min);
