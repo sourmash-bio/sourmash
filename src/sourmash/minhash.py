@@ -620,6 +620,7 @@ class MinHash(RustObject):
         ``values[hash] = abund``
 
         If ``abund`` value is set to zero, the ``hash`` will be removed from the sketch.
+        ``abund`` cannot be set to a negative value.
         """
         if self.track_abundance:
             hashes = []
