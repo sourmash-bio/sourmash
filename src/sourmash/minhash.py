@@ -306,8 +306,15 @@ class MinHash(RustObject):
             self._methodcall(lib.kmerminhash_add_many, list(hashes), len(hashes))
 
     def remove_many(self, hashes):
-        "Remove many hashes at once; ``hashes`` must be an iterable."
-        self._methodcall(lib.kmerminhash_remove_many, list(hashes), len(hashes))
+        """Remove many hashes from a sketch at once.
+
+        ``hashes`` can be either an iterable (list, set, etc.), or another
+        ``MinHash`` object.
+        """
+        if isinstance(hashes, MinHash):
+            self._methodcall(lib.kmerminhash_remove_from, hashes._objptr)
+        else:
+            self._methodcall(lib.kmerminhash_remove_many, list(hashes), len(hashes))
 
     def __len__(self):
         "Number of hashes."
