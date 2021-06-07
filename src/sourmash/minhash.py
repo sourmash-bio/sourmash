@@ -2,7 +2,6 @@
 from __future__ import unicode_literals, division
 
 import math
-import copy
 from collections.abc import Mapping
 
 from . import VERSION
