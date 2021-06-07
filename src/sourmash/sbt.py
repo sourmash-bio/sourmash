@@ -213,6 +213,7 @@ class SBT(Index):
         return self
 
     def new_node_pos(self, node):
+        # note: node is not actually used in this function! CTB
         if not self._nodes:
             self.next_node = 1
             return 0
@@ -286,6 +287,9 @@ class SBT(Index):
             c1 = self.children(p.pos)[0]
             self._leaves[c1.pos] = node 
             node.update(n)
+        else:
+            # this branch should never be reached; put guard in to make sure!
+            assert 0
 
         # update all parents!
         p = self.parent(p.pos)
@@ -569,6 +573,7 @@ class SBT(Index):
         info["index_type"] = self.__class__.__name__  # TODO: check
 
         # choose between ZipStorage and FS (file system/directory) storage.
+        kind = None
         if not path.endswith(".sbt.json"):
             kind = "Zip"
             if not path.endswith('.sbt.zip'):
@@ -583,12 +588,12 @@ class SBT(Index):
             index_filename = os.path.abspath(path)
         else:                             # path.endswith('.sbt.json')
             assert path.endswith('.sbt.json')
-            kind = "FS"
             name = os.path.basename(path)
             name = name[:-9]
             index_filename = os.path.abspath(path)
 
             if storage is None:
+                kind = "FS"
                 # default storage
                 location = os.path.dirname(index_filename)
                 subdir = '.sbt.{}'.format(name)
@@ -639,8 +644,13 @@ class SBT(Index):
                 node.storage = storage
 
                 if kind == "Zip":
-                    node.save(os.path.join(subdir, data['filename']))
-                elif kind == "FS":
+                    new_name = node.save(os.path.join(subdir, data['filename']))
+                    assert new_name.startswith(subdir + '/')
+
+                    # strip off prefix
+                    new_name = new_name[len(subdir) + 1:]
+                    data['filename'] = new_name
+                else:
                     data['filename'] = node.save(data['filename'])
 
             if isinstance(node, Node):
@@ -651,19 +661,31 @@ class SBT(Index):
             if n % 100 == 0:
                 notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
 
+        # now, save the index file.
+        #
+        # for zipfiles, it gets saved in the zip file.
+        # for FSStorage, we use the storage.save function.
+        #
+        # for everything else (Redis, IPFS), the index gets saved locally.
+        # the nodes/leaves are saved/loaded from the datatabase, and
+        # the index is used to get their names for loading.
+        #
         notify("Finished saving nodes, now saving SBT index file.")
         info['nodes'] = nodes
         info['signatures'] = leaves
 
+        tree_data = json.dumps(info).encode("utf-8")
         if kind == "Zip":
-            tree_data = json.dumps(info).encode("utf-8")
             save_path = "{}.sbt.json".format(name)
-            storage.save(save_path, tree_data)
+            storage.save(save_path, tree_data, overwrite=True)
             storage.flush()
 
         elif kind == "FS":
-            with open(index_filename, 'w') as fp:
-                json.dump(info, fp)
+            storage.save(index_filename, tree_data, overwrite=True)
+        else:
+            # save tree locally.
+            with open(index_filename, 'wb') as tree_fp:
+                tree_fp.write(tree_data)
 
         notify("Finished saving SBT index, available at {0}\n".format(index_filename))
 
@@ -702,10 +724,10 @@ class SBT(Index):
                     if ZipStorage.can_open(location2):
                         storage = ZipStorage(location2)
 
-            if storage:
-                sbts = storage.list_sbts()
-                if len(sbts) == 1:
-                    tree_data = storage.load(sbts[0])
+        if storage:
+            sbts = storage.list_sbts()
+            if len(sbts) == 1:
+                tree_data = storage.load(sbts[0])
 
                 tempfile = NamedTemporaryFile()
 
@@ -1185,7 +1207,7 @@ class Node(object):
 
     def save(self, path):
         buf = self.data.to_bytes(compression=1)
-        return self.storage.save(path, buf)
+        return self.storage.save(path, buf, overwrite=True)
 
     @property
     def data(self):
