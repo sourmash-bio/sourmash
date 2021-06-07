@@ -1207,7 +1207,9 @@ def test_clear_abundance_on_zero():
 
     with pytest.raises(ValueError):
         mh.set_abundances({ 2: -1 }) # Test on clear = True
-        mh.set_abundances({ 2: -1 }, clear=False)
+
+    with pytest.raises(ValueError):
+        mh.set_abundances({ 2: -1 }, clear=False)    
     
     assert len(mh) == 2 # Assert that nothing was affected
 
