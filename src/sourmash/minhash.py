@@ -625,13 +625,18 @@ class MinHash(RustObject):
     def set_abundances(self, values, clear=True):
         """Set abundances for hashes from ``values``, where
         ``values[hash] = abund``
+
+        If ``abund`` value is set to zero, the ``hash`` will be removed from the sketch.
+        ``abund`` cannot be set to a negative value.
         """
         if self.track_abundance:
             hashes = []
             abunds = []
 
             for h, v in values.items():
-                hashes.append(h)
+                hashes.append(h)                
+                if v < 0:
+                    raise ValueError("Abundance cannot be set to a negative value.")
                 abunds.append(v)
 
             self._methodcall(lib.kmerminhash_set_abundances, hashes, abunds, len(hashes), clear)
