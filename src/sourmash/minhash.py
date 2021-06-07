@@ -625,7 +625,7 @@ class MinHash(RustObject):
 
             for h, v in values.items():
                 hashes.append(h)
-                abunds.append(v)
+                abunds.append(max(0, v))
 
             self._methodcall(lib.kmerminhash_set_abundances, hashes, abunds, len(hashes), clear)
         else:

@@ -327,7 +327,7 @@ impl KmerMinHash {
         }
 
         if abundance == 0 {
-            // well, don't add it.
+            self.remove_hash(hash);
             return;
         }
 
