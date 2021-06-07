@@ -1199,9 +1199,17 @@ def test_set_abundance_clear_4():
 def test_clear_abundance_on_zero():
     mh = sourmash.minhash.MinHash(n=0, ksize=31, scaled=1, track_abundance=True)
     mh.set_abundances({ 1: 5, 2: 3, 3 : 5 })
-    mh.set_abundances({ 1: 0, 2 : -1 }, clear=False)
+    mh.set_abundances({ 1: 0 }, clear=False)
     assert 1 not in dict(mh.hashes)
-    assert 2 not in dict(mh.hashes)
+    assert dict(mh.hashes)[2] == 3
+    assert dict(mh.hashes)[3] == 5
+    assert len(mh) == 2
+
+    with pytest.raises(ValueError):
+        mh.set_abundances({ 2: -1 }) # Test on clear = True
+        mh.set_abundances({ 2: -1 }, clear=False)
+    
+    assert len(mh) == 2 # Assert that nothing was affected
 
 def test_reset_abundance_initialized():
     a = MinHash(1, 4, track_abundance=True)

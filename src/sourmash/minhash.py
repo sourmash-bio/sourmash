@@ -624,8 +624,10 @@ class MinHash(RustObject):
             abunds = []
 
             for h, v in values.items():
-                hashes.append(h)
-                abunds.append(max(0, v))
+                hashes.append(h)                
+                if v < 0:
+                    raise ValueError("Abundance cannot be set to a negative value.")
+                abunds.append(v)
 
             self._methodcall(lib.kmerminhash_set_abundances, hashes, abunds, len(hashes), clear)
         else:
