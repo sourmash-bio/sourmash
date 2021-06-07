@@ -1196,6 +1196,12 @@ def test_set_abundance_clear_4():
     a.set_abundances({20: 1, 10: 2}, clear=False)
     assert a.hashes == {10: 3, 20: 3}
 
+def test_clear_abundance_on_zero():
+    mh = sourmash.minhash.MinHash(n=0, ksize=31, scaled=1, track_abundance=True)
+    mh.set_abundances({ 1: 5, 2: 3, 3 : 5 })
+    mh.set_abundances({ 1: 0, 2 : -1 }, clear=False)
+    assert 1 not in dict(mh.hashes)
+    assert 2 not in dict(mh.hashes)
 
 def test_reset_abundance_initialized():
     a = MinHash(1, 4, track_abundance=True)
