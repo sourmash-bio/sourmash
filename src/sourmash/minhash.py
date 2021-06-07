@@ -618,6 +618,8 @@ class MinHash(RustObject):
     def set_abundances(self, values, clear=True):
         """Set abundances for hashes from ``values``, where
         ``values[hash] = abund``
+
+        If ``abund`` value is set to zero, the ``hash`` will be removed from the sketch.
         """
         if self.track_abundance:
             hashes = []
