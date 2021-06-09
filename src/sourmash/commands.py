@@ -5,7 +5,6 @@ import csv
 import os
 import os.path
 import sys
-import copy
 
 import screed
 from .compare import (compare_all_pairs, compare_serial_containment,
@@ -608,7 +607,7 @@ def categorize(args):
                orig_query.minhash.ksize, orig_query.minhash.moltype)
 
         if args.ignore_abundance:
-            query = copy.copy(orig_query)
+            query = orig_query.copy()
             query.minhash = query.minhash.flatten()
         else:
             if orig_query.minhash.track_abundance:
@@ -698,7 +697,7 @@ def gather(args):
 
     if args.prefetch:           # note: on by default!
         notify("Starting prefetch sweep across databases.")
-        prefetch_query = copy.copy(query)
+        prefetch_query = query.copy()
         prefetch_query.minhash = prefetch_query.minhash.flatten()
         save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
         save_prefetch.open()
@@ -771,7 +770,8 @@ def gather(args):
                       'f_unique_to_query', 'f_unique_weighted',
                       'average_abund', 'median_abund', 'std_abund', 'name',
                       'filename', 'md5', 'f_match_orig', 'unique_intersect_bp',
-                      'gather_result_rank', 'remaining_bp']
+                      'gather_result_rank', 'remaining_bp',
+                      'query_filename', 'query_name', 'query_md5', 'query_bp']
 
         with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
@@ -880,7 +880,7 @@ def multigather(args):
                 continue
 
             counters = []
-            prefetch_query = copy.copy(query)
+            prefetch_query = query.copy()
             prefetch_query.minhash = prefetch_query.minhash.flatten()
 
             counters = []
@@ -944,7 +944,8 @@ def multigather(args):
                           'average_abund', 'median_abund', 'std_abund', 'name',
                           'filename', 'md5', 'f_match_orig',
                           'unique_intersect_bp', 'gather_result_rank',
-                          'remaining_bp']
+                          'remaining_bp', 'query_filename', 'query_name',
+                          'query_md5', 'query_bp']
             with FileOutputCSV(output_csv) as fp:
                 w = csv.DictWriter(fp, fieldnames=fieldnames)
                 w.writeheader()

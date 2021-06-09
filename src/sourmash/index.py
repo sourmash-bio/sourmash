@@ -5,7 +5,6 @@ import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
 import zipfile
-import copy
 
 from .search import make_jaccard_search_query, make_gather_query
 
@@ -242,7 +241,7 @@ class Index(ABC):
         scaled = max(query_mh.scaled, match_mh.scaled)
         match_mh = match_mh.downsample(scaled=scaled).flatten()
         query_mh = query_mh.downsample(scaled=scaled)
-        intersect_mh = match_mh.intersection(query_mh)
+        intersect_mh = match_mh & query_mh
 
         return [sr, intersect_mh]
 
@@ -260,7 +259,7 @@ class Index(ABC):
         public `CounterGather` interface, of course.
         """
         # build a flat query
-        prefetch_query = copy.copy(query)
+        prefetch_query = query.copy()
         prefetch_query.minhash = prefetch_query.minhash.flatten()
 
         # find all matches and construct a CounterGather object.
@@ -520,7 +519,7 @@ class CounterGather:
             raise ValueError('gather requires scaled signatures')
 
         # track query
-        self.orig_query_mh = copy.copy(query_mh).flatten()
+        self.orig_query_mh = query_mh.copy().flatten()
         self.scaled = query_mh.scaled
 
         # track matching signatures & their locations
@@ -623,7 +622,7 @@ class CounterGather:
 
         # calculate intersection of this "best match" with query.
         match_mh = match.minhash.downsample(scaled=scaled).flatten()
-        intersect_mh = cur_query_mh.intersection(match_mh)
+        intersect_mh = cur_query_mh & match_mh
         location = self.locations[dataset_id]
 
         # build result & return intersection

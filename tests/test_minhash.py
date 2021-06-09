@@ -559,6 +559,24 @@ def test_similarity_1(track_abundance):
     assert round(b.similarity(b), 3) == 1.0
 
 
+def test_copy(track_abundance):
+    a = MinHash(20, 21, track_abundance=track_abundance)
+    a.add_hash(5)
+    b = a.copy()
+    assert a == b
+    a.add_hash(6)
+    assert a != b
+
+
+def test_frozen_copy(track_abundance):
+    a = MinHash(20, 21, track_abundance=track_abundance)
+    a.add_hash(5)
+    b = a.copy()
+    assert 5 in b.hashes
+    a.add_hash(6)
+    assert 6 not in b.hashes
+
+
 def test_mh_copy(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
 
@@ -1178,6 +1196,22 @@ def test_set_abundance_clear_4():
     a.set_abundances({20: 1, 10: 2}, clear=False)
     assert a.hashes == {10: 3, 20: 3}
 
+def test_clear_abundance_on_zero():
+    mh = sourmash.minhash.MinHash(n=0, ksize=31, scaled=1, track_abundance=True)
+    mh.set_abundances({ 1: 5, 2: 3, 3 : 5 })
+    mh.set_abundances({ 1: 0 }, clear=False)
+    assert 1 not in dict(mh.hashes)
+    assert dict(mh.hashes)[2] == 3
+    assert dict(mh.hashes)[3] == 5
+    assert len(mh) == 2
+
+    with pytest.raises(ValueError):
+        mh.set_abundances({ 2: -1 }) # Test on clear = True
+
+    with pytest.raises(ValueError):
+        mh.set_abundances({ 2: -1 }, clear=False)    
+    
+    assert len(mh) == 2 # Assert that nothing was affected
 
 def test_reset_abundance_initialized():
     a = MinHash(1, 4, track_abundance=True)
@@ -1395,6 +1429,28 @@ def test_remove_many(track_abundance):
 
     assert len(a) == 33
     assert all(c % 6 != 0 for c in a.hashes)
+
+def test_remove_minhash(track_abundance):
+    original_mh = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
+    added_mh = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
+    tested_mh = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
+
+    original_mh.add_many(list(range(101)))
+    added_mh.add_many(list(range(101,201))) # contains original in it
+    tested_mh.add_many(list(range(201))) # original + added
+
+    # Now we should expect tested_minhash == original_minhash
+    # Note we are passing a MinHash object instead of an iterable object
+    tested_mh.remove_many(added_mh)
+
+    # Assertion
+    original_sig = signature.SourmashSignature(original_mh)
+    tested_sig = signature.SourmashSignature(tested_mh)
+
+    # Should pass if the hashes list in the same order
+    assert original_mh.hashes == tested_mh.hashes
+    assert len(original_mh) == len(tested_mh)
+    assert original_sig.md5sum() == tested_sig.md5sum()
 
 
 def test_add_many(track_abundance):
@@ -1675,10 +1731,27 @@ def test_intersection_1_num():
     mh2.add_hash(2)
 
     mh3 = mh1.intersection(mh2)
-    print(set(mh3.hashes))
+    print("mh.intersection INTERSECTION HASHES:",set(mh3.hashes))
     assert len(mh3) == 1
     assert 0 in mh3.hashes
 
+def test_and_operator():
+    mh1 = MinHash(20, 21)
+    mh1.add_hash(5)
+    mh1.add_hash(6)
+    mh2 = MinHash(20, 21)
+    mh2.add_hash(6)
+    mh2.add_hash(7)
+
+    print("\n \n mh1 EQUALS ", mh1.hashes, "\n mh2 EQUALS", mh2.hashes)
+
+    mh3 = mh1.intersection(mh2)
+    mh4 = mh1 & mh2
+
+    print("\n Intersection hashes (mh3): ", mh3.hashes, "\n '&' hashes: (mh4)", mh4.hashes)
+
+    assert mh3
+    assert mh3 == mh4
 
 def test_intersection_2_scaled():
     mh1 = MinHash(0, 21, scaled=1)
@@ -1792,6 +1865,8 @@ def test_merge_abund():
     ret = mh1.merge(mh2)
     assert ret is None
 
+    print("MH1 EQUALS ", mh1.hashes)
+
     hashcounts = mh1.hashes
     assert len(hashcounts) == 1
     assert hashcounts[0] == 4
@@ -1858,12 +1933,8 @@ def test_merge_scaled():
     assert len(mh1) == 100
     assert len(mh2) == 100
 
-    # add is symmetric:
-    mh3 = mh1 + mh2
-    mh4 = mh2 + mh1
-    assert mh3 == mh4
-
     # merge contains all the things
+    mh3 = mh1 + mh2
     assert len(mh3) == 150
 
     # everything in either one is in union
@@ -1872,6 +1943,30 @@ def test_merge_scaled():
     for k in mh2.hashes:
         assert k in mh3.hashes
 
+def test_add_is_symmetric():
+    mh1 = MinHash(20, 21)
+    mh1.add_hash(5)
+    mh2 = MinHash(20, 21)
+    mh2.add_hash(6)
+    print("\n mh1 EQUALS ", mh1.hashes, "\n mh2 EQUALS", mh2.hashes)
+    mh3 = mh1 + mh2
+    mh4 = mh2 + mh1
+    print("\n mh3 EQUALS ", mh3.hashes, "\n mh4 EQUALS", mh4.hashes)
+    #if mh3 != 0, then it is "true", so it passes
+    assert mh3
+    assert mh3 == mh4
+
+def test_or_equals_add():
+    mh1 = MinHash(20, 21)
+    mh1.add_hash(5)
+    mh2 = MinHash(20, 21)
+    mh2.add_hash(6)
+    print("\n mh1 EQUALS ", mh1.hashes, "\n mh2 EQUALS", mh2.hashes)
+    mh3 = mh1 + mh2
+    mh4 = mh1 | mh2
+    print("\n mh3 EQUALS ", mh3.hashes, "\n mh4 EQUALS", mh4.hashes)
+    assert mh3
+    assert mh3 == mh4
 
 def test_max_containment():
     mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
