@@ -327,7 +327,7 @@ impl KmerMinHash {
         }
 
         if abundance == 0 {
-            // well, don't add it.
+            self.remove_hash(hash);
             return;
         }
 
@@ -413,6 +413,13 @@ impl KmerMinHash {
                 }
             }
         };
+    }
+
+    pub fn remove_from(&mut self, other: &KmerMinHash) -> Result<(), Error> {
+        for min in &other.mins {
+            self.remove_hash(*min);
+        }
+        Ok(())
     }
 
     pub fn remove_many(&mut self, hashes: &[u64]) -> Result<(), Error> {

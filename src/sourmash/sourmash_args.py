@@ -137,7 +137,7 @@ def traverse_find_sigs(filenames, yield_all_files=False):
         # filename is a directory -- traverse beneath!
         elif os.path.isdir(filename):
             for root, dirs, files in os.walk(filename):
-                for name in files:
+                for name in sorted(files):
                     fullname = os.path.join(root, name)
                     if yield_all_files or _check_suffix(fullname, endings):
                         yield fullname

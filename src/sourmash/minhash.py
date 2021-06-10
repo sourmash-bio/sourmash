@@ -2,7 +2,6 @@
 from __future__ import unicode_literals, division
 
 import math
-import copy
 from collections.abc import Mapping
 
 from . import VERSION
@@ -222,6 +221,8 @@ class MinHash(RustObject):
         a.merge(self)
         return a
 
+    copy = __copy__
+
     def __getstate__(self):
         "support pickling via __getstate__/__setstate__"
         return (
@@ -305,8 +306,15 @@ class MinHash(RustObject):
             self._methodcall(lib.kmerminhash_add_many, list(hashes), len(hashes))
 
     def remove_many(self, hashes):
-        "Remove many hashes at once; ``hashes`` must be an iterable."
-        self._methodcall(lib.kmerminhash_remove_many, list(hashes), len(hashes))
+        """Remove many hashes from a sketch at once.
+
+        ``hashes`` can be either an iterable (list, set, etc.), or another
+        ``MinHash`` object.
+        """
+        if isinstance(hashes, MinHash):
+            self._methodcall(lib.kmerminhash_remove_from, hashes._objptr)
+        else:
+            self._methodcall(lib.kmerminhash_remove_many, list(hashes), len(hashes))
 
     def __len__(self):
         "Number of hashes."
@@ -591,6 +599,7 @@ class MinHash(RustObject):
         new_obj = self.to_mutable()
         new_obj += other
         return new_obj
+    __or__ = __add__
 
     def __iadd__(self, other):
         if not isinstance(other, MinHash):
@@ -611,17 +620,23 @@ class MinHash(RustObject):
 
         ptr = self._methodcall(lib.kmerminhash_intersection, other._get_objptr())
         return MinHash._from_objptr(ptr)
+    __and__ = intersection
 
     def set_abundances(self, values, clear=True):
         """Set abundances for hashes from ``values``, where
         ``values[hash] = abund``
+
+        If ``abund`` value is set to zero, the ``hash`` will be removed from the sketch.
+        ``abund`` cannot be set to a negative value.
         """
         if self.track_abundance:
             hashes = []
             abunds = []
 
             for h, v in values.items():
-                hashes.append(h)
+                hashes.append(h)                
+                if v < 0:
+                    raise ValueError("Abundance cannot be set to a negative value.")
                 abunds.append(v)
 
             self._methodcall(lib.kmerminhash_set_abundances, hashes, abunds, len(hashes), clear)
@@ -749,3 +764,4 @@ class FrozenMinHash(MinHash):
 
     def __copy__(self):
         return self
+    copy = __copy__
