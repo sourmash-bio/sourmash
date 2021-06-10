@@ -331,7 +331,7 @@ pub fn to_aa(seq: &[u8], dayhoff: bool, hp: bool) -> Result<Vec<u8>, Error> {
     let mut converted: Vec<u8> = Vec::with_capacity(seq.len() / 3);
 
     for chunk in seq.chunks(3) {
-        if chunk.len() < 3 {
+        if chunk.len() < 2 {
             break;
         }
 
