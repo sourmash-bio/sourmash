@@ -461,25 +461,29 @@ def search(args):
                                              sourmash_args.get_moltype(query))
 
     # downsample if requested
-    if args.scaled:
-        if args.scaled < 1:
+    if isinstance(args.scaled, float):
+        if args.scaled == 0:
             error('ERROR: --scaled value must be >= 1')
             sys.exit(-1)
-        if args.scaled != round(args.scaled, 0):
-            error('ERROR: --scaled value must be integer value')
-            sys.exit(-1)
-        if args.scaled < 100:
-            notify('WARNING: scaled value should be >= 100. Continuing anyway.')
-        if args.scaled > 1e6:
-            notify('WARNING: scaled value should be <= 1e6. Continuing anyway.')
-        if not query.minhash.scaled:
-            error('cannot downsample a signature not created with --scaled')
-            sys.exit(-1)
+        if args.scaled:
+            if args.scaled < 0:
+                error('ERROR: --scaled value must be positive')
+                sys.exit(-1)
+            if args.scaled != round(args.scaled, 0):
+                error('ERROR: --scaled value must be integer value')
+                sys.exit(-1)
+            if args.scaled < 100:
+                notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
+            if args.scaled > 1e6:
+                notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
+            if not query.minhash.scaled:
+                error('cannot downsample a signature not created with --scaled')
+                sys.exit(-1)
 
-        if args.scaled != query.minhash.scaled:
-            notify('downsampling query from scaled={} to {}',
-                   query.minhash.scaled, int(args.scaled))
-        query.minhash = query.minhash.downsample(scaled=args.scaled)
+            if args.scaled != query.minhash.scaled:
+                notify('downsampling query from scaled={} to {}',
+                    query.minhash.scaled, int(args.scaled))
+            query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # set up the search databases
     is_containment = args.containment or args.max_containment
