@@ -3,21 +3,7 @@
 import argparse
 import sourmash
 from sourmash.logging import notify, print_results, error
-
-#https://stackoverflow.com/questions/55324449/how-to-specify-a-minimum-or-maximum-float-value-with-argparse#55410582
-# should this go in a different file?
-def range_limited_float_type(arg):
-    """ Type function for argparse - a float within some predefined bounds """
-    min_val = 0
-    max_val = 1
-    try:
-        f = float(arg)
-    except ValueError:
-        raise argparse.ArgumentTypeError("Must be a floating point number")
-    if f < min_val or f > max_val:
-        raise argparse.ArgumentTypeError(f"Argument must be >{str(min_val)} and <{str(max_val)}")
-    return f
-
+from sourmash.cli.utils import add_threshold_arg
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('classify')
@@ -51,10 +37,6 @@ def subparser(subparsers):
         help='Summarize genome taxonomy at this rank and above'
     )
     subparser.add_argument(
-        '--containment-threshold', type=range_limited_float_type, default=0.1,
-        help='minimum containment for classification'
-    )
-    subparser.add_argument(
         '--keep-full-identifiers', action='store_true',
         help='do not split identifiers on whitespace'
     )
@@ -74,6 +56,7 @@ def subparser(subparsers):
         '-f', '--force', action = 'store_true',
         help='continue past survivable errors in loading taxonomy database or gather results',
     )
+    add_threshold_arg(subparser, 0.1)
 
 
 def main(args):
