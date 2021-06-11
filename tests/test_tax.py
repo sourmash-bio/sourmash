@@ -90,6 +90,7 @@ def test_summarize_empty_gather_results(runtmp):
 ## some test ideas to start with -- see test_lca.py for add'l ideas
 
 def test_summarize_empty_tax_lineage_input(runtmp):
+#    print(type(runtmp))
     tax_empty = runtmp.output('t.csv')
     outcsv = runtmp.output('out.csv')
     g_csv = utils.get_test_data('tax/test1.gather.csv')
@@ -97,10 +98,16 @@ def test_summarize_empty_tax_lineage_input(runtmp):
     with open(tax_empty, "w") as fp:
         fp.write("")
     print("t_csv: ", tax_empty)
+    import sys
 
     with pytest.raises(ValueError) as exc:
         runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax_empty, '--split-identifiers', '-o', outcsv)
-        assert str(exc.value) == "local variable 'n' referenced before assignment"
+    print(f"----------------- [DEBUG]{exc.value}", file=sys.stderr)
+    if(str(exc.value) == "local variable 'n' referenced before assignment"):
+        print("[DEBUG] -------------------- PASSED")
+    else:
+        print("FAIL")
+
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
