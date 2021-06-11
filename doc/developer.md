@@ -115,7 +115,7 @@ Code coverage can be viewed interactively at [codecov.io][1].
 
 ## Building docs
 
-We are using [Sphinx](https://www.sphinx-doc.org/en/master/) for Sourmash main docs hosted on [readthedocs](https://sourmash.bio). For Rust, we use [rustdoc](https://doc.rust-lang.org/rustdoc/what-is-rustdoc.html).
+We are using [Sphinx](https://www.sphinx-doc.org/en/master/) for sourmash main docs hosted on [readthedocs](https://sourmash.bio). For Rust, we use [rustdoc](https://doc.rust-lang.org/rustdoc/what-is-rustdoc.html).
 
 To build the Sourmash docs run the following command. Then, inside the `html_docs` docs you will find an `index.html` file for the docs homepage.
 
