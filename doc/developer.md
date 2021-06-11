@@ -158,7 +158,7 @@ A short description of the high-level files and dirs in the sourmash repo:
 src/sourmash
 ├── cli/                | Command-line parsing, help messages and overall infrastucture
 ├── command_compute.py  | compute command implementation
-├── command_compute.py  | sketch command implementation
+├── command_sketch.py   | sketch command implementation
 ├── commands.py         | implementation for other CLI commands
 ├── compare.py          | Signature comparison functions
 ├── _compat.py          | Py2/3 compatibility functions
