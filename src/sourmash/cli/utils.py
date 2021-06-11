@@ -51,6 +51,31 @@ def add_ksize_arg(parser, default=31):
     )
 
 
+def check_scaled_bounds(arg):
+    min_val = 100
+    max_val = 1e6
+    try:
+        f = float(arg)
+    except ValueError:
+        raise argparse.ArgumentTypeError("Must be a floating point number")
+    if f == 0:
+        raise argparse.ArgumentTypeError(f"Argument must be >={str(1)}")
+    if f < 0:
+        raise argparse.ArgumentTypeError(f"Argument must be positive")
+    if f < min_val:
+        raise argparse.ArgumentTypeError(f"Argument must be >{str(min_val)}")
+    if f > max_val:
+        raise argparse.ArgumentTypeError(f"Argument must be <{str(max_val)}")
+    return f
+
+
+def add_scaled_arg(parser, default=None):
+    parser.add_argument(
+        '--scaled', metavar='FLOAT', type=check_scaled_bounds, default=default,
+        help='scaled value should be between 100 and 1e6; default={d}'.format(d=default)
+    )
+
+
 def opfilter(path):
     return not path.startswith('__') and path not in ['utils']
 

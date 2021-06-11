@@ -1937,11 +1937,6 @@ def test_search_traverse_incompatible(c):
     assert '100.0%       NC_009665.1 Shewanella baltica OS185, complete genome' in c.last_result.out
 
 
-# explanation: you cannot downsample a scaled SBT to match a scaled
-# signature, so make sure that when you try such a search, it fails!
-# (you *can* downsample a signature to match an SBT.)
-
-
 def test_check_scaled_bounds_zero():
 
     with utils.TempDirectory() as location:
@@ -2016,6 +2011,11 @@ def test_check_scaled_bounds_more_than_maximum():
         print(err)
 
         assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
+
+
+# explanation: you cannot downsample a scaled SBT to match a scaled
+# signature, so make sure that when you try such a search, it fails!
+# (you *can* downsample a signature to match an SBT.)
 
 
 def test_search_metagenome_downsample():
