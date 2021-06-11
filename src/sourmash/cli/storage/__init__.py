@@ -12,6 +12,7 @@ import sys
 
 
 def subparser(subparsers):
+    "Aggregates argparse for sourmash storage"
     subparser = subparsers.add_parser('storage', formatter_class=RawDescriptionHelpFormatter, usage=SUPPRESS)
     desc = 'Operations\n'
     clidir = os.path.dirname(__file__)

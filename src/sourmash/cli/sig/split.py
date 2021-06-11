@@ -4,6 +4,7 @@ import sourmash
 
 
 def subparser(subparsers):
+    "Aggregates argparse for subtract subcommands"
     subparser = subparsers.add_parser('split')
     subparser.add_argument('signatures', nargs='+')
     subparser.add_argument(

@@ -30,6 +30,7 @@ assert command_sketch.DEFAULTS['protein'] == 'k=10,scaled=200,noabund'
 
 
 def subparser(subparsers):
+    "Aggregates argparse for sourmash protein subcommands"
     subparser = subparsers.add_parser('protein', aliases=['aa', 'prot'],
                                       usage=usage)
     subparser.add_argument(

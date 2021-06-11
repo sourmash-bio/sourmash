@@ -54,6 +54,7 @@ def _get_scaled_for_max_hash(max_hash):
 
 
 def to_bytes(s):
+    "Returns string sequences in bytes"
     # Allow for strings, bytes or int
     # Single item of byte string = int
 
@@ -334,6 +335,7 @@ class MinHash(RustObject):
 
     @property
     def hashes(self):
+        "placeholder"
         size = ffi.new("uintptr_t *")
         mins_ptr = self._methodcall(lib.kmerminhash_get_mins, size)
         size = size[0]
@@ -357,14 +359,17 @@ class MinHash(RustObject):
 
     @property
     def seed(self):
+        "Returns kmer minhash seed"
         return self._methodcall(lib.kmerminhash_seed)
 
     @property
     def num(self):
+        "Returns kmer minhash number"
         return self._methodcall(lib.kmerminhash_num)
 
     @property
     def scaled(self):
+        "Returns the scaled value for this MinHash"
         mx = self._methodcall(lib.kmerminhash_max_hash)
         if mx:
             return _get_scaled_for_max_hash(mx)
@@ -372,22 +377,27 @@ class MinHash(RustObject):
 
     @property
     def is_dna(self):
+        "Returns nothing if dna"
         return not (self.is_protein or self.dayhoff or self.hp)
 
     @property
     def is_protein(self):
+        "Returns protein kmer minhash library"
         return self._methodcall(lib.kmerminhash_is_protein)
 
     @property
     def dayhoff(self):
+        "Returns dayhoff kmer minhash library"    
         return self._methodcall(lib.kmerminhash_dayhoff)
 
     @property
     def hp(self):
+        "Returns hp kmer minhash library"
         return self._methodcall(lib.kmerminhash_hp)
 
     @property
     def ksize(self):
+        "Returns k size of kmer minhash library"
         k = self._methodcall(lib.kmerminhash_ksize)
         if not self.is_dna:
             assert k % 3 == 0
@@ -399,11 +409,13 @@ class MinHash(RustObject):
                 current_version=VERSION,
                 details='Use scaled instead.')
     def max_hash(self):
+        "Returns max hash"
         return self._methodcall(lib.kmerminhash_max_hash)
 
     # a non-deprecated `max_hash` property for internal testing purposes only
     @property
     def _max_hash(self):
+        "Returns max hash"
         return self._methodcall(lib.kmerminhash_max_hash)
 
     @property

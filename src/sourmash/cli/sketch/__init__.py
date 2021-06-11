@@ -17,6 +17,7 @@ import sys
 
 
 def subparser(subparsers):
+    "Aggregates argparse for sourmash subcommands"
     subparser = subparsers.add_parser('sketch', formatter_class=RawDescriptionHelpFormatter, usage=SUPPRESS)
     desc = 'Operations\n'
     clidir = os.path.dirname(__file__)

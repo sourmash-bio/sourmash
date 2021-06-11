@@ -1,6 +1,7 @@
 "'sourmash storage convert' - convert an SBT to use a different back end."
 
 def subparser(subparsers):
+    "Aggregates argparse for sourmash storage"
     subparser = subparsers.add_parser('convert')
     subparser.add_argument(
         'sbt', help='name to save SBT into'
