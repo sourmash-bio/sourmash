@@ -78,7 +78,7 @@ To update your Python dependencies to the latest required for sourmash, you can 
 
 ## Installing sourmash in the editable mode
 
-In order to use Sourmash in the command line interface or the API while developing, you will need to install it in your enviornment in editable mode by running
+In order to use sourmash in the command line interface or the API while developing, you will need to install it in your environment in editable mode by running
 
 ```
 pip install -e .
