@@ -123,7 +123,7 @@ To build the sourmash docs run the following command. Then, inside the `html_doc
 sphinx-build -b html doc html_docs
 ```
 
-For building Rust docs you will need to change the current working directory to `sourmash/src/core` then run the following command. The docs will be generated in `sourmash/target/docs/Sourmash`
+For building Rust docs you will need to change the current working directory to `sourmash/src/core` then run the following command. The docs will be generated in `sourmash/target/docs/sourmash`
 
 ```
 cargo doc --no-deps # --no-deps for excluding the 3rd party libs' docs from being built.
