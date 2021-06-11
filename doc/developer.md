@@ -132,7 +132,7 @@ cargo doc --no-deps # --no-deps for excluding the 3rd party libs' docs from bein
 For interactive docs building we use [`cargo-watch`](https://crates.io/crates/cargo-watch). Open a terminal and run `cargo watch -x  "doc --no-deps"`, you will need to keep this command running while changing the docs. Refresh the browser for rendering the changes.
 
 .. warning::
-    Although Rust is the backbone of Sourmash, it does not have all the functionalities that are provided in the main [Sourmash docs](https://sourmash.bio).
+    Although Rust is the backbone of sourmash, it does not have all the functionalities that are provided in the Python [sourmash API](https://sourmash.bio).
 
 
 ## Code organization
