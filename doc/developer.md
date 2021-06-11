@@ -105,6 +105,28 @@ Code coverage can be viewed interactively at [codecov.io][1].
 [1]: https://codecov.io/gh/dib-lab/sourmash/
 [2]: https://github.com/dib-lab/sourmash/actions
 
+## Building docs
+
+We are using [Sphinx](https://www.sphinx-doc.org/en/master/) for Sourmash main docs hosted on [readthedocs](https://sourmash.bio). For Rust, we use [rustdoc](https://doc.rust-lang.org/rustdoc/what-is-rustdoc.html).
+
+To build the Sourmash docs run the following command. Then, inside the `html_docs` docs you will find an `index.html` file for the docs homepage.
+
+```
+sphinx-build -b html doc html_docs
+```
+
+For building Rust docs you will need to change the current working directory to `sourmash/src/core` then run the following command. The docs will be generated in `sourmash/target/docs/Sourmash`
+
+```
+cargo doc --no-deps # --no-deps for excluding the 3rd party libs' docs from being built.
+``` 
+
+For interactive docs building we use [`cargo-watch`](https://crates.io/crates/cargo-watch). Open a terminal and run `cargo watch -x  "doc --no-deps"`, you will need to keep this command running while changing the docs. Refresh the browser for rendering the changes.
+
+
+## Rust docs
+
+
 ## Code organization
 
 There are three main components in the sourmash repo:
