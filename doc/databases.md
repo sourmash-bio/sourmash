@@ -12,7 +12,7 @@ For each k-mer size, three databases are available.
 
 You can read more about the different database and index types [here](https://sourmash.readthedocs.io/en/latest/command-line.html#indexed-databases).
 
-Legacy databases are available [here](https://sourmash.readthedocs.io/en/latest/legacy-databases.md)
+Legacy databases are available [here](legacy-databases.md)
 
 Note that the SBT and LCA databases can be used with sourmash v3.5 and later, while Zipfile collections can only be used with sourmash v4.1.0 and up.
 
@@ -35,4 +35,3 @@ These databases contain the complete GTDB collection of 258,406 genomes.
 | 21 | [download (7.8 GB)](https://osf.io/vgex4/download) | [download (15 GB)](https://osf.io/ar67j/download) | [download (266 MB)](https://osf.io/hm3c4/download) | 
 | 31 | [download (7.8 GB)](https://osf.io/94mzh/download) | [download (15 GB)](https://osf.io/dmsz8/download) | [download (286 MB)](https://osf.io/9xdg2/download) | 
 | 51 | [download (7.8 GB)](https://osf.io/x9cdp/download) | [download (15 GB)](https://osf.io/8fc3t/download) | [download (299 MB)](https://osf.io/3cdp6/download)  | 
-
