@@ -367,6 +367,15 @@ unsafe fn kmerminhash_add_from(ptr: *mut SourmashKmerMinHash, other: *const Sour
 }
 
 ffi_fn! {
+    unsafe fn kmerminhash_remove_from(ptr: *mut SourmashKmerMinHash, other: *const SourmashKmerMinHash)
+    -> Result<()> {
+        let mh = SourmashKmerMinHash::as_rust_mut(ptr);
+        let other_mh = SourmashKmerMinHash::as_rust(other);
+        mh.remove_from(other_mh)
+    }
+}
+
+ffi_fn! {
 unsafe fn kmerminhash_count_common(ptr: *const SourmashKmerMinHash, other: *const SourmashKmerMinHash, downsample: bool)
     -> Result<u64> {
     let mh = SourmashKmerMinHash::as_rust(ptr);

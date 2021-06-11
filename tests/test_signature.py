@@ -9,6 +9,45 @@ import sourmash_tst_utils as utils
 from sourmash import MinHash
 
 
+def test_minhash_copy(track_abundance):
+    e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add_kmer("AT" * 10)
+    sig = SourmashSignature(e, name='foo')
+    f = e.copy()
+    assert e == f
+
+
+def test_sig_copy(track_abundance):
+    e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add_kmer("AT" * 10)
+    sig1 = SourmashSignature(e, name='foo')
+    sig2 = sig1.copy()
+    assert sig1 == sig2
+
+
+def test_sig_copy_frozen(track_abundance):
+    e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add_kmer("AT" * 10)
+    sig1 = SourmashSignature(e, name='foo')
+    sig2 = sig1.copy()
+    assert sig1 == sig2
+    with pytest.raises(TypeError) as e:
+        sig2.minhash.add_hash(5)
+    assert 'FrozenMinHash does not support modification' in str(e.value)
+
+
+def test_sig_copy_frozen_mutable(track_abundance):
+    e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add_kmer("AT" * 10)
+    sig1 = SourmashSignature(e, name='foo')
+    sig1.minhash = sig1.minhash.to_mutable()
+    sig2 = sig1.copy()
+    assert sig1 == sig2
+    with pytest.raises(TypeError) as e:
+        sig2.minhash.add_hash(5)
+    assert 'FrozenMinHash does not support modification' in str(e.value)
+
+
 def test_compare(track_abundance):
     # same content, same name -> equal
     e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
