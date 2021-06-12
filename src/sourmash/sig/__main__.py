@@ -13,6 +13,7 @@ from sourmash.sourmash_args import FileOutput
 from sourmash.logging import set_quiet, error, notify, print_results, debug
 from sourmash import sourmash_args
 from sourmash.minhash import _get_max_hash_for_scaled
+from .picklist import SignaturePicklist
 
 usage='''
 sourmash signature <command> [<args>] - manipulate/work with signature files.
@@ -188,6 +189,7 @@ def describe(args):
     w = None
     csv_fp = None
     if args.csv:
+        # CTB: might want to switch to sourmash_args.FileOutputCSV here?
         csv_fp = open(args.csv, 'w', newline='')
         w = csv.DictWriter(csv_fp,
                            ['signature_file', 'md5', 'ksize', 'moltype', 'num',
@@ -541,6 +543,43 @@ def extract(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    picklist = None
+    if args.picklist:
+        picklist = SignaturePicklist.from_picklist_args(args.picklist)
+
+        notify(f"picking column '{picklist.column_name}' of type '{picklist.coltype}' from '{picklist.pickfile}'")
+
+        n_empty_val, dup_vals = picklist.load()
+
+        notify(f"loaded {len(picklist.pickset)} distinct values into picklist.")
+        if n_empty_val:
+            notify(f"WARNING: {n_empty_val} empty values in column '{picklist.column_name}' in CSV file")
+        if dup_vals:
+            notify(f"WARNING: {len(dup_vals)} values in column '{picklist.column_name}' were not distinct")
+        picklist_filter_fn = picklist.filter
+    else:
+        def picklist_filter_fn(it):
+            for ss in it:
+                yield ss
+
+    # further filtering on md5 or name?
+    if args.md5 is not None or args.name is not None:
+        def filter_fn(it):
+            for ss in picklist_filter_fn(it):
+                # match?
+                keep = False
+                if args.name and args.name in str(ss):
+                    keep = True
+                if args.md5 and args.md5 in ss.md5sum():
+                    keep = True
+
+                if keep:
+                    yield ss
+    else:
+        # whatever comes out of the picklist is fine
+        filter_fn = picklist_filter_fn
+
+    # ok! filtering defined, let's go forward
     progress = sourmash_args.SignatureLoadingProgress()
 
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
@@ -551,21 +590,12 @@ def extract(args):
                                                         ksize=args.ksize,
                                                         select_moltype=moltype,
                                                         progress=progress)
-        # CTB: make streaming!
-        siglist = list(siglist)
-
-        # select!
-        if args.md5 is not None:
-            siglist = [ ss for ss in siglist if args.md5 in ss.md5sum() ]
-        if args.name is not None:
-            siglist = [ ss for ss in siglist if args.name in str(ss) ]
-
-        for ss in siglist:
+        for ss in filter_fn(siglist):
             save_sigs.add(ss)
 
     notify(f"loaded {len(progress)} total that matched ksize & molecule type")
     if not save_sigs:
-        error("no matching signatures!")
+        error("no matching signatures to save!")
         sys.exit(-1)
 
     save_sigs.close()

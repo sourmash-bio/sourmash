@@ -113,3 +113,8 @@ class SignaturePicklist:
         if q in self.pickset:
             return True
         return False
+
+    def filter(self, it):
+        for ss in it:
+            if self.__contains__(ss):
+                yield ss

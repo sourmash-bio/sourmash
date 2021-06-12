@@ -25,6 +25,10 @@ def subparser(subparsers):
         '--name', default=None,
         help='select signatures whose name contains this substring'
     )
+    subparser.add_argument(
+        '--picklist', default=None,
+        help="select signatures based on a picklist, i.e. 'file.csv:colname:coltype'"
+    )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
 
