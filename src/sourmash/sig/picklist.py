@@ -23,6 +23,7 @@ class SignaturePicklist:
     Initialize using ``SignaturePicklist.from_picklist_args(argstr)``,
     which takes an argument str like so: 'pickfile:column:coltype'.
 
+    # CTB pickfile or pickset?
     Here, 'pickfile' is the path to a CSV file; 'column' is the name of
     the column to select from the CSV file; and 'coltype' is the type of
     matching to do on that column.
@@ -38,7 +39,7 @@ class SignaturePicklist:
     the signature name.
     """
     def __init__(self, pickfile, column_name, coltype):
-        self.pickfile = pickfile
+        self.pickfile = pickfile # note: can be None
         self.column_name = column_name
         self.coltype = coltype
 
@@ -78,16 +79,19 @@ class SignaturePicklist:
 
         return q
 
-    def load(self):
+    def load(self, pickfile):
         "load pickset, return num empty vals, and set of duplicate vals."
-        pickset = set()
+        pickset = self.pickset
+        if pickset is None:
+            pickset = set()
+
         n_empty_val = 0
         dup_vals = set()
-        with open(self.pickfile, newline='') as csvfile:
+        with open(pickfile, newline='') as csvfile:
             r = csv.DictReader(csvfile)
 
             if self.column_name not in r.fieldnames:
-                raise ValueError("column '{self.column_name}' not in pickfile '{self.pickfile}'")
+                raise ValueError("column '{self.column_name}' not in pickfile '{pickfile}'")
 
             for row in r:
                 # pick out values from column
