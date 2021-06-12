@@ -549,7 +549,7 @@ def extract(args):
 
         notify(f"picking column '{picklist.column_name}' of type '{picklist.coltype}' from '{picklist.pickfile}'")
 
-        n_empty_val, dup_vals = picklist.load(picklist.pickfile)
+        n_empty_val, dup_vals = picklist.load(picklist.pickfile, picklist.column_name)
 
         notify(f"loaded {len(picklist.pickset)} distinct values into picklist.")
         if n_empty_val:
