@@ -40,7 +40,7 @@ class SignaturePicklist:
     """
     def __init__(self, pickfile, column_name, coltype):
         self.pickfile = pickfile # note: can be None
-        self.column_name = column_name
+        self.column_name = column_name # note: can be None
         self.coltype = coltype
 
         if coltype not in ('md5', 'md5prefix8', 'name', 'ident', 'ident.'):
@@ -79,7 +79,12 @@ class SignaturePicklist:
 
         return q
 
-    def load(self, pickfile):
+    def init(self, values=[]):
+        if self.pickset is not None:
+            raise ValueError("already initialized?")
+        self.pickset = set(values)
+
+    def load(self, pickfile, column_name):
         "load pickset, return num empty vals, and set of duplicate vals."
         pickset = self.pickset
         if pickset is None:
@@ -90,12 +95,12 @@ class SignaturePicklist:
         with open(pickfile, newline='') as csvfile:
             r = csv.DictReader(csvfile)
 
-            if self.column_name not in r.fieldnames:
-                raise ValueError("column '{self.column_name}' not in pickfile '{pickfile}'")
+            if column_name not in r.fieldnames:
+                raise ValueError("column '{column_name}' not in pickfile '{pickfile}'")
 
             for row in r:
                 # pick out values from column
-                col = row[self.column_name]
+                col = row[column_name]
                 if not col:
                     n_empty_val += 1
                     continue
@@ -110,6 +115,9 @@ class SignaturePicklist:
 
         self.pickset = pickset
         return n_empty_val, dup_vals
+
+    def add(self, value):
+        self.pickset.add(value)
 
     def __contains__(self, ss):
         "does this signature match anything in the picklist?"
