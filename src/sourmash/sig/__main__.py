@@ -602,6 +602,11 @@ def extract(args):
 
     notify("extracted {} signatures from {} file(s)", len(save_sigs),
            len(args.signatures))
+    if picklist:
+        notify(f"for given picklist, found {len(picklist.found)} matches of {len(picklist.pickset)} total")
+        n_missing = len(picklist.pickset - picklist.found)
+        if n_missing:
+            notify(f"WARNING: {n_missing} missing picklist values.")
 
 
 def filter(args):

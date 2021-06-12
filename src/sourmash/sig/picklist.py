@@ -47,6 +47,8 @@ class SignaturePicklist:
 
         self.preprocess_fn = preprocess[coltype]
         self.pickset = None
+        self.found = set()
+        self.n_queries = 0
 
     @classmethod
     def from_picklist_args(cls, argstr):
@@ -110,7 +112,9 @@ class SignaturePicklist:
         q = self._get_sig_attribute(ss)
         q = self.preprocess_fn(q)
 
+        self.n_queries += 1
         if q in self.pickset:
+            self.found.add(q)
             return True
         return False
 
