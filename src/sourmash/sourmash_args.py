@@ -338,7 +338,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     return db
 
 
-def load_file_as_index(filename, yield_all_files=False):
+def load_file_as_index(filename, *, yield_all_files=False):
     """Load 'filename' as a database; generic database loader.
 
     If 'filename' contains an SBT or LCA indexed database, or a regular
@@ -356,7 +356,7 @@ def load_file_as_index(filename, yield_all_files=False):
     return _load_database(filename, yield_all_files)
 
 
-def load_file_as_signatures(filename, select_moltype=None, ksize=None,
+def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
                             yield_all_files=False,
                             progress=None):
     """Load 'filename' as a collection of signatures. Return an iterable.
@@ -382,7 +382,7 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
     db = db.select(moltype=select_moltype, ksize=ksize)
     loader = db.signatures()
 
-    if progress:
+    if progress is not None:
         return progress.start_file(filename, loader)
     else:
         return loader
@@ -500,6 +500,9 @@ class SignatureLoadingProgress(object):
         self.n_sig = 0
         self.interval = reporting_interval
         self.screen_width = 79
+
+    def __len__(self):
+        return self.n_sig
 
     def short_notify(self, msg_template, *args, **kwargs):
         """Shorten the notification message so that it fits on one line.
@@ -689,7 +692,8 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
             return False
 
     def add(self, ss):
-        assert self.zf
+        if not self.zf:
+            raise ValueError("this output is not open")
         super().add(ss)
 
         md5 = ss.md5sum()
