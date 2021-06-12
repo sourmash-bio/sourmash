@@ -556,16 +556,11 @@ def extract(args):
             notify(f"WARNING: {n_empty_val} empty values in column '{picklist.column_name}' in CSV file")
         if dup_vals:
             notify(f"WARNING: {len(dup_vals)} values in column '{picklist.column_name}' were not distinct")
-        picklist_filter_fn = picklist.filter
-    else:
-        def picklist_filter_fn(it):
-            for ss in it:
-                yield ss
 
     # further filtering on md5 or name?
     if args.md5 is not None or args.name is not None:
         def filter_fn(it):
-            for ss in picklist_filter_fn(it):
+            for ss in it:
                 # match?
                 keep = False
                 if args.name and args.name in str(ss):
@@ -576,8 +571,10 @@ def extract(args):
                 if keep:
                     yield ss
     else:
-        # whatever comes out of the picklist is fine
-        filter_fn = picklist_filter_fn
+        # whatever comes out of the database is fine
+        def filter_fn(it):
+            for ss in it:
+                yield ss
 
     # ok! filtering defined, let's go forward
     progress = sourmash_args.SignatureLoadingProgress()
@@ -589,6 +586,7 @@ def extract(args):
         siglist = sourmash_args.load_file_as_signatures(filename,
                                                         ksize=args.ksize,
                                                         select_moltype=moltype,
+                                                        picklist=picklist,
                                                         progress=progress)
         for ss in filter_fn(siglist):
             save_sigs.add(ss)

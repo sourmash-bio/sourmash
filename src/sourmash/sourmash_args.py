@@ -351,6 +351,7 @@ def load_file_as_index(filename, *, yield_all_files=False):
 
 
 def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
+                            picklist=None,
                             yield_all_files=False,
                             progress=None):
     """Load 'filename' as a collection of signatures. Return an iterable.
@@ -367,13 +368,13 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
     underneath this directory into a list of signatures. If
     yield_all_files=True, will attempt to load all files.
 
-    Applies selector function if select_moltype and/or ksize are given.
+    Applies selector function if select_moltype, ksize or picklist are given.
     """
     if progress:
         progress.notify(filename)
 
     db = _load_database(filename, yield_all_files)
-    db = db.select(moltype=select_moltype, ksize=ksize)
+    db = db.select(moltype=select_moltype, ksize=ksize, picklist=picklist)
     loader = db.signatures()
 
     if progress is not None:
