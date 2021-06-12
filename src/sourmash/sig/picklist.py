@@ -10,8 +10,8 @@ preprocess['name'] = lambda x: x
 preprocess['md5'] = lambda x: x
 
 # identifier matches/prefix foo - space delimited identifiers
-preprocess['ident'] = lambda x: x.split(' ')[0].split('.')[0]
-preprocess['ident.'] = lambda x: x.split(' ')[0]
+preprocess['ident.'] = lambda x: x.split(' ')[0].split('.')[0]
+preprocess['ident'] = lambda x: x.split(' ')[0]
 
 # match 8 characters
 preprocess['md5prefix8'] = lambda x: x[:8]
