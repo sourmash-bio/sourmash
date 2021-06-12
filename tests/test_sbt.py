@@ -636,6 +636,33 @@ def test_sbt_as_index_select():
         tree.select(moltype='protein')
 
 
+def test_sbt_as_index_select_picklist():
+    # test 'select' method from Index base class with a picklist
+    from sourmash.sig.picklist import SignaturePicklist
+
+    factory = GraphFactory(31, 1e5, 4)
+    tree = SBT(factory, d=2)
+
+    sig47 = load_one_signature(utils.get_test_data('47.fa.sig'))
+    sig63 = load_one_signature(utils.get_test_data('63.fa.sig'))
+
+    tree.insert(sig47)
+    tree.insert(sig63)
+
+    # construct a picklist...
+    picklist = SignaturePicklist(None, None, 'md5prefix8')
+    picklist.init(['09a08691'])
+
+    # select on picklist
+    tree = tree.select(picklist=picklist)
+    siglist = list(tree.signatures())
+    assert len(siglist) == 1
+
+    ss = siglist[0]
+    assert ss.minhash.ksize == 31
+    assert ss.md5sum().startswith('09a08691c')
+
+
 def test_sbt_as_index_signatures():
     # test 'signatures' method from Index base class.
     factory = GraphFactory(31, 1e5, 4)

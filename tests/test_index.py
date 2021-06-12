@@ -634,6 +634,30 @@ def test_linear_index_moltype_select():
     assert len(linear2) == 0
 
 
+def test_linear_index_picklist_select():
+    # test select with a picklist
+    from sourmash.sig.picklist import SignaturePicklist
+
+    # this loads three ksizes, 21/31/51
+    sig2 = utils.get_test_data('2.fa.sig')
+    siglist = sourmash.load_file_as_signatures(sig2)
+
+    linear = LinearIndex()
+    for ss in siglist:
+        linear.insert(ss)
+
+    # construct a picklist...
+    picklist = SignaturePicklist(None, None, 'md5prefix8')
+    picklist.init(['f3a90d4e'])
+
+    # select on picklist
+    linear2 = linear.select(picklist=picklist)
+    assert len(linear2) == 1
+    ss = list(linear2.signatures())[0]
+    assert ss.minhash.ksize == 31
+    assert ss.md5sum().startswith('f3a90d4e55')
+
+
 @utils.in_tempdir
 def test_index_same_md5sum_fsstorage(c):
     testdata1 = utils.get_test_data('img/2706795855.sig')

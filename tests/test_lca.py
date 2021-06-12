@@ -460,6 +460,27 @@ def test_lca_index_select():
         db.select(moltype='protein')
 
 
+def test_lca_index_select_picklist():
+    # test 'select' method from Index base class with a picklist.
+    from sourmash.sig.picklist import SignaturePicklist
+
+    filename = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    # construct a picklist...
+    picklist = SignaturePicklist(None, None, 'md5prefix8')
+    picklist.init(['50a92740'])
+
+    xx = db.select(picklist=picklist)
+    assert xx == db
+
+    siglist = list(db.signatures())
+    assert len(siglist) == 1
+    ss = siglist[0]
+    assert ss.md5sum().startswith('50a92740')
+    assert ss.minhash.ksize == 31
+
+
 def test_search_db_scaled_gt_sig_scaled():
     dbfile = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
