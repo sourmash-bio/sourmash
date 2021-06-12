@@ -3,28 +3,22 @@ Utility functions for sourmash CLI commands.
 """
 import sys
 import os
-import argparse
-import itertools
 from enum import Enum
 import traceback
 import gzip
 import zipfile
 
 import screed
+import sourmash
 
 from sourmash.sbtmh import load_sbt_index
 from sourmash.lca.lca_db import load_single_database
 import sourmash.exceptions
 
-from . import signature
 from .logging import notify, error, debug_literal
 
 from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
-from . import signature as sig
-from .sbt import SBT
-from .sbtmh import SigLeaf
-from .lca import LCA_Database
-import sourmash
+from . import signature as sigmod
 
 DEFAULT_LOAD_K = 31
 
@@ -304,7 +298,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             db = load_fn(filename,
                          traverse_yield_all=traverse_yield_all,
                          cache_size=cache_size)
-        except ValueError as exc:
+        except ValueError:
             debug_literal(f"_load_databases: FAIL on fn {desc}.")
             debug_literal(traceback.format_exc())
 
@@ -321,7 +315,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             # CTB: could be kind of time consuming for a big record, but at the
             # moment screed doesn't expose format detection cleanly.
             with screed.open(filename) as it:
-                record = next(iter(it))
+                _ = next(iter(it))
             successful_screed_load = True
         except:
             pass
@@ -629,7 +623,7 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
                 i += 1
 
         with gzip.open(outname, "wb") as fp:
-            sig.save_signatures([ss], fp, compression=1)
+            sigmod.save_signatures([ss], fp, compression=1)
 
 
 class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
