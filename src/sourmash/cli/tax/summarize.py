@@ -6,7 +6,7 @@ from sourmash.logging import notify, print_results, error
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('summarize')
-    subparser.add_argument('gather_results')
+    subparser.add_argument('gather_results', nargs='+')
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
@@ -36,7 +36,7 @@ def subparser(subparsers):
         help='choose output format(s)',
     )
     subparser.add_argument(
-        '-r', '--rank', choices=['strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'],
+        '-r', '--rank', choices=['species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'], # strain?
         help='For non-default output formats: Summarize genome taxonomy at this rank and above'
     )
     subparser.add_argument(

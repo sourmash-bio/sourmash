@@ -7,6 +7,7 @@ from sourmash.cli.utils import add_threshold_arg
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('classify')
+    subparser.add_argument('gather_results', nargs='+')
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
@@ -16,17 +17,8 @@ def subparser(subparsers):
         help='database lineages csv'
     )
     subparser.add_argument(
-        '-g', '--gather-results',  metavar='FILE',
-        help='database lineages csv'
-    )
-    subparser.add_argument(
-        '-n', '--query-name', default="",
-        help='name of query to be classified'
-    )
-    subparser.add_argument(
-        '--from-csv',  metavar='FILE',
-        # to do: if query_name in gather results, can just have textfile of gather_results here
-        help='input many gather results as a csv with "name,resultsfile" on each line'
+        '--from-file',  metavar='FILE',
+        help='input many gather results as a text file, with one gather csv per line'
     )
     subparser.add_argument(
         '-o', '--output-base', default='-',

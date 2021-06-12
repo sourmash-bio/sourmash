@@ -10,8 +10,8 @@ from sourmash.tax import tax_utils
 from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_results,
                                     summarize_gather_at, find_missing_identities,
                                     write_summary, load_gather_files_from_csv,
-                                    write_classifications,
-                                    make_krona_header, format_for_krona, write_krona,
+                                    write_classifications, aggregate_by_lineage_at_rank,
+                                    make_krona_header, format_and_summarize_for_krona, write_krona,
                                     combine_sumgather_csvs_by_lineage, write_lineage_sample_frac)
 
 # import lca utils as needed for now
@@ -23,7 +23,7 @@ from sourmash.lca.command_index import load_taxonomy_assignments
 # utility functions for testing
 def make_mini_gather_results(g_infolist):
     # make mini gather_results
-    min_header = ["name","match_ident","f_unique_weighted"]
+    min_header = ["query_name", "name", "match_ident", "f_unique_weighted"]
     gather_results = []
     for g_info in g_infolist:
         inf = dict(zip(min_header, g_info))
@@ -75,6 +75,7 @@ def test_load_gatherfiles_from_csv():
     assert "test1" in seen_idents
 
 
+# @NTP: improve me !!
 def test_load_gather_results():
     gather_csv = utils.get_test_data('tax/test1.gather.csv')
     gather_results = tax_utils.load_gather_results(gather_csv)
@@ -162,8 +163,8 @@ def test_load_taxonomy_assignments_duplicate_force(runtmp):
 
 def test_find_missing_identities():
     # make gather results
-    gA = ["gA","0.5","0.5"]
-    gB = ["gB","0.3","0.5"]
+    gA = ["queryA", "gA","0.5","0.5"]
+    gB = ["queryA", "gB","0.3","0.5"]
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -174,14 +175,14 @@ def test_find_missing_identities():
     print("n_missing: ", n)
     print("ids_missing: ", ids)
     assert n == 1
-    assert ids == ["gB"]
+    assert ids == {"gB"}
 
 
 def test_summarize_gather_at_0():
     """test two matches, equal f_unique_weighted"""
     # make gather results
-    gA = ["gA","0.5","0.5"]
-    gB = ["gB","0.3","0.5"]
+    gA = ["queryA", "gA","0.5","0.5"]
+    gB = ["queryA", "gB","0.3","0.5"]
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -191,12 +192,12 @@ def test_summarize_gather_at_0():
 
     # run summarize_gather_at and check results!
     sk_sum = summarize_gather_at("superkingdom", taxD, g_res)
-    assert sk_sum == [((LineagePair(rank='superkingdom', name='a'),), 1.0)]
+    assert sk_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),), 1.0)]
     phy_sum = summarize_gather_at("phylum", taxD, g_res)
-    assert phy_sum == [((LineagePair(rank='superkingdom', name='a'),
+    assert phy_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),
                          LineagePair(rank='phylum', name='b')),1.0)]
     cl_sum = summarize_gather_at("class", taxD, g_res)
-    assert cl_sum == [((LineagePair(rank='superkingdom', name='a'),
+    assert cl_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),
                         LineagePair(rank='phylum', name='b'),
                         LineagePair(rank='class', name='c')),0.5),
                       ((LineagePair(rank='superkingdom', name='a'),
@@ -207,8 +208,8 @@ def test_summarize_gather_at_0():
 def test_summarize_gather_at_1():
     """test two matches, diff f_unique_weighted"""
     # make mini gather_results
-    gA = ["gA","0.5","0.6"]
-    gB = ["gB","0.3","0.1"]
+    gA = ["queryA", "gA","0.5","0.6"]
+    gB = ["queryA", "gB","0.3","0.1"]
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -217,12 +218,12 @@ def test_summarize_gather_at_1():
     taxD = make_mini_taxonomy([gA_tax,gB_tax])
     # run summarize_gather_at and check results!
     sk_sum = summarize_gather_at("superkingdom", taxD, g_res)
-    assert sk_sum == [((LineagePair(rank='superkingdom', name='a'),), 0.7)]
+    assert sk_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),), 0.7)]
     phy_sum = summarize_gather_at("phylum", taxD, g_res)
-    assert phy_sum == [((LineagePair(rank='superkingdom', name='a'),
+    assert phy_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),
                          LineagePair(rank='phylum', name='b')),0.7)]
     cl_sum = summarize_gather_at("class", taxD, g_res)
-    assert cl_sum == [((LineagePair(rank='superkingdom', name='a'),
+    assert cl_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),
                         LineagePair(rank='phylum', name='b'),
                         LineagePair(rank='class', name='c')),0.6),
                       ((LineagePair(rank='superkingdom', name='a'),
@@ -234,8 +235,8 @@ def test_summarize_gather_at_over100percent_f_unique_weighted():
     """gather matches that add up to >100% f_unique_weighted"""
     ## @NTP:  currently passes, we should probably make this fail
     # make mini gather_results
-    gA = ["gA","0.5","0.5"]
-    gB = ["gB","0.3","0.6"]
+    gA = ["queryA", "gA","0.5","0.5"]
+    gB = ["queryA", "gB","0.3","0.6"]
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -244,12 +245,12 @@ def test_summarize_gather_at_over100percent_f_unique_weighted():
     taxD = make_mini_taxonomy([gA_tax,gB_tax])
     # run summarize_gather_at and check results!
     sk_sum = summarize_gather_at("superkingdom", taxD, g_res)
-    assert sk_sum == [((LineagePair(rank='superkingdom', name='a'),), 1.1)]
+    assert sk_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),), 1.1)]
     phy_sum = summarize_gather_at("phylum", taxD, g_res)
-    assert phy_sum == [((LineagePair(rank='superkingdom', name='a'),
+    assert phy_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),
                          LineagePair(rank='phylum', name='b')),1.1)]
     cl_sum = summarize_gather_at("class", taxD, g_res)
-    assert cl_sum == [((LineagePair(rank='superkingdom', name='a'),
+    assert cl_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),
                         LineagePair(rank='phylum', name='b'),
                         LineagePair(rank='class', name='d')),0.6),
                       ((LineagePair(rank='superkingdom', name='a'),
@@ -260,8 +261,8 @@ def test_summarize_gather_at_over100percent_f_unique_weighted():
 def test_summarize_gather_at_missing_ignore():
     """test two matches, equal f_unique_weighted"""
     # make gather results
-    gA = ["gA","0.5","0.5"]
-    gB = ["gB","0.3","0.5"]
+    gA = ["queryA", "gA","0.5","0.5"]
+    gB = ["queryA", "gB","0.3","0.5"]
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -271,12 +272,12 @@ def test_summarize_gather_at_missing_ignore():
     # run summarize_gather_at and check results!
     sk_sum = summarize_gather_at("superkingdom", taxD, g_res, skip_idents=['gB'])
     print("sk_sum: ", sk_sum)
-    assert sk_sum == [((LineagePair(rank='superkingdom', name='a'),), 0.5)]
+    assert sk_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),), 0.5)]
     phy_sum = summarize_gather_at("phylum", taxD, g_res, skip_idents=['gB'])
-    assert phy_sum == [((LineagePair(rank='superkingdom', name='a'),
+    assert phy_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),
                          LineagePair(rank='phylum', name='b')),0.5)]
     cl_sum = summarize_gather_at("class", taxD, g_res, skip_idents=['gB'])
-    assert cl_sum == [((LineagePair(rank='superkingdom', name='a'),
+    assert cl_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),
                         LineagePair(rank='phylum', name='b'),
                         LineagePair(rank='class', name='c')),0.5)]
 
@@ -284,8 +285,8 @@ def test_summarize_gather_at_missing_ignore():
 def test_summarize_gather_at_missing_fail():
     """test two matches, equal f_unique_weighted"""
     # make gather results
-    gA = ["gA","0.5","0.5"]
-    gB = ["gB","0.3","0.5"]
+    gA = ["queryA", "gA","0.5","0.5"]
+    gB = ["queryA", "gB","0.3","0.5"]
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -301,8 +302,8 @@ def test_summarize_gather_at_missing_fail():
 def test_summarize_gather_at_best_only_0():
     """test two matches, diff f_unique_weighted"""
     # make mini gather_results
-    gA = ["gA","0.5","0.6"]
-    gB = ["gB","0.3","0.1"]
+    gA = ["queryA", "gA","0.5","0.6"]
+    gB = ["queryA", "gB","0.3","0.1"]
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -311,12 +312,12 @@ def test_summarize_gather_at_best_only_0():
     taxD = make_mini_taxonomy([gA_tax,gB_tax])
     # run summarize_gather_at and check results!
     sk_sum = summarize_gather_at("superkingdom", taxD, g_res, best_only=True)
-    assert sk_sum == [((LineagePair(rank='superkingdom', name='a'),), 0.7)]
+    assert sk_sum["queryA"]== [((LineagePair(rank='superkingdom', name='a'),), 0.7)]
     phy_sum = summarize_gather_at("phylum", taxD, g_res, best_only=True)
-    assert phy_sum == [((LineagePair(rank='superkingdom', name='a'),
+    assert phy_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),
                          LineagePair(rank='phylum', name='b')),0.7)]
     cl_sum = summarize_gather_at("class", taxD, g_res, best_only=True)
-    assert cl_sum == [((LineagePair(rank='superkingdom', name='a'),
+    assert cl_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),
                         LineagePair(rank='phylum', name='b'),
                         LineagePair(rank='class', name='c')),0.6)]
 
@@ -324,8 +325,8 @@ def test_summarize_gather_at_best_only_0():
 def test_summarize_gather_at_best_only_equal_choose_first():
     """test two matches, equal f_unique_weighted. best_only chooses first"""
     # make mini gather_results
-    gA = ["gA","0.5","0.5"]
-    gB = ["gB","0.3","0.5"]
+    gA = ["queryA", "gA","0.5","0.5"]
+    gB = ["queryA", "gB","0.3","0.5"]
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -334,12 +335,12 @@ def test_summarize_gather_at_best_only_equal_choose_first():
     taxD = make_mini_taxonomy([gA_tax,gB_tax])
     # run summarize_gather_at and check results!
     sk_sum = summarize_gather_at("superkingdom", taxD, g_res, best_only=True)
-    assert sk_sum == [((LineagePair(rank='superkingdom', name='a'),), 1.0)]
+    assert sk_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),), 1.0)]
     phy_sum = summarize_gather_at("phylum", taxD, g_res, best_only=True)
-    assert phy_sum == [((LineagePair(rank='superkingdom', name='a'),
+    assert phy_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),
                          LineagePair(rank='phylum', name='b')),1.0)]
     cl_sum = summarize_gather_at("class", taxD, g_res, best_only=True)
-    assert cl_sum == [((LineagePair(rank='superkingdom', name='a'),
+    assert cl_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),
                         LineagePair(rank='phylum', name='b'),
                         LineagePair(rank='class', name='c')),0.5)]
 
@@ -404,11 +405,41 @@ def test_make_krona_header_fail():
         assert str(exc.value) == "Rank strain not present in available ranks"
 
 
+def test_aggregate_by_lineage_at_rank_0():
+    """test two queries, aggregate lineage at rank for each"""
+    # make gather results
+    gA = ["queryA","gA","0.5","0.5"]
+    gB = ["queryA","gB","0.3","0.4"]
+    gC = ["queryB","gB","0.3","0.3"]
+    g_res = make_mini_gather_results([gA,gB,gC])
+
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b")
+    gB_tax = ("gB", "a;c")
+    taxD = make_mini_taxonomy([gA_tax,gB_tax])
+
+    # aggregate by lineage at rank
+    sk_sum = summarize_gather_at("superkingdom", taxD, g_res)
+    print("superkingdom summarized gather results:", sk_sum['queryA'])
+    sk_lin_sum = aggregate_by_lineage_at_rank(sk_sum["queryA"])
+    print("queryA superkingdom lineage summary:", sk_lin_sum)
+    assert sk_lin_sum == {(LineagePair(rank='superkingdom', name='a'),): 0.9}
+
+    phy_sum = summarize_gather_at("phylum", taxD, g_res)
+    print("phylum summary:", phy_sum)
+    phy_lin_sum = aggregate_by_lineage_at_rank(phy_sum["queryA"])
+    print("phylum lineage summary:", phy_lin_sum)
+    assert phy_lin_sum == {(LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='b')): 0.5,
+                           (LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='c')): 0.4}
+    skB_lin_sum = aggregate_by_lineage_at_rank(sk_sum["queryB"])
+    assert skB_lin_sum == {(LineagePair(rank='superkingdom', name='a'),): 0.3}
+
+
 def test_format_for_krona_0():
     """test two matches, equal f_unique_weighted"""
     # make gather results
-    gA = ["gA","0.5","0.5"]
-    gB = ["gB","0.3","0.5"]
+    gA = ["queryA", "gA","0.5","0.5"]
+    gB = ["queryA", "gB","0.3","0.5"]
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -418,12 +449,13 @@ def test_format_for_krona_0():
 
     # check krona format and check results!
     sk_sum = summarize_gather_at("superkingdom", taxD, g_res)
-    krona_res = format_for_krona("superkingdom", {"superkingdom": sk_sum})
+    print("superkingdom summarized gather results:", sk_sum)
+    krona_res = format_and_summarize_for_krona("superkingdom", {"superkingdom": sk_sum})
     print("krona_res: ", krona_res)
     assert krona_res == [(1.0, 'a')]
 
     phy_sum = summarize_gather_at("phylum", taxD, g_res)
-    krona_res = format_for_krona("phylum", {"phylum": phy_sum})
+    krona_res = format_and_summarize_for_krona("phylum", {"phylum": phy_sum})
     print("krona_res: ", krona_res)
     assert krona_res == [(1.0, 'a', 'b')]
 
@@ -431,8 +463,8 @@ def test_format_for_krona_0():
 def test_format_for_krona_1():
     """test two matches, equal f_unique_weighted"""
     # make gather results
-    gA = ["gA","0.5","0.5"]
-    gB = ["gB","0.3","0.5"]
+    gA = ["queryA", "gA","0.5","0.5"]
+    gB = ["queryA", "gB","0.3","0.5"]
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -447,13 +479,13 @@ def test_format_for_krona_1():
         sum_res[rank] = summarize_gather_at(rank, taxD, g_res)
     print('summarized gather: ', sum_res)
     # check krona format
-    sk_krona = format_for_krona("superkingdom", sum_res)
+    sk_krona = format_and_summarize_for_krona("superkingdom", sum_res)
     print("sk_krona: ", sk_krona)
     assert sk_krona == [(1.0, 'a')]
-    phy_krona = format_for_krona("phylum", sum_res)
+    phy_krona = format_and_summarize_for_krona("phylum", sum_res)
     print("phy_krona: ", phy_krona)
     assert phy_krona ==  [(1.0, 'a', 'b')]
-    cl_krona = format_for_krona("class", sum_res)
+    cl_krona = format_and_summarize_for_krona("class", sum_res)
     print("cl_krona: ", cl_krona)
     assert cl_krona ==  [(0.5, 'a', 'b', 'c'), (0.5, 'a', 'b', 'd')]
 
@@ -461,8 +493,8 @@ def test_format_for_krona_1():
 def test_format_for_krona_best_only():
     """test two matches, equal f_unique_weighted"""
     # make gather results
-    gA = ["gA","0.5","0.5"]
-    gB = ["gB","0.3","0.5"]
+    gA = ["queryA", "gA","0.5","0.5"]
+    gB = ["queryA", "gB","0.3","0.5"]
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -477,13 +509,13 @@ def test_format_for_krona_best_only():
         sum_res[rank] = summarize_gather_at(rank, taxD, g_res, best_only=True)
     print('summarized gather: ', sum_res)
     # check krona format
-    sk_krona = format_for_krona("superkingdom", sum_res)
+    sk_krona = format_and_summarize_for_krona("superkingdom", sum_res)
     print("sk_krona: ", sk_krona)
     assert sk_krona == [(1.0, 'a')]
-    phy_krona = format_for_krona("phylum", sum_res)
+    phy_krona = format_and_summarize_for_krona("phylum", sum_res)
     print("phy_krona: ", phy_krona)
     assert phy_krona ==  [(1.0, 'a', 'b')]
-    cl_krona = format_for_krona("class", sum_res)
+    cl_krona = format_and_summarize_for_krona("class", sum_res)
     print("cl_krona: ", cl_krona)
     assert cl_krona ==  [(0.5, 'a', 'b', 'c')]
 

@@ -71,9 +71,12 @@ def load_gather_results(gather_csv):
 # this summarizes at a specific rank.
 def summarize_gather_at(rank, tax_assign, gather_results, skip_idents = [], split_identifiers=True, keep_identifier_versions=False, best_only=False):
     # collect!
-    sum_uniq_weighted = defaultdict(float)
+    #sum_uniq_weighted = defaultdict(float)
+    # how to modify this to enable multiple gather csvs, AND multigather output? need to use query_name, summarize by query_name
+    sum_uniq_weighted = defaultdict(lambda: defaultdict(float))
     for row in gather_results:
-        # move these checks to loading function!
+        query_name = row['query_name']
+        # move these checks to loading function!?
         match_ident = row['name']
         match_ident = get_ident(match_ident, split_identifiers, keep_identifier_versions)
         # if identity not in lineage database, and not --fail-on-missing-taxonomy, skip summarizing this match
@@ -89,26 +92,33 @@ def summarize_gather_at(rank, tax_assign, gather_results, skip_idents = [], spli
 
         f_uniq_weighted = row['f_unique_weighted']
         f_uniq_weighted = float(f_uniq_weighted)
-        sum_uniq_weighted[lineage] += f_uniq_weighted
+        sum_uniq_weighted[query_name][lineage] += f_uniq_weighted
 
-    items = list(sum_uniq_weighted.items())
-    items.sort(key = lambda x: -x[1])
-    if best_only:
-        return [items[0]]# return list to keep formatting the same as non best-only
-    return items
+    sum_uniq_weighted_sorted = defaultdict(list)
+    for query_name, lineage_weights in sum_uniq_weighted.items():
+        items = list(lineage_weights.items())
+        items.sort(key = lambda x: -x[1])
+        if best_only:
+            sum_uniq_weighted_sorted[query_name] = [items[0]] # list to keep formatting the same as non best-only
+        else:
+            sum_uniq_weighted_sorted[query_name] = items
+
+    return sum_uniq_weighted_sorted
+
 
 def find_missing_identities(gather_results, tax_assign):
     n_missed = 0
-    ident_missed= []
+    ident_missed= set()
     for row in gather_results:
         match_ident = row['name']
         match_ident = get_ident(match_ident)
         if match_ident not in tax_assign:
             n_missed += 1
-            ident_missed.append(match_ident)
+            ident_missed.add(match_ident)
 
     notify(f'of {len(gather_results)}, missed {n_missed} lineage assignments.')
     return n_missed, ident_missed
+
 
 # pass ranks; have ranks=[default_ranks]
 def make_krona_header(min_rank, include_strain=False):
@@ -120,15 +130,45 @@ def make_krona_header(min_rank, include_strain=False):
         raise ValueError(f"Rank {min_rank} not present in available ranks!")
     return tuple(header + tl[:rank_index+1])
 
-def format_for_krona(rank, summarized_gather):
+
+# this is for summarized results of a single query
+def aggregate_by_lineage_at_rank(rank_results):
+    #query_lineage_summary = defaultdict(float)
+    query_lineage_summary = Counter()
+    for lin, fraction in rank_results:
+        query_lineage_summary[lin] += fraction
+    return query_lineage_summary
+
+
+def format_and_summarize_for_krona(rank, summarized_gather):
+    num_queries=0
+    #krona_summary = defaultdict(float)
+    krona_summary = Counter()
+    for res_rank, query_summarized_gather in summarized_gather.items():
+        if res_rank == rank:
+            for query, sumgather in query_summarized_gather.items():
+                num_queries += 1
+                query_lineage_summary = aggregate_by_lineage_at_rank(sumgather)
+            #add results from each query
+            krona_summary.update(query_lineage_summary)
+
+    # if multiple_samples, divide fraction by the total number of query files
+    for lin, fraction in krona_summary.items():
+        # add query-specific fraction (fraction/total num queries)
+        krona_summary[lin] = fraction/num_queries
+
+    # sort by fraction
+    krona_items = list(krona_summary.items())
+    krona_items.sort(key = lambda x: -x[1])
+
+    # reformat lineage for krona_results printing
     krona_results = []
-    for gather_rank, rank_results in summarized_gather.items():
-        if gather_rank == rank:
-            for sorted_result in rank_results:
-                lin,fraction = sorted_result
-                lin_list = display_lineage(lin).split(';')
-                krona_results.append((fraction, *lin_list))
+    for lin, fraction in krona_items:
+        lin_list = display_lineage(lin).split(';')
+        krona_results.append((fraction, *lin_list))
+
     return krona_results
+
 
 def write_krona(rank, krona_results, out_fp, sep='\t'):
     header = make_krona_header(rank)
@@ -136,6 +176,7 @@ def write_krona(rank, krona_results, out_fp, sep='\t'):
     tsv_output.writerow(header)
     for res in krona_results:
         tsv_output.writerow(res)
+
 
 def write_summary(summarized_gather, csv_fp, sep='\t'):
     header= ["rank", "fraction", "lineage"]
@@ -145,6 +186,7 @@ def write_summary(summarized_gather, csv_fp, sep='\t'):
         for sorted_result in rank_results:
             lin,val = sorted_result
             w.writerow([rank, f'{val:.3f}', display_lineage(lin)])
+
 
 def write_classifications(classifications, csv_fp, sep='\t'):
     header= ["query_name", "classification_rank", "fraction_matched_at_rank", "lineage"]
@@ -225,3 +267,25 @@ def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, sep='\t'):
         row = {'lineage': lin}
         row.update(sampleinfo)
         w.writerow(row)
+
+
+# see https://github.com/luizirber/2020-cami/blob/master/scripts/gather_to_opal.py
+def write_cami_profiling_bioboxes_format(sample_id, ranks, taxons, out_fp, *, taxonomy_id=None, program=None, format_version="0.9.1", sep="\t"):
+    # init version, not working yet
+    header_title = "# Taxonomic Profiling Output"
+    sample_info = f"@SampleID:{sample_id}"
+    version_info = f" @Version:{format_version}"
+    rank_info = f"@Ranks:{ranks}"
+    output_lines = [header_title, sample_info, version_info, rank_info]
+    if taxonomy_id is not None:
+        output_lines.append(f"@TaxonomyID:{taxonomy_id}")
+#    if program is not None:
+#        output_lines.append(f"@__program__: {program}")
+    output_lines.append(f"@@TAXID\tRANK\tTAXPATH\tPERCENTAGE") # actual tsv header
+
+    for tax in taxons.itertuples(index=False, name=None):
+        tax_line = "\t".join(str(t) for t in tax)
+        output_lines.append(tax_line)
+
+    #write instead of return!
+    #return "\n".join(output_lines)
