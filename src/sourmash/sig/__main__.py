@@ -216,8 +216,10 @@ def describe(args):
                 if mh.track_abundance:
                     with_abundance = 1
                 md5 = sig.md5sum()
-                name = sig.name or "** no name **"
-                filename = sig.filename or "** no name **"
+                name = sig.name
+                p_name = name or "** no name **"
+                filename = sig.filename
+                p_filename = filename or "** no name **"
                 license = sig.license
 
                 if w:
@@ -226,8 +228,8 @@ def describe(args):
                 print_results('''\
 ---
 signature filename: {signature_file}
-signature: {name}
-source file: {filename}
+signature: {p_name}
+source file: {p_filename}
 md5: {md5}
 k={ksize} molecule={moltype} num={num} scaled={scaled} seed={seed} track_abundance={with_abundance}
 size: {n_hashes}
@@ -549,6 +551,7 @@ def extract(args):
                                                         ksize=args.ksize,
                                                         select_moltype=moltype,
                                                         progress=progress)
+        # CTB: make streaming!
         siglist = list(siglist)
 
         # select!
