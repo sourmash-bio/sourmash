@@ -231,10 +231,12 @@ def test_search_minhashes():
     # this fails if 'search_obj' is calc containment and not similarity.
     search_obj = make_jaccard_search_query(threshold=0.08)
     results = tree.find(search_obj, to_search.data)
-    for sr in results:
+
+    n = 0
+    for n, sr in enumerate(results):
         assert to_search.data.jaccard(sr.signature) >= 0.08
 
-    print(results)
+    assert n == 1
 
 
 def test_binary_nary_tree():
@@ -659,6 +661,41 @@ def test_sbt_as_index_select_picklist():
     assert len(siglist) == 1
 
     ss = siglist[0]
+    assert ss.minhash.ksize == 31
+    assert ss.md5sum().startswith('09a08691c')
+
+
+def test_sbt_as_index_find_picklist():
+    # test 'select' method from Index base class with a picklist
+    from sourmash.sig.picklist import SignaturePicklist
+
+    factory = GraphFactory(31, 1e5, 4)
+    tree = SBT(factory, d=2)
+
+    sig47 = load_one_signature(utils.get_test_data('47.fa.sig'))
+    sig63 = load_one_signature(utils.get_test_data('63.fa.sig'))
+
+    tree.insert(sig47)
+    tree.insert(sig63)
+
+    # construct a picklist...
+    picklist = SignaturePicklist(None, None, 'md5prefix8')
+    picklist.init(['09a08691'])
+
+    # run a 'find' with sig63, should find 47 and 63 both.
+    search_obj = make_jaccard_search_query(do_containment=True, threshold=0.0)
+    results = list(tree.find(search_obj, sig63))
+    print(results)
+    assert len(results) == 2
+
+    # now, select on picklist and do another find...
+    tree = tree.select(picklist=picklist)
+    results = list(tree.find(search_obj, sig63))
+    print(results)
+    assert len(results) == 1
+
+    # and check that it is the expected one!
+    ss = results[0].signature
     assert ss.minhash.ksize == 31
     assert ss.md5sum().startswith('09a08691c')
 

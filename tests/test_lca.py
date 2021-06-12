@@ -11,6 +11,7 @@ import sourmash_tst_utils as utils
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
 
+from sourmash.search import make_jaccard_search_query
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import LineagePair
 
@@ -29,6 +30,41 @@ def test_api_create_search():
     assert len(results) == 1
     (similarity, match, filename) = results[0]
     assert match.minhash == ss.minhash
+
+
+def test_api_find_picklist_select():
+    # does 'find' respect picklists?
+    from sourmash.sig.picklist import SignaturePicklist
+
+    sig47 = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                        ksize=31)
+    sig63 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                        ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(sig47)
+    lca_db.insert(sig63)
+
+    # construct a picklist...
+    picklist = SignaturePicklist(None, None, 'md5prefix8')
+    picklist.init(['09a08691'])
+
+    # run a 'find' with sig63, should find 47 and 63 both.
+    search_obj = make_jaccard_search_query(do_containment=True, threshold=0.0)
+    results = list(lca_db.find(search_obj, sig63))
+    print(results)
+    assert len(results) == 2
+
+    # now, select on picklist and do another find...
+    lca_db = lca_db.select(picklist=picklist)
+    results = list(lca_db.find(search_obj, sig63))
+    print(results)
+    assert len(results) == 1
+
+    # and check that it is the expected one!
+    ss = results[0].signature
+    assert ss.minhash.ksize == 31
+    assert ss.md5sum().startswith('09a08691c')
 
 
 def test_api_create_insert():
