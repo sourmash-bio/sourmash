@@ -481,6 +481,27 @@ class ZipFileLinearIndex(Index):
         zf = zipfile.ZipFile(location, 'r')
         return cls(zf, traverse_yield_all=traverse_yield_all)
 
+    def signatures_with_internal(self):
+        from .signature import load_signatures
+        for zipinfo in self.zf.infolist():
+            # should we load this file? if it ends in .sig OR we are forcing:
+            if zipinfo.filename.endswith('.sig') or \
+               zipinfo.filename.endswith('.sig.gz') or \
+               self.traverse_yield_all:
+                # now load all the signatures and select on ksize/moltype:
+                selection_dict = self.selection_dict
+
+                fp = self.zf.open(zipinfo)
+
+                # note: if 'fp' doesn't contain a valid JSON signature,
+                # load_signatures will silently fail & yield nothing.
+                for ss in load_signatures(fp):
+                    if selection_dict:
+                        if select_signature(ss, **self.selection_dict):
+                            yield ss, self.zf.filename, zipinfo.filename
+                    else:
+                        yield ss, self.zf.filename, zipinfo.filename
+
     def signatures(self):
         "Load all signatures in the zip file."
         from .signature import load_signatures

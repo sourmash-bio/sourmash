@@ -27,6 +27,7 @@ extract <signature> [<signature> ... ]    - extract one or more signatures
 filter <signature> [<signature> ... ]     - filter k-mers on abundance
 flatten <signature> [<signature> ... ]    - remove abundances
 intersect <signature> [<signature> ...]   - intersect one or more signatures
+manifest <sig/db>                         - build a manifest
 merge <signature> [<signature> ...]       - merge one or more signatures
 rename <signature> <name>                 - rename signature
 split <signatures> [<signature> ...]      - split signatures into single files
@@ -245,6 +246,59 @@ signature license: {license}
             raise
 
     notify(f'loaded {len(progress)} signatures total.')
+
+    if csv_fp:
+        csv_fp.close()
+
+
+def manifest(args):
+    """
+    build a signature manifest
+    """
+    set_quiet(args.quiet)
+
+    # CTB: might want to switch to sourmash_args.FileOutputCSV here?
+    csv_fp = open(args.output, 'w', newline='')
+    w = csv.DictWriter(csv_fp,
+                       ['internal_location',
+                        'md5', 'md5short', 'ksize', 'moltype', 'num',
+                        'scaled', 'n_hashes', 'seed', 'with_abundance',
+                        'name', 'filename', 'license'],
+                       extrasaction='ignore')
+    w.writeheader()
+
+    try:
+        loader = sourmash_args.load_file_as_index(args.location)
+    except Exception as exc:
+        error('\nError while reading signatures from {}:'.format(signature_file))
+        error(str(exc))
+        error('(continuing)')
+        raise
+
+    n = 0
+    for n, (sig, parent, loc) in enumerate(loader.signatures_with_internal()):
+        internal_location = loc
+
+        # extract info, write as appropriate.
+        mh = sig.minhash
+        ksize = mh.ksize
+        moltype = mh.moltype
+        scaled = mh.scaled
+        num = mh.num
+        seed = mh.seed
+        n_hashes = len(mh)
+        with_abundance = 0
+        if mh.track_abundance:
+            with_abundance = 1
+        md5 = sig.md5sum()
+        md5short = md5[:8]
+        name = sig.name
+        filename = sig.filename
+        license = sig.license
+
+        w.writerow(locals())
+
+    notify(f'built manifest for {n} signatures total.')
 
     if csv_fp:
         csv_fp.close()
