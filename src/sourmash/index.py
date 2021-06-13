@@ -509,6 +509,15 @@ class ZipFileLinearIndex(Index):
                             print(f"({p} found!")
                             yield self.zf.open(zipinfo)
                             break
+        elif picklist and picklist.coltype == 'md5prefix8':
+            def yield_fp():
+                for zipinfo in self.zf.infolist():
+                    if zipinfo.filename.startswith('signatures/'):
+                        fn = zipinfo.filename[len('signatures/'):]
+                        prefix = fn[:8]
+                        if prefix in picklist.pickset:
+                            print(f"({prefix} q found)")
+                            yield self.zf.open(zipinfo)
         else:
             def yield_fp():
                 for zipinfo in self.zf.infolist():
