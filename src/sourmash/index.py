@@ -484,24 +484,52 @@ class ZipFileLinearIndex(Index):
     def signatures(self):
         "Load all signatures in the zip file."
         from .signature import load_signatures
-        for zipinfo in self.zf.infolist():
-            # should we load this file? if it ends in .sig OR we are forcing:
-            if zipinfo.filename.endswith('.sig') or \
-               zipinfo.filename.endswith('.sig.gz') or \
-               self.traverse_yield_all:
-                fp = self.zf.open(zipinfo)
 
-                # now load all the signatures and select on ksize/moltype:
-                selection_dict = self.selection_dict
+        picklist = None
+        if self.selection_dict:
+            picklist = self.selection_dict.get('picklist', None)
 
-                # note: if 'fp' doesn't contain a valid JSON signature,
-                # load_signatures will silently fail & yield nothing.
-                for ss in load_signatures(fp):
-                    if selection_dict:
-                        if select_signature(ss, **self.selection_dict):
-                            yield ss
-                    else:
+        # treat md5 picklists specially!
+        # CTB: here, should we be worried if we don't find a signature we want?
+        # e.g. how do we conclude that a picklist optimization doesn't apply?
+        # CTB: also, could support md5 prefix by filtering all infolist.
+
+        if picklist and picklist.coltype == 'md5':
+            patterns = ("signatures/{md5}.sig", "signatures/{md5}.sig.gz")
+
+            def yield_fp():
+                for md5 in picklist.pickset:
+                    for p in patterns:
+                        p = p.format(md5=md5)
+                        try:
+                            zipinfo = self.zf.getinfo(p)
+                        except KeyError:
+                            print(f"({p} is not found)")
+                        else:
+                            print(f"({p} found!")
+                            yield self.zf.open(zipinfo)
+                            break
+        else:
+            def yield_fp():
+                for zipinfo in self.zf.infolist():
+                    # should we load this file? if it ends in .sig OR we are forcing:
+                    if zipinfo.filename.endswith('.sig') or \
+                       zipinfo.filename.endswith('.sig.gz') or \
+                       self.traverse_yield_all:
+                        yield self.zf.open(zipinfo)
+
+        for fp in yield_fp():
+            # now load all the signatures and select on ksize/moltype:
+            selection_dict = self.selection_dict
+
+            # note: if 'fp' doesn't contain a valid JSON signature,
+            # load_signatures will silently fail & yield nothing.
+            for ss in load_signatures(fp):
+                if selection_dict:
+                    if select_signature(ss, **self.selection_dict):
                         yield ss
+                else:
+                    yield ss
 
     def select(self, **kwargs):
         "Select signatures in zip file based on ksize/moltype/etc."
