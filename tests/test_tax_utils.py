@@ -9,8 +9,10 @@ import sourmash_tst_utils as utils
 from sourmash.tax import tax_utils
 from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_results,
                                     summarize_gather_at, find_missing_identities,
-                                    write_summary, load_gather_files_from_csv,
-                                    write_classifications, aggregate_by_lineage_at_rank,
+                                    write_summary, load_gather_files_from_file,
+                                    SummarizedGatherResult,
+                                    #write_classifications,
+                                    aggregate_by_lineage_at_rank,
                                     make_krona_header, format_and_summarize_for_krona, write_krona,
                                     combine_sumgather_csvs_by_lineage, write_lineage_sample_frac)
 
@@ -66,13 +68,12 @@ def test_get_ident_no_split():
     assert n_id == "GCF_001881345.1 secondname"
 
 
-def test_load_gatherfiles_from_csv():
-    from_csv = utils.get_test_data('tax/from-csv.csv')
-    gather_files, seen_idents = load_gather_files_from_csv(from_csv)
+def test_load_gatherfiles_from_file():
+    from_file = utils.get_test_data('tax/from-file.txt')
+    gather_files = load_gather_files_from_file(from_file)
     print("gather_files: ", gather_files)
     assert len(gather_files) == 1
-    assert gather_files == [('test1', 'test1.gather.csv')]
-    assert "test1" in seen_idents
+    assert gather_files == ['test1.gather.csv']
 
 
 # @NTP: improve me !!
@@ -192,17 +193,20 @@ def test_summarize_gather_at_0():
 
     # run summarize_gather_at and check results!
     sk_sum = summarize_gather_at("superkingdom", taxD, g_res)
-    assert sk_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),), 1.0)]
+    print("superkingdom summarized gather: ", sk_sum)
+
+    assert sk_sum == [SummarizedGatherResult(query_name='queryA', rank='superkingdom', fraction=1.0, lineage=(LineagePair(rank='superkingdom', name='a'),))]
     phy_sum = summarize_gather_at("phylum", taxD, g_res)
-    assert phy_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),
-                         LineagePair(rank='phylum', name='b')),1.0)]
+    print("phylum summarized gather: ", phy_sum)
+    assert phy_sum == [SummarizedGatherResult(query_name='queryA', rank='phylum', fraction=1.0, lineage=(LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='b')))]
     cl_sum = summarize_gather_at("class", taxD, g_res)
-    assert cl_sum["queryA"] == [((LineagePair(rank='superkingdom', name='a'),
-                        LineagePair(rank='phylum', name='b'),
-                        LineagePair(rank='class', name='c')),0.5),
-                      ((LineagePair(rank='superkingdom', name='a'),
-                        LineagePair(rank='phylum', name='b'),
-                        LineagePair(rank='class', name='d')),0.5)]
+    print("class summarized gather: ", cl_sum)
+    assert cl_sum == [SummarizedGatherResult(query_name='queryA', rank='class', fraction=0.5,
+                         lineage=(LineagePair(rank='superkingdom', name='a'),
+                         LineagePair(rank='phylum', name='b'), LineagePair(rank='class', name='c'))),
+                      SummarizedGatherResult(query_name='queryA', rank='class', fraction=0.5,
+                         lineage=(LineagePair(rank='superkingdom', name='a'),
+                         LineagePair(rank='phylum', name='b'), LineagePair(rank='class', name='d')))]
 
 
 def test_summarize_gather_at_1():
@@ -348,9 +352,12 @@ def test_summarize_gather_at_best_only_equal_choose_first():
 def test_write_summary_csv(runtmp):
     """test summary csv write function"""
 
-    sum_gather = {'superkingdom': [((LineagePair(rank='superkingdom', name='a'),), 1.0)],
-                  'phylum': [((LineagePair(rank='superkingdom', name='a'),
-                               LineagePair(rank='phylum', name='b')), 1.0)]}
+    #sum_gather = {'superkingdom': [((LineagePair(rank='superkingdom', name='a'),), 1.0)],
+    #              'phylum': [((LineagePair(rank='superkingdom', name='a'),
+    #                           LineagePair(rank='phylum', name='b')), 1.0)]}
+    sum_gather = {'superkingdom': {"x": [((LineagePair(rank='superkingdom', name='a'),), 1.0)]},
+                  'phylum': {"y": [((LineagePair(rank='superkingdom', name='a'),
+                               LineagePair(rank='phylum', name='b')), 1.0)]}}
 
     outs= runtmp.output("outsum.csv")
     with open(outs, 'w') as out_fp:
@@ -358,27 +365,27 @@ def test_write_summary_csv(runtmp):
 
     sr = [x.rstrip().split(',') for x in open(outs, 'r')]
     print("gather_summary_results_from_file: \n", sr)
-    assert sr[0] ==  ['rank', 'fraction', 'lineage']
-    assert sr[1] ==  ['superkingdom', '1.000', 'a']
-    assert sr[2] ==  ['phylum', '1.000', 'a;b']
+    assert sr[0] ==  ['query_name', 'rank', 'fraction', 'lineage']
+    assert sr[1] ==  ['x', 'superkingdom', '1.000', 'a']
+    assert sr[2] ==  ['y', 'phylum', '1.000', 'a;b']
 
 
-def test_write_classification_csv(runtmp):
-    """test classification csv write function"""
-
-    classif = {'superkingdom': [("x",((LineagePair(rank='superkingdom', name='a'),), 1.0))],
-                  'phylum': [("y", ((LineagePair(rank='superkingdom', name='a'),
-                               LineagePair(rank='phylum', name='b')), 1.0))]}
-
-    outc= runtmp.output("outclass.csv")
-    with open(outc, 'w') as out_fp:
-        write_classifications(classif, out_fp)
-
-    cr = [x.rstrip().split(',') for x in open(outc, 'r')]
-    print("classification_summary_results_from_file: \n", cr)
-    assert cr[0] == ['query_name', 'classification_rank', 'fraction_matched_at_rank', 'lineage']
-    assert cr[1] == ['superkingdom', 'x', '1.000', 'a']
-    assert cr[2] == ['phylum', 'y', '1.000', 'a;b']
+#def test_write_classification_csv(runtmp):
+#    """test classification csv write function"""
+#
+#    classif = {'superkingdom': [("x",((LineagePair(rank='superkingdom', name='a'),), 1.0))],
+#                  'phylum': [("y", ((LineagePair(rank='superkingdom', name='a'),
+#                               LineagePair(rank='phylum', name='b')), 1.0))]}
+#
+#    outc= runtmp.output("outclass.csv")
+#    with open(outc, 'w') as out_fp:
+#        write_classifications(classif, out_fp)
+#
+#    cr = [x.rstrip().split(',') for x in open(outc, 'r')]
+#    print("classification_summary_results_from_file: \n", cr)
+#    assert cr[0] == ['query_name', 'classification_rank', 'fraction_matched_at_rank', 'lineage']
+#    assert cr[1] == ['x', 'superkingdom', '1.000', 'a']
+#    assert cr[2] == ['y', 'phylum', '1.000', 'a;b']
 
 
 def test_make_krona_header_0():
@@ -536,13 +543,13 @@ def test_write_krona(runtmp):
 
 def test_combine_sumgather_csvs_by_lineage(runtmp):
     # some summarized gather dicts
-    sum_gather1 = {'superkingdom': [((LineagePair(rank='superkingdom', name='a'),), 0.5)],
-                  'phylum': [((LineagePair(rank='superkingdom', name='a'),
-                               LineagePair(rank='phylum', name='b')), 0.5)]}
+    sum_gather1 = {'superkingdom': {"x": [((LineagePair(rank='superkingdom', name='a'),), 0.5)]},
+                  'phylum': {"x": [((LineagePair(rank='superkingdom', name='a'),
+                               LineagePair(rank='phylum', name='b')), 0.5)]}}
 
-    sum_gather2 = {'superkingdom': [((LineagePair(rank='superkingdom', name='a'),), 0.7)],
-                  'phylum': [((LineagePair(rank='superkingdom', name='a'),
-                               LineagePair(rank='phylum', name='c')), 0.7)]}
+    sum_gather2 = {'superkingdom': {"x": [((LineagePair(rank='superkingdom', name='a'),), 0.7)]},
+                  'phylum': {"x": [((LineagePair(rank='superkingdom', name='a'),
+                               LineagePair(rank='phylum', name='c')), 0.7)]}}
 
     # write summarized gather results csvs
     sg1= runtmp.output("sample1.csv")
@@ -585,12 +592,13 @@ def test_write_lineage_sample_frac(runtmp):
 
 def test_combine_sumgather_csvs_by_lineage_improper_rank(runtmp):
     # some summarized gather dicts
-    sum_gather1 = {'superkingdom': [((LineagePair(rank='superkingdom', name='a'),), 0.5)],
-                  'phylum': [((LineagePair(rank='superkingdom', name='a'),
-                               LineagePair(rank='phylum', name='b')), 0.5)]}
-    sum_gather2 = {'superkingdom': [((LineagePair(rank='superkingdom', name='a'),), 0.7)],
-                  'phylum': [((LineagePair(rank='superkingdom', name='a'),
-                               LineagePair(rank='phylum', name='c')), 0.7)]}
+    sum_gather1 = {'superkingdom': {"x": [((LineagePair(rank='superkingdom', name='a'),), 0.5)]},
+                  'phylum': {"x": [((LineagePair(rank='superkingdom', name='a'),
+                               LineagePair(rank='phylum', name='b')), 0.5)]}}
+
+    sum_gather2 = {'superkingdom': {"x": [((LineagePair(rank='superkingdom', name='a'),), 0.7)]},
+                  'phylum': {"x": [((LineagePair(rank='superkingdom', name='a'),
+                               LineagePair(rank='phylum', name='c')), 0.7)]}}
 
     # write summarized gather results csvs
     sg1= runtmp.output("sample1.csv")
