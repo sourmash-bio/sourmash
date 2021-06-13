@@ -10,6 +10,8 @@ __all__ = ['get_ident', 'load_gather_results',
 
 from sourmash.logging import notify, error, debug
 
+SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage")
+
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import (LineagePair, build_tree, find_lca,
@@ -41,20 +43,18 @@ def ascending_taxlist(include_strain=True):
     for k in ascending_taxlist:
         yield k
 
-def load_gather_files_from_csv(from_csv):
-    gather_files = []
-    seen = set()
-    with open(from_csv, 'rt') as fp:
-        r = csv.DictReader(fp, fieldnames=['name', 'filepath'])
-        for n, row in enumerate(r):
-            name = row["name"]
-            if name in seen:
-                notify(f"found duplicate name: {name}. Ignoring...")
-            else:
-                seen.add(name)
-                gather_files.append((name, row["filepath"]))
-    notify(f'loaded {len(gather_files)} gather files from csv input.')
-    return gather_files, seen
+def load_gather_files_from_file(from_file):
+    gather_files = [x.strip() for x in open(from_file, 'r')]
+    # rm duplicates, but keep order
+    seen_files = set()
+    gatherF_nondup = []
+    for inF in gather_files:
+        if inF in seen_files:
+            continue
+        seen_files.add(inF)
+        gatherF_nondup.append(inF)
+    notify(f'found {len(gatherF_nondup)} filenames in --from-file input.')
+    return gatherF_nondup
 
 # load and aggregate all gather results
 def load_gather_results(gather_csv):
@@ -71,8 +71,6 @@ def load_gather_results(gather_csv):
 # this summarizes at a specific rank.
 def summarize_gather_at(rank, tax_assign, gather_results, skip_idents = [], split_identifiers=True, keep_identifier_versions=False, best_only=False):
     # collect!
-    #sum_uniq_weighted = defaultdict(float)
-    # how to modify this to enable multiple gather csvs, AND multigather output? need to use query_name, summarize by query_name
     sum_uniq_weighted = defaultdict(lambda: defaultdict(float))
     for row in gather_results:
         query_name = row['query_name']
@@ -94,14 +92,18 @@ def summarize_gather_at(rank, tax_assign, gather_results, skip_idents = [], spli
         f_uniq_weighted = float(f_uniq_weighted)
         sum_uniq_weighted[query_name][lineage] += f_uniq_weighted
 
-    sum_uniq_weighted_sorted = defaultdict(list)
+    # sort and store as SummarizedGatherResult
+    sum_uniq_weighted_sorted = []
     for query_name, lineage_weights in sum_uniq_weighted.items():
-        items = list(lineage_weights.items())
-        items.sort(key = lambda x: -x[1])
+        query_results = []
+        sumgather_items = list(lineage_weights.items())
+        sumgather_items.sort(key = lambda x: -x[1])
         if best_only:
-            sum_uniq_weighted_sorted[query_name] = [items[0]] # list to keep formatting the same as non best-only
+            lineage, fraction = sumgather_items[0]
+            sum_uniq_weighted_sorted.append(SummarizedGatherResult(query_name, rank, fraction, lineage))
         else:
-            sum_uniq_weighted_sorted[query_name] = items
+            for lineage, fraction in sumgather_items:
+                sum_uniq_weighted_sorted.append(SummarizedGatherResult(query_name, rank, fraction, lineage))
 
     return sum_uniq_weighted_sorted
 
@@ -179,26 +181,27 @@ def write_krona(rank, krona_results, out_fp, sep='\t'):
 
 
 def write_summary(summarized_gather, csv_fp, sep='\t'):
-    header= ["rank", "fraction", "lineage"]
+    header= ["query_name", "rank", "fraction", "lineage"]
     w = csv.writer(csv_fp)
     w.writerow(header)
     for rank, rank_results in summarized_gather.items():
-        for sorted_result in rank_results:
-            lin,val = sorted_result
-            w.writerow([rank, f'{val:.3f}', display_lineage(lin)])
+        for query_name, res in rank_results.items():
+            for lin, val in res:
+                w.writerow([query_name, rank, f'{val:.3f}', display_lineage(lin)])
 
 
-def write_classifications(classifications, csv_fp, sep='\t'):
-    header= ["query_name", "classification_rank", "fraction_matched_at_rank", "lineage"]
-    w = csv.writer(csv_fp)
-    w.writerow(header)
-    for rank, rank_results in classifications.items():
-        # do we want to sort the results somehow?
-        #items = list(sum_uniq_weighted.items())
-        #items.sort(key = lambda x: -x[1])
-        for result in rank_results:
-            name, (lin,val) = result
-            w.writerow([rank, name, f'{val:.3f}', display_lineage(lin)])
+## write summary and write classifications are now pretty much identical!!
+#def write_classifications(classifications, csv_fp, sep='\t'):
+#    header= ["query_name", "classification_rank", "fraction_matched_at_rank", "lineage"]
+#    w = csv.writer(csv_fp)
+#    w.writerow(header)
+#    for rank, rank_results in classifications.items():
+#        # do we want to sort the results somehow?
+#        #items = list(sum_uniq_weighted.items())
+#        #items.sort(key = lambda x: -x[1])
+#        for result in rank_results:
+#            name, (lin,val) = result
+#            w.writerow([rank, name, f'{val:.3f}', display_lineage(lin)])
 
 
 def combine_sumgather_csvs_by_lineage(gather_csvs, rank="species", accept_ranks = list(lca_utils.taxlist(include_strain=False)), force=False):
