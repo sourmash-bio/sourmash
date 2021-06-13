@@ -450,6 +450,24 @@ class ZipFileLinearIndex(Index):
         self.selection_dict = selection_dict
         self.traverse_yield_all = traverse_yield_all
 
+        # manifest?
+        try:
+            zi = self.zf.getinfo('SOURMASH-MANIFEST.csv')
+        except KeyError:
+            self.manifest_info = None
+        else:
+            # maybe support passing manifest in on constructor?
+            print(f'found manifest when loading {self.zf.filename}')
+            import csv
+            from io import TextIOWrapper
+
+            mfp = self.zf.open(zi, 'r')
+            manifest_l = []
+            r = csv.DictReader(TextIOWrapper(mfp, 'utf-8'))
+            for row in r:
+                manifest_l.append(row)
+            self.manifest_info = manifest_l
+
     def __bool__(self):
         "Are there any matching signatures in this zipfile? Avoid calling len."
         try:
@@ -506,40 +524,28 @@ class ZipFileLinearIndex(Index):
         "Load all signatures in the zip file."
         from .signature import load_signatures
 
-        picklist = None
-        if self.selection_dict:
-            picklist = self.selection_dict.get('picklist', None)
+        skipped_manifest = True
+        if self.manifest_info is not None:
+            print('.signatures() found manifest!')
+            picklist = None
+            if self.selection_dict:
+                picklist = self.selection_dict.get('picklist', None)
 
-        # treat md5 picklists specially!
-        # CTB: here, should we be worried if we don't find a signature we want?
-        # e.g. how do we conclude that a picklist optimization doesn't apply?
-        # CTB: also, could support md5 prefix by filtering all infolist.
-
-        if picklist and picklist.coltype == 'md5':
-            patterns = ("signatures/{md5}.sig", "signatures/{md5}.sig.gz")
+            if picklist and picklist.coltype == 'md5':
+                skipped_manifest = False
+                colkey = 'md5'
+            elif picklist and picklist.coltype == 'md5prefix8':
+                skipped_manifest = False
+                colkey = 'md5short'
 
             def yield_fp():
-                for md5 in picklist.pickset:
-                    for p in patterns:
-                        p = p.format(md5=md5)
-                        try:
-                            zipinfo = self.zf.getinfo(p)
-                        except KeyError:
-                            print(f"({p} is not found)")
-                        else:
-                            print(f"({p} found!")
-                            yield self.zf.open(zipinfo)
-                            break
-        elif picklist and picklist.coltype == 'md5prefix8':
-            def yield_fp():
-                for zipinfo in self.zf.infolist():
-                    if zipinfo.filename.startswith('signatures/'):
-                        fn = zipinfo.filename[len('signatures/'):]
-                        prefix = fn[:8]
-                        if prefix in picklist.pickset:
-                            print(f"({prefix} q found)")
-                            yield self.zf.open(zipinfo)
-        else:
+                for row in self.manifest_info:
+                    if row[colkey] in picklist.pickset:
+                        filename = row['internal_location']
+                        zi = self.zf.getinfo(filename)
+                        yield self.zf.open(zi)
+
+        if skipped_manifest:
             def yield_fp():
                 for zipinfo in self.zf.infolist():
                     # should we load this file? if it ends in .sig OR we are forcing:
