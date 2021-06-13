@@ -155,15 +155,12 @@ class SBT(Index):
         return self._location
 
     def signatures(self):
+        from .sig.picklist import passes_all_picklists
+
         for k in self.leaves():
             ss = k.data
-            keep = True
-            for picklist in self.picklists:
-                if ss not in picklist:
-                    keep = False
-
-            if keep:
-                yield k.data
+            if passes_all_picklists(ss, self.picklists):
+                yield ss
 
     def select(self, ksize=None, moltype=None, num=0, scaled=0,
                containment=False, picklist=None):
@@ -372,6 +369,7 @@ class SBT(Index):
         search. See SBT.select(...) for details.
         """
         from .sbtmh import SigLeaf
+        from .sig.picklist import passes_all_picklists
 
         search_fn.check_is_compatible(query)
 
@@ -464,12 +462,7 @@ class SBT(Index):
             ss = n.data
 
             # filter on picklists
-            keep = True
-            for picklist in self.picklists:
-                if ss not in picklist:
-                    keep = False
-
-            if keep:
+            if passes_all_picklists(ss, self.picklists):
                 yield IndexSearchResult(results[ss], ss, self.location)
 
     def _rebuild_node(self, pos=0):

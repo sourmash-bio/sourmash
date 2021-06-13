@@ -375,6 +375,7 @@ class LCA_Database(Index):
     @cached_property
     def _signatures(self):
         "Create a _signatures member dictionary that contains {idx: sigobj}."
+        from sourmash.sig.picklist import passes_all_picklists
         from sourmash import MinHash, SourmashSignature
 
         is_protein = False
@@ -422,13 +423,7 @@ class LCA_Database(Index):
             name = self.ident_to_name[ident]
             ss = SourmashSignature(mh, name=name)
 
-            keep = True
-            for picklist in self.picklists:
-                if ss not in picklist:
-                    keep = False
-                    break
-
-            if keep:
+            if passes_all_picklists(ss, self.picklists):
                 sigd[idx] = SourmashSignature(mh, name=name)
 
         debug('=> {} signatures!', len(sigd))
@@ -444,6 +439,7 @@ class LCA_Database(Index):
         can still be used for containment search, but not for similarity
         search. See SBT.select(...) for details.
         """
+        from sourmash.sig.picklist import passes_all_picklists
         search_fn.check_is_compatible(query)
 
         # make sure we're looking at the same scaled value as database
@@ -491,14 +487,7 @@ class LCA_Database(Index):
             # signal that it is done, or something.
             if search_fn.passes(score):
                 if search_fn.collect(score, subj):
-
-                    # filter on picklists
-                    keep = True
-                    for picklist in self.picklists:
-                        if subj not in picklist:
-                            keep = False
-
-                    if keep:
+                    if passes_all_picklists(subj, self.picklists):
                         yield IndexSearchResult(score, subj, self.location)
 
     @cached_property

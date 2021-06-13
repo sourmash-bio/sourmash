@@ -134,3 +134,11 @@ class SignaturePicklist:
         for ss in it:
             if self.__contains__(ss):
                 yield ss
+
+
+def passes_all_picklists(ss, picklists):
+    "does the signature 'ss' pass all of the picklists?"
+    for picklist in picklists:
+        if ss not in picklist:
+            return False
+    return True
