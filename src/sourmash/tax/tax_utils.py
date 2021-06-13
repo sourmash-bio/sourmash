@@ -134,14 +134,18 @@ def make_krona_header(min_rank, include_strain=False):
 
 
 # this is for summarized results of a single query
+
+## SIGH, this is why a dict was helpful still. MODIFY FOR NAMEDTUPLE!
 def aggregate_by_lineage_at_rank(rank_results):
     #query_lineage_summary = defaultdict(float)
     query_lineage_summary = Counter()
-    for lin, fraction in rank_results:
+    for (query_name, rank, fraction, lineage) in rank_results:
+    #for lin, fraction in rank_results:
         query_lineage_summary[lin] += fraction
     return query_lineage_summary
 
 
+# MODIFY FOR NAMEDTUPLE
 def format_and_summarize_for_krona(rank, summarized_gather):
     num_queries=0
     #krona_summary = defaultdict(float)
