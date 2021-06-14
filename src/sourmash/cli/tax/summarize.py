@@ -8,6 +8,10 @@ def subparser(subparsers):
     subparser = subparsers.add_parser('summarize')
     subparser.add_argument('gather_results', nargs='+')
     subparser.add_argument(
+        '--from-file',  metavar='FILE', default = '',
+        help='input many gather results as a text file, with one gather csv per line'
+    )
+    subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
     )
