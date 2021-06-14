@@ -446,27 +446,31 @@ class ZipFileLinearIndex(Index):
     """
     is_database = True
 
-    def __init__(self, zf, selection_dict=None,
-                 traverse_yield_all=False):
+    def __init__(self, zf, *, selection_dict=None,
+                 traverse_yield_all=False, manifest=None):
         self.zf = zf
         self.selection_dict = selection_dict
         self.traverse_yield_all = traverse_yield_all
 
         # load manifest?
-        try:
-            zi = self.zf.getinfo('SOURMASH-MANIFEST.csv')
-        except KeyError:
-            self.manifest = None
-        else:
-            # CTB: maybe support passing manifest in on constructor?
-            # otherwise manifest is loaded on 'select'.
-            print(f'found manifest when loading {self.zf.filename}')
+        if manifest is None:
+            try:
+                zi = self.zf.getinfo('SOURMASH-MANIFEST.csv')
+            except KeyError:
+                self.manifest = None
+            else:
+                # CTB: maybe support passing manifest in on constructor?
+                # otherwise manifest is loaded on 'select'.
+                print(f'found manifest when loading {self.zf.filename}')
 
-            with self.zf.open(zi, 'r') as mfp:
-                # wrap as text, since ZipFile.open only supports 'r' mode.
-                mfp = TextIOWrapper(mfp, 'utf-8')
-                # load manifest!
-                self.manifest = CollectionManifest.load_from_csv(mfp)
+                with self.zf.open(zi, 'r') as mfp:
+                    # wrap as text, since ZipFile.open only supports 'r' mode.
+                    mfp = TextIOWrapper(mfp, 'utf-8')
+                    # load manifest!
+                    self.manifest = CollectionManifest.load_from_csv(mfp)
+        else:
+            print(f'using passed-in manifest')
+            self.manifest = manifest
 
     def __bool__(self):
         "Are there any matching signatures in this zipfile? Avoid calling len."
@@ -561,7 +565,8 @@ class ZipFileLinearIndex(Index):
         "Select signatures in zip file based on ksize/moltype/etc."
         return ZipFileLinearIndex(self.zf,
                                   selection_dict=kwargs,
-                                  traverse_yield_all=self.traverse_yield_all)
+                                  traverse_yield_all=self.traverse_yield_all,
+                                  manifest=self.manifest)
 
 
 class CounterGather:
@@ -727,26 +732,32 @@ class MultiIndex(Index):
     One specific use for this is when loading signatures from a directory;
     MultiIndex will properly record which files provided which signatures.
     """
-    def __init__(self, index_list, source_list):
+    def __init__(self, index_list, source_list, *, manifest=None):
         self.index_list = list(index_list)
         self.source_list = list(source_list)
         assert len(index_list) == len(source_list)
 
+        self.manifest = manifest
+
     def signatures(self):
-        for idx in self.index_list:
-            for ss in idx.signatures():
-                yield ss
+        for ss, loc in self.signatures_with_location():
+            yield ss
 
     def signatures_with_location(self):
-        for idx, loc in zip(self.index_list, self.source_list):
-            for ss in idx.signatures():
-                yield ss, loc
+        for ss, _, loc in self.signatures_with_internal():
+            yield ss, loc
 
     def signatures_with_internal(self):
         for idx, loc in zip(self.index_list, self.source_list):
             for ss in idx.signatures():
-                # @CTB: properly recognize parent?
-                yield ss, '', loc
+                # @CTB: properly recognize parent here?? what is that anyway?
+                # @CTB this does iterate over all signatures so does not
+                # (yet) support lazy loading
+                if self.manifest:
+                    if ss in self.manifest:
+                        yield ss, '', loc
+                else:
+                    yield ss, '', loc
 
     def __len__(self):
         return sum([ len(idx) for idx in self.index_list ])
@@ -778,8 +789,10 @@ class MultiIndex(Index):
                 else:
                     raise       # continue past error!
 
-        # manifest?
-        # @CTB: do we want to ONLY load things in the manifest? maaaybe...
+        if not index_list:
+            raise ValueError(f"no signatures to load under directory '{pathname}'")
+        # do we have a manifest to load?
+        # @CTB: do we want to ONLY load things in the manifest? maaaybe...?
         manifest = None
         manifest_fn = os.path.join(pathname, 'SOURMASH-MANIFEST.csv')
         if os.path.exists(manifest_fn):
@@ -787,18 +800,13 @@ class MultiIndex(Index):
             with open(manifest_fn, newline='') as mfp:
                 manifest = CollectionManifest.load_from_csv(mfp)
 
-        db = None
-        if index_list:
-            db = cls(index_list, source_list)
-        else:
-            raise ValueError(f"no signatures to load under directory '{pathname}'")
-        db.manifest = manifest
-
+        db = cls(index_list, source_list, manifest=manifest)
         return db
 
     @classmethod
     def load_from_pathlist(cls, filename):
         "Create a MultiIndex from all files listed in a text file."
+        # @CTB manifest support? do we need a MultiManifest? ergh.
         from .sourmash_args import (load_pathlist_from_file,
                                     load_file_as_index)
         idx_list = []
@@ -820,15 +828,20 @@ class MultiIndex(Index):
 
     def select(self, **kwargs):
         "Run 'select' on all indices within this MultiIndex."
-        # @CTB: add manifest support HERE.
-        new_idx_list = []
-        new_src_list = []
-        for idx, src in zip(self.index_list, self.source_list):
-            idx = idx.select(**kwargs)
-            new_idx_list.append(idx)
-            new_src_list.append(src)
+        if self.manifest:
+            new_manifest = self.manifest.select_to_manifest(**kwargs)
+            return MultiIndex(self.index_list,
+                              self.source_list,
+                              manifest=new_manifest)
+        else:
+            new_idx_list = []
+            new_src_list = []
+            for idx, src in zip(self.index_list, self.source_list):
+                idx = idx.select(**kwargs)
+                new_idx_list.append(idx)
+                new_src_list.append(src)
 
-        return MultiIndex(new_idx_list, new_src_list)
+            return MultiIndex(new_idx_list, new_src_list)
 
     def search(self, query, **kwargs):
         """Return the match with the best Jaccard similarity in the Index.
@@ -895,9 +908,13 @@ class CollectionManifest:
         obj.info = manifest_list
         return obj
 
-    def select_filenames(self, *, ksize=None, moltype=None, scaled=0, num=0,
-                         containment=False, picklist=None):
-        "Yield internal paths for sigs that match the specificed requirements."
+    def _select(self, *, ksize=None, moltype=None, scaled=0, num=0,
+               containment=False, picklist=None):
+        """Yield manifest rows for sigs that match the specified requirements.
+
+        Internal method; call `select_to_manifest` or `select_filenames`
+        instead.
+        """
         # CTB: should probably make this something that returns a new
         # manifest, so that 'select' subsets manifests rather than signatures.
         matching_rows = self.info
@@ -927,10 +944,30 @@ class CollectionManifest:
                               if int(row['scaled']) )
         if num:
             assert 0
-            # CTB: check sclaed, per select_signature?
+            # CTB: check scaled, per select_signature?
             matching_rows = ( row for row in matching_rows
                               if int(row['num']) )
 
         # return only the internal filenames!
         for row in matching_rows:
+            yield row
+
+    def select_to_manifest(self, **kwargs):
+        "Do a 'select' and return a new CollectionManifest object."
+        obj = CollectionManifest()
+        obj.info = list(self._select(**kwargs))
+        return obj
+
+    def select_filenames(self, **kwargs):
+        "Do a 'select' and return all of the locations"
+        # @CTB return to 'select_to_locations' or something?
+        # @CTB or, support lazy loading signatures? or ...?
+        for row in self._select(**kwargs):
             yield row['internal_location']
+
+    def __contains__(self, ss):
+        md5 = ss.md5sum()
+        for row in self.info:
+            if md5 == row['md5']:
+                return True
+        return False
