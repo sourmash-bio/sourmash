@@ -54,7 +54,7 @@ def collect_gather_csvs(cmdline_gather_input, from_file=None):
         gather_csvs+= more_files
     return gather_csvs
 
-def collect_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False):
+def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False):
     #  load gather results from all files
     gather_results = []
     total_missed = 0
@@ -120,7 +120,7 @@ def summarize(args):
 
     # next, load gather results
     gather_csvs = collect_gather_csvs(args.gather_results, args.from_file)
-    gather_results, idents_missed, total_missed = collect_and_load_gather_csvs(gather_csvs, tax_assign, fail_on_missing_taxonomy=args.fail_on_missing_taxonomy, force=args.force)
+    gather_results, idents_missed, total_missed = check_and_load_gather_csvs(gather_csvs, tax_assign, fail_on_missing_taxonomy=args.fail_on_missing_taxonomy, force=args.force)
 
     if not gather_results:
         notify(f'No gather results loaded. Exiting.')
@@ -152,6 +152,7 @@ def classify(args):
     """
     taxonomic classification of genomes from gather results
     """
+    # classify:: summarize at rank, choose best match
     ## currently reports a single rank. do we want to optionally report at all ranks? (no, bc summarize does that?)
     set_quiet(args.quiet)
 
@@ -166,22 +167,25 @@ def classify(args):
         sys.exit(-1)
 
     # get gather_csvs from args
-    # next, load gather results
-    gather_results, idents_missed, total_missed = collect_and_load_gather_csvs(args.gather_results, args.from_file, args.force)
+    gather_csvs = collect_gather_csvs(args.gather_results, args.from_file)
+    # handle each gather result separately
 
-    if not gather_results:
-        notify(f'No gather results loaded. Exiting.')
-        sys.exit(-1)
-
-    # classify:: summarize at rank, choose best match
-    classifications = {}
+    classifications = defaultdict(list)
     krona_results = []
     num_empty=0
-    # WORKING HERE TO UPDATE
 
-    #summarize_gather_at returns nested dict: {query: {lineage: fraction}}
+    for g_csv in gather_csvs:
+        gather_results, idents_missed, total_missed = check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
+                                                                                 fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
 
-    for query in enumerate(gather_results):
+        if not gather_results:
+            notify(f'No gather results loaded from {g_csv}.')
+            if force:
+                notify(f'--force is set. Attempting to continue to next set of gather results.')
+                continue
+            else:
+                notify(f'Exiting.')
+                sys.exit(-1)
 
         # if --rank is specified, classify to that rank
         # to do, what to do if don't have gather results at desired rank (e.g. strain)?
@@ -189,15 +193,15 @@ def classify(args):
             # todo: check we have gather results at this rank
             #if not tax_utils.check_taxonomy_exists(tax_assign, args.rank):
             #    notify(f"No taxonomic information at rank {args.rank}: cannot classify at this rank")
-            best_at_rank = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=ident_missed,
+            best_at_rank = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
                                                          split_identifiers=not args.keep_full_identifiers,
                                                          keep_identifier_versions = args.keep_identifier_versions,
                                                          best_only=True)
-            for query_name, classifications in best_at_rank.items():
-                for lineage, containment in classifications.items(): # should just be one here bc best_only
-                    if containment <= args.containment_threshold:
-                        notify(f"WARNING: classifying at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
-                classifications[args.rank].append((query_name, best_at_rank))
+           # this now returns list of SummarizedGather tuples
+            for (query_name, rank, fraction, lineage) in best_at_rank:
+                if fraction <= args.containment_threshold:
+                    notify(f"WARNING: classifying at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
+                classifications[args.rank].append((query_name, rank, fraction, lineage))
                 if "krona" in args.output_format:
                     lin_list = display_lineage(lineage).split(';')
                     krona_results.append((containment, *lin_list))
@@ -208,17 +212,15 @@ def classify(args):
                 best_at_rank = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=ident_missed,
                                                              split_identifiers=not args.keep_full_identifiers,
                                                              keep_identifier_versions = args.keep_identifier_versions,
-                                                             best_only=True)#[0]
+                                                             best_only=True)
 
-                for query_name, classifications in best_at_rank.items():
-                    for lineage, containment in classifications.items(): # should just be one here per query bc best_only
-                        if containment >= args.containment_threshold:
-                            classifications[args.rank].append((query_name, name, best_at_rank))
-
-                            if "krona" in args.output_format:
-                                lin_list = display_lineage(lineage).split(';')
-                                krona_results.append((query_name, containment, *lin_list))
-                            break
+                for (query_name, rank, fraction, lineage) in best_at_rank:
+                    if fraction >= args.containment_threshold:
+                        classifications[args.rank].append((query_name, rank, fraction, lineage))
+                        if "krona" in args.output_format:
+                            lin_list = display_lineage(lineage).split(';')
+                            krona_results.append((query_name, containment, *lin_list))
+                        break
 
     if not any([classifications, krona_results]):
         notify(f'No results for classification. Exiting.')

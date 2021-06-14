@@ -7,7 +7,7 @@ from sourmash.cli.utils import add_threshold_arg
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('classify')
-    subparser.add_argument('gather_results', nargs='+')
+    subparser.add_argument('gather_results', nargs='*')
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'

@@ -253,8 +253,8 @@ def test_classify_rank_stdout_0(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
-    assert "species,,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "query_name,rank,fraction,lineage" in c.last_result.out
+    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
 def test_classify_rank_csv_0(runtmp):
@@ -268,7 +268,7 @@ def test_classify_rank_csv_0(runtmp):
     csvout = runtmp.output(cl_csv)
     print("csvout: ", csvout)
 
-    c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', tax,
+    c.run_sourmash('tax', 'classify', g_csv, '--taxonomy-csv', tax,
                    '--rank', 'species', '-o', csv_base)
 
     print(c.last_result.status)
@@ -277,27 +277,8 @@ def test_classify_rank_csv_0(runtmp):
 
     assert c.last_result.status == 0
     cl_results = [x.rstrip() for x in open(csvout)]
-    assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in cl_results[0]
-    assert "species,,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in cl_results[1]
-
-
-def test_classify_gather_with_name(runtmp):
-    # input query name for cli classify
-    c = runtmp
-    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    g_res = utils.get_test_data('tax/test1.gather.csv')
-
-    c.run_sourmash('tax', 'classify', '-g', g_res, '--query-name', 'test1',
-                   '--taxonomy-csv', taxonomy_csv, '--rank', 'species')
-
-    print(c.last_result.status)
-    print(c.last_result.out)
-    print(c.last_result.err)
-
-    assert c.last_result.status == 0
-    assert 'loaded 4 gather results' in c.last_result.err
-    assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
-    assert "species,test1,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "query_name,rank,fraction,lineage" in cl_results[0]
+    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in cl_results[1]
 
 
 def test_classify_gather_from_file_rank(runtmp):
@@ -316,9 +297,9 @@ def test_classify_gather_from_file_rank(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert 'loaded 1 gather files for classification' in c.last_result.err
-    assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
-    assert "species,test1,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert 'found 1 filenames in --from-file input.' in c.last_result.err
+    assert "query_name,rank,fraction,lineage" in c.last_result.out
+    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
 def test_classify_gather_from_file_duplicate(runtmp):
@@ -351,7 +332,7 @@ def test_classify_gather_cli_and_from_file(runtmp):
     with open(g_from_file, 'w') as f_csv:
         f_csv.write(f"{g_res}\n")
 
-    c.run_sourmash('tax', 'classify','-g', g_res, '-n', 'test1', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
+    c.run_sourmash('tax', 'classify', g_res, '-n', 'test1', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
                    '--rank', 'species')
 
     print(c.last_result.status)
@@ -400,7 +381,7 @@ def test_classify_rank_duplicated_taxonomy_fail(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
     with pytest.raises(Exception) as exc:
-        c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', duplicated_csv,
+        c.run_sourmash('tax', 'classify', g_csv, '--taxonomy-csv', duplicated_csv,
                        '--rank', 'species')
         assert str(exc.value == "multiple lineages for identifier GCF_001881345")
 
@@ -418,7 +399,7 @@ def test_classify_rank_duplicated_taxonomy_force(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', duplicated_csv,
+    c.run_sourmash('tax', 'classify', g_csv, '--taxonomy-csv', duplicated_csv,
                    '--rank', 'species', '--force')
 
     print(c.last_result.status)
@@ -442,7 +423,7 @@ def test_classify_missing_taxonomy_ignore_threshold(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', subset_csv, '--containment-threshold', '0')
+    c.run_sourmash('tax', 'classify', g_csv, '--taxonomy-csv', subset_csv, '--containment-threshold', '0')
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -465,7 +446,7 @@ def test_classify_missing_taxonomy_ignore_rank(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', subset_csv, '--rank', 'species')
+    c.run_sourmash('tax', 'classify', g_csv, '--taxonomy-csv', subset_csv, '--rank', 'species')
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -489,7 +470,7 @@ def test_classify_missing_taxonomy_fail_threshold(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
     with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
-        c.run_sourmash('tax', 'classify', '-g',  g_csv, '--taxonomy-csv', subset_csv,
+        c.run_sourmash('tax', 'classify', g_csv, '--taxonomy-csv', subset_csv,
                        '--fail-on-missing-taxonomy', '--containment-threshold', '0', fail_ok=True)
 
     print(c.last_result.status)
@@ -514,7 +495,7 @@ def test_classify_missing_taxonomy_fail_rank(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
     with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
-        c.run_sourmash('tax', 'classify', '-g',  g_csv, '--taxonomy-csv', subset_csv,
+        c.run_sourmash('tax', 'classify', g_csv, '--taxonomy-csv', subset_csv,
                        '--fail-on-missing-taxonomy', '--rank', 'species', fail_ok=True)
 
     print(c.last_result.status)
@@ -538,7 +519,7 @@ def test_classify_empty_gather_results_with_header_single(runtmp):
         fp.write(gather_results[0])
 
     with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
-        c.run_sourmash('tax', 'classify', '-g', empty_tax_with_header, '--taxonomy-csv', taxonomy_csv, fail_ok=True)
+        c.run_sourmash('tax', 'classify', empty_tax_with_header, '--taxonomy-csv', taxonomy_csv, fail_ok=True)
 
 
     print(c.last_result.status)
@@ -560,7 +541,7 @@ def test_classify_empty_gather_results_single(runtmp):
         fp.write("")
 
     with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
-        c.run_sourmash('tax', 'classify', '-g', empty_tax, '--taxonomy-csv', taxonomy_csv, fail_ok=True)
+        c.run_sourmash('tax', 'classify', empty_tax, '--taxonomy-csv', taxonomy_csv, fail_ok=True)
 
 
     print(c.last_result.status)
@@ -581,7 +562,7 @@ def test_classify_empty_gather_results_single_force(runtmp):
         fp.write("")
 
     with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
-        c.run_sourmash('tax', 'classify', '-g', empty_tax, '--taxonomy-csv', taxonomy_csv,
+        c.run_sourmash('tax', 'classify', empty_tax, '--taxonomy-csv', taxonomy_csv,
                        '--force', fail_ok=True)
 
 
@@ -608,7 +589,7 @@ def test_classify_empty_gather_results_with_empty_csv_force(runtmp):
         f_csv.write(f"{empty_tax}\n")
 
     with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
-        c.run_sourmash('tax', 'classify', '-g', empty_tax, '--from-file', g_from_file,
+        c.run_sourmash('tax', 'classify', empty_tax, '--from-file', g_from_file,
                        '--taxonomy-csv', taxonomy_csv, '--rank', 'species', '--force')
 
     print(c.last_result.status)
@@ -636,7 +617,7 @@ def test_classify_empty_gather_results_with_csv_force(runtmp):
         fp.write("")
 
     #with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
-    c.run_sourmash('tax', 'classify', '-g', empty_tax, '--from-file', g_from_file,
+    c.run_sourmash('tax', 'classify', empty_tax, '--from-file', g_from_file,
                    '--taxonomy-csv', taxonomy_csv, '--rank', 'species', '--force')
 
     print(c.last_result.status)
