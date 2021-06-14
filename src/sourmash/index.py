@@ -5,6 +5,8 @@ import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
 import zipfile
+import csv
+from io import TextIOWrapper
 
 from .search import make_jaccard_search_query, make_gather_query
 
@@ -290,7 +292,7 @@ class Index(ABC):
         """
 
 
-def select_signature(ss, ksize=None, moltype=None, scaled=0, num=0,
+def select_signature(ss, *, ksize=None, moltype=None, scaled=0, num=0,
                      containment=False, picklist=None):
     "Check that the given signature matches the specificed requirements."
     # ksize match?
@@ -450,23 +452,20 @@ class ZipFileLinearIndex(Index):
         self.selection_dict = selection_dict
         self.traverse_yield_all = traverse_yield_all
 
-        # manifest?
+        # load manifest?
         try:
             zi = self.zf.getinfo('SOURMASH-MANIFEST.csv')
         except KeyError:
-            self.manifest_info = None
+            self.manifest = None
         else:
-            # maybe support passing manifest in on constructor?
+            # CTB: maybe support passing manifest in on constructor?
             print(f'found manifest when loading {self.zf.filename}')
-            import csv
-            from io import TextIOWrapper
 
             mfp = self.zf.open(zi, 'r')
-            manifest_l = []
-            r = csv.DictReader(TextIOWrapper(mfp, 'utf-8'))
-            for row in r:
-                manifest_l.append(row)
-            self.manifest_info = manifest_l
+            # wrap as text, since ZipFile.open only supports 'r' mode.
+            mfp = TextIOWrapper(mfp, 'utf-8')
+            # load manifest!
+            self.manifest = CollectionManifest.load_from_csv(mfp)
 
     def __bool__(self):
         "Are there any matching signatures in this zipfile? Avoid calling len."
@@ -524,28 +523,21 @@ class ZipFileLinearIndex(Index):
         "Load all signatures in the zip file."
         from .signature import load_signatures
 
-        skipped_manifest = True
-        if self.manifest_info is not None:
+        manifest = None
+        if self.manifest:
             print('.signatures() found manifest!')
             picklist = None
             if self.selection_dict:
                 picklist = self.selection_dict.get('picklist', None)
 
-            if picklist and picklist.coltype == 'md5':
-                skipped_manifest = False
-                colkey = 'md5'
-            elif picklist and picklist.coltype == 'md5prefix8':
-                skipped_manifest = False
-                colkey = 'md5short'
-
-            def yield_fp():
-                for row in self.manifest_info:
-                    if row[colkey] in picklist.pickset:
-                        filename = row['internal_location']
+            if picklist and picklist.coltype in ('md5', 'md5prefix8'):
+                manifest = self.manifest
+                def yield_fp():
+                    for filename in manifest.select_filenames(picklist=picklist):
                         zi = self.zf.getinfo(filename)
                         yield self.zf.open(zi)
 
-        if skipped_manifest:
+        if not manifest:
             def yield_fp():
                 for zipinfo in self.zf.infolist():
                     # should we load this file? if it ends in .sig OR we are forcing:
@@ -855,3 +847,51 @@ class MultiIndex(Index):
                 yield IndexSearchResult(score, ss, best_src)
             
         return results
+
+
+class CollectionManifest:
+    def __init__(self):
+        self.info = None
+
+    def __bool__(self):
+        if self.info is None:
+            return False
+        return True
+
+    @classmethod
+    def load_from_csv(cls, fp):
+        "load a manifest from a CSV file."
+        manifest_list = []
+        r = csv.DictReader(fp)
+        for k in ('internal_location', 'md5', 'md5short', 'ksize',
+                  'moltype', 'num', 'scaled', 'n_hashes', 'seed',
+                  'with_abundance', 'name'):
+            if k not in r.fieldnames:
+                raise ValueError(f"missing column '{k}' in manifest.")
+
+        row = None
+        for row in r:
+            manifest_list.append(row)
+
+        obj = cls()
+        obj.info = manifest_list
+        print('XYZ', len(manifest_list))
+        return obj
+
+    def select_filenames(self, *, ksize=None, moltype=None, scaled=0, num=0,
+                         containment=False, picklist=None):
+        "Yield internal paths for sigs that match the specificed requirements."
+        matching_rows = self.info
+        if picklist:
+            # map picklist.coltype to manifest column types.
+            # CTB: should these be the same? probably...
+            if picklist.coltype == 'md5':
+                colkey = 'md5'
+            elif picklist.coltype == 'md5prefix8':
+                colkey = 'md5short'
+            else:
+                assert 0        # support more here CTB!
+            matching_rows = ( row for row in matching_rows if row[colkey] in picklist.pickset )
+
+        for row in matching_rows:
+            yield row['internal_location']
