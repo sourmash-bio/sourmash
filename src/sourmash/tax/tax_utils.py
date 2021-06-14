@@ -192,21 +192,6 @@ def write_summary(summarized_gather, csv_fp, sep='\t'):
         for (query_name, rank, fraction, lineage) in rank_results:
             w.writerow([query_name, rank, f'{fraction:.3f}', display_lineage(lineage)])
 
-
-## write summary and write classifications are now pretty much identical!!
-#def write_classifications(classifications, csv_fp, sep='\t'):
-#    header= ["query_name", "classification_rank", "fraction_matched_at_rank", "lineage"]
-#    w = csv.writer(csv_fp)
-#    w.writerow(header)
-#    for rank, rank_results in classifications.items():
-#        # do we want to sort the results somehow?
-#        #items = list(sum_uniq_weighted.items())
-#        #items.sort(key = lambda x: -x[1])
-#        for result in rank_results:
-#            name, (lin,val) = result
-#            w.writerow([rank, name, f'{val:.3f}', display_lineage(lin)])
-
-
 def combine_sumgather_csvs_by_lineage(gather_csvs, rank="species", accept_ranks = list(lca_utils.taxlist(include_strain=False)), force=False):
     '''
     Takes in one or more output csvs from `sourmash taxonomy summarize`

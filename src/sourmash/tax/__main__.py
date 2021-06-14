@@ -88,22 +88,6 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
     return gather_results, all_ident_missed, total_missed
 
 
-def select_results_by_rank(summarized_gather, rank="species"):
-    #if containment <= args.containment_threshold:
-    #   notify(f"WARNING: classifying at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
-    return summarized_gather[rank]
-
-def select_results_by_threshold(rank, summarized_gather, threshold=0.1):
-     for rank, sumgather in summarized_gather.items():
-        for query_name, results in sumgather.items():
-            for lineage, containment in results.items(): # best only produces just a single result here
-                threshold_results[rank]
-                #threshold_results[rank].append((query_name, best_at_rank))
-                if "krona" in args.output_format:
-                    lin_list = display_lineage(lineage).split(';')
-                    krona_results.append((containment, *lin_list))
-
-
 def summarize(args):
     """
     summarize taxonomic information for metagenome gather results
