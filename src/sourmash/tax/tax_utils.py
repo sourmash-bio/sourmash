@@ -59,7 +59,7 @@ def collect_gather_csvs(cmdline_gather_input, from_file=None):
 def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False):
     if not isinstance(gather_csvs, list):
         gather_csvs = [gather_csvs]
-    #  load gather results from all files
+    # load gather results from all files
     gather_results = []
     total_missed = 0
     all_ident_missed = set()
