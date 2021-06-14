@@ -300,15 +300,15 @@ def test_classify_gather_with_name(runtmp):
     assert "species,test1,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
-def test_classify_gather_from_csv_rank(runtmp):
+def test_classify_gather_from_file_rank(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
-    g_from_csv = runtmp.output("tmp-from-csv.csv")
-    with open(g_from_csv, 'w') as f_csv:
-        f_csv.write(f"test1,{g_res}\n")
+    g_from_file = runtmp.output("tmp-from-file.txt")
+    with open(g_from_file, 'w') as f_csv:
+        f_csv.write(f"{g_res}\n")
 
-    c.run_sourmash('tax', 'classify', '--from-csv', g_from_csv, '--taxonomy-csv', taxonomy_csv,
+    c.run_sourmash('tax', 'classify', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
                    '--rank', 'species')
 
     print(c.last_result.status)
@@ -321,16 +321,16 @@ def test_classify_gather_from_csv_rank(runtmp):
     assert "species,test1,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
-def test_classify_gather_from_csv_duplicate(runtmp):
+def test_classify_gather_from_file_duplicate(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
-    g_from_csv = runtmp.output("tmp-from-csv.csv")
-    with open(g_from_csv, 'w') as f_csv:
-        f_csv.write(f"test1,{g_res}\n")
-        f_csv.write(f"test1,{g_res}\n")
+    g_from_file = runtmp.output("tmp-from-file.txt")
+    with open(g_from_file, 'w') as f_csv:
+        f_csv.write(f"{g_res}\n")
+        f_csv.write(f"{g_res}\n")
 
-    c.run_sourmash('tax', 'classify', '--from-csv', g_from_csv, '--taxonomy-csv', taxonomy_csv,
+    c.run_sourmash('tax', 'classify', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
                    '--rank', 'species')
 
     print(c.last_result.status)
@@ -343,15 +343,15 @@ def test_classify_gather_from_csv_duplicate(runtmp):
     assert "species,test1,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
-def test_classify_gather_cli_and_from_csv(runtmp):
+def test_classify_gather_cli_and_from_file(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
-    g_from_csv = runtmp.output("tmp-from-csv.csv")
-    with open(g_from_csv, 'w') as f_csv:
-        f_csv.write(f"test2,{g_res}\n")
+    g_from_file = runtmp.output("tmp-from-file.txt")
+    with open(g_from_file, 'w') as f_csv:
+        f_csv.write(f"{g_res}\n")
 
-    c.run_sourmash('tax', 'classify','-g', g_res, '-n', 'test1', '--from-csv', g_from_csv, '--taxonomy-csv', taxonomy_csv,
+    c.run_sourmash('tax', 'classify','-g', g_res, '-n', 'test1', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
                    '--rank', 'species')
 
     print(c.last_result.status)
@@ -366,15 +366,15 @@ def test_classify_gather_cli_and_from_csv(runtmp):
     assert "species,test2,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
-def test_classify_gather_from_csv_threshold_0(runtmp):
+def test_classify_gather_from_file_threshold_0(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
-    g_from_csv = runtmp.output("tmp-from-csv.csv")
-    with open(g_from_csv, 'w') as f_csv:
-        f_csv.write(f"test1,{g_res}\n")
+    g_from_file = runtmp.output("tmp-from-file.txt")
+    with open(g_from_file, 'w') as f_csv:
+        f_csv.write(f"{g_res}\n")
 
-    c.run_sourmash('tax', 'classify', '--from-csv', g_from_csv, '--taxonomy-csv', taxonomy_csv,
+    c.run_sourmash('tax', 'classify', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
                    '--containment-threshold', '0')
 
     print(c.last_result.status)
@@ -599,16 +599,16 @@ def test_classify_empty_gather_results_with_empty_csv_force(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
 
     # write temp empty gather results
-    empty_tax = runtmp.output('tax_empty.csv')
+    empty_tax = runtmp.output('tax_empty.txt')
     with open(empty_tax, "w") as fp:
         fp.write("")
 
-    g_from_csv = runtmp.output("tmp-from-csv.csv")
-    with open(g_from_csv, 'w') as f_csv:
-        f_csv.write(f"test1,{empty_tax}\n")
+    g_from_file = runtmp.output("tmp-from-csv.csv")
+    with open(g_from_file, 'w') as f_csv:
+        f_csv.write(f"{empty_tax}\n")
 
     with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
-        c.run_sourmash('tax', 'classify', '-g', empty_tax, '--from-csv', g_from_csv,
+        c.run_sourmash('tax', 'classify', '-g', empty_tax, '--from-file', g_from_file,
                        '--taxonomy-csv', taxonomy_csv, '--rank', 'species', '--force')
 
     print(c.last_result.status)
@@ -626,9 +626,9 @@ def test_classify_empty_gather_results_with_csv_force(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
 
     g_res = utils.get_test_data('tax/test1.gather.csv')
-    g_from_csv = runtmp.output("tmp-from-csv.csv")
-    with open(g_from_csv, 'w') as f_csv:
-        f_csv.write(f"test1,{g_res}\n")
+    g_from_file = runtmp.output("tmp-from-file.txt")
+    with open(g_from_file, 'w') as f_csv:
+        f_csv.write(f"{g_res}\n")
 
     # write temp empty gather results
     empty_tax = runtmp.output('tax_empty.csv')
@@ -636,7 +636,7 @@ def test_classify_empty_gather_results_with_csv_force(runtmp):
         fp.write("")
 
     #with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
-    c.run_sourmash('tax', 'classify', '-g', empty_tax, '--from-csv', g_from_csv,
+    c.run_sourmash('tax', 'classify', '-g', empty_tax, '--from-file', g_from_file,
                    '--taxonomy-csv', taxonomy_csv, '--rank', 'species', '--force')
 
     print(c.last_result.status)
