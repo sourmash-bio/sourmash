@@ -166,13 +166,7 @@ def classify(args):
                                                                                  fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
 
         if not gather_results:
-            notify(f'No gather results loaded from {g_csv}.')
-            if args.force:
-                notify(f'--force is set. Attempting to continue to next set of gather results.')
-                continue
-            else:
-                notify(f'Exiting.')
-                sys.exit(-1)
+            continue
 
         # if --rank is specified, classify to that rank
         # to do, what to do if don't have gather results at desired rank (e.g. strain)?
