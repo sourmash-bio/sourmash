@@ -1937,7 +1937,7 @@ def test_search_traverse_incompatible(c):
     assert '100.0%       NC_009665.1 Shewanella baltica OS185, complete genome' in c.last_result.out
 
 
-def test_check_scaled_bounds_zero():
+def test_search_check_scaled_bounds_zero():
 
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
@@ -1956,7 +1956,7 @@ def test_check_scaled_bounds_zero():
         assert "ERROR: --scaled value must be >= 1" in err
 
 
-def test_check_scaled_bounds_negative():
+def test_search_check_scaled_bounds_negative():
 
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
@@ -1975,7 +1975,7 @@ def test_check_scaled_bounds_negative():
         assert "ERROR: --scaled value must be positive" in err
 
 
-def test_check_scaled_bounds_less_than_minimum():
+def test_search_check_scaled_bounds_less_than_minimum():
 
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
@@ -1994,7 +1994,7 @@ def test_check_scaled_bounds_less_than_minimum():
         assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
 
 
-def test_check_scaled_bounds_more_than_maximum():
+def test_search_check_scaled_bounds_more_than_maximum():
 
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
@@ -3961,6 +3961,90 @@ def test_gather_metagenome_output_unassigned_nomatches_protein(runtmp, linear_ga
 
     assert x.minhash == y.minhash
     assert y.minhash.moltype == "protein"
+
+
+def test_gather_check_scaled_bounds_zero(prefetch_gather, linear_gather):
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = 'gather {} {} {} gcf_all -k 21 --scaled 0 --threshold-bp 50000'.format(query_sig, prefetch_gather, linear_gather)
+
+        status, out, err = utils.runscript('sourmash',
+                                           cmd.split(' '),
+                                           in_directory=location, fail_ok=True)
+        
+        assert status == -1
+
+        print(out)
+        print(err)
+
+        assert "ERROR: --scaled value must be >= 1" in err
+
+
+def test_gather_check_scaled_bounds_negative(prefetch_gather, linear_gather):
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = 'gather {} {} {} gcf_all -k 21 --scaled -5 --threshold-bp 50000'.format(query_sig, prefetch_gather, linear_gather)
+
+        status, out, err = utils.runscript('sourmash',
+                                           cmd.split(' '),
+                                           in_directory=location, fail_ok=True)
+        
+        assert status == -1
+
+        print(out)
+        print(err)
+    
+        assert "ERROR: --scaled value must be positive" in err
+
+
+def test_gather_check_scaled_bounds_less_than_minimum(prefetch_gather, linear_gather):
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = 'gather {} {} {} gcf_all -k 21 --scaled 50 --threshold-bp 50000'.format(query_sig, prefetch_gather, linear_gather)
+
+        status, out, err = utils.runscript('sourmash',
+                                           cmd.split(' '),
+                                           in_directory=location, fail_ok=True)
+        
+        assert status == -1
+
+        print(out)
+        print(err)
+
+        assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
+
+
+def test_gather_check_scaled_bounds_more_than_maximum(prefetch_gather, linear_gather):
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = 'gather {} {} {} gcf_all -k 21 --scaled 1e9 --threshold-bp 50000'.format(query_sig, prefetch_gather, linear_gather)
+
+        status, out, err = utils.runscript('sourmash',
+                                           cmd.split(' '),
+                                           in_directory=location, fail_ok=True)
+        
+        assert status == -1
+
+        print(out)
+        print(err)
+    
+        assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
 
 
 def test_gather_metagenome_downsample(prefetch_gather, linear_gather):
