@@ -46,15 +46,17 @@ def make_outfile(base, ext):
 ##### taxonomy command line functions
 
 
-
-def collect_and_load_gather_csvs(cmdline_gather_input, fromfile, force=False):
+def collect_gather_csvs(cmdline_gather_input, from_file=None):
     # collect files from input
     gather_csvs = cmdline_gather_input
     if from_file:
-        more_files = tax_utils.load_gather_files_from_file(args.from_file)
+        more_files = tax_utils.load_gather_files_from_file(from_file)
         gather_csvs+= more_files
+    return gather_csvs
 
-    #  load gather results from each file
+def collect_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False):
+    #  load gather results from all files
+    gather_results = []
     total_missed = 0
     all_ident_missed = set()
     for gather_csv in gather_csvs:
@@ -62,7 +64,7 @@ def collect_and_load_gather_csvs(cmdline_gather_input, fromfile, force=False):
         these_results = tax_utils.load_gather_results(gather_csv)
         if not these_results:
             notify(f'No gather results loaded from {gather_csv}.')
-            if args.force:
+            if force:
                 notify(f'--force is set. Attempting to continue.')
                 continue
             else:
@@ -73,7 +75,7 @@ def collect_and_load_gather_csvs(cmdline_gather_input, fromfile, force=False):
         n_missed, ident_missed = tax_utils.find_missing_identities(these_results, tax_assign)
         if n_missed:
             notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
-            if args.fail_on_missing_taxonomy:
+            if fail_on_missing_taxonomy:
                 notify(f'Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
                 sys.exit(-1)
             total_missed += n_missed
@@ -81,7 +83,7 @@ def collect_and_load_gather_csvs(cmdline_gather_input, fromfile, force=False):
         # add these results to gather_results
         gather_results += these_results
 
-    return gather_results, all_ident_misssed, total_missed
+    return gather_results, all_ident_missed, total_missed
 
 
 def select_results_by_rank(summarized_gather, rank="species"):
@@ -117,7 +119,8 @@ def summarize(args):
         sys.exit(-1)
 
     # next, load gather results
-    gather_results, idents_missed, total_missed = collect_and_load_gather_csvs(args.gather_results, args.from_file, args.force)
+    gather_csvs = collect_gather_csvs(args.gather_results, args.from_file)
+    gather_results, idents_missed, total_missed = collect_and_load_gather_csvs(gather_csvs, tax_assign, fail_on_missing_taxonomy=args.fail_on_missing_taxonomy, force=args.force)
 
     if not gather_results:
         notify(f'No gather results loaded. Exiting.')
@@ -138,7 +141,7 @@ def summarize(args):
 
     # write summarized --> krona output csv
     if "krona" in args.output_format:
-        krona_resultslist = tax_utils.format_and_summarize_for_krona(args.rank, summarized_gather)
+        krona_resultslist = tax_utils.format_for_krona(args.rank, summarized_gather)
 
         krona_outfile = make_outfile(args.output_base, ".krona.tsv")
         with FileOutputCSV(krona_outfile) as out_fp:
