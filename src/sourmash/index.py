@@ -966,6 +966,10 @@ class CollectionManifest:
             yield row['internal_location']
 
     def __contains__(self, ss):
+        "Does this manifest contain this signature?"
+        # @CTB currently iterative, we should optimize!
+        # @CTB probably should change to 'contains_md5' and
+        # @CTB 'contains_filename' or something.
         md5 = ss.md5sum()
         for row in self.info:
             if md5 == row['md5']:
