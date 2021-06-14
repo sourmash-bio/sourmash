@@ -62,7 +62,7 @@ def summarize(args):
         sys.exit(-1)
 
     # next, collect and load gather results
-    gather_csvs = tax_utils.collect_gather_csvs(args.gather_results, args.from_file)
+    gather_csvs = tax_utils.collect_gather_csvs(args.gather_results, from_file= args.from_file)
     gather_results, idents_missed, total_missed = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
                                                                                        fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
 
@@ -111,7 +111,7 @@ def classify(args):
         sys.exit(-1)
 
     # get gather_csvs from args
-    gather_csvs = tax_utils.collect_gather_csvs(args.gather_results, args.from_file)
+    gather_csvs = tax_utils.collect_gather_csvs(args.gather_results, from_file=args.from_file)
 
     classifications = defaultdict(list)
     seen_queries=set()
@@ -211,7 +211,7 @@ def combine(args):
     set_quiet(args.quiet)
 
     # load summarized gather csvs into lineage dictionary
-    sumgather_csvs = tax_utils.collect_gather_csvs(args.summarized_gather_results, args.from_file)
+    sumgather_csvs = tax_utils.collect_gather_csvs(args.summarized_gather_results, from_file=args.from_file)
 
     linD, all_samples = tax_utils.combine_sumgather_csvs_by_lineage(sumgather_csvs, rank=args.rank, force=args.force)
     if not linD:

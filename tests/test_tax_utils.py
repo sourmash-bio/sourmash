@@ -75,7 +75,7 @@ def test_collect_gather_csvs(runtmp):
     with open(from_file, 'w') as fp:
         fp.write(f"{g_csv}\n")
 
-    gather_files = collect_gather_csvs([g_csv], from_file)
+    gather_files = collect_gather_csvs([g_csv], from_file=from_file)
     print("gather_files: ", gather_files)
     assert len(gather_files) == 1
     assert basename(gather_files[0]) == 'test1.gather.csv'

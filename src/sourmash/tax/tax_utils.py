@@ -22,7 +22,7 @@ from sourmash.lca.lca_utils import (LineagePair, build_tree, find_lca,
                                     pop_to_rank)
 
 
-def get_ident(ident, split_identifiers=True, keep_identifier_versions=False):
+def get_ident(ident, *, split_identifiers=True, keep_identifier_versions=False):
     # split identifiers = split on whitespace
     # keep identifiers = don't split .[12] from assembly accessions
     "Hack and slash identifiers."
@@ -45,7 +45,7 @@ def ascending_taxlist(include_strain=True):
         yield k
 
 
-def collect_gather_csvs(cmdline_gather_input, from_file=None):
+def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     # collect files from input
     gather_csvs = cmdline_gather_input
     if from_file:
@@ -103,14 +103,14 @@ def load_gather_results(gather_csv):
 
 
 # this summarizes at a specific rank.
-def summarize_gather_at(rank, tax_assign, gather_results, skip_idents = [], split_identifiers=True, keep_identifier_versions=False, best_only=False):
+def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], split_identifiers=True, keep_identifier_versions=False, best_only=False):
     # collect!
     sum_uniq_weighted = defaultdict(lambda: defaultdict(float))
     for row in gather_results:
         query_name = row['query_name']
         # move these checks to loading function!?
         match_ident = row['name']
-        match_ident = get_ident(match_ident, split_identifiers, keep_identifier_versions)
+        match_ident = get_ident(match_ident, split_identifiers=split_identifiers, keep_identifier_versions=keep_identifier_versions)
         # if identity not in lineage database, and not --fail-on-missing-taxonomy, skip summarizing this match
         if match_ident in skip_idents:
             continue
@@ -157,7 +157,7 @@ def find_missing_identities(gather_results, tax_assign):
 
 
 # pass ranks; have ranks=[default_ranks]
-def make_krona_header(min_rank, include_strain=False):
+def make_krona_header(min_rank, *, include_strain=False):
     header = ["fraction"]
     tl = list(taxlist(include_strain=include_strain))
     try:
@@ -167,7 +167,7 @@ def make_krona_header(min_rank, include_strain=False):
     return tuple(header + tl[:rank_index+1])
 
 
-def aggregate_by_lineage_at_rank(rank_results, by_query=False):
+def aggregate_by_lineage_at_rank(rank_results, *, by_query=False):
     '''
     Aggregate list of rank SummarizedGatherResults,
     keeping query info or aggregating across queries.
@@ -208,7 +208,7 @@ def format_for_krona(rank, summarized_gather):
     return krona_results
 
 
-def write_krona(rank, krona_results, out_fp, sep='\t'):
+def write_krona(rank, krona_results, out_fp, *, sep='\t'):
     header = make_krona_header(rank)
     tsv_output = csv.writer(out_fp, delimiter='\t')
     tsv_output.writerow(header)
@@ -216,7 +216,7 @@ def write_krona(rank, krona_results, out_fp, sep='\t'):
         tsv_output.writerow(res)
 
 
-def write_summary(summarized_gather, csv_fp, sep='\t'):
+def write_summary(summarized_gather, csv_fp, *, sep='\t'):
     header= ["query_name", "rank", "fraction", "lineage"]
     w = csv.writer(csv_fp)
     w.writerow(header)
@@ -224,7 +224,7 @@ def write_summary(summarized_gather, csv_fp, sep='\t'):
         for (query_name, rank, fraction, lineage) in rank_results:
             w.writerow([query_name, rank, f'{fraction:.3f}', display_lineage(lineage)])
 
-def combine_sumgather_csvs_by_lineage(gather_csvs, rank="species", accept_ranks = list(lca_utils.taxlist(include_strain=False)), force=False):
+def combine_sumgather_csvs_by_lineage(gather_csvs, *, rank="species", accept_ranks = list(lca_utils.taxlist(include_strain=False)), force=False):
     '''
     Takes in one or more output csvs from `sourmash taxonomy summarize`
     and combines the results into a nested dictionary with lineages
@@ -267,7 +267,7 @@ def combine_sumgather_csvs_by_lineage(gather_csvs, rank="species", accept_ranks 
     return sgD, all_samples
 
 
-def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, sep='\t'):
+def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, sep='\t'):
     '''
     takes in a lineage dictionary with sample counts (output of combine_sumgather_by_lineage)
     and produces a tab-separated file with fractions for each sample.
