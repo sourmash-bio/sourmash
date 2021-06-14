@@ -305,7 +305,6 @@ def test_classify_gather_from_file_rank(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert 'found 1 filenames in --from-file input.' in c.last_result.err
     assert "query_name,rank,fraction,lineage" in c.last_result.out
     assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
@@ -336,7 +335,6 @@ def test_classify_gather_from_file_two_files(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert 'found 2 filenames in --from-file input' in c.last_result.err
     assert "query_name,rank,fraction,lineage" in c.last_result.out
     assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
     assert "test2,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
@@ -359,7 +357,6 @@ def test_classify_gather_from_file_duplicate(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert 'found 1 filenames in --from-file input' in c.last_result.err
     assert "query_name,rank,fraction,lineage" in c.last_result.out
     assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
@@ -390,7 +387,6 @@ def test_classify_gather_cli_and_from_file(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert 'found 1 filenames in --from-file input.' in c.last_result.err
     assert "query_name,rank,fraction,lineage" in c.last_result.out
     assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
     assert "test2,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
@@ -415,8 +411,6 @@ def test_classify_gather_cli_and_from_file_duplicate(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert 'found 1 filenames in --from-file input.' in c.last_result.err
-    assert 'WARNING: duplicate query test1. Skipping...' in c.last_result.err
     assert "query_name,rank,fraction,lineage" in c.last_result.out
     assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
@@ -701,7 +695,6 @@ def test_classify_empty_gather_results_with_csv_force(runtmp):
     assert c.last_result.status == 0
     assert f'No gather results loaded from {empty_tax}.' in c.last_result.err
     assert f'--force is set. Attempting to continue to next set of gather results.' in c.last_result.err
-    assert 'found 1 filenames in --from-file input.' in c.last_result.err
     assert f'loaded 1 gather files for classification' in c.last_result.err
     assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 

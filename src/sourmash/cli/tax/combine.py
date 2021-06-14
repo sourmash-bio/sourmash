@@ -12,6 +12,10 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
+        '--from-file',  metavar='FILE',
+        help='input many gather results as a text file, with one gather csv per line'
+    )
+    subparser.add_argument(
         '-o', '--output-base', default='-',
         help='basename for output file (default stdout)'
     )
@@ -24,10 +28,10 @@ def subparser(subparsers):
         default='species',
         help='Output combined info for lineages at this rank'
     )
-    #subparser.add_argument(
-    #    '-f', '--force', action = 'store_true',
-    #    help='continue past errors in file loading',
-    #)
+    subparser.add_argument(
+        '-f', '--force', action = 'store_true',
+        help='continue past errors in file loading',
+    )
 
 def main(args):
     import sourmash

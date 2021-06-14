@@ -2,13 +2,14 @@
 Utility functions for taxonomy analysis tools.
 """
 import csv
-from os.path import exists, basename
+from os.path import exists, basename, dirname, abspath
 from collections import namedtuple, defaultdict, Counter
 
 __all__ = ['get_ident', 'load_gather_results',
            'summarize_gather_at', 'find_missing_identities']
 
 from sourmash.logging import notify, error, debug
+from sourmash.sourmash_args import load_pathlist_from_file
 
 SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage")
 
@@ -44,18 +45,49 @@ def ascending_taxlist(include_strain=True):
         yield k
 
 
-def load_gather_files_from_file(from_file):
-    gather_files = [x.strip() for x in open(from_file, 'r')]
-    # rm duplicates, but keep order
-    seen_files = set()
-    gatherF_nondup = []
-    for inF in gather_files:
-        if inF in seen_files:
-            continue
-        seen_files.add(inF)
-        gatherF_nondup.append(inF)
-    notify(f'found {len(gatherF_nondup)} filenames in --from-file input.')
-    return gatherF_nondup
+def collect_gather_csvs(cmdline_gather_input, from_file=None):
+    # collect files from input
+    gather_csvs = cmdline_gather_input
+    if from_file:
+        more_files = load_pathlist_from_file(from_file)
+        for gf in more_files:
+            if gf not in gather_csvs:
+                gather_csvs.append(gf)
+    return gather_csvs
+
+
+def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False):
+    if not isinstance(gather_csvs, list):
+        gather_csvs = [gather_csvs]
+    #  load gather results from all files
+    gather_results = []
+    total_missed = 0
+    all_ident_missed = set()
+    for gather_csv in gather_csvs:
+        # should we check for file here?
+        these_results = load_gather_results(gather_csv)
+        if not these_results:
+            notify(f'No gather results loaded from {gather_csv}.')
+            if force:
+                notify(f'--force is set. Attempting to continue to next set of gather results.')
+                continue
+            else:
+                notify(f'Exiting.')
+                sys.exit(-1)
+
+        # check for match identites in these gather_results not found in lineage spreadsheets
+        n_missed, ident_missed = find_missing_identities(these_results, tax_assign)
+        if n_missed:
+            notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
+            if fail_on_missing_taxonomy:
+                notify(f'Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
+                sys.exit(-1)
+            total_missed += n_missed
+            all_ident_missed.update(ident_missed)
+        # add these results to gather_results
+        gather_results += these_results
+
+    return gather_results, all_ident_missed, total_missed
 
 
 # load and aggregate all gather results

@@ -2,6 +2,7 @@
 Tests for functions in taxonomy submodule.
 """
 import pytest
+from os.path import basename
 
 import sourmash
 import sourmash_tst_utils as utils
@@ -9,7 +10,8 @@ import sourmash_tst_utils as utils
 from sourmash.tax import tax_utils
 from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_results,
                                     summarize_gather_at, find_missing_identities,
-                                    write_summary, load_gather_files_from_file,
+                                    write_summary,
+                                    collect_gather_csvs, check_and_load_gather_csvs,
                                     SummarizedGatherResult,
                                     aggregate_by_lineage_at_rank,
                                     make_krona_header, format_for_krona, write_krona,
@@ -67,12 +69,16 @@ def test_get_ident_no_split():
     assert n_id == "GCF_001881345.1 secondname"
 
 
-def test_load_gatherfiles_from_file():
-    from_file = utils.get_test_data('tax/from-file.txt')
-    gather_files = load_gather_files_from_file(from_file)
+def test_collect_gather_csvs(runtmp):
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    from_file = runtmp.output("tmp-from-file.txt")
+    with open(from_file, 'w') as fp:
+        fp.write(f"{g_csv}\n")
+
+    gather_files = collect_gather_csvs([g_csv], from_file)
     print("gather_files: ", gather_files)
     assert len(gather_files) == 1
-    assert gather_files == ['test1.gather.csv']
+    assert basename(gather_files[0]) == 'test1.gather.csv'
 
 
 # @NTP: improve me !!
