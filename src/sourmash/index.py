@@ -459,6 +459,7 @@ class ZipFileLinearIndex(Index):
             self.manifest = None
         else:
             # CTB: maybe support passing manifest in on constructor?
+            # otherwise manifest is loaded on 'select'.
             print(f'found manifest when loading {self.zf.filename}')
 
             mfp = self.zf.open(zi, 'r')
@@ -528,12 +529,9 @@ class ZipFileLinearIndex(Index):
             print('.signatures() found manifest!')
             picklist = None
             if self.selection_dict:
-                picklist = self.selection_dict.get('picklist', None)
-
-            if picklist and picklist.coltype in ('md5', 'md5prefix8'):
                 manifest = self.manifest
                 def yield_fp():
-                    for filename in manifest.select_filenames(picklist=picklist):
+                    for filename in manifest.select_filenames(**self.selection_dict):
                         zi = self.zf.getinfo(filename)
                         yield self.zf.open(zi)
 
@@ -875,7 +873,6 @@ class CollectionManifest:
 
         obj = cls()
         obj.info = manifest_list
-        print('XYZ', len(manifest_list))
         return obj
 
     def select_filenames(self, *, ksize=None, moltype=None, scaled=0, num=0,
@@ -891,7 +888,27 @@ class CollectionManifest:
                 colkey = 'md5short'
             else:
                 assert 0        # support more here CTB!
-            matching_rows = ( row for row in matching_rows if row[colkey] in picklist.pickset )
+            matching_rows = ( row for row in matching_rows
+                              if row[colkey] in picklist.pickset )
 
+        if ksize:
+            matching_rows = ( row for row in matching_rows
+                              if int(row['ksize']) == ksize )
+        if moltype:
+            matching_rows = ( row for row in matching_rows
+                              if row['moltype'] == moltype )
+        if scaled or containment:
+            assert 0
+            # CTB: check scaled AND containment per select_signature
+            # CTB: check num, per select_signature?
+            matching_rows = ( row for row in matching_rows
+                              if int(row['scaled']) )
+        if num:
+            assert 0
+            # CTB: check sclaed, per select_signature?
+            matching_rows = ( row for row in matching_rows
+                              if int(row['num']) )
+
+        # return only the internal filenames!
         for row in matching_rows:
             yield row['internal_location']
