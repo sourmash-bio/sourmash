@@ -449,12 +449,11 @@ def test_aggregate_by_lineage_at_rank_by_query():
 
     phy_sum = summarize_gather_at("phylum", taxD, g_res)
     print("phylum summary:", phy_sum, ']\n')
-    phy_lin_sum = aggregate_by_lineage_at_rank(phy_sum)
+    phy_lin_sum, num_queries = aggregate_by_lineage_at_rank(phy_sum, by_query=True)
     print("phylum lineage summary:", phy_lin_sum, '\n')
-    #assert phy_lin_sum == {(LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='b')): 0.5,
-    #                       (LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='c')): 0.4}
-    skB_lin_sum = aggregate_by_lineage_at_rank(sk_sum)
-    #assert skB_lin_sum == {(LineagePair(rank='superkingdom', name='a'),): 0.3}
+    assert phy_lin_sum == {(LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='b')): ('queryA', 0.5),
+                           (LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='c')): ('queryB', 0.3)}
+    assert num_queries == 2
 
 
 def test_format_for_krona_0():
@@ -581,10 +580,10 @@ def test_combine_sumgather_csvs_by_lineage(runtmp):
 
     # test combine_summarized_gather_csvs_by_lineage_at_rank
     linD, query_names = combine_sumgather_csvs_by_lineage([sg1,sg2], rank="phylum")
-    print("lineage dict: \n", linD)
+    print("lineage_dict", linD)
     assert linD == {'a;b': {'queryA': '0.500'}, 'a;c': {'queryB': '0.700'}}
     assert query_names == ['queryA', 'queryB']
-    linD = combine_sumgather_csvs_by_lineage([sg1,sg2], rank="superkingdom")
+    linD, query_names = combine_sumgather_csvs_by_lineage([sg1,sg2], rank="superkingdom")
     print("lineage dict: \n", linD)
     assert linD, query_names == {'a': {'queryA': '0.500', 'queryB': '0.700'}}
     assert query_names == ['queryA', 'queryB']
