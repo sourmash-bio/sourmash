@@ -206,18 +206,26 @@ def test_combine_csv_out(runtmp):
     # first make a couple summarized gather csvs
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
-    # sample 1
-    csv_base1 = "sample1"
+
+    # make test2 results (identical to test1 except query_name)
+    g_res2 = runtmp.output("test2.gather.csv")
+    test2_results = [x.replace("test1", "test2") for x in open(g_csv, 'r')]
+    with open(g_res2, 'w') as fp:
+        for line in test2_results:
+            fp.write(line)
+
+    # test1
+    csv_base1 = "test1"
     sum_csv1 = csv_base1 + ".summarized.csv"
     csvout1 = runtmp.output(sum_csv1)
     runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax, '-o', csv_base1)
     # sample 2
-    csv_base2 = "sample2"
+    csv_base2 = "test2"
     sum_csv2 = csv_base2 + ".summarized.csv"
     csvout2 = runtmp.output(sum_csv2)
-    runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax, '-o', csv_base2)
+    runtmp.run_sourmash('tax', 'summarize', g_res2, '--taxonomy-csv', tax, '-o', csv_base2)
 
-    # now combine sample1 and sample2
+    # now combine test1 and test2
     combined_outbase = "combined"
     combined_output = combined_outbase + ".combined.csv"
     cb_csv = runtmp.output(combined_output)
@@ -232,7 +240,7 @@ def test_combine_csv_out(runtmp):
 
     cb = [x.strip().split(',') for x in open(cb_csv, 'r')]
     print('combined file: \n', cb)
-    assert cb[0] == ['lineage', 'sample1', 'sample2']
+    assert cb[0] == ['lineage', 'test1', 'test2']
     assert cb[1] == ['d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus', '0.016', '0.016']
     assert cb[2] == ['d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri', '0.057', '0.057']
     assert cb[3] == ['d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli', '0.058', '0.058']
@@ -302,6 +310,38 @@ def test_classify_gather_from_file_rank(runtmp):
     assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
+def test_classify_gather_from_file_two_files(runtmp):
+    c = runtmp
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    g_res = utils.get_test_data('tax/test1.gather.csv')
+
+    # make test2 results (identical to test1 except query_name)
+    g_res2 = runtmp.output("test2.gather.csv")
+    test2_results = [x.replace("test1", "test2") for x in open(g_res, 'r')]
+    with open(g_res2, 'w') as fp:
+        for line in test2_results:
+            fp.write(line)
+
+    # write test1 and test2 files to a text file for input
+    g_from_file = runtmp.output("tmp-from-file.txt")
+    with open(g_from_file, 'w') as f_csv:
+        f_csv.write(f"{g_res}\n")
+        f_csv.write(f"{g_res2}\n")
+
+    c.run_sourmash('tax', 'classify', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
+                   '--rank', 'species')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert 'found 2 filenames in --from-file input' in c.last_result.err
+    assert "query_name,rank,fraction,lineage" in c.last_result.out
+    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "test2,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+
+
 def test_classify_gather_from_file_duplicate(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -319,9 +359,9 @@ def test_classify_gather_from_file_duplicate(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert 'loaded 1 gather files for classification' in c.last_result.err
-    assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
-    assert "species,test1,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert 'found 1 filenames in --from-file input' in c.last_result.err
+    assert "query_name,rank,fraction,lineage" in c.last_result.out
+    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
 def test_classify_gather_cli_and_from_file(runtmp):
@@ -329,10 +369,20 @@ def test_classify_gather_cli_and_from_file(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
     g_from_file = runtmp.output("tmp-from-file.txt")
-    with open(g_from_file, 'w') as f_csv:
-        f_csv.write(f"{g_res}\n")
 
-    c.run_sourmash('tax', 'classify', g_res, '-n', 'test1', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
+    # make test2 results (identical to test1 except query_name)
+    g_res2 = runtmp.output("test2.gather.csv")
+    test2_results = [x.replace("test1", "test2") for x in open(g_res, 'r')]
+    with open(g_res2, 'w') as fp:
+        for line in test2_results:
+            fp.write(line)
+
+    # write test2 csv to a text file for input
+    g_from_file = runtmp.output("tmp-from-file.txt")
+    with open(g_from_file, 'w') as f_csv:
+        f_csv.write(f"{g_res2}\n")
+
+    c.run_sourmash('tax', 'classify', g_res, '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
                    '--rank', 'species')
 
     print(c.last_result.status)
@@ -340,11 +390,35 @@ def test_classify_gather_cli_and_from_file(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert 'loaded 1 gather files from csv input.' in c.last_result.err
-    assert 'loaded 2 gather files for classification' in c.last_result.err
-    assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
-    assert "species,test1,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
-    assert "species,test2,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert 'found 1 filenames in --from-file input.' in c.last_result.err
+    assert "query_name,rank,fraction,lineage" in c.last_result.out
+    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "test2,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+
+
+def test_classify_gather_cli_and_from_file_duplicate(runtmp):
+    c = runtmp
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    g_res = utils.get_test_data('tax/test1.gather.csv')
+    g_from_file = runtmp.output("tmp-from-file.txt")
+
+    # also write test1 csv to a text file for input
+    g_from_file = runtmp.output("tmp-from-file.txt")
+    with open(g_from_file, 'w') as f_csv:
+        f_csv.write(f"{g_res}\n")
+
+    c.run_sourmash('tax', 'classify', g_res, '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
+                   '--rank', 'species')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert 'found 1 filenames in --from-file input.' in c.last_result.err
+    assert 'WARNING: duplicate query test1. Skipping...' in c.last_result.err
+    assert "query_name,rank,fraction,lineage" in c.last_result.out
+    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
 def test_classify_gather_from_file_threshold_0(runtmp):
@@ -363,8 +437,8 @@ def test_classify_gather_from_file_threshold_0(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
-    assert "species,test1,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "query_name,rank,fraction,lineage" in c.last_result.out
+    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
 def test_classify_rank_duplicated_taxonomy_fail(runtmp):
@@ -407,8 +481,8 @@ def test_classify_rank_duplicated_taxonomy_force(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
-    assert "species,,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "query_name,rank,fraction,lineage" in c.last_result.out
+    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
 def test_classify_missing_taxonomy_ignore_threshold(runtmp):
@@ -430,8 +504,8 @@ def test_classify_missing_taxonomy_ignore_threshold(runtmp):
 
     assert c.last_result.status == 0
     assert "The following are missing from the taxonomy information: GCF_001881345" in c.last_result.err
-    assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
-    assert "species,,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in c.last_result.out
+    assert "query_name,rank,fraction,lineage" in c.last_result.out
+    assert "test1,species,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in c.last_result.out
 
 
 def test_classify_missing_taxonomy_ignore_rank(runtmp):
@@ -453,8 +527,8 @@ def test_classify_missing_taxonomy_ignore_rank(runtmp):
 
     assert c.last_result.status == 0
     assert "The following are missing from the taxonomy information: GCF_001881345" in c.last_result.err
-    assert "query_name,classification_rank,fraction_matched_at_rank,lineage" in c.last_result.out
-    assert "species,,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in c.last_result.out
+    assert "query_name,rank,fraction,lineage" in c.last_result.out
+    assert "test1,species,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in c.last_result.out
 
 
 def test_classify_missing_taxonomy_fail_threshold(runtmp):
@@ -521,7 +595,6 @@ def test_classify_empty_gather_results_with_header_single(runtmp):
     with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
         c.run_sourmash('tax', 'classify', empty_tax_with_header, '--taxonomy-csv', taxonomy_csv, fail_ok=True)
 
-
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -547,6 +620,7 @@ def test_classify_empty_gather_results_single(runtmp):
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
+
     assert c.last_result.status == -1
     assert f'No gather results loaded from {empty_tax}.' in c.last_result.err
     assert 'Exiting.' in c.last_result.err
@@ -565,10 +639,10 @@ def test_classify_empty_gather_results_single_force(runtmp):
         c.run_sourmash('tax', 'classify', empty_tax, '--taxonomy-csv', taxonomy_csv,
                        '--force', fail_ok=True)
 
-
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
+
     assert c.last_result.status == -1
     assert f'No gather results loaded from {empty_tax}.' in c.last_result.err
     assert f'--force is set. Attempting to continue to next set of gather results.' in c.last_result.err
@@ -627,9 +701,9 @@ def test_classify_empty_gather_results_with_csv_force(runtmp):
     assert c.last_result.status == 0
     assert f'No gather results loaded from {empty_tax}.' in c.last_result.err
     assert f'--force is set. Attempting to continue to next set of gather results.' in c.last_result.err
-    assert f'loaded 1 gather files from csv input.' in c.last_result.err
+    assert 'found 1 filenames in --from-file input.' in c.last_result.err
     assert f'loaded 1 gather files for classification' in c.last_result.err
-    assert "species,test1,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
 ## some test ideas to start with -- see test_lca.py for add'l ideas

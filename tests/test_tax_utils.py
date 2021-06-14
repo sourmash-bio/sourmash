@@ -11,7 +11,6 @@ from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_re
                                     summarize_gather_at, find_missing_identities,
                                     write_summary, load_gather_files_from_file,
                                     SummarizedGatherResult,
-                                    #write_classifications,
                                     aggregate_by_lineage_at_rank,
                                     make_krona_header, format_for_krona, write_krona,
                                     combine_sumgather_csvs_by_lineage, write_lineage_sample_frac)
@@ -398,24 +397,6 @@ def test_write_summary_csv(runtmp):
     assert sr[2] ==  ['queryA', 'phylum', '1.000', 'a;b']
 
 
-#def test_write_classification_csv(runtmp):
-#    """test classification csv write function"""
-#
-#    classif = {'superkingdom': [("x",((LineagePair(rank='superkingdom', name='a'),), 1.0))],
-#                  'phylum': [("y", ((LineagePair(rank='superkingdom', name='a'),
-#                               LineagePair(rank='phylum', name='b')), 1.0))]}
-#
-#    outc= runtmp.output("outclass.csv")
-#    with open(outc, 'w') as out_fp:
-#        write_classifications(classif, out_fp)
-#
-#    cr = [x.rstrip().split(',') for x in open(outc, 'r')]
-#    print("classification_summary_results_from_file: \n", cr)
-#    assert cr[0] == ['query_name', 'classification_rank', 'fraction_matched_at_rank', 'lineage']
-#    assert cr[1] == ['x', 'superkingdom', '1.000', 'a']
-#    assert cr[2] == ['y', 'phylum', '1.000', 'a;b']
-
-
 def test_make_krona_header_0():
     hd = make_krona_header("species")
     print("header: ", hd)
@@ -440,7 +421,7 @@ def test_make_krona_header_fail():
         assert str(exc.value) == "Rank strain not present in available ranks"
 
 
-def test_aggregate_by_lineage_at_rank_0():
+def test_aggregate_by_lineage_at_rank_by_query():
     """test two queries, aggregate lineage at rank for each"""
     # make gather results
     gA = ["queryA","gA","0.5","0.5"]
@@ -456,14 +437,20 @@ def test_aggregate_by_lineage_at_rank_0():
     # aggregate by lineage at rank
     sk_sum = summarize_gather_at("superkingdom", taxD, g_res)
     print("superkingdom summarized gather results:", sk_sum)
-    sk_lin_sum = aggregate_by_lineage_at_rank(sk_sum)
-    print("queryA superkingdom lineage summary:", sk_lin_sum)
-    #assert sk_lin_sum == {(LineagePair(rank='superkingdom', name='a'),): 0.9}
+    assert sk_sum== [SummarizedGatherResult(query_name='queryA', rank='superkingdom', fraction=0.9,
+                          lineage=(LineagePair(rank='superkingdom', name='a'),)),
+                          SummarizedGatherResult(query_name='queryB', rank='superkingdom', fraction=0.3,
+                          lineage=(LineagePair(rank='superkingdom', name='a'),))]
+
+    sk_lin_sum, num_queries = aggregate_by_lineage_at_rank(sk_sum, by_query=True)
+    print("superkingdom lineage summary:", sk_lin_sum, '\n')
+    assert sk_lin_sum == {(LineagePair(rank='superkingdom', name='a'),): ('queryB', 0.3)}
+    assert num_queries == 2
 
     phy_sum = summarize_gather_at("phylum", taxD, g_res)
-    print("phylum summary:", phy_sum)
+    print("phylum summary:", phy_sum, ']\n')
     phy_lin_sum = aggregate_by_lineage_at_rank(phy_sum)
-    print("phylum lineage summary:", phy_lin_sum)
+    print("phylum lineage summary:", phy_lin_sum, '\n')
     #assert phy_lin_sum == {(LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='b')): 0.5,
     #                       (LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='c')): 0.4}
     skB_lin_sum = aggregate_by_lineage_at_rank(sk_sum)
