@@ -656,7 +656,8 @@ def extract(args):
     notify("extracted {} signatures from {} file(s)", len(save_sigs),
            len(args.signatures))
 
-    # @CTB note picklist.found is not updated properly necessarily.
+    # @CTB note picklist.found is not updated properly necessarily,
+    # since we are using .select!
     if picklist:
         notify(f"for given picklist, found {len(picklist.found)} matches of {len(picklist.pickset)} total")
         n_missing = len(picklist.pickset - picklist.found)
