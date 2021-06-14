@@ -173,15 +173,17 @@ def aggregate_by_lineage_at_rank(rank_results, *, by_query=False):
     keeping query info or aggregating across queries.
     '''
     lineage_summary = defaultdict(float)
-    all_queries = set()
+    if by_query:
+        lineage_summary = defaultdict(dict)
+    all_queries = []
     for (query_name, rank, fraction, lineage) in rank_results:
-        if query_name not in all_queries: # is this any faster than just trying to add?
-            all_queries.add(query_name)
+        if query_name not in all_queries:
+            all_queries.append(query_name)
         if by_query:
-            lineage_summary[lineage] = (query_name, fraction)
+            lineage_summary[lineage][query_name] = fraction
         else:
             lineage_summary[lineage] += fraction
-    return lineage_summary, len(all_queries)
+    return lineage_summary, all_queries, len(all_queries)
 
 
 def format_for_krona(rank, summarized_gather):
@@ -189,7 +191,7 @@ def format_for_krona(rank, summarized_gather):
     num_queries=0
     for res_rank, rank_results in summarized_gather.items():
         if res_rank == rank:
-            lineage_summary, num_queries = aggregate_by_lineage_at_rank(rank_results, by_query=False)
+            lineage_summary, all_queries, num_queries = aggregate_by_lineage_at_rank(rank_results, by_query=False)
     # if multiple_samples, divide fraction by the total number of query files
     for lin, fraction in lineage_summary.items():
         # divide total fraction by total number of queries
@@ -223,6 +225,7 @@ def write_summary(summarized_gather, csv_fp, *, sep='\t'):
     for rank, rank_results in summarized_gather.items():
         for (query_name, rank, fraction, lineage) in rank_results:
             w.writerow([query_name, rank, f'{fraction:.3f}', display_lineage(lineage)])
+
 
 def combine_sumgather_csvs_by_lineage(gather_csvs, *, rank="species", accept_ranks = list(lca_utils.taxlist(include_strain=False)), force=False):
     '''
@@ -267,7 +270,7 @@ def combine_sumgather_csvs_by_lineage(gather_csvs, *, rank="species", accept_ran
     return sgD, all_samples
 
 
-def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, sep='\t'):
+def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, flatten_lineage=False, sep='\t'):
     '''
     takes in a lineage dictionary with sample counts (output of combine_sumgather_by_lineage)
     and produces a tab-separated file with fractions for each sample.
@@ -290,6 +293,8 @@ def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, sep='\t'):
     blank_row = {query_name: 0 for query_name in sample_names}
     for lin, sampleinfo in sorted(lineage_dict.items()):
         #add lineage and 0 placeholders
+        if flatten_lineage:
+            lin = display_lineage(lin)
         row = {'lineage': lin}
         row.update(blank_row)
         # add info for query_names that exist for this lineage

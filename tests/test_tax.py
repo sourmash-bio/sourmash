@@ -110,6 +110,31 @@ def test_summarize_krona_tsv_out(runtmp):
     assert ['0.015637726014008795', 'd__Bacteria', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Phocaeicola'] == gn_krona_results[3]
 
 
+def test_summarize_lineage_summary_out(runtmp):
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+    lin_csv = csv_base + ".lineage_summary.tsv"
+    csvout = runtmp.output(lin_csv)
+    print("csvout: ", csvout)
+
+    runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'lineage_summary', '--rank', 'genus')
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    gn_lineage_summary = [x.rstrip().split('\t') for x in open(csvout)]
+    print("species lineage summary results: \n", gn_lineage_summary)
+    assert ['lineage', 'test1'] == gn_lineage_summary[0]
+    assert ['d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola', '0.015637726014008795'] == gn_lineage_summary[1]
+    assert ['d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella', '0.05701254275940707'] == gn_lineage_summary[2]
+    assert ['d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia', '0.05815279361459521'] == gn_lineage_summary[3]
+
+
 def test_summarize_duplicated_taxonomy_fail(runtmp):
     c = runtmp
     # write temp taxonomy with duplicates

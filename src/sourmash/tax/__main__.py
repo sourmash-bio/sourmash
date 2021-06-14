@@ -83,6 +83,16 @@ def summarize(args):
         with FileOutputCSV(summary_outfile) as csv_fp:
             tax_utils.write_summary(summarized_gather, csv_fp)
 
+    # if lineage summary table
+    if "lineage_summary" in args.output_format:
+        lineage_outfile = make_outfile(args.output_base, ".lineage_summary.tsv")
+
+        ## aggregate by lineage, by query
+        lineageD, query_names, num_queries = tax_utils.aggregate_by_lineage_at_rank(summarized_gather[args.rank], by_query=True)
+
+        with FileOutputCSV(lineage_outfile) as csv_fp:
+            tax_utils.write_lineage_sample_frac(query_names, lineageD, csv_fp, flatten_lineage=True, sep='\t')
+
     # write summarized --> krona output csv
     if "krona" in args.output_format:
         krona_resultslist = tax_utils.format_for_krona(args.rank, summarized_gather)
@@ -181,7 +191,6 @@ def classify(args):
     if "summary" in args.output_format:
         summary_outfile = make_outfile(args.output_base, ".classifications.csv")
         with FileOutputCSV(summary_outfile) as csv_fp:
-            #tax_utils.write_classifications(classifications, csv_fp)
             tax_utils.write_summary(classifications, csv_fp)
 
     if "krona" in args.output_format:

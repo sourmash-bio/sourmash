@@ -515,18 +515,20 @@ def test_aggregate_by_lineage_at_rank_by_query():
                           SummarizedGatherResult(query_name='queryB', rank='superkingdom', fraction=0.3,
                           lineage=(LineagePair(rank='superkingdom', name='a'),))]
 
-    sk_lin_sum, num_queries = aggregate_by_lineage_at_rank(sk_sum, by_query=True)
+    sk_lin_sum, query_names, num_queries = aggregate_by_lineage_at_rank(sk_sum, by_query=True)
     print("superkingdom lineage summary:", sk_lin_sum, '\n')
-    assert sk_lin_sum == {(LineagePair(rank='superkingdom', name='a'),): ('queryB', 0.3)}
+    assert sk_lin_sum == {(LineagePair(rank='superkingdom', name='a'),): {'queryA': 0.9, 'queryB': 0.3}}
     assert num_queries == 2
+    assert query_names == ['queryA', 'queryB']
 
     phy_sum = summarize_gather_at("phylum", taxD, g_res)
     print("phylum summary:", phy_sum, ']\n')
-    phy_lin_sum, num_queries = aggregate_by_lineage_at_rank(phy_sum, by_query=True)
+    phy_lin_sum, query_names, num_queries = aggregate_by_lineage_at_rank(phy_sum, by_query=True)
     print("phylum lineage summary:", phy_lin_sum, '\n')
-    assert phy_lin_sum == {(LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='b')): ('queryA', 0.5),
-                           (LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='c')): ('queryB', 0.3)}
+    assert phy_lin_sum ==  {(LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='b')): {'queryA': 0.5},
+                            (LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='c')): {'queryA': 0.4, 'queryB': 0.3}}
     assert num_queries == 2
+    assert query_names == ['queryA', 'queryB']
 
 
 def test_format_for_krona_0():
