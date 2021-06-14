@@ -268,9 +268,10 @@ def manifest(args):
     w.writeheader()
 
     try:
+        # @CTB: figure out how to ignore manifests here! otherwise circularity.
         loader = sourmash_args.load_file_as_index(args.location)
     except Exception as exc:
-        error('\nError while reading signatures from {}:'.format(signature_file))
+        error('\nError while reading signatures from {}:'.format(args.location))
         error(str(exc))
         error('(continuing)')
         raise

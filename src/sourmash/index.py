@@ -462,11 +462,11 @@ class ZipFileLinearIndex(Index):
             # otherwise manifest is loaded on 'select'.
             print(f'found manifest when loading {self.zf.filename}')
 
-            mfp = self.zf.open(zi, 'r')
-            # wrap as text, since ZipFile.open only supports 'r' mode.
-            mfp = TextIOWrapper(mfp, 'utf-8')
-            # load manifest!
-            self.manifest = CollectionManifest.load_from_csv(mfp)
+            with self.zf.open(zi, 'r') as mfp:
+                # wrap as text, since ZipFile.open only supports 'r' mode.
+                mfp = TextIOWrapper(mfp, 'utf-8')
+                # load manifest!
+                self.manifest = CollectionManifest.load_from_csv(mfp)
 
     def __bool__(self):
         "Are there any matching signatures in this zipfile? Avoid calling len."
@@ -742,6 +742,12 @@ class MultiIndex(Index):
             for ss in idx.signatures():
                 yield ss, loc
 
+    def signatures_with_internal(self):
+        for idx, loc in zip(self.index_list, self.source_list):
+            for ss in idx.signatures():
+                # @CTB: properly recognize parent?
+                yield ss, '', loc
+
     def __len__(self):
         return sum([ len(idx) for idx in self.index_list ])
 
@@ -772,11 +778,21 @@ class MultiIndex(Index):
                 else:
                     raise       # continue past error!
 
+        # manifest?
+        # @CTB: do we want to ONLY load things in the manifest? maaaybe...
+        manifest = None
+        manifest_fn = os.path.join(pathname, 'SOURMASH-MANIFEST.csv')
+        if os.path.exists(manifest_fn):
+            print(f'found manifest when loading path {pathname}')
+            with open(manifest_fn, newline='') as mfp:
+                manifest = CollectionManifest.load_from_csv(mfp)
+
         db = None
         if index_list:
             db = cls(index_list, source_list)
         else:
             raise ValueError(f"no signatures to load under directory '{pathname}'")
+        db.manifest = manifest
 
         return db
 
@@ -804,6 +820,7 @@ class MultiIndex(Index):
 
     def select(self, **kwargs):
         "Run 'select' on all indices within this MultiIndex."
+        # @CTB: add manifest support HERE.
         new_idx_list = []
         new_src_list = []
         for idx, src in zip(self.index_list, self.source_list):
@@ -864,6 +881,9 @@ class CollectionManifest:
         for k in ('internal_location', 'md5', 'md5short', 'ksize',
                   'moltype', 'num', 'scaled', 'n_hashes', 'seed',
                   'with_abundance', 'name'):
+            if not r.fieldnames:
+                return None
+
             if k not in r.fieldnames:
                 raise ValueError(f"missing column '{k}' in manifest.")
 
@@ -878,6 +898,8 @@ class CollectionManifest:
     def select_filenames(self, *, ksize=None, moltype=None, scaled=0, num=0,
                          containment=False, picklist=None):
         "Yield internal paths for sigs that match the specificed requirements."
+        # CTB: should probably make this something that returns a new
+        # manifest, so that 'select' subsets manifests rather than signatures.
         matching_rows = self.info
         if picklist:
             # map picklist.coltype to manifest column types.
