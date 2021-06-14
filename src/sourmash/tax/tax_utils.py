@@ -43,6 +43,7 @@ def ascending_taxlist(include_strain=True):
     for k in ascending_taxlist:
         yield k
 
+
 def load_gather_files_from_file(from_file):
     gather_files = [x.strip() for x in open(from_file, 'r')]
     # rm duplicates, but keep order
@@ -55,6 +56,7 @@ def load_gather_files_from_file(from_file):
         gatherF_nondup.append(inF)
     notify(f'found {len(gatherF_nondup)} filenames in --from-file input.')
     return gatherF_nondup
+
 
 # load and aggregate all gather results
 def load_gather_results(gather_csv):
@@ -133,43 +135,41 @@ def make_krona_header(min_rank, include_strain=False):
     return tuple(header + tl[:rank_index+1])
 
 
-# this is for summarized results of a single query
-
-## SIGH, this is why a dict was helpful still. MODIFY FOR NAMEDTUPLE!
-def aggregate_by_lineage_at_rank(rank_results):
-    #query_lineage_summary = defaultdict(float)
-    query_lineage_summary = Counter()
+def aggregate_by_lineage_at_rank(rank_results, by_query=False):
+    '''
+    Aggregate list of rank SummarizedGatherResults,
+    keeping query info or aggregating across queries.
+    '''
+    lineage_summary = defaultdict(float)
+    all_queries = set()
     for (query_name, rank, fraction, lineage) in rank_results:
-    #for lin, fraction in rank_results:
-        query_lineage_summary[lin] += fraction
-    return query_lineage_summary
+        if query_name not in all_queries: # is this any faster than just trying to add?
+            all_queries.add(query_name)
+        if by_query:
+            lineage_summary[lineage] = (query_name, fraction)
+        else:
+            lineage_summary[lineage] += fraction
+    return lineage_summary, len(all_queries)
 
 
-# MODIFY FOR NAMEDTUPLE
-def format_and_summarize_for_krona(rank, summarized_gather):
+def format_for_krona(rank, summarized_gather):
+    '''Aggregate list of SummarizedGatherResults and format for krona output'''
     num_queries=0
-    #krona_summary = defaultdict(float)
-    krona_summary = Counter()
-    for res_rank, query_summarized_gather in summarized_gather.items():
+    for res_rank, rank_results in summarized_gather.items():
         if res_rank == rank:
-            for query, sumgather in query_summarized_gather.items():
-                num_queries += 1
-                query_lineage_summary = aggregate_by_lineage_at_rank(sumgather)
-            #add results from each query
-            krona_summary.update(query_lineage_summary)
-
+            lineage_summary, num_queries = aggregate_by_lineage_at_rank(rank_results, by_query=False)
     # if multiple_samples, divide fraction by the total number of query files
-    for lin, fraction in krona_summary.items():
-        # add query-specific fraction (fraction/total num queries)
-        krona_summary[lin] = fraction/num_queries
+    for lin, fraction in lineage_summary.items():
+        # divide total fraction by total number of queries
+        lineage_summary[lin] = fraction/num_queries
 
     # sort by fraction
-    krona_items = list(krona_summary.items())
-    krona_items.sort(key = lambda x: -x[1])
+    lin_items = list(lineage_summary.items())
+    lin_items.sort(key = lambda x: -x[1])
 
     # reformat lineage for krona_results printing
     krona_results = []
-    for lin, fraction in krona_items:
+    for lin, fraction in lin_items:
         lin_list = display_lineage(lin).split(';')
         krona_results.append((fraction, *lin_list))
 
@@ -189,9 +189,8 @@ def write_summary(summarized_gather, csv_fp, sep='\t'):
     w = csv.writer(csv_fp)
     w.writerow(header)
     for rank, rank_results in summarized_gather.items():
-        for query_name, res in rank_results.items():
-            for lin, val in res:
-                w.writerow([query_name, rank, f'{val:.3f}', display_lineage(lin)])
+        for (query_name, rank, fraction, lineage) in rank_results:
+            w.writerow([query_name, rank, f'{fraction:.3f}', display_lineage(lineage)])
 
 
 ## write summary and write classifications are now pretty much identical!!
@@ -231,21 +230,22 @@ def combine_sumgather_csvs_by_lineage(gather_csvs, rank="species", accept_ranks 
     if rank not in accept_ranks:
         raise ValueError(f"Rank {rank} not available.")
 
-    all_samples = [basename(g_csv).rsplit(".csv", 1)[0].rsplit('.summarized')[0] for g_csv in gather_csvs]
-
-    # default dict to store lineage: {sample_id: fraction} info. better way to do this?
-    sgD = defaultdict(lambda: {sample_id : 0.0 for sample_id in all_samples})
+    sgD = defaultdict(dict)
+    all_samples = []
     for g_csv in gather_csvs:
-        sample_id = basename(g_csv).rsplit(".csv", 1)[0].rsplit('.summarized')[0]
-
         # collect lineage info for this sample
+        lineageD = defaultdict(list)
         with open(g_csv, 'r') as fp:
             r = csv.DictReader(fp)
-            for n, row in enumerate(r):
+            for row in r:
                 if row["rank"] == rank:
+                    query_name = row["query_name"]
                     lin = row["lineage"]
                     frac = row["fraction"]
-                    sgD[lin][sample_id] = frac
+                    if query_name not in all_samples:
+                        all_samples.append(query_name)
+                    sgD[lin][query_name] = frac
+                    #sgD[lin].append((query_name,frac)) # list of tuples instead?
             fp.close()
     return sgD, all_samples
 
@@ -270,9 +270,14 @@ def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, sep='\t'):
     header = ["lineage"] + sample_names
     w = csv.DictWriter(out_fp, header, delimiter=sep)
     w.writeheader()
+    blank_row = {query_name: 0 for query_name in sample_names}
     for lin, sampleinfo in sorted(lineage_dict.items()):
+        #add lineage and 0 placeholders
         row = {'lineage': lin}
+        row.update(blank_row)
+        # add info for query_names that exist for this lineage
         row.update(sampleinfo)
+        # write row
         w.writerow(row)
 
 
