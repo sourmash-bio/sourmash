@@ -58,6 +58,20 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     return gather_csvs
 
 
+def load_gather_results(gather_csv):
+    "Load a single gather csv"
+    gather_results = []
+    with open(gather_csv, 'rt') as fp:
+        r = csv.DictReader(fp)
+        #todo: add a check for all gather column names?
+        for n, row in enumerate(r):
+            gather_results.append(row)
+    notify(f'loaded {len(gather_results)} gather results.')
+    if not gather_results:
+        raise ValueError(f'No gather results loaded from {gather_csv}.')
+    return gather_results
+
+
 def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False):
     '''
     Load gather csvs, checking for empties and ids missing from taxonomic assignments.
@@ -69,16 +83,16 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
     total_missed = 0
     all_ident_missed = set()
     for gather_csv in gather_csvs:
-        # should we check for file here?
-        these_results = load_gather_results(gather_csv)
-        if not these_results:
-            notify(f'No gather results loaded from {gather_csv}.')
+        these_results = []
+        try:
+            these_results = load_gather_results(gather_csv)
+        except ValueError:
             if force:
                 notify(f'--force is set. Attempting to continue to next set of gather results.')
                 continue
             else:
                 notify(f'Exiting.')
-                sys.exit(-1)
+                raise
 
         # check for match identites in these gather_results not found in lineage spreadsheets
         n_missed, ident_missed = find_missing_identities(these_results, tax_assign)
@@ -93,19 +107,6 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
         gather_results += these_results
 
     return gather_results, all_ident_missed, total_missed
-
-
-def load_gather_results(gather_csv):
-    "Load a single gather csv"
-
-    gather_results = []
-    with open(gather_csv, 'rt') as fp:
-        r = csv.DictReader(fp)
-        #todo: add a check for all gather column names
-        for n, row in enumerate(r):
-            gather_results.append(row)
-    notify(f'loaded {len(gather_results)} gather results.')
-    return gather_results
 
 
 def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], split_identifiers=True, keep_identifier_versions=False, best_only=False):
@@ -282,9 +283,38 @@ def combine_sumgather_csvs_by_lineage(gather_csvs, *, rank="species", accept_ran
                     if query_name not in all_samples:
                         all_samples.append(query_name)
                     sgD[lin][query_name] = frac
-                    #sgD[lin].append((query_name,frac)) # list of tuples instead?
             fp.close()
     return sgD, all_samples
+
+
+def sample_frac_to_krona(rank, samplefracD):
+    '''
+    Aggregate sample fractions by lineage for krona output
+    '''
+    # if combine_sumgather_csvs_by_lineage output summarized gather results tuples, could use aggregate_by_lineage_at_rank instead...
+    lineage_summary = defaultdict(float)
+    for lin, sample_info in samplefracD.items():
+        for query, fraction in sample_info.items():
+            if query not in all_queries:
+                all_queries.append(query)
+            lineage_summary[lin]+= fraction
+
+    num_queries = len(all_queries)
+    # if multiple_samples, divide fraction by the total number of queries
+    for lin, fraction in lineage_summary.items():
+        lineage_summary[lin] = fraction/num_queries
+
+    # sort by fraction
+    lin_items = list(lineage_summary.items())
+    lin_items.sort(key = lambda x: -x[1])
+
+    # reformat lineage for krona_results printing
+    krona_results = []
+    for lin, fraction in lin_items:
+        lin_list = display_lineage(lin).split(';')
+        krona_results.append((fraction, *lin_list))
+
+    return krona_results
 
 
 def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, format_lineage=False, sep='\t'):

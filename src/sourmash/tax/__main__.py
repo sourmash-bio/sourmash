@@ -225,15 +225,23 @@ def combine(args):
         notify(f'No summarized gather results loaded from {args.summarized_gather_results}. Exiting.')
         sys.exit(-1)
 
-    # write output csv
+    # write output
     if "csv" in args.output_format:
         outfile = make_outfile(args.output_base, ".combined.csv")
-        with FileOutputCSV(outfile) as csv_fp:
-            tax_utils.write_lineage_sample_frac(all_samples, linD, csv_fp, sep=",")
+        with FileOutputCSV(outfile) as out_fp:
+            tax_utils.write_lineage_sample_frac(all_samples, linD, out_fp, sep=",")
     if "tsv" in args.output_format:
         outfile = make_outfile(args.output_base, ".combined.tsv")
-        with FileOutputCSV(outfile) as csv_fp:
-            tax_utils.write_lineage_sample_frac(all_samples, linD, csv_fp, sep="\t")
+        with FileOutputCSV(outfile) as out_fp:
+            tax_utils.write_lineage_sample_frac(all_samples, linD, out_fp, sep="\t")
+
+    # krona output averages across all samples at lineage at rank
+    if "krona" in args.output_format:
+        krona_results = tax_utils.sample_frac_to_krona(args.rank, linD)
+        krona_outfile = make_outfile(args.output_base, ".krona.tsv")
+        with FileOutputCSV(krona_outfile) as out_fp:
+            tax_utils.write_krona(args.rank, krona_results, out_fp)
+
 
 
 def main(arglist=None):

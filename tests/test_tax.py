@@ -705,7 +705,6 @@ def test_classify_empty_gather_results_single_force(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == -1
-    assert f'No gather results loaded from {empty_tax}.' in c.last_result.err
     assert f'--force is set. Attempting to continue to next set of gather results.' in c.last_result.err
     assert f'No results for classification. Exiting.' in c.last_result.err
 
@@ -732,7 +731,6 @@ def test_classify_empty_gather_results_with_empty_csv_force(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == -1
-    assert f'No gather results loaded from {empty_tax}.' in c.last_result.err
     assert f'--force is set. Attempting to continue to next set of gather results.' in c.last_result.err
     assert 'No results for classification. Exiting.' in c.last_result.err
 
@@ -760,7 +758,6 @@ def test_classify_empty_gather_results_with_csv_force(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert f'No gather results loaded from {empty_tax}.' in c.last_result.err
     assert f'--force is set. Attempting to continue to next set of gather results.' in c.last_result.err
     assert f'loaded 1 gather files for classification' in c.last_result.err
     assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out

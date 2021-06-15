@@ -20,7 +20,7 @@ def subparser(subparsers):
         help='basename for output file (default stdout)'
     )
     subparser.add_argument(
-        '--output-format', default=['csv'], nargs='+', choices=["csv", "tsv"],
+        '--output-format', default=['csv'], nargs='+', choices=["csv", "tsv", "krona"],
         help='choose output format(s)',
     )
     subparser.add_argument(
