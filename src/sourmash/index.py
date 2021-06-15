@@ -867,11 +867,10 @@ class CollectionManifest:
             if k not in r.fieldnames:
                 raise ValueError(f"missing column '{k}' in manifest.")
 
-            # @CTB revisit
-            r['signature'] = None
-
         row = None
         for row in r:
+            # @CTB revisit
+            row['signature'] = None
             manifest_list.append(row)
 
         return cls(manifest_list)
@@ -879,6 +878,8 @@ class CollectionManifest:
     @classmethod
     def create_manifest(cls, locations_iter):
         """create a manifest from an iterator that yields (ss, location)
+
+        Stores signatures in manifest rows.
 
         Note: do NOT catch exceptions here, so this passes through load excs.
         """
@@ -932,13 +933,11 @@ class CollectionManifest:
             matching_rows = ( row for row in matching_rows
                               if row['moltype'] == moltype )
         if scaled or containment:
-            assert 0
             # CTB: check scaled AND containment per select_signature
             # CTB: check num, per select_signature?
             matching_rows = ( row for row in matching_rows
                               if int(row['scaled']) )
         if num:
-            assert 0
             # CTB: check scaled, per select_signature?
             matching_rows = ( row for row in matching_rows
                               if int(row['num']) )
