@@ -916,16 +916,8 @@ class CollectionManifest:
         """
         matching_rows = self.rows
         if picklist:
-            # map picklist.coltype to manifest column types.
-            # CTB: should these be the same? probably...
-            if picklist.coltype == 'md5':
-                colkey = 'md5'
-            elif picklist.coltype == 'md5prefix8':
-                colkey = 'md5short'
-            else:
-                assert 0        # support more here CTB!
             matching_rows = ( row for row in matching_rows
-                              if row[colkey] in picklist.pickset )
+                              if picklist.matches_siginfo(row) )
 
         if ksize:
             matching_rows = ( row for row in matching_rows

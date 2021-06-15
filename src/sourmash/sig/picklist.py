@@ -130,6 +130,23 @@ class SignaturePicklist:
             return True
         return False
 
+    def matches_siginfo(self, siginfo):
+        # match on metadata info for signature, not signature itself
+        if self.coltype == 'md5':
+            colkey = 'md5'
+        elif self.coltype == 'md5prefix8':
+            colkey = 'md5short'
+        elif self.coltype in ('name', 'ident', 'ident.'):
+            colkey = 'name'
+
+        q = siginfo[colkey]
+        q = self.preprocess_fn(q)
+        self.n_queries += 1
+        if q in self.pickset:
+            self.found.add(q)
+            return True
+        return False
+
     def filter(self, it):
         for ss in it:
             if self.__contains__(ss):
