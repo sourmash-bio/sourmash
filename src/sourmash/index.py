@@ -9,6 +9,7 @@ import csv
 from io import TextIOWrapper
 
 from .search import make_jaccard_search_query, make_gather_query
+from .logging import debug_literal
 
 # generic return tuple for Index.search and Index.gather
 IndexSearchResult = namedtuple('Result', 'score, signature, location')
@@ -455,16 +456,14 @@ class ZipFileLinearIndex(Index):
         self.selection_dict = selection_dict
         self.traverse_yield_all = traverse_yield_all
 
-        # load manifest?
+        # do we have a manifest already? if not, try loading.
         if manifest is None:
             try:
                 zi = self.zf.getinfo('SOURMASH-MANIFEST.csv')
             except KeyError:
                 self.manifest = None
             else:
-                # CTB: maybe support passing manifest in on constructor?
-                # otherwise manifest is loaded on 'select'.
-                print(f'found manifest when loading {self.zf.filename}')
+                debug_literal(f'found manifest when loading {self.zf.filename}')
 
                 with self.zf.open(zi, 'r') as mfp:
                     # wrap as text, since ZipFile.open only supports 'r' mode.
@@ -472,7 +471,7 @@ class ZipFileLinearIndex(Index):
                     # load manifest!
                     self.manifest = CollectionManifest.load_from_csv(mfp)
         else:
-            print(f'using passed-in manifest')
+            debug_literal(f'ZipFileLinearIndex using passed-in manifest')
             self.manifest = manifest
 
     def __bool__(self):
@@ -536,8 +535,6 @@ class ZipFileLinearIndex(Index):
         manifest = None
         if self.manifest:
             manifest = self.manifest
-
-            print(f'.signatures() found manifest! {len(manifest)}')
             assert not selection_dict
 
             # yield all signatures found in manifest
@@ -545,8 +542,8 @@ class ZipFileLinearIndex(Index):
                 zi = self.zf.getinfo(filename)
                 fp = self.zf.open(zi)
                 for ss in load_signatures(fp):
-                    # CTB: in case multiple signatures are in file, check
-                    # to make sure we want to return this 'un.
+                    # in case multiple signatures are in the file, check
+                    # to make sure we want to return each one.
                     if ss in manifest:
                         yield ss
 
@@ -576,7 +573,6 @@ class ZipFileLinearIndex(Index):
         manifest = self.manifest
         if manifest:
             manifest = manifest.select_to_manifest(**kwargs)
-            print(f'select - passing in manifest {len(manifest)}')
             selection_dict = None
         else:
             # no manifest? just pass along all the selection kwargs to
@@ -860,10 +856,23 @@ class LoadedCollection(Index):
 
 
 class CollectionManifest:
-    "@CTB"
+    """
+    Signature metadata for a collection of signatures.
+
+    Manifests support selection and rapid lookup of signatures.
+
+    * 'select_to_manifest(...)' matches the Index selector protocol
+    * 'rows' is a public iterable that can be used to iterate over the manifest
+       contents.
+    * 'locations()' returns all distinct locations for e.g. lazy loading
+    * supports container protocol for signatures, e.g. 'if ss in manifest: ...'
+    """
+
     def __init__(self, rows):
+        "Initialize from an iterable of metadata dictionaries."
         self.rows = tuple(rows)
 
+        # build a fast lookup table for md5sums in particular
         md5set = set()
         for row in self.rows:
             md5set.add(row['md5'])
@@ -898,7 +907,7 @@ class CollectionManifest:
 
     @classmethod
     def create_manifest(cls, locations_iter):
-        """create a manifest from an iterator that yields (ss, location)
+        """Create a manifest from an iterator that yields (ss, location)
 
         Stores signatures in manifest rows.
 
@@ -918,7 +927,7 @@ class CollectionManifest:
             row['name'] = ss.name
             # @CTB: do we want filename in manifests?
             row['internal_location'] = location
-            # @CTB: change name, maybe just make it 'location'
+            # @CTB: change key, maybe just make it 'location'
 
             # CTB: track signature when creating manifest w/this info.
             row['signature'] = ss
@@ -931,8 +940,7 @@ class CollectionManifest:
                containment=False, picklist=None):
         """Yield manifest rows for sigs that match the specified requirements.
 
-        Internal method; call `select_to_manifest` or `select_filenames`
-        instead.
+        Internal method; call `select_to_manifest` instead.
         """
         matching_rows = self.rows
         if picklist:
@@ -965,9 +973,15 @@ class CollectionManifest:
         return CollectionManifest(new_rows)
 
     def locations(self):
-        "Return all locations."
+        "Return all distinct locations."
+        seen = set()
         for row in self.rows:
-            yield row['internal_location']
+            loc = row['internal_location']
+
+            # track/remove duplicates
+            if loc not in seen:
+                yield loc
+                seen.add(loc)
 
     def __contains__(self, ss):
         "Does this manifest contain this signature?"
