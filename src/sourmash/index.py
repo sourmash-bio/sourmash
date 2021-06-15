@@ -912,13 +912,6 @@ class LoadedCollection(Index):
         for row in self.manifest.info: # @CTB hide attr
             yield row['signature'], row['internal_location']
 
-    @classmethod
-    def _signatures_with_location(cls, idx_list, src_list):
-        "@CTB: This function does not use self."
-        for idx, loc in zip(idx_list, src_list):
-            for ss in idx.signatures():
-                yield ss, loc
-
     def __len__(self):
         return len(self.manifest)
 
@@ -926,15 +919,30 @@ class LoadedCollection(Index):
         raise NotImplementedError
 
     @classmethod
-    def load(self, *args):
-        raise NotImplementedError
+    def load(cls, index_list, source_list):
+        "Create a LoadedCollection from already-loaded indices."
+
+        # yield all signatures + locations
+        def sigloc_iter():
+            for idx, loc in zip(index_list, source_list):
+                if loc is None:
+                    loc = idx.location
+                for ss in idx.signatures():
+                    yield ss, loc
+
+        # build manifest
+        manifest = CollectionManifest.create_manifest(sigloc_iter())
+
+        # create!
+        return cls(manifest)
 
     @classmethod
     def load_from_path(cls, pathname, force=False):
         """
         Create a LoadedCollection from a path (filename or directory).
 
-        @CTB note, only uses LinearIndex.load.
+        Note: this only uses LinearIndex.load(...), so will only load
+        signature JSON files.
         """
         from .sourmash_args import traverse_find_sigs
         if not os.path.exists(pathname): # CTB consider changing to isdir...
@@ -945,11 +953,10 @@ class LoadedCollection(Index):
         for thisfile in traverse_find_sigs([pathname], yield_all_files=force):
             try:
                 idx = LinearIndex.load(thisfile)
-                if not idx:
-                    continue
 
-                index_list.append(idx)
-                source_list.append(thisfile)
+                if idx:
+                    index_list.append(idx)
+                    source_list.append(thisfile)
             except (IOError, sourmash.exceptions.SourmashError):
                 if force:
                     continue    # ignore error
@@ -959,12 +966,7 @@ class LoadedCollection(Index):
         if not index_list:
             raise ValueError(f"no signatures to load under directory '{pathname}'")
 
-        # build manifests for all the things
-        sigloc_iter = cls._signatures_with_location(index_list, source_list)
-        manifest = CollectionManifest.create_manifest(sigloc_iter)
-
-        db = cls(manifest)
-        return db
+        return cls.load(index_list, source_list)
 
     @classmethod
     def load_from_pathlist(cls, filename):
@@ -982,11 +984,7 @@ class LoadedCollection(Index):
             idx_list.append(idx)
             src_list.append(src)
 
-        sigloc_iter = cls._signatures_with_location(idx_list, src_list)
-        manifest = CollectionManifest.create_manifest(sigloc_iter)
-
-        db = cls(manifest)
-        return db
+        return cls.load(idx_list, src_list)
 
     def save(self, *args):
         raise NotImplementedError

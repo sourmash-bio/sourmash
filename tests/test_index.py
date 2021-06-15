@@ -945,7 +945,7 @@ def test_multi_index_search():
     lidx3 = LinearIndex.load(sig63)
 
     # create LoadedCollection with source location override
-    lidx = LoadedCollection([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = LoadedCollection.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
     lidx = lidx.select(ksize=31)
 
     # now, search for sig2
@@ -998,7 +998,7 @@ def test_multi_index_gather():
     lidx3 = LinearIndex.load(sig63)
 
     # create LoadedCollection with source location override
-    lidx = LoadedCollection([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = LoadedCollection.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
     lidx = lidx.select(ksize=31)
 
     matches = lidx.gather(ss2)
@@ -1027,7 +1027,7 @@ def test_multi_index_signatures():
     lidx3 = LinearIndex.load(sig63)
 
     # create LoadedCollection with source location override
-    lidx = LoadedCollection([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = LoadedCollection.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
     lidx = lidx.select(ksize=31)
 
     siglist = list(lidx.signatures())
@@ -1049,9 +1049,6 @@ def test_multi_index_load_from_path_2():
     # only load .sig files, currently; not the databases under that directory.
     dirname = utils.get_test_data('prot')
     mi = LoadedCollection.load_from_path(dirname, force=False)
-
-    print(mi.index_list)
-    print(mi.source_list)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 7
@@ -1091,9 +1088,6 @@ def test_multi_index_load_from_path_3_yield_all_true(c):
 
     mi = LoadedCollection.load_from_path(c.location, force=True)
 
-    print(mi.index_list)
-    print(mi.source_list)
-
     sigs = list(mi.signatures())
     assert len(sigs) == 8
 
@@ -1117,9 +1111,6 @@ def test_multi_index_load_from_path_3_yield_all_true_subdir(c):
 
     mi = LoadedCollection.load_from_path(c.location, force=True)
 
-    print(mi.index_list)
-    print(mi.source_list)
-
     sigs = list(mi.signatures())
     assert len(sigs) == 8
 
@@ -1141,9 +1132,6 @@ def test_multi_index_load_from_path_3_sig_gz(c):
             count += 1
 
     mi = LoadedCollection.load_from_path(c.location, force=False)
-
-    print(mi.index_list)
-    print(mi.source_list)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 6
@@ -2061,7 +2049,7 @@ def test_lazy_index_wraps_multiindex_location():
     db_paths = (sigdir, sigzip, siglca, sigsbt)
     dbs = [ sourmash.load_file_as_index(db_path) for db_path in db_paths ]
 
-    mi = LoadedCollection(dbs, db_paths)
+    mi = LoadedCollection.load(dbs, db_paths)
     lazy = LazyLinearIndex(mi)
 
     mi2 = mi.select(moltype='protein')
