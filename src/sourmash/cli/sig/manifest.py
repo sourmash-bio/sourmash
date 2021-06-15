@@ -1,4 +1,4 @@
-"""show details of signature"""
+"""create a manifest for a collection of signatures"""
 
 import sourmash
 from sourmash.logging import notify, print_results, error

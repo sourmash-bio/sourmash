@@ -507,16 +507,17 @@ class ZipFileLinearIndex(Index):
         return cls(zf, traverse_yield_all=traverse_yield_all)
 
     def signatures_with_internal(self):
+        # @CTB used for creating manifests
         from .signature import load_signatures
         for zipinfo in self.zf.infolist():
             # should we load this file? if it ends in .sig OR we are forcing:
             if zipinfo.filename.endswith('.sig') or \
                zipinfo.filename.endswith('.sig.gz') or \
                self.traverse_yield_all:
+                fp = self.zf.open(zipinfo)
+
                 # now load all the signatures and select on ksize/moltype:
                 selection_dict = self.selection_dict
-
-                fp = self.zf.open(zipinfo)
 
                 # note: if 'fp' doesn't contain a valid JSON signature,
                 # load_signatures will silently fail & yield nothing.
