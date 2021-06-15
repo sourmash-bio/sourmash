@@ -10,7 +10,7 @@ from .. import sourmash_args
 from ..logging import notify, error, print_results, set_quiet, debug
 from . import lca_utils
 from .lca_utils import check_files_exist
-from sourmash.index import MultiIndex
+from sourmash.index import LoadedCollection
 
 
 DEFAULT_THRESHOLD=5
@@ -65,7 +65,7 @@ def load_singletons_and_count(filenames, ksize, scaled, ignore_abundance):
     total_n = len(filenames)
     for filename in filenames:
         n += 1
-        mi = MultiIndex.load_from_path(filename)
+        mi = LoadedCollection.load_from_path(filename)
         mi = mi.select(ksize=ksize)
 
         for query_sig, query_filename in mi.signatures_with_location():

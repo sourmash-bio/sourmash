@@ -17,7 +17,7 @@ import sourmash.exceptions
 
 from .logging import notify, error, debug_literal
 
-from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
+from .index import (LinearIndex, ZipFileLinearIndex, LoadedCollection)
 from . import signature as sigmod
 
 DEFAULT_LOAD_K = 31
@@ -216,17 +216,19 @@ def _load_stdin(filename, **kwargs):
     return db
 
 
+# @CTB change name
 def _multiindex_load_from_pathlist(filename, **kwargs):
     "Load collection from a list of signature/database files"
-    db = MultiIndex.load_from_pathlist(filename)
+    db = LoadedCollection.load_from_pathlist(filename)
 
     return db
 
 
+# @CTB change name
 def _multiindex_load_from_path(filename, **kwargs):
     "Load collection from a directory."
     traverse_yield_all = kwargs['traverse_yield_all']
-    db = MultiIndex.load_from_path(filename, traverse_yield_all)
+    db = LoadedCollection.load_from_path(filename, traverse_yield_all)
 
     return db
 

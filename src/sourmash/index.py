@@ -797,13 +797,22 @@ class MultiIndex(Index):
                 if not idx:
                     continue
 
-                index_list.append(idx)
-                source_list.append(thisfile)
             except (IOError, sourmash.exceptions.SourmashError):
                 if force:
                     continue    # ignore error
                 else:
                     raise       # continue past error!
+            else:
+                # build a manifest for this index.
+                def sigloc_iter():
+                    for ss in idx.signatures():
+                        yield ss, thisfile
+
+                manifest = CollectionManifest.create_manifest(sigloc_iter)
+
+                index_list.append(idx)
+                source_list.append(thisfile)
+                manifest_list.append(manifest)
 
         if not index_list:
             raise ValueError(f"no signatures to load under directory '{pathname}'")
@@ -883,6 +892,115 @@ class MultiIndex(Index):
         return results
 
 
+class LoadedCollection(Index):
+    """@CTB Holds signatures and locations. Uses manifests.
+    Creates manifest on load if necessary.
+
+    N.B. In memory collection, loads once and does not use lazy loading.
+    """
+    def __init__(self, manifest):
+        self.manifest = manifest
+
+    def signatures(self):
+        for row in self.manifest.info: # @CTB hide attribute
+            yield row['signature']
+
+    def signatures_with_location(self):
+        for row in self.manifest.info: # @CTB hide attr
+            yield row['signature'], row['internal_location']
+
+    @classmethod
+    def _signatures_with_location(cls, idx_list, src_list):
+        "@CTB: This function does not use manifests."
+        for idx, loc in zip(idx_list, src_list):
+            for ss in idx.signatures():
+                yield ss, loc
+
+    def __len__(self):
+        return len(self.manifest)
+
+    def insert(self, *args):
+        raise NotImplementedError
+
+    @classmethod
+    def load(self, *args):
+        raise NotImplementedError
+
+    @classmethod
+    def load_from_path(cls, pathname, force=False):
+        "Create a LoadedCollection from a path (filename or directory)."
+        from .sourmash_args import traverse_find_sigs
+        if not os.path.exists(pathname): # CTB consider changing to isdir...
+            raise ValueError(f"'{pathname}' must be a directory")
+
+        index_list = []
+        source_list = []
+        for thisfile in traverse_find_sigs([pathname], yield_all_files=force):
+            try:
+                idx = LinearIndex.load(thisfile)
+                if not idx:
+                    continue
+
+                index_list.append(idx)
+                source_list.append(thisfile)
+            except (IOError, sourmash.exceptions.SourmashError):
+                if force:
+                    continue    # ignore error
+                else:
+                    raise       # stop loading!
+
+        if not index_list:
+            raise ValueError(f"no signatures to load under directory '{pathname}'")
+
+        # build manifests for all the things
+        sigloc_iter = cls._signatures_with_location(index_list, source_list)
+        manifest = CollectionManifest.create_manifest(sigloc_iter)
+
+        # @CTB
+        #manifest = None
+        manifest_fn = os.path.join(pathname, 'SOURMASH-MANIFEST.csv')
+        if 0 and os.path.exists(manifest_fn):
+            print(f'found manifest when loading path {pathname}')
+            with open(manifest_fn, newline='') as mfp:
+                manifest = CollectionManifest.load_from_csv(mfp)
+                for row in manifest.info: # @CTB hideme
+                    pass
+                # @CTB load signatures.
+
+        db = cls(manifest)
+        return db
+
+    @classmethod
+    def load_from_pathlist(cls, filename):
+        "Create a MultiIndex from all files listed in a text file."
+        from .sourmash_args import (load_pathlist_from_file,
+                                    load_file_as_index)
+        idx_list = []
+        src_list = []
+
+        file_list = load_pathlist_from_file(filename)
+        for fname in file_list:
+            idx = load_file_as_index(fname)
+            src = fname
+
+            idx_list.append(idx)
+            src_list.append(src)
+
+        sigloc_iter = cls._signatures_with_location(idx_list, src_list)
+        manifest = CollectionManifest.create_manifest(sigloc_iter)
+
+        db = cls(manifest)
+        return db
+
+    def save(self, *args):
+        raise NotImplementedError
+
+    def select(self, **kwargs):
+        "Run 'select' on the manifest."
+        new_manifest = self.manifest.select_to_manifest(**kwargs)
+        return LoadedCollection(new_manifest)
+
+
 class CollectionManifest:
     def __init__(self):
         self.info = None
@@ -910,6 +1028,9 @@ class CollectionManifest:
 
             if k not in r.fieldnames:
                 raise ValueError(f"missing column '{k}' in manifest.")
+
+            # @CTB revisit
+            r['signature'] = None
 
         row = None
         for row in r:
@@ -940,6 +1061,7 @@ class CollectionManifest:
             # @CTB: do we want filename in manifests?
             row['internal_location'] = location
             # @CTB: change name, maybe just make it 'location'
+            row['signature'] = ss
 
             manifest_list.append(row)
         obj = cls()
