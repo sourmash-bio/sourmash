@@ -622,6 +622,7 @@ def test_summarize_empty_gather_results(runtmp):
         fp.write("")
     print("g_csv: ", g_csv)
 
+    #test below is not working properly: assert statement needs to be moved outside of the with block, but exc.value is empty and im not sure why
     with pytest.raises(ValueError) as exc:
         runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax, '--split-identifiers', '-o', outcsv)
         assert str(exc.value) == "local variable 'n' referenced before assignment"
