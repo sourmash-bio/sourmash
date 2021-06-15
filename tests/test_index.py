@@ -931,7 +931,7 @@ def test_zipfile_load_database_fail_if_not_zip(c):
     assert 'Error while reading signatures from' in str(exc.value)
 
 
-def test_multi_index_search():
+def test_loaded_collection_search():
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -984,7 +984,7 @@ def test_multi_index_search():
     assert sr[0][2] == 'C'      # source override
 
 
-def test_multi_index_gather():
+def test_loaded_collection_gather():
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -1013,7 +1013,7 @@ def test_multi_index_gather():
     assert matches[0][2] == sig47     # no source override
 
 
-def test_multi_index_signatures():
+def test_loaded_collection_signatures():
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -1037,7 +1037,7 @@ def test_multi_index_signatures():
     assert ss63 in siglist
 
 
-def test_multi_index_load_from_path():
+def test_loaded_collection_load_from_path():
     dirname = utils.get_test_data('prot/protein')
     mi = LoadedCollection.load_from_path(dirname, force=False)
 
@@ -1045,7 +1045,7 @@ def test_multi_index_load_from_path():
     assert len(sigs) == 2
 
 
-def test_multi_index_load_from_path_2():
+def test_loaded_collection_load_from_path_2():
     # only load .sig files, currently; not the databases under that directory.
     dirname = utils.get_test_data('prot')
     mi = LoadedCollection.load_from_path(dirname, force=False)
@@ -1055,7 +1055,7 @@ def test_multi_index_load_from_path_2():
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_path_3(c):
+def test_loaded_collection_load_from_path_3(c):
     # check that force works ok on a directory
     dirname = utils.get_test_data('prot')
 
@@ -1073,7 +1073,7 @@ def test_multi_index_load_from_path_3(c):
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_path_3_yield_all_true(c):
+def test_loaded_collection_load_from_path_3_yield_all_true(c):
     # check that force works ok on a directory w/force=True
     dirname = utils.get_test_data('prot')
 
@@ -1093,7 +1093,7 @@ def test_multi_index_load_from_path_3_yield_all_true(c):
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_path_3_yield_all_true_subdir(c):
+def test_loaded_collection_load_from_path_3_yield_all_true_subdir(c):
     # check that force works ok on subdirectories
     dirname = utils.get_test_data('prot')
 
@@ -1116,7 +1116,7 @@ def test_multi_index_load_from_path_3_yield_all_true_subdir(c):
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_path_3_sig_gz(c):
+def test_loaded_collection_load_from_path_3_sig_gz(c):
     # check that we find .sig.gz files, too
     dirname = utils.get_test_data('prot')
 
@@ -1138,7 +1138,7 @@ def test_multi_index_load_from_path_3_sig_gz(c):
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_path_3_check_traverse_fn(c):
+def test_loaded_collection_load_from_path_3_check_traverse_fn(c):
     # test the actual traverse function... eventually this test can be
     # removed, probably, as we consolidate functionality and test LoadedCollection
     # better.
@@ -1150,20 +1150,20 @@ def test_multi_index_load_from_path_3_check_traverse_fn(c):
     assert len(files) == 20, files
 
 
-def test_multi_index_load_from_path_no_exist():
+def test_loaded_collection_load_from_path_no_exist():
     dirname = utils.get_test_data('does-not-exist')
     with pytest.raises(ValueError):
         mi = LoadedCollection.load_from_path(dirname, force=True)
 
 
-def test_multi_index_load_from_pathlist_no_exist():
+def test_loaded_collection_load_from_pathlist_no_exist():
     dirname = utils.get_test_data('does-not-exist')
     with pytest.raises(ValueError):
         mi = LoadedCollection.load_from_pathlist(dirname)
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_pathlist_1(c):
+def test_loaded_collection_load_from_pathlist_1(c):
     dirname = utils.get_test_data('prot')
     files = list(sourmash_args.traverse_find_sigs([dirname]))
     assert len(files) == 7, files
@@ -1179,7 +1179,7 @@ def test_multi_index_load_from_pathlist_1(c):
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_pathlist_2(c):
+def test_loaded_collection_load_from_pathlist_2(c):
     dirname = utils.get_test_data('prot')
     files = list(sourmash_args.traverse_find_sigs([dirname], True))
     assert len(files) == 20, files
@@ -1194,7 +1194,7 @@ def test_multi_index_load_from_pathlist_2(c):
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_pathlist_3_zipfile(c):
+def test_loaded_collection_load_from_pathlist_3_zipfile(c):
     # can we load zipfiles in a pathlist? yes please.
     zipfile = utils.get_test_data('prot/all.zip')
 
