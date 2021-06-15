@@ -63,12 +63,13 @@ def load_gather_results(gather_csv):
     gather_results = []
     with open(gather_csv, 'rt') as fp:
         r = csv.DictReader(fp)
-        #todo: add a check for all gather column names?
+        #do we want to check for critical column names?
         for n, row in enumerate(r):
             gather_results.append(row)
-    notify(f'loaded {len(gather_results)} gather results.')
     if not gather_results:
         raise ValueError(f'No gather results loaded from {gather_csv}.')
+    else:
+        notify(f'loaded {len(gather_results)} gather results.')
     return gather_results
 
 
@@ -78,7 +79,6 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
     '''
     if not isinstance(gather_csvs, list):
         gather_csvs = [gather_csvs]
-    # load gather results from all files
     gather_results = []
     total_missed = 0
     all_ident_missed = set()
