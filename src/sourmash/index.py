@@ -893,10 +893,13 @@ class MultiIndex(Index):
 
 
 class LoadedCollection(Index):
-    """@CTB Holds signatures and locations. Uses manifests.
-    Creates manifest on load if necessary.
+    """
+    Load a collection of signatures, and retain their original locations.
 
-    N.B. In memory collection, loads once and does not use lazy loading.
+    Uses manifests; creates them as needed.
+
+    Note: this is an in-memory collection, and does not do lazy loading:
+    all signatures are loaded upon instantiation.
     """
     def __init__(self, manifest):
         self.manifest = manifest
@@ -911,7 +914,7 @@ class LoadedCollection(Index):
 
     @classmethod
     def _signatures_with_location(cls, idx_list, src_list):
-        "@CTB: This function does not use manifests."
+        "@CTB: This function does not use self."
         for idx, loc in zip(idx_list, src_list):
             for ss in idx.signatures():
                 yield ss, loc
@@ -928,10 +931,14 @@ class LoadedCollection(Index):
 
     @classmethod
     def load_from_path(cls, pathname, force=False):
-        "Create a LoadedCollection from a path (filename or directory)."
+        """
+        Create a LoadedCollection from a path (filename or directory).
+
+        @CTB note, only uses LinearIndex.load.
+        """
         from .sourmash_args import traverse_find_sigs
         if not os.path.exists(pathname): # CTB consider changing to isdir...
-            raise ValueError(f"'{pathname}' must be a directory")
+            raise ValueError(f"'{pathname}' must exist.")
 
         index_list = []
         source_list = []
@@ -955,17 +962,6 @@ class LoadedCollection(Index):
         # build manifests for all the things
         sigloc_iter = cls._signatures_with_location(index_list, source_list)
         manifest = CollectionManifest.create_manifest(sigloc_iter)
-
-        # @CTB
-        #manifest = None
-        manifest_fn = os.path.join(pathname, 'SOURMASH-MANIFEST.csv')
-        if 0 and os.path.exists(manifest_fn):
-            print(f'found manifest when loading path {pathname}')
-            with open(manifest_fn, newline='') as mfp:
-                manifest = CollectionManifest.load_from_csv(mfp)
-                for row in manifest.info: # @CTB hideme
-                    pass
-                # @CTB load signatures.
 
         db = cls(manifest)
         return db
