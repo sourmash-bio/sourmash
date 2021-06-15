@@ -46,7 +46,9 @@ def ascending_taxlist(include_strain=True):
 
 
 def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
-    # collect files from input
+    """
+    collect gather files from cmdline; --from-file input
+    """
     gather_csvs = cmdline_gather_input
     if from_file:
         more_files = load_pathlist_from_file(from_file)
@@ -57,6 +59,9 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
 
 
 def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False):
+    '''
+    Load gather csvs, checking for empties and ids missing from taxonomic assignments.
+    '''
     if not isinstance(gather_csvs, list):
         gather_csvs = [gather_csvs]
     # load gather results from all files
@@ -90,8 +95,9 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
     return gather_results, all_ident_missed, total_missed
 
 
-# load and aggregate all gather results
 def load_gather_results(gather_csv):
+    "Load a single gather csv"
+
     gather_results = []
     with open(gather_csv, 'rt') as fp:
         r = csv.DictReader(fp)
@@ -102,13 +108,13 @@ def load_gather_results(gather_csv):
     return gather_results
 
 
-# this summarizes at a specific rank.
 def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], split_identifiers=True, keep_identifier_versions=False, best_only=False):
-    # collect!
+    """
+    Summarize gather results at specified taxonomic rank
+    """
     sum_uniq_weighted = defaultdict(lambda: defaultdict(float))
     for row in gather_results:
         query_name = row['query_name']
-        # move these checks to loading function!?
         match_ident = row['name']
         match_ident = get_ident(match_ident, split_identifiers=split_identifiers, keep_identifier_versions=keep_identifier_versions)
         # if identity not in lineage database, and not --fail-on-missing-taxonomy, skip summarizing this match
@@ -126,7 +132,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], s
         f_uniq_weighted = float(f_uniq_weighted)
         sum_uniq_weighted[query_name][lineage] += f_uniq_weighted
 
-    # sort and store as SummarizedGatherResult
+    # sort and store each as SummarizedGatherResult
     sum_uniq_weighted_sorted = []
     for query_name, lineage_weights in sum_uniq_weighted.items():
         query_results = []
@@ -143,6 +149,10 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], s
 
 
 def find_missing_identities(gather_results, tax_assign):
+    """
+    Identify match ids/accessions from gather results
+    that are not present in taxonomic assignments.
+    """
     n_missed = 0
     ident_missed= set()
     for row in gather_results:
@@ -158,6 +168,7 @@ def find_missing_identities(gather_results, tax_assign):
 
 # pass ranks; have ranks=[default_ranks]
 def make_krona_header(min_rank, *, include_strain=False):
+    "make header for krona output"
     header = ["fraction"]
     tl = list(taxlist(include_strain=include_strain))
     try:
@@ -187,7 +198,9 @@ def aggregate_by_lineage_at_rank(rank_results, *, by_query=False):
 
 
 def format_for_krona(rank, summarized_gather):
-    '''Aggregate list of SummarizedGatherResults and format for krona output'''
+    '''
+    Aggregate list of SummarizedGatherResults and format for krona output
+    '''
     num_queries=0
     for res_rank, rank_results in summarized_gather.items():
         if res_rank == rank:
@@ -211,6 +224,7 @@ def format_for_krona(rank, summarized_gather):
 
 
 def write_krona(rank, krona_results, out_fp, *, sep='\t'):
+    'write krona output'
     header = make_krona_header(rank)
     tsv_output = csv.writer(out_fp, delimiter='\t')
     tsv_output.writerow(header)
@@ -219,6 +233,9 @@ def write_krona(rank, krona_results, out_fp, *, sep='\t'):
 
 
 def write_summary(summarized_gather, csv_fp, *, sep='\t'):
+    '''
+    Write taxonomy-summarized gather results for each rank.
+    '''
     header= ["query_name", "rank", "fraction", "lineage"]
     w = csv.writer(csv_fp)
     w.writerow(header)
@@ -305,6 +322,10 @@ def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, format_line
 
 # see https://github.com/luizirber/2020-cami/blob/master/scripts/gather_to_opal.py
 def write_cami_profiling_bioboxes_format(sample_id, ranks, taxons, out_fp, *, taxonomy_id=None, program=None, format_version="0.9.1", sep="\t"):
+    '''
+    Write taxonomy-summarized gather results
+    to CAMI bioboxes format.
+    '''
     # init version, not working yet
     header_title = "# Taxonomic Profiling Output"
     sample_info = f"@SampleID:{sample_id}"

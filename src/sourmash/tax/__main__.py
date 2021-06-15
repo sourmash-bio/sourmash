@@ -204,9 +204,7 @@ def combine(args):
     Combine summarize gather results by lineage and sample.
 
     Takes in one or more output csvs from `sourmash taxonomy summarize`
-    and produces a tab-separated file with fractions for each sample.
-
-    Uses the file basename (minus .csv extension) as sample identifier.
+    and produces a tab-separated file with fractions for each query.
 
     example output:
 
