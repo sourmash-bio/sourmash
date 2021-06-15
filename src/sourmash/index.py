@@ -737,6 +737,12 @@ class MultiIndex(Index):
         self.source_list = list(source_list)
         assert len(index_list) == len(source_list)
 
+        if manifest is None:
+            print('no manifest provided for MultiIndex; creating one.')
+            sigloc_iter = self._signatures_with_location(index_list,
+                                                         source_list)
+            manifest = CollectionManifest.create_manifest(sigloc_iter)
+
         self.manifest = manifest
 
     def signatures(self):
@@ -746,6 +752,13 @@ class MultiIndex(Index):
     def signatures_with_location(self):
         for ss, _, loc in self.signatures_with_internal():
             yield ss, loc
+
+    @classmethod
+    def _signatures_with_location(cls, idx_list, src_list):
+        "@CTB: This function does not use manifests."
+        for idx, loc in zip(idx_list, src_list):
+            for ss in idx.signatures():
+                yield ss, loc
 
     def signatures_with_internal(self):
         for idx, loc in zip(self.index_list, self.source_list):
@@ -760,7 +773,7 @@ class MultiIndex(Index):
                     yield ss, '', loc
 
     def __len__(self):
-        return sum([ len(idx) for idx in self.index_list ])
+        return len(self.manifest)
 
     def insert(self, *args):
         raise NotImplementedError
@@ -781,6 +794,9 @@ class MultiIndex(Index):
         for thisfile in traverse_find_sigs([pathname], yield_all_files=force):
             try:
                 idx = LinearIndex.load(thisfile)
+                if not idx:
+                    continue
+
                 index_list.append(idx)
                 source_list.append(thisfile)
             except (IOError, sourmash.exceptions.SourmashError):
@@ -791,7 +807,8 @@ class MultiIndex(Index):
 
         if not index_list:
             raise ValueError(f"no signatures to load under directory '{pathname}'")
-        # do we have a manifest to load?
+
+        # do we have a manifest to load? or shall we create?
         # @CTB: do we want to ONLY load things in the manifest? maaaybe...?
         manifest = None
         manifest_fn = os.path.join(pathname, 'SOURMASH-MANIFEST.csv')
@@ -806,7 +823,6 @@ class MultiIndex(Index):
     @classmethod
     def load_from_pathlist(cls, filename):
         "Create a MultiIndex from all files listed in a text file."
-        # @CTB manifest support? do we need a MultiManifest? ergh.
         from .sourmash_args import (load_pathlist_from_file,
                                     load_file_as_index)
         idx_list = []
@@ -828,20 +844,10 @@ class MultiIndex(Index):
 
     def select(self, **kwargs):
         "Run 'select' on all indices within this MultiIndex."
-        if self.manifest:
-            new_manifest = self.manifest.select_to_manifest(**kwargs)
-            return MultiIndex(self.index_list,
-                              self.source_list,
-                              manifest=new_manifest)
-        else:
-            new_idx_list = []
-            new_src_list = []
-            for idx, src in zip(self.index_list, self.source_list):
-                idx = idx.select(**kwargs)
-                new_idx_list.append(idx)
-                new_src_list.append(src)
-
-            return MultiIndex(new_idx_list, new_src_list)
+        new_manifest = self.manifest.select_to_manifest(**kwargs)
+        return MultiIndex(self.index_list,
+                          self.source_list,
+                          manifest=new_manifest)
 
     def search(self, query, **kwargs):
         """Return the match with the best Jaccard similarity in the Index.
@@ -886,6 +892,11 @@ class CollectionManifest:
             return False
         return True
 
+    def __len__(self):
+        if self.info is None:
+            return 0
+        return len(self.info)
+
     @classmethod
     def load_from_csv(cls, fp):
         "load a manifest from a CSV file."
@@ -908,6 +919,33 @@ class CollectionManifest:
         obj.info = manifest_list
         return obj
 
+    @classmethod
+    def create_manifest(cls, locations_iter):
+        """create a manifest from an iterator that yields (ss, location)
+
+        Note: do NOT catch exceptions here, so this passes through load excs.
+        """
+        manifest_list = []
+        for ss, location in locations_iter:
+            row = {}
+            row['md5'] = ss.md5sum()
+            row['md5short'] = row['md5'][:8]
+            row['ksize'] = ss.minhash.ksize
+            row['moltype'] = ss.minhash.moltype
+            row['num'] = ss.minhash.num
+            row['scaled'] = ss.minhash.scaled
+            row['n_hashes'] = len(ss.minhash)
+            row['with_abundance'] = 1 if ss.minhash.track_abundance else 0
+            row['name'] = ss.name
+            # @CTB: do we want filename in manifests?
+            row['internal_location'] = location
+            # @CTB: change name, maybe just make it 'location'
+
+            manifest_list.append(row)
+        obj = cls()
+        obj.info = manifest_list
+        return obj
+
     def _select(self, *, ksize=None, moltype=None, scaled=0, num=0,
                containment=False, picklist=None):
         """Yield manifest rows for sigs that match the specified requirements.
@@ -915,8 +953,6 @@ class CollectionManifest:
         Internal method; call `select_to_manifest` or `select_filenames`
         instead.
         """
-        # CTB: should probably make this something that returns a new
-        # manifest, so that 'select' subsets manifests rather than signatures.
         matching_rows = self.info
         if picklist:
             # map picklist.coltype to manifest column types.
