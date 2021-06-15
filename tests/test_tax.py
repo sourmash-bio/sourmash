@@ -135,6 +135,48 @@ def test_summarize_lineage_summary_out(runtmp):
     assert ['d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia', '0.05815279361459521'] == gn_lineage_summary[3]
 
 
+def test_summarize_no_taxonomy_fail(runtmp):
+    c = runtmp
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('tax', 'summarize', g_csv)
+    assert "error: the following arguments are required: -t/--taxonomy-csv" in str(exc.value)
+
+
+def test_summarize_no_rank_lineage_summary(runtmp):
+    c = runtmp
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+
+    with pytest.raises(ValueError) as exc:
+        runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'lineage_summary')
+    assert "Rank (--rank) is required for krona and lineage_summary output formats." in str(exc.value)
+
+
+def test_summarize_no_rank_krona(runtmp):
+    c = runtmp
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+
+    with pytest.raises(ValueError) as exc:
+        runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona')
+    assert "Rank (--rank) is required for krona and lineage_summary output formats." in str(exc.value)
+
+
+def test_classify_no_rank_krona(runtmp):
+    c = runtmp
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+
+    with pytest.raises(ValueError) as exc:
+        runtmp.run_sourmash('tax', 'classify', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona')
+    assert "Rank (--rank) is required for krona output format." in str(exc.value)
+
+
 def test_summarize_duplicated_taxonomy_fail(runtmp):
     c = runtmp
     # write temp taxonomy with duplicates

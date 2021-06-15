@@ -56,4 +56,7 @@ def main(args):
     if len(args.output_format) > 1:
         if args.output_base == "-":
             raise TypeError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")
+    if not args.rank:
+        if any(x in ["krona", "lineage_summary"] for x in args.output_format):
+            raise ValueError(f"Rank (--rank) is required for krona output format.")
     return sourmash.tax.__main__.classify(args)
