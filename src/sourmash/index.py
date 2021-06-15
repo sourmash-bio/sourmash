@@ -532,45 +532,61 @@ class ZipFileLinearIndex(Index):
         "Load all signatures in the zip file."
         from .signature import load_signatures
 
+        selection_dict = self.selection_dict
         manifest = None
         if self.manifest:
-            print('.signatures() found manifest!')
-            picklist = None
-            if self.selection_dict:
-                manifest = self.manifest
-                def yield_fp():
-                    for filename in manifest.select_filenames(**self.selection_dict):
-                        zi = self.zf.getinfo(filename)
-                        yield self.zf.open(zi)
+            manifest = self.manifest
 
-        if not manifest:
-            def yield_fp():
-                for zipinfo in self.zf.infolist():
-                    # should we load this file? if it ends in .sig OR we are forcing:
-                    if zipinfo.filename.endswith('.sig') or \
-                       zipinfo.filename.endswith('.sig.gz') or \
-                       self.traverse_yield_all:
-                        yield self.zf.open(zipinfo)
+            print(f'.signatures() found manifest! {len(manifest)}')
+            assert not selection_dict
 
-        for fp in yield_fp():
-            # now load all the signatures and select on ksize/moltype:
-            selection_dict = self.selection_dict
-
-            # note: if 'fp' doesn't contain a valid JSON signature,
-            # load_signatures will silently fail & yield nothing.
-            for ss in load_signatures(fp):
-                if selection_dict:
-                    if select_signature(ss, **self.selection_dict):
+            # yield all signatures found in manifest
+            for filename in manifest.locations():
+                zi = self.zf.getinfo(filename)
+                fp = self.zf.open(zi)
+                for ss in load_signatures(fp):
+                    # CTB: in case multiple signatures are in file, check
+                    # to make sure we want to return this 'un.
+                    if ss in manifest:
                         yield ss
-                else:
-                    yield ss
+
+        # no manifest! iterate.
+        else:
+            for zipinfo in self.zf.infolist():
+                # should we load this file? if it ends in .sig OR force:
+                if zipinfo.filename.endswith('.sig') or \
+                   zipinfo.filename.endswith('.sig.gz') or \
+                   self.traverse_yield_all:
+                    fp = self.zf.open(zipinfo)
+
+                    if selection_dict:
+                        select = lambda x: select_signature(x,
+                                                            **selection_dict)
+                    else:
+                        select = lambda x: True
+
+                    for ss in load_signatures(fp):
+                        if select(ss):
+                            yield ss
 
     def select(self, **kwargs):
         "Select signatures in zip file based on ksize/moltype/etc."
+
+        # if we have a manifest, run 'select' on the manifest.
+        manifest = self.manifest
+        if manifest:
+            manifest = manifest.select_to_manifest(**kwargs)
+            print(f'select - passing in manifest {len(manifest)}')
+            selection_dict = None
+        else:
+            # no manifest? just pass along all the selection kwargs to
+            # the new ZipFileLinearIndex.
+            selection_dict = kwargs
+
         return ZipFileLinearIndex(self.zf,
-                                  selection_dict=kwargs,
+                                  selection_dict=selection_dict,
                                   traverse_yield_all=self.traverse_yield_all,
-                                  manifest=self.manifest)
+                                  manifest=manifest)
 
 
 class CounterGather:
@@ -848,6 +864,11 @@ class CollectionManifest:
     def __init__(self, rows):
         self.rows = tuple(rows)
 
+        md5set = set()
+        for row in self.rows:
+            md5set.add(row['md5'])
+        self._md5_set = md5set
+
     def __bool__(self):
         return bool(self.rows)
 
@@ -870,7 +891,6 @@ class CollectionManifest:
 
         row = None
         for row in r:
-            # @CTB revisit
             row['signature'] = None
             manifest_list.append(row)
 
@@ -944,20 +964,12 @@ class CollectionManifest:
         new_rows = self._select(**kwargs)
         return CollectionManifest(new_rows)
 
-    def select_filenames(self, **kwargs):
-        "Do a 'select' and return all of the locations"
-        # @CTB return to 'select_to_locations' or something?
-        # @CTB or, support lazy loading signatures? or ...?
-        for row in self._select(**kwargs):
+    def locations(self):
+        "Return all locations."
+        for row in self.rows:
             yield row['internal_location']
 
     def __contains__(self, ss):
         "Does this manifest contain this signature?"
-        # @CTB currently iterative, we should optimize!
-        # @CTB probably should change to 'contains_md5' and
-        # @CTB 'contains_filename' or something.
         md5 = ss.md5sum()
-        for row in self.rows:
-            if md5 == row['md5']:
-                return True
-        return False
+        return md5 in self._md5_set
