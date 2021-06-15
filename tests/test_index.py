@@ -10,7 +10,7 @@ import copy
 
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
-from sourmash.index import (LinearIndex, MultiIndex, ZipFileLinearIndex,
+from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             make_jaccard_search_query, CounterGather,
                             LazyLinearIndex, LoadedCollection)
 from sourmash.sbt import SBT, GraphFactory, Leaf

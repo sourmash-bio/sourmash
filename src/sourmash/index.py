@@ -327,7 +327,10 @@ def select_signature(ss, *, ksize=None, moltype=None, scaled=0, num=0,
 
 
 class LinearIndex(Index):
-    "An Index for a collection of signatures. Can load from a .sig file."
+    """An Index for a collection of signatures. Can load from a .sig file.
+
+    Note: does not use manifests. See LoadedCollection for that functionality.
+    """
     def __init__(self, _signatures=None, filename=None):
         self._signatures = []
         if _signatures:
@@ -721,195 +724,28 @@ class CounterGather:
                     del counter[dataset_id]
 
 
-class MultiIndex(Index):
-    """An Index class that wraps other Index classes.
-
-    The MultiIndex constructor takes two arguments: a list of Index
-    objects, and a matching list of sources (filenames, etc.)  If the
-    source is not None, then it will be used to override the 'filename'
-    in the triple that is returned by search and gather.
-
-    One specific use for this is when loading signatures from a directory;
-    MultiIndex will properly record which files provided which signatures.
-    """
-    def __init__(self, index_list, source_list, *, manifest=None):
-        self.index_list = list(index_list)
-        self.source_list = list(source_list)
-        assert len(index_list) == len(source_list)
-
-        if manifest is None:
-            print('no manifest provided for MultiIndex; creating one.')
-            sigloc_iter = self._signatures_with_location(index_list,
-                                                         source_list)
-            manifest = CollectionManifest.create_manifest(sigloc_iter)
-
-        self.manifest = manifest
-
-    def signatures(self):
-        for ss, loc in self.signatures_with_location():
-            yield ss
-
-    def signatures_with_location(self):
-        for ss, _, loc in self.signatures_with_internal():
-            yield ss, loc
-
-    @classmethod
-    def _signatures_with_location(cls, idx_list, src_list):
-        "@CTB: This function does not use manifests."
-        for idx, loc in zip(idx_list, src_list):
-            for ss in idx.signatures():
-                yield ss, loc
-
-    def signatures_with_internal(self):
-        for idx, loc in zip(self.index_list, self.source_list):
-            for ss in idx.signatures():
-                # @CTB: properly recognize parent here?? what is that anyway?
-                # @CTB this does iterate over all signatures so does not
-                # (yet) support lazy loading
-                if self.manifest:
-                    if ss in self.manifest:
-                        yield ss, '', loc
-                else:
-                    yield ss, '', loc
-
-    def __len__(self):
-        return len(self.manifest)
-
-    def insert(self, *args):
-        raise NotImplementedError
-
-    @classmethod
-    def load(self, *args):
-        raise NotImplementedError
-
-    @classmethod
-    def load_from_path(cls, pathname, force=False):
-        "Create a MultiIndex from a path (filename or directory)."
-        from .sourmash_args import traverse_find_sigs
-        if not os.path.exists(pathname): # CTB consider changing to isdir.
-            raise ValueError(f"'{pathname}' must be a directory")
-
-        index_list = []
-        source_list = []
-        for thisfile in traverse_find_sigs([pathname], yield_all_files=force):
-            try:
-                idx = LinearIndex.load(thisfile)
-                if not idx:
-                    continue
-
-            except (IOError, sourmash.exceptions.SourmashError):
-                if force:
-                    continue    # ignore error
-                else:
-                    raise       # continue past error!
-            else:
-                # build a manifest for this index.
-                def sigloc_iter():
-                    for ss in idx.signatures():
-                        yield ss, thisfile
-
-                manifest = CollectionManifest.create_manifest(sigloc_iter)
-
-                index_list.append(idx)
-                source_list.append(thisfile)
-                manifest_list.append(manifest)
-
-        if not index_list:
-            raise ValueError(f"no signatures to load under directory '{pathname}'")
-
-        # do we have a manifest to load? or shall we create?
-        # @CTB: do we want to ONLY load things in the manifest? maaaybe...?
-        manifest = None
-        manifest_fn = os.path.join(pathname, 'SOURMASH-MANIFEST.csv')
-        if os.path.exists(manifest_fn):
-            print(f'found manifest when loading path {pathname}')
-            with open(manifest_fn, newline='') as mfp:
-                manifest = CollectionManifest.load_from_csv(mfp)
-
-        db = cls(index_list, source_list, manifest=manifest)
-        return db
-
-    @classmethod
-    def load_from_pathlist(cls, filename):
-        "Create a MultiIndex from all files listed in a text file."
-        from .sourmash_args import (load_pathlist_from_file,
-                                    load_file_as_index)
-        idx_list = []
-        src_list = []
-
-        file_list = load_pathlist_from_file(filename)
-        for fname in file_list:
-            idx = load_file_as_index(fname)
-            src = fname
-
-            idx_list.append(idx)
-            src_list.append(src)
-
-        db = MultiIndex(idx_list, src_list)
-        return db
-
-    def save(self, *args):
-        raise NotImplementedError
-
-    def select(self, **kwargs):
-        "Run 'select' on all indices within this MultiIndex."
-        new_manifest = self.manifest.select_to_manifest(**kwargs)
-        return MultiIndex(self.index_list,
-                          self.source_list,
-                          manifest=new_manifest)
-
-    def search(self, query, **kwargs):
-        """Return the match with the best Jaccard similarity in the Index.
-
-        Note: this overrides the location of the match if needed.
-        """
-        # do the actual search:
-        matches = []
-        for idx, src in zip(self.index_list, self.source_list):
-            for sr in idx.search(query, **kwargs):
-                if src: # override 'sr.location' if 'src' specified'
-                    sr = IndexSearchResult(sr.score, sr.signature, src)
-                matches.append(sr)
-                
-        # sort!
-        matches.sort(key=lambda x: -x.score)
-        return matches
-
-    def prefetch(self, query, threshold_bp, **kwargs):
-        "Return all matches with specified overlap."
-        # actually do search!
-        results = []
-
-        for idx, src in zip(self.index_list, self.source_list):
-            if not idx:
-                continue
-
-            for (score, ss, filename) in idx.prefetch(query, threshold_bp,
-                                                      **kwargs):
-                best_src = src or filename # override if src provided
-                yield IndexSearchResult(score, ss, best_src)
-            
-        return results
-
-
 class LoadedCollection(Index):
     """
     Load a collection of signatures, and retain their original locations.
 
-    Uses manifests; creates them as needed.
+    One specific use for this is when loading signatures from a directory;
+    LoadedCollection will record which specific files provided which
+    signatures.
+
+    Creates a manifest on load.
 
     Note: this is an in-memory collection, and does not do lazy loading:
-    all signatures are loaded upon instantiation.
+    all signatures are loaded upon instantiation and kept in memory.
     """
     def __init__(self, manifest):
         self.manifest = manifest
 
     def signatures(self):
-        for row in self.manifest.info: # @CTB hide attribute
+        for row in self.manifest.rows:
             yield row['signature']
 
     def signatures_with_location(self):
-        for row in self.manifest.info: # @CTB hide attr
+        for row in self.manifest.rows:
             yield row['signature'], row['internal_location']
 
     def __len__(self):
@@ -920,7 +756,13 @@ class LoadedCollection(Index):
 
     @classmethod
     def load(cls, index_list, source_list):
-        "Create a LoadedCollection from already-loaded indices."
+        """Create a LoadedCollection from already-loaded indices.
+
+        Takes two arguments: a list of Index objects, and a matching list
+        of source strings (filenames, etc.)  If the source is not None,
+        then it will be used to override the location provided by the
+        matching Index object.
+        """
 
         # yield all signatures + locations
         def sigloc_iter():
@@ -970,7 +812,12 @@ class LoadedCollection(Index):
 
     @classmethod
     def load_from_pathlist(cls, filename):
-        "Create a MultiIndex from all files listed in a text file."
+        """Create a LoadedCollection from all files listed in a text file.
+
+        Note: this will load signatures from directories and databases, too,
+        if they are listed in the text file; it uses 'load_file_as_index'
+        underneath.
+        """
         from .sourmash_args import (load_pathlist_from_file,
                                     load_file_as_index)
         idx_list = []
@@ -996,18 +843,15 @@ class LoadedCollection(Index):
 
 
 class CollectionManifest:
-    def __init__(self):
-        self.info = None
+    "@CTB"
+    def __init__(self, rows):
+        self.rows = tuple(rows)
 
     def __bool__(self):
-        if self.info is None:
-            return False
-        return True
+        return bool(self.rows)
 
     def __len__(self):
-        if self.info is None:
-            return 0
-        return len(self.info)
+        return len(self.rows)
 
     @classmethod
     def load_from_csv(cls, fp):
@@ -1030,9 +874,7 @@ class CollectionManifest:
         for row in r:
             manifest_list.append(row)
 
-        obj = cls()
-        obj.info = manifest_list
-        return obj
+        return cls(manifest_list)
 
     @classmethod
     def create_manifest(cls, locations_iter):
@@ -1055,12 +897,13 @@ class CollectionManifest:
             # @CTB: do we want filename in manifests?
             row['internal_location'] = location
             # @CTB: change name, maybe just make it 'location'
+
+            # CTB: track signature when creating manifest w/this info.
             row['signature'] = ss
 
             manifest_list.append(row)
-        obj = cls()
-        obj.info = manifest_list
-        return obj
+
+        return cls(manifest_list)
 
     def _select(self, *, ksize=None, moltype=None, scaled=0, num=0,
                containment=False, picklist=None):
@@ -1069,7 +912,7 @@ class CollectionManifest:
         Internal method; call `select_to_manifest` or `select_filenames`
         instead.
         """
-        matching_rows = self.info
+        matching_rows = self.rows
         if picklist:
             # map picklist.coltype to manifest column types.
             # CTB: should these be the same? probably...
@@ -1106,9 +949,8 @@ class CollectionManifest:
 
     def select_to_manifest(self, **kwargs):
         "Do a 'select' and return a new CollectionManifest object."
-        obj = CollectionManifest()
-        obj.info = list(self._select(**kwargs))
-        return obj
+        new_rows = self._select(**kwargs)
+        return CollectionManifest(new_rows)
 
     def select_filenames(self, **kwargs):
         "Do a 'select' and return all of the locations"
@@ -1123,7 +965,7 @@ class CollectionManifest:
         # @CTB probably should change to 'contains_md5' and
         # @CTB 'contains_filename' or something.
         md5 = ss.md5sum()
-        for row in self.info:
+        for row in self.rows:
             if md5 == row['md5']:
                 return True
         return False
