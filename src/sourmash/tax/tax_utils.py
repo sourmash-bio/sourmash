@@ -270,7 +270,7 @@ def combine_sumgather_csvs_by_lineage(gather_csvs, *, rank="species", accept_ran
     return sgD, all_samples
 
 
-def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, flatten_lineage=False, sep='\t'):
+def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, format_lineage=False, sep='\t'):
     '''
     takes in a lineage dictionary with sample counts (output of combine_sumgather_by_lineage)
     and produces a tab-separated file with fractions for each sample.
@@ -292,9 +292,9 @@ def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, flatten_lin
     w.writeheader()
     blank_row = {query_name: 0 for query_name in sample_names}
     for lin, sampleinfo in sorted(lineage_dict.items()):
-        #add lineage and 0 placeholders
-        if flatten_lineage:
+        if format_lineage:
             lin = display_lineage(lin)
+        #add lineage and 0 placeholders
         row = {'lineage': lin}
         row.update(blank_row)
         # add info for query_names that exist for this lineage

@@ -91,7 +91,7 @@ def summarize(args):
         lineageD, query_names, num_queries = tax_utils.aggregate_by_lineage_at_rank(summarized_gather[args.rank], by_query=True)
 
         with FileOutputCSV(lineage_outfile) as csv_fp:
-            tax_utils.write_lineage_sample_frac(query_names, lineageD, csv_fp, flatten_lineage=True, sep='\t')
+            tax_utils.write_lineage_sample_frac(query_names, lineageD, csv_fp, format_lineage=True, sep='\t')
 
     # write summarized --> krona output csv
     if "krona" in args.output_format:

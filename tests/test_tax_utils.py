@@ -684,6 +684,32 @@ def test_write_lineage_sample_frac(runtmp):
     assert frac_lines == [['lineage', 'sample1', 'sample2'], ['a;b', '0.500', '0'],  ['a;c', '0', '0.700']]
 
 
+def test_write_lineage_sample_frac_format_lineage(runtmp):
+    outfrac = runtmp.output('outfrac.csv')
+    sample_names = ['sample1', 'sample2']
+    sk_lineage = lca_utils.make_lineage('a')
+    print(sk_lineage)
+    sk_linD = {sk_lineage: {'sample1': '0.500' ,'sample2': '0.700'}}
+    with open(outfrac, 'w') as out_fp:
+        write_lineage_sample_frac(sample_names, sk_linD, out_fp, format_lineage=True)
+
+    frac_lines = [x.strip().split('\t') for x in open(outfrac, 'r')]
+    print("csv_lines: ", frac_lines)
+    assert frac_lines == [['lineage', 'sample1', 'sample2'], ['a', '0.500', '0.700']]
+
+    phy_lineage = lca_utils.make_lineage('a;b')
+    print(phy_lineage)
+    phy2_lineage = lca_utils.make_lineage('a;c')
+    print(phy2_lineage)
+    phy_linD = {phy_lineage: {'sample1': '0.500'}, phy2_lineage: {'sample2': '0.700'}}
+    with open(outfrac, 'w') as out_fp:
+        write_lineage_sample_frac(sample_names, phy_linD, out_fp, format_lineage=True)
+
+    frac_lines = [x.strip().split('\t') for x in open(outfrac, 'r')]
+    print("csv_lines: ", frac_lines)
+    assert frac_lines == [['lineage', 'sample1', 'sample2'], ['a;b', '0.500', '0'],  ['a;c', '0', '0.700']]
+
+
 def test_combine_sumgather_csvs_by_lineage_improper_rank(runtmp):
     # some summarized gather dicts
     sum_gather1 = {'superkingdom': [SummarizedGatherResult(query_name='queryA', rank='superkingdom', fraction=0.5,
