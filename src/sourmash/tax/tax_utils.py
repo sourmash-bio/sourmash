@@ -318,29 +318,3 @@ def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, format_line
         row.update(sampleinfo)
         # write row
         w.writerow(row)
-
-
-# see https://github.com/luizirber/2020-cami/blob/master/scripts/gather_to_opal.py
-def write_cami_profiling_bioboxes_format(sample_id, ranks, taxons, out_fp, *, taxonomy_id=None, program=None, format_version="0.9.1", sep="\t"):
-    '''
-    Write taxonomy-summarized gather results
-    to CAMI bioboxes format.
-    '''
-    # init version, not working yet
-    header_title = "# Taxonomic Profiling Output"
-    sample_info = f"@SampleID:{sample_id}"
-    version_info = f" @Version:{format_version}"
-    rank_info = f"@Ranks:{ranks}"
-    output_lines = [header_title, sample_info, version_info, rank_info]
-    if taxonomy_id is not None:
-        output_lines.append(f"@TaxonomyID:{taxonomy_id}")
-#    if program is not None:
-#        output_lines.append(f"@__program__: {program}")
-    output_lines.append(f"@@TAXID\tRANK\tTAXPATH\tPERCENTAGE") # actual tsv header
-
-    for tax in taxons.itertuples(index=False, name=None):
-        tax_line = "\t".join(str(t) for t in tax)
-        output_lines.append(tax_line)
-
-    #write instead of return!
-    #return "\n".join(output_lines)
