@@ -616,25 +616,18 @@ def test_classify_empty_gather_results_with_csv_force(runtmp):
 
 def test_summarize_empty_gather_results(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
-    outcsv = runtmp.output('out.csv')
     g_csv = runtmp.output('g.csv')
     with open(g_csv, "w") as fp:
         fp.write("")
-    print("\n XXXXXXXXXXg_csv: ", g_csv)
+    print("g_csv: ", g_csv)
 
     #test below is not working properly: assert statement needs to be moved outside of the with block, but exc.value is empty and im not sure why
     with pytest.raises(ValueError) as exc:
         runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax)
-  #  print("XXXXXXXXXXXXXXXXexc.val= ", str(exc.value))
- #   print("LOOOOOOOOOOOOOOOK LOOOK AT ME")
-#    print(runtmp.last_result.status)
-#    print(runtmp.last_result.out)
-#    print(runtmp.last_result.err)   
+    print("exc.val= ", str(exc.value))
     assert "No gather results loaded from "+g_csv in str(exc.value)
-    print(runtmp.last_result.status)
-    print(runtmp.last_result.out)
-    print(runtmp.last_result.err)
-  #  assert runtmp.last_result.status != 0
+
+    assert runtmp.last_result.status == -1
 
 
 def test_summarize_empty_tax_lineage_input(runtmp):
