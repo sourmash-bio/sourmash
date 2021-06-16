@@ -1513,7 +1513,7 @@ def test_sig_extract_11_picklist_bad_coltype(runtmp):
 
     err = runtmp.last_result.err
     print(err)
-    assert "ValueError: invalid picklist column type 'BADCOLTYPE'" in err
+    assert "invalid picklist column type 'BADCOLTYPE'" in err
 
 
 def test_sig_extract_12_picklist_bad_argstr(runtmp):
@@ -1557,7 +1557,7 @@ def test_sig_extract_12_picklist_bad_colname(runtmp):
 
     err = runtmp.last_result.err
     print(err)
-    assert "ValueError: column 'BADCOLNAME' not in pickfile" in err
+    assert "column 'BADCOLNAME' not in pickfile" in err
 
 
 @utils.in_tempdir

@@ -545,7 +545,12 @@ def extract(args):
 
     picklist = None
     if args.picklist:
-        picklist = SignaturePicklist.from_picklist_args(args.picklist)
+        try:
+            picklist = SignaturePicklist.from_picklist_args(args.picklist)
+        except ValueError as exc:
+            error("ERROR: could not load picklist.")
+            error(str(exc))
+            sys.exit(-1)
 
         notify(f"picking column '{picklist.column_name}' of type '{picklist.coltype}' from '{picklist.pickfile}'")
 
