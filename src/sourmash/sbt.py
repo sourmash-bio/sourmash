@@ -150,7 +150,7 @@ class SBT(Index):
         self._nodescache = _NodesCache(maxsize=cache_size)
         self._location = None
         self.picklists = []
-        self._manifest_rows = []
+        self.manifest = None
 
     @property
     def location(self):
@@ -165,14 +165,12 @@ class SBT(Index):
             from .signature import load_one_signature
             manifest = self.manifest
 
-            print(f"{len(manifest)} rows before picklists.")
-
+            # iteratively select picklists; no other selection criteria
+            # apply to SBTs, since ksize etc are fixed as part of indexing.
             for picklist in self.picklists:
                 manifest = manifest.select_to_manifest(picklist=picklist)
 
-            print(f"{len(manifest)} rows left after picklists.")
-
-            for loc in self.manifest.locations():
+            for loc in manifest.locations():
                 buf = self.storage.load(loc)
                 # if more than one signature can be in a file, we need
                 # to recheck picklists here.
@@ -614,15 +612,19 @@ class SBT(Index):
         info["index_type"] = self.__class__.__name__  # TODO: check
 
         # choose between ZipStorage and FS (file system/directory) storage.
+        # default to ZipStorage, unless .sbt.json is specified in filename.
         kind = None
-        manifest_prefix = ""
         if not path.endswith(".sbt.json"):
             kind = "Zip"
             if not path.endswith('.sbt.zip'):
                 path += '.sbt.zip'
             storage = ZipStorage(path)
             backend = "FSStorage"
+
+            assert path[-8:] == '.sbt.zip'
             name = os.path.basename(path[:-8])
+
+            # align the storage prefix with what we do for FSStorage, below.
             subdir = '.sbt.{}'.format(name)
             storage_args = FSStorage("", subdir, make_dirs=False).init_args()
             storage.save(subdir + "/", b"")
@@ -638,11 +640,14 @@ class SBT(Index):
                 kind = "FS"
                 # default storage
                 location = os.path.dirname(index_filename)
+
+                # align subdir names with what we do above for ZipStorage
                 subdir = '.sbt.{}'.format(name)
 
+                # when we go to default of FSStorage, use full location for
+                # storage, e.g. location/.sbt.{name}/
                 storage = FSStorage(location, subdir)
                 index_filename = os.path.join(location, index_filename)
-                manifest_prefix = location
 
             backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
             storage_args = storage.init_args()
@@ -703,44 +708,52 @@ class SBT(Index):
             else:
                 leaves[i] = data
 
-                row = CollectionManifest.make_manifest_row(node.data,
-                                                           data['filename'],
-                                                           include_signature=0)
-                manifest_rows.append(row)
+                row = node.make_manifest_row(data['filename'])
+                if row:
+                    manifest_rows.append(row)
 
             if n % 100 == 0:
                 notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
 
-        # now, save the index file and manifests. @CTB doc.
+        # now, save the index file and manifests.
         #
-        # for zipfiles, it gets saved in the zip file.
+        # for zipfiles, they get saved in the zip file.
         # for FSStorage, we use the storage.save function.
         #
         # for everything else (Redis, IPFS), the index gets saved locally.
         # the nodes/leaves are saved/loaded from the datatabase, and
         # the index is used to get their names for loading.
+        # (CTB: manifests are not yet supported for Redis and IPFS)
         #
         notify("Finished saving nodes, now saving SBT index file.")
         info['nodes'] = nodes
         info['signatures'] = leaves
 
+        # finish constructing manifest object & save
         manifest = CollectionManifest(manifest_rows)
-        manifest_path = os.path.join(manifest_prefix, f"{name}.manifest.csv")
+        manifest_name = f"{name}.manifest.csv"
 
         manifest_fp = StringIO()
         manifest.write_to_csv(manifest_fp)
         manifest_data = manifest_fp.getvalue().encode("utf-8")
 
         if kind == "Zip":
-            mfn = storage.save(manifest_path, manifest_data, overwrite=True)
+            manifest_name = os.path.join(storage.subdir, manifest_name)
+            manifest_path = storage.save(manifest_name, manifest_data,
+                                         overwrite=True)
         elif kind == "FS":
-            manifest_path = os.path.join(subdir, f"{name}.manifest.csv")
-            manifest_path = os.path.abspath(manifest_path)
-            mfn = storage.save(manifest_path, manifest_data, overwrite=True)
+            manifest_name = manifest_name
+            manifest_path = storage.save(manifest_name, manifest_data,
+                                         overwrite=True)
         else:
-            mfn = ""            # @CTB
+            manifest_path = None
 
-        info['manifest_path'] = mfn
+        print(f"XXX manifest_path is {manifest_path}")
+
+        if manifest_path:
+            info['manifest_path'] = manifest_path
+
+        # now, save index.
         tree_data = json.dumps(info).encode("utf-8")
 
         if kind == "Zip":
@@ -1343,6 +1356,9 @@ class Leaf(object):
                 name=self.name, metadata=self.metadata,
                 nb=self.data.n_occupied(),
                 fpr=calc_expected_collisions(self.data, True, 1.1))
+
+    def make_manifest_row(self, location):
+        return None
 
     @property
     def data(self):
