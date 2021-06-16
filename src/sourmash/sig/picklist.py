@@ -1,7 +1,6 @@
 "Picklist code for extracting subsets of signatures."
 import csv
 
-
 # set up preprocessing functions for column stuff
 preprocess = {}
 
@@ -15,6 +14,7 @@ preprocess['ident'] = lambda x: x.split(' ')[0]
 
 # match 8 characters
 preprocess['md5prefix8'] = lambda x: x[:8]
+preprocess['md5short'] = lambda x: x[:8]
 
 
 class SignaturePicklist:
@@ -32,18 +32,23 @@ class SignaturePicklist:
     * 'name' - exact match to signature's name
     * 'md5' - exact match to signature's md5sum
     * 'md5prefix8' - match to 8-character prefix of signature's md5sum
+    * 'md5short' - same as md5prefix8
     * 'ident' - exact match to signature's identifier
-    * 'ident.' - match to signature's identifier, before '.'
+    * 'identprefix' - match to signature's identifier, before '.'
 
     Identifiers are constructed by using the first space delimited word in
     the signature name.
     """
-    def __init__(self, pickfile, column_name, coltype):
-        self.pickfile = pickfile # note: can be None
-        self.column_name = column_name # note: can be None
-        self.coltype = coltype
+    supported_coltypes = ('md5', 'md5prefix8', 'md5short',
+                          'name', 'ident', 'identprefix')
 
-        if coltype not in ('md5', 'md5prefix8', 'name', 'ident', 'ident.'):
+    def __init__(self, coltype, *, pickfile=None, column_name=None):
+        "create a picklist of column type 'coltype'."
+        self.coltype = coltype
+        self.pickfile = pickfile
+        self.column_name = column_name
+
+        if coltype not in self.supported_coltypes:
             raise ValueError(f"invalid picklist column type '{coltype}'")
 
         self.preprocess_fn = preprocess[coltype]
@@ -61,7 +66,7 @@ class SignaturePicklist:
         assert len(picklist) == 3
         pickfile, column, coltype = picklist
 
-        return cls(pickfile, column, coltype)
+        return cls(coltype, pickfile=pickfile, column_name=column)
 
     def _get_sig_attribute(self, ss):
         "for a given SourmashSignature, return attribute for this picklist."
@@ -80,6 +85,7 @@ class SignaturePicklist:
         return q
 
     def init(self, values=[]):
+        "initialize a Picklist object with given values."
         if self.pickset is not None:
             raise ValueError("already initialized?")
         self.pickset = set(values)
@@ -117,20 +123,28 @@ class SignaturePicklist:
         return n_empty_val, dup_vals
 
     def add(self, value):
+        "Add a value to this picklist."
         self.pickset.add(value)
 
     def __contains__(self, ss):
         "does this signature match anything in the picklist?"
+        # pull out the relevant signature attribute
         q = self._get_sig_attribute(ss)
+
+        # mangle into the kinds of values we support here
         q = self.preprocess_fn(q)
 
+        # add to the number of queries performed,
         self.n_queries += 1
+
+        # determine if ok or not.
         if q in self.pickset:
             self.found.add(q)
             return True
         return False
 
     def filter(self, it):
+        "yield all signatures in the given iterator that are in the picklist"
         for ss in it:
             if self.__contains__(ss):
                 yield ss
