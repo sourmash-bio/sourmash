@@ -553,9 +553,9 @@ def extract(args):
 
         notify(f"loaded {len(picklist.pickset)} distinct values into picklist.")
         if n_empty_val:
-            notify(f"WARNING: {n_empty_val} empty values in column '{picklist.column_name}' in CSV file")
+            notify(f"WARNING: {n_empty_val} empty values in column '{picklist.column_name}' in picklist file")
         if dup_vals:
-            notify(f"WARNING: {len(dup_vals)} values in column '{picklist.column_name}' were not distinct")
+            notify(f"WARNING: {len(dup_vals)} values in picklist column '{picklist.column_name}' were not distinct")
         picklist_filter_fn = picklist.filter
     else:
         def picklist_filter_fn(it):

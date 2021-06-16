@@ -85,12 +85,11 @@ class SignaturePicklist:
         if self.pickset is not None:
             raise ValueError("already initialized?")
         self.pickset = set(values)
+        return self.pickset
 
     def load(self, pickfile, column_name):
         "load pickset, return num empty vals, and set of duplicate vals."
-        pickset = self.pickset
-        if pickset is None:
-            pickset = set()
+        pickset = self.init()
 
         n_empty_val = 0
         dup_vals = set()
@@ -98,7 +97,7 @@ class SignaturePicklist:
             r = csv.DictReader(csvfile)
 
             if column_name not in r.fieldnames:
-                raise ValueError("column '{column_name}' not in pickfile '{pickfile}'")
+                raise ValueError(f"column '{column_name}' not in pickfile '{pickfile}'")
 
             for row in r:
                 # pick out values from column
@@ -113,9 +112,8 @@ class SignaturePicklist:
                 if col in pickset:
                     dup_vals.add(col)
                 else:
-                    pickset.add(col)
+                    self.add(col)
 
-        self.pickset = pickset
         return n_empty_val, dup_vals
 
     def add(self, value):
