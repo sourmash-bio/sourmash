@@ -545,7 +545,12 @@ def extract(args):
 
     picklist = None
     if args.picklist:
-        picklist = SignaturePicklist.from_picklist_args(args.picklist)
+        try:
+            picklist = SignaturePicklist.from_picklist_args(args.picklist)
+        except ValueError as exc:
+            error("ERROR: could not load picklist.")
+            error(str(exc))
+            sys.exit(-1)
 
         notify(f"picking column '{picklist.column_name}' of type '{picklist.coltype}' from '{picklist.pickfile}'")
 
@@ -553,9 +558,9 @@ def extract(args):
 
         notify(f"loaded {len(picklist.pickset)} distinct values into picklist.")
         if n_empty_val:
-            notify(f"WARNING: {n_empty_val} empty values in column '{picklist.column_name}' in CSV file")
+            notify(f"WARNING: {n_empty_val} empty values in column '{picklist.column_name}' in picklist file")
         if dup_vals:
-            notify(f"WARNING: {len(dup_vals)} values in column '{picklist.column_name}' were not distinct")
+            notify(f"WARNING: {len(dup_vals)} values in picklist column '{picklist.column_name}' were not distinct")
 
     # further filtering on md5 or name?
     if args.md5 is not None or args.name is not None:
@@ -601,10 +606,13 @@ def extract(args):
     notify("extracted {} signatures from {} file(s)", len(save_sigs),
            len(args.signatures))
     if picklist:
-        notify(f"for given picklist, found {len(picklist.found)} matches of {len(picklist.pickset)} total")
+        notify(f"for given picklist, found {len(picklist.found)} matches to {len(picklist.pickset)} distinct values")
         n_missing = len(picklist.pickset - picklist.found)
         if n_missing:
             notify(f"WARNING: {n_missing} missing picklist values.")
+            if args.picklist_require_all:
+                error("ERROR: failing because --picklist-require-all was set")
+                sys.exit(-1)
 
 
 def filter(args):
