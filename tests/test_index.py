@@ -647,7 +647,7 @@ def test_linear_index_picklist_select():
         linear.insert(ss)
 
     # construct a picklist...
-    picklist = SignaturePicklist(None, None, 'md5prefix8')
+    picklist = SignaturePicklist('md5prefix8')
     picklist.init(['f3a90d4e'])
 
     # select on picklist

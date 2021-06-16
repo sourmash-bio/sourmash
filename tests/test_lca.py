@@ -46,7 +46,7 @@ def test_api_find_picklist_select():
     lca_db.insert(sig63)
 
     # construct a picklist...
-    picklist = SignaturePicklist(None, None, 'md5prefix8')
+    picklist = SignaturePicklist('md5prefix8')
     picklist.init(['09a08691'])
 
     # run a 'find' with sig63, should find 47 and 63 both.
@@ -504,7 +504,7 @@ def test_lca_index_select_picklist():
     db, ksize, scaled = lca_utils.load_single_database(filename)
 
     # construct a picklist...
-    picklist = SignaturePicklist(None, None, 'md5prefix8')
+    picklist = SignaturePicklist('md5prefix8')
     picklist.init(['50a92740'])
 
     xx = db.select(picklist=picklist)

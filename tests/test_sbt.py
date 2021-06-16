@@ -652,7 +652,7 @@ def test_sbt_as_index_select_picklist():
     tree.insert(sig63)
 
     # construct a picklist...
-    picklist = SignaturePicklist(None, None, 'md5prefix8')
+    picklist = SignaturePicklist('md5prefix8')
     picklist.init(['09a08691'])
 
     # select on picklist
@@ -679,7 +679,7 @@ def test_sbt_as_index_find_picklist():
     tree.insert(sig63)
 
     # construct a picklist...
-    picklist = SignaturePicklist(None, None, 'md5prefix8')
+    picklist = SignaturePicklist('md5prefix8')
     picklist.init(['09a08691'])
 
     # run a 'find' with sig63, should find 47 and 63 both.
