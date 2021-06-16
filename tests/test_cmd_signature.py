@@ -1222,7 +1222,7 @@ def test_sig_extract_8_picklist_ident_dot(runtmp):
         w.writeheader()
         w.writerow(row)
 
-    picklist_arg = f"{picklist_csv}:nodotIdent:ident."
+    picklist_arg = f"{picklist_csv}:nodotIdent:identprefix"
     runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist', picklist_arg)
 
     # stdout should be new signature

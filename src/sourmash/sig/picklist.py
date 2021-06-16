@@ -9,7 +9,7 @@ preprocess['name'] = lambda x: x
 preprocess['md5'] = lambda x: x
 
 # identifier matches/prefix foo - space delimited identifiers
-preprocess['ident.'] = lambda x: x.split(' ')[0].split('.')[0]
+preprocess['identprefix'] = lambda x: x.split(' ')[0].split('.')[0]
 preprocess['ident'] = lambda x: x.split(' ')[0]
 
 # match 8 characters
@@ -79,8 +79,10 @@ class SignaturePicklist:
             q = ss.name
         elif coltype == 'ident':
             q = ss.name
-        elif coltype == 'ident.':
+        elif coltype == 'identprefix':
             q = ss.name
+        else:
+            assert 0
 
         return q
 
