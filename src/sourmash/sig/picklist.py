@@ -23,7 +23,6 @@ class SignaturePicklist:
     Initialize using ``SignaturePicklist.from_picklist_args(argstr)``,
     which takes an argument str like so: 'pickfile:column:coltype'.
 
-    # CTB pickfile or pickset?
     Here, 'pickfile' is the path to a CSV file; 'column' is the name of
     the column to select from the CSV file; and 'coltype' is the type of
     matching to do on that column.
