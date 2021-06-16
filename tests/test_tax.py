@@ -630,11 +630,10 @@ def test_summarize_empty_gather_results(runtmp):
 #    print(runtmp.last_result.status)
 #    print(runtmp.last_result.out)
 #    print(runtmp.last_result.err)   
-    assert str(exc.value) == "No gather results loaded from g.csv"
+    assert "No gather results loaded from "+g_csv in str(exc.value)
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
-    assert 0==0
   #  assert runtmp.last_result.status != 0
 
 
