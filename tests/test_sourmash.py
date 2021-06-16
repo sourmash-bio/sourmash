@@ -1774,6 +1774,88 @@ def test_search_4():
 
 
 @utils.in_tempdir
+def test_index_check_scaled_bounds_zero(c):
+    # test index --from-file
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    # construct a file list
+    with open(c.output('sig.list'), 'wt') as fp:
+        fp.write("\n".join(testdata_sigs))
+
+    cmd = ['index', 'gcf_all', testdata_sigs[0], '-k', '21', '--scaled', '0',
+           '--from-file', c.output('sig.list')]
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash(*cmd)
+
+    assert "ERROR: --scaled value must be >= 1" in str(exc.value)
+
+
+@utils.in_tempdir
+def test_index_check_scaled_bounds_negative(c):
+    # test index --from-file
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    # construct a file list
+    with open(c.output('sig.list'), 'wt') as fp:
+        fp.write("\n".join(testdata_sigs))
+
+    cmd = ['index', 'gcf_all', testdata_sigs[0], '-k', '21', '--scaled', '-5',
+           '--from-file', c.output('sig.list')]
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash(*cmd)
+
+    assert "ERROR: --scaled value must be positive" in str(exc.value)
+
+
+@utils.in_tempdir
+def test_index_check_scaled_bounds_less_than_minimum(c):
+    # test index --from-file
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    # construct a file list
+    with open(c.output('sig.list'), 'wt') as fp:
+        fp.write("\n".join(testdata_sigs))
+
+    cmd = ['index', 'gcf_all', testdata_sigs[0], '-k', '21', '--scaled', '50',
+           '--from-file', c.output('sig.list')]
+    c.run_sourmash(*cmd)
+
+    err = c.last_result.err
+
+    assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
+
+
+@utils.in_tempdir
+def test_index_check_scaled_bounds_more_than_maximum(c):
+    # test index --from-file
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    # construct a file list
+    with open(c.output('sig.list'), 'wt') as fp:
+        fp.write("\n".join(testdata_sigs))
+
+    cmd = ['index', 'gcf_all', testdata_sigs[0], '-k', '21', '--scaled', '1e9',
+           '--from-file', c.output('sig.list')]
+    c.run_sourmash(*cmd)
+
+    err = c.last_result.err
+
+    assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
+
+
+@utils.in_tempdir
 def test_index_metagenome_fromfile(c):
     # test index --from-file
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
