@@ -980,7 +980,6 @@ class CollectionManifest:
         r = csv.DictReader(fp)
         if not r.fieldnames:
             raise ValueError("missing column headers in manifest")
-            return None
 
         for k in cls.required_keys:
             if k not in r.fieldnames:
@@ -993,8 +992,17 @@ class CollectionManifest:
 
         return cls(manifest_list)
 
+    def write_to_csv(self, fp):
+        "write manifest CSV to specified file handle"
+        w = csv.DictWriter(fp, fieldnames=self.required_keys)
+        w.writeheader()
+
+        for row in self.rows:
+            w.writerow(row)
+
     @classmethod
     def make_manifest_row(cls, ss, location, *, include_signature=True):
+        "make a manifest row dictionary."
         row = {}
         row['md5'] = ss.md5sum()
         row['md5short'] = row['md5'][:8]
