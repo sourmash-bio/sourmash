@@ -80,8 +80,8 @@ def summarize(args):
     # write summarized output csv
     if "summary" in args.output_format:
         summary_outfile = make_outfile(args.output_base, ".summarized.csv")
-        with FileOutputCSV(summary_outfile) as csv_fp:
-            tax_utils.write_summary(summarized_gather, csv_fp)
+        with FileOutputCSV(summary_outfile) as out_fp:
+            tax_utils.write_summary(summarized_gather, out_fp)
 
     # if lineage summary table
     if "lineage_summary" in args.output_format:
@@ -90,10 +90,10 @@ def summarize(args):
         ## aggregate by lineage, by query
         lineageD, query_names, num_queries = tax_utils.aggregate_by_lineage_at_rank(summarized_gather[args.rank], by_query=True)
 
-        with FileOutputCSV(lineage_outfile) as csv_fp:
-            tax_utils.write_lineage_sample_frac(query_names, lineageD, csv_fp, format_lineage=True, sep='\t')
+        with FileOutputCSV(lineage_outfile) as out_fp:
+            tax_utils.write_lineage_sample_frac(query_names, lineageD, out_fp, format_lineage=True, sep='\t')
 
-    # write summarized --> krona output csv
+    # write summarized --> krona output tsv
     if "krona" in args.output_format:
         krona_resultslist = tax_utils.format_for_krona(args.rank, summarized_gather)
 
@@ -106,8 +106,6 @@ def classify(args):
     """
     taxonomic classification of genomes from gather results
     """
-    # classify:: summarize at rank, choose best match
-    ## currently reports a single rank. do we want to optionally report at all ranks? (no, bc summarize does that?)
     set_quiet(args.quiet)
 
     # load taxonomy assignments
@@ -137,16 +135,12 @@ def classify(args):
             continue
 
         # if --rank is specified, classify to that rank
-        # to do, what to do if don't have gather results at desired rank (e.g. strain)?
         if args.rank:
-            # todo: check we have gather results at this rank
-            # better idea: return available taxonomic ranks from tax_assign! then check that rank is in these.
-            #if not tax_utils.check_taxonomy_exists(tax_assign, args.rank):
-            #    notify(f"No taxonomic information at rank {args.rank}: cannot classify at this rank")
             best_at_rank = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
                                                          split_identifiers=not args.keep_full_identifiers,
                                                          keep_identifier_versions = args.keep_identifier_versions,
                                                          best_only=True)
+
            # this now returns list of SummarizedGather tuples
             for (query_name, rank, fraction, lineage) in best_at_rank:
                 if query_name in seen_queries:
@@ -161,9 +155,9 @@ def classify(args):
                     krona_results.append((containment, *lin_list))
         else:
             # classify to the match that passes the containment threshold.
-            # To do - do we want to report anything if nothing >= containment threshold?
+            # To do - do we want to store anything for this match if nothing >= containment threshold?
             for rank in tax_utils.ascending_taxlist(include_strain=False):
-                # gets for all queries at once
+                # gets best_at_rank for all queries in this gather_csv
                 best_at_rank = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
                                                              split_identifiers=not args.keep_full_identifiers,
                                                              keep_identifier_versions = args.keep_identifier_versions,
@@ -187,16 +181,16 @@ def classify(args):
         notify(f'No results for classification. Exiting.')
         sys.exit(-1)
 
-    # write output csv
+    # write outputs
     if "summary" in args.output_format:
         summary_outfile = make_outfile(args.output_base, ".classifications.csv")
-        with FileOutputCSV(summary_outfile) as csv_fp:
-            tax_utils.write_summary(classifications, csv_fp)
+        with FileOutputCSV(summary_outfile) as out_fp:
+            tax_utils.write_summary(classifications, out_fp)
 
     if "krona" in args.output_format:
         krona_outfile = make_outfile(args.output_base, ".krona.tsv")
-        with FileOutputCSV(krona_outfile) as csv_fp:
-            tax_utils.write_krona(args.rank, krona_results, csv_fp)
+        with FileOutputCSV(krona_outfile) as out_fp:
+            tax_utils.write_krona(args.rank, krona_results, out_fp)
 
 
 def combine(args):
