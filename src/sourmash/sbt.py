@@ -15,11 +15,12 @@ from random import randint, random
 import sys
 from tempfile import NamedTemporaryFile
 from cachetools import Cache
+from io import StringIO
 
 from .exceptions import IndexNotSupported
 from .sbt_storage import FSStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
-from .index import Index, IndexSearchResult
+from .index import Index, IndexSearchResult, CollectionManifest
 
 from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
 
@@ -149,6 +150,7 @@ class SBT(Index):
         self._nodescache = _NodesCache(maxsize=cache_size)
         self._location = None
         self.picklists = []
+        self._manifest_rows = []
 
     @property
     def location(self):
@@ -157,10 +159,36 @@ class SBT(Index):
     def signatures(self):
         from .sig.picklist import passes_all_picklists
 
+        if self.manifest:
+            # if manifest, use it & load using direct path to storage.
+            # this will be faster when using picklists.
+            from .signature import load_one_signature
+            manifest = self.manifest
+
+            print(f"{len(manifest)} rows before picklists.")
+
+            for picklist in self.picklists:
+                manifest = manifest.select_to_manifest(picklist=picklist)
+
+            print(f"{len(manifest)} rows left after picklists.")
+
+            for loc in self.manifest.locations():
+                buf = self.storage.load(loc)
+                # if more than one signature can be in a file, we need
+                # to recheck picklists here.
+                ss = load_one_signature(buf)
+                yield ss
+        else:
+            # no manifest? iterate over all leaves.
+            for k in self.leaves():
+                ss = k.data
+                if passes_all_picklists(ss, self.picklists):
+                    yield ss
+
+    def signatures_with_internal(self):
         for k in self.leaves():
             ss = k.data
-            if passes_all_picklists(ss, self.picklists):
-                yield ss
+            yield ss, self.location, k._path
 
     def select(self, ksize=None, moltype=None, num=0, scaled=0,
                containment=False, picklist=None):
@@ -587,6 +615,7 @@ class SBT(Index):
 
         # choose between ZipStorage and FS (file system/directory) storage.
         kind = None
+        manifest_prefix = ""
         if not path.endswith(".sbt.json"):
             kind = "Zip"
             if not path.endswith('.sbt.zip'):
@@ -613,6 +642,7 @@ class SBT(Index):
 
                 storage = FSStorage(location, subdir)
                 index_filename = os.path.join(location, index_filename)
+                manifest_prefix = location
 
             backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
             storage_args = storage.init_args()
@@ -629,6 +659,7 @@ class SBT(Index):
         nodes = {}
         leaves = {}
         total_nodes = len(self)
+        manifest_rows = []
         for n, (i, node) in enumerate(self):
             if node is None:
                 continue
@@ -666,15 +697,21 @@ class SBT(Index):
                 else:
                     data['filename'] = node.save(data['filename'])
 
+
             if isinstance(node, Node):
                 nodes[i] = data
             else:
                 leaves[i] = data
 
+                row = CollectionManifest.make_manifest_row(node.data,
+                                                           data['filename'],
+                                                           include_signature=0)
+                manifest_rows.append(row)
+
             if n % 100 == 0:
                 notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
 
-        # now, save the index file.
+        # now, save the index file and manifests. @CTB doc.
         #
         # for zipfiles, it gets saved in the zip file.
         # for FSStorage, we use the storage.save function.
@@ -687,12 +724,29 @@ class SBT(Index):
         info['nodes'] = nodes
         info['signatures'] = leaves
 
+        manifest = CollectionManifest(manifest_rows)
+        manifest_path = os.path.join(manifest_prefix, f"{name}.manifest.csv")
+
+        manifest_fp = StringIO()
+        manifest.write_to_csv(manifest_fp)
+        manifest_data = manifest_fp.getvalue().encode("utf-8")
+
+        if kind == "Zip":
+            mfn = storage.save(manifest_path, manifest_data, overwrite=True)
+        elif kind == "FS":
+            manifest_path = os.path.join(subdir, f"{name}.manifest.csv")
+            manifest_path = os.path.abspath(manifest_path)
+            mfn = storage.save(manifest_path, manifest_data, overwrite=True)
+        else:
+            mfn = ""            # @CTB
+
+        info['manifest_path'] = mfn
         tree_data = json.dumps(info).encode("utf-8")
+
         if kind == "Zip":
             save_path = "{}.sbt.json".format(name)
             storage.save(save_path, tree_data, overwrite=True)
             storage.flush()
-
         elif kind == "FS":
             storage.save(index_filename, tree_data, overwrite=True)
         else:
@@ -801,6 +855,16 @@ class SBT(Index):
 
         obj = loader(jnodes, leaf_loader, dirname, storage, print_version_warning=print_version_warning, cache_size=cache_size)
         obj._location = location
+
+        if 'manifest_path' in jnodes:
+            manifest_path = jnodes['manifest_path']
+            manifest_data = storage.load(manifest_path)
+            manifest_data = manifest_data.decode('utf-8')
+            manifest_fp = StringIO(manifest_data)
+            obj.manifest = CollectionManifest.load_from_csv(manifest_fp)
+        else:
+            obj.manifest = None
+
         return obj
 
     @staticmethod
