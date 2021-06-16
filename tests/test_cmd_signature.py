@@ -1140,6 +1140,14 @@ def test_sig_extract_8_picklist_md5(runtmp):
 
     assert actual_extract_sig == test_extract_sig
 
+    err = runtmp.last_result.err
+
+    print(err)
+    assert "loaded 1 distinct values into picklist." in err
+    assert "loaded 2 total that matched ksize & molecule type" in err
+    assert "extracted 1 signatures from 2 file(s)" in err
+    assert "for given picklist, found 1 matches to 1 distinct values" in err
+
 
 def test_sig_extract_8_picklist_name(runtmp):
     # extract 47 from 47, using a picklist w/full md5
