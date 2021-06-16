@@ -269,50 +269,6 @@ def test_summarize_missing_taxonomy_fail(runtmp):
     assert c.last_result.status == -1
 
 
-def test_combine_csv_out(runtmp):
-    # first make a couple summarized gather csvs
-    g_csv = utils.get_test_data('tax/test1.gather.csv')
-    tax = utils.get_test_data('tax/test.taxonomy.csv')
-
-    # make test2 results (identical to test1 except query_name)
-    g_res2 = runtmp.output("test2.gather.csv")
-    test2_results = [x.replace("test1", "test2") for x in open(g_csv, 'r')]
-    with open(g_res2, 'w') as fp:
-        for line in test2_results:
-            fp.write(line)
-
-    # test1
-    csv_base1 = "test1"
-    sum_csv1 = csv_base1 + ".summarized.csv"
-    csvout1 = runtmp.output(sum_csv1)
-    runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax, '-o', csv_base1)
-    # sample 2
-    csv_base2 = "test2"
-    sum_csv2 = csv_base2 + ".summarized.csv"
-    csvout2 = runtmp.output(sum_csv2)
-    runtmp.run_sourmash('tax', 'summarize', g_res2, '--taxonomy-csv', tax, '-o', csv_base2)
-
-    # now combine test1 and test2
-    combined_outbase = "combined"
-    combined_output = combined_outbase + ".combined.csv"
-    cb_csv = runtmp.output(combined_output)
-    runtmp.run_sourmash('tax', 'combine', csvout1, csvout2, '--output-base', combined_outbase)
-
-    print(runtmp.last_result.status)
-    print(runtmp.last_result.out)
-    print(runtmp.last_result.err)
-
-    assert runtmp.last_result.status == 0
-    assert os.path.exists(cb_csv)
-
-    cb = [x.strip().split(',') for x in open(cb_csv, 'r')]
-    print('combined file: \n', cb)
-    assert cb[0] == ['lineage', 'test1', 'test2']
-    assert cb[1] == ['d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus', '0.016', '0.016']
-    assert cb[2] == ['d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri', '0.057', '0.057']
-    assert cb[3] == ['d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli', '0.058', '0.058']
-
-
 def test_classify_rank_stdout_0(runtmp):
     # test basic classify
     c = runtmp
@@ -762,6 +718,32 @@ def test_classify_empty_gather_results_with_csv_force(runtmp):
     assert f'loaded 1 gather files for classification' in c.last_result.err
     assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
+
+def test_label_0(runtmp):
+    # test label
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csvout = runtmp.output("test1.gather.with-lineages.csv")
+    out_dir = os.path.dirname(csvout)
+
+    c.run_sourmash('tax', 'label', g_csv, '--taxonomy-csv', tax, '-o', out_dir)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+
+    lin_gather_results = [x.rstrip() for x in open(csvout)]
+    print("\n".join(lin_gather_results))
+
+    assert "lineage" in lin_gather_results[0]
+    assert "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in lin_gather_results[1]
+    assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in lin_gather_results[2]
+    assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus" in lin_gather_results[3]
+    assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in lin_gather_results[4]
 
 ## some test ideas to start with -- see test_lca.py for add'l ideas
 

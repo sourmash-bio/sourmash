@@ -6,7 +6,7 @@ from sourmash.logging import notify, print_results, error
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('summarize')
-    subparser.add_argument('gather_results', nargs='+')
+    subparser.add_argument('gather_results', nargs='*')
     subparser.add_argument(
         '--from-file',  metavar='FILE', default = '',
         help='input many gather results as a text file, with one gather csv per line'

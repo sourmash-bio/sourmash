@@ -60,17 +60,20 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
 
 def load_gather_results(gather_csv):
     "Load a single gather csv"
+    header = []
     gather_results = []
     with open(gather_csv, 'rt') as fp:
         r = csv.DictReader(fp)
         #do we want to check for critical column names?
         for n, row in enumerate(r):
+            if not header:
+                header= list(row.keys())
             gather_results.append(row)
     if not gather_results:
         raise ValueError(f'No gather results loaded from {gather_csv}.')
     else:
         notify(f'loaded {len(gather_results)} gather results.')
-    return gather_results
+    return gather_results, header
 
 
 def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False):
@@ -82,10 +85,11 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
     gather_results = []
     total_missed = 0
     all_ident_missed = set()
+    header = []
     for gather_csv in gather_csvs:
         these_results = []
         try:
-            these_results = load_gather_results(gather_csv)
+            these_results, header = load_gather_results(gather_csv)
         except ValueError:
             if force:
                 notify(f'--force is set. Attempting to continue to next set of gather results.')
@@ -106,7 +110,20 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
         # add these results to gather_results
         gather_results += these_results
 
-    return gather_results, all_ident_missed, total_missed
+    return gather_results, all_ident_missed, total_missed, header
+
+
+def find_match_lineage(match_ident, tax_assign, *, skip_idents = [], split_identifiers=True, keep_identifier_versions=False):
+    lineage=""
+    match_ident = get_ident(match_ident, split_identifiers=split_identifiers, keep_identifier_versions=keep_identifier_versions)
+    # if identity not in lineage database, and not --fail-on-missing-taxonomy, skip summarizing this match
+    if match_ident in skip_idents:
+        return lineage
+    try:
+        lineage = tax_assign[match_ident]
+    except KeyError:
+        raise KeyError(f"ident {match_ident} is not in the taxonomy database.")
+    return lineage
 
 
 def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], split_identifiers=True, keep_identifier_versions=False, best_only=False):
@@ -117,15 +134,13 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], s
     for row in gather_results:
         query_name = row['query_name']
         match_ident = row['name']
-        match_ident = get_ident(match_ident, split_identifiers=split_identifiers, keep_identifier_versions=keep_identifier_versions)
-        # if identity not in lineage database, and not --fail-on-missing-taxonomy, skip summarizing this match
-        if match_ident in skip_idents:
+        # get lineage for match
+        lineage = find_match_lineage(match_ident, tax_assign, skip_idents = skip_idents, split_identifiers=split_identifiers, keep_identifier_versions=keep_identifier_versions)
+        # ident was in skip_idents
+        if not lineage:
             continue
-        try:
-            lineage = tax_assign[match_ident]
-        except KeyError:
-            raise KeyError(f"ident {match_ident} is not in the taxonomy database.")
-        # actual summarization code
+
+        # summarize at rank!
         lineage = pop_to_rank(lineage, rank)
         assert lineage[-1].rank == rank, lineage[-1]
 
@@ -285,36 +300,6 @@ def combine_sumgather_csvs_by_lineage(gather_csvs, *, rank="species", accept_ran
                     sgD[lin][query_name] = frac
             fp.close()
     return sgD, all_samples
-
-
-def sample_frac_to_krona(rank, samplefracD):
-    '''
-    Aggregate sample fractions by lineage for krona output
-    '''
-    # if combine_sumgather_csvs_by_lineage output summarized gather results tuples, could use aggregate_by_lineage_at_rank instead...
-    lineage_summary = defaultdict(float)
-    for lin, sample_info in samplefracD.items():
-        for query, fraction in sample_info.items():
-            if query not in all_queries:
-                all_queries.append(query)
-            lineage_summary[lin]+= fraction
-
-    num_queries = len(all_queries)
-    # if multiple_samples, divide fraction by the total number of queries
-    for lin, fraction in lineage_summary.items():
-        lineage_summary[lin] = fraction/num_queries
-
-    # sort by fraction
-    lin_items = list(lineage_summary.items())
-    lin_items.sort(key = lambda x: -x[1])
-
-    # reformat lineage for krona_results printing
-    krona_results = []
-    for lin, fraction in lin_items:
-        lin_list = display_lineage(lin).split(';')
-        krona_results.append((fraction, *lin_list))
-
-    return krona_results
 
 
 def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, format_lineage=False, sep='\t'):

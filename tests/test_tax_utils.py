@@ -81,21 +81,18 @@ def test_collect_gather_csvs(runtmp):
     assert basename(gather_files[0]) == 'test1.gather.csv'
 
 
-# WORKING HERE
 def test_check_and_load_gather_csvs_empty(runtmp):
     g_res = runtmp.output('empty.gather.csv')
     with open(g_res, 'w') as fp:
         fp.write("")
-
     csvs = [g_res]
-
     # load taxonomy csv
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     tax_assign, num_rows = load_taxonomy_assignments(taxonomy_csv, split_identifiers=True)
     print(tax_assign)
     # check gather results and missing ids
     with pytest.raises(Exception) as exc:
-        gather_results, ids_missing, n_missing = check_and_load_gather_csvs(csvs, tax_assign)
+        gather_results, ids_missing, n_missing, header = check_and_load_gather_csvs(csvs, tax_assign)
         assert "No gather results loaded from" in str(exc.value)
 
 
@@ -119,7 +116,7 @@ def test_check_and_load_gather_csvs_with_empty_force(runtmp):
     tax_assign, num_rows = load_taxonomy_assignments(taxonomy_csv, split_identifiers=True)
     print(tax_assign)
     # check gather results and missing ids
-    gather_results, ids_missing, n_missing = check_and_load_gather_csvs(csvs, tax_assign, force=True)
+    gather_results, ids_missing, n_missing, header = check_and_load_gather_csvs(csvs, tax_assign, force=True)
     assert len(gather_results) == 4
     print("n_missing: ", n_missing)
     print("ids_missing: ", ids_missing)
@@ -144,14 +141,14 @@ def test_check_and_load_gather_csvs_fail_on_missing(runtmp):
     print(tax_assign)
     # check gather results and missing ids
     with pytest.raises(Exception) as exc:
-        gather_results, ids_missing, n_missing = check_and_load_gather_csvs(csvs, tax_assign, fail_on_missing_taxonomy=True, force=True)
+        gather_results, ids_missing, n_missing, header = check_and_load_gather_csvs(csvs, tax_assign, fail_on_missing_taxonomy=True, force=True)
         assert "Failing on missing taxonomy" in str(exc.value)
 
 
 # @NTP: improve test!?
 def test_load_gather_results():
     gather_csv = utils.get_test_data('tax/test1.gather.csv')
-    gather_results = tax_utils.load_gather_results(gather_csv)
+    gather_results, header = tax_utils.load_gather_results(gather_csv)
     assert len(gather_results) == 4
 
 

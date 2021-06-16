@@ -29,8 +29,8 @@ sourmash tax <command> [<args>]
 ** Commands can be:
 
 summarize <gather_results> [<gather_results> ... ]        - summarize taxonomic information for metagenome gather results
-combine <summarized_gather_results> [<summarized_gather_results> ... ] - combine outputs of `summarize` for multiple samples
-classify <gather_results> [<gather_results> ... ]   - taxonomic classification of genomes from gather results
+classify <gather_results> [<gather_results> ... ]         - taxonomic classification of genomes from gather results
+label <gather_results> [<gather_results> ... ]            - add taxonomic information to gather results csv(s)
 
 ** Use '-h' to get subcommand-specific help, e.g.
 
@@ -63,7 +63,7 @@ def summarize(args):
 
     # next, collect and load gather results
     gather_csvs = tax_utils.collect_gather_csvs(args.gather_results, from_file= args.from_file)
-    gather_results, idents_missed, total_missed = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
+    gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
                                                                                        fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
 
     if not gather_results:
@@ -128,7 +128,7 @@ def classify(args):
 
     # handle each gather result separately
     for n, g_csv in enumerate(gather_csvs):
-        gather_results, idents_missed, total_missed = tax_utils.check_and_load_gather_csvs(g_csv, tax_assign, force=args.force,
+        gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(g_csv, tax_assign, force=args.force,
                                                                                  fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
 
         if not gather_results:
@@ -193,49 +193,53 @@ def classify(args):
             tax_utils.write_krona(args.rank, krona_results, out_fp)
 
 
-def combine(args):
+def label(args):
     """
-    Combine summarize gather results by lineage and sample.
+    Integrate lineage information into gather results.
 
-    Takes in one or more output csvs from `sourmash taxonomy summarize`
-    and produces a tab-separated file with fractions for each query.
-
-    example output:
-
-    lineage    sample1  sample2 sample3
-    lin_a     0.4    0.17     0.6
-    lin_b     0.0    0.0      0.1
-    lin_c     0.3    0.4      0.2
-
+    Produces gather csv with lineage information as the final column.
     """
 
     set_quiet(args.quiet)
 
-    # load summarized gather csvs into lineage dictionary
-    sumgather_csvs = tax_utils.collect_gather_csvs(args.summarized_gather_results, from_file=args.from_file)
+    # load taxonomy assignments
+    tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, use_headers=True,
+                                              split_identifiers=not args.keep_full_identifiers,
+                                              keep_identifier_versions = args.keep_identifier_versions,
+                                              force=args.force)
 
-    linD, all_samples = tax_utils.combine_sumgather_csvs_by_lineage(sumgather_csvs, rank=args.rank, force=args.force)
-    if not linD:
-        notify(f'No summarized gather results loaded from {args.summarized_gather_results}. Exiting.')
+    if not tax_assign:
+        notify(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
         sys.exit(-1)
 
-    # write output
-    if "csv" in args.output_format:
-        outfile = make_outfile(args.output_base, ".combined.csv")
-        with FileOutputCSV(outfile) as out_fp:
-            tax_utils.write_lineage_sample_frac(all_samples, linD, out_fp, sep=",")
-    if "tsv" in args.output_format:
-        outfile = make_outfile(args.output_base, ".combined.tsv")
-        with FileOutputCSV(outfile) as out_fp:
-            tax_utils.write_lineage_sample_frac(all_samples, linD, out_fp, sep="\t")
+    # get gather_csvs from args
+    gather_csvs = tax_utils.collect_gather_csvs(args.gather_results, from_file=args.from_file)
 
-    # krona output averages across all samples at lineage at rank
-    if "krona" in args.output_format:
-        krona_results = tax_utils.sample_frac_to_krona(args.rank, linD)
-        krona_outfile = make_outfile(args.output_base, ".krona.tsv")
-        with FileOutputCSV(krona_outfile) as out_fp:
-            tax_utils.write_krona(args.rank, krona_results, out_fp)
+    # handle each gather csv separately
+    for n, g_csv in enumerate(gather_csvs):
+        gather_results, idents_missed, total_missed, header = tax_utils.check_and_load_gather_csvs(g_csv, tax_assign, force=args.force,
+                                                                                 fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
 
+        if not gather_results:
+            continue
+
+        out_base = os.path.basename(g_csv.rsplit('.csv')[0])
+        out_path = os.path.join(args.output_dir, out_base)
+        this_outfile = make_outfile(out_path, ".with-lineages.csv")
+
+        with FileOutputCSV(this_outfile) as out_fp:
+            header.append("lineage")
+            w = csv.DictWriter(out_fp, header, delimiter=',')
+            w.writeheader()
+
+            # add taxonomy info and then print directly
+            for row in gather_results:
+                match_ident = row['name']
+                lineage = tax_utils.find_match_lineage(match_ident, tax_assign, skip_idents=idents_missed,
+                                             split_identifiers=not args.keep_full_identifiers,
+                                             keep_identifier_versions=args.keep_identifier_versions)
+                row['lineage'] = display_lineage(lineage)
+                w.writerow(row)
 
 
 def main(arglist=None):
