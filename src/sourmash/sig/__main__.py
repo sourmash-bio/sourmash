@@ -255,16 +255,15 @@ def manifest(args):
     """
     build a signature manifest
     """
+    from sourmash.index import CollectionManifest
+
     set_quiet(args.quiet)
 
     # CTB: might want to switch to sourmash_args.FileOutputCSV here?
     csv_fp = open(args.output, 'w', newline='')
-    w = csv.DictWriter(csv_fp,
-                       ['internal_location',
-                        'md5', 'md5short', 'ksize', 'moltype', 'num',
-                        'scaled', 'n_hashes', 'seed', 'with_abundance',
-                        'name', 'filename', 'license'],
-                       extrasaction='ignore')
+
+    keys = CollectionManifest.required_keys
+    w = csv.DictWriter(csv_fp, fieldnames=keys)
     w.writeheader()
 
     try:
@@ -278,26 +277,10 @@ def manifest(args):
 
     n = 0
     for n, (sig, parent, loc) in enumerate(loader.signatures_with_internal()):
-        internal_location = loc
-
         # extract info, write as appropriate.
-        mh = sig.minhash
-        ksize = mh.ksize
-        moltype = mh.moltype
-        scaled = mh.scaled
-        num = mh.num
-        seed = mh.seed
-        n_hashes = len(mh)
-        with_abundance = 0
-        if mh.track_abundance:
-            with_abundance = 1
-        md5 = sig.md5sum()
-        md5short = md5[:8]
-        name = sig.name
-        filename = sig.filename
-        license = sig.license
-
-        w.writerow(locals())
+        row = CollectionManifest.make_manifest_row(sig, loc,
+                                                   include_signature=False)
+        w.writerow(row)
 
     notify(f'built manifest for {n} signatures total.')
 

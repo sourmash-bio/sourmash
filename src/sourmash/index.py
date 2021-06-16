@@ -951,6 +951,11 @@ class CollectionManifest:
     * 'locations()' returns all distinct locations for e.g. lazy loading
     * supports container protocol for signatures, e.g. 'if ss in manifest: ...'
     """
+    # each manifest row must have the following, although they may be empty.
+    required_keys = ('internal_location',
+                     'md5', 'md5short', 'ksize', 'moltype', 'num',
+                     'scaled', 'n_hashes', 'with_abundance',
+                     'name', 'filename')
 
     def __init__(self, rows):
         "Initialize from an iterable of metadata dictionaries."
@@ -973,12 +978,11 @@ class CollectionManifest:
         "load a manifest from a CSV file."
         manifest_list = []
         r = csv.DictReader(fp)
-        for k in ('internal_location', 'md5', 'md5short', 'ksize',
-                  'moltype', 'num', 'scaled', 'n_hashes', 'seed',
-                  'with_abundance', 'name'):
-            if not r.fieldnames:
-                return None
+        if not r.fieldnames:
+            raise ValueError("missing column headers in manifest")
+            return None
 
+        for k in cls.required_keys:
             if k not in r.fieldnames:
                 raise ValueError(f"missing column '{k}' in manifest.")
 
@@ -990,32 +994,40 @@ class CollectionManifest:
         return cls(manifest_list)
 
     @classmethod
-    def create_manifest(cls, locations_iter):
+    def make_manifest_row(cls, ss, location, *, include_signature=True):
+        row = {}
+        row['md5'] = ss.md5sum()
+        row['md5short'] = row['md5'][:8]
+        row['ksize'] = ss.minhash.ksize
+        row['moltype'] = ss.minhash.moltype
+        row['num'] = ss.minhash.num
+        row['scaled'] = ss.minhash.scaled
+        row['n_hashes'] = len(ss.minhash)
+        row['with_abundance'] = 1 if ss.minhash.track_abundance else 0
+        row['name'] = ss.name
+        row['filename'] = ss.filename
+        # @CTB: do we want filename in manifests?
+        row['internal_location'] = location
+        # @CTB: change key, maybe just make it 'location'
+
+        assert set(row.keys()) == set(cls.required_keys)
+
+        if include_signature:
+            # CTB: track signature when creating manifest w/this info.
+            row['signature'] = ss
+        return row
+
+    @classmethod
+    def create_manifest(cls, locations_iter, *, include_signature=True):
         """Create a manifest from an iterator that yields (ss, location)
 
-        Stores signatures in manifest rows.
+        Stores signatures in manifest rows by default.
 
         Note: do NOT catch exceptions here, so this passes through load excs.
         """
         manifest_list = []
         for ss, location in locations_iter:
-            row = {}
-            row['md5'] = ss.md5sum()
-            row['md5short'] = row['md5'][:8]
-            row['ksize'] = ss.minhash.ksize
-            row['moltype'] = ss.minhash.moltype
-            row['num'] = ss.minhash.num
-            row['scaled'] = ss.minhash.scaled
-            row['n_hashes'] = len(ss.minhash)
-            row['with_abundance'] = 1 if ss.minhash.track_abundance else 0
-            row['name'] = ss.name
-            # @CTB: do we want filename in manifests?
-            row['internal_location'] = location
-            # @CTB: change key, maybe just make it 'location'
-
-            # CTB: track signature when creating manifest w/this info.
-            row['signature'] = ss
-
+            row = cls.make_manifest_row(ss, location, include_signature=True)
             manifest_list.append(row)
 
         return cls(manifest_list)
