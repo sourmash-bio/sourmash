@@ -71,15 +71,9 @@ class SignaturePicklist:
     def _get_sig_attribute(self, ss):
         "for a given SourmashSignature, return attribute for this picklist."
         coltype = self.coltype
-        if coltype == 'md5':
+        if coltype in ('md5', 'md5prefix8', 'md5short'):
             q = ss.md5sum()
-        elif coltype == 'md5prefix8':
-            q = ss.md5sum()
-        elif coltype == 'name':
-            q = ss.name
-        elif coltype == 'ident':
-            q = ss.name
-        elif coltype == 'identprefix':
+        elif coltype in ('name', 'ident', 'identprefix'):
             q = ss.name
         else:
             assert 0
