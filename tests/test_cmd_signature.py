@@ -1351,6 +1351,67 @@ def test_sig_extract_8_picklist_md5_short_alias(runtmp):
     assert actual_extract_sig == test_extract_sig
 
 
+def test_sig_extract_8_picklist_md5_short_alias_with_md5_selector_nomatch(runtmp):
+    # extract 47 from 47, using a picklist w/full md5 and also md5 selector
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='09a08691ce52952152f0e866a59f6261',
+               md5short='09a08691ce5295215',
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:md5short:md5short"
+    with pytest.raises(ValueError):
+        runtmp.sourmash('sig', 'extract', sig47, sig63,
+                        '--picklist', picklist_arg,
+                        '--md5', 'XXX') # no match to md5 selector here
+
+    err = runtmp.last_result.err
+    assert "no matching signatures to save!" in err
+
+
+def test_sig_extract_8_picklist_md5_short_alias_with_md5_selector(runtmp):
+    # extract 47 from 47, using a picklist w/full md5 and also md5 selector
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='09a08691ce52952152f0e866a59f6261',
+               md5short='09a08691ce5295215',
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:md5short:md5short"
+    runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist', picklist_arg,
+                    '--md5', '09a08691ce5295215')
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig47)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    assert actual_extract_sig == test_extract_sig
+
+
 def test_sig_extract_8_picklist_md5_nomatch(runtmp):
     # use an empty picklist => no match
     sig47 = utils.get_test_data('47.fa.sig')
