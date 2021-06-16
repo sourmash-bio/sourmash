@@ -29,6 +29,10 @@ def subparser(subparsers):
         '--picklist', default=None,
         help="select signatures based on a picklist, i.e. 'file.csv:colname:coltype'"
     )
+    subparser.add_argument(
+        '--picklist-require-all', default=False, action='store_true',
+        help="require that all picklist values be found or else fail"
+    )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
 

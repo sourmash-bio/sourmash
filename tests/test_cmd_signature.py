@@ -1149,6 +1149,53 @@ def test_sig_extract_8_picklist_md5(runtmp):
     assert "for given picklist, found 1 matches to 1 distinct values" in err
 
 
+def test_sig_extract_8_picklist_md5_require_all(runtmp):
+    # extract 47 from 47, using a picklist w/full md5;
+    # confirm that check missing picklist val errors out on --picklist-require
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='09a08691ce52952152f0e866a59f6261',
+               md5short='09a08691ce5295215',
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+        w.writerow(dict(exactName='', md5full='BAD MD5',
+                        md5short='', fullIdent='', nodotIdent=''))
+
+    picklist_arg = f"{picklist_csv}:md5full:md5"
+    with pytest.raises(ValueError):
+        runtmp.sourmash('sig', 'extract', sig47, sig63,
+                        '--picklist', picklist_arg,
+                        '--picklist-require-all')
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig47)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    assert actual_extract_sig == test_extract_sig
+
+    err = runtmp.last_result.err
+
+    print(err)
+    assert "loaded 2 distinct values into picklist." in err
+    assert "loaded 2 total that matched ksize & molecule type" in err
+    assert "extracted 1 signatures from 2 file(s)" in err
+    assert "for given picklist, found 1 matches to 2 distinct values" in err
+    assert 'WARNING: 1 missing picklist values.' in err
+    assert 'ERROR: failing because --picklist-require-all was set' in err
+
+
 def test_sig_extract_8_picklist_name(runtmp):
     # extract 47 from 47, using a picklist w/full md5
     sig47 = utils.get_test_data('47.fa.sig')

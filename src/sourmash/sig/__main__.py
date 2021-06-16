@@ -607,6 +607,9 @@ def extract(args):
         n_missing = len(picklist.pickset - picklist.found)
         if n_missing:
             notify(f"WARNING: {n_missing} missing picklist values.")
+            if args.picklist_require_all:
+                error("ERROR: failing because --picklist-require-all was set")
+                sys.exit(-1)
 
 
 def filter(args):
