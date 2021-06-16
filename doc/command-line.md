@@ -818,6 +818,40 @@ sourmash signature extract tests/test-data/*.fa.sig --name NC_009665
 will extract the same signature, which has an accession number of
 `NC_009665.1`.
 
+#### Using picklists with `sourmash sig extract`
+
+As of sourmash 4.2.0, `extract` also supports picklists, a feature by
+which you can select signatures based on values in a CSV file.
+
+For example,
+```
+sourmash sig extract --picklist list.csv:md5:md5sum <signatures>
+```
+will extract only the signatures that have md5sums matching the
+column `md5sum` in the CSV file `list.csv`.
+
+The `--picklist` argument string must be of the format
+`pickfile:colname:coltype`, where `pickfile` is the path to a CSV
+file, `colname` is the name of the column to select from the CSV
+file (based on the headers in the first line of the CSV file),
+and `coltype` is the type of match.
+
+The following `coltype`s are currently supported by `sourmash sig extract`:
+
+* `name` - exact match to signature's name
+* `md5` - exact match to signature's md5sum
+* `md5prefix8` - match to 8-character prefix of signature's md5sum
+* `md5short` - same as `md5prefix8`
+* `ident` - exact match to signature's identifier
+* `identprefix` - match to signature's identifier, before '.'
+
+Identifiers are constructed by using the first space delimited word in
+the signature name.
+
+One way to build a picklist is to use `sourmash sig describe --csv
+out.csv <signatures>` to construct an initial CSV file that you can
+then edit further.
+
 ### `sourmash signature flatten` - remove abundance information from signatures
 
 Flatten the specified signature(s), removing abundances and setting
