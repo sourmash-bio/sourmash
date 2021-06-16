@@ -6,6 +6,7 @@ The top level CLI is defined in ../__init__.py. This module defines the CLI for
 
 from . import summarize
 from . import classify
+from . import label
 from ..utils import command_list
 from argparse import SUPPRESS, RawDescriptionHelpFormatter
 import os

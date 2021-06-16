@@ -6,7 +6,11 @@ from sourmash.logging import notify, print_results, error
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('summarize')
-    subparser.add_argument('gather_results')
+    subparser.add_argument('gather_results', nargs='*')
+    subparser.add_argument(
+        '--from-file',  metavar='FILE', default = '',
+        help='input many gather results as a text file, with one gather csv per line'
+    )
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
@@ -16,7 +20,7 @@ def subparser(subparsers):
         help='base filepath for output file(s) (default stdout)'
     )
     subparser.add_argument(
-        '-t', '--taxonomy-csv',  metavar='FILE',
+        '-t', '--taxonomy-csv',  metavar='FILE', required=True,
         help='database lineages csv'
     )
     subparser.add_argument(
@@ -32,11 +36,11 @@ def subparser(subparsers):
         help='fail quickly if taxonomy is not available for an identifier',
     )
     subparser.add_argument(
-        '--output-format', default=['summary'], nargs='+', choices=["summary", "krona"],
+        '--output-format', default=['summary'], nargs='+', choices=["summary", "krona", "lineage_summary"],
         help='choose output format(s)',
     )
     subparser.add_argument(
-        '-r', '--rank', choices=['strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'],
+        '-r', '--rank', choices=['species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'], # strain?
         help='For non-default output formats: Summarize genome taxonomy at this rank and above'
     )
     subparser.add_argument(
@@ -49,4 +53,7 @@ def main(args):
     if len(args.output_format) > 1:
         if args.output_base == "-":
             raise TypeError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")
+    if not args.rank:
+        if any(x in ["krona", "lineage_summary"] for x in args.output_format):
+            raise ValueError(f"Rank (--rank) is required for krona and lineage_summary output formats.")
     return sourmash.tax.__main__.summarize(args)

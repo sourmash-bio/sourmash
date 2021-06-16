@@ -3,44 +3,22 @@
 import argparse
 import sourmash
 from sourmash.logging import notify, print_results, error
-
-#https://stackoverflow.com/questions/55324449/how-to-specify-a-minimum-or-maximum-float-value-with-argparse#55410582
-# should this go in a different file?
-def range_limited_float_type(arg):
-    """ Type function for argparse - a float within some predefined bounds """
-    min_val = 0
-    max_val = 1
-    try:
-        f = float(arg)
-    except ValueError:
-        raise argparse.ArgumentTypeError("Must be a floating point number")
-    if f < min_val or f > max_val:
-        raise argparse.ArgumentTypeError(f"Argument must be >{str(min_val)} and <{str(max_val)}")
-    return f
-
+from sourmash.cli.utils import add_threshold_arg
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('classify')
+    subparser.add_argument('gather_results', nargs='*')
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
     )
     subparser.add_argument(
-        '-t', '--taxonomy-csv',  metavar='FILE',
+        '-t', '--taxonomy-csv',  metavar='FILE', required=True,
         help='database lineages csv'
     )
     subparser.add_argument(
-        '-g', '--gather-results',  metavar='FILE',
-        help='database lineages csv'
-    )
-    subparser.add_argument(
-        '-n', '--query-name', default="",
-        help='name of query to be classified'
-    )
-    subparser.add_argument(
-        '--from-csv',  metavar='FILE',
-        # to do: if query_name in gather results, can just have textfile of gather_results here
-        help='input many gather results as a csv with "name,resultsfile" on each line'
+        '--from-file',  metavar='FILE',
+        help='input many gather results as a text file, with one gather csv per line'
     )
     subparser.add_argument(
         '-o', '--output-base', default='-',
@@ -49,10 +27,6 @@ def subparser(subparsers):
     subparser.add_argument(
         '-r', '--rank', choices=['species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'], #strain
         help='Summarize genome taxonomy at this rank and above'
-    )
-    subparser.add_argument(
-        '--containment-threshold', type=range_limited_float_type, default=0.1,
-        help='minimum containment for classification'
     )
     subparser.add_argument(
         '--keep-full-identifiers', action='store_true',
@@ -74,6 +48,7 @@ def subparser(subparsers):
         '-f', '--force', action = 'store_true',
         help='continue past survivable errors in loading taxonomy database or gather results',
     )
+    add_threshold_arg(subparser, 0.1)
 
 
 def main(args):
@@ -81,4 +56,7 @@ def main(args):
     if len(args.output_format) > 1:
         if args.output_base == "-":
             raise TypeError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")
+    if not args.rank:
+        if any(x in ["krona", "lineage_summary"] for x in args.output_format):
+            raise ValueError(f"Rank (--rank) is required for krona output format.")
     return sourmash.tax.__main__.classify(args)

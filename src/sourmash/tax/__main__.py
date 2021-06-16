@@ -29,7 +29,8 @@ sourmash tax <command> [<args>]
 ** Commands can be:
 
 summarize <gather_results> [<gather_results> ... ]        - summarize taxonomic information for metagenome gather results
-classify <gather_results> [<gather_results> ... ]   - taxonomic classification of genomes from gather results
+classify <gather_results> [<gather_results> ... ]         - taxonomic classification of genomes from gather results
+label <gather_results> [<gather_results> ... ]            - add taxonomic information to gather results csv(s)
 
 ** Use '-h' to get subcommand-specific help, e.g.
 
@@ -42,50 +43,57 @@ def make_outfile(base, ext):
         return base
     return base + ext
 
-##### taxonomy command line functions
 
+##### taxonomy command line functions
 def summarize(args):
     """
     summarize taxonomic information for metagenome gather results
     """
     set_quiet(args.quiet)
 
-    # load gather results and taxonomy assignments
-    gather_results = tax_utils.load_gather_results(args.gather_results)
-    if not gather_results:
-        notify(f'No gather results loaded from {args.gather_results}. Exiting.')
-        sys.exit(-1)
-
+    # first, load taxonomic_assignments
     tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, use_headers=True,
                                               split_identifiers=not args.keep_full_identifiers,
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
+
     if not tax_assign:
         notify(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
         sys.exit(-1)
 
-    # check for match identites not found in lineage spreadsheets
-    n_missed, ident_missed = tax_utils.find_missing_identities(gather_results, tax_assign)
-    if n_missed:
-        notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
-        if args.fail_on_missing_taxonomy:
-            notify(f'Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
-            sys.exit(-1)
+    # next, collect and load gather results
+    gather_csvs = tax_utils.collect_gather_csvs(args.gather_results, from_file= args.from_file)
+    gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
+                                                                                       fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
+
+    if not gather_results:
+        notify(f'No gather results loaded. Exiting.')
+        sys.exit(-1)
 
     # actually summarize at rank
     summarized_gather = {}
     for rank in sourmash.lca.taxlist(include_strain=False):
-        summarized_gather[rank] = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=ident_missed,
+        summarized_gather[rank] = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
                                                                 split_identifiers=not args.keep_full_identifiers,
                                                                 keep_identifier_versions = args.keep_identifier_versions)
 
     # write summarized output csv
     if "summary" in args.output_format:
         summary_outfile = make_outfile(args.output_base, ".summarized.csv")
-        with FileOutputCSV(summary_outfile) as csv_fp:
-            tax_utils.write_summary(summarized_gather, csv_fp)
+        with FileOutputCSV(summary_outfile) as out_fp:
+            tax_utils.write_summary(summarized_gather, out_fp)
 
-    # write summarized --> krona output csv
+    # if lineage summary table
+    if "lineage_summary" in args.output_format:
+        lineage_outfile = make_outfile(args.output_base, ".lineage_summary.tsv")
+
+        ## aggregate by lineage, by query
+        lineageD, query_names, num_queries = tax_utils.aggregate_by_lineage_at_rank(summarized_gather[args.rank], by_query=True)
+
+        with FileOutputCSV(lineage_outfile) as out_fp:
+            tax_utils.write_lineage_sample_frac(query_names, lineageD, out_fp, format_lineage=True, sep='\t')
+
+    # write summarized --> krona output tsv
     if "krona" in args.output_format:
         krona_resultslist = tax_utils.format_for_krona(args.rank, summarized_gather)
 
@@ -98,7 +106,6 @@ def classify(args):
     """
     taxonomic classification of genomes from gather results
     """
-    ## currently reports a single rank. do we want to optionally report at all ranks? (no, bc summarize does that?)
     set_quiet(args.quiet)
 
     # load taxonomy assignments
@@ -111,103 +118,129 @@ def classify(args):
         notify(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
         sys.exit(-1)
 
-    # load gather results for each genome and summarize with --best-only to classify
-    gather_info, cli_gather_res, csv_gather_res = [],[],[]
-    query_name = None
-    if args.gather_results:
-        query_name = args.query_name
-        cli_gather_res = [(query_name, args.gather_results)]
-    if args.from_csv:
-        csv_gather_res, seen_idents = tax_utils.load_gather_files_from_csv(args.from_csv)
-        if query_name and query_name in seen_idents:
-            notify("query name is also found in --from-csv filelist!")
-            if args.force:
-                fixed_csv_res = []
-                #remove query_name result line from csv_gather_res -- is this a good desired behavior?
-                notify(f"--force is set. Removing {query_name} entry from the --from-csv gather results in favor of cli input.")
-                for (ident, gather_res) in csv_gather_res:
-                    if ident != query_name:
-                        fixed_csv_res.append((ident, gather_res))
-                csv_gather_res = fixed_csv_res
-            else:
-                notify('Exiting.')
-                sys.exit(-1)
-
-    # full list of (ident,gather_results)
-    gather_info = cli_gather_res + csv_gather_res
+    # get gather_csvs from args
+    gather_csvs = tax_utils.collect_gather_csvs(args.gather_results, from_file=args.from_file)
 
     classifications = defaultdict(list)
+    seen_queries=set()
     krona_results = []
     num_empty=0
-    for n, (name, g_results) in enumerate(gather_info):
 
-        gather_results = tax_utils.load_gather_results(g_results)
+    # handle each gather result separately
+    for n, g_csv in enumerate(gather_csvs):
+        gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(g_csv, tax_assign, force=args.force,
+                                                                                 fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
+
         if not gather_results:
-            notify(f'No gather results loaded from {args.gather_results}.')
-            num_empty+=1
-            if args.force:
-                notify('--force is set. Attempting to continue to next set of gather results.')
-                continue
-            else:
-                notify('Exiting.')
-                sys.exit(-1)
-
-        # check for match identites not found in lineage spreadsheets
-        n_missed, ident_missed = tax_utils.find_missing_identities(gather_results, tax_assign)
-        if n_missed:
-            notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
-            if args.fail_on_missing_taxonomy:
-                notify(f'Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
-                sys.exit(-1)
+            continue
 
         # if --rank is specified, classify to that rank
-        # to do, what to do if don't have gather results at desired rank (e.g. strain)?
         if args.rank:
-            # todo: check we have gather results at this rank
-            #if not tax_utils.check_taxonomy_exists(tax_assign, args.rank):
-            #    notify(f"No taxonomic information at rank {args.rank}: cannot classify at this rank")
-            best_at_rank = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=ident_missed,
+            best_at_rank = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
                                                          split_identifiers=not args.keep_full_identifiers,
                                                          keep_identifier_versions = args.keep_identifier_versions,
-                                                         best_only=True)[0]
-            (lineage,containment) = best_at_rank
-            if containment <= args.containment_threshold:
-                notify(f"WARNING: classifying at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
-            classifications[args.rank].append((name, best_at_rank))
-            if "krona" in args.output_format:
-                lin_list = display_lineage(lineage).split(';')
-                krona_results.append((containment, *lin_list))
+                                                         best_only=True)
+
+           # this now returns list of SummarizedGather tuples
+            for (query_name, rank, fraction, lineage) in best_at_rank:
+                if query_name in seen_queries:
+                    notify(f"WARNING: duplicate query {query_name}. Skipping...")
+                    continue
+                if fraction <= args.containment_threshold:
+                    notify(f"WARNING: classifying at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
+                classifications[args.rank].append((query_name, rank, fraction, lineage))
+                seen_queries.add(query_name)
+                if "krona" in args.output_format:
+                    lin_list = display_lineage(lineage).split(';')
+                    krona_results.append((containment, *lin_list))
         else:
-            # classify to the match that passes the containment threshold. To do - do we want to report anything if nothing >= containment threshold?
+            # classify to the match that passes the containment threshold.
+            # To do - do we want to store anything for this match if nothing >= containment threshold?
             for rank in tax_utils.ascending_taxlist(include_strain=False):
-                best_at_rank = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=ident_missed,
+                # gets best_at_rank for all queries in this gather_csv
+                best_at_rank = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
                                                              split_identifiers=not args.keep_full_identifiers,
                                                              keep_identifier_versions = args.keep_identifier_versions,
-                                                             best_only=True)[0]
-                (lineage,containment) = best_at_rank
-                if containment >= args.containment_threshold:
-                    classifications[rank].append((name, best_at_rank))
-                    if "krona" in args.output_format:
-                        lin_list = display_lineage(lineage).split(';')
-                        krona_results.append((containment, *lin_list))
-                    break
+                                                             best_only=True)
 
-    notify(f'loaded {n+1-num_empty} gather files for classification.')
+                for (query_name, rank, fraction, lineage) in best_at_rank:
+                    if query_name in seen_queries:
+                        notify(f"WARNING: duplicate query {query_name}. Skipping...")
+                        continue
+                    if fraction >= args.containment_threshold:
+                        classifications[args.rank].append((query_name, rank, fraction, lineage))
+                        seen_queries.add(query_name)
+                        if "krona" in args.output_format:
+                            lin_list = display_lineage(lineage).split(';')
+                            krona_results.append((query_name, containment, *lin_list))
+                        break
 
-    if not any([classifications,krona_results]):
+    notify(f'loaded {n} gather files for classification.')
+
+    if not any([classifications, krona_results]):
         notify(f'No results for classification. Exiting.')
         sys.exit(-1)
 
-    # write output csv
+    # write outputs
     if "summary" in args.output_format:
         summary_outfile = make_outfile(args.output_base, ".classifications.csv")
-        with FileOutputCSV(summary_outfile) as csv_fp:
-            tax_utils.write_classifications(classifications, csv_fp)
+        with FileOutputCSV(summary_outfile) as out_fp:
+            tax_utils.write_summary(classifications, out_fp)
 
     if "krona" in args.output_format:
         krona_outfile = make_outfile(args.output_base, ".krona.tsv")
-        with FileOutputCSV(krona_outfile) as csv_fp:
-            tax_utils.write_krona(args.rank, krona_results, csv_fp)
+        with FileOutputCSV(krona_outfile) as out_fp:
+            tax_utils.write_krona(args.rank, krona_results, out_fp)
+
+
+def label(args):
+    """
+    Integrate lineage information into gather results.
+
+    Produces gather csv with lineage information as the final column.
+    """
+
+    set_quiet(args.quiet)
+
+    # load taxonomy assignments
+    tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, use_headers=True,
+                                              split_identifiers=not args.keep_full_identifiers,
+                                              keep_identifier_versions = args.keep_identifier_versions,
+                                              force=args.force)
+
+    if not tax_assign:
+        notify(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
+        sys.exit(-1)
+
+    # get gather_csvs from args
+    gather_csvs = tax_utils.collect_gather_csvs(args.gather_results, from_file=args.from_file)
+
+    # handle each gather csv separately
+    for n, g_csv in enumerate(gather_csvs):
+        gather_results, idents_missed, total_missed, header = tax_utils.check_and_load_gather_csvs(g_csv, tax_assign, force=args.force,
+                                                                                 fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
+
+        if not gather_results:
+            continue
+
+        out_base = os.path.basename(g_csv.rsplit('.csv')[0])
+        out_path = os.path.join(args.output_dir, out_base)
+        this_outfile = make_outfile(out_path, ".with-lineages.csv")
+
+        with FileOutputCSV(this_outfile) as out_fp:
+            header.append("lineage")
+            w = csv.DictWriter(out_fp, header, delimiter=',')
+            w.writeheader()
+
+            # add taxonomy info and then print directly
+            for row in gather_results:
+                match_ident = row['name']
+                lineage = tax_utils.find_match_lineage(match_ident, tax_assign, skip_idents=idents_missed,
+                                             split_identifiers=not args.keep_full_identifiers,
+                                             keep_identifier_versions=args.keep_identifier_versions)
+                row['lineage'] = display_lineage(lineage)
+                w.writerow(row)
+
 
 def main(arglist=None):
     args = sourmash.cli.get_parser().parse_args(arglist)
