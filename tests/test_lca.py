@@ -2494,3 +2494,31 @@ def test_lca_db_dayhoff_command_search(c):
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+def test_lca_index_with_picklist(runtmp):
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    outdb = runtmp.output('gcf.lca.json')
+    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
+
+    # create an empty spreadsheet
+    with open(runtmp.output('empty.csv'), 'wt') as fp:
+        fp.write('accession,superkingdom,phylum,class,order,family,genus,species,strain')
+
+    runtmp.sourmash('lca', 'index', 'empty.csv', outdb, *gcf_sigs,
+                    '-k', '21', '--picklist', f"{picklist}:md5:md5")
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(out)
+    print(err)
+
+    assert "for given picklist, found 3 matches to 9 distinct values" in err
+    assert "WARNING: 6 missing picklist values."
+    assert "WARNING: no lineage provided for 3 signatures" in err
+
+    siglist = list(sourmash.load_file_as_signatures(outdb))
+    assert len(siglist) == 3
+    for ss in siglist:
+        assert 'Thermotoga' in ss.name
