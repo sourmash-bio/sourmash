@@ -54,7 +54,7 @@ def summarize(args):
     tax_assign = {}
     for tax_csv in args.taxonomy_csv:
 
-        this_tax_assign, _ = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
+        this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
         # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
@@ -115,7 +115,7 @@ def classify(args):
     tax_assign = {}
     for tax_csv in args.taxonomy_csv:
 
-        this_tax_assign, _ = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
+        this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
         # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
@@ -224,7 +224,7 @@ def label(args):
     tax_assign = {}
     for tax_csv in args.taxonomy_csv:
 
-        this_tax_assign, _ = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
+        this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
 

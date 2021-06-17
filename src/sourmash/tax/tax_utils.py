@@ -350,9 +350,6 @@ def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, format_line
         w.writerow(row)
 
 
-
-
-
 def load_taxonomy_csv(filename, *, delimiter=',', force=False,
                               split_identifiers=False,
                               keep_identifier_versions=False):
@@ -384,7 +381,7 @@ def load_taxonomy_csv(filename, *, delimiter=',', force=False,
         include_strain=True
 
    # check that all ranks are in header
-    ranks = list(lca_utils.taxlist(include_strain=False))
+    ranks = list(lca_utils.taxlist(include_strain=include_strain))
     if not set(ranks).issubset(header):
         # is this what we want?
         notify('not all taxonomy ranks present! Exiting.')
@@ -449,4 +446,4 @@ def load_taxonomy_csv(filename, *, delimiter=',', force=False,
             error("** If this is intentional, re-run the command with -f.")
             sys.exit(-1)
 
-    return assignments, num_rows
+    return assignments, num_rows, ranks
