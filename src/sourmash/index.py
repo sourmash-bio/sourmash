@@ -1014,14 +1014,12 @@ class CollectionManifest:
         row['with_abundance'] = 1 if ss.minhash.track_abundance else 0
         row['name'] = ss.name
         row['filename'] = ss.filename
-        # @CTB: do we want filename in manifests?
         row['internal_location'] = location
-        # @CTB: change key, maybe just make it 'location'
 
         assert set(row.keys()) == set(cls.required_keys)
 
+        # if requested, include the signature in the manifest.
         if include_signature:
-            # CTB: track signature when creating manifest w/this info.
             row['signature'] = ss
         return row
 
@@ -1054,18 +1052,19 @@ class CollectionManifest:
             matching_rows = ( row for row in matching_rows
                               if row['moltype'] == moltype )
         if scaled or containment:
-            # CTB: check scaled AND containment per select_signature
-            # CTB: check num, per select_signature?
+            if containment and not scaled:
+                raise ValueError("'containment' requires 'scaled' in Index.select'")
+
             matching_rows = ( row for row in matching_rows
-                              if int(row['scaled']) )
+                              if int(row['scaled']) and not int(row['num']) )
         if num:
-            # CTB: check scaled, per select_signature?
             matching_rows = ( row for row in matching_rows
-                              if int(row['num']) )
+                              if int(row['num']) and not int(row['scaled']) )
 
         if picklist:
             matching_rows = ( row for row in matching_rows
                               if picklist.matches_siginfo(row) )
+
         # return only the internal filenames!
         for row in matching_rows:
             yield row
