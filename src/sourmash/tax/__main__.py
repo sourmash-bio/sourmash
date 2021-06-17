@@ -164,7 +164,7 @@ def classify(args):
                 matched_queries.add(query_name)
                 if "krona" in args.output_format:
                     lin_list = display_lineage(lineage).split(';')
-                    krona_results.append((containment, *lin_list))
+                    krona_results.append(fraction, *lin_list))
         else:
             # classify to the match that passes the containment threshold.
             # To do - do we want to store anything for this match if nothing >= containment threshold?
@@ -186,7 +186,7 @@ def classify(args):
                         matched_queries.add(query_name)
                         if "krona" in args.output_format:
                             lin_list = display_lineage(lineage).split(';')
-                            krona_results.append((query_name, containment, *lin_list))
+                            krona_results.append((query_name, fraction, *lin_list))
                         break
                     if rank == "superkingdom" and status == "nomatch":
                         status="below_threshold"
