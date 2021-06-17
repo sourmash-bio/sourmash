@@ -590,6 +590,7 @@ def extract(args):
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
+
 def filter(args):
     """
     filter hashes by abundance in all of the signatures
