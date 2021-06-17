@@ -270,7 +270,31 @@ def test_summarize_missing_taxonomy_fail(runtmp):
 
 
 # NTP: WORKING HERE
+def test_summarize_multiple_taxonomy_files_missing(runtmp):
+    c = runtmp
+    # write temp taxonomy with duplicates
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+
+    # gather against mult databases
+    g_csv = utils.get_test_data('tax/test1_x_gtdbrs202_genbank_euks.gather.csv')
+
+    c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', taxonomy_csv, '--force')
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert "of 6, missed 2 lineage assignments." in c.last_result.err
+    assert "query_name,rank,fraction,lineage" in c.last_result.out
+    assert "multtest,superkingdom,0.131,d__Bacteria" in c.last_result.out
+    assert "multtest,phylum,0.073,d__Bacteria;p__Bacteroidota" in c.last_result.out
+    assert "multtest,phylum,0.058,d__Bacteria;p__Proteobacteria" in c.last_result.out
+    assert "multtest,class,0.073,d__Bacteria;p__Bacteroidota;c__Bacteroidia" in c.last_result.out
+
+
 def test_summarize_multiple_taxonomy_files(runtmp):
+    # NOTE THAT HERE, LATER TAX OVERRIDES EARLIER IF IDENTS PRESENT IN BOTH
+    # maybe test and handle this?
+
     c = runtmp
     # write temp taxonomy with duplicates
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -278,13 +302,20 @@ def test_summarize_multiple_taxonomy_files(runtmp):
     bacteria_refseq  = utils.get_test_data('tax/bacteria_refseq_lineage.csv')
 
     # gather against mult databases
-    g_csv = utils.get_test_data('tax/multtest.gather.csv')
+    g_csv = utils.get_test_data('tax/test1_x_gtdbrs202_genbank_euks.gather.csv')
 
     c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', taxonomy_csv, protozoa_genbank, bacteria_refseq)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
+    assert "of 6, missed 0 lineage assignments." in c.last_result.err
+    assert "query_name,rank,fraction,lineage" in c.last_result.out
+    assert "multtest,superkingdom,0.245,Eukaryota" in c.last_result.out
+    assert "multtest,superkingdom,0.131,Bacteria" in c.last_result.out
+    assert "multtest,phylum,0.245,Eukaryota;Apicomplexa" in c.last_result.out
+    assert "multtest,phylum,0.073,Bacteria;Bacteroidetes" in c.last_result.out
+    #assert "multtest,phylum,0.073,d__Bacteria;p__Bacteroidota" in c.last_result.out # this is gtdb tax, line above is genbank...
 
 
 def test_classify_rank_stdout_0(runtmp):
@@ -295,15 +326,15 @@ def test_classify_rank_stdout_0(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
     c.run_sourmash('tax', 'classify', g_csv, '--taxonomy-csv', tax,
-                   '--rank', 'species')
+                   '--rank', 'species', '--containment-threshold', '0')
 
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert "query_name,rank,fraction,lineage" in c.last_result.out
-    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "query_name,status,rank,fraction,lineage" in c.last_result.out
+    assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
 def test_classify_rank_csv_0(runtmp):
@@ -318,7 +349,7 @@ def test_classify_rank_csv_0(runtmp):
     print("csvout: ", csvout)
 
     c.run_sourmash('tax', 'classify', g_csv, '--taxonomy-csv', tax,
-                   '--rank', 'species', '-o', csv_base)
+                   '--rank', 'species', '-o', csv_base, '--containment-threshold', '0')
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -326,8 +357,8 @@ def test_classify_rank_csv_0(runtmp):
 
     assert c.last_result.status == 0
     cl_results = [x.rstrip() for x in open(csvout)]
-    assert "query_name,rank,fraction,lineage" in cl_results[0]
-    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in cl_results[1]
+    assert "query_name,status,rank,fraction,lineage" in cl_results[0]
+    assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in cl_results[1]
 
 
 def test_classify_gather_from_file_rank(runtmp):
@@ -339,15 +370,15 @@ def test_classify_gather_from_file_rank(runtmp):
         f_csv.write(f"{g_res}\n")
 
     c.run_sourmash('tax', 'classify', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
-                   '--rank', 'species')
+                   '--rank', 'species', '--containment-threshold', '0')
 
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert "query_name,rank,fraction,lineage" in c.last_result.out
-    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "query_name,status,rank,fraction,lineage" in c.last_result.out
+    assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
 def test_classify_gather_from_file_two_files(runtmp):
@@ -369,16 +400,16 @@ def test_classify_gather_from_file_two_files(runtmp):
         f_csv.write(f"{g_res2}\n")
 
     c.run_sourmash('tax', 'classify', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
-                   '--rank', 'species')
+                   '--rank', 'species', '--containment-threshold', '0')
 
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert "query_name,rank,fraction,lineage" in c.last_result.out
-    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
-    assert "test2,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "query_name,status,rank,fraction,lineage" in c.last_result.out
+    assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "test2,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
 def test_classify_gather_from_file_duplicate(runtmp):
@@ -391,15 +422,15 @@ def test_classify_gather_from_file_duplicate(runtmp):
         f_csv.write(f"{g_res}\n")
 
     c.run_sourmash('tax', 'classify', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
-                   '--rank', 'species')
+                   '--rank', 'species', '--containment-threshold', '0')
 
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert "query_name,rank,fraction,lineage" in c.last_result.out
-    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "query_name,status,rank,fraction,lineage" in c.last_result.out
+    assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
 def test_classify_gather_cli_and_from_file(runtmp):
@@ -421,16 +452,16 @@ def test_classify_gather_cli_and_from_file(runtmp):
         f_csv.write(f"{g_res2}\n")
 
     c.run_sourmash('tax', 'classify', g_res, '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
-                   '--rank', 'species')
+                   '--rank', 'species', '--containment-threshold', '0')
 
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert "query_name,rank,fraction,lineage" in c.last_result.out
-    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
-    assert "test2,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "query_name,status,rank,fraction,lineage" in c.last_result.out
+    assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "test2,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
 def test_classify_gather_cli_and_from_file_duplicate(runtmp):
@@ -445,18 +476,18 @@ def test_classify_gather_cli_and_from_file_duplicate(runtmp):
         f_csv.write(f"{g_res}\n")
 
     c.run_sourmash('tax', 'classify', g_res, '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
-                   '--rank', 'species')
+                   '--rank', 'species', '--containment-threshold', '0')
 
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert "query_name,rank,fraction,lineage" in c.last_result.out
-    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "query_name,status,rank,fraction,lineage" in c.last_result.out
+    assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
-def test_classify_gather_from_file_threshold_0(runtmp):
+def test_classify_gather_from_file_below_threshold(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -465,15 +496,15 @@ def test_classify_gather_from_file_threshold_0(runtmp):
         f_csv.write(f"{g_res}\n")
 
     c.run_sourmash('tax', 'classify', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
-                   '--containment-threshold', '0')
+                   '--containment-threshold', '1')
 
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert "query_name,rank,fraction,lineage" in c.last_result.out
-    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "query_name,status,rank,fraction,lineage" in c.last_result.out
+    assert "test1,below_threshold,,0.000," in c.last_result.out
 
 
 def test_classify_rank_duplicated_taxonomy_fail(runtmp):
@@ -509,15 +540,15 @@ def test_classify_rank_duplicated_taxonomy_force(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
     c.run_sourmash('tax', 'classify', g_csv, '--taxonomy-csv', duplicated_csv,
-                   '--rank', 'species', '--force')
+                   '--rank', 'species', '--force', '--containment-threshold', '0')
 
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert "query_name,rank,fraction,lineage" in c.last_result.out
-    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "query_name,status,rank,fraction,lineage" in c.last_result.out
+    assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
 def test_classify_missing_taxonomy_ignore_threshold(runtmp):
@@ -539,8 +570,8 @@ def test_classify_missing_taxonomy_ignore_threshold(runtmp):
 
     assert c.last_result.status == 0
     assert "The following are missing from the taxonomy information: GCF_001881345" in c.last_result.err
-    assert "query_name,rank,fraction,lineage" in c.last_result.out
-    assert "test1,species,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in c.last_result.out
+    assert "query_name,status,rank,fraction,lineage" in c.last_result.out
+    assert "test1,match,species,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in c.last_result.out
 
 
 def test_classify_missing_taxonomy_ignore_rank(runtmp):
@@ -562,8 +593,8 @@ def test_classify_missing_taxonomy_ignore_rank(runtmp):
 
     assert c.last_result.status == 0
     assert "The following are missing from the taxonomy information: GCF_001881345" in c.last_result.err
-    assert "query_name,rank,fraction,lineage" in c.last_result.out
-    assert "test1,species,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in c.last_result.out
+    assert "query_name,status,rank,fraction,lineage" in c.last_result.out
+    assert "test1,below_threshold,species,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in c.last_result.out
 
 
 def test_classify_missing_taxonomy_fail_threshold(runtmp):
@@ -725,7 +756,8 @@ def test_classify_empty_gather_results_with_csv_force(runtmp):
 
     #with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
     c.run_sourmash('tax', 'classify', empty_tax, '--from-file', g_from_file,
-                   '--taxonomy-csv', taxonomy_csv, '--rank', 'species', '--force')
+                   '--taxonomy-csv', taxonomy_csv, '--rank', 'species',
+                   '--containment-threshold', '0', '--force')
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -734,7 +766,7 @@ def test_classify_empty_gather_results_with_csv_force(runtmp):
     assert c.last_result.status == 0
     assert f'--force is set. Attempting to continue to next set of gather results.' in c.last_result.err
     assert f'loaded 1 gather files for classification' in c.last_result.err
-    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
 def test_label_0(runtmp):

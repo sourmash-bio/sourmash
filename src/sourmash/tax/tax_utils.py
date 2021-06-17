@@ -263,6 +263,18 @@ def write_summary(summarized_gather, csv_fp, *, sep='\t'):
             w.writerow([query_name, rank, f'{fraction:.3f}', display_lineage(lineage)])
 
 
+def write_classifications(classifications, csv_fp, *, sep='\t'):
+    '''
+    Write taxonomy-classifed gather results.
+    '''
+    header= ["query_name", "status", "rank", "fraction", "lineage"]
+    w = csv.writer(csv_fp)
+    w.writerow(header)
+    for rank, rank_results in classifications.items():
+        for (query_name, status, rank, fraction, lineage) in rank_results:
+            w.writerow([query_name, status, rank, f'{fraction:.3f}', display_lineage(lineage)])
+
+
 def combine_sumgather_csvs_by_lineage(gather_csvs, *, rank="species", accept_ranks = list(lca_utils.taxlist(include_strain=False)), force=False):
     '''
     Takes in one or more output csvs from `sourmash taxonomy summarize`
