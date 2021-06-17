@@ -1073,6 +1073,7 @@ def prefetch(args):
     # figure out what k-mer size and molecule type we're looking for here
     ksize = args.ksize
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
@@ -1141,7 +1142,8 @@ def prefetch(args):
             db = LazyLinearIndex(db)
 
         db = db.select(ksize=ksize, moltype=moltype,
-                       containment=True, scaled=True)
+                       containment=True, scaled=True,
+                       picklist=picklist)
 
         if not db:
             notify(f"...no compatible signatures in '{dbfilename}'; skipping")
@@ -1206,5 +1208,7 @@ def prefetch(args):
         with open(filename, "wt") as fp:
             sig.save_signatures([ss], fp)
 
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
+
     return 0
-    
