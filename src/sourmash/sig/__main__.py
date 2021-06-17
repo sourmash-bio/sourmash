@@ -13,7 +13,7 @@ from sourmash.sourmash_args import FileOutput
 from sourmash.logging import set_quiet, error, notify, print_results, debug
 from sourmash import sourmash_args
 from sourmash.minhash import _get_max_hash_for_scaled
-from .picklist import SignaturePicklist
+from sourmash.picklist import SignaturePicklist
 
 usage='''
 sourmash signature <command> [<args>] - manipulate/work with signature files.

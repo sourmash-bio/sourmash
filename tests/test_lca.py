@@ -14,6 +14,7 @@ from sourmash import load_one_signature, SourmashSignature
 from sourmash.search import make_jaccard_search_query
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import LineagePair
+from sourmash.picklist import SignaturePicklist
 
 
 def test_api_create_search():
@@ -34,7 +35,6 @@ def test_api_create_search():
 
 def test_api_find_picklist_select():
     # does 'find' respect picklists?
-    from sourmash.sig.picklist import SignaturePicklist
 
     sig47 = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
                                         ksize=31)
@@ -498,7 +498,6 @@ def test_lca_index_select():
 
 def test_lca_index_select_picklist():
     # test 'select' method from Index base class with a picklist.
-    from sourmash.sig.picklist import SignaturePicklist
 
     filename = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(filename)

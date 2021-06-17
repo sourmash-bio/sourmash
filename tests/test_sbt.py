@@ -14,6 +14,7 @@ from sourmash.sbtmh import (SigLeaf, load_sbt_index)
 from sourmash.sbt_storage import (FSStorage, RedisStorage,
                                   IPFSStorage, ZipStorage)
 from sourmash.search import make_jaccard_search_query
+from sourmash.picklist import SignaturePicklist
 
 import sourmash_tst_utils as utils
 
@@ -640,7 +641,6 @@ def test_sbt_as_index_select():
 
 def test_sbt_as_index_select_picklist():
     # test 'select' method from Index base class with a picklist
-    from sourmash.sig.picklist import SignaturePicklist
 
     factory = GraphFactory(31, 1e5, 4)
     tree = SBT(factory, d=2)
@@ -667,7 +667,6 @@ def test_sbt_as_index_select_picklist():
 
 def test_sbt_as_index_find_picklist():
     # test 'select' method from Index base class with a picklist
-    from sourmash.sig.picklist import SignaturePicklist
 
     factory = GraphFactory(31, 1e5, 4)
     tree = SBT(factory, d=2)
