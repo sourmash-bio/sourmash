@@ -384,7 +384,7 @@ def test_summarize_gather_at_missing_fail():
     taxD = make_mini_taxonomy([gA_tax])
 
     # run summarize_gather_at and check results!
-    with pytest.raises(KeyError) as exc:
+    with pytest.raises(ValueError) as exc:
         sk_sum = summarize_gather_at("superkingdom", taxD, g_res)
         assert exc.value == "ident gB is not in the taxonomy database."
 

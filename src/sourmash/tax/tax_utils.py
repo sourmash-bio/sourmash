@@ -104,9 +104,7 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
         if n_missed:
             notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
             if fail_on_missing_taxonomy:
-                #notify(f'Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
                 raise ValueError(f'Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
-                #sys.exit(-1)
 
             total_missed += n_missed
             all_ident_missed.update(ident_missed)
@@ -125,7 +123,7 @@ def find_match_lineage(match_ident, tax_assign, *, skip_idents = [], split_ident
     try:
         lineage = tax_assign[match_ident]
     except KeyError:
-        raise KeyError(f"ident {match_ident} is not in the taxonomy database.")
+        raise ValueError(f"ident {match_ident} is not in the taxonomy database.")
     return lineage
 
 
@@ -375,17 +373,17 @@ def load_taxonomy_csv(filename, *, delimiter=',', force=False,
             identifier = 'accession'
             header = ["ident" if "accession" == x else x for x in header]
         else:
-            notify('no identifiers found. Exiting.')
-            sys.exit(-1)
+            raise ValueError(f'No taxonomic identifiers found.')
     if "strain" in header:
         include_strain=True
 
    # check that all ranks are in header
     ranks = list(lca_utils.taxlist(include_strain=include_strain))
     if not set(ranks).issubset(header):
-        # is this what we want?
-        notify('not all taxonomy ranks present! Exiting.')
-        sys.exit(-1)
+        # for now, just raise err if not all ranks are present.
+        # in future, we can define `ranks` differently if desired
+        # return them from this function so we can check the `available` ranks
+        raise ValueError(f'Not all taxonomy ranks present')
 
     assignments = {}
     num_rows = 0
@@ -423,7 +421,7 @@ def load_taxonomy_csv(filename, *, delimiter=',', force=False,
                 if ident in assignments:
                     if assignments[ident] != tuple(lineage):
                         if not force:
-                            raise Exception("multiple lineages for identifier {}".format(ident))
+                            raise ValueError(f"multiple lineages for identifier {ident}")
                 else:
                     assignments[ident] = tuple(lineage)
 
@@ -434,16 +432,5 @@ def load_taxonomy_csv(filename, *, delimiter=',', force=False,
                         n_strains += 1
 
     fp.close()
-
-    # this is to guard against a bug that happened once and I can't find
-    # any more, when building a large GTDB-based database :) --CTB
-    if len(assignments) * 0.2 > n_species and len(assignments) > 50:
-        if not force:
-            error('')
-            error("ERROR: fewer than 20% of lineages have species-level resolution!?")
-            error("({} species assignments found, of {} assignments total)",
-                  n_species, len(assignments))
-            error("** If this is intentional, re-run the command with -f.")
-            sys.exit(-1)
 
     return assignments, num_rows, ranks

@@ -259,8 +259,8 @@ def test_summarize_missing_taxonomy_fail(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
-        c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', subset_csv, '--fail-on-missing-taxonomy', fail_ok=True)
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', subset_csv, '--fail-on-missing-taxonomy')
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -609,9 +609,9 @@ def test_classify_missing_taxonomy_fail_threshold(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
+    with pytest.raises(ValueError) as exc:
         c.run_sourmash('tax', 'classify', g_csv, '--taxonomy-csv', subset_csv,
-                       '--fail-on-missing-taxonomy', '--containment-threshold', '0', fail_ok=True)
+                       '--fail-on-missing-taxonomy', '--containment-threshold', '0')
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -634,9 +634,9 @@ def test_classify_missing_taxonomy_fail_rank(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
+    with pytest.raises(ValueError) as exc:
         c.run_sourmash('tax', 'classify', g_csv, '--taxonomy-csv', subset_csv,
-                       '--fail-on-missing-taxonomy', '--rank', 'species', fail_ok=True)
+                       '--fail-on-missing-taxonomy', '--rank', 'species')
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -658,8 +658,8 @@ def test_classify_empty_gather_results_with_header_single(runtmp):
     with open(empty_tax_with_header, "w") as fp:
         fp.write(gather_results[0])
 
-    with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
-        c.run_sourmash('tax', 'classify', empty_tax_with_header, '--taxonomy-csv', taxonomy_csv, fail_ok=True)
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('tax', 'classify', empty_tax_with_header, '--taxonomy-csv', taxonomy_csv)
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -679,8 +679,8 @@ def test_classify_empty_gather_results_single(runtmp):
     with open(empty_tax, "w") as fp:
         fp.write("")
 
-    with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
-        c.run_sourmash('tax', 'classify', empty_tax, '--taxonomy-csv', taxonomy_csv, fail_ok=True)
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('tax', 'classify', empty_tax, '--taxonomy-csv', taxonomy_csv)
 
 
     print(c.last_result.status)
@@ -701,9 +701,9 @@ def test_classify_empty_gather_results_single_force(runtmp):
     with open(empty_tax, "w") as fp:
         fp.write("")
 
-    with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
+    with pytest.raises(ValueError) as exc:
         c.run_sourmash('tax', 'classify', empty_tax, '--taxonomy-csv', taxonomy_csv,
-                       '--force', fail_ok=True)
+                       '--force')
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -727,7 +727,7 @@ def test_classify_empty_gather_results_with_empty_csv_force(runtmp):
     with open(g_from_file, 'w') as f_csv:
         f_csv.write(f"{empty_tax}\n")
 
-    with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
+    with pytest.raises(ValueError) as exc:
         c.run_sourmash('tax', 'classify', empty_tax, '--from-file', g_from_file,
                        '--taxonomy-csv', taxonomy_csv, '--rank', 'species', '--force')
 
@@ -754,7 +754,6 @@ def test_classify_empty_gather_results_with_csv_force(runtmp):
     with open(empty_tax, "w") as fp:
         fp.write("")
 
-    #with pytest.raises(ValueError) as exc: # should fail_ok handle this instead? Why ValueError?
     c.run_sourmash('tax', 'classify', empty_tax, '--from-file', g_from_file,
                    '--taxonomy-csv', taxonomy_csv, '--rank', 'species',
                    '--containment-threshold', '0', '--force')
