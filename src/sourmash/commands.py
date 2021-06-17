@@ -28,6 +28,7 @@ def compare(args):
 
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     inp_files = list(args.signatures)
     if args.from_file:
@@ -45,11 +46,12 @@ def compare(args):
         loaded = sourmash_args.load_file_as_signatures(filename,
                                                        ksize=args.ksize,
                                                        select_moltype=moltype,
+                                                       picklist=picklist,
                                                        yield_all_files=args.force,
                                                        progress=progress)
         loaded = list(loaded)
         if not loaded:
-            notify('\nwarning: no signatures loaded at given ksize/molecule type from {}', filename)
+            notify('\nwarning: no signatures loaded at given ksize/molecule type/picklist from {}', filename)
         siglist.extend(loaded)
 
         # track ksizes/moltypes
@@ -78,6 +80,9 @@ def compare(args):
 
     notify(' '*79, end='\r')
     notify('loaded {} signatures total.'.format(len(siglist)))
+
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
     # check to make sure they're potentially compatible - either using
     # scaled, or not.

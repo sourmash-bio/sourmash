@@ -2909,6 +2909,27 @@ def test_compare_with_abundance_3():
         assert '70.5%' in out
 
 
+def test_compare_with_picklist(runtmp):
+    # test 'sourmash compare' with picklists
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
+
+    runtmp.sourmash('compare', *gcf_sigs,
+                    '-k', '21', '--picklist', f"{picklist}:md5:md5")
+
+    err = runtmp.last_result.err
+    out = runtmp.last_result.out
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "for given picklist, found 3 matches to 9 distinct values" in err
+    assert "WARNING: 6 missing picklist values." in err
+
+    assert "0-NC_009486.1 The...\t[1.    0.331 0.036]" in out
+    assert "1-NC_000853.1 The...\t[0.331 1.    0.053]" in out
+    assert "2-NC_011978.1 The...\t[0.036 0.053 1.   ]" in out
+
+
 def test_gather(linear_gather, prefetch_gather):
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
