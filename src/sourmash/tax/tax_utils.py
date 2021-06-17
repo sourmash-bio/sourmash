@@ -366,12 +366,17 @@ def load_taxonomy_csv(filename, *, delimiter=',', force=False,
     fp = open(filename, newline='')
     r = csv.DictReader(fp, delimiter=delimiter)
     header = r.fieldnames
+
+    identifier = "ident"
     # check for ident/identifier, handle some common alternatives
     if "ident" not in header:
+        # check for ident/identifier, handle some common alternatives
         if 'identifiers' in header:
-            # one liner replace
-            header = ["ident" if "identifiers" in x else x for x in header]
-            # also check `accession?`
+            identifier = 'identifiers'
+            header = ["ident" if "identifiers" == x else x for x in header]
+        elif 'accession' in header:
+            identifier = 'accession'
+            header = ["ident" if "accession" == x else x for x in header]
         else:
             notify('no identifiers found. Exiting.')
             sys.exit(-1)
@@ -398,7 +403,7 @@ def load_taxonomy_csv(filename, *, delimiter=',', force=False,
             # read row into a lineage pair
             for rank in lca_utils.taxlist(include_strain=include_strain):
                 lineage.append(LineagePair(rank, row[rank]))
-            ident = row['ident']
+            ident = row[identifier]
 
             # fold, spindle, and mutilate ident?
             if split_identifiers:
