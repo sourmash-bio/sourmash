@@ -4897,3 +4897,80 @@ def test_index_with_picklist(runtmp):
     assert len(siglist) == 3
     for ss in siglist:
         assert 'Thermotoga' in ss.name
+
+
+def test_index_matches_search_with_picklist(runtmp):
+    # test 'sourmash index' with picklists
+    gcf_sig_dir = utils.get_test_data('gather/')
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
+    metag_sig = utils.get_test_data('gather/combined.sig')
+
+    output_db = runtmp.output('thermo.sbt.zip')
+
+    runtmp.sourmash('index', output_db, gcf_sig_dir, '-k', '21')
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    # verify:
+    siglist = list(sourmash.load_file_as_signatures(output_db))
+    assert len(siglist) > 3     # all signatures included...
+
+    n_thermo = 0
+    for ss in siglist:
+        if 'Thermotoga' in ss.name:
+            n_thermo += 1
+
+    assert n_thermo == 3
+
+    runtmp.sourmash('search', metag_sig, output_db, '--containment',
+                    '-k', '21', '--picklist', f"{picklist}:md5:md5")
+
+    err = runtmp.last_result.err
+    print(err)
+    assert "for given picklist, found 3 matches to 9 distinct values" in err
+    # these are the different ksizes
+    assert "WARNING: 6 missing picklist values." in err
+
+    out = runtmp.last_result.out
+    print(out)
+    assert "3 matches:" in out
+    assert "13.1%       NC_000853.1 Thermotoga" in out
+    assert "13.0%       NC_009486.1 Thermotoga" in out
+    assert "12.8%       NC_011978.1 Thermotoga" in out
+
+
+def test_gather_with_prefetch_picklist(runtmp, linear_gather):
+    # test 'gather' using a picklist taken from 'sourmash prefetch' output
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    prefetch_csv = runtmp.output('prefetch-out.csv')
+
+    runtmp.sourmash('prefetch', metag_sig, *gcf_sigs,
+                    '-k', '21', '-o', prefetch_csv)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "total of 12 matching signatures." in err
+    assert "of 1466 distinct query hashes, 1466 were found in matches above threshold." in err
+
+    # now, do a gather with the results
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs, linear_gather,
+                    '-k', '21', '--picklist',
+                    f'{prefetch_csv}:match_md5:md5short')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "found 11 matches total;" in out
+    assert "the recovered matches hit 99.9% of the query" in out
+
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
+    assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out

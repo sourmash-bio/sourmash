@@ -399,7 +399,6 @@ class LazyLinearIndex(Index):
         "Return the selected signatures."
         db = self.db.select(**self.selection_dict)
         for ss in db.signatures():
-            print('MATCH!', ss)
             yield ss
 
     def signatures_with_location(self):
