@@ -336,6 +336,7 @@ def index(args):
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     if args.append:
         tree = load_sbt_index(args.sbt_name)
@@ -372,6 +373,7 @@ def index(args):
                                                         ksize=args.ksize,
                                                         select_moltype=moltype,
                                                         yield_all_files=args.force,
+                                                        picklist=picklist,
                                                         progress=progress)
 
         # load all matching signatures in this file
@@ -416,6 +418,9 @@ def index(args):
     if n == 0:
         error('no signatures found to load into tree!? failing.')
         sys.exit(-1)
+
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
     notify('loaded {} sigs; saving SBT under "{}"', n, args.sbt_name)
     tree.save(args.sbt_name, sparseness=args.sparseness)
@@ -620,6 +625,7 @@ def gather(args):
 
     set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
@@ -651,7 +657,8 @@ def gather(args):
     if args.cache_size == 0:
         cache_size = None
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
-                                                cache_size=cache_size)
+                                                cache_size=cache_size,
+                                                picklist=picklist)
 
     if not len(databases):
         error('Nothing found to search!')
@@ -669,7 +676,12 @@ def gather(args):
 
         counters = []
         for db in databases:
-            counter = db.counter_gather(prefetch_query, args.threshold_bp)
+            try:
+                counter = db.counter_gather(prefetch_query, args.threshold_bp)
+            except ValueError:
+                if picklist:
+                    # catch "no signatures to search" ValueError...
+                    continue
             save_prefetch.add_many(counter.siglist)
             counters.append(counter)
 
@@ -774,6 +786,10 @@ def gather(args):
 
             with FileOutput(args.output_unassigned, 'wt') as fp:
                 sig.save_signatures([ next_query ], fp)
+
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
+
     # DONE w/gather function.
 
 
