@@ -267,7 +267,6 @@ def manifest(args):
     w.writeheader()
 
     try:
-        # @CTB: figure out how to ignore manifests here! otherwise circularity.
         loader = sourmash_args.load_file_as_index(args.location)
     except Exception as exc:
         error('\nError while reading signatures from {}:'.format(args.location))
@@ -276,6 +275,7 @@ def manifest(args):
         raise
 
     n = 0
+    # Need to ignore existing manifests here! otherwise circularity...
     for n, (sig, parent, loc) in enumerate(loader.signatures_with_internal()):
         # extract info, write as appropriate.
         row = CollectionManifest.make_manifest_row(sig, loc,
@@ -626,8 +626,6 @@ def extract(args):
     notify("extracted {} signatures from {} file(s)", len(save_sigs),
            len(args.signatures))
 
-    # @CTB note picklist.found is not updated properly necessarily,
-    # since we are using .select!
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
