@@ -1047,10 +1047,6 @@ class CollectionManifest:
         Internal method; call `select_to_manifest` instead.
         """
         matching_rows = self.rows
-        if picklist:
-            matching_rows = ( row for row in matching_rows
-                              if picklist.matches_siginfo(row) )
-
         if ksize:
             matching_rows = ( row for row in matching_rows
                               if int(row['ksize']) == ksize )
@@ -1067,6 +1063,9 @@ class CollectionManifest:
             matching_rows = ( row for row in matching_rows
                               if int(row['num']) )
 
+        if picklist:
+            matching_rows = ( row for row in matching_rows
+                              if picklist.matches_siginfo(row) )
         # return only the internal filenames!
         for row in matching_rows:
             yield row
