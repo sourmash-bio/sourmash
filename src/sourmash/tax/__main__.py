@@ -11,7 +11,6 @@ import sourmash
 import copy
 from sourmash.sourmash_args import FileOutput
 from sourmash.lca.lca_utils import pop_to_rank, display_lineage
-from sourmash.lca.command_index import load_taxonomy_assignments
 
 from ..sourmash_args import FileOutputCSV
 
@@ -52,10 +51,14 @@ def summarize(args):
     set_quiet(args.quiet)
 
     # first, load taxonomic_assignments
-    tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, use_headers=True,
-                                              split_identifiers=not args.keep_full_identifiers,
+    tax_assign = {}
+    for tax_csv in args.taxonomy_csv:
+
+        this_tax_assign, _ = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
+        # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
+        tax_assign.update(this_tax_assign)
 
     if not tax_assign:
         notify(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
@@ -108,11 +111,15 @@ def classify(args):
     """
     set_quiet(args.quiet)
 
-    # load taxonomy assignments
-    tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, use_headers=True,
-                                              split_identifiers=not args.keep_full_identifiers,
+    # first, load taxonomic_assignments
+    tax_assign = {}
+    for tax_csv in args.taxonomy_csv:
+
+        this_tax_assign, _ = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
+        # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
+        tax_assign.update(this_tax_assign)
 
     if not tax_assign:
         notify(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
@@ -202,11 +209,16 @@ def label(args):
 
     set_quiet(args.quiet)
 
-    # load taxonomy assignments
-    tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, use_headers=True,
-                                              split_identifiers=not args.keep_full_identifiers,
+    # first, load taxonomic_assignments
+    tax_assign = {}
+    for tax_csv in args.taxonomy_csv:
+
+        this_tax_assign, _ = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
+
+        # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
+        tax_assign.update(this_tax_assign)
 
     if not tax_assign:
         notify(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')

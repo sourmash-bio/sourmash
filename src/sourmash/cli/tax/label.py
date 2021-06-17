@@ -12,11 +12,12 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
-        '--from-file',  metavar='FILE',
+        '--from-file',  metavar='FILE', default=None,
         help='input many gather results as a text file, with one gather csv per line'
     )
     subparser.add_argument(
-        '-t', '--taxonomy-csv',  metavar='FILE', required=True,
+        '-t', '--taxonomy-csv', metavar='FILE',
+        nargs="+", required=True,
         help='database lineages csv'
     )
     subparser.add_argument(

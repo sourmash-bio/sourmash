@@ -269,6 +269,24 @@ def test_summarize_missing_taxonomy_fail(runtmp):
     assert c.last_result.status == -1
 
 
+# NTP: WORKING HERE
+def test_summarize_multiple_taxonomy_files(runtmp):
+    c = runtmp
+    # write temp taxonomy with duplicates
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    protozoa_genbank = utils.get_test_data('tax/protozoa_genbank_lineage.csv')
+    bacteria_refseq  = utils.get_test_data('tax/bacteria_refseq_lineage.csv')
+
+    # gather against mult databases
+    g_csv = utils.get_test_data('tax/multtest.gather.csv')
+
+    c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', taxonomy_csv, protozoa_genbank, bacteria_refseq)
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+
+
 def test_classify_rank_stdout_0(runtmp):
     # test basic classify
     c = runtmp
