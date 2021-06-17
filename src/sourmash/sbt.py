@@ -216,6 +216,8 @@ class SBT(Index):
 
         if picklist is not None:
             self.picklists.append(picklist)
+            if len(self.picklists) > 1:
+                raise ValueError("we do not (yet) support multiple picklists for SBTs")
 
         return self
 

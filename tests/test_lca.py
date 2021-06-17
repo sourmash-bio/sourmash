@@ -516,6 +516,26 @@ def test_lca_index_select_picklist():
     assert ss.minhash.ksize == 31
 
 
+def test_lca_index_select_picklist_twice():
+    # test 'select' method from Index base class with a picklist.
+
+    filename = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('md5prefix8')
+    picklist.init(['50a92740'])
+
+    xx = db.select(picklist=picklist)
+    assert xx == db
+
+    with pytest.raises(ValueError) as exc:
+        xx = db.select(picklist=picklist)
+
+    assert "we do not (yet) support multiple picklists for LCA databases" in str(exc)
+
+
+
 def test_search_db_scaled_gt_sig_scaled():
     dbfile = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
