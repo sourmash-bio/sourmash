@@ -361,6 +361,8 @@ def load_taxonomy_csv(filename, *, delimiter=',', force=False,
     fp = open(filename, newline='')
     r = csv.DictReader(fp, delimiter=delimiter)
     header = r.fieldnames
+    if not header:
+        raise ValueError(f'Cannot read taxonomy assignments from {filename}. Is file empty?')
 
     identifier = "ident"
     # check for ident/identifier, handle some common alternatives
