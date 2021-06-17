@@ -747,25 +747,22 @@ def test_label_0(runtmp):
 
 def test_summarize_empty_gather_results(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
-    
+
     #creates empty gather result
     g_csv = runtmp.output('g.csv')
     with open(g_csv, "w") as fp:
         fp.write("")
     print("g_csv: ", g_csv)
 
-    with pytest.raises(ValueError) as exc:
-        #should fail
-        runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax)
-    print("exc.val= ", str(exc.value))
-    assert "No gather results loaded from "+g_csv in str(exc.value)
-
+    #FIXME: currently throwing a valueError
+    runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax)
+   
+    assert f"No gather results loaded from {g_csv}" in str(runtmp.last_result.err)
     assert runtmp.last_result.status == -1
 
 def test_summarize_empty_tax_lineage_input(runtmp):
 #    print(type(runtmp))
     tax_empty = runtmp.output('t.csv')
-    outcsv = runtmp.output('out.csv')
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     
     with open(tax_empty, "w") as fp:
@@ -773,14 +770,14 @@ def test_summarize_empty_tax_lineage_input(runtmp):
     print("t_csv: ", tax_empty)
     import sys
 
-    with pytest.raises(ValueError) as exc:
-        runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax_empty)
-    print(f"----------------- [DEBUG]{exc.value}", file=sys.stderr)
-    assert f"No taxonomic assignments loaded from {tax_empty}" in str(exc.value
-        print("[DEBUG] -------------------- PASSED")
-    else:
-        print("FAIL")
-
+  #  with pytest.raises(ValueError) as exc:
+    runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax_empty)
+   # assert f"No taxonomic assignments loaded from {tax_empty}" in str(exc.value)
+ #   if(str(exc.value) == "local variable 'n' referenced before assignment"):
+  #      print("[DEBUG] -------------------- PASSED")
+  #  else:
+  #      print("FAIL")
+    assert f"No taxonomic assignments loaded from {tax_empty}" in str(runtmp.last_result.err)
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
@@ -796,3 +793,4 @@ def test_summarize_empty_tax_lineage_input(runtmp):
 #    pass
 #def test_classify_bad_lineage_input():
 #    pass
+
