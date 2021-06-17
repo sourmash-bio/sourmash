@@ -2708,10 +2708,10 @@ def test_do_sourmash_check_sbt_filenames():
             sig_md5s.add(sig.md5sum())
 
         sbt_files = glob.glob(os.path.join(location, '.sbt.zzz', '*'))
-        assert len(sbt_files) == 13
+        assert len(sbt_files) == 14
 
         for f in sbt_files:
-            if 'internal' in f:
+            if 'internal' in f or f.endswith('zzz.manifest.csv'):
                 continue
             f = os.path.basename(f)
             assert f not in sig_names
