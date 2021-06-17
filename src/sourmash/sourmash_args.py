@@ -19,6 +19,8 @@ from .logging import notify, error, debug_literal
 
 from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
 from . import signature as sigmod
+from .picklist import SignaturePicklist
+
 
 DEFAULT_LOAD_K = 31
 
@@ -55,6 +57,40 @@ def calculate_moltype(args, default=None):
         sys.exit(-1)
 
     return moltype
+
+
+def load_picklist(args):
+    "Load a SignaturePicklist from --picklist arguments."
+    picklist = None
+    if args.picklist:
+        try:
+            picklist = SignaturePicklist.from_picklist_args(args.picklist)
+        except ValueError as exc:
+            error("ERROR: could not load picklist.")
+            error(str(exc))
+            sys.exit(-1)
+
+        notify(f"picking column '{picklist.column_name}' of type '{picklist.coltype}' from '{picklist.pickfile}'")
+
+        n_empty_val, dup_vals = picklist.load(picklist.pickfile, picklist.column_name)
+
+        notify(f"loaded {len(picklist.pickset)} distinct values into picklist.")
+        if n_empty_val:
+            notify(f"WARNING: {n_empty_val} empty values in column '{picklist.column_name}' in picklist file")
+        if dup_vals:
+            notify(f"WARNING: {len(dup_vals)} values in picklist column '{picklist.column_name}' were not distinct")
+
+    return picklist
+
+
+def report_picklist(args, picklist):
+    notify(f"for given picklist, found {len(picklist.found)} matches to {len(picklist.pickset)} distinct values")
+    n_missing = len(picklist.pickset - picklist.found)
+    if n_missing:
+        notify(f"WARNING: {n_missing} missing picklist values.")
+        if args.picklist_require_all:
+            error("ERROR: failing because --picklist-require-all was set")
+            sys.exit(-1)
 
 
 def load_query_signature(filename, ksize, select_moltype, select_md5=None):
