@@ -1,6 +1,7 @@
 """
 Utility functions for taxonomy analysis tools.
 """
+import sys
 import csv
 from os.path import exists, basename, dirname, abspath
 from collections import namedtuple, defaultdict, Counter
@@ -103,8 +104,10 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
         if n_missed:
             notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
             if fail_on_missing_taxonomy:
-                notify(f'Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
-                sys.exit(-1)
+                #notify(f'Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
+                raise ValueError(f'Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
+                #sys.exit(-1)
+
             total_missed += n_missed
             all_ident_missed.update(ident_missed)
         # add these results to gather_results
@@ -260,6 +263,18 @@ def write_summary(summarized_gather, csv_fp, *, sep='\t'):
             w.writerow([query_name, rank, f'{fraction:.3f}', display_lineage(lineage)])
 
 
+def write_classifications(classifications, csv_fp, *, sep='\t'):
+    '''
+    Write taxonomy-classifed gather results.
+    '''
+    header= ["query_name", "status", "rank", "fraction", "lineage"]
+    w = csv.writer(csv_fp)
+    w.writerow(header)
+    for rank, rank_results in classifications.items():
+        for (query_name, status, rank, fraction, lineage) in rank_results:
+            w.writerow([query_name, status, rank, f'{fraction:.3f}', display_lineage(lineage)])
+
+
 def combine_sumgather_csvs_by_lineage(gather_csvs, *, rank="species", accept_ranks = list(lca_utils.taxlist(include_strain=False)), force=False):
     '''
     Takes in one or more output csvs from `sourmash taxonomy summarize`
@@ -333,3 +348,105 @@ def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, format_line
         row.update(sampleinfo)
         # write row
         w.writerow(row)
+
+
+
+
+
+def load_taxonomy_csv(filename, *, delimiter=',', force=False,
+                              split_identifiers=False,
+                              keep_identifier_versions=False):
+    """
+    Load a taxonomy assignment spreadsheet into a dictionary.
+
+    The 'assignments' dictionary that's returned maps identifiers to
+    lineage tuples.
+    """
+    include_strain=False
+    fp = open(filename, newline='')
+    r = csv.DictReader(fp, delimiter=delimiter)
+    header = r.fieldnames
+
+    identifier = "ident"
+    # check for ident/identifier, handle some common alternatives
+    if "ident" not in header:
+        # check for ident/identifier, handle some common alternatives
+        if 'identifiers' in header:
+            identifier = 'identifiers'
+            header = ["ident" if "identifiers" == x else x for x in header]
+        elif 'accession' in header:
+            identifier = 'accession'
+            header = ["ident" if "accession" == x else x for x in header]
+        else:
+            notify('no identifiers found. Exiting.')
+            sys.exit(-1)
+    if "strain" in header:
+        include_strain=True
+
+   # check that all ranks are in header
+    ranks = list(lca_utils.taxlist(include_strain=False))
+    if not set(ranks).issubset(header):
+        # is this what we want?
+        notify('not all taxonomy ranks present! Exiting.')
+        sys.exit(-1)
+
+    assignments = {}
+    num_rows = 0
+    n_species = 0
+    n_strains = 0
+
+    # now parse and load lineages
+    for n, row in enumerate(r):
+        if row: #and row[0].strip():        # want non-empty row
+            num_rows += 1
+            lineage = []
+            # read row into a lineage pair
+            for rank in lca_utils.taxlist(include_strain=include_strain):
+                lineage.append(LineagePair(rank, row[rank]))
+            ident = row[identifier]
+
+            # fold, spindle, and mutilate ident?
+            if split_identifiers:
+                ident = ident.split(' ')[0]
+
+                if not keep_identifier_versions:
+                    ident = ident.split('.')[0]
+
+            # clean lineage of null names, replace with 'unassigned'
+            lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
+            lineage = [ LineagePair(a, b) for (a, b) in lineage ]
+
+            # remove end nulls
+            while lineage and lineage[-1].name == 'unassigned':
+                lineage = lineage[:-1]
+
+            # store lineage tuple
+            if lineage:
+                # check duplicates
+                if ident in assignments:
+                    if assignments[ident] != tuple(lineage):
+                        if not force:
+                            raise Exception("multiple lineages for identifier {}".format(ident))
+                else:
+                    assignments[ident] = tuple(lineage)
+
+                    if lineage[-1].rank == 'species':
+                        n_species += 1
+                    elif lineage[-1].rank == 'strain':
+                        n_species += 1
+                        n_strains += 1
+
+    fp.close()
+
+    # this is to guard against a bug that happened once and I can't find
+    # any more, when building a large GTDB-based database :) --CTB
+    if len(assignments) * 0.2 > n_species and len(assignments) > 50:
+        if not force:
+            error('')
+            error("ERROR: fewer than 20% of lineages have species-level resolution!?")
+            error("({} species assignments found, of {} assignments total)",
+                  n_species, len(assignments))
+            error("** If this is intentional, re-run the command with -f.")
+            sys.exit(-1)
+
+    return assignments, num_rows

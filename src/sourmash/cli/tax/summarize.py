@@ -8,7 +8,7 @@ def subparser(subparsers):
     subparser = subparsers.add_parser('summarize')
     subparser.add_argument('gather_results', nargs='*')
     subparser.add_argument(
-        '--from-file',  metavar='FILE', default = '',
+        '--from-file',  metavar='FILE', default = None,
         help='input many gather results as a text file, with one gather csv per line'
     )
     subparser.add_argument(
@@ -20,7 +20,8 @@ def subparser(subparsers):
         help='base filepath for output file(s) (default stdout)'
     )
     subparser.add_argument(
-        '-t', '--taxonomy-csv',  metavar='FILE', required=True,
+        '-t', '--taxonomy-csv', metavar='FILE',
+        nargs='+', required=True,
         help='database lineages csv'
     )
     subparser.add_argument(

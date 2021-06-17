@@ -11,7 +11,6 @@ import sourmash
 import copy
 from sourmash.sourmash_args import FileOutput
 from sourmash.lca.lca_utils import pop_to_rank, display_lineage
-from sourmash.lca.command_index import load_taxonomy_assignments
 
 from ..sourmash_args import FileOutputCSV
 
@@ -52,10 +51,14 @@ def summarize(args):
     set_quiet(args.quiet)
 
     # first, load taxonomic_assignments
-    tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, use_headers=True,
-                                              split_identifiers=not args.keep_full_identifiers,
+    tax_assign = {}
+    for tax_csv in args.taxonomy_csv:
+
+        this_tax_assign, _ = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
+        # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
+        tax_assign.update(this_tax_assign)
 
     if not tax_assign:
         notify(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
@@ -108,11 +111,15 @@ def classify(args):
     """
     set_quiet(args.quiet)
 
-    # load taxonomy assignments
-    tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, use_headers=True,
-                                              split_identifiers=not args.keep_full_identifiers,
+    # first, load taxonomic_assignments
+    tax_assign = {}
+    for tax_csv in args.taxonomy_csv:
+
+        this_tax_assign, _ = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
+        # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
+        tax_assign.update(this_tax_assign)
 
     if not tax_assign:
         notify(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
@@ -122,9 +129,10 @@ def classify(args):
     gather_csvs = tax_utils.collect_gather_csvs(args.gather_results, from_file=args.from_file)
 
     classifications = defaultdict(list)
-    seen_queries=set()
+    matched_queries=set()
     krona_results = []
     num_empty=0
+    status = "nomatch"
 
     # handle each gather result separately
     for n, g_csv in enumerate(gather_csvs):
@@ -143,16 +151,20 @@ def classify(args):
 
            # this now returns list of SummarizedGather tuples
             for (query_name, rank, fraction, lineage) in best_at_rank:
-                if query_name in seen_queries:
-                    notify(f"WARNING: duplicate query {query_name}. Skipping...")
+                status = 'nomatch'
+                if query_name in matched_queries:
+                    notify(f"already matched query {query_name}. Skipping...")
                     continue
                 if fraction <= args.containment_threshold:
+                    status="below_threshold"
                     notify(f"WARNING: classifying at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
-                classifications[args.rank].append((query_name, rank, fraction, lineage))
-                seen_queries.add(query_name)
+                else:
+                    status="match"
+                classifications[args.rank].append((query_name, status, rank, fraction, lineage))
+                matched_queries.add(query_name)
                 if "krona" in args.output_format:
                     lin_list = display_lineage(lineage).split(';')
-                    krona_results.append((containment, *lin_list))
+                    krona_results.append((query_name, fraction, *lin_list))
         else:
             # classify to the match that passes the containment threshold.
             # To do - do we want to store anything for this match if nothing >= containment threshold?
@@ -164,16 +176,21 @@ def classify(args):
                                                              best_only=True)
 
                 for (query_name, rank, fraction, lineage) in best_at_rank:
-                    if query_name in seen_queries:
-                        notify(f"WARNING: duplicate query {query_name}. Skipping...")
+                    status = 'nomatch'
+                    if query_name in matched_queries:
+                        notify(f"already matched query {query_name}. Skipping...")
                         continue
                     if fraction >= args.containment_threshold:
-                        classifications[args.rank].append((query_name, rank, fraction, lineage))
-                        seen_queries.add(query_name)
+                        status = "match"
+                        classifications[args.rank].append((query_name, status, rank, fraction, lineage))
+                        matched_queries.add(query_name)
                         if "krona" in args.output_format:
                             lin_list = display_lineage(lineage).split(';')
-                            krona_results.append((query_name, containment, *lin_list))
+                            krona_results.append((query_name, fraction, *lin_list))
                         break
+                    if rank == "superkingdom" and status == "nomatch":
+                        status="below_threshold"
+                        classifications[args.rank].append((query_name, status, "", 0, ""))
 
     notify(f'loaded {n} gather files for classification.')
 
@@ -185,7 +202,8 @@ def classify(args):
     if "summary" in args.output_format:
         summary_outfile = make_outfile(args.output_base, ".classifications.csv")
         with FileOutputCSV(summary_outfile) as out_fp:
-            tax_utils.write_summary(classifications, out_fp)
+            #tax_utils.write_summary(classifications, out_fp)
+            tax_utils.write_classifications(classifications, out_fp)
 
     if "krona" in args.output_format:
         krona_outfile = make_outfile(args.output_base, ".krona.tsv")
@@ -202,11 +220,16 @@ def label(args):
 
     set_quiet(args.quiet)
 
-    # load taxonomy assignments
-    tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, use_headers=True,
-                                              split_identifiers=not args.keep_full_identifiers,
+    # first, load taxonomic_assignments
+    tax_assign = {}
+    for tax_csv in args.taxonomy_csv:
+
+        this_tax_assign, _ = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
+
+        # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
+        tax_assign.update(this_tax_assign)
 
     if not tax_assign:
         notify(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')

@@ -10,9 +10,9 @@ import sourmash_tst_utils as utils
 from sourmash.tax import tax_utils
 from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_results,
                                     summarize_gather_at, find_missing_identities,
-                                    write_summary,
+                                    write_summary, load_taxonomy_csv,
                                     collect_gather_csvs, check_and_load_gather_csvs,
-                                    SummarizedGatherResult,
+                                    SummarizedGatherResult, write_classifications,
                                     aggregate_by_lineage_at_rank,
                                     make_krona_header, format_for_krona, write_krona,
                                     combine_sumgather_csvs_by_lineage, write_lineage_sample_frac)
@@ -21,7 +21,7 @@ from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_re
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import LineagePair
 
-from sourmash.lca.command_index import load_taxonomy_assignments
+#from sourmash.lca.command_index import load_taxonomy_assignments
 
 # utility functions for testing
 def make_mini_gather_results(g_infolist):
@@ -88,7 +88,7 @@ def test_check_and_load_gather_csvs_empty(runtmp):
     csvs = [g_res]
     # load taxonomy csv
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign, num_rows = load_taxonomy_assignments(taxonomy_csv, split_identifiers=True)
+    tax_assign, num_rows = load_taxonomy_csv(taxonomy_csv, split_identifiers=True)
     print(tax_assign)
     # check gather results and missing ids
     with pytest.raises(Exception) as exc:
@@ -113,7 +113,7 @@ def test_check_and_load_gather_csvs_with_empty_force(runtmp):
 
     # load taxonomy csv
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign, num_rows = load_taxonomy_assignments(taxonomy_csv, split_identifiers=True)
+    tax_assign, num_rows = load_taxonomy_csv(taxonomy_csv, split_identifiers=True)
     print(tax_assign)
     # check gather results and missing ids
     gather_results, ids_missing, n_missing, header = check_and_load_gather_csvs(csvs, tax_assign, force=True)
@@ -137,12 +137,12 @@ def test_check_and_load_gather_csvs_fail_on_missing(runtmp):
 
     # load taxonomy csv
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign, num_rows = load_taxonomy_assignments(taxonomy_csv, split_identifiers=True)
+    tax_assign, num_rows = load_taxonomy_csv(taxonomy_csv, split_identifiers=True)
     print(tax_assign)
     # check gather results and missing ids
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(ValueError) as exc:
         gather_results, ids_missing, n_missing, header = check_and_load_gather_csvs(csvs, tax_assign, fail_on_missing_taxonomy=True, force=True)
-        assert "Failing on missing taxonomy" in str(exc.value)
+    assert "Failing on missing taxonomy" in str(exc)
 
 
 # @NTP: improve test!?
@@ -153,23 +153,23 @@ def test_load_gather_results():
 
 
 # this function is in lca.command_index for now, but not tested there
-def test_load_taxonomy_assignments():
+def test_load_taxonomy_csv():
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign, num_rows = load_taxonomy_assignments(taxonomy_csv)
+    tax_assign, num_rows = load_taxonomy_csv(taxonomy_csv)
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1']
     assert num_rows == 4 # should have read 4 rows
 
 
-def test_load_taxonomy_assignments_split_id():
+def test_load_taxonomy_csv_split_id():
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign, num_rows = load_taxonomy_assignments(taxonomy_csv, split_identifiers=True)
+    tax_assign, num_rows = load_taxonomy_csv(taxonomy_csv, split_identifiers=True)
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345', 'GCF_009494285', 'GCF_013368705', 'GCF_003471795']
     assert num_rows == 4 # should have read 4 rows
 
 
-def test_load_taxonomy_assignments_with_ncbi_id(runtmp):
+def test_load_taxonomy_csv_with_ncbi_id(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     upd_csv = runtmp.output("updated_taxonomy.csv")
     with open(upd_csv, 'w') as new_tax:
@@ -180,13 +180,13 @@ def test_load_taxonomy_assignments_with_ncbi_id(runtmp):
         tax.append(ncbi_tax)
         new_tax.write("\n".join(tax))
 
-    tax_assign, num_rows = load_taxonomy_assignments(upd_csv)
+    tax_assign, num_rows = load_taxonomy_csv(upd_csv)
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', "ncbi_id after_space"]
     assert num_rows == 5  # should have read 5 rows
 
 
-def test_load_taxonomy_assignments_split_id_ncbi(runtmp):
+def test_load_taxonomy_csv_split_id_ncbi(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     upd_csv = runtmp.output("updated_taxonomy.csv")
     with open(upd_csv, 'w') as new_tax:
@@ -197,13 +197,13 @@ def test_load_taxonomy_assignments_split_id_ncbi(runtmp):
         tax.append(ncbi_tax)
         new_tax.write("\n".join(tax))
 
-    tax_assign, num_rows = load_taxonomy_assignments(upd_csv, split_identifiers=True)
+    tax_assign, num_rows = load_taxonomy_csv(upd_csv, split_identifiers=True)
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345', 'GCF_009494285', 'GCF_013368705', 'GCF_003471795', "ncbi_id"]
     assert num_rows == 5 # should have read 5 rows
 
 
-def test_load_taxonomy_assignments_duplicate(runtmp):
+def test_load_taxonomy_csv_duplicate(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
     with open(duplicated_csv, 'w') as dup:
@@ -212,11 +212,11 @@ def test_load_taxonomy_assignments_duplicate(runtmp):
         dup.write("\n".join(tax))
 
     with pytest.raises(Exception) as exc:
-        tax_assign, num_rows = load_taxonomy_assignments(duplicated_csv)
+        tax_assign, num_rows = load_taxonomy_csv(duplicated_csv)
         assert str(exc.value == "multiple lineages for identifier GCF_001881345.1")
 
 
-def test_load_taxonomy_assignments_duplicate_force(runtmp):
+def test_load_taxonomy_csv_duplicate_force(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
     with open(duplicated_csv, 'w') as dup:
@@ -225,7 +225,7 @@ def test_load_taxonomy_assignments_duplicate_force(runtmp):
         dup.write("\n".join(tax))
 
     # now force
-    tax_assign, num_rows = load_taxonomy_assignments(duplicated_csv, force=True)
+    tax_assign, num_rows = load_taxonomy_csv(duplicated_csv, force=True)
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1']
     assert num_rows == 5 # should have read 5 rows
@@ -465,6 +465,23 @@ def test_write_summary_csv(runtmp):
     assert sr[0] ==  ['query_name', 'rank', 'fraction', 'lineage']
     assert sr[1] ==  ['queryA', 'superkingdom', '1.000', 'a']
     assert sr[2] ==  ['queryA', 'phylum', '1.000', 'a;b']
+
+
+def test_write_classification(runtmp):
+    """test classification csv write function"""
+
+    classification = {'phylum': [('queryA', 'match', 'phylum', 1.0,
+                                (LineagePair(rank='superkingdom', name='a'),
+                                LineagePair(rank='phylum', name='b')))]}
+
+    outs= runtmp.output("outsum.csv")
+    with open(outs, 'w') as out_fp:
+        write_classifications(classification, out_fp)
+
+    sr = [x.rstrip().split(',') for x in open(outs, 'r')]
+    print("gather_classification_results_from_file: \n", sr)
+    assert sr[0] ==  ['query_name', 'status', 'rank', 'fraction', 'lineage']
+    assert sr[1] ==  ['queryA', 'match', 'phylum', '1.000', 'a;b']
 
 
 def test_make_krona_header_0():
