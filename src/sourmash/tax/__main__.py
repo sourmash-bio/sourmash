@@ -54,14 +54,18 @@ def summarize(args):
     tax_assign = {}
     for tax_csv in args.taxonomy_csv:
 
-        this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
+        try:
+            this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
-        # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
-        tax_assign.update(this_tax_assign)
+            # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
+            tax_assign.update(this_tax_assign)
+
+        except ValueError as exc:
+            error(exc)
 
     if not tax_assign:
-        notify(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
+        error(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
         sys.exit(-1)
 
     # next, collect and load gather results
@@ -115,14 +119,17 @@ def classify(args):
     tax_assign = {}
     for tax_csv in args.taxonomy_csv:
 
-        this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
+        try:
+            this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
-        # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
-        tax_assign.update(this_tax_assign)
+            # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
+            tax_assign.update(this_tax_assign)
+        except ValueError as exc:
+            error(exc)
 
     if not tax_assign:
-        notify(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
+        error(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
         sys.exit(-1)
 
     # get gather_csvs from args
@@ -140,6 +147,7 @@ def classify(args):
                                                                                  fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
 
         if not gather_results:
+            num_empty += 1
             continue
 
         # if --rank is specified, classify to that rank
@@ -192,7 +200,7 @@ def classify(args):
                         status="below_threshold"
                         classifications[args.rank].append((query_name, status, "", 0, ""))
 
-    notify(f'loaded {n} gather files for classification.')
+    notify(f'loaded {n+1-num_empty} gather files for classification.')
 
     if not any([classifications, krona_results]):
         notify(f'No results for classification. Exiting.')
@@ -235,7 +243,7 @@ def label(args):
         tax_assign.update(this_tax_assign)
 
     if not tax_assign:
-        notify(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
+        error(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
         sys.exit(-1)
 
     # get gather_csvs from args

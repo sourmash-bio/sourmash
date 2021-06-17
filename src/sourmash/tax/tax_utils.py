@@ -399,7 +399,8 @@ def load_taxonomy_csv(filename, *, delimiter=',', force=False,
             lineage = []
             # read row into a lineage pair
             for rank in lca_utils.taxlist(include_strain=include_strain):
-                lineage.append(LineagePair(rank, row[rank]))
+                lin = row[rank]
+                lineage.append(LineagePair(rank, lin))
             ident = row[identifier]
 
             # fold, spindle, and mutilate ident?

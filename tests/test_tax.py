@@ -292,9 +292,6 @@ def test_summarize_multiple_taxonomy_files_missing(runtmp):
 
 
 def test_summarize_multiple_taxonomy_files(runtmp):
-    # NOTE THAT HERE, LATER TAX OVERRIDES EARLIER IF IDENTS PRESENT IN BOTH
-    # maybe test and handle this?
-
     c = runtmp
     # write temp taxonomy with duplicates
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -345,6 +342,42 @@ def test_summarize_empty_tax_lineage_input(runtmp):
 
     with pytest.raises(ValueError) as exc:
         runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax_empty)
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status != 0
+    assert f"Cannot read taxonomy assignments from {tax_empty}. Is file empty?" in str(exc.value)
+
+
+def test_classify_empty_gather_results(runtmp):
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+
+    #creates empty gather result
+    g_csv = runtmp.output('g.csv')
+    with open(g_csv, "w") as fp:
+        fp.write("")
+    print("g_csv: ", g_csv)
+
+    with pytest.raises(ValueError) as exc:
+        runtmp.run_sourmash('tax', 'classify', g_csv, '--taxonomy-csv', tax)
+
+    assert f"No gather results loaded from {g_csv}" in str(exc.value)
+    assert runtmp.last_result.status == -1
+
+
+def test_classify_empty_tax_lineage_input(runtmp):
+    tax_empty = runtmp.output('t.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    with open(tax_empty, "w") as fp:
+        fp.write("")
+    print("t_csv: ", tax_empty)
+
+
+    with pytest.raises(ValueError) as exc:
+        runtmp.run_sourmash('tax', 'classify', g_csv, '--taxonomy-csv', tax_empty)
 
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
@@ -829,3 +862,40 @@ def test_label_0(runtmp):
     assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in lin_gather_results[2]
     assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus" in lin_gather_results[3]
     assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in lin_gather_results[4]
+
+
+def test_label_empty_gather_results(runtmp):
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+
+    #creates empty gather result
+    g_csv = runtmp.output('g.csv')
+    with open(g_csv, "w") as fp:
+        fp.write("")
+    print("g_csv: ", g_csv)
+
+    with pytest.raises(ValueError) as exc:
+        runtmp.run_sourmash('tax', 'label', g_csv, '--taxonomy-csv', tax)
+
+    assert f"No gather results loaded from {g_csv}" in str(exc.value)
+    assert runtmp.last_result.status == -1
+
+
+def test_label_empty_tax_lineage_input(runtmp):
+    tax_empty = runtmp.output('t.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    with open(tax_empty, "w") as fp:
+        fp.write("")
+    print("t_csv: ", tax_empty)
+
+
+    with pytest.raises(ValueError) as exc:
+        runtmp.run_sourmash('tax', 'label', g_csv, '--taxonomy-csv', tax_empty)
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status != 0
+    assert f"Cannot read taxonomy assignments from {tax_empty}. Is file empty?" in str(exc.value)
+
