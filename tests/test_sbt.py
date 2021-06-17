@@ -14,6 +14,7 @@ from sourmash.sbtmh import (SigLeaf, load_sbt_index)
 from sourmash.sbt_storage import (FSStorage, RedisStorage,
                                   IPFSStorage, ZipStorage)
 from sourmash.search import make_jaccard_search_query
+from sourmash.picklist import SignaturePicklist
 
 import sourmash_tst_utils as utils
 
@@ -640,7 +641,6 @@ def test_sbt_as_index_select():
 
 def test_sbt_as_index_select_picklist():
     # test 'select' method from Index base class with a picklist
-    from sourmash.sig.picklist import SignaturePicklist
 
     factory = GraphFactory(31, 1e5, 4)
     tree = SBT(factory, d=2)
@@ -652,7 +652,7 @@ def test_sbt_as_index_select_picklist():
     tree.insert(sig63)
 
     # construct a picklist...
-    picklist = SignaturePicklist(None, None, 'md5prefix8')
+    picklist = SignaturePicklist('md5prefix8')
     picklist.init(['09a08691'])
 
     # select on picklist
@@ -667,7 +667,6 @@ def test_sbt_as_index_select_picklist():
 
 def test_sbt_as_index_find_picklist():
     # test 'select' method from Index base class with a picklist
-    from sourmash.sig.picklist import SignaturePicklist
 
     factory = GraphFactory(31, 1e5, 4)
     tree = SBT(factory, d=2)
@@ -679,7 +678,7 @@ def test_sbt_as_index_find_picklist():
     tree.insert(sig63)
 
     # construct a picklist...
-    picklist = SignaturePicklist(None, None, 'md5prefix8')
+    picklist = SignaturePicklist('md5prefix8')
     picklist.init(['09a08691'])
 
     # run a 'find' with sig63, should find 47 and 63 both.
@@ -698,6 +697,36 @@ def test_sbt_as_index_find_picklist():
     ss = results[0].signature
     assert ss.minhash.ksize == 31
     assert ss.md5sum().startswith('09a08691c')
+
+
+def test_sbt_as_index_find_picklist_twice():
+    # test 'select' method from Index base class with a picklist
+
+    factory = GraphFactory(31, 1e5, 4)
+    tree = SBT(factory, d=2)
+
+    sig47 = load_one_signature(utils.get_test_data('47.fa.sig'))
+    sig63 = load_one_signature(utils.get_test_data('63.fa.sig'))
+
+    tree.insert(sig47)
+    tree.insert(sig63)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('md5prefix8')
+    picklist.init(['09a08691'])
+
+    # run a 'find' with sig63, should find 47 and 63 both.
+    search_obj = make_jaccard_search_query(do_containment=True, threshold=0.0)
+    results = list(tree.find(search_obj, sig63))
+    print(results)
+    assert len(results) == 2
+
+    # now, select twice on picklists...
+    tree = tree.select(picklist=picklist)
+
+    with pytest.raises(ValueError):
+        tree = tree.select(picklist=picklist)
+        assert "we do not (yet) support multiple picklists for SBT databases" in str(exc)
 
 
 def test_sbt_as_index_signatures():

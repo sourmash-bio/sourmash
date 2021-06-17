@@ -14,6 +14,7 @@ from sourmash import load_one_signature, SourmashSignature
 from sourmash.search import make_jaccard_search_query
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import LineagePair
+from sourmash.picklist import SignaturePicklist
 
 
 def test_api_create_search():
@@ -34,7 +35,6 @@ def test_api_create_search():
 
 def test_api_find_picklist_select():
     # does 'find' respect picklists?
-    from sourmash.sig.picklist import SignaturePicklist
 
     sig47 = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
                                         ksize=31)
@@ -46,7 +46,7 @@ def test_api_find_picklist_select():
     lca_db.insert(sig63)
 
     # construct a picklist...
-    picklist = SignaturePicklist(None, None, 'md5prefix8')
+    picklist = SignaturePicklist('md5prefix8')
     picklist.init(['09a08691'])
 
     # run a 'find' with sig63, should find 47 and 63 both.
@@ -498,13 +498,12 @@ def test_lca_index_select():
 
 def test_lca_index_select_picklist():
     # test 'select' method from Index base class with a picklist.
-    from sourmash.sig.picklist import SignaturePicklist
 
     filename = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(filename)
 
     # construct a picklist...
-    picklist = SignaturePicklist(None, None, 'md5prefix8')
+    picklist = SignaturePicklist('md5prefix8')
     picklist.init(['50a92740'])
 
     xx = db.select(picklist=picklist)
@@ -515,6 +514,26 @@ def test_lca_index_select_picklist():
     ss = siglist[0]
     assert ss.md5sum().startswith('50a92740')
     assert ss.minhash.ksize == 31
+
+
+def test_lca_index_select_picklist_twice():
+    # test 'select' method from Index base class with a picklist.
+
+    filename = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('md5prefix8')
+    picklist.init(['50a92740'])
+
+    xx = db.select(picklist=picklist)
+    assert xx == db
+
+    with pytest.raises(ValueError) as exc:
+        xx = db.select(picklist=picklist)
+
+    assert "we do not (yet) support multiple picklists for LCA databases" in str(exc)
+
 
 
 def test_search_db_scaled_gt_sig_scaled():
@@ -2495,3 +2514,31 @@ def test_lca_db_dayhoff_command_search(c):
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+def test_lca_index_with_picklist(runtmp):
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    outdb = runtmp.output('gcf.lca.json')
+    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
+
+    # create an empty spreadsheet
+    with open(runtmp.output('empty.csv'), 'wt') as fp:
+        fp.write('accession,superkingdom,phylum,class,order,family,genus,species,strain')
+
+    runtmp.sourmash('lca', 'index', 'empty.csv', outdb, *gcf_sigs,
+                    '-k', '21', '--picklist', f"{picklist}:md5:md5")
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(out)
+    print(err)
+
+    assert "for given picklist, found 3 matches to 9 distinct values" in err
+    assert "WARNING: 6 missing picklist values."
+    assert "WARNING: no lineage provided for 3 signatures" in err
+
+    siglist = list(sourmash.load_file_as_signatures(outdb))
+    assert len(siglist) == 3
+    for ss in siglist:
+        assert 'Thermotoga' in ss.name

@@ -2,7 +2,8 @@
 
 import sys
 
-from sourmash.cli.utils import add_moltype_args, add_ksize_arg
+from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
+                                add_picklist_args)
 
 
 def subparser(subparsers):
@@ -25,12 +26,9 @@ def subparser(subparsers):
         '--name', default=None,
         help='select signatures whose name contains this substring'
     )
-    subparser.add_argument(
-        '--picklist', default=None,
-        help="select signatures based on a picklist, i.e. 'file.csv:colname:coltype'"
-    )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
+    add_picklist_args(subparser)
 
 
 def main(args):
