@@ -140,10 +140,12 @@ class SignaturePicklist:
         # match on metadata info for signature, not signature itself
         if self.coltype == 'md5':
             colkey = 'md5'
-        elif self.coltype == 'md5prefix8':
+        elif self.coltype in ('md5prefix8', 'md5short'):
             colkey = 'md5short'
-        elif self.coltype in ('name', 'ident', 'ident.'):
+        elif self.coltype in ('name', 'ident', 'identprefix'):
             colkey = 'name'
+        else:
+            assert 0
 
         q = siginfo[colkey]
         q = self.preprocess_fn(q)
