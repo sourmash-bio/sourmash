@@ -776,7 +776,7 @@ def test_summarize_empty_tax_lineage_input(runtmp):
     with pytest.raises(ValueError) as exc:
         runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax_empty, '--split-identifiers', '-o', outcsv)
     print(f"----------------- [DEBUG]{exc.value}", file=sys.stderr)
-    if(str(exc.value) == "local variable 'n' referenced before assignment"):
+    assert f"No taxonomic assignments loaded from {tax_empty}" in str(exc.value
         print("[DEBUG] -------------------- PASSED")
     else:
         print("FAIL")
@@ -796,4 +796,3 @@ def test_summarize_empty_tax_lineage_input(runtmp):
 #    pass
 #def test_classify_bad_lineage_input():
 #    pass
-
