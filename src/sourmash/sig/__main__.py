@@ -13,7 +13,7 @@ from sourmash.sourmash_args import FileOutput
 from sourmash.logging import set_quiet, error, notify, print_results, debug
 from sourmash import sourmash_args
 from sourmash.minhash import _get_max_hash_for_scaled
-from .picklist import SignaturePicklist
+from sourmash.picklist import SignaturePicklist
 
 usage='''
 sourmash signature <command> [<args>] - manipulate/work with signature files.
@@ -580,20 +580,7 @@ def extract(args):
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
-
-    picklist = None
-    if args.picklist:
-        picklist = SignaturePicklist.from_picklist_args(args.picklist)
-
-        notify(f"picking column '{picklist.column_name}' of type '{picklist.coltype}' from '{picklist.pickfile}'")
-
-        n_empty_val, dup_vals = picklist.load(picklist.pickfile, picklist.column_name)
-
-        notify(f"loaded {len(picklist.pickset)} distinct values into picklist.")
-        if n_empty_val:
-            notify(f"WARNING: {n_empty_val} empty values in column '{picklist.column_name}' in CSV file")
-        if dup_vals:
-            notify(f"WARNING: {len(dup_vals)} values in column '{picklist.column_name}' were not distinct")
+    picklist = sourmash_args.load_picklist(args)
 
     # further filtering on md5 or name?
     if args.md5 is not None or args.name is not None:
@@ -642,10 +629,7 @@ def extract(args):
     # @CTB note picklist.found is not updated properly necessarily,
     # since we are using .select!
     if picklist:
-        notify(f"for given picklist, found {len(picklist.found)} matches of {len(picklist.pickset)} total")
-        n_missing = len(picklist.pickset - picklist.found)
-        if n_missing:
-            notify(f"WARNING: {n_missing} missing picklist values.")
+        sourmash_args.report_picklist(args, picklist)
 
 
 def filter(args):

@@ -9,6 +9,7 @@ import sourmash
 from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.logging import notify, error, debug
 from sourmash.index import Index, IndexSearchResult
+from sourmash.picklist import passes_all_picklists
 
 
 def cached_property(fun):
@@ -200,6 +201,8 @@ class LCA_Database(Index):
 
         if picklist is not None:
             self.picklists.append(picklist)
+            if len(self.picklists) > 1:
+                raise ValueError("we do not (yet) support multiple picklists for LCA databases")
 
         return self
 
@@ -375,7 +378,6 @@ class LCA_Database(Index):
     @cached_property
     def _signatures(self):
         "Create a _signatures member dictionary that contains {idx: sigobj}."
-        from sourmash.sig.picklist import passes_all_picklists
         from sourmash import MinHash, SourmashSignature
 
         is_protein = False
@@ -439,7 +441,6 @@ class LCA_Database(Index):
         can still be used for containment search, but not for similarity
         search. See SBT.select(...) for details.
         """
-        from sourmash.sig.picklist import passes_all_picklists
         search_fn.check_is_compatible(query)
 
         # make sure we're looking at the same scaled value as database

@@ -20,6 +20,7 @@ from .exceptions import IndexNotSupported
 from .sbt_storage import FSStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
 from .index import Index, IndexSearchResult
+from .picklist import passes_all_picklists
 
 from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
 
@@ -155,8 +156,6 @@ class SBT(Index):
         return self._location
 
     def signatures(self):
-        from .sig.picklist import passes_all_picklists
-
         for k in self.leaves():
             ss = k.data
             if passes_all_picklists(ss, self.picklists):
@@ -217,6 +216,8 @@ class SBT(Index):
 
         if picklist is not None:
             self.picklists.append(picklist)
+            if len(self.picklists) > 1:
+                raise ValueError("we do not (yet) support multiple picklists for SBTs")
 
         return self
 
@@ -369,7 +370,6 @@ class SBT(Index):
         search. See SBT.select(...) for details.
         """
         from .sbtmh import SigLeaf
-        from .sig.picklist import passes_all_picklists
 
         search_fn.check_is_compatible(query)
 
