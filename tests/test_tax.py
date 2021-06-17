@@ -774,7 +774,7 @@ def test_summarize_empty_tax_lineage_input(runtmp):
     import sys
 
     with pytest.raises(ValueError) as exc:
-        runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax_empty, '--split-identifiers', '-o', outcsv)
+        runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax_empty)
     print(f"----------------- [DEBUG]{exc.value}", file=sys.stderr)
     assert f"No taxonomic assignments loaded from {tax_empty}" in str(exc.value
         print("[DEBUG] -------------------- PASSED")
