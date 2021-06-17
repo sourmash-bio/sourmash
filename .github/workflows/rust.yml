@@ -136,15 +136,24 @@ jobs:
   lints:
     name: Lints
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build: [beta, stable]
+        include:
+          - build: beta
+            rust: beta
+          - build: stable
+            rust: stable
     steps:
       - name: Checkout sources
         uses: actions/checkout@v1
 
-      - name: Install stable toolchain
+      - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: ${{ matrix.rust }}
           override: true
           components: rustfmt, clippy
 
