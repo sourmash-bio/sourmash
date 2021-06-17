@@ -763,7 +763,6 @@ def test_summarize_empty_gather_results(runtmp):
 
     assert runtmp.last_result.status == -1
 
-
 def test_summarize_empty_tax_lineage_input(runtmp):
 #    print(type(runtmp))
     tax_empty = runtmp.output('t.csv')
