@@ -414,48 +414,89 @@ signatures, rather than all the signatures in the database.
 
 ## `sourmash tax` subcommands for integrating taxonomic information
 
-The sourmash `tax` or `taxonomy` commands integrate taxonomic information into the results of `sourmash gather`. `tax` commands  require a properly formatted `taxonomy` csv file that corresponds to the database used for `gather`. For supported databases (e.g. GTDB, NCBI), we provide these files, but they can also be generated for user-generated databases. For more information, see [databases](databases.md).
+The sourmash `tax` or `taxonomy` commands integrate taxonomic information into
+the results of `sourmash gather`. All `tax` commands  require a properly
+formatted `taxonomy` csv file that corresponds to the database used for
+`gather`. For supported databases (e.g. GTDB, NCBI), we provide these files, but
+they can also be generated for user-generated databases. For more information,
+see [databases](databases.md).
 
-These commands rely upon the fact that `gather` results are non-overlapping: the fraction match for gather on each query will be between 0 (no database matches) and 1 (100% of query matched). We use this property to aggregate gather matches at the desired taxonomic rank. For example, if the gather results for a metagenome include results for 30 different strains of a given species, we can sum the fraction match to each strain to obtain the fraction match to this species.
+These commands rely upon the fact that `gather` results are non-overlapping: the
+fraction match for gather on each query will be between 0 (no database matches)
+and 1 (100% of query matched). We use this property to aggregate gather matches
+at the desired taxonomic rank. For example, if the gather results for a
+metagenome include results for 30 different strains of a given species, we can
+sum the fraction match to each strain to obtain the fraction match to this
+species.
 
-As with all reference-based analysis, results can be affected by the completeness of the reference database. However, summarizing taxonomic results from `gather` minimizes issues associated with increasing size and redundancy of reference databases.
+As with all reference-based analysis, results can be affected by the
+completeness of the reference database. However, summarizing taxonomic results
+from `gather` minimizes issues associated with increasing size and redundancy of
+reference databases.
 
 
 ### `sourmash tax summarize` (for summarizing metagenomes)
 
-`sourmash tax summarize` - for each gather query, summarize gather results by taxonomic lineage.
+`sourmash tax summarize` - for each gather query, summarize gather results by
+taxonomic lineage.
 
-There are three possible output formats, `summary`, `lineage_summary`, and `krona`.
+There are three possible output formats, `summary`, `lineage_summary`, and
+`krona`.
 
-- `summary` is the default output format. This outputs a `csv` with lineage summarization for each taxonomic rank. This output currently consists of four columns, `query_name,rank,fraction,lineage`, where `fraction` is the  fraction of the query matched to the reported rank and lineage.
-- `krona` format is a tab-separated list of these results at a specific rank. The first column, `fraction` is the fraction of the query matched to the reported rank and lineage. The remaining columns are `superkingdom`, `phylum`, .. etc down to the rank used for summarization. This output can be used directly for summary visualization.
-- `lineage_summary` - the lineage summary format is most useful when comparing across metagenomes. each row is a lineage at the desired reporting rank. The columns are each query used for gather, with the fraction match reported for each lineage. This format is commonly used as input for many external multi-sample visualization tools.
+- `summary` is the default output format. This outputs a `csv` with lineage
+summarization for each taxonomic rank. This output currently consists of four
+columns, `query_name,rank,fraction,lineage`, where `fraction` is the  fraction
+of the query matched to the reported rank and lineage.  - `krona` format is a
+tab-separated list of these results at a specific rank. The first column,
+`fraction` is the fraction of the query matched to the reported rank and
+lineage. The remaining columns are `superkingdom`, `phylum`, .. etc down to the
+rank used for summarization. This output can be used directly for summary
+visualization.  - `lineage_summary` - the lineage summary format is most useful
+when comparing across metagenomes. Each row is a lineage at the desired
+reporting rank. The columns are each query used for gather, with the fraction
+match reported for each lineage. This format is commonly used as input for many
+external multi-sample visualization tools.
 
 example `lineage_summary`:
 
-    lineage    sample1  sample2 sample3
-    lin_a     0.4    0.17     0.6
-    lin_b     0.0    0.0      0.1
-    lin_c     0.3    0.4      0.2
+    lineage    sample1  sample2 sample3 lin_a     0.4    0.17     0.6 lin_b
+    0.0    0.0      0.1 lin_c     0.3    0.4      0.2
 
 ### `sourmash tax classify` (for classifying genomes)
 
-`sourmash tax classify` - for each gather query, report likely classification based on `gather` matches. By default, classification requires at least 10% of the query to be matched. Thus, if 10% of the query was matched to a species, the species-level classification can be reported. However, if 7% of the query was matched to one species, and an additional 5% matched to a different species in the same genus, the genus-level classification will be reported.
+`sourmash tax classify` - for each gather query, report likely classification
+based on `gather` matches. By default, classification requires at least 10% of
+the query to be matched. Thus, if 10% of the query was matched to a species, the
+species-level classification can be reported. However, if 7% of the query was
+matched to one species, and an additional 5% matched to a different species in
+the same genus, the genus-level classification will be reported.
 
-Optionally, `classify` can instead report classifications at a desired `rank`, regardless of match threshold.
+Optionally, `classify` can instead report classifications at a desired `rank`,
+regardless of match threshold.
 
 Note that these thresholds and strategies are under active testing.
 
 There are two possible output formats, `summary` and `krona`.
 
-- `summary` is the default output format. This outputs a `csv` with lineage summarization for each taxonomic rank. This output currently consists of four columns, `query_name,rank,fraction,lineage`, where `fraction` is the  fraction of the query matched to the reported rank and lineage.
-- `krona` format is a tab-separated list of these results at a specific rank. The first column, `fraction` is the fraction of the query matched to the reported rank and lineage. The remaining columns are `superkingdom`, `phylum`, .. etc down to the rank used for summarization. This output can be used directly for summary visualization.
+- `summary` is the default output format. This outputs a `csv` with lineage
+summarization for each taxonomic rank. This output currently consists of four
+columns, `query_name,rank,fraction,lineage`, where `fraction` is the  fraction
+of the query matched to the reported rank and lineage.  - `krona` format is a
+tab-separated list of these results at a specific rank. The first column,
+`fraction` is the fraction of the query matched to the reported rank and
+lineage. The remaining columns are `superkingdom`, `phylum`, .. etc down to the
+rank used for summarization. This output can be used directly for summary
+visualization.
 
 ### `sourmash tax label` (for labeling gather results)
 
-`sourmash tax label` - for any gather results, add a column with taxonomic lineage information for each database match. Do not summarize or classify. Note that this is not required for either `summarize` or `classify`.
+`sourmash tax label` - for any gather results, add a column with taxonomic
+lineage information for each database match. Do not summarize or classify. Note
+that this is not required for either `summarize` or `classify`.
 
-By default, `label` uses the name of each input gather csv to write an updated version with lineages information. For example, labeling `sample1.gather.csv` would produce `sample1.gather.with-lineages.csv`
+By default, `label` uses the name of each input gather csv to write an updated
+version with lineages information. For example, labeling `sample1.gather.csv`
+would produce `sample1.gather.with-lineages.csv`
 
 
 ## `sourmash lca` subcommands for in-memory taxonomy integration
