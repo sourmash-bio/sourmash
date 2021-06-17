@@ -173,7 +173,8 @@ def traverse_find_sigs(filenames, yield_all_files=False):
                         yield fullname
 
 
-def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None):
+def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
+                      cache_size=None, picklist=None):
     """
     Load one or more SBTs, LCAs, and/or collections of signatures.
 
@@ -214,6 +215,9 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
         if not db:
             notify(f"no compatible signatures found in '{filename}'")
             sys.exit(-1)
+
+        if picklist:
+            db = db.select(picklist=picklist)
 
         databases.append(db)
 

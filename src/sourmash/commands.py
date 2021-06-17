@@ -429,6 +429,7 @@ def search(args):
 
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     # set up the query.
     query = sourmash_args.load_query_signature(args.query,
@@ -458,7 +459,8 @@ def search(args):
             sys.exit(-1)
 
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
-                                                not is_containment)
+                                                not is_containment,
+                                                picklist=picklist)
 
     if not len(databases):
         error('Nothing found to search!')
@@ -530,6 +532,9 @@ def search(args):
         with SaveSignaturesToLocation(args.save_matches) as save_sig:
             for sr in results:
                 save_sig.add(sr.match)
+
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
 
 def categorize(args):
