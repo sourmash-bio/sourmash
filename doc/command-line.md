@@ -424,47 +424,47 @@ signatures, rather than all the signatures in the database.
 ## `sourmash tax` subcommands for integrating taxonomic information
 
 The sourmash `tax` or `taxonomy` commands integrate taxonomic information into
-the results of `sourmash gather`. All `tax` commands  require a properly
-formatted `taxonomy` csv file that corresponds to the database used for
-`gather`. For supported databases (e.g. GTDB, NCBI), we provide these files, but
-they can also be generated for user-generated databases. For more information,
-see [databases](databases.md).
+ the results of `sourmash gather`. All `tax` commands  require a properly
+ formatted `taxonomy` csv file that corresponds to the database used for
+ `gather`. For supported databases (e.g. GTDB, NCBI), we provide these files,
+ but they can also be generated for user-generated databases. For more
+ information, see [databases](databases.md).
 
 These commands rely upon the fact that `gather` results are non-overlapping: the
-fraction match for gather on each query will be between 0 (no database matches)
-and 1 (100% of query matched). We use this property to aggregate gather matches
-at the desired taxonomic rank. For example, if the gather results for a
-metagenome include results for 30 different strains of a given species, we can
-sum the fraction match to each strain to obtain the fraction match to this
-species.
+ fraction match for gather on each query will be between 0 (no database matches)
+ and 1 (100% of query matched). We use this property to aggregate gather matches
+ at the desired taxonomic rank. For example, if the gather results for a
+ metagenome include results for 30 different strains of a given species, we can
+ sum the fraction match to each strain to obtain the fraction match to this
+ species.
 
 As with all reference-based analysis, results can be affected by the
-completeness of the reference database. However, summarizing taxonomic results
-from `gather` minimizes issues associated with increasing size and redundancy of
-reference databases.
+ completeness of the reference database. However, summarizing taxonomic results
+ from `gather` minimizes issues associated with increasing size and redundancy of
+ reference databases.
 
 
 ### `sourmash tax summarize` (for summarizing metagenomes)
 
 `sourmash tax summarize` - for each gather query, summarize gather results by
-taxonomic lineage.
+ taxonomic lineage.
 
 example command to summarize a single `gather csv`, where the query was gathered
-against `gtdb-rs202` representative species database.
+ against `gtdb-rs202` representative species database.
 
     ```
     sourmash tax summarize 
-        --gather_results HSMA33MX_gather_x_gtdbrs202_k31.csv \
+        --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
         --taxonomy-csv gtdb-rs202.taxonomy.v2.csv
     ```
 
 There are three possible output formats, `summary`, `lineage_summary`, and
-`krona`.
+ `krona`.
 
 - `summary` is the default output format. This outputs a `csv` with lineage
-summarization for each taxonomic rank. This output currently consists of four
-columns, `query_name,rank,fraction,lineage`, where `fraction` is the  fraction
-of the query matched to the reported rank and lineage.  
+ summarization for each taxonomic rank. This output currently consists of four
+ columns, `query_name,rank,fraction,lineage`, where `fraction` is the  fraction
+ of the query matched to the reported rank and lineage.
 
 example `summary` output from the command above:
 
@@ -484,19 +484,19 @@ example `summary` output from the command above:
     o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus
     ```
 
-- `krona` format is a tab-separated list of these results at a specific rank. 
-The first column, `fraction` is the fraction of the query matched to the 
-reported rank and lineage. The remaining columns are `superkingdom`, `phylum`, 
-.. etc down to the rank used for summarization. This output can be used 
-directly for summary visualization.
+- `krona` format is a tab-separated list of these results at a specific rank.
+ The first column, `fraction` is the fraction of the query matched to the
+ reported rank and lineage. The remaining columns are `superkingdom`, `phylum`,
+ ... etc down to the rank used for summarization. This output can be used
+ directly for summary visualization.
 
 To generate `krona`, we add `--output-format krona` to the command above, and
-need to specify a rank to summarize. Here's the command for reporting `krona`
-summary at `species` level:
+ need to specify a rank to summarize. Here's the command for reporting `krona`
+ summary at `species` level:
 
    ```
     sourmash tax summarize
-        --gather_results HSMA33MX_gather_x_gtdbrs202_k31.csv \
+        --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
         --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
         --output-format krona --rank species
    ```
@@ -511,19 +511,19 @@ example krona output from this command:
     ```
 
 - `lineage_summary` - the lineage summary format is most useful
-when comparing across metagenome queries. Each row is a lineage at the desired
-reporting rank. The columns are each query used for gather, with the fraction
-match reported for each lineage. This format is commonly used as input for many
-external multi-sample visualization tools.
+ when comparing across metagenome queries. Each row is a lineage at the desired
+ reporting rank. The columns are each query used for gather, with the fraction
+ match reported for each lineage. This format is commonly used as input for many
+ external multi-sample visualization tools.
 
 To generate `lineage_summary`, we add `--output-format lineage_summary` to the summarize
-command, and need to specify a rank to summarize. Here's the command for reporting 
-`lineage_summary` for two queries (HSMA33MX, NTP_ADD_ME) summary at `species` level.
+ command, and need to specify a rank to summarize. Here's the command for reporting
+ `lineage_summary` for two queries (HSMA33MX, NTP_ADD_ME) summary at `species` level.
 
    ```
     sourmash tax summarize
-        --gather_results HSMA33MX_gather_x_gtdbrs202_k31.csv \
-        --gather_results NTP_ADD_ME_gather_x_gtdbrs202_k31.csv \
+        --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
+        --gather-csv NTP_ADD_ME_gather_x_gtdbrs202_k31.csv \
         --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
         --output-format krona --rank species
    ```
@@ -539,49 +539,123 @@ example `lineage_summary`:
     Eukaryota;Apicomplexa;Conoidasida;Eucoccidiorida;Sarcocystidae;Toxoplasma;Toxoplasma gondii	0.023293696041700604 ADD_ME
     ```
 
+To produce multiple output types from the same command, add the types into the
+ `--output-format` argument, e.g. `--output-format summary krona lineage_summary`
+
+
 ### `sourmash tax classify` (for classifying genomes)
 
 `sourmash tax classify` - for each gather query, report likely classification
-based on `gather` matches. By default, classification requires at least 10% of
-the query to be matched. Thus, if 10% of the query was matched to a species, the
-species-level classification can be reported. However, if 7% of the query was
-matched to one species, and an additional 5% matched to a different species in
-the same genus, the genus-level classification will be reported.
+ based on `gather` matches. By default, classification requires at least 10% of
+ the query to be matched. Thus, if 10% of the query was matched to a species, the
+ species-level classification can be reported. However, if 7% of the query was
+ matched to one species, and an additional 5% matched to a different species in
+ the same genus, the genus-level classification will be reported.
 
 Optionally, `classify` can instead report classifications at a desired `rank`,
-regardless of match threshold.
+ regardless of match threshold.
 
 Note that these thresholds and strategies are under active testing.
 
-Example command to classify a query from a single `gather` csv:
+To illustrate the utility of `classify`, let's consider a signature consisting
+ of two different Shewanella strains, `Shewanella baltica OS185 strain=OS185`
+ and `Shewanella baltica OS223 strain=OS223`. For simplicity, we gave this query
+ the name "Sb47+63".
+
+When we gather this signature against the `gtdb-rs202` representatives database,
+we see 66% matches to one strain, and 33% to the other:
+
+abbreviated gather_csv:
+
+```
+f_match,f_unique_weighted,name,query_name
+0.664,1.0,0.664,"GCF_000021665.1 Shewanella baltica OS223 strain=OS223, ASM2166v1",Sb47+63
+0.656,0.511,0.335,"GCF_000017325.1 Shewanella baltica OS185 strain=OS185, ASM1732v1",Sb47+63
+```
+
+> Here, `f_match` shows that independently, both strains match ~65% percent of
+ this mixed query. The `f_unique_weighted` column has the results of gather-style
+ decomposition. So the OS223 strain had a slightly higher `f_match` (66%), so it
+ was the first match. Then, the matching sequence was removed from the query. The
+ remaining 33% of the query matched to strain OS185.
+
+Here, we use this gather csv to `classify our "Sb47+63" mixed-strain query.
+
+Example command to classify this query from the `gather` csv, using
+the default classification threshold (0.1, which corresponds to ~ 93% ANI).
     
     ```
     sourmash tax classify 
-        --gather_results MAG1_gather_x_gtdbrs202_k31.csv \
-        --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
+        --gather-csv 47+63_x_gtdb-rs202.gather.csv \
+        --taxonomy-csv gtdb-rs202.taxonomy.v2.csv
     ```
 
 There are two possible output formats, `summary` and `krona`.
 
 - `summary` is the default output format. This outputs a `csv` with lineage
-summarization for each taxonomic rank. This output currently consists of four
-columns, `query_name,rank,fraction,lineage`, where `fraction` is the  fraction
-of the query matched to the reported rank and lineage.  - `krona` format is a
-tab-separated list of these results at a specific rank. The first column,
-`fraction` is the fraction of the query matched to the reported rank and
-lineage. The remaining columns are `superkingdom`, `phylum`, .. etc down to the
-rank used for summarization. This output can be used directly for summary
-visualization.
+ summarization for each taxonomic rank. This output currently consists of four
+ columns, `query_name,rank,fraction,lineage`, where `fraction` is the  fraction
+ of the query matched to the reported rank and lineage. The `status` column
+ provides additional information on the classification. The `status` options are:
+
+  - `match` - this query was classified
+  - `nomatch`- this query could not be classified
+  - `below_threshold` - this query was classified at the specified rank,
+     but the query fraction matched was below the containment threshold
+
+Here's the results from classifying this mixed-strain Shewanella query to
+species level.
+
+```
+query_name,status,rank,fraction,lineage
+"NC_009665.1 Shewanella baltica OS185, complete genome",match,species,1.000,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Shewanellaceae;g__Shewanella;s__Shewanella baltica
+```
+
+Here, we see that the match percentages to both strains have been aggregated,
+and we have 100% species-level `Shewanella baltica` annotation.
+
+- `krona` format is a tab-separated list of these results at a specific rank.
+  The first column, `fraction` is the fraction of the query matched to the
+  reported rank and lineage. The remaining columns are `superkingdom`, `phylum`,
+  ... etc down to the rank used for summarization. This output can be used
+  directly for `krona` visualization.
+
+To generate `krona`, we must classify by `--rank` instead of using the
+ classification threshold. For the command, we add `--output-format krona`
+  and `--rank <RANK>` to the command above. Here's the command for producing
+  `krona` output for `species`-level classifications:
+
+    ```
+    sourmash tax classify
+        --gather-csv MAG1_gather_x_gtdbrs202_k31.csv \
+        --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
+        --output-format krona --rank species
+    ```
+
+Here is the `krona`-formatted output for this command:
+
+```
+fraction        superkingdom    phylum  class   order   family  genus   species
+47+63   1.0     d__Bacteria     p__Proteobacteria       c__Gammaproteobacteria  o__Enterobacterales     f__Shewanellaceae       g__Shewanella   s__Shewanella baltica
+```
+
+To produce multiple output types from the same command, add the types into the
+ `--output-format` argument, e.g. `--output-format summary krona`.
+ **Note that for classify, specifying `--rank`, as needed for `krona`, forces
+ classification by `rank` rather than by containment threshold.** If the query
+ classification at this rank does not meet the containment threshold
+ (default=0.1), the `status` column will contain `below_threshold`.
+
 
 ### `sourmash tax label` (for labeling gather results)
 
 `sourmash tax label` - for any gather results, add a column with taxonomic
-lineage information for each database match. Do not summarize or classify. Note
-that this is not required for either `summarize` or `classify`.
+ lineage information for each database match. Do not summarize or classify. Note
+ that this is not required for either `summarize` or `classify`.
 
 By default, `label` uses the name of each input gather csv to write an updated
-version with lineages information. For example, labeling `sample1.gather.csv`
-would produce `sample1.gather.with-lineages.csv`
+ version with lineages information. For example, labeling `sample1.gather.csv`
+ would produce `sample1.gather.with-lineages.csv`
 
 
 ## `sourmash lca` subcommands for in-memory taxonomy integration

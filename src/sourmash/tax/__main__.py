@@ -176,7 +176,6 @@ def classify(args):
             for (query_name, rank, fraction, lineage) in best_at_rank:
                 status = 'nomatch'
                 if query_name in matched_queries:
-                    notify(f"already matched query {query_name}. Skipping...")
                     continue
                 if fraction <= args.containment_threshold:
                     status="below_threshold"
@@ -201,7 +200,6 @@ def classify(args):
                 for (query_name, rank, fraction, lineage) in best_at_rank:
                     status = 'nomatch'
                     if query_name in matched_queries:
-                        notify(f"already matched query {query_name}. Skipping...")
                         continue
                     if fraction >= args.containment_threshold:
                         status = "match"
