@@ -52,6 +52,7 @@ def summarize(args):
 
     # first, load taxonomic_assignments
     tax_assign = {}
+    available_ranks = set()
     for tax_csv in args.taxonomy_csv:
 
         try:
@@ -60,12 +61,17 @@ def summarize(args):
                                               force=args.force)
             # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
             tax_assign.update(this_tax_assign)
+            available_ranks.update(set(avail_ranks))
 
         except ValueError as exc:
             error(exc)
 
     if not tax_assign:
         error(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
+        sys.exit(-1)
+
+    if args.rank and args.rank not in available_ranks:
+        error(f"No taxonomic information provided for rank {args.rank}: cannot summarize at this rank")
         sys.exit(-1)
 
     # next, collect and load gather results
@@ -117,6 +123,7 @@ def classify(args):
 
     # first, load taxonomic_assignments
     tax_assign = {}
+    available_ranks = set()
     for tax_csv in args.taxonomy_csv:
 
         try:
@@ -125,11 +132,16 @@ def classify(args):
                                               force=args.force)
             # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
             tax_assign.update(this_tax_assign)
+            available_ranks.update(set(avail_ranks))
         except ValueError as exc:
             error(exc)
 
     if not tax_assign:
         error(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
+        sys.exit(-1)
+
+    if args.rank and args.rank not in available_ranks:
+        error(f"No taxonomic information provided for rank {args.rank}: cannot classify at this rank")
         sys.exit(-1)
 
     # get gather_csvs from args

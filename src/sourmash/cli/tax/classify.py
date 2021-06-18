@@ -26,8 +26,8 @@ def subparser(subparsers):
         help='base filepath for output file(s) (default stdout)'
     )
     subparser.add_argument(
-        '-r', '--rank', choices=['species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'], #strain
-        help='Summarize genome taxonomy at this rank and above'
+        '-r', '--rank', choices=['strain','species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'],
+        help='Summarize genome taxonomy at this rank and above. Note that the taxonomy csv must contain lineage information at this rank.'
     )
     subparser.add_argument(
         '--keep-full-identifiers', action='store_true',

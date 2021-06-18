@@ -59,17 +59,25 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     return gather_csvs
 
 
-def load_gather_results(gather_csv):
+def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=['query_name', 'name', 'f_unique_weighted']):
     "Load a single gather csv"
     header = []
     gather_results = []
+
     with open(gather_csv, 'rt') as fp:
-        r = csv.DictReader(fp)
-        #do we want to check for critical column names?
+        r = csv.DictReader(fp, delimiter=delimiter)
+        header = r.fieldnames
+        # check for empty file
+        if not header:
+            raise ValueError(f'Cannot read gather results from {gather_csv}. Is file empty?')
+
+        #check for critical column names used by summarize_gather_at
+        if not set(essential_colnames).issubset(header):
+            raise ValueError(f'Not all required gather columns are present in {gather_csv}.')
+
         for n, row in enumerate(r):
-            if not header:
-                header= list(row.keys())
             gather_results.append(row)
+
     if not gather_results:
         raise ValueError(f'No gather results loaded from {gather_csv}.')
     else:
@@ -133,8 +141,16 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], s
     """
     sum_uniq_weighted = defaultdict(lambda: defaultdict(float))
     for row in gather_results:
+        # get essential gather info
         query_name = row['query_name']
         match_ident = row['name']
+        f_uniq_weighted = row['f_unique_weighted']
+        f_uniq_weighted = float(f_uniq_weighted)
+
+        # 100% match? are we looking at something in the database?
+        if f_uniq_weighted == 1:
+            notify('WARNING: 100% match! Is query {query_name} identical to the database match, {name}?')
+
         # get lineage for match
         lineage = find_match_lineage(match_ident, tax_assign, skip_idents = skip_idents, split_identifiers=split_identifiers, keep_identifier_versions=keep_identifier_versions)
         # ident was in skip_idents
@@ -145,8 +161,6 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], s
         lineage = pop_to_rank(lineage, rank)
         assert lineage[-1].rank == rank, lineage[-1]
 
-        f_uniq_weighted = row['f_unique_weighted']
-        f_uniq_weighted = float(f_uniq_weighted)
         sum_uniq_weighted[query_name][lineage] += f_uniq_weighted
 
     # sort and store each as SummarizedGatherResult
@@ -358,82 +372,82 @@ def load_taxonomy_csv(filename, *, delimiter=',', force=False,
     lineage tuples.
     """
     include_strain=False
-    fp = open(filename, newline='')
-    r = csv.DictReader(fp, delimiter=delimiter)
-    header = r.fieldnames
-    if not header:
-        raise ValueError(f'Cannot read taxonomy assignments from {filename}. Is file empty?')
 
-    identifier = "ident"
-    # check for ident/identifier, handle some common alternatives
-    if "ident" not in header:
+    with open(filename, newline='') as fp:
+        r = csv.DictReader(fp, delimiter=delimiter)
+        header = r.fieldnames
+        if not header:
+            raise ValueError(f'Cannot read taxonomy assignments from {filename}. Is file empty?')
+
+        identifier = "ident"
         # check for ident/identifier, handle some common alternatives
-        if 'identifiers' in header:
-            identifier = 'identifiers'
-            header = ["ident" if "identifiers" == x else x for x in header]
-        elif 'accession' in header:
-            identifier = 'accession'
-            header = ["ident" if "accession" == x else x for x in header]
-        else:
-            raise ValueError(f'No taxonomic identifiers found.')
-    if "strain" in header:
-        include_strain=True
+        if "ident" not in header:
+            # check for ident/identifier, handle some common alternatives
+            if 'identifiers' in header:
+                identifier = 'identifiers'
+                header = ["ident" if "identifiers" == x else x for x in header]
+            elif 'accession' in header:
+                identifier = 'accession'
+                header = ["ident" if "accession" == x else x for x in header]
+            else:
+                raise ValueError(f'No taxonomic identifiers found.')
+        # is "strain" an available rank?
+        if "strain" in header:
+            include_strain=True
 
-   # check that all ranks are in header
-    ranks = list(lca_utils.taxlist(include_strain=include_strain))
-    if not set(ranks).issubset(header):
-        # for now, just raise err if not all ranks are present.
-        # in future, we can define `ranks` differently if desired
-        # return them from this function so we can check the `available` ranks
-        raise ValueError(f'Not all taxonomy ranks present')
+       # check that all ranks are in header
+        ranks = list(lca_utils.taxlist(include_strain=include_strain))
+        if not set(ranks).issubset(header):
+            # for now, just raise err if not all ranks are present.
+            # in future, we can define `ranks` differently if desired
+            # return them from this function so we can check the `available` ranks
+            raise ValueError(f'Not all taxonomy ranks present')
 
-    assignments = {}
-    num_rows = 0
-    n_species = 0
-    n_strains = 0
+        assignments = {}
+        num_rows = 0
+        n_species = 0
+        n_strains = 0
 
-    # now parse and load lineages
-    for n, row in enumerate(r):
-        if row: #and row[0].strip():        # want non-empty row
-            num_rows += 1
-            lineage = []
-            # read row into a lineage pair
-            for rank in lca_utils.taxlist(include_strain=include_strain):
-                lin = row[rank]
-                lineage.append(LineagePair(rank, lin))
-            ident = row[identifier]
+        # now parse and load lineages
+        for n, row in enumerate(r):
+            if row:
+                num_rows += 1
+                lineage = []
+                # read row into a lineage pair
+                for rank in lca_utils.taxlist(include_strain=include_strain):
+                    lin = row[rank]
+                    lineage.append(LineagePair(rank, lin))
+                ident = row[identifier]
 
-            # fold, spindle, and mutilate ident?
-            if split_identifiers:
-                ident = ident.split(' ')[0]
+                # fold, spindle, and mutilate ident?
+                if split_identifiers:
+                    ident = ident.split(' ')[0]
 
-                if not keep_identifier_versions:
-                    ident = ident.split('.')[0]
+                    if not keep_identifier_versions:
+                        ident = ident.split('.')[0]
 
-            # clean lineage of null names, replace with 'unassigned'
-            lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
-            lineage = [ LineagePair(a, b) for (a, b) in lineage ]
+                # clean lineage of null names, replace with 'unassigned'
+                lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
+                lineage = [ LineagePair(a, b) for (a, b) in lineage ]
 
-            # remove end nulls
-            while lineage and lineage[-1].name == 'unassigned':
-                lineage = lineage[:-1]
+                # remove end nulls
+                while lineage and lineage[-1].name == 'unassigned':
+                    lineage = lineage[:-1]
 
-            # store lineage tuple
-            if lineage:
-                # check duplicates
-                if ident in assignments:
-                    if assignments[ident] != tuple(lineage):
-                        if not force:
-                            raise ValueError(f"multiple lineages for identifier {ident}")
-                else:
-                    assignments[ident] = tuple(lineage)
+                # store lineage tuple
+                if lineage:
+                    # check duplicates
+                    if ident in assignments:
+                        if assignments[ident] != tuple(lineage):
+                            if not force:
+                                raise ValueError(f"multiple lineages for identifier {ident}")
+                    else:
+                        assignments[ident] = tuple(lineage)
 
-                    if lineage[-1].rank == 'species':
-                        n_species += 1
-                    elif lineage[-1].rank == 'strain':
-                        n_species += 1
-                        n_strains += 1
-
-    fp.close()
+                        if lineage[-1].rank == 'species':
+                            n_species += 1
+                        elif lineage[-1].rank == 'strain':
+                            n_species += 1
+                            n_strains += 1
 
     return assignments, num_rows, ranks

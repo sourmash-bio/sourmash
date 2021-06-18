@@ -177,6 +177,24 @@ def test_classify_no_rank_krona(runtmp):
     assert "Rank (--rank) is required for krona output format." in str(exc.value)
 
 
+def test_summarize_rank_not_available(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax,
+                       '--rank', 'strain')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == -1
+    assert "No taxonomic information provided for rank strain: cannot summarize at this rank" in c.last_result.err
+
+
 def test_summarize_duplicated_taxonomy_fail(runtmp):
     c = runtmp
     # write temp taxonomy with duplicates
@@ -269,7 +287,6 @@ def test_summarize_missing_taxonomy_fail(runtmp):
     assert c.last_result.status == -1
 
 
-# NTP: WORKING HERE
 def test_summarize_multiple_taxonomy_files_missing(runtmp):
     c = runtmp
     # write temp taxonomy with duplicates
@@ -327,8 +344,29 @@ def test_summarize_empty_gather_results(runtmp):
     with pytest.raises(ValueError) as exc:
         runtmp.run_sourmash('tax', 'summarize', g_csv, '--taxonomy-csv', tax)
 
-    assert f"No gather results loaded from {g_csv}" in str(exc.value)
+    assert f'Cannot read gather results from {g_csv}. Is file empty?' in str(exc.value)
     assert runtmp.last_result.status == -1
+
+
+def test_summarize_bad_gather_header(runtmp):
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    bad_g_csv = runtmp.output('g.csv')
+
+    #creates bad gather result
+    bad_g = [x.replace("name", "nope") for x in open(g_csv, 'r')]
+    with open(bad_g_csv, 'w') as fp:
+        for line in bad_g:
+            fp.write(line)
+    print("bad_gather_results: \n", bad_g)
+
+    with pytest.raises(ValueError) as exc:
+        runtmp.run_sourmash('tax', 'summarize', bad_g_csv, '--taxonomy-csv', tax)
+
+    assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
+    assert runtmp.last_result.status == -1
+
 
 
 def test_summarize_empty_tax_lineage_input(runtmp):
@@ -363,7 +401,27 @@ def test_classify_empty_gather_results(runtmp):
     with pytest.raises(ValueError) as exc:
         runtmp.run_sourmash('tax', 'classify', g_csv, '--taxonomy-csv', tax)
 
-    assert f"No gather results loaded from {g_csv}" in str(exc.value)
+    assert f'Cannot read gather results from {g_csv}. Is file empty?' in str(exc.value)
+    assert runtmp.last_result.status == -1
+
+
+def test_classify_bad_gather_header(runtmp):
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    bad_g_csv = runtmp.output('g.csv')
+
+    #creates bad gather result
+    bad_g = [x.replace("f_unique_weighted", "nope") for x in open(g_csv, 'r')]
+    with open(bad_g_csv, 'w') as fp:
+        for line in bad_g:
+            fp.write(line)
+    print("bad_gather_results: \n", bad_g)
+
+    with pytest.raises(ValueError) as exc:
+        runtmp.run_sourmash('tax', 'classify', bad_g_csv, '--taxonomy-csv', tax)
+
+    assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
@@ -577,7 +635,6 @@ def test_classify_gather_from_file_below_threshold(runtmp):
 
 
 def test_classify_rank_duplicated_taxonomy_fail(runtmp):
-    # test basic summarize
     c = runtmp
     # write temp taxonomy with duplicates
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -596,7 +653,6 @@ def test_classify_rank_duplicated_taxonomy_fail(runtmp):
 
 
 def test_classify_rank_duplicated_taxonomy_force(runtmp):
-    # test basic summarize
     c = runtmp
     # write temp taxonomy with duplicates
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -716,6 +772,24 @@ def test_classify_missing_taxonomy_fail_rank(runtmp):
     assert c.last_result.status == -1
 
 
+def test_classify_rank_not_available(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('tax', 'classify', g_csv, '--taxonomy-csv', tax,
+                       '--rank', 'strain', '--containment-threshold', '0')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == -1
+    assert "No taxonomic information provided for rank strain: cannot classify at this rank" in c.last_result.err
+
+
 def test_classify_empty_gather_results_with_header_single(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -757,7 +831,7 @@ def test_classify_empty_gather_results_single(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == -1
-    assert f'No gather results loaded from {empty_tax}.' in c.last_result.err
+    assert f'Cannot read gather results from {empty_tax}. Is file empty?' in str(exc.value)
     assert 'Exiting.' in c.last_result.err
 
 
@@ -876,7 +950,27 @@ def test_label_empty_gather_results(runtmp):
     with pytest.raises(ValueError) as exc:
         runtmp.run_sourmash('tax', 'label', g_csv, '--taxonomy-csv', tax)
 
-    assert f"No gather results loaded from {g_csv}" in str(exc.value)
+    assert f'Cannot read gather results from {g_csv}. Is file empty?' in str(exc.value)
+    assert runtmp.last_result.status == -1
+
+
+def test_label_bad_gather_header(runtmp):
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    bad_g_csv = runtmp.output('g.csv')
+
+    #creates bad gather result
+    bad_g = [x.replace("query_name", "nope") for x in open(g_csv, 'r')]
+    with open(bad_g_csv, 'w') as fp:
+        for line in bad_g:
+            fp.write(line)
+    print("bad_gather_results: \n", bad_g)
+
+    with pytest.raises(ValueError) as exc:
+        runtmp.run_sourmash('tax', 'label', bad_g_csv, '--taxonomy-csv', tax)
+
+    assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
     assert runtmp.last_result.status == -1
 
 

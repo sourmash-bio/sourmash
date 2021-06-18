@@ -145,14 +145,43 @@ def test_check_and_load_gather_csvs_fail_on_missing(runtmp):
     assert "Failing on missing taxonomy" in str(exc)
 
 
-# @NTP: improve test!?
 def test_load_gather_results():
     gather_csv = utils.get_test_data('tax/test1.gather.csv')
     gather_results, header = tax_utils.load_gather_results(gather_csv)
     assert len(gather_results) == 4
 
 
-# this function is in lca.command_index for now, but not tested there
+def test_load_gather_results_bad_header(runtmp):
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    bad_g_csv = runtmp.output('g.csv')
+
+    #creates bad gather result
+    bad_g = [x.replace("f_unique_weighted", "nope") for x in open(g_csv, 'r')]
+    with open(bad_g_csv, 'w') as fp:
+        for line in bad_g:
+            fp.write(line)
+    print("bad_gather_results: \n", bad_g)
+
+    with pytest.raises(ValueError) as exc:
+        gather_results, header = tax_utils.load_gather_results(bad_g_csv)
+    assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
+
+
+def test_load_gather_results_empty(runtmp):
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    empty_csv = runtmp.output('g.csv')
+
+    #creates empty gather result
+    with open(empty_csv, 'w') as fp:
+        fp.write('')
+
+    with pytest.raises(ValueError) as exc:
+        gather_results, header = tax_utils.load_gather_results(empty_csv)
+    assert f'Cannot read gather results from {empty_csv}. Is file empty?' in str(exc.value)
+
+
 def test_load_taxonomy_csv():
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     tax_assign, num_rows, ranks = load_taxonomy_csv(taxonomy_csv)

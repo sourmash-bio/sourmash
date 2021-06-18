@@ -41,8 +41,8 @@ def subparser(subparsers):
         help='choose output format(s)',
     )
     subparser.add_argument(
-        '-r', '--rank', choices=['species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'], # strain?
-        help='For non-default output formats: Summarize genome taxonomy at this rank and above'
+        '-r', '--rank', choices=['strain','species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'],
+        help='For non-default output formats: Summarize genome taxonomy at this rank and above. Note that the taxonomy csv must contain lineage information at this rank.'
     )
     subparser.add_argument(
         '-f', '--force', action = 'store_true',
