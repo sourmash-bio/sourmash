@@ -1,4 +1,4 @@
-"""summarize metagenome gather results at rank"""
+"""summarize metagenome gather results"""
 
 import sourmash
 from sourmash.logging import notify, print_results, error
@@ -6,7 +6,10 @@ from sourmash.logging import notify, print_results, error
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('summarize')
-    subparser.add_argument('gather_results', nargs='*')
+    subparser.add_argument(
+        '-g', '--gather-csv', nargs='*', default = [],
+        help='csvs from sourmash gather'
+    )
     subparser.add_argument(
         '--from-file',  metavar='FILE', default = None,
         help='input many gather results as a text file, with one gather csv per line'
@@ -51,6 +54,8 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
+    if not args.gather_csv and not args.from_file:
+        raise ValueError(f"No gather csvs found! Please input via `-g` or `--from-file`.")
     if len(args.output_format) > 1:
         if args.output_base == "-":
             raise TypeError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")

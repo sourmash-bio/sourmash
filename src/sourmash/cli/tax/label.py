@@ -6,14 +6,17 @@ from sourmash.logging import notify, print_results, error
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('label')
-    subparser.add_argument('gather_results', nargs='*')
     subparser.add_argument(
-        '-q', '--quiet', action='store_true',
-        help='suppress non-error output'
+        '-g', '--gather-csv', nargs='*', default = [],
+        help='csvs from sourmash gather'
     )
     subparser.add_argument(
         '--from-file',  metavar='FILE', default=None,
         help='input many gather results as a text file, with one gather csv per line'
+    )
+    subparser.add_argument(
+        '-q', '--quiet', action='store_true',
+        help='suppress non-error output'
     )
     subparser.add_argument(
         '-t', '--taxonomy-csv', metavar='FILE',
@@ -43,4 +46,6 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
+    if not args.gather_csv and not args.from_file:
+        raise ValueError(f"No gather csvs found! Please input via `-g` or `--from-file`.")
     return sourmash.tax.__main__.label(args)

@@ -440,27 +440,95 @@ reference databases.
 `sourmash tax summarize` - for each gather query, summarize gather results by
 taxonomic lineage.
 
+example command to summarize a single `gather csv`, where the query was gathered
+against `gtdb-rs202` representative species database.
+
+    ```
+    sourmash tax summarize 
+        --gather_results HSMA33MX_gather_x_gtdbrs202_k31.csv \
+        --taxonomy-csv gtdb-rs202.taxonomy.v2.csv
+    ```
+
 There are three possible output formats, `summary`, `lineage_summary`, and
 `krona`.
 
 - `summary` is the default output format. This outputs a `csv` with lineage
 summarization for each taxonomic rank. This output currently consists of four
 columns, `query_name,rank,fraction,lineage`, where `fraction` is the  fraction
-of the query matched to the reported rank and lineage.  - `krona` format is a
-tab-separated list of these results at a specific rank. The first column,
-`fraction` is the fraction of the query matched to the reported rank and
-lineage. The remaining columns are `superkingdom`, `phylum`, .. etc down to the
-rank used for summarization. This output can be used directly for summary
-visualization.  - `lineage_summary` - the lineage summary format is most useful
-when comparing across metagenomes. Each row is a lineage at the desired
+of the query matched to the reported rank and lineage.  
+
+example `summary` output from the command above:
+
+    ```
+    query_name,rank,fraction,lineage
+    HSMA33MX,superkingdom,0.131,d__Bacteria
+    HSMA33MX,phylum,0.073,d__Bacteria;p__Bacteroidota
+    HSMA33MX,phylum,0.058,d__Bacteria;p__Proteobacteria
+    .
+    .
+    .
+    HSMA33MX,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;
+    o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli
+    HSMA33MX,species,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;
+    o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri
+    HSMA33MX,species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;
+    o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus
+    ```
+
+- `krona` format is a tab-separated list of these results at a specific rank. 
+The first column, `fraction` is the fraction of the query matched to the 
+reported rank and lineage. The remaining columns are `superkingdom`, `phylum`, 
+.. etc down to the rank used for summarization. This output can be used 
+directly for summary visualization.
+
+To generate `krona`, we add `--output-format krona` to the command above, and
+need to specify a rank to summarize. Here's the command for reporting `krona`
+summary at `species` level:
+
+   ```
+    sourmash tax summarize
+        --gather_results HSMA33MX_gather_x_gtdbrs202_k31.csv \
+        --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
+        --output-format krona --rank species
+   ```
+
+example krona output from this command:
+
+    ```
+    fraction	superkingdom	phylum	class	order	family	genus	species
+    0.05815279361459521	Bacteria	Proteobacteria	Gammaproteobacteria	Enterobacterales	Enterobacteriaceae	Escherichia	Escherichia coli
+    0.05701254275940707	Bacteria	Bacteroidetes	Bacteroidia	Bacteroidales	Prevotellaceae	Prevotella	Prevotella copri
+    0.015637726014008795	Bacteria	Bacteroidetes	Bacteroidia	Bacteroidales	Bacteroidaceae	Bacteroides	Bacteroides vulgatus
+    ```
+
+- `lineage_summary` - the lineage summary format is most useful
+when comparing across metagenome queries. Each row is a lineage at the desired
 reporting rank. The columns are each query used for gather, with the fraction
 match reported for each lineage. This format is commonly used as input for many
 external multi-sample visualization tools.
 
+To generate `lineage_summary`, we add `--output-format lineage_summary` to the summarize
+command, and need to specify a rank to summarize. Here's the command for reporting 
+`lineage_summary` for two queries (HSMA33MX, NTP_ADD_ME) summary at `species` level.
+
+   ```
+    sourmash tax summarize
+        --gather_results HSMA33MX_gather_x_gtdbrs202_k31.csv \
+        --gather_results NTP_ADD_ME_gather_x_gtdbrs202_k31.csv \
+        --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
+        --output-format krona --rank species
+   ```
+
 example `lineage_summary`:
 
-    lineage    sample1  sample2 sample3 lin_a     0.4    0.17     0.6 lin_b
-    0.0    0.0      0.1 lin_c     0.3    0.4      0.2
+    ```
+    lineage	HSMA33MX ADD_ME
+    Bacteria;Bacteroidetes;Bacteroidia;Bacteroidales;Bacteroidaceae;Bacteroides;Bacteroides vulgatus	0.015637726014008795 ADD_ME
+    Bacteria;Bacteroidetes;Bacteroidia;Bacteroidales;Prevotellaceae;Prevotella;Prevotella copri	0.05701254275940707 ADD_ME
+    Bacteria;Proteobacteria;Gammaproteobacteria;Enterobacterales;Enterobacteriaceae;Escherichia;Escherichia coli	0.05815279361459521 ADD_ME
+    Eukaryota;Apicomplexa;Aconoidasida;Haemosporida;Plasmodiidae;Plasmodium;Plasmodium vivax	0.2215344518651246 ADD_ME
+    Eukaryota;Apicomplexa;Conoidasida;Eucoccidiorida;Sarcocystidae;Toxoplasma;Toxoplasma gondii	0.023293696041700604 ADD_ME
+    ```
 
 ### `sourmash tax classify` (for classifying genomes)
 
@@ -475,6 +543,14 @@ Optionally, `classify` can instead report classifications at a desired `rank`,
 regardless of match threshold.
 
 Note that these thresholds and strategies are under active testing.
+
+Example command to classify a query from a single `gather` csv:
+    
+    ```
+    sourmash tax classify 
+        --gather_results MAG1_gather_x_gtdbrs202_k31.csv \
+        --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
+    ```
 
 There are two possible output formats, `summary` and `krona`.
 

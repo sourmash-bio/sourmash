@@ -59,12 +59,12 @@ def summarize(args):
             this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
-            # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
+            # maybe check for overlapping tax assignments? rn later ones will override earlier ones
             tax_assign.update(this_tax_assign)
             available_ranks.update(set(avail_ranks))
 
         except ValueError as exc:
-            error(exc)
+            error(str(exc))
 
     if not tax_assign:
         error(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
@@ -75,7 +75,7 @@ def summarize(args):
         sys.exit(-1)
 
     # next, collect and load gather results
-    gather_csvs = tax_utils.collect_gather_csvs(args.gather_results, from_file= args.from_file)
+    gather_csvs = tax_utils.collect_gather_csvs(args.gather_csv, from_file= args.from_file)
     gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
                                                                                        fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
 
@@ -136,7 +136,7 @@ def classify(args):
             tax_assign.update(this_tax_assign)
             available_ranks.update(set(avail_ranks))
         except ValueError as exc:
-            error(exc)
+            error(str(exc))
 
     if not tax_assign:
         error(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
@@ -147,7 +147,7 @@ def classify(args):
         sys.exit(-1)
 
     # get gather_csvs from args
-    gather_csvs = tax_utils.collect_gather_csvs(args.gather_results, from_file=args.from_file)
+    gather_csvs = tax_utils.collect_gather_csvs(args.gather_csv, from_file=args.from_file)
 
     classifications = defaultdict(list)
     matched_queries=set()
@@ -252,7 +252,7 @@ def label(args):
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
         except ValueError as exc:
-            error(exc)
+            error(str(exc))
 
         # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
         tax_assign.update(this_tax_assign)
@@ -262,7 +262,7 @@ def label(args):
         sys.exit(-1)
 
     # get gather_csvs from args
-    gather_csvs = tax_utils.collect_gather_csvs(args.gather_results, from_file=args.from_file)
+    gather_csvs = tax_utils.collect_gather_csvs(args.gather_csv, from_file=args.from_file)
 
     # handle each gather csv separately
     for n, g_csv in enumerate(gather_csvs):
