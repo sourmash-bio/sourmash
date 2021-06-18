@@ -461,7 +461,9 @@ sourmash tax summarize
 There are three possible output formats, `summary`, `lineage_summary`, and
  `krona`.
 
-- `summary` is the default output format. This outputs a `csv` with lineage
+#### `summary` output format
+
+`summary` is the default output format. This outputs a `csv` with lineage
  summarization for each taxonomic rank. This output currently consists of four
  columns, `query_name,rank,fraction,lineage`, where `fraction` is the  fraction
  of the query matched to the reported rank and lineage.
@@ -484,7 +486,9 @@ HSMA33MX,species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;
 o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus
 ```
 
-- `krona` format is a tab-separated list of these results at a specific rank.
+#### `krona` output format
+
+`krona` format is a tab-separated list of these results at a specific rank.
  The first column, `fraction` is the fraction of the query matched to the
  reported rank and lineage. The remaining columns are `superkingdom`, `phylum`,
  ... etc down to the rank used for summarization. This output can be used
@@ -510,11 +514,12 @@ fraction	superkingdom	phylum	class	order	family	genus	species
 0.015637726014008795	Bacteria	Bacteroidetes	Bacteroidia	Bacteroidales	Bacteroidaceae	Bacteroides	Bacteroides vulgatus
 ```
 
-- `lineage_summary` - the lineage summary format is most useful
- when comparing across metagenome queries. Each row is a lineage at the desired
- reporting rank. The columns are each query used for gather, with the fraction
- match reported for each lineage. This format is commonly used as input for many
- external multi-sample visualization tools.
+#### `lineage_summary` output format
+
+The lineage summary format is most useful when comparing across metagenome queries.
+ Each row is a lineage at the desired reporting rank. The columns are each query
+ used for gather, with the fraction match reported for each lineage. This format
+ is commonly used as input for many external multi-sample visualization tools.
 
 To generate `lineage_summary`, we add `--output-format lineage_summary` to the summarize
  command, and need to specify a rank to summarize. Here's the command for reporting
@@ -592,7 +597,9 @@ sourmash tax classify
 
 There are two possible output formats, `summary` and `krona`.
 
-- `summary` is the default output format. This outputs a `csv` with lineage
+#### `summary` output format
+
+`summary` is the default output format. This outputs a `csv` with lineage
  summarization for each taxonomic rank. This output currently consists of four
  columns, `query_name,rank,fraction,lineage`, where `fraction` is the  fraction
  of the query matched to the reported rank and lineage. The `status` column
@@ -614,7 +621,9 @@ query_name,status,rank,fraction,lineage
 Here, we see that the match percentages to both strains have been aggregated,
 and we have 100% species-level `Shewanella baltica` annotation.
 
-- `krona` format is a tab-separated list of these results at a specific rank.
+#### `krona` output format
+
+`krona` format is a tab-separated list of these results at a specific rank.
   The first column, `fraction` is the fraction of the query matched to the
   reported rank and lineage. The remaining columns are `superkingdom`, `phylum`,
   ... etc down to the rank used for summarization. This output can be used
