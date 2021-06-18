@@ -50,6 +50,16 @@ def add_ksize_arg(parser, default=31):
         help='k-mer size; default={d}'.format(d=default)
     )
 
+def add_picklist_args(parser):
+    parser.add_argument(
+        '--picklist', default=None,
+        help="select signatures based on a picklist, i.e. 'file.csv:colname:coltype'"
+    )
+    parser.add_argument(
+        '--picklist-require-all', default=False, action='store_true',
+        help="require that all picklist values be found or else fail"
+    )
+
 
 def check_scaled_bounds(arg):
     min_val = 100

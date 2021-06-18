@@ -1,0 +1,10 @@
+signature_file,md5,ksize,moltype,num,scaled,n_hashes,seed,with_abundance,name,filename,license
+GCF_000008545.1_ASM854v1_genomic.fna.gz.sig,74b928d3db1f7f033c0dcca6c6e52aea,11,DNA,0,10000,84,42,0,"NC_000853.1 Thermotoga maritima MSB8 chromosome, complete genome",../fasta/GCF_000008545.1_ASM854v1_genomic.fna.gz,CC0
+GCF_000008545.1_ASM854v1_genomic.fna.gz.sig,ba9947e078cab29e20bc7d31bc1b9f0d,21,DNA,0,10000,192,42,0,"NC_000853.1 Thermotoga maritima MSB8 chromosome, complete genome",../fasta/GCF_000008545.1_ASM854v1_genomic.fna.gz,CC0
+GCF_000008545.1_ASM854v1_genomic.fna.gz.sig,1bfe96d76ec9cdb60779a1a9223c424e,31,DNA,0,10000,187,42,0,"NC_000853.1 Thermotoga maritima MSB8 chromosome, complete genome",../fasta/GCF_000008545.1_ASM854v1_genomic.fna.gz,CC0
+GCF_000016785.1_ASM1678v1_genomic.fna.gz.sig,328f7b0643bdb6c76135292b5afc8fa7,11,DNA,0,10000,82,42,0,"NC_009486.1 Thermotoga petrophila RKU-1, complete genome",../fasta/GCF_000016785.1_ASM1678v1_genomic.fna.gz,CC0
+GCF_000016785.1_ASM1678v1_genomic.fna.gz.sig,a77789e831fcd2436c3b9e4e22fb173e,21,DNA,0,10000,190,42,0,"NC_009486.1 Thermotoga petrophila RKU-1, complete genome",../fasta/GCF_000016785.1_ASM1678v1_genomic.fna.gz,CC0
+GCF_000016785.1_ASM1678v1_genomic.fna.gz.sig,50d8efd580ff2000cb38d1f8cc9cf9b4,31,DNA,0,10000,185,42,0,"NC_009486.1 Thermotoga petrophila RKU-1, complete genome",../fasta/GCF_000016785.1_ASM1678v1_genomic.fna.gz,CC0
+GCF_000018945.1_ASM1894v1_genomic.fna.gz.sig,989f88420b193ef39c4dbe3b268e0049,11,DNA,0,10000,90,42,0,"NC_011978.1 Thermotoga neapolitana DSM 4359, complete genome",../fasta/GCF_000018945.1_ASM1894v1_genomic.fna.gz,CC0
+GCF_000018945.1_ASM1894v1_genomic.fna.gz.sig,bebcd0dcc0ed3b120ad16c4e15805370,21,DNA,0,10000,188,42,0,"NC_011978.1 Thermotoga neapolitana DSM 4359, complete genome",../fasta/GCF_000018945.1_ASM1894v1_genomic.fna.gz,CC0
+GCF_000018945.1_ASM1894v1_genomic.fna.gz.sig,4289d4241be8573145282352215ca3c4,31,DNA,0,10000,198,42,0,"NC_011978.1 Thermotoga neapolitana DSM 4359, complete genome",../fasta/GCF_000018945.1_ASM1894v1_genomic.fna.gz,CC0

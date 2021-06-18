@@ -1,6 +1,7 @@
 """search a metagenome signature against dbs"""
 
-from sourmash.cli.utils import add_ksize_arg, add_moltype_args, add_scaled_arg
+from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
+                                add_picklist_args, add_scaled_arg)
 
 
 def subparser(subparsers):
@@ -59,10 +60,6 @@ def subparser(subparsers):
     subparser.add_argument(
         '--cache-size', default=0, type=int, metavar='N',
         help='number of internal SBT nodes to cache in memory (default: 0, cache all nodes)'
-    )
-    add_ksize_arg(subparser, 31)
-    add_moltype_args(subparser)
-    add_scaled_arg(subparser)
 
     # advanced parameters
     subparser.add_argument(
@@ -80,6 +77,11 @@ def subparser(subparsers):
         '--prefetch', dest="prefetch", action='store_true',
         help="use prefetch before gather; see documentation",
     )
+
+    add_ksize_arg(subparser, 31)
+    add_moltype_args(subparser)
+    add_picklist_args(subparser)
+    add_scaled_arg(subparser)
 
 
 def main(args):
