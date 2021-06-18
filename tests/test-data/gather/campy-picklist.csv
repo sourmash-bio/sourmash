@@ -1,0 +1,4 @@
+signature_file,md5,ksize,moltype,num,scaled,n_hashes,seed,with_abundance,name,filename,license
+GCF_000009085.1_ASM908v1_genomic.fna.gz.sig,752280e9969ce750e2c80477c1b7b0e7,11,DNA,0,10000,61,42,0,"NC_002163.1 Campylobacter jejuni subsp. jejuni NCTC 11168 = ATCC 700819 chromosome, complete genome",../fasta/GCF_000009085.1_ASM908v1_genomic.fna.gz,CC0
+GCF_000009085.1_ASM908v1_genomic.fna.gz.sig,eba0eb3ce984cc53c36f134a752c52c5,21,DNA,0,10000,157,42,0,"NC_002163.1 Campylobacter jejuni subsp. jejuni NCTC 11168 = ATCC 700819 chromosome, complete genome",../fasta/GCF_000009085.1_ASM908v1_genomic.fna.gz,CC0
+GCF_000009085.1_ASM908v1_genomic.fna.gz.sig,953156e9f4da8cf22e7e0b4b88261fae,31,DNA,0,10000,167,42,0,"NC_002163.1 Campylobacter jejuni subsp. jejuni NCTC 11168 = ATCC 700819 chromosome, complete genome",../fasta/GCF_000009085.1_ASM908v1_genomic.fna.gz,CC0

@@ -20,6 +20,7 @@ from .exceptions import IndexNotSupported
 from .sbt_storage import FSStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
 from .index import Index, IndexSearchResult
+from .picklist import passes_all_picklists
 
 from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
 
@@ -148,6 +149,7 @@ class SBT(Index):
             cache_size = sys.maxsize
         self._nodescache = _NodesCache(maxsize=cache_size)
         self._location = None
+        self.picklists = []
 
     @property
     def location(self):
@@ -155,10 +157,12 @@ class SBT(Index):
 
     def signatures(self):
         for k in self.leaves():
-            yield k.data
+            ss = k.data
+            if passes_all_picklists(ss, self.picklists):
+                yield ss
 
     def select(self, ksize=None, moltype=None, num=0, scaled=0,
-               containment=False):
+               containment=False, picklist=None):
         """Make sure this database matches the requested requirements.
 
         Will always raise ValueError if a requirement cannot be met.
@@ -209,6 +213,11 @@ class SBT(Index):
             # we can downsample SBTs for containment operations.
             if scaled > db_mh.scaled and not containment:
                 raise ValueError(f"search scaled value {scaled} is less than database scaled value of {db_mh.scaled}")
+
+        if picklist is not None:
+            self.picklists.append(picklist)
+            if len(self.picklists) > 1:
+                raise ValueError("we do not (yet) support multiple picklists for SBTs")
 
         return self
 
@@ -450,7 +459,11 @@ class SBT(Index):
 
         # & execute!
         for n in self._find_nodes(node_search, **kwargs):
-            yield IndexSearchResult(results[n.data], n.data, self.location)
+            ss = n.data
+
+            # filter on picklists
+            if passes_all_picklists(ss, self.picklists):
+                yield IndexSearchResult(results[ss], ss, self.location)
 
     def _rebuild_node(self, pos=0):
         """Recursively rebuilds an internal node (if it is not present).

@@ -1,6 +1,7 @@
 """create LCA database"""
 
-from sourmash.cli.utils import add_ksize_arg, add_moltype_args
+from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
+                                add_picklist_args)
 
 
 def subparser(subparsers):
@@ -18,8 +19,6 @@ def subparser(subparsers):
     subparser.add_argument(
         '--scaled', metavar='S', default=10000, type=float
     )
-    add_ksize_arg(subparser, 31)
-    add_moltype_args(subparser)
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
@@ -60,6 +59,10 @@ def subparser(subparsers):
         '--fail-on-missing-taxonomy', action='store_true',
         help='fail quickly if taxonomy is not available for an identifier',
     )
+
+    add_ksize_arg(subparser, 31)
+    add_moltype_args(subparser)
+    add_picklist_args(subparser)
 
 
 def main(args):
