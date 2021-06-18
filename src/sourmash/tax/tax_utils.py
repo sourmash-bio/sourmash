@@ -12,8 +12,9 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
            'find_missing_identities', 'make_krona_header',
            'aggregate_by_lineage_at_rank', 'format_for_krona',
            'write_krona', 'write_summary', 'write_classifications',
-           'combine_sumgather_csvs_by_lineage', 'write_lineage_sample_frac',
-           'load_taxonomy_csv']
+           'format_for_cami_profile', 'write_cami_profile',
+           'combine_sumgather_csvs_by_lineage',
+           'write_lineage_sample_frac', 'load_taxonomy_csv']
 
 from sourmash.logging import notify, error, debug
 from sourmash.sourmash_args import load_pathlist_from_file
@@ -368,6 +369,62 @@ def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, format_line
         row.update(sampleinfo)
         # write row
         w.writerow(row)
+
+
+def format_for_cami_profile(rank, summarized_gather):
+    '''
+    Aggregate list of SummarizedGatherResults and format for krona output
+    '''
+    num_queries=0
+    for res_rank, rank_results in summarized_gather.items():
+        if res_rank == rank:
+            lineage_summary, all_queries, num_queries = aggregate_by_lineage_at_rank(rank_results, by_query=False)
+    # if multiple_samples, divide fraction by the total number of query files
+    for lin, fraction in lineage_summary.items():
+        # divide total fraction by total number of queries
+        lineage_summary[lin] = fraction/num_queries
+
+    # sort by fraction
+    lin_items = list(lineage_summary.items())
+    lin_items.sort(key = lambda x: -x[1])
+
+    # reformat lineage for krona_results printing
+    krona_results = []
+    for lin, fraction in lin_items:
+        lin_list = display_lineage(lin).split(';')
+        krona_results.append((fraction, *lin_list))
+
+    return krona_results
+
+
+# see https://github.com/luizirber/2020-cami/blob/master/scripts/gather_to_opal.py
+def write_cami_profile(sample_id, taxons, *, ranks=None, out_fp=None, taxonomy_id=None):
+    '''
+    Write taxonomy-summarized gather results
+    to CAMI profiling Bioboxes format.
+    '''
+
+    if ranks is None:
+        ranks = lca_utils.taxlist(include_strain=False)
+
+    header_title = "# Taxonomic Profiling Output"
+    sample_info = f"@SampleID:{sample_id}"
+    version_info = "@Version:0.10.0"
+    rank_info = f"@Ranks:{'|'.join(ranks)}"
+    program = "@__program__:sourmash"
+    output_lines = [header_title, sample_info, version_info, rank_info, program]
+    if taxonomy_id is not None:
+        output_lines.append(f"@TaxonomyID:{taxonomy_id}")
+    output_lines.append(f"@@TAXID\tRANK\tTAXPATH\tPERCENTAGE") # actual tsv header
+    for tax in taxons:
+        tax_line = "\t".join(str(t) for t in tax)
+        output_lines.append(tax_line)
+
+    final_profile = "\n".join(output_lines)
+    if out_fp:
+        out_fp.write(final_profile)
+
+    return final_profile
 
 
 def load_taxonomy_csv(filename, *, delimiter=',', force=False,

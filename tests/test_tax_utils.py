@@ -15,6 +15,7 @@ from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_re
                                     SummarizedGatherResult, write_classifications,
                                     aggregate_by_lineage_at_rank,
                                     make_krona_header, format_for_krona, write_krona,
+                                    format_for_cami_profile, write_cami_profile,
                                     combine_sumgather_csvs_by_lineage, write_lineage_sample_frac)
 
 # import lca utils as needed for now
@@ -691,6 +692,126 @@ def test_write_krona(runtmp):
     assert kr[0] == ["fraction", "superkingdom", "phylum", "class"]
     assert kr[1] == ["0.5", "a", "b", "c"]
     assert kr[2] == ["0.5", "a", "b", "d"]
+
+
+def test_format_for_cami_profile_0():
+    """test two matches, equal f_unique_weighted"""
+    # make gather results
+    gA = ["queryA", "gA","0.5","0.5"]
+    gB = ["queryA", "gB","0.3","0.5"]
+    g_res = make_mini_gather_results([gA,gB])
+
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b;c")
+    gB_tax = ("gB", "a;b;d")
+    taxD = make_mini_taxonomy([gA_tax,gB_tax])
+
+    # check cami profile format and check results!
+    sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res)
+    print("superkingdom summarized gather results:", sk_sum)
+    cami_res = format_for_cami_profile("superkingdom", {"superkingdom": sk_sum})
+    print("cami_res: ", cami_res)
+    assert cami_res == [(1.0, 'a')]
+
+    phy_sum, _ = summarize_gather_at("phylum", taxD, g_res)
+    cami_res = format_for_cami_profile("phylum", {"phylum": phy_sum})
+    print("cami_res: ", cami_res)
+    assert cami_res == [(1.0, 'a', 'b')]
+
+
+def test_format_for_cami_profile_1():
+    """test two matches, equal f_unique_weighted"""
+    # make gather results
+    gA = ["queryA", "gA","0.5","0.5"]
+    gB = ["queryA", "gB","0.3","0.5"]
+    g_res = make_mini_gather_results([gA,gB])
+
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b;c")
+    gB_tax = ("gB", "a;b;d")
+    taxD = make_mini_taxonomy([gA_tax,gB_tax])
+
+    # summarize with all ranks
+    sum_res = {}
+    #for rank in lca_utils.taxlist(include_strain=False):
+    for rank in ['superkingdom', 'phylum', 'class']:
+        sum_res[rank], _ = summarize_gather_at(rank, taxD, g_res)
+    print('summarized gather: ', sum_res)
+    # check krona format
+    sk_krona = format_for_krona("superkingdom", sum_res)
+    print("sk_krona: ", sk_krona)
+    assert sk_krona == [(1.0, 'a')]
+    phy_krona = format_for_krona("phylum", sum_res)
+    print("phy_krona: ", phy_krona)
+    assert phy_krona ==  [(1.0, 'a', 'b')]
+    cl_krona = format_for_krona("class", sum_res)
+    print("cl_krona: ", cl_krona)
+
+    assert cl_krona ==  [(0.5, 'a', 'b', 'c'), (0.5, 'a', 'b', 'd')]
+
+
+def test_format_for_cami_profile_best_only():
+    """test two matches, equal f_unique_weighted"""
+    # make gather results
+    gA = ["queryA", "gA","0.5","0.5"]
+    gB = ["queryA", "gB","0.3","0.5"]
+    g_res = make_mini_gather_results([gA,gB])
+
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b;c")
+    gB_tax = ("gB", "a;b;d")
+    taxD = make_mini_taxonomy([gA_tax,gB_tax])
+
+    # summarize with all ranks
+    sum_res = {}
+    #for rank in lca_utils.taxlist(include_strain=False):
+    for rank in ['superkingdom', 'phylum', 'class']:
+        sum_res[rank], _ = summarize_gather_at(rank, taxD, g_res, best_only=True)
+    print('summarized gather: ', sum_res)
+    # check krona format
+    sk_krona = format_for_krona("superkingdom", sum_res)
+    print("sk_krona: ", sk_krona)
+    assert sk_krona == [(1.0, 'a')]
+    phy_krona = format_for_krona("phylum", sum_res)
+    print("phy_krona: ", phy_krona)
+    assert phy_krona ==  [(1.0, 'a', 'b')]
+    cl_krona = format_for_krona("class", sum_res)
+    print("cl_krona: ", cl_krona)
+    assert cl_krona ==  [(0.5, 'a', 'b', 'c')]
+
+
+def test_write_cami_profile(runtmp):
+    """test two matches, equal f_unique_weighted"""
+    sample_id = "Test sample"
+    ranks = ("superkingdom", "kingdom", "class")
+    class_cami_results =  [
+      (1, 'superkingdom', '1', '0.4'),
+      (2, 'kingdom', '1|2', '0.4'),
+      (3, 'class', '1|2|3', '0.2'),
+      (4, 'class', '1|2|4', '0.2'),
+    ]
+    outk= runtmp.output("cami.profile")
+    with open(outk, 'w') as out_fp:
+        write_cami_profile(sample_id, class_cami_results, ranks=ranks, out_fp=out_fp)
+
+    with open(outk, 'r') as out_fp:
+       kr = [x.strip() for x in out_fp]
+
+    print("cami_results_from_file: \n", kr)
+    assert kr[0] == "# Taxonomic Profiling Output"
+    assert kr[1] == f"@SampleID:{sample_id}"
+    assert kr[2] == "@Version:0.10.0"
+    assert kr[3] == f"@Ranks:{'|'.join(ranks)}"
+    assert kr[4] == "@__program__:sourmash"
+
+    # remainder of file is tab-separated
+    results = [x.split('\t') for x in kr[5:]]
+    assert(len(results) == 5)
+    assert results[0] == ["@@TAXID", "RANK", "TAXPATH", "PERCENTAGE"]
+    assert ["1", "superkingdom", "1", "0.4"] in results
+    assert ["2", "kingdom", "1|2", "0.4"] in results
+    assert ["3", "class", "1|2|3", "0.2"] in results
+    assert ["4", "class", "1|2|4", "0.2"] in results
 
 
 def test_combine_sumgather_csvs_by_lineage(runtmp):
