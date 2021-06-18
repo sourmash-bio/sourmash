@@ -610,15 +610,14 @@ There are two possible output formats, `summary` and `krona`.
   - `below_threshold` - this query was classified at the specified rank,
      but the query fraction matched was below the containment threshold
 
-Here's the results from classifying this mixed-strain Shewanella query to
-species level.
+Here is the `summary` output from classifying this mixed-strain Shewanella query to
+species level:
 
 ```
 query_name,status,rank,fraction,lineage
 "NC_009665.1 Shewanella baltica OS185, complete genome",match,species,1.000,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Shewanellaceae;g__Shewanella;s__Shewanella baltica
 ```
-
-Here, we see that the match percentages to both strains have been aggregated,
+>Here, we see that the match percentages to both strains have been aggregated,
 and we have 100% species-level `Shewanella baltica` annotation.
 
 #### `krona` output format
