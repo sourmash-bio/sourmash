@@ -187,15 +187,14 @@ sourmash compare file1.sig [ file2.sig ... ]
 ```
 
 Options:
-```
---output -- save the distance matrix to this file (as a numpy binary matrix)
---ksize -- do the comparisons at this k-mer size.
---containment -- calculate containment instead of similarity.
-        C(i, j) = size(i intersection j) / size(i).
---from-file -- append the list of files in this text file to the input
+
+* `--output` -- save the distance matrix to this file (as a numpy binary matrix)
+* `--ksize` -- do the comparisons at this k-mer size.
+* `--containment` -- calculate containment instead of similarity; `C(i, j) = size(i intersection j) / size(i)`
+* `--from-file` -- append the list of files in this text file to the input
         signatures.
---ignore-abundance -- ignore abundances in signatures.
-```
+* `--ignore-abundance` -- ignore abundances in signatures.
+* `--picklist` -- select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
 
 **Note:** compare by default produces a symmetric similarity matrix that can be used as an input to clustering. With `--containment`, however, this matrix is no longer symmetric and cannot formally be used for clustering.
 
@@ -259,6 +258,9 @@ similarity   match
 ...    
 ```
 
+Note, as of sourmash 4.2.0, `search` supports `--picklist`, to
+[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures).
+
 ### `sourmash gather` - find metagenome members
 
 The `gather` subcommand selects the best reference genomes to use for
@@ -298,6 +300,9 @@ The command line option `--threshold-bp` sets the threshold below
 which matches are no longer reported; by default, this is set to
 50kb. see the Appendix in
 [Classifying Signatures](classifying-signatures.md) for details.
+
+As of sourmash 4.2.0, `gather` supports `--picklist`, to
+[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures).
 
 Note:
 
@@ -360,6 +365,9 @@ containing a list of file names to index; you can also provide individual
 signature files, directories full of signatures, or other sourmash
 databases.
 
+As of sourmash 4.2.0, `index` supports `--picklist`, to
+[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures).
+
 ### `sourmash prefetch` - select subsets of very large databases for more processing
 
 The `prefetch` subcommand searches a collection of scaled signatures
@@ -385,6 +393,7 @@ Other options include:
 * `--threshold-bp` to require a minimum estimated bp overlap for output;
 * `--scaled` for downsampling;
 * `--force` to continue past survivable errors;
+* `--picklist` select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
 
 ### Alternative search mode for low-memory (but slow) search: `--linear`
 
@@ -686,6 +695,9 @@ see
 You can use `--from-file` to pass `lca index` a text file containing a
 list of file names to index.
 
+As of sourmash 4.2.0, `lca index` supports `--picklist`, to
+[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures).
+
 ### `sourmash lca rankinfo` - examine an LCA database
 
 The `sourmash lca rankinfo` command displays k-mer specificity
@@ -918,36 +930,8 @@ will extract the same signature, which has an accession number of
 #### Using picklists with `sourmash sig extract`
 
 As of sourmash 4.2.0, `extract` also supports picklists, a feature by
-which you can select signatures based on values in a CSV file.
-
-For example,
-```
-sourmash sig extract --picklist list.csv:md5:md5sum <signatures>
-```
-will extract only the signatures that have md5sums matching the
-column `md5sum` in the CSV file `list.csv`.
-
-The `--picklist` argument string must be of the format
-`pickfile:colname:coltype`, where `pickfile` is the path to a CSV
-file, `colname` is the name of the column to select from the CSV
-file (based on the headers in the first line of the CSV file),
-and `coltype` is the type of match.
-
-The following `coltype`s are currently supported by `sourmash sig extract`:
-
-* `name` - exact match to signature's name
-* `md5` - exact match to signature's md5sum
-* `md5prefix8` - match to 8-character prefix of signature's md5sum
-* `md5short` - same as `md5prefix8`
-* `ident` - exact match to signature's identifier
-* `identprefix` - match to signature's identifier, before '.'
-
-Identifiers are constructed by using the first space delimited word in
-the signature name.
-
-One way to build a picklist is to use `sourmash sig describe --csv
-out.csv <signatures>` to construct an initial CSV file that you can
-then edit further.
+which you can select signatures based on values in a CSV file. See
+[Using picklists to subset large collections of signatures](#using-picklists-to-subset-large-collections-of-signatures), below.
 
 ### `sourmash signature flatten` - remove abundance information from signatures
 
@@ -1059,6 +1043,45 @@ None of these commands currently support searching, comparing, or indexing
 signatures with multiple ksizes or moltypes at the same time; you need
 to pick the ksize and moltype to use for your search. Where possible,
 scaled values will be made compatible.
+
+### Using picklists to subset large collections of signatures
+
+As of sourmash 4.2.0, many commands support *picklists*, a feature by
+which you can select or "pick out" signatures based on values in a CSV
+file.
+
+For example,
+```
+sourmash sig extract --picklist list.csv:md5:md5sum <signatures>
+```
+will extract only the signatures that have md5sums matching the
+column `md5sum` in the CSV file `list.csv`.
+
+The `--picklist` argument string must be of the format
+`pickfile:colname:coltype`, where `pickfile` is the path to a CSV
+file, `colname` is the name of the column to select from the CSV
+file (based on the headers in the first line of the CSV file),
+and `coltype` is the type of match.
+
+The following `coltype`s are currently supported by `sourmash sig extract`:
+
+* `name` - exact match to signature's name
+* `md5` - exact match to signature's md5sum
+* `md5prefix8` - match to 8-character prefix of signature's md5sum
+* `md5short` - same as `md5prefix8`
+* `ident` - exact match to signature's identifier
+* `identprefix` - match to signature's identifier, before '.'
+
+Identifiers are constructed by using the first space delimited word in
+the signature name.
+
+One way to build a picklist is to use `sourmash sig describe --csv
+out.csv <signatures>` to construct an initial CSV file that you can
+then edit further.
+
+In addition to `sig extract`, the following commands support
+`--picklist` selection: `index`, `search`, `gather`, `prefetch`,
+`compare`, `index`, and `lca index`.
 
 ### Storing (and searching) signatures
   

@@ -19,6 +19,8 @@ from .logging import notify, error, debug_literal
 
 from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
 from . import signature as sigmod
+from .picklist import SignaturePicklist
+
 
 DEFAULT_LOAD_K = 31
 
@@ -55,6 +57,40 @@ def calculate_moltype(args, default=None):
         sys.exit(-1)
 
     return moltype
+
+
+def load_picklist(args):
+    "Load a SignaturePicklist from --picklist arguments."
+    picklist = None
+    if args.picklist:
+        try:
+            picklist = SignaturePicklist.from_picklist_args(args.picklist)
+        except ValueError as exc:
+            error("ERROR: could not load picklist.")
+            error(str(exc))
+            sys.exit(-1)
+
+        notify(f"picking column '{picklist.column_name}' of type '{picklist.coltype}' from '{picklist.pickfile}'")
+
+        n_empty_val, dup_vals = picklist.load(picklist.pickfile, picklist.column_name)
+
+        notify(f"loaded {len(picklist.pickset)} distinct values into picklist.")
+        if n_empty_val:
+            notify(f"WARNING: {n_empty_val} empty values in column '{picklist.column_name}' in picklist file")
+        if dup_vals:
+            notify(f"WARNING: {len(dup_vals)} values in picklist column '{picklist.column_name}' were not distinct")
+
+    return picklist
+
+
+def report_picklist(args, picklist):
+    notify(f"for given picklist, found {len(picklist.found)} matches to {len(picklist.pickset)} distinct values")
+    n_missing = len(picklist.pickset - picklist.found)
+    if n_missing:
+        notify(f"WARNING: {n_missing} missing picklist values.")
+        if args.picklist_require_all:
+            error("ERROR: failing because --picklist-require-all was set")
+            sys.exit(-1)
 
 
 def load_query_signature(filename, ksize, select_moltype, select_md5=None):
@@ -137,7 +173,8 @@ def traverse_find_sigs(filenames, yield_all_files=False):
                         yield fullname
 
 
-def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None):
+def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
+                      cache_size=None, picklist=None):
     """
     Load one or more SBTs, LCAs, and/or collections of signatures.
 
@@ -178,6 +215,9 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
         if not db:
             notify(f"no compatible signatures found in '{filename}'")
             sys.exit(-1)
+
+        if picklist:
+            db = db.select(picklist=picklist)
 
         databases.append(db)
 
@@ -351,6 +391,7 @@ def load_file_as_index(filename, *, yield_all_files=False):
 
 
 def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
+                            picklist=None,
                             yield_all_files=False,
                             progress=None):
     """Load 'filename' as a collection of signatures. Return an iterable.
@@ -367,13 +408,13 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
     underneath this directory into a list of signatures. If
     yield_all_files=True, will attempt to load all files.
 
-    Applies selector function if select_moltype and/or ksize are given.
+    Applies selector function if select_moltype, ksize or picklist are given.
     """
     if progress:
         progress.notify(filename)
 
     db = _load_database(filename, yield_all_files)
-    db = db.select(moltype=select_moltype, ksize=ksize)
+    db = db.select(moltype=select_moltype, ksize=ksize, picklist=picklist)
     loader = db.signatures()
 
     if progress is not None:

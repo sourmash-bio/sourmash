@@ -154,6 +154,7 @@ def index(args):
         args.ksize = DEFAULT_LOAD_K
 
     moltype = sourmash_args.calculate_moltype(args, default='DNA')
+    picklist = sourmash_args.load_picklist(args)
 
     notify('Building LCA database with ksize={} scaled={} moltype={}.',
            args.ksize, args.scaled, moltype)
@@ -202,6 +203,7 @@ def index(args):
         n += 1
         it = load_file_as_signatures(filename, ksize=args.ksize,
                                      select_moltype=moltype,
+                                     picklist=picklist,
                                      yield_all_files=args.force)
         for sig in it:
             notify(u'\r\033[K', end=u'')
@@ -284,6 +286,9 @@ def index(args):
         sys.exit(1)
     notify('loaded {} hashes at ksize={} scaled={}', len(db.hashval_to_idx),
            args.ksize, args.scaled)
+
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
     # summarize:
     notify('{} assigned lineages out of {} distinct lineages in spreadsheet.',

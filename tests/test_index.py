@@ -17,6 +17,7 @@ from sourmash.sbt import SBT, GraphFactory, Leaf
 from sourmash.sbtmh import SigLeaf
 from sourmash import sourmash_args
 from sourmash.search import JaccardSearch, SearchType
+from sourmash.picklist import SignaturePicklist
 
 import sourmash_tst_utils as utils
 
@@ -632,6 +633,29 @@ def test_linear_index_moltype_select():
     # select something impossible
     linear2 = linear.select(ksize=4)
     assert len(linear2) == 0
+
+
+def test_linear_index_picklist_select():
+    # test select with a picklist
+
+    # this loads three ksizes, 21/31/51
+    sig2 = utils.get_test_data('2.fa.sig')
+    siglist = sourmash.load_file_as_signatures(sig2)
+
+    linear = LinearIndex()
+    for ss in siglist:
+        linear.insert(ss)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('md5prefix8')
+    picklist.init(['f3a90d4e'])
+
+    # select on picklist
+    linear2 = linear.select(picklist=picklist)
+    assert len(linear2) == 1
+    ss = list(linear2.signatures())[0]
+    assert ss.minhash.ksize == 31
+    assert ss.md5sum().startswith('f3a90d4e55')
 
 
 @utils.in_tempdir
