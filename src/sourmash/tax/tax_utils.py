@@ -6,8 +6,14 @@ import csv
 from os.path import exists, basename, dirname, abspath
 from collections import namedtuple, defaultdict, Counter
 
-__all__ = ['get_ident', 'load_gather_results',
-           'summarize_gather_at', 'find_missing_identities']
+__all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
+           'load_gather_results', 'check_and_load_gather_csvs',
+           'find_match_lineage', 'summarize_gather_at',
+           'find_missing_identities', 'make_krona_header',
+           'aggregate_by_lineage_at_rank', 'format_for_krona',
+           'write_krona', 'write_summary', 'write_classifications',
+           'combine_sumgather_csvs_by_lineage', 'write_lineage_sample_frac',
+           'load_taxonomy_csv']
 
 from sourmash.logging import notify, error, debug
 from sourmash.sourmash_args import load_pathlist_from_file
