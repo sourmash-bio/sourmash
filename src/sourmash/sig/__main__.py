@@ -13,7 +13,7 @@ from sourmash.sourmash_args import FileOutput
 from sourmash.logging import set_quiet, error, notify, print_results, debug
 from sourmash import sourmash_args
 from sourmash.minhash import _get_max_hash_for_scaled
-from .picklist import SignaturePicklist
+from sourmash.picklist import SignaturePicklist
 
 usage='''
 sourmash signature <command> [<args>] - manipulate/work with signature files.
@@ -542,35 +542,12 @@ def extract(args):
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
-
-    picklist = None
-    if args.picklist:
-        try:
-            picklist = SignaturePicklist.from_picklist_args(args.picklist)
-        except ValueError as exc:
-            error("ERROR: could not load picklist.")
-            error(str(exc))
-            sys.exit(-1)
-
-        notify(f"picking column '{picklist.column_name}' of type '{picklist.coltype}' from '{picklist.pickfile}'")
-
-        n_empty_val, dup_vals = picklist.load(picklist.pickfile, picklist.column_name)
-
-        notify(f"loaded {len(picklist.pickset)} distinct values into picklist.")
-        if n_empty_val:
-            notify(f"WARNING: {n_empty_val} empty values in column '{picklist.column_name}' in picklist file")
-        if dup_vals:
-            notify(f"WARNING: {len(dup_vals)} values in picklist column '{picklist.column_name}' were not distinct")
-        picklist_filter_fn = picklist.filter
-    else:
-        def picklist_filter_fn(it):
-            for ss in it:
-                yield ss
+    picklist = sourmash_args.load_picklist(args)
 
     # further filtering on md5 or name?
     if args.md5 is not None or args.name is not None:
         def filter_fn(it):
-            for ss in picklist_filter_fn(it):
+            for ss in it:
                 # match?
                 keep = False
                 if args.name and args.name in str(ss):
@@ -581,8 +558,10 @@ def extract(args):
                 if keep:
                     yield ss
     else:
-        # whatever comes out of the picklist is fine
-        filter_fn = picklist_filter_fn
+        # whatever comes out of the database is fine
+        def filter_fn(it):
+            for ss in it:
+                yield ss
 
     # ok! filtering defined, let's go forward
     progress = sourmash_args.SignatureLoadingProgress()
@@ -594,6 +573,7 @@ def extract(args):
         siglist = sourmash_args.load_file_as_signatures(filename,
                                                         ksize=args.ksize,
                                                         select_moltype=moltype,
+                                                        picklist=picklist,
                                                         progress=progress)
         for ss in filter_fn(siglist):
             save_sigs.add(ss)
@@ -608,13 +588,7 @@ def extract(args):
     notify("extracted {} signatures from {} file(s)", len(save_sigs),
            len(args.signatures))
     if picklist:
-        notify(f"for given picklist, found {len(picklist.found)} matches to {len(picklist.pickset)} distinct values")
-        n_missing = len(picklist.pickset - picklist.found)
-        if n_missing:
-            notify(f"WARNING: {n_missing} missing picklist values.")
-            if args.picklist_require_all:
-                error("ERROR: failing because --picklist-require-all was set")
-                sys.exit(-1)
+        sourmash_args.report_picklist(args, picklist)
 
 
 def filter(args):
