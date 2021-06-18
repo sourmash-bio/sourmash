@@ -85,10 +85,12 @@ def summarize(args):
 
     # actually summarize at rank
     summarized_gather = {}
+    seen_perfect = set()
     for rank in sourmash.lca.taxlist(include_strain=False):
-        summarized_gather[rank] = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
+        summarized_gather[rank], seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
                                                                 split_identifiers=not args.keep_full_identifiers,
-                                                                keep_identifier_versions = args.keep_identifier_versions)
+                                                                keep_identifier_versions = args.keep_identifier_versions,
+                                                                seen_perfect = seen_perfect)
 
     # write summarized output csv
     if "summary" in args.output_format:
@@ -152,6 +154,7 @@ def classify(args):
     krona_results = []
     num_empty=0
     status = "nomatch"
+    seen_perfect = set()
 
     # handle each gather result separately
     for n, g_csv in enumerate(gather_csvs):
@@ -164,10 +167,10 @@ def classify(args):
 
         # if --rank is specified, classify to that rank
         if args.rank:
-            best_at_rank = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
+            best_at_rank, seen_perfect = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
                                                          split_identifiers=not args.keep_full_identifiers,
                                                          keep_identifier_versions = args.keep_identifier_versions,
-                                                         best_only=True)
+                                                         best_only=True, seen_perfect=seen_perfect)
 
            # this now returns list of SummarizedGather tuples
             for (query_name, rank, fraction, lineage) in best_at_rank:
@@ -190,10 +193,10 @@ def classify(args):
             # To do - do we want to store anything for this match if nothing >= containment threshold?
             for rank in tax_utils.ascending_taxlist(include_strain=False):
                 # gets best_at_rank for all queries in this gather_csv
-                best_at_rank = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
+                best_at_rank, seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
                                                              split_identifiers=not args.keep_full_identifiers,
                                                              keep_identifier_versions = args.keep_identifier_versions,
-                                                             best_only=True)
+                                                             best_only=True, seen_perfect=seen_perfect)
 
                 for (query_name, rank, fraction, lineage) in best_at_rank:
                     status = 'nomatch'

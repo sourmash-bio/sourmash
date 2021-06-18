@@ -368,7 +368,6 @@ def test_summarize_bad_gather_header(runtmp):
     assert runtmp.last_result.status == -1
 
 
-
 def test_summarize_empty_tax_lineage_input(runtmp):
     tax_empty = runtmp.output('t.csv')
     g_csv = utils.get_test_data('tax/test1.gather.csv')
@@ -387,6 +386,36 @@ def test_summarize_empty_tax_lineage_input(runtmp):
 
     assert runtmp.last_result.status != 0
     assert f"Cannot read taxonomy assignments from {tax_empty}. Is file empty?" in str(exc.value)
+
+
+def test_summarize_perfect_match_warning(runtmp):
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    perfect_g_csv = runtmp.output('g.csv')
+
+    #create a perfect gather result
+    with open(g_csv, 'r') as fp:
+        r = csv.DictReader(fp, delimiter=',')
+        header = r.fieldnames
+        print(header)
+        with open(perfect_g_csv, 'w') as out_fp:
+            w = csv.DictWriter(out_fp, header)
+            w.writeheader()
+            for n, row in enumerate(r):
+                if n == 0:
+                    row["f_unique_weighted"] = 1.0
+                w.writerow(row)
+                print(row)
+
+    runtmp.run_sourmash('tax', 'summarize', perfect_g_csv, '--taxonomy-csv', tax)
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert 'WARNING: 100% match! Is query test1 identical to its database match, GCF_001881345' in runtmp.last_result.err
 
 
 def test_classify_empty_gather_results(runtmp):

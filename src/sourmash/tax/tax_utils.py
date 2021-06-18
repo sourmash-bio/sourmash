@@ -135,7 +135,7 @@ def find_match_lineage(match_ident, tax_assign, *, skip_idents = [], split_ident
     return lineage
 
 
-def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], split_identifiers=True, keep_identifier_versions=False, best_only=False):
+def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], split_identifiers=True, keep_identifier_versions=False, best_only=False, seen_perfect=set()):
     """
     Summarize gather results at specified taxonomic rank
     """
@@ -148,8 +148,10 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], s
         f_uniq_weighted = float(f_uniq_weighted)
 
         # 100% match? are we looking at something in the database?
-        if f_uniq_weighted == 1:
-            notify('WARNING: 100% match! Is query {query_name} identical to the database match, {name}?')
+        if f_uniq_weighted >= 1.0 and query_name not in seen_perfect:
+            ident = get_ident(match_ident, split_identifiers=split_identifiers, keep_identifier_versions=keep_identifier_versions)
+            seen_perfect.add(query_name)
+            notify(f'WARNING: 100% match! Is query {query_name} identical to its database match, {ident}?')
 
         # get lineage for match
         lineage = find_match_lineage(match_ident, tax_assign, skip_idents = skip_idents, split_identifiers=split_identifiers, keep_identifier_versions=keep_identifier_versions)
@@ -176,7 +178,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], s
             for lineage, fraction in sumgather_items:
                 sum_uniq_weighted_sorted.append(SummarizedGatherResult(query_name, rank, fraction, lineage))
 
-    return sum_uniq_weighted_sorted
+    return sum_uniq_weighted_sorted, seen_perfect
 
 
 def find_missing_identities(gather_results, tax_assign):
