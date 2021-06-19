@@ -10,6 +10,7 @@ from ..sourmash_args import load_file_as_signatures
 from ..logging import notify, error, debug, set_quiet
 from . import lca_utils
 from .lca_utils import check_files_exist
+from sourmash.signature import SourmashSignature
 
 DEFAULT_THRESHOLD=5                  # how many counts of a taxid at min
 
@@ -135,8 +136,9 @@ def classify(args):
 
                 # make sure we're looking at the same scaled value as database
                 if query_sig.minhash.scaled != scaled:
-                    query_sig = query_sig.to_mutable()
-                    query_sig.minhash = query_sig.minhash.downsample(scaled=scaled)
+                    query_sig.into_mutable()
+                    downsample_mh = query_sig.minhash.downsample(scaled=scaled)
+                    query_sig.minhash = downsample_mh
 
                 # do the classification
                 lineage, status = classify_signature(query_sig, dblist,

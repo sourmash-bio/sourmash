@@ -212,9 +212,16 @@ class SourmashSignature(RustObject):
     def to_mutable(self):
         return self.copy()
 
+    def into_mutable(self):
+        pass
+
+    def into_frozen(self):
+        self.__class__ = FrozenSourmashSignature
+
 
 class FrozenSourmashSignature(SourmashSignature):
     "Frozen (immutable) signature class."
+
     @SourmashSignature.minhash.setter
     def minhash(self, value):
         raise ValueError("cannot set .minhash on FrozenSourmashSignature")
@@ -249,6 +256,14 @@ class FrozenSourmashSignature(SourmashSignature):
         state_tup = self.__getstate__()
         mut.__setstate__(state_tup)
         return mut
+
+    def into_mutable(self):
+        # CTB note: this is safer here than for MinHash, because MinHash
+        # will remain Frozen
+        self.__class__ = SourmashSignature
+
+    def into_frozen(self):
+        pass
 
 
 def _detect_input_type(data):
@@ -377,7 +392,6 @@ def load_one_signature(data, ksize=None, select_moltype=None, ignore_md5sum=Fals
     try:
         next(sigiter)
     except StopIteration:
-        first_sig = first_sig.to_frozen()
         return first_sig
 
     raise ValueError("expected to load exactly one signature")

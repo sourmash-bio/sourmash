@@ -4,9 +4,9 @@ import pytest
 
 import sourmash
 from sourmash.signature import SourmashSignature, save_signatures, \
-    load_signatures, load_one_signature
+    load_signatures, load_one_signature, FrozenSourmashSignature
 import sourmash_tst_utils as utils
-from sourmash import MinHash
+from sourmash.minhash import MinHash, FrozenMinHash
 
 
 def test_minhash_copy(track_abundance):
@@ -138,6 +138,24 @@ def test_roundtrip(track_abundance):
 
     assert sig.similarity(sig2) == 1.0
     assert sig2.similarity(sig) == 1.0
+    assert isinstance(sig, SourmashSignature)
+    assert not isinstance(sig, FrozenSourmashSignature)
+    assert isinstance(sig2, FrozenSourmashSignature)
+
+    assert isinstance(e, MinHash)
+    assert isinstance(sig.minhash, FrozenMinHash)
+    assert isinstance(sig2.minhash, FrozenMinHash)
+
+
+def test_roundtrip_mutable_frozen(track_abundance):
+    e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add_kmer("AT" * 10)
+    sig = SourmashSignature(e)
+    assert isinstance(sig.minhash, FrozenMinHash)
+    sig.minhash = sig.minhash.to_mutable()
+
+    sig2 = sig.to_frozen()
+    assert isinstance(sig2.minhash, FrozenMinHash)
 
 
 def test_load_signature_ksize_nonint(track_abundance):
