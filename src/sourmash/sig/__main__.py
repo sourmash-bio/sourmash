@@ -262,9 +262,8 @@ def manifest(args):
     # CTB: might want to switch to sourmash_args.FileOutputCSV here?
     csv_fp = open(args.output, 'w', newline='')
 
-    keys = CollectionManifest.required_keys
-    w = csv.DictWriter(csv_fp, fieldnames=keys)
-    w.writeheader()
+    CollectionManifest.write_csv_header(csv_fp)
+    w = csv.DictWriter(csv_fp, fieldnames=CollectionManifest.required_keys)
 
     try:
         loader = sourmash_args.load_file_as_index(args.location)

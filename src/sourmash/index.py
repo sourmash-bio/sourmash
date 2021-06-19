@@ -977,6 +977,14 @@ class CollectionManifest:
     def load_from_csv(cls, fp):
         "load a manifest from a CSV file."
         manifest_list = []
+        firstline = fp.readline().rstrip()
+        if not firstline.startswith('# SOURMASH-MANIFEST-VERSION: '):
+            raise ValueError("manifest is missing version header")
+
+        version = firstline[len('# SOURMASH-MANIFEST-VERSION: '):]
+        if float(version) != 1.0:
+            raise ValueError(f"unknown manifest version number {version}")
+
         r = csv.DictReader(fp)
         if not r.fieldnames:
             raise ValueError("missing column headers in manifest")
@@ -992,10 +1000,16 @@ class CollectionManifest:
 
         return cls(manifest_list)
 
+    @classmethod
+    def write_csv_header(cls, fp):
+        "write header for manifest CSV format"
+        fp.write('# SOURMASH-MANIFEST-VERSION: 1.0\n')
+        w = csv.DictWriter(fp, fieldnames=cls.required_keys)
+        w.writeheader()
+
     def write_to_csv(self, fp):
         "write manifest CSV to specified file handle"
         w = csv.DictWriter(fp, fieldnames=self.required_keys)
-        w.writeheader()
 
         for row in self.rows:
             w.writerow(row)
