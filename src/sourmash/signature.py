@@ -204,6 +204,53 @@ class SourmashSignature(RustObject):
 
     copy = __copy__
 
+    def to_frozen(self):
+        new_ss = self.copy()
+        new_ss.__class__ = FrozenSourmashSignature
+        return new_ss
+
+    def to_mutable(self):
+        return self.copy()
+
+
+class FrozenSourmashSignature(SourmashSignature):
+    "Frozen (immutable) signature class."
+    @SourmashSignature.minhash.setter
+    def minhash(self, value):
+        raise ValueError("cannot set .minhash on FrozenSourmashSignature")
+
+    @SourmashSignature._name.setter
+    def _name(self, value):
+        raise ValueError("cannot set ._name on FrozenSourmashSignature")
+
+    @SourmashSignature.name.setter
+    def name(self, value):
+        raise ValueError("cannot set .name on FrozenSourmashSignature")
+
+    @SourmashSignature.filename.setter
+    def filename(self, value):
+        raise ValueError("cannot set .filename on FrozenSourmashSignature")
+
+    def add_sequence(self, sequence, force=False):
+        raise ValueError("cannot add sequence data to FrozenSourmashSignature")
+
+    def add_protein(self, sequence):
+        raise ValueError("cannot add protein sequence to FrozenSourmashSignature")
+
+    def __copy__(self):
+        return self
+    copy = __copy__
+
+    def to_frozen(self):
+        return self
+
+    def to_mutable(self):
+        mut = SourmashSignature.__new__(SourmashSignature)
+        state_tup = self.__getstate__()
+        mut.__setstate__(state_tup)
+        return mut
+
+
 def _detect_input_type(data):
     """\
     Determine how to load input from `data`. Returns SigInput enum.
@@ -240,7 +287,7 @@ def load_signatures(
 ):
     """Load a JSON string with signatures into classes.
 
-    Returns list of SourmashSignature objects.
+    Returns iterator over SourmashSignature objects.
 
     Note, the order is not necessarily the same as what is in the source file.
     """
@@ -310,7 +357,7 @@ def load_signatures(
             sigs.append(sig)
 
         for sig in sigs:
-            yield sig
+            yield sig.to_frozen()
 
     except Exception as e:
         if do_raise:
@@ -330,6 +377,7 @@ def load_one_signature(data, ksize=None, select_moltype=None, ignore_md5sum=Fals
     try:
         next(sigiter)
     except StopIteration:
+        first_sig = first_sig.to_frozen()
         return first_sig
 
     raise ValueError("expected to load exactly one signature")

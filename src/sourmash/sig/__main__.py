@@ -528,7 +528,8 @@ def rename(args):
                                                         progress=progress)
 
         for sigobj in siglist:
-            sigobj._name = args.name
+            sigobj = sigobj.to_mutable()
+            sigobj.name = args.name
             save_sigs.add(sigobj)
 
     save_sigs.close()
@@ -634,6 +635,7 @@ def filter(args):
             filtered_mh = mh.copy_and_clear()
             filtered_mh.set_abundances(abunds2)
 
+            ss = ss.to_mutable()
             ss.minhash = filtered_mh
 
             save_sigs.add(ss)
@@ -671,6 +673,7 @@ def flatten(args):
             siglist = [ ss for ss in siglist if args.name in ss.name ]
 
         for ss in siglist:
+            ss = ss.to_mutable()
             ss.minhash = ss.minhash.flatten()
             save_sigs.add(ss)
 
@@ -708,6 +711,7 @@ def downsample(args):
                                                         progress=progress)
 
         for sigobj in siglist:
+            sigobj = sigobj.to_mutable()
             mh = sigobj.minhash
 
             notify('loading and downsampling signature from {}...', sigfile, end='\r')

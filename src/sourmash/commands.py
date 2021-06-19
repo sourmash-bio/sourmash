@@ -118,12 +118,19 @@ def compare(args):
     printed_scaled_msg = False
     if is_scaled:
         max_scaled = max(s.minhash.scaled for s in siglist)
+        new_siglist = []
         for s in siglist:
             if s.minhash.scaled != max_scaled:
                 if not printed_scaled_msg:
                     notify('downsampling to scaled value of {}'.format(max_scaled))
                     printed_scaled_msg = True
+                s = s.to_mutable()
                 s.minhash = s.minhash.downsample(scaled=max_scaled)
+                new_siglist.append(s)
+            else:
+                new_siglist.append(s)
+
+        siglist = new_siglist
 
     if len(siglist) == 0:
         error('no signatures!')
@@ -388,6 +395,7 @@ def index(args):
             moltypes.add(sourmash_args.get_moltype(ss))
             nums.add(ss.minhash.num)
 
+            ss = ss.to_mutable()
             if args.scaled:
                 ss.minhash = ss.minhash.downsample(scaled=args.scaled)
             if ss.minhash.track_abundance:
@@ -459,6 +467,7 @@ def search(args):
         if args.scaled != query.minhash.scaled:
             notify('downsampling query from scaled={} to {}',
                    query.minhash.scaled, int(args.scaled))
+        query = query.to_mutable()
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # set up the search databases
@@ -481,6 +490,7 @@ def search(args):
         args.ignore_abundance = True
     else:
         if args.ignore_abundance:
+            query = query.to_mutable()
             query.minhash = query.minhash.flatten()
 
     # do the actual search
@@ -592,7 +602,7 @@ def categorize(args):
                orig_query.minhash.ksize, orig_query.minhash.moltype)
 
         if args.ignore_abundance:
-            query = orig_query.copy()
+            query = orig_query.to_mutable()
             query.minhash = query.minhash.flatten()
         else:
             if orig_query.minhash.track_abundance:
@@ -650,6 +660,7 @@ def gather(args):
     if args.scaled:
         notify('downsampling query from scaled={} to {}',
                query.minhash.scaled, int(args.scaled))
+        query = query.to_mutable()
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # empty?
@@ -674,7 +685,7 @@ def gather(args):
 
     if args.prefetch:           # note: on by default!
         notify("Starting prefetch sweep across databases.")
-        prefetch_query = query.copy()
+        prefetch_query = query.to_mutable()
         prefetch_query.minhash = prefetch_query.minhash.flatten()
         save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
         save_prefetch.open()
@@ -856,7 +867,7 @@ def multigather(args):
                 continue
 
             counters = []
-            prefetch_query = query.copy()
+            prefetch_query = query.to_mutable()
             prefetch_query.minhash = prefetch_query.minhash.flatten()
 
             counters = []
@@ -1110,6 +1121,7 @@ def prefetch(args):
         error('no query hashes!? exiting.')
         sys.exit(-1)
 
+    query = query.to_mutable()
     query.minhash = query_mh
 
     # set up CSV output, write headers, etc.
