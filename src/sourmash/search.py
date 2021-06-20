@@ -2,13 +2,10 @@
 Code for searching collections of signatures.
 """
 from collections import namedtuple
-import sys
-import os
 from enum import Enum
 import numpy as np
 
 from .signature import SourmashSignature
-from .minhash import _get_max_hash_for_scaled
 
 
 class SearchType(Enum):
@@ -249,8 +246,6 @@ def _find_best(counters, query, threshold_bp):
     """
     Search for the best containment, return precisely one match.
     """
-    results = []
-
     best_result = None
     best_intersect_mh = None
 
