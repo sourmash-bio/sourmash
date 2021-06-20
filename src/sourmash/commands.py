@@ -1193,7 +1193,7 @@ def prefetch(args):
             match = result.match
 
             # track remaining "untouched" hashes.
-            noident_mh.remove_many(match.minhash.hashes)
+            noident_mh.remove_many(match.minhash)
 
             # output match info as we go
             if csvout_fp:
@@ -1230,7 +1230,7 @@ def prefetch(args):
         csvout_fp.close()
 
     matched_query_mh = query_mh.to_mutable()
-    matched_query_mh.remove_many(noident_mh.hashes)
+    matched_query_mh.remove_many(noident_mh)
     notify(f"of {len(query_mh)} distinct query hashes, {len(matched_query_mh)} were found in matches above threshold.")
     notify(f"a total of {len(noident_mh)} query hashes remain unmatched.")
 
