@@ -270,8 +270,10 @@ def _find_best(counters, query, threshold_bp):
 
 
 class GatherDatabases:
+    "Iterator object for doing gather/min-set-cov."
+
     def __init__(self, query, counters, threshold_bp, ignore_abundance):
-        # track original query information for later usage.
+        # track original query information for later usage?
         track_abundance = query.minhash.track_abundance and not ignore_abundance
         self.orig_query_bp = len(query.minhash) * query.minhash.scaled
         self.orig_query_filename = query.filename
@@ -299,6 +301,16 @@ class GatherDatabases:
         self.orig_query_mh = orig_query_mh
         self.orig_query_abunds = orig_query_abunds
 
+    def _update_scaled(self, scaled):
+        max_scaled = max(self.cmp_scaled, scaled)
+        if self.cmp_scaled != max_scaled:
+            self.cmp_scaled = max_scaled
+            self.orig_query_mh = self.orig_query_mh.downsample(scaled=scaled)
+
+        if max_scaled != scaled:
+            return max_scaled, True
+        return max_scaled, False
+
     def __iter__(self):
         return self
 
@@ -315,7 +327,6 @@ class GatherDatabases:
         track_abundance = self.track_abundance
         threshold_bp = self.threshold_bp
         orig_query_abunds = self.orig_query_abunds
-        orig_query_mh = self.orig_query_mh
 
         # find the best match!
         best_result, intersect_mh = _find_best(counters, query, threshold_bp)
@@ -331,20 +342,25 @@ class GatherDatabases:
         assert match_scaled
 
         # pick the highest scaled / lowest resolution
-        cmp_scaled = max(cmp_scaled, match_scaled)
+        scaled, update_scaled = self._update_scaled(match_scaled)
+
+        # retrieve various saved things, after potential downsampling
+        orig_query_mh = self.orig_query_mh
 
         # eliminate hashes under this new resolution.
         # (CTB note: this means that if a high scaled/low res signature is
         # found early on, resolution will be low from then on.)
-        query_mh = query.minhash.downsample(scaled=cmp_scaled)
-        found_mh = best_match.minhash.downsample(scaled=cmp_scaled).flatten()
-        orig_query_mh = orig_query_mh.downsample(scaled=cmp_scaled)
+        query_mh = query.minhash.downsample(scaled=scaled)
+        found_mh = best_match.minhash.downsample(scaled=scaled).flatten()
+        orig_query_mh = orig_query_mh.downsample(scaled=scaled)
+
+        # @CTB compute less
         sum_abunds = sum(( orig_query_abunds[k] for k in orig_query_mh.hashes ))
 
         # calculate intersection with query hashes:
-        unique_intersect_bp = cmp_scaled * len(intersect_mh)
+        unique_intersect_bp = scaled * len(intersect_mh)
         intersect_orig_mh = orig_query_mh & found_mh
-        intersect_bp = cmp_scaled * len(intersect_orig_mh)
+        intersect_bp = scaled * len(intersect_orig_mh)
 
         # calculate fractions wrt first denominator - genome size
         assert intersect_mh.contained_by(found_mh) == 1.0
@@ -374,12 +390,15 @@ class GatherDatabases:
             std_abund = np.std(intersect_abunds)
 
         # construct a new query, subtracting hashes found in previous one.
-        new_query_mh = query.minhash.downsample(scaled=cmp_scaled)
-        new_query_mh = new_query_mh.to_mutable()
+        # @CTB use query_mh here? should be same.
+        #new_query_mh = query_mh
+        #assert new_query_mh == query_mh
+
+        new_query_mh = query_mh.to_mutable()
         new_query_mh.remove_many(set(found_mh.hashes))
         new_query = SourmashSignature(new_query_mh)
 
-        remaining_bp = cmp_scaled * len(new_query_mh)
+        remaining_bp = scaled * len(new_query_mh)
 
         # compute weighted_missed:
         query_hashes = set(query_mh.hashes) - set(found_mh.hashes)
