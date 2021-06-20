@@ -971,6 +971,11 @@ def multigather(args):
             output_unassigned = output_base + '.unassigned.sig'
             with open(output_unassigned, 'wt') as fp:
                 remaining_query = gather_iter.query
+                if noident_mh:
+                    remaining_mh = remaining_query.minhash.to_mutable()
+                    remaining_mh += noident_mh.downsample(scaled=remaining_mh.scaled)
+                    remaining_query.minhash = remaining_mh
+
                 if not found:
                     notify('nothing found - entire query signature unassigned.')
                 elif not remaining_query:
