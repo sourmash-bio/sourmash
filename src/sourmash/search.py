@@ -281,6 +281,9 @@ class GatherDatabases:
         self.orig_query_name = query.name
         self.orig_query_md5 = query.md5sum()[:8]
         orig_query_mh = query.minhash
+        if noident_mh is None:  # create empty
+            noident_mh = orig_query_mh.copy_and_clear()
+        self.noident_mh = noident_mh.to_frozen()
 
         # do we pay attention to abundances?
         orig_query_abunds = { k: 1 for k in orig_query_mh.hashes }
@@ -311,10 +314,14 @@ class GatherDatabases:
 
             # CTB note: this can be expensive
             self.orig_query_mh = self.orig_query_mh.downsample(scaled=scaled)
+            self.noident_mh = self.noident_mh.downsample(scaled=scaled)
+
+            # NOTE: orig_query_abunds can be used w/o downsampling
             orig_query_abunds = self.orig_query_abunds
             self.sum_abunds = sum(( orig_query_abunds[k] \
                                     for k in self.orig_query_mh.hashes ))
-            # orig_query_abunds can be used w/o downsampling
+            self.sum_abunds += sum(( orig_query_abunds[k] \
+                                    for k in self.noident_mh.hashes ))
 
         if max_scaled != scaled:
             return max_scaled
@@ -362,6 +369,8 @@ class GatherDatabases:
         # retrieve various saved things, after potential downsampling
         orig_query_mh = self.orig_query_mh
         sum_abunds = self.sum_abunds
+        noident_mh = self.noident_mh
+        orig_query_len = len(orig_query_mh) + len(noident_mh)
 
         # eliminate hashes under this new resolution.
         query_mh = query.minhash.downsample(scaled=scaled)
@@ -375,11 +384,11 @@ class GatherDatabases:
         # calculate fractions wrt first denominator - genome size
         assert intersect_mh.contained_by(found_mh) == 1.0
         f_match = len(intersect_mh) / len(found_mh)
-        f_orig_query = len(intersect_orig_mh) / len(orig_query_mh)
+        f_orig_query = len(intersect_orig_mh) / orig_query_len
 
         # calculate fractions wrt second denominator - metagenome size
         assert intersect_mh.contained_by(orig_query_mh) == 1.0
-        f_unique_to_query = len(intersect_mh) / len(orig_query_mh)
+        f_unique_to_query = len(intersect_mh) / orig_query_len
 
         # calculate fraction of subject match with orig query
         f_match_orig = found_mh.contained_by(orig_query_mh)
