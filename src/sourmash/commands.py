@@ -1229,7 +1229,9 @@ def prefetch(args):
         notify(f"saved {matches_out.count} matches to CSV file '{args.output}'")
         csvout_fp.close()
 
+    print('XXX converting to mutable')
     matched_query_mh = query_mh.to_mutable()
+    print('XXX running remove_many')
     matched_query_mh.remove_many(noident_mh)
     notify(f"of {len(query_mh)} distinct query hashes, {len(matched_query_mh)} were found in matches above threshold.")
     notify(f"a total of {len(noident_mh)} query hashes remain unmatched.")
