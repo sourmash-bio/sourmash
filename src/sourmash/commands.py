@@ -1229,15 +1229,14 @@ def prefetch(args):
         notify(f"saved {matches_out.count} matches to CSV file '{args.output}'")
         csvout_fp.close()
 
-    print('XXX converting to mutable')
-    matched_query_mh = query_mh.to_mutable()
-    print('XXX running remove_many')
-    matched_query_mh.remove_many(noident_mh)
-    notify(f"of {len(query_mh)} distinct query hashes, {len(matched_query_mh)} were found in matches above threshold.")
+    matched_num = len(query_mh) - len(noident_mh)
+    notify(f"of {len(query_mh)} distinct query hashes, {matched_num} were found in matches above threshold.")
     notify(f"a total of {len(noident_mh)} query hashes remain unmatched.")
 
     if args.save_matching_hashes:
         filename = args.save_matching_hashes
+        matched_query_mh = query_mh.to_mutable()
+        matched_query_mh.remove_many(noident_mh)
         notify(f"saving {len(matched_query_mh)} matched hashes to '{filename}'")
         ss = sig.SourmashSignature(matched_query_mh)
         with open(filename, "wt") as fp:
