@@ -294,9 +294,8 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
         orig_query_abunds = orig_query_mh.hashes
 
     orig_query_mh = orig_query_mh.flatten()
-    query.into_mutable()
-    query.minhash = query.minhash.flatten()
-    query.into_frozen()
+    with query.mutable():
+        query.minhash = query.minhash.flatten()
 
     cmp_scaled = query.minhash.scaled    # initialize with resolution of query
     result_n = 0

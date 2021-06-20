@@ -135,9 +135,9 @@ def classify(args):
 
                 # make sure we're looking at the same scaled value as database
                 if query_sig.minhash.scaled != scaled:
-                    query_sig.into_mutable()
-                    downsample_mh = query_sig.minhash.downsample(scaled=scaled)
-                    query_sig.minhash = downsample_mh
+                    with query_sig.mutable():
+                        downsample_mh = query_sig.minhash.downsample(scaled=scaled)
+                        query_sig.minhash = downsample_mh
 
                 # do the classification
                 lineage, status = classify_signature(query_sig, dblist,

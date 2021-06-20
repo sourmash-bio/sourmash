@@ -6,6 +6,7 @@ import sys
 import os
 import weakref
 from enum import Enum
+import contextlib
 
 from .logging import error
 from . import MinHash
@@ -264,6 +265,13 @@ class FrozenSourmashSignature(SourmashSignature):
 
     def into_frozen(self):
         pass
+
+    @contextlib.contextmanager
+    def mutate(self):
+        "Briefly make this a mutable SourmashSignature.""
+        self.into_mutable()
+        yield self
+        self.into_frozen()
 
 
 def _detect_input_type(data):
