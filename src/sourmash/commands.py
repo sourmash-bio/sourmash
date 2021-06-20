@@ -891,8 +891,6 @@ def multigather(args):
                 for found_sig in counter.siglist:
                     noident_mh.remove_many(found_sig.minhash)
                 counters.append(counter)
-                # @CTB add test for valueerror thing
-
 
             found = []
             weighted_missed = 1
