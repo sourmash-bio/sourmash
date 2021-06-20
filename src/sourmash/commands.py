@@ -682,23 +682,28 @@ def gather(args):
 
         counters = []
         for db in databases:
+            counter = None
             try:
                 counter = db.counter_gather(prefetch_query, args.threshold_bp)
             except ValueError:
                 if picklist:
                     # catch "no signatures to search" ValueError...
                     continue
+                else:
+                    raise       # re-raise other errors, if no picklist.
+
             save_prefetch.add_many(counter.siglist)
+            # subtract found hashes as we can.
             for found_sig in counter.siglist:
                 noident_mh.remove_many(found_sig.minhash)
             counters.append(counter)
 
         notify(f"Found {len(save_prefetch)} signatures via prefetch; now doing gather.")
         save_prefetch.close()
-        notify(f"XXX remaining: {len(noident_mh)}")
     else:
         counters = databases
-        noident_mh = query.minhash.copy_and_clear()
+        # we can't track unidentified hashes w/o prefetch
+        noident_mh = None
 
     ## ok! now do gather -
 
@@ -710,6 +715,7 @@ def gather(args):
                                   threshold_bp=args.threshold_bp,
                                   ignore_abundance=args.ignore_abundance,
                                   noident_mh=noident_mh)
+
     for result, weighted_missed in gather_iter:
         if not len(found):                # first result? print header.
             if is_abundance:
@@ -1169,6 +1175,7 @@ def prefetch(args):
 
     # iterate over signatures in db one at a time, for each db;
     # find those with sufficient overlap
+    ident_mh = query_mh.copy_and_clear()
     noident_mh = query_mh.to_mutable()
 
     did_a_search = False        # track whether we did _any_ search at all!
@@ -1192,7 +1199,9 @@ def prefetch(args):
         for result in prefetch_database(query, db, args.threshold_bp):
             match = result.match
 
-            # track remaining "untouched" hashes.
+            # track found & "untouched" hashes.
+            match_mh = match.minhash.downsample(scaled=query.minhash.scaled)
+            ident_mh += query.minhash & match_mh.flatten()
             noident_mh.remove_many(match.minhash)
 
             # output match info as we go
@@ -1229,16 +1238,14 @@ def prefetch(args):
         notify(f"saved {matches_out.count} matches to CSV file '{args.output}'")
         csvout_fp.close()
 
-    matched_num = len(query_mh) - len(noident_mh)
-    notify(f"of {len(query_mh)} distinct query hashes, {matched_num} were found in matches above threshold.")
+    assert len(query_mh) == len(ident_mh) + len(noident_mh)
+    notify(f"of {len(query_mh)} distinct query hashes, {len(ident_mh)} were found in matches above threshold.")
     notify(f"a total of {len(noident_mh)} query hashes remain unmatched.")
 
     if args.save_matching_hashes:
         filename = args.save_matching_hashes
-        matched_query_mh = query_mh.to_mutable()
-        matched_query_mh.remove_many(noident_mh)
-        notify(f"saving {len(matched_query_mh)} matched hashes to '{filename}'")
-        ss = sig.SourmashSignature(matched_query_mh)
+        notify(f"saving {len(ident_mh)} matched hashes to '{filename}'")
+        ss = sig.SourmashSignature(ident_mh)
         with open(filename, "wt") as fp:
             sig.save_signatures([ss], fp)
 
