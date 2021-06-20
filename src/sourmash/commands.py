@@ -676,6 +676,7 @@ def gather(args):
         notify("Starting prefetch sweep across databases.")
         prefetch_query = query.copy()
         prefetch_query.minhash = prefetch_query.minhash.flatten()
+        noident_mh = prefetch_query.minhash.to_mutable()
         save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
         save_prefetch.open()
 
@@ -688,12 +689,16 @@ def gather(args):
                     # catch "no signatures to search" ValueError...
                     continue
             save_prefetch.add_many(counter.siglist)
+            for found_sig in counter.siglist:
+                noident_mh.remove_many(found_sig.minhash)
             counters.append(counter)
 
         notify(f"Found {len(save_prefetch)} signatures via prefetch; now doing gather.")
         save_prefetch.close()
+        notify(f"XXX remaining: {len(noident_mh)}")
     else:
         counters = databases
+        noident_mh = query.minhash.copy_and_clear()
 
     ## ok! now do gather -
 
@@ -703,7 +708,8 @@ def gather(args):
     orig_query_mh = query.minhash
     gather_iter = GatherDatabases(query, counters,
                                   threshold_bp=args.threshold_bp,
-                                  ignore_abundance=args.ignore_abundance)
+                                  ignore_abundance=args.ignore_abundance,
+                                  noident_mh=noident_mh)
     for result, weighted_missed in gather_iter:
         if not len(found):                # first result? print header.
             if is_abundance:

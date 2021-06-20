@@ -280,18 +280,24 @@ class GatherDatabases:
         self.orig_query_filename = query.filename
         self.orig_query_name = query.name
         self.orig_query_md5 = query.md5sum()[:8]
-        orig_query_mh = query.minhash
-        if noident_mh is None:  # create empty
-            noident_mh = orig_query_mh.copy_and_clear()
-        self.noident_mh = noident_mh.to_frozen()
 
         # do we pay attention to abundances?
-        orig_query_abunds = { k: 1 for k in orig_query_mh.hashes }
+        query_mh = query.minhash
+        query_hashes = query_mh.hashes
+        orig_query_abunds = { k: 1 for k in query_hashes }
         if track_abundance:
-            orig_query_abunds = orig_query_mh.hashes
+            orig_query_abunds = query_hashes
 
-        orig_query_mh = orig_query_mh.flatten()
-        query.minhash = query.minhash.flatten()
+        # adjust for not found...
+        if noident_mh is None:  # create empty
+            noident_mh = query_mh.copy_and_clear()
+        self.noident_mh = noident_mh.to_frozen()
+
+        query_mh = query_mh.to_mutable()
+        query_mh.remove_many(noident_mh)
+
+        orig_query_mh = query_mh.flatten()
+        query.minhash = orig_query_mh.to_mutable()
 
         cmp_scaled = query.minhash.scaled    # initialize with resolution of query
 
