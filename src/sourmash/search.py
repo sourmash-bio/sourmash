@@ -272,7 +272,8 @@ def _find_best(counters, query, threshold_bp):
 class GatherDatabases:
     "Iterator object for doing gather/min-set-cov."
 
-    def __init__(self, query, counters, threshold_bp, ignore_abundance):
+    def __init__(self, query, counters, *,
+                 threshold_bp=0, ignore_abundance=False, noident_mh=None):
         # track original query information for later usage?
         track_abundance = query.minhash.track_abundance and not ignore_abundance
         self.orig_query_bp = len(query.minhash) * query.minhash.scaled

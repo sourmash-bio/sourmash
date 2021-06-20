@@ -701,8 +701,9 @@ def gather(args):
     weighted_missed = 1
     is_abundance = query.minhash.track_abundance and not args.ignore_abundance
     orig_query_mh = query.minhash
-    gather_iter = GatherDatabases(query, counters, args.threshold_bp,
-                                  args.ignore_abundance)
+    gather_iter = GatherDatabases(query, counters,
+                                  threshold_bp=args.threshold_bp,
+                                  ignore_abundance=args.ignore_abundance)
     for result, weighted_missed in gather_iter:
         if not len(found):                # first result? print header.
             if is_abundance:
@@ -874,8 +875,9 @@ def multigather(args):
             found = []
             weighted_missed = 1
             is_abundance = query.minhash.track_abundance and not args.ignore_abundance
-            gather_iter = GatherDatabases(query, counters, args.threshold_bp,
-                                          args.ignore_abundance)
+            gather_iter = GatherDatabases(query, counters,
+                                          threshold_bp=args.threshold_bp,
+                                          ignore_abundance=args.ignore_abundance)
             for result, weighted_missed in gather_iter:
                 if not len(found):                # first result? print header.
                     if is_abundance:
