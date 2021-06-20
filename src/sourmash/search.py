@@ -319,6 +319,10 @@ class GatherDatabases:
             return max_scaled
         return max_scaled
 
+    @property
+    def scaled(self):
+        return self.cmp_scaled
+
     def __iter__(self):
         return self
 

@@ -750,6 +750,9 @@ def gather(args):
     p_covered = (1 - weighted_missed) * 100
     print_results(f'the recovered matches hit {p_covered:.1f}% of the query')
     print_results('')
+    if gather_iter.scaled != query.minhash.scaled:
+        # @CTB check in tests
+        print_results(f'WARNING: final scaled was {gather_iter.scaled}, vs query scaled of {query.minhash.scaled}')
 
     # save CSV?
     if found and args.output:
