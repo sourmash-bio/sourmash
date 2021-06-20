@@ -259,7 +259,7 @@ class Index(ABC):
         public `CounterGather` interface, of course.
         """
         # build a flat query
-        prefetch_query = query.copy()
+        prefetch_query = query.to_mutable()
         prefetch_query.minhash = prefetch_query.minhash.flatten()
 
         # find all matches and construct a CounterGather object.

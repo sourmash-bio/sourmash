@@ -10,7 +10,6 @@ from ..sourmash_args import load_file_as_signatures
 from ..logging import notify, error, debug, set_quiet
 from . import lca_utils
 from .lca_utils import check_files_exist
-from sourmash.signature import SourmashSignature
 
 DEFAULT_THRESHOLD=5                  # how many counts of a taxid at min
 
