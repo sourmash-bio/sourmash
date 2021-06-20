@@ -648,6 +648,8 @@ def gather(args):
                                              query.minhash.ksize,
                                              sourmash_args.get_moltype(query))
 
+    print('AAA', query.minhash.track_abundance, type(query))
+
     # verify signature was computed right.
     if not query.minhash.scaled:
         error('query signature needs to be created with --scaled')
@@ -684,9 +686,10 @@ def gather(args):
         notify("Starting prefetch sweep across databases.")
         prefetch_query = query.copy()
         if prefetch_query.minhash.track_abundance:
-            with prefetch_query.mutate():
-                prefetch_query.minhash = prefetch_query.minhash.flatten()
-
+            prefetch_query = prefetch_query.to_mutable()
+            prefetch_query.minhash = prefetch_query.minhash.flatten()
+            prefetch_query = prefetch_query.to_frozen()
+            
         save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
         save_prefetch.open()
 
@@ -713,6 +716,7 @@ def gather(args):
 
     found = []
     weighted_missed = 1
+    print('XYZ', query.minhash.track_abundance, not args.ignore_abundance)
     is_abundance = query.minhash.track_abundance and not args.ignore_abundance
     orig_query_mh = query.minhash
     next_query = query
@@ -875,8 +879,9 @@ def multigather(args):
             counters = []
             prefetch_query = query.copy()
             if prefetch_query.minhash.track_abundance:
-                with prefetch_query.mutate():
-                    prefetch_query.minhash = prefetch_query.minhash.flatten()
+                prefetch_query = prefetch_query.to_mutable()
+                prefetch_query.minhash = prefetch_query.minhash.flatten()
+                prefetch_query = prefetch_query.to_frozen()
 
             counters = []
             for db in databases:
