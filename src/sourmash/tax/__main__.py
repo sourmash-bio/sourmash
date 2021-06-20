@@ -179,7 +179,7 @@ def classify(args):
                     continue
                 if fraction <= args.containment_threshold:
                     status="below_threshold"
-                    notify(f"WARNING: classifying at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
+                    notify(f"WARNING: classifying query {query_name} at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
                 else:
                     status="match"
                 classifications[args.rank].append((query_name, status, rank, fraction, lineage))
@@ -223,7 +223,6 @@ def classify(args):
     if "summary" in args.output_format:
         summary_outfile = make_outfile(args.output_base, ".classifications.csv")
         with FileOutputCSV(summary_outfile) as out_fp:
-            #tax_utils.write_summary(classifications, out_fp)
             tax_utils.write_classifications(classifications, out_fp)
 
     if "krona" in args.output_format:
