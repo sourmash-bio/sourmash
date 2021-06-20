@@ -7,7 +7,6 @@ import os
 from enum import Enum
 import numpy as np
 
-from .logging import notify, error
 from .signature import SourmashSignature
 from .minhash import _get_max_hash_for_scaled
 
@@ -313,24 +312,20 @@ class GatherDatabases:
         if not self.query.minhash:
             raise StopIteration
 
-        # changeable
+        # may be changed:
         counters = self.counters
         cmp_scaled = self.cmp_scaled
 
-        # will not be updated:
+        # will not be changed::
         track_abundance = self.track_abundance
         threshold_bp = self.threshold_bp
         orig_query_abunds = self.orig_query_abunds
         orig_query_mh = self.orig_query_mh
 
-        # go forward!
-
         # find the best match!
         best_result, intersect_mh = _find_best(counters, query, threshold_bp)
 
         if not best_result:          # no matches at all for this cutoff!
-            # @CTB can we remove this notify?
-            notify(f'found less than {format_bp(threshold_bp)} in common. => exiting')
             raise StopIteration
 
         best_match = best_result.signature

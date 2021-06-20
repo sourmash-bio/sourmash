@@ -737,6 +737,11 @@ def gather(args):
             break
 
 
+    # report on thresholding -
+    if gather_iter.query:
+        # if still a query, then we failed the threshold.
+        notify(f'found less than {format_bp(args.threshold_bp)} in common. => exiting')
+
     # basic reporting:
     print_results(f'\nfound {len(found)} matches total;')
     if args.num_results and len(found) == args.num_results:
@@ -897,6 +902,10 @@ def multigather(args):
                               name)
                 found.append(result)
 
+            # report on thresholding -
+            if gather_iter.query.minhash:
+                # if still a query, then we failed the threshold.
+                notify(f'found less than {format_bp(args.threshold_bp)} in common. => exiting')
 
             # basic reporting
             print_results('\nfound {} matches total;', len(found))
