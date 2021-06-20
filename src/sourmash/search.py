@@ -305,6 +305,8 @@ class GatherDatabases:
         max_scaled = max(self.cmp_scaled, scaled)
         if self.cmp_scaled != max_scaled:
             self.cmp_scaled = max_scaled
+
+            # CTB note: this can be expensive
             self.orig_query_mh = self.orig_query_mh.downsample(scaled=scaled)
 
         if max_scaled != scaled:
@@ -341,20 +343,20 @@ class GatherDatabases:
         match_scaled = best_match.minhash.scaled
         assert match_scaled
 
-        # pick the highest scaled / lowest resolution
+        # pick the highest scaled / lowest resolution.
         scaled, update_scaled = self._update_scaled(match_scaled)
+        # CTB note: this means that if a high scaled/low res signature is
+        # found early on, resolution will be low from then on.
 
         # retrieve various saved things, after potential downsampling
         orig_query_mh = self.orig_query_mh
 
         # eliminate hashes under this new resolution.
-        # (CTB note: this means that if a high scaled/low res signature is
-        # found early on, resolution will be low from then on.)
         query_mh = query.minhash.downsample(scaled=scaled)
         found_mh = best_match.minhash.downsample(scaled=scaled).flatten()
-        orig_query_mh = orig_query_mh.downsample(scaled=scaled)
 
         # @CTB compute less
+        # CTB note: this can be expensive
         sum_abunds = sum(( orig_query_abunds[k] for k in orig_query_mh.hashes ))
 
         # calculate intersection with query hashes:
@@ -395,7 +397,7 @@ class GatherDatabases:
 
         remaining_bp = scaled * len(new_query_mh)
 
-        # compute weighted_missed:
+        # compute weighted_missed for remaining query hashes
         query_hashes = set(query_mh.hashes) - set(found_mh.hashes)
         weighted_missed = sum((orig_query_abunds[k] for k in query_hashes)) \
              / sum_abunds
@@ -427,13 +429,6 @@ class GatherDatabases:
         self.orig_query_mh = orig_query_mh
 
         return result, weighted_missed, new_query
-
-
-def gather_databases(query, counters, threshold_bp, ignore_abundance):
-    """
-    Iteratively find the best containment of `query` in all the `counters`,
-    until we find fewer than `threshold_bp` (estimated) bp in common.
-    """
 
 
 ###
