@@ -701,11 +701,9 @@ def gather(args):
     weighted_missed = 1
     is_abundance = query.minhash.track_abundance and not args.ignore_abundance
     orig_query_mh = query.minhash
-    next_query = query
-
     gather_iter = GatherDatabases(query, counters, args.threshold_bp,
                                   args.ignore_abundance)
-    for result, weighted_missed, next_query in gather_iter:
+    for result, weighted_missed in gather_iter:
         if not len(found):                # first result? print header.
             if is_abundance:
                 print_results("")
@@ -780,25 +778,26 @@ def gather(args):
 
     # save unassigned hashes?
     if args.output_unassigned:
-        if not len(next_query.minhash):
+        remaining_query = gather_iter.query
+        if not len(remaining_query.minhash):
             notify('no unassigned hashes to save with --output-unassigned!')
         else:
             notify(f"saving unassigned hashes to '{args.output_unassigned}'")
 
             if is_abundance:
-                # next_query is flattened; reinflate abundances
-                hashes = set(next_query.minhash.hashes)
+                # remaining_query is flattened; reinflate abundances
+                hashes = set(remaining_query.minhash.hashes)
                 orig_abunds = orig_query_mh.hashes
                 abunds = { h: orig_abunds[h] for h in hashes }
 
                 abund_query_mh = orig_query_mh.copy_and_clear()
                 # orig_query might have been downsampled...
-                abund_query_mh.downsample(scaled=next_query.minhash.scaled)
+                abund_query_mh.downsample(scaled=gather_iter.scaled)
                 abund_query_mh.set_abundances(abunds)
-                next_query.minhash = abund_query_mh
+                remaining_query.minhash = abund_query_mh
 
             with FileOutput(args.output_unassigned, 'wt') as fp:
-                sig.save_signatures([ next_query ], fp)
+                sig.save_signatures([ remaining_query ], fp)
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
@@ -877,7 +876,7 @@ def multigather(args):
             is_abundance = query.minhash.track_abundance and not args.ignore_abundance
             gather_iter = GatherDatabases(query, counters, args.threshold_bp,
                                           args.ignore_abundance)
-            for result, weighted_missed, next_query in gather_iter:
+            for result, weighted_missed in gather_iter:
                 if not len(found):                # first result? print header.
                     if is_abundance:
                         print_results("")
@@ -952,18 +951,16 @@ def multigather(args):
 
             output_unassigned = output_base + '.unassigned.sig'
             with open(output_unassigned, 'wt') as fp:
+                remaining_query = gather_iter.query
                 if not found:
                     notify('nothing found - entire query signature unassigned.')
-                elif not len(query.minhash):
+                elif not remaining_query:
                     notify('no unassigned hashes! not saving.')
                 else:
                     notify('saving unassigned hashes to "{}"', output_unassigned)
 
-                    e = MinHash(ksize=query.minhash.ksize, n=0,
-                                scaled=next_query.minhash.scaled)
-                    e.add_many(next_query.minhash.hashes)
                     # CTB: note, multigather does not save abundances
-                    sig.save_signatures([ sig.SourmashSignature(e) ], fp)
+                    sig.save_signatures([ remaining_query ], fp)
             n += 1
 
         # fini, next query!

@@ -435,7 +435,7 @@ class GatherDatabases:
         self.query = new_query
         self.orig_query_mh = orig_query_mh
 
-        return result, weighted_missed, new_query
+        return result, weighted_missed
 
 
 ###
