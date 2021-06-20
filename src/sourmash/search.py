@@ -416,7 +416,7 @@ class GatherDatabases:
 
         # construct a new query, subtracting hashes found in previous one.
         new_query_mh = query_mh.to_mutable()
-        new_query_mh.remove_many(found_mh.hashes)
+        new_query_mh.remove_many(found_mh)
         new_query = SourmashSignature(new_query_mh)
 
         remaining_bp = scaled * len(new_query_mh)
