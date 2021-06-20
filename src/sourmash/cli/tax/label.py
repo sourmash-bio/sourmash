@@ -1,11 +1,27 @@
 """add taxonomy information to gather results"""
 
+usage="""
+
+    sourmash tax label --gather-csv [gather_csv(s)] --taxonomy-csv [taxonomy-csv(s)]
+
+The 'tax label' command reads in gather results CSVs and annotates them
+ with taxonomic information.
+
+By default, `tax label` produces a gather CSV with an additional `lineage`
+ column containing the taxonomic information for each database match.
+
+Please see the 'tax label' documentation for more details:
+  https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-label-annotates-gather-output-with-taxonomy
+"""
+
 import sourmash
 from sourmash.logging import notify, print_results, error
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('label')
+    subparser = subparsers.add_parser('label',
+                                      aliases=['annotate'],
+                                      usage=usage)
     subparser.add_argument(
         '-g', '--gather-csv', nargs='*', default = [],
         help='CSV output files from sourmash gather'

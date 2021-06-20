@@ -1,12 +1,42 @@
 """classify genomes from gather results"""
 
+usage="""
+
+    sourmash tax classify --gather-csv [gather_csv(s)] --taxonomy-csv [taxonomy-csv(s)]
+
+The 'tax classify' command reads in gather results CSVs and reports likely
+classification for each query.
+
+By default, classification uses a containment threshold of 0.1, meaning at least
+10 percent of the query was covered by matches with the reported taxonomic rank and lineage.
+You can specify an alternate classification threshold or force classification by
+taxonomic rank instead, e.g. at species or genus-level.
+
+The default output format consists of five columns,
+ `query_name,status,rank,fraction,lineage`, where `fraction` is the fraction
+ of the query matched to the reported rank and lineage. The `status` column
+ provides additional information on the classification, and can be:
+  - `match` - this query was classified
+  - `nomatch`- this query could not be classified
+  - `below_threshold` - this query was classified at the specified rank,
+     but the query fraction matched was below the containment threshold
+
+Optionally, you can report classifications in `krona` format, but note
+that this forces classification by rank, rather than containment threshold.
+
+Please see the 'tax classify' documentation for more details:
+  https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-classify-classify-a-genome-using-gather-results
+"""
+
 import argparse
 import sourmash
 from sourmash.logging import notify, print_results, error
-from sourmash.cli.utils import add_threshold_arg
+from sourmash.cli.utils import add_tax_threshold_arg
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('classify')
+    subparser = subparsers.add_parser('classify',
+                                      aliases=['genome'],
+                                      usage=usage)
     subparser.add_argument(
         '-g', '--gather-csv', nargs='*', default = [],
         help='CSVs output by sourmash gather for this sample'
@@ -29,7 +59,7 @@ def subparser(subparsers):
         help='base filepath for output file(s) (default stdout)'
     )
     subparser.add_argument(
-        '-r', '--rank', choices=['strain','species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'],
+        '-r', '--rank', choices=['strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'],
         help='Summarize genome taxonomy at this rank and above. Note that the taxonomy CSV must contain lineage information at this rank.'
     )
     subparser.add_argument(
@@ -52,7 +82,7 @@ def subparser(subparsers):
         '-f', '--force', action = 'store_true',
         help='continue past survivable errors in loading taxonomy database or gather results',
     )
-    add_threshold_arg(subparser, 0.1)
+    add_tax_threshold_arg(subparser, 0.1)
 
 
 def main(args):

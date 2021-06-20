@@ -64,13 +64,13 @@ def range_limited_float_type(arg):
     return f
 
 
-def add_threshold_arg(parser, default=0.1):
+def add_tax_threshold_arg(parser, default=0.1):
     parser.add_argument(
         '--containment-threshold', default=default, type=range_limited_float_type,
         help=f'minimum containment threshold for classification; default={default}'
     )
-    
-    
+
+
 def add_picklist_args(parser):
     parser.add_argument(
         '--picklist', default=None,

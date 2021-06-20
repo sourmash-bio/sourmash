@@ -423,25 +423,33 @@ signatures, rather than all the signatures in the database.
 
 ## `sourmash tax` subcommands for integrating taxonomic information
 
-The sourmash `tax` or `taxonomy` commands integrate taxonomic information into
- the results of `sourmash gather`. All `tax` commands  require a properly
- formatted `taxonomy` csv file that corresponds to the database used for
- `gather`. For supported databases (e.g. GTDB, NCBI), we provide these files,
- but they can also be generated for user-generated databases. For more
- information, see [databases](databases.md).
+The sourmash `tax` or `taxonomy` commands integrate taxonomic
+ information into the results of `sourmash gather`. All `tax` commands
+ require a properly formatted `taxonomy` csv file that corresponds to
+ the database used for `gather`. For supported databases (e.g. GTDB, NCBI),
+ we provide these files, but they can also be generated for user-generated
+ databases. For more information, see [databases](databases.md).
 
-These commands rely upon the fact that `gather` results are non-overlapping: the
- fraction match for gather on each query will be between 0 (no database matches)
- and 1 (100% of query matched). We use this property to aggregate gather matches
- at the desired taxonomic rank. For example, if the gather results for a
- metagenome include results for 30 different strains of a given species, we can
- sum the fraction match to each strain to obtain the fraction match to this
- species.
+These commands rely upon the fact that `gather` provides both the total
+ fraction of the query matched to each database matched, as well as a
+ non-overlapping `f_unique_weighted` which is the fraction of the query
+ (weighted by abundance, if tracked) uniquely matched to each reference
+ genome. The `f_unique_weighted` for any reference match will always be
+ between (0% of query matched) and 1 (100% of query matched), and for a
+ query matched to multiple references, the `f_unique_weighted` will sum
+ to at most 1 (100% of query matched). We use this property to aggregate
+ gather matches at the desired taxonomic rank. For example, if the gather
+ results for a metagenome include results for 30 different strains of a
+ given species, we can sum the fraction uniquely matched to each strain
+ to obtain the fraction uniquely matched to this species.
 
 As with all reference-based analysis, results can be affected by the
- completeness of the reference database. However, summarizing taxonomic results
- from `gather` minimizes issues associated with increasing size and redundancy of
- reference databases.
+ completeness of the reference database. However, summarizing taxonomic
+ results from `gather` minimizes issues associated with increasing size
+ and redundancy of reference databases.
+
+For more on how `gather` works and can be used to classify signatures, see
+ [classifying-signatures](classifying-signatures.html)
 
 
 ### `sourmash tax summarize` - summarize metagenome content from `gather` results
@@ -450,7 +458,7 @@ As with all reference-based analysis, results can be affected by the
  taxonomic lineage.
 
 example command to summarize a single `gather csv`, where the query was gathered
- against `gtdb-rs202` representative species database.
+ against `gtdb-rs202` representative species database:
 
 ```
 sourmash tax summarize 
@@ -558,7 +566,7 @@ To produce multiple output types from the same command, add the types into the
  the same genus, the genus-level classification will be reported.
 
 Optionally, `classify` can instead report classifications at a desired `rank`,
- regardless of match threshold.
+ regardless of match threshold (`--rank` argument, e.g. `--rank species`).
 
 Note that these thresholds and strategies are under active testing.
 
@@ -581,8 +589,7 @@ f_match,f_unique_weighted,name,query_name
 > Here, `f_match` shows that independently, both strains match ~65% percent of
  this mixed query. The `f_unique_weighted` column has the results of gather-style
  decomposition. As the OS223 strain had a slightly higher `f_match` (66%), it
- was the first match. The
- remaining 33% of the query matched to strain OS185.
+ was the first match. The remaining 33% of the query matched to strain OS185.
 
 Here, we use this gather csv to `classify our "Sb47+63" mixed-strain query.
 
@@ -635,7 +642,7 @@ To generate `krona`, we must classify by `--rank` instead of using the
 
 ```
 sourmash tax classify
-    --gather-csv MAG1_gather_x_gtdbrs202_k31.csv \
+    --gather-csv Sb47+63_gather_x_gtdbrs202_k31.csv \
     --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
     --output-format krona --rank species
 ```
@@ -644,13 +651,17 @@ Here is the `krona`-formatted output for this command:
 
 ```
 fraction        superkingdom    phylum  class   order   family  genus   species
-47+63   1.0     d__Bacteria     p__Proteobacteria       c__Gammaproteobacteria  o__Enterobacterales     f__Shewanellaceae       g__Shewanella   s__Shewanella baltica
+Sb47+63   1.0     d__Bacteria     p__Proteobacteria       c__Gammaproteobacteria  o__Enterobacterales     f__Shewanellaceae       g__Shewanella   s__Shewanella baltica
 ```
+
+Note here that specifying `--rank` forces classification by rank rather than
+by the containment threshold.
 
 To produce multiple output types from the same command, add the types into the
  `--output-format` argument, e.g. `--output-format summary krona`.
- **Note that for classify, specifying `--rank`, as needed for `krona`, forces
- classification by `rank` rather than by containment threshold.** If the query
+ **Note that specifying the classification rank with `--rank`,
+ (e.g. `--rank species`), as needed for `krona` output, forces classification
+ by `rank` rather than by containment threshold.** If the query
  classification at this rank does not meet the containment threshold
  (default=0.1), the `status` column will contain `below_threshold`.
 
@@ -664,6 +675,13 @@ To produce multiple output types from the same command, add the types into the
 By default, `label` uses the name of each input gather csv to write an updated
  version with lineages information. For example, labeling `sample1.gather.csv`
  would produce `sample1.gather.with-lineages.csv`
+
+```
+sourmash tax label
+    --gather-csv Sb47+63_gather_x_gtdbrs202_k31.csv \
+    --taxonomy-csv gtdb-rs202.taxonomy.v2.csv
+```
+> This will produce an annotated gather CSV, `Sb47+63_gather_x_gtdbrs202_k31.with-lineages.csv`
 
 
 ## `sourmash lca` subcommands for in-memory taxonomy integration
