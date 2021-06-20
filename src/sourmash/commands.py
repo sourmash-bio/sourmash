@@ -786,10 +786,15 @@ def gather(args):
     # save unassigned hashes?
     if args.output_unassigned:
         remaining_query = gather_iter.query
-        if not len(remaining_query.minhash):
+        if not (remaining_query.minhash or noident_mh):
             notify('no unassigned hashes to save with --output-unassigned!')
         else:
             notify(f"saving unassigned hashes to '{args.output_unassigned}'")
+
+            if noident_mh:
+                remaining_mh = remaining_query.minhash.to_mutable()
+                remaining_mh += noident_mh
+                remaining_query.minhash = remaining_mh
 
             if is_abundance:
                 # remaining_query is flattened; reinflate abundances

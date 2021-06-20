@@ -324,10 +324,11 @@ class GatherDatabases:
 
             # NOTE: orig_query_abunds can be used w/o downsampling
             orig_query_abunds = self.orig_query_abunds
+            self.noident_query_sum_abunds = sum(( orig_query_abunds[k] \
+                                                  for k in self.noident_mh.hashes ))
             self.sum_abunds = sum(( orig_query_abunds[k] \
                                     for k in self.orig_query_mh.hashes ))
-            self.sum_abunds += sum(( orig_query_abunds[k] \
-                                    for k in self.noident_mh.hashes ))
+            self.sum_abunds += self.noident_query_sum_abunds
 
         if max_scaled != scaled:
             return max_scaled
@@ -422,8 +423,9 @@ class GatherDatabases:
 
         # compute weighted_missed for remaining query hashes
         query_hashes = set(query_mh.hashes) - set(found_mh.hashes)
-        weighted_missed = sum((orig_query_abunds[k] for k in query_hashes)) \
-             / sum_abunds
+        weighted_missed = sum((orig_query_abunds[k] for k in query_hashes))
+        weighted_missed += self.noident_query_sum_abunds
+        weighted_missed /= sum_abunds
 
         # build a result namedtuple
         result = GatherResult(intersect_bp=intersect_bp,
