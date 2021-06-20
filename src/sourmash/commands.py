@@ -877,18 +877,24 @@ def multigather(args):
             counters = []
             prefetch_query = query.copy()
             prefetch_query.minhash = prefetch_query.minhash.flatten()
+            noident_mh = prefetch_query.minhash.to_mutable()
 
             counters = []
             for db in databases:
                 counter = db.counter_gather(prefetch_query, args.threshold_bp)
+                for found_sig in counter.siglist:
+                    noident_mh.remove_many(found_sig.minhash)
                 counters.append(counter)
+                # @CTB add test for valueerror thing
+
 
             found = []
             weighted_missed = 1
             is_abundance = query.minhash.track_abundance and not args.ignore_abundance
             gather_iter = GatherDatabases(query, counters,
                                           threshold_bp=args.threshold_bp,
-                                          ignore_abundance=args.ignore_abundance)
+                                          ignore_abundance=args.ignore_abundance,
+                                          noident_mh=noident_mh)
             for result, weighted_missed in gather_iter:
                 if not len(found):                # first result? print header.
                     if is_abundance:
