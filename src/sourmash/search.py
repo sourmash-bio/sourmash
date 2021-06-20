@@ -292,7 +292,6 @@ class GatherDatabases:
         cmp_scaled = query.minhash.scaled    # initialize with resolution of query
 
         self.result_n = 0
-        self.cmp_scaled = cmp_scaled
         self.query = query
         self.counters = counters
         self.threshold_bp = threshold_bp
@@ -301,6 +300,9 @@ class GatherDatabases:
         self.orig_query_mh = orig_query_mh
         self.orig_query_abunds = orig_query_abunds
 
+        self.cmp_scaled = 1
+        self._update_scaled(cmp_scaled)
+
     def _update_scaled(self, scaled):
         max_scaled = max(self.cmp_scaled, scaled)
         if self.cmp_scaled != max_scaled:
@@ -308,10 +310,14 @@ class GatherDatabases:
 
             # CTB note: this can be expensive
             self.orig_query_mh = self.orig_query_mh.downsample(scaled=scaled)
+            orig_query_abunds = self.orig_query_abunds
+            self.sum_abunds = sum(( orig_query_abunds[k] \
+                                    for k in self.orig_query_mh.hashes ))
+            # orig_query_abunds can be used w/o downsampling
 
         if max_scaled != scaled:
-            return max_scaled, True
-        return max_scaled, False
+            return max_scaled
+        return max_scaled
 
     def __iter__(self):
         return self
@@ -344,20 +350,17 @@ class GatherDatabases:
         assert match_scaled
 
         # pick the highest scaled / lowest resolution.
-        scaled, update_scaled = self._update_scaled(match_scaled)
+        scaled = self._update_scaled(match_scaled)
         # CTB note: this means that if a high scaled/low res signature is
         # found early on, resolution will be low from then on.
 
         # retrieve various saved things, after potential downsampling
         orig_query_mh = self.orig_query_mh
+        sum_abunds = self.sum_abunds
 
         # eliminate hashes under this new resolution.
         query_mh = query.minhash.downsample(scaled=scaled)
         found_mh = best_match.minhash.downsample(scaled=scaled).flatten()
-
-        # @CTB compute less
-        # CTB note: this can be expensive
-        sum_abunds = sum(( orig_query_abunds[k] for k in orig_query_mh.hashes ))
 
         # calculate intersection with query hashes:
         unique_intersect_bp = scaled * len(intersect_mh)
