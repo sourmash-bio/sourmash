@@ -5,6 +5,7 @@ from collections import namedtuple
 import sys
 import os
 from enum import Enum
+import numpy as np
 
 from .logging import notify, error
 from .signature import SourmashSignature
@@ -274,37 +275,63 @@ def _find_best(counters, query, threshold_bp):
     return None, None
 
 
-def gather_databases(query, counters, threshold_bp, ignore_abundance):
-    """
-    Iteratively find the best containment of `query` in all the `counters`,
-    until we find fewer than `threshold_bp` (estimated) bp in common.
-    """
-    # track original query information for later usage.
-    track_abundance = query.minhash.track_abundance and not ignore_abundance
-    orig_query_bp = len(query.minhash) * query.minhash.scaled
-    orig_query_filename = query.filename
-    orig_query_name = query.name
-    orig_query_md5 = query.md5sum()[:8]
-    orig_query_mh = query.minhash
+class GatherDatabases:
+    def __init__(self, query, counters, threshold_bp, ignore_abundance):
+        # track original query information for later usage.
+        track_abundance = query.minhash.track_abundance and not ignore_abundance
+        self.orig_query_bp = len(query.minhash) * query.minhash.scaled
+        self.orig_query_filename = query.filename
+        self.orig_query_name = query.name
+        self.orig_query_md5 = query.md5sum()[:8]
+        orig_query_mh = query.minhash
 
-    # do we pay attention to abundances?
-    orig_query_abunds = { k: 1 for k in orig_query_mh.hashes }
-    if track_abundance:
-        import numpy as np
-        orig_query_abunds = orig_query_mh.hashes
+        # do we pay attention to abundances?
+        orig_query_abunds = { k: 1 for k in orig_query_mh.hashes }
+        if track_abundance:
+            orig_query_abunds = orig_query_mh.hashes
 
-    orig_query_mh = orig_query_mh.flatten()
-    query.minhash = query.minhash.flatten()
+        orig_query_mh = orig_query_mh.flatten()
+        query.minhash = query.minhash.flatten()
 
-    cmp_scaled = query.minhash.scaled    # initialize with resolution of query
-    result_n = 0
-    while query.minhash:
+        cmp_scaled = query.minhash.scaled    # initialize with resolution of query
+
+        self.result_n = 0
+        self.cmp_scaled = cmp_scaled
+        self.query = query
+        self.counters = counters
+        self.threshold_bp = threshold_bp
+
+        self.track_abundance = track_abundance
+        self.orig_query_mh = orig_query_mh
+        self.orig_query_abunds = orig_query_abunds
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        query = self.query
+        if not self.query.minhash:
+            raise StopIteration
+
+        # changeable
+        counters = self.counters
+        cmp_scaled = self.cmp_scaled
+
+        # will not be updated:
+        track_abundance = self.track_abundance
+        threshold_bp = self.threshold_bp
+        orig_query_abunds = self.orig_query_abunds
+        orig_query_mh = self.orig_query_mh
+
+        # go forward!
+
         # find the best match!
         best_result, intersect_mh = _find_best(counters, query, threshold_bp)
 
         if not best_result:          # no matches at all for this cutoff!
+            # @CTB can we remove this notify?
             notify(f'found less than {format_bp(threshold_bp)} in common. => exiting')
-            break
+            raise StopIteration
 
         best_match = best_result.signature
         filename = best_result.location
@@ -384,18 +411,25 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
                               md5=best_match.md5sum(),
                               name=str(best_match),
                               match=best_match,
-                              gather_result_rank=result_n,
+                              gather_result_rank=self.result_n,
                               remaining_bp=remaining_bp,
-                              query_bp = orig_query_bp,
-                              query_filename=orig_query_filename,
-                              query_name=orig_query_name,
-                              query_md5=orig_query_md5,
+                              query_bp = self.orig_query_bp,
+                              query_filename=self.orig_query_filename,
+                              query_name=self.orig_query_name,
+                              query_md5=self.orig_query_md5,
                               )
-        result_n += 1
+        self.result_n += 1
+        self.query = new_query
+        self.orig_query_mh = orig_query_mh
 
-        yield result, weighted_missed, new_query
+        return result, weighted_missed, new_query
 
-        query = new_query
+
+def gather_databases(query, counters, threshold_bp, ignore_abundance):
+    """
+    Iteratively find the best containment of `query` in all the `counters`,
+    until we find fewer than `threshold_bp` (estimated) bp in common.
+    """
 
 
 ###

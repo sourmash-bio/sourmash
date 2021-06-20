@@ -626,7 +626,7 @@ def categorize(args):
 
 
 def gather(args):
-    from .search import gather_databases, format_bp
+    from .search import GatherDatabases, format_bp
 
     set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
@@ -703,8 +703,8 @@ def gather(args):
     orig_query_mh = query.minhash
     next_query = query
 
-    gather_iter = gather_databases(query, counters, args.threshold_bp,
-                                   args.ignore_abundance)
+    gather_iter = GatherDatabases(query, counters, args.threshold_bp,
+                                  args.ignore_abundance)
     for result, weighted_missed, next_query in gather_iter:
         if not len(found):                # first result? print header.
             if is_abundance:
@@ -800,7 +800,7 @@ def gather(args):
 
 def multigather(args):
     "Gather many signatures against multiple databases."
-    from .search import gather_databases, format_bp
+    from .search import GatherDatabases, format_bp
 
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
@@ -867,7 +867,9 @@ def multigather(args):
             found = []
             weighted_missed = 1
             is_abundance = query.minhash.track_abundance and not args.ignore_abundance
-            for result, weighted_missed, next_query in gather_databases(query, counters, args.threshold_bp, args.ignore_abundance):
+            gather_iter = GatherDatabases(query, counters, args.threshold_bp,
+                                          args.ignore_abundance)
+            for result, weighted_missed, next_query in gather_iter:
                 if not len(found):                # first result? print header.
                     if is_abundance:
                         print_results("")
