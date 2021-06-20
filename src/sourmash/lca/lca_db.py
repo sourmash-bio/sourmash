@@ -173,7 +173,6 @@ class LCA_Database(Index):
 
     def signatures(self):
         "Return all of the signatures in this LCA database."
-        from sourmash import SourmashSignature
         for v in self._signatures.values():
             yield v
 
@@ -378,7 +377,8 @@ class LCA_Database(Index):
     @cached_property
     def _signatures(self):
         "Create a _signatures member dictionary that contains {idx: sigobj}."
-        from sourmash import MinHash, SourmashSignature
+        from sourmash import MinHash
+        from sourmash.signature import SourmashSignature
 
         is_protein = False
         is_hp = False
@@ -423,10 +423,11 @@ class LCA_Database(Index):
         for idx, mh in mhd.items():
             ident = self.idx_to_ident[idx]
             name = self.ident_to_name[ident]
-            ss = SourmashSignature(mh, name=name)
+            ss = SourmashSignature(mh.to_frozen(), name=name)
+            ss.into_frozen()
 
             if passes_all_picklists(ss, self.picklists):
-                sigd[idx] = SourmashSignature(mh, name=name)
+                sigd[idx] = ss
 
         debug('=> {} signatures!', len(sigd))
         return sigd

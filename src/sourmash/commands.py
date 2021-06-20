@@ -597,16 +597,17 @@ def categorize(args):
         notify('loaded query: {}... (k={}, {})', str(orig_query)[:30],
                orig_query.minhash.ksize, orig_query.minhash.moltype)
 
-        if args.ignore_abundance:
-            query = orig_query.to_mutable()
-            query.minhash = query.minhash.flatten()
+        if args.ignore_abundance and orig_query.minhash.track_abundance:
+            query = orig_query.copy()
+            with query.mutate():
+                query.minhash = query.minhash.flatten()
         else:
             if orig_query.minhash.track_abundance:
                 notify("ERROR: this search cannot be done on signatures calculated with abundance.")
                 notify("ERROR: please specify --ignore-abundance.")
                 sys.exit(-1)
 
-            query = orig_query
+            query = orig_query.copy()
 
         results = []
         for sr in db.find(search_obj, query):
@@ -683,9 +684,8 @@ def gather(args):
         notify("Starting prefetch sweep across databases.")
         prefetch_query = query.copy()
         if prefetch_query.minhash.track_abundance:
-            prefetch_query = prefetch_query.to_mutable()
-            prefetch_query.minhash = prefetch_query.minhash.flatten()
-            prefetch_query = prefetch_query.to_frozen()
+            with prefetch_query.mutate():
+                prefetch_query.minhash = prefetch_query.minhash.flatten()
 
         save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
         save_prefetch.open()
@@ -850,6 +850,8 @@ def multigather(args):
         for query in sourmash_args.load_file_as_signatures(queryfile,
                                                        ksize=args.ksize,
                                                        select_moltype=moltype):
+            query.into_frozen()
+
             notify('loaded query: {}... (k={}, {})', str(query)[:30],
                    query.minhash.ksize, sourmash_args.get_moltype(query))
 
@@ -859,10 +861,11 @@ def multigather(args):
                 continue
 
             # downsample if requested
-            if args.scaled:
+            if args.scaled and query.minhash.scaled != args.scaled:
                 notify('downsampling query from scaled={} to {}',
                        query.minhash.scaled, int(args.scaled))
-                query.minhash = query.minhash.downsample(scaled=args.scaled)
+                with query.mutate():
+                    query.minhash = query.minhash.downsample(scaled=args.scaled)
 
             # empty?
             if not len(query.minhash):
