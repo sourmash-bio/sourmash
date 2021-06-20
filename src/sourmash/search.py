@@ -372,8 +372,7 @@ class GatherDatabases:
         f_unique_to_query = len(intersect_mh) / len(orig_query_mh)
 
         # calculate fraction of subject match with orig query
-        f_match_orig = best_match.minhash.contained_by(orig_query_mh,
-                                                       downsample=True)
+        f_match_orig = found_mh.contained_by(orig_query_mh)
 
         # calculate scores weighted by abundances
         f_unique_weighted = sum((orig_query_abunds[k] for k in intersect_mh.hashes ))
@@ -390,12 +389,8 @@ class GatherDatabases:
             std_abund = np.std(intersect_abunds)
 
         # construct a new query, subtracting hashes found in previous one.
-        # @CTB use query_mh here? should be same.
-        #new_query_mh = query_mh
-        #assert new_query_mh == query_mh
-
         new_query_mh = query_mh.to_mutable()
-        new_query_mh.remove_many(set(found_mh.hashes))
+        new_query_mh.remove_many(found_mh.hashes)
         new_query = SourmashSignature(new_query_mh)
 
         remaining_bp = scaled * len(new_query_mh)
