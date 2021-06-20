@@ -9,11 +9,11 @@ def subparser(subparsers):
     subparser = subparsers.add_parser('classify')
     subparser.add_argument(
         '-g', '--gather-csv', nargs='*', default = [],
-        help='csvs from sourmash gather'
+        help='CSVs output by sourmash gather for this sample'
     )
     subparser.add_argument(
         '--from-file',  metavar='FILE', default=None,
-        help='input many gather results as a text file, with one gather csv per line'
+        help='input many gather results as a text file, with one gather CSV per line'
     )
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
@@ -22,7 +22,7 @@ def subparser(subparsers):
     subparser.add_argument(
         '-t', '--taxonomy-csv',  metavar='FILE',
         nargs='+', required=True,
-        help='database lineages csv'
+        help='database lineages CSV'
     )
     subparser.add_argument(
         '-o', '--output-base', default='-',
@@ -30,7 +30,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-r', '--rank', choices=['strain','species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'],
-        help='Summarize genome taxonomy at this rank and above. Note that the taxonomy csv must contain lineage information at this rank.'
+        help='Summarize genome taxonomy at this rank and above. Note that the taxonomy CSV must contain lineage information at this rank.'
     )
     subparser.add_argument(
         '--keep-full-identifiers', action='store_true',
@@ -58,7 +58,7 @@ def subparser(subparsers):
 def main(args):
     import sourmash
     if not args.gather_csv and not args.from_file:
-        raise ValueError(f"No gather csvs found! Please input via `-g` or `--from-file`.")
+        raise ValueError(f"No gather CSVs found! Please input via `-g` or `--from-file`.")
     if len(args.output_format) > 1:
         if args.output_base == "-":
             raise TypeError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")

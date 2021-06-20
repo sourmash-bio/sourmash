@@ -76,8 +76,6 @@ def add_picklist_args(parser):
         '--picklist', default=None,
         help="select signatures based on a picklist, i.e. 'file.csv:colname:coltype'"
     )
-    
-    
     parser.add_argument(
         '--picklist-require-all', default=False, action='store_true',
         help="require that all picklist values be found or else fail"

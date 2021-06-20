@@ -8,11 +8,11 @@ def subparser(subparsers):
     subparser = subparsers.add_parser('label')
     subparser.add_argument(
         '-g', '--gather-csv', nargs='*', default = [],
-        help='csvs from sourmash gather'
+        help='CSV output files from sourmash gather'
     )
     subparser.add_argument(
         '--from-file',  metavar='FILE', default=None,
-        help='input many gather results as a text file, with one gather csv per line'
+        help='input many gather results as a text file, with one gather CSV per line'
     )
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
@@ -21,11 +21,11 @@ def subparser(subparsers):
     subparser.add_argument(
         '-t', '--taxonomy-csv', metavar='FILE',
         nargs="+", required=True,
-        help='database lineages csv'
+        help='database lineages CSV'
     )
     subparser.add_argument(
         '-o', '--output-dir', default= "",
-        help='directory for output csv(s)'
+        help='directory for output files'
     )
     subparser.add_argument(
         '--keep-full-identifiers', action='store_true',
@@ -47,5 +47,5 @@ def subparser(subparsers):
 def main(args):
     import sourmash
     if not args.gather_csv and not args.from_file:
-        raise ValueError(f"No gather csvs found! Please input via `-g` or `--from-file`.")
+        raise ValueError(f"No gather CSVs found! Please input via `-g` or `--from-file`.")
     return sourmash.tax.__main__.label(args)

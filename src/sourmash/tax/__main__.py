@@ -59,7 +59,7 @@ def summarize(args):
             this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
-            # maybe check for overlapping tax assignments? rn later ones will override earlier ones
+            # maybe check for overlapping tax assignments? currently, later ones will override earlier ones
             tax_assign.update(this_tax_assign)
             available_ranks.update(set(avail_ranks))
 
@@ -67,11 +67,11 @@ def summarize(args):
             error(str(exc))
 
     if not tax_assign:
-        error(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
+        error(f'ERROR: No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
         sys.exit(-1)
 
     if args.rank and args.rank not in available_ranks:
-        error(f"No taxonomic information provided for rank {args.rank}: cannot summarize at this rank")
+        error(f"ERROR: No taxonomic information provided for rank {args.rank}: cannot summarize at this rank")
         sys.exit(-1)
 
     # next, collect and load gather results
@@ -139,11 +139,11 @@ def classify(args):
             error(str(exc))
 
     if not tax_assign:
-        error(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
+        error(f'ERROR: No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
         sys.exit(-1)
 
     if args.rank and args.rank not in available_ranks:
-        error(f"No taxonomic information provided for rank {args.rank}: cannot classify at this rank")
+        error(f"ERROR: No taxonomic information provided for rank {args.rank}: cannot classify at this rank")
         sys.exit(-1)
 
     # get gather_csvs from args
@@ -256,7 +256,7 @@ def label(args):
         tax_assign.update(this_tax_assign)
 
     if not tax_assign:
-        error(f'No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
+        error(f'ERROR: No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
         sys.exit(-1)
 
     # get gather_csvs from args

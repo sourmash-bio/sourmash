@@ -444,9 +444,9 @@ As with all reference-based analysis, results can be affected by the
  reference databases.
 
 
-### `sourmash tax summarize` (for summarizing metagenomes)
+### `sourmash tax summarize` - summarize metagenome content from `gather` results
 
-`sourmash tax summarize` - for each gather query, summarize gather results by
+`sourmash tax summarize` summarizes gather results for each query by
  taxonomic lineage.
 
 example command to summarize a single `gather csv`, where the query was gathered
@@ -548,9 +548,9 @@ To produce multiple output types from the same command, add the types into the
  `--output-format` argument, e.g. `--output-format summary krona lineage_summary`
 
 
-### `sourmash tax classify` (for classifying genomes)
+### `sourmash tax classify` - classify a genome using `gather` results
 
-`sourmash tax classify` - for each gather query, report likely classification
+`sourmash tax classify` reports likely classification for each query,
  based on `gather` matches. By default, classification requires at least 10% of
  the query to be matched. Thus, if 10% of the query was matched to a species, the
  species-level classification can be reported. However, if 7% of the query was
@@ -580,8 +580,8 @@ f_match,f_unique_weighted,name,query_name
 
 > Here, `f_match` shows that independently, both strains match ~65% percent of
  this mixed query. The `f_unique_weighted` column has the results of gather-style
- decomposition. So the OS223 strain had a slightly higher `f_match` (66%), so it
- was the first match. Then, the matching sequence was removed from the query. The
+ decomposition. As the OS223 strain had a slightly higher `f_match` (66%), it
+ was the first match. The
  remaining 33% of the query matched to strain OS185.
 
 Here, we use this gather csv to `classify our "Sb47+63" mixed-strain query.
@@ -655,10 +655,10 @@ To produce multiple output types from the same command, add the types into the
  (default=0.1), the `status` column will contain `below_threshold`.
 
 
-### `sourmash tax label` (for labeling gather results)
+### `sourmash tax label` - annotates gather output with taxonomy
 
-`sourmash tax label` - for any gather results, add a column with taxonomic
- lineage information for each database match. Do not summarize or classify. Note
+`sourmash tax label` adds a column with taxonomic 
+ lineage information for each database match to gather output. Do not summarize or classify. Note
  that this is not required for either `summarize` or `classify`.
 
 By default, `label` uses the name of each input gather csv to write an updated
