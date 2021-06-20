@@ -761,6 +761,10 @@ class LoadedCollection(Index):
         for row in self.manifest.rows:
             yield row['signature'], row['internal_location']
 
+    def signatures_with_internal(self):
+        for row in self.manifest.rows:
+            yield row['signature'], "", row['internal_location']
+
     def __len__(self):
         return len(self.manifest)
 
@@ -939,6 +943,47 @@ class LazyMultiIndex(Index):
         return LazyMultiIndex(self.index_list, new_manifests)
 
 
+class LazyLoadedSigFile(Index):
+    def __init__(self, filename, manifest):
+        self.filename = filename
+        self.manifest = manifest
+
+    @property
+    def location(self):
+        return self.filename
+
+    def signatures(self):
+        if not len(self.manifest):
+            print('nothing to do, returning')
+            return []
+
+        print(f'...{len(self.manifest)} in manifest, loading')
+        picklist = self.manifest.to_picklist()
+        idx = LinearIndex.load(self.location)
+        idx = idx.select(picklist=picklist)
+        for ss in idx.signatures():
+            yield ss
+
+    def __len__(self):
+        return len(self.manifest)
+    __bool__ = __len__
+
+    def load(self, *args):
+        raise NotImplementedError
+
+    def insert(self, *args):
+        raise NotImplementedError
+
+    def save(self, *args):
+        raise NotImplementedError
+
+    def select(self, **kwargs):
+        manifest = self.manifest
+        new_manifest = manifest.select_to_manifest(**kwargs)
+
+        return LazyLoadedSigFile(self.filename, new_manifest)
+
+
 class CollectionManifest:
     """
     Signature metadata for a collection of signatures.
@@ -1106,8 +1151,8 @@ class CollectionManifest:
 
     def to_picklist(self):
         "Convert this manifest to a picklist."
-        from sourmash.sig.picklist import SignaturePicklist
-        picklist = SignaturePicklist(None, None, 'md5')
+        from sourmash.picklist import SignaturePicklist
+        picklist = SignaturePicklist('md5')
         picklist.pickset = set(self._md5_set)
 
         return picklist
