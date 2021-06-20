@@ -135,7 +135,7 @@ def classify(args):
 
                 # make sure we're looking at the same scaled value as database
                 if query_sig.minhash.scaled != scaled:
-                    with query_sig.mutate():
+                    with query_sig.update() as query_sig:
                         downsample_mh = query_sig.minhash.downsample(scaled=scaled)
                         query_sig.minhash = downsample_mh
 

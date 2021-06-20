@@ -215,10 +215,6 @@ class SourmashSignature(RustObject):
         "Return a mutable copy of this signature."
         return self.copy()
 
-    def into_mutable(self):
-        "Make this signature mutable, allowing attribute changes."
-        pass
-
     def into_frozen(self):
         "Freeze this signature, preventing attribute changes."
         self.__class__ = FrozenSourmashSignature
@@ -264,22 +260,16 @@ class FrozenSourmashSignature(SourmashSignature):
         mut.__setstate__(state_tup)
         return mut
 
-    def into_mutable(self):
-        "Make this signature mutable, preventing any attribute changes."
-        # CTB note: this is safer here than for MinHash, because MinHash
-        # will remain Frozen (but can be replaced).
-        self.__class__ = SourmashSignature
-
     def into_frozen(self):
-        "Freeze this signature, preventing any attribute changes."
-        pass
+        "Freeze this signature, preventing attribute changes."
+        self.__class__ = FrozenSourmashSignature
 
     @contextlib.contextmanager
-    def mutate(self):
-        "Briefly make this a mutable SourmashSignature."
-        self.into_mutable()
-        yield self
-        self.into_frozen()
+    def update(self):
+        "Briefly make this a mutable SourmashSignature, then freeze it."
+        new_copy = self.to_mutable()
+        yield new_copy
+        new_copy.into_frozen()
 
 
 def _detect_input_type(data):
