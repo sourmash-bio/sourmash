@@ -75,7 +75,7 @@ def subparser(subparsers):
         help='fail quickly if taxonomy is not available for an identifier',
     )
     subparser.add_argument(
-        '--output-format', default=['summary'], nargs='+', choices=["summary", "krona"],
+        '--output-format', default=['csv_summary'], nargs='+', choices=["csv_summary", "krona"],
         help='choose output format(s)',
     )
     subparser.add_argument(
@@ -93,6 +93,6 @@ def main(args):
         if args.output_base == "-":
             raise TypeError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")
     if not args.rank:
-        if any(x in ["krona", "lineage_summary"] for x in args.output_format):
+        if any(x in ["krona"] for x in args.output_format):
             raise ValueError(f"Rank (--rank) is required for krona output format.")
     return sourmash.tax.__main__.classify(args)

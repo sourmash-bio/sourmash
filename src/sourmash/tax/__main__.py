@@ -95,7 +95,7 @@ def summarize(args):
                                                                 seen_perfect = seen_perfect)
 
     # write summarized output csv
-    if "summary" in args.output_format:
+    if "csv_summary" in args.output_format:
         summary_outfile = make_outfile(args.output_base, ".summarized.csv")
         with FileOutputCSV(summary_outfile) as out_fp:
             tax_utils.write_summary(summarized_gather, out_fp)
@@ -224,7 +224,7 @@ def classify(args):
         sys.exit(-1)
 
     # write outputs
-    if "summary" in args.output_format:
+    if "csv_summary" in args.output_format:
         summary_outfile = make_outfile(args.output_base, ".classifications.csv")
         with FileOutputCSV(summary_outfile) as out_fp:
             tax_utils.write_classifications(classifications, out_fp)
