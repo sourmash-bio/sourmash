@@ -60,7 +60,8 @@ def subparser(subparsers):
     subparser.add_argument(
         '--cache-size', default=0, type=int, metavar='N',
         help='number of internal SBT nodes to cache in memory (default: 0, cache all nodes)'
-
+    )
+    
     # advanced parameters
     subparser.add_argument(
         '--linear', dest="linear", action='store_true',
