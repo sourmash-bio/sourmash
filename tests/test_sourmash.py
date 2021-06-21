@@ -920,7 +920,10 @@ def test_gather_lca_db(runtmp, linear_gather, prefetch_gather):
 
     runtmp.sourmash('gather', query, lca_db, linear_gather, prefetch_gather)
     print(runtmp)
-    assert 'NC_009665.1 Shewanella baltica OS185' in str(runtmp.last_result.out)
+    out = runtmp.last_result.out
+
+    assert 'NC_009665.1 Shewanella baltica OS185' in out
+    assert 'WARNING: final scaled was 10000, vs query scaled of 1000' in out
 
 
 def test_gather_csv_output_filename_bug(runtmp, linear_gather, prefetch_gather):
@@ -3984,6 +3987,8 @@ def test_gather_query_downsample(linear_gather, prefetch_gather):
         assert 'loaded 12 signatures' in err
         assert all(('4.9 Mbp      100.0%  100.0%' in out,
                     'NC_003197.2' in out))
+
+        assert 'WARNING: final scaled was 10000, vs query scaled of 500' in out
 
 
 def test_gather_query_downsample_explicit(linear_gather, prefetch_gather):
