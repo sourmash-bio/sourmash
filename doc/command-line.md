@@ -466,17 +466,17 @@ sourmash tax summarize
     --taxonomy-csv gtdb-rs202.taxonomy.v2.csv
 ```
 
-There are three possible output formats, `summary`, `lineage_summary`, and
+There are three possible output formats, `csv_summary`, `lineage_summary`, and
  `krona`.
 
-#### `summary` output format
+#### `csv_summary` output format
 
-`summary` is the default output format. This outputs a `csv` with lineage
+`csv_summary` is the default output format. This outputs a `csv` with lineage
  summarization for each taxonomic rank. This output currently consists of four
  columns, `query_name,rank,fraction,lineage`, where `fraction` is the  fraction
  of the query matched to the reported rank and lineage.
 
-example `summary` output from the command above:
+example `csv_summary` output from the command above:
 
 ```
 query_name,rank,fraction,lineage
@@ -602,11 +602,11 @@ sourmash tax classify
     --taxonomy-csv gtdb-rs202.taxonomy.v2.csv
 ```
 
-There are two possible output formats, `summary` and `krona`.
+There are two possible output formats, `csv_summary` and `krona`.
 
-#### `summary` output format
+#### `csv_summary` output format
 
-`summary` is the default output format. This outputs a `csv` with lineage
+`csv_summary` is the default output format. This outputs a `csv` with lineage
  summarization for each taxonomic rank. This output currently consists of four
  columns, `query_name,rank,fraction,lineage`, where `fraction` is the  fraction
  of the query matched to the reported rank and lineage. The `status` column
@@ -617,7 +617,7 @@ There are two possible output formats, `summary` and `krona`.
   - `below_threshold` - this query was classified at the specified rank,
      but the query fraction matched was below the containment threshold
 
-Here is the `summary` output from classifying this mixed-strain Shewanella query to
+Here is the `csv_summary` output from classifying this mixed-strain Shewanella query to
 species level:
 
 ```
@@ -658,7 +658,7 @@ Note here that specifying `--rank` forces classification by rank rather than
 by the containment threshold.
 
 To produce multiple output types from the same command, add the types into the
- `--output-format` argument, e.g. `--output-format summary krona`.
+ `--output-format` argument, e.g. `--output-format csv_summary krona`.
  **Note that specifying the classification rank with `--rank`,
  (e.g. `--rank species`), as needed for `krona` output, forces classification
  by `rank` rather than by containment threshold.** If the query
@@ -666,18 +666,18 @@ To produce multiple output types from the same command, add the types into the
  (default=0.1), the `status` column will contain `below_threshold`.
 
 
-### `sourmash tax label` - annotates gather output with taxonomy
+### `sourmash tax annotate` - annotates gather output with taxonomy
 
-`sourmash tax label` adds a column with taxonomic 
- lineage information for each database match to gather output. Do not summarize or classify. Note
- that this is not required for either `summarize` or `classify`.
+`sourmash tax annotate` adds a column with taxonomic lineage information
+ for each database match to gather output. Do not summarize or classify.
+ Note that this is not required for either `summarize` or `classify`.
 
-By default, `label` uses the name of each input gather csv to write an updated
- version with lineages information. For example, labeling `sample1.gather.csv`
+By default, `annotate` uses the name of each input gather csv to write an updated
+ version with lineages information. For example, annotating `sample1.gather.csv`
  would produce `sample1.gather.with-lineages.csv`
 
 ```
-sourmash tax label
+sourmash tax annotate
     --gather-csv Sb47+63_gather_x_gtdbrs202_k31.csv \
     --taxonomy-csv gtdb-rs202.taxonomy.v2.csv
 ```
