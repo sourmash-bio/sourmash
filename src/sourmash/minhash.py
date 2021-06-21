@@ -685,13 +685,13 @@ class MinHash(RustObject):
     def inflate(self, infl):
         """If track_abundance=True, return a new inflated MinHash."""
         if self.track_abundance:
-            # create new object:
-            a = MinHash(
-                infl.num, infl.ksize, infl.is_protein, infl.dayhoff, infl.hp,
-                False, infl.seed, self._max_hash
-            )
-            a.add_many(self)
-
+            if infl.track_abundance:
+                # create new object:
+                a = MinHash(
+                    infl.num, infl.ksize, infl.is_protein, infl.dayhoff, infl.hp,
+                    False, infl.seed, self._max_hash
+                )
+                a.add_many(self)
         return a
         return self
 
