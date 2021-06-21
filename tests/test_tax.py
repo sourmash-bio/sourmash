@@ -418,6 +418,90 @@ def test_summarize_perfect_match_warning(runtmp):
     assert 'WARNING: 100% match! Is query test1 identical to its database match, GCF_001881345' in runtmp.last_result.err
 
 
+def test_summarize_gather_duplicate_query(runtmp):
+    c = runtmp
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    g_res = utils.get_test_data('tax/test1.gather.csv')
+
+    # different filename, contents identical to test1
+    g_res2 = runtmp.output("test2.gather.csv")
+    with open(g_res2, 'w') as fp:
+        for line in open(g_res, 'r'):
+            fp.write(line)
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('tax', 'summarize',  '--gather-csv', g_res, g_res2,
+                   '--taxonomy-csv', taxonomy_csv)
+
+    assert c.last_result.status == -1
+    print(str(exc.value))
+    assert f"Gather query test1 was found in more than one CSV. Cannot load from " in str(exc.value)
+
+
+def test_summarize_gather_duplicate_query_force(runtmp):
+    c = runtmp
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    g_res = utils.get_test_data('tax/test1.gather.csv')
+
+    # different filename, contents identical to test1
+    g_res2 = runtmp.output("test2.gather.csv")
+    with open(g_res2, 'w') as fp:
+        for line in open(g_res, 'r'):
+            fp.write(line)
+
+    c.run_sourmash('tax', 'summarize',  '--gather-csv', g_res, g_res2,
+                   '--taxonomy-csv', taxonomy_csv, '--force')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert f'--force is set, ignoring duplicate query.' in c.last_result.err
+    assert f'No gather results loaded from ' in c.last_result.err
+    assert f'loaded results from 1 gather CSVs' in c.last_result.err
+    assert "query_name,rank,fraction,lineage" in c.last_result.out
+    assert 'test1,superkingdom,0.131,d__Bacteria' in c.last_result.out
+
+
+def test_summarize_gather_duplicate_filename(runtmp):
+    c = runtmp
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    g_res = utils.get_test_data('tax/test1.gather.csv')
+
+    c.run_sourmash('tax', 'summarize', '--gather-csv', g_res, g_res, '--taxonomy-csv', taxonomy_csv)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert f'ignoring duplicated reference to file: {g_res}'
+    assert "query_name,rank,fraction,lineage" in c.last_result.out
+    assert 'test1,superkingdom,0.131,d__Bacteria' in c.last_result.out
+
+
+def test_summarize_gather_duplicate_filename_from_file(runtmp):
+    c = runtmp
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    g_res = utils.get_test_data('tax/test1.gather.csv')
+    g_from_file = runtmp.output("tmp-from-file.txt")
+    with open(g_from_file, 'w') as f_csv:
+        f_csv.write(f"{g_res}\n")
+        f_csv.write(f"{g_res}\n")
+
+    c.run_sourmash('tax', 'summarize', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert f'ignoring duplicated reference to file: {g_res}'
+    assert "query_name,rank,fraction,lineage" in c.last_result.out
+    assert 'test1,superkingdom,0.131,d__Bacteria' in c.last_result.out
+
+
 def test_classify_empty_gather_results(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
@@ -568,7 +652,24 @@ def test_classify_gather_from_file_two_files(runtmp):
     assert "test2,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
-def test_classify_gather_from_file_duplicate(runtmp):
+def test_classify_gather_from_file_duplicate_filename(runtmp):
+    c = runtmp
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    g_res = utils.get_test_data('tax/test1.gather.csv')
+
+    c.run_sourmash('tax', 'classify', '--gather-csv', g_res, g_res, '--taxonomy-csv', taxonomy_csv,
+                   '--rank', 'species', '--containment-threshold', '0')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert f'ignoring duplicated reference to file: {g_res}'
+    assert "query_name,status,rank,fraction,lineage" in c.last_result.out
+    assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+
+def test_classify_gather_from_file_duplicate_filename(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -585,8 +686,64 @@ def test_classify_gather_from_file_duplicate(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
+    assert f'ignoring duplicated reference to file: {g_res}'
     assert "query_name,status,rank,fraction,lineage" in c.last_result.out
     assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+
+
+def test_classify_gather_from_file_duplicate_query(runtmp):
+    c = runtmp
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    g_res = utils.get_test_data('tax/test1.gather.csv')
+
+    # different filename, contents identical to test1
+    g_res2 = runtmp.output("test2.gather.csv")
+    with open(g_res2, 'w') as fp:
+        for line in open(g_res, 'r'):
+            fp.write(line)
+
+    g_from_file = runtmp.output("tmp-from-file.txt")
+    with open(g_from_file, 'w') as f_csv:
+        f_csv.write(f"{g_res}\n")
+        f_csv.write(f"{g_res2}\n")
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('tax', 'classify', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
+                   '--rank', 'species', '--containment-threshold', '0')
+    assert c.last_result.status == -1
+    print(str(exc.value))
+    assert f"Gather query test1 was found in more than one CSV. Cannot load from " in str(exc.value)
+
+
+def test_classify_gather_from_file_duplicate_query_force(runtmp):
+    c = runtmp
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    g_res = utils.get_test_data('tax/test1.gather.csv')
+
+    # different filename, contents identical to test1
+    g_res2 = runtmp.output("test2.gather.csv")
+    with open(g_res2, 'w') as fp:
+        for line in open(g_res, 'r'):
+            fp.write(line)
+
+    g_from_file = runtmp.output("tmp-from-file.txt")
+    with open(g_from_file, 'w') as f_csv:
+        f_csv.write(f"{g_res}\n")
+        f_csv.write(f"{g_res2}\n")
+
+    c.run_sourmash('tax', 'classify', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
+                   '--rank', 'species', '--containment-threshold', '0', '--force')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,status,rank,fraction,lineage" in c.last_result.out
+    assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert f'--force is set, ignoring duplicate query.' in c.last_result.err
+    assert f'No gather results loaded from ' in c.last_result.err
+    assert f'loaded results from 1 gather CSVs' in c.last_result.err
 
 
 def test_classify_gather_cli_and_from_file(runtmp):
@@ -620,7 +777,7 @@ def test_classify_gather_cli_and_from_file(runtmp):
     assert "test2,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
-def test_classify_gather_cli_and_from_file_duplicate(runtmp):
+def test_classify_gather_cli_and_from_file_duplicate_filename(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -639,6 +796,7 @@ def test_classify_gather_cli_and_from_file_duplicate(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
+    assert f'ignoring duplicated reference to file: {g_res}'
     assert "query_name,status,rank,fraction,lineage" in c.last_result.out
     assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
@@ -936,12 +1094,12 @@ def test_classify_empty_gather_results_with_csv_force(runtmp):
 
     assert c.last_result.status == 0
     assert f'--force is set. Attempting to continue to next set of gather results.' in c.last_result.err
-    assert f'loaded 1 gather files for classification' in c.last_result.err
+    assert f'loaded results from 1 gather CSVs' in c.last_result.err
     assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
-def test_label_0(runtmp):
-    # test label
+def test_annotate_0(runtmp):
+    # test annotate
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
@@ -949,7 +1107,7 @@ def test_label_0(runtmp):
     csvout = runtmp.output("test1.gather.with-lineages.csv")
     out_dir = os.path.dirname(csvout)
 
-    c.run_sourmash('tax', 'label', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', out_dir)
+    c.run_sourmash('tax', 'annotate', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', out_dir)
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -967,7 +1125,7 @@ def test_label_0(runtmp):
     assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in lin_gather_results[4]
 
 
-def test_label_empty_gather_results(runtmp):
+def test_annotate_empty_gather_results(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
     #creates empty gather result
@@ -977,13 +1135,13 @@ def test_label_empty_gather_results(runtmp):
     print("g_csv: ", g_csv)
 
     with pytest.raises(ValueError) as exc:
-        runtmp.run_sourmash('tax', 'label', '-g', g_csv, '--taxonomy-csv', tax)
+        runtmp.run_sourmash('tax', 'annotate', '-g', g_csv, '--taxonomy-csv', tax)
 
     assert f'Cannot read gather results from {g_csv}. Is file empty?' in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
-def test_label_bad_gather_header(runtmp):
+def test_annotate_bad_gather_header(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
@@ -997,13 +1155,13 @@ def test_label_bad_gather_header(runtmp):
     print("bad_gather_results: \n", bad_g)
 
     with pytest.raises(ValueError) as exc:
-        runtmp.run_sourmash('tax', 'label', '-g', bad_g_csv, '--taxonomy-csv', tax)
+        runtmp.run_sourmash('tax', 'annotate', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
     assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
-def test_label_empty_tax_lineage_input(runtmp):
+def test_annotate_empty_tax_lineage_input(runtmp):
     tax_empty = runtmp.output('t.csv')
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
@@ -1013,7 +1171,7 @@ def test_label_empty_tax_lineage_input(runtmp):
 
 
     with pytest.raises(ValueError) as exc:
-        runtmp.run_sourmash('tax', 'label', '-g', g_csv, '--taxonomy-csv', tax_empty)
+        runtmp.run_sourmash('tax', 'annotate', '-g', g_csv, '--taxonomy-csv', tax_empty)
 
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)

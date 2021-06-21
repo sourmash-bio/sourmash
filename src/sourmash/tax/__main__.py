@@ -18,6 +18,7 @@ from sourmash.logging import set_quiet, error, notify, set_quiet, print_results,
 from sourmash import sourmash_args
 
 from . import tax_utils
+from .tax_utils import ClassificationResult
 
 usage='''
 sourmash taxonomy <command> [<args>] - manipulate/work with taxonomy information.
@@ -67,7 +68,7 @@ def summarize(args):
             error(str(exc))
 
     if not tax_assign:
-        error(f'ERROR: No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
+        error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
         sys.exit(-1)
 
     if args.rank and args.rank not in available_ranks:
@@ -132,14 +133,14 @@ def classify(args):
             this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
-            # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
+            # maybe check for overlapping tax assignments? currently later ones will override earlier ones
             tax_assign.update(this_tax_assign)
             available_ranks.update(set(avail_ranks))
         except ValueError as exc:
             error(str(exc))
 
     if not tax_assign:
-        error(f'ERROR: No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
+        error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
         sys.exit(-1)
 
     if args.rank and args.rank not in available_ranks:
@@ -152,68 +153,65 @@ def classify(args):
     classifications = defaultdict(list)
     matched_queries=set()
     krona_results = []
-    num_empty=0
     status = "nomatch"
     seen_perfect = set()
 
-    # handle each gather result separately
-    for n, g_csv in enumerate(gather_csvs):
-        gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(g_csv, tax_assign, force=args.force,
-                                                                                 fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
+    # read in all gather CSVs (queries in more than one gather file will raise error; with --force they will only be loaded once)
+    # note: doing one CSV at a time would work and probably be more memory efficient, but we would need to change how we check
+    # for duplicated queries
+    gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
+                                                                            fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
 
-        if not gather_results:
-            num_empty += 1
-            continue
+    # if --rank is specified, classify to that rank
+    if args.rank:
+        best_at_rank, seen_perfect = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
+                                                     split_identifiers=not args.keep_full_identifiers,
+                                                     keep_identifier_versions = args.keep_identifier_versions,
+                                                     best_only=True, seen_perfect=seen_perfect)
 
-        # if --rank is specified, classify to that rank
-        if args.rank:
-            best_at_rank, seen_perfect = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
+       # best at rank is a list of SummarizedGather tuples
+        for sg in best_at_rank:
+            status = 'nomatch'
+            if sg.query_name in matched_queries:
+                continue
+            if sg.fraction <= args.containment_threshold:
+                status="below_threshold"
+                notify(f"WARNING: classifying query {sg.query_name} at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
+            else:
+                status="match"
+            classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage)
+            classifications[args.rank].append(classif)
+            matched_queries.add(sg.query_name)
+            if "krona" in args.output_format:
+                lin_list = display_lineage(sg.lineage).split(';')
+                krona_results.append((sg.query_name, sg.fraction, *lin_list))
+    else:
+        # classify to the match that passes the containment threshold.
+        # To do - do we want to store anything for this match if nothing >= containment threshold?
+        for rank in tax_utils.ascending_taxlist(include_strain=False):
+            # gets best_at_rank for all queries in this gather_csv
+            best_at_rank, seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
                                                          split_identifiers=not args.keep_full_identifiers,
                                                          keep_identifier_versions = args.keep_identifier_versions,
                                                          best_only=True, seen_perfect=seen_perfect)
 
-           # this now returns list of SummarizedGather tuples
-            for (query_name, rank, fraction, lineage) in best_at_rank:
+            for sg in best_at_rank:
                 status = 'nomatch'
-                if query_name in matched_queries:
+                if sg.query_name in matched_queries:
                     continue
-                if fraction <= args.containment_threshold:
+                if sg.fraction >= args.containment_threshold:
+                    status = "match"
+                    classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage)
+                    classifications[args.rank].append(classif)
+                    matched_queries.add(sg.query_name)
+                    if "krona" in args.output_format:
+                        lin_list = display_lineage(sg.lineage).split(';')
+                        krona_results.append((sg.query_name, sg.fraction, *lin_list))
+                    break
+                if rank == "superkingdom" and status == "nomatch":
                     status="below_threshold"
-                    notify(f"WARNING: classifying query {query_name} at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
-                else:
-                    status="match"
-                classifications[args.rank].append((query_name, status, rank, fraction, lineage))
-                matched_queries.add(query_name)
-                if "krona" in args.output_format:
-                    lin_list = display_lineage(lineage).split(';')
-                    krona_results.append((query_name, fraction, *lin_list))
-        else:
-            # classify to the match that passes the containment threshold.
-            # To do - do we want to store anything for this match if nothing >= containment threshold?
-            for rank in tax_utils.ascending_taxlist(include_strain=False):
-                # gets best_at_rank for all queries in this gather_csv
-                best_at_rank, seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                             split_identifiers=not args.keep_full_identifiers,
-                                                             keep_identifier_versions = args.keep_identifier_versions,
-                                                             best_only=True, seen_perfect=seen_perfect)
-
-                for (query_name, rank, fraction, lineage) in best_at_rank:
-                    status = 'nomatch'
-                    if query_name in matched_queries:
-                        continue
-                    if fraction >= args.containment_threshold:
-                        status = "match"
-                        classifications[args.rank].append((query_name, status, rank, fraction, lineage))
-                        matched_queries.add(query_name)
-                        if "krona" in args.output_format:
-                            lin_list = display_lineage(lineage).split(';')
-                            krona_results.append((query_name, fraction, *lin_list))
-                        break
-                    if rank == "superkingdom" and status == "nomatch":
-                        status="below_threshold"
-                        classifications[args.rank].append((query_name, status, "", 0, ""))
-
-    notify(f'loaded {n+1-num_empty} gather files for classification.')
+                    classif = ClassificationResult(sg.query_name, status, "", 0, "")
+                    classifications[args.rank].append(classif)
 
     if not any([classifications, krona_results]):
         notify(f'No results for classification. Exiting.')
@@ -231,9 +229,9 @@ def classify(args):
             tax_utils.write_krona(args.rank, krona_results, out_fp)
 
 
-def label(args):
+def annotate(args):
     """
-    Integrate lineage information into gather results.
+    Annotate gather results with taxonomic lineage for each match.
 
     Produces gather csv with lineage information as the final column.
     """
@@ -242,6 +240,7 @@ def label(args):
 
     # first, load taxonomic_assignments
     tax_assign = {}
+    this_tax_assign = None
     for tax_csv in args.taxonomy_csv:
 
         try:
@@ -251,11 +250,12 @@ def label(args):
         except ValueError as exc:
             error(str(exc))
 
-        # to do -- maybe check for overlapping tax assignments? rn later ones will override earlier ones
-        tax_assign.update(this_tax_assign)
+        # maybe check for overlapping tax assignments? currently later ones will override earlier ones
+        if this_tax_assign:
+            tax_assign.update(this_tax_assign)
 
     if not tax_assign:
-        error(f'ERROR: No taxonomic assignments loaded from {args.taxonomy_csv}. Exiting.')
+        error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
         sys.exit(-1)
 
     # get gather_csvs from args

@@ -19,6 +19,7 @@ from sourmash.logging import notify, error, debug
 from sourmash.sourmash_args import load_pathlist_from_file
 
 SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage")
+ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage")
 
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
@@ -56,20 +57,29 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     """
     collect gather files from cmdline; --from-file input
     """
-    gather_csvs = cmdline_gather_input
+    gather_csvs = []
+    # ignore command line duplicates
+    for gf in cmdline_gather_input:
+        if gf not in gather_csvs:
+            gather_csvs.append(gf)
+        else:
+            notify(f'ignoring duplicated reference to file: {gf}')
+    # ignore pathlist duplicates
     if from_file:
         more_files = load_pathlist_from_file(from_file)
         for gf in more_files:
             if gf not in gather_csvs:
                 gather_csvs.append(gf)
+            else:
+               notify(f'ignoring duplicated reference to file: {gf}')
     return gather_csvs
 
 
-def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=['query_name', 'name', 'f_unique_weighted']):
+def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=['query_name', 'name', 'f_unique_weighted'], seen_queries=set(), force=False):
     "Load a single gather csv"
     header = []
     gather_results = []
-
+    gather_queries = set()
     with open(gather_csv, 'rt') as fp:
         r = csv.DictReader(fp, delimiter=delimiter)
         header = r.fieldnames
@@ -82,13 +92,29 @@ def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=['query
             raise ValueError(f'Not all required gather columns are present in {gather_csv}.')
 
         for n, row in enumerate(r):
-            gather_results.append(row)
+            query_name = row['query_name']
+            # check if we've seen this query already in a different gather CSV
+            if query_name in seen_queries:
+                if query_name not in gather_queries: #seen already in this CSV? (only want to warn once per query per CSV)
+                    notify(f"WARNING: Gather query {query_name} was already loaded from a separate gather CSV. Cannot load duplicate query from CSV {gather_csv}...")
+                if force:
+                    if query_name not in gather_queries:
+                        notify("--force is set, ignoring duplicate query.")
+                        gather_queries.add(query_name)
+                    continue
+                else:
+                    raise ValueError(f"Gather query {query_name} was found in more than one CSV. Cannot load from {gather_csv}.")
+            else:
+                gather_results.append(row)
+            # add query name to the gather_queries from this CSV
+            if query_name not in gather_queries:
+                gather_queries.add(query_name)
 
     if not gather_results:
         raise ValueError(f'No gather results loaded from {gather_csv}.')
     else:
         notify(f'loaded {len(gather_results)} gather results.')
-    return gather_results, header
+    return gather_results, header, gather_queries
 
 
 def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False):
@@ -100,14 +126,18 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
     gather_results = []
     total_missed = 0
     all_ident_missed = set()
+    seen_queries = set()
     header = []
-    for gather_csv in gather_csvs:
+    n_ignored = 0
+    for n, gather_csv in enumerate(gather_csvs):
         these_results = []
         try:
-            these_results, header = load_gather_results(gather_csv)
-        except ValueError:
+            these_results, header, seen_queries = load_gather_results(gather_csv, seen_queries=seen_queries, force=force)
+        except ValueError as exc:
             if force:
+                notify(str(exc))
                 notify(f'--force is set. Attempting to continue to next set of gather results.')
+                n_ignored+=1
                 continue
             else:
                 notify(f'Exiting.')
@@ -124,6 +154,9 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
             all_ident_missed.update(ident_missed)
         # add these results to gather_results
         gather_results += these_results
+
+    num_gather_csvs_loaded = n+1 - n_ignored
+    notify(f'loaded results from {str(num_gather_csvs_loaded)} gather CSVs')
 
     return gather_results, all_ident_missed, total_missed, header
 
@@ -154,7 +187,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], s
         f_uniq_weighted = float(f_uniq_weighted)
 
         # 100% match? are we looking at something in the database?
-        if f_uniq_weighted >= 1.0 and query_name not in seen_perfect:
+        if f_uniq_weighted >= 1.0 and query_name not in seen_perfect: # only want to notify once, not for each rank
             ident = get_ident(match_ident, split_identifiers=split_identifiers, keep_identifier_versions=keep_identifier_versions)
             seen_perfect.add(query_name)
             notify(f'WARNING: 100% match! Is query {query_name} identical to its database match, {ident}?')
@@ -168,7 +201,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], s
         # summarize at rank!
         lineage = pop_to_rank(lineage, rank)
         assert lineage[-1].rank == rank, lineage[-1]
-
+        # record info
         sum_uniq_weighted[query_name][lineage] += f_uniq_weighted
 
     # sort and store each as SummarizedGatherResult

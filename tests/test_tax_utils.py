@@ -147,7 +147,7 @@ def test_check_and_load_gather_csvs_fail_on_missing(runtmp):
 
 def test_load_gather_results():
     gather_csv = utils.get_test_data('tax/test1.gather.csv')
-    gather_results, header = tax_utils.load_gather_results(gather_csv)
+    gather_results, header, seen_queries = tax_utils.load_gather_results(gather_csv)
     assert len(gather_results) == 4
 
 
