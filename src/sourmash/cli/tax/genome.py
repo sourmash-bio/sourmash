@@ -2,10 +2,10 @@
 
 usage="""
 
-    sourmash tax classify --gather-csv [gather_csv(s)] --taxonomy-csv [taxonomy-csv(s)]
+    sourmash tax genome --gather-csv [gather_csv(s)] --taxonomy-csv [taxonomy-csv(s)]
 
-The 'tax classify' command reads in gather results CSVs and reports likely
-classification for each query.
+The 'tax genome' command reads in genome gather result CSVs and reports likely
+classification for each query genome.
 
 By default, classification uses a containment threshold of 0.1, meaning at least
 10 percent of the query was covered by matches with the reported taxonomic rank and lineage.
@@ -24,8 +24,8 @@ The default output format consists of five columns,
 Optionally, you can report classifications in `krona` format, but note
 that this forces classification by rank, rather than containment threshold.
 
-Please see the 'tax classify' documentation for more details:
-  https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-classify-classify-a-genome-using-gather-results
+Please see the 'tax genome' documentation for more details:
+  https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-genome-classify-a-genome-using-gather-results
 """
 
 import argparse
@@ -34,8 +34,8 @@ from sourmash.logging import notify, print_results, error
 from sourmash.cli.utils import add_tax_threshold_arg
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('classify',
-                                      aliases=['genome'],
+    subparser = subparsers.add_parser('genome',
+                                      aliases=['classify'],
                                       usage=usage)
     subparser.add_argument(
         '-g', '--gather-csv', nargs='*', default = [],

@@ -13,14 +13,14 @@ def test_run_sourmash_tax():
     assert status != 0                    # no args provided, ok ;)
 
 
-def test_summarize_stdout_0(runtmp):
-    # test basic summarize
+def test_metagenome_stdout_0(runtmp):
+    # test basic metagenome
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
-    c.run_sourmash('tax', 'summarize', '-g', g_csv, '--taxonomy-csv', tax)
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax)
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -45,7 +45,7 @@ def test_summarize_stdout_0(runtmp):
     assert "test1,species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus" in c.last_result.out
 
 
-def test_summarize_summary_csv_out(runtmp):
+def test_metagenome_summary_csv_out(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
@@ -53,7 +53,7 @@ def test_summarize_summary_csv_out(runtmp):
     csvout = runtmp.output(sum_csv)
     print("csvout: ", csvout)
 
-    runtmp.run_sourmash('tax', 'summarize', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', csv_base)
+    runtmp.run_sourmash('tax', 'metagenome', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', csv_base)
 
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
@@ -81,7 +81,7 @@ def test_summarize_summary_csv_out(runtmp):
     assert "test1,species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus" in sum_gather_results[15]
 
 
-def test_summarize_krona_tsv_out(runtmp):
+def test_metagenome_krona_tsv_out(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
@@ -89,7 +89,7 @@ def test_summarize_krona_tsv_out(runtmp):
     csvout = runtmp.output(kr_csv)
     print("csvout: ", csvout)
 
-    runtmp.run_sourmash('tax', 'summarize', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona', '--rank', 'genus')
+    runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona', '--rank', 'genus')
 
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
@@ -106,7 +106,7 @@ def test_summarize_krona_tsv_out(runtmp):
     assert ['0.015637726014008795', 'd__Bacteria', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Phocaeicola'] == gn_krona_results[3]
 
 
-def test_summarize_lineage_summary_out(runtmp):
+def test_metagenome_lineage_summary_out(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
@@ -114,7 +114,7 @@ def test_summarize_lineage_summary_out(runtmp):
     csvout = runtmp.output(lin_csv)
     print("csvout: ", csvout)
 
-    runtmp.run_sourmash('tax', 'summarize', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'lineage_summary', '--rank', 'genus')
+    runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'lineage_summary', '--rank', 'genus')
 
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
@@ -131,53 +131,53 @@ def test_summarize_lineage_summary_out(runtmp):
     assert ['d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia', '0.05815279361459521'] == gn_lineage_summary[3]
 
 
-def test_summarize_no_taxonomy_fail(runtmp):
+def test_metagenome_no_taxonomy_fail(runtmp):
     c = runtmp
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
     with pytest.raises(ValueError) as exc:
-        c.run_sourmash('tax', 'summarize', '-g', g_csv)
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv)
     assert "error: the following arguments are required: -t/--taxonomy-csv" in str(exc.value)
 
 
-def test_summarize_no_rank_lineage_summary(runtmp):
+def test_metagenome_no_rank_lineage_summary(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
 
     with pytest.raises(ValueError) as exc:
-        runtmp.run_sourmash('tax', 'summarize', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'lineage_summary')
+        runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'lineage_summary')
     assert "Rank (--rank) is required for krona and lineage_summary output formats." in str(exc.value)
 
 
-def test_summarize_no_rank_krona(runtmp):
+def test_metagenome_no_rank_krona(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
 
     with pytest.raises(ValueError) as exc:
-        runtmp.run_sourmash('tax', 'summarize', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona')
+        runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona')
     assert "Rank (--rank) is required for krona and lineage_summary output formats." in str(exc.value)
 
 
-def test_classify_no_rank_krona(runtmp):
+def test_genome_no_rank_krona(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
 
     with pytest.raises(ValueError) as exc:
-        runtmp.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona')
+        runtmp.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona')
     assert "Rank (--rank) is required for krona output format." in str(exc.value)
 
 
-def test_summarize_rank_not_available(runtmp):
+def test_metagenome_rank_not_available(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
     with pytest.raises(ValueError) as exc:
-        c.run_sourmash('tax', 'summarize', '-g', g_csv, '--taxonomy-csv', tax,
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
                        '--rank', 'strain')
 
     print(str(exc.value))
@@ -186,7 +186,7 @@ def test_summarize_rank_not_available(runtmp):
     assert "No taxonomic information provided for rank strain: cannot summarize at this rank" in str(exc.value)
 
 
-def test_summarize_duplicated_taxonomy_fail(runtmp):
+def test_metagenome_duplicated_taxonomy_fail(runtmp):
     c = runtmp
     # write temp taxonomy with duplicates
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -199,11 +199,11 @@ def test_summarize_duplicated_taxonomy_fail(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
     with pytest.raises(Exception) as exc:
-        c.run_sourmash('tax', 'summarize', '-g', g_csv, '--taxonomy-csv', duplicated_csv)
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', duplicated_csv)
         assert str(exc.value == "multiple lineages for identifier GCF_001881345")
 
 
-def test_summarize_duplicated_taxonomy_force(runtmp):
+def test_metagenome_duplicated_taxonomy_force(runtmp):
     c = runtmp
     # write temp taxonomy with duplicates
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -215,7 +215,7 @@ def test_summarize_duplicated_taxonomy_force(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    c.run_sourmash('tax', 'summarize', '-g', g_csv, '--taxonomy-csv', duplicated_csv, '--force')
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', duplicated_csv, '--force')
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -229,7 +229,7 @@ def test_summarize_duplicated_taxonomy_force(runtmp):
     assert "phylum,0.058,d__Bacteria;p__Proteobacteria" in c.last_result.out
 
 
-def test_summarize_missing_taxonomy(runtmp):
+def test_metagenome_missing_taxonomy(runtmp):
     c = runtmp
     # write temp taxonomy with missing entry
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -240,7 +240,7 @@ def test_summarize_missing_taxonomy(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    c.run_sourmash('tax', 'summarize', '-g', g_csv, '--taxonomy-csv', subset_csv)
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', subset_csv)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -257,7 +257,7 @@ def test_summarize_missing_taxonomy(runtmp):
     assert "order,0.066,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales" in c.last_result.out
 
 
-def test_summarize_missing_taxonomy_fail(runtmp):
+def test_metagenome_missing_taxonomy_fail(runtmp):
     c = runtmp
     # write temp taxonomy with missing entry
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -269,7 +269,7 @@ def test_summarize_missing_taxonomy_fail(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
     with pytest.raises(ValueError) as exc:
-        c.run_sourmash('tax', 'summarize', '-g', g_csv, '--taxonomy-csv', subset_csv, '--fail-on-missing-taxonomy')
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', subset_csv, '--fail-on-missing-taxonomy')
 
     print(str(exc.value))
 
@@ -278,7 +278,7 @@ def test_summarize_missing_taxonomy_fail(runtmp):
     assert c.last_result.status == -1
 
 
-def test_summarize_multiple_taxonomy_files_missing(runtmp):
+def test_metagenome_multiple_taxonomy_files_missing(runtmp):
     c = runtmp
     # write temp taxonomy with duplicates
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -286,7 +286,7 @@ def test_summarize_multiple_taxonomy_files_missing(runtmp):
     # gather against mult databases
     g_csv = utils.get_test_data('tax/test1_x_gtdbrs202_genbank_euks.gather.csv')
 
-    c.run_sourmash('tax', 'summarize', '-g', g_csv, '--taxonomy-csv', taxonomy_csv, '--force')
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', taxonomy_csv, '--force')
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -299,7 +299,7 @@ def test_summarize_multiple_taxonomy_files_missing(runtmp):
     assert "multtest,class,0.073,d__Bacteria;p__Bacteroidota;c__Bacteroidia" in c.last_result.out
 
 
-def test_summarize_multiple_taxonomy_files(runtmp):
+def test_metagenome_multiple_taxonomy_files(runtmp):
     c = runtmp
     # write temp taxonomy with duplicates
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -309,7 +309,7 @@ def test_summarize_multiple_taxonomy_files(runtmp):
     # gather against mult databases
     g_csv = utils.get_test_data('tax/test1_x_gtdbrs202_genbank_euks.gather.csv')
 
-    c.run_sourmash('tax', 'summarize', '-g', g_csv, '--taxonomy-csv', taxonomy_csv, protozoa_genbank, bacteria_refseq)
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', taxonomy_csv, protozoa_genbank, bacteria_refseq)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -323,7 +323,7 @@ def test_summarize_multiple_taxonomy_files(runtmp):
     #assert "multtest,phylum,0.073,d__Bacteria;p__Bacteroidota" in c.last_result.out # this is gtdb tax, line above is genbank...
 
 
-def test_summarize_empty_gather_results(runtmp):
+def test_metagenome_empty_gather_results(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
     #creates empty gather result
@@ -333,13 +333,13 @@ def test_summarize_empty_gather_results(runtmp):
     print("g_csv: ", g_csv)
 
     with pytest.raises(ValueError) as exc:
-        runtmp.run_sourmash('tax', 'summarize', '-g', g_csv, '--taxonomy-csv', tax)
+        runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax)
 
     assert f'Cannot read gather results from {g_csv}. Is file empty?' in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
-def test_summarize_bad_gather_header(runtmp):
+def test_metagenome_bad_gather_header(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
@@ -353,13 +353,13 @@ def test_summarize_bad_gather_header(runtmp):
     print("bad_gather_results: \n", bad_g)
 
     with pytest.raises(ValueError) as exc:
-        runtmp.run_sourmash('tax', 'summarize', '-g', bad_g_csv, '--taxonomy-csv', tax)
+        runtmp.run_sourmash('tax', 'metagenome', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
     assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
-def test_summarize_empty_tax_lineage_input(runtmp):
+def test_metagenome_empty_tax_lineage_input(runtmp):
     tax_empty = runtmp.output('t.csv')
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
@@ -369,7 +369,7 @@ def test_summarize_empty_tax_lineage_input(runtmp):
 
 
     with pytest.raises(ValueError) as exc:
-        runtmp.run_sourmash('tax', 'summarize', '-g', g_csv, '--taxonomy-csv', tax_empty)
+        runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax_empty)
 
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
@@ -379,7 +379,7 @@ def test_summarize_empty_tax_lineage_input(runtmp):
     assert f"Cannot read taxonomy assignments from {tax_empty}. Is file empty?" in str(exc.value)
 
 
-def test_summarize_perfect_match_warning(runtmp):
+def test_metagenome_perfect_match_warning(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
@@ -399,7 +399,7 @@ def test_summarize_perfect_match_warning(runtmp):
                 w.writerow(row)
                 print(row)
 
-    runtmp.run_sourmash('tax', 'summarize', '-g', perfect_g_csv, '--taxonomy-csv', tax)
+    runtmp.run_sourmash('tax', 'metagenome', '-g', perfect_g_csv, '--taxonomy-csv', tax)
 
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
@@ -409,7 +409,7 @@ def test_summarize_perfect_match_warning(runtmp):
     assert 'WARNING: 100% match! Is query test1 identical to its database match, GCF_001881345' in runtmp.last_result.err
 
 
-def test_summarize_gather_duplicate_query(runtmp):
+def test_metagenome_gather_duplicate_query(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -421,7 +421,7 @@ def test_summarize_gather_duplicate_query(runtmp):
             fp.write(line)
 
     with pytest.raises(ValueError) as exc:
-        c.run_sourmash('tax', 'summarize',  '--gather-csv', g_res, g_res2,
+        c.run_sourmash('tax', 'metagenome',  '--gather-csv', g_res, g_res2,
                    '--taxonomy-csv', taxonomy_csv)
 
     assert c.last_result.status == -1
@@ -429,7 +429,7 @@ def test_summarize_gather_duplicate_query(runtmp):
     assert "Gather query test1 was found in more than one CSV. Cannot load from " in str(exc.value)
 
 
-def test_summarize_gather_duplicate_query_force(runtmp):
+def test_metagenome_gather_duplicate_query_force(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -440,7 +440,7 @@ def test_summarize_gather_duplicate_query_force(runtmp):
         for line in open(g_res, 'r'):
             fp.write(line)
 
-    c.run_sourmash('tax', 'summarize',  '--gather-csv', g_res, g_res2,
+    c.run_sourmash('tax', 'metagenome',  '--gather-csv', g_res, g_res2,
                    '--taxonomy-csv', taxonomy_csv, '--force')
 
     print(c.last_result.status)
@@ -455,12 +455,12 @@ def test_summarize_gather_duplicate_query_force(runtmp):
     assert 'test1,superkingdom,0.131,d__Bacteria' in c.last_result.out
 
 
-def test_summarize_gather_duplicate_filename(runtmp):
+def test_metagenome_gather_duplicate_filename(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
 
-    c.run_sourmash('tax', 'summarize', '--gather-csv', g_res, g_res, '--taxonomy-csv', taxonomy_csv)
+    c.run_sourmash('tax', 'metagenome', '--gather-csv', g_res, g_res, '--taxonomy-csv', taxonomy_csv)
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -472,7 +472,7 @@ def test_summarize_gather_duplicate_filename(runtmp):
     assert 'test1,superkingdom,0.131,d__Bacteria' in c.last_result.out
 
 
-def test_summarize_gather_duplicate_filename_from_file(runtmp):
+def test_metagenome_gather_duplicate_filename_from_file(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -481,7 +481,7 @@ def test_summarize_gather_duplicate_filename_from_file(runtmp):
         f_csv.write(f"{g_res}\n")
         f_csv.write(f"{g_res}\n")
 
-    c.run_sourmash('tax', 'summarize', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv)
+    c.run_sourmash('tax', 'metagenome', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv)
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -493,7 +493,7 @@ def test_summarize_gather_duplicate_filename_from_file(runtmp):
     assert 'test1,superkingdom,0.131,d__Bacteria' in c.last_result.out
 
 
-def test_classify_empty_gather_results(runtmp):
+def test_genome_empty_gather_results(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
     #creates empty gather result
@@ -503,13 +503,13 @@ def test_classify_empty_gather_results(runtmp):
     print("g_csv: ", g_csv)
 
     with pytest.raises(ValueError) as exc:
-        runtmp.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', tax)
+        runtmp.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax)
 
     assert f'Cannot read gather results from {g_csv}. Is file empty?' in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
-def test_classify_bad_gather_header(runtmp):
+def test_genome_bad_gather_header(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
@@ -523,13 +523,13 @@ def test_classify_bad_gather_header(runtmp):
     print("bad_gather_results: \n", bad_g)
 
     with pytest.raises(ValueError) as exc:
-        runtmp.run_sourmash('tax', 'classify', '-g', bad_g_csv, '--taxonomy-csv', tax)
+        runtmp.run_sourmash('tax', 'genome', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
     assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
-def test_classify_empty_tax_lineage_input(runtmp):
+def test_genome_empty_tax_lineage_input(runtmp):
     tax_empty = runtmp.output('t.csv')
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
@@ -539,7 +539,7 @@ def test_classify_empty_tax_lineage_input(runtmp):
 
 
     with pytest.raises(ValueError) as exc:
-        runtmp.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', tax_empty)
+        runtmp.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax_empty)
 
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
@@ -549,14 +549,14 @@ def test_classify_empty_tax_lineage_input(runtmp):
     assert f"Cannot read taxonomy assignments from {tax_empty}. Is file empty?" in str(exc.value)
 
 
-def test_classify_rank_stdout_0(runtmp):
-    # test basic classify
+def test_genome_rank_stdout_0(runtmp):
+    # test basic genome
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
-    c.run_sourmash('tax', 'classify', '--gather-csv', g_csv, '--taxonomy-csv', tax,
+    c.run_sourmash('tax', 'genome', '--gather-csv', g_csv, '--taxonomy-csv', tax,
                    '--rank', 'species', '--containment-threshold', '0')
 
     print(c.last_result.status)
@@ -568,8 +568,8 @@ def test_classify_rank_stdout_0(runtmp):
     assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
-def test_classify_rank_csv_0(runtmp):
-    # test basic classify - output csv
+def test_genome_rank_csv_0(runtmp):
+    # test basic genome - output csv
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
@@ -579,7 +579,7 @@ def test_classify_rank_csv_0(runtmp):
     csvout = runtmp.output(cl_csv)
     print("csvout: ", csvout)
 
-    c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', tax,
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
                    '--rank', 'species', '-o', csv_base, '--containment-threshold', '0')
 
     print(c.last_result.status)
@@ -592,7 +592,7 @@ def test_classify_rank_csv_0(runtmp):
     assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in cl_results[1]
 
 
-def test_classify_gather_from_file_rank(runtmp):
+def test_genome_gather_from_file_rank(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -600,7 +600,7 @@ def test_classify_gather_from_file_rank(runtmp):
     with open(g_from_file, 'w') as f_csv:
         f_csv.write(f"{g_res}\n")
 
-    c.run_sourmash('tax', 'classify', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
+    c.run_sourmash('tax', 'genome', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
                    '--rank', 'species', '--containment-threshold', '0')
 
     print(c.last_result.status)
@@ -612,7 +612,7 @@ def test_classify_gather_from_file_rank(runtmp):
     assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
-def test_classify_gather_from_file_two_files(runtmp):
+def test_genome_gather_from_file_two_files(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -630,7 +630,7 @@ def test_classify_gather_from_file_two_files(runtmp):
         f_csv.write(f"{g_res}\n")
         f_csv.write(f"{g_res2}\n")
 
-    c.run_sourmash('tax', 'classify', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
+    c.run_sourmash('tax', 'genome', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
                    '--rank', 'species', '--containment-threshold', '0')
 
     print(c.last_result.status)
@@ -643,12 +643,12 @@ def test_classify_gather_from_file_two_files(runtmp):
     assert "test2,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
-def test_classify_gather_duplicate_filename(runtmp):
+def test_genome_gather_duplicate_filename(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
 
-    c.run_sourmash('tax', 'classify', '--gather-csv', g_res, g_res, '--taxonomy-csv', taxonomy_csv,
+    c.run_sourmash('tax', 'genome', '--gather-csv', g_res, g_res, '--taxonomy-csv', taxonomy_csv,
                    '--rank', 'species', '--containment-threshold', '0')
 
     print(c.last_result.status)
@@ -660,7 +660,7 @@ def test_classify_gather_duplicate_filename(runtmp):
     assert "query_name,status,rank,fraction,lineage" in c.last_result.out
     assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
-def test_classify_gather_from_file_duplicate_filename(runtmp):
+def test_genome_gather_from_file_duplicate_filename(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -669,7 +669,7 @@ def test_classify_gather_from_file_duplicate_filename(runtmp):
         f_csv.write(f"{g_res}\n")
         f_csv.write(f"{g_res}\n")
 
-    c.run_sourmash('tax', 'classify', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
+    c.run_sourmash('tax', 'genome', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
                    '--rank', 'species', '--containment-threshold', '0')
 
     print(c.last_result.status)
@@ -682,7 +682,7 @@ def test_classify_gather_from_file_duplicate_filename(runtmp):
     assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
-def test_classify_gather_from_file_duplicate_query(runtmp):
+def test_genome_gather_from_file_duplicate_query(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -699,14 +699,14 @@ def test_classify_gather_from_file_duplicate_query(runtmp):
         f_csv.write(f"{g_res2}\n")
 
     with pytest.raises(ValueError) as exc:
-        c.run_sourmash('tax', 'classify', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
+        c.run_sourmash('tax', 'genome', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
                    '--rank', 'species', '--containment-threshold', '0')
     assert c.last_result.status == -1
     print(str(exc.value))
     assert "Gather query test1 was found in more than one CSV. Cannot load from " in str(exc.value)
 
 
-def test_classify_gather_from_file_duplicate_query_force(runtmp):
+def test_genome_gather_from_file_duplicate_query_force(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -722,7 +722,7 @@ def test_classify_gather_from_file_duplicate_query_force(runtmp):
         f_csv.write(f"{g_res}\n")
         f_csv.write(f"{g_res2}\n")
 
-    c.run_sourmash('tax', 'classify', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
+    c.run_sourmash('tax', 'genome', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
                    '--rank', 'species', '--containment-threshold', '0', '--force')
 
     print(c.last_result.status)
@@ -737,7 +737,7 @@ def test_classify_gather_from_file_duplicate_query_force(runtmp):
     assert 'loaded results from 1 gather CSVs' in c.last_result.err
 
 
-def test_classify_gather_cli_and_from_file(runtmp):
+def test_genome_gather_cli_and_from_file(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -755,7 +755,7 @@ def test_classify_gather_cli_and_from_file(runtmp):
     with open(g_from_file, 'w') as f_csv:
         f_csv.write(f"{g_res2}\n")
 
-    c.run_sourmash('tax', 'classify', '-g', g_res, '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
+    c.run_sourmash('tax', 'genome', '-g', g_res, '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
                    '--rank', 'species', '--containment-threshold', '0')
 
     print(c.last_result.status)
@@ -768,7 +768,7 @@ def test_classify_gather_cli_and_from_file(runtmp):
     assert "test2,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
-def test_classify_gather_cli_and_from_file_duplicate_filename(runtmp):
+def test_genome_gather_cli_and_from_file_duplicate_filename(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -779,7 +779,7 @@ def test_classify_gather_cli_and_from_file_duplicate_filename(runtmp):
     with open(g_from_file, 'w') as f_csv:
         f_csv.write(f"{g_res}\n")
 
-    c.run_sourmash('tax', 'classify', '-g', g_res, '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
+    c.run_sourmash('tax', 'genome', '-g', g_res, '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
                    '--rank', 'species', '--containment-threshold', '0')
 
     print(c.last_result.status)
@@ -792,7 +792,7 @@ def test_classify_gather_cli_and_from_file_duplicate_filename(runtmp):
     assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
-def test_classify_gather_from_file_below_threshold(runtmp):
+def test_genome_gather_from_file_below_threshold(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -800,7 +800,7 @@ def test_classify_gather_from_file_below_threshold(runtmp):
     with open(g_from_file, 'w') as f_csv:
         f_csv.write(f"{g_res}\n")
 
-    c.run_sourmash('tax', 'classify', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
+    c.run_sourmash('tax', 'genome', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
                    '--containment-threshold', '1')
 
     print(c.last_result.status)
@@ -812,7 +812,7 @@ def test_classify_gather_from_file_below_threshold(runtmp):
     assert "test1,below_threshold,,0.000," in c.last_result.out
 
 
-def test_classify_rank_duplicated_taxonomy_fail(runtmp):
+def test_genome_rank_duplicated_taxonomy_fail(runtmp):
     c = runtmp
     # write temp taxonomy with duplicates
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -825,12 +825,12 @@ def test_classify_rank_duplicated_taxonomy_fail(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
     with pytest.raises(Exception) as exc:
-        c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', duplicated_csv,
+        c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', duplicated_csv,
                        '--rank', 'species')
         assert str(exc.value == "multiple lineages for identifier GCF_001881345")
 
 
-def test_classify_rank_duplicated_taxonomy_force(runtmp):
+def test_genome_rank_duplicated_taxonomy_force(runtmp):
     c = runtmp
     # write temp taxonomy with duplicates
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -842,7 +842,7 @@ def test_classify_rank_duplicated_taxonomy_force(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', duplicated_csv,
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', duplicated_csv,
                    '--rank', 'species', '--force', '--containment-threshold', '0')
 
     print(c.last_result.status)
@@ -854,7 +854,7 @@ def test_classify_rank_duplicated_taxonomy_force(runtmp):
     assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
-def test_classify_missing_taxonomy_ignore_threshold(runtmp):
+def test_genome_missing_taxonomy_ignore_threshold(runtmp):
     c = runtmp
     # write temp taxonomy with missing entry
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -866,7 +866,7 @@ def test_classify_missing_taxonomy_ignore_threshold(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', subset_csv, '--containment-threshold', '0')
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', subset_csv, '--containment-threshold', '0')
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -877,7 +877,7 @@ def test_classify_missing_taxonomy_ignore_threshold(runtmp):
     assert "test1,match,species,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in c.last_result.out
 
 
-def test_classify_missing_taxonomy_ignore_rank(runtmp):
+def test_genome_missing_taxonomy_ignore_rank(runtmp):
     c = runtmp
     # write temp taxonomy with missing entry
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -889,7 +889,7 @@ def test_classify_missing_taxonomy_ignore_rank(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', subset_csv, '--rank', 'species')
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', subset_csv, '--rank', 'species')
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -900,7 +900,7 @@ def test_classify_missing_taxonomy_ignore_rank(runtmp):
     assert "test1,below_threshold,species,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in c.last_result.out
 
 
-def test_classify_missing_taxonomy_fail_threshold(runtmp):
+def test_genome_missing_taxonomy_fail_threshold(runtmp):
     c = runtmp
     # write temp taxonomy with missing entry
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -913,7 +913,7 @@ def test_classify_missing_taxonomy_fail_threshold(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
     with pytest.raises(ValueError) as exc:
-        c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', subset_csv,
+        c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', subset_csv,
                        '--fail-on-missing-taxonomy', '--containment-threshold', '0')
 
     print(str(exc.value))
@@ -926,7 +926,7 @@ def test_classify_missing_taxonomy_fail_threshold(runtmp):
     assert c.last_result.status == -1
 
 
-def test_classify_missing_taxonomy_fail_rank(runtmp):
+def test_genome_missing_taxonomy_fail_rank(runtmp):
     c = runtmp
     # write temp taxonomy with missing entry
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -939,7 +939,7 @@ def test_classify_missing_taxonomy_fail_rank(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
     with pytest.raises(ValueError) as exc:
-        c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', subset_csv,
+        c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', subset_csv,
                        '--fail-on-missing-taxonomy', '--rank', 'species')
 
     print(str(exc.value))
@@ -952,14 +952,14 @@ def test_classify_missing_taxonomy_fail_rank(runtmp):
     assert c.last_result.status == -1
 
 
-def test_classify_rank_not_available(runtmp):
+def test_genome_rank_not_available(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
     with pytest.raises(ValueError) as exc:
-        c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', tax,
+        c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
                        '--rank', 'strain', '--containment-threshold', '0')
 
     print(str(exc.value))
@@ -971,7 +971,7 @@ def test_classify_rank_not_available(runtmp):
     assert "No taxonomic information provided for rank strain: cannot classify at this rank" in str(exc.value)
 
 
-def test_classify_empty_gather_results_with_header_single(runtmp):
+def test_genome_empty_gather_results_with_header_single(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
 
@@ -983,7 +983,7 @@ def test_classify_empty_gather_results_with_header_single(runtmp):
         fp.write(gather_results[0])
 
     with pytest.raises(ValueError) as exc:
-        c.run_sourmash('tax', 'classify', '-g', empty_gather_with_header, '--taxonomy-csv', taxonomy_csv)
+        c.run_sourmash('tax', 'genome', '-g', empty_gather_with_header, '--taxonomy-csv', taxonomy_csv)
 
     print(str(exc.value))
     print(c.last_result.status)
@@ -995,7 +995,7 @@ def test_classify_empty_gather_results_with_header_single(runtmp):
     assert 'Exiting.' in str(exc.value)
 
 
-def test_classify_empty_gather_results_single(runtmp):
+def test_genome_empty_gather_results_single(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
 
@@ -1005,7 +1005,7 @@ def test_classify_empty_gather_results_single(runtmp):
         fp.write("")
 
     with pytest.raises(ValueError) as exc:
-        c.run_sourmash('tax', 'classify', '-g', empty_tax, '--taxonomy-csv', taxonomy_csv)
+        c.run_sourmash('tax', 'genome', '-g', empty_tax, '--taxonomy-csv', taxonomy_csv)
 
 
     print(c.last_result.status)
@@ -1017,7 +1017,7 @@ def test_classify_empty_gather_results_single(runtmp):
     assert 'Exiting.' in c.last_result.err
 
 
-def test_classify_empty_gather_results_single_force(runtmp):
+def test_genome_empty_gather_results_single_force(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
 
@@ -1027,7 +1027,7 @@ def test_classify_empty_gather_results_single_force(runtmp):
         fp.write("")
 
     with pytest.raises(ValueError) as exc:
-        c.run_sourmash('tax', 'classify', '-g', empty_tax, '--taxonomy-csv', taxonomy_csv,
+        c.run_sourmash('tax', 'genome', '-g', empty_tax, '--taxonomy-csv', taxonomy_csv,
                        '--force')
 
     print(str(exc.value))
@@ -1040,7 +1040,7 @@ def test_classify_empty_gather_results_single_force(runtmp):
     assert 'No results for classification. Exiting.' in str(exc.value)
 
 
-def test_classify_empty_gather_results_with_empty_csv_force(runtmp):
+def test_genome_empty_gather_results_with_empty_csv_force(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
 
@@ -1054,7 +1054,7 @@ def test_classify_empty_gather_results_with_empty_csv_force(runtmp):
         f_csv.write(f"{empty_tax}\n")
 
     with pytest.raises(ValueError) as exc:
-        c.run_sourmash('tax', 'classify', '-g', empty_tax, '--from-file', g_from_file,
+        c.run_sourmash('tax', 'genome', '-g', empty_tax, '--from-file', g_from_file,
                        '--taxonomy-csv', taxonomy_csv, '--rank', 'species', '--force')
 
     print(str(exc.value))
@@ -1067,7 +1067,7 @@ def test_classify_empty_gather_results_with_empty_csv_force(runtmp):
     assert 'No results for classification. Exiting.' in str(exc.value)
 
 
-def test_classify_empty_gather_results_with_csv_force(runtmp):
+def test_genome_empty_gather_results_with_csv_force(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
 
@@ -1081,7 +1081,7 @@ def test_classify_empty_gather_results_with_csv_force(runtmp):
     with open(empty_tax, "w") as fp:
         fp.write("")
 
-    c.run_sourmash('tax', 'classify', '-g', empty_tax, '--from-file', g_from_file,
+    c.run_sourmash('tax', 'genome', '-g', empty_tax, '--from-file', g_from_file,
                    '--taxonomy-csv', taxonomy_csv, '--rank', 'species',
                    '--containment-threshold', '0', '--force')
 

@@ -2,10 +2,10 @@
 
 usage="""
 
-    sourmash tax summarize --gather-csv [gather_csv(s)] --taxonomy-csv [taxonomy-csv(s)]
+    sourmash tax metagenome --gather-csv [gather_csv(s)] --taxonomy-csv [taxonomy-csv(s)]
 
-The 'tax summarize' command reads in gather results CSVs and summarizes by
- taxonomic lineage.
+The 'tax metagenome' command reads in metagenome gather result CSVs and
+summarizes by taxonomic lineage.
 
 The default output format consists of four columns,
  `query_name,rank,fraction,lineage`, where `fraction` is the fraction
@@ -15,8 +15,8 @@ The default output format consists of four columns,
 Alternatively, you can output results at a specific rank (e.g. species)
 in `krona` or `lineage_summary` formats.
 
-Please see the 'tax summarize' documentation for more details:
-  https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-summarize-summarize-metagenome-content-from-gather-results
+Please see the 'tax metagenome' documentation for more details:
+  https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-metagenome-summarize-metagenome-content-from-gather-results
 """
 
 import sourmash
@@ -24,8 +24,8 @@ from sourmash.logging import notify, print_results, error
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('summarize',
-                                      aliases=['metagenome'],
+    subparser = subparsers.add_parser('metagenome',
+                                      aliases=['summarize'],
                                       usage=usage)
     subparser.add_argument(
         '-g', '--gather-csv', nargs='*', default = [],

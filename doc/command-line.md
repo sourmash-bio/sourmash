@@ -75,9 +75,9 @@ information; these are grouped under the `sourmash tax` and
 
 `sourmash tax` commands:
 
-* `tax summarize` - summarize metagenome gather results at each taxonomic rank.
-* `tax classify` - summarize single-genome gather results and report most likely classification
-* `tax label` - label gather results with lineage information (no summarization or classification)
+* `tax metagenome` - summarize metagenome gather results at each taxonomic rank.
+* `tax genome`     - summarize single-genome gather results and report most likely classification.
+* `tax annotate`   - annotate gather results with lineage information (no summarization or classification).
 
 `sourmash lca` commands:
 
@@ -452,16 +452,16 @@ For more on how `gather` works and can be used to classify signatures, see
  [classifying-signatures](classifying-signatures.html)
 
 
-### `sourmash tax summarize` - summarize metagenome content from `gather` results
+### `sourmash tax metagenome` - summarize metagenome content from `gather` results
 
-`sourmash tax summarize` summarizes gather results for each query by
+`sourmash tax metagenome` summarizes gather results for each query by
  taxonomic lineage.
 
 example command to summarize a single `gather csv`, where the query was gathered
  against `gtdb-rs202` representative species database:
 
 ```
-sourmash tax summarize 
+sourmash tax metagenome
     --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
     --taxonomy-csv gtdb-rs202.taxonomy.v2.csv
 ```
@@ -507,7 +507,7 @@ To generate `krona`, we add `--output-format krona` to the command above, and
  summary at `species` level:
 
 ```
-sourmash tax summarize
+sourmash tax metagenome
     --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
     --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
     --output-format krona --rank species
@@ -534,7 +534,7 @@ To generate `lineage_summary`, we add `--output-format lineage_summary` to the s
  `lineage_summary` for two queries (HSMA33MX, PSM6XBW3) summary at `species` level.
 
 ```
-sourmash tax summarize
+sourmash tax metagenome
     --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
     --gather-csv PSM6XBW3_gather_x_gtdbrs202_k31.csv \
     --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
@@ -554,21 +554,21 @@ To produce multiple output types from the same command, add the types into the
  `--output-format` argument, e.g. `--output-format summary krona lineage_summary`
 
 
-### `sourmash tax classify` - classify a genome using `gather` results
+### `sourmash tax genome` - classify a genome using `gather` results
 
-`sourmash tax classify` reports likely classification for each query,
+`sourmash tax genome` reports likely classification for each query,
  based on `gather` matches. By default, classification requires at least 10% of
  the query to be matched. Thus, if 10% of the query was matched to a species, the
  species-level classification can be reported. However, if 7% of the query was
  matched to one species, and an additional 5% matched to a different species in
  the same genus, the genus-level classification will be reported.
 
-Optionally, `classify` can instead report classifications at a desired `rank`,
+Optionally, `genome` can instead report classifications at a desired `rank`,
  regardless of match threshold (`--rank` argument, e.g. `--rank species`).
 
 Note that these thresholds and strategies are under active testing.
 
-To illustrate the utility of `classify`, let's consider a signature consisting
+To illustrate the utility of `genome`, let's consider a signature consisting
  of two different Shewanella strains, `Shewanella baltica OS185 strain=OS185`
  and `Shewanella baltica OS223 strain=OS223`. For simplicity, we gave this query
  the name "Sb47+63".
@@ -589,13 +589,13 @@ f_match,f_unique_weighted,name,query_name
  decomposition. As the OS223 strain had a slightly higher `f_match` (66%), it
  was the first match. The remaining 33% of the query matched to strain OS185.
 
-Here, we use this gather csv to `classify our "Sb47+63" mixed-strain query.
+Here, we use this gather csv to classify our "Sb47+63" mixed-strain query.
 
 Example command to classify this query from the `gather` csv, using
 the default classification threshold (0.1).
     
 ```
-sourmash tax classify 
+sourmash tax genome
     --gather-csv 47+63_x_gtdb-rs202.gather.csv \
     --taxonomy-csv gtdb-rs202.taxonomy.v2.csv
 ```
@@ -639,7 +639,7 @@ To generate `krona`, we must classify by `--rank` instead of using the
   `krona` output for `species`-level classifications:
 
 ```
-sourmash tax classify
+sourmash tax genome
     --gather-csv Sb47+63_gather_x_gtdbrs202_k31.csv \
     --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
     --output-format krona --rank species

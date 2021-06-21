@@ -7,11 +7,9 @@ import os
 from collections import defaultdict
 
 import sourmash
-from sourmash.lca.lca_utils import display_lineage
-
 from ..sourmash_args import FileOutputCSV
-
 from sourmash.logging import set_quiet, error, notify
+from sourmash.lca.lca_utils import display_lineage
 
 from . import tax_utils
 from .tax_utils import ClassificationResult
@@ -24,9 +22,9 @@ sourmash tax <command> [<args>]
 
 ** Commands can be:
 
-summarize <gather_results> [<gather_results> ... ]        - summarize taxonomic information for metagenome gather results
-classify <gather_results> [<gather_results> ... ]         - taxonomic classification of genomes from gather results
-label <gather_results> [<gather_results> ... ]            - add taxonomic information to gather results csv(s)
+annotate -g <gather_csv> [<gather_csv> ... ] -t [<taxonomy_csv> ...]      - annotate gather CSVs with taxonomic lineages
+genome -g <gather_csv> [<gather_csv> ... ] -t [<taxonomy_csv> ...]        - taxonomic classification of genomes from gather results
+metagenome -g <gather_csv> [<gather_csv> ... ] -t [<taxonomy_csv> ...]    - summarize taxonomic information for metagenome gather results
 
 ** Use '-h' to get subcommand-specific help, e.g.
 

@@ -4,8 +4,8 @@ The top level CLI is defined in ../__init__.py. This module defines the CLI for
 `sourmash tax` operations.
 """
 
-from . import summarize
-from . import classify
+from . import metagenome
+from . import genome
 from . import annotate
 from ..utils import command_list
 from argparse import SUPPRESS, RawDescriptionHelpFormatter
