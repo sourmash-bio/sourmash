@@ -531,12 +531,12 @@ The lineage summary format is most useful when comparing across metagenome queri
 
 To generate `lineage_summary`, we add `--output-format lineage_summary` to the summarize
  command, and need to specify a rank to summarize. Here's the command for reporting
- `lineage_summary` for two queries (HSMA33MX, NTP_ADD_ME) summary at `species` level.
+ `lineage_summary` for two queries (HSMA33MX, PSM6XBW3) summary at `species` level.
 
 ```
 sourmash tax summarize
     --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
-    --gather-csv NTP_ADD_ME_gather_x_gtdbrs202_k31.csv \
+    --gather-csv PSM6XBW3_gather_x_gtdbrs202_k31.csv \
     --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
     --output-format krona --rank species
 ```
@@ -544,12 +544,10 @@ sourmash tax summarize
 example `lineage_summary`:
 
 ```
-lineage	HSMA33MX ADD_ME
-Bacteria;Bacteroidetes;Bacteroidia;Bacteroidales;Bacteroidaceae;Bacteroides;Bacteroides vulgatus	0.015637726014008795 ADD_ME
-Bacteria;Bacteroidetes;Bacteroidia;Bacteroidales;Prevotellaceae;Prevotella;Prevotella copri	0.05701254275940707 ADD_ME
-Bacteria;Proteobacteria;Gammaproteobacteria;Enterobacterales;Enterobacteriaceae;Escherichia;Escherichia coli	0.05815279361459521 ADD_ME
-Eukaryota;Apicomplexa;Aconoidasida;Haemosporida;Plasmodiidae;Plasmodium;Plasmodium vivax	0.2215344518651246 ADD_ME
-Eukaryota;Apicomplexa;Conoidasida;Eucoccidiorida;Sarcocystidae;Toxoplasma;Toxoplasma gondii	0.023293696041700604 ADD_ME
+lineage HSMA33MX   PSM6XBW3
+d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus    0.015637726014008795    0.015642822225843248
+d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri 0.05701254275940707     0.05703112269838684
+d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli       0.05815279361459521     0.05817174515235457
 ```
 
 To produce multiple output types from the same command, add the types into the
