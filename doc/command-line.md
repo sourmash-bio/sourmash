@@ -432,16 +432,19 @@ The sourmash `tax` or `taxonomy` commands integrate taxonomic
 
 These commands rely upon the fact that `gather` provides both the total
  fraction of the query matched to each database matched, as well as a
- non-overlapping `f_unique_weighted` which is the fraction of the query
- (weighted by abundance, if tracked) uniquely matched to each reference
- genome. The `f_unique_weighted` for any reference match will always be
- between (0% of query matched) and 1 (100% of query matched), and for a
- query matched to multiple references, the `f_unique_weighted` will sum
- to at most 1 (100% of query matched). We use this property to aggregate
- gather matches at the desired taxonomic rank. For example, if the gather
- results for a metagenome include results for 30 different strains of a
- given species, we can sum the fraction uniquely matched to each strain
- to obtain the fraction uniquely matched to this species.
+ non-overlapping `f_unique_to_query` which is the fraction of the query
+ uniquely matched to each reference genome. The `f_unique_to_query` for
+ any reference match will always be between (0% of query matched) and 1
+ (100% of query matched), and for a query matched to multiple references,
+ the `f_unique_to_query` will sum to at most 1 (100% of query matched).
+ We use this property to aggregate gather matches at the desired
+ taxonomic rank. For example, if the gather results for a metagenome
+ include results for 30 different strains of a given species, we can sum
+ the fraction uniquely matched to each strain to obtain the fraction
+ uniquely matched to this species. Note that this summarization can
+ also take into account abundance weighting; see
+ [Classifying Signatures](classifying-signatures.html) for more
+ information.
 
 As with all reference-based analysis, results can be affected by the
  completeness of the reference database. However, summarizing taxonomic
