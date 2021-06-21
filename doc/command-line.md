@@ -421,7 +421,7 @@ This combination of commands ensures that the more time- and
 memory-intensive `gather` step is run only on a small set of relevant
 signatures, rather than all the signatures in the database.
 
-## `sourmash tax` subcommands for integrating taxonomic information
+## `sourmash tax` subcommands for integrating taxonomic information into gather results
 
 The sourmash `tax` or `taxonomy` commands integrate taxonomic
  information into the results of `sourmash gather`. All `tax` commands
@@ -644,6 +644,8 @@ sourmash tax genome
     --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
     --output-format krona --rank species
 ```
+> Note that specifying `--rank` forces classification by rank rather than
+by the containment threshold.
 
 Here is the `krona`-formatted output for this command:
 
@@ -651,9 +653,6 @@ Here is the `krona`-formatted output for this command:
 fraction        superkingdom    phylum  class   order   family  genus   species
 Sb47+63   1.0     d__Bacteria     p__Proteobacteria       c__Gammaproteobacteria  o__Enterobacterales     f__Shewanellaceae       g__Shewanella   s__Shewanella baltica
 ```
-
-Note here that specifying `--rank` forces classification by rank rather than
-by the containment threshold.
 
 To produce multiple output types from the same command, add the types into the
  `--output-format` argument, e.g. `--output-format csv_summary krona`.
