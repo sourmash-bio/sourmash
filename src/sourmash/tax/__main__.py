@@ -28,7 +28,7 @@ metagenome -g <gather_csv> [<gather_csv> ... ] -t [<taxonomy_csv> ...]    - summ
 
 ** Use '-h' to get subcommand-specific help, e.g.
 
-sourmash taxonomy summarize -h
+sourmash taxonomy metagenome -h
 '''
 
 # some utils
@@ -39,7 +39,7 @@ def make_outfile(base, ext):
 
 
 ##### taxonomy command line functions
-def summarize(args):
+def metagenome(args):
     """
     summarize taxonomic information for metagenome gather results
     """
@@ -117,7 +117,7 @@ def summarize(args):
             tax_utils.write_krona(args.rank, krona_resultslist, out_fp)
 
 
-def classify(args):
+def genome(args):
     """
     taxonomic classification of genomes from gather results
     """

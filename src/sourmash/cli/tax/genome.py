@@ -95,4 +95,4 @@ def main(args):
     if not args.rank:
         if any(x in ["krona"] for x in args.output_format):
             raise ValueError(f"Rank (--rank) is required for krona output format.")
-    return sourmash.tax.__main__.classify(args)
+    return sourmash.tax.__main__.genome(args)
