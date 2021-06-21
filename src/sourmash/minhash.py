@@ -681,6 +681,19 @@ class MinHash(RustObject):
         new_mh = self.__copy__()
         new_mh.__class__ = FrozenMinHash
         return new_mh
+    
+    def inflate(self, infl):
+        """If track_abundance=True, return a new inflated MinHash."""
+        if self.track_abundance:
+            # create new object:
+            a = MinHash(
+                infl.num, infl.ksize, infl.is_protein, infl.dayhoff, infl.hp,
+                False, infl.seed, self._max_hash
+            )
+            a.add_many(self)
+
+        return a
+        return self
 
 
 class FrozenMinHash(MinHash):
@@ -773,3 +786,6 @@ class FrozenMinHash(MinHash):
     def __copy__(self):
         return self
     copy = __copy__
+
+    def inflate(self, infl):
+        raise TypeError('FrozenMinHash does not support modification')
