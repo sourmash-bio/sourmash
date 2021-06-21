@@ -1,10 +1,8 @@
 """
 Utility functions for taxonomy analysis tools.
 """
-import sys
 import csv
-from os.path import exists, basename, dirname, abspath
-from collections import namedtuple, defaultdict, Counter
+from collections import namedtuple, defaultdict
 
 __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
            'load_gather_results', 'check_and_load_gather_csvs',
@@ -15,7 +13,7 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
            'combine_sumgather_csvs_by_lineage', 'write_lineage_sample_frac',
            'load_taxonomy_csv']
 
-from sourmash.logging import notify, error, debug
+from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
 
 SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage")
@@ -23,11 +21,7 @@ ClassificationResult = namedtuple("ClassificationResult", "query_name, status, r
 
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
-from sourmash.lca.lca_utils import (LineagePair, build_tree, find_lca,
-                                    taxlist, count_lca_for_assignments,
-                                    zip_lineage, display_lineage,
-                                    make_lineage, is_lineage_match,
-                                    pop_to_rank)
+from sourmash.lca.lca_utils import (LineagePair, taxlist, display_lineage, pop_to_rank)
 
 
 def get_ident(ident, *, split_identifiers=True, keep_identifier_versions=False):
@@ -136,11 +130,11 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
         except ValueError as exc:
             if force:
                 notify(str(exc))
-                notify(f'--force is set. Attempting to continue to next set of gather results.')
+                notify('--force is set. Attempting to continue to next set of gather results.')
                 n_ignored+=1
                 continue
             else:
-                notify(f'Exiting.')
+                notify('Exiting.')
                 raise
 
         # check for match identites in these gather_results not found in lineage spreadsheets
@@ -148,7 +142,7 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
         if n_missed:
             notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
             if fail_on_missing_taxonomy:
-                raise ValueError(f'Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
+                raise ValueError('Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
 
             total_missed += n_missed
             all_ident_missed.update(ident_missed)
@@ -207,7 +201,6 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], s
     # sort and store each as SummarizedGatherResult
     sum_uniq_weighted_sorted = []
     for query_name, lineage_weights in sum_uniq_weighted.items():
-        query_results = []
         sumgather_items = list(lineage_weights.items())
         sumgather_items.sort(key = lambda x: -x[1])
         if best_only:
@@ -355,7 +348,6 @@ def combine_sumgather_csvs_by_lineage(gather_csvs, *, rank="species", accept_ran
     all_samples = []
     for g_csv in gather_csvs:
         # collect lineage info for this sample
-        lineageD = defaultdict(list)
         with open(g_csv, 'r') as fp:
             r = csv.DictReader(fp)
             for row in r:
@@ -431,7 +423,7 @@ def load_taxonomy_csv(filename, *, delimiter=',', force=False,
                 identifier = 'accession'
                 header = ["ident" if "accession" == x else x for x in header]
             else:
-                raise ValueError(f'No taxonomic identifiers found.')
+                raise ValueError('No taxonomic identifiers found.')
         # is "strain" an available rank?
         if "strain" in header:
             include_strain=True
@@ -442,7 +434,7 @@ def load_taxonomy_csv(filename, *, delimiter=',', force=False,
             # for now, just raise err if not all ranks are present.
             # in future, we can define `ranks` differently if desired
             # return them from this function so we can check the `available` ranks
-            raise ValueError(f'Not all taxonomy ranks present')
+            raise ValueError('Not all taxonomy ranks present')
 
         assignments = {}
         num_rows = 0

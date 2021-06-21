@@ -2,14 +2,10 @@
 Tests for the 'sourmash tax' command line and high level API.
 """
 import os
-import shutil
 import csv
 import pytest
-import glob
 
 import sourmash_tst_utils as utils
-import sourmash
-from sourmash import load_one_signature, SourmashSignature
 
 ## command line tests
 def test_run_sourmash_tax():
@@ -145,7 +141,6 @@ def test_summarize_no_taxonomy_fail(runtmp):
 
 
 def test_summarize_no_rank_lineage_summary(runtmp):
-    c = runtmp
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
@@ -156,7 +151,6 @@ def test_summarize_no_rank_lineage_summary(runtmp):
 
 
 def test_summarize_no_rank_krona(runtmp):
-    c = runtmp
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
@@ -167,7 +161,6 @@ def test_summarize_no_rank_krona(runtmp):
 
 
 def test_classify_no_rank_krona(runtmp):
-    c = runtmp
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
@@ -187,12 +180,10 @@ def test_summarize_rank_not_available(runtmp):
         c.run_sourmash('tax', 'summarize', '-g', g_csv, '--taxonomy-csv', tax,
                        '--rank', 'strain')
 
-    print(c.last_result.status)
-    print(c.last_result.out)
-    print(c.last_result.err)
+    print(str(exc.value))
 
     assert c.last_result.status == -1
-    assert "No taxonomic information provided for rank strain: cannot summarize at this rank" in c.last_result.err
+    assert "No taxonomic information provided for rank strain: cannot summarize at this rank" in str(exc.value)
 
 
 def test_summarize_duplicated_taxonomy_fail(runtmp):
@@ -279,11 +270,11 @@ def test_summarize_missing_taxonomy_fail(runtmp):
 
     with pytest.raises(ValueError) as exc:
         c.run_sourmash('tax', 'summarize', '-g', g_csv, '--taxonomy-csv', subset_csv, '--fail-on-missing-taxonomy')
-    print(c.last_result.status)
-    print(c.last_result.out)
-    print(c.last_result.err)
-    assert "The following are missing from the taxonomy information: GCF_003471795" in c.last_result.err
-    assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in c.last_result.err
+
+    print(str(exc.value))
+
+    assert "The following are missing from the taxonomy information: GCF_003471795" in str(exc.value)
+    assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in str(exc.value)
     assert c.last_result.status == -1
 
 
@@ -435,7 +426,7 @@ def test_summarize_gather_duplicate_query(runtmp):
 
     assert c.last_result.status == -1
     print(str(exc.value))
-    assert f"Gather query test1 was found in more than one CSV. Cannot load from " in str(exc.value)
+    assert "Gather query test1 was found in more than one CSV. Cannot load from " in str(exc.value)
 
 
 def test_summarize_gather_duplicate_query_force(runtmp):
@@ -457,9 +448,9 @@ def test_summarize_gather_duplicate_query_force(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert f'--force is set, ignoring duplicate query.' in c.last_result.err
-    assert f'No gather results loaded from ' in c.last_result.err
-    assert f'loaded results from 1 gather CSVs' in c.last_result.err
+    assert '--force is set, ignoring duplicate query.' in c.last_result.err
+    assert 'No gather results loaded from ' in c.last_result.err
+    assert 'loaded results from 1 gather CSVs' in c.last_result.err
     assert "query_name,rank,fraction,lineage" in c.last_result.out
     assert 'test1,superkingdom,0.131,d__Bacteria' in c.last_result.out
 
@@ -652,7 +643,7 @@ def test_classify_gather_from_file_two_files(runtmp):
     assert "test2,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
-def test_classify_gather_from_file_duplicate_filename(runtmp):
+def test_classify_gather_duplicate_filename(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -712,7 +703,7 @@ def test_classify_gather_from_file_duplicate_query(runtmp):
                    '--rank', 'species', '--containment-threshold', '0')
     assert c.last_result.status == -1
     print(str(exc.value))
-    assert f"Gather query test1 was found in more than one CSV. Cannot load from " in str(exc.value)
+    assert "Gather query test1 was found in more than one CSV. Cannot load from " in str(exc.value)
 
 
 def test_classify_gather_from_file_duplicate_query_force(runtmp):
@@ -741,9 +732,9 @@ def test_classify_gather_from_file_duplicate_query_force(runtmp):
     assert c.last_result.status == 0
     assert "query_name,status,rank,fraction,lineage" in c.last_result.out
     assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
-    assert f'--force is set, ignoring duplicate query.' in c.last_result.err
-    assert f'No gather results loaded from ' in c.last_result.err
-    assert f'loaded results from 1 gather CSVs' in c.last_result.err
+    assert '--force is set, ignoring duplicate query.' in c.last_result.err
+    assert 'No gather results loaded from ' in c.last_result.err
+    assert 'loaded results from 1 gather CSVs' in c.last_result.err
 
 
 def test_classify_gather_cli_and_from_file(runtmp):
@@ -925,12 +916,13 @@ def test_classify_missing_taxonomy_fail_threshold(runtmp):
         c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', subset_csv,
                        '--fail-on-missing-taxonomy', '--containment-threshold', '0')
 
+    print(str(exc.value))
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert "The following are missing from the taxonomy information: GCF_001881345" in c.last_result.err
-    assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in c.last_result.err
+    assert "The following are missing from the taxonomy information: GCF_001881345" in str(exc.value)
+    assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in str(exc.value)
     assert c.last_result.status == -1
 
 
@@ -950,12 +942,13 @@ def test_classify_missing_taxonomy_fail_rank(runtmp):
         c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', subset_csv,
                        '--fail-on-missing-taxonomy', '--rank', 'species')
 
+    print(str(exc.value))
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert "The following are missing from the taxonomy information: GCF_001881345" in c.last_result.err
-    assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in c.last_result.err
+    assert "The following are missing from the taxonomy information: GCF_001881345" in str(exc.value)
+    assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in str(exc.value)
     assert c.last_result.status == -1
 
 
@@ -969,12 +962,13 @@ def test_classify_rank_not_available(runtmp):
         c.run_sourmash('tax', 'classify', '-g', g_csv, '--taxonomy-csv', tax,
                        '--rank', 'strain', '--containment-threshold', '0')
 
+    print(str(exc.value))
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
     assert c.last_result.status == -1
-    assert "No taxonomic information provided for rank strain: cannot classify at this rank" in c.last_result.err
+    assert "No taxonomic information provided for rank strain: cannot classify at this rank" in str(exc.value)
 
 
 def test_classify_empty_gather_results_with_header_single(runtmp):
@@ -991,13 +985,14 @@ def test_classify_empty_gather_results_with_header_single(runtmp):
     with pytest.raises(ValueError) as exc:
         c.run_sourmash('tax', 'classify', '-g', empty_gather_with_header, '--taxonomy-csv', taxonomy_csv)
 
+    print(str(exc.value))
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
     assert c.last_result.status == -1
-    assert f'No gather results loaded from {empty_gather_with_header}.' in c.last_result.err
-    assert 'Exiting.' in c.last_result.err
+    assert f'No gather results loaded from {empty_gather_with_header}.' in str(exc.value)
+    assert 'Exiting.' in str(exc.value)
 
 
 def test_classify_empty_gather_results_single(runtmp):
@@ -1035,13 +1030,14 @@ def test_classify_empty_gather_results_single_force(runtmp):
         c.run_sourmash('tax', 'classify', '-g', empty_tax, '--taxonomy-csv', taxonomy_csv,
                        '--force')
 
+    print(str(exc.value))
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
     assert c.last_result.status == -1
-    assert f'--force is set. Attempting to continue to next set of gather results.' in c.last_result.err
-    assert f'No results for classification. Exiting.' in c.last_result.err
+    assert '--force is set. Attempting to continue to next set of gather results.' in str(exc.value)
+    assert 'No results for classification. Exiting.' in str(exc.value)
 
 
 def test_classify_empty_gather_results_with_empty_csv_force(runtmp):
@@ -1061,13 +1057,14 @@ def test_classify_empty_gather_results_with_empty_csv_force(runtmp):
         c.run_sourmash('tax', 'classify', '-g', empty_tax, '--from-file', g_from_file,
                        '--taxonomy-csv', taxonomy_csv, '--rank', 'species', '--force')
 
+    print(str(exc.value))
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
     assert c.last_result.status == -1
-    assert f'--force is set. Attempting to continue to next set of gather results.' in c.last_result.err
-    assert 'No results for classification. Exiting.' in c.last_result.err
+    assert '--force is set. Attempting to continue to next set of gather results.' in str(exc.value)
+    assert 'No results for classification. Exiting.' in str(exc.value)
 
 
 def test_classify_empty_gather_results_with_csv_force(runtmp):
@@ -1093,8 +1090,8 @@ def test_classify_empty_gather_results_with_csv_force(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert f'--force is set. Attempting to continue to next set of gather results.' in c.last_result.err
-    assert f'loaded results from 1 gather CSVs' in c.last_result.err
+    assert '--force is set. Attempting to continue to next set of gather results.' in c.last_result.err
+    assert 'loaded results from 1 gather CSVs' in c.last_result.err
     assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 

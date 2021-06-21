@@ -4,10 +4,8 @@ Tests for functions in taxonomy submodule.
 import pytest
 from os.path import basename
 
-import sourmash
 import sourmash_tst_utils as utils
 
-from sourmash.tax import tax_utils
 from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_results,
                                     summarize_gather_at, find_missing_identities,
                                     write_summary, load_taxonomy_csv,
@@ -53,19 +51,19 @@ def test_ascending_taxlist_2():
 
 def test_get_ident_default():
     ident = "GCF_001881345.1"
-    n_id = tax_utils.get_ident(ident)
+    n_id = get_ident(ident)
     assert n_id == "GCF_001881345"
 
 
 def test_get_ident_split_but_keep_version():
     ident = "GCF_001881345.1"
-    n_id = tax_utils.get_ident(ident, keep_identifier_versions=True)
+    n_id = get_ident(ident, keep_identifier_versions=True)
     assert n_id == "GCF_001881345.1"
 
 
 def test_get_ident_no_split():
     ident = "GCF_001881345.1 secondname"
-    n_id = tax_utils.get_ident(ident, split_identifiers=False)
+    n_id = get_ident(ident, split_identifiers=False)
     assert n_id == "GCF_001881345.1 secondname"
 
 
@@ -147,7 +145,7 @@ def test_check_and_load_gather_csvs_fail_on_missing(runtmp):
 
 def test_load_gather_results():
     gather_csv = utils.get_test_data('tax/test1.gather.csv')
-    gather_results, header, seen_queries = tax_utils.load_gather_results(gather_csv)
+    gather_results, header, seen_queries = load_gather_results(gather_csv)
     assert len(gather_results) == 4
 
 
@@ -164,13 +162,11 @@ def test_load_gather_results_bad_header(runtmp):
     print("bad_gather_results: \n", bad_g)
 
     with pytest.raises(ValueError) as exc:
-        gather_results, header = tax_utils.load_gather_results(bad_g_csv)
+        gather_results, header = load_gather_results(bad_g_csv)
     assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
 
 
 def test_load_gather_results_empty(runtmp):
-    g_csv = utils.get_test_data('tax/test1.gather.csv')
-
     empty_csv = runtmp.output('g.csv')
 
     #creates empty gather result
@@ -178,7 +174,7 @@ def test_load_gather_results_empty(runtmp):
         fp.write('')
 
     with pytest.raises(ValueError) as exc:
-        gather_results, header = tax_utils.load_gather_results(empty_csv)
+        gather_results, header = load_gather_results(empty_csv)
     assert f'Cannot read gather results from {empty_csv}. Is file empty?' in str(exc.value)
 
 
@@ -553,7 +549,7 @@ def test_make_krona_header_strain():
 
 def test_make_krona_header_fail():
     with pytest.raises(ValueError) as exc:
-        hd = make_krona_header("strain")
+        make_krona_header("strain")
         assert str(exc.value) == "Rank strain not present in available ranks"
 
 

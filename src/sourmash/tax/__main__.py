@@ -3,19 +3,15 @@ Command-line entry point for 'python -m sourmash.tax'
 """
 import sys
 import csv
-import json
 import os
 from collections import defaultdict
 
 import sourmash
-import copy
-from sourmash.sourmash_args import FileOutput
-from sourmash.lca.lca_utils import pop_to_rank, display_lineage
+from sourmash.lca.lca_utils import display_lineage
 
 from ..sourmash_args import FileOutputCSV
 
-from sourmash.logging import set_quiet, error, notify, set_quiet, print_results, debug
-from sourmash import sourmash_args
+from sourmash.logging import set_quiet, error, notify
 
 from . import tax_utils
 from .tax_utils import ClassificationResult
@@ -65,7 +61,8 @@ def summarize(args):
             available_ranks.update(set(avail_ranks))
 
         except ValueError as exc:
-            error(str(exc))
+            error(f"ERROR: {str(exc)}")
+            sys.exit(-1)
 
     if not tax_assign:
         error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
@@ -77,11 +74,15 @@ def summarize(args):
 
     # next, collect and load gather results
     gather_csvs = tax_utils.collect_gather_csvs(args.gather_csv, from_file= args.from_file)
-    gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
+    try:
+        gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
                                                                                        fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
+    except ValueError as exc:
+        error(f"ERROR: {str(exc)}")
+        sys.exit(-1)
 
     if not gather_results:
-        notify(f'No gather results loaded. Exiting.')
+        notify('No gather results loaded. Exiting.')
         sys.exit(-1)
 
     # actually summarize at rank
@@ -137,7 +138,7 @@ def classify(args):
             tax_assign.update(this_tax_assign)
             available_ranks.update(set(avail_ranks))
         except ValueError as exc:
-            error(str(exc))
+            error(f"ERROR: {str(exc)}")
 
     if not tax_assign:
         error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
@@ -159,8 +160,13 @@ def classify(args):
     # read in all gather CSVs (queries in more than one gather file will raise error; with --force they will only be loaded once)
     # note: doing one CSV at a time would work and probably be more memory efficient, but we would need to change how we check
     # for duplicated queries
-    gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
+    try:
+        gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
                                                                             fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
+
+    except ValueError as exc:
+        error(f"ERROR: {str(exc)}")
+        sys.exit(-1)
 
     # if --rank is specified, classify to that rank
     if args.rank:
@@ -214,7 +220,7 @@ def classify(args):
                     classifications[args.rank].append(classif)
 
     if not any([classifications, krona_results]):
-        notify(f'No results for classification. Exiting.')
+        notify('No results for classification. Exiting.')
         sys.exit(-1)
 
     # write outputs
@@ -248,7 +254,8 @@ def annotate(args):
                                               keep_identifier_versions = args.keep_identifier_versions,
                                               force=args.force)
         except ValueError as exc:
-            error(str(exc))
+            error(f"ERROR: {str(exc)}")
+            sys.exit(-1)
 
         # maybe check for overlapping tax assignments? currently later ones will override earlier ones
         if this_tax_assign:
