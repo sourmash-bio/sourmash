@@ -298,8 +298,7 @@ class GatherDatabases:
 
         orig_query_mh = query_mh.flatten()
         query = query.to_mutable()
-        query.minhash = query.minhash.flatten()
-        #@CTB query.minhash = orig_query_mh.to_mutable()
+        query.minhash = orig_query_mh
 
         cmp_scaled = query.minhash.scaled    # initialize with resolution of query
 

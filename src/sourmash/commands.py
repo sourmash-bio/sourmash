@@ -726,7 +726,6 @@ def gather(args):
 
     found = []
     weighted_missed = 1
-    print('XYZ', query.minhash.track_abundance, not args.ignore_abundance)
     is_abundance = query.minhash.track_abundance and not args.ignore_abundance
     orig_query_mh = query.minhash
     gather_iter = GatherDatabases(query, counters,
