@@ -2104,3 +2104,20 @@ def test_import_mash_csv_to_sig(runtmp):
 
     assert '1 matches:' in runtmp.last_result.out
     assert '100.0%       short.fa' in runtmp.last_result.out
+
+
+def test_sig_manifest(runtmp):
+    # make a manifest from a .zip file
+    from sourmash.index import CollectionManifest
+
+    protzip = utils.get_test_data('prot/protein.zip')
+    runtmp.sourmash('sig', 'manifest', protzip, '-o', 'SOURMASH-MANIFEST.csv')
+
+    manifest_fn = runtmp.output('SOURMASH-MANIFEST.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
