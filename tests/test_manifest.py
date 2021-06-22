@@ -1,6 +1,8 @@
 """
 Tests for manifest code in databases, etc.
 """
+from io import StringIO
+
 import sourmash
 from sourmash import index
 
@@ -34,7 +36,7 @@ def test_generate_manifest():
 
 
 def test_manifest_to_picklist():
-    # test basic manifest-generating functionality.
+    # test manifest/picklist interaction basics
     protzip = utils.get_test_data('prot/protein.zip')
 
     loader = sourmash.load_file_as_index(protzip)
@@ -48,3 +50,33 @@ def test_manifest_to_picklist():
 
     manifest = index.CollectionManifest(rows)
     picklist = manifest.to_picklist()
+    assert len(picklist.pickset) == len(manifest)
+
+    new_manifest = manifest.select_to_manifest(picklist=picklist)
+    assert len(new_manifest) == len(manifest)
+
+
+def test_save_load_manifest():
+    # test saving and loading manifests
+    protzip = utils.get_test_data('prot/protein.zip')
+
+    loader = sourmash.load_file_as_index(protzip)
+
+    rows = []
+    siglist = []
+    for (sig, _, loc) in loader.signatures_with_internal():
+        row = index.CollectionManifest.make_manifest_row(sig, loc)
+        rows.append(row)
+        siglist.append(sig)
+
+    manifest = index.CollectionManifest(rows)
+
+    # now, on to CSV
+    fp = StringIO()
+    manifest.write_csv_header(fp)
+    manifest.write_to_csv(fp)
+
+    rfp = StringIO(fp.getvalue())
+    manifest2 = index.CollectionManifest.load_from_csv(rfp)
+
+    assert len(manifest) == len(manifest2)

@@ -1007,11 +1007,17 @@ class CollectionManifest:
         w = csv.DictWriter(fp, fieldnames=cls.required_keys)
         w.writeheader()
 
-    def write_to_csv(self, fp):
+    def write_to_csv(self, fp, write_header=False):
         "write manifest CSV to specified file handle"
         w = csv.DictWriter(fp, fieldnames=self.required_keys)
 
+        if write_header:
+            self.write_csv_header(fp)
+
         for row in self.rows:
+            # don't write signature!
+            if 'signature' in row:
+                del row['signature']
             w.writerow(row)
 
     @classmethod
