@@ -67,6 +67,40 @@ def test_api_find_picklist_select():
     assert ss.md5sum().startswith('09a08691c')
 
 
+def test_api_find_picklist_select_exclude():
+    # does 'find' respect picklists?
+
+    sig47 = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                        ksize=31)
+    sig63 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                        ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(sig47)
+    lca_db.insert(sig63)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('md5prefix8', pickstyle= 'exclude')
+    picklist.init(['09a08691'])
+
+    # run a 'find' with sig63, should find 47 and 63 both.
+    search_obj = make_jaccard_search_query(do_containment=True, threshold=0.0)
+    results = list(lca_db.find(search_obj, sig63))
+    print(results)
+    assert len(results) == 2
+
+    # now, select on picklist and do another find...
+    lca_db = lca_db.select(picklist=picklist)
+    results = list(lca_db.find(search_obj, sig63))
+    print(results)
+    assert len(results) == 1
+
+    # and check that it is the expected one!
+    ss = results[0].signature
+    assert ss.minhash.ksize == 31
+    assert ss.md5sum().startswith('38729c637')
+
+
 def test_api_create_insert():
     # test some internal implementation stuff: create & then insert a sig.
     ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
@@ -513,6 +547,26 @@ def test_lca_index_select_picklist():
     assert len(siglist) == 1
     ss = siglist[0]
     assert ss.md5sum().startswith('50a92740')
+    assert ss.minhash.ksize == 31
+
+
+def test_lca_index_select_picklist_exclude():
+    # test 'select' method from Index base class with a picklist.
+
+    filename = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('md5prefix8', pickstyle='exclude')
+    picklist.init(['50a92740'])
+
+    xx = db.select(picklist=picklist)
+    assert xx == db
+
+    siglist = list(db.signatures())
+    assert len(siglist) == 1
+    ss = siglist[0]
+    assert ss.md5sum().startswith('e88dc390')
     assert ss.minhash.ksize == 31
 
 
@@ -2542,3 +2596,31 @@ def test_lca_index_with_picklist(runtmp):
     assert len(siglist) == 3
     for ss in siglist:
         assert 'Thermotoga' in ss.name
+
+
+def test_lca_index_with_picklist_exclude(runtmp):
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    outdb = runtmp.output('gcf.lca.json')
+    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
+
+    # create an empty spreadsheet
+    with open(runtmp.output('empty.csv'), 'wt') as fp:
+        fp.write('accession,superkingdom,phylum,class,order,family,genus,species,strain')
+
+    runtmp.sourmash('lca', 'index', 'empty.csv', outdb, *gcf_sigs,
+                    '-k', '21', '--picklist', f"{picklist}:md5:md5:exclude")
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(out)
+    print(err)
+
+    assert "for given picklist, found 9 matches by excluding 9 distinct values" in err
+    assert "WARNING: 3 missing picklist values."
+    assert "WARNING: no lineage provided for 9 signatures" in err
+
+    siglist = list(sourmash.load_file_as_signatures(outdb))
+    assert len(siglist) == 9
+    for ss in siglist:
+        assert 'Thermotoga' not in ss.name
