@@ -17,7 +17,7 @@ from sourmash.sbt import SBT, GraphFactory, Leaf
 from sourmash.sbtmh import SigLeaf
 from sourmash import sourmash_args
 from sourmash.search import JaccardSearch, SearchType
-from sourmash.picklist import SignaturePicklist
+from sourmash.picklist import SignaturePicklist, PickStyle
 
 import sourmash_tst_utils as utils
 
@@ -670,7 +670,7 @@ def test_linear_index_picklist_select_exclude():
         linear.insert(ss)
 
     # construct a picklist...
-    picklist = SignaturePicklist('md5prefix8', pickstyle='exclude')
+    picklist = SignaturePicklist('md5prefix8', pickstyle=PickStyle.EXCLUDE)
     picklist.init(['f3a90d4e'])
 
     # select on picklist

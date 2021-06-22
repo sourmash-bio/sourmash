@@ -19,7 +19,7 @@ from .logging import notify, error, debug_literal
 
 from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
 from . import signature as sigmod
-from .picklist import SignaturePicklist
+from .picklist import SignaturePicklist, PickStyle
 
 
 DEFAULT_LOAD_K = 31
@@ -84,12 +84,12 @@ def load_picklist(args):
 
 
 def report_picklist(args, picklist):
-    if picklist.pickstyle == 'include':
+    if picklist.pickstyle == PickStyle.INCLUDE:
         notify(f"for given picklist, found {len(picklist.found)} matches to {len(picklist.pickset)} distinct values")
         n_missing = len(picklist.pickset - picklist.found)
-    elif picklist.pickstyle == 'exclude':
+    elif picklist.pickstyle == PickStyle.EXCLUDE:
         notify(f"for given picklist, found {len(picklist.found)} matches by excluding {len(picklist.pickset)} distinct values")
-        n_missing = len(picklist.pickset)- len(picklist.found)
+        n_missing = len(picklist.pickset) - len(picklist.found)
     if n_missing:
         notify(f"WARNING: {n_missing} missing picklist values.")
         if args.picklist_require_all:

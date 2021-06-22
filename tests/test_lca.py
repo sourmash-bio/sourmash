@@ -14,7 +14,7 @@ from sourmash import load_one_signature, SourmashSignature
 from sourmash.search import make_jaccard_search_query
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import LineagePair
-from sourmash.picklist import SignaturePicklist
+from sourmash.picklist import SignaturePicklist, PickStyle
 
 
 def test_api_create_search():
@@ -80,7 +80,7 @@ def test_api_find_picklist_select_exclude():
     lca_db.insert(sig63)
 
     # construct a picklist...
-    picklist = SignaturePicklist('md5prefix8', pickstyle= 'exclude')
+    picklist = SignaturePicklist('md5prefix8', pickstyle= PickStyle.EXCLUDE)
     picklist.init(['09a08691'])
 
     # run a 'find' with sig63, should find 47 and 63 both.
@@ -557,7 +557,7 @@ def test_lca_index_select_picklist_exclude():
     db, ksize, scaled = lca_utils.load_single_database(filename)
 
     # construct a picklist...
-    picklist = SignaturePicklist('md5prefix8', pickstyle='exclude')
+    picklist = SignaturePicklist('md5prefix8', pickstyle=PickStyle.EXCLUDE)
     picklist.init(['50a92740'])
 
     xx = db.select(picklist=picklist)

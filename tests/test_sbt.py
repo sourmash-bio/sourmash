@@ -14,7 +14,7 @@ from sourmash.sbtmh import (SigLeaf, load_sbt_index)
 from sourmash.sbt_storage import (FSStorage, RedisStorage,
                                   IPFSStorage, ZipStorage)
 from sourmash.search import make_jaccard_search_query
-from sourmash.picklist import SignaturePicklist
+from sourmash.picklist import SignaturePicklist, PickStyle
 
 import sourmash_tst_utils as utils
 
@@ -678,7 +678,7 @@ def test_sbt_as_index_select_picklist_exclude():
     tree.insert(sig63)
 
     # construct a picklist...
-    picklist = SignaturePicklist('md5prefix8', pickstyle='exclude')
+    picklist = SignaturePicklist('md5prefix8', pickstyle=PickStyle.EXCLUDE)
     picklist.init(['09a08691'])
 
     # select on picklist
@@ -738,7 +738,7 @@ def test_sbt_as_index_find_picklist_exclude():
     tree.insert(sig63)
 
     # construct a picklist...
-    picklist = SignaturePicklist('md5prefix8', pickstyle='exclude')
+    picklist = SignaturePicklist('md5prefix8', pickstyle=PickStyle.EXCLUDE)
     picklist.init(['09a08691'])
 
     # run a 'find' with sig63, should find 47 and 63 both.

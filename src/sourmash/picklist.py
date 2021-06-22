@@ -1,5 +1,6 @@
 "Picklist code for extracting subsets of signatures."
 import csv
+from enum import Enum
 
 # set up preprocessing functions for column stuff
 preprocess = {}
@@ -15,6 +16,11 @@ preprocess['ident'] = lambda x: x.split(' ')[0]
 # match 8 characters
 preprocess['md5prefix8'] = lambda x: x[:8]
 preprocess['md5short'] = lambda x: x[:8]
+
+
+class PickStyle(Enum):
+    INCLUDE = 1
+    EXCLUDE = 2
 
 
 class SignaturePicklist:
@@ -41,7 +47,7 @@ class SignaturePicklist:
     supported_coltypes = ('md5', 'md5prefix8', 'md5short',
                           'name', 'ident', 'identprefix')
 
-    def __init__(self, coltype, *, pickfile=None, column_name=None, pickstyle='include'):
+    def __init__(self, coltype, *, pickfile=None, column_name=None, pickstyle=PickStyle.INCLUDE):
         "create a picklist of column type 'coltype'."
         self.coltype = coltype
         self.pickfile = pickfile
@@ -64,9 +70,13 @@ class SignaturePicklist:
         if len(picklist) != 3:
             if len(picklist) == 4:
                 pickfile, column, coltype, pickstyle = picklist
-                if pickstyle not in ['include', 'exclude']:
+                if pickstyle == 'include':
+                    return cls(coltype, pickfile=pickfile, column_name=column, pickstyle=PickStyle.INCLUDE)
+                elif pickstyle == 'exclude':
+                    return cls(coltype, pickfile=pickfile, column_name=column, pickstyle=PickStyle.EXCLUDE)
+                else:
                     raise ValueError(f"invalid picklist 'pickstyle' argument, '{pickstyle}': must be 'include' or 'exclude'")
-                return cls(coltype, pickfile=pickfile, column_name=column, pickstyle=pickstyle)
+
             raise ValueError(f"invalid picklist argument '{argstr}'")
 
         assert len(picklist) == 3
@@ -138,11 +148,11 @@ class SignaturePicklist:
         self.n_queries += 1
 
         # determine if ok or not.
-        if self.pickstyle == 'include':
+        if self.pickstyle == PickStyle.INCLUDE:
             if q in self.pickset:
                 self.found.add(q)
                 return True
-        elif self.pickstyle == 'exclude':
+        elif self.pickstyle == PickStyle.EXCLUDE:
             if q not in self.pickset:
                 self.found.add(q)
                 return True
