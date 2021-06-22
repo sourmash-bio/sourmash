@@ -84,8 +84,12 @@ def load_picklist(args):
 
 
 def report_picklist(args, picklist):
-    notify(f"for given picklist, found {len(picklist.found)} matches to {len(picklist.pickset)} distinct values")
-    n_missing = len(picklist.pickset - picklist.found)
+    if picklist.pickstyle == 'include':
+        notify(f"for given picklist, found {len(picklist.found)} matches to {len(picklist.pickset)} distinct values")
+        n_missing = len(picklist.pickset - picklist.found)
+    elif picklist.pickstyle == 'exclude':
+        notify(f"for given picklist, found {len(picklist.found)} matches by excluding {len(picklist.pickset)} distinct values")
+        n_missing = len(picklist.pickset)- len(picklist.found)
     if n_missing:
         notify(f"WARNING: {n_missing} missing picklist values.")
         if args.picklist_require_all:
@@ -435,7 +439,7 @@ def load_pathlist_from_file(filename):
             if not os.path.exists(checkfile):
                 raise ValueError(f"file '{checkfile}' inside the pathlist does not exist")
     except IOError:
-        raise ValueError(f"pathlist file '{filename}' does not exist")    
+        raise ValueError(f"pathlist file '{filename}' does not exist")
     except OSError:
         raise ValueError(f"cannot open file '{filename}'")
     except UnicodeDecodeError:
@@ -632,7 +636,7 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
     "Save signatures within a directory, using md5sum names."
     def __init__(self, location):
         super().__init__(location)
-        
+
     def __repr__(self):
         return f"SaveSignatures_Directory('{self.location}')"
 
@@ -709,7 +713,7 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
     def __init__(self, location):
         super().__init__(location)
         self.zf = None
-        
+
     def __repr__(self):
         return f"SaveSignatures_ZipFile('{self.location}')"
 

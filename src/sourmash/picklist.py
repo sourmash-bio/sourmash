@@ -151,21 +151,13 @@ class SignaturePicklist:
     def filter(self, it):
         "yield all signatures in the given iterator that are in the picklist"
         for ss in it:
-            if self.pickstyle == 'include':
-                if self.__contains__(ss):
-                    yield ss
-            elif self.pickstyle == 'exclude':
-                if not self.__contains__(ss):
-                    yield ss
+            if self.__contains__(ss):
+                yield ss
 
 
 def passes_all_picklists(ss, picklists):
     "does the signature 'ss' pass all of the picklists?"
     for picklist in picklists:
-        if self.pickstyle == 'include':
-            if ss not in picklist:
-                return False
-        elif self.pickstyle == 'exclude':
-            if ss not in picklist:
-                return True
+        if ss not in picklist:
+            return False
     return True
