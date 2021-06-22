@@ -1,7 +1,7 @@
 """search a metagenome signature against dbs"""
 
 from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
-                                add_picklist_args, add_scaled_arg)
+                                add_picklist_args)
 
 
 def subparser(subparsers):
@@ -45,10 +45,10 @@ def subparser(subparsers):
         help='output unassigned portions of the query as a signature to the '
         'specified file'
     )
-    # subparser.add_argument(
-    #     '--scaled', metavar='FLOAT', type=float, default=0,
-    #     help='downsample query to the specified scaled factor'
-    # )
+    subparser.add_argument(
+        '--scaled', metavar='FLOAT', type=float, default=0,
+        help='downsample query to the specified scaled factor'
+    )
     subparser.add_argument(
         '--ignore-abundance',  action='store_true',
         help='do NOT use k-mer abundances if present'
@@ -82,7 +82,7 @@ def subparser(subparsers):
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
-    add_scaled_arg(subparser)
+    # add_scaled_arg(subparser)
 
 
 def main(args):
