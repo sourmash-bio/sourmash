@@ -80,3 +80,14 @@ def test_save_load_manifest():
     manifest2 = index.CollectionManifest.load_from_csv(rfp)
 
     assert len(manifest) == len(manifest2)
+
+    pick1 = manifest.to_picklist()
+    pick2 = manifest2.to_picklist()
+
+    # manifest 1 in manifest2?
+    for row in manifest.rows:
+        assert pick2.matches_manifest_row(row)
+
+    # manifest 2 in manifest?
+    for row in manifest2.rows:
+        assert pick1.matches_manifest_row(row)

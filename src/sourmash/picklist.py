@@ -158,7 +158,7 @@ class SignaturePicklist:
                 return True
         return False
 
-    def matches_siginfo(self, siginfo):
+    def matches_manifest_row(self, row):
         # match on metadata info for signature, not signature itself
         if self.coltype == 'md5':
             colkey = 'md5'
@@ -169,12 +169,18 @@ class SignaturePicklist:
         else:
             assert 0
 
-        q = siginfo[colkey]
+        q = row[colkey]
         q = self.preprocess_fn(q)
         self.n_queries += 1
-        if q in self.pickset:
-            self.found.add(q)
-            return True
+
+        if self.pickstyle == PickStyle.INCLUDE:
+            if q in self.pickset:
+                self.found.add(q)
+                return True
+        elif self.pickstyle == PickStyle.EXCLUDE:
+            if q not in self.pickset:
+                self.found.add(q)
+                return True
         return False
 
     def filter(self, it):

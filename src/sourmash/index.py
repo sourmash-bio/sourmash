@@ -1083,7 +1083,7 @@ class CollectionManifest:
 
         if picklist:
             matching_rows = ( row for row in matching_rows
-                              if picklist.matches_siginfo(row) )
+                              if picklist.matches_manifest_row(row) )
 
         # return only the internal filenames!
         for row in matching_rows:
