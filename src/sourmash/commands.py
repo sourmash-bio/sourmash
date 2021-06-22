@@ -549,7 +549,7 @@ def search(args):
 
 def categorize(args):
     "Use a database to find the best match to many signatures."
-    from .index import LoadedCollection
+    from .index import MultiIndex
     from .search import make_jaccard_search_query
 
     set_quiet(args.quiet)
@@ -571,7 +571,7 @@ def categorize(args):
     # utility function to load & select relevant signatures.
     def _yield_all_sigs(queries, ksize, moltype):
         for filename in queries:
-            mi = LoadedCollection.load_from_path(filename, False)
+            mi = MultiIndex.load_from_path(filename, False)
             mi = mi.select(ksize=ksize, moltype=moltype)
             for ss, loc in mi.signatures_with_location():
                 yield ss, loc

@@ -17,7 +17,7 @@ import sourmash.exceptions
 
 from .logging import notify, error, debug_literal
 
-from .index import (LinearIndex, ZipFileLinearIndex, LoadedCollection)
+from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
 from . import signature as sigmod
 from .picklist import SignaturePicklist, PickStyle
 
@@ -263,7 +263,7 @@ def _load_stdin(filename, **kwargs):
 
 def _collection_load_from_pathlist(filename, **kwargs):
     "Load collection from a list of signature/database files"
-    db = LoadedCollection.load_from_pathlist(filename)
+    db = MultiIndex.load_from_pathlist(filename)
 
     return db
 
@@ -271,7 +271,7 @@ def _collection_load_from_pathlist(filename, **kwargs):
 def _collection_load_from_path(filename, **kwargs):
     "Load collection from a directory."
     traverse_yield_all = kwargs['traverse_yield_all']
-    db = LoadedCollection.load_from_path(filename, traverse_yield_all)
+    db = MultiIndex.load_from_path(filename, traverse_yield_all)
 
     return db
 
