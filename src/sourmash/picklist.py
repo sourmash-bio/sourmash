@@ -159,7 +159,7 @@ class SignaturePicklist:
         return False
 
     def matches_manifest_row(self, row):
-        # match on metadata info for signature, not signature itself
+        "does the given manifest row match this picklist?"
         if self.coltype == 'md5':
             colkey = 'md5'
         elif self.coltype in ('md5prefix8', 'md5short'):
