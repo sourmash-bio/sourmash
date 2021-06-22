@@ -184,7 +184,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], s
         if f_uniq_weighted >= 1.0 and query_name not in seen_perfect: # only want to notify once, not for each rank
             ident = get_ident(match_ident, split_identifiers=split_identifiers, keep_identifier_versions=keep_identifier_versions)
             seen_perfect.add(query_name)
-            notify(f'WARNING: 100% match! Is query {query_name} identical to its database match, {ident}?')
+            notify(f'WARNING: 100% match! Is query "{query_name}" identical to its database match, {ident}?')
 
         # get lineage for match
         lineage = find_match_lineage(match_ident, tax_assign, skip_idents = skip_idents, split_identifiers=split_identifiers, keep_identifier_versions=keep_identifier_versions)

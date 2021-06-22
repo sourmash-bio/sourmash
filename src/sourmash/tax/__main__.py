@@ -32,10 +32,25 @@ sourmash taxonomy metagenome -h
 '''
 
 # some utils
-def make_outfile(base, ext):
+def make_outfile(base, output_type, *, output_dir = ""):
     if base == "-":
         return base
-    return base + ext
+    ext=""
+    if output_type == 'csv_summary':
+        ext = '.summarized.csv'
+    elif output_type == 'classification':
+        ext = '.classifications.csv'
+    elif output_type == 'krona':
+        ext = '.krona.tsv'
+    elif output_type == 'lineage_summary':
+        ext = '.lineage_summary.tsv'
+    elif output_type == 'annotate':
+        ext = '.with-lineages.csv'
+    fname = base+ext
+    if output_dir:
+        fname = os.path.join(output_dir, fname)
+    notify(f"saving `{output_type}` output to {fname}.")
+    return fname
 
 
 ##### taxonomy command line functions
@@ -94,13 +109,13 @@ def metagenome(args):
 
     # write summarized output csv
     if "csv_summary" in args.output_format:
-        summary_outfile = make_outfile(args.output_base, ".summarized.csv")
+        summary_outfile = make_outfile(args.output_base, "csv_summary", output_dir=args.output_dir)
         with FileOutputCSV(summary_outfile) as out_fp:
             tax_utils.write_summary(summarized_gather, out_fp)
 
     # if lineage summary table
     if "lineage_summary" in args.output_format:
-        lineage_outfile = make_outfile(args.output_base, ".lineage_summary.tsv")
+        lineage_outfile = make_outfile(args.output_base, "lineage_summary", output_dir=args.output_dir)
 
         ## aggregate by lineage, by query
         lineageD, query_names, num_queries = tax_utils.aggregate_by_lineage_at_rank(summarized_gather[args.rank], by_query=True)
@@ -112,7 +127,7 @@ def metagenome(args):
     if "krona" in args.output_format:
         krona_resultslist = tax_utils.format_for_krona(args.rank, summarized_gather)
 
-        krona_outfile = make_outfile(args.output_base, ".krona.tsv")
+        krona_outfile = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
         with FileOutputCSV(krona_outfile) as out_fp:
             tax_utils.write_krona(args.rank, krona_resultslist, out_fp)
 
@@ -223,12 +238,12 @@ def genome(args):
 
     # write outputs
     if "csv_summary" in args.output_format:
-        summary_outfile = make_outfile(args.output_base, ".classifications.csv")
+        summary_outfile = make_outfile(args.output_base, "classification", output_dir=args.output_dir)
         with FileOutputCSV(summary_outfile) as out_fp:
             tax_utils.write_classifications(classifications, out_fp)
 
     if "krona" in args.output_format:
-        krona_outfile = make_outfile(args.output_base, ".krona.tsv")
+        krona_outfile = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
         with FileOutputCSV(krona_outfile) as out_fp:
             tax_utils.write_krona(args.rank, krona_results, out_fp)
 
@@ -275,8 +290,7 @@ def annotate(args):
             continue
 
         out_base = os.path.basename(g_csv.rsplit('.csv')[0])
-        out_path = os.path.join(args.output_dir, out_base)
-        this_outfile = make_outfile(out_path, ".with-lineages.csv")
+        this_outfile = make_outfile(out_base, "annotate", output_dir=args.output_dir)
 
         with FileOutputCSV(this_outfile) as out_fp:
             header.append("lineage")

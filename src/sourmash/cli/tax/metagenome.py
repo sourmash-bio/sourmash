@@ -44,6 +44,10 @@ def subparser(subparsers):
         help='base filepath for output file(s) (default stdout)'
     )
     subparser.add_argument(
+        '--output-dir', default= "",
+        help='directory for output files'
+    )
+    subparser.add_argument(
         '-t', '--taxonomy-csv', metavar='FILE',
         nargs='+', required=True,
         help='database lineages CSV'
