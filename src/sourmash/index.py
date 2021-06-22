@@ -1102,8 +1102,8 @@ class CollectionManifest:
 
             # track/remove duplicates
             if loc not in seen:
-                yield loc
                 seen.add(loc)
+                yield loc
 
     def __contains__(self, ss):
         "Does this manifest contain this signature?"
