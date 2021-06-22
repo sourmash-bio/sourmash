@@ -100,7 +100,7 @@ def test_sig_merge_1_name(c):
     outsig = c.output('merged2and63.sig')
 
     c.run_sourmash('sig', 'merge', sig2, sig63, '--dna', '-k', '31', '-o', "merged2and63.sig", '--name', assignedSigName )
-    
+
     test_merge_sig = sourmash.load_one_signature(outsig)
 
     print("outsig", outsig)
@@ -784,7 +784,7 @@ def test_sig_cat_filelist(c):
     # print("length multisig: ",len(multisiglist))
     # print("\n")
 
-    filelist = c.output("filelist")   
+    filelist = c.output("filelist")
 
     with open(filelist, 'w') as f:
         f.write("\n".join((sig47, sig47abund, multisig)))
@@ -811,12 +811,12 @@ def test_sig_cat_filelist(c):
 
     # sort the signatures by something deterministic and unique
     siglist.sort(key = lambda x: x.md5sum())
-    
+
     # print(len(siglist))
     # print("siglist: ",siglist)
     # print("\n")
     # print("\n")
-    
+
     assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequence', 485c3377), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 57e2b22f), SourmashSignature('NC_011668.1 Shewanella baltica OS223 plasmid pS22302, complete sequence', 837bf2a7), SourmashSignature('NC_011664.1 Shewanella baltica OS223 plasmid pS22301, complete sequence', 87a9aec4), SourmashSignature('NC_009661.1 Shewanella baltica OS185 plasmid pS18501, complete sequence', bde81a41), SourmashSignature('NC_011663.1 Shewanella baltica OS223, complete genome', f033bbd8)]"""
 
 
@@ -1136,6 +1136,45 @@ def test_sig_extract_8_picklist_md5(runtmp):
     out = runtmp.last_result.out
 
     test_extract_sig = sourmash.load_one_signature(sig47)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    assert actual_extract_sig == test_extract_sig
+
+    err = runtmp.last_result.err
+
+    print(err)
+    assert "loaded 1 distinct values into picklist." in err
+    assert "loaded 1 total that matched ksize & molecule type" in err
+    assert "extracted 1 signatures from 2 file(s)" in err
+    assert "for given picklist, found 1 matches to 1 distinct values" in err
+
+
+def test_sig_extract_8_picklist_md5_exclude(runtmp):
+    # extract 63 from 47,63 by excluding 47, using a picklist w/full md5
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='09a08691ce52952152f0e866a59f6261',
+               md5short='09a08691ce5295215',
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:md5full:md5:exclude"
+    runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist', picklist_arg)
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig63)
     actual_extract_sig = sourmash.load_one_signature(out)
 
     assert actual_extract_sig == test_extract_sig

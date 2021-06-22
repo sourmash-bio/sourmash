@@ -41,14 +41,16 @@ class SignaturePicklist:
     supported_coltypes = ('md5', 'md5prefix8', 'md5short',
                           'name', 'ident', 'identprefix')
 
-    def __init__(self, coltype, *, pickfile=None, column_name=None):
+    def __init__(self, coltype, *, pickfile=None, column_name=None, pickstyle='include'):
         "create a picklist of column type 'coltype'."
         self.coltype = coltype
         self.pickfile = pickfile
         self.column_name = column_name
+        self.pickstyle = pickstyle
 
         if coltype not in self.supported_coltypes:
             raise ValueError(f"invalid picklist column type '{coltype}'")
+
 
         self.preprocess_fn = preprocess[coltype]
         self.pickset = None
@@ -60,6 +62,11 @@ class SignaturePicklist:
         "load a picklist from an argument string 'pickfile:column:coltype'"
         picklist = argstr.split(':')
         if len(picklist) != 3:
+            if len(picklist) == 4:
+                pickfile, column, coltype, pickstyle = picklist
+                if pickstyle not in ['include', 'exclude']:
+                    raise ValueError(f"invalid picklist 'pickstyle' argument, '{pickstyle}': must be 'include' or 'exclude'")
+                return cls(coltype, pickfile=pickfile, column_name=column, pickstyle=pickstyle)
             raise ValueError(f"invalid picklist argument '{argstr}'")
 
         assert len(picklist) == 3
@@ -131,21 +138,34 @@ class SignaturePicklist:
         self.n_queries += 1
 
         # determine if ok or not.
-        if q in self.pickset:
-            self.found.add(q)
-            return True
+        if self.pickstyle == 'include':
+            if q in self.pickset:
+                self.found.add(q)
+                return True
+        elif self.pickstyle == 'exclude':
+            if q not in self.pickset:
+                self.found.add(q)
+                return True
         return False
 
     def filter(self, it):
         "yield all signatures in the given iterator that are in the picklist"
         for ss in it:
-            if self.__contains__(ss):
-                yield ss
+            if self.pickstyle == 'include':
+                if self.__contains__(ss):
+                    yield ss
+            elif self.pickstyle == 'exclude':
+                if not self.__contains__(ss):
+                    yield ss
 
 
 def passes_all_picklists(ss, picklists):
     "does the signature 'ss' pass all of the picklists?"
     for picklist in picklists:
-        if ss not in picklist:
-            return False
+        if self.pickstyle == 'include':
+            if ss not in picklist:
+                return False
+        elif self.pickstyle == 'exclude':
+            if ss not in picklist:
+                return True
     return True
