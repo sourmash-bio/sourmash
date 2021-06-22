@@ -198,7 +198,7 @@ def genome(args):
                 notify(f"WARNING: classifying query {sg.query_name} at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
             else:
                 status="match"
-            classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage)
+            classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename)
             classifications[args.rank].append(classif)
             matched_queries.add(sg.query_name)
             if "krona" in args.output_format:
@@ -220,7 +220,7 @@ def genome(args):
                     continue
                 if sg.fraction >= args.containment_threshold:
                     status = "match"
-                    classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage)
+                    classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename)
                     classifications[args.rank].append(classif)
                     matched_queries.add(sg.query_name)
                     if "krona" in args.output_format:
@@ -229,7 +229,9 @@ def genome(args):
                     break
                 if rank == "superkingdom" and status == "nomatch":
                     status="below_threshold"
-                    classif = ClassificationResult(sg.query_name, status, "", 0, "")
+                    classif = ClassificationResult(query_name=sg.query_name, status=status,
+                                                   rank="", fraction=0, lineage="",
+                                                   query_md5=sg.query_md5, query_filename=sg.query_filename)
                     classifications[args.rank].append(classif)
 
     if not any([classifications, krona_results]):

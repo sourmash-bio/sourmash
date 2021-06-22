@@ -16,8 +16,8 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
 from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
 
-SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage")
-ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage")
+SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename")
+ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename")
 
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
@@ -69,7 +69,7 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     return gather_csvs
 
 
-def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=['query_name', 'name', 'f_unique_weighted'], seen_queries=set(), force=False):
+def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=['query_name', 'name', 'f_unique_weighted', 'query_md5', 'query_filename'], seen_queries=set(), force=False):
     "Load a single gather csv"
     header = []
     gather_results = []
@@ -176,6 +176,8 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], s
     for row in gather_results:
         # get essential gather info
         query_name = row['query_name']
+        query_md5 = row['query_md5']
+        query_filename = row['query_filename']
         match_ident = row['name']
         f_uniq_weighted = row['f_unique_weighted']
         f_uniq_weighted = float(f_uniq_weighted)
@@ -205,10 +207,12 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], s
         sumgather_items.sort(key = lambda x: -x[1])
         if best_only:
             lineage, fraction = sumgather_items[0]
-            sum_uniq_weighted_sorted.append(SummarizedGatherResult(query_name, rank, fraction, lineage))
+            sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename)
+            sum_uniq_weighted_sorted.append(sres)
         else:
             for lineage, fraction in sumgather_items:
-                sum_uniq_weighted_sorted.append(SummarizedGatherResult(query_name, rank, fraction, lineage))
+                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename)
+                sum_uniq_weighted_sorted.append(sres)
 
     return sum_uniq_weighted_sorted, seen_perfect
 
@@ -252,13 +256,13 @@ def aggregate_by_lineage_at_rank(rank_results, *, by_query=False):
     if by_query:
         lineage_summary = defaultdict(dict)
     all_queries = []
-    for (query_name, rank, fraction, lineage) in rank_results:
-        if query_name not in all_queries:
-            all_queries.append(query_name)
+    for res in rank_results:
+        if res.query_name not in all_queries:
+            all_queries.append(res.query_name)
         if by_query:
-            lineage_summary[lineage][query_name] = fraction
+            lineage_summary[res.lineage][res.query_name] = res.fraction
         else:
-            lineage_summary[lineage] += fraction
+            lineage_summary[res.lineage] += res.fraction
     return lineage_summary, all_queries, len(all_queries)
 
 
@@ -297,28 +301,34 @@ def write_krona(rank, krona_results, out_fp, *, sep='\t'):
         tsv_output.writerow(res)
 
 
-def write_summary(summarized_gather, csv_fp, *, sep='\t'):
+def write_summary(summarized_gather, csv_fp, *, sep=','):
     '''
     Write taxonomy-summarized gather results for each rank.
     '''
-    header= ["query_name", "rank", "fraction", "lineage"]
-    w = csv.writer(csv_fp)
-    w.writerow(header)
+    header = SummarizedGatherResult._fields
+    w = csv.DictWriter(csv_fp, header, delimiter=sep)
+    w.writeheader()
     for rank, rank_results in summarized_gather.items():
-        for (query_name, rank, fraction, lineage) in rank_results:
-            w.writerow([query_name, rank, f'{fraction:.3f}', display_lineage(lineage)])
+        for res in rank_results:
+            rD = res._asdict()
+            rD['fraction'] = f'{res.fraction:.3f}'
+            rD['lineage'] = display_lineage(res.lineage)
+            w.writerow(rD)
 
 
-def write_classifications(classifications, csv_fp, *, sep='\t'):
+def write_classifications(classifications, csv_fp, *, sep=','):
     '''
     Write taxonomy-classifed gather results.
     '''
-    header= ["query_name", "status", "rank", "fraction", "lineage"]
-    w = csv.writer(csv_fp)
-    w.writerow(header)
+    header = ClassificationResult._fields
+    w = csv.DictWriter(csv_fp, header, delimiter=sep)
+    w.writeheader()
     for rank, rank_results in classifications.items():
-        for (query_name, status, rank, fraction, lineage) in rank_results:
-            w.writerow([query_name, status, rank, f'{fraction:.3f}', display_lineage(lineage)])
+        for res in rank_results:
+            rD = res._asdict()
+            rD['fraction'] = f'{res.fraction:.3f}'
+            rD['lineage'] = display_lineage(res.lineage)
+            w.writerow(rD)
 
 
 def combine_sumgather_csvs_by_lineage(gather_csvs, *, rank="species", accept_ranks = list(lca_utils.taxlist(include_strain=False)), force=False):
