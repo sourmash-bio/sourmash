@@ -89,9 +89,10 @@ def report_picklist(args, picklist):
         n_missing = len(picklist.pickset - picklist.found)
     elif picklist.pickstyle == PickStyle.EXCLUDE:
         notify(f"for given picklist, found {len(picklist.found)} matches by excluding {len(picklist.pickset)} distinct values")
-        n_missing = len(picklist.pickset) - len(picklist.found)
+        n_missing = 0
     if n_missing:
         notify(f"WARNING: {n_missing} missing picklist values.")
+        # Note - picklist_require_all is currently only relevant for PickStyle.INCLUDE
         if args.picklist_require_all:
             error("ERROR: failing because --picklist-require-all was set")
             sys.exit(-1)
