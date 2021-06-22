@@ -982,7 +982,7 @@ One way to build a picklist is to use `sourmash sig describe --csv
 out.csv <signatures>` to construct an initial CSV file that you can
 then edit further.
 
-The picklist functionality also supports _excluding_ (rather than
+The picklist functionality also supports excluding (rather than
 including) signatures matching the picklist arguments. To specify a
 picklist for exclusion, add `:exclude` to the `--picklist` argument
 string, e.g. `pickfile:colname:coltype:exclude`.
