@@ -977,6 +977,14 @@ class CollectionManifest:
     def load_from_csv(cls, fp):
         "load a manifest from a CSV file."
         manifest_list = []
+        firstline = fp.readline().rstrip()
+        if not firstline.startswith('# SOURMASH-MANIFEST-VERSION: '):
+            raise ValueError("manifest is missing version header")
+
+        version = firstline[len('# SOURMASH-MANIFEST-VERSION: '):]
+        if float(version) != 1.0:
+            raise ValueError(f"unknown manifest version number {version}")
+
         r = csv.DictReader(fp)
         if not r.fieldnames:
             raise ValueError("missing column headers in manifest")
@@ -992,12 +1000,24 @@ class CollectionManifest:
 
         return cls(manifest_list)
 
-    def write_to_csv(self, fp):
-        "write manifest CSV to specified file handle"
-        w = csv.DictWriter(fp, fieldnames=self.required_keys)
+    @classmethod
+    def write_csv_header(cls, fp):
+        "write header for manifest CSV format"
+        fp.write('# SOURMASH-MANIFEST-VERSION: 1.0\n')
+        w = csv.DictWriter(fp, fieldnames=cls.required_keys)
         w.writeheader()
 
+    def write_to_csv(self, fp, write_header=False):
+        "write manifest CSV to specified file handle"
+        w = csv.DictWriter(fp, fieldnames=self.required_keys)
+
+        if write_header:
+            self.write_csv_header(fp)
+
         for row in self.rows:
+            # don't write signature!
+            if 'signature' in row:
+                del row['signature']
             w.writerow(row)
 
     @classmethod
@@ -1063,7 +1083,7 @@ class CollectionManifest:
 
         if picklist:
             matching_rows = ( row for row in matching_rows
-                              if picklist.matches_siginfo(row) )
+                              if picklist.matches_manifest_row(row) )
 
         # return only the internal filenames!
         for row in matching_rows:
@@ -1082,8 +1102,8 @@ class CollectionManifest:
 
             # track/remove duplicates
             if loc not in seen:
-                yield loc
                 seen.add(loc)
+                yield loc
 
     def __contains__(self, ss):
         "Does this manifest contain this signature?"
@@ -1092,8 +1112,8 @@ class CollectionManifest:
 
     def to_picklist(self):
         "Convert this manifest to a picklist."
-        from sourmash.sig.picklist import SignaturePicklist
-        picklist = SignaturePicklist(None, None, 'md5')
+        from sourmash.picklist import SignaturePicklist
+        picklist = SignaturePicklist('md5')
         picklist.pickset = set(self._md5_set)
 
         return picklist
