@@ -98,7 +98,7 @@ def test_load_pathlist_from_file_badly_formatted(c):
     with pytest.raises(ValueError) as e:
         load_pathlist_from_file(file_list)
     assert "file '{'a':1}' inside the pathlist does not exist" in str(e.value)
-    
+
 
 @utils.in_tempdir
 def test_load_pathlist_from_file_badly_formatted_2(c):
@@ -920,7 +920,10 @@ def test_gather_lca_db(runtmp, linear_gather, prefetch_gather):
 
     runtmp.sourmash('gather', query, lca_db, linear_gather, prefetch_gather)
     print(runtmp)
-    assert 'NC_009665.1 Shewanella baltica OS185' in str(runtmp.last_result.out)
+    out = runtmp.last_result.out
+
+    assert 'NC_009665.1 Shewanella baltica OS185' in out
+    assert 'WARNING: final scaled was 10000, vs query scaled of 1000' in out
 
 
 def test_gather_csv_output_filename_bug(runtmp, linear_gather, prefetch_gather):
@@ -2046,6 +2049,28 @@ def test_search_with_picklist(runtmp):
     assert "12.8%       NC_011978.1 Thermotoga" in out
 
 
+def test_search_with_picklist_exclude(runtmp):
+    # test 'sourmash search' with picklists
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
+
+    runtmp.sourmash('search', metag_sig, *gcf_sigs, '--containment',
+                    '-k', '21', '--picklist', f"{picklist}:md5:md5:exclude")
+
+    err = runtmp.last_result.err
+    print(err)
+    assert "for given picklist, found 9 matches by excluding 9 distinct values" in err
+    # these are the different ksizes
+
+    out = runtmp.last_result.out
+    print(out)
+    assert "9 matches; showing first 3:" in out
+    assert "33.2%       NC_003198.1 Salmonella" in out
+    assert "33.1%       NC_003197.2 Salmonella" in out
+    assert "32.2%       NC_006905.1 Salmonella" in out
+
+
 def test_mash_csv_to_sig():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa.msh.dump')
@@ -2928,6 +2953,28 @@ def test_compare_with_picklist(runtmp):
     assert "NC_009486.1 The..." in out
     assert "NC_000853.1 The..." in out
     assert "NC_011978.1 The..." in out
+
+
+def test_compare_with_picklist_exclude(runtmp):
+    # test 'sourmash compare' with picklists - exclude
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
+
+    runtmp.sourmash('compare', *gcf_sigs,
+                    '-k', '21', '--picklist', f"{picklist}:md5:md5:exclude")
+
+    err = runtmp.last_result.err
+    out = runtmp.last_result.out
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "for given picklist, found 9 matches by excluding 9 distinct values" in err
+
+    assert "NC_004631.1 Sal..." in out
+    assert "NC_006905.1 Sal..." in out
+    assert "NC_003198.1 Sal..." in out
+    assert "NC_002163.1 Cam..." in out
+    assert "NC_011294.1 Sal..." in out
 
 
 def test_gather(linear_gather, prefetch_gather):
@@ -3985,6 +4032,8 @@ def test_gather_query_downsample(linear_gather, prefetch_gather):
         assert all(('4.9 Mbp      100.0%  100.0%' in out,
                     'NC_003197.2' in out))
 
+        assert 'WARNING: final scaled was 10000, vs query scaled of 500' in out
+
 
 def test_gather_query_downsample_explicit(linear_gather, prefetch_gather):
     # do an explicit downsampling to fix `test_gather_query_downsample`
@@ -4031,6 +4080,35 @@ def test_gather_with_picklist(runtmp, linear_gather, prefetch_gather):
     assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 Thermotoga" in out
     assert "1.9 Mbp       11.5%   89.9%    NC_011978.1 Thermotoga" in out
     assert "1.9 Mbp        6.3%   48.4%    NC_009486.1 Thermotoga" in out
+
+
+def test_gather_with_picklist_exclude(runtmp, linear_gather, prefetch_gather):
+    # test 'sourmash gather' with picklists - exclude
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
+
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs, '--threshold-bp=0',
+                    '-k', '21', '--picklist', f"{picklist}:md5:md5:exclude",
+                    linear_gather, prefetch_gather)
+
+    err = runtmp.last_result.err
+    print(err)
+    assert "for given picklist, found 9 matches by excluding 9 distinct values" in err
+    # these are the different ksizes
+
+    out = runtmp.last_result.out
+    print(out)
+    assert "found 9 matches total;" in out
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 Salmonella enterica subsp..." in out
+    assert "1.6 Mbp       10.7%  100.0%    NC_002163.1 Campylobacter jejuni subs..." in out
+    assert "4.8 Mbp       10.4%   31.3%    NC_003197.2 Salmonella enterica subsp..." in out
+    assert "4.7 Mbp        5.2%   16.1%    NC_006905.1 Salmonella enterica subsp..." in out
+    assert "4.7 Mbp        4.0%   12.6%    NC_011080.1 Salmonella enterica subsp..." in out
+    assert "4.6 Mbp        2.9%    9.2%    NC_011274.1 Salmonella enterica subsp..." in out
+    assert "4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp..." in out
+    assert "4.7 Mbp        0.5%    1.5%    NC_011294.1 Salmonella enterica subsp..." in out
+    assert "4.5 Mbp        0.1%    0.4%    NC_004631.1 Salmonella enterica subsp..." in out
 
 
 def test_gather_save_matches(linear_gather, prefetch_gather):
@@ -4899,6 +4977,27 @@ def test_index_with_picklist(runtmp):
         assert 'Thermotoga' in ss.name
 
 
+def test_index_with_picklist_exclude(runtmp):
+    # test 'sourmash index' with picklists - exclude
+    gcf_sig_dir = utils.get_test_data('gather/')
+    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
+
+    output_db = runtmp.output('thermo-exclude.sbt.zip')
+
+    runtmp.sourmash('index', output_db, gcf_sig_dir,
+                    '-k', '31', '--picklist', f"{picklist}:md5:md5:exclude")
+
+    err = runtmp.last_result.err
+    print(err)
+    assert "for given picklist, found 9 matches by excluding 9 distinct values" in err
+
+    # verify:
+    siglist = list(sourmash.load_file_as_signatures(output_db))
+    assert len(siglist) == 9
+    for ss in siglist:
+        assert 'Thermotoga' not in ss.name
+
+
 def test_index_matches_search_with_picklist(runtmp):
     # test 'sourmash index' with picklists
     gcf_sig_dir = utils.get_test_data('gather/')
@@ -4938,6 +5037,47 @@ def test_index_matches_search_with_picklist(runtmp):
     assert "13.1%       NC_000853.1 Thermotoga" in out
     assert "13.0%       NC_009486.1 Thermotoga" in out
     assert "12.8%       NC_011978.1 Thermotoga" in out
+
+
+def test_index_matches_search_with_picklist_exclude(runtmp):
+    # test 'sourmash index' with picklists - exclude
+    gcf_sig_dir = utils.get_test_data('gather/')
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
+    metag_sig = utils.get_test_data('gather/combined.sig')
+
+    output_db = runtmp.output('thermo-exclude.sbt.zip')
+
+    runtmp.sourmash('index', output_db, gcf_sig_dir, '-k', '21')
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    # verify:
+    siglist = list(sourmash.load_file_as_signatures(output_db))
+    assert len(siglist) > 3     # all signatures included...
+
+    n_thermo = 0
+    for ss in siglist:
+        if 'Thermotoga' in ss.name:
+            n_thermo += 1
+
+    assert n_thermo == 3
+
+    runtmp.sourmash('search', metag_sig, output_db, '--containment',
+                    '-k', '21', '--picklist', f"{picklist}:md5:md5:exclude")
+
+    err = runtmp.last_result.err
+    print(err)
+    assert "for given picklist, found 10 matches by excluding 9 distinct values" in err
+    ### NTP: FIX REPORTING
+    assert "WARNING: -1 missing picklist values"
+
+    out = runtmp.last_result.out
+    print(out)
+    assert "10 matches; showing first 3:" in out
+    assert "100.0%       -" in out
+    assert "33.2%       NC_003198.1 Salmonella" in out
+    assert "33.1%       NC_003197.2 Salmonella" in out
 
 
 def test_gather_with_prefetch_picklist(runtmp, linear_gather):

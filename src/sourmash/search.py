@@ -2,13 +2,10 @@
 Code for searching collections of signatures.
 """
 from collections import namedtuple
-import sys
-import os
 from enum import Enum
+import numpy as np
 
-from .logging import notify, error
 from .signature import SourmashSignature
-from .minhash import _get_max_hash_for_scaled
 
 
 class SearchType(Enum):
@@ -249,8 +246,6 @@ def _find_best(counters, query, threshold_bp):
     """
     Search for the best containment, return precisely one match.
     """
-    results = []
-
     best_result = None
     best_intersect_mh = None
 
@@ -274,37 +269,97 @@ def _find_best(counters, query, threshold_bp):
     return None, None
 
 
-def gather_databases(query, counters, threshold_bp, ignore_abundance):
-    """
-    Iteratively find the best containment of `query` in all the `counters`,
-    until we find fewer than `threshold_bp` (estimated) bp in common.
-    """
-    # track original query information for later usage.
-    track_abundance = query.minhash.track_abundance and not ignore_abundance
-    orig_query_bp = len(query.minhash) * query.minhash.scaled
-    orig_query_filename = query.filename
-    orig_query_name = query.name
-    orig_query_md5 = query.md5sum()[:8]
-    orig_query_mh = query.minhash
+class GatherDatabases:
+    "Iterator object for doing gather/min-set-cov."
 
-    # do we pay attention to abundances?
-    orig_query_abunds = { k: 1 for k in orig_query_mh.hashes }
-    if track_abundance:
-        import numpy as np
-        orig_query_abunds = orig_query_mh.hashes
+    def __init__(self, query, counters, *,
+                 threshold_bp=0, ignore_abundance=False, noident_mh=None):
+        # track original query information for later usage?
+        track_abundance = query.minhash.track_abundance and not ignore_abundance
+        self.orig_query_bp = len(query.minhash) * query.minhash.scaled
+        self.orig_query_filename = query.filename
+        self.orig_query_name = query.name
+        self.orig_query_md5 = query.md5sum()[:8]
 
-    orig_query_mh = orig_query_mh.flatten()
-    query.minhash = query.minhash.flatten()
+        # do we pay attention to abundances?
+        query_mh = query.minhash
+        query_hashes = query_mh.hashes
+        orig_query_abunds = { k: 1 for k in query_hashes }
+        if track_abundance:
+            orig_query_abunds = query_hashes
 
-    cmp_scaled = query.minhash.scaled    # initialize with resolution of query
-    result_n = 0
-    while query.minhash:
+        # adjust for not found...
+        if noident_mh is None:  # create empty
+            noident_mh = query_mh.copy_and_clear()
+        self.noident_mh = noident_mh.to_frozen()
+
+        query_mh = query_mh.to_mutable()
+        query_mh.remove_many(noident_mh)
+
+        orig_query_mh = query_mh.flatten()
+        query.minhash = orig_query_mh.to_mutable()
+
+        cmp_scaled = query.minhash.scaled    # initialize with resolution of query
+
+        self.result_n = 0
+        self.query = query
+        self.counters = counters
+        self.threshold_bp = threshold_bp
+
+        self.track_abundance = track_abundance
+        self.orig_query_mh = orig_query_mh
+        self.orig_query_abunds = orig_query_abunds
+
+        self.cmp_scaled = 1
+        self._update_scaled(cmp_scaled)
+
+    def _update_scaled(self, scaled):
+        max_scaled = max(self.cmp_scaled, scaled)
+        if self.cmp_scaled != max_scaled:
+            self.cmp_scaled = max_scaled
+
+            # CTB note: this can be expensive
+            self.orig_query_mh = self.orig_query_mh.downsample(scaled=scaled)
+            self.noident_mh = self.noident_mh.downsample(scaled=scaled)
+
+            # NOTE: orig_query_abunds can be used w/o downsampling
+            orig_query_abunds = self.orig_query_abunds
+            self.noident_query_sum_abunds = sum(( orig_query_abunds[k] \
+                                                  for k in self.noident_mh.hashes ))
+            self.sum_abunds = sum(( orig_query_abunds[k] \
+                                    for k in self.orig_query_mh.hashes ))
+            self.sum_abunds += self.noident_query_sum_abunds
+
+        if max_scaled != scaled:
+            return max_scaled
+        return max_scaled
+
+    @property
+    def scaled(self):
+        return self.cmp_scaled
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        query = self.query
+        if not self.query.minhash:
+            raise StopIteration
+
+        # may be changed:
+        counters = self.counters
+        cmp_scaled = self.cmp_scaled
+
+        # will not be changed::
+        track_abundance = self.track_abundance
+        threshold_bp = self.threshold_bp
+        orig_query_abunds = self.orig_query_abunds
+
         # find the best match!
         best_result, intersect_mh = _find_best(counters, query, threshold_bp)
 
         if not best_result:          # no matches at all for this cutoff!
-            notify(f'found less than {format_bp(threshold_bp)} in common. => exiting')
-            break
+            raise StopIteration
 
         best_match = best_result.signature
         filename = best_result.location
@@ -313,34 +368,37 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
         match_scaled = best_match.minhash.scaled
         assert match_scaled
 
-        # pick the highest scaled / lowest resolution
-        cmp_scaled = max(cmp_scaled, match_scaled)
+        # pick the highest scaled / lowest resolution.
+        scaled = self._update_scaled(match_scaled)
+        # CTB note: this means that if a high scaled/low res signature is
+        # found early on, resolution will be low from then on.
+
+        # retrieve various saved things, after potential downsampling
+        orig_query_mh = self.orig_query_mh
+        sum_abunds = self.sum_abunds
+        noident_mh = self.noident_mh
+        orig_query_len = len(orig_query_mh) + len(noident_mh)
 
         # eliminate hashes under this new resolution.
-        # (CTB note: this means that if a high scaled/low res signature is
-        # found early on, resolution will be low from then on.)
-        query_mh = query.minhash.downsample(scaled=cmp_scaled)
-        found_mh = best_match.minhash.downsample(scaled=cmp_scaled).flatten()
-        orig_query_mh = orig_query_mh.downsample(scaled=cmp_scaled)
-        sum_abunds = sum(( orig_query_abunds[k] for k in orig_query_mh.hashes ))
+        query_mh = query.minhash.downsample(scaled=scaled)
+        found_mh = best_match.minhash.downsample(scaled=scaled).flatten()
 
         # calculate intersection with query hashes:
-        unique_intersect_bp = cmp_scaled * len(intersect_mh)
+        unique_intersect_bp = scaled * len(intersect_mh)
         intersect_orig_mh = orig_query_mh & found_mh
-        intersect_bp = cmp_scaled * len(intersect_orig_mh)
+        intersect_bp = scaled * len(intersect_orig_mh)
 
         # calculate fractions wrt first denominator - genome size
         assert intersect_mh.contained_by(found_mh) == 1.0
         f_match = len(intersect_mh) / len(found_mh)
-        f_orig_query = len(intersect_orig_mh) / len(orig_query_mh)
+        f_orig_query = len(intersect_orig_mh) / orig_query_len
 
         # calculate fractions wrt second denominator - metagenome size
         assert intersect_mh.contained_by(orig_query_mh) == 1.0
-        f_unique_to_query = len(intersect_mh) / len(orig_query_mh)
+        f_unique_to_query = len(intersect_mh) / orig_query_len
 
         # calculate fraction of subject match with orig query
-        f_match_orig = best_match.minhash.contained_by(orig_query_mh,
-                                                       downsample=True)
+        f_match_orig = found_mh.contained_by(orig_query_mh)
 
         # calculate scores weighted by abundances
         f_unique_weighted = sum((orig_query_abunds[k] for k in intersect_mh.hashes ))
@@ -357,17 +415,17 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
             std_abund = np.std(intersect_abunds)
 
         # construct a new query, subtracting hashes found in previous one.
-        new_query_mh = query.minhash.downsample(scaled=cmp_scaled)
-        new_query_mh = new_query_mh.to_mutable()
-        new_query_mh.remove_many(set(found_mh.hashes))
+        new_query_mh = query_mh.to_mutable()
+        new_query_mh.remove_many(found_mh)
         new_query = SourmashSignature(new_query_mh)
 
-        remaining_bp = cmp_scaled * len(new_query_mh)
+        remaining_bp = scaled * len(new_query_mh)
 
-        # compute weighted_missed:
+        # compute weighted_missed for remaining query hashes
         query_hashes = set(query_mh.hashes) - set(found_mh.hashes)
-        weighted_missed = sum((orig_query_abunds[k] for k in query_hashes)) \
-             / sum_abunds
+        weighted_missed = sum((orig_query_abunds[k] for k in query_hashes))
+        weighted_missed += self.noident_query_sum_abunds
+        weighted_missed /= sum_abunds
 
         # build a result namedtuple
         result = GatherResult(intersect_bp=intersect_bp,
@@ -384,18 +442,18 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
                               md5=best_match.md5sum(),
                               name=str(best_match),
                               match=best_match,
-                              gather_result_rank=result_n,
+                              gather_result_rank=self.result_n,
                               remaining_bp=remaining_bp,
-                              query_bp = orig_query_bp,
-                              query_filename=orig_query_filename,
-                              query_name=orig_query_name,
-                              query_md5=orig_query_md5,
+                              query_bp = self.orig_query_bp,
+                              query_filename=self.orig_query_filename,
+                              query_name=self.orig_query_name,
+                              query_md5=self.orig_query_md5,
                               )
-        result_n += 1
+        self.result_n += 1
+        self.query = new_query
+        self.orig_query_mh = orig_query_mh
 
-        yield result, weighted_missed, new_query
-
-        query = new_query
+        return result, weighted_missed
 
 
 ###

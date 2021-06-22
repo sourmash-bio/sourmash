@@ -17,7 +17,7 @@ from sourmash.sbt import SBT, GraphFactory, Leaf
 from sourmash.sbtmh import SigLeaf
 from sourmash import sourmash_args
 from sourmash.search import JaccardSearch, SearchType
-from sourmash.picklist import SignaturePicklist
+from sourmash.picklist import SignaturePicklist, PickStyle
 
 import sourmash_tst_utils as utils
 
@@ -39,28 +39,28 @@ def test_simple_index(n_children):
     leaf2_mh.add_sequence("AAAAG")
     leaf2_sig = SourmashSignature(leaf2_mh)
     root.insert(leaf2_sig)
-    
+
     leaf3_mh = sourmash.MinHash(0, 5, scaled=1)
     leaf3_mh.add_sequence("AAAAA")
     leaf3_mh.add_sequence("AAAAT")
     leaf3_mh.add_sequence("CAAAA")
     leaf3_sig = SourmashSignature(leaf3_mh)
     root.insert(leaf3_sig)
-    
+
     leaf4_mh = sourmash.MinHash(0, 5, scaled=1)
     leaf4_mh.add_sequence("AAAAA")
     leaf4_mh.add_sequence("CAAAA")
     leaf4_mh.add_sequence("GAAAA")
     leaf4_sig = SourmashSignature(leaf4_mh)
     root.insert(leaf4_sig)
-    
+
     leaf5_mh = sourmash.MinHash(0, 5, scaled=1)
     leaf5_mh.add_sequence("AAAAA")
     leaf5_mh.add_sequence("AAAAT")
     leaf5_mh.add_sequence("GAAAA")
     leaf5_sig = SourmashSignature(leaf5_mh)
     root.insert(leaf5_sig)
-    
+
     linear = LinearIndex()
     linear.insert(leaf1_sig)
     linear.insert(leaf2_sig)
@@ -80,7 +80,7 @@ def test_simple_index(n_children):
         linear_found = set(linear_found)
 
         tree_found = set(root.find(search_fn, search_sig))
-        
+
         assert tree_found
         assert tree_found == set(linear_found)
 
@@ -424,7 +424,7 @@ def test_linear_index_save(runtmp):
     linear.insert(ss2)
     linear.insert(ss47)
     linear.insert(ss63)
-    
+
     filename = runtmp.output('foo')
     linear.save(filename)
 
@@ -451,7 +451,7 @@ def test_linear_index_load(runtmp):
     ss63 = sourmash.load_one_signature(sig63)
 
     from sourmash import save_signatures
-    
+
     filename = runtmp.output('foo')
     with open(filename, 'wt') as fp:
         sourmash.save_signatures([ss2, ss47, ss63], fp)
@@ -480,7 +480,7 @@ def test_linear_index_save_load(runtmp):
     filename = runtmp.output('foo')
     linear.save(filename)
     linear2 = LinearIndex.load(filename)
-        
+
     # now, search for sig2
     sr = linear2.search(ss2, threshold=1.0)
     print([s[1].name for s in sr])
@@ -656,6 +656,33 @@ def test_linear_index_picklist_select():
     ss = list(linear2.signatures())[0]
     assert ss.minhash.ksize == 31
     assert ss.md5sum().startswith('f3a90d4e55')
+
+
+def test_linear_index_picklist_select_exclude():
+    # test select with a picklist, but exclude
+
+    # this loads three ksizes, 21/31/51
+    sig2 = utils.get_test_data('2.fa.sig')
+    siglist = sourmash.load_file_as_signatures(sig2)
+
+    linear = LinearIndex()
+    for ss in siglist:
+        linear.insert(ss)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('md5prefix8', pickstyle=PickStyle.EXCLUDE)
+    picklist.init(['f3a90d4e'])
+
+    # select on picklist
+    linear2 = linear.select(picklist=picklist)
+    assert len(linear2) == 2
+    md5s = set()
+    ksizes = set()
+    for ss in list(linear2.signatures()):
+        md5s.add(ss.md5sum())
+        ksizes.add(ss.minhash.ksize)
+    assert md5s == set(['f372e47893edd349e5956f8b0d8dcbf7','43f3b48e59443092850964d355a20ac0'])
+    assert ksizes == set([21,51])
 
 
 @utils.in_tempdir
