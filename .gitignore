@@ -32,6 +32,7 @@ Cargo.lock
 pkg/
 wasm-pack.log
 .hypothesis
+**/node_modules/
 
 # IDEs
 .vscode/

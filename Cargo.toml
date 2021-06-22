@@ -3,3 +3,7 @@ members = [
   "src/core",
 ]
 default-members = ["src/core"]
+
+# the wasm crate has profile optimization that we don't necessarily want in
+# core, so keeping it out of the workspace for now.
+exclude = [ "src/wasm" ]

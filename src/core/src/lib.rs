@@ -34,16 +34,10 @@ pub mod encodings;
 #[cfg(feature = "from-finch")]
 pub mod from;
 
-use cfg_if::cfg_if;
-use murmurhash3::murmurhash3_x64_128;
+#[cfg(not(all(target_arch = "wasm32", target_vendor = "unknown")))]
+pub mod ffi;
 
-cfg_if! {
-    if #[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))] {
-        pub mod wasm;
-    } else {
-        pub mod ffi;
-    }
-}
+use murmurhash3::murmurhash3_x64_128;
 
 type HashIntoType = u64;
 

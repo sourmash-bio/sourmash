@@ -17,8 +17,10 @@ in
       heaptrack
       cargo-watch
       cargo-limit
+
       wasmtime
       wasm-pack
+      yarn
     ];
 
     shellHook = ''
