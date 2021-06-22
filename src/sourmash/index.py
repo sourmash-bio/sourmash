@@ -1106,8 +1106,8 @@ class CollectionManifest:
 
     def to_picklist(self):
         "Convert this manifest to a picklist."
-        from sourmash.sig.picklist import SignaturePicklist
-        picklist = SignaturePicklist(None, None, 'md5')
+        from sourmash.picklist import SignaturePicklist
+        picklist = SignaturePicklist('md5')
         picklist.pickset = set(self._md5_set)
 
         return picklist
