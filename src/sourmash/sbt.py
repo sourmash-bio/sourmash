@@ -734,7 +734,7 @@ class SBT(Index):
         manifest_name = f"{name}.manifest.csv"
 
         manifest_fp = StringIO()
-        manifest.write_to_csv(manifest_fp)
+        manifest.write_to_csv(manifest_fp, write_header=True)
         manifest_data = manifest_fp.getvalue().encode("utf-8")
 
         if kind == "Zip":
