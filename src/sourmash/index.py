@@ -852,3 +852,89 @@ class MultiIndex(Index):
         "Run 'select' on the manifest."
         new_manifest = self.manifest.select_to_manifest(**kwargs)
         return MultiIndex(new_manifest)
+
+
+class LazyMultiIndex(Index):
+    """
+    Do lazy selection of multiple collections; manifests are required.
+
+    Maintains a manifest per collection, and subselects on collections
+    only when actual signatures are needed.
+
+    Differs from MultiIndex in that only the manifests are held in memory,
+    not any of the signatures.
+    """
+    def __init__(self, index_list, manifest_list):
+        assert len(index_list) == len(manifest_list)
+        self.index_list = index_list
+        self.manifest_list = manifest_list
+
+    def signatures(self):
+        for ss, loc in self.signatures_with_location():
+            yield ss
+
+    def signatures_with_location(self):
+        for idx, manifest in zip(self.index_list, self.manifest_list):
+            # convert manifest to picklist:
+            picklist = manifest.to_picklist()
+
+            # select using picklist:
+            idx_new = idx.select(picklist=picklist)
+
+            # yield all remaining signatures:
+            for ss, loc in idx_new.signatures_with_location():
+                yield ss, loc
+
+    def __len__(self):
+        return sum( [len(m) for m in self.manifest_list] )
+
+    def insert(self, *args):
+        raise NotImplementedError
+
+    @classmethod
+    def load(cls, index_list):
+        """Create a LazyMultiIndex from a loaded list of index objects.
+
+        All index objects must have manifests already.
+        """
+
+        manifest_list = []
+        for idx in index_list:
+            if not idx.manifest:
+                raise ValueError(f"no manifest on {repr(idx)}")
+            manifest_list.append(idx.manifest)
+
+        # create obj!
+        return cls(index_list, manifest_list)
+
+    @classmethod
+    def load_from_pathlist(cls, filename):
+        """Create a LazyMultiIndex from all files listed in a text file.
+
+        Note, this will not currently work for indices without manifests.
+        """
+        from .sourmash_args import (load_pathlist_from_file,
+                                    load_file_as_index)
+        idx_list = []
+
+        file_list = load_pathlist_from_file(filename)
+        for fname in file_list:
+            idx = load_file_as_index(fname)
+            manifest = getattr(idx, 'manifest', None)
+            if manifest is None:
+                raise ValueError(f"index at '{fname}' has no manifest")
+            idx_list.append(idx)
+
+        return cls.load(idx_list)
+
+    def save(self, *args):
+        raise NotImplementedError
+
+    def select(self, **kwargs):
+        "Run 'select' on all manifests."
+        new_manifests = []
+        for idx, manifest in zip(self.index_list, self.manifest_list):
+            new_manifest = manifest.select_to_manifest(**kwargs)
+            new_manifests.append(new_manifest)
+
+        return LazyMultiIndex(self.index_list, new_manifests)
