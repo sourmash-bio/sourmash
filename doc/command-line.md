@@ -1255,6 +1255,18 @@ One way to build a picklist is to use `sourmash sig describe --csv
 out.csv <signatures>` to construct an initial CSV file that you can
 then edit further.
 
+The picklist functionality also supports excluding (rather than
+including) signatures matching the picklist arguments. To specify a
+picklist for exclusion, add `:exclude` to the `--picklist` argument
+string, e.g. `pickfile:colname:coltype:exclude`.
+
+For example,
+```
+sourmash sig extract --picklist list.csv:md5:md5sum:exclude <signatures>
+```
+will extract only the signatures that have md5sums that **do not** match
+entries in the column `md5sum` in the CSV file `list.csv`.
+
 In addition to `sig extract`, the following commands support
 `--picklist` selection: `index`, `search`, `gather`, `prefetch`,
 `compare`, `index`, and `lca index`.

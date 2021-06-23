@@ -59,6 +59,10 @@ def subparser(subparsers):
         help='base filepath for output file(s) (default stdout)'
     )
     subparser.add_argument(
+        '--output-dir', default= "",
+        help='directory for output files'
+    )
+    subparser.add_argument(
         '-r', '--rank', choices=['strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'],
         help='Summarize genome taxonomy at this rank and above. Note that the taxonomy CSV must contain lineage information at this rank.'
     )

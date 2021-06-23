@@ -51,9 +51,9 @@ def test_metagenome_summary_csv_out(runtmp):
     csv_base = "out"
     sum_csv = csv_base + ".summarized.csv"
     csvout = runtmp.output(sum_csv)
-    print("csvout: ", csvout)
+    outdir = os.path.dirname(csvout)
 
-    runtmp.run_sourmash('tax', 'metagenome', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', csv_base)
+    runtmp.run_sourmash('tax', 'metagenome', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-dir', outdir)
 
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
@@ -63,6 +63,7 @@ def test_metagenome_summary_csv_out(runtmp):
     assert os.path.exists(csvout)
 
     sum_gather_results = [x.rstrip() for x in open(csvout)]
+    assert f"saving `csv_summary` output to {csvout}" in runtmp.last_result.err
     assert "query_name,rank,fraction,lineage" in sum_gather_results[0]
     assert 'test1,superkingdom,0.131,d__Bacteria' in sum_gather_results[1]
     assert "test1,phylum,0.073,d__Bacteria;p__Bacteroidota" in sum_gather_results[2]
@@ -87,9 +88,11 @@ def test_metagenome_krona_tsv_out(runtmp):
     csv_base = "out"
     kr_csv = csv_base + ".krona.tsv"
     csvout = runtmp.output(kr_csv)
+    outdir = os.path.dirname(csvout)
     print("csvout: ", csvout)
 
-    runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona', '--rank', 'genus')
+    runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base,
+                        '--output-format', 'krona', '--rank', 'genus', '--output-dir', outdir)
 
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
@@ -97,6 +100,7 @@ def test_metagenome_krona_tsv_out(runtmp):
 
     assert runtmp.last_result.status == 0
     assert os.path.exists(csvout)
+    assert f"saving `krona` output to {csvout}" in runtmp.last_result.err
 
     gn_krona_results = [x.rstrip().split('\t') for x in open(csvout)]
     print("species krona results: \n", gn_krona_results)
@@ -112,9 +116,12 @@ def test_metagenome_lineage_summary_out(runtmp):
     csv_base = "out"
     lin_csv = csv_base + ".lineage_summary.tsv"
     csvout = runtmp.output(lin_csv)
+    outdir = os.path.dirname(csvout)
     print("csvout: ", csvout)
 
-    runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'lineage_summary', '--rank', 'genus')
+    runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                        '-o', csv_base, '--output-format', 'lineage_summary', '--rank',
+                        'genus', '--output-dir', outdir)
 
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
@@ -122,6 +129,7 @@ def test_metagenome_lineage_summary_out(runtmp):
 
     assert runtmp.last_result.status == 0
     assert os.path.exists(csvout)
+    assert f"saving `lineage_summary` output to {csvout}" in runtmp.last_result.err
 
     gn_lineage_summary = [x.rstrip().split('\t') for x in open(csvout)]
     print("species lineage summary results: \n", gn_lineage_summary)
@@ -406,7 +414,7 @@ def test_metagenome_perfect_match_warning(runtmp):
     print(runtmp.last_result.err)
 
     assert runtmp.last_result.status == 0
-    assert 'WARNING: 100% match! Is query test1 identical to its database match, GCF_001881345' in runtmp.last_result.err
+    assert 'WARNING: 100% match! Is query "test1" identical to its database match, GCF_001881345' in runtmp.last_result.err
 
 
 def test_metagenome_gather_duplicate_query(runtmp):
@@ -577,19 +585,50 @@ def test_genome_rank_csv_0(runtmp):
     csv_base = "out"
     cl_csv = csv_base + ".classifications.csv"
     csvout = runtmp.output(cl_csv)
+    outdir = os.path.dirname(csvout)
     print("csvout: ", csvout)
 
     c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
-                   '--rank', 'species', '-o', csv_base, '--containment-threshold', '0')
+                   '--rank', 'species', '-o', csv_base, '--containment-threshold', '0',
+                   '--output-dir', outdir)
 
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
+    assert f"saving `classification` output to {csvout}" in runtmp.last_result.err
     assert c.last_result.status == 0
     cl_results = [x.rstrip() for x in open(csvout)]
     assert "query_name,status,rank,fraction,lineage" in cl_results[0]
     assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in cl_results[1]
+
+
+def test_genome_rank_krona(runtmp):
+    # test basic genome - output csv
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+    cl_csv = csv_base + ".krona.tsv"
+    csvout = runtmp.output(cl_csv)
+    outdir = os.path.dirname(csvout)
+    print("csvout: ", csvout)
+
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--rank', 'species', '-o', csv_base, '--containment-threshold', '0',
+                   '--output-format', 'krona', '--output-dir', outdir)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert f"saving `krona` output to {csvout}" in runtmp.last_result.err
+    assert c.last_result.status == 0
+    kr_results = [x.rstrip().split('\t') for x in open(csvout)]
+    print(kr_results)
+    assert ['fraction', 'superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'] == kr_results[0]
+    assert ['test1', '0.05815279361459521', 'd__Bacteria', 'p__Proteobacteria', 'c__Gammaproteobacteria', 'o__Enterobacterales', 'f__Enterobacteriaceae', 'g__Escherichia', 's__Escherichia coli'] == kr_results[1]
 
 
 def test_genome_gather_from_file_rank(runtmp):
@@ -1114,6 +1153,7 @@ def test_annotate_0(runtmp):
 
     lin_gather_results = [x.rstrip() for x in open(csvout)]
     print("\n".join(lin_gather_results))
+    assert f"saving `annotate` output to {csvout}" in runtmp.last_result.err
 
     assert "lineage" in lin_gather_results[0]
     assert "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in lin_gather_results[1]
