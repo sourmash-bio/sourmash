@@ -4,6 +4,7 @@ Tests for `sourmash prefetch` command-line and API functionality.
 import os
 import csv
 import pytest
+import glob
 
 import sourmash_tst_utils as utils
 import sourmash
@@ -444,3 +445,48 @@ def test_prefetch_basic_many_sigs(runtmp, linear_gather):
     assert "total of 10 matching signatures." in c.last_result.err
     assert "of 5177 distinct query hashes, 5177 were found in matches above threshold." in c.last_result.err
     assert "a total of 0 query hashes remain unmatched." in c.last_result.err
+
+
+def test_prefetch_with_picklist(runtmp):
+    # test 'sourmash prefetch' with picklists
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
+
+    runtmp.sourmash('prefetch', metag_sig, *gcf_sigs,
+                    '-k', '21', '--picklist', f"{picklist}:md5:md5")
+
+    err = runtmp.last_result.err
+    print(err)
+    assert "for given picklist, found 3 matches to 9 distinct values" in err
+    # these are the different ksizes
+    assert "WARNING: 6 missing picklist values." in err
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "total of 3 matching signatures." in err
+    assert "of 1466 distinct query hashes, 453 were found in matches above threshold." in err
+    assert "a total of 1013 query hashes remain unmatched." in err
+
+
+def test_prefetch_with_picklist_exclude(runtmp):
+    # test 'sourmash prefetch' with picklists, exclude
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
+
+    runtmp.sourmash('prefetch', metag_sig, *gcf_sigs,
+                    '-k', '21', '--picklist', f"{picklist}:md5:md5:exclude")
+
+    err = runtmp.last_result.err
+    print(err)
+    assert "for given picklist, found 9 matches by excluding 9 distinct values" in err
+    # these are the different ksizes
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "total of 9 matching signatures." in err
+    assert "of 1466 distinct query hashes, 1013 were found in matches above threshold." in err
+    assert "a total of 453 query hashes remain unmatched." in err

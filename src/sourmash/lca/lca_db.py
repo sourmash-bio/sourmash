@@ -9,6 +9,7 @@ import sourmash
 from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.logging import notify, error, debug
 from sourmash.index import Index, IndexSearchResult
+from sourmash.picklist import passes_all_picklists
 
 
 def cached_property(fun):
@@ -71,6 +72,7 @@ class LCA_Database(Index):
         self.lineage_to_lid = {}
         self.lid_to_lineage = {}
         self.hashval_to_idx = defaultdict(set)
+        self.picklists = []
 
     @property
     def location(self):
@@ -176,7 +178,7 @@ class LCA_Database(Index):
             yield v
 
     def select(self, ksize=None, moltype=None, num=0, scaled=0,
-               containment=False):
+               containment=False, picklist=None):
         """Make sure this database matches the requested requirements.
 
         As with SBTs, queries with higher scaled values than the database
@@ -196,6 +198,11 @@ class LCA_Database(Index):
             raise ValueError(f"ksize on this database is {self.ksize}; this is different from requested ksize of {ksize}")
         if moltype is not None and moltype != self.moltype:
             raise ValueError(f"moltype on this database is {self.moltype}; this is different from requested moltype of {moltype}")
+
+        if picklist is not None:
+            self.picklists.append(picklist)
+            if len(self.picklists) > 1:
+                raise ValueError("we do not (yet) support multiple picklists for LCA databases")
 
         return self
 
@@ -416,7 +423,10 @@ class LCA_Database(Index):
         for idx, mh in mhd.items():
             ident = self.idx_to_ident[idx]
             name = self.ident_to_name[ident]
-            sigd[idx] = SourmashSignature(mh, name=name)
+            ss = SourmashSignature(mh, name=name)
+
+            if passes_all_picklists(ss, self.picklists):
+                sigd[idx] = SourmashSignature(mh, name=name)
 
         debug('=> {} signatures!', len(sigd))
         return sigd
@@ -478,7 +488,8 @@ class LCA_Database(Index):
             # signal that it is done, or something.
             if search_fn.passes(score):
                 if search_fn.collect(score, subj):
-                    yield IndexSearchResult(score, subj, self.location)
+                    if passes_all_picklists(subj, self.picklists):
+                        yield IndexSearchResult(score, subj, self.location)
 
     @cached_property
     def lid_to_idx(self):

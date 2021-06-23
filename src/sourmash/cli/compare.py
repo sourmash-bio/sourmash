@@ -1,6 +1,7 @@
 """compare sequence signatures made by compute"""
 
-from sourmash.cli.utils import add_ksize_arg, add_moltype_args
+from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
+                                add_picklist_args)
 
 
 def subparser(subparsers):
@@ -47,6 +48,7 @@ def subparser(subparsers):
     subparser.add_argument(
         '-p', '--processes', metavar='N', type=int, default=None,
         help='Number of processes to use to calculate similarity')
+    add_picklist_args(subparser)
 
 
 def main(args):

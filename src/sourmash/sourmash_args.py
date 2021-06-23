@@ -3,28 +3,24 @@ Utility functions for sourmash CLI commands.
 """
 import sys
 import os
-import argparse
-import itertools
 from enum import Enum
 import traceback
 import gzip
 import zipfile
 
 import screed
+import sourmash
 
 from sourmash.sbtmh import load_sbt_index
 from sourmash.lca.lca_db import load_single_database
 import sourmash.exceptions
 
-from . import signature
 from .logging import notify, error, debug_literal
 
 from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
-from . import signature as sig
-from .sbt import SBT
-from .sbtmh import SigLeaf
-from .lca import LCA_Database
-import sourmash
+from . import signature as sigmod
+from .picklist import SignaturePicklist, PickStyle
+
 
 DEFAULT_LOAD_K = 31
 
@@ -61,6 +57,45 @@ def calculate_moltype(args, default=None):
         sys.exit(-1)
 
     return moltype
+
+
+def load_picklist(args):
+    "Load a SignaturePicklist from --picklist arguments."
+    picklist = None
+    if args.picklist:
+        try:
+            picklist = SignaturePicklist.from_picklist_args(args.picklist)
+        except ValueError as exc:
+            error("ERROR: could not load picklist.")
+            error(str(exc))
+            sys.exit(-1)
+
+        notify(f"picking column '{picklist.column_name}' of type '{picklist.coltype}' from '{picklist.pickfile}'")
+
+        n_empty_val, dup_vals = picklist.load(picklist.pickfile, picklist.column_name)
+
+        notify(f"loaded {len(picklist.pickset)} distinct values into picklist.")
+        if n_empty_val:
+            notify(f"WARNING: {n_empty_val} empty values in column '{picklist.column_name}' in picklist file")
+        if dup_vals:
+            notify(f"WARNING: {len(dup_vals)} values in picklist column '{picklist.column_name}' were not distinct")
+
+    return picklist
+
+
+def report_picklist(args, picklist):
+    if picklist.pickstyle == PickStyle.INCLUDE:
+        notify(f"for given picklist, found {len(picklist.found)} matches to {len(picklist.pickset)} distinct values")
+        n_missing = len(picklist.pickset - picklist.found)
+    elif picklist.pickstyle == PickStyle.EXCLUDE:
+        notify(f"for given picklist, found {len(picklist.found)} matches by excluding {len(picklist.pickset)} distinct values")
+        n_missing = 0
+    if n_missing:
+        notify(f"WARNING: {n_missing} missing picklist values.")
+        # Note - picklist_require_all is currently only relevant for PickStyle.INCLUDE
+        if args.picklist_require_all:
+            error("ERROR: failing because --picklist-require-all was set")
+            sys.exit(-1)
 
 
 def load_query_signature(filename, ksize, select_moltype, select_md5=None):
@@ -143,7 +178,8 @@ def traverse_find_sigs(filenames, yield_all_files=False):
                         yield fullname
 
 
-def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None):
+def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
+                      cache_size=None, picklist=None):
     """
     Load one or more SBTs, LCAs, and/or collections of signatures.
 
@@ -184,6 +220,9 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
         if not db:
             notify(f"no compatible signatures found in '{filename}'")
             sys.exit(-1)
+
+        if picklist:
+            db = db.select(picklist=picklist)
 
         databases.append(db)
 
@@ -304,7 +343,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             db = load_fn(filename,
                          traverse_yield_all=traverse_yield_all,
                          cache_size=cache_size)
-        except ValueError as exc:
+        except ValueError:
             debug_literal(f"_load_databases: FAIL on fn {desc}.")
             debug_literal(traceback.format_exc())
 
@@ -321,7 +360,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             # CTB: could be kind of time consuming for a big record, but at the
             # moment screed doesn't expose format detection cleanly.
             with screed.open(filename) as it:
-                record = next(iter(it))
+                _ = next(iter(it))
             successful_screed_load = True
         except:
             pass
@@ -338,7 +377,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     return db
 
 
-def load_file_as_index(filename, yield_all_files=False):
+def load_file_as_index(filename, *, yield_all_files=False):
     """Load 'filename' as a database; generic database loader.
 
     If 'filename' contains an SBT or LCA indexed database, or a regular
@@ -356,7 +395,8 @@ def load_file_as_index(filename, yield_all_files=False):
     return _load_database(filename, yield_all_files)
 
 
-def load_file_as_signatures(filename, select_moltype=None, ksize=None,
+def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
+                            picklist=None,
                             yield_all_files=False,
                             progress=None):
     """Load 'filename' as a collection of signatures. Return an iterable.
@@ -373,16 +413,16 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
     underneath this directory into a list of signatures. If
     yield_all_files=True, will attempt to load all files.
 
-    Applies selector function if select_moltype and/or ksize are given.
+    Applies selector function if select_moltype, ksize or picklist are given.
     """
     if progress:
         progress.notify(filename)
 
     db = _load_database(filename, yield_all_files)
-    db = db.select(moltype=select_moltype, ksize=ksize)
+    db = db.select(moltype=select_moltype, ksize=ksize, picklist=picklist)
     loader = db.signatures()
 
-    if progress:
+    if progress is not None:
         return progress.start_file(filename, loader)
     else:
         return loader
@@ -400,7 +440,7 @@ def load_pathlist_from_file(filename):
             if not os.path.exists(checkfile):
                 raise ValueError(f"file '{checkfile}' inside the pathlist does not exist")
     except IOError:
-        raise ValueError(f"pathlist file '{filename}' does not exist")    
+        raise ValueError(f"pathlist file '{filename}' does not exist")
     except OSError:
         raise ValueError(f"cannot open file '{filename}'")
     except UnicodeDecodeError:
@@ -501,6 +541,9 @@ class SignatureLoadingProgress(object):
         self.interval = reporting_interval
         self.screen_width = 79
 
+    def __len__(self):
+        return self.n_sig
+
     def short_notify(self, msg_template, *args, **kwargs):
         """Shorten the notification message so that it fits on one line.
 
@@ -594,7 +637,7 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
     "Save signatures within a directory, using md5sum names."
     def __init__(self, location):
         super().__init__(location)
-        
+
     def __repr__(self):
         return f"SaveSignatures_Directory('{self.location}')"
 
@@ -626,7 +669,7 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
                 i += 1
 
         with gzip.open(outname, "wb") as fp:
-            sig.save_signatures([ss], fp, compression=1)
+            sigmod.save_signatures([ss], fp, compression=1)
 
 
 class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
@@ -671,7 +714,7 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
     def __init__(self, location):
         super().__init__(location)
         self.zf = None
-        
+
     def __repr__(self):
         return f"SaveSignatures_ZipFile('{self.location}')"
 
@@ -689,7 +732,8 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
             return False
 
     def add(self, ss):
-        assert self.zf
+        if not self.zf:
+            raise ValueError("this output is not open")
         super().add(ss)
 
         md5 = ss.md5sum()
