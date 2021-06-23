@@ -748,8 +748,6 @@ class SBT(Index):
         else:
             manifest_path = None
 
-        print(f"XXX manifest_path is {manifest_path}")
-
         if manifest_path:
             info['manifest_path'] = manifest_path
 
