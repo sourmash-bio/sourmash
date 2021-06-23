@@ -395,7 +395,7 @@ True
 
 (Beware, these are confusing techniques for working with hashes that
 are easy to get wrong! We suggest
-[posting questions in the issue tracker](https://github.com/dib-lab/sourmash/issues)
+[posting questions in the issue tracker](https://github.com/sourmash-bio/sourmash/issues)
 as you go, if you are interested in exploring this area!)
 
 The hashing function used is identical between num and scaled signatures,

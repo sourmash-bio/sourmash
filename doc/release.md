@@ -29,7 +29,7 @@ and also check if the [rendered docs] are updated.
 1\. The below should be done in a clean checkout:
 ```
 cd $(mktemp -d)
-git clone git@github.com:dib-lab/sourmash.git
+git clone git@github.com:sourmash-bio/sourmash.git
 cd sourmash
 ```
 
@@ -46,7 +46,7 @@ git tag -a v${new_version}${rc}
 git push --tags origin
 ```
 
-[the releases page]: https://github.com/dib-lab/sourmash/releases
+[the releases page]: https://github.com/sourmash-bio/sourmash/releases
 
 3\. Test the release candidate. Bonus: repeat on macOS:
 ```
@@ -62,7 +62,7 @@ python -m venv testenv4
 
 cd testenv1
 source bin/activate
-git clone --depth 1 --branch v${new_version}${rc} https://github.com/dib-lab/sourmash.git
+git clone --depth 1 --branch v${new_version}${rc} https://github.com/sourmash-bio/sourmash.git
 cd sourmash
 python -m pip install -U setuptools pip wheel setuptools_scm
 python -m pip install -r requirements.txt
@@ -74,7 +74,7 @@ cd ../../testenv2
 deactivate
 source bin/activate
 python -m pip install -U setuptools pip wheel setuptools_scm
-python -m pip install -e git+https://github.com/dib-lab/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
+python -m pip install -e git+https://github.com/sourmash-bio/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
 cd src/sourmash
 make test
 make dist
@@ -145,7 +145,7 @@ git push --delete origin v${new_version}${rc}
 
 3\. Upload wheels from GitHub Releases to PyPI
 
-[GitHub Actions will automatically build wheels and upload them to GitHub Releases](https://github.com/dib-lab/sourmash/actions?query=workflow%3Acibuildwheel).
+[GitHub Actions will automatically build wheels and upload them to GitHub Releases](https://github.com/sourmash-bio/sourmash/actions?query=workflow%3Acibuildwheel).
 This will take about 45 minutes, or more. After they're built, they must be
 copied over to PyPI manually.
 
