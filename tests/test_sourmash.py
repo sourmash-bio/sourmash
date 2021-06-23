@@ -2457,7 +2457,7 @@ def test_do_sourmash_index_sparseness():
                                            in_directory=location)
         print(out)
 
-        assert len(glob.glob(os.path.join(location, '.sbt.zzz', '*'))) == 2
+        assert len(glob.glob(os.path.join(location, '.sbt.zzz', '*'))) == 3
         assert not glob.glob(os.path.join(location, '.sbt.zzz', '*internal*'))
 
         assert 'short.fa' in out
@@ -2733,10 +2733,10 @@ def test_do_sourmash_check_sbt_filenames():
             sig_md5s.add(sig.md5sum())
 
         sbt_files = glob.glob(os.path.join(location, '.sbt.zzz', '*'))
-        assert len(sbt_files) == 13
+        assert len(sbt_files) == 14
 
         for f in sbt_files:
-            if 'internal' in f:
+            if 'internal' in f or f.endswith('zzz.manifest.csv'):
                 continue
             f = os.path.basename(f)
             assert f not in sig_names
@@ -4895,7 +4895,7 @@ def test_do_sourmash_index_zipfile(c):
     # look internally at the zip file
     with zipfile.ZipFile(outfile) as zf:
         content = zf.namelist()
-        assert len(content) == 25
+        assert len(content) == 26
         assert len([c for c in content if 'internal' in c]) == 11
         assert ".sbt.zzz/" in content
         sbts = [c for c in content if c.endswith(".sbt.json")]
@@ -4945,7 +4945,7 @@ def test_do_sourmash_index_zipfile_append(c):
     with zipfile.ZipFile(outfile) as zf:
         content = zf.namelist()
         print(content)
-        assert len(content) == 25
+        assert len(content) == 26
         assert len([c for c in content if 'internal' in c]) == 11
         assert ".sbt.zzz/" in content
         sbts = [c for c in content if c.endswith(".sbt.json")]

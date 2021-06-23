@@ -39,6 +39,13 @@ class SigLeaf(Leaf):
         return '**Leaf:{name} -> {metadata}'.format(
                 name=self.name, metadata=self.metadata)
 
+    def make_manifest_row(self, loc):
+        from .index import CollectionManifest
+        row = CollectionManifest.make_manifest_row(self.data,
+                                                   loc,
+                                                   include_signature=0)
+        return row
+
     def save(self, path):
         # this is here only for triggering the property load
         # before we reopen the file (and overwrite the previous
