@@ -223,9 +223,6 @@ def genome(args):
                     classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename)
                     classifications[args.rank].append(classif)
                     matched_queries.add(sg.query_name)
-                    if "krona" in args.output_format:
-                        lin_list = display_lineage(sg.lineage).split(';')
-                        krona_results.append((sg.query_name, sg.fraction, *lin_list))
                     break
                 if rank == "superkingdom" and status == "nomatch":
                     status="below_threshold"
