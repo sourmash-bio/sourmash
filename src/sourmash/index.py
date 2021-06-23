@@ -593,6 +593,16 @@ class ZipFileLinearIndex(Index):
             # the new ZipFileLinearIndex.
 
             assert manifest is None
+            if self.selection_dict:
+                # combine selects...
+                d = dict(self.selection_dict)
+                for k, v in kwargs.items():
+                    if k in d:
+                        if d[k] is not None and d[k] != v:
+                            raise ValueError(f"incompatible select on '{k}'")
+                    d[k] = v
+                kwargs = d
+
             return ZipFileLinearIndex(self.zf,
                                       selection_dict=kwargs,
                                       traverse_yield_all=traverse_yield_all,

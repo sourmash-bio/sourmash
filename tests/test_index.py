@@ -901,6 +901,23 @@ def test_zipfile_API_signatures_select(use_manifest):
         assert len(zipidx) == 1
 
 
+def test_zipfile_API_signatures_select_twice(use_manifest):
+    # include dna-sig.noext
+    zipfile_db = utils.get_test_data('prot/all.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    zipidx = zipidx.select(moltype='DNA')
+    zipidx = zipidx.select(ksize=31)
+    siglist = list(zipidx.signatures())
+
+    if use_manifest:
+        assert len(siglist) == 2
+        assert len(zipidx) == 2
+    else:
+        assert len(siglist) == 1
+        assert len(zipidx) == 1
+
+
 def test_zipfile_API_save():
     zipfile_db = utils.get_test_data('prot/all.zip')
 
