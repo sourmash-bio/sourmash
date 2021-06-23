@@ -1208,7 +1208,7 @@ def test_multi_index_load_from_path_3_check_traverse_fn(c):
     assert len(files) == 7, files
 
     files = list(sourmash_args.traverse_find_sigs([dirname], True))
-    assert len(files) == 26, files
+    assert len(files) == 20, files # if this fails, check for extra files!
 
 
 def test_multi_index_load_from_path_no_exist():
@@ -1241,9 +1241,11 @@ def test_multi_index_load_from_pathlist_1(c):
 
 @utils.in_tempdir
 def test_multi_index_load_from_pathlist_2(c):
+    # CTB note: if you create extra files under this directory,
+    # it will fail :)
     dirname = utils.get_test_data('prot')
     files = list(sourmash_args.traverse_find_sigs([dirname], True))
-    assert len(files) == 26, files
+    assert len(files) == 20, files # check there aren't extra files in here!
 
     file_list = c.output('filelist.txt')
 
