@@ -139,7 +139,7 @@ Please see Appendix B, below, for some actual numbers and output.
 
 **Buyer beware:** There are substantial challenges in doing this kind
 of analysis on real metagenomic samples, relating to genome representation
-and strain overlap; see [this issue](https://github.com/dib-lab/sourmash/issues/461) for a discussion.
+and strain overlap; see [this issue](https://github.com/sourmash-bio/sourmash/issues/461) for a discussion.
 
 ### Computing signature similarity with angular similarity.
 
@@ -173,7 +173,7 @@ We suggest the following approach:
 
 * explore the available databases;
 
-* then ask questions [via the issue tracker](https://github.com/dib-lab/sourmash/issues) and we will do our best to help you out!
+* then ask questions [via the issue tracker](https://github.com/sourmash-bio/sourmash/issues) and we will do our best to help you out!
 
 This helps us figure out what people are actually interested in doing, and
 any help we provide via the issue tracker will eventually be added into the

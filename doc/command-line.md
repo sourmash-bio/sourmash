@@ -1378,5 +1378,5 @@ signatures that were just created.
 
 (This is a relatively new feature as of 3.4 and our testing may need
 some work, so please
-[let us know](https://github.com/dib-lab/sourmash/issues) if there's
+[let us know](https://github.com/sourmash-bio/sourmash/issues) if there's
 something that doesn't work and we will fix it :).
