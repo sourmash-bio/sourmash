@@ -783,7 +783,11 @@ class MultiIndex(Index):
             yield row['signature']
 
     def signatures_with_location(self):
-        "Return an iterator of tuples (ss, location, internal_location)."
+        """Return an iterator of tuples (ss, location)
+
+        CTB note: here, 'internal_location' is the source file for the
+        index. This is a special feature of this (in memory) class.
+        """
         for row in self.manifest.rows:
             yield row['signature'], row['internal_location']
 
