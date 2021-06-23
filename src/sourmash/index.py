@@ -459,6 +459,7 @@ class ZipFileLinearIndex(Index):
         self.zf = zf
         self.selection_dict = selection_dict
         self.traverse_yield_all = traverse_yield_all
+        self.use_manifest = use_manifest
 
         # do we have a manifest already? if not, try loading.
         if use_manifest:
@@ -467,9 +468,13 @@ class ZipFileLinearIndex(Index):
                 self.manifest = manifest
             else:
                 self._load_manifest()
-                assert self.manifest
         else:
             self.manifest = None
+
+        if self.manifest is not None:
+            assert not self.selection_dict, self.selection_dict
+        if self.selection_dict:
+            assert manifest is None
 
     def _load_manifest(self):
         "Load a manifest if one exists"
@@ -574,19 +579,25 @@ class ZipFileLinearIndex(Index):
 
         # if we have a manifest, run 'select' on the manifest.
         manifest = self.manifest
-        if manifest:
+        traverse_yield_all = self.traverse_yield_all
+
+        if manifest is not None:
             manifest = manifest.select_to_manifest(**kwargs)
             return ZipFileLinearIndex(self.zf,
                                       selection_dict=None,
-                                    traverse_yield_all=self.traverse_yield_all,
-                                      manifest=manifest)
+                                      traverse_yield_all=traverse_yield_all,
+                                      manifest=manifest,
+                                      use_manifest=True)
         else:
             # no manifest? just pass along all the selection kwargs to
             # the new ZipFileLinearIndex.
 
+            assert manifest is None
             return ZipFileLinearIndex(self.zf,
                                       selection_dict=kwargs,
-                                    traverse_yield_all=self.traverse_yield_all)
+                                      traverse_yield_all=traverse_yield_all,
+                                      manifest=None,
+                                      use_manifest=False)
 
 
 class CounterGather:
