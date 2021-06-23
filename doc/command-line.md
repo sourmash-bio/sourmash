@@ -425,14 +425,17 @@ signatures, rather than all the signatures in the database.
 
 The sourmash `tax` or `taxonomy` commands integrate taxonomic
  information into the results of `sourmash gather`. All `tax` commands
- require a properly formatted `taxonomy` csv file that corresponds to
- the database used for `gather`. For supported databases (e.g. GTDB, NCBI),
- we provide these files, but they can also be generated for user-generated
+ require one or more properly formatted `taxonomy` csv files that correspond to
+ the database(s) used for `gather`. Note that if using multiple databases,
+ the `gather` needs to have been conducted against all desired databases
+ within the same `gather` command (we cannot combine separate `gather` runs
+ for the same query). For supported databases (e.g. GTDB, NCBI), we provide
+ taxonomy csv files, but they can also be generated for user-generated
  databases. For more information, see [databases](databases.md).
 
-These commands rely upon the fact that `gather` provides both the total
+`tax` commands rely upon the fact that `gather` provides both the total
  fraction of the query matched to each database matched, as well as a
- non-overlapping `f_unique_to_query` which is the fraction of the query
+ non-overlapping `f_unique_to_query`, which is the fraction of the query
  uniquely matched to each reference genome. The `f_unique_to_query` for
  any reference match will always be between (0% of query matched) and 1
  (100% of query matched), and for a query matched to multiple references,
@@ -443,7 +446,7 @@ These commands rely upon the fact that `gather` provides both the total
  the fraction uniquely matched to each strain to obtain the fraction
  uniquely matched to this species. Note that this summarization can
  also take into account abundance weighting; see
- [Classifying Signatures](classifying-signatures.html) for more
+ [classifying signatures](classifying-signatures.md) for more
  information.
 
 As with all reference-based analysis, results can be affected by the
@@ -452,12 +455,12 @@ As with all reference-based analysis, results can be affected by the
  and redundancy of reference databases.
 
 For more on how `gather` works and can be used to classify signatures, see
- [classifying-signatures](classifying-signatures.html)
+ [classifying-signatures](classifying-signatures.md).
 
 
 ### `sourmash tax metagenome` - summarize metagenome content from `gather` results
 
-`sourmash tax metagenome` summarizes gather results for each query by
+`sourmash tax metagenome` summarizes gather results for each query metagenome by
  taxonomic lineage.
 
 example command to summarize a single `gather csv`, where the query was gathered
@@ -475,9 +478,10 @@ There are three possible output formats, `csv_summary`, `lineage_summary`, and
 #### `csv_summary` output format
 
 `csv_summary` is the default output format. This outputs a `csv` with lineage
- summarization for each taxonomic rank. This output currently consists of four
- columns, `query_name,rank,fraction,lineage`, where `fraction` is the  fraction
- of the query matched to the reported rank and lineage.
+ summarization for each taxonomic rank. This output currently consists of six
+ columns, `query_name,rank,fraction,lineage,query_md5,query_filename`, where
+ `fraction` is the  fraction of the query matched to the reported rank and
+ lineage.
 
 example `csv_summary` output from the command above:
 
@@ -496,6 +500,7 @@ o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri
 HSMA33MX,species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;
 o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus
 ```
+> The `query_md5` and `query_filename` columns are omitted here for brevity.
 
 #### `krona` output format
 
@@ -582,36 +587,35 @@ we see 66% matches to one strain, and 33% to the other:
 abbreviated gather_csv:
 
 ```
-f_match,f_unique_weighted,name,query_name
-0.664,1.0,0.664,"GCF_000021665.1 Shewanella baltica OS223 strain=OS223, ASM2166v1",Sb47+63
-0.656,0.511,0.335,"GCF_000017325.1 Shewanella baltica OS185 strain=OS185, ASM1732v1",Sb47+63
+f_match,f_unique_to_query,name,query_name
+0.664,0.664,"GCF_000021665.1 Shewanella baltica OS223 strain=OS223, ASM2166v1",Sb47+63
+0.656,0.335,"GCF_000017325.1 Shewanella baltica OS185 strain=OS185, ASM1732v1",Sb47+63
 ```
 
 > Here, `f_match` shows that independently, both strains match ~65% percent of
- this mixed query. The `f_unique_weighted` column has the results of gather-style
+ this mixed query. The `f_unique_to_query` column has the results of gather-style
  decomposition. As the OS223 strain had a slightly higher `f_match` (66%), it
  was the first match. The remaining 33% of the query matched to strain OS185.
 
-Here, we use this gather csv to classify our "Sb47+63" mixed-strain query.
+We can use `tax genome` on this gather csv to classify our "Sb47+63" mixed-strain query:
 
-Example command to classify this query from the `gather` csv, using
-the default classification threshold (0.1).
-    
 ```
 sourmash tax genome
     --gather-csv 47+63_x_gtdb-rs202.gather.csv \
     --taxonomy-csv gtdb-rs202.taxonomy.v2.csv
 ```
+> This command uses the default classification strategy, which uses a
+containment threshold of 0.1 (10%).
 
 There are two possible output formats, `csv_summary` and `krona`.
 
 #### `csv_summary` output format
 
-`csv_summary` is the default output format. This outputs a `csv` with lineage
- summarization for each taxonomic rank. This output currently consists of four
- columns, `query_name,rank,fraction,lineage`, where `fraction` is the  fraction
- of the query matched to the reported rank and lineage. The `status` column
- provides additional information on the classification. The `status` options are:
+`csv_summary` is the default output format. This outputs a `csv` with taxonomic
+ classification for each query genome. This output currently consists of six
+ columns, `query_name,rank,fraction,lineage,query_md5,query_filename`, where
+ `fraction` is the  fraction of the query matched to the reported rank and lineage.
+ The `status` column provides additional information on the classification:
 
   - `match` - this query was classified
   - `nomatch`- this query could not be classified
@@ -623,10 +627,11 @@ species level:
 
 ```
 query_name,status,rank,fraction,lineage
-"NC_009665.1 Shewanella baltica OS185, complete genome",match,species,1.000,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Shewanellaceae;g__Shewanella;s__Shewanella baltica
+"Sb47+63",match,species,1.000,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Shewanellaceae;g__Shewanella;s__Shewanella baltica
 ```
 >Here, we see that the match percentages to both strains have been aggregated,
-and we have 100% species-level `Shewanella baltica` annotation.
+and we have 100% species-level `Shewanella baltica` annotation. We have omitted
+the `query_md5` and `query_filename` columns for brevity.
 
 #### `krona` output format
 
@@ -654,7 +659,7 @@ Here is the `krona`-formatted output for this command:
 
 ```
 fraction        superkingdom    phylum  class   order   family  genus   species
-Sb47+63   1.0     d__Bacteria     p__Proteobacteria       c__Gammaproteobacteria  o__Enterobacterales     f__Shewanellaceae       g__Shewanella   s__Shewanella baltica
+1.0     d__Bacteria     p__Proteobacteria       c__Gammaproteobacteria  o__Enterobacterales     f__Shewanellaceae       g__Shewanella   s__Shewanella baltica
 ```
 
 To produce multiple output types from the same command, add the types into the
