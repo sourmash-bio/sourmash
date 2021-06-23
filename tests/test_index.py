@@ -821,8 +821,13 @@ def test_zipfile_API_signatures(use_manifest):
 
     zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
     siglist = list(zipidx.signatures())
-    assert len(siglist) == 7
-    assert len(zipidx) == 7
+
+    if use_manifest:
+        assert len(siglist) == 8
+        assert len(zipidx) == 8
+    else:
+        assert len(siglist) == 7
+        assert len(zipidx) == 7
 
 
 def test_zipfile_bool():
@@ -865,7 +870,7 @@ def test_zipfile_API_signatures_traverse_yield_all(use_manifest):
     zf = zipidx.zf
     allfiles = [ zi.filename for zi in zf.infolist() ]
     print(allfiles)
-    assert len(allfiles) == 12
+    assert len(allfiles) == 13
 
 
 def test_zipfile_API_signatures_traverse_yield_all_select(use_manifest):
@@ -887,8 +892,13 @@ def test_zipfile_API_signatures_select(use_manifest):
     zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
     zipidx = zipidx.select(moltype='DNA')
     siglist = list(zipidx.signatures())
-    assert len(siglist) == 1
-    assert len(zipidx) == 1
+
+    if use_manifest:
+        assert len(siglist) == 2
+        assert len(zipidx) == 2
+    else:
+        assert len(siglist) == 1
+        assert len(zipidx) == 1
 
 
 def test_zipfile_API_save():
@@ -930,7 +940,10 @@ def test_zipfile_load_file_as_signatures(use_manifest):
     assert isinstance(sigs, GeneratorType)
 
     sigs = list(sigs)
-    assert len(sigs) == 7
+    if use_manifest:
+        assert len(sigs) == 8
+    else:
+        assert len(sigs) == 7
 
 
 def test_zipfile_load_file_as_signatures_traverse_yield_all(use_manifest):
@@ -1178,7 +1191,7 @@ def test_multi_index_load_from_path_3_check_traverse_fn(c):
     assert len(files) == 7, files
 
     files = list(sourmash_args.traverse_find_sigs([dirname], True))
-    assert len(files) == 20, files
+    assert len(files) == 26, files
 
 
 def test_multi_index_load_from_path_no_exist():
@@ -1213,7 +1226,7 @@ def test_multi_index_load_from_pathlist_1(c):
 def test_multi_index_load_from_pathlist_2(c):
     dirname = utils.get_test_data('prot')
     files = list(sourmash_args.traverse_find_sigs([dirname], True))
-    assert len(files) == 20, files
+    assert len(files) == 26, files
 
     file_list = c.output('filelist.txt')
 
@@ -1235,7 +1248,7 @@ def test_multi_index_load_from_pathlist_3_zipfile(c):
         print(zipfile, file=fp)
 
     mi = MultiIndex.load_from_pathlist(file_list)
-    assert len(mi) == 7
+    assert len(mi) == 8
 
 ##
 ## test a slightly outre version of JaccardSearch - this is a test of the

@@ -77,7 +77,8 @@ def cat(args):
     for sigfile in args.signatures:
         try:
             loader = sourmash_args.load_file_as_signatures(sigfile,
-                                                           progress=progress)
+                                                           progress=progress,
+                                                           yield_all_files=args.force)
             n_loaded = 0
             for sig in loader:
                 n_loaded += 1
@@ -266,7 +267,8 @@ def manifest(args):
     w = csv.DictWriter(csv_fp, fieldnames=CollectionManifest.required_keys)
 
     try:
-        loader = sourmash_args.load_file_as_index(args.location)
+        loader = sourmash_args.load_file_as_index(args.location,
+                                                  yield_all_files=args.force)
     except Exception as exc:
         error('\nError while reading signatures from {}:'.format(args.location))
         error(str(exc))

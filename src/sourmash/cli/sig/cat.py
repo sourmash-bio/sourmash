@@ -19,6 +19,10 @@ def subparser(subparsers):
         '-u', '--unique', action='store_true',
         help='keep only distinct signatures, removing duplicates (based on md5sum)'
     )
+    subparser.add_argument(
+        '-f', '--force', action='store_true',
+        help='try to load all files as signatures'
+    )
 
 
 def main(args):

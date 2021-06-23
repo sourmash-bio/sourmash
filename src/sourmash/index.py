@@ -468,6 +468,8 @@ class ZipFileLinearIndex(Index):
                 self.manifest = manifest
             else:
                 self._load_manifest()
+                if self.manifest is not None:
+                    print('AZA', len(self.manifest))
         else:
             self.manifest = None
 
@@ -545,6 +547,8 @@ class ZipFileLinearIndex(Index):
             manifest = self.manifest
             assert not selection_dict
 
+            print('AAA', len(manifest))
+
             # yield all signatures found in manifest
             for filename in manifest.locations():
                 zi = self.zf.getinfo(filename)
@@ -552,6 +556,7 @@ class ZipFileLinearIndex(Index):
                 for ss in load_signatures(fp):
                     # in case multiple signatures are in the file, check
                     # to make sure we want to return each one.
+                    print('ABC', ss.md5sum())
                     if ss in manifest:
                         yield ss
 
@@ -582,7 +587,9 @@ class ZipFileLinearIndex(Index):
         traverse_yield_all = self.traverse_yield_all
 
         if manifest is not None:
+            print('ZZZ', len(manifest))
             manifest = manifest.select_to_manifest(**kwargs)
+            print('ZZZ2', len(manifest))
             return ZipFileLinearIndex(self.zf,
                                       selection_dict=None,
                                       traverse_yield_all=traverse_yield_all,
