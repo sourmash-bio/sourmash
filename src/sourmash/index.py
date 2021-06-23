@@ -467,6 +467,7 @@ class ZipFileLinearIndex(Index):
                 self.manifest = manifest
             else:
                 self._load_manifest()
+                assert self.manifest
         else:
             self.manifest = None
 
@@ -575,16 +576,17 @@ class ZipFileLinearIndex(Index):
         manifest = self.manifest
         if manifest:
             manifest = manifest.select_to_manifest(**kwargs)
-            selection_dict = None
+            return ZipFileLinearIndex(self.zf,
+                                      selection_dict=None,
+                                    traverse_yield_all=self.traverse_yield_all,
+                                      manifest=manifest)
         else:
             # no manifest? just pass along all the selection kwargs to
             # the new ZipFileLinearIndex.
-            selection_dict = kwargs
 
-        return ZipFileLinearIndex(self.zf,
-                                  selection_dict=selection_dict,
-                                  traverse_yield_all=self.traverse_yield_all,
-                                  manifest=manifest)
+            return ZipFileLinearIndex(self.zf,
+                                      selection_dict=kwargs,
+                                    traverse_yield_all=self.traverse_yield_all)
 
 
 class CounterGather:
