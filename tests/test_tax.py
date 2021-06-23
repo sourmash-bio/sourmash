@@ -628,7 +628,7 @@ def test_genome_rank_krona(runtmp):
     kr_results = [x.rstrip().split('\t') for x in open(csvout)]
     print(kr_results)
     assert ['fraction', 'superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'] == kr_results[0]
-    assert ['test1', '0.05815279361459521', 'd__Bacteria', 'p__Proteobacteria', 'c__Gammaproteobacteria', 'o__Enterobacterales', 'f__Enterobacteriaceae', 'g__Escherichia', 's__Escherichia coli'] == kr_results[1]
+    assert ['0.05815279361459521', 'd__Bacteria', 'p__Proteobacteria', 'c__Gammaproteobacteria', 'o__Enterobacterales', 'f__Enterobacteriaceae', 'g__Escherichia', 's__Escherichia coli'] == kr_results[1]
 
 
 def test_genome_gather_from_file_rank(runtmp):
