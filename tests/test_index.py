@@ -696,7 +696,7 @@ def test_index_same_md5sum_fsstorage(c):
     outfile = c.output('zzz.sbt.json')
     assert os.path.exists(outfile)
     storage = c.output('.sbt.zzz')
-    assert len(glob.glob(storage + "/*")) == 3
+    assert len(glob.glob(storage + "/*")) == 4
 
 
 @utils.in_tempdir
@@ -712,7 +712,7 @@ def test_index_same_md5sum_sbt_zipstorage(c):
     zout = zipfile.ZipFile(outfile, mode='r')
     # should have 3 files, 1 internal and two sigs. We check for 4 because the
     # directory also shows in namelist()
-    assert len([f for f in zout.namelist() if f.startswith(".sbt.zzz/")]) == 4
+    assert len([f for f in zout.namelist() if f.startswith(".sbt.zzz/")]) == 5
 
 
 @utils.in_thisdir
