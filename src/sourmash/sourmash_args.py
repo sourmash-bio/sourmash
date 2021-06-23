@@ -403,7 +403,8 @@ def load_file_as_index(filename, *, yield_all_files=False):
 def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
                             picklist=None,
                             yield_all_files=False,
-                            progress=None):
+                            progress=None,
+                            _use_manifest=True):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
     If 'filename' contains an SBT or LCA indexed database, or a regular
@@ -424,6 +425,11 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
         progress.notify(filename)
 
     db = _load_database(filename, yield_all_files)
+
+    # test fixture ;)
+    if not _use_manifest and db.manifest:
+        db.manifest = None
+
     db = db.select(moltype=select_moltype, ksize=ksize, picklist=picklist)
     loader = db.signatures()
 
