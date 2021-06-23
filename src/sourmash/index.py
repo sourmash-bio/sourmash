@@ -5,10 +5,10 @@ import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
 import zipfile
-import csv
 from io import TextIOWrapper
 
 from .search import make_jaccard_search_query, make_gather_query
+from .manifest import CollectionManifest
 from .logging import debug_literal
 
 # generic return tuple for Index.search and Index.gather
@@ -197,9 +197,6 @@ class Index(ABC):
 
     def prefetch(self, query, threshold_bp, **kwargs):
         "Return all matches with minimum overlap."
-        query_mh = query.minhash
-        scaled = query_mh.scaled
-
         if not self:            # empty database? quit.
             raise ValueError("no signatures to search")
 
@@ -330,7 +327,7 @@ def select_signature(ss, *, ksize=None, moltype=None, scaled=0, num=0,
 class LinearIndex(Index):
     """An Index for a collection of signatures. Can load from a .sig file.
 
-    Note: does not use manifests. See LoadedCollection for that functionality.
+    Note: does not use manifests. See MultiIndex for that functionality.
     """
     def __init__(self, _signatures=None, filename=None):
         self._signatures = []
@@ -372,9 +369,6 @@ class LinearIndex(Index):
 
         Does not raise ValueError, but may return an empty Index.
         """
-        # eliminate things from kwargs with None or zero value
-        kw = { k : v for (k, v) in kwargs.items() if v }
-
         siglist = []
         for ss in self._signatures:
             if select_signature(ss, **kwargs):
@@ -409,7 +403,7 @@ class LazyLinearIndex(Index):
 
     def __bool__(self):
         try:
-            first_sig = next(iter(self.signatures()))
+            next(iter(self.signatures()))
             return True
         except StopIteration:
             return False
@@ -471,13 +465,13 @@ class ZipFileLinearIndex(Index):
                     # load manifest!
                     self.manifest = CollectionManifest.load_from_csv(mfp)
         else:
-            debug_literal(f'ZipFileLinearIndex using passed-in manifest')
+            debug_literal('ZipFileLinearIndex using passed-in manifest')
             self.manifest = manifest
 
     def __bool__(self):
         "Are there any matching signatures in this zipfile? Avoid calling len."
         try:
-            first_sig = next(iter(self.signatures()))
+            next(iter(self.signatures()))
         except StopIteration:
             return False
 
@@ -737,12 +731,12 @@ class CounterGather:
                     del counter[dataset_id]
 
 
-class LoadedCollection(Index):
+class MultiIndex(Index):
     """
     Load a collection of signatures, and retain their original locations.
 
     One specific use for this is when loading signatures from a directory;
-    LoadedCollection will record which specific files provided which
+    MultiIndex will record which specific files provided which
     signatures.
 
     Creates a manifest on load.
@@ -773,7 +767,7 @@ class LoadedCollection(Index):
 
     @classmethod
     def load(cls, index_list, source_list):
-        """Create a LoadedCollection from already-loaded indices.
+        """Create a MultiIndex from already-loaded indices.
 
         Takes two arguments: a list of Index objects, and a matching list
         of source strings (filenames, etc.)  If the source is not None,
@@ -799,7 +793,7 @@ class LoadedCollection(Index):
     @classmethod
     def load_from_path(cls, pathname, force=False):
         """
-        Create a LoadedCollection from a path (filename or directory).
+        Create a MultiIndex from a path (filename or directory).
 
         Note: this only uses LinearIndex.load(...), so will only load
         signature JSON files.
@@ -830,7 +824,7 @@ class LoadedCollection(Index):
 
     @classmethod
     def load_from_pathlist(cls, filename):
-        """Create a LoadedCollection from all files listed in a text file.
+        """Create a MultiIndex from all files listed in a text file.
 
         Note: this will load signatures from directories and databases, too,
         if they are listed in the text file; it uses 'load_file_as_index'
@@ -857,308 +851,4 @@ class LoadedCollection(Index):
     def select(self, **kwargs):
         "Run 'select' on the manifest."
         new_manifest = self.manifest.select_to_manifest(**kwargs)
-        return LoadedCollection(new_manifest)
-
-
-class LazyMultiIndex(Index):
-    """
-    Do lazy selection of multiple collections; manifests are required.
-
-    Maintains a manifest per collection, and subselects on collections
-    only when actual signatures are needed.
-    """
-    def __init__(self, index_list, manifest_list):
-        assert len(index_list) == len(manifest_list)
-        self.index_list = index_list
-        self.manifest_list = manifest_list
-
-    def signatures(self):
-        for ss, loc in self.signatures_with_location():
-            yield ss
-
-    def signatures_with_location(self):
-        for idx, manifest in zip(self.index_list, self.manifest_list):
-            # convert manifest to picklist:
-            picklist = manifest.to_picklist()
-
-            # select using picklist:
-            idx_new = idx.select(picklist=picklist)
-
-            # yield all remaining signatures:
-            for ss, loc in idx_new.signatures_with_location():
-                yield ss, loc
-
-    def __len__(self):
-        return sum( [len(m) for m in self.manifest_list] )
-
-    def insert(self, *args):
-        raise NotImplementedError
-
-    @classmethod
-    def load(cls, index_list):
-        """Create a LazyMultiIndex from a loaded list of index objects.
-
-        All index objects must have manifests already.
-        """
-
-        manifest_list = []
-        for idx in index_list:
-            if not idx.manifest:
-                raise ValueError(f"no manifest on {repr(idx)}")
-            manifest_list.append(idx.manifest)
-
-        # create obj!
-        return cls(index_list, manifest_list)
-
-    @classmethod
-    def load_from_pathlist(cls, filename):
-        """Create a LazyMultiIndex from all files listed in a text file.
-
-        Note, this will not currently work for indices without manifests.
-        """
-        from .sourmash_args import (load_pathlist_from_file,
-                                    load_file_as_index)
-        idx_list = []
-
-        file_list = load_pathlist_from_file(filename)
-        for fname in file_list:
-            idx = load_file_as_index(fname)
-            manifest = getattr(idx, 'manifest', None)
-            if manifest is None:
-                raise ValueError(f"index at '{fname}' has no manifest")
-            idx_list.append(idx)
-
-        return cls.load(idx_list)
-
-    def save(self, *args):
-        raise NotImplementedError
-
-    def select(self, **kwargs):
-        "Run 'select' on all manifests."
-        new_manifests = []
-        for idx, manifest in zip(self.index_list, self.manifest_list):
-            new_manifest = manifest.select_to_manifest(**kwargs)
-            new_manifests.append(new_manifest)
-
-        return LazyMultiIndex(self.index_list, new_manifests)
-
-
-class LazyLoadedSigFile(Index):
-    def __init__(self, filename, manifest):
-        self.filename = filename
-        self.manifest = manifest
-
-    @property
-    def location(self):
-        return self.filename
-
-    def signatures(self):
-        if not len(self.manifest):
-            print('nothing to do, returning')
-            return []
-
-        print(f'...{len(self.manifest)} in manifest, loading')
-        picklist = self.manifest.to_picklist()
-        idx = LinearIndex.load(self.location)
-        idx = idx.select(picklist=picklist)
-        for ss in idx.signatures():
-            yield ss
-
-    def __len__(self):
-        return len(self.manifest)
-    __bool__ = __len__
-
-    def load(self, *args):
-        raise NotImplementedError
-
-    def insert(self, *args):
-        raise NotImplementedError
-
-    def save(self, *args):
-        raise NotImplementedError
-
-    def select(self, **kwargs):
-        manifest = self.manifest
-        new_manifest = manifest.select_to_manifest(**kwargs)
-
-        return LazyLoadedSigFile(self.filename, new_manifest)
-
-
-class CollectionManifest:
-    """
-    Signature metadata for a collection of signatures.
-
-    Manifests support selection and rapid lookup of signatures.
-
-    * 'select_to_manifest(...)' matches the Index selector protocol
-    * 'rows' is a public iterable that can be used to iterate over the manifest
-       contents.
-    * 'locations()' returns all distinct locations for e.g. lazy loading
-    * supports container protocol for signatures, e.g. 'if ss in manifest: ...'
-    """
-    # each manifest row must have the following, although they may be empty.
-    required_keys = ('internal_location',
-                     'md5', 'md5short', 'ksize', 'moltype', 'num',
-                     'scaled', 'n_hashes', 'with_abundance',
-                     'name', 'filename')
-
-    def __init__(self, rows):
-        "Initialize from an iterable of metadata dictionaries."
-        self.rows = tuple(rows)
-
-        # build a fast lookup table for md5sums in particular
-        md5set = set()
-        for row in self.rows:
-            md5set.add(row['md5'])
-        self._md5_set = md5set
-
-    def __bool__(self):
-        return bool(self.rows)
-
-    def __len__(self):
-        return len(self.rows)
-
-    @classmethod
-    def load_from_csv(cls, fp):
-        "load a manifest from a CSV file."
-        manifest_list = []
-        firstline = fp.readline().rstrip()
-        if not firstline.startswith('# SOURMASH-MANIFEST-VERSION: '):
-            raise ValueError("manifest is missing version header")
-
-        version = firstline[len('# SOURMASH-MANIFEST-VERSION: '):]
-        if float(version) != 1.0:
-            raise ValueError(f"unknown manifest version number {version}")
-
-        r = csv.DictReader(fp)
-        if not r.fieldnames:
-            raise ValueError("missing column headers in manifest")
-
-        for k in cls.required_keys:
-            if k not in r.fieldnames:
-                raise ValueError(f"missing column '{k}' in manifest.")
-
-        row = None
-        for row in r:
-            row['signature'] = None
-            manifest_list.append(row)
-
-        return cls(manifest_list)
-
-    @classmethod
-    def write_csv_header(cls, fp):
-        "write header for manifest CSV format"
-        fp.write('# SOURMASH-MANIFEST-VERSION: 1.0\n')
-        w = csv.DictWriter(fp, fieldnames=cls.required_keys)
-        w.writeheader()
-
-    def write_to_csv(self, fp, write_header=False):
-        "write manifest CSV to specified file handle"
-        w = csv.DictWriter(fp, fieldnames=self.required_keys)
-
-        if write_header:
-            self.write_csv_header(fp)
-
-        for row in self.rows:
-            # don't write signature!
-            if 'signature' in row:
-                del row['signature']
-            w.writerow(row)
-
-    @classmethod
-    def make_manifest_row(cls, ss, location, *, include_signature=True):
-        "make a manifest row dictionary."
-        row = {}
-        row['md5'] = ss.md5sum()
-        row['md5short'] = row['md5'][:8]
-        row['ksize'] = ss.minhash.ksize
-        row['moltype'] = ss.minhash.moltype
-        row['num'] = ss.minhash.num
-        row['scaled'] = ss.minhash.scaled
-        row['n_hashes'] = len(ss.minhash)
-        row['with_abundance'] = 1 if ss.minhash.track_abundance else 0
-        row['name'] = ss.name
-        row['filename'] = ss.filename
-        row['internal_location'] = location
-
-        assert set(row.keys()) == set(cls.required_keys)
-
-        # if requested, include the signature in the manifest.
-        if include_signature:
-            row['signature'] = ss
-        return row
-
-    @classmethod
-    def create_manifest(cls, locations_iter, *, include_signature=True):
-        """Create a manifest from an iterator that yields (ss, location)
-
-        Stores signatures in manifest rows by default.
-
-        Note: do NOT catch exceptions here, so this passes through load excs.
-        """
-        manifest_list = []
-        for ss, location in locations_iter:
-            row = cls.make_manifest_row(ss, location, include_signature=True)
-            manifest_list.append(row)
-
-        return cls(manifest_list)
-
-    def _select(self, *, ksize=None, moltype=None, scaled=0, num=0,
-               containment=False, picklist=None):
-        """Yield manifest rows for sigs that match the specified requirements.
-
-        Internal method; call `select_to_manifest` instead.
-        """
-        matching_rows = self.rows
-        if ksize:
-            matching_rows = ( row for row in matching_rows
-                              if int(row['ksize']) == ksize )
-        if moltype:
-            matching_rows = ( row for row in matching_rows
-                              if row['moltype'] == moltype )
-        if scaled or containment:
-            if containment and not scaled:
-                raise ValueError("'containment' requires 'scaled' in Index.select'")
-
-            matching_rows = ( row for row in matching_rows
-                              if int(row['scaled']) and not int(row['num']) )
-        if num:
-            matching_rows = ( row for row in matching_rows
-                              if int(row['num']) and not int(row['scaled']) )
-
-        if picklist:
-            matching_rows = ( row for row in matching_rows
-                              if picklist.matches_manifest_row(row) )
-
-        # return only the internal filenames!
-        for row in matching_rows:
-            yield row
-
-    def select_to_manifest(self, **kwargs):
-        "Do a 'select' and return a new CollectionManifest object."
-        new_rows = self._select(**kwargs)
-        return CollectionManifest(new_rows)
-
-    def locations(self):
-        "Return all distinct locations."
-        seen = set()
-        for row in self.rows:
-            loc = row['internal_location']
-
-            # track/remove duplicates
-            if loc not in seen:
-                seen.add(loc)
-                yield loc
-
-    def __contains__(self, ss):
-        "Does this manifest contain this signature?"
-        md5 = ss.md5sum()
-        return md5 in self._md5_set
-
-    def to_picklist(self):
-        "Convert this manifest to a picklist."
-        from sourmash.picklist import SignaturePicklist
-        picklist = SignaturePicklist('md5')
-        picklist.pickset = set(self._md5_set)
-
-        return picklist
+        return MultiIndex(new_manifest)
