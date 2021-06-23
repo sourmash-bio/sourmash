@@ -7,6 +7,7 @@ from enum import Enum
 import traceback
 import gzip
 import zipfile
+from io import StringIO
 
 import screed
 import sourmash
@@ -20,6 +21,7 @@ from .logging import notify, error, debug_literal
 from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
 from . import signature as sigmod
 from .picklist import SignaturePicklist, PickStyle
+from .manifest import CollectionManifest
 
 
 DEFAULT_LOAD_K = 31
@@ -722,10 +724,20 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         return f"SaveSignatures_ZipFile('{self.location}')"
 
     def close(self):
+        # finish constructing manifest object & save
+        manifest = CollectionManifest(self.manifest_rows)
+        manifest_name = f"SOURMASH-MANIFEST.csv"
+
+        manifest_fp = StringIO()
+        manifest.write_to_csv(manifest_fp, write_header=True)
+        manifest_data = manifest_fp.getvalue().encode("utf-8")
+
+        self.zf.writestr(manifest_name, manifest_data)
         self.zf.close()
 
     def open(self):
         self.zf = zipfile.ZipFile(self.location, 'w', zipfile.ZIP_STORED)
+        self.manifest_rows = []
 
     def _exists(self, name):
         try:
@@ -753,6 +765,11 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
 
         json_str = sourmash.save_signatures([ss], compression=1)
         self.zf.writestr(outname, json_str)
+
+        # update manifest
+        row = CollectionManifest.make_manifest_row(ss, outname,
+                                                   include_signature=False)
+        self.manifest_rows.append(row)
 
 
 class SigFileSaveType(Enum):
