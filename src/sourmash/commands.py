@@ -801,17 +801,17 @@ def gather(args):
                 remaining_mh += noident_mh
                 remaining_query.minhash = remaining_mh
 
-            if is_abundance:
-                # remaining_query is flattened; reinflate abundances
-                hashes = set(remaining_query.minhash.hashes)
-                orig_abunds = orig_query_mh.hashes
-                abunds = { h: orig_abunds[h] for h in hashes }
+            # if is_abundance:
+            #     # remaining_query is flattened; reinflate abundances
+            #     hashes = set(remaining_query.minhash.hashes)
+            #     orig_abunds = orig_query_mh.hashes
+            #     abunds = { h: orig_abunds[h] for h in hashes }
 
-                abund_query_mh = orig_query_mh.copy_and_clear()
-                # orig_query might have been downsampled...
-                abund_query_mh.downsample(scaled=gather_iter.scaled)
-                abund_query_mh.set_abundances(abunds)
-                remaining_query.minhash = abund_query_mh
+            #     abund_query_mh = orig_query_mh.copy_and_clear()
+            #     # orig_query might have been downsampled...
+            #     abund_query_mh.downsample(scaled=gather_iter.scaled)
+            #     abund_query_mh.set_abundances(abunds)
+            #     remaining_query.minhash = abund_query_mh
 
             with FileOutput(args.output_unassigned, 'wt') as fp:
                 sig.save_signatures([ remaining_query ], fp)

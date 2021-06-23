@@ -692,6 +692,17 @@ class MinHash(RustObject):
                     False, infl.seed, self._max_hash
                 )
                 a.add_many(self)
+                remaining_query = a.query
+                # remaining_query is flattened; reinflate abundances
+                hashes = set(remaining_query.minhash.hashes)
+                orig_abunds = self.hashes
+                abunds = { h: orig_abunds[h] for h in hashes }
+
+                abund_query_mh = self.copy_and_clear()
+                # orig_query might have been downsampled...
+                abund_query_mh.downsample(scaled=a.scaled)
+                abund_query_mh.set_abundances(abunds)
+                remaining_query.minhash = abund_query_mh
         return a
         return self
 
