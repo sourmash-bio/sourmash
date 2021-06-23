@@ -49,6 +49,10 @@ def linear_gather(request):
 def prefetch_gather(request):
     return request.param
 
+@pytest.fixture(params=[True, False])
+def use_manifest(request):
+    return request.param
+
 
 # --- BEGIN - Only run tests using a particular fixture --- #
 # Cribbed from: http://pythontesting.net/framework/pytest/pytest-run-tests-using-particular-fixture/

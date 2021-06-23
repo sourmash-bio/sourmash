@@ -455,28 +455,35 @@ class ZipFileLinearIndex(Index):
     is_database = True
 
     def __init__(self, zf, *, selection_dict=None,
-                 traverse_yield_all=False, manifest=None):
+                 traverse_yield_all=False, manifest=None, use_manifest=True):
         self.zf = zf
         self.selection_dict = selection_dict
         self.traverse_yield_all = traverse_yield_all
 
         # do we have a manifest already? if not, try loading.
-        if manifest is None:
-            try:
-                zi = self.zf.getinfo('SOURMASH-MANIFEST.csv')
-            except KeyError:
-                self.manifest = None
+        if use_manifest:
+            if manifest is not None:
+                debug_literal('ZipFileLinearIndex using passed-in manifest')
+                self.manifest = manifest
             else:
-                debug_literal(f'found manifest when loading {self.zf.filename}')
-
-                with self.zf.open(zi, 'r') as mfp:
-                    # wrap as text, since ZipFile.open only supports 'r' mode.
-                    mfp = TextIOWrapper(mfp, 'utf-8')
-                    # load manifest!
-                    self.manifest = CollectionManifest.load_from_csv(mfp)
+                self._load_manifest()
         else:
-            debug_literal('ZipFileLinearIndex using passed-in manifest')
-            self.manifest = manifest
+            self.manifest = None
+
+    def _load_manifest(self):
+        "Load a manifest if one exists"
+        try:
+            zi = self.zf.getinfo('SOURMASH-MANIFEST.csv')
+        except KeyError:
+            self.manifest = None
+        else:
+            debug_literal(f'found manifest when loading {self.zf.filename}')
+
+            with self.zf.open(zi, 'r') as mfp:
+                # wrap as text, since ZipFile.open only supports 'r' mode.
+                mfp = TextIOWrapper(mfp, 'utf-8')
+                # load manifest!
+                self.manifest = CollectionManifest.load_from_csv(mfp)
 
     def __bool__(self):
         "Are there any matching signatures in this zipfile? Avoid calling len."
@@ -504,10 +511,11 @@ class ZipFileLinearIndex(Index):
         raise NotImplementedError
 
     @classmethod
-    def load(cls, location, traverse_yield_all=False):
+    def load(cls, location, traverse_yield_all=False, use_manifest=True):
         "Class method to load a zipfile."
         zf = zipfile.ZipFile(location, 'r')
-        return cls(zf, traverse_yield_all=traverse_yield_all)
+        return cls(zf, traverse_yield_all=traverse_yield_all,
+                   use_manifest=use_manifest)
 
     def _signatures_with_internal(self):
         """Return an iterator of tuples (ss, location, internal_location).

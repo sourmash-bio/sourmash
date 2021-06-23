@@ -815,11 +815,11 @@ def test_zipfile_dayhoff_command_search_protein(c):
     assert 'no compatible signatures found in ' in c.last_result.err
 
 
-def test_zipfile_API_signatures():
+def test_zipfile_API_signatures(use_manifest):
     # return all of the .sig and .sig.gz files in all.zip
     zipfile_db = utils.get_test_data('prot/all.zip')
 
-    zipidx = ZipFileLinearIndex.load(zipfile_db)
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
     siglist = list(zipidx.signatures())
     assert len(siglist) == 7
     assert len(zipidx) == 7
@@ -851,11 +851,12 @@ def test_zipfile_bool():
     assert "don't call len!" in str(exc.value)
 
 
-def test_zipfile_API_signatures_traverse_yield_all():
+def test_zipfile_API_signatures_traverse_yield_all(use_manifest):
     # include dna-sig.noext, but not build.sh (cannot be loaded as signature)
     zipfile_db = utils.get_test_data('prot/all.zip')
 
-    zipidx = ZipFileLinearIndex.load(zipfile_db, traverse_yield_all=True)
+    zipidx = ZipFileLinearIndex.load(zipfile_db, traverse_yield_all=True,
+                                     use_manifest=use_manifest)
     siglist = list(zipidx.signatures())
     assert len(siglist) == 8
     assert len(zipidx) == 8
@@ -867,22 +868,23 @@ def test_zipfile_API_signatures_traverse_yield_all():
     assert len(allfiles) == 12
 
 
-def test_zipfile_API_signatures_traverse_yield_all_select():
+def test_zipfile_API_signatures_traverse_yield_all_select(use_manifest):
     # include dna-sig.noext
     zipfile_db = utils.get_test_data('prot/all.zip')
 
-    zipidx = ZipFileLinearIndex.load(zipfile_db, traverse_yield_all=True)
+    zipidx = ZipFileLinearIndex.load(zipfile_db, traverse_yield_all=True,
+                                     use_manifest=use_manifest)
     zipidx = zipidx.select(moltype='DNA')
     siglist = list(zipidx.signatures())
     assert len(siglist) == 2
     assert len(zipidx) == 2
 
 
-def test_zipfile_API_signatures_select():
+def test_zipfile_API_signatures_select(use_manifest):
     # include dna-sig.noext
     zipfile_db = utils.get_test_data('prot/all.zip')
 
-    zipidx = ZipFileLinearIndex.load(zipfile_db)
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
     zipidx = zipidx.select(moltype='DNA')
     siglist = list(zipidx.signatures())
     assert len(siglist) == 1
@@ -908,10 +910,10 @@ def test_zipfile_API_insert():
         zipidx.insert(None)
 
 
-def test_zipfile_API_location():
+def test_zipfile_API_location(use_manifest):
     zipfile_db = utils.get_test_data('prot/all.zip')
 
-    zipidx = ZipFileLinearIndex.load(zipfile_db)
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
 
     assert zipidx.location == zipfile_db
 
