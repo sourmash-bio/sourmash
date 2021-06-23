@@ -182,7 +182,11 @@ class SBT(Index):
                 if passes_all_picklists(ss, self.picklists):
                     yield ss
 
-    def signatures_with_internal(self):
+    def _signatures_with_internal(self):
+        """Return an iterator of tuples (ss, location, internal_location).
+
+        Note: does not limit signatures to subsets.
+        """
         for k in self.leaves():
             ss = k.data
             yield ss, self.location, k._path

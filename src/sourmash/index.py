@@ -10,6 +10,7 @@ from io import TextIOWrapper
 from .search import make_jaccard_search_query, make_gather_query
 from .manifest import CollectionManifest
 from .logging import debug_literal
+from .signature import load_signatures, save_signatures
 
 # generic return tuple for Index.search and Index.gather
 IndexSearchResult = namedtuple('Result', 'score, signature, location')
@@ -30,6 +31,16 @@ class Index(ABC):
         "Return an iterator over tuples (signature, location) in the Index."
         for ss in self.signatures():
             yield ss, self.location
+
+    def _signatures_with_internal(self):
+        """Return an iterator of tuples (ss, location, internal_location).
+
+        This is an internal API for use in generating manifests, and may
+        change without warning.
+
+        This method should be implemented separately for each Index object.
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def insert(self, signature):
@@ -352,13 +363,12 @@ class LinearIndex(Index):
         self._signatures.append(node)
 
     def save(self, path):
-        from .signature import save_signatures
         with open(path, 'wt') as fp:
             save_signatures(self.signatures(), fp)
 
     @classmethod
     def load(cls, location):
-        from .signature import load_signatures
+        "Load signatures from a JSON signature file."
         si = load_signatures(location, do_raise=True)
 
         lidx = LinearIndex(si, filename=location)
@@ -499,32 +509,22 @@ class ZipFileLinearIndex(Index):
         zf = zipfile.ZipFile(location, 'r')
         return cls(zf, traverse_yield_all=traverse_yield_all)
 
-    def signatures_with_internal(self):
-        # @CTB used for creating manifests
-        from .signature import load_signatures
+    def _signatures_with_internal(self):
+        """Return an iterator of tuples (ss, location, internal_location).
+
+        Note: does not limit signatures to subsets.
+        """
         for zipinfo in self.zf.infolist():
             # should we load this file? if it ends in .sig OR we are forcing:
             if zipinfo.filename.endswith('.sig') or \
                zipinfo.filename.endswith('.sig.gz') or \
                self.traverse_yield_all:
                 fp = self.zf.open(zipinfo)
-
-                # now load all the signatures and select on ksize/moltype:
-                selection_dict = self.selection_dict
-
-                # note: if 'fp' doesn't contain a valid JSON signature,
-                # load_signatures will silently fail & yield nothing.
                 for ss in load_signatures(fp):
-                    if selection_dict:
-                        if select_signature(ss, **self.selection_dict):
-                            yield ss, self.zf.filename, zipinfo.filename
-                    else:
-                        yield ss, self.zf.filename, zipinfo.filename
+                    yield ss, self.zf.filename, zipinfo.filename
 
     def signatures(self):
         "Load all signatures in the zip file."
-        from .signature import load_signatures
-
         selection_dict = self.selection_dict
         manifest = None
         if self.manifest:
@@ -752,6 +752,7 @@ class MultiIndex(Index):
             yield row['signature']
 
     def signatures_with_location(self):
+        "Return an iterator of tuples (ss, location, internal_location)."
         for row in self.manifest.rows:
             yield row['signature'], row['internal_location']
 

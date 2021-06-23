@@ -275,7 +275,7 @@ def manifest(args):
 
     n = 0
     # Need to ignore existing manifests here! otherwise circularity...
-    for n, (sig, parent, loc) in enumerate(loader.signatures_with_internal()):
+    for n, (sig, parent, loc) in enumerate(loader._signatures_with_internal()):
         # extract info, write as appropriate.
         row = CollectionManifest.make_manifest_row(sig, loc,
                                                    include_signature=False)

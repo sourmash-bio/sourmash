@@ -17,7 +17,7 @@ def test_generate_manifest():
 
     rows = []
     siglist = []
-    for (sig, _, loc) in loader.signatures_with_internal():
+    for (sig, _, loc) in loader._signatures_with_internal():
         row = index.CollectionManifest.make_manifest_row(sig, loc)
         rows.append(row)
         siglist.append(sig)
@@ -43,7 +43,7 @@ def test_manifest_to_picklist():
 
     rows = []
     siglist = []
-    for (sig, _, loc) in loader.signatures_with_internal():
+    for (sig, _, loc) in loader._signatures_with_internal():
         row = index.CollectionManifest.make_manifest_row(sig, loc)
         rows.append(row)
         siglist.append(sig)
@@ -64,7 +64,7 @@ def test_save_load_manifest():
 
     rows = []
     siglist = []
-    for (sig, _, loc) in loader.signatures_with_internal():
+    for (sig, _, loc) in loader._signatures_with_internal():
         row = index.CollectionManifest.make_manifest_row(sig, loc)
         rows.append(row)
         siglist.append(sig)
