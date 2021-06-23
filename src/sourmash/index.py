@@ -541,7 +541,7 @@ class ZipFileLinearIndex(Index):
         "Load all signatures in the zip file."
         selection_dict = self.selection_dict
         manifest = None
-        if self.manifest:
+        if self.manifest is not None:
             manifest = self.manifest
             assert not selection_dict
 
