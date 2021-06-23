@@ -2563,7 +2563,7 @@ def test_import_mash_csv_to_sig(runtmp):
     assert '100.0%       short.fa' in runtmp.last_result.out
 
 
-def test_sig_manifest(runtmp):
+def test_sig_manifest_1_zipfile(runtmp):
     # make a manifest from a .zip file
     from sourmash.index import CollectionManifest
 
@@ -2578,3 +2578,20 @@ def test_sig_manifest(runtmp):
     md5_list = [ row['md5'] for row in manifest.rows ]
     assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
     assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+
+def test_sig_manifest_2_sigfile(runtmp):
+    # make a manifest from a .sig file
+    from sourmash.index import CollectionManifest
+
+    sigfile = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    with pytest.raises(ValueError):
+        runtmp.sourmash('sig', 'manifest', sigfile, '-o',
+                        'SOURMASH-MANIFEST.csv')
+
+    status = runtmp.last_result.status
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert status != 0
+    assert "ERROR: manifests cannot be generated for this file." in err

@@ -275,7 +275,13 @@ def manifest(args):
 
     n = 0
     # Need to ignore existing manifests here! otherwise circularity...
-    for n, (sig, parent, loc) in enumerate(loader._signatures_with_internal()):
+    try:
+        manifest_iter = loader._signatures_with_internal()
+    except NotImplementedError:
+        error("ERROR: manifests cannot be generated for this file.")
+        sys.exit(-1)
+
+    for n, (sig, parent, loc) in enumerate(manifest_iter):
         # extract info, write as appropriate.
         row = CollectionManifest.make_manifest_row(sig, loc,
                                                    include_signature=False)
