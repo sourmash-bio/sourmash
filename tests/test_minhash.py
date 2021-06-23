@@ -559,6 +559,24 @@ def test_similarity_1(track_abundance):
     assert round(b.similarity(b), 3) == 1.0
 
 
+def test_copy(track_abundance):
+    a = MinHash(20, 21, track_abundance=track_abundance)
+    a.add_hash(5)
+    b = a.copy()
+    assert a == b
+    a.add_hash(6)
+    assert a != b
+
+
+def test_frozen_copy(track_abundance):
+    a = MinHash(20, 21, track_abundance=track_abundance)
+    a.add_hash(5)
+    b = a.copy()
+    assert 5 in b.hashes
+    a.add_hash(6)
+    assert 6 not in b.hashes
+
+
 def test_mh_copy(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
 
@@ -1178,6 +1196,22 @@ def test_set_abundance_clear_4():
     a.set_abundances({20: 1, 10: 2}, clear=False)
     assert a.hashes == {10: 3, 20: 3}
 
+def test_clear_abundance_on_zero():
+    mh = sourmash.minhash.MinHash(n=0, ksize=31, scaled=1, track_abundance=True)
+    mh.set_abundances({ 1: 5, 2: 3, 3 : 5 })
+    mh.set_abundances({ 1: 0 }, clear=False)
+    assert 1 not in dict(mh.hashes)
+    assert dict(mh.hashes)[2] == 3
+    assert dict(mh.hashes)[3] == 5
+    assert len(mh) == 2
+
+    with pytest.raises(ValueError):
+        mh.set_abundances({ 2: -1 }) # Test on clear = True
+
+    with pytest.raises(ValueError):
+        mh.set_abundances({ 2: -1 }, clear=False)    
+    
+    assert len(mh) == 2 # Assert that nothing was affected
 
 def test_reset_abundance_initialized():
     a = MinHash(1, 4, track_abundance=True)
@@ -1395,6 +1429,28 @@ def test_remove_many(track_abundance):
 
     assert len(a) == 33
     assert all(c % 6 != 0 for c in a.hashes)
+
+def test_remove_minhash(track_abundance):
+    original_mh = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
+    added_mh = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
+    tested_mh = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
+
+    original_mh.add_many(list(range(101)))
+    added_mh.add_many(list(range(101,201))) # contains original in it
+    tested_mh.add_many(list(range(201))) # original + added
+
+    # Now we should expect tested_minhash == original_minhash
+    # Note we are passing a MinHash object instead of an iterable object
+    tested_mh.remove_many(added_mh)
+
+    # Assertion
+    original_sig = signature.SourmashSignature(original_mh)
+    tested_sig = signature.SourmashSignature(tested_mh)
+
+    # Should pass if the hashes list in the same order
+    assert original_mh.hashes == tested_mh.hashes
+    assert len(original_mh) == len(tested_mh)
+    assert original_sig.md5sum() == tested_sig.md5sum()
 
 
 def test_add_many(track_abundance):

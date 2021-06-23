@@ -5,7 +5,6 @@ import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
 import zipfile
-import copy
 
 from .search import make_jaccard_search_query, make_gather_query
 
@@ -260,7 +259,7 @@ class Index(ABC):
         public `CounterGather` interface, of course.
         """
         # build a flat query
-        prefetch_query = copy.copy(query)
+        prefetch_query = query.copy()
         prefetch_query.minhash = prefetch_query.minhash.flatten()
 
         # find all matches and construct a CounterGather object.
@@ -292,7 +291,7 @@ class Index(ABC):
 
 
 def select_signature(ss, ksize=None, moltype=None, scaled=0, num=0,
-                     containment=False):
+                     containment=False, picklist=None):
     "Check that the given signature matches the specificed requirements."
     # ksize match?
     if ksize and ksize != ss.minhash.ksize:
@@ -318,6 +317,9 @@ def select_signature(ss, ksize=None, moltype=None, scaled=0, num=0,
         # changed later.
         if ss.minhash.scaled or num != ss.minhash.num:
             return False
+
+    if picklist is not None and ss not in picklist:
+        return False
 
     return True
 
@@ -520,7 +522,7 @@ class CounterGather:
             raise ValueError('gather requires scaled signatures')
 
         # track query
-        self.orig_query_mh = copy.copy(query_mh).flatten()
+        self.orig_query_mh = query_mh.copy().flatten()
         self.scaled = query_mh.scaled
 
         # track matching signatures & their locations

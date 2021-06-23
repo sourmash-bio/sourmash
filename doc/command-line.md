@@ -70,15 +70,25 @@ There are seven main subcommands: `sketch`, `compare`, `plot`,
 * `prefetch` selects signatures of interest from a very large collection of signatures, for later processing.
 
 There are also a number of commands that work with taxonomic
-information; these are grouped under the `sourmash lca`
-subcommand. See [the LCA tutorial](tutorials-lca.md) for a
-walkthrough of these commands.
+information; these are grouped under the `sourmash tax` and
+`sourmash lca` subcommands.
+
+`sourmash tax` commands:
+
+* `tax metagenome` - summarize metagenome gather results at each taxonomic rank.
+* `tax genome`     - summarize single-genome gather results and report most likely classification.
+* `tax annotate`   - annotate gather results with lineage information (no summarization or classification).
+
+`sourmash lca` commands:
 
 * `lca classify` classifies many signatures against an LCA database.
 * `lca summarize` summarizes the content of metagenomes using an LCA database.
 * `lca index` creates a database for use with LCA subcommands.
 * `lca rankinfo` summarizes the content of a database.
 * `lca compare_csv` compares lineage spreadsheets, e.g. those output by `lca classify`.
+
+> See [the LCA tutorial](tutorials-lca.md) for a
+walkthrough of some of these commands.
 
 Finally, there are a number of utility and information commands:
 
@@ -177,15 +187,14 @@ sourmash compare file1.sig [ file2.sig ... ]
 ```
 
 Options:
-```
---output -- save the distance matrix to this file (as a numpy binary matrix)
---ksize -- do the comparisons at this k-mer size.
---containment -- calculate containment instead of similarity.
-        C(i, j) = size(i intersection j) / size(i).
---from-file -- append the list of files in this text file to the input
+
+* `--output` -- save the distance matrix to this file (as a numpy binary matrix)
+* `--ksize` -- do the comparisons at this k-mer size.
+* `--containment` -- calculate containment instead of similarity; `C(i, j) = size(i intersection j) / size(i)`
+* `--from-file` -- append the list of files in this text file to the input
         signatures.
---ignore-abundance -- ignore abundances in signatures.
-```
+* `--ignore-abundance` -- ignore abundances in signatures.
+* `--picklist` -- select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
 
 **Note:** compare by default produces a symmetric similarity matrix that can be used as an input to clustering. With `--containment`, however, this matrix is no longer symmetric and cannot formally be used for clustering.
 
@@ -249,6 +258,9 @@ similarity   match
 ...    
 ```
 
+Note, as of sourmash 4.2.0, `search` supports `--picklist`, to
+[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures).
+
 ### `sourmash gather` - find metagenome members
 
 The `gather` subcommand selects the best reference genomes to use for
@@ -288,6 +300,9 @@ The command line option `--threshold-bp` sets the threshold below
 which matches are no longer reported; by default, this is set to
 50kb. see the Appendix in
 [Classifying Signatures](classifying-signatures.md) for details.
+
+As of sourmash 4.2.0, `gather` supports `--picklist`, to
+[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures).
 
 Note:
 
@@ -350,6 +365,9 @@ containing a list of file names to index; you can also provide individual
 signature files, directories full of signatures, or other sourmash
 databases.
 
+As of sourmash 4.2.0, `index` supports `--picklist`, to
+[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures).
+
 ### `sourmash prefetch` - select subsets of very large databases for more processing
 
 The `prefetch` subcommand searches a collection of scaled signatures
@@ -375,6 +393,7 @@ Other options include:
 * `--threshold-bp` to require a minimum estimated bp overlap for output;
 * `--scaled` for downsampling;
 * `--force` to continue past survivable errors;
+* `--picklist` select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
 
 ### Alternative search mode for low-memory (but slow) search: `--linear`
 
@@ -402,7 +421,270 @@ This combination of commands ensures that the more time- and
 memory-intensive `gather` step is run only on a small set of relevant
 signatures, rather than all the signatures in the database.
 
-## `sourmash lca` subcommands for taxonomic classification
+## `sourmash tax` subcommands for integrating taxonomic information into gather results
+
+The sourmash `tax` or `taxonomy` commands integrate taxonomic
+ information into the results of `sourmash gather`. All `tax` commands
+ require a properly formatted `taxonomy` csv file that corresponds to
+ the database used for `gather`. For supported databases (e.g. GTDB, NCBI),
+ we provide these files, but they can also be generated for user-generated
+ databases. For more information, see [databases](databases.md).
+
+These commands rely upon the fact that `gather` provides both the total
+ fraction of the query matched to each database matched, as well as a
+ non-overlapping `f_unique_to_query` which is the fraction of the query
+ uniquely matched to each reference genome. The `f_unique_to_query` for
+ any reference match will always be between (0% of query matched) and 1
+ (100% of query matched), and for a query matched to multiple references,
+ the `f_unique_to_query` will sum to at most 1 (100% of query matched).
+ We use this property to aggregate gather matches at the desired
+ taxonomic rank. For example, if the gather results for a metagenome
+ include results for 30 different strains of a given species, we can sum
+ the fraction uniquely matched to each strain to obtain the fraction
+ uniquely matched to this species. Note that this summarization can
+ also take into account abundance weighting; see
+ [Classifying Signatures](classifying-signatures.html) for more
+ information.
+
+As with all reference-based analysis, results can be affected by the
+ completeness of the reference database. However, summarizing taxonomic
+ results from `gather` minimizes issues associated with increasing size
+ and redundancy of reference databases.
+
+For more on how `gather` works and can be used to classify signatures, see
+ [classifying-signatures](classifying-signatures.html)
+
+
+### `sourmash tax metagenome` - summarize metagenome content from `gather` results
+
+`sourmash tax metagenome` summarizes gather results for each query by
+ taxonomic lineage.
+
+example command to summarize a single `gather csv`, where the query was gathered
+ against `gtdb-rs202` representative species database:
+
+```
+sourmash tax metagenome
+    --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
+    --taxonomy-csv gtdb-rs202.taxonomy.v2.csv
+```
+
+There are three possible output formats, `csv_summary`, `lineage_summary`, and
+ `krona`.
+
+#### `csv_summary` output format
+
+`csv_summary` is the default output format. This outputs a `csv` with lineage
+ summarization for each taxonomic rank. This output currently consists of four
+ columns, `query_name,rank,fraction,lineage`, where `fraction` is the  fraction
+ of the query matched to the reported rank and lineage.
+
+example `csv_summary` output from the command above:
+
+```
+query_name,rank,fraction,lineage
+HSMA33MX,superkingdom,0.131,d__Bacteria
+HSMA33MX,phylum,0.073,d__Bacteria;p__Bacteroidota
+HSMA33MX,phylum,0.058,d__Bacteria;p__Proteobacteria
+.
+.
+.
+HSMA33MX,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;
+o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli
+HSMA33MX,species,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;
+o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri
+HSMA33MX,species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;
+o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus
+```
+
+#### `krona` output format
+
+`krona` format is a tab-separated list of these results at a specific rank.
+ The first column, `fraction` is the fraction of the query matched to the
+ reported rank and lineage. The remaining columns are `superkingdom`, `phylum`,
+ ... etc down to the rank used for summarization. This output can be used
+ directly for summary visualization.
+
+To generate `krona`, we add `--output-format krona` to the command above, and
+ need to specify a rank to summarize. Here's the command for reporting `krona`
+ summary at `species` level:
+
+```
+sourmash tax metagenome
+    --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
+    --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
+    --output-format krona --rank species
+```
+
+example krona output from this command:
+
+```
+fraction	superkingdom	phylum	class	order	family	genus	species
+0.05815279361459521	Bacteria	Proteobacteria	Gammaproteobacteria	Enterobacterales	Enterobacteriaceae	Escherichia	Escherichia coli
+0.05701254275940707	Bacteria	Bacteroidetes	Bacteroidia	Bacteroidales	Prevotellaceae	Prevotella	Prevotella copri
+0.015637726014008795	Bacteria	Bacteroidetes	Bacteroidia	Bacteroidales	Bacteroidaceae	Bacteroides	Bacteroides vulgatus
+```
+
+#### `lineage_summary` output format
+
+The lineage summary format is most useful when comparing across metagenome queries.
+ Each row is a lineage at the desired reporting rank. The columns are each query
+ used for gather, with the fraction match reported for each lineage. This format
+ is commonly used as input for many external multi-sample visualization tools.
+
+To generate `lineage_summary`, we add `--output-format lineage_summary` to the summarize
+ command, and need to specify a rank to summarize. Here's the command for reporting
+ `lineage_summary` for two queries (HSMA33MX, PSM6XBW3) summary at `species` level.
+
+```
+sourmash tax metagenome
+    --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
+    --gather-csv PSM6XBW3_gather_x_gtdbrs202_k31.csv \
+    --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
+    --output-format krona --rank species
+```
+
+example `lineage_summary`:
+
+```
+lineage HSMA33MX   PSM6XBW3
+d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus    0.015637726014008795    0.015642822225843248
+d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri 0.05701254275940707     0.05703112269838684
+d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli       0.05815279361459521     0.05817174515235457
+```
+
+To produce multiple output types from the same command, add the types into the
+ `--output-format` argument, e.g. `--output-format summary krona lineage_summary`
+
+
+### `sourmash tax genome` - classify a genome using `gather` results
+
+`sourmash tax genome` reports likely classification for each query,
+ based on `gather` matches. By default, classification requires at least 10% of
+ the query to be matched. Thus, if 10% of the query was matched to a species, the
+ species-level classification can be reported. However, if 7% of the query was
+ matched to one species, and an additional 5% matched to a different species in
+ the same genus, the genus-level classification will be reported.
+
+Optionally, `genome` can instead report classifications at a desired `rank`,
+ regardless of match threshold (`--rank` argument, e.g. `--rank species`).
+
+Note that these thresholds and strategies are under active testing.
+
+To illustrate the utility of `genome`, let's consider a signature consisting
+ of two different Shewanella strains, `Shewanella baltica OS185 strain=OS185`
+ and `Shewanella baltica OS223 strain=OS223`. For simplicity, we gave this query
+ the name "Sb47+63".
+
+When we gather this signature against the `gtdb-rs202` representatives database,
+we see 66% matches to one strain, and 33% to the other:
+
+abbreviated gather_csv:
+
+```
+f_match,f_unique_weighted,name,query_name
+0.664,1.0,0.664,"GCF_000021665.1 Shewanella baltica OS223 strain=OS223, ASM2166v1",Sb47+63
+0.656,0.511,0.335,"GCF_000017325.1 Shewanella baltica OS185 strain=OS185, ASM1732v1",Sb47+63
+```
+
+> Here, `f_match` shows that independently, both strains match ~65% percent of
+ this mixed query. The `f_unique_weighted` column has the results of gather-style
+ decomposition. As the OS223 strain had a slightly higher `f_match` (66%), it
+ was the first match. The remaining 33% of the query matched to strain OS185.
+
+Here, we use this gather csv to classify our "Sb47+63" mixed-strain query.
+
+Example command to classify this query from the `gather` csv, using
+the default classification threshold (0.1).
+    
+```
+sourmash tax genome
+    --gather-csv 47+63_x_gtdb-rs202.gather.csv \
+    --taxonomy-csv gtdb-rs202.taxonomy.v2.csv
+```
+
+There are two possible output formats, `csv_summary` and `krona`.
+
+#### `csv_summary` output format
+
+`csv_summary` is the default output format. This outputs a `csv` with lineage
+ summarization for each taxonomic rank. This output currently consists of four
+ columns, `query_name,rank,fraction,lineage`, where `fraction` is the  fraction
+ of the query matched to the reported rank and lineage. The `status` column
+ provides additional information on the classification. The `status` options are:
+
+  - `match` - this query was classified
+  - `nomatch`- this query could not be classified
+  - `below_threshold` - this query was classified at the specified rank,
+     but the query fraction matched was below the containment threshold
+
+Here is the `csv_summary` output from classifying this mixed-strain Shewanella query to
+species level:
+
+```
+query_name,status,rank,fraction,lineage
+"NC_009665.1 Shewanella baltica OS185, complete genome",match,species,1.000,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Shewanellaceae;g__Shewanella;s__Shewanella baltica
+```
+>Here, we see that the match percentages to both strains have been aggregated,
+and we have 100% species-level `Shewanella baltica` annotation.
+
+#### `krona` output format
+
+`krona` format is a tab-separated list of these results at a specific rank.
+  The first column, `fraction` is the fraction of the query matched to the
+  reported rank and lineage. The remaining columns are `superkingdom`, `phylum`,
+  ... etc down to the rank used for summarization. This output can be used
+  directly for `krona` visualization.
+
+To generate `krona`, we must classify by `--rank` instead of using the
+ classification threshold. For the command, we add `--output-format krona`
+  and `--rank <RANK>` to the command above. Here's the command for producing
+  `krona` output for `species`-level classifications:
+
+```
+sourmash tax genome
+    --gather-csv Sb47+63_gather_x_gtdbrs202_k31.csv \
+    --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
+    --output-format krona --rank species
+```
+> Note that specifying `--rank` forces classification by rank rather than
+by the containment threshold.
+
+Here is the `krona`-formatted output for this command:
+
+```
+fraction        superkingdom    phylum  class   order   family  genus   species
+Sb47+63   1.0     d__Bacteria     p__Proteobacteria       c__Gammaproteobacteria  o__Enterobacterales     f__Shewanellaceae       g__Shewanella   s__Shewanella baltica
+```
+
+To produce multiple output types from the same command, add the types into the
+ `--output-format` argument, e.g. `--output-format csv_summary krona`.
+ **Note that specifying the classification rank with `--rank`,
+ (e.g. `--rank species`), as needed for `krona` output, forces classification
+ by `rank` rather than by containment threshold.** If the query
+ classification at this rank does not meet the containment threshold
+ (default=0.1), the `status` column will contain `below_threshold`.
+
+
+### `sourmash tax annotate` - annotates gather output with taxonomy
+
+`sourmash tax annotate` adds a column with taxonomic lineage information
+ for each database match to gather output. Do not summarize or classify.
+ Note that this is not required for either `summarize` or `classify`.
+
+By default, `annotate` uses the name of each input gather csv to write an updated
+ version with lineages information. For example, annotating `sample1.gather.csv`
+ would produce `sample1.gather.with-lineages.csv`
+
+```
+sourmash tax annotate
+    --gather-csv Sb47+63_gather_x_gtdbrs202_k31.csv \
+    --taxonomy-csv gtdb-rs202.taxonomy.v2.csv
+```
+> This will produce an annotated gather CSV, `Sb47+63_gather_x_gtdbrs202_k31.with-lineages.csv`
+
+
+## `sourmash lca` subcommands for in-memory taxonomy integration
 
 These commands use LCA databases (created with `lca index`, below, or
 prepared databases such as
@@ -588,6 +870,9 @@ see
 
 You can use `--from-file` to pass `lca index` a text file containing a
 list of file names to index.
+
+As of sourmash 4.2.0, `lca index` supports `--picklist`, to
+[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures).
 
 ### `sourmash lca rankinfo` - examine an LCA database
 
@@ -818,6 +1103,12 @@ sourmash signature extract tests/test-data/*.fa.sig --name NC_009665
 will extract the same signature, which has an accession number of
 `NC_009665.1`.
 
+#### Using picklists with `sourmash sig extract`
+
+As of sourmash 4.2.0, `extract` also supports picklists, a feature by
+which you can select signatures based on values in a CSV file. See
+[Using picklists to subset large collections of signatures](#using-picklists-to-subset-large-collections-of-signatures), below.
+
 ### `sourmash signature flatten` - remove abundance information from signatures
 
 Flatten the specified signature(s), removing abundances and setting
@@ -928,6 +1219,45 @@ None of these commands currently support searching, comparing, or indexing
 signatures with multiple ksizes or moltypes at the same time; you need
 to pick the ksize and moltype to use for your search. Where possible,
 scaled values will be made compatible.
+
+### Using picklists to subset large collections of signatures
+
+As of sourmash 4.2.0, many commands support *picklists*, a feature by
+which you can select or "pick out" signatures based on values in a CSV
+file.
+
+For example,
+```
+sourmash sig extract --picklist list.csv:md5:md5sum <signatures>
+```
+will extract only the signatures that have md5sums matching the
+column `md5sum` in the CSV file `list.csv`.
+
+The `--picklist` argument string must be of the format
+`pickfile:colname:coltype`, where `pickfile` is the path to a CSV
+file, `colname` is the name of the column to select from the CSV
+file (based on the headers in the first line of the CSV file),
+and `coltype` is the type of match.
+
+The following `coltype`s are currently supported by `sourmash sig extract`:
+
+* `name` - exact match to signature's name
+* `md5` - exact match to signature's md5sum
+* `md5prefix8` - match to 8-character prefix of signature's md5sum
+* `md5short` - same as `md5prefix8`
+* `ident` - exact match to signature's identifier
+* `identprefix` - match to signature's identifier, before '.'
+
+Identifiers are constructed by using the first space delimited word in
+the signature name.
+
+One way to build a picklist is to use `sourmash sig describe --csv
+out.csv <signatures>` to construct an initial CSV file that you can
+then edit further.
+
+In addition to `sig extract`, the following commands support
+`--picklist` selection: `index`, `search`, `gather`, `prefetch`,
+`compare`, `index`, and `lca index`.
 
 ### Storing (and searching) signatures
   

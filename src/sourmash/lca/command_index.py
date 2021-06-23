@@ -120,19 +120,19 @@ def generate_report(record_duplicates, record_no_lineage, record_remnants,
     Output a report of anomalies from building the index.
     """
     with open(filename, 'wt') as fp:
-        print('Duplicate signatures:', file=fp)
+        print(f'Duplicate signatures: {len(record_duplicates)}', file=fp)
         fp.write("\n".join(record_duplicates))
         fp.write("\n")
-        print('----\nUnused identifiers:', file=fp)
+        print(f'----\nUnused identifiers: {len(unused_identifiers)}', file=fp)
         fp.write("\n".join(unused_identifiers))
         fp.write("\n")
-        print('----\nNo lineage provided for these identifiers:', file=fp)
+        print(f'----\nNo lineage provided for these identifiers: {len(record_no_lineage)}', file=fp)
         fp.write("\n".join(record_no_lineage))
         fp.write("\n")
-        print('----\nNo signatures found for these identifiers:', file=fp)
+        print(f'----\nNo signatures found for these identifiers: {len(record_remnants)}', file=fp)
         fp.write('\n'.join(record_remnants))
         fp.write("\n")
-        print('----\nUnused lineages:', file=fp)
+        print(f'----\nUnused lineages: {len(unused_lineages)}', file=fp)
         for lineage in unused_lineages:
             fp.write(";".join(lca_utils.zip_lineage(lineage)))
             fp.write("\n")
@@ -154,6 +154,7 @@ def index(args):
         args.ksize = DEFAULT_LOAD_K
 
     moltype = sourmash_args.calculate_moltype(args, default='DNA')
+    picklist = sourmash_args.load_picklist(args)
 
     notify('Building LCA database with ksize={} scaled={} moltype={}.',
            args.ksize, args.scaled, moltype)
@@ -202,6 +203,7 @@ def index(args):
         n += 1
         it = load_file_as_signatures(filename, ksize=args.ksize,
                                      select_moltype=moltype,
+                                     picklist=picklist,
                                      yield_all_files=args.force)
         for sig in it:
             notify(u'\r\033[K', end=u'')
@@ -211,7 +213,7 @@ def index(args):
             # block off duplicates.
             if sig.md5sum() in md5_to_name:
                 debug('WARNING: in file {}, duplicate md5sum: {}; skipping', filename, sig.md5sum())
-                record_duplicates.add(filename)
+                record_duplicates.add(sig.name)
                 continue
 
             md5_to_name[sig.md5sum()] = str(sig)
@@ -284,6 +286,9 @@ def index(args):
         sys.exit(1)
     notify('loaded {} hashes at ksize={} scaled={}', len(db.hashval_to_idx),
            args.ksize, args.scaled)
+
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
     # summarize:
     notify('{} assigned lineages out of {} distinct lineages in spreadsheet.',

@@ -14,6 +14,7 @@ from sourmash.sbtmh import (SigLeaf, load_sbt_index)
 from sourmash.sbt_storage import (FSStorage, RedisStorage,
                                   IPFSStorage, ZipStorage)
 from sourmash.search import make_jaccard_search_query
+from sourmash.picklist import SignaturePicklist
 
 import sourmash_tst_utils as utils
 
@@ -231,10 +232,12 @@ def test_search_minhashes():
     # this fails if 'search_obj' is calc containment and not similarity.
     search_obj = make_jaccard_search_query(threshold=0.08)
     results = tree.find(search_obj, to_search.data)
-    for sr in results:
+
+    n = 0
+    for n, sr in enumerate(results):
         assert to_search.data.jaccard(sr.signature) >= 0.08
 
-    print(results)
+    assert n == 1
 
 
 def test_binary_nary_tree():
@@ -636,6 +639,96 @@ def test_sbt_as_index_select():
         tree.select(moltype='protein')
 
 
+def test_sbt_as_index_select_picklist():
+    # test 'select' method from Index base class with a picklist
+
+    factory = GraphFactory(31, 1e5, 4)
+    tree = SBT(factory, d=2)
+
+    sig47 = load_one_signature(utils.get_test_data('47.fa.sig'))
+    sig63 = load_one_signature(utils.get_test_data('63.fa.sig'))
+
+    tree.insert(sig47)
+    tree.insert(sig63)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('md5prefix8')
+    picklist.init(['09a08691'])
+
+    # select on picklist
+    tree = tree.select(picklist=picklist)
+    siglist = list(tree.signatures())
+    assert len(siglist) == 1
+
+    ss = siglist[0]
+    assert ss.minhash.ksize == 31
+    assert ss.md5sum().startswith('09a08691c')
+
+
+def test_sbt_as_index_find_picklist():
+    # test 'select' method from Index base class with a picklist
+
+    factory = GraphFactory(31, 1e5, 4)
+    tree = SBT(factory, d=2)
+
+    sig47 = load_one_signature(utils.get_test_data('47.fa.sig'))
+    sig63 = load_one_signature(utils.get_test_data('63.fa.sig'))
+
+    tree.insert(sig47)
+    tree.insert(sig63)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('md5prefix8')
+    picklist.init(['09a08691'])
+
+    # run a 'find' with sig63, should find 47 and 63 both.
+    search_obj = make_jaccard_search_query(do_containment=True, threshold=0.0)
+    results = list(tree.find(search_obj, sig63))
+    print(results)
+    assert len(results) == 2
+
+    # now, select on picklist and do another find...
+    tree = tree.select(picklist=picklist)
+    results = list(tree.find(search_obj, sig63))
+    print(results)
+    assert len(results) == 1
+
+    # and check that it is the expected one!
+    ss = results[0].signature
+    assert ss.minhash.ksize == 31
+    assert ss.md5sum().startswith('09a08691c')
+
+
+def test_sbt_as_index_find_picklist_twice():
+    # test 'select' method from Index base class with a picklist
+
+    factory = GraphFactory(31, 1e5, 4)
+    tree = SBT(factory, d=2)
+
+    sig47 = load_one_signature(utils.get_test_data('47.fa.sig'))
+    sig63 = load_one_signature(utils.get_test_data('63.fa.sig'))
+
+    tree.insert(sig47)
+    tree.insert(sig63)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('md5prefix8')
+    picklist.init(['09a08691'])
+
+    # run a 'find' with sig63, should find 47 and 63 both.
+    search_obj = make_jaccard_search_query(do_containment=True, threshold=0.0)
+    results = list(tree.find(search_obj, sig63))
+    print(results)
+    assert len(results) == 2
+
+    # now, select twice on picklists...
+    tree = tree.select(picklist=picklist)
+
+    with pytest.raises(ValueError):
+        tree = tree.select(picklist=picklist)
+        assert "we do not (yet) support multiple picklists for SBT databases" in str(exc)
+
+
 def test_sbt_as_index_signatures():
     # test 'signatures' method from Index base class.
     factory = GraphFactory(31, 1e5, 4)
@@ -983,3 +1076,71 @@ def test_sbt_no_containment_on_num():
         results = list(tree.find(search_obj, to_search))
 
     assert "this search requires a scaled signature" in str(exc)
+
+
+def test_build_sbt_zip_with_dups(runtmp):
+    dups_data = utils.get_test_data('duplicate-sigs')
+
+    all_sigs = set(sourmash.load_file_as_signatures(dups_data))
+    assert len(all_sigs) == 4
+
+    runtmp.run_sourmash('index', 'dups.sbt.zip', dups_data)
+    outfile = runtmp.output('dups.sbt.zip')
+
+    sbt_sigs = set(sourmash.load_file_as_signatures(outfile))
+    assert len(sbt_sigs) == 4
+
+    assert all_sigs == sbt_sigs
+
+
+def test_build_sbt_zip_with_dups_exists(runtmp):
+    dups_data = utils.get_test_data('duplicate-sigs')
+
+    all_sigs = set(sourmash.load_file_as_signatures(dups_data))
+    assert len(all_sigs) == 4
+
+    runtmp.run_sourmash('index', 'dups.sbt.zip', dups_data)
+    outfile = runtmp.output('dups.sbt.zip')
+
+    # run again, to see what happens :)
+    runtmp.run_sourmash('index', 'dups.sbt.zip', dups_data)
+    outfile = runtmp.output('dups.sbt.zip')
+
+    sbt_sigs = set(sourmash.load_file_as_signatures(outfile))
+    assert len(sbt_sigs) == 4
+
+    assert all_sigs == sbt_sigs
+
+
+def test_build_sbt_json_with_dups(runtmp):
+    dups_data = utils.get_test_data('duplicate-sigs')
+
+    all_sigs = set(sourmash.load_file_as_signatures(dups_data))
+    assert len(all_sigs) == 4
+
+    runtmp.run_sourmash('index', 'dups.sbt.json', dups_data)
+    outfile = runtmp.output('dups.sbt.json')
+
+    sbt_sigs = set(sourmash.load_file_as_signatures(outfile))
+    assert len(sbt_sigs) == 4
+
+    assert all_sigs == sbt_sigs
+
+
+def test_build_sbt_json_with_dups_exists(runtmp):
+    dups_data = utils.get_test_data('duplicate-sigs')
+
+    all_sigs = set(sourmash.load_file_as_signatures(dups_data))
+    assert len(all_sigs) == 4
+
+    runtmp.run_sourmash('index', 'dups.sbt.json', dups_data)
+    outfile = runtmp.output('dups.sbt.json')
+
+    # run again, see what happens!
+    runtmp.run_sourmash('index', 'dups.sbt.json', dups_data)
+    outfile = runtmp.output('dups.sbt.json')
+
+    sbt_sigs = set(sourmash.load_file_as_signatures(outfile))
+    assert len(sbt_sigs) == 4
+
+    assert all_sigs == sbt_sigs

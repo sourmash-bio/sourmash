@@ -4,8 +4,9 @@ The top level CLI is defined in ../__init__.py. This module defines the CLI for
 `sourmash tax` operations.
 """
 
-from . import summarize
-from . import classify
+from . import metagenome
+from . import genome
+from . import annotate
 from ..utils import command_list
 from argparse import SUPPRESS, RawDescriptionHelpFormatter
 import os
@@ -22,7 +23,7 @@ def subparser(subparsers):
         helpstring = 'sourmash tax {op:s} --help'.format(op=subcmd)
         desc += '        {hs:33s} {ds:s}\n'.format(hs=helpstring, ds=docstring)
     s = subparser.add_subparsers(
-        title='Integrate taxonomy information', dest='subcmd', metavar='subcmd', help=SUPPRESS,
+        title="Integrate taxonomy information based on 'gather' results", dest='subcmd', metavar='subcmd', help=SUPPRESS,
         description=desc
     )
     for subcmd in ops:
