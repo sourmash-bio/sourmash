@@ -261,14 +261,14 @@ def _load_stdin(filename, **kwargs):
     return db
 
 
-def _collection_load_from_pathlist(filename, **kwargs):
+def _multiindex_load_from_pathlist(filename, **kwargs):
     "Load collection from a list of signature/database files"
     db = MultiIndex.load_from_pathlist(filename)
 
     return db
 
 
-def _collection_load_from_path(filename, **kwargs):
+def _multiindex_load_from_path(filename, **kwargs):
     "Load collection from a directory."
     traverse_yield_all = kwargs['traverse_yield_all']
     db = MultiIndex.load_from_path(filename, traverse_yield_all)
@@ -278,7 +278,7 @@ def _collection_load_from_path(filename, **kwargs):
 
 def _load_sigfile(filename, **kwargs):
     "Load collection from a signature JSON file"
-    # CTB: note, all .sig files are loaded by _collection_load_from_path,
+    # CTB: note, all .sig files are loaded by _multiindex_load_from_path,
     # before this function is called; this effectively only loads
     # files not named .sig.
     try:
@@ -320,9 +320,9 @@ def _load_zipfile(filename, **kwargs):
 # all loader functions, in order.
 _loader_functions = [
     ("load from stdin", _load_stdin),
-    ("load from directory", _collection_load_from_path),
+    ("load from directory", _multiindex_load_from_path),
     ("load from sig file", _load_sigfile),
-    ("load from file list", _collection_load_from_pathlist),
+    ("load from file list", _multiindex_load_from_pathlist),
     ("load SBT", _load_sbt),
     ("load revindex", _load_revindex),
     ("load collection from zipfile", _load_zipfile),
