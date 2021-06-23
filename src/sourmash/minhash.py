@@ -473,6 +473,8 @@ class MinHash(RustObject):
         "Calculate intersection and union sizes between `self` and `other`."
         if not isinstance(other, MinHash):
             raise TypeError("Must be a MinHash!")
+        if not self.is_compatible(other):
+            raise TypeError("incompatible MinHash objects")
 
         usize = ffi.new("uint64_t *")
         common = self._methodcall(lib.kmerminhash_intersection_union_size,
