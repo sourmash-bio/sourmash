@@ -16,6 +16,10 @@ def subparser(subparsers):
         help='output information to a CSV file',
         required=True,
     )
+    subparser.add_argument(
+        '-f', '--force', action='store_true',
+        help='try to load all files as signatures'
+    )
 
 
 def main(args):

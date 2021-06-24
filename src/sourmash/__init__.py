@@ -111,6 +111,7 @@ def search_sbt_index(*args, **kwargs):
 
 from .sbtmh import create_sbt_index
 from . import lca
+from . import tax
 from . import sbt
 from . import sbtmh
 from . import sbt_storage

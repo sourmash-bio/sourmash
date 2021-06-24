@@ -10,6 +10,7 @@ from io import TextIOWrapper
 from .search import make_jaccard_search_query, make_gather_query
 from .manifest import CollectionManifest
 from .logging import debug_literal
+from .signature import load_signatures, save_signatures
 
 # generic return tuple for Index.search and Index.gather
 IndexSearchResult = namedtuple('Result', 'score, signature, location')
@@ -30,6 +31,16 @@ class Index(ABC):
         "Return an iterator over tuples (signature, location) in the Index."
         for ss in self.signatures():
             yield ss, self.location
+
+    def _signatures_with_internal(self):
+        """Return an iterator of tuples (ss, location, internal_location).
+
+        This is an internal API for use in generating manifests, and may
+        change without warning.
+
+        This method should be implemented separately for each Index object.
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def insert(self, signature):
@@ -352,13 +363,12 @@ class LinearIndex(Index):
         self._signatures.append(node)
 
     def save(self, path):
-        from .signature import save_signatures
         with open(path, 'wt') as fp:
             save_signatures(self.signatures(), fp)
 
     @classmethod
     def load(cls, location):
-        from .signature import load_signatures
+        "Load signatures from a JSON signature file."
         si = load_signatures(location, do_raise=True)
 
         lidx = LinearIndex(si, filename=location)
@@ -445,10 +455,41 @@ class ZipFileLinearIndex(Index):
     is_database = True
 
     def __init__(self, zf, *, selection_dict=None,
-                 traverse_yield_all=False, manifest=None):
+                 traverse_yield_all=False, manifest=None, use_manifest=True):
         self.zf = zf
         self.selection_dict = selection_dict
         self.traverse_yield_all = traverse_yield_all
+        self.use_manifest = use_manifest
+
+        # do we have a manifest already? if not, try loading.
+        if use_manifest:
+            if manifest is not None:
+                debug_literal('ZipFileLinearIndex using passed-in manifest')
+                self.manifest = manifest
+            else:
+                self._load_manifest()
+        else:
+            self.manifest = None
+
+        if self.manifest is not None:
+            assert not self.selection_dict, self.selection_dict
+        if self.selection_dict:
+            assert manifest is None
+
+    def _load_manifest(self):
+        "Load a manifest if one exists"
+        try:
+            zi = self.zf.getinfo('SOURMASH-MANIFEST.csv')
+        except KeyError:
+            self.manifest = None
+        else:
+            debug_literal(f'found manifest when loading {self.zf.filename}')
+
+            with self.zf.open(zi, 'r') as mfp:
+                # wrap as text, since ZipFile.open only supports 'r' mode.
+                mfp = TextIOWrapper(mfp, 'utf-8')
+                # load manifest!
+                self.manifest = CollectionManifest.load_from_csv(mfp)
 
         # do we have a manifest already? if not, try loading.
         if manifest is None:
@@ -494,40 +535,31 @@ class ZipFileLinearIndex(Index):
         raise NotImplementedError
 
     @classmethod
-    def load(cls, location, traverse_yield_all=False):
+    def load(cls, location, traverse_yield_all=False, use_manifest=True):
         "Class method to load a zipfile."
         zf = zipfile.ZipFile(location, 'r')
-        return cls(zf, traverse_yield_all=traverse_yield_all)
+        return cls(zf, traverse_yield_all=traverse_yield_all,
+                   use_manifest=use_manifest)
 
-    def signatures_with_internal(self):
-        # @CTB used for creating manifests
-        from .signature import load_signatures
+    def _signatures_with_internal(self):
+        """Return an iterator of tuples (ss, location, internal_location).
+
+        Note: does not limit signatures to subsets.
+        """
         for zipinfo in self.zf.infolist():
             # should we load this file? if it ends in .sig OR we are forcing:
             if zipinfo.filename.endswith('.sig') or \
                zipinfo.filename.endswith('.sig.gz') or \
                self.traverse_yield_all:
                 fp = self.zf.open(zipinfo)
-
-                # now load all the signatures and select on ksize/moltype:
-                selection_dict = self.selection_dict
-
-                # note: if 'fp' doesn't contain a valid JSON signature,
-                # load_signatures will silently fail & yield nothing.
                 for ss in load_signatures(fp):
-                    if selection_dict:
-                        if select_signature(ss, **self.selection_dict):
-                            yield ss, self.zf.filename, zipinfo.filename
-                    else:
-                        yield ss, self.zf.filename, zipinfo.filename
+                    yield ss, self.zf.filename, zipinfo.filename
 
     def signatures(self):
         "Load all signatures in the zip file."
-        from .signature import load_signatures
-
         selection_dict = self.selection_dict
         manifest = None
-        if self.manifest:
+        if self.manifest is not None:
             manifest = self.manifest
             assert not selection_dict
 
@@ -565,18 +597,35 @@ class ZipFileLinearIndex(Index):
 
         # if we have a manifest, run 'select' on the manifest.
         manifest = self.manifest
-        if manifest:
+        traverse_yield_all = self.traverse_yield_all
+
+        if manifest is not None:
             manifest = manifest.select_to_manifest(**kwargs)
-            selection_dict = None
+            return ZipFileLinearIndex(self.zf,
+                                      selection_dict=None,
+                                      traverse_yield_all=traverse_yield_all,
+                                      manifest=manifest,
+                                      use_manifest=True)
         else:
             # no manifest? just pass along all the selection kwargs to
             # the new ZipFileLinearIndex.
-            selection_dict = kwargs
 
-        return ZipFileLinearIndex(self.zf,
-                                  selection_dict=selection_dict,
-                                  traverse_yield_all=self.traverse_yield_all,
-                                  manifest=manifest)
+            assert manifest is None
+            if self.selection_dict:
+                # combine selects...
+                d = dict(self.selection_dict)
+                for k, v in kwargs.items():
+                    if k in d:
+                        if d[k] is not None and d[k] != v:
+                            raise ValueError(f"incompatible select on '{k}'")
+                    d[k] = v
+                kwargs = d
+
+            return ZipFileLinearIndex(self.zf,
+                                      selection_dict=kwargs,
+                                      traverse_yield_all=traverse_yield_all,
+                                      manifest=None,
+                                      use_manifest=False)
 
 
 class CounterGather:
@@ -755,7 +804,12 @@ class MultiIndex(Index):
         for row in self.manifest.rows:
             yield row['signature'], row['internal_location']
 
-    def signatures_with_internal(self):
+    def _signatures_with_internal(self):
+        """Return an iterator of tuples (ss, location)
+
+        CTB note: here, 'internal_location' is the source file for the
+        index. This is a special feature of this (in memory) class.
+        """
         for row in self.manifest.rows:
             yield row['signature'], "", row['internal_location']
 

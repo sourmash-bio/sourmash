@@ -182,7 +182,11 @@ class SBT(Index):
                 if passes_all_picklists(ss, self.picklists):
                     yield ss
 
-    def signatures_with_internal(self):
+    def _signatures_with_internal(self):
+        """Return an iterator of tuples (ss, location, internal_location).
+
+        Note: does not limit signatures to subsets.
+        """
         for k in self.leaves():
             ss = k.data
             yield ss, self.location, k._path
@@ -740,7 +744,7 @@ class SBT(Index):
         if kind == "Zip":
             manifest_name = os.path.join(storage.subdir, manifest_name)
             manifest_path = storage.save(manifest_name, manifest_data,
-                                         overwrite=True)
+                                         overwrite=True, compress=True)
         elif kind == "FS":
             manifest_name = manifest_name
             manifest_path = storage.save(manifest_name, manifest_data,
