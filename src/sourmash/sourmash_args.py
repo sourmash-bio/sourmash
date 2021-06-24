@@ -53,7 +53,7 @@ def calculate_moltype(args, default=None):
         n += 1
 
     if n > 1:
-        error("cannot specify more than one of --dna/--rna/--protein/--hp/--dayhoff")
+        error("cannot specify more than one of --dna/--rna/--nucleotide/--protein/--hp/--dayhoff")
         sys.exit(-1)
 
     return moltype
