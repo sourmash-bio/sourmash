@@ -474,7 +474,7 @@ class ZipFileLinearIndex(Index):
         if self.manifest is not None:
             assert not self.selection_dict, self.selection_dict
         if self.selection_dict:
-            assert manifest is None
+            assert self.manifest is None
 
     def _load_manifest(self):
         "Load a manifest if one exists"
@@ -490,24 +490,6 @@ class ZipFileLinearIndex(Index):
                 mfp = TextIOWrapper(mfp, 'utf-8')
                 # load manifest!
                 self.manifest = CollectionManifest.load_from_csv(mfp)
-
-        # do we have a manifest already? if not, try loading.
-        if manifest is None:
-            try:
-                zi = self.zf.getinfo('SOURMASH-MANIFEST.csv')
-            except KeyError:
-                self.manifest = None
-            else:
-                debug_literal(f'found manifest when loading {self.zf.filename}')
-
-                with self.zf.open(zi, 'r') as mfp:
-                    # wrap as text, since ZipFile.open only supports 'r' mode.
-                    mfp = TextIOWrapper(mfp, 'utf-8')
-                    # load manifest!
-                    self.manifest = CollectionManifest.load_from_csv(mfp)
-        else:
-            debug_literal('ZipFileLinearIndex using passed-in manifest')
-            self.manifest = manifest
 
     def __bool__(self):
         "Are there any matching signatures in this zipfile? Avoid calling len."
