@@ -7,6 +7,7 @@ from enum import Enum
 import traceback
 import gzip
 import zipfile
+from io import StringIO
 
 import screed
 import sourmash
@@ -20,6 +21,7 @@ from .logging import notify, error, debug_literal
 from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
 from . import signature as sigmod
 from .picklist import SignaturePicklist, PickStyle
+from .manifest import CollectionManifest
 
 
 DEFAULT_LOAD_K = 31
@@ -278,6 +280,9 @@ def _multiindex_load_from_path(filename, **kwargs):
 
 def _load_sigfile(filename, **kwargs):
     "Load collection from a signature JSON file"
+    # CTB: note, all .sig files are loaded by _multiindex_load_from_path,
+    # before this function is called; this effectively only loads
+    # files not named .sig.
     try:
         db = LinearIndex.load(filename)
     except sourmash.exceptions.SourmashError as exc:
@@ -398,7 +403,8 @@ def load_file_as_index(filename, *, yield_all_files=False):
 def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
                             picklist=None,
                             yield_all_files=False,
-                            progress=None):
+                            progress=None,
+                            _use_manifest=True):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
     If 'filename' contains an SBT or LCA indexed database, or a regular
@@ -419,6 +425,11 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
         progress.notify(filename)
 
     db = _load_database(filename, yield_all_files)
+
+    # test fixture ;)
+    if not _use_manifest and db.manifest:
+        db.manifest = None
+
     db = db.select(moltype=select_moltype, ksize=ksize, picklist=picklist)
     loader = db.signatures()
 
@@ -719,10 +730,27 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         return f"SaveSignatures_ZipFile('{self.location}')"
 
     def close(self):
+        # finish constructing manifest object & save
+        manifest = CollectionManifest(self.manifest_rows)
+        manifest_name = f"SOURMASH-MANIFEST.csv"
+
+        manifest_fp = StringIO()
+        manifest.write_to_csv(manifest_fp, write_header=True)
+        manifest_data = manifest_fp.getvalue().encode("utf-8")
+
+        # compress the manifest --
+        self.zf.writestr(manifest_name, manifest_data,
+                         compress_type=zipfile.ZIP_DEFLATED)
+
+        # set permissions:
+        zi = self.zf.getinfo(manifest_name)
+        zi.external_attr = 0o444 << 16 # give a+r access
+
         self.zf.close()
 
     def open(self):
         self.zf = zipfile.ZipFile(self.location, 'w', zipfile.ZIP_STORED)
+        self.manifest_rows = []
 
     def _exists(self, name):
         try:
@@ -750,6 +778,15 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
 
         json_str = sourmash.save_signatures([ss], compression=1)
         self.zf.writestr(outname, json_str)
+
+        # set permissions:
+        zi = self.zf.getinfo(outname)
+        zi.external_attr = 0o444 << 16 # give a+r access
+
+        # update manifest
+        row = CollectionManifest.make_manifest_row(ss, outname,
+                                                   include_signature=False)
+        self.manifest_rows.append(row)
 
 
 class SigFileSaveType(Enum):
