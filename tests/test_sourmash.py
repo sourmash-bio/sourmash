@@ -247,6 +247,32 @@ def test_do_basic_compare_using_rna_arg(c):
     assert (cmp_out == cmp_calc).all()
 
 
+def test_do_basic_compare_using_nucleotide_arg(runtmp):
+    # try doing a basic compare using --nucleotide instead of --dna/--rna
+    c=runtmp
+    import numpy
+    testsigs = utils.get_test_data('genome-s1*.sig')
+    testsigs = glob.glob(testsigs)
+
+    c.run_sourmash('compare', '-o', 'cmp', '-k', '21', '--nucleotide', *testsigs)
+
+    cmp_outfile = c.output('cmp')
+    assert os.path.exists(cmp_outfile)
+    cmp_out = numpy.load(cmp_outfile)
+
+    sigs = []
+    for fn in testsigs:
+        sigs.append(sourmash.load_one_signature(fn, ksize=21,
+                                                select_moltype='dna'))
+
+    cmp_calc = numpy.zeros([len(sigs), len(sigs)])
+    for i, si in enumerate(sigs):
+        for j, sj in enumerate(sigs):
+            cmp_calc[i][j] = si.similarity(sj)
+
+    assert (cmp_out == cmp_calc).all()
+
+
 @utils.in_tempdir
 def test_do_compare_quiet(c):
     testdata1 = utils.get_test_data('short.fa')
@@ -2112,7 +2138,7 @@ def test_do_sourmash_index_bad_args():
                                            in_directory=location, fail_ok=True)
 
         print(out, err)
-        assert 'cannot specify more than one of --dna/--rna/--protein/--hp/--dayhoff' in err
+        assert 'cannot specify more than one of --dna/--rna/--nucleotide/--protein/--hp/--dayhoff' in err
         assert status != 0
 
 
