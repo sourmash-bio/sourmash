@@ -1218,6 +1218,7 @@ def test_do_sourmash_index_multiscaled_rescale(c):
 
     print(c)
     assert c.last_result.status == 0
+    assert "WARNING: --scaled value should be >= 100. Continuing anyway." in c.last_result.err
 
 
 @utils.in_tempdir
