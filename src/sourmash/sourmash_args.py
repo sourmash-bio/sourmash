@@ -738,7 +738,14 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         manifest.write_to_csv(manifest_fp, write_header=True)
         manifest_data = manifest_fp.getvalue().encode("utf-8")
 
-        self.zf.writestr(manifest_name, manifest_data)
+        # compress the manifest --
+        self.zf.writestr(manifest_name, manifest_data,
+                         compress_type=zipfile.ZIP_DEFLATED)
+
+        # set permissions:
+        zi = self.zf.getinfo(manifest_name)
+        zi.external_attr = 0o444 << 16 # give a+r access
+
         self.zf.close()
 
     def open(self):
@@ -771,6 +778,10 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
 
         json_str = sourmash.save_signatures([ss], compression=1)
         self.zf.writestr(outname, json_str)
+
+        # set permissions:
+        zi = self.zf.getinfo(outname)
+        zi.external_attr = 0o444 << 16 # give a+r access
 
         # update manifest
         row = CollectionManifest.make_manifest_row(ss, outname,

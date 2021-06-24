@@ -744,7 +744,7 @@ class SBT(Index):
         if kind == "Zip":
             manifest_name = os.path.join(storage.subdir, manifest_name)
             manifest_path = storage.save(manifest_name, manifest_data,
-                                         overwrite=True)
+                                         overwrite=True, compress=True)
         elif kind == "FS":
             manifest_name = manifest_name
             manifest_path = storage.save(manifest_name, manifest_data,
