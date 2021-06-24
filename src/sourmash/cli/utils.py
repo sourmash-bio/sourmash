@@ -31,10 +31,10 @@ def add_moltype_args(parser):
     parser.set_defaults(hp=False)
 
     parser.add_argument(
-        '--dna', '--rna', dest='dna', default=None, action='store_true',
+        '--dna', '--rna', '--nucleotide', dest='dna', default=None, action='store_true',
         help='choose a nucleotide signature (default: True)')
     parser.add_argument(
-        '--no-dna', '--no-rna', dest='dna', action='store_false',
+        '--no-dna', '--no-rna', '--no-nucleotide', dest='dna', action='store_false',
         help='do not choose a nucleotide signature')
     parser.set_defaults(dna=None)
 
