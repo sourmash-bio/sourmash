@@ -10,14 +10,14 @@ import copy
 
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
-from sourmash.index import (LinearIndex, MultiIndex, ZipFileLinearIndex,
+from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             make_jaccard_search_query, CounterGather,
-                            LazyLinearIndex)
+                            LazyLinearIndex, MultiIndex)
 from sourmash.sbt import SBT, GraphFactory, Leaf
 from sourmash.sbtmh import SigLeaf
 from sourmash import sourmash_args
 from sourmash.search import JaccardSearch, SearchType
-from sourmash.picklist import SignaturePicklist
+from sourmash.picklist import SignaturePicklist, PickStyle
 
 import sourmash_tst_utils as utils
 
@@ -39,28 +39,28 @@ def test_simple_index(n_children):
     leaf2_mh.add_sequence("AAAAG")
     leaf2_sig = SourmashSignature(leaf2_mh)
     root.insert(leaf2_sig)
-    
+
     leaf3_mh = sourmash.MinHash(0, 5, scaled=1)
     leaf3_mh.add_sequence("AAAAA")
     leaf3_mh.add_sequence("AAAAT")
     leaf3_mh.add_sequence("CAAAA")
     leaf3_sig = SourmashSignature(leaf3_mh)
     root.insert(leaf3_sig)
-    
+
     leaf4_mh = sourmash.MinHash(0, 5, scaled=1)
     leaf4_mh.add_sequence("AAAAA")
     leaf4_mh.add_sequence("CAAAA")
     leaf4_mh.add_sequence("GAAAA")
     leaf4_sig = SourmashSignature(leaf4_mh)
     root.insert(leaf4_sig)
-    
+
     leaf5_mh = sourmash.MinHash(0, 5, scaled=1)
     leaf5_mh.add_sequence("AAAAA")
     leaf5_mh.add_sequence("AAAAT")
     leaf5_mh.add_sequence("GAAAA")
     leaf5_sig = SourmashSignature(leaf5_mh)
     root.insert(leaf5_sig)
-    
+
     linear = LinearIndex()
     linear.insert(leaf1_sig)
     linear.insert(leaf2_sig)
@@ -80,7 +80,7 @@ def test_simple_index(n_children):
         linear_found = set(linear_found)
 
         tree_found = set(root.find(search_fn, search_sig))
-        
+
         assert tree_found
         assert tree_found == set(linear_found)
 
@@ -424,7 +424,7 @@ def test_linear_index_save(runtmp):
     linear.insert(ss2)
     linear.insert(ss47)
     linear.insert(ss63)
-    
+
     filename = runtmp.output('foo')
     linear.save(filename)
 
@@ -451,7 +451,7 @@ def test_linear_index_load(runtmp):
     ss63 = sourmash.load_one_signature(sig63)
 
     from sourmash import save_signatures
-    
+
     filename = runtmp.output('foo')
     with open(filename, 'wt') as fp:
         sourmash.save_signatures([ss2, ss47, ss63], fp)
@@ -480,7 +480,7 @@ def test_linear_index_save_load(runtmp):
     filename = runtmp.output('foo')
     linear.save(filename)
     linear2 = LinearIndex.load(filename)
-        
+
     # now, search for sig2
     sr = linear2.search(ss2, threshold=1.0)
     print([s[1].name for s in sr])
@@ -658,6 +658,33 @@ def test_linear_index_picklist_select():
     assert ss.md5sum().startswith('f3a90d4e55')
 
 
+def test_linear_index_picklist_select_exclude():
+    # test select with a picklist, but exclude
+
+    # this loads three ksizes, 21/31/51
+    sig2 = utils.get_test_data('2.fa.sig')
+    siglist = sourmash.load_file_as_signatures(sig2)
+
+    linear = LinearIndex()
+    for ss in siglist:
+        linear.insert(ss)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('md5prefix8', pickstyle=PickStyle.EXCLUDE)
+    picklist.init(['f3a90d4e'])
+
+    # select on picklist
+    linear2 = linear.select(picklist=picklist)
+    assert len(linear2) == 2
+    md5s = set()
+    ksizes = set()
+    for ss in list(linear2.signatures()):
+        md5s.add(ss.md5sum())
+        ksizes.add(ss.minhash.ksize)
+    assert md5s == set(['f372e47893edd349e5956f8b0d8dcbf7','43f3b48e59443092850964d355a20ac0'])
+    assert ksizes == set([21,51])
+
+
 @utils.in_tempdir
 def test_index_same_md5sum_fsstorage(c):
     testdata1 = utils.get_test_data('img/2706795855.sig')
@@ -669,7 +696,7 @@ def test_index_same_md5sum_fsstorage(c):
     outfile = c.output('zzz.sbt.json')
     assert os.path.exists(outfile)
     storage = c.output('.sbt.zzz')
-    assert len(glob.glob(storage + "/*")) == 3
+    assert len(glob.glob(storage + "/*")) == 4
 
 
 @utils.in_tempdir
@@ -685,7 +712,7 @@ def test_index_same_md5sum_sbt_zipstorage(c):
     zout = zipfile.ZipFile(outfile, mode='r')
     # should have 3 files, 1 internal and two sigs. We check for 4 because the
     # directory also shows in namelist()
-    assert len([f for f in zout.namelist() if f.startswith(".sbt.zzz/")]) == 4
+    assert len([f for f in zout.namelist() if f.startswith(".sbt.zzz/")]) == 5
 
 
 @utils.in_thisdir
@@ -788,14 +815,19 @@ def test_zipfile_dayhoff_command_search_protein(c):
     assert 'no compatible signatures found in ' in c.last_result.err
 
 
-def test_zipfile_API_signatures():
+def test_zipfile_API_signatures(use_manifest):
     # return all of the .sig and .sig.gz files in all.zip
     zipfile_db = utils.get_test_data('prot/all.zip')
 
-    zipidx = ZipFileLinearIndex.load(zipfile_db)
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
     siglist = list(zipidx.signatures())
-    assert len(siglist) == 7
-    assert len(zipidx) == 7
+
+    if use_manifest:
+        assert len(siglist) == 8
+        assert len(zipidx) == 8
+    else:
+        assert len(siglist) == 7
+        assert len(zipidx) == 7
 
 
 def test_zipfile_bool():
@@ -824,11 +856,12 @@ def test_zipfile_bool():
     assert "don't call len!" in str(exc.value)
 
 
-def test_zipfile_API_signatures_traverse_yield_all():
+def test_zipfile_API_signatures_traverse_yield_all(use_manifest):
     # include dna-sig.noext, but not build.sh (cannot be loaded as signature)
     zipfile_db = utils.get_test_data('prot/all.zip')
 
-    zipidx = ZipFileLinearIndex.load(zipfile_db, traverse_yield_all=True)
+    zipidx = ZipFileLinearIndex.load(zipfile_db, traverse_yield_all=True,
+                                     use_manifest=use_manifest)
     siglist = list(zipidx.signatures())
     assert len(siglist) == 8
     assert len(zipidx) == 8
@@ -837,29 +870,52 @@ def test_zipfile_API_signatures_traverse_yield_all():
     zf = zipidx.zf
     allfiles = [ zi.filename for zi in zf.infolist() ]
     print(allfiles)
-    assert len(allfiles) == 12
+    assert len(allfiles) == 13
 
 
-def test_zipfile_API_signatures_traverse_yield_all_select():
+def test_zipfile_API_signatures_traverse_yield_all_select(use_manifest):
     # include dna-sig.noext
     zipfile_db = utils.get_test_data('prot/all.zip')
 
-    zipidx = ZipFileLinearIndex.load(zipfile_db, traverse_yield_all=True)
+    zipidx = ZipFileLinearIndex.load(zipfile_db, traverse_yield_all=True,
+                                     use_manifest=use_manifest)
     zipidx = zipidx.select(moltype='DNA')
     siglist = list(zipidx.signatures())
     assert len(siglist) == 2
     assert len(zipidx) == 2
 
 
-def test_zipfile_API_signatures_select():
+def test_zipfile_API_signatures_select(use_manifest):
     # include dna-sig.noext
     zipfile_db = utils.get_test_data('prot/all.zip')
 
-    zipidx = ZipFileLinearIndex.load(zipfile_db)
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
     zipidx = zipidx.select(moltype='DNA')
     siglist = list(zipidx.signatures())
-    assert len(siglist) == 1
-    assert len(zipidx) == 1
+
+    if use_manifest:
+        assert len(siglist) == 2
+        assert len(zipidx) == 2
+    else:
+        assert len(siglist) == 1
+        assert len(zipidx) == 1
+
+
+def test_zipfile_API_signatures_select_twice(use_manifest):
+    # include dna-sig.noext
+    zipfile_db = utils.get_test_data('prot/all.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    zipidx = zipidx.select(moltype='DNA')
+    zipidx = zipidx.select(ksize=31)
+    siglist = list(zipidx.signatures())
+
+    if use_manifest:
+        assert len(siglist) == 2
+        assert len(zipidx) == 2
+    else:
+        assert len(siglist) == 1
+        assert len(zipidx) == 1
 
 
 def test_zipfile_API_save():
@@ -881,37 +937,42 @@ def test_zipfile_API_insert():
         zipidx.insert(None)
 
 
-def test_zipfile_API_location():
+def test_zipfile_API_location(use_manifest):
     zipfile_db = utils.get_test_data('prot/all.zip')
 
-    zipidx = ZipFileLinearIndex.load(zipfile_db)
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
 
     assert zipidx.location == zipfile_db
 
 
-def test_zipfile_load_file_as_signatures():
-    from types import GeneratorType
-
-    zipfile_db = utils.get_test_data('prot/all.zip')
-    sigs = sourmash_args.load_file_as_signatures(zipfile_db)
-
-    # it's fine if this needs to change, but for now I want to make
-    # sure that this is generator.
-    assert isinstance(sigs, GeneratorType)
-
-    sigs = list(sigs)
-    assert len(sigs) == 7
-
-
-def test_zipfile_load_file_as_signatures_traverse_yield_all():
+def test_zipfile_load_file_as_signatures(use_manifest):
     from types import GeneratorType
 
     zipfile_db = utils.get_test_data('prot/all.zip')
     sigs = sourmash_args.load_file_as_signatures(zipfile_db,
-                                                 yield_all_files=True)
+                                                 _use_manifest=use_manifest)
 
     # it's fine if this needs to change, but for now I want to make
-    # sure that this is generator.
+    # sure that this is a generator.
+    assert isinstance(sigs, GeneratorType)
+
+    sigs = list(sigs)
+    if use_manifest:
+        assert len(sigs) == 8
+    else:
+        assert len(sigs) == 7
+
+
+def test_zipfile_load_file_as_signatures_traverse_yield_all(use_manifest):
+    from types import GeneratorType
+
+    zipfile_db = utils.get_test_data('prot/all.zip')
+    sigs = sourmash_args.load_file_as_signatures(zipfile_db,
+                                                 yield_all_files=True,
+                                                 _use_manifest=use_manifest)
+
+    # it's fine if this needs to change, but for now I want to make
+    # sure that this is a generator.
     assert isinstance(sigs, GeneratorType)
 
     sigs = list(sigs)
@@ -944,8 +1005,8 @@ def test_multi_index_search():
     lidx2 = LinearIndex.load(sig47)
     lidx3 = LinearIndex.load(sig63)
 
-    # create MultiIindex with source location override
-    lidx = MultiIndex([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    # create MultiIndex with source location override
+    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
     lidx = lidx.select(ksize=31)
 
     # now, search for sig2
@@ -997,8 +1058,8 @@ def test_multi_index_gather():
     lidx2 = LinearIndex.load(sig47)
     lidx3 = LinearIndex.load(sig63)
 
-    # create MultiIindex with source location override
-    lidx = MultiIndex([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    # create MultiIndex with source location override
+    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
     lidx = lidx.select(ksize=31)
 
     matches = lidx.gather(ss2)
@@ -1026,8 +1087,8 @@ def test_multi_index_signatures():
     lidx2 = LinearIndex.load(sig47)
     lidx3 = LinearIndex.load(sig63)
 
-    # create MultiIindex with source location override
-    lidx = MultiIndex([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    # create MultiIndex with source location override
+    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
     lidx = lidx.select(ksize=31)
 
     siglist = list(lidx.signatures())
@@ -1049,9 +1110,6 @@ def test_multi_index_load_from_path_2():
     # only load .sig files, currently; not the databases under that directory.
     dirname = utils.get_test_data('prot')
     mi = MultiIndex.load_from_path(dirname, force=False)
-
-    print(mi.index_list)
-    print(mi.source_list)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 7
@@ -1091,9 +1149,6 @@ def test_multi_index_load_from_path_3_yield_all_true(c):
 
     mi = MultiIndex.load_from_path(c.location, force=True)
 
-    print(mi.index_list)
-    print(mi.source_list)
-
     sigs = list(mi.signatures())
     assert len(sigs) == 8
 
@@ -1117,9 +1172,6 @@ def test_multi_index_load_from_path_3_yield_all_true_subdir(c):
 
     mi = MultiIndex.load_from_path(c.location, force=True)
 
-    print(mi.index_list)
-    print(mi.source_list)
-
     sigs = list(mi.signatures())
     assert len(sigs) == 8
 
@@ -1142,9 +1194,6 @@ def test_multi_index_load_from_path_3_sig_gz(c):
 
     mi = MultiIndex.load_from_path(c.location, force=False)
 
-    print(mi.index_list)
-    print(mi.source_list)
-
     sigs = list(mi.signatures())
     assert len(sigs) == 6
 
@@ -1159,7 +1208,7 @@ def test_multi_index_load_from_path_3_check_traverse_fn(c):
     assert len(files) == 7, files
 
     files = list(sourmash_args.traverse_find_sigs([dirname], True))
-    assert len(files) == 20, files
+    assert len(files) == 20, files # if this fails, check for extra files!
 
 
 def test_multi_index_load_from_path_no_exist():
@@ -1192,9 +1241,11 @@ def test_multi_index_load_from_pathlist_1(c):
 
 @utils.in_tempdir
 def test_multi_index_load_from_pathlist_2(c):
+    # CTB note: if you create extra files under this directory,
+    # it will fail :)
     dirname = utils.get_test_data('prot')
     files = list(sourmash_args.traverse_find_sigs([dirname], True))
-    assert len(files) == 20, files
+    assert len(files) == 20, files # check there aren't extra files in here!
 
     file_list = c.output('filelist.txt')
 
@@ -1216,7 +1267,7 @@ def test_multi_index_load_from_pathlist_3_zipfile(c):
         print(zipfile, file=fp)
 
     mi = MultiIndex.load_from_pathlist(file_list)
-    assert len(mi) == 7
+    assert len(mi) == 8
 
 ##
 ## test a slightly outre version of JaccardSearch - this is a test of the
@@ -2052,7 +2103,7 @@ def test_lazy_index_5_len():
         len(lazy)
 
 
-def test_lazy_index_wraps_multiindex_location():
+def test_lazy_index_wraps_multi_index_location():
     sigdir = utils.get_test_data('prot/protein/')
     sigzip = utils.get_test_data('prot/protein.zip')
     siglca = utils.get_test_data('prot/protein.lca.json.gz')
@@ -2061,7 +2112,7 @@ def test_lazy_index_wraps_multiindex_location():
     db_paths = (sigdir, sigzip, siglca, sigsbt)
     dbs = [ sourmash.load_file_as_index(db_path) for db_path in db_paths ]
 
-    mi = MultiIndex(dbs, db_paths)
+    mi = MultiIndex.load(dbs, db_paths)
     lazy = LazyLinearIndex(mi)
 
     mi2 = mi.select(moltype='protein')
