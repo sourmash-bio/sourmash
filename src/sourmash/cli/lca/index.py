@@ -41,7 +41,11 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '--split-identifiers', action='store_true',
-        help='split names in signatures on whitspace and period'
+        help='split names in signatures on whitespace'
+    )
+    subparser.add_argument(
+        '--keep-identifier-versions', action='store_true',
+        help='do not remove accession versions'
     )
     subparser.add_argument('-f', '--force', action='store_true')
     subparser.add_argument(
@@ -50,6 +54,10 @@ def subparser(subparsers):
     subparser.add_argument(
         '--require-taxonomy', action='store_true',
         help='ignore signatures with no taxonomy entry'
+    )
+    subparser.add_argument(
+        '--fail-on-missing-taxonomy', action='store_true',
+        help='fail quickly if taxonomy is not available for an identifier',
     )
 
     add_ksize_arg(subparser, 31)

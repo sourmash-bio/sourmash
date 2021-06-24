@@ -91,7 +91,7 @@ The output signature(s) will be saved in locations that depend on your input par
 
 `sourmash sketch protein` and `sourmash sketch translate` output protein sketches by default, but can also use the `dayhoff` and `hp` encodings.  The [Dayhoff encoding](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-9-367/tables/1) collapses multiple amino acids into a smaller alphabet so that amino acids that share biochemical properties map to the same character. The hp encoding divides amino acids into hydrophobic and polar (hydrophilic) amino acids, collapsing amino acids with hydrophobic side chains together and doing the same for polar amino acids.
 
-We are still in the process of benchmarking these encodings; ask [on the issue tracker](https://github.com/dib-lab/sourmash/issues) if you are interested in updates.
+We are still in the process of benchmarking these encodings; ask [on the issue tracker](https://github.com/sourmash-bio/sourmash/issues) if you are interested in updates.
 
 ### Parameter strings
 
@@ -121,7 +121,7 @@ These were chosen by a committee of PhDs as being good defaults for an initial a
 
 More seriously, the DNA parameters were chosen based on the analyses done by Koslicki and Falush in [MetaPalette: a k-mer Painting Approach for Metagenomic Taxonomic Profiling and Quantification of Novel Strain Variation](https://msystems.asm.org/content/1/3/e00020-16).
 
-The protein, dayhoff, and hp parameters were selected based on unpublished research results and/or magic formulas. We are working on publishing the results! Please ask on the [issue tracker](https://github.com/dib-lab/sourmash/issues) if you are curious.
+The protein, dayhoff, and hp parameters were selected based on unpublished research results and/or magic formulas. We are working on publishing the results! Please ask on the [issue tracker](https://github.com/sourmash-bio/sourmash/issues) if you are curious.
 
 ### More complex parameter string examples
 
@@ -185,4 +185,4 @@ You can use `sourmash sig describe` to get detailed information about the conten
 
 We try to provide good documentation and error messages, but may not succeed in answer all your questions! So we're happy to help out!
 
-Please post questions [on the sourmash issue tracker](https://github.com/dib-lab/sourmash/issues). If you find something confusing or buggy about the documentation or about sourmash, we'd love to fix it -- for you *and* for everyone else!
+Please post questions [on the sourmash issue tracker](https://github.com/sourmash-bio/sourmash/issues). If you find something confusing or buggy about the documentation or about sourmash, we'd love to fix it -- for you *and* for everyone else!
