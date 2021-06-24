@@ -98,7 +98,7 @@ def test_load_pathlist_from_file_badly_formatted(c):
     with pytest.raises(ValueError) as e:
         load_pathlist_from_file(file_list)
     assert "file '{'a':1}' inside the pathlist does not exist" in str(e.value)
-
+    
 
 @utils.in_tempdir
 def test_load_pathlist_from_file_badly_formatted_2(c):
@@ -229,32 +229,6 @@ def test_do_basic_compare_using_rna_arg(c):
     testsigs = glob.glob(testsigs)
 
     c.run_sourmash('compare', '-o', 'cmp', '-k', '21', '--rna', *testsigs)
-
-    cmp_outfile = c.output('cmp')
-    assert os.path.exists(cmp_outfile)
-    cmp_out = numpy.load(cmp_outfile)
-
-    sigs = []
-    for fn in testsigs:
-        sigs.append(sourmash.load_one_signature(fn, ksize=21,
-                                                select_moltype='dna'))
-
-    cmp_calc = numpy.zeros([len(sigs), len(sigs)])
-    for i, si in enumerate(sigs):
-        for j, sj in enumerate(sigs):
-            cmp_calc[i][j] = si.similarity(sj)
-
-    assert (cmp_out == cmp_calc).all()
-
-
-def test_do_basic_compare_using_nucleotide_arg(runtmp):
-    # try doing a basic compare using --nucleotide instead of --dna/--rna
-    c=runtmp
-    import numpy
-    testsigs = utils.get_test_data('genome-s1*.sig')
-    testsigs = glob.glob(testsigs)
-
-    c.run_sourmash('compare', '-o', 'cmp', '-k', '21', '--nucleotide', *testsigs)
 
     cmp_outfile = c.output('cmp')
     assert os.path.exists(cmp_outfile)
@@ -946,10 +920,7 @@ def test_gather_lca_db(runtmp, linear_gather, prefetch_gather):
 
     runtmp.sourmash('gather', query, lca_db, linear_gather, prefetch_gather)
     print(runtmp)
-    out = runtmp.last_result.out
-
-    assert 'NC_009665.1 Shewanella baltica OS185' in out
-    assert 'WARNING: final scaled was 10000, vs query scaled of 1000' in out
+    assert 'NC_009665.1 Shewanella baltica OS185' in str(runtmp.last_result.out)
 
 
 def test_gather_csv_output_filename_bug(runtmp, linear_gather, prefetch_gather):
@@ -1247,8 +1218,7 @@ def test_do_sourmash_index_multiscaled_rescale(c):
 
     print(c)
     assert c.last_result.status == 0
-    assert "WARNING: --scaled value should be >= 100. Continuing anyway." in c.last_result.err
-
+    
 
 @utils.in_tempdir
 def test_do_sourmash_index_multiscaled_rescale_fail(c):
@@ -2238,28 +2208,6 @@ def test_search_with_picklist(runtmp):
     assert "12.8%       NC_011978.1 Thermotoga" in out
 
 
-def test_search_with_picklist_exclude(runtmp):
-    # test 'sourmash search' with picklists
-    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
-    metag_sig = utils.get_test_data('gather/combined.sig')
-    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
-
-    runtmp.sourmash('search', metag_sig, *gcf_sigs, '--containment',
-                    '-k', '21', '--picklist', f"{picklist}:md5:md5:exclude")
-
-    err = runtmp.last_result.err
-    print(err)
-    assert "for given picklist, found 9 matches by excluding 9 distinct values" in err
-    # these are the different ksizes
-
-    out = runtmp.last_result.out
-    print(out)
-    assert "9 matches; showing first 3:" in out
-    assert "33.2%       NC_003198.1 Salmonella" in out
-    assert "33.1%       NC_003197.2 Salmonella" in out
-    assert "32.2%       NC_006905.1 Salmonella" in out
-
-
 def test_mash_csv_to_sig():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa.msh.dump')
@@ -2301,7 +2249,7 @@ def test_do_sourmash_index_bad_args():
                                            in_directory=location, fail_ok=True)
 
         print(out, err)
-        assert 'cannot specify more than one of --dna/--rna/--nucleotide/--protein/--hp/--dayhoff' in err
+        assert 'cannot specify more than one of --dna/--rna/--protein/--hp/--dayhoff' in err
         assert status != 0
 
 
@@ -2646,7 +2594,7 @@ def test_do_sourmash_index_sparseness():
                                            in_directory=location)
         print(out)
 
-        assert len(glob.glob(os.path.join(location, '.sbt.zzz', '*'))) == 3
+        assert len(glob.glob(os.path.join(location, '.sbt.zzz', '*'))) == 2
         assert not glob.glob(os.path.join(location, '.sbt.zzz', '*internal*'))
 
         assert 'short.fa' in out
@@ -2922,10 +2870,10 @@ def test_do_sourmash_check_sbt_filenames():
             sig_md5s.add(sig.md5sum())
 
         sbt_files = glob.glob(os.path.join(location, '.sbt.zzz', '*'))
-        assert len(sbt_files) == 14
+        assert len(sbt_files) == 13
 
         for f in sbt_files:
-            if 'internal' in f or f.endswith('zzz.manifest.csv'):
+            if 'internal' in f:
                 continue
             f = os.path.basename(f)
             assert f not in sig_names
@@ -3142,28 +3090,6 @@ def test_compare_with_picklist(runtmp):
     assert "NC_009486.1 The..." in out
     assert "NC_000853.1 The..." in out
     assert "NC_011978.1 The..." in out
-
-
-def test_compare_with_picklist_exclude(runtmp):
-    # test 'sourmash compare' with picklists - exclude
-    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
-    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
-
-    runtmp.sourmash('compare', *gcf_sigs,
-                    '-k', '21', '--picklist', f"{picklist}:md5:md5:exclude")
-
-    err = runtmp.last_result.err
-    out = runtmp.last_result.out
-    print(runtmp.last_result.out)
-    print(runtmp.last_result.err)
-
-    assert "for given picklist, found 9 matches by excluding 9 distinct values" in err
-
-    assert "NC_004631.1 Sal..." in out
-    assert "NC_006905.1 Sal..." in out
-    assert "NC_003198.1 Sal..." in out
-    assert "NC_002163.1 Cam..." in out
-    assert "NC_011294.1 Sal..." in out
 
 
 def test_gather(linear_gather, prefetch_gather):
@@ -4406,8 +4332,6 @@ def test_gather_query_downsample(linear_gather, prefetch_gather):
         assert all(('4.9 Mbp      100.0%  100.0%' in out,
                     'NC_003197.2' in out))
 
-        assert 'WARNING: final scaled was 10000, vs query scaled of 500' in out
-
 
 def test_gather_query_downsample_explicit(linear_gather, prefetch_gather):
     # do an explicit downsampling to fix `test_gather_query_downsample`
@@ -4454,35 +4378,6 @@ def test_gather_with_picklist(runtmp, linear_gather, prefetch_gather):
     assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 Thermotoga" in out
     assert "1.9 Mbp       11.5%   89.9%    NC_011978.1 Thermotoga" in out
     assert "1.9 Mbp        6.3%   48.4%    NC_009486.1 Thermotoga" in out
-
-
-def test_gather_with_picklist_exclude(runtmp, linear_gather, prefetch_gather):
-    # test 'sourmash gather' with picklists - exclude
-    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
-    metag_sig = utils.get_test_data('gather/combined.sig')
-    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
-
-    runtmp.sourmash('gather', metag_sig, *gcf_sigs, '--threshold-bp=0',
-                    '-k', '21', '--picklist', f"{picklist}:md5:md5:exclude",
-                    linear_gather, prefetch_gather)
-
-    err = runtmp.last_result.err
-    print(err)
-    assert "for given picklist, found 9 matches by excluding 9 distinct values" in err
-    # these are the different ksizes
-
-    out = runtmp.last_result.out
-    print(out)
-    assert "found 9 matches total;" in out
-    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 Salmonella enterica subsp..." in out
-    assert "1.6 Mbp       10.7%  100.0%    NC_002163.1 Campylobacter jejuni subs..." in out
-    assert "4.8 Mbp       10.4%   31.3%    NC_003197.2 Salmonella enterica subsp..." in out
-    assert "4.7 Mbp        5.2%   16.1%    NC_006905.1 Salmonella enterica subsp..." in out
-    assert "4.7 Mbp        4.0%   12.6%    NC_011080.1 Salmonella enterica subsp..." in out
-    assert "4.6 Mbp        2.9%    9.2%    NC_011274.1 Salmonella enterica subsp..." in out
-    assert "4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp..." in out
-    assert "4.7 Mbp        0.5%    1.5%    NC_011294.1 Salmonella enterica subsp..." in out
-    assert "4.5 Mbp        0.1%    0.4%    NC_004631.1 Salmonella enterica subsp..." in out
 
 
 def test_gather_save_matches(linear_gather, prefetch_gather):
@@ -5269,7 +5164,7 @@ def test_do_sourmash_index_zipfile(c):
     # look internally at the zip file
     with zipfile.ZipFile(outfile) as zf:
         content = zf.namelist()
-        assert len(content) == 26
+        assert len(content) == 25
         assert len([c for c in content if 'internal' in c]) == 11
         assert ".sbt.zzz/" in content
         sbts = [c for c in content if c.endswith(".sbt.json")]
@@ -5319,7 +5214,7 @@ def test_do_sourmash_index_zipfile_append(c):
     with zipfile.ZipFile(outfile) as zf:
         content = zf.namelist()
         print(content)
-        assert len(content) == 26
+        assert len(content) == 25
         assert len([c for c in content if 'internal' in c]) == 11
         assert ".sbt.zzz/" in content
         sbts = [c for c in content if c.endswith(".sbt.json")]
@@ -5349,27 +5244,6 @@ def test_index_with_picklist(runtmp):
     assert len(siglist) == 3
     for ss in siglist:
         assert 'Thermotoga' in ss.name
-
-
-def test_index_with_picklist_exclude(runtmp):
-    # test 'sourmash index' with picklists - exclude
-    gcf_sig_dir = utils.get_test_data('gather/')
-    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
-
-    output_db = runtmp.output('thermo-exclude.sbt.zip')
-
-    runtmp.sourmash('index', output_db, gcf_sig_dir,
-                    '-k', '31', '--picklist', f"{picklist}:md5:md5:exclude")
-
-    err = runtmp.last_result.err
-    print(err)
-    assert "for given picklist, found 9 matches by excluding 9 distinct values" in err
-
-    # verify:
-    siglist = list(sourmash.load_file_as_signatures(output_db))
-    assert len(siglist) == 9
-    for ss in siglist:
-        assert 'Thermotoga' not in ss.name
 
 
 def test_index_matches_search_with_picklist(runtmp):
@@ -5411,47 +5285,6 @@ def test_index_matches_search_with_picklist(runtmp):
     assert "13.1%       NC_000853.1 Thermotoga" in out
     assert "13.0%       NC_009486.1 Thermotoga" in out
     assert "12.8%       NC_011978.1 Thermotoga" in out
-
-
-def test_index_matches_search_with_picklist_exclude(runtmp):
-    # test 'sourmash index' with picklists - exclude
-    gcf_sig_dir = utils.get_test_data('gather/')
-    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
-    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
-    metag_sig = utils.get_test_data('gather/combined.sig')
-
-    output_db = runtmp.output('thermo-exclude.sbt.zip')
-
-    runtmp.sourmash('index', output_db, gcf_sig_dir, '-k', '21')
-    print(runtmp.last_result.out)
-    print(runtmp.last_result.err)
-
-    # verify:
-    siglist = list(sourmash.load_file_as_signatures(output_db))
-    assert len(siglist) > 3     # all signatures included...
-
-    n_thermo = 0
-    for ss in siglist:
-        if 'Thermotoga' in ss.name:
-            n_thermo += 1
-
-    assert n_thermo == 3
-
-    runtmp.sourmash('search', metag_sig, output_db, '--containment',
-                    '-k', '21', '--picklist', f"{picklist}:md5:md5:exclude")
-
-    err = runtmp.last_result.err
-    print(err)
-    assert "for given picklist, found 10 matches by excluding 9 distinct values" in err
-    ### NTP: FIX REPORTING
-    assert "WARNING: -1 missing picklist values"
-
-    out = runtmp.last_result.out
-    print(out)
-    assert "10 matches; showing first 3:" in out
-    assert "100.0%       -" in out
-    assert "33.2%       NC_003198.1 Salmonella" in out
-    assert "33.1%       NC_003197.2 Salmonella" in out
 
 
 def test_gather_with_prefetch_picklist(runtmp, linear_gather):
