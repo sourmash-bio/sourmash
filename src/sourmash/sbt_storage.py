@@ -151,7 +151,22 @@ class ZipStorage(Storage):
 
         assert 0 # should never get here!
 
-    def save(self, path, content, *, overwrite=False):
+    def _write_to_zf(self, zf, path, content, *, compress=False):
+        compress_type = zipfile.ZIP_STORED
+        if compress:
+            compress_type = zipfile.ZIP_DEFLATED
+
+        # save to zipfile
+        zf.writestr(path, content, compress_type=compress_type)
+
+        # set permissions
+        zi = zf.getinfo(path)
+        perms = 0o444 << 16     # give a+r access
+        if path.endswith('/'):
+            perms = 0o755 << 16 # directories get u+rwx, a+rx
+        zi.external_attr = perms
+
+    def save(self, path, content, *, overwrite=False, compress=False):
         # First try to save to self.zipfile, if it is not writable
         # or would introduce duplicates then try to save it in the buffer
         if overwrite:
@@ -161,13 +176,15 @@ class ZipStorage(Storage):
             newpath, do_write = self._generate_filename(self.zipfile, path, content)
         if do_write:
             try:
-                self.zipfile.writestr(newpath, content)
+                self._write_to_zf(self.zipfile, newpath, content,
+                                  compress=compress)
             except (ValueError, RuntimeError):
                 # Can't write in the zipfile, write in buffer instead
                 # CTB: do we need to generate a new filename wrt to the
                 # bufferzip, too? Not sure this code is working as intended...
                 if self.bufferzip:
-                    self.bufferzip.writestr(newpath, content)
+                    self._write_to_zf(self.bufferzip, newpath, content,
+                                      compress=compress)
                 else:
                     # Throw error, can't write the data
                     raise ValueError("can't write data")
@@ -235,10 +252,10 @@ class ZipStorage(Storage):
                         if item in duplicated or item in buffer_names:
                             # we prioritize writing data from the buffer to the
                             # final file
-                            final_file.writestr(item, self.bufferzip.read(item))
+                            self._write_to_zf(final_file, item, self.bufferzip.read(item))
                         else:
                             # it is only in the zipfile, so write from it
-                            final_file.writestr(item, self.zipfile.read(item))
+                            self._write_to_zf(final_file, item, self.zipfile.read(item))
 
                     # close the files, remove the old one and copy the final
                     # file to the right place.
@@ -257,7 +274,7 @@ class ZipStorage(Storage):
                         zf = zipfile.ZipFile(self.path, mode='a',
                                              compression=zipfile.ZIP_STORED)
                     for item in new_data:
-                        zf.writestr(item, self.bufferzip.read(item))
+                        self._write_to_zf(zf, item, self.bufferzip.read(item))
                     self.zipfile = zf
             # finally, close the buffer and release memory
             self.bufferzip.close()

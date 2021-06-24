@@ -158,6 +158,31 @@ class SignaturePicklist:
                 return True
         return False
 
+    def matches_manifest_row(self, row):
+        "does the given manifest row match this picklist?"
+        if self.coltype == 'md5':
+            colkey = 'md5'
+        elif self.coltype in ('md5prefix8', 'md5short'):
+            colkey = 'md5short'
+        elif self.coltype in ('name', 'ident', 'identprefix'):
+            colkey = 'name'
+        else:
+            assert 0
+
+        q = row[colkey]
+        q = self.preprocess_fn(q)
+        self.n_queries += 1
+
+        if self.pickstyle == PickStyle.INCLUDE:
+            if q in self.pickset:
+                self.found.add(q)
+                return True
+        elif self.pickstyle == PickStyle.EXCLUDE:
+            if q not in self.pickset:
+                self.found.add(q)
+                return True
+        return False
+
     def filter(self, it):
         "yield all signatures in the given iterator that are in the picklist"
         for ss in it:

@@ -27,6 +27,7 @@ extract <signature> [<signature> ... ]    - extract one or more signatures
 filter <signature> [<signature> ... ]     - filter k-mers on abundance
 flatten <signature> [<signature> ... ]    - remove abundances
 intersect <signature> [<signature> ...]   - intersect one or more signatures
+manifest <sig/db>                         - build a manifest
 merge <signature> [<signature> ...]       - merge one or more signatures
 rename <signature> <name>                 - rename signature
 split <signatures> [<signature> ...]      - split signatures into single files
@@ -76,7 +77,8 @@ def cat(args):
     for sigfile in args.signatures:
         try:
             loader = sourmash_args.load_file_as_signatures(sigfile,
-                                                           progress=progress)
+                                                           progress=progress,
+                                                           yield_all_files=args.force)
             n_loaded = 0
             for sig in loader:
                 n_loaded += 1
@@ -245,6 +247,49 @@ signature license: {license}
             raise
 
     notify(f'loaded {len(progress)} signatures total.')
+
+    if csv_fp:
+        csv_fp.close()
+
+
+def manifest(args):
+    """
+    build a signature manifest
+    """
+    from sourmash.index import CollectionManifest
+
+    set_quiet(args.quiet)
+
+    # CTB: might want to switch to sourmash_args.FileOutputCSV here?
+    csv_fp = open(args.output, 'w', newline='')
+
+    CollectionManifest.write_csv_header(csv_fp)
+    w = csv.DictWriter(csv_fp, fieldnames=CollectionManifest.required_keys)
+
+    try:
+        loader = sourmash_args.load_file_as_index(args.location,
+                                                  yield_all_files=args.force)
+    except Exception as exc:
+        error('\nError while reading signatures from {}:'.format(args.location))
+        error(str(exc))
+        error('(continuing)')
+        raise
+
+    n = 0
+    # Need to ignore existing manifests here! otherwise circularity...
+    try:
+        manifest_iter = loader._signatures_with_internal()
+    except NotImplementedError:
+        error("ERROR: manifests cannot be generated for this file.")
+        sys.exit(-1)
+
+    for n, (sig, parent, loc) in enumerate(manifest_iter):
+        # extract info, write as appropriate.
+        row = CollectionManifest.make_manifest_row(sig, loc,
+                                                   include_signature=False)
+        w.writerow(row)
+
+    notify(f'built manifest for {n} signatures total.')
 
     if csv_fp:
         csv_fp.close()
@@ -588,6 +633,7 @@ def extract(args):
 
     notify("extracted {} signatures from {} file(s)", len(save_sigs),
            len(args.signatures))
+
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 

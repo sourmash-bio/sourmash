@@ -130,6 +130,8 @@ class JaccardSearch:
 
     def score_jaccard(self, query_size, shared_size, subject_size, total_size):
         "Calculate Jaccard similarity."
+        if total_size == 0:
+            return 0
         return shared_size / total_size
 
     def score_containment(self, query_size, shared_size, subject_size,
