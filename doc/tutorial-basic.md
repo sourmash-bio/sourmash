@@ -121,7 +121,7 @@ Let's grab a sample collection of 50 E. coli genomes and unpack it --
 mkdir ecoli_many_sigs
 cd ecoli_many_sigs
 
-curl -O -L https://github.com/dib-lab/sourmash/raw/latest/data/eschericia-sigs.tar.gz
+curl -O -L https://github.com/sourmash-bio/sourmash/raw/latest/data/eschericia-sigs.tar.gz
 
 tar xzf eschericia-sigs.tar.gz
 rm eschericia-sigs.tar.gz
@@ -246,7 +246,7 @@ from the
 [Shakya et al. 2013 mock metagenome paper.][2]
 
 ```
-wget https://github.com/dib-lab/sourmash/raw/latest/doc/_static/shakya-unaligned-contigs.sig
+wget https://github.com/sourmash-bio/sourmash/raw/latest/doc/_static/shakya-unaligned-contigs.sig
 sourmash gather -k 31 shakya-unaligned-contigs.sig genbank-k31.lca.json.gz
 ```
 

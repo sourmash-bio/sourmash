@@ -11,11 +11,11 @@ bugs, and some of our best features have come from user
 requests. Please help us improve sourmash for everyone by asking
 questions as you have them!
 
-Please ask questions and file bug descriptions [on the GitHub issue tracker for sourmash, dib-lab/sourmash/issues][0].
+Please ask questions and file bug descriptions [on the GitHub issue tracker for sourmash, sourmash-bio/sourmash/issues][0].
 
 You can also ask questions of Titus on Twitter at [@ctitusbrown][1].
 
-[0]:https://github.com/dib-lab/sourmash/issues
+[0]:https://github.com/sourmash-bio/sourmash/issues
 [1]:https://twitter.com/ctitusbrown/
 
 ## Versioning and stability of features and APIs
@@ -116,7 +116,7 @@ If you depend on sourmash, we recommend using the following process:
 
 * pin sourmash to the major version you developed against, e.g. `sourmash >=3,<4`.
 * when ready to upgrade sourmash, upgrade to the latest minor release within that major version (e.g. sourmash 3.5.x).
-* scan for deprecations that affect you, check [the release notes](https://github.com/dib-lab/sourmash/releases), 
+* scan for deprecations that affect you, check [the release notes](https://github.com/sourmash-bio/sourmash/releases), 
 and fix any major issues noted.
 * upgrade to the next major version (e.g. sourmash 4.0) and run your integration tests or workflow.
 * fix outstanding issues.
@@ -130,7 +130,7 @@ If you want to upgrade workflows and scripts from prior releases of
 sourmash to sourmash v4.0, we suggest doing this in two stages.
 
 First, upgrade to the latest version of sourmash 3.5.x (currently
-[v3.5.1](https://github.com/dib-lab/sourmash/releases/tag/v3.5.1)),
+[v3.5.1](https://github.com/sourmash-bio/sourmash/releases/tag/v3.5.1)),
 which is compatible with all files and command lines used in previous
 versions of sourmash (v2.x and v3.x). After upgrading to 3.5.x, scan
 the sourmash output for deprecation warnings and fix those.
@@ -178,12 +178,12 @@ Second, the `MinHash` class API has changed significantly!
 Third, `SourmashSignature` objects no longer have a `name()` method but instead a `name` property, which can be assigned to. This property is now `None` when no name has been assigned. Note that `str(sig)` should now be used to retrieve a display name, and should replace all previous uses of `sig.name()`.
 
 Fourth, a few top-level functions have been deprecated: `load_signatures(...)`, `load_one_signature(...)`, `create_sbt_index(...)`, and `load_sbt_index(...)`.
-* `load_signatures(...)`, `load_one_signature(...)` should be replaced with `load_file_as_signatures(...)`. Note there is currently no top-level way to load signatures from strings. For now, if you need that functionality, you can use `sourmash.signature.load_signatures(...)` and `sourmash.signature.load_one_signature(...)`, but please be aware that these are not considered part of the public API that is under semantic versioning, so they may change in the next minor point release; this is tracked in  https://github.com/dib-lab/sourmash/issues/1312.
+* `load_signatures(...)`, `load_one_signature(...)` should be replaced with `load_file_as_signatures(...)`. Note there is currently no top-level way to load signatures from strings. For now, if you need that functionality, you can use `sourmash.signature.load_signatures(...)` and `sourmash.signature.load_one_signature(...)`, but please be aware that these are not considered part of the public API that is under semantic versioning, so they may change in the next minor point release; this is tracked in  https://github.com/sourmash-bio/sourmash/issues/1312.
 * `load_sbt_index(...)` have been deprecated.  Please use `load_file_as_index(...)` instead.
 * `create_sbt_index(...)` has been deprecated. There is currently no replacement, although you can use it directly from `sourmash.sbtmh` if necessary.
 
 Fifth, directory traversal now happens by default when loading signatures, so remove `traverse=True` arguments to several functions in `sourmash_args` - `load_dbs_and_sigs`, `load_file_as_index`, `and load_file_as_signatures`.
 
 Please post questions and concerns to the
-[sourmash issue tracker](https://github.com/dib-lab/sourmash/issues)
+[sourmash issue tracker](https://github.com/sourmash-bio/sourmash/issues)
 and we'll be happy to help!
