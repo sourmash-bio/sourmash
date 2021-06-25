@@ -550,6 +550,25 @@ def test_lca_index_select_picklist():
     assert ss.minhash.ksize == 31
 
 
+def test_lca_index_find_picklist_check_overlap():
+    # make sure 'find' works for picklists that exclude relevant signatures
+    # (bug #1638)
+
+    query_fn = utils.get_test_data('47.fa.sig')
+    query_sig = sourmash.load_one_signature(query_fn, ksize=31)
+    db_fn = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(db_fn)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('ident')
+    picklist.init(['NC_009665.1'])
+
+    xx = db.select(picklist=picklist)
+    assert xx == db
+
+    db.search(query_sig, threshold=0.1)
+
+
 def test_lca_index_select_picklist_exclude():
     # test 'select' method from Index base class with a picklist.
 
