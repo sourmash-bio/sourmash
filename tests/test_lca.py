@@ -566,7 +566,8 @@ def test_lca_index_find_picklist_check_overlap():
     xx = db.select(picklist=picklist)
     assert xx == db
 
-    db.search(query_sig, threshold=0.1)
+    results = list(db.search(query_sig, threshold=0.1))
+    assert len(results) == 1
 
 
 def test_lca_index_select_picklist_exclude():
