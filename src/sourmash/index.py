@@ -5,8 +5,12 @@ import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
 import zipfile
+from io import TextIOWrapper
 
 from .search import make_jaccard_search_query, make_gather_query
+from .manifest import CollectionManifest
+from .logging import debug_literal
+from .signature import load_signatures, save_signatures
 
 # generic return tuple for Index.search and Index.gather
 IndexSearchResult = namedtuple('Result', 'score, signature, location')
@@ -27,6 +31,16 @@ class Index(ABC):
         "Return an iterator over tuples (signature, location) in the Index."
         for ss in self.signatures():
             yield ss, self.location
+
+    def _signatures_with_internal(self):
+        """Return an iterator of tuples (ss, location, internal_location).
+
+        This is an internal API for use in generating manifests, and may
+        change without warning.
+
+        This method should be implemented separately for each Index object.
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def insert(self, signature):
@@ -194,9 +208,6 @@ class Index(ABC):
 
     def prefetch(self, query, threshold_bp, **kwargs):
         "Return all matches with minimum overlap."
-        query_mh = query.minhash
-        scaled = query_mh.scaled
-
         if not self:            # empty database? quit.
             raise ValueError("no signatures to search")
 
@@ -290,7 +301,7 @@ class Index(ABC):
         """
 
 
-def select_signature(ss, ksize=None, moltype=None, scaled=0, num=0,
+def select_signature(ss, *, ksize=None, moltype=None, scaled=0, num=0,
                      containment=False, picklist=None):
     "Check that the given signature matches the specificed requirements."
     # ksize match?
@@ -325,7 +336,10 @@ def select_signature(ss, ksize=None, moltype=None, scaled=0, num=0,
 
 
 class LinearIndex(Index):
-    "An Index for a collection of signatures. Can load from a .sig file."
+    """An Index for a collection of signatures. Can load from a .sig file.
+
+    Note: does not use manifests. See MultiIndex for that functionality.
+    """
     def __init__(self, _signatures=None, filename=None):
         self._signatures = []
         if _signatures:
@@ -349,13 +363,12 @@ class LinearIndex(Index):
         self._signatures.append(node)
 
     def save(self, path):
-        from .signature import save_signatures
         with open(path, 'wt') as fp:
             save_signatures(self.signatures(), fp)
 
     @classmethod
     def load(cls, location):
-        from .signature import load_signatures
+        "Load signatures from a JSON signature file."
         si = load_signatures(location, do_raise=True)
 
         lidx = LinearIndex(si, filename=location)
@@ -366,9 +379,6 @@ class LinearIndex(Index):
 
         Does not raise ValueError, but may return an empty Index.
         """
-        # eliminate things from kwargs with None or zero value
-        kw = { k : v for (k, v) in kwargs.items() if v }
-
         siglist = []
         for ss in self._signatures:
             if select_signature(ss, **kwargs):
@@ -403,7 +413,7 @@ class LazyLinearIndex(Index):
 
     def __bool__(self):
         try:
-            first_sig = next(iter(self.signatures()))
+            next(iter(self.signatures()))
             return True
         except StopIteration:
             return False
@@ -444,16 +454,47 @@ class ZipFileLinearIndex(Index):
     """
     is_database = True
 
-    def __init__(self, zf, selection_dict=None,
-                 traverse_yield_all=False):
+    def __init__(self, zf, *, selection_dict=None,
+                 traverse_yield_all=False, manifest=None, use_manifest=True):
         self.zf = zf
         self.selection_dict = selection_dict
         self.traverse_yield_all = traverse_yield_all
+        self.use_manifest = use_manifest
+
+        # do we have a manifest already? if not, try loading.
+        if use_manifest:
+            if manifest is not None:
+                debug_literal('ZipFileLinearIndex using passed-in manifest')
+                self.manifest = manifest
+            else:
+                self._load_manifest()
+        else:
+            self.manifest = None
+
+        if self.manifest is not None:
+            assert not self.selection_dict, self.selection_dict
+        if self.selection_dict:
+            assert manifest is None
+
+    def _load_manifest(self):
+        "Load a manifest if one exists"
+        try:
+            zi = self.zf.getinfo('SOURMASH-MANIFEST.csv')
+        except KeyError:
+            self.manifest = None
+        else:
+            debug_literal(f'found manifest when loading {self.zf.filename}')
+
+            with self.zf.open(zi, 'r') as mfp:
+                # wrap as text, since ZipFile.open only supports 'r' mode.
+                mfp = TextIOWrapper(mfp, 'utf-8')
+                # load manifest!
+                self.manifest = CollectionManifest.load_from_csv(mfp)
 
     def __bool__(self):
         "Are there any matching signatures in this zipfile? Avoid calling len."
         try:
-            first_sig = next(iter(self.signatures()))
+            next(iter(self.signatures()))
         except StopIteration:
             return False
 
@@ -476,38 +517,97 @@ class ZipFileLinearIndex(Index):
         raise NotImplementedError
 
     @classmethod
-    def load(cls, location, traverse_yield_all=False):
+    def load(cls, location, traverse_yield_all=False, use_manifest=True):
         "Class method to load a zipfile."
         zf = zipfile.ZipFile(location, 'r')
-        return cls(zf, traverse_yield_all=traverse_yield_all)
+        return cls(zf, traverse_yield_all=traverse_yield_all,
+                   use_manifest=use_manifest)
 
-    def signatures(self):
-        "Load all signatures in the zip file."
-        from .signature import load_signatures
+    def _signatures_with_internal(self):
+        """Return an iterator of tuples (ss, location, internal_location).
+
+        Note: does not limit signatures to subsets.
+        """
         for zipinfo in self.zf.infolist():
             # should we load this file? if it ends in .sig OR we are forcing:
             if zipinfo.filename.endswith('.sig') or \
                zipinfo.filename.endswith('.sig.gz') or \
                self.traverse_yield_all:
                 fp = self.zf.open(zipinfo)
-
-                # now load all the signatures and select on ksize/moltype:
-                selection_dict = self.selection_dict
-
-                # note: if 'fp' doesn't contain a valid JSON signature,
-                # load_signatures will silently fail & yield nothing.
                 for ss in load_signatures(fp):
-                    if selection_dict:
-                        if select_signature(ss, **self.selection_dict):
-                            yield ss
-                    else:
+                    yield ss, self.zf.filename, zipinfo.filename
+
+    def signatures(self):
+        "Load all signatures in the zip file."
+        selection_dict = self.selection_dict
+        manifest = None
+        if self.manifest is not None:
+            manifest = self.manifest
+            assert not selection_dict
+
+            # yield all signatures found in manifest
+            for filename in manifest.locations():
+                zi = self.zf.getinfo(filename)
+                fp = self.zf.open(zi)
+                for ss in load_signatures(fp):
+                    # in case multiple signatures are in the file, check
+                    # to make sure we want to return each one.
+                    if ss in manifest:
                         yield ss
+
+        # no manifest! iterate.
+        else:
+            for zipinfo in self.zf.infolist():
+                # should we load this file? if it ends in .sig OR force:
+                if zipinfo.filename.endswith('.sig') or \
+                   zipinfo.filename.endswith('.sig.gz') or \
+                   self.traverse_yield_all:
+                    fp = self.zf.open(zipinfo)
+
+                    if selection_dict:
+                        select = lambda x: select_signature(x,
+                                                            **selection_dict)
+                    else:
+                        select = lambda x: True
+
+                    for ss in load_signatures(fp):
+                        if select(ss):
+                            yield ss
 
     def select(self, **kwargs):
         "Select signatures in zip file based on ksize/moltype/etc."
-        return ZipFileLinearIndex(self.zf,
-                                  selection_dict=kwargs,
-                                  traverse_yield_all=self.traverse_yield_all)
+
+        # if we have a manifest, run 'select' on the manifest.
+        manifest = self.manifest
+        traverse_yield_all = self.traverse_yield_all
+
+        if manifest is not None:
+            manifest = manifest.select_to_manifest(**kwargs)
+            return ZipFileLinearIndex(self.zf,
+                                      selection_dict=None,
+                                      traverse_yield_all=traverse_yield_all,
+                                      manifest=manifest,
+                                      use_manifest=True)
+        else:
+            # no manifest? just pass along all the selection kwargs to
+            # the new ZipFileLinearIndex.
+
+            assert manifest is None
+            if self.selection_dict:
+                # combine selects...
+                d = dict(self.selection_dict)
+                for k, v in kwargs.items():
+                    if k in d:
+                        if d[k] is not None and d[k] != v:
+                            raise ValueError(f"incompatible select on '{k}'")
+                    d[k] = v
+                kwargs = d
+
+            return ZipFileLinearIndex(self.zf,
+                                      selection_dict=kwargs,
+                                      traverse_yield_all=traverse_yield_all,
+                                      manifest=None,
+                                      use_manifest=False)
 
 
 class CounterGather:
@@ -663,72 +763,105 @@ class CounterGather:
 
 
 class MultiIndex(Index):
-    """An Index class that wraps other Index classes.
-
-    The MultiIndex constructor takes two arguments: a list of Index
-    objects, and a matching list of sources (filenames, etc.)  If the
-    source is not None, then it will be used to override the 'filename'
-    in the triple that is returned by search and gather.
+    """
+    Load a collection of signatures, and retain their original locations.
 
     One specific use for this is when loading signatures from a directory;
-    MultiIndex will properly record which files provided which signatures.
+    MultiIndex will record which specific files provided which
+    signatures.
+
+    Creates a manifest on load.
+
+    Note: this is an in-memory collection, and does not do lazy loading:
+    all signatures are loaded upon instantiation and kept in memory.
     """
-    def __init__(self, index_list, source_list):
-        self.index_list = list(index_list)
-        self.source_list = list(source_list)
-        assert len(index_list) == len(source_list)
+    def __init__(self, manifest):
+        self.manifest = manifest
 
     def signatures(self):
-        for idx in self.index_list:
-            for ss in idx.signatures():
-                yield ss
+        for row in self.manifest.rows:
+            yield row['signature']
 
     def signatures_with_location(self):
-        for idx, loc in zip(self.index_list, self.source_list):
-            for ss in idx.signatures():
-                yield ss, loc
+        """Return an iterator of tuples (ss, location)
+
+        CTB note: here, 'internal_location' is the source file for the
+        index. This is a special feature of this (in memory) class.
+        """
+        for row in self.manifest.rows:
+            yield row['signature'], row['internal_location']
 
     def __len__(self):
-        return sum([ len(idx) for idx in self.index_list ])
+        return len(self.manifest)
 
     def insert(self, *args):
         raise NotImplementedError
 
     @classmethod
-    def load(self, *args):
-        raise NotImplementedError
+    def load(cls, index_list, source_list):
+        """Create a MultiIndex from already-loaded indices.
+
+        Takes two arguments: a list of Index objects, and a matching list
+        of source strings (filenames, etc.)  If the source is not None,
+        then it will be used to override the location provided by the
+        matching Index object.
+        """
+        assert len(index_list) == len(source_list)
+
+        # yield all signatures + locations
+        def sigloc_iter():
+            for idx, loc in zip(index_list, source_list):
+                if loc is None:
+                    loc = idx.location
+                for ss in idx.signatures():
+                    yield ss, loc
+
+        # build manifest
+        manifest = CollectionManifest.create_manifest(sigloc_iter())
+
+        # create!
+        return cls(manifest)
 
     @classmethod
     def load_from_path(cls, pathname, force=False):
-        "Create a MultiIndex from a path (filename or directory)."
+        """
+        Create a MultiIndex from a path (filename or directory).
+
+        Note: this only uses LinearIndex.load(...), so will only load
+        signature JSON files.
+        """
         from .sourmash_args import traverse_find_sigs
-        if not os.path.exists(pathname): # CTB consider changing to isdir.
-            raise ValueError(f"'{pathname}' must be a directory")
+        if not os.path.exists(pathname): # CTB consider changing to isdir...
+            raise ValueError(f"'{pathname}' must exist.")
 
         index_list = []
         source_list = []
         for thisfile in traverse_find_sigs([pathname], yield_all_files=force):
             try:
                 idx = LinearIndex.load(thisfile)
-                index_list.append(idx)
-                source_list.append(thisfile)
+
+                if idx:
+                    index_list.append(idx)
+                    source_list.append(thisfile)
             except (IOError, sourmash.exceptions.SourmashError):
                 if force:
                     continue    # ignore error
                 else:
-                    raise       # continue past error!
+                    raise       # stop loading!
 
-        db = None
-        if index_list:
-            db = cls(index_list, source_list)
-        else:
+        if not index_list:
             raise ValueError(f"no signatures to load under directory '{pathname}'")
 
-        return db
+        return cls.load(index_list, source_list)
 
     @classmethod
     def load_from_pathlist(cls, filename):
-        "Create a MultiIndex from all files listed in a text file."
+        """Create a MultiIndex from all files listed in a text file.
+
+        Note: this will load signatures from directories and databases, too,
+        if they are listed in the text file; it uses 'load_file_as_index'
+        underneath.
+        """
         from .sourmash_args import (load_pathlist_from_file,
                                     load_file_as_index)
         idx_list = []
@@ -742,52 +875,12 @@ class MultiIndex(Index):
             idx_list.append(idx)
             src_list.append(src)
 
-        db = MultiIndex(idx_list, src_list)
-        return db
+        return cls.load(idx_list, src_list)
 
     def save(self, *args):
         raise NotImplementedError
 
     def select(self, **kwargs):
-        "Run 'select' on all indices within this MultiIndex."
-        new_idx_list = []
-        new_src_list = []
-        for idx, src in zip(self.index_list, self.source_list):
-            idx = idx.select(**kwargs)
-            new_idx_list.append(idx)
-            new_src_list.append(src)
-
-        return MultiIndex(new_idx_list, new_src_list)
-
-    def search(self, query, **kwargs):
-        """Return the match with the best Jaccard similarity in the Index.
-
-        Note: this overrides the location of the match if needed.
-        """
-        # do the actual search:
-        matches = []
-        for idx, src in zip(self.index_list, self.source_list):
-            for sr in idx.search(query, **kwargs):
-                if src: # override 'sr.location' if 'src' specified'
-                    sr = IndexSearchResult(sr.score, sr.signature, src)
-                matches.append(sr)
-                
-        # sort!
-        matches.sort(key=lambda x: -x.score)
-        return matches
-
-    def prefetch(self, query, threshold_bp, **kwargs):
-        "Return all matches with specified overlap."
-        # actually do search!
-        results = []
-
-        for idx, src in zip(self.index_list, self.source_list):
-            if not idx:
-                continue
-
-            for (score, ss, filename) in idx.prefetch(query, threshold_bp,
-                                                      **kwargs):
-                best_src = src or filename # override if src provided
-                yield IndexSearchResult(score, ss, best_src)
-            
-        return results
+        "Run 'select' on the manifest."
+        new_manifest = self.manifest.select_to_manifest(**kwargs)
+        return MultiIndex(new_manifest)

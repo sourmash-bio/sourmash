@@ -202,7 +202,7 @@ impl Nodegraph {
                 let len = size_of::<u32>() * slice.len();
                 slice::from_raw_parts(slice.as_ptr() as *const u8, len)
             };
-            wtr.write_all(&buf)?;
+            wtr.write_all(buf)?;
             // Replace when byteorder PR is released
 
             if rem != 0 {

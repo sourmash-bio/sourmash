@@ -76,13 +76,13 @@ impl Comparable<Node<Nodegraph>> for Node<Nodegraph> {
     fn similarity(&self, other: &Node<Nodegraph>) -> f64 {
         let ng: &Nodegraph = self.data().unwrap();
         let ong: &Nodegraph = other.data().unwrap();
-        ng.similarity(&ong)
+        ng.similarity(ong)
     }
 
     fn containment(&self, other: &Node<Nodegraph>) -> f64 {
         let ng: &Nodegraph = self.data().unwrap();
         let ong: &Nodegraph = other.data().unwrap();
-        ng.containment(&ong)
+        ng.containment(ong)
     }
 }
 

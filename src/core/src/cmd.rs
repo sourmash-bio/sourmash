@@ -24,7 +24,7 @@ pub fn prepare(index_path: &str) -> Result<(), Error> {
 
 impl Signature {
     pub fn from_params(params: &ComputeParameters) -> Signature {
-        let template = build_template(&params);
+        let template = build_template(params);
 
         Signature::builder()
             .hash_function("0.murmur64")

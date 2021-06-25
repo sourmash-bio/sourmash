@@ -134,7 +134,7 @@ pub trait SigsTrait {
 
         if hash_function.protein() {
             for aa_kmer in seq.windows(ksize) {
-                let hash = crate::_hash_murmur(&aa_kmer, self.seed());
+                let hash = crate::_hash_murmur(aa_kmer, self.seed());
                 self.add_hash(hash);
             }
             return Ok(());
@@ -151,7 +151,7 @@ pub trait SigsTrait {
         };
 
         for aa_kmer in aa_seq.windows(ksize) {
-            let hash = crate::_hash_murmur(&aa_kmer, self.seed());
+            let hash = crate::_hash_murmur(aa_kmer, self.seed());
             self.add_hash(hash);
         }
 
@@ -478,7 +478,7 @@ impl Signature {
             self.signatures
                 .iter_mut()
                 .for_each(|sketch| {
-                    sketch.add_sequence(&seq, force).unwrap(); }
+                    sketch.add_sequence(seq, force).unwrap(); }
                 );
         }
         }
@@ -498,7 +498,7 @@ impl Signature {
             self.signatures
                 .iter_mut()
                 .try_for_each(|sketch| {
-                    sketch.add_protein(&seq) }
+                    sketch.add_protein(seq) }
                 )?;
         }
         }
