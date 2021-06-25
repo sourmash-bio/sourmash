@@ -192,10 +192,21 @@ jobs:
           registry-url: https://registry.npmjs.org/
 
       - name: run wasm tests
-        run: wasm-pack test --node src/core
+        run: wasm-pack test --node src/wasm
 
       - name: run wasm-pack build
         run: wasm-pack build src/core -d ../../pkg
+
+      - name: prepare NPM package
+        working-directory: ./src/wasm
+        run: |
+          yarn install
+          yarn build
+          yarn pack
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: './src/wasm/sourmash*.tgz'
 
   wasm32-wasi:
     name: Run tests under wasm32-wasi

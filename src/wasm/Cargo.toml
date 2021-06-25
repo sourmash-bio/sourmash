@@ -1,0 +1,53 @@
+[package]
+name = "sourmash-wasm"
+version = "0.10.0"
+authors = ["Luiz Irber <luiz.irber@gmail.com>"]
+license = "BSD-3-Clause"
+edition = "2018"
+repository = "https://github.com/dib-lab/sourmash"
+description = "MinHash sketches for genomic data"
+keywords = ["minhash", "bioinformatics"]
+categories = ["science", "algorithms", "data-structures"]
+readme = "README.md"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["console_error_panic_hook"]
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = true
+
+[dependencies]
+sourmash = { version = "0.10.0", path = "../core" }
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+paste = "1.0"
+js-sys = "*"
+
+# The `console_error_panic_hook` crate provides better debugging of panics by
+# logging them with `console.error`. This is great for development, but requires
+# all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
+# code size when deploying.
+console_error_panic_hook = { version = "*", optional = true }
+
+# `wee_alloc` is a tiny allocator for wasm that is only ~1K in code size
+# compared to the default allocator's ~10K. It is slower than the default
+# allocator, however.
+#
+# Unfortunately, `wee_alloc` requires nightly Rust when targeting wasm for now.
+wee_alloc = { version = "*", optional = true }
+serde_json = "1.0.64"
+
+[dependencies.web-sys]
+version = "0.3.51"
+features = ["console", "File"]
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+# opt-level = "s"
+opt-level = 3 # opt-level 3 is smaller than s

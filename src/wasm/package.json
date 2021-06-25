@@ -1,0 +1,41 @@
+{
+  "name": "sourmash",
+  "collaborators": [
+    "Luiz Irber <luiz@sourmash.bio>"
+  ],
+  "description": "MinHash sketches for genomic data",
+  "version": "0.10.0",
+  "license": "BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sourmash-bio/sourmash"
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "dist/sourmash.js",
+  "scripts": {
+    "prebuild": "yarn clean",
+    "build": "rollup --config",
+    "watch": "rollup --config --watch",
+    "build:web": "wasm-pack build --target web",
+    "build:node": "wasm-pack build --target nodejs",
+    "clean": "rimraf dist pkg",
+    "prepublishOnly": "yarn build",
+    "preserve": "yarn build:web",
+    "serve": "light-server -s .",
+    "perf": "wasm-pack build --target nodejs && node perf.js"
+  },
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^8.2.1",
+    "@wasm-tool/rollup-plugin-rust": "^1.0.6",
+    "benny": "^3.6.15",
+    "light-server": "^2.9.1",
+    "rimraf": "^3.0.2",
+    "rollup": "^2.52.1",
+    "rollup-plugin-dts": "^3.0.2",
+    "tslib": "^2.3.0",
+    "typescript": "^4.3.4"
+  },
+  "sideEffects": false
+}
