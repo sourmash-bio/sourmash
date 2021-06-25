@@ -470,7 +470,11 @@ class LCA_Database(Index):
             # NOTE: one future low-mem optimization could be to support doing
             # this piecemeal by iterating across all the hashes, instead.
 
-            subj = self._signatures[idx]
+            subj = self._signatures.get(idx)
+            if subj is None:    # must be because of a picklist exclusion
+                assert self.picklists
+                continue
+
             subj_mh = prepare_subject(subj.minhash)
 
             # all numbers calculated after downsampling --
