@@ -1240,8 +1240,7 @@ def test_do_sourmash_index_multiscaled_rescale_fail(c):
     print(e.value)
     
     assert c.last_result.status == -1
-    assert "WARNING: --scaled value should be >= 100. Continuing anyway." in c.last_result.err
-    # assert 'new scaled 5 is lower than current sample scaled 10' in c.last_result.err
+    assert 'new scaled 5 is lower than current sample scaled 10' in c.last_result.err
 
 
 def test_do_sourmash_sbt_search_output():
