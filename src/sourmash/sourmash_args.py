@@ -340,8 +340,8 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     """
     loaded = False
 
-    def debug_literal(s):
-        print("XXX", s, file=sys.stderr)
+    #def debug_literal(s):
+    #    print("XXX", s, file=sys.stderr)
 
     # iterate through loader functions, trying them all. Catch ValueError
     # but nothing else.

@@ -890,12 +890,64 @@ class MultiIndex(Index):
         return MultiIndex(new_manifest)
 
 
+class LazyLoadedSigFile(Index):
+    """
+    Given a .sig file and a manifest, do everything on the manifest until
+    signatures are actually requested, and only then load the .sig file
+    (and do so transiently).
+
+    May or may not be redundant with other classes :).
+    CTB: could probably be replaced with a slight extension of LazyMultiIndex,
+    in which it loads the .sig file to generate a manifestm, and then unloads.
+    """
+    def __init__(self, filename, manifest):
+        self.filename = filename
+        self.manifest = manifest
+
+    @property
+    def location(self):
+        return self.filename
+
+    def signatures(self):
+        if not len(self.manifest):
+            print('nothing to do, returning')
+            return []
+
+        print(f'...{len(self.manifest)} in manifest, loading')
+        picklist = self.manifest.to_picklist()
+        idx = LinearIndex.load(self.location)
+        idx = idx.select(picklist=picklist)
+        for ss in idx.signatures():
+            yield ss
+
+    def __len__(self):
+        return len(self.manifest)
+    __bool__ = __len__
+
+    def load(self, *args):
+        raise NotImplementedError
+
+    def insert(self, *args):
+        raise NotImplementedError
+
+    def save(self, *args):
+        raise NotImplementedError
+
+    def select(self, **kwargs):
+        manifest = self.manifest
+        new_manifest = manifest.select_to_manifest(**kwargs)
+
+        return LazyLoadedSigFile(self.filename, new_manifest)
+
+
 class LazyMultiIndex(Index):
     """
-    Do lazy selection of multiple collections; manifests are required.
+    Do lazy selection of multiple index objects w/manifests.
 
-    Maintains a manifest per collection, and subselects on collections
-    only when actual signatures are needed.
+    Maintains a manifest per collection, and touches the index objects
+    only when actual signatures are needed. This permits lazy loading
+    when wrapping Index classes that are on disk, e.g. ZipFileLinearIndex
+    and SBTs.
 
     Differs from MultiIndex in that only the manifests are held in memory,
     not any of the signatures.
