@@ -340,16 +340,19 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     """
     loaded = False
 
+    def debug_literal(s):
+        print("XXX", s, file=sys.stderr)
+
     # iterate through loader functions, trying them all. Catch ValueError
     # but nothing else.
-    for (desc, load_fn) in _loader_functions:
+    for n, (desc, load_fn) in enumerate(_loader_functions):
         try:
-            debug_literal(f"_load_databases: trying loader fn {desc}")
+            debug_literal(f"_load_databases: trying loader fn {n} {desc}")
             db = load_fn(filename,
                          traverse_yield_all=traverse_yield_all,
                          cache_size=cache_size)
         except ValueError:
-            debug_literal(f"_load_databases: FAIL on fn {desc}.")
+            debug_literal(f"_load_databases: FAIL on fn {n} {desc}.")
             debug_literal(traceback.format_exc())
 
         if db is not None:
