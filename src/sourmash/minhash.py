@@ -682,29 +682,19 @@ class MinHash(RustObject):
         new_mh.__class__ = FrozenMinHash
         return new_mh
 
-    # def inflate(infl):
-    #     """If track_abundance=True, return a new inflated MinHash."""
-    #     if self.track_abundance:
-    #         if infl.track_abundance:
-    #             # create new object:
-    #             a = MinHash(
-    #                 infl.num, infl.ksize, infl.is_protein, infl.dayhoff, infl.hp,
-    #                 False, infl.seed, self._max_hash
-    #             )
-    #             a.add_many(self)
-    #             remaining_query = a.query
-    #             # remaining_query is flattened; reinflate abundances
-    #             hashes = set(remaining_query.minhash.hashes)
-    #             orig_abunds = self.hashes
-    #             abunds = { h: orig_abunds[h] for h in hashes }
+    def inflate(self, orig_query_mh):     
+        if orig_query_mh.track_abundance:
+            hashes = set(self.minhash.hashes)
+            orig_abunds = orig_query_mh.hashes
+            abunds = { h: orig_abunds[h] for h in hashes }
 
-    #             abund_query_mh = self.copy_and_clear()
-    #             # orig_query might have been downsampled...
-    #             abund_query_mh.downsample(scaled=a.scaled)
-    #             abund_query_mh.set_abundances(abunds)
-    #             remaining_query.minhash = abund_query_mh
-    #     return a
-    #     return self
+            abund_query_mh = orig_query_mh.copy_and_clear()
+
+            abund_query_mh.downsample(scaled=self.minhash.scaled)
+            abund_query_mh.set_abundances(abunds)
+            self.minhash = abund_query_mh
+
+            return self
 
 
 class FrozenMinHash(MinHash):

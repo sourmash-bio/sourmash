@@ -802,7 +802,8 @@ def gather(args):
                 remaining_query.minhash = remaining_mh
 
             if is_abundance:
-                inflate(remaining_query, orig_query_mh, gather_iter)
+                abund_query_mh = remaining_query.minhash.inflate(orig_query_mh)
+                # inflate(remaining_query, orig_query_mh, gather_iter)
                 # # remaining_query is flattened; reinflate abundances
                 # hashes = set(remaining_query.minhash.hashes)
                 # orig_abunds = orig_query_mh.hashes
@@ -823,18 +824,18 @@ def gather(args):
     # DONE w/gather function.
 
 
-def inflate(remaining_query, orig_query_mh, gather_iter):
-    hashes = set(remaining_query.minhash.hashes)
-    orig_abunds = orig_query_mh.hashes
-    abunds = { h: orig_abunds[h] for h in hashes }
+# def inflate(remaining_query, orig_query_mh, gather_iter):
+#     hashes = set(remaining_query.minhash.hashes)
+#     orig_abunds = orig_query_mh.hashes
+#     abunds = { h: orig_abunds[h] for h in hashes }
 
-    abund_query_mh = orig_query_mh.copy_and_clear()
+#     abund_query_mh = orig_query_mh.copy_and_clear()
 
-    abund_query_mh.downsample(scaled=gather_iter.scaled)
-    abund_query_mh.set_abundances(abunds)
-    remaining_query.minhash = abund_query_mh
+#     abund_query_mh.downsample(scaled=gather_iter.scaled)
+#     abund_query_mh.set_abundances(abunds)
+#     remaining_query.minhash = abund_query_mh
 
-    return remaining_query
+#     return remaining_query
 
 
 def multigather(args):
