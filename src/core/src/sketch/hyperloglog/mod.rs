@@ -120,7 +120,7 @@ impl HyperLogLog {
         wtr.write_u8(self.p as u8)?; // number of bits used for indexing
         wtr.write_u8(self.q as u8)?; // number of bits used for counting leading zeroes
         wtr.write_u8(self.ksize as u8)?; // ksize
-        wtr.write_all(&self.registers.as_slice())?;
+        wtr.write_all(self.registers.as_slice())?;
 
         Ok(())
     }
