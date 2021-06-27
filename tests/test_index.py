@@ -2126,16 +2126,16 @@ def test_lazy_index_wraps_multi_index_location():
 
 def test_lazy_loaded_index_1(runtmp):
     # some basic tests for LazyLoadedIndex
-    sigfile = utils.get_test_data('prot/dna-sig.noext')
+    lcafile = utils.get_test_data('prot/protein.lca.json.gz')
     sigzip = utils.get_test_data('prot/protein.zip')
 
     with pytest.raises(ValueError) as exc:
-        db = index.LazyLoadedIndex.load(sigfile)
-    # no manifest on sigfiles loaded with LinearIndex.load
+        db = index.LazyLoadedIndex.load(lcafile)
+    # no manifest on LCA database
     assert "no manifest on index at" in str(exc)
 
     with pytest.raises(NotImplementedError) as exc:
-        db = index.LazyLoadedIndex.load(sigfile, create_manifest=True)
+        db = index.LazyLoadedIndex.load(lcafile, create_manifest=True)
     # can't create a manifest, either, at the moment, b/c no
     # _signatures_with_internal
 
@@ -2164,13 +2164,13 @@ def test_lazy_loaded_index_1(runtmp):
 
 def test_lazy_multi_index_1(runtmp):
     # some basic tests for LazyMultiIndex
-    sigfile = utils.get_test_data('prot/dna-sig.noext')
+    lcafile = utils.get_test_data('prot/protein.lca.json.gz')
     sigzip = utils.get_test_data('prot/protein.zip')
 
     with pytest.raises(ValueError) as exc:
-        sigidx = LinearIndex.load(sigfile)
+        sigidx = sourmash.load_file_as_index(lcafile)
         db = index.LazyMultiIndex.load([sigidx])
-    # no manifest on sigfiles loaded with LinearIndex.load
+    # no manifest on LCA database
     assert "no manifest on" in str(exc)
 
     # load something, check that it's only accessed upon .signatures(...)
