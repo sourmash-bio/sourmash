@@ -2,13 +2,13 @@
 Code for searching collections of signatures.
 """
 from collections import namedtuple
-from enum import Enum
+from enum import IntEnum
 import numpy as np
 
 from .signature import SourmashSignature
 
 
-class SearchType(Enum):
+class SearchType(IntEnum):
     JACCARD = 1
     CONTAINMENT = 2
     MAX_CONTAINMENT = 3
@@ -95,6 +95,7 @@ class JaccardSearch:
             require_scaled = True
         self.score_fn = score_fn
         self.require_scaled = require_scaled
+        self.search_type = search_type
 
         if threshold is None:
             threshold = 0

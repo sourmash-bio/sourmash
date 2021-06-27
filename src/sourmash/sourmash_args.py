@@ -319,8 +319,24 @@ def _load_zipfile(filename, **kwargs):
     return db
 
 
+def _load_rpc_index(location, **kwargs):
+    from remote_index import RemoteIndex
+    if location.startswith('http'):
+        remote = RemoteIndex(location)
+        try:
+            val = remote.check_is_sourmash()
+            assert val
+        except:
+            import traceback
+            traceback.print_exc()
+            raise ValueError
+
+        return remote
+    return None
+
 # all loader functions, in order.
 _loader_functions = [
+    ("load a remote (RPC) server as index", _load_rpc_index),
     ("load from stdin", _load_stdin),
     ("load from directory", _multiindex_load_from_path),
     ("load from sig file", _load_sigfile),
@@ -329,7 +345,6 @@ _loader_functions = [
     ("load revindex", _load_revindex),
     ("load collection from zipfile", _load_zipfile),
     ]
-
 
 def _load_database(filename, traverse_yield_all, *, cache_size=None):
     """Load file as a database - list of signatures, LCA, SBT, etc.
@@ -346,6 +361,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     # iterate through loader functions, trying them all. Catch ValueError
     # but nothing else.
     for n, (desc, load_fn) in enumerate(_loader_functions):
+        db = None
         try:
             debug_literal(f"_load_databases: trying loader fn {n} {desc}")
             db = load_fn(filename,
