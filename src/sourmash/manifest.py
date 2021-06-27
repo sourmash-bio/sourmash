@@ -2,6 +2,7 @@
 Manifests for collections of signatures.
 """
 import csv
+from collections import defaultdict
 
 from sourmash.picklist import SignaturePicklist
 
@@ -183,3 +184,58 @@ class CollectionManifest:
         picklist.pickset = set(self._md5_set)
 
         return picklist
+
+
+class ManifestOfManifests:
+    # @CTB rename to MultiManifest?
+    def __init__(self, locations, manifests):
+        assert len(locations) == len(manifests)
+        self.locations = locations
+        self.manifests = manifests
+
+    def __len__(self):
+        return sum([ len(m) for m in self.manifests ])
+
+    @classmethod
+    def load_from_sqlite(cls, filename):
+        import sqlite3
+        db = sqlite3.connect(filename)
+        cursor = db.cursor()
+        cursor.execute('SELECT DISTINCT index_location, internal_location, md5, md5short, ksize, moltype, num, scaled, n_hashes, with_abundance, name, filename FROM manifest')
+
+        d = defaultdict(list)
+        rowkeys = 'internal_location, md5, md5short, ksize, moltype, num, scaled, n_hashes, with_abundance, name, filename'.split(', ')
+        print(rowkeys)
+        for result in cursor:
+            loc, *rest = result
+            mrow = dict(zip(rowkeys, rest))
+            d[loc].append(mrow)
+
+        locs = []
+        manifests = []
+        for loc, value in d.items():
+            manifest = CollectionManifest(value)
+            locs.append(loc)
+            manifests.append(manifest)
+
+        return cls(locs, manifests)
+
+    def select_to_manifest(self, **kwargs):
+        new_manifests = []
+        for m in self.manifests:
+            m = m.select_to_manifest(**kwargs)
+            new_manifests.append(m)
+        return ManifestOfManifests(self.locations, new_manifests)
+
+    def locations(self):
+        raise NotImplementedError
+
+    def locations_and_manifests(self):
+        for (l, m) in zip(self.locations, self.manifests):
+            yield l, m
+
+    def __contains__(self, ss):
+        for m in self.manifests:
+            if ss in m:
+                return True
+        return False
