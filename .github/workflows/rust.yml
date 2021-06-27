@@ -197,6 +197,20 @@ jobs:
       - name: run wasm-pack build
         run: wasm-pack build src/core -d ../../pkg
 
+      - name: fix wasm-pack package.json
+        working-directory: pkg
+        run: |
+          patch -p0 <../.ci/patch_npm_package
+
+      - name: Prepare package for NPM publishing
+        working-directory: pkg
+        run: npm pack
+
+      - uses: actions/upload-artifact@v2
+        working-directory: pkg
+        with:
+          path: 'sourmash*.tgz'
+
   wasm32-wasi:
     name: Run tests under wasm32-wasi
     runs-on: ubuntu-latest
