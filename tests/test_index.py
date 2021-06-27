@@ -10,6 +10,7 @@ import copy
 
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
+from sourmash import index
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             make_jaccard_search_query, CounterGather,
                             LazyLinearIndex, MultiIndex)
@@ -2121,3 +2122,79 @@ def test_lazy_index_wraps_multi_index_location():
     for (ss_tup, ss_lazy_tup) in zip(mi2.signatures_with_location(),
                                      lazy2.signatures_with_location()):
         assert ss_tup == ss_lazy_tup
+
+
+def test_lazy_loaded_index_1(runtmp):
+    # some basic tests for LazyLoadedIndex
+    sigfile = utils.get_test_data('prot/dna-sig.noext')
+    sigzip = utils.get_test_data('prot/protein.zip')
+
+    with pytest.raises(ValueError) as exc:
+        db = index.LazyLoadedIndex.load(sigfile)
+    # no manifest on sigfiles loaded with LinearIndex.load
+    assert "no manifest on index at" in str(exc)
+
+    with pytest.raises(NotImplementedError) as exc:
+        db = index.LazyLoadedIndex.load(sigfile, create_manifest=True)
+    # can't create a manifest, either, at the moment, b/c no
+    # _signatures_with_internal
+
+    # load something, check that it's only accessed upon .signatures(...)
+    test_zip = runtmp.output('test.zip')
+    shutil.copyfile(sigzip, test_zip)
+    db = index.LazyLoadedIndex.load(test_zip)
+    assert len(db) == 2
+    assert db.location == test_zip
+
+    # now remove!
+    os.unlink(test_zip)
+
+    # can still access manifest...
+    assert len(db) == 2
+
+    # ...but we should get an error when we call signatures.
+    with pytest.raises(FileNotFoundError):
+        list(db.signatures())
+
+    # but put it back, and all is forgiven. yay!
+    shutil.copyfile(sigzip, test_zip)
+    x = list(db.signatures())
+    assert len(x) == 2
+
+
+def test_lazy_multi_index_1(runtmp):
+    # some basic tests for LazyMultiIndex
+    sigfile = utils.get_test_data('prot/dna-sig.noext')
+    sigzip = utils.get_test_data('prot/protein.zip')
+
+    with pytest.raises(ValueError) as exc:
+        sigidx = LinearIndex.load(sigfile)
+        db = index.LazyMultiIndex.load([sigidx])
+    # no manifest on sigfiles loaded with LinearIndex.load
+    assert "no manifest on" in str(exc)
+
+    # load something, check that it's only accessed upon .signatures(...)
+    test_zip = runtmp.output('test.zip')
+    shutil.copyfile(sigzip, test_zip)
+    
+    # first load zipidx...
+    zipidx = index.LazyLoadedIndex.load(test_zip)
+    # ...then build LazyMultiIndex around zipidx
+    db = index.LazyMultiIndex.load([zipidx])
+    assert len(db) == 2
+    assert db.location == None
+
+    # now remove!
+    os.unlink(test_zip)
+
+    # can still access manifest of MultiIndex...
+    assert len(db) == 2
+
+    # ...but we should get an error when we call signatures.
+    with pytest.raises(FileNotFoundError):
+        list(db.signatures())
+
+    # but put it back, and all is forgiven. yay!
+    shutil.copyfile(sigzip, test_zip)
+    x = list(db.signatures())
+    assert len(x) == 2
