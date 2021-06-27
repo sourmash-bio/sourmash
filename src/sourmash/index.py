@@ -1,4 +1,42 @@
-"An Abstract Base Class for collections of signatures."
+"""An Abstract Base Class for collections of signatures, plus implementations.
+
+APIs and functionality
+----------------------
+
+Index classes support three sets of API functionality -
+
+'select(...)', which selects subsets of signatures based on ksize, moltype,
+and other criteria, including picklists.
+
+'find(...)', and the 'search', 'gather', and 'counter_gather' implementations
+built on top of 'find', which search for signatures that match a query.
+
+'signatures()', which yields all signatures in the Index subject to the
+selection criteria.
+
+Classes defined in this file
+----------------------------
+
+Index - abstract base class for all Index objects.
+
+LinearIndex - simple in-memory storage of signatures.
+
+LazyLinearIndex - lazy selection and linear search of signatures.
+
+ZipFileLinearIndex - simple on-disk storage of signatures.
+
+class MultiIndex - in-memory storage and selection of signatures from multiple
+index objects, using manifests.
+
+class LazyLoadedIndex - lazy-loading wrapper for on-disk indices, using
+manifests. Signatures are kept on disk until requested; only manifests are
+retained, and no open file handles or signatures.
+
+class LazyMultiIndex - lazy-loading wrapper for many on-disk indices.
+Signatures are kept on disk until requested.
+
+CounterGather - an ancillary class returned by the 'counter_gather()' method.
+"""
 
 import os
 import sourmash
@@ -17,6 +55,7 @@ IndexSearchResult = namedtuple('Result', 'score, signature, location')
 
 class Index(ABC):
     is_database = False
+    manifest = None
 
     @property
     def location(self):
@@ -390,9 +429,20 @@ class LinearIndex(Index):
 class LazyLinearIndex(Index):
     """An Index for lazy linear search of another database.
 
-    The defining feature of this class is that 'find' is inherited
-    from the base Index class, which does a linear search with
-    signatures().
+    One of the main purposes of this class is to _force_ linear 'find'
+    on index objects. So if this class wraps an SBT, for example, the
+    SBT find method will be overriden with the linear 'find' from the
+    base class. There are very few situations where this is an improvement,
+    so use this class wisely!
+
+    A few notes:
+    * selection criteria defined by 'select' are only executed when
+      signatures are actually requested (hence, 'lazy').
+    * this class stores the provided index 'db' in memory. If you need
+      a class that does lazy loading of signatures from disk and does not
+      store signatures in memory, see LazyLoadedIndex.
+    * if you want efficient in-memory manifest-based selection, consider
+      LazyMultiIndex.
     """
 
     def __init__(self, db, selection_dict={}):
@@ -890,42 +940,69 @@ class MultiIndex(Index):
         return MultiIndex(new_manifest)
 
 
-class LazyLoadedSigFile(Index):
-    """
-    Given a .sig file and a manifest, do everything on the manifest until
-    signatures are actually requested, and only then load the .sig file
-    (and do so transiently).
+class LazyLoadedIndex(Index):
+    """Given an index location and a manifest, do select only on the manifest
+    until signatures are actually requested, and only then load the index.
 
-    May or may not be redundant with other classes :).
-    CTB: could probably be replaced with a slight extension of LazyMultiIndex,
-    in which it loads the .sig file to generate a manifestm, and then unloads.
+    This class is useful when you have an index object that consume
+    memory when it is loaded (e.g. JSON signature files, or LCA
+    databases) and you want to avoid keeping them in memory.  The
+    downside of using this class is that it will load the signatures
+    from disk every time they are needed (e.g. 'find(...)', 'signatures()').
+
+    Can be used with LazyMultiIndex to support many such indices at once.
+
     """
     def __init__(self, filename, manifest):
+        "Create an Index with given filename and manifest."
         self.filename = filename
         self.manifest = manifest
 
     @property
     def location(self):
+        "the 'location' attribute for this index will be the filename."
         return self.filename
 
     def signatures(self):
-        if not len(self.manifest):
-            print('nothing to do, returning')
+        "yield all signatures from the manifest."
+        if not len(self):
+            # nothing in manifest? done!
             return []
 
-        print(f'...{len(self.manifest)} in manifest, loading')
+        # ok - something in manifest, let's go get those signatures!
         picklist = self.manifest.to_picklist()
-        idx = LinearIndex.load(self.location)
+        idx = sourmash.load_file_as_index(self.location)
+
+        # convert remaining manifest into picklist
         idx = idx.select(picklist=picklist)
+
+        # extract signatures.
         for ss in idx.signatures():
             yield ss
 
     def __len__(self):
+        "track index size based on the manifest."
         return len(self.manifest)
     __bool__ = __len__
 
-    def load(self, *args):
-        raise NotImplementedError
+    @classmethod
+    def load(cls, location, *, create_manifest=False):
+        "Load manifest from given location, and then unload."
+        idx = sourmash.load_file_as_index(location)
+        manifest = idx.manifest
+
+        # do we need to create the manifest?
+        if manifest is None:
+            if create_manifest:
+                iter = idx._signatures_with_internal()
+                manifest = CollectionManifest.create_manifest(idx,
+                                                       include_signature=False)
+            else:
+                raise ValueError(f"no manifest on index at {location}")
+
+        # NOTE: index is not retained outside this scope, just location.
+
+        return cls(location, manifest)
 
     def insert(self, *args):
         raise NotImplementedError
@@ -934,10 +1011,11 @@ class LazyLoadedSigFile(Index):
         raise NotImplementedError
 
     def select(self, **kwargs):
+        "Run 'select' on manifest, return new object with new manifest."
         manifest = self.manifest
         new_manifest = manifest.select_to_manifest(**kwargs)
 
-        return LazyLoadedSigFile(self.filename, new_manifest)
+        return LazyLoadedIndex(self.filename, new_manifest)
 
 
 class LazyMultiIndex(Index):
@@ -951,6 +1029,8 @@ class LazyMultiIndex(Index):
 
     Differs from MultiIndex in that only the manifests are held in memory,
     not any of the signatures.
+
+    CTB: could we get the same functionality from MultiIndex + LazyLoadedIndex?
     """
     def __init__(self, index_list, manifest_list):
         assert len(index_list) == len(manifest_list)
