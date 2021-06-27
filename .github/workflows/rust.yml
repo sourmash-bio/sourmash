@@ -207,9 +207,8 @@ jobs:
         run: npm pack
 
       - uses: actions/upload-artifact@v2
-        working-directory: pkg
         with:
-          path: 'sourmash*.tgz'
+          path: 'pkg/sourmash*.tgz'
 
   wasm32-wasi:
     name: Run tests under wasm32-wasi
