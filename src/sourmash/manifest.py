@@ -143,7 +143,7 @@ class CollectionManifest:
         matching_rows = self.rows
         if ksize:
             matching_rows = ( row for row in matching_rows
-                              if int(row['ksize']) == ksize )
+                              if row['ksize'] == ksize )
         if moltype:
             matching_rows = ( row for row in matching_rows
                               if row['moltype'] == moltype )
@@ -152,14 +152,14 @@ class CollectionManifest:
                 raise ValueError("'containment' requires 'scaled' in Index.select'")
 
             matching_rows = ( row for row in matching_rows
-                              if int(row['scaled']) and not int(row['num']) )
+                              if row['scaled'] and not row['num'] )
         if num:
             matching_rows = ( row for row in matching_rows
-                              if int(row['num']) and not int(row['scaled']) )
+                              if row['num'] and not row['scaled'] )
 
         if abund is not None:
             matching_rows = ( row for row in matching_rows
-                              if bool(abund) == bool(row['with_abundance']) )
+                              if bool(abund) == row['with_abundance'] )
 
         if picklist:
             matching_rows = ( row for row in matching_rows
