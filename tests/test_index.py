@@ -890,15 +890,41 @@ def test_zipfile_API_signatures_select(use_manifest):
     zipfile_db = utils.get_test_data('prot/all.zip')
 
     zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(moltype='DNA')
+
     zipidx = zipidx.select(moltype='DNA')
     siglist = list(zipidx.signatures())
 
     if use_manifest:
         assert len(siglist) == 2
         assert len(zipidx) == 2
+        assert len(ziplist_pre) == 2
     else:
         assert len(siglist) == 1
         assert len(zipidx) == 1
+        assert len(ziplist_pre) == 1
+
+
+def test_zipfile_API_signatures_select_abund(use_manifest):
+    # include dna-sig.noext
+    zipfile_db = utils.get_test_data('prot/all.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(abund=False)
+
+    zipidx = zipidx.select(abund=False)
+    siglist = list(zipidx.signatures())
+
+    if use_manifest:
+        assert len(siglist) == 8
+        assert len(zipidx) == 8
+        assert len(ziplist_pre) == 8
+    else:
+        assert len(siglist) == 7
+        assert len(zipidx) == 7
+        assert len(ziplist_pre) == 7
 
 
 def test_zipfile_API_signatures_select_twice(use_manifest):
@@ -906,6 +932,10 @@ def test_zipfile_API_signatures_select_twice(use_manifest):
     zipfile_db = utils.get_test_data('prot/all.zip')
 
     zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(moltype='DNA')
+    ziplist_pre = ziplist_pre.select(ksize=31)
+
     zipidx = zipidx.select(moltype='DNA')
     zipidx = zipidx.select(ksize=31)
     siglist = list(zipidx.signatures())
@@ -913,9 +943,11 @@ def test_zipfile_API_signatures_select_twice(use_manifest):
     if use_manifest:
         assert len(siglist) == 2
         assert len(zipidx) == 2
+        assert len(ziplist_pre) == 2
     else:
         assert len(siglist) == 1
         assert len(zipidx) == 1
+        assert len(ziplist_pre) == 1
 
 
 def test_zipfile_API_save():
