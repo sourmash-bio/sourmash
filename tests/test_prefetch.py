@@ -271,6 +271,7 @@ def test_prefetch_matching_hashes(runtmp, linear_gather):
     intersect.add_many(matches)
 
     ss = sourmash.load_one_signature(matches_out)
+    assert ss.name
     assert ss.minhash == intersect
 
 
@@ -300,6 +301,7 @@ def test_prefetch_nomatch_hashes(runtmp, linear_gather):
     remain.remove_many(ss63.minhash.hashes)
 
     ss = sourmash.load_one_signature(nomatch_out)
+    assert ss.name
     assert ss.minhash == remain
 
 
