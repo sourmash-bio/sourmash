@@ -402,24 +402,24 @@ def index(args):
             moltypes.add(sourmash_args.get_moltype(ss))
             nums.add(ss.minhash.num)
 
-            if args.scaled:
-                ss.minhash = ss.minhash.downsample(scaled=args.scaled)
-            # if isinstance(args.scaled, float):
-            #     if args.scaled == 0:
-            #         error('ERROR: --scaled value must be >= 1')
-            #         sys.exit(-1)
-            #     if args.scaled:
-            #         if args.scaled < 0:
-            #             error('ERROR: --scaled value must be positive')
-            #             sys.exit(-1)
-            #         if args.scaled != round(args.scaled, 0):
-            #             error('ERROR: --scaled value must be integer value')
-            #             sys.exit(-1)
-            #         if args.scaled < 100:
-            #             notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
-            #         if args.scaled > 1e6:
-            #             notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
-            #         ss.minhash = ss.minhash.downsample(scaled=args.scaled)
+            # if args.scaled:
+            #     ss.minhash = ss.minhash.downsample(scaled=args.scaled)
+            if isinstance(args.scaled, float):
+                if args.scaled == 0:
+                    error('ERROR: --scaled value must be >= 1')
+                    sys.exit(-1)
+                if args.scaled:
+                    if args.scaled < 0:
+                        error('ERROR: --scaled value must be positive')
+                        sys.exit(-1)
+                    if args.scaled != round(args.scaled, 0):
+                        error('ERROR: --scaled value must be integer value')
+                        sys.exit(-1)
+                    if args.scaled < 100:
+                        notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
+                    if args.scaled > 1e6:
+                        notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
+                    ss.minhash = ss.minhash.downsample(scaled=args.scaled)
             if ss.minhash.track_abundance:
                 ss.minhash = ss.minhash.flatten()
             scaleds.add(ss.minhash.scaled)
