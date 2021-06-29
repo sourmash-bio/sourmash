@@ -1256,7 +1256,7 @@ def prefetch(args):
 
         sig_name = ''
         if query.name:
-            sig_name = f"{query.name}-known"
+            sig_name = f"{query.name}-unknown"
 
         notify(f"saving {len(noident_mh)} unmatched hashes to '{filename}'")
         ss = sig.SourmashSignature(noident_mh, name=sig_name)
