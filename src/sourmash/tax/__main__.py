@@ -221,15 +221,15 @@ def genome(args):
                 if sg.fraction >= args.containment_threshold:
                     status = "match"
                     classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename)
-                    classifications[args.rank].append(classif)
+                    classifications[sg.rank].append(classif)
                     matched_queries.add(sg.query_name)
-                    break
+                    continue
                 if rank == "superkingdom" and status == "nomatch":
                     status="below_threshold"
                     classif = ClassificationResult(query_name=sg.query_name, status=status,
                                                    rank="", fraction=0, lineage="",
                                                    query_md5=sg.query_md5, query_filename=sg.query_filename)
-                    classifications[args.rank].append(classif)
+                    classifications[sg.rank].append(classif)
 
     if not any([classifications, krona_results]):
         notify('No results for classification. Exiting.')
