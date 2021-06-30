@@ -329,10 +329,9 @@ def select_signature(ss, *, ksize=None, moltype=None, scaled=0, num=0,
         if ss.minhash.scaled or num != ss.minhash.num:
             return False
 
-    if abund is not None:
-        if abund and not ss.minhash.track_abundance:
-            return False
-        if not abund and ss.minhash.track_abundance:
+    if abund:
+        # note: minhash w/abund can always be flattened
+        if not ss.minhash.track_abundance:
             return False
 
     if picklist is not None and ss not in picklist:

@@ -157,9 +157,10 @@ class CollectionManifest:
             matching_rows = ( row for row in matching_rows
                               if row['num'] and not row['scaled'] )
 
-        if abund is not None:
+        if abund:
+            # only need to concern ourselves if abundance is _required_
             matching_rows = ( row for row in matching_rows
-                              if bool(abund) == row['with_abundance'] )
+                              if row['with_abundance'] )
 
         if picklist:
             matching_rows = ( row for row in matching_rows
