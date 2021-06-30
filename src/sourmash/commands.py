@@ -368,7 +368,7 @@ def index(args):
                 notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
             args.scaled = int(args.scaled)
             notify('downsampling signatures to scaled={}', args.scaled)
-
+            
     inp_files = list(args.signatures)
     if args.from_file:
         more_files = sourmash_args.load_pathlist_from_file(args.from_file)
@@ -404,8 +404,25 @@ def index(args):
 
             # if args.scaled:
             #     ss.minhash = ss.minhash.downsample(scaled=args.scaled)
+               
             if isinstance(args.scaled, float):
+                print("\n\n\n\n")
+                print("args.scaled: ",args.scaled)
+                print("\n\n\n\n")
+                if args.scaled == 0:
+                    error('ERROR: --scaled value must be >= 1')
+                    sys.exit(-1)
                 if args.scaled:
+                    if args.scaled < 0:
+                        error('ERROR: --scaled value must be positive')
+                        sys.exit(-1)
+                    if args.scaled != round(args.scaled, 0):
+                        error('ERROR: --scaled value must be integer value')
+                        sys.exit(-1)
+                    if args.scaled < 100:
+                        notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
+                    if args.scaled > 1e6:
+                        notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
                     ss.minhash = ss.minhash.downsample(scaled=args.scaled)
             if ss.minhash.track_abundance:
                 ss.minhash = ss.minhash.flatten()
