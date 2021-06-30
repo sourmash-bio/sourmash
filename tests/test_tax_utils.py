@@ -183,16 +183,16 @@ def test_load_taxonomy_csv():
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     tax_assign, num_rows, ranks = load_taxonomy_csv(taxonomy_csv)
     print("taxonomy assignments: \n", tax_assign)
-    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1']
-    assert num_rows == 5 # should have read 5 rows
+    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1']
+    assert num_rows == 6 # should have read 6 rows
 
 
 def test_load_taxonomy_csv_split_id():
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     tax_assign, num_rows, ranks = load_taxonomy_csv(taxonomy_csv, split_identifiers=True)
     print("taxonomy assignments: \n", tax_assign)
-    assert list(tax_assign.keys()) == ['GCF_001881345', 'GCF_009494285', 'GCF_013368705', 'GCF_003471795', 'GCF_000017325']
-    assert num_rows == 5 # should have read 4 rows
+    assert list(tax_assign.keys()) == ['GCF_001881345', 'GCF_009494285', 'GCF_013368705', 'GCF_003471795', 'GCF_000017325', 'GCF_000021665']
+    assert num_rows == 6 # should have read 6 rows
 
 
 def test_load_taxonomy_csv_with_ncbi_id(runtmp):
@@ -208,8 +208,8 @@ def test_load_taxonomy_csv_with_ncbi_id(runtmp):
 
     tax_assign, num_rows, ranks = load_taxonomy_csv(upd_csv)
     print("taxonomy assignments: \n", tax_assign)
-    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', "ncbi_id after_space"]
-    assert num_rows == 6  # should have read 6 rows
+    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1', "ncbi_id after_space"]
+    assert num_rows == 7  # should have read 7 rows
 
 
 def test_load_taxonomy_csv_split_id_ncbi(runtmp):
@@ -225,8 +225,8 @@ def test_load_taxonomy_csv_split_id_ncbi(runtmp):
 
     tax_assign, num_rows, ranks = load_taxonomy_csv(upd_csv, split_identifiers=True)
     print("taxonomy assignments: \n", tax_assign)
-    assert list(tax_assign.keys()) == ['GCF_001881345', 'GCF_009494285', 'GCF_013368705', 'GCF_003471795', 'GCF_000017325', "ncbi_id"]
-    assert num_rows == 6 # should have read 5 rows
+    assert list(tax_assign.keys()) == ['GCF_001881345', 'GCF_009494285', 'GCF_013368705', 'GCF_003471795', 'GCF_000017325', 'GCF_000021665', "ncbi_id"]
+    assert num_rows == 7 # should have read 7 rows
 
 
 def test_load_taxonomy_csv_duplicate(runtmp):
@@ -253,8 +253,8 @@ def test_load_taxonomy_csv_duplicate_force(runtmp):
     # now force
     tax_assign, num_rows, ranks = load_taxonomy_csv(duplicated_csv, force=True)
     print("taxonomy assignments: \n", tax_assign)
-    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1']
-    assert num_rows == 6 # should have read 6 rows
+    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1']
+    assert num_rows == 7 # should have read 7 rows
 
 
 def test_find_missing_identities():
