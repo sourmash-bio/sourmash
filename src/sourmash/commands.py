@@ -402,13 +402,10 @@ def index(args):
             moltypes.add(sourmash_args.get_moltype(ss))
             nums.add(ss.minhash.num)
 
-            # if args.scaled:
-            #     ss.minhash = ss.minhash.downsample(scaled=args.scaled)
-               
             if isinstance(args.scaled, float):
-                print("\n\n\n\n")
-                print("args.scaled: ",args.scaled)
-                print("\n\n\n\n")
+                # print("\n\n\n\n")
+                # print("args.scaled: ",args.scaled)
+                # print("\n\n\n\n")
                 if args.scaled == 0:
                     error('ERROR: --scaled value must be >= 1')
                     sys.exit(-1)
@@ -485,29 +482,43 @@ def search(args):
                                              sourmash_args.get_moltype(query))
 
     # downsample if requested
-    if isinstance(args.scaled, float):
-        if args.scaled == 0:
-            error('ERROR: --scaled value must be >= 1')
+    if args.scaled:
+        if not query.minhash.scaled:
+            error('cannot downsample a signature not created with --scaled')
             sys.exit(-1)
-        if args.scaled:
-            if args.scaled < 0:
-                error('ERROR: --scaled value must be positive')
-                sys.exit(-1)
-            if args.scaled != round(args.scaled, 0):
-                error('ERROR: --scaled value must be integer value')
-                sys.exit(-1)
-            if args.scaled < 100:
-                notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
-            if args.scaled > 1e6:
-                notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
-            if not query.minhash.scaled:
-                error('cannot downsample a signature not created with --scaled')
-                sys.exit(-1)
-
-            if args.scaled != query.minhash.scaled:
-                notify('downsampling query from scaled={} to {}',
-                    query.minhash.scaled, int(args.scaled))
-            query.minhash = query.minhash.downsample(scaled=args.scaled)
+        if args.scaled != query.minhash.scaled:
+            notify('downsampling query from scaled={} to {}',
+            query.minhash.scaled, int(args.scaled))
+        query.minhash = query.minhash.downsample(scaled=args.scaled)
+    else:
+        assert 0
+    
+    # if isinstance(args.scaled, float):
+        # print("\n\n\n\n")
+        # print("args.scaled: ",args.scaled)
+        # print("type: ",type(args.scaled))
+        # print("\n\n\n\n")
+    # if args.scaled == 0:
+    #     error('ERROR: --scaled value must be >= 1')
+    #     sys.exit(-1)
+    # if args.scaled:
+    #     if args.scaled < 0:
+    #         error('ERROR: --scaled value must be positive')
+    #         sys.exit(-1)
+    #     if args.scaled != round(args.scaled, 0):
+    #         error('ERROR: --scaled value must be integer value')
+    #         sys.exit(-1)
+    #     if args.scaled < 100:
+    #         notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
+    #     if args.scaled > 1e6:
+    #         notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
+        # if not query.minhash.scaled:
+        #     error('cannot downsample a signature not created with --scaled')
+        #     sys.exit(-1)
+        # if args.scaled != query.minhash.scaled:
+        #     notify('downsampling query from scaled={} to {}',
+        #         query.minhash.scaled, int(args.scaled))
+        # query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # set up the search databases
     is_containment = args.containment or args.max_containment
