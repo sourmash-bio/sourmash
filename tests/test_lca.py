@@ -523,11 +523,17 @@ def test_lca_index_select():
     xx = db.select(moltype='DNA')
     assert xx == db
 
+    xx = db.select(abund=False)
+    assert xx == db
+
     with pytest.raises(ValueError):
         db.select(ksize=21)
 
     with pytest.raises(ValueError):
         db.select(moltype='protein')
+
+    with pytest.raises(ValueError):
+        db.select(abund=True)
 
 
 def test_lca_index_select_picklist():
