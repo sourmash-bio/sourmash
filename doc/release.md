@@ -29,7 +29,7 @@ and also check if the [rendered docs] are updated.
 1\. The below should be done in a clean checkout:
 ```
 cd $(mktemp -d)
-git clone git@github.com:sourmash-bio/sourmash.git
+git clone https://github.com/sourmash-bio/sourmash
 cd sourmash
 ```
 
