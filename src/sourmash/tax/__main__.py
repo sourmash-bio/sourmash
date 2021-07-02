@@ -61,7 +61,6 @@ def metagenome(args):
     set_quiet(args.quiet)
 
     # first, load taxonomic_assignments
-
     try:
         tax_assign, available_ranks = tax_utils.load_taxonomies(args.taxonomy_csv,
                        split_identifiers=not args.keep_full_identifiers,
@@ -133,20 +132,15 @@ def genome(args):
     set_quiet(args.quiet)
 
     # first, load taxonomic_assignments
-    tax_assign = {}
-    available_ranks = set()
-    for tax_csv in args.taxonomy_csv:
-
-        try:
-            this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
-                                              keep_identifier_versions = args.keep_identifier_versions,
-                                              force=args.force)
-            # maybe check for overlapping tax assignments? currently later ones will override earlier ones
-            tax_assign.update(this_tax_assign)
-            available_ranks.update(set(avail_ranks))
-        except ValueError as exc:
-            error(f"ERROR: {str(exc)}")
-
+    try:
+        tax_assign, available_ranks = tax_utils.load_taxonomies(args.taxonomy_csv,
+                       split_identifiers=not args.keep_full_identifiers,
+                       keep_identifier_versions=args.keep_identifier_versions,
+                       force=args.force)
+    except ValueError as exc:
+        error(f"ERROR: {str(exc)}")
+        sys.exit(-1)
+        
     if not tax_assign:
         error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
         sys.exit(-1)
@@ -251,22 +245,15 @@ def annotate(args):
     set_quiet(args.quiet)
 
     # first, load taxonomic_assignments
-    tax_assign = {}
-    this_tax_assign = None
-    for tax_csv in args.taxonomy_csv:
-
-        try:
-            this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
-                                              keep_identifier_versions = args.keep_identifier_versions,
-                                              force=args.force)
-        except ValueError as exc:
-            error(f"ERROR: {str(exc)}")
-            sys.exit(-1)
-
-        # maybe check for overlapping tax assignments? currently later ones will override earlier ones
-        if this_tax_assign:
-            tax_assign.update(this_tax_assign)
-
+    try:
+        tax_assign, available_ranks = tax_utils.load_taxonomies(args.taxonomy_csv,
+                       split_identifiers=not args.keep_full_identifiers,
+                       keep_identifier_versions=args.keep_identifier_versions,
+                       force=args.force)
+    except ValueError as exc:
+        error(f"ERROR: {str(exc)}")
+        sys.exit(-1)
+        
     if not tax_assign:
         error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
         sys.exit(-1)
