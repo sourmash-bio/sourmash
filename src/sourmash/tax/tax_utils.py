@@ -510,3 +510,54 @@ class LineageDB(abc.Mapping):
 
     def __len__(self):
         return len(self.assignments)
+
+    def __bool__(self):
+        return bool(self.assignments)
+
+
+class MultiLineageDB(abc.Mapping):
+    def __init__(self):
+        self.lineage_dbs = []
+
+    def add(self, db):
+        self.lineage_dbs.insert(0, db)
+
+    def __iter__(self):
+        seen = set()
+        for db in self.lineage_dbs:
+            for k in db:
+                if k not in seen:
+                    seen.add(k)
+                    yield k
+
+    def __getitem__(self, k):
+        "return first match"
+        for db in self.lineage_dbs:
+            if k in db:
+                return db[k]
+
+        # not found? KeyError!
+        raise KeyError(k)
+
+    def __len__(self):
+        # CTB: maybe we can make this unnecessary?
+        x = set(self)
+        return len(x)
+    #raise NotImplementedError
+
+    def __bool__(self):
+        return any( bool(db) for db in self.lineage_dbs )
+
+
+def load_taxonomies(locations, **kwargs):
+    "Load one or more taxonomies."
+    tax_assign = MultiLineageDB()
+    available_ranks = set()
+    for location in locations:
+        this_tax_assign, _, avail_ranks = load_taxonomy_csv(location, **kwargs)
+        # NTP: maybe check for overlapping tax assignments? currently, later
+        # ones will override earlier ones
+        tax_assign.add(this_tax_assign)
+        available_ranks.update(set(avail_ranks))
+    
+    return tax_assign, available_ranks
