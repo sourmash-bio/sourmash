@@ -3,6 +3,7 @@ Utility functions for taxonomy analysis tools.
 """
 import csv
 from collections import namedtuple, defaultdict
+from collections import abc
 
 __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
            'load_gather_results', 'check_and_load_gather_csvs',
@@ -493,4 +494,19 @@ def load_taxonomy_csv(filename, *, delimiter=',', force=False,
                             n_species += 1
                             n_strains += 1
 
+    assignments = LineageDB(assignments)
     return assignments, num_rows, ranks
+
+
+class LineageDB(abc.Mapping):
+    def __init__(self, assign_d):
+        self.assignments = assign_d
+
+    def __getitem__(self, k):
+        return self.assignments[k]
+
+    def __iter__(self):
+        return iter(self.assignments)
+
+    def __len__(self):
+        return len(self.assignments)
