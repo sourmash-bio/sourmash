@@ -804,7 +804,7 @@ def gather(args):
             if is_abundance:
                 abund_query_mh = remaining_query.minhash.inflate(orig_query_mh)
                 # inflate(remaining_query, orig_query_mh, gather_iter)
-                # # remaining_query is flattened; reinflate abundances
+                # remaining_query is flattened; reinflate abundances
                 # hashes = set(remaining_query.minhash.hashes)
                 # orig_abunds = orig_query_mh.hashes
                 # abunds = { h: orig_abunds[h] for h in hashes }
