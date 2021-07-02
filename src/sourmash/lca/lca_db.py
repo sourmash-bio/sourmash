@@ -177,7 +177,7 @@ class LCA_Database(Index):
         for v in self._signatures.values():
             yield v
 
-    def select(self, ksize=None, moltype=None, num=0, scaled=0,
+    def select(self, ksize=None, moltype=None, num=0, scaled=0, abund=None,
                containment=False, picklist=None):
         """Make sure this database matches the requested requirements.
 
@@ -198,6 +198,9 @@ class LCA_Database(Index):
             raise ValueError(f"ksize on this database is {self.ksize}; this is different from requested ksize of {ksize}")
         if moltype is not None and moltype != self.moltype:
             raise ValueError(f"moltype on this database is {self.moltype}; this is different from requested moltype of {moltype}")
+
+        if abund:
+            raise ValueError("LCA databases do not support sketches with abund=True")
 
         if picklist is not None:
             self.picklists.append(picklist)

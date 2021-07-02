@@ -891,15 +891,68 @@ def test_zipfile_API_signatures_select(use_manifest):
     zipfile_db = utils.get_test_data('prot/all.zip')
 
     zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(moltype='DNA')
+
     zipidx = zipidx.select(moltype='DNA')
     siglist = list(zipidx.signatures())
 
     if use_manifest:
         assert len(siglist) == 2
         assert len(zipidx) == 2
+        assert len(ziplist_pre) == 2
     else:
         assert len(siglist) == 1
         assert len(zipidx) == 1
+        assert len(ziplist_pre) == 1
+
+
+def test_zipfile_API_signatures_select_abund_false(use_manifest):
+    # check for abund=False (all signatures match b/c can convert)
+    zipfile_db = utils.get_test_data('track_abund/track_abund.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(abund=False)
+
+    zipidx = zipidx.select(abund=False)
+    siglist = list(zipidx.signatures())
+
+    assert len(siglist) == 2
+    assert len(zipidx) == 2
+    assert len(ziplist_pre) == 2
+
+
+def test_zipfile_API_signatures_select_abund_true(use_manifest):
+    # find all abund=True (all signatures match, b/c abund)
+    zipfile_db = utils.get_test_data('track_abund/track_abund.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(abund=True)
+
+    zipidx = zipidx.select(abund=True)
+    siglist = list(zipidx.signatures())
+
+    assert len(siglist) == 2
+    assert len(zipidx) == 2
+    assert len(ziplist_pre) == 2
+
+
+def test_zipfile_API_signatures_select_abund_none(use_manifest):
+    # find all abund=None (all signatures match, b/c no selection criteria)
+    zipfile_db = utils.get_test_data('track_abund/track_abund.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(abund=None)
+
+    zipidx = zipidx.select(abund=None)
+    siglist = list(zipidx.signatures())
+
+    assert len(siglist) == 2
+    assert len(zipidx) == 2
+    assert len(ziplist_pre) == 2
 
 
 def test_zipfile_API_signatures_select_twice(use_manifest):
@@ -907,6 +960,10 @@ def test_zipfile_API_signatures_select_twice(use_manifest):
     zipfile_db = utils.get_test_data('prot/all.zip')
 
     zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(moltype='DNA')
+    ziplist_pre = ziplist_pre.select(ksize=31)
+
     zipidx = zipidx.select(moltype='DNA')
     zipidx = zipidx.select(ksize=31)
     siglist = list(zipidx.signatures())
@@ -914,9 +971,11 @@ def test_zipfile_API_signatures_select_twice(use_manifest):
     if use_manifest:
         assert len(siglist) == 2
         assert len(zipidx) == 2
+        assert len(ziplist_pre) == 2
     else:
         assert len(siglist) == 1
         assert len(zipidx) == 1
+        assert len(ziplist_pre) == 1
 
 
 def test_zipfile_API_save():
