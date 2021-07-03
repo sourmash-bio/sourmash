@@ -882,6 +882,33 @@ class MultiIndex(Index):
         return cls(manifest)
 
     @classmethod
+    def load_from_directory(cls, pathname, force=False):
+        from .sourmash_args import traverse_find_sigs
+
+        index_list = []
+        source_list = []
+
+        traversal = traverse_find_sigs([pathname], yield_all_files=force)
+        for thisfile in traversal:
+            try:
+                idx = LinearIndex.load(thisfile)
+                index_list.append(idx)
+
+                relpath = os.path.relpath(thisfile, pathname)
+                source_list.append(relpath)
+            except (IOError, sourmash.exceptions.SourmashError):
+                if force:
+                    continue    # ignore error
+                else:
+                    raise       # stop loading!
+
+        # did we load anything? if not, error
+        if not index_list:
+            raise ValueError(f"no signatures to load under directory '{pathname}'")
+
+        return cls.load(index_list, source_list)
+
+    @classmethod
     def load_from_path(cls, pathname, force=False):
         """
         Create a MultiIndex from a path (filename or directory).
@@ -889,29 +916,24 @@ class MultiIndex(Index):
         Note: this only uses LinearIndex.load(...), so will only load
         signature JSON files.
         """
-        from .sourmash_args import traverse_find_sigs
-        if not os.path.exists(pathname): # CTB consider changing to isdir...
+        if not os.path.exists(pathname):
             raise ValueError(f"'{pathname}' must exist.")
 
-        index_list = []
-        source_list = []
-        for thisfile in traverse_find_sigs([pathname], yield_all_files=force):
+        if os.path.isdir(pathname): # traverse
+            return cls.load_from_directory(pathname, force=force)
+        else:                   # load as a .sig/JSON file
+            index_list = []
+            source_list = []
             try:
-                idx = LinearIndex.load(thisfile)
-
-                if idx:
-                    index_list.append(idx)
-                    source_list.append(thisfile)
+                idx = LinearIndex.load(pathname)
+                index_list = [idx]
+                source_list = [pathname]
             except (IOError, sourmash.exceptions.SourmashError):
-                if force:
-                    continue    # ignore error
-                else:
-                    raise       # stop loading!
+                if not force:
+                    raise ValueError(f"no signatures to load from '{pathname}'")
+                return None
 
-        if not index_list:
-            raise ValueError(f"no signatures to load under directory '{pathname}'")
-
-        return cls.load(index_list, source_list)
+            return cls.load(index_list, source_list)
 
     @classmethod
     def load_from_pathlist(cls, filename):
