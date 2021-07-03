@@ -502,60 +502,97 @@ class LineageDB(abc.Mapping):
     def __init__(self, assign_d):
         self.assignments = assign_d
 
-    def __getitem__(self, k):
-        return self.assignments[k]
+    def __getitem__(self, ident):
+        "Retrieve the lineage tuple for identifer (or raise KeyError)"
+        return self.assignments[ident]
 
     def __iter__(self):
+        "Return all identifiers for this db."
         return iter(self.assignments)
 
     def __len__(self):
+        "Return number of lineages"
         return len(self.assignments)
 
     def __bool__(self):
+        "Are there any lineages at all in this database?"
         return bool(self.assignments)
 
 
 class LineageDB_Sqlite(abc.Mapping):
-    def __init__(self, conn, nrows):
+    def __init__(self, conn):
         self.conn = conn
-        self.cursor = conn.cursor()
-        self.nrows = nrows
 
-    def __getitem__(self, k):
+        # can we do a 'select' on the right table?
+        self.__len__()
+        self.cursor = conn.cursor()
+
+    @classmethod
+    def load(cls, location):
+        import sqlite3
+        conn = sqlite3.connect(location)
+        return cls(conn)
+
+    def _make_tup(self, row):
+        tup = [ LineagePair(n, r) for (n, r) in zip(taxlist(True), row) ]
+        return tuple(tup)
+
+    def __getitem__(self, ident):
+        "Retrieve lineage for identifer"
         c = self.cursor
-        c.execute('SELECT superkingdom, class, order_, family, genus, species, strain FROM taxonomy WHERE ident=?', (k,))
+        c.execute('SELECT superkingdom, class, order_, family, genus, species, strain FROM taxonomy WHERE ident=?', (ident,))
+
+        # retrieve names list...
         names = c.fetchone()
-        tup = [ LineagePair(n, r) for (n, r) in zip(taxlist(True), names) ]
-        tup = tuple(tup)
+
+        # ...and construct lineage tuple
+        return self._make_tup(names)
+
         return tup
 
     def __bool__(self):
-        return True
+        "Do we have any info?"
+        return bool(len(self))
 
     def __len__(self):
-        return self.nrows
+        "Return number of rows"
+        c = self.conn.cursor()
+        c.execute('SELECT COUNT(DISTINCT ident) FROM taxonomy')
+        nrows, = c.fetchone()
+        return nrows
 
     def __iter__(self):
-        c = self.cursor
+        "Return all identifiers"
+        # create new cursor so as to allow other operations
+        c = self.conn.cursor()
         c.execute('SELECT DISTINCT ident FROM taxonomy')
-        r = c.fetchone()
-        while r:
-            ident, = r
-            yield ident
-            r = c.fetchone()
 
+        for ident, in c:
+            yield ident
+
+    def items(self):
+        c = self.conn.cursor()
+
+        c.execute('SELECT DISTINCT ident, superkingdom, class, order_, family, genus, species, strain FROM taxonomy')
+
+        for ident, *names in c:
+            yield ident, self._make_tup(names)
 
 class MultiLineageDB(abc.Mapping):
-    # NTP: maybe check for overlapping tax assignments? currently, later
-    # ones will override earlier ones
+    "A wrapper for (dynamically) combining multiple lineage databases."
+
+    # NTP: currently, later lineage databases will override earlier ones.
+    # Do we want to report/summarize shadowed identifiers?
 
     def __init__(self):
         self.lineage_dbs = []
 
     def add(self, db):
+        "Add a new lineage database"
         self.lineage_dbs.insert(0, db)
 
     def __iter__(self):
+        "Return all identifiers (once)"
         seen = set()
         for db in self.lineage_dbs:
             for k in db:
@@ -563,34 +600,40 @@ class MultiLineageDB(abc.Mapping):
                     seen.add(k)
                     yield k
 
-    def __getitem__(self, k):
-        "return first match"
+    def items(self):
+        "Return all (identifiers, lineage_tup), masking duplicate idents"
+        seen = set()
         for db in self.lineage_dbs:
-            if k in db:
-                return db[k]
+            for k, v in db.items():
+                if k not in seen:
+                    seen.add(k)
+                    yield k, v
+
+    def __getitem__(self, ident):
+        "Return lineage tuple for first match to identifier."
+        for db in self.lineage_dbs:
+            if ident in db:
+                return db[ident]
 
         # not found? KeyError!
         raise KeyError(k)
 
     def __len__(self):
+        "Return number of distinct identifiers. Currently iterates over all."
         # CTB: maybe we can make this unnecessary?
         x = set(self)
         return len(x)
-    #raise NotImplementedError
 
     def __bool__(self):
+        "True if any contained database has content."
         return any( bool(db) for db in self.lineage_dbs )
 
 
 def load_taxonomy_sqlite(location):
-    import sqlite3
-    db = sqlite3.connect(location)
-    cursor = db.cursor()
+    db = LineageDB_Sqlite.load(location)
+    actual_ranks = set(taxlist(True))
 
-    cursor.execute('SELECT COUNT(DISTINCT ident) FROM taxonomy')
-    rowcount, = cursor.fetchone()
-    print(f'XXX {rowcount}')
-    return LineageDB_Sqlite(db, rowcount), rowcount, set(taxlist(True))
+    return db, len(db), actual_ranks
 
 
 def load_taxonomies(locations, **kwargs):
