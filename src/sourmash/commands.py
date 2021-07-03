@@ -1213,10 +1213,28 @@ def prefetch(args):
         query_mh = query_mh.flatten()
 
     # downsample if/as requested
-    if args.scaled:
-        notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
-        query_mh = query_mh.downsample(scaled=args.scaled)
+    # if args.scaled:
+    #     notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
+    #     query_mh = query_mh.downsample(scaled=args.scaled)
+    # notify(f"all sketches will be downsampled to scaled={query_mh.scaled}")
+
+
+    if isinstance(args.scaled, float):
+        if args.scaled:
+            notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
+            query_mh = query_mh.downsample(scaled=args.scaled)
+            if args.scaled < 0:
+                error('ERROR: --scaled value must be positive')
+                sys.exit(-1)
+            if args.scaled < 100:
+                notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
+            if args.scaled > 1e6:
+                notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
+        if args.scaled == 0:
+            error('ERROR: --scaled value must be >= 1')
+            sys.exit(-1)
     notify(f"all sketches will be downsampled to scaled={query_mh.scaled}")
+
 
     # empty?
     if not len(query_mh):
