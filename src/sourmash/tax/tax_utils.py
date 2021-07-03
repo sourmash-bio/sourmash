@@ -515,7 +515,40 @@ class LineageDB(abc.Mapping):
         return bool(self.assignments)
 
 
+class LineageDB_Sqlite(abc.Mapping):
+    def __init__(self, conn, nrows):
+        self.conn = conn
+        self.cursor = conn.cursor()
+        self.nrows = nrows
+
+    def __getitem__(self, k):
+        c = self.cursor
+        c.execute('SELECT superkingdom, class, order_, family, genus, species, strain FROM taxonomy WHERE ident=?', (k,))
+        names = c.fetchone()
+        tup = [ LineagePair(n, r) for (n, r) in zip(taxlist(True), names) ]
+        tup = tuple(tup)
+        return tup
+
+    def __bool__(self):
+        return True
+
+    def __len__(self):
+        return self.nrows
+
+    def __iter__(self):
+        c = self.cursor
+        c.execute('SELECT DISTINCT ident FROM taxonomy')
+        r = c.fetchone()
+        while r:
+            ident, = r
+            yield ident
+            r = c.fetchone()
+
+
 class MultiLineageDB(abc.Mapping):
+    # NTP: maybe check for overlapping tax assignments? currently, later
+    # ones will override earlier ones
+
     def __init__(self):
         self.lineage_dbs = []
 
@@ -549,14 +582,27 @@ class MultiLineageDB(abc.Mapping):
         return any( bool(db) for db in self.lineage_dbs )
 
 
+def load_taxonomy_sqlite(location):
+    import sqlite3
+    db = sqlite3.connect(location)
+    cursor = db.cursor()
+
+    cursor.execute('SELECT COUNT(DISTINCT ident) FROM taxonomy')
+    rowcount, = cursor.fetchone()
+    print(f'XXX {rowcount}')
+    return LineageDB_Sqlite(db, rowcount), rowcount, set(taxlist(True))
+
+
 def load_taxonomies(locations, **kwargs):
     "Load one or more taxonomies."
     tax_assign = MultiLineageDB()
     available_ranks = set()
     for location in locations:
-        this_tax_assign, _, avail_ranks = load_taxonomy_csv(location, **kwargs)
-        # NTP: maybe check for overlapping tax assignments? currently, later
-        # ones will override earlier ones
+        if location.endswith('.csv'):
+            this_tax_assign, _, avail_ranks = load_taxonomy_csv(location, **kwargs)
+        elif location.endswith('.db'):
+            this_tax_assign, _, avail_ranks = load_taxonomy_sqlite(location)
+
         tax_assign.add(this_tax_assign)
         available_ranks.update(set(avail_ranks))
     
