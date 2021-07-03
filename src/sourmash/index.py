@@ -830,8 +830,9 @@ class MultiIndex(Index):
     Note: this is an in-memory collection, and does not do lazy loading:
     all signatures are loaded upon instantiation and kept in memory.
     """
-    def __init__(self, manifest):
+    def __init__(self, manifest, parent=None):
         self.manifest = manifest
+        self.parent = parent
 
     def signatures(self):
         for row in self.manifest.rows:
@@ -839,7 +840,12 @@ class MultiIndex(Index):
 
     def signatures_with_location(self):
         for row in self.manifest.rows:
-            yield row['signature'], row['internal_location']
+            loc = row['internal_location']
+            # here, 'parent' may have been removed from internal_location
+            # for directories; if so, add it back in.
+            if self.parent:
+                loc = os.path.join(self.parent, loc)
+            yield row['signature'], loc
 
     def _signatures_with_internal(self):
         """Return an iterator of tuples (ss, location)
@@ -847,8 +853,10 @@ class MultiIndex(Index):
         CTB note: here, 'internal_location' is the source file for the
         index. This is a special feature of this (in memory) class.
         """
+        # CTB: maybe put 'parent' here in the middle?
         for row in self.manifest.rows:
             yield row['signature'], "", row['internal_location']
+
 
     def __len__(self):
         return len(self.manifest)
@@ -857,7 +865,7 @@ class MultiIndex(Index):
         raise NotImplementedError
 
     @classmethod
-    def load(cls, index_list, source_list):
+    def load(cls, index_list, source_list, parent=None):
         """Create a MultiIndex from already-loaded indices.
 
         Takes two arguments: a list of Index objects, and a matching list
@@ -879,7 +887,7 @@ class MultiIndex(Index):
         manifest = CollectionManifest.create_manifest(sigloc_iter())
 
         # create!
-        return cls(manifest)
+        return cls(manifest, parent=parent)
 
     @classmethod
     def load_from_directory(cls, pathname, force=False):
@@ -894,8 +902,8 @@ class MultiIndex(Index):
                 idx = LinearIndex.load(thisfile)
                 index_list.append(idx)
 
-                #relpath = os.path.relpath(thisfile, pathname)
-                source_list.append(thisfile)
+                rel = os.path.relpath(thisfile, pathname)
+                source_list.append(rel)
             except (IOError, sourmash.exceptions.SourmashError):
                 if force:
                     continue    # ignore error
@@ -906,7 +914,7 @@ class MultiIndex(Index):
         if not index_list:
             raise ValueError(f"no signatures to load under directory '{pathname}'")
 
-        return cls.load(index_list, source_list)
+        return cls.load(index_list, source_list, parent=pathname)
 
     @classmethod
     def load_from_path(cls, pathname, force=False):
@@ -964,7 +972,7 @@ class MultiIndex(Index):
     def select(self, **kwargs):
         "Run 'select' on the manifest."
         new_manifest = self.manifest.select_to_manifest(**kwargs)
-        return MultiIndex(new_manifest)
+        return MultiIndex(new_manifest, parent=self.parent)
 
 
 class LazyLoadedIndex(Index):
