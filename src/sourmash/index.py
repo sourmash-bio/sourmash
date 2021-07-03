@@ -72,12 +72,15 @@ class Index(ABC):
             yield ss, self.location
 
     def _signatures_with_internal(self):
-        """Return an iterator of tuples (ss, location, internal_location).
+        """Return an iterator of tuples (ss, storage_path, internal_location).
 
         This is an internal API for use in generating manifests, and may
         change without warning.
 
         This method should be implemented separately for each Index object.
+
+        CTB: maybe 'location' is the Storage location...? generally
+        not stored in the manifest?
         """
         raise NotImplementedError
 
@@ -853,9 +856,11 @@ class MultiIndex(Index):
         CTB note: here, 'internal_location' is the source file for the
         index. This is a special feature of this (in memory) class.
         """
-        # CTB: maybe put 'parent' here in the middle?
+        parent = ""
+        if self.parent:
+            parent = self.parent
         for row in self.manifest.rows:
-            yield row['signature'], "", row['internal_location']
+            yield row['signature'], parent, row['internal_location']
 
 
     def __len__(self):
