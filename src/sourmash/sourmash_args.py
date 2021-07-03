@@ -278,19 +278,6 @@ def _multiindex_load_from_path(filename, **kwargs):
     return db
 
 
-def _load_sigfile(filename, **kwargs):
-    "Load collection from a signature JSON file"
-    # CTB: note, all .sig files are loaded by _multiindex_load_from_path,
-    # before this function is called; this effectively only loads
-    # files not named .sig.
-    try:
-        db = LinearIndex.load(filename)
-    except sourmash.exceptions.SourmashError as exc:
-        raise ValueError(exc)
-
-    return db
-
-
 def _load_sbt(filename, **kwargs):
     "Load collection from an SBT."
     cache_size = kwargs.get('cache_size')
@@ -322,8 +309,7 @@ def _load_zipfile(filename, **kwargs):
 # all loader functions, in order.
 _loader_functions = [
     ("load from stdin", _load_stdin),
-    ("load from directory", _multiindex_load_from_path),
-    ("load from sig file", _load_sigfile),
+    ("load from path (file or directory)", _multiindex_load_from_path),
     ("load from file list", _multiindex_load_from_pathlist),
     ("load SBT", _load_sbt),
     ("load revindex", _load_revindex),
