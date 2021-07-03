@@ -894,8 +894,8 @@ class MultiIndex(Index):
                 idx = LinearIndex.load(thisfile)
                 index_list.append(idx)
 
-                relpath = os.path.relpath(thisfile, pathname)
-                source_list.append(relpath)
+                #relpath = os.path.relpath(thisfile, pathname)
+                source_list.append(thisfile)
             except (IOError, sourmash.exceptions.SourmashError):
                 if force:
                     continue    # ignore error
