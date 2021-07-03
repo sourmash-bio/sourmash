@@ -416,6 +416,8 @@ def load_taxonomy_csv(filename, *, delimiter=',', force=False,
     lineage tuples.
     """
     include_strain=False
+    if not keep_identifier_versions and not split_identifiers:
+        assert 0
 
     with open(filename, newline='') as fp:
         r = csv.DictReader(fp, delimiter=delimiter)
@@ -544,11 +546,11 @@ class LineageDB_Sqlite(abc.Mapping):
 
         # retrieve names list...
         names = c.fetchone()
+        if names:
+            # ...and construct lineage tuple
+            return self._make_tup(names)
 
-        # ...and construct lineage tuple
-        return self._make_tup(names)
-
-        return tup
+        raise KeyError(ident)
 
     def __bool__(self):
         "Do we have any info?"
@@ -616,7 +618,7 @@ class MultiLineageDB(abc.Mapping):
                 return db[ident]
 
         # not found? KeyError!
-        raise KeyError(k)
+        raise KeyError(ident)
 
     def __len__(self):
         "Return number of distinct identifiers. Currently iterates over all."
