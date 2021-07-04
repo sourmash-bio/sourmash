@@ -149,6 +149,19 @@ def test_bytes_dna(track_abundance):
     assert len(b) == 1
 
 
+def test_seq_to_hashes(track_abundance):
+    mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1, track_abundance=track_abundance)
+    seq = "ATGAGAGACGATAGACAGATGACC"
+    mh.add_sequence(seq)
+
+    golden_hashes = mh.hashes
+    
+    # New seq to hashes without adding to the sketch
+    new_hashes = mh.seq_to_hashes(seq)
+
+    assert set(golden_hashes) == set(new_hashes)
+
+
 def test_bytes_protein_dayhoff(track_abundance, dayhoff):
     # verify that we can hash protein/aa sequences
     mh = MinHash(10, 2, True, dayhoff=dayhoff, hp=False,
