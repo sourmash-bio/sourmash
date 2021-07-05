@@ -183,7 +183,7 @@ class SBT(Index):
                     yield ss
 
     def _signatures_with_internal(self):
-        """Return an iterator of tuples (ss, location, internal_location).
+        """Return an iterator of tuples (ss, storage_path, internal_location).
 
         Note: does not limit signatures to subsets.
         """

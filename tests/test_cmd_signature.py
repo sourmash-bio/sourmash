@@ -2391,9 +2391,13 @@ def test_sig_describe_1_dir(c):
     out = c.last_result.out
     print(c.last_result)
 
+    # make sure signature names, as well as full path to .sig file under
+    # directory, show up in output.
     expected_output = """\
 signature: GCA_001593925
 signature: GCA_001593935
+prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig
+prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
