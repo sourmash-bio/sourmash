@@ -10,7 +10,6 @@ import copy
 
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
-from sourmash import index
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             make_jaccard_search_query, CounterGather,
                             LazyLinearIndex, MultiIndex)
