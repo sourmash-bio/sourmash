@@ -18,7 +18,8 @@ import sourmash.exceptions
 
 from .logging import notify, error, debug_literal
 
-from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
+from .index import (LinearIndex, ZipFileLinearIndex,
+                    MultiIndex, DirectoryIndex)
 from . import signature as sigmod
 from .picklist import SignaturePicklist, PickStyle
 from .manifest import CollectionManifest
@@ -270,6 +271,13 @@ def _multiindex_load_from_pathlist(filename, **kwargs):
     return db
 
 
+def _directoryindex_load(filename, **kwargs):
+    "Load collection from a directory with a manifest."
+    db = DirectoryIndex.load(filename)
+
+    return db
+
+
 def _multiindex_load_from_path(filename, **kwargs):
     "Load collection from a directory."
     traverse_yield_all = kwargs['traverse_yield_all']
@@ -309,6 +317,7 @@ def _load_zipfile(filename, **kwargs):
 # all loader functions, in order.
 _loader_functions = [
     ("load from stdin", _load_stdin),
+    ("load from directory w/manifest", _directoryindex_load),
     ("load from path (file or directory)", _multiindex_load_from_path),
     ("load from file list", _multiindex_load_from_pathlist),
     ("load SBT", _load_sbt),
@@ -325,6 +334,9 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     This is an internal function used by other functions in sourmash_args.
     """
     loaded = False
+
+    #def debug_literal(s):
+    #    print("XXX", s, file=sys.stderr)
 
     # iterate through loader functions, trying them all. Catch ValueError
     # but nothing else.

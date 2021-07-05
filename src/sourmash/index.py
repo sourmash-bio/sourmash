@@ -65,12 +65,15 @@ class Index(ABC):
             yield ss, self.location
 
     def _signatures_with_internal(self):
-        """Return an iterator of tuples (ss, location, internal_location).
+        """Return an iterator of tuples (ss, storage_path, internal_location).
 
         This is an internal API for use in generating manifests, and may
         change without warning.
 
         This method should be implemented separately for each Index object.
+
+        CTB: maybe 'location' is the Storage location...? generally
+        not stored in the manifest?
         """
         raise NotImplementedError
 
@@ -375,7 +378,7 @@ def select_signature(ss, *, ksize=None, moltype=None, scaled=0, num=0,
 class LinearIndex(Index):
     """An Index for a collection of signatures. Can load from a .sig file.
 
-    Note: See MultiIndex for an in-memory class that uses manifests.
+    Note: does not use manifests. See MultiIndex for that functionality.
 
     Concrete class; signatures held in memory; does not use manifests.
     """
@@ -444,7 +447,8 @@ class LazyLinearIndex(Index):
       a class that does lazy loading of signatures from disk and does not
       store signatures in memory, see LazyLoadedIndex.
     * if you want efficient manifest-based selection, consider
-      MultiIndex (signatures in memory).
+      MultiIndex (signatures in memory) and LazyMultiIndex (signatures loaded
+      upon request).
     """
 
     def __init__(self, db, selection_dict={}):
@@ -987,3 +991,241 @@ class MultiIndex(Index):
         "Run 'select' on the manifest."
         new_manifest = self.manifest.select_to_manifest(**kwargs)
         return MultiIndex(new_manifest, parent=self.parent)
+
+
+class DirectoryIndex(Index):
+    """An Index for a collection of signature files under a directory.
+
+    Concrete class; signatures dynamically loaded from disk; uses manifests.
+
+    This is useful for situations where you have many existing .sig files
+    under a directory hierarchy. If you convert them to .zip collections
+    then you can use LazyMultiIndex instead.
+
+    Notes:
+    * manifests for directories are _generated_ by MultiIndex :grin: :shrug:
+    * Lazy - loads signatures only when requested
+    * could/should be implemented on top of FSStorage?
+    * maybe this becomes StorageIndex? basically a storage with a manifest?
+    * different from MultiIndex because it uses pre-existing manifest and
+      lazy loading/does not keep signatures in memory.
+    * different from LazyLoadedIndex because that requires a concrete index.
+    * different from LazyMultiIndex because that also requires a concrete
+      index.
+    """
+    def __init__(self, parent, manifest):
+        "Constructor; 'parent' is the top-level directory."
+        self.parent = parent
+        self.manifest = manifest
+
+    @classmethod
+    def load(cls, pathname):
+        "Create a DirectoryIndex from a directory with an existing manifest."
+        if not os.path.isdir(pathname):
+            raise ValueError(f"'{pathname}' must be a directory")
+
+        manifest_path = os.path.join(pathname, "SOURMASH-MANIFEST.csv")
+        if not os.path.exists(manifest_path):
+            raise ValueError(f"Cannot find manifest '{manifest_path}'")
+
+        with open(manifest_path, newline="") as csvfp:
+            manifest = CollectionManifest.load_from_csv(csvfp)
+
+        return cls(pathname, manifest)
+
+    def signatures(self):
+        for ss, _ in self.signatures_with_location():
+            yield ss
+
+    def signatures_with_location(self):
+        "Load and return all of the signatures in the manifest."
+        for location in self.manifest.locations():
+            fullpath = os.path.join(self.parent, location)
+            for ss in load_signatures(fullpath):
+                if ss in self.manifest:
+                    yield ss, fullpath
+
+    def select(self, **kwargs):
+        "Run 'select' on the manifest."
+        new_manifest = self.manifest.select_to_manifest(**kwargs)
+        return DirectoryIndex(self.parent, new_manifest)
+
+    def __len__(self):
+        return len(self.manifest)
+
+    def insert(self, *args):
+        raise NotImplementedError
+
+    def save(self, *args):
+        raise NotImplementedError
+
+
+class LazyLoadedIndex(Index):
+    """Given an index location and a manifest, do select only on the manifest
+    until signatures are actually requested, and only then load the index.
+
+    This class is useful when you have an index object that consume
+    memory when it is loaded (e.g. JSON signature files, or LCA
+    databases) and you want to avoid keeping them in memory.  The
+    downside of using this class is that it will load the signatures
+    from disk every time they are needed (e.g. 'find(...)', 'signatures()').
+
+    Can be used with LazyMultiIndex to support many such indices at once.
+
+    Wrapper class; signatures dynamically loaded from disk; uses manifests.
+    """
+    def __init__(self, filename, manifest):
+        "Create an Index with given filename and manifest."
+        self.filename = filename
+        self.manifest = manifest
+
+    @property
+    def location(self):
+        "the 'location' attribute for this index will be the filename."
+        return self.filename
+
+    def signatures(self):
+        "yield all signatures from the manifest."
+        if not len(self):
+            # nothing in manifest? done!
+            return []
+
+        # ok - something in manifest, let's go get those signatures!
+        picklist = self.manifest.to_picklist()
+        idx = sourmash.load_file_as_index(self.location)
+
+        # convert remaining manifest into picklist
+        idx = idx.select(picklist=picklist)
+
+        # extract signatures.
+        for ss in idx.signatures():
+            yield ss
+
+    def __len__(self):
+        "track index size based on the manifest."
+        return len(self.manifest)
+    __bool__ = __len__
+
+    @classmethod
+    def load(cls, location, *, create_manifest=False):
+        "Load manifest from given location, and then unload."
+        idx = sourmash.load_file_as_index(location)
+        manifest = idx.manifest
+
+        # do we need to create the manifest?
+        if manifest is None:
+            if create_manifest:
+                iter = idx._signatures_with_internal()
+                manifest = CollectionManifest.create_manifest(idx,
+                                                       include_signature=False)
+            else:
+                raise ValueError(f"no manifest on index at {location}")
+
+        # NOTE: index is not retained outside this scope, just location.
+
+        return cls(location, manifest)
+
+    def insert(self, *args):
+        raise NotImplementedError
+
+    def save(self, *args):
+        raise NotImplementedError
+
+    def select(self, **kwargs):
+        "Run 'select' on manifest, return new object with new manifest."
+        manifest = self.manifest
+        new_manifest = manifest.select_to_manifest(**kwargs)
+
+        return LazyLoadedIndex(self.filename, new_manifest)
+
+
+class LazyMultiIndex(Index):
+    """
+    Do lazy selection of multiple index objects w/manifests.
+
+    Maintains a manifest per collection, and touches the index objects
+    only when actual signatures are needed. This permits lazy loading
+    when wrapping Index classes that are on disk, e.g. ZipFileLinearIndex
+    and SBTs.
+
+    Differs from MultiIndex in that only the manifests are held in memory,
+    not any of the signatures.
+
+    Wrapper class; signatures loaded index objects; uses manifests.
+
+    CTB: could we get the same functionality from MultiIndex + LazyLoadedIndex?
+    """
+    def __init__(self, index_list, manifest_list):
+        assert len(index_list) == len(manifest_list)
+        self.index_list = index_list
+        self.manifest_list = manifest_list
+
+    def signatures(self):
+        for ss, loc in self.signatures_with_location():
+            yield ss
+
+    def signatures_with_location(self):
+        for idx, manifest in zip(self.index_list, self.manifest_list):
+            # convert manifest to picklist:
+            picklist = manifest.to_picklist()
+
+            # select using picklist:
+            idx_new = idx.select(picklist=picklist)
+
+            # yield all remaining signatures:
+            for ss, loc in idx_new.signatures_with_location():
+                yield ss, loc
+
+    def __len__(self):
+        return sum( [len(m) for m in self.manifest_list] )
+
+    def insert(self, *args):
+        raise NotImplementedError
+
+    @classmethod
+    def load(cls, index_list):
+        """Create a LazyMultiIndex from a loaded list of index objects.
+
+        All index objects must have manifests already.
+        """
+
+        manifest_list = []
+        for idx in index_list:
+            if not idx.manifest:
+                raise ValueError(f"no manifest on {repr(idx)}")
+            manifest_list.append(idx.manifest)
+
+        # create obj!
+        return cls(index_list, manifest_list)
+
+    @classmethod
+    def load_from_pathlist(cls, filename):
+        """Create a LazyMultiIndex from all files listed in a text file.
+
+        Note, this will not currently work for indices without manifests.
+        """
+        from .sourmash_args import (load_pathlist_from_file,
+                                    load_file_as_index)
+        idx_list = []
+
+        file_list = load_pathlist_from_file(filename)
+        for fname in file_list:
+            idx = load_file_as_index(fname)
+            manifest = getattr(idx, 'manifest', None)
+            if manifest is None:
+                raise ValueError(f"index at '{fname}' has no manifest")
+            idx_list.append(idx)
+
+        return cls.load(idx_list)
+
+    def save(self, *args):
+        raise NotImplementedError
+
+    def select(self, **kwargs):
+        "Run 'select' on all manifests."
+        new_manifests = []
+        for idx, manifest in zip(self.index_list, self.manifest_list):
+            new_manifest = manifest.select_to_manifest(**kwargs)
+            new_manifests.append(new_manifest)
+
+        return LazyMultiIndex(self.index_list, new_manifests)

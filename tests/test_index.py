@@ -10,9 +10,10 @@ import copy
 
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
+from sourmash import index
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             make_jaccard_search_query, CounterGather,
-                            LazyLinearIndex, MultiIndex)
+                            LazyLinearIndex, MultiIndex, DirectoryIndex)
 from sourmash.sbt import SBT, GraphFactory, Leaf
 from sourmash.sbtmh import SigLeaf
 from sourmash import sourmash_args
@@ -2202,3 +2203,117 @@ def test_lazy_index_wraps_multi_index_location():
                                      lazy2.signatures_with_location()):
         assert ss_tup == ss_lazy_tup
 
+
+def test_lazy_loaded_index_1(runtmp):
+    # some basic tests for LazyLoadedIndex
+    lcafile = utils.get_test_data('prot/protein.lca.json.gz')
+    sigzip = utils.get_test_data('prot/protein.zip')
+
+    with pytest.raises(ValueError) as exc:
+        db = index.LazyLoadedIndex.load(lcafile)
+    # no manifest on LCA database
+    assert "no manifest on index at" in str(exc)
+
+    with pytest.raises(NotImplementedError) as exc:
+        db = index.LazyLoadedIndex.load(lcafile, create_manifest=True)
+    # can't create a manifest, either, at the moment, b/c no
+    # _signatures_with_internal
+
+    # load something, check that it's only accessed upon .signatures(...)
+    test_zip = runtmp.output('test.zip')
+    shutil.copyfile(sigzip, test_zip)
+    db = index.LazyLoadedIndex.load(test_zip)
+    assert len(db) == 2
+    assert db.location == test_zip
+
+    # now remove!
+    os.unlink(test_zip)
+
+    # can still access manifest...
+    assert len(db) == 2
+
+    # ...but we should get an error when we call signatures.
+    with pytest.raises(FileNotFoundError):
+        list(db.signatures())
+
+    # but put it back, and all is forgiven. yay!
+    shutil.copyfile(sigzip, test_zip)
+    x = list(db.signatures())
+    assert len(x) == 2
+
+
+def test_lazy_multi_index_1(runtmp):
+    # some basic tests for LazyMultiIndex
+    lcafile = utils.get_test_data('prot/protein.lca.json.gz')
+    sigzip = utils.get_test_data('prot/protein.zip')
+
+    with pytest.raises(ValueError) as exc:
+        sigidx = sourmash.load_file_as_index(lcafile)
+        db = index.LazyMultiIndex.load([sigidx])
+    # no manifest on LCA database
+    assert "no manifest on" in str(exc)
+
+    # load something, check that it's only accessed upon .signatures(...)
+    test_zip = runtmp.output('test.zip')
+    shutil.copyfile(sigzip, test_zip)
+    
+    # first load zipidx...
+    zipidx = index.LazyLoadedIndex.load(test_zip)
+    # ...then build LazyMultiIndex around zipidx
+    db = index.LazyMultiIndex.load([zipidx])
+    assert len(db) == 2
+    assert db.location == None
+
+    # now remove!
+    os.unlink(test_zip)
+
+    # can still access manifest of MultiIndex...
+    assert len(db) == 2
+
+    # ...but we should get an error when we call signatures.
+    with pytest.raises(FileNotFoundError):
+        list(db.signatures())
+
+    # but put it back, and all is forgiven. yay!
+    shutil.copyfile(sigzip, test_zip)
+    x = list(db.signatures())
+    assert len(x) == 2
+
+
+def test_directory_index_1(runtmp):
+    new_dir = runtmp.output('somedir')
+    os.mkdir(new_dir)
+
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    shutil.copyfile(sig2, os.path.join(new_dir, "2.sig"))
+    shutil.copyfile(sig47, os.path.join(new_dir, "47.sig"))
+    shutil.copyfile(sig63, os.path.join(new_dir, "63.sig"))
+
+    # this should fail: not a directory
+    badpath = os.path.join(new_dir, "2.sig")
+    with pytest.raises(ValueError) as exc:
+        idx = DirectoryIndex.load(badpath)
+    assert str(exc.value).endswith("must be a directory"), str(exc)
+
+    # this should fail: no manifest in new dir
+    with pytest.raises(ValueError) as exc:
+        idx = DirectoryIndex.load(new_dir)
+    assert str(exc.value).startswith("Cannot find manifest")
+
+    # build a manifest
+    manifest_loc = os.path.join(new_dir, 'SOURMASH-MANIFEST.csv')
+    runtmp.sourmash('sig', 'manifest', new_dir, '-o', manifest_loc)
+    assert os.path.exists(manifest_loc)
+
+    # ok, now load should work:
+    idx = DirectoryIndex.load(new_dir)
+    assert len(idx) == 5
+
+    idx = idx.select(ksize=31)
+    assert len(idx) == 3
+
+    siglist = list(idx.signatures())
+    assert len(siglist) == 3
