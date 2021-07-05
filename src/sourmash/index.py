@@ -378,7 +378,7 @@ def select_signature(ss, *, ksize=None, moltype=None, scaled=0, num=0,
 class LinearIndex(Index):
     """An Index for a collection of signatures. Can load from a .sig file.
 
-    Note: does not use manifests. See MultiIndex for that functionality.
+    Note: See MultiIndex for an in-memory class that uses manifests.
 
     Concrete class; signatures held in memory; does not use manifests.
     """
