@@ -61,7 +61,16 @@ class CollectionManifest:
                 raise ValueError(f"missing column '{k}' in manifest.")
 
         row = None
+
+        # do row type conversion
+        introws = ('num', 'scaled', 'with_abundance', 'ksize', 'n_hashes')
+        boolrows = ('with_abundance',)
+
         for row in r:
+            for k in introws:
+                row[k] = int(row[k])
+            for k in boolrows:
+                row[k] = bool(row[k])
             row['signature'] = None
             manifest_list.append(row)
 
@@ -126,7 +135,7 @@ class CollectionManifest:
         return cls(manifest_list)
 
     def _select(self, *, ksize=None, moltype=None, scaled=0, num=0,
-               containment=False, picklist=None):
+                containment=False, abund=None, picklist=None):
         """Yield manifest rows for sigs that match the specified requirements.
 
         Internal method; call `select_to_manifest` instead.
@@ -134,7 +143,7 @@ class CollectionManifest:
         matching_rows = self.rows
         if ksize:
             matching_rows = ( row for row in matching_rows
-                              if int(row['ksize']) == ksize )
+                              if row['ksize'] == ksize )
         if moltype:
             matching_rows = ( row for row in matching_rows
                               if row['moltype'] == moltype )
@@ -143,10 +152,15 @@ class CollectionManifest:
                 raise ValueError("'containment' requires 'scaled' in Index.select'")
 
             matching_rows = ( row for row in matching_rows
-                              if int(row['scaled']) and not int(row['num']) )
+                              if row['scaled'] and not row['num'] )
         if num:
             matching_rows = ( row for row in matching_rows
-                              if int(row['num']) and not int(row['scaled']) )
+                              if row['num'] and not row['scaled'] )
+
+        if abund:
+            # only need to concern ourselves if abundance is _required_
+            matching_rows = ( row for row in matching_rows
+                              if row['with_abundance'] )
 
         if picklist:
             matching_rows = ( row for row in matching_rows

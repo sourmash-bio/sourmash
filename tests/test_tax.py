@@ -851,6 +851,39 @@ def test_genome_gather_from_file_below_threshold(runtmp):
     assert "test1,below_threshold,,0.000," in c.last_result.out
 
 
+def test_genome_gather_two_queries(runtmp):
+    '''
+    This checks for initial bug where classification
+    would only happen for one genome per rank when
+    doing --containment-threshold classification
+    '''
+    c = runtmp
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    g_res = utils.get_test_data('tax/47+63_x_gtdb-rs202.gather.csv')
+
+    # split 47+63 into two fake queries: q47, q63
+    g_res2 = runtmp.output("two-queries.gather.csv")
+    q2_results = [x for x in open(g_res, 'r')]
+    # rename queries
+    q2_results[1] = q2_results[1].replace('47+63', 'q47')
+    q2_results[2] = q2_results[2].replace('47+63', 'q63')
+    with open(g_res2, 'w') as fp:
+        for line in q2_results:
+            print(line)
+            fp.write(line)
+
+    c.run_sourmash('tax', 'genome', '-g', g_res2, '--taxonomy-csv', taxonomy_csv,
+                   '--containment-threshold', '0')
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,status,rank,fraction,lineage" in c.last_result.out
+    assert "q63,match,species,0.336,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Shewanellaceae;g__Shewanella;s__Shewanella baltica,491c0a81," in c.last_result.out
+    assert "q47,match,species,0.664,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Shewanellaceae;g__Shewanella;s__Shewanella baltica," in c.last_result.out
+
+
 def test_genome_rank_duplicated_taxonomy_fail(runtmp):
     c = runtmp
     # write temp taxonomy with duplicates

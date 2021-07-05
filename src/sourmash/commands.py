@@ -1267,14 +1267,24 @@ def prefetch(args):
     if args.save_matching_hashes:
         filename = args.save_matching_hashes
         notify(f"saving {len(ident_mh)} matched hashes to '{filename}'")
-        ss = sig.SourmashSignature(ident_mh)
+
+        sig_name = ''
+        if query.name:
+            sig_name = f"{query.name}-known"
+
+        ss = sig.SourmashSignature(ident_mh, name=sig_name)
         with open(filename, "wt") as fp:
             sig.save_signatures([ss], fp)
 
     if args.save_unmatched_hashes:
         filename = args.save_unmatched_hashes
+
+        sig_name = ''
+        if query.name:
+            sig_name = f"{query.name}-unknown"
+
         notify(f"saving {len(noident_mh)} unmatched hashes to '{filename}'")
-        ss = sig.SourmashSignature(noident_mh)
+        ss = sig.SourmashSignature(noident_mh, name=sig_name)
         with open(filename, "wt") as fp:
             sig.save_signatures([ss], fp)
 

@@ -526,11 +526,17 @@ def test_lca_index_select():
     xx = db.select(moltype='DNA')
     assert xx == db
 
+    xx = db.select(abund=False)
+    assert xx == db
+
     with pytest.raises(ValueError):
         db.select(ksize=21)
 
     with pytest.raises(ValueError):
         db.select(moltype='protein')
+
+    with pytest.raises(ValueError):
+        db.select(abund=True)
 
 
 def test_lca_index_select_picklist():
@@ -551,6 +557,26 @@ def test_lca_index_select_picklist():
     ss = siglist[0]
     assert ss.md5sum().startswith('50a92740')
     assert ss.minhash.ksize == 31
+
+
+def test_lca_index_find_picklist_check_overlap():
+    # make sure 'find' works for picklists that exclude relevant signatures
+    # (bug #1638)
+
+    query_fn = utils.get_test_data('47.fa.sig')
+    query_sig = sourmash.load_one_signature(query_fn, ksize=31)
+    db_fn = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(db_fn)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('ident')
+    picklist.init(['NC_009665.1'])
+
+    xx = db.select(picklist=picklist)
+    assert xx == db
+
+    results = list(db.search(query_sig, threshold=0.1))
+    assert len(results) == 1
 
 
 def test_lca_index_select_picklist_exclude():

@@ -597,8 +597,8 @@ impl KmerMinHash {
                 self.num,
             );
 
-            combined_mh.merge(&self)?;
-            combined_mh.merge(&other)?;
+            combined_mh.merge(self)?;
+            combined_mh.merge(other)?;
 
             let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
 
@@ -630,8 +630,8 @@ impl KmerMinHash {
                 self.num,
             );
 
-            combined_mh.merge(&self)?;
-            combined_mh.merge(&other)?;
+            combined_mh.merge(self)?;
+            combined_mh.merge(other)?;
 
             let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
 
@@ -721,9 +721,9 @@ impl KmerMinHash {
             let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
             first.similarity(&downsampled_mh, ignore_abundance, false)
         } else if ignore_abundance || self.abunds.is_none() || other.abunds.is_none() {
-            self.jaccard(&other)
+            self.jaccard(other)
         } else {
-            self.angular_similarity(&other)
+            self.angular_similarity(other)
         }
     }
 
@@ -1311,7 +1311,7 @@ impl KmerMinHashBTree {
 
                 for hash in &self.mins {
                     *new_abunds.entry(*hash).or_insert(0) +=
-                        abunds.get(&hash).unwrap_or(&0) + oabunds.get(&hash).unwrap_or(&0);
+                        abunds.get(hash).unwrap_or(&0) + oabunds.get(hash).unwrap_or(&0);
                 }
                 self.abunds = Some(new_abunds)
             }
@@ -1378,8 +1378,8 @@ impl KmerMinHashBTree {
                 self.num,
             );
 
-            combined_mh.merge(&self)?;
-            combined_mh.merge(&other)?;
+            combined_mh.merge(self)?;
+            combined_mh.merge(other)?;
 
             let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
 
@@ -1410,8 +1410,8 @@ impl KmerMinHashBTree {
                 self.num,
             );
 
-            combined_mh.merge(&self)?;
-            combined_mh.merge(&other)?;
+            combined_mh.merge(self)?;
+            combined_mh.merge(other)?;
 
             let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
 
@@ -1455,7 +1455,7 @@ impl KmerMinHashBTree {
         let b_sq: u64 = other_abunds.values().map(|a| (a * a)).sum();
 
         for (hash, value) in abunds.iter() {
-            if let Some(oa) = other_abunds.get(&hash) {
+            if let Some(oa) = other_abunds.get(hash) {
                 prod += value * oa
             }
         }
@@ -1486,9 +1486,9 @@ impl KmerMinHashBTree {
             let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
             first.similarity(&downsampled_mh, ignore_abundance, false)
         } else if ignore_abundance || self.abunds.is_none() || other.abunds.is_none() {
-            self.jaccard(&other)
+            self.jaccard(other)
         } else {
-            self.angular_similarity(&other)
+            self.angular_similarity(other)
         }
     }
 

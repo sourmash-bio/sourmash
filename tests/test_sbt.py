@@ -632,11 +632,17 @@ def test_sbt_as_index_select():
     xx = tree.select(moltype='DNA')
     assert xx == tree
 
+    xx = tree.select(abund=False)
+    assert xx == tree
+
     with pytest.raises(ValueError):
         tree.select(ksize=21)
 
     with pytest.raises(ValueError):
         tree.select(moltype='protein')
+
+    with pytest.raises(ValueError):
+        tree.select(abund=True)
 
 
 def test_sbt_as_index_select_picklist():

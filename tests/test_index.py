@@ -890,15 +890,68 @@ def test_zipfile_API_signatures_select(use_manifest):
     zipfile_db = utils.get_test_data('prot/all.zip')
 
     zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(moltype='DNA')
+
     zipidx = zipidx.select(moltype='DNA')
     siglist = list(zipidx.signatures())
 
     if use_manifest:
         assert len(siglist) == 2
         assert len(zipidx) == 2
+        assert len(ziplist_pre) == 2
     else:
         assert len(siglist) == 1
         assert len(zipidx) == 1
+        assert len(ziplist_pre) == 1
+
+
+def test_zipfile_API_signatures_select_abund_false(use_manifest):
+    # check for abund=False (all signatures match b/c can convert)
+    zipfile_db = utils.get_test_data('track_abund/track_abund.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(abund=False)
+
+    zipidx = zipidx.select(abund=False)
+    siglist = list(zipidx.signatures())
+
+    assert len(siglist) == 2
+    assert len(zipidx) == 2
+    assert len(ziplist_pre) == 2
+
+
+def test_zipfile_API_signatures_select_abund_true(use_manifest):
+    # find all abund=True (all signatures match, b/c abund)
+    zipfile_db = utils.get_test_data('track_abund/track_abund.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(abund=True)
+
+    zipidx = zipidx.select(abund=True)
+    siglist = list(zipidx.signatures())
+
+    assert len(siglist) == 2
+    assert len(zipidx) == 2
+    assert len(ziplist_pre) == 2
+
+
+def test_zipfile_API_signatures_select_abund_none(use_manifest):
+    # find all abund=None (all signatures match, b/c no selection criteria)
+    zipfile_db = utils.get_test_data('track_abund/track_abund.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(abund=None)
+
+    zipidx = zipidx.select(abund=None)
+    siglist = list(zipidx.signatures())
+
+    assert len(siglist) == 2
+    assert len(zipidx) == 2
+    assert len(ziplist_pre) == 2
 
 
 def test_zipfile_API_signatures_select_twice(use_manifest):
@@ -906,6 +959,10 @@ def test_zipfile_API_signatures_select_twice(use_manifest):
     zipfile_db = utils.get_test_data('prot/all.zip')
 
     zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(moltype='DNA')
+    ziplist_pre = ziplist_pre.select(ksize=31)
+
     zipidx = zipidx.select(moltype='DNA')
     zipidx = zipidx.select(ksize=31)
     siglist = list(zipidx.signatures())
@@ -913,9 +970,11 @@ def test_zipfile_API_signatures_select_twice(use_manifest):
     if use_manifest:
         assert len(siglist) == 2
         assert len(zipidx) == 2
+        assert len(ziplist_pre) == 2
     else:
         assert len(siglist) == 1
         assert len(zipidx) == 1
+        assert len(ziplist_pre) == 1
 
 
 def test_zipfile_API_save():
@@ -1099,11 +1158,32 @@ def test_multi_index_signatures():
 
 
 def test_multi_index_load_from_path():
+    # test MultiIndex loading from a directory. The full paths to the
+    # signature files should be available via 'signatures_with_location()'
     dirname = utils.get_test_data('prot/protein')
     mi = MultiIndex.load_from_path(dirname, force=False)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 2
+
+    # check to make sure that full paths to expected sig files are returned
+    locs = [ x[1] for x in mi.signatures_with_location() ]
+
+    endings = ('GCA_001593925.1_ASM159392v1_protein.faa.gz.sig',
+               'GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+    for loc in locs:
+        found = False
+        for end in endings:
+            if loc.endswith(end):
+                found = True
+        assert found, f"could not find full filename in locations for {end}"
+
+    # also check internal locations and parent value --
+    assert mi.parent.endswith('prot/protein')
+
+    ilocs = [ x[2] for x in mi._signatures_with_internal() ]
+    assert endings[0] in ilocs, ilocs
+    assert endings[1] in ilocs, ilocs
 
 
 def test_multi_index_load_from_path_2():
@@ -2121,3 +2201,4 @@ def test_lazy_index_wraps_multi_index_location():
     for (ss_tup, ss_lazy_tup) in zip(mi2.signatures_with_location(),
                                      lazy2.signatures_with_location()):
         assert ss_tup == ss_lazy_tup
+
