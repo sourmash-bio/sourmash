@@ -831,7 +831,10 @@ class MultiIndex(Index):
 
     Concrete class; signatures held in memory; builds and uses manifests.
     """
-    def __init__(self, manifest, parent=None):
+    def __init__(self, manifest, parent=""):
+        """Constructor; takes manifest containing signatures, together with
+        optional top-level location to prepend to internal locations.
+        """
         self.manifest = manifest
         self.parent = parent
 
@@ -849,14 +852,12 @@ class MultiIndex(Index):
             yield row['signature'], loc
 
     def _signatures_with_internal(self):
-        """Return an iterator of tuples (ss, location)
+        """Return an iterator of tuples (ss, parent, location)
 
         CTB note: here, 'internal_location' is the source file for the
         index. This is a special feature of this (in memory) class.
         """
-        parent = ""
-        if self.parent:
-            parent = self.parent
+        parent = self.parent
         for row in self.manifest.rows:
             yield row['signature'], parent, row['internal_location']
 
@@ -868,7 +869,7 @@ class MultiIndex(Index):
         raise NotImplementedError
 
     @classmethod
-    def load(cls, index_list, source_list, parent=None):
+    def load(cls, index_list, source_list, parent=""):
         """Create a MultiIndex from already-loaded indices.
 
         Takes two arguments: a list of Index objects, and a matching list
@@ -880,13 +881,14 @@ class MultiIndex(Index):
 
         # yield all signatures + locations
         def sigloc_iter():
-            for idx, loc in zip(index_list, source_list):
-                if loc is None:
-                    loc = idx.location
+            for idx, iloc in zip(index_list, source_list):
+                # override internal location if location is explicitly provided
+                if iloc is None:
+                    iloc = idx.location
                 for ss in idx.signatures():
-                    yield ss, loc
+                    yield ss, iloc
 
-        # build manifest
+        # build manifest; note, signatures are stored in memory.
         manifest = CollectionManifest.create_manifest(sigloc_iter())
 
         # create!
