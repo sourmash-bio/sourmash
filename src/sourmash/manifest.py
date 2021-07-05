@@ -219,7 +219,7 @@ class ManifestOfManifests:
 
         d = defaultdict(list)
         rowkeys = 'internal_location, md5, md5short, ksize, moltype, num, scaled, n_hashes, with_abundance, name, filename'.split(', ')
-        print(rowkeys)
+        #print(rowkeys)
         for result in cursor:
             loc, *rest = result
             mrow = dict(zip(rowkeys, rest))
@@ -240,6 +240,19 @@ class ManifestOfManifests:
             m = m.select_to_manifest(**kwargs)
             new_manifests.append(m)
         return ManifestOfManifests(self.index_locations, new_manifests)
+
+    def update_manifest(self, index_location, new_manifest):
+        idx_locations = self.index_locations
+        # CTB: note, this assumes idx_locations has no duplicates
+        for i in range(len(idx_locations)):
+            if idx_locations[i] == index_location:
+                # found! update & exit
+                self.manifests[i] = new_manifest
+                return
+
+        # not found?
+        self.index_locations.append(index_location)
+        self.manifests.append(new_manifest)
 
     def locations(self):
         raise NotImplementedError
