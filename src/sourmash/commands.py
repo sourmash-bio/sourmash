@@ -803,17 +803,6 @@ def gather(args):
 
             if is_abundance:
                 abund_query_mh = remaining_query.minhash.inflate(orig_query_mh)
-                # inflate(remaining_query, orig_query_mh, gather_iter)
-                # remaining_query is flattened; reinflate abundances
-                # hashes = set(remaining_query.minhash.hashes)
-                # orig_abunds = orig_query_mh.hashes
-                # abunds = { h: orig_abunds[h] for h in hashes }
-
-                # abund_query_mh = orig_query_mh.copy_and_clear()
-                # # orig_query might have been downsampled...
-                # abund_query_mh.downsample(scaled=gather_iter.scaled)
-                # abund_query_mh.set_abundances(abunds)
-                # remaining_query.minhash = abund_query_mh
 
             with FileOutput(args.output_unassigned, 'wt') as fp:
                 sig.save_signatures([ remaining_query ], fp)
@@ -822,20 +811,6 @@ def gather(args):
         sourmash_args.report_picklist(args, picklist)
 
     # DONE w/gather function.
-
-
-# def inflate(remaining_query, orig_query_mh, gather_iter):
-#     hashes = set(remaining_query.minhash.hashes)
-#     orig_abunds = orig_query_mh.hashes
-#     abunds = { h: orig_abunds[h] for h in hashes }
-
-#     abund_query_mh = orig_query_mh.copy_and_clear()
-
-#     abund_query_mh.downsample(scaled=gather_iter.scaled)
-#     abund_query_mh.set_abundances(abunds)
-#     remaining_query.minhash = abund_query_mh
-
-#     return remaining_query
 
 
 def multigather(args):
