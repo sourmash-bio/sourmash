@@ -59,6 +59,31 @@ unsafe fn kmerminhash_add_sequence(ptr: *mut SourmashKmerMinHash, sequence: *con
 }
 
 ffi_fn! {
+unsafe fn kmerminhash_seq_to_hashes(ptr: *mut SourmashKmerMinHash, sequence: *const c_char, force: bool, size: *mut usize) ->
+Result<*const u64> {
+
+    let mh = SourmashKmerMinHash::as_rust_mut(ptr);
+
+    // FIXME: take buffer and len instead of c_char
+    let c_str = {
+        assert!(!sequence.is_null());
+
+        CStr::from_ptr(sequence)
+    };
+
+    let output = match mh.seq_to_hashes(c_str.to_bytes(), force) {
+        Ok(s) => s,
+        Err(e) => return Err(e),
+    };
+
+    *size = output.len();
+
+    // FIXME: make a SourmashSlice_u64 type?
+    Ok(Box::into_raw(output.into_boxed_slice()) as *const u64)
+}
+}
+
+ffi_fn! {
 unsafe fn kmerminhash_add_protein(ptr: *mut SourmashKmerMinHash, sequence: *const c_char) ->
     Result<()> {
 

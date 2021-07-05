@@ -295,6 +295,20 @@ class MinHash(RustObject):
         self._methodcall(lib.kmerminhash_add_sequence, to_bytes(sequence),
                          force)
 
+    def seq_to_hashes(self, sequence, force=False):
+        "Convert sequence to hashes without adding to the sketch."
+
+        size = ffi.new("uintptr_t *")
+        hashes_ptr = self._methodcall(lib.kmerminhash_seq_to_hashes, to_bytes(sequence), force, size)
+        size = size[0]
+
+        try:
+            d = ffi.unpack(hashes_ptr, size)
+            return _HashesWrapper([k for k in d])
+
+        finally:
+            lib.kmerminhash_slice_free(hashes_ptr, size)
+
     def add_kmer(self, kmer):
         "Add a kmer into the sketch."
         if self.is_dna:

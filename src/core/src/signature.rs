@@ -33,13 +33,16 @@ pub trait SigsTrait {
     fn hash_function(&self) -> HashFunctions;
 
     fn add_hash(&mut self, hash: HashIntoType);
-    fn add_sequence(&mut self, seq: &[u8], force: bool) -> Result<(), Error> {
+
+    fn seq_to_hashes(&self, seq: &[u8], force: bool) -> Result<Vec<u64>, Error> {
+        let mut seq_hashes: Vec<u64> = Vec::new();
+
         let ksize = self.ksize() as usize;
         let len = seq.len();
         let hash_function = self.hash_function();
 
         if len < ksize {
-            return Ok(());
+            return Ok(seq_hashes);
         };
 
         // Here we convert the sequence to upper case and
@@ -90,7 +93,7 @@ pub trait SigsTrait {
 
                 let krc = &rc[len - ksize - i..len - i];
                 let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed());
-                self.add_hash(hash);
+                seq_hashes.push(hash);
             }
         } else {
             // protein
@@ -107,7 +110,7 @@ pub trait SigsTrait {
 
                 aa.windows(aa_ksize as usize).for_each(|n| {
                     let hash = crate::_hash_murmur(n, self.seed());
-                    self.add_hash(hash);
+                    seq_hashes.push(hash);
                 });
 
                 let rc_substr: Vec<u8> = rc.iter().cloned().skip(i).take(rc.len() - i).collect();
@@ -115,11 +118,25 @@ pub trait SigsTrait {
 
                 aa_rc.windows(aa_ksize as usize).for_each(|n| {
                     let hash = crate::_hash_murmur(n, self.seed());
-                    self.add_hash(hash);
+                    seq_hashes.push(hash);
                 });
             }
         }
 
+        Ok(seq_hashes)
+    }
+
+    fn add_sequence(&mut self, seq: &[u8], force: bool) -> Result<(), Error> {
+        let ready_hashes = match self.seq_to_hashes(seq, force) {
+            Ok(s) => s,
+            Err(e) => return Err(e),
+        };
+
+        for hash_value in ready_hashes.iter() {
+            self.add_hash(*hash_value);
+        }
+
+        // Should be always ok
         Ok(())
     }
 
