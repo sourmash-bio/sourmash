@@ -205,9 +205,10 @@ def describe(args):
 
     for signature_file in args.signatures:
         try:
-            loader = sourmash_args.load_file_as_signatures(signature_file,
-                                                           progress=progress)
-            for sig in loader:
+            idx = sourmash_args.load_file_as_index(signature_file)
+            loader = idx.signatures_with_location()
+
+            for sig, location in progress.start_file(signature_file, loader):
                 # extract info, write as appropriate.
                 mh = sig.minhash
                 ksize = mh.ksize
@@ -231,7 +232,7 @@ def describe(args):
 
                 print_results('''\
 ---
-signature filename: {signature_file}
+signature filename: {location}
 signature: {p_name}
 source file: {p_filename}
 md5: {md5}

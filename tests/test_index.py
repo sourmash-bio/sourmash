@@ -1158,11 +1158,32 @@ def test_multi_index_signatures():
 
 
 def test_multi_index_load_from_path():
+    # test MultiIndex loading from a directory. The full paths to the
+    # signature files should be available via 'signatures_with_location()'
     dirname = utils.get_test_data('prot/protein')
     mi = MultiIndex.load_from_path(dirname, force=False)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 2
+
+    # check to make sure that full paths to expected sig files are returned
+    locs = [ x[1] for x in mi.signatures_with_location() ]
+
+    endings = ('GCA_001593925.1_ASM159392v1_protein.faa.gz.sig',
+               'GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+    for loc in locs:
+        found = False
+        for end in endings:
+            if loc.endswith(end):
+                found = True
+        assert found, f"could not find full filename in locations for {end}"
+
+    # also check internal locations and parent value --
+    assert mi.parent.endswith('prot/protein')
+
+    ilocs = [ x[2] for x in mi._signatures_with_internal() ]
+    assert endings[0] in ilocs, ilocs
+    assert endings[1] in ilocs, ilocs
 
 
 def test_multi_index_load_from_path_2():
@@ -2180,3 +2201,4 @@ def test_lazy_index_wraps_multi_index_location():
     for (ss_tup, ss_lazy_tup) in zip(mi2.signatures_with_location(),
                                      lazy2.signatures_with_location()):
         assert ss_tup == ss_lazy_tup
+
