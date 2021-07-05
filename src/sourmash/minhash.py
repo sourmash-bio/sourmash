@@ -682,13 +682,13 @@ class MinHash(RustObject):
         new_mh.__class__ = FrozenMinHash
         return new_mh
 
-    def inflate(self, orig_query_mh):     
-        if orig_query_mh.track_abundance:
+    def inflate(self, from_mh):     
+        if from_mh.track_abundance:
             hashes = set(self.hashes)
-            orig_abunds = orig_query_mh.hashes
+            orig_abunds = from_mh.hashes
             abunds = { h: orig_abunds[h] for h in hashes }
 
-            abund_query_mh = orig_query_mh.copy_and_clear()
+            abund_query_mh = from_mh.copy_and_clear()
 
             abund_query_mh.downsample(scaled=self.scaled)
             abund_query_mh.set_abundances(abunds)
