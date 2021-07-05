@@ -147,7 +147,12 @@ def test_save_signatures_to_location_1_zip_dup(runtmp):
         print(save_sig)
         save_sig.add(ss2)
         save_sig.add(ss47)
+
+        # here we have to change the names so the sig content is different;
+        # exactly duplicates will not be saved, otherwise.
+        ss2.name = 'different name for ss2'
         save_sig.add(ss2)
+        ss47.name = 'different name for ss47'
         save_sig.add(ss47)
 
     # can we open as a .zip file?

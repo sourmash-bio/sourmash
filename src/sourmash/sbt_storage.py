@@ -114,7 +114,7 @@ class ZipStorage(Storage):
             self.zipfile = zipfile.ZipFile(path, 'r')
             self.bufferzip = zipfile.ZipFile(BytesIO(), mode="w")
 
-        self.subdir = None
+        self.subdir = ""
         subdirs = [f for f in self.zipfile.namelist() if f.endswith("/")]
         if len(subdirs) == 1:
             self.subdir = subdirs[0]

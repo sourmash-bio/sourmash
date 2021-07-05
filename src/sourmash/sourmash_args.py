@@ -6,7 +6,6 @@ import os
 from enum import Enum
 import traceback
 import gzip
-import zipfile
 from io import StringIO
 
 import screed
@@ -705,11 +704,13 @@ class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
         self.keep.append(ss)
 
 
+
+
 class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
     "Save compressed signatures in an uncompressed Zip file."
     def __init__(self, location):
         super().__init__(location)
-        self.zf = None
+        self.storage = None
 
     def __repr__(self):
         return f"SaveSignatures_ZipFile('{self.location}')"
@@ -723,53 +724,42 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         manifest.write_to_csv(manifest_fp, write_header=True)
         manifest_data = manifest_fp.getvalue().encode("utf-8")
 
-        # compress the manifest --
-        self.zf.writestr(manifest_name, manifest_data,
-                         compress_type=zipfile.ZIP_DEFLATED)
-
-        # set permissions:
-        zi = self.zf.getinfo(manifest_name)
-        zi.external_attr = 0o444 << 16 # give a+r access
-
-        self.zf.close()
+        self.storage.save(manifest_name, manifest_data, overwrite=True,
+                          compress=True)
+        self.storage.flush()
+        self.storage.close()
 
     def open(self):
-        self.zf = zipfile.ZipFile(self.location, 'w', zipfile.ZIP_STORED)
-        self.manifest_rows = []
+        from .sbt_storage import ZipStorage
+        storage = ZipStorage(self.location)
+        if not storage.subdir:
+            storage.subdir = 'signatures'
+
+        self.storage = storage
+        self.manifest_rows = [] # CTB: load manifest here for append?
 
     def _exists(self, name):
         try:
-            self.zf.getinfo(name)
+            self.storage.load(name)
             return True
         except KeyError:
             return False
 
     def add(self, ss):
-        if not self.zf:
+        if not self.storage:
             raise ValueError("this output is not open")
+
         super().add(ss)
 
+        buf = sigmod.save_signatures([ss], compression=1)
         md5 = ss.md5sum()
-        outname = f"signatures/{md5}.sig.gz"
 
-        # don't overwrite even if duplicate md5sum.
-        if self._exists(outname):
-            i = 0
-            while 1:
-                outname = os.path.join(self.location, f"{md5}_{i}.sig.gz")
-                if not self._exists(outname):
-                    break
-                i += 1
-
-        json_str = sourmash.save_signatures([ss], compression=1)
-        self.zf.writestr(outname, json_str)
-
-        # set permissions:
-        zi = self.zf.getinfo(outname)
-        zi.external_attr = 0o444 << 16 # give a+r access
+        storage = self.storage
+        path = f'{storage.subdir}/{md5}.sig.gz'
+        location = storage.save(path, buf)
 
         # update manifest
-        row = CollectionManifest.make_manifest_row(ss, outname,
+        row = CollectionManifest.make_manifest_row(ss, location,
                                                    include_signature=False)
         self.manifest_rows.append(row)
 
