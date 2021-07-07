@@ -1928,7 +1928,7 @@ def test_search_metagenome_traverse_check_csv():
             r = csv.DictReader(fp)
             for row in r:
                 filename = row['filename']
-                assert filename.startswith(testdata_dir)
+                assert filename.startswith(testdata_dir), filename
                 # should have full path to file sig was loaded from
                 assert len(filename) > prefix_len
 

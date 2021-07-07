@@ -2,7 +2,7 @@
 
 usage="""
 
-    sourmash tax metagenome --gather-csv [gather_csv(s)] --taxonomy-csv [taxonomy-csv(s)]
+    sourmash tax metagenome --gather-csv <gather_csv> [ ... ] --taxonomy-csv <taxonomy-csv> [ ... ]
 
 The 'tax metagenome' command reads in metagenome gather result CSVs and
 summarizes by taxonomic lineage.
