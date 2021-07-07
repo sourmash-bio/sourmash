@@ -202,14 +202,15 @@ def test_metagenome_duplicated_taxonomy_fail(runtmp):
     duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
     with open(duplicated_csv, 'w') as dup:
         tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
-        tax.append(tax[1]) # add first tax_assign again
+        tax.append(tax[1] + 'FOO') # add first tax_assign again
         dup.write("\n".join(tax))
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(ValueError) as exc:
         c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', duplicated_csv)
-        assert str(exc.value == "multiple lineages for identifier GCF_001881345")
+    assert "Cannot read taxonomy" in str(exc.value)
+    # @CTB revisit
 
 
 def test_metagenome_duplicated_taxonomy_force(runtmp):
@@ -892,15 +893,16 @@ def test_genome_rank_duplicated_taxonomy_fail(runtmp):
     duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
     with open(duplicated_csv, 'w') as dup:
         tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
-        tax.append(tax[1]) # add first tax_assign again
+        tax.append(tax[1] + 'FOO') # add first tax_assign again
         dup.write("\n".join(tax))
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(ValueError) as exc:
         c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', duplicated_csv,
                        '--rank', 'species')
-        assert str(exc.value == "multiple lineages for identifier GCF_001881345")
+    assert "Cannot read taxonomy assignments" in str(exc.value)
+    # @CTB revisit
 
 
 def test_genome_rank_duplicated_taxonomy_force(runtmp):
