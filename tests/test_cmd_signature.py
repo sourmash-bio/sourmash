@@ -11,6 +11,7 @@ import pytest
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash.signature import load_signatures
+from sourmash.manifest import CollectionManifest
 
 ## command line tests
 
@@ -2391,9 +2392,13 @@ def test_sig_describe_1_dir(c):
     out = c.last_result.out
     print(c.last_result)
 
+    # make sure signature names, as well as full path to .sig file under
+    # directory, show up in output.
     expected_output = """\
 signature: GCA_001593925
 signature: GCA_001593935
+prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig
+prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -2566,8 +2571,6 @@ def test_import_mash_csv_to_sig(runtmp):
 
 def test_sig_manifest_1_zipfile(runtmp):
     # make a manifest from a .zip file
-    from sourmash.index import CollectionManifest
-
     protzip = utils.get_test_data('prot/protein.zip')
     runtmp.sourmash('sig', 'manifest', protzip, '-o', 'SOURMASH-MANIFEST.csv')
 
@@ -2584,22 +2587,24 @@ def test_sig_manifest_1_zipfile(runtmp):
 def test_sig_manifest_2_sigfile(runtmp):
     # make a manifest from a .sig file
     sigfile = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
-    with pytest.raises(ValueError):
-        runtmp.sourmash('sig', 'manifest', sigfile, '-o',
-                        'SOURMASH-MANIFEST.csv')
+
+    runtmp.sourmash('sig', 'manifest', sigfile, '-o', 'SOURMASH-MANIFEST.csv')
 
     status = runtmp.last_result.status
     out = runtmp.last_result.out
     err = runtmp.last_result.err
 
-    assert status != 0
-    assert "ERROR: manifests cannot be generated for this file." in err
+    manifest_fn = runtmp.output('SOURMASH-MANIFEST.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 1
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
 
 
 def test_sig_manifest_3_sbt(runtmp):
     # make a manifest from an SBT
-    from sourmash.index import CollectionManifest
-
     protzip = utils.get_test_data('prot/protein.sbt.zip')
     runtmp.sourmash('sig', 'manifest', protzip, '-o', 'SOURMASH-MANIFEST.csv')
 
@@ -2631,16 +2636,20 @@ def test_sig_manifest_4_lca(runtmp):
 def test_sig_manifest_5_dir(runtmp):
     # make a manifest from a directory
     sigfile = utils.get_test_data('prot/protein/')
-    with pytest.raises(ValueError):
-        runtmp.sourmash('sig', 'manifest', sigfile, '-o',
-                        'SOURMASH-MANIFEST.csv')
+    runtmp.sourmash('sig', 'manifest', sigfile, '-o', 'SOURMASH-MANIFEST.csv')
 
     status = runtmp.last_result.status
     out = runtmp.last_result.out
     err = runtmp.last_result.err
 
-    assert status != 0
-    assert "ERROR: manifests cannot be generated for this file." in err
+    manifest_fn = runtmp.output('SOURMASH-MANIFEST.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
 
 
 def test_sig_manifest_6_pathlist(runtmp):
@@ -2652,13 +2661,17 @@ def test_sig_manifest_6_pathlist(runtmp):
     with open(pathlist, 'wt') as fp:
         fp.write("\n".join(sigfiles))
 
-    with pytest.raises(ValueError):
-        runtmp.sourmash('sig', 'manifest', pathlist, '-o',
-                        'SOURMASH-MANIFEST.csv')
+    runtmp.sourmash('sig', 'manifest', pathlist, '-o', 'SOURMASH-MANIFEST.csv')
 
     status = runtmp.last_result.status
     out = runtmp.last_result.out
     err = runtmp.last_result.err
 
-    assert status != 0
-    assert "ERROR: manifests cannot be generated for this file." in err
+    manifest_fn = runtmp.output('SOURMASH-MANIFEST.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
