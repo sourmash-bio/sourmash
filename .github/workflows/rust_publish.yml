@@ -18,15 +18,10 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: install
-          args: --force wasm-pack --version 0.9.1
+          args: --force wasm-pack --version 0.10.0
       - name: run wasm-pack
         run: |
           wasm-pack build src/core -d ../../pkg
-
-      - name: fix wasm-pack package.json
-        working-directory: pkg
-        run: |
-          patch -p0 <../.ci/patch_npm_package
 
       - name: Prepare node for NPM publishing
         uses: actions/setup-node@v1
