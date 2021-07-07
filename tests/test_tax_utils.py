@@ -248,9 +248,9 @@ def test_load_taxonomy_csv_duplicate(runtmp):
 
     with pytest.raises(Exception) as exc:
         MultiLineageDB.load([duplicated_csv])
-    #assert "multiple lineages for identifier GCF_001881345.1" in str(exc.value)
-    # @CTB revisit
-    assert "Cannot read taxonomy assignments" in str(exc.value)
+
+    assert "cannot read taxonomy assignments" in str(exc.value)
+    assert "multiple lineages for identifier GCF_001881345.1" in str(exc.value)
 
 
 def test_load_taxonomy_csv_duplicate_force(runtmp):

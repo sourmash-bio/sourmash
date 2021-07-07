@@ -455,7 +455,7 @@ class LineageDB(abc.Mapping):
             r = csv.DictReader(fp, delimiter=delimiter)
             header = r.fieldnames
             if not header:
-                raise ValueError(f'Cannot read taxonomy assignments from {filename}')
+                raise ValueError(f'cannot read taxonomy assignments from {filename}')
 
             identifier = "ident"
             # check for ident/identifier, handle some common alternatives
@@ -804,12 +804,14 @@ class MultiLineageDB(abc.Mapping):
                 try:
                     this_tax_assign = LineageDB.load(location, **kwargs)
                     loaded = True
-                except ValueError:
-                    pass
+                except ValueError as exc:
+                    # for the last loader, just pass along ValueError...
+                    raise ValueError(f"cannot read taxonomy assignments from '{location}': {str(exc)}")
 
             # nothing loaded, goodbye!
             if not loaded:
-                raise ValueError(f"Cannot read taxonomy assignments from '{location}'")
+                assert 0
+                raise ValueError(f"cannot read taxonomy assignments from '{location}'")
 
             tax_assign.add(this_tax_assign)
 

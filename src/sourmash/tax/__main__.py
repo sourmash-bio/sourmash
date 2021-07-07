@@ -293,8 +293,14 @@ def annotate(args):
 def prepare(args):
     "Combine multiple taxonomy databases into one and/or translate formats."
     notify("loading taxonomies...")
-    tax_assign = MultiLineageDB.load(args.taxonomy_csv,
-                                     split_identifiers=True)
+    try:
+        tax_assign = MultiLineageDB.load(args.taxonomy_csv,
+                                         split_identifiers=True)
+    except ValueError as exc:
+        error("ERROR while loading taxonomies!")
+        error(str(exc))
+        sys.exit(-1)
+
     notify(f"...loaded {len(tax_assign)} entries.")
 
     notify(f"saving to '{args.output}', format {args.database_format}...")
