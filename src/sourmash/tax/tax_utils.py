@@ -533,7 +533,11 @@ class LineageDB_Sqlite(abc.Mapping):
     def load(cls, location):
         import sqlite3
         conn = sqlite3.connect(location)
-        return cls(conn)
+        try:
+            db = cls(conn)
+        except sqlite3.DatabaseError:
+            raise ValueError("not a sqlite database")
+        return db
 
     def _make_tup(self, row):
         tup = [ LineagePair(n, r) for (n, r) in zip(taxlist(True), row) ]
@@ -729,10 +733,28 @@ def load_taxonomies(locations, **kwargs):
     tax_assign = MultiLineageDB()
     available_ranks = set()
     for location in locations:
-        if location.endswith('.csv'):
-            this_tax_assign, _, avail_ranks = load_taxonomy_csv(location, **kwargs)
-        elif location.endswith('.db'):
+        # try faster formats first
+        loaded = False
+
+        # sqlite db?
+        try:
             this_tax_assign, _, avail_ranks = load_taxonomy_sqlite(location)
+            loaded = True
+        except ValueError:
+            pass
+
+        # CSV file?
+        if not loaded:
+            try:
+                this_tax_assign, _, avail_ranks = load_taxonomy_csv(location,
+                                                                    **kwargs)
+                loaded = True
+            except ValueError:
+                pass
+
+        # nothing loaded, goodbye!
+        if not loaded:
+            notify(f"cannot load taxonomy information from '{location}'")
 
         tax_assign.add(this_tax_assign)
         available_ranks.update(set(avail_ranks))
