@@ -1281,6 +1281,12 @@ def test_tax_prepare_2_csv_to_sql(runtmp):
 
     assert set(db1) == set(db2)
 
+    # cannot overwrite -
+    with pytest.raises(ValueError) as exc:
+        runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o', taxout,
+                            '-F', 'sql')
+    assert 'taxonomy table already exists' in str(exc.value)
+
 
 def test_tax_prepare_3_db_to_csv(runtmp):
     # CSV -> CSV; same assignments

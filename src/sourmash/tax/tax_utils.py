@@ -561,13 +561,17 @@ class LineageDB_Sqlite(abc.Mapping):
     def __getitem__(self, ident):
         "Retrieve lineage for identifer"
         c = self.cursor
-        c.execute('SELECT superkingdom, class, order_, family, genus, species, strain FROM taxonomy WHERE ident=?', (ident,))
+        c.execute('SELECT superkingdom, phylum, class, order_, family, genus, species, strain FROM taxonomy WHERE ident=?', (ident,))
 
         # retrieve names list...
         names = c.fetchone()
         if names:
             # ...and construct lineage tuple
-            return self._make_tup(names)
+            tup = self._make_tup(names)
+            while tup and not tup[-1].name:
+                tup = tup[:-1]
+
+            return tup
 
         raise KeyError(ident)
 
@@ -595,7 +599,7 @@ class LineageDB_Sqlite(abc.Mapping):
         "return all items in the sqlite database"
         c = self.conn.cursor()
 
-        c.execute('SELECT DISTINCT ident, superkingdom, class, order_, family, genus, species, strain FROM taxonomy')
+        c.execute('SELECT DISTINCT ident, superkingdom, phylum, class, order_, family, genus, species, strain FROM taxonomy')
 
         for ident, *names in c:
             yield ident, self._make_tup(names)

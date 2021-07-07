@@ -876,7 +876,7 @@ def test_tax_multi_load_files(runtmp):
     # test loading various good and bad files
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     taxonomy_csv2 = utils.get_test_data('tax/test-strain.taxonomy.csv')
-    badcsv = utils.get_test_data('47+63_x_gtdb-rs202.gather.csv')
+    badcsv = utils.get_test_data('tax/47+63_x_gtdb-rs202.gather.csv')
 
     db = MultiLineageDB.load([taxonomy_csv])
     assert len(db) == 6
@@ -904,11 +904,61 @@ def test_tax_multi_load_files(runtmp):
         MultiLineageDB.load([runtmp.output('no-such-file')])
 
 
+def test_tax_multi_save_files(runtmp):
+    # test save
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+
+    db = MultiLineageDB.load([taxonomy_csv], split_identifiers=True)
+
+    out_db = runtmp.output('out.db')
+    out_csv = runtmp.output('out.csv')
+    out2_csv = runtmp.output('out2.csv')
+
+    # can't save to fp with sql
+    with open(out_csv, 'wt') as fp:
+        with pytest.raises(ValueError):
+            db.save(fp, 'sql')
+
+    # these should all work...
+    with open(out_csv, 'wt') as fp:
+        db.save(fp, 'csv')
+
+    db.save(out2_csv, 'csv')
+    db.save(out_db, 'sql')
+
+    # ...and be equal
+    db1 = db.load([out_db])
+    db2 = db.load([out_csv])
+    db3 = db.load([out2_csv])
+
+    def strip_strain(it):
+        for k, v in it:
+            if v[-1].rank == 'strain':
+                v = v[:-1]
+            yield k, v
+
+    import pprint
+    db_items = list(strip_strain(db.items()))
+    db1_items = list(strip_strain(db1.items()))
+    db2_items = list(strip_strain(db2.items()))
+    db3_items = list(strip_strain(db3.items()))
+    pprint.pprint(db_items)
+    print('XXX')
+    pprint.pprint(list(db1_items))
+    print('XXX')
+    pprint.pprint(list(db2_items))
+
+    assert set(db_items) == set(db1_items)
+    assert set(db_items) == set(db2_items)
+    assert set(db_items) == set(db3_items)
+
+
 def test_lineage_db_csv_load(runtmp):
     # test LineageDB.load
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     taxonomy_csv2 = utils.get_test_data('tax/test-strain.taxonomy.csv')
-    badcsv = utils.get_test_data('47+63_x_gtdb-rs202.gather.csv')
+    badcsv = utils.get_test_data('tax/47+63_x_gtdb-rs202.gather.csv')
+    badcsv2 = utils.get_test_data('tax/test-missing-ranks.taxonomy.csv')
 
     db = LineageDB.load(taxonomy_csv)
     assert len(db) == 6
@@ -924,7 +974,7 @@ def test_lineage_db_csv_load(runtmp):
 
     # load a bad CSV
     with pytest.raises(ValueError):
-        LineageDB.load(badcsv)
+        LineageDB.load(badcsv2)
 
     # load a directory
     with pytest.raises(ValueError):
@@ -950,6 +1000,7 @@ def test_lineage_db_sql_load(runtmp):
     assert bool(db)
     assert len(db) == 6
     #assert 'strain' not in db.available_ranks @CTB
+    assert db['GCF_001881345.1'][0].rank == 'superkingdom'
     with pytest.raises(KeyError):
         db['foo']
 
