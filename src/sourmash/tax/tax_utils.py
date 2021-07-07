@@ -434,10 +434,16 @@ class LineageDB(abc.Mapping):
              split_identifiers=False, keep_identifier_versions=True):
         """
         Load a taxonomy assignment CSV file into a LineageDB.
+
+        'split_identifiers=True' will split identifiers from strings
+        using whitespace, e.g. 'IDENT other name stuff' => 'IDENT'
+
+        'keep_identifier_versions=False' will remove trailing versions,
+        e.g. 'IDENT.1' => 'IDENT'.
         """
         include_strain=False
         if not keep_identifier_versions and not split_identifiers:
-            assert 0 # @CTB
+            raise ValueError("keep_identifer_versions=False doesn't make sense with split_identifiers=False")
 
         if not os.path.exists(filename):
             raise ValueError(f"'{filename}' does not exist")

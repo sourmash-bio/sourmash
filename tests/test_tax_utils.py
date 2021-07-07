@@ -230,6 +230,11 @@ def test_load_taxonomy_csv_split_id_ncbi(runtmp):
     assert list(tax_assign.keys()) == ['GCF_001881345', 'GCF_009494285', 'GCF_013368705', 'GCF_003471795', 'GCF_000017325', 'GCF_000021665', "ncbi_id"]
     assert len(tax_assign) == 7 # should have read 7 rows
 
+    # check for non-sensical args.
+    with pytest.raises(ValueError):
+        tax_assign = MultiLineageDB.load([upd_csv], split_identifiers=False,
+                                         keep_identifier_versions=False)
+
 
 def test_load_taxonomy_csv_duplicate(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
