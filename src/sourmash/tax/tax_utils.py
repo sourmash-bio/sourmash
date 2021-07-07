@@ -430,7 +430,7 @@ class LineageDB(abc.Mapping):
 
     @classmethod
     def load(cls, filename, *, delimiter=',', force=False,
-             split_identifiers=False, keep_identifier_versions=False):
+             split_identifiers=False, keep_identifier_versions=True):
         """
         Load a taxonomy assignment CSV file into a LineageDB.
         """
@@ -533,8 +533,8 @@ class LineageDB_Sqlite(abc.Mapping):
     def load(cls, location):
         "load taxonomy information from a sqlite3 database"
         import sqlite3
-        conn = sqlite3.connect(location)
         try:
+            conn = sqlite3.connect(location)
             db = cls(conn)
         except sqlite3.DatabaseError:
             raise ValueError("not a sqlite database")

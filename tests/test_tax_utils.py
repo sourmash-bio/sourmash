@@ -8,7 +8,7 @@ import sourmash_tst_utils as utils
 
 from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_results,
                                     summarize_gather_at, find_missing_identities,
-                                    write_summary, load_taxonomy_csv,
+                                    write_summary, MultiLineageDB,
                                     collect_gather_csvs, check_and_load_gather_csvs,
                                     SummarizedGatherResult, ClassificationResult,
                                     write_classifications,
@@ -19,8 +19,6 @@ from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_re
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import LineagePair
-
-#from sourmash.lca.command_index import load_taxonomy_assignments
 
 # utility functions for testing
 def make_mini_gather_results(g_infolist):
@@ -87,7 +85,8 @@ def test_check_and_load_gather_csvs_empty(runtmp):
     csvs = [g_res]
     # load taxonomy csv
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign, num_rows, ranks = load_taxonomy_csv(taxonomy_csv, split_identifiers=True)
+    tax_assign = MultiLineageDB.load([taxonomy_csv], split_identifiers=True)
+
     print(tax_assign)
     # check gather results and missing ids
     with pytest.raises(Exception) as exc:
@@ -112,7 +111,8 @@ def test_check_and_load_gather_csvs_with_empty_force(runtmp):
 
     # load taxonomy csv
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign, num_rows, ranks = load_taxonomy_csv(taxonomy_csv, split_identifiers=True)
+    tax_assign = MultiLineageDB.load([taxonomy_csv], split_identifiers=True,
+                                     keep_identifier_versions=False)
     print(tax_assign)
     # check gather results and missing ids
     gather_results, ids_missing, n_missing, header = check_and_load_gather_csvs(csvs, tax_assign, force=True)
@@ -136,7 +136,7 @@ def test_check_and_load_gather_csvs_fail_on_missing(runtmp):
 
     # load taxonomy csv
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign, num_rows, ranks = load_taxonomy_csv(taxonomy_csv, split_identifiers=True)
+    tax_assign = MultiLineageDB.load([taxonomy_csv], split_identifiers=True)
     print(tax_assign)
     # check gather results and missing ids
     with pytest.raises(ValueError) as exc:
@@ -181,18 +181,19 @@ def test_load_gather_results_empty(runtmp):
 
 def test_load_taxonomy_csv():
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign, num_rows, ranks = load_taxonomy_csv(taxonomy_csv)
+    tax_assign = MultiLineageDB.load([taxonomy_csv])
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1']
-    assert num_rows == 6 # should have read 6 rows
+    assert len(tax_assign) == 6 # should have read 6 rows
 
 
 def test_load_taxonomy_csv_split_id():
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign, num_rows, ranks = load_taxonomy_csv(taxonomy_csv, split_identifiers=True)
+    tax_assign = MultiLineageDB.load([taxonomy_csv], split_identifiers=True,
+                                     keep_identifier_versions=False)
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345', 'GCF_009494285', 'GCF_013368705', 'GCF_003471795', 'GCF_000017325', 'GCF_000021665']
-    assert num_rows == 6 # should have read 6 rows
+    assert len(tax_assign) == 6 # should have read 6 rows
 
 
 def test_load_taxonomy_csv_with_ncbi_id(runtmp):
@@ -206,10 +207,10 @@ def test_load_taxonomy_csv_with_ncbi_id(runtmp):
         tax.append(ncbi_tax)
         new_tax.write("\n".join(tax))
 
-    tax_assign, num_rows, ranks = load_taxonomy_csv(upd_csv)
+    tax_assign = MultiLineageDB.load([upd_csv])
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1', "ncbi_id after_space"]
-    assert num_rows == 7  # should have read 7 rows
+    assert len(tax_assign) == 7  # should have read 7 rows
 
 
 def test_load_taxonomy_csv_split_id_ncbi(runtmp):
@@ -223,10 +224,11 @@ def test_load_taxonomy_csv_split_id_ncbi(runtmp):
         tax.append(ncbi_tax)
         new_tax.write("\n".join(tax))
 
-    tax_assign, num_rows, ranks = load_taxonomy_csv(upd_csv, split_identifiers=True)
+    tax_assign = MultiLineageDB.load([upd_csv], split_identifiers=True,
+                                     keep_identifier_versions=False)
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345', 'GCF_009494285', 'GCF_013368705', 'GCF_003471795', 'GCF_000017325', 'GCF_000021665', "ncbi_id"]
-    assert num_rows == 7 # should have read 7 rows
+    assert len(tax_assign) == 7 # should have read 7 rows
 
 
 def test_load_taxonomy_csv_duplicate(runtmp):
@@ -238,7 +240,7 @@ def test_load_taxonomy_csv_duplicate(runtmp):
         dup.write("\n".join(tax))
 
     with pytest.raises(Exception) as exc:
-        tax_assign, num_rows, ranks = load_taxonomy_csv(duplicated_csv)
+        tax_assign = MultiLineageDB.load([duplicated_csv])
         assert str(exc.value == "multiple lineages for identifier GCF_001881345.1")
 
 
@@ -251,10 +253,11 @@ def test_load_taxonomy_csv_duplicate_force(runtmp):
         dup.write("\n".join(tax))
 
     # now force
-    tax_assign, num_rows, ranks = load_taxonomy_csv(duplicated_csv, force=True)
+    tax_assign = MultiLineageDB.load([duplicated_csv], force=True)
+    num_rows = len(tax_assign)
+
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1']
-    assert num_rows == 7 # should have read 7 rows
 
 
 def test_find_missing_identities():
