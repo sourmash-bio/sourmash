@@ -1,20 +1,42 @@
-//! # Compute, compare and search signatures for nucleotide (DNA/RNA) and protein sequences.
+//! Quickly search, compare, and analyze genomic and metagenomic data sets.
 //!
-//! sourmash is a command-line tool and Python library for computing
-//! [MinHash sketches][0] from DNA sequences, comparing them to each other,
-//! and plotting the results.
+//! This is the core library supporting sourmash, a command-line tool and Python
+//! library for computing [MinHash sketches][0] from genomic sequences,
+//! comparing them to each other, and plotting the results.
 //! This allows you to estimate sequence similarity between even very
 //! large data sets quickly and accurately.
 //!
+//! More information for sourmash as an application is available in [the
+//! documentation](https://sourmash.readthedocs.io/en/latest/)
+//!
 //! [0]: https://en.wikipedia.org/wiki/MinHash
 //!
-//! sourmash can be used to quickly search large databases of genomes
-//! for matches to query genomes and metagenomes.
+//! This crate is organized using the following concepts:
 //!
-//! sourmash also includes k-mer based taxonomic exploration and
-//! classification routines for genome and metagenome analysis. These
-//! routines can use the NCBI taxonomy but do not depend on it in any way.
-//! Documentation and further examples for each module can be found in the module descriptions below.
+//! - A **dataset** contains genomic sequencing data. It can be assembled or raw
+//!   reads from a sequencing experiment, or more generally anything
+//!   representable with FASTA/FASTQ formats in a nucleotide ("ACGTN") or
+//!   amino acid ("ACDEFGHIKLMNPQRSTVWY*") alphabet.
+//!   Encodings are defined in the [`encodings`] submodule, as well as functions to
+//!   work with them.
+//!
+//! - A **sketch** is a representation of a **dataset**. It is usually sublinear
+//!   in size, meaning it uses less space than the original dataset, while still
+//!   allowing limited operations (set membership, similarity or cardinality estimation).
+//!   Examples include [MinHash][0], [Bloom Filter][1] or [HyperLogLog][2] sketches.
+//!   Sketches are implemented in the [`sketch`] submodule.
+//!
+//! - A **signature** is a collection of **sketches** derived from the same
+//!   **dataset**. Signatures can be compared as long as they have compatible
+//!   sketches between them.
+//!   Signatures are implemented in the [`signature`] submodule.
+//!
+//! - An **index** is a collection of **signatures**, possibly containing (or
+//!   implemented as) optimized data structures allowing faster search.
+//!   Indices are implemented in the [`index`] submodule.
+//!
+//!  [1]: https://en.wikipedia.org/wiki/Bloom_filter
+//!  [2]: https://en.wikipedia.org/wiki/HyperLogLog
 
 // TODO: remove this line and update all the appropriate type names for 1.0
 #![allow(clippy::upper_case_acronyms)]
