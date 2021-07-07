@@ -35,6 +35,12 @@ def subparser(subparsers):
         help='output file',
     )
     subparser.add_argument(
+        '-T', '--database-type',
+        help="type of output file; default is 'sql')",
+        default='sql',
+        choices=['csv', 'sql'],
+    )
+    subparser.add_argument(
         '--keep-full-identifiers', action='store_true',
         help='do not split identifiers on whitespace'
     )

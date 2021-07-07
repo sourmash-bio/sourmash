@@ -289,6 +289,7 @@ def annotate(args):
 
 def prepare(args):
     "Combine multiple taxonomy databases into one and/or translate formats."
+
     import sqlite3
 
     # @CTB currently only outputs sqlite <grin>
