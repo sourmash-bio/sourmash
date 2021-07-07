@@ -384,7 +384,7 @@ def test_metagenome_empty_tax_lineage_input(runtmp):
     print(runtmp.last_result.err)
 
     assert runtmp.last_result.status != 0
-    assert f"Cannot read taxonomy assignments from {tax_empty}. Is file empty?" in str(exc.value)
+    assert f"Cannot read taxonomy assignments from" in str(exc.value)
 
 
 def test_metagenome_perfect_match_warning(runtmp):
@@ -554,7 +554,7 @@ def test_genome_empty_tax_lineage_input(runtmp):
     print(runtmp.last_result.err)
 
     assert runtmp.last_result.status != 0
-    assert f"Cannot read taxonomy assignments from {tax_empty}. Is file empty?" in str(exc.value)
+    assert f"Cannot read taxonomy assignments from" in str(exc.value)
 
 
 def test_genome_rank_stdout_0(runtmp):
@@ -1248,5 +1248,5 @@ def test_annotate_empty_tax_lineage_input(runtmp):
     print(runtmp.last_result.err)
 
     assert runtmp.last_result.status != 0
-    assert f"Cannot read taxonomy assignments from {tax_empty}. Is file empty?" in str(exc.value)
+    assert f"Cannot read taxonomy assignments from" in str(exc.value)
 

@@ -12,7 +12,7 @@ from sourmash.logging import set_quiet, error, notify
 from sourmash.lca.lca_utils import display_lineage
 
 from . import tax_utils
-from .tax_utils import ClassificationResult
+from .tax_utils import ClassificationResult, MultiLineageDB
 
 usage='''
 sourmash taxonomy <command> [<args>] - manipulate/work with taxonomy information.
@@ -62,10 +62,11 @@ def metagenome(args):
 
     # first, load taxonomic_assignments
     try:
-        tax_assign, available_ranks = tax_utils.load_taxonomies(args.taxonomy_csv,
+        tax_assign = MultiLineageDB.load(args.taxonomy_csv,
                        split_identifiers=not args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
                        force=args.force)
+        available_ranks = tax_assign.available_ranks
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
@@ -133,10 +134,11 @@ def genome(args):
 
     # first, load taxonomic_assignments
     try:
-        tax_assign, available_ranks = tax_utils.load_taxonomies(args.taxonomy_csv,
+        tax_assign = MultiLineageDB.load(args.taxonomy_csv,
                        split_identifiers=not args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
                        force=args.force)
+        available_ranks = tax_assign.available_ranks
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
@@ -246,10 +248,11 @@ def annotate(args):
 
     # first, load taxonomic_assignments
     try:
-        tax_assign, available_ranks = tax_utils.load_taxonomies(args.taxonomy_csv,
+        tax_assign = MultiLineageDB.load(args.taxonomy_csv,
                        split_identifiers=not args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
                        force=args.force)
+        available_ranks = tax_assign.available_ranks
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
@@ -290,8 +293,8 @@ def annotate(args):
 def prepare(args):
     "Combine multiple taxonomy databases into one and/or translate formats."
     notify("loading taxonomies...")
-    tax_assign, avail_ranks = tax_utils.load_taxonomies(args.taxonomy_csv,
-                                                        split_identifiers=True)
+    tax_assign = MultiLineageDB.load(args.taxonomy_csv,
+                                     split_identifiers=True)
     notify(f"...loaded {len(tax_assign)} entries.")
 
     notify(f"saving to '{args.output}', format {args.database_format}...")
