@@ -1017,7 +1017,7 @@ def test_lineage_db_sql_load(runtmp):
     assert bool(db)
     assert len(db) == 6
     db.available_ranks
-    #assert 'strain' not in db.available_ranks @CTB
+    assert 'strain' not in db.available_ranks
     assert db['GCF_001881345.1'][0].rank == 'superkingdom'
     with pytest.raises(KeyError):
         db['foo']
