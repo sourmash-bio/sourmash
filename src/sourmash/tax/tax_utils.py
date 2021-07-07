@@ -714,13 +714,13 @@ class MultiLineageDB(abc.Mapping):
         db.commit()
 
     def _save_csv(self, fp):
-        headers = ['identifier'] + list(taxlist(include_strain=True))
+        headers = ['identifiers'] + list(taxlist(include_strain=True))
         w = csv.DictWriter(fp, fieldnames=headers)
         w.writeheader()
 
         for n, (ident, tax) in enumerate(self.items()):
             row = {}
-            row['identifier'] = ident
+            row['identifiers'] = ident
 
             # convert tax LineagePairs into dictionary
             for t in tax:

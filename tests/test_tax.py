@@ -6,6 +6,7 @@ import csv
 import pytest
 
 import sourmash_tst_utils as utils
+from sourmash.tax import tax_utils
 
 ## command line tests
 def test_run_sourmash_tax():
@@ -1250,3 +1251,50 @@ def test_annotate_empty_tax_lineage_input(runtmp):
     assert runtmp.last_result.status != 0
     assert f"Cannot read taxonomy assignments from" in str(exc.value)
 
+
+def test_tax_prepare_1_csv_to_csv(runtmp):
+    # CSV -> CSV; same assignments
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    taxout = runtmp.output('out.csv')
+
+    runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o', taxout, '-F', 'csv')
+    assert os.path.exists(taxout)
+
+    db1 = tax_utils.MultiLineageDB.load([tax])
+    db2 = tax_utils.MultiLineageDB.load([taxout])
+
+    assert set(db1) == set(db2)
+
+
+def test_tax_prepare_2_csv_to_sql(runtmp):
+    # CSV -> SQL; same assignments?
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    taxout = runtmp.output('out.db')
+
+    runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o', taxout, '-F', 'sql')
+    assert os.path.exists(taxout)
+
+    db1 = tax_utils.MultiLineageDB.load([tax])
+    db2 = tax_utils.MultiLineageDB.load([taxout])
+
+    assert set(db1) == set(db2)
+
+
+def test_tax_prepare_3_db_to_csv(runtmp):
+    # CSV -> CSV; same assignments
+    taxcsv = utils.get_test_data('tax/test.taxonomy.csv')
+    taxdb = utils.get_test_data('tax/test.taxonomy.db')
+    taxout = runtmp.output('out.csv')
+
+    runtmp.run_sourmash('tax', 'prepare', '-t', taxdb,
+                        '-o', taxout, '-F', 'csv')
+    assert os.path.exists(taxout)
+    with open(taxout) as fp:
+        print(fp.read())
+
+    db1 = tax_utils.MultiLineageDB.load([taxcsv])
+    db2 = tax_utils.MultiLineageDB.load([taxout])
+    db3 = tax_utils.MultiLineageDB.load([taxdb])
+
+    assert set(db1) == set(db2)
+    assert set(db1) == set(db3)
