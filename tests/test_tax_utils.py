@@ -861,3 +861,24 @@ def test_combine_sumgather_csvs_by_lineage_improper_rank(runtmp):
         linD, sample_names = combine_sumgather_csvs_by_lineage([sg1,sg2], rank="strain")
         print("ValueError: ", exc.value)
         assert exc.value == "Rank strain not available."
+
+
+def test_tax_load_bad_files(runtmp):
+    # test loading various bad files
+    badcsv = utils.get_test_data('47+63_x_gtdb-rs202.gather.csv')
+
+    # load a string rather than a list
+    with pytest.raises(TypeError):
+        MultiLineageDB.load(badcsv)
+
+    # load a bad CSV
+    with pytest.raises(ValueError):
+        MultiLineageDB.load([badcsv])
+
+    # load a directory
+    with pytest.raises(ValueError):
+        MultiLineageDB.load([runtmp.output('')])
+
+    # file does not exist
+    with pytest.raises(ValueError):
+        MultiLineageDB.load([runtmp.output('no-such-file')])

@@ -1,6 +1,7 @@
 """
 Utility functions for taxonomy analysis tools.
 """
+import os
 import csv
 from collections import namedtuple, defaultdict
 from collections import abc
@@ -438,6 +439,12 @@ class LineageDB(abc.Mapping):
         if not keep_identifier_versions and not split_identifiers:
             assert 0 # @CTB
 
+        if not os.path.exists(filename):
+            raise ValueError(f"'{filename}' does not exist")
+
+        if os.path.isdir(filename):
+            raise ValueError(f"'{filename}' is a directory")
+
         with open(filename, newline='') as fp:
             r = csv.DictReader(fp, delimiter=delimiter)
             header = r.fieldnames
@@ -735,6 +742,9 @@ class MultiLineageDB(abc.Mapping):
     @classmethod
     def load(cls, locations, **kwargs):
         "Load one or more taxonomies from the given location(s)"
+        if isinstance(locations, str):
+            raise TypeError("'locations' should be a list, not a string")
+
         tax_assign = cls()
         for location in locations:
             # try faster formats first
