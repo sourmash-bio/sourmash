@@ -535,12 +535,33 @@ class LineageDB_Sqlite(abc.Mapping):
     """
     A LineageDB based on a sqlite3 database with a 'taxonomy' table.
     """
+    # NOTE: 'order' is a reserved name in sql, so we have to use 'order_'.
+    columns = ('superkingdom', 'phylum', 'order_', 'class', 'family',
+               'genus', 'species', 'strain')
+
     def __init__(self, conn):
         self.conn = conn
 
         # check: can we do a 'select' on the right table?
         self.__len__()
-        self.cursor = conn.cursor()
+        c = conn.cursor()
+
+        # get available ranks...
+        ranks = set()
+        for column, rank in zip(self.columns, taxlist(include_strain=True)):
+            query = f'SELECT COUNT({column}) FROM taxonomy WHERE {column} IS NOT NULL AND {column} != ""'
+            print(query)
+            try:
+                c.execute(query)
+            except:
+                import traceback
+                traceback.print_exc()
+            cnt, = c.fetchone()
+            if cnt:
+                ranks.add(rank)
+
+        self.available_ranks = ranks
+        self.cursor = c
 
     @classmethod
     def load(cls, location):
@@ -643,6 +664,17 @@ class MultiLineageDB(abc.Mapping):
                 if k not in seen:
                     seen.add(k)
                     yield k, v
+
+    def shadowed_identifiers(self):
+        seen = set()
+        dups = set()
+        for db in self.lineage_dbs:
+            for k, v in db.items():
+                if k in seen:
+                    dups.add(k)
+                else:
+                    seen.add(k)
+        return seen
 
     def __getitem__(self, ident):
         "Return lineage tuple for first match to identifier."

@@ -904,6 +904,23 @@ def test_tax_multi_load_files(runtmp):
         MultiLineageDB.load([runtmp.output('no-such-file')])
 
 
+def test_tax_multi_load_files_shadowed(runtmp):
+    # test loading various good and bad files
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    taxonomy_csv2 = utils.get_test_data('tax/test-strain.taxonomy.csv')
+    taxonomy_db = utils.get_test_data('tax/test.taxonomy.db')
+
+    db = MultiLineageDB.load([taxonomy_csv, taxonomy_csv2, taxonomy_db])
+    assert len(db.shadowed_identifiers()) == 6
+
+    # we should have everything including strain
+    assert set(lca_utils.taxlist()) == set(db.available_ranks)
+
+    db = MultiLineageDB.load([taxonomy_csv, taxonomy_db])
+    assert len(db.shadowed_identifiers()) == 6
+    assert set(lca_utils.taxlist(include_strain=False)) == set(db.available_ranks)
+
+
 def test_tax_multi_save_files(runtmp):
     # test save
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -999,6 +1016,7 @@ def test_lineage_db_sql_load(runtmp):
     db = LineageDB_Sqlite.load(taxonomy_db)
     assert bool(db)
     assert len(db) == 6
+    db.available_ranks
     #assert 'strain' not in db.available_ranks @CTB
     assert db['GCF_001881345.1'][0].rank == 'superkingdom'
     with pytest.raises(KeyError):
