@@ -304,7 +304,13 @@ def prepare(args):
     notify(f"...loaded {len(tax_assign)} entries.")
 
     notify(f"saving to '{args.output}', format {args.database_format}...")
-    tax_assign.save(args.output, args.database_format)
+    try:
+        tax_assign.save(args.output, args.database_format)
+    except ValueError as exc:
+        error("ERROR while saving!")
+        error(str(exc))
+        sys.exit(-1)
+
     notify("done!")
 
 
