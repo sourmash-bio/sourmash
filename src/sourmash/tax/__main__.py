@@ -287,8 +287,8 @@ def annotate(args):
                 w.writerow(row)
 
 
-def combine_tax(args):
-    "Combine multiple taxonomy databases into one."
+def prepare(args):
+    "Combine multiple taxonomy databases into one and/or translate formats."
     import sqlite3
 
     # @CTB currently only outputs sqlite <grin>

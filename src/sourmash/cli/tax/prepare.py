@@ -2,12 +2,13 @@
 
 usage="""
 
-    sourmash tax combine_tax --taxonomy-csv [taxonomy-csv(s)] -o <output>
+    sourmash tax prepare --taxonomy-csv <taxonomy_file> [ ... ] -o <output>
 
-The 'tax combine_tax' command reads in one or more taxonomy databases
-and saves them into a new database.
+The 'tax prepare' command reads in one or more taxonomy databases
+and saves them into a new database. It can be used to combine databases
+in the desired order, as well as output different database formats.
 
-Please see the 'tax combine_tax' documentation for more details:
+Please see the 'tax prepare' documentation for more details:
   https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-annotate-annotates-gather-output-with-taxonomy
 
 @CTB fix link
@@ -18,7 +19,7 @@ from sourmash.logging import notify, print_results, error
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('combine_tax',
+    subparser = subparsers.add_parser('prepare',
                                       usage=usage)
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
@@ -52,4 +53,4 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
-    return sourmash.tax.__main__.combine_tax(args)
+    return sourmash.tax.__main__.prepare(args)
