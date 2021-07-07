@@ -740,7 +740,7 @@ class MultiLineageDB(abc.Mapping):
                 row[t.rank] = t.name
 
             # add strain if needed
-            if 'strain' in row:
+            if 'strain' not in row:
                 row['strain'] = ''
 
             w.writerow(row)

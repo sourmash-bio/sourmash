@@ -14,7 +14,8 @@ from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_re
                                     write_classifications,
                                     aggregate_by_lineage_at_rank,
                                     make_krona_header, format_for_krona, write_krona,
-                                    combine_sumgather_csvs_by_lineage, write_lineage_sample_frac)
+                                    combine_sumgather_csvs_by_lineage, write_lineage_sample_frac,
+                                    LineageDB, LineageDB_Sqlite)
 
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
@@ -871,9 +872,20 @@ def test_combine_sumgather_csvs_by_lineage_improper_rank(runtmp):
     assert "Rank strain not available." in str(exc.value)
 
 
-def test_tax_load_bad_files(runtmp):
-    # test loading various bad files
+def test_tax_multi_load_files(runtmp):
+    # test loading various good and bad files
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    taxonomy_csv2 = utils.get_test_data('tax/test-strain.taxonomy.csv')
     badcsv = utils.get_test_data('47+63_x_gtdb-rs202.gather.csv')
+
+    db = MultiLineageDB.load([taxonomy_csv])
+    assert len(db) == 6
+    assert 'strain' not in db.available_ranks
+
+    db = MultiLineageDB.load([taxonomy_csv2])
+    assert len(db) == 6
+    assert 'strain' in db.available_ranks
+    assert db['GCF_001881345.1'][0].rank == 'superkingdom'
 
     # load a string rather than a list
     with pytest.raises(TypeError):
@@ -890,3 +902,65 @@ def test_tax_load_bad_files(runtmp):
     # file does not exist
     with pytest.raises(ValueError):
         MultiLineageDB.load([runtmp.output('no-such-file')])
+
+
+def test_lineage_db_csv_load(runtmp):
+    # test LineageDB.load
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    taxonomy_csv2 = utils.get_test_data('tax/test-strain.taxonomy.csv')
+    badcsv = utils.get_test_data('47+63_x_gtdb-rs202.gather.csv')
+
+    db = LineageDB.load(taxonomy_csv)
+    assert len(db) == 6
+    assert 'strain' not in db.available_ranks
+
+    db = LineageDB.load(taxonomy_csv2)
+    assert len(db) == 6
+    assert 'strain' in db.available_ranks
+
+    # load the wrong kind of csv
+    with pytest.raises(ValueError):
+        LineageDB.load(badcsv)
+
+    # load a bad CSV
+    with pytest.raises(ValueError):
+        LineageDB.load(badcsv)
+
+    # load a directory
+    with pytest.raises(ValueError):
+        LineageDB.load(runtmp.output(''))
+
+    # file does not exist
+    with pytest.raises(ValueError):
+        LineageDB.load(runtmp.output('no-such-file'))
+
+    # construct a CSV with bad headers
+    with open(runtmp.output('xxx.csv'), 'w', newline="") as fp:
+        fp.write('x,y,z\n')
+    with pytest.raises(ValueError):
+        LineageDB.load(runtmp.output('xxx.csv'))
+
+
+def test_lineage_db_sql_load(runtmp):
+    # test LineageDB_sqlite.load
+    taxonomy_db = utils.get_test_data('tax/test.taxonomy.db')
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+
+    db = LineageDB_Sqlite.load(taxonomy_db)
+    assert bool(db)
+    assert len(db) == 6
+    #assert 'strain' not in db.available_ranks @CTB
+    with pytest.raises(KeyError):
+        db['foo']
+
+    # load any kind of CSV
+    with pytest.raises(ValueError):
+        LineageDB_Sqlite.load(taxonomy_csv)
+
+    # load a directory
+    with pytest.raises(ValueError):
+        LineageDB_Sqlite.load(runtmp.output(''))
+
+    # file does not exist
+    with pytest.raises(ValueError):
+        LineageDB_Sqlite.load(runtmp.output('no-such-file'))
