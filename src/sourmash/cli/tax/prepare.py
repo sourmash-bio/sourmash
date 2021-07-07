@@ -35,8 +35,8 @@ def subparser(subparsers):
         help='output file',
     )
     subparser.add_argument(
-        '-T', '--database-type',
-        help="type of output file; default is 'sql')",
+        '-F', '--database-format',
+        help="format of output file; default is 'sql')",
         default='sql',
         choices=['csv', 'sql'],
     )

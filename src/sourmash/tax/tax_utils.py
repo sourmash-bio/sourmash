@@ -630,6 +630,92 @@ class MultiLineageDB(abc.Mapping):
         "True if any contained database has content."
         return any( bool(db) for db in self.lineage_dbs )
 
+    def save(self, filename_or_fp, file_format):
+        assert file_format in ('sql', 'csv')
+
+        is_filename = False
+        try:
+            filename_or_fp.write
+        except AttributeError:
+            is_filename = True
+
+        if file_format == 'sql':
+            if not is_filename:
+                raise ValueError("file format '{file_format}' requires a filename, not a file handle")
+            self._save_sqlite(filename_or_fp)
+        elif file_format == 'csv':
+            # we need a file handle; open file.
+            fp = filename_or_fp
+            if is_filename:
+                fp = open(filename_or_fp, 'w', newline="")
+
+            try:
+                self._save_csv(fp)
+            finally:
+                # close the file we opened!
+                if is_filename:
+                    fp.close()
+
+    def _save_sqlite(self, filename):
+        import sqlite3
+        db = sqlite3.connect(filename)
+
+        cursor = db.cursor()
+        try:
+            cursor.execute("""
+
+        CREATE TABLE taxonomy (
+            ident TEXT NOT NULL,
+            superkingdom TEXT,
+            phylum TEXT,
+            class TEXT,
+            order_ TEXT,
+            family TEXT,
+            genus TEXT,
+            species TEXT,
+            strain TEXT
+        )
+        """)
+            did_create = True
+        except sqlite3.OperationalError:
+            # already exists?
+            raise ValueError(f"taxonomy table already exists in '{filename}'")
+
+        # follow up and create index
+        cursor.execute("CREATE UNIQUE INDEX taxonomy_ident ON taxonomy(ident);")
+        # @CTB remove notify in here...
+        n = 0
+        for n, (ident, tax) in enumerate(self.items()):
+            if n and n % 1000 == 0:
+                notify(f'... processed {n} taxonomy rows', end='\r')
+            x = [ident, *[ t.name for t in tax ]]
+
+            if tax[-1].rank != 'strain':
+                assert len(x) == 8, len(x)
+                x.append('')    # append empty strain value
+            cursor.execute('INSERT INTO taxonomy (ident, superkingdom, phylum, class, order_, family, genus, species, strain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', x)
+
+        db.commit()
+
+    def _save_csv(self, fp):
+        headers = ['identifier'] + list(taxlist(include_strain=True))
+        w = csv.DictWriter(fp, fieldnames=headers)
+        w.writeheader()
+
+        for n, (ident, tax) in enumerate(self.items()):
+            row = {}
+            row['identifier'] = ident
+
+            # convert tax LineagePairs into dictionary
+            for t in tax:
+                row[t.rank] = t.name
+
+            # add strain if needed
+            if 'strain' in row:
+                row['strain'] = ''
+
+            w.writerow(row)
+
 
 def load_taxonomy_sqlite(location):
     db = LineageDB_Sqlite.load(location)

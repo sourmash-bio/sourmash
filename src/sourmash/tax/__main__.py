@@ -289,58 +289,14 @@ def annotate(args):
 
 def prepare(args):
     "Combine multiple taxonomy databases into one and/or translate formats."
-
-    import sqlite3
-
-    # @CTB currently only outputs sqlite <grin>
-    db = sqlite3.connect(args.output)
-
-    cursor = db.cursor()
-    did_create = False
-    try:
-        cursor.execute("""
-
-    CREATE TABLE taxonomy (
-        ident TEXT NOT NULL,
-        superkingdom TEXT,
-        phylum TEXT,
-        class TEXT,
-        order_ TEXT,
-        family TEXT,
-        genus TEXT,
-        species TEXT,
-        strain TEXT
-    )
-    """)
-        notify('created sqlite table')
-        did_create = True
-    except sqlite3.OperationalError:
-        # already exists?
-        notify('table exists! not creating.')
-
-    if did_create:
-        # follow up and create index
-        cursor.execute("CREATE UNIQUE INDEX taxonomy_ident ON taxonomy(ident);")
-
     notify("loading taxonomies...")
     tax_assign, avail_ranks = tax_utils.load_taxonomies(args.taxonomy_csv,
                                                         split_identifiers=True)
     notify(f"...loaded {len(tax_assign)} entries.")
 
-    n = 0
-    for n, (ident, tax) in enumerate(tax_assign.items()):
-        if n and n % 1000 == 0:
-            notify(f'... processed {n} taxonomy rows', end='\r')
-        x = [ident, *[ t.name for t in tax ]]
-        if len(x) == 8:
-            x.append('')
-        cursor.execute('INSERT INTO taxonomy (ident, superkingdom, phylum, class, order_, family, genus, species, strain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', x)
-
-    notify(f'processed {n} taxonomy rows total')
-
-    notify(f'writing to {args.output}...')
-    db.commit()
-    notify('...done!')
+    notify(f"saving to '{args.output}', format {args.database_format}...")
+    tax_assign.save(args.output, args.database_format)
+    notify("done!")
 
 
 def main(arglist=None):
