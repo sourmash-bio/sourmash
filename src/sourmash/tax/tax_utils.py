@@ -550,7 +550,6 @@ class LineageDB_Sqlite(abc.Mapping):
         ranks = set()
         for column, rank in zip(self.columns, taxlist(include_strain=True)):
             query = f'SELECT COUNT({column}) FROM taxonomy WHERE {column} IS NOT NULL AND {column} != ""'
-            print(query)
             try:
                 c.execute(query)
             except:

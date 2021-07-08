@@ -295,7 +295,8 @@ def prepare(args):
     notify("loading taxonomies...")
     try:
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
-                                         split_identifiers=True)
+                       split_identifiers=not args.keep_full_identifiers,
+                       keep_identifier_versions=args.keep_identifier_versions)
     except ValueError as exc:
         error("ERROR while loading taxonomies!")
         error(str(exc))

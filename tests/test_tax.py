@@ -46,6 +46,38 @@ def test_metagenome_stdout_0(runtmp):
     assert "test1,species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus" in c.last_result.out
 
 
+def test_metagenome_stdout_0_db(runtmp):
+    # test basic metagenome with sqlite database
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.db')
+
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,rank,fraction,lineage" in c.last_result.out
+    assert 'test1,superkingdom,0.131,d__Bacteria' in c.last_result.out
+    assert "test1,phylum,0.073,d__Bacteria;p__Bacteroidota" in c.last_result.out
+    assert "test1,phylum,0.058,d__Bacteria;p__Proteobacteria" in c.last_result.out
+    assert "test1,class,0.073,d__Bacteria;p__Bacteroidota;c__Bacteroidia" in c.last_result.out
+    assert "test1,class,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria" in c.last_result.out
+    assert "test1,order,0.073,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales" in c.last_result.out
+    assert "test1,order,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales" in c.last_result.out
+    assert "test1,family,0.073,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae" in c.last_result.out
+    assert "test1,family,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae" in c.last_result.out
+    assert "test1,genus,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia" in c.last_result.out
+    assert "test1,genus,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella" in c.last_result.out
+    assert "test1,genus,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola" in c.last_result.out
+    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "test1,species,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in c.last_result.out
+    assert "test1,species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus" in c.last_result.out
+
+
 def test_metagenome_summary_csv_out(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
@@ -1255,29 +1287,62 @@ def test_annotate_empty_tax_lineage_input(runtmp):
     assert f"cannot read taxonomy assignments from" in str(exc.value)
 
 
-def test_tax_prepare_1_csv_to_csv(runtmp):
+def test_tax_prepare_1_csv_to_csv(runtmp, split_identifiers, keep_versions):
     # CSV -> CSV; same assignments
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     taxout = runtmp.output('out.csv')
 
-    runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o', taxout, '-F', 'csv')
+    args = []
+    if not split_identifiers:
+        args.append('--keep-full-identifiers')
+    if keep_versions:
+        args.append('--keep-identifier-versions')
+
+    # this is an error - can't strip versions if not splitting identifiers
+    if not split_identifiers and not keep_versions:
+        with pytest.raises(ValueError):
+            runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o',
+                                taxout, '-F', 'csv', *args)
+        return
+
+    runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o',
+                        taxout, '-F', 'csv', *args)
     assert os.path.exists(taxout)
 
-    db1 = tax_utils.MultiLineageDB.load([tax])
+    db1 = tax_utils.MultiLineageDB.load([tax],
+                                        split_identifiers=split_identifiers,
+                                        keep_identifier_versions=keep_versions)
+
     db2 = tax_utils.MultiLineageDB.load([taxout])
 
     assert set(db1) == set(db2)
 
 
-def test_tax_prepare_2_csv_to_sql(runtmp):
+def test_tax_prepare_2_csv_to_sql(runtmp, split_identifiers, keep_versions):
     # CSV -> SQL; same assignments?
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     taxout = runtmp.output('out.db')
 
-    runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o', taxout, '-F', 'sql')
+    args = []
+    if not split_identifiers:
+        args.append('--keep-full-identifiers')
+    if keep_versions:
+        args.append('--keep-identifier-versions')
+
+    # this is an error - can't strip versions if not splitting identifiers
+    if not split_identifiers and not keep_versions:
+        with pytest.raises(ValueError):
+            runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o', taxout,
+                                '-F', 'sql', *args)
+        return
+
+    runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o', taxout,
+                        '-F', 'sql', *args)
     assert os.path.exists(taxout)
 
-    db1 = tax_utils.MultiLineageDB.load([tax])
+    db1 = tax_utils.MultiLineageDB.load([tax],
+                                        split_identifiers=split_identifiers,
+                                        keep_identifier_versions=keep_versions)
     db2 = tax_utils.MultiLineageDB.load([taxout])
 
     assert set(db1) == set(db2)
@@ -1285,7 +1350,7 @@ def test_tax_prepare_2_csv_to_sql(runtmp):
     # cannot overwrite -
     with pytest.raises(ValueError) as exc:
         runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o', taxout,
-                            '-F', 'sql')
+                            '-F', 'sql', *args)
     assert 'taxonomy table already exists' in str(exc.value)
 
 
@@ -1301,9 +1366,13 @@ def test_tax_prepare_3_db_to_csv(runtmp):
     with open(taxout) as fp:
         print(fp.read())
 
-    db1 = tax_utils.MultiLineageDB.load([taxcsv])
-    db2 = tax_utils.MultiLineageDB.load([taxout])
-    db3 = tax_utils.MultiLineageDB.load([taxdb])
+    db1 = tax_utils.MultiLineageDB.load([taxcsv],
+                                        split_identifiers=True,
+                                        keep_identifier_versions=False)
 
+    db2 = tax_utils.MultiLineageDB.load([taxout])
+    db3 = tax_utils.MultiLineageDB.load([taxdb],
+                                        split_identifiers=True,
+                                        keep_identifier_versions=False)
     assert set(db1) == set(db2)
     assert set(db1) == set(db3)

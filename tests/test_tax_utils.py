@@ -910,22 +910,35 @@ def test_tax_multi_load_files_shadowed(runtmp):
     taxonomy_csv2 = utils.get_test_data('tax/test-strain.taxonomy.csv')
     taxonomy_db = utils.get_test_data('tax/test.taxonomy.db')
 
-    db = MultiLineageDB.load([taxonomy_csv, taxonomy_csv2, taxonomy_db])
+    db = MultiLineageDB.load([taxonomy_csv, taxonomy_csv2, taxonomy_db],
+                             split_identifiers=True,
+                             keep_identifier_versions=False)
     assert len(db.shadowed_identifiers()) == 6
 
     # we should have everything including strain
     assert set(lca_utils.taxlist()) == set(db.available_ranks)
 
-    db = MultiLineageDB.load([taxonomy_csv, taxonomy_db])
+    db = MultiLineageDB.load([taxonomy_csv, taxonomy_db],
+                             split_identifiers=True,
+                             keep_identifier_versions=False)
     assert len(db.shadowed_identifiers()) == 6
     assert set(lca_utils.taxlist(include_strain=False)) == set(db.available_ranks)
 
 
-def test_tax_multi_save_files(runtmp):
+def test_tax_multi_save_files(runtmp, split_identifiers, keep_versions):
     # test save
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
 
-    db = MultiLineageDB.load([taxonomy_csv], split_identifiers=True)
+    if not split_identifiers and not keep_versions:
+        with pytest.raises(ValueError):
+            db = MultiLineageDB.load([taxonomy_csv],
+                                     split_identifiers=split_identifiers,
+                                     keep_identifier_versions=keep_versions)
+        return
+
+    db = MultiLineageDB.load([taxonomy_csv],
+                             split_identifiers=split_identifiers,
+                             keep_identifier_versions=keep_versions)
 
     out_db = runtmp.output('out.db')
     out_csv = runtmp.output('out.csv')
@@ -1018,7 +1031,7 @@ def test_lineage_db_sql_load(runtmp):
     assert len(db) == 6
     db.available_ranks
     assert 'strain' not in db.available_ranks
-    assert db['GCF_001881345.1'][0].rank == 'superkingdom'
+    assert db['GCF_001881345'][0].rank == 'superkingdom'
     with pytest.raises(KeyError):
         db['foo']
 
