@@ -12,7 +12,7 @@ from sourmash.logging import set_quiet, error, notify
 from sourmash.lca.lca_utils import display_lineage
 
 from . import tax_utils
-from .tax_utils import ClassificationResult
+from .tax_utils import ClassificationResult, MultiLineageDB
 
 usage='''
 sourmash taxonomy <command> [<args>] - manipulate/work with taxonomy information.
@@ -61,22 +61,16 @@ def metagenome(args):
     set_quiet(args.quiet)
 
     # first, load taxonomic_assignments
-    tax_assign = {}
-    available_ranks = set()
-    for tax_csv in args.taxonomy_csv:
-
-        try:
-            this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
-                                              keep_identifier_versions = args.keep_identifier_versions,
-                                              force=args.force)
-            # maybe check for overlapping tax assignments? currently, later ones will override earlier ones
-            tax_assign.update(this_tax_assign)
-            available_ranks.update(set(avail_ranks))
-
-        except ValueError as exc:
-            error(f"ERROR: {str(exc)}")
-            sys.exit(-1)
-
+    try:
+        tax_assign = MultiLineageDB.load(args.taxonomy_csv,
+                       keep_full_identifiers=args.keep_full_identifiers,
+                       keep_identifier_versions=args.keep_identifier_versions,
+                       force=args.force)
+        available_ranks = tax_assign.available_ranks
+    except ValueError as exc:
+        error(f"ERROR: {str(exc)}")
+        sys.exit(-1)
+        
     if not tax_assign:
         error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
         sys.exit(-1)
@@ -103,7 +97,7 @@ def metagenome(args):
     seen_perfect = set()
     for rank in sourmash.lca.taxlist(include_strain=False):
         summarized_gather[rank], seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                                split_identifiers=not args.keep_full_identifiers,
+                                                                keep_full_identifiers=args.keep_full_identifiers,
                                                                 keep_identifier_versions = args.keep_identifier_versions,
                                                                 seen_perfect = seen_perfect)
 
@@ -139,20 +133,16 @@ def genome(args):
     set_quiet(args.quiet)
 
     # first, load taxonomic_assignments
-    tax_assign = {}
-    available_ranks = set()
-    for tax_csv in args.taxonomy_csv:
-
-        try:
-            this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
-                                              keep_identifier_versions = args.keep_identifier_versions,
-                                              force=args.force)
-            # maybe check for overlapping tax assignments? currently later ones will override earlier ones
-            tax_assign.update(this_tax_assign)
-            available_ranks.update(set(avail_ranks))
-        except ValueError as exc:
-            error(f"ERROR: {str(exc)}")
-
+    try:
+        tax_assign = MultiLineageDB.load(args.taxonomy_csv,
+                       keep_full_identifiers=args.keep_full_identifiers,
+                       keep_identifier_versions=args.keep_identifier_versions,
+                       force=args.force)
+        available_ranks = tax_assign.available_ranks
+    except ValueError as exc:
+        error(f"ERROR: {str(exc)}")
+        sys.exit(-1)
+        
     if not tax_assign:
         error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
         sys.exit(-1)
@@ -184,7 +174,7 @@ def genome(args):
     # if --rank is specified, classify to that rank
     if args.rank:
         best_at_rank, seen_perfect = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                     split_identifiers=not args.keep_full_identifiers,
+                                                     keep_full_identifiers=args.keep_full_identifiers,
                                                      keep_identifier_versions = args.keep_identifier_versions,
                                                      best_only=True, seen_perfect=seen_perfect)
 
@@ -210,7 +200,7 @@ def genome(args):
         for rank in tax_utils.ascending_taxlist(include_strain=False):
             # gets best_at_rank for all queries in this gather_csv
             best_at_rank, seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                         split_identifiers=not args.keep_full_identifiers,
+                                                         keep_full_identifiers=args.keep_full_identifiers,
                                                          keep_identifier_versions = args.keep_identifier_versions,
                                                          best_only=True, seen_perfect=seen_perfect)
 
@@ -257,22 +247,16 @@ def annotate(args):
     set_quiet(args.quiet)
 
     # first, load taxonomic_assignments
-    tax_assign = {}
-    this_tax_assign = None
-    for tax_csv in args.taxonomy_csv:
-
-        try:
-            this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
-                                              keep_identifier_versions = args.keep_identifier_versions,
-                                              force=args.force)
-        except ValueError as exc:
-            error(f"ERROR: {str(exc)}")
-            sys.exit(-1)
-
-        # maybe check for overlapping tax assignments? currently later ones will override earlier ones
-        if this_tax_assign:
-            tax_assign.update(this_tax_assign)
-
+    try:
+        tax_assign = MultiLineageDB.load(args.taxonomy_csv,
+                       keep_full_identifiers=args.keep_full_identifiers,
+                       keep_identifier_versions=args.keep_identifier_versions,
+                       force=args.force)
+        available_ranks = tax_assign.available_ranks
+    except ValueError as exc:
+        error(f"ERROR: {str(exc)}")
+        sys.exit(-1)
+        
     if not tax_assign:
         error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
         sys.exit(-1)
@@ -300,10 +284,35 @@ def annotate(args):
             for row in gather_results:
                 match_ident = row['name']
                 lineage = tax_utils.find_match_lineage(match_ident, tax_assign, skip_idents=idents_missed,
-                                             split_identifiers=not args.keep_full_identifiers,
+                                             keep_full_identifiers=args.keep_full_identifiers,
                                              keep_identifier_versions=args.keep_identifier_versions)
                 row['lineage'] = display_lineage(lineage)
                 w.writerow(row)
+
+
+def prepare(args):
+    "Combine multiple taxonomy databases into one and/or translate formats."
+    notify("loading taxonomies...")
+    try:
+        tax_assign = MultiLineageDB.load(args.taxonomy_csv,
+                       keep_full_identifiers=args.keep_full_identifiers,
+                       keep_identifier_versions=args.keep_identifier_versions)
+    except ValueError as exc:
+        error("ERROR while loading taxonomies!")
+        error(str(exc))
+        sys.exit(-1)
+
+    notify(f"...loaded {len(tax_assign)} entries.")
+
+    notify(f"saving to '{args.output}', format {args.database_format}...")
+    try:
+        tax_assign.save(args.output, args.database_format)
+    except ValueError as exc:
+        error("ERROR while saving!")
+        error(str(exc))
+        sys.exit(-1)
+
+    notify("done!")
 
 
 def main(arglist=None):
