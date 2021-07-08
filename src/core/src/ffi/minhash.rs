@@ -71,10 +71,7 @@ Result<*const u64> {
         CStr::from_ptr(sequence)
     };
 
-    let output = match mh.seq_to_hashes(c_str.to_bytes(), force) {
-        Ok(s) => s,
-        Err(e) => return Err(e),
-    };
+    let output = mh.seq_to_hashes(c_str.to_bytes(), force)?;
 
     *size = output.len();
 
