@@ -69,7 +69,7 @@ Result<*const u64> {
         slice::from_raw_parts(sequence as *const u8, insize)
     };
 
-    let output = mh.seq_to_hashes(c_str.to_bytes(), force)?;
+    let output = mh.seq_to_hashes(buf, force)?;
 
     *size = output.len();
 

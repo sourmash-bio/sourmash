@@ -299,7 +299,7 @@ class MinHash(RustObject):
         "Convert sequence to hashes without adding to the sketch."
 
         size = ffi.new("uintptr_t *")
-        hashes_ptr = self._methodcall(lib.kmerminhash_seq_to_hashes, to_bytes(sequence), force, size)
+        hashes_ptr = self._methodcall(lib.kmerminhash_seq_to_hashes, to_bytes(sequence), len(sequence), force, size)
         size = size[0]
 
         try:

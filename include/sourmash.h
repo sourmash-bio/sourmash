@@ -187,7 +187,7 @@ const uint64_t *kmerminhash_get_abunds(SourmashKmerMinHash *ptr, uintptr_t *size
 
 const uint64_t *kmerminhash_get_mins(const SourmashKmerMinHash *ptr, uintptr_t *size);
 
-const uint64_t *kmerminhash_seq_to_hashes(SourmashKmerMinHash *ptr, const char *sequence, bool force, uintptr_t *size);
+const uint64_t *kmerminhash_seq_to_hashes(SourmashKmerMinHash *ptr, const char *sequence, uintptr_t insize, bool force, uintptr_t *size);
 
 uintptr_t kmerminhash_get_mins_size(const SourmashKmerMinHash *ptr);
 
