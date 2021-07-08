@@ -127,10 +127,7 @@ pub trait SigsTrait {
     }
 
     fn add_sequence(&mut self, seq: &[u8], force: bool) -> Result<(), Error> {
-        let ready_hashes = match self.seq_to_hashes(seq, force) {
-            Ok(s) => s,
-            Err(e) => return Err(e),
-        };
+        let ready_hashes = self.seq_to_hashes(seq, force)?;
 
         for hash_value in ready_hashes.iter() {
             self.add_hash(*hash_value);
