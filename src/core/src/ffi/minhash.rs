@@ -59,16 +59,14 @@ unsafe fn kmerminhash_add_sequence(ptr: *mut SourmashKmerMinHash, sequence: *con
 }
 
 ffi_fn! {
-unsafe fn kmerminhash_seq_to_hashes(ptr: *mut SourmashKmerMinHash, sequence: *const c_char, force: bool, size: *mut usize) ->
+unsafe fn kmerminhash_seq_to_hashes(ptr: *mut SourmashKmerMinHash, sequence: *const c_char, insize: usize, force: bool, size: *mut usize) ->
 Result<*const u64> {
 
     let mh = SourmashKmerMinHash::as_rust_mut(ptr);
 
-    // FIXME: take buffer and len instead of c_char
-    let c_str = {
-        assert!(!sequence.is_null());
-
-        CStr::from_ptr(sequence)
+    let buf = {
+        assert!(!ptr.is_null());
+        slice::from_raw_parts(sequence as *const u8, insize)
     };
 
     let output = mh.seq_to_hashes(c_str.to_bytes(), force)?;
