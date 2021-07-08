@@ -611,6 +611,25 @@ def test_genome_rank_stdout_0(runtmp):
     assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
+def test_genome_rank_stdout_0_db(runtmp):
+    # test basic genome with sqlite database
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.db')
+
+    c.run_sourmash('tax', 'genome', '--gather-csv', g_csv, '--taxonomy-csv',
+                   tax, '--rank', 'species', '--containment-threshold', '0')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,status,rank,fraction,lineage" in c.last_result.out
+    assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+
+
 def test_genome_rank_csv_0(runtmp):
     # test basic genome - output csv
     c = runtmp
@@ -1209,6 +1228,34 @@ def test_annotate_0(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csvout = runtmp.output("test1.gather.with-lineages.csv")
+    out_dir = os.path.dirname(csvout)
+
+    c.run_sourmash('tax', 'annotate', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', out_dir)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+
+    lin_gather_results = [x.rstrip() for x in open(csvout)]
+    print("\n".join(lin_gather_results))
+    assert f"saving `annotate` output to {csvout}" in runtmp.last_result.err
+
+    assert "lineage" in lin_gather_results[0]
+    assert "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in lin_gather_results[1]
+    assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in lin_gather_results[2]
+    assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus" in lin_gather_results[3]
+    assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in lin_gather_results[4]
+
+
+def test_annotate_0_db(runtmp):
+    # test annotate with sqlite db
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.db')
     csvout = runtmp.output("test1.gather.with-lineages.csv")
     out_dir = os.path.dirname(csvout)
 
