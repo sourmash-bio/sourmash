@@ -350,27 +350,17 @@ def index(args):
 
     if args.sparseness < 0 or args.sparseness > 1.0:
         error('sparseness must be in range [0.0, 1.0].')
-
-    # if args.scaled:
-    #     args.scaled = int(args.scaled)
-    #     notify('downsampling signatures to scaled={}', args.scaled)
-
     
-    if isinstance(args.scaled, float):
-        if args.scaled:
-            if args.scaled < 0:
-                error('ERROR: --scaled value must be positive')
-                sys.exit(-1)
-            if args.scaled < 100:
-                notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
-            if args.scaled > 1e6:
-                notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
-            args.scaled = int(args.scaled)
-            notify('downsampling signatures to scaled={}', args.scaled)
-        if args.scaled == 0:
-            error('ERROR: --scaled value must be >= 1')
+    if args.scaled:
+        if args.scaled < 0:
+            error('ERROR: --scaled value must be positive')
             sys.exit(-1)
-
+        if args.scaled < 100:
+            notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
+        if args.scaled > 1e6:
+            notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
+        args.scaled = int(args.scaled)
+        notify('downsampling signatures to scaled={}', args.scaled)
 
     inp_files = list(args.signatures)
     if args.from_file:
@@ -405,11 +395,6 @@ def index(args):
             moltypes.add(sourmash_args.get_moltype(ss))
             nums.add(ss.minhash.num)
 
-            # if args.scaled:
-            #     ss.minhash = ss.minhash.downsample(scaled=args.scaled)
-
-
-            # if isinstance(args.scaled, float):
             if args.scaled:
                 if args.scaled < 0:
                     error('ERROR: --scaled value must be positive')
@@ -419,10 +404,6 @@ def index(args):
                 if args.scaled > 1e6:
                     notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
                 ss.minhash = ss.minhash.downsample(scaled=args.scaled)
-            # if args.scaled == 0:
-            #     error('ERROR: --scaled value must be >= 1')
-            #     sys.exit(-1)
-
 
             if ss.minhash.track_abundance:
                 ss.minhash = ss.minhash.flatten()
@@ -484,38 +465,21 @@ def search(args):
                                              query.minhash.ksize,
                                              sourmash_args.get_moltype(query))
 
-    # downsample if requested
-    # if args.scaled:
-    #     if not query.minhash.scaled:
-    #         error('cannot downsample a signature not created with --scaled')
-    #         sys.exit(-1)
-
-    #     if args.scaled != query.minhash.scaled:
-    #         notify('downsampling query from scaled={} to {}',
-    #                query.minhash.scaled, int(args.scaled))
-    #     query.minhash = query.minhash.downsample(scaled=args.scaled)
-
-
-    if isinstance(args.scaled, float):
-        if args.scaled:
-            if args.scaled < 0:
-                error('ERROR: --scaled value must be positive')
-                sys.exit(-1)
-            if args.scaled < 100:
-                notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
-            if args.scaled > 1e6:
-                notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
-            if not query.minhash.scaled:
-                error('cannot downsample a signature not created with --scaled')
-                sys.exit(-1)
-            if args.scaled != query.minhash.scaled:
-                notify('downsampling query from scaled={} to {}',
-                    query.minhash.scaled, int(args.scaled))
-            query.minhash = query.minhash.downsample(scaled=args.scaled)
-        if args.scaled == 0:
-            error('ERROR: --scaled value must be >= 1')
+    if args.scaled:
+        if args.scaled < 0:
+            error('ERROR: --scaled value must be positive')
             sys.exit(-1)
-
+        if args.scaled < 100:
+            notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
+        if args.scaled > 1e6:
+            notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
+        if not query.minhash.scaled:
+            error('cannot downsample a signature not created with --scaled')
+            sys.exit(-1)
+        if args.scaled != query.minhash.scaled:
+            notify('downsampling query from scaled={} to {}',
+                query.minhash.scaled, int(args.scaled))
+        query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # set up the search databases
     is_containment = args.containment or args.max_containment
@@ -702,29 +666,17 @@ def gather(args):
         error('query signature needs to be created with --scaled')
         sys.exit(-1)
 
-    # downsample if requested
-    # if args.scaled:
-    #     notify('downsampling query from scaled={} to {}',
-    #            query.minhash.scaled, int(args.scaled))
-    #     query.minhash = query.minhash.downsample(scaled=args.scaled)
-
-
-    if isinstance(args.scaled, float):
-        if args.scaled:
-            if args.scaled < 0:
-                error('ERROR: --scaled value must be positive')
-                sys.exit(-1)
-            if args.scaled < 100:
-                notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
-            if args.scaled > 1e6:
-                notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
-            notify('downsampling query from scaled={} to {}',
-               query.minhash.scaled, int(args.scaled))
-            query.minhash = query.minhash.downsample(scaled=args.scaled)
-        if args.scaled == 0:
-            error('ERROR: --scaled value must be >= 1')
+    if args.scaled:
+        if args.scaled < 0:
+            error('ERROR: --scaled value must be positive')
             sys.exit(-1)
-
+        if args.scaled < 100:
+            notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
+        if args.scaled > 1e6:
+            notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
+        notify('downsampling query from scaled={} to {}',
+            query.minhash.scaled, int(args.scaled))
+        query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # empty?
     if not len(query.minhash):
@@ -942,30 +894,18 @@ def multigather(args):
                 error('query signature needs to be created with --scaled; skipping')
                 continue
 
-            # downsample if requested
-            # if args.scaled:
-            #     notify('downsampling query from scaled={} to {}',
-            #            query.minhash.scaled, int(args.scaled))
-            #     query.minhash = query.minhash.downsample(scaled=args.scaled)
-
-
-            if isinstance(args.scaled, float):
-                if args.scaled:
-                    if args.scaled < 0:
-                        error('ERROR: --scaled value must be positive')
-                        sys.exit(-1)
-                    if args.scaled < 100:
-                        notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
-                    if args.scaled > 1e6:
-                        notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
-                    notify('downsampling query from scaled={} to {}',
-                       query.minhash.scaled, int(args.scaled))
-                    query.minhash = query.minhash.downsample(scaled=args.scaled)
-                if args.scaled == 0:
-                    error('ERROR: --scaled value must be >= 1')
+            if args.scaled:
+                if args.scaled < 0:
+                    error('ERROR: --scaled value must be positive')
                     sys.exit(-1)
-
-
+                if args.scaled < 100:
+                    notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
+                if args.scaled > 1e6:
+                    notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
+                notify('downsampling query from scaled={} to {}',
+                    query.minhash.scaled, int(args.scaled))
+                query.minhash = query.minhash.downsample(scaled=args.scaled)
+ 
             # empty?
             if not len(query.minhash):
                 error('no query hashes!? skipping to next..')
@@ -1229,29 +1169,17 @@ def prefetch(args):
     if query_mh.track_abundance:
         query_mh = query_mh.flatten()
 
-    # downsample if/as requested
-    # if args.scaled:
-    #     notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
-    #     query_mh = query_mh.downsample(scaled=args.scaled)
-    # notify(f"all sketches will be downsampled to scaled={query_mh.scaled}")
-
-
-    if isinstance(args.scaled, float):
-        if args.scaled:
-            if args.scaled < 0:
-                error('ERROR: --scaled value must be positive')
-                sys.exit(-1)
-            if args.scaled < 100:
-                notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
-            if args.scaled > 1e6:
-                notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
-            notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
-            query_mh = query_mh.downsample(scaled=args.scaled)
-        if args.scaled == 0:
-            error('ERROR: --scaled value must be >= 1')
+    if args.scaled:
+        if args.scaled < 0:
+            error('ERROR: --scaled value must be positive')
             sys.exit(-1)
+        if args.scaled < 100:
+            notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
+        if args.scaled > 1e6:
+            notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
+        notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
+        query_mh = query_mh.downsample(scaled=args.scaled)
     notify(f"all sketches will be downsampled to scaled={query_mh.scaled}")
-
 
     # empty?
     if not len(query_mh):

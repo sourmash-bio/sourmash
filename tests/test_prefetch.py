@@ -388,20 +388,6 @@ def test_prefetch_no_db(runtmp, linear_gather):
     assert "ERROR: no databases or signatures to search!?" in c.last_result.err
 
 
-def test_prefetch_check_scaled_bounds_zero(runtmp, linear_gather):
-    c = runtmp
-
-    sig2 = utils.get_test_data('2.fa.sig')
-    sig47 = utils.get_test_data('47.fa.sig')
-    sig63 = utils.get_test_data('63.fa.sig')
-
-    with pytest.raises(ValueError) as exc:
-        c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
-                    '--scaled', '0', linear_gather)
-
-    assert "ERROR: --scaled value must be >= 1" in str(exc.value)
-
-
 def test_prefetch_check_scaled_bounds_negative(runtmp, linear_gather):
     c = runtmp
 
