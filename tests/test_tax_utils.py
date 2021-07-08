@@ -63,7 +63,7 @@ def test_get_ident_split_but_keep_version():
 
 def test_get_ident_no_split():
     ident = "GCF_001881345.1 secondname"
-    n_id = get_ident(ident, split_identifiers=False)
+    n_id = get_ident(ident, keep_full_identifiers=True)
     assert n_id == "GCF_001881345.1 secondname"
 
 
@@ -86,7 +86,7 @@ def test_check_and_load_gather_csvs_empty(runtmp):
     csvs = [g_res]
     # load taxonomy csv
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign = MultiLineageDB.load([taxonomy_csv], split_identifiers=True)
+    tax_assign = MultiLineageDB.load([taxonomy_csv], keep_full_identifiers=1)
 
     print(tax_assign)
     # check gather results and missing ids
@@ -112,7 +112,8 @@ def test_check_and_load_gather_csvs_with_empty_force(runtmp):
 
     # load taxonomy csv
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign = MultiLineageDB.load([taxonomy_csv], split_identifiers=True,
+    tax_assign = MultiLineageDB.load([taxonomy_csv],
+                                     keep_full_identifiers=False,
                                      keep_identifier_versions=False)
     print(tax_assign)
     # check gather results and missing ids
@@ -137,7 +138,7 @@ def test_check_and_load_gather_csvs_fail_on_missing(runtmp):
 
     # load taxonomy csv
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign = MultiLineageDB.load([taxonomy_csv], split_identifiers=True)
+    tax_assign = MultiLineageDB.load([taxonomy_csv], keep_full_identifiers=1)
     print(tax_assign)
     # check gather results and missing ids
     with pytest.raises(ValueError) as exc:
@@ -190,7 +191,7 @@ def test_load_taxonomy_csv():
 
 def test_load_taxonomy_csv_split_id():
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign = MultiLineageDB.load([taxonomy_csv], split_identifiers=True,
+    tax_assign = MultiLineageDB.load([taxonomy_csv], keep_full_identifiers=0,
                                      keep_identifier_versions=False)
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345', 'GCF_009494285', 'GCF_013368705', 'GCF_003471795', 'GCF_000017325', 'GCF_000021665']
@@ -208,7 +209,7 @@ def test_load_taxonomy_csv_with_ncbi_id(runtmp):
         tax.append(ncbi_tax)
         new_tax.write("\n".join(tax))
 
-    tax_assign = MultiLineageDB.load([upd_csv])
+    tax_assign = MultiLineageDB.load([upd_csv], keep_full_identifiers=True)
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1', "ncbi_id after_space"]
     assert len(tax_assign) == 7  # should have read 7 rows
@@ -225,7 +226,7 @@ def test_load_taxonomy_csv_split_id_ncbi(runtmp):
         tax.append(ncbi_tax)
         new_tax.write("\n".join(tax))
 
-    tax_assign = MultiLineageDB.load([upd_csv], split_identifiers=True,
+    tax_assign = MultiLineageDB.load([upd_csv], keep_full_identifiers=False,
                                      keep_identifier_versions=False)
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345', 'GCF_009494285', 'GCF_013368705', 'GCF_003471795', 'GCF_000017325', 'GCF_000021665', "ncbi_id"]
@@ -233,7 +234,7 @@ def test_load_taxonomy_csv_split_id_ncbi(runtmp):
 
     # check for non-sensical args.
     with pytest.raises(ValueError):
-        tax_assign = MultiLineageDB.load([upd_csv], split_identifiers=False,
+        tax_assign = MultiLineageDB.load([upd_csv], keep_full_identifiers=1,
                                          keep_identifier_versions=False)
 
 
@@ -911,7 +912,7 @@ def test_tax_multi_load_files_shadowed(runtmp):
     taxonomy_db = utils.get_test_data('tax/test.taxonomy.db')
 
     db = MultiLineageDB.load([taxonomy_csv, taxonomy_csv2, taxonomy_db],
-                             split_identifiers=True,
+                             keep_full_identifiers=False,
                              keep_identifier_versions=False)
     assert len(db.shadowed_identifiers()) == 6
 
@@ -919,25 +920,25 @@ def test_tax_multi_load_files_shadowed(runtmp):
     assert set(lca_utils.taxlist()) == set(db.available_ranks)
 
     db = MultiLineageDB.load([taxonomy_csv, taxonomy_db],
-                             split_identifiers=True,
+                             keep_full_identifiers=False,
                              keep_identifier_versions=False)
     assert len(db.shadowed_identifiers()) == 6
     assert set(lca_utils.taxlist(include_strain=False)) == set(db.available_ranks)
 
 
-def test_tax_multi_save_files(runtmp, split_identifiers, keep_versions):
+def test_tax_multi_save_files(runtmp, keep_identifiers, keep_versions):
     # test save
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
 
-    if not split_identifiers and not keep_versions:
+    if keep_identifiers and not keep_versions:
         with pytest.raises(ValueError):
             db = MultiLineageDB.load([taxonomy_csv],
-                                     split_identifiers=split_identifiers,
+                                     keep_full_identifiers=keep_identifiers,
                                      keep_identifier_versions=keep_versions)
         return
 
     db = MultiLineageDB.load([taxonomy_csv],
-                             split_identifiers=split_identifiers,
+                             keep_full_identifiers=keep_identifiers,
                              keep_identifier_versions=keep_versions)
 
     out_db = runtmp.output('out.db')

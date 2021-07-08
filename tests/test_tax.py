@@ -1287,19 +1287,19 @@ def test_annotate_empty_tax_lineage_input(runtmp):
     assert f"cannot read taxonomy assignments from" in str(exc.value)
 
 
-def test_tax_prepare_1_csv_to_csv(runtmp, split_identifiers, keep_versions):
+def test_tax_prepare_1_csv_to_csv(runtmp, keep_identifiers, keep_versions):
     # CSV -> CSV; same assignments
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     taxout = runtmp.output('out.csv')
 
     args = []
-    if not split_identifiers:
+    if keep_identifiers:
         args.append('--keep-full-identifiers')
     if keep_versions:
         args.append('--keep-identifier-versions')
 
     # this is an error - can't strip versions if not splitting identifiers
-    if not split_identifiers and not keep_versions:
+    if keep_identifiers and not keep_versions:
         with pytest.raises(ValueError):
             runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o',
                                 taxout, '-F', 'csv', *args)
@@ -1310,7 +1310,7 @@ def test_tax_prepare_1_csv_to_csv(runtmp, split_identifiers, keep_versions):
     assert os.path.exists(taxout)
 
     db1 = tax_utils.MultiLineageDB.load([tax],
-                                        split_identifiers=split_identifiers,
+                                        keep_full_identifiers=keep_identifiers,
                                         keep_identifier_versions=keep_versions)
 
     db2 = tax_utils.MultiLineageDB.load([taxout])
@@ -1318,19 +1318,19 @@ def test_tax_prepare_1_csv_to_csv(runtmp, split_identifiers, keep_versions):
     assert set(db1) == set(db2)
 
 
-def test_tax_prepare_2_csv_to_sql(runtmp, split_identifiers, keep_versions):
+def test_tax_prepare_2_csv_to_sql(runtmp, keep_identifiers, keep_versions):
     # CSV -> SQL; same assignments?
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     taxout = runtmp.output('out.db')
 
     args = []
-    if not split_identifiers:
+    if keep_identifiers:
         args.append('--keep-full-identifiers')
     if keep_versions:
         args.append('--keep-identifier-versions')
 
     # this is an error - can't strip versions if not splitting identifiers
-    if not split_identifiers and not keep_versions:
+    if keep_identifiers and not keep_versions:
         with pytest.raises(ValueError):
             runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o', taxout,
                                 '-F', 'sql', *args)
@@ -1341,7 +1341,7 @@ def test_tax_prepare_2_csv_to_sql(runtmp, split_identifiers, keep_versions):
     assert os.path.exists(taxout)
 
     db1 = tax_utils.MultiLineageDB.load([tax],
-                                        split_identifiers=split_identifiers,
+                                        keep_full_identifiers=keep_identifiers,
                                         keep_identifier_versions=keep_versions)
     db2 = tax_utils.MultiLineageDB.load([taxout])
 
@@ -1367,12 +1367,12 @@ def test_tax_prepare_3_db_to_csv(runtmp):
         print(fp.read())
 
     db1 = tax_utils.MultiLineageDB.load([taxcsv],
-                                        split_identifiers=True,
+                                        keep_full_identifiers=False,
                                         keep_identifier_versions=False)
 
     db2 = tax_utils.MultiLineageDB.load([taxout])
     db3 = tax_utils.MultiLineageDB.load([taxdb],
-                                        split_identifiers=True,
+                                        keep_full_identifiers=False,
                                         keep_identifier_versions=False)
     assert set(db1) == set(db2)
     assert set(db1) == set(db3)

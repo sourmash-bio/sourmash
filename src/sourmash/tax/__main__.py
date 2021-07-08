@@ -63,7 +63,7 @@ def metagenome(args):
     # first, load taxonomic_assignments
     try:
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
-                       split_identifiers=not args.keep_full_identifiers,
+                       keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
                        force=args.force)
         available_ranks = tax_assign.available_ranks
@@ -97,7 +97,7 @@ def metagenome(args):
     seen_perfect = set()
     for rank in sourmash.lca.taxlist(include_strain=False):
         summarized_gather[rank], seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                                split_identifiers=not args.keep_full_identifiers,
+                                                                keep_full_identifiers=args.keep_full_identifiers,
                                                                 keep_identifier_versions = args.keep_identifier_versions,
                                                                 seen_perfect = seen_perfect)
 
@@ -135,7 +135,7 @@ def genome(args):
     # first, load taxonomic_assignments
     try:
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
-                       split_identifiers=not args.keep_full_identifiers,
+                       keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
                        force=args.force)
         available_ranks = tax_assign.available_ranks
@@ -174,7 +174,7 @@ def genome(args):
     # if --rank is specified, classify to that rank
     if args.rank:
         best_at_rank, seen_perfect = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                     split_identifiers=not args.keep_full_identifiers,
+                                                     keep_full_identifiers=args.keep_full_identifiers,
                                                      keep_identifier_versions = args.keep_identifier_versions,
                                                      best_only=True, seen_perfect=seen_perfect)
 
@@ -200,7 +200,7 @@ def genome(args):
         for rank in tax_utils.ascending_taxlist(include_strain=False):
             # gets best_at_rank for all queries in this gather_csv
             best_at_rank, seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                         split_identifiers=not args.keep_full_identifiers,
+                                                         keep_full_identifiers=args.keep_full_identifiers,
                                                          keep_identifier_versions = args.keep_identifier_versions,
                                                          best_only=True, seen_perfect=seen_perfect)
 
@@ -249,7 +249,7 @@ def annotate(args):
     # first, load taxonomic_assignments
     try:
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
-                       split_identifiers=not args.keep_full_identifiers,
+                       keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
                        force=args.force)
         available_ranks = tax_assign.available_ranks
@@ -284,7 +284,7 @@ def annotate(args):
             for row in gather_results:
                 match_ident = row['name']
                 lineage = tax_utils.find_match_lineage(match_ident, tax_assign, skip_idents=idents_missed,
-                                             split_identifiers=not args.keep_full_identifiers,
+                                             keep_full_identifiers=args.keep_full_identifiers,
                                              keep_identifier_versions=args.keep_identifier_versions)
                 row['lineage'] = display_lineage(lineage)
                 w.writerow(row)
@@ -295,7 +295,7 @@ def prepare(args):
     notify("loading taxonomies...")
     try:
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
-                       split_identifiers=not args.keep_full_identifiers,
+                       keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions)
     except ValueError as exc:
         error("ERROR while loading taxonomies!")

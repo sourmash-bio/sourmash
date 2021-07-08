@@ -36,7 +36,7 @@ def hp(request):
 
 
 @pytest.fixture(params=[True, False])
-def split_identifiers(request):
+def keep_identifiers(request):
     return request.param
 
 

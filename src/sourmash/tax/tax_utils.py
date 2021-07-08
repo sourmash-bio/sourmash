@@ -26,11 +26,12 @@ from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import (LineagePair, taxlist, display_lineage, pop_to_rank)
 
 
-def get_ident(ident, *, split_identifiers=True, keep_identifier_versions=False):
+def get_ident(ident, *,
+              keep_full_identifiers=False, keep_identifier_versions=False):
     # split identifiers = split on whitespace
     # keep identifiers = don't split .[12] from assembly accessions
     "Hack and slash identifiers."
-    if split_identifiers:
+    if not keep_full_identifiers:
         ident = ident.split(' ')[0]
         if not keep_identifier_versions:
             ident = ident.split('.')[0]
@@ -157,9 +158,11 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
     return gather_results, all_ident_missed, total_missed, header
 
 
-def find_match_lineage(match_ident, tax_assign, *, skip_idents = [], split_identifiers=True, keep_identifier_versions=False):
+def find_match_lineage(match_ident, tax_assign, *, skip_idents = [],
+                       keep_full_identifiers=False,
+                       keep_identifier_versions=False):
     lineage=""
-    match_ident = get_ident(match_ident, split_identifiers=split_identifiers, keep_identifier_versions=keep_identifier_versions)
+    match_ident = get_ident(match_ident, keep_full_identifiers=keep_full_identifiers, keep_identifier_versions=keep_identifier_versions)
     # if identity not in lineage database, and not --fail-on-missing-taxonomy, skip summarizing this match
     if match_ident in skip_idents:
         return lineage
@@ -170,7 +173,10 @@ def find_match_lineage(match_ident, tax_assign, *, skip_idents = [], split_ident
     return lineage
 
 
-def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], split_identifiers=True, keep_identifier_versions=False, best_only=False, seen_perfect=set()):
+def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
+                        keep_full_identifiers=False,
+                        keep_identifier_versions=False, best_only=False,
+                        seen_perfect=set()):
     """
     Summarize gather results at specified taxonomic rank
     """
@@ -186,12 +192,17 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], s
 
         # 100% match? are we looking at something in the database?
         if f_uniq_weighted >= 1.0 and query_name not in seen_perfect: # only want to notify once, not for each rank
-            ident = get_ident(match_ident, split_identifiers=split_identifiers, keep_identifier_versions=keep_identifier_versions)
+            ident = get_ident(match_ident,
+                              keep_full_identifiers=keep_full_identifiers,
+                              keep_identifier_versions=keep_identifier_versions)
             seen_perfect.add(query_name)
             notify(f'WARNING: 100% match! Is query "{query_name}" identical to its database match, {ident}?')
 
         # get lineage for match
-        lineage = find_match_lineage(match_ident, tax_assign, skip_idents = skip_idents, split_identifiers=split_identifiers, keep_identifier_versions=keep_identifier_versions)
+        lineage = find_match_lineage(match_ident, tax_assign,
+                                     skip_idents=skip_idents,
+                             keep_full_identifiers=keep_full_identifiers,
+                             keep_identifier_versions=keep_identifier_versions)
         # ident was in skip_idents
         if not lineage:
             continue
@@ -431,19 +442,19 @@ class LineageDB(abc.Mapping):
 
     @classmethod
     def load(cls, filename, *, delimiter=',', force=False,
-             split_identifiers=False, keep_identifier_versions=True):
+             keep_full_identifiers=False, keep_identifier_versions=True):
         """
         Load a taxonomy assignment CSV file into a LineageDB.
 
-        'split_identifiers=True' will split identifiers from strings
+        'keep_full_identifiers=False' will split identifiers from strings
         using whitespace, e.g. 'IDENT other name stuff' => 'IDENT'
 
         'keep_identifier_versions=False' will remove trailing versions,
         e.g. 'IDENT.1' => 'IDENT'.
         """
         include_strain=False
-        if not keep_identifier_versions and not split_identifiers:
-            raise ValueError("keep_identifer_versions=False doesn't make sense with split_identifiers=False")
+        if not keep_identifier_versions and keep_full_identifiers:
+            raise ValueError("keep_identifer_versions=False doesn't make sense with keep_full_identifiers=True")
 
         if not os.path.exists(filename):
             raise ValueError(f"'{filename}' does not exist")
@@ -498,7 +509,7 @@ class LineageDB(abc.Mapping):
                     ident = row[identifier]
 
                     # fold, spindle, and mutilate ident?
-                    if split_identifiers:
+                    if not keep_full_identifiers:
                         ident = ident.split(' ')[0]
 
                         if not keep_identifier_versions:
