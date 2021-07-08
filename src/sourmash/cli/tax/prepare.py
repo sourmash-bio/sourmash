@@ -9,9 +9,7 @@ and saves them into a new database. It can be used to combine databases
 in the desired order, as well as output different database formats.
 
 Please see the 'tax prepare' documentation for more details:
-  https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-annotate-annotates-gather-output-with-taxonomy
-
-@CTB fix link
+  https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-prepare-prepare-and-or-combine-taxonomy-files
 """
 
 import sourmash

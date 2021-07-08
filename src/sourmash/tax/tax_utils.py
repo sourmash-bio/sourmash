@@ -561,11 +561,7 @@ class LineageDB_Sqlite(abc.Mapping):
         ranks = set()
         for column, rank in zip(self.columns, taxlist(include_strain=True)):
             query = f'SELECT COUNT({column}) FROM taxonomy WHERE {column} IS NOT NULL AND {column} != ""'
-            try:
-                c.execute(query)
-            except:
-                import traceback
-                traceback.print_exc()
+            c.execute(query)
             cnt, = c.fetchone()
             if cnt:
                 ranks.add(rank)
@@ -758,11 +754,7 @@ class MultiLineageDB(abc.Mapping):
 
         # follow up and create index
         cursor.execute("CREATE UNIQUE INDEX taxonomy_ident ON taxonomy(ident);")
-        # @CTB remove notify in here...
-        n = 0
-        for n, (ident, tax) in enumerate(self.items()):
-            if n and n % 1000 == 0:
-                notify(f'... processed {n} taxonomy rows', end='\r')
+        for ident, tax in self.items():
             x = [ident, *[ t.name for t in tax ]]
 
             if tax[-1].rank != 'strain':
@@ -820,7 +812,6 @@ class MultiLineageDB(abc.Mapping):
 
             # nothing loaded, goodbye!
             if not loaded:
-                assert 0
                 raise ValueError(f"cannot read taxonomy assignments from '{location}'")
 
             tax_assign.add(this_tax_assign)
