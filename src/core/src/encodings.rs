@@ -4,12 +4,9 @@ use std::iter::Iterator;
 use std::str;
 
 use once_cell::sync::Lazy;
-#[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
-use wasm_bindgen::prelude::*;
 
 use crate::Error;
 
-#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(u32)]
