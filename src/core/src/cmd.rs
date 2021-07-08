@@ -1,6 +1,3 @@
-#[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
-use wasm_bindgen::prelude::*;
-
 use getset::{CopyGetters, Getters, Setters};
 use typed_builder::TypedBuilder;
 
@@ -36,7 +33,6 @@ impl Signature {
 }
 
 #[allow(dead_code)]
-#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[derive(TypedBuilder, CopyGetters, Getters, Setters)]
 pub struct ComputeParameters {
     #[getset(get = "pub", set = "pub")]
