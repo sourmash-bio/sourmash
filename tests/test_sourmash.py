@@ -2019,10 +2019,6 @@ def test_search_check_scaled_bounds_negative():
         cmd = 'search {} gcf_all -k 21 --scaled -5'.format(query_sig)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                             in_directory=location, fail_ok=True)
-        assert status == -1
-
-        print(out)
-        print(err)
 
         assert "ERROR: --scaled value must be positive" in err
 
@@ -2038,10 +2034,6 @@ def test_search_check_scaled_bounds_less_than_minimum():
         cmd = 'search {} gcf_all -k 21 --scaled 50'.format(query_sig)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                             in_directory=location, fail_ok=True)
-        assert status == -1
-
-        print(out)
-        print(err)
 
         assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
 
@@ -2057,10 +2049,6 @@ def test_search_check_scaled_bounds_more_than_maximum():
         cmd = 'search {} gcf_all -k 21 --scaled 1e9'.format(query_sig)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                             in_directory=location, fail_ok=True)
-        assert status == -1
-
-        print(out)
-        print(err)
 
         assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
 
@@ -4189,11 +4177,6 @@ def test_gather_check_scaled_bounds_negative(prefetch_gather, linear_gather):
         status, out, err = utils.runscript('sourmash',
                                         cmd.split(' '),
                                         in_directory=location, fail_ok=True)
-        
-        assert status == -1
-
-        print(out)
-        print(err)
 
         assert "ERROR: --scaled value must be positive" in err
 
@@ -4210,11 +4193,6 @@ def test_gather_check_scaled_bounds_less_than_minimum(prefetch_gather, linear_ga
         status, out, err = utils.runscript('sourmash',
                                            cmd.split(' '),
                                            in_directory=location, fail_ok=True)
-        
-        assert status == -1
-
-        print(out)
-        print(err)
 
         assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
 
@@ -4231,11 +4209,6 @@ def test_gather_check_scaled_bounds_more_than_maximum(prefetch_gather, linear_ga
         status, out, err = utils.runscript('sourmash',
                                            cmd.split(' '),
                                            in_directory=location, fail_ok=True)
-        
-        assert status == -1
-
-        print(out)
-        print(err)
     
         assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
 

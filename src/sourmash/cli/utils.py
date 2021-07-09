@@ -98,10 +98,9 @@ def check_scaled_bounds(arg):
     actual_min_val = 0
     min_val = 100
     max_val = 1e6
-    try:
-        f = float(arg)
-    except ValueError:
-        raise argparse.ArgumentTypeError("Must be a floating point number")
+
+    f = float(arg)
+
     if f < actual_min_val:
         raise argparse.ArgumentTypeError(f"ERROR: --scaled value must be positive")
     if f < min_val:

@@ -45,10 +45,6 @@ def subparser(subparsers):
         help='output unassigned portions of the query as a signature to the '
         'specified file'
     )
-    # subparser.add_argument(
-    #     '--scaled', metavar='FLOAT', type=float, default=0,
-    #     help='downsample query to the specified scaled factor'
-    # )
     subparser.add_argument(
         '--ignore-abundance',  action='store_true',
         help='do NOT use k-mer abundances if present'
