@@ -35,7 +35,7 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
-        '-t', '--taxonomy-csv', metavar='FILE',
+        '-t', '--taxonomy-csv', '--taxonomy', metavar='FILE',
         nargs="+", required=True,
         help='database lineages CSV'
     )
