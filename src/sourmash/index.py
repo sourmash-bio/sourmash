@@ -1179,7 +1179,8 @@ class LazyMultiIndex(Index):
 
             # yield all remaining signatures:
             for ss, loc in idx_new.signatures_with_location():
-                yield ss, loc
+                if ss in picklist:
+                    yield ss, loc
 
     def __len__(self):
         return sum( [len(m) for m in self.manifest_list] )
