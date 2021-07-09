@@ -1095,6 +1095,11 @@ class LazyLoadedIndex(Index):
         idx = sourmash.load_file_as_index(self.location)
 
         # convert remaining manifest into picklist
+        # CTB: one optimization down the road is, for storage-backed
+        # Index objects, to just reach in and get the signatures directly,
+        # without going through 'select'. Still, this is nice for abstraction
+        # because we don't need to care what the index is - it'll work on
+        # anything. It just might be a bit slower.
         idx = idx.select(picklist=picklist)
 
         # extract signatures.
