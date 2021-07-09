@@ -4187,14 +4187,14 @@ def test_gather_check_scaled_bounds_negative(prefetch_gather, linear_gather):
         cmd = 'gather {} {} {} gcf_all -k 21 --scaled -5 --threshold-bp 50000'.format(query_sig, prefetch_gather, linear_gather)
 
         status, out, err = utils.runscript('sourmash',
-                                           cmd.split(' '),
-                                           in_directory=location, fail_ok=True)
+                                        cmd.split(' '),
+                                        in_directory=location, fail_ok=True)
         
         assert status == -1
 
         print(out)
         print(err)
-    
+
         assert "ERROR: --scaled value must be positive" in err
 
 

@@ -92,3 +92,27 @@ def command_list(dirpath):
     basenames = [os.path.splitext(path)[0] for path in filenames if not path.startswith('__')]
     basenames = filter(opfilter, basenames)
     return sorted(basenames)
+
+
+def check_scaled_bounds(arg):
+    actual_min_val = 0
+    min_val = 100
+    max_val = 1e6
+    try:
+        f = float(arg)
+    except ValueError:
+        raise argparse.ArgumentTypeError("Must be a floating point number")
+    if f < actual_min_val:
+        raise argparse.ArgumentTypeError(f"ERROR: --scaled value must be positive")
+    if f < min_val:
+        notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
+    if f > max_val:
+        notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
+    return f
+
+
+def add_scaled_arg(parser, default=None):
+    parser.add_argument(
+        '--scaled', metavar='FLOAT', type=check_scaled_bounds, default=0,
+        help='scaled value should be between 100 and 1e6; default={d}'.format(d=default)
+    )
