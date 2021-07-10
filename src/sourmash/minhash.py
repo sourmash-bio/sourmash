@@ -694,7 +694,7 @@ class MinHash(RustObject):
             abund_query_mh.set_abundances(abunds)
             self.minhash = abund_query_mh
 
-            return self
+            return abund_query_mh
 
 
 class FrozenMinHash(MinHash):
