@@ -211,18 +211,35 @@ class ManifestOfManifests:
         return sum([ len(m) for m in self.manifests ])
 
     @classmethod
-    def load_from_sqlite(cls, filename):
+    def load_from_sqlite(cls, filename, *,
+                         ksize=None, moltype=None, picklist=None):
         import sqlite3
         db = sqlite3.connect(filename)
         cursor = db.cursor()
-        cursor.execute('SELECT DISTINCT index_location, internal_location, md5, md5short, ksize, moltype, num, scaled, n_hashes, with_abundance, name, filename FROM manifest')
+
+        query = 'SELECT DISTINCT index_location, internal_location, md5, md5short, ksize, moltype, num, scaled, n_hashes, with_abundance, name, filename FROM manifest'
+        conditions = []
+        args = []
+        if ksize:
+            conditions.append('ksize=?')
+            args.append(int(ksize))
+        if moltype:
+            conditions.append('moltype=?')
+            args.append(moltype)
+
+        if conditions:
+            query += ' WHERE ' + " AND ".join(conditions)
+
+        cursor.execute(query, args)
+        rowkeys = 'internal_location, md5, md5short, ksize, moltype, num, scaled, n_hashes, with_abundance, name, filename'.split(', ')
 
         d = defaultdict(list)
-        rowkeys = 'internal_location, md5, md5short, ksize, moltype, num, scaled, n_hashes, with_abundance, name, filename'.split(', ')
         #print(rowkeys)
         for result in cursor:
             loc, *rest = result
             mrow = dict(zip(rowkeys, rest))
+            if picklist and not picklist.matches_manifest_row(mrow):
+                continue
             d[loc].append(mrow)
 
         locs = []
