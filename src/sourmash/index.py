@@ -1106,10 +1106,35 @@ class LazyLoadedIndex(Index):
         for ss in idx.signatures():
             yield ss
 
+    def find(self, *args, **kwargs):
+        "run find after loading and selecting"
+        if not len(self):
+            # nothing in manifest? done!
+            return []
+
+        # ok - something in manifest, let's go get those signatures!
+        picklist = self.manifest.to_picklist()
+        idx = sourmash.load_file_as_index(self.location)
+        print('loaded!', idx)
+
+        # convert remaining manifest into picklist
+        # CTB: one optimization down the road is, for storage-backed
+        # Index objects, to just reach in and get the signatures directly,
+        # without going through 'select'. Still, this is nice for abstraction
+        # because we don't need to care what the index is - it'll work on
+        # anything. It just might be a bit slower.
+        idx = idx.select(picklist=picklist)
+        print('SELECT', idx)
+
+        for x in idx.find(*args, **kwargs):
+            yield x
+
     def __len__(self):
         "track index size based on the manifest."
         return len(self.manifest)
-    __bool__ = __len__
+
+    def __bool__(self):
+        return bool(self.manifest)
 
     @classmethod
     def load(cls, location, *, create_manifest=False):
