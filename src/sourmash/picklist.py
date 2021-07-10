@@ -44,19 +44,34 @@ class SignaturePicklist:
     Identifiers are constructed by using the first space delimited word in
     the signature name.
     """
+    meta_coltypes = ('manifest', 'gather')
     supported_coltypes = ('md5', 'md5prefix8', 'md5short',
                           'name', 'ident', 'identprefix')
 
     def __init__(self, coltype, *, pickfile=None, column_name=None, pickstyle=PickStyle.INCLUDE):
         "create a picklist of column type 'coltype'."
+        valid_coltypes = set(self.meta_coltypes)
+        valid_coltypes.update(self.supported_coltypes)
+
+        if coltype not in valid_coltypes:
+            raise ValueError(f"invalid picklist column type '{coltype}'")
+
+        if coltype in self.meta_coltypes:
+            if coltype == 'gather':
+                # for now, override => md5short
+                coltype = 'md5prefix8'
+                column_name = 'md5'
+            elif coltype == 'manifest':
+                # for now, override => md5
+                coltype = 'md5'
+                column_name = 'md5'
+            else:
+                assert 0
+
         self.coltype = coltype
         self.pickfile = pickfile
         self.column_name = column_name
         self.pickstyle = pickstyle
-
-        if coltype not in self.supported_coltypes:
-            raise ValueError(f"invalid picklist column type '{coltype}'")
-
 
         self.preprocess_fn = preprocess[coltype]
         self.pickset = None
@@ -87,7 +102,7 @@ class SignaturePicklist:
     def _get_sig_attribute(self, ss):
         "for a given SourmashSignature, return attribute for this picklist."
         coltype = self.coltype
-        if coltype in ('md5', 'md5prefix8', 'md5short'):
+        if coltype in ('md5', 'md5prefix8', 'md5short', 'manifest', 'gather'):
             q = ss.md5sum()
         elif coltype in ('name', 'ident', 'identprefix'):
             q = ss.name
@@ -110,6 +125,13 @@ class SignaturePicklist:
         n_empty_val = 0
         dup_vals = set()
         with open(pickfile, newline='') as csvfile:
+            x = csvfile.readline()
+            # skip comments.
+            if x[0] == '#':
+                pass
+            else:
+                csvfile.seek(0)
+
             r = csv.DictReader(csvfile)
 
             if column_name not in r.fieldnames:
