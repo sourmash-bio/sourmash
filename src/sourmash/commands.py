@@ -667,13 +667,6 @@ def gather(args):
         sys.exit(-1)
 
     if args.scaled:
-        if args.scaled < 0:
-            error('ERROR: --scaled value must be positive')
-            sys.exit(-1)
-        if args.scaled < 100:
-            notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
-        if args.scaled > 1e6:
-            notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
         notify('downsampling query from scaled={} to {}',
             query.minhash.scaled, int(args.scaled))
         query.minhash = query.minhash.downsample(scaled=args.scaled)
