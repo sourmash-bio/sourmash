@@ -53,9 +53,10 @@ class SignaturePicklist:
     def __init__(self, coltype, *, pickfile=None, column_name=None,
                  pickstyle=PickStyle.INCLUDE):
         "create a picklist of column type 'coltype'."
+
+        # first, check coltype...
         valid_coltypes = set(self.meta_coltypes)
         valid_coltypes.update(self.supported_coltypes)
-
         if coltype not in valid_coltypes:
             raise ValueError(f"invalid picklist column type '{coltype}'")
 
