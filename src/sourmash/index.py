@@ -1157,8 +1157,6 @@ class LazyMultiIndex(Index):
     not any of the signatures.
 
     Wrapper class; signatures loaded index objects; uses manifests.
-
-    CTB: could we get the same functionality from MultiIndex + LazyLoadedIndex?
     """
     def __init__(self, index_list, manifest_list):
         assert len(index_list) == len(manifest_list)
