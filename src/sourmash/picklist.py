@@ -41,14 +41,17 @@ class SignaturePicklist:
     * 'ident' - exact match to signature's identifier
     * 'identprefix' - match to signature's identifier, before '.'
 
+    @CTB add something about meta_coltypes.
+
     Identifiers are constructed by using the first space delimited word in
     the signature name.
     """
-    meta_coltypes = ('manifest', 'gather')
+    meta_coltypes = ('manifest', 'gather', 'prefetch')
     supported_coltypes = ('md5', 'md5prefix8', 'md5short',
                           'name', 'ident', 'identprefix')
 
-    def __init__(self, coltype, *, pickfile=None, column_name=None, pickstyle=PickStyle.INCLUDE):
+    def __init__(self, coltype, *, pickfile=None, column_name=None,
+                 pickstyle=PickStyle.INCLUDE):
         "create a picklist of column type 'coltype'."
         valid_coltypes = set(self.meta_coltypes)
         valid_coltypes.update(self.supported_coltypes)
@@ -56,11 +59,21 @@ class SignaturePicklist:
         if coltype not in valid_coltypes:
             raise ValueError(f"invalid picklist column type '{coltype}'")
 
+        # if we're using gather or prefetch or manifest, set column_name
+        # automatically (after checks).
         if coltype in self.meta_coltypes:
+            if column_name:
+                raise ValueError(f"no column name allowed for coltype '{coltype}'")
+            if pickstyle != PickStyle.INCLUDE:
+                raise ValueError(f"picklist coltype '{coltype}' only supports picklist inclusion")
             if coltype == 'gather':
-                # for now, override => md5short
+                # for now, override => md5short in column md5
                 coltype = 'md5prefix8'
                 column_name = 'md5'
+            elif coltype == 'prefetch':
+                # for now, override => md5short in column match_md5
+                coltype = 'md5prefix8'
+                column_name = 'match_md5'
             elif coltype == 'manifest':
                 # for now, override => md5
                 coltype = 'md5'
@@ -80,7 +93,7 @@ class SignaturePicklist:
 
     @classmethod
     def from_picklist_args(cls, argstr):
-        "load a picklist from an argument string 'pickfile:column:coltype'"
+        "load a picklist from an argument string 'pickfile:col:coltype:style'"
         picklist = argstr.split(':')
         if len(picklist) != 3:
             if len(picklist) == 4:
@@ -126,7 +139,8 @@ class SignaturePicklist:
         dup_vals = set()
         with open(pickfile, newline='') as csvfile:
             x = csvfile.readline()
-            # skip comments.
+
+            # skip leading comment line in case there's a manifest header
             if x[0] == '#':
                 pass
             else:
