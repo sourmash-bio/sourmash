@@ -2,7 +2,6 @@
 Manifests for collections of signatures.
 """
 import csv
-from collections import defaultdict
 
 from sourmash.picklist import SignaturePicklist
 
