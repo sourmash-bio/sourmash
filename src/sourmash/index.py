@@ -1107,7 +1107,9 @@ class LazyLoadedIndex(Index):
             yield ss
 
     def find(self, *args, **kwargs):
-        "run find after loading and selecting"
+        """Run find after loading and selecting; this provides 'search',
+        "'gather', and 'prefetch' functionality, which are built on 'find'.
+        """
         if not len(self):
             # nothing in manifest? done!
             return []
@@ -1115,7 +1117,6 @@ class LazyLoadedIndex(Index):
         # ok - something in manifest, let's go get those signatures!
         picklist = self.manifest.to_picklist()
         idx = sourmash.load_file_as_index(self.location)
-        print('loaded!', idx)
 
         # convert remaining manifest into picklist
         # CTB: one optimization down the road is, for storage-backed
@@ -1124,7 +1125,6 @@ class LazyLoadedIndex(Index):
         # because we don't need to care what the index is - it'll work on
         # anything. It just might be a bit slower.
         idx = idx.select(picklist=picklist)
-        print('SELECT', idx)
 
         for x in idx.find(*args, **kwargs):
             yield x
