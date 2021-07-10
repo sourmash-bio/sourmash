@@ -571,7 +571,7 @@ class SignatureLoadingProgress(object):
         notify(msg, end=end)
 
     def notify(self, location):
-        self.short_notify(f"...{self.n_sig} sigs / {self.n_files} files. Next file: '{location}'", end='\r')
+        self.short_notify(f"\33[2K...{self.n_sig} sigs / {self.n_files} files. Next file: '{location}'", end='\r')
 
     def start_file(self, location, loader):
         self.n_files += 1
@@ -595,7 +595,7 @@ class SignatureLoadingProgress(object):
         finally:
             self.n_sig += n_this
 
-        self.short_notify(f"Loaded {n_this} sigs from '{location}' ({self.n_sig} sigs / {self.n_files} files total)", end='\r')
+        self.short_notify(f"\33[2KLoaded {n_this} sigs from '{location}' ({self.n_sig} sigs / {self.n_files} files total)", end='\r')
 
 
 #

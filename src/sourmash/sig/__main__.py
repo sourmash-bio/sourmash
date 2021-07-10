@@ -98,8 +98,6 @@ def cat(args):
             error(str(exc))
             error('(continuing)')
 
-        notify('loaded {} signatures from {}...', n_loaded, sigfile, end='\r')
-
     notify('loaded {} signatures total.', len(save_sigs))
 
     save_sigs.close()
