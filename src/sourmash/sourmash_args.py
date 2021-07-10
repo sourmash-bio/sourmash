@@ -547,6 +547,7 @@ class SignatureLoadingProgress(object):
     """
     def __init__(self, reporting_interval=10):
         self.n_sig = 0
+        self.n_files = 0
         self.interval = reporting_interval
         self.screen_width = 79
 
@@ -570,9 +571,10 @@ class SignatureLoadingProgress(object):
         notify(msg, end=end)
 
     def notify(self, location):
-        self.short_notify(f"...{self.n_sig} sigs so far. Now reading from file '{location}'", end='\r')
+        self.short_notify(f"...{self.n_sig} sigs / {self.n_files} files. Next file: '{location}'", end='\r')
 
     def start_file(self, location, loader):
+        self.n_files += 1
         n_this = 0
         n_before = self.n_sig
 
@@ -593,8 +595,7 @@ class SignatureLoadingProgress(object):
         finally:
             self.n_sig += n_this
 
-        self.short_notify(f"Loaded {n_this} sigs from '{location}'",
-                          end='\r')
+        self.short_notify(f"Loaded {n_this} sigs from '{location}' ({self.n_sig} sigs / {self.n_files} files total)", end='\r')
 
 
 #
