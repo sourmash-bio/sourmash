@@ -98,11 +98,11 @@ def cat(args):
             error(str(exc))
             error('(continuing)')
 
-    notify('loaded {} signatures total.', len(save_sigs))
+    notify(f'loaded {progress.n_sig} signatures total from {progress.n_files} files.', len(save_sigs))
 
     save_sigs.close()
 
-    notify('output {} signatures', len(save_sigs))
+    notify(f"saved {len(save_sigs)} signatures to '{args.output}'")
 
     multiple_md5 = [ 1 for cnt in encountered_md5sums.values() if cnt > 1 ]
     if multiple_md5:
