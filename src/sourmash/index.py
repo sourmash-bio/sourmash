@@ -1001,8 +1001,6 @@ class LazyLoadedIndex(Index):
     downside of using this class is that it will load the signatures
     from disk every time they are needed (e.g. 'find(...)', 'signatures()').
 
-    Can be used with LazyMultiIndex to support many such indices at once.
-
     Wrapper class; signatures dynamically loaded from disk; uses manifests.
     """
     def __init__(self, filename, manifest):
