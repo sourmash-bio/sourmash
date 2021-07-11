@@ -2286,3 +2286,14 @@ def test_lazy_loaded_index_3_find(runtmp):
     x = db.search(query, threshold=0.0)
     x = list(x)
     assert len(x) == 0
+
+
+def test_lazy_loaded_index_4_create_manifest(runtmp):
+    # test load from a directory w/no manifest
+    dirname = utils.get_test_data('prot/protein/')
+
+    # load:
+    db = index.LazyLoadedIndex.load(dirname)
+
+    assert len(db) == 2
+    assert db.location == dirname
