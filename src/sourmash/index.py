@@ -1066,20 +1066,18 @@ class LazyLoadedIndex(Index):
         return bool(self.manifest)
 
     @classmethod
-    def load(cls, location, *, create_manifest=False):
-        "Load manifest from given location, and then unload."
+    def load(cls, location):
+        """Load index from given location, but retain only the manifest.
+
+        Fail if no manifest.
+        """
         idx = sourmash.load_file_as_index(location)
         manifest = idx.manifest
 
-        # do we need to create the manifest?
-        if manifest is None:
-            if create_manifest:
-                iter = idx._signatures_with_internal()
-                manifest = CollectionManifest.create_manifest(idx,
-                                                       include_signature=False)
-            else:
-                raise ValueError(f"no manifest on index at {location}")
+        if not idx.manifest:
+            raise ValueError(f"no manifest on index at {location}")
 
+        del idx
         # NOTE: index is not retained outside this scope, just location.
 
         return cls(location, manifest)

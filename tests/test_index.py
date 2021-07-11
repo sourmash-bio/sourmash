@@ -2214,11 +2214,6 @@ def test_lazy_loaded_index_1(runtmp):
     # no manifest on LCA database
     assert "no manifest on index at" in str(exc)
 
-    with pytest.raises(NotImplementedError) as exc:
-        db = index.LazyLoadedIndex.load(lcafile, create_manifest=True)
-    # can't create a manifest, either, at the moment, b/c no
-    # _signatures_with_internal
-
     # load something, check that it's only accessed upon .signatures(...)
     test_zip = runtmp.output('test.zip')
     shutil.copyfile(sigzip, test_zip)
@@ -2286,12 +2281,3 @@ def test_lazy_loaded_index_3_find(runtmp):
     x = db.search(query, threshold=0.0)
     x = list(x)
     assert len(x) == 0
-
-
-def test_lazy_loaded_index_4_create_manifest(runtmp):
-    # test load from a directory w/no manifest
-    lcafile = utils.get_test_data('prot/protein.lca.json.gz')
-
-    # load, and try to create manifest; should fail :)
-    with pytest.raises(NotImplementedError):
-        db = index.LazyLoadedIndex.load(lcafile, create_manifest=True)
