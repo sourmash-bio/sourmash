@@ -2290,10 +2290,8 @@ def test_lazy_loaded_index_3_find(runtmp):
 
 def test_lazy_loaded_index_4_create_manifest(runtmp):
     # test load from a directory w/no manifest
-    dirname = utils.get_test_data('prot/protein/')
+    lcafile = utils.get_test_data('prot/protein.lca.json.gz')
 
-    # load:
-    db = index.LazyLoadedIndex.load(dirname)
-
-    assert len(db) == 2
-    assert db.location == dirname
+    # load, and try to create manifest; should fail :)
+    with pytest.raises(NotImplementedError):
+        db = index.LazyLoadedIndex.load(lcafile, create_manifest=True)
