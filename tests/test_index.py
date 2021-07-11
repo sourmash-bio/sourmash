@@ -9,6 +9,7 @@ import shutil
 import copy
 
 import sourmash
+from sourmash import index
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             make_jaccard_search_query, CounterGather,
@@ -2202,3 +2203,40 @@ def test_lazy_index_wraps_multi_index_location():
                                      lazy2.signatures_with_location()):
         assert ss_tup == ss_lazy_tup
 
+
+def test_lazy_loaded_index_1(runtmp):
+    # some basic tests for LazyLoadedIndex
+    lcafile = utils.get_test_data('prot/protein.lca.json.gz')
+    sigzip = utils.get_test_data('prot/protein.zip')
+
+    with pytest.raises(ValueError) as exc:
+        db = index.LazyLoadedIndex.load(lcafile)
+    # no manifest on LCA database
+    assert "no manifest on index at" in str(exc)
+
+    with pytest.raises(NotImplementedError) as exc:
+        db = index.LazyLoadedIndex.load(lcafile, create_manifest=True)
+    # can't create a manifest, either, at the moment, b/c no
+    # _signatures_with_internal
+
+    # load something, check that it's only accessed upon .signatures(...)
+    test_zip = runtmp.output('test.zip')
+    shutil.copyfile(sigzip, test_zip)
+    db = index.LazyLoadedIndex.load(test_zip)
+    assert len(db) == 2
+    assert db.location == test_zip
+
+    # now remove!
+    os.unlink(test_zip)
+
+    # can still access manifest...
+    assert len(db) == 2
+
+    # ...but we should get an error when we call signatures.
+    with pytest.raises(FileNotFoundError):
+        list(db.signatures())
+
+    # but put it back, and all is forgiven. yay!
+    shutil.copyfile(sigzip, test_zip)
+    x = list(db.signatures())
+    assert len(x) == 2
