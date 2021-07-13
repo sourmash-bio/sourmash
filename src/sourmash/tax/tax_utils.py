@@ -1,8 +1,10 @@
 """
 Utility functions for taxonomy analysis tools.
 """
+import os
 import csv
 from collections import namedtuple, defaultdict
+from collections import abc
 
 __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
            'load_gather_results', 'check_and_load_gather_csvs',
@@ -11,7 +13,7 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
            'aggregate_by_lineage_at_rank', 'format_for_krona',
            'write_krona', 'write_summary', 'write_classifications',
            'combine_sumgather_csvs_by_lineage', 'write_lineage_sample_frac',
-           'load_taxonomy_csv']
+           'MultiLineageDB']
 
 from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
@@ -24,11 +26,12 @@ from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import (LineagePair, taxlist, display_lineage, pop_to_rank)
 
 
-def get_ident(ident, *, split_identifiers=True, keep_identifier_versions=False):
+def get_ident(ident, *,
+              keep_full_identifiers=False, keep_identifier_versions=False):
     # split identifiers = split on whitespace
     # keep identifiers = don't split .[12] from assembly accessions
     "Hack and slash identifiers."
-    if split_identifiers:
+    if not keep_full_identifiers:
         ident = ident.split(' ')[0]
         if not keep_identifier_versions:
             ident = ident.split('.')[0]
@@ -155,9 +158,11 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
     return gather_results, all_ident_missed, total_missed, header
 
 
-def find_match_lineage(match_ident, tax_assign, *, skip_idents = [], split_identifiers=True, keep_identifier_versions=False):
+def find_match_lineage(match_ident, tax_assign, *, skip_idents = [],
+                       keep_full_identifiers=False,
+                       keep_identifier_versions=False):
     lineage=""
-    match_ident = get_ident(match_ident, split_identifiers=split_identifiers, keep_identifier_versions=keep_identifier_versions)
+    match_ident = get_ident(match_ident, keep_full_identifiers=keep_full_identifiers, keep_identifier_versions=keep_identifier_versions)
     # if identity not in lineage database, and not --fail-on-missing-taxonomy, skip summarizing this match
     if match_ident in skip_idents:
         return lineage
@@ -168,7 +173,10 @@ def find_match_lineage(match_ident, tax_assign, *, skip_idents = [], split_ident
     return lineage
 
 
-def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], split_identifiers=True, keep_identifier_versions=False, best_only=False, seen_perfect=set()):
+def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
+                        keep_full_identifiers=False,
+                        keep_identifier_versions=False, best_only=False,
+                        seen_perfect=set()):
     """
     Summarize gather results at specified taxonomic rank
     """
@@ -184,12 +192,17 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [], s
 
         # 100% match? are we looking at something in the database?
         if f_uniq_weighted >= 1.0 and query_name not in seen_perfect: # only want to notify once, not for each rank
-            ident = get_ident(match_ident, split_identifiers=split_identifiers, keep_identifier_versions=keep_identifier_versions)
+            ident = get_ident(match_ident,
+                              keep_full_identifiers=keep_full_identifiers,
+                              keep_identifier_versions=keep_identifier_versions)
             seen_perfect.add(query_name)
             notify(f'WARNING: 100% match! Is query "{query_name}" identical to its database match, {ident}?')
 
         # get lineage for match
-        lineage = find_match_lineage(match_ident, tax_assign, skip_idents = skip_idents, split_identifiers=split_identifiers, keep_identifier_versions=keep_identifier_versions)
+        lineage = find_match_lineage(match_ident, tax_assign,
+                                     skip_idents=skip_idents,
+                             keep_full_identifiers=keep_full_identifiers,
+                             keep_identifier_versions=keep_identifier_versions)
         # ident was in skip_idents
         if not lineage:
             continue
@@ -405,92 +418,402 @@ def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, format_line
         w.writerow(row)
 
 
-def load_taxonomy_csv(filename, *, delimiter=',', force=False,
-                              split_identifiers=False,
-                              keep_identifier_versions=False):
-    """
-    Load a taxonomy assignment spreadsheet into a dictionary.
+class LineageDB(abc.Mapping):
+    "Base LineageDB class built around an assignments dictionary."
+    def __init__(self, assign_d, avail_ranks):
+        self.assignments = assign_d
+        self.available_ranks = set(avail_ranks)
 
-    The 'assignments' dictionary that's returned maps identifiers to
-    lineage tuples.
-    """
-    include_strain=False
+    def __getitem__(self, ident):
+        "Retrieve the lineage tuple for identifer (or raise KeyError)"
+        return self.assignments[ident]
 
-    with open(filename, newline='') as fp:
-        r = csv.DictReader(fp, delimiter=delimiter)
-        header = r.fieldnames
-        if not header:
-            raise ValueError(f'Cannot read taxonomy assignments from {filename}. Is file empty?')
+    def __iter__(self):
+        "Return all identifiers for this db."
+        return iter(self.assignments)
 
-        identifier = "ident"
-        # check for ident/identifier, handle some common alternatives
-        if "ident" not in header:
+    def __len__(self):
+        "Return number of lineages"
+        return len(self.assignments)
+
+    def __bool__(self):
+        "Are there any lineages at all in this database?"
+        return bool(self.assignments)
+
+    @classmethod
+    def load(cls, filename, *, delimiter=',', force=False,
+             keep_full_identifiers=False, keep_identifier_versions=True):
+        """
+        Load a taxonomy assignment CSV file into a LineageDB.
+
+        'keep_full_identifiers=False' will split identifiers from strings
+        using whitespace, e.g. 'IDENT other name stuff' => 'IDENT'
+
+        'keep_identifier_versions=False' will remove trailing versions,
+        e.g. 'IDENT.1' => 'IDENT'.
+        """
+        include_strain=False
+        if not keep_identifier_versions and keep_full_identifiers:
+            raise ValueError("keep_identifer_versions=False doesn't make sense with keep_full_identifiers=True")
+
+        if not os.path.exists(filename):
+            raise ValueError(f"'{filename}' does not exist")
+
+        if os.path.isdir(filename):
+            raise ValueError(f"'{filename}' is a directory")
+
+        with open(filename, newline='') as fp:
+            r = csv.DictReader(fp, delimiter=delimiter)
+            header = r.fieldnames
+            if not header:
+                raise ValueError(f'cannot read taxonomy assignments from {filename}')
+
+            identifier = "ident"
             # check for ident/identifier, handle some common alternatives
-            if 'identifiers' in header:
-                identifier = 'identifiers'
-                header = ["ident" if "identifiers" == x else x for x in header]
-            elif 'accession' in header:
-                identifier = 'accession'
-                header = ["ident" if "accession" == x else x for x in header]
-            else:
-                raise ValueError('No taxonomic identifiers found.')
-        # is "strain" an available rank?
-        if "strain" in header:
-            include_strain=True
+            if "ident" not in header:
+                # check for ident/identifier, handle some common alternatives
+                if 'identifiers' in header:
+                    identifier = 'identifiers'
+                    header = ["ident" if "identifiers" == x else x for x in header]
+                elif 'accession' in header:
+                    identifier = 'accession'
+                    header = ["ident" if "accession" == x else x for x in header]
+                else:
+                    raise ValueError('No taxonomic identifiers found.')
+            # is "strain" an available rank?
+            if "strain" in header:
+                include_strain=True
 
-       # check that all ranks are in header
-        ranks = list(lca_utils.taxlist(include_strain=include_strain))
-        if not set(ranks).issubset(header):
-            # for now, just raise err if not all ranks are present.
-            # in future, we can define `ranks` differently if desired
-            # return them from this function so we can check the `available` ranks
-            raise ValueError('Not all taxonomy ranks present')
+           # check that all ranks are in header
+            ranks = list(lca_utils.taxlist(include_strain=include_strain))
+            if not set(ranks).issubset(header):
+                # for now, just raise err if not all ranks are present.
+                # in future, we can define `ranks` differently if desired
+                # return them from this function so we can check the `available` ranks
+                raise ValueError('Not all taxonomy ranks present')
 
-        assignments = {}
-        num_rows = 0
-        n_species = 0
-        n_strains = 0
+            assignments = {}
+            num_rows = 0
+            n_species = 0
+            n_strains = 0
 
-        # now parse and load lineages
-        for n, row in enumerate(r):
-            if row:
-                num_rows += 1
-                lineage = []
-                # read row into a lineage pair
-                for rank in lca_utils.taxlist(include_strain=include_strain):
-                    lin = row[rank]
-                    lineage.append(LineagePair(rank, lin))
-                ident = row[identifier]
+            # now parse and load lineages
+            for n, row in enumerate(r):
+                if row:
+                    num_rows += 1
+                    lineage = []
+                    # read row into a lineage pair
+                    for rank in lca_utils.taxlist(include_strain=include_strain):
+                        lin = row[rank]
+                        lineage.append(LineagePair(rank, lin))
+                    ident = row[identifier]
 
-                # fold, spindle, and mutilate ident?
-                if split_identifiers:
-                    ident = ident.split(' ')[0]
+                    # fold, spindle, and mutilate ident?
+                    if not keep_full_identifiers:
+                        ident = ident.split(' ')[0]
 
-                    if not keep_identifier_versions:
-                        ident = ident.split('.')[0]
+                        if not keep_identifier_versions:
+                            ident = ident.split('.')[0]
 
-                # clean lineage of null names, replace with 'unassigned'
-                lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
-                lineage = [ LineagePair(a, b) for (a, b) in lineage ]
+                    # clean lineage of null names, replace with 'unassigned'
+                    lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
+                    lineage = [ LineagePair(a, b) for (a, b) in lineage ]
 
-                # remove end nulls
-                while lineage and lineage[-1].name == 'unassigned':
-                    lineage = lineage[:-1]
+                    # remove end nulls
+                    while lineage and lineage[-1].name == 'unassigned':
+                        lineage = lineage[:-1]
 
-                # store lineage tuple
-                if lineage:
-                    # check duplicates
-                    if ident in assignments:
-                        if assignments[ident] != tuple(lineage):
-                            if not force:
-                                raise ValueError(f"multiple lineages for identifier {ident}")
-                    else:
-                        assignments[ident] = tuple(lineage)
+                    # store lineage tuple
+                    if lineage:
+                        # check duplicates
+                        if ident in assignments:
+                            if assignments[ident] != tuple(lineage):
+                                if not force:
+                                    raise ValueError(f"multiple lineages for identifier {ident}")
+                        else:
+                            assignments[ident] = tuple(lineage)
 
-                        if lineage[-1].rank == 'species':
-                            n_species += 1
-                        elif lineage[-1].rank == 'strain':
-                            n_species += 1
-                            n_strains += 1
+                            if lineage[-1].rank == 'species':
+                                n_species += 1
+                            elif lineage[-1].rank == 'strain':
+                                n_species += 1
+                                n_strains += 1
 
-    return assignments, num_rows, ranks
+        return LineageDB(assignments, ranks)
+
+
+class LineageDB_Sqlite(abc.Mapping):
+    """
+    A LineageDB based on a sqlite3 database with a 'taxonomy' table.
+    """
+    # NOTE: 'order' is a reserved name in sql, so we have to use 'order_'.
+    columns = ('superkingdom', 'phylum', 'order_', 'class', 'family',
+               'genus', 'species', 'strain')
+
+    def __init__(self, conn):
+        self.conn = conn
+
+        # check: can we do a 'select' on the right table?
+        self.__len__()
+        c = conn.cursor()
+
+        # get available ranks...
+        ranks = set()
+        for column, rank in zip(self.columns, taxlist(include_strain=True)):
+            query = f'SELECT COUNT({column}) FROM taxonomy WHERE {column} IS NOT NULL AND {column} != ""'
+            c.execute(query)
+            cnt, = c.fetchone()
+            if cnt:
+                ranks.add(rank)
+
+        self.available_ranks = ranks
+        self.cursor = c
+
+    @classmethod
+    def load(cls, location):
+        "load taxonomy information from a sqlite3 database"
+        import sqlite3
+        try:
+            conn = sqlite3.connect(location)
+            db = cls(conn)
+        except sqlite3.DatabaseError:
+            raise ValueError("not a sqlite database")
+        return db
+
+    def _make_tup(self, row):
+        "build a tuple of LineagePairs for this sqlite row"
+        tup = [ LineagePair(n, r) for (n, r) in zip(taxlist(True), row) ]
+        return tuple(tup)
+
+    def __getitem__(self, ident):
+        "Retrieve lineage for identifer"
+        c = self.cursor
+        c.execute('SELECT superkingdom, phylum, class, order_, family, genus, species, strain FROM taxonomy WHERE ident=?', (ident,))
+
+        # retrieve names list...
+        names = c.fetchone()
+        if names:
+            # ...and construct lineage tuple
+            tup = self._make_tup(names)
+            while tup and not tup[-1].name:
+                tup = tup[:-1]
+
+            return tup
+
+        raise KeyError(ident)
+
+    def __bool__(self):
+        "Do we have any info?"
+        return bool(len(self))
+
+    def __len__(self):
+        "Return number of rows"
+        c = self.conn.cursor()
+        c.execute('SELECT COUNT(DISTINCT ident) FROM taxonomy')
+        nrows, = c.fetchone()
+        return nrows
+
+    def __iter__(self):
+        "Return all identifiers"
+        # create new cursor so as to allow other operations
+        c = self.conn.cursor()
+        c.execute('SELECT DISTINCT ident FROM taxonomy')
+
+        for ident, in c:
+            yield ident
+
+    def items(self):
+        "return all items in the sqlite database"
+        c = self.conn.cursor()
+
+        c.execute('SELECT DISTINCT ident, superkingdom, phylum, class, order_, family, genus, species, strain FROM taxonomy')
+
+        for ident, *names in c:
+            yield ident, self._make_tup(names)
+
+class MultiLineageDB(abc.Mapping):
+    "A wrapper for (dynamically) combining multiple lineage databases."
+
+    # NTP: currently, later lineage databases will override earlier ones.
+    # Do we want to report/summarize shadowed identifiers?
+
+    def __init__(self):
+        self.lineage_dbs = []
+
+    @property
+    def available_ranks(self):
+        "build the union of available ranks across all databases"
+        # CTB: do we need to worry about lineages of shadowed identifiers?
+        x = set()
+        for db in self.lineage_dbs:
+            x.update(db.available_ranks)
+        return x
+
+    def add(self, db):
+        "Add a new lineage database"
+        self.lineage_dbs.insert(0, db)
+
+    def __iter__(self):
+        "Return all identifiers (once)"
+        seen = set()
+        for db in self.lineage_dbs:
+            for k in db:
+                if k not in seen:
+                    seen.add(k)
+                    yield k
+
+    def items(self):
+        "Return all (identifiers, lineage_tup), masking duplicate idents"
+        seen = set()
+        for db in self.lineage_dbs:
+            for k, v in db.items():
+                if k not in seen:
+                    seen.add(k)
+                    yield k, v
+
+    def shadowed_identifiers(self):
+        seen = set()
+        dups = set()
+        for db in self.lineage_dbs:
+            for k, v in db.items():
+                if k in seen:
+                    dups.add(k)
+                else:
+                    seen.add(k)
+        return seen
+
+    def __getitem__(self, ident):
+        "Return lineage tuple for first match to identifier."
+        for db in self.lineage_dbs:
+            if ident in db:
+                return db[ident]
+
+        # not found? KeyError!
+        raise KeyError(ident)
+
+    def __len__(self):
+        "Return number of distinct identifiers. Currently iterates over all."
+        # CTB: maybe we can make this unnecessary?
+        x = set(self)
+        return len(x)
+
+    def __bool__(self):
+        "True if any contained database has content."
+        return any( bool(db) for db in self.lineage_dbs )
+
+    def save(self, filename_or_fp, file_format):
+        assert file_format in ('sql', 'csv')
+
+        is_filename = False
+        try:
+            filename_or_fp.write
+        except AttributeError:
+            is_filename = True
+
+        if file_format == 'sql':
+            if not is_filename:
+                raise ValueError("file format '{file_format}' requires a filename, not a file handle")
+            self._save_sqlite(filename_or_fp)
+        elif file_format == 'csv':
+            # we need a file handle; open file.
+            fp = filename_or_fp
+            if is_filename:
+                fp = open(filename_or_fp, 'w', newline="")
+
+            try:
+                self._save_csv(fp)
+            finally:
+                # close the file we opened!
+                if is_filename:
+                    fp.close()
+
+    def _save_sqlite(self, filename):
+        import sqlite3
+        db = sqlite3.connect(filename)
+
+        cursor = db.cursor()
+        try:
+            cursor.execute("""
+
+        CREATE TABLE taxonomy (
+            ident TEXT NOT NULL,
+            superkingdom TEXT,
+            phylum TEXT,
+            class TEXT,
+            order_ TEXT,
+            family TEXT,
+            genus TEXT,
+            species TEXT,
+            strain TEXT
+        )
+        """)
+            did_create = True
+        except sqlite3.OperationalError:
+            # already exists?
+            raise ValueError(f"taxonomy table already exists in '{filename}'")
+
+        # follow up and create index
+        cursor.execute("CREATE UNIQUE INDEX taxonomy_ident ON taxonomy(ident);")
+        for ident, tax in self.items():
+            x = [ident, *[ t.name for t in tax ]]
+
+            if tax[-1].rank != 'strain':
+                assert len(x) == 8, len(x)
+                x.append('')    # append empty strain value
+            cursor.execute('INSERT INTO taxonomy (ident, superkingdom, phylum, class, order_, family, genus, species, strain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', x)
+
+        db.commit()
+
+    def _save_csv(self, fp):
+        headers = ['identifiers'] + list(taxlist(include_strain=True))
+        w = csv.DictWriter(fp, fieldnames=headers)
+        w.writeheader()
+
+        for n, (ident, tax) in enumerate(self.items()):
+            row = {}
+            row['identifiers'] = ident
+
+            # convert tax LineagePairs into dictionary
+            for t in tax:
+                row[t.rank] = t.name
+
+            # add strain if needed
+            if 'strain' not in row:
+                row['strain'] = ''
+
+            w.writerow(row)
+
+    @classmethod
+    def load(cls, locations, **kwargs):
+        "Load one or more taxonomies from the given location(s)"
+        if isinstance(locations, str):
+            raise TypeError("'locations' should be a list, not a string")
+
+        tax_assign = cls()
+        for location in locations:
+            # try faster formats first
+            loaded = False
+
+            # sqlite db?
+            try:
+                this_tax_assign = LineageDB_Sqlite.load(location)
+                loaded = True
+            except ValueError:
+                pass
+
+            # CSV file?
+            if not loaded:
+                try:
+                    this_tax_assign = LineageDB.load(location, **kwargs)
+                    loaded = True
+                except ValueError as exc:
+                    # for the last loader, just pass along ValueError...
+                    raise ValueError(f"cannot read taxonomy assignments from '{location}': {str(exc)}")
+
+            # nothing loaded, goodbye!
+            if not loaded:
+                raise ValueError(f"cannot read taxonomy assignments from '{location}'")
+
+            tax_assign.add(this_tax_assign)
+
+        return tax_assign

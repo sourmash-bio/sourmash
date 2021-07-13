@@ -28,6 +28,8 @@ ZipFileLinearIndex - simple on-disk storage of signatures.
 class MultiIndex - in-memory storage and selection of signatures from multiple
 index objects, using manifests.
 
+LazyLoadedIndex - selection on manifests with loading of index on demand.
+
 CounterGather - an ancillary class returned by the 'counter_gather()' method.
 """
 
@@ -991,3 +993,108 @@ class MultiIndex(Index):
         "Run 'select' on the manifest."
         new_manifest = self.manifest.select_to_manifest(**kwargs)
         return MultiIndex(new_manifest, parent=self.parent)
+
+
+class LazyLoadedIndex(Index):
+    """Given an index location and a manifest, do select only on the manifest
+    until signatures are actually requested, and only then load the index.
+
+    This class is useful when you have an index object that consume
+    memory when it is loaded (e.g. JSON signature files, or LCA
+    databases) and you want to avoid keeping them in memory.  The
+    downside of using this class is that it will load the signatures
+    from disk every time they are needed (e.g. 'find(...)', 'signatures()').
+
+    Wrapper class; signatures dynamically loaded from disk; uses manifests.
+    """
+    def __init__(self, filename, manifest):
+        "Create an Index with given filename and manifest."
+        self.filename = filename
+        self.manifest = manifest
+
+    @property
+    def location(self):
+        "the 'location' attribute for this index will be the filename."
+        return self.filename
+
+    def signatures(self):
+        "yield all signatures from the manifest."
+        if not len(self):
+            # nothing in manifest? done!
+            return []
+
+        # ok - something in manifest, let's go get those signatures!
+        picklist = self.manifest.to_picklist()
+        idx = sourmash.load_file_as_index(self.location)
+
+        # convert remaining manifest into picklist
+        # CTB: one optimization down the road is, for storage-backed
+        # Index objects, to just reach in and get the signatures directly,
+        # without going through 'select'. Still, this is nice for abstraction
+        # because we don't need to care what the index is - it'll work on
+        # anything. It just might be a bit slower.
+        idx = idx.select(picklist=picklist)
+
+        # extract signatures.
+        for ss in idx.signatures():
+            yield ss
+
+    def find(self, *args, **kwargs):
+        """Run find after loading and selecting; this provides 'search',
+        "'gather', and 'prefetch' functionality, which are built on 'find'.
+        """
+        if not len(self):
+            # nothing in manifest? done!
+            return []
+
+        # ok - something in manifest, let's go get those signatures!
+        picklist = self.manifest.to_picklist()
+        idx = sourmash.load_file_as_index(self.location)
+
+        # convert remaining manifest into picklist
+        # CTB: one optimization down the road is, for storage-backed
+        # Index objects, to just reach in and get the signatures directly,
+        # without going through 'select'. Still, this is nice for abstraction
+        # because we don't need to care what the index is - it'll work on
+        # anything. It just might be a bit slower.
+        idx = idx.select(picklist=picklist)
+
+        for x in idx.find(*args, **kwargs):
+            yield x
+
+    def __len__(self):
+        "track index size based on the manifest."
+        return len(self.manifest)
+
+    def __bool__(self):
+        return bool(self.manifest)
+
+    @classmethod
+    def load(cls, location):
+        """Load index from given location, but retain only the manifest.
+
+        Fail if no manifest.
+        """
+        idx = sourmash.load_file_as_index(location)
+        manifest = idx.manifest
+
+        if not idx.manifest:
+            raise ValueError(f"no manifest on index at {location}")
+
+        del idx
+        # NOTE: index is not retained outside this scope, just location.
+
+        return cls(location, manifest)
+
+    def insert(self, *args):
+        raise NotImplementedError
+
+    def save(self, *args):
+        raise NotImplementedError
+
+    def select(self, **kwargs):
+        "Run 'select' on manifest, return new object with new manifest."
+        manifest = self.manifest
+        new_manifest = manifest.select_to_manifest(**kwargs)
+
+        return LazyLoadedIndex(self.filename, new_manifest)

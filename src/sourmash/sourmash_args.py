@@ -557,7 +557,7 @@ class SignatureLoadingProgress(object):
         notify(msg, end=end)
 
     def notify(self, location):
-        self.short_notify(f"...reading from file '{location}'", end='\r')
+        self.short_notify(f"...{self.n_sig} sigs so far. Now reading from file '{location}'", end='\r')
 
     def start_file(self, location, loader):
         n_this = 0
@@ -580,7 +580,8 @@ class SignatureLoadingProgress(object):
         finally:
             self.n_sig += n_this
 
-        self.short_notify(f"loaded {n_this} sigs from '{location}'")
+        self.short_notify(f"Loaded {n_this} sigs from '{location}'",
+                          end='\r')
 
 
 #

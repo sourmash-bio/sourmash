@@ -6,7 +6,11 @@ from sourmash.logging import notify, print_results, error
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('cat')
-    subparser.add_argument('signatures', nargs='+')
+    subparser.add_argument('signatures', nargs='*')
+    subparser.add_argument(
+        '--from-file',
+        help='a text file containing a list of files to load signatures from'
+    )
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
