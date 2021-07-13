@@ -74,6 +74,11 @@ def cat(args):
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
     save_sigs.open()
 
+    if args.from_file:
+        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
+        args.signatures = list(args.signatures)
+        args.signatures.extend(more_files)
+
     for sigfile in args.signatures:
         try:
             loader = sourmash_args.load_file_as_signatures(sigfile,
