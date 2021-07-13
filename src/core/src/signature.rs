@@ -14,9 +14,6 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
-#[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
-use wasm_bindgen::prelude::*;
-
 use crate::encodings::{aa_to_dayhoff, aa_to_hp, revcomp, to_aa, HashFunctions, VALID};
 use crate::index::storage::ToWriter;
 use crate::sketch::Sketch;
@@ -242,7 +239,6 @@ impl SigsTrait for Sketch {
     }
 }
 
-#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[derive(Serialize, Deserialize, Debug, Clone, TypedBuilder)]
 pub struct Signature {
     #[serde(default = "default_class")]

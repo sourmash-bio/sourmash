@@ -425,11 +425,12 @@ signatures, rather than all the signatures in the database.
 
 The sourmash `tax` or `taxonomy` commands integrate taxonomic
  information into the results of `sourmash gather`. All `tax` commands
- require one or more properly formatted `taxonomy` csv files that correspond to
- the database(s) used for `gather`. Note that if using multiple databases,
- the `gather` needs to have been conducted against all desired databases
- within the same `gather` command (we cannot combine separate `gather` runs
- for the same query). For supported databases (e.g. GTDB, NCBI), we provide
+ require one or more properly formatted `taxonomy` files where the
+ identifiers correspond to those in the database(s) used for
+ `gather`. Note that if using multiple databases, the `gather` needs
+ to have been conducted against all desired databases within the same
+ `gather` command (we cannot combine separate `gather` runs for the
+ same query). For supported databases (e.g. GTDB, NCBI), we provide
  taxonomy csv files, but they can also be generated for user-generated
  databases. For more information, see [databases](databases.md).
 
@@ -454,8 +455,8 @@ As with all reference-based analysis, results can be affected by the
  results from `gather` minimizes issues associated with increasing size
  and redundancy of reference databases.
 
-For more on how `gather` works and can be used to classify signatures, see
- [classifying-signatures](classifying-signatures.md).
+For more details on how `gather` works and can be used to classify
+ signatures, see [classifying-signatures](classifying-signatures.md).
 
 
 ### `sourmash tax metagenome` - summarize metagenome content from `gather` results
@@ -469,7 +470,7 @@ example command to summarize a single `gather csv`, where the query was gathered
 ```
 sourmash tax metagenome
     --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
-    --taxonomy-csv gtdb-rs202.taxonomy.v2.csv
+    --taxonomy gtdb-rs202.taxonomy.v2.csv
 ```
 
 There are three possible output formats, `csv_summary`, `lineage_summary`, and
@@ -517,7 +518,7 @@ To generate `krona`, we add `--output-format krona` to the command above, and
 ```
 sourmash tax metagenome
     --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
-    --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
+    --taxonomy gtdb-rs202.taxonomy.v2.csv \
     --output-format krona --rank species
 ```
 
@@ -545,7 +546,7 @@ To generate `lineage_summary`, we add `--output-format lineage_summary` to the s
 sourmash tax metagenome
     --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
     --gather-csv PSM6XBW3_gather_x_gtdbrs202_k31.csv \
-    --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
+    --taxonomy gtdb-rs202.taxonomy.v2.csv \
     --output-format krona --rank species
 ```
 
@@ -602,7 +603,7 @@ We can use `tax genome` on this gather csv to classify our "Sb47+63" mixed-strai
 ```
 sourmash tax genome
     --gather-csv 47+63_x_gtdb-rs202.gather.csv \
-    --taxonomy-csv gtdb-rs202.taxonomy.v2.csv
+    --taxonomy gtdb-rs202.taxonomy.v2.csv
 ```
 > This command uses the default classification strategy, which uses a
 containment threshold of 0.1 (10%).
@@ -649,7 +650,7 @@ To generate `krona`, we must classify by `--rank` instead of using the
 ```
 sourmash tax genome
     --gather-csv Sb47+63_gather_x_gtdbrs202_k31.csv \
-    --taxonomy-csv gtdb-rs202.taxonomy.v2.csv \
+    --taxonomy gtdb-rs202.taxonomy.v2.csv \
     --output-format krona --rank species
 ```
 > Note that specifying `--rank` forces classification by rank rather than
@@ -684,10 +685,35 @@ By default, `annotate` uses the name of each input gather csv to write an update
 ```
 sourmash tax annotate
     --gather-csv Sb47+63_gather_x_gtdbrs202_k31.csv \
-    --taxonomy-csv gtdb-rs202.taxonomy.v2.csv
+    --taxonomy gtdb-rs202.taxonomy.v2.csv
 ```
 > This will produce an annotated gather CSV, `Sb47+63_gather_x_gtdbrs202_k31.with-lineages.csv`
 
+### `sourmash tax prepare` - prepare and/or combine taxonomy files
+
+All `sourmash tax` commands must be given one or more taxonomy files as
+parameters to the `--taxonomy` argument. These files can be either CSV
+files or (as of sourmash 4.2.1) sqlite3 databases. sqlite3 databases
+are much faster for large taxonomies, while CSV files are easier to view
+and modify using spreadsheet software.
+
+`sourmash tax prepare` is a utility function that can ingest and validate
+multiple CSV files or sqlite3 databases, and output a CSV file or a sqlite3
+database. It can be used to combine multiple taxonomies into a single file,
+as well as change formats between CSV and sqlite3.
+
+The following command will take in two taxonomy files and combine them into
+a single taxonomy sqlite database.
+
+```
+sourmash tax prepare --taxonomy file1.csv file2.csv -o tax.db
+```
+
+Input databases formats can be mixed and matched, and the output format
+can be set to CSV like so:
+```
+sourmash tax prepare --taxonomy file1.csv file2.db -o tax.csv -F csv
+```
 
 ## `sourmash lca` subcommands for in-memory taxonomy integration
 
@@ -1216,9 +1242,10 @@ Briefly,
   signature files using `--query-from-file` (see below).
   
 * `index` and `lca index` take a few fixed parameters (database name,
-  taxonomy spreadsheet) and then an arbitrary number of other files
-  that contain signatures, including files, directories, and indexed
-  databases. These commands will also take `--from-file` (see below).
+  and for `lca index`, a taxonomy file) and then an arbitrary number of
+  other files that contain signatures, including files, directories,
+  and indexed databases. These commands will also take `--from-file`
+  (see below).
 
 None of these commands currently support searching, comparing, or indexing
 signatures with multiple ksizes or moltypes at the same time; you need
@@ -1236,13 +1263,20 @@ For example,
 sourmash sig extract --picklist list.csv:md5:md5sum <signatures>
 ```
 will extract only the signatures that have md5sums matching the
-column `md5sum` in the CSV file `list.csv`.
+column `md5sum` in the CSV file `list.csv`. The command
+```
+sourmash sig extract --picklist list.csv::prefetch <signatures>
+```
+will extract only the signatures found in the output
+of `sourmash prefetch ... -o list.csv`.
 
 The `--picklist` argument string must be of the format
-`pickfile:colname:coltype`, where `pickfile` is the path to a CSV
-file, `colname` is the name of the column to select from the CSV
-file (based on the headers in the first line of the CSV file),
-and `coltype` is the type of match.
+`pickfile:colname:coltype[:pickstyle]`, where `pickfile` is the path
+to a CSV file, `colname` is the name of the column to select from the
+CSV file (based on the headers in the first line of the CSV file), and
+`coltype` is the type of match.  An optional pickstyle argument,
+`:include` or `:exclude`, can be added as a fourth parameter; if
+omitted, the default is `:include`.
 
 The following `coltype`s are currently supported by `sourmash sig extract`:
 
@@ -1252,6 +1286,10 @@ The following `coltype`s are currently supported by `sourmash sig extract`:
 * `md5short` - same as `md5prefix8`
 * `ident` - exact match to signature's identifier
 * `identprefix` - match to signature's identifier, before '.'
+* `gather` - use the CSV output of `sourmash gather` as a picklist
+* `prefetch` - use the CSV output of `sourmash prefetch` as a picklist
+* `search` - use the CSV output of `sourmash prefetch` as a picklist
+* `manifest` - use the CSV output of `sourmash sig manifest` as a picklist
 
 Identifiers are constructed by using the first space delimited word in
 the signature name.
