@@ -44,12 +44,12 @@ class SignaturePicklist:
     Identifiers are constructed by using the first space delimited word in
     the signature name.
 
-    You can also use 'gather', 'prefetch', and 'manifest' as column types;
-    these take the CSV output of 'gather', 'prefetch', and 'sig manifest'
-    as picklists. 'column' must be left blank in this case: e.g. use
-    'pickfile.csv::gather'.
+    You can also use 'gather', 'prefetch', 'search'm and 'manifest' as
+    column types; these take the CSV output of 'gather', 'prefetch',
+    'search', and 'sig manifest' as picklists. 'column' must be left
+    blank in this case: e.g. use 'pickfile.csv::gather'.
     """
-    meta_coltypes = ('manifest', 'gather', 'prefetch')
+    meta_coltypes = ('manifest', 'gather', 'prefetch', 'search')
     supported_coltypes = ('md5', 'md5prefix8', 'md5short',
                           'name', 'ident', 'identprefix')
 
@@ -76,7 +76,7 @@ class SignaturePicklist:
                 # for now, override => md5short in column match_md5
                 coltype = 'md5prefix8'
                 column_name = 'match_md5'
-            elif coltype == 'manifest':
+            elif coltype == 'manifest' or coltype == 'search':
                 # for now, override => md5
                 coltype = 'md5'
                 column_name = 'md5'

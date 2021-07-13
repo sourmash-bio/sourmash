@@ -5324,3 +5324,40 @@ def test_gather_with_prefetch_picklist_4_manifest_excl(runtmp, linear_gather):
     # excluded everything, so nothing to match!
     assert "found 0 matches total;" in out
     assert "the recovered matches hit 0.0% of the query" in out
+
+
+def test_gather_with_prefetch_picklist_5_search(runtmp):
+    # test 'gather' using a picklist taken from 'sourmash prefetch' output
+    # using ::prefetch
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    search_csv = runtmp.output('search-out.csv')
+
+    runtmp.sourmash('search', '--containment', metag_sig, *gcf_sigs,
+                    '-k', '21', '-o', search_csv)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "12 matches; showing first 3:" in out
+    assert " 33.2%       NC_003198.1 Salmonella enterica subsp." in out
+
+    # now, do a gather with the results
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs,
+                    '-k', '21', '--picklist',
+                    f'{search_csv}::search')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "found 11 matches total;" in out
+    assert "the recovered matches hit 99.9% of the query" in out
+
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
+    assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out

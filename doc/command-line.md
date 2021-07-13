@@ -1263,13 +1263,20 @@ For example,
 sourmash sig extract --picklist list.csv:md5:md5sum <signatures>
 ```
 will extract only the signatures that have md5sums matching the
-column `md5sum` in the CSV file `list.csv`.
+column `md5sum` in the CSV file `list.csv`. The command
+```
+sourmash sig extract --picklist list.csv::prefetch <signatures>
+```
+will extract only the signatures found in the output
+of `sourmash prefetch ... -o list.csv`.
 
 The `--picklist` argument string must be of the format
-`pickfile:colname:coltype`, where `pickfile` is the path to a CSV
-file, `colname` is the name of the column to select from the CSV
-file (based on the headers in the first line of the CSV file),
-and `coltype` is the type of match.
+`pickfile:colname:coltype[:pickstyle]`, where `pickfile` is the path
+to a CSV file, `colname` is the name of the column to select from the
+CSV file (based on the headers in the first line of the CSV file), and
+`coltype` is the type of match.  An optional pickstyle argument,
+`:include` or `:exclude`, can be added as a fourth parameter; if
+omitted, the default is `:include`.
 
 The following `coltype`s are currently supported by `sourmash sig extract`:
 
@@ -1281,6 +1288,7 @@ The following `coltype`s are currently supported by `sourmash sig extract`:
 * `identprefix` - match to signature's identifier, before '.'
 * `gather` - use the CSV output of `sourmash gather` as a picklist
 * `prefetch` - use the CSV output of `sourmash prefetch` as a picklist
+* `search` - use the CSV output of `sourmash prefetch` as a picklist
 * `manifest` - use the CSV output of `sourmash sig manifest` as a picklist
 
 Identifiers are constructed by using the first space delimited word in
