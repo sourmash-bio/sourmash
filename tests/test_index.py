@@ -2238,8 +2238,6 @@ def test_lazy_loaded_index_1(runtmp):
     assert len(x) == 2
 
 
-
-
 def test_lazy_loaded_index_2_empty(runtmp):
     # some basic tests for LazyLoadedIndex that is empty
     sigzip = utils.get_test_data('prot/protein.zip')

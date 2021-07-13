@@ -1222,6 +1222,48 @@ def test_genome_empty_gather_results_with_csv_force(runtmp):
     assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
+def test_genome_containment_threshold_bounds(runtmp):
+    c = runtmp
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    below_threshold = "-1"
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('tax', 'genome', '-g', tax, '--taxonomy-csv', tax,
+                       '--containment-threshold', below_threshold)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert "ERROR: Argument must be >0 and <1" in str(exc.value)
+
+    above_threshold = "1.1"
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('tax', 'genome', '-g', tax, '--taxonomy-csv', tax,
+                       '--containment-threshold', above_threshold)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert "ERROR: Argument must be >0 and <1" in str(exc.value)
+
+
+def test_genome_containment_threshold_type(runtmp):
+    c = runtmp
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    not_a_float = "str"
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('tax', 'genome', '-g', tax, '--taxonomy-csv', tax,
+                       '--containment-threshold', not_a_float)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert "ERROR: Must be a floating point number" in str(exc.value)
+
+
 def test_annotate_0(runtmp):
     # test annotate
     c = runtmp
