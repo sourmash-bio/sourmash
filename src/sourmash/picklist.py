@@ -107,7 +107,7 @@ class SignaturePicklist:
             elif pickstyle_str == 'exclude':
                 pickstyle = PickStyle.EXCLUDE
             else:
-                raise ValueError(f"invalid picklist 'pickstyle' argument, '{pickstyle}': must be 'include' or 'exclude'")
+                raise ValueError(f"invalid picklist 'pickstyle' argument, '{pickstyle_str}': must be 'include' or 'exclude'")
 
         if len(picklist) != 3:
             raise ValueError(f"invalid picklist argument '{argstr}'")
