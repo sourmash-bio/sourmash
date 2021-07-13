@@ -97,22 +97,26 @@ class SignaturePicklist:
     def from_picklist_args(cls, argstr):
         "load a picklist from an argument string 'pickfile:col:coltype:style'"
         picklist = argstr.split(':')
-        if len(picklist) != 3:
-            if len(picklist) == 4:
-                pickfile, column, coltype, pickstyle = picklist
-                if pickstyle == 'include':
-                    return cls(coltype, pickfile=pickfile, column_name=column, pickstyle=PickStyle.INCLUDE)
-                elif pickstyle == 'exclude':
-                    return cls(coltype, pickfile=pickfile, column_name=column, pickstyle=PickStyle.EXCLUDE)
-                else:
-                    raise ValueError(f"invalid picklist 'pickstyle' argument, '{pickstyle}': must be 'include' or 'exclude'")
+        pickstyle = PickStyle.INCLUDE
 
+        # pickstyle specified?
+        if len(picklist) == 4:
+            pickstyle_str = picklist.pop()
+            if pickstyle_str == 'include':
+                pickstyle = PickStyle.INCLUDE
+            elif pickstyle_str == 'exclude':
+                pickstyle = PickStyle.EXCLUDE
+            else:
+                raise ValueError(f"invalid picklist 'pickstyle' argument, '{pickstyle}': must be 'include' or 'exclude'")
+
+        if len(picklist) != 3:
             raise ValueError(f"invalid picklist argument '{argstr}'")
 
         assert len(picklist) == 3
         pickfile, column, coltype = picklist
 
-        return cls(coltype, pickfile=pickfile, column_name=column)
+        return cls(coltype, pickfile=pickfile, column_name=column,
+                   pickstyle=pickstyle)
 
     def _get_sig_attribute(self, ss):
         "for a given SourmashSignature, return attribute for this picklist."
