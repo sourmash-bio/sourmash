@@ -1279,6 +1279,9 @@ The following `coltype`s are currently supported by `sourmash sig extract`:
 * `md5short` - same as `md5prefix8`
 * `ident` - exact match to signature's identifier
 * `identprefix` - match to signature's identifier, before '.'
+* `gather` - use the CSV output of `sourmash gather` as a picklist
+* `prefetch` - use the CSV output of `sourmash prefetch` as a picklist
+* `manifest` - use the CSV output of `sourmash sig manifest` as a picklist
 
 Identifiers are constructed by using the first space delimited word in
 the signature name.
