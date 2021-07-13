@@ -70,7 +70,7 @@ def metagenome(args):
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
-        
+
     if not tax_assign:
         error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
         sys.exit(-1)
@@ -142,7 +142,7 @@ def genome(args):
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
-        
+
     if not tax_assign:
         error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
         sys.exit(-1)
@@ -188,7 +188,7 @@ def genome(args):
                 notify(f"WARNING: classifying query {sg.query_name} at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
             else:
                 status="match"
-            classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename)
+            classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename, sg.f_match_at_rank, sg.bp_match_at_rank)
             classifications[args.rank].append(classif)
             matched_queries.add(sg.query_name)
             if "krona" in args.output_format:
@@ -210,7 +210,7 @@ def genome(args):
                     continue
                 if sg.fraction >= args.containment_threshold:
                     status = "match"
-                    classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename)
+                    classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename, sg.f_match_at_rank, sg.bp_match_at_rank)
                     classifications[sg.rank].append(classif)
                     matched_queries.add(sg.query_name)
                     continue
@@ -218,7 +218,8 @@ def genome(args):
                     status="below_threshold"
                     classif = ClassificationResult(query_name=sg.query_name, status=status,
                                                    rank="", fraction=0, lineage="",
-                                                   query_md5=sg.query_md5, query_filename=sg.query_filename)
+                                                   query_md5=sg.query_md5, query_filename=sg.query_filename,
+                                                   f_match_at_rank=sg.f_match_at_rank, bp_match_at_rank=sg.bp_match_at_rank)
                     classifications[sg.rank].append(classif)
 
     if not any([classifications, krona_results]):
@@ -256,7 +257,7 @@ def annotate(args):
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
-        
+
     if not tax_assign:
         error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
         sys.exit(-1)
