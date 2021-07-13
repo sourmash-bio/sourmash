@@ -3,6 +3,7 @@
 Quickly search, compare, and analyze genomic and metagenomic data sets.
 
 [![Documentation](https://readthedocs.org/projects/sourmash/badge/?version=latest)](http://sourmash.readthedocs.io/en/latest/)
+[![Gitter](https://badges.gitter.im/sourmash-bio/community.svg)](https://gitter.im/sourmash-bio/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 [![Build Status](https://github.com/sourmash-bio/sourmash/workflows/Python%20tests/badge.svg)](https://github.com/sourmash-bio/sourmash/actions/)
 [![Bioconda install](https://img.shields.io/conda/dn/bioconda/sourmash.svg?style=flag&label=Bioconda)](https://anaconda.org/bioconda/sourmash)
 <a href="https://pypi.org/project/sourmash/"><img alt="PyPI" src="https://badge.fury.io/py/sourmash.svg"></a>
@@ -84,8 +85,7 @@ which will install
 
 ## Support
 
-Please ask questions and files issues
-[on Github](https://github.com/sourmash-bio/sourmash/issues).
+For questions, please open an issue [on Github](https://github.com/sourmash-bio/sourmash/issues), or ask in our [chat](https://gitter.im/sourmash-bio/community?utm_source=share-link&utm_medium=link&utm_campaign=share-link).
 
 ## Development
 
