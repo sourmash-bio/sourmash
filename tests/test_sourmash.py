@@ -5140,3 +5140,81 @@ def test_gather_with_prefetch_picklist(runtmp, linear_gather):
 
     assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
     assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out
+
+
+def test_gather_with_prefetch_picklist_2(runtmp, linear_gather):
+    # test 'gather' using a picklist taken from 'sourmash prefetch' output
+    # using ::prefetch
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    prefetch_csv = runtmp.output('prefetch-out.csv')
+
+    runtmp.sourmash('prefetch', metag_sig, *gcf_sigs,
+                    '-k', '21', '-o', prefetch_csv)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "total of 12 matching signatures." in err
+    assert "of 1466 distinct query hashes, 1466 were found in matches above threshold." in err
+
+    # now, do a gather with the results
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs, linear_gather,
+                    '-k', '21', '--picklist',
+                    f'{prefetch_csv}::prefetch')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "found 11 matches total;" in out
+    assert "the recovered matches hit 99.9% of the query" in out
+
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
+    assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out
+
+
+def test_gather_with_prefetch_picklist_3_gather(runtmp, linear_gather):
+    # test 'gather' using a picklist taken from 'sourmash gather' output,
+    # using ::gather.
+    # (this doesn't really do anything useful, but it's an ok test :)
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    gather_csv = runtmp.output('gather-out.csv')
+
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs,
+                    '-k', '21', '-o', gather_csv)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "found 11 matches total;" in out
+    assert "the recovered matches hit 99.9% of the query" in out
+
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
+    assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out
+
+    # now, do another gather with the results
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs, linear_gather,
+                    '-k', '21', '--picklist',
+                    f'{gather_csv}::gather')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "found 11 matches total;" in out
+    assert "the recovered matches hit 99.9% of the query" in out
+
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
+    assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out
