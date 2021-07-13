@@ -65,8 +65,6 @@ class SignaturePicklist:
         if coltype in self.meta_coltypes:
             if column_name:
                 raise ValueError(f"no column name allowed for coltype '{coltype}'")
-            if pickstyle != PickStyle.INCLUDE:
-                raise ValueError(f"picklist coltype '{coltype}' only supports picklist inclusion")
             if coltype == 'gather':
                 # for now, override => md5short in column md5
                 coltype = 'md5prefix8'
@@ -79,7 +77,7 @@ class SignaturePicklist:
                 # for now, override => md5
                 coltype = 'md5'
                 column_name = 'md5'
-            else:
+            else:               # should never be reached!
                 assert 0
 
         self.coltype = coltype
