@@ -59,7 +59,7 @@ unsafe fn kmerminhash_add_sequence(ptr: *mut SourmashKmerMinHash, sequence: *con
 }
 
 ffi_fn! {
-unsafe fn kmerminhash_seq_to_hashes(ptr: *mut SourmashKmerMinHash, sequence: *const c_char, insize: usize, force: bool, size: *mut usize) ->
+unsafe fn kmerminhash_seq_to_hashes(ptr: *mut SourmashKmerMinHash, sequence: *const c_char, insize: usize, force: bool, is_protein: bool, size: *mut usize) ->
 Result<*const u64> {
 
     let mh = SourmashKmerMinHash::as_rust_mut(ptr);
@@ -69,7 +69,7 @@ Result<*const u64> {
         slice::from_raw_parts(sequence as *const u8, insize)
     };
 
-    let output = mh.seq_to_hashes(buf, force)?;
+    let output = mh.seq_to_hashes(buf, force, is_protein)?;
 
     *size = output.len();
 
