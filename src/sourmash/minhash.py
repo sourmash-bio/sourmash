@@ -682,7 +682,7 @@ class MinHash(RustObject):
         new_mh.__class__ = FrozenMinHash
         return new_mh
 
-    def inflate(self, from_mh):     
+    def inflate(self, from_mh):    
         if from_mh.track_abundance:
             hashes = set(self.hashes)
             orig_abunds = from_mh.hashes
@@ -695,6 +695,9 @@ class MinHash(RustObject):
             self.minhash = abund_query_mh
 
             return abund_query_mh
+
+        else:
+            raise ValueError('value of track_abundance should be true') 
 
 
 class FrozenMinHash(MinHash):

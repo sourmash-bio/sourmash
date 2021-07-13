@@ -1548,12 +1548,11 @@ def test_inflate():
     assert mh2.hashes[20] == 2
     assert mh2.hashes[30] == 3
 
-    mh.inflate(mh2)
+    mh3 = mh.inflate(mh2)
 
-    assert mh.hashes[10] == 3
-    assert mh.hashes[20] == 2
-    assert mh.hashes[30] == 3
-    assert len(mh) == 8
+    assert mh3.hashes[10] == 3
+    assert mh3.hashes[20] == 2
+    assert mh3.hashes[30] == 3
 
 
 def test_add_kmer(track_abundance):
