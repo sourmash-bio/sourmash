@@ -162,6 +162,41 @@ def test_seq_to_hashes(track_abundance):
     assert set(golden_hashes) == set(new_hashes)
 
 
+def test_seq_to_hashes_protein_1(track_abundance, dayhoff):
+    mh = MinHash(10, 2, True, dayhoff=dayhoff, hp=False, track_abundance=track_abundance)
+    prot_seq = "AGYYG"
+
+    mh.add_protein(prot_seq)
+
+    golden_hashes = mh.hashes
+
+    # New seq to hashes without adding to the sketch
+    new_hashes = mh.seq_to_hashes(prot_seq, is_protein = True)
+
+    assert set(golden_hashes) == set(new_hashes)
+
+def test_seq_to_hashes_protein_2(track_abundance):
+    mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1, track_abundance=track_abundance)
+    seq = "ATGAGAGACGATAGACAGATGACC"
+
+    with pytest.raises(ValueError):
+        mh.seq_to_hashes(seq, is_protein = True)
+
+
+def test_seq_to_hashes_translated(track_abundance):
+    mh_protein = MinHash(10, 2, is_protein=True, track_abundance=track_abundance)
+    seq = "ACTGAC"
+    mh_protein.add_sequence(seq)
+
+    golden_hashes = mh_protein.hashes
+
+    # New seq to hashes without adding to the sketch
+    new_hashes = mh_protein.seq_to_hashes(seq)
+
+    assert set(golden_hashes) == set(new_hashes)
+
+
+
 def test_bytes_protein_dayhoff(track_abundance, dayhoff):
     # verify that we can hash protein/aa sequences
     mh = MinHash(10, 2, True, dayhoff=dayhoff, hp=False,
