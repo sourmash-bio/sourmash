@@ -9,6 +9,7 @@ import shutil
 import copy
 
 import sourmash
+from sourmash import index
 from sourmash import load_one_signature, SourmashSignature
 from sourmash import index
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
@@ -2214,11 +2215,6 @@ def test_lazy_loaded_index_1(runtmp):
     # no manifest on LCA database
     assert "no manifest on index at" in str(exc)
 
-    with pytest.raises(NotImplementedError) as exc:
-        db = index.LazyLoadedIndex.load(lcafile, create_manifest=True)
-    # can't create a manifest, either, at the moment, b/c no
-    # _signatures_with_internal
-
     # load something, check that it's only accessed upon .signatures(...)
     test_zip = runtmp.output('test.zip')
     shutil.copyfile(sigzip, test_zip)
@@ -2240,6 +2236,54 @@ def test_lazy_loaded_index_1(runtmp):
     shutil.copyfile(sigzip, test_zip)
     x = list(db.signatures())
     assert len(x) == 2
+
+
+
+
+def test_lazy_loaded_index_2_empty(runtmp):
+    # some basic tests for LazyLoadedIndex that is empty
+    sigzip = utils.get_test_data('prot/protein.zip')
+
+    # load something:
+    test_zip = runtmp.output('test.zip')
+    shutil.copyfile(sigzip, test_zip)
+    db = index.LazyLoadedIndex.load(test_zip)
+    assert len(db) == 2
+    assert db.location == test_zip
+    assert bool(db)
+
+    # select to empty:
+    db = db.select(ksize=50)
+
+    assert len(db) == 0
+    assert not bool(db)
+
+    x = list(db.signatures())
+    assert len(x) == 0
+
+
+def test_lazy_loaded_index_3_find(runtmp):
+    # test 'find'
+    query_file = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigzip = utils.get_test_data('prot/protein.zip')
+
+    # load something:
+    test_zip = runtmp.output('test.zip')
+    shutil.copyfile(sigzip, test_zip)
+    db = index.LazyLoadedIndex.load(test_zip)
+
+    # can we find matches? should find two.
+    query = sourmash.load_one_signature(query_file)
+    assert query.minhash.ksize == 19
+    x = db.search(query, threshold=0.0)
+    x = list(x)
+    assert len(x) == 2
+
+    # no matches!
+    db = db.select(ksize=20)
+    x = db.search(query, threshold=0.0)
+    x = list(x)
+    assert len(x) == 0
 
 
 def test_lazy_multi_index_1(runtmp):
