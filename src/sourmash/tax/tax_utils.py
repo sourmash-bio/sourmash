@@ -182,6 +182,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
     """
     # init dictionaries
     sum_uniq_weighted = defaultdict(lambda: defaultdict(float))
+    # store together w/ ^ instead?
     sum_uniq_to_query = defaultdict(lambda: defaultdict(float))
     sum_uniq_bp = defaultdict(lambda: defaultdict(float))
 
@@ -193,7 +194,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
         match_ident = row['name']
         f_uniq_weighted = row['f_unique_weighted']
         f_uniq_weighted = float(f_uniq_weighted)
-        ## record some additional info?
+        ## record some additional info
         f_unique_to_query = float(row['f_unique_to_query'])
         unique_intersect_bp = float(row['unique_intersect_bp'])
 
@@ -234,9 +235,24 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
             sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename, f_intersect_at_rank, bp_intersect_at_rank)
             sum_uniq_weighted_sorted.append(sres)
         else:
+            total_f_weighted= 0
+            total_f_classified = 0
+            total_bp_classified = 0
             for lineage, fraction in sumgather_items:
+                total_f_weighted += fraction
                 f_intersect_at_rank = sum_uniq_to_query[query_name][lineage]
+                total_f_classified += f_intersect_at_rank
                 bp_intersect_at_rank = sum_uniq_bp[query_name][lineage]
+                total_bp_classified += bp_intersect_at_rank
+                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename, f_intersect_at_rank, bp_intersect_at_rank)
+                sum_uniq_weighted_sorted.append(sres)
+
+            # record unclassified
+            lineage = ()
+            fraction = round(1.0 - total_f_weighted, 4)
+            if fraction > 0:
+                f_intersect_at_rank = round(1.0 - total_f_classified, 4)
+                bp_intersect_at_rank = 0 #query_bp - total_bp_classified
                 sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename, f_intersect_at_rank, bp_intersect_at_rank)
                 sum_uniq_weighted_sorted.append(sres)
 
@@ -300,7 +316,7 @@ def format_for_krona(rank, summarized_gather):
     for res_rank, rank_results in summarized_gather.items():
         if res_rank == rank:
             lineage_summary, all_queries, num_queries = aggregate_by_lineage_at_rank(rank_results, by_query=False)
-    # if multiple_samples, divide fraction by the total number of query files
+    # if aggregating across queries divide fraction by the total number of queries
     for lin, fraction in lineage_summary.items():
         # divide total fraction by total number of queries
         lineage_summary[lin] = fraction/num_queries
@@ -311,9 +327,20 @@ def format_for_krona(rank, summarized_gather):
 
     # reformat lineage for krona_results printing
     krona_results = []
+    unclassified_fraction = 0
     for lin, fraction in lin_items:
+        # save unclassified fraction for the end
+        if lin == ():
+            unclassified_fraction = fraction
+            continue
         lin_list = display_lineage(lin).split(';')
         krona_results.append((fraction, *lin_list))
+
+    # handle unclassified
+    if unclassified_fraction:
+        len_unclassified_lin = len(krona_results[-1]) -1
+        unclassifed_lin = ["unclassified"]*len_unclassified_lin
+        krona_results.append((unclassified_fraction, *unclassifed_lin))
 
     return krona_results
 
@@ -327,7 +354,7 @@ def write_krona(rank, krona_results, out_fp, *, sep='\t'):
         tsv_output.writerow(res)
 
 
-def write_summary(summarized_gather, csv_fp, *, sep=','):
+def write_summary(summarized_gather, csv_fp, *, sep=',', write_unclassified=False):
     '''
     Write taxonomy-summarized gather results for each rank.
     '''
@@ -340,6 +367,11 @@ def write_summary(summarized_gather, csv_fp, *, sep=','):
             rD['fraction'] = f'{res.fraction:.3f}'
             rD['f_match_at_rank'] = f'{res.fraction:.3f}'
             rD['lineage'] = display_lineage(res.lineage)
+            if rD['lineage'] == "":
+                if write_unclassified:
+                    rD['lineage'] = "unclassified"
+                else:
+                    continue
             w.writerow(rD)
 
 
@@ -356,6 +388,9 @@ def write_classifications(classifications, csv_fp, *, sep=','):
             rD['fraction'] = f'{res.fraction:.3f}'
             rD['f_match_at_rank'] = f'{res.fraction:.3f}'
             rD['lineage'] = display_lineage(res.lineage)
+            # needed?
+            if rD['lineage'] == "":
+                rD['lineage'] = "unclassified"
             w.writerow(rD)
 
 
@@ -421,16 +456,25 @@ def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, format_line
     w = csv.DictWriter(out_fp, header, delimiter=sep)
     w.writeheader()
     blank_row = {query_name: 0 for query_name in sample_names}
+    unclassified_row = None
     for lin, sampleinfo in sorted(lineage_dict.items()):
         if format_lineage:
             lin = display_lineage(lin)
+
         #add lineage and 0 placeholders
         row = {'lineage': lin}
         row.update(blank_row)
         # add info for query_names that exist for this lineage
         row.update(sampleinfo)
+        # if unclassified, save this row for the end
+        if lin == "":
+            lin = "unclassified"
+            unclassified_row = row
+            continue
         # write row
         w.writerow(row)
+    if unclassified_row:
+        w.writerow(unclassified_row)
 
 
 class LineageDB(abc.Mapping):

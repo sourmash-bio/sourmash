@@ -365,22 +365,26 @@ def test_summarize_gather_at_1():
     sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res)
 
     # superkingdom
-    assert len(sk_sum) == 1
+    assert len(sk_sum) == 2
     print("superkingdom summarized gather: ", sk_sum[0])
     assert sk_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),)
     assert sk_sum[0].fraction == 0.7
+    assert sk_sum[1].lineage == ()
+    assert round(sk_sum[1].fraction, 1) == 0.3
 
     # phylum
     phy_sum, _ = summarize_gather_at("phylum", taxD, g_res)
     print("phylum summarized gather: ", phy_sum[0])
-    assert len(phy_sum) == 1
+    assert len(phy_sum) == 2
     assert phy_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),LineagePair(rank='phylum', name='b'))
     assert phy_sum[0].fraction == 0.7
     assert phy_sum[0].f_match_at_rank == 0.6
     assert phy_sum[0].bp_match_at_rank == 15
+    assert phy_sum[1].lineage == ()
+    assert round(phy_sum[1].fraction, 1) == 0.3
     # class
     cl_sum, _ = summarize_gather_at("class", taxD, g_res)
-    assert len(cl_sum) == 2
+    assert len(cl_sum) == 3
     print("class summarized gather: ", cl_sum)
     assert cl_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),
                                  LineagePair(rank='phylum', name='b'),
@@ -396,9 +400,11 @@ def test_summarize_gather_at_1():
     assert cl_sum[1].fraction == 0.1
     assert cl_sum[1].f_match_at_rank == 0.1
     assert cl_sum[1].bp_match_at_rank == 5
+    assert cl_sum[2].lineage == ()
+    assert round(cl_sum[2].fraction, 1) == 0.3
 
 
-def test_summarize_gather_at_100percent_match():
+def test_summarize_gather_at_perfect_match():
     """test 100% gather match (f_unique_weighted == 1)"""
     # make mini gather_results
     gA = ["queryA", "gA","0.5","1.0", "queryA_md5", "queryA.sig", '0.5', '10']
@@ -474,25 +480,37 @@ def test_summarize_gather_at_missing_ignore():
     # run summarize_gather_at and check results!
     sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res, skip_idents=['gB'])
     # superkingdom
-    assert len(sk_sum) == 1
+    assert len(sk_sum) == 2
     print("superkingdom summarized gather: ", sk_sum[0])
     assert sk_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),)
     assert sk_sum[0].fraction == 0.5
+    assert sk_sum[0].bp_match_at_rank == 10
+    assert sk_sum[1].lineage == ()
+    assert sk_sum[1].fraction == 0.5
+    assert sk_sum[1].bp_match_at_rank == 0
 
     # phylum
     phy_sum, _ = summarize_gather_at("phylum", taxD, g_res, skip_idents=['gB'])
     print("phylum summarized gather: ", phy_sum[0])
-    assert len(phy_sum) == 1
+    assert len(phy_sum) == 2
     assert phy_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),LineagePair(rank='phylum', name='b'))
     assert phy_sum[0].fraction == 0.5
+    assert phy_sum[0].bp_match_at_rank == 10
+    assert phy_sum[1].lineage == ()
+    assert phy_sum[1].fraction == 0.5
+    assert phy_sum[1].bp_match_at_rank == 0
     # class
     cl_sum, _ = summarize_gather_at("class", taxD, g_res, skip_idents=['gB'])
-    assert len(cl_sum) == 1
+    assert len(cl_sum) == 2
     print("class summarized gather: ", cl_sum)
     assert cl_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),
                                  LineagePair(rank='phylum', name='b'),
                                  LineagePair(rank='class', name='c'))
     assert cl_sum[0].fraction == 0.5
+    assert cl_sum[0].bp_match_at_rank == 10
+    assert cl_sum[1].lineage == ()
+    assert cl_sum[1].fraction == 0.5
+    assert cl_sum[1].bp_match_at_rank == 0
 
 
 def test_summarize_gather_at_missing_fail():
@@ -653,16 +671,26 @@ def test_aggregate_by_lineage_at_rank_by_query():
     # aggregate by lineage at rank
     sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res)
     print("superkingdom summarized gather results:", sk_sum)
-    assert len(sk_sum) ==2
+    assert len(sk_sum) ==4
     assert sk_sum[0].query_name == "queryA"
     assert sk_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),)
     assert sk_sum[0].fraction == 0.9
-    assert sk_sum[1].query_name == "queryB"
-    assert sk_sum[1].lineage == (LineagePair(rank='superkingdom', name='a'),)
-    assert sk_sum[1].fraction == 0.3
+    # check for unassigned for queryA
+    assert sk_sum[1].query_name == "queryA"
+    assert sk_sum[1].lineage == ()
+    assert round(sk_sum[1].fraction,1) == 0.1
+    # queryB
+    assert sk_sum[2].query_name == "queryB"
+    assert sk_sum[2].lineage == (LineagePair(rank='superkingdom', name='a'),)
+    assert sk_sum[2].fraction == 0.3
+    # check for unassigned for queryA
+    assert sk_sum[3].query_name == "queryB"
+    assert sk_sum[3].lineage == ()
+    assert sk_sum[3].fraction == 0.7
     sk_lin_sum, query_names, num_queries = aggregate_by_lineage_at_rank(sk_sum, by_query=True)
     print("superkingdom lineage summary:", sk_lin_sum, '\n')
-    assert sk_lin_sum == {(LineagePair(rank='superkingdom', name='a'),): {'queryA': 0.9, 'queryB': 0.3}}
+    assert sk_lin_sum == {(LineagePair(rank='superkingdom', name='a'),): {'queryA': 0.9, 'queryB': 0.3},
+                          (): {'queryA': 0.1, 'queryB': 0.7}}
     assert num_queries == 2
     assert query_names == ['queryA', 'queryB']
 
@@ -671,7 +699,8 @@ def test_aggregate_by_lineage_at_rank_by_query():
     phy_lin_sum, query_names, num_queries = aggregate_by_lineage_at_rank(phy_sum, by_query=True)
     print("phylum lineage summary:", phy_lin_sum, '\n')
     assert phy_lin_sum ==  {(LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='b')): {'queryA': 0.5},
-                            (LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='c')): {'queryA': 0.4, 'queryB': 0.3}}
+                            (LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='c')): {'queryA': 0.4, 'queryB': 0.3},
+                            (): {'queryA': 0.1, 'queryB': 0.7}}
     assert num_queries == 2
     assert query_names == ['queryA', 'queryB']
 

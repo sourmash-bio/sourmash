@@ -76,6 +76,10 @@ def subparser(subparsers):
         '-f', '--force', action = 'store_true',
         help='continue past errors in taxonomy database loading',
     )
+    subparser.add_argument(
+        '-u', '--write-unclassified-fraction', action = 'store_true',
+        help='include information on the unmatched fraction to the summary output',
+    )
 
 def main(args):
     import sourmash

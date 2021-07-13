@@ -105,7 +105,7 @@ def metagenome(args):
     if "csv_summary" in args.output_format:
         summary_outfile = make_outfile(args.output_base, "csv_summary", output_dir=args.output_dir)
         with FileOutputCSV(summary_outfile) as out_fp:
-            tax_utils.write_summary(summarized_gather, out_fp)
+            tax_utils.write_summary(summarized_gather, out_fp, write_unclassified=args.write_unclassified_fraction)
 
     # if lineage summary table
     if "lineage_summary" in args.output_format:

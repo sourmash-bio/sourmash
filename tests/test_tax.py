@@ -115,6 +115,50 @@ def test_metagenome_summary_csv_out(runtmp):
     assert "test1,species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus" in sum_gather_results[15]
 
 
+def test_metagenome_summary_csv_write_unclassified(runtmp):
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+    sum_csv = csv_base + ".summarized.csv"
+    csvout = runtmp.output(sum_csv)
+    outdir = os.path.dirname(csvout)
+
+    runtmp.run_sourmash('tax', 'metagenome', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-dir', outdir, '--write-unclassified-fraction')
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    sum_gather_results = [x.rstrip() for x in open(csvout)]
+    assert f"saving `csv_summary` output to {csvout}" in runtmp.last_result.err
+    assert "query_name,rank,fraction,lineage" in sum_gather_results[0]
+    assert 'test1,superkingdom,0.131,d__Bacteria' in sum_gather_results[1]
+    assert 'test1,superkingdom,0.869,unclassified,md5,test1.sig,0.869,0' in sum_gather_results[2]
+    assert "test1,phylum,0.073,d__Bacteria;p__Bacteroidota" in sum_gather_results[3]
+    assert "test1,phylum,0.058,d__Bacteria;p__Proteobacteria" in sum_gather_results[4]
+    assert 'test1,phylum,0.869,unclassified,md5,test1.sig,0.869,0' in sum_gather_results[5]
+    assert "test1,class,0.073,d__Bacteria;p__Bacteroidota;c__Bacteroidia" in sum_gather_results[6]
+    assert "test1,class,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria" in sum_gather_results[7]
+    assert 'test1,class,0.869,unclassified,md5,test1.sig,0.869,0' in sum_gather_results[8]
+    assert "test1,order,0.073,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales" in sum_gather_results[9]
+    assert "test1,order,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales" in sum_gather_results[10]
+    assert 'test1,order,0.869,unclassified,md5,test1.sig,0.869,0' in sum_gather_results[11]
+    assert "test1,family,0.073,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae" in sum_gather_results[12]
+    assert "test1,family,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae" in sum_gather_results[13]
+    assert 'test1,family,0.869,unclassified,md5,test1.sig,0.869,0' in sum_gather_results[14]
+    assert "test1,genus,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia" in sum_gather_results[15]
+    assert "test1,genus,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella" in sum_gather_results[16]
+    assert "test1,genus,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola" in sum_gather_results[17]
+    assert 'test1,genus,0.869,unclassified,md5,test1.sig,0.869,0' in sum_gather_results[18]
+    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in sum_gather_results[19]
+    assert "test1,species,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in sum_gather_results[20]
+    assert "test1,species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus" in sum_gather_results[21]
+    assert 'test1,species,0.869,unclassified,md5,test1.sig,0.869,0' in sum_gather_results[22]
+
+
 def test_metagenome_krona_tsv_out(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
@@ -141,6 +185,7 @@ def test_metagenome_krona_tsv_out(runtmp):
     assert ['0.05815279361459521', 'd__Bacteria', 'p__Proteobacteria', 'c__Gammaproteobacteria', 'o__Enterobacterales', 'f__Enterobacteriaceae', 'g__Escherichia']  == gn_krona_results[1]
     assert ['0.05701254275940707', 'd__Bacteria', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Prevotella'] == gn_krona_results[2]
     assert ['0.015637726014008795', 'd__Bacteria', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Phocaeicola'] == gn_krona_results[3]
+    assert ['0.8692', 'unclassified', 'unclassified', 'unclassified', 'unclassified', 'unclassified', 'unclassified'] == gn_krona_results[4]
 
 
 def test_metagenome_lineage_summary_out(runtmp):
