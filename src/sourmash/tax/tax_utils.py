@@ -18,8 +18,8 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
 from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
 
-SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_match_at_rank, bp_match_at_rank")
-ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_match_at_rank, bp_match_at_rank")
+SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_unique_at_rank, bp_match_at_rank")
+ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_unique_at_rank, bp_match_at_rank")
 
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
@@ -365,7 +365,7 @@ def write_summary(summarized_gather, csv_fp, *, sep=',', write_unclassified=Fals
         for res in rank_results:
             rD = res._asdict()
             rD['fraction'] = f'{res.fraction:.3f}'
-            rD['f_match_at_rank'] = f'{res.fraction:.3f}'
+            rD['f_unique_at_rank'] = f'{res.fraction:.3f}'
             rD['lineage'] = display_lineage(res.lineage)
             if rD['lineage'] == "":
                 if write_unclassified:
@@ -386,7 +386,7 @@ def write_classifications(classifications, csv_fp, *, sep=','):
         for res in rank_results:
             rD = res._asdict()
             rD['fraction'] = f'{res.fraction:.3f}'
-            rD['f_match_at_rank'] = f'{res.fraction:.3f}'
+            rD['f_unique_at_rank'] = f'{res.fraction:.3f}'
             rD['lineage'] = display_lineage(res.lineage)
             # needed?
             if rD['lineage'] == "":
