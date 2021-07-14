@@ -354,7 +354,7 @@ def write_krona(rank, krona_results, out_fp, *, sep='\t'):
         tsv_output.writerow(res)
 
 
-def write_summary(summarized_gather, csv_fp, *, sep=',', write_unclassified=False):
+def write_summary(summarized_gather, csv_fp, *, sep=','):
     '''
     Write taxonomy-summarized gather results for each rank.
     '''
@@ -368,10 +368,7 @@ def write_summary(summarized_gather, csv_fp, *, sep=',', write_unclassified=Fals
             rD['f_unique_at_rank'] = f'{res.fraction:.3f}'
             rD['lineage'] = display_lineage(res.lineage)
             if rD['lineage'] == "":
-                if write_unclassified:
-                    rD['lineage'] = "unclassified"
-                else:
-                    continue
+                rD['lineage'] = "unclassified"
             w.writerow(rD)
 
 
