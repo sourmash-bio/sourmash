@@ -1802,46 +1802,46 @@ def test_search_4():
         assert 'short3.fa' in out
 
 
-# @utils.in_tempdir
-# def test_index_check_scaled_bounds_negative(c):
-#     with utils.TempDirectory() as location:
-#         status, out, err = utils.runscript('sourmash',
-#                                            ['index', 'zzz',
-#                                             'short.fa.sig',
-#                                             'short2.fa.sig',
-#                                             '-k', '31', '--scaled', '-5',
-#                                             '--dna'],
-#                                            in_directory=location, fail_ok=True)
+@utils.in_tempdir
+def test_index_check_scaled_bounds_negative(c):
+    with utils.TempDirectory() as location:
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig',
+                                            '-k', '31', '--scaled', '-5',
+                                            '--dna'],
+                                           in_directory=location, fail_ok=True)
 
-#         assert "ERROR: --scaled value must be positive" in err
-
-
-# @utils.in_tempdir
-# def test_index_check_scaled_bounds_less_than_minimum(c):
-#     with utils.TempDirectory() as location:
-#         status, out, err = utils.runscript('sourmash',
-#                                            ['index', 'zzz',
-#                                             'short.fa.sig',
-#                                             'short2.fa.sig',
-#                                             '-k', '31', '--scaled', '50',
-#                                             '--dna'],
-#                                            in_directory=location, fail_ok=True)
-
-#         assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
+        assert "ERROR: --scaled value must be positive" in err
 
 
-# @utils.in_tempdir
-# def test_index_check_scaled_bounds_more_than_maximum(c):
-#     with utils.TempDirectory() as location:
-#         status, out, err = utils.runscript('sourmash',
-#                                            ['index', 'zzz',
-#                                             'short.fa.sig',
-#                                             'short2.fa.sig',
-#                                             '-k', '31', '--scaled', '1e9',
-#                                             '--dna'],
-#                                            in_directory=location, fail_ok=True)
+@utils.in_tempdir
+def test_index_check_scaled_bounds_less_than_minimum(c):
+    with utils.TempDirectory() as location:
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig',
+                                            '-k', '31', '--scaled', '50',
+                                            '--dna'],
+                                           in_directory=location, fail_ok=True)
 
-#         assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
+        assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
+
+
+@utils.in_tempdir
+def test_index_check_scaled_bounds_more_than_maximum(c):
+    with utils.TempDirectory() as location:
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig',
+                                            '-k', '31', '--scaled', '1e9',
+                                            '--dna'],
+                                           in_directory=location, fail_ok=True)
+
+        assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
 
 
 @utils.in_tempdir

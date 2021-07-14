@@ -352,13 +352,6 @@ def index(args):
         error('sparseness must be in range [0.0, 1.0].')
     
     if args.scaled:
-        # if args.scaled < 0:
-        #     error('ERROR: --scaled value must be positive')
-        #     sys.exit(-1)
-        # if args.scaled < 100:
-        #     notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
-        # if args.scaled > 1e6:
-        #     notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
         args.scaled = int(args.scaled)
         notify('downsampling signatures to scaled={}', args.scaled)
 
@@ -396,13 +389,6 @@ def index(args):
             nums.add(ss.minhash.num)
 
             if args.scaled:
-                # if args.scaled < 0:
-                #     error('ERROR: --scaled value must be positive')
-                #     sys.exit(-1)
-                # if args.scaled < 100:
-                #     notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
-                # if args.scaled > 1e6:
-                #     notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
                 ss.minhash = ss.minhash.downsample(scaled=args.scaled)
 
             if ss.minhash.track_abundance:
