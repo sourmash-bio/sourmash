@@ -24,8 +24,7 @@ from sourmash.lca.lca_utils import LineagePair
 # utility functions for testing
 def make_mini_gather_results(g_infolist):
     # make mini gather_results
-    min_header = ["query_name", "name", "match_ident", "f_unique_weighted", "query_md5", "query_filename", "f_unique_to_query", "unique_intersect_bp"]
-    #default_gather_results = ['queryA', 'gA', '0.5', '0.5', "queryA_md5", "queryA.sig", '0.5', '10']
+    min_header = ["query_name", "name", "match_ident", "f_unique_weighted", "query_md5", "query_filename", "f_unique_to_query", "unique_intersect_bp", "remaining_bp"]
     gather_results = []
     for g_info in g_infolist:
         inf = dict(zip(min_header, g_info))
@@ -273,8 +272,8 @@ def test_load_taxonomy_csv_duplicate_force(runtmp):
 
 def test_find_missing_identities():
     # make gather results
-    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
-    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
+    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
+    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -291,8 +290,8 @@ def test_find_missing_identities():
 def test_summarize_gather_at_0():
     """test two matches, equal f_unique_weighted"""
     # make gather results
-    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
-    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
+    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
+    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -353,8 +352,8 @@ def test_summarize_gather_at_0():
 def test_summarize_gather_at_1():
     """test two matches, diff f_unique_weighted"""
     # make mini gather_results
-    gA = ["queryA", "gA","0.5","0.6", "queryA_md5", "queryA.sig", '0.5', '10']
-    gB = ["queryA", "gB","0.3","0.1", "queryA_md5", "queryA.sig", '0.1', '5']
+    gA = ["queryA", "gA","0.5","0.6", "queryA_md5", "queryA.sig", '0.5', '10', '1']
+    gB = ["queryA", "gB","0.3","0.1", "queryA_md5", "queryA.sig", '0.1', '5', '1']
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -407,8 +406,8 @@ def test_summarize_gather_at_1():
 def test_summarize_gather_at_perfect_match():
     """test 100% gather match (f_unique_weighted == 1)"""
     # make mini gather_results
-    gA = ["queryA", "gA","0.5","1.0", "queryA_md5", "queryA.sig", '0.5', '10']
-    gB = ["queryA", "gB","0.3","0.0", "queryA_md5", "queryA.sig", '0.5', '10']
+    gA = ["queryA", "gA","0.5","1.0", "queryA_md5", "queryA.sig", '0.5', '10', '1']
+    gB = ["queryA", "gB","0.3","0.0", "queryA_md5", "queryA.sig", '0.5', '10', '1']
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -429,8 +428,8 @@ def test_summarize_gather_at_over100percent_f_unique_weighted():
     """gather matches that add up to >100% f_unique_weighted"""
     ## should we make this fail?
     # make mini gather_results
-    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
-    gB = ["queryA", "gB","0.3","0.6", "queryA_md5", "queryA.sig", '0.5', '10']
+    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
+    gB = ["queryA", "gB","0.3","0.6", "queryA_md5", "queryA.sig", '0.5', '10', '1']
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -469,8 +468,8 @@ def test_summarize_gather_at_over100percent_f_unique_weighted():
 def test_summarize_gather_at_missing_ignore():
     """test two matches, equal f_unique_weighted"""
     # make gather results
-    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
-    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
+    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
+    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -487,7 +486,7 @@ def test_summarize_gather_at_missing_ignore():
     assert sk_sum[0].bp_match_at_rank == 10
     assert sk_sum[1].lineage == ()
     assert sk_sum[1].fraction == 0.5
-    assert sk_sum[1].bp_match_at_rank == 0
+    assert sk_sum[1].bp_match_at_rank == 1
 
     # phylum
     phy_sum, _ = summarize_gather_at("phylum", taxD, g_res, skip_idents=['gB'])
@@ -498,7 +497,7 @@ def test_summarize_gather_at_missing_ignore():
     assert phy_sum[0].bp_match_at_rank == 10
     assert phy_sum[1].lineage == ()
     assert phy_sum[1].fraction == 0.5
-    assert phy_sum[1].bp_match_at_rank == 0
+    assert phy_sum[1].bp_match_at_rank == 1
     # class
     cl_sum, _ = summarize_gather_at("class", taxD, g_res, skip_idents=['gB'])
     assert len(cl_sum) == 2
@@ -510,14 +509,14 @@ def test_summarize_gather_at_missing_ignore():
     assert cl_sum[0].bp_match_at_rank == 10
     assert cl_sum[1].lineage == ()
     assert cl_sum[1].fraction == 0.5
-    assert cl_sum[1].bp_match_at_rank == 0
+    assert cl_sum[1].bp_match_at_rank == 1
 
 
 def test_summarize_gather_at_missing_fail():
     """test two matches, equal f_unique_weighted"""
     # make gather results
-    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
-    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
+    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
+    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -533,8 +532,8 @@ def test_summarize_gather_at_missing_fail():
 def test_summarize_gather_at_best_only_0():
     """test two matches, diff f_unique_weighted"""
     # make mini gather_results
-    gA = ["queryA", "gA","0.5","0.6", "queryA_md5", "queryA.sig", '0.5', '10']
-    gB = ["queryA", "gB","0.3","0.1", "queryA_md5", "queryA.sig", '0.5', '10']
+    gA = ["queryA", "gA","0.5","0.6", "queryA_md5", "queryA.sig", '0.5', '10', '1']
+    gB = ["queryA", "gB","0.3","0.1", "queryA_md5", "queryA.sig", '0.5', '10', '1']
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -568,8 +567,8 @@ def test_summarize_gather_at_best_only_0():
 def test_summarize_gather_at_best_only_equal_choose_first():
     """test two matches, equal f_unique_weighted. best_only chooses first"""
     # make mini gather_results
-    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
-    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
+    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
+    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -658,9 +657,9 @@ def test_make_krona_header_fail():
 def test_aggregate_by_lineage_at_rank_by_query():
     """test two queries, aggregate lineage at rank for each"""
     # make gather results
-    gA = ["queryA","gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
-    gB = ["queryA","gB","0.3","0.4", "queryA_md5", "queryA.sig", '0.5', '10']
-    gC = ["queryB","gB","0.3","0.3", "queryB_md5", "queryB.sig", '0.5', '10']
+    gA = ["queryA","gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
+    gB = ["queryA","gB","0.3","0.4", "queryA_md5", "queryA.sig", '0.5', '10', '1']
+    gC = ["queryB","gB","0.3","0.3", "queryB_md5", "queryB.sig", '0.5', '10', '1']
     g_res = make_mini_gather_results([gA,gB,gC])
 
     # make mini taxonomy
@@ -708,8 +707,8 @@ def test_aggregate_by_lineage_at_rank_by_query():
 def test_format_for_krona_0():
     """test two matches, equal f_unique_weighted"""
     # make gather results
-    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
-    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
+    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
+    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -733,8 +732,8 @@ def test_format_for_krona_0():
 def test_format_for_krona_1():
     """test two matches, equal f_unique_weighted"""
     # make gather results
-    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
-    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
+    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
+    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy
@@ -763,8 +762,8 @@ def test_format_for_krona_1():
 def test_format_for_krona_best_only():
     """test two matches, equal f_unique_weighted"""
     # make gather results
-    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
-    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '10']
+    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
+    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
     g_res = make_mini_gather_results([gA,gB])
 
     # make mini taxonomy

@@ -72,7 +72,7 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     return gather_csvs
 
 
-def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=['query_name', 'name', 'f_unique_weighted', 'f_unique_to_query', 'unique_intersect_bp', 'query_md5', 'query_filename'], seen_queries=set(), force=False):
+def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=['query_name', 'name', 'f_unique_weighted', 'f_unique_to_query', 'unique_intersect_bp', 'remaining_bp', 'query_md5', 'query_filename'], seen_queries=set(), force=False):
     "Load a single gather csv"
     header = []
     gather_results = []
@@ -185,10 +185,16 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
     # store together w/ ^ instead?
     sum_uniq_to_query = defaultdict(lambda: defaultdict(float))
     sum_uniq_bp = defaultdict(lambda: defaultdict(float))
+    query_bp = defaultdict(int)
 
     for row in gather_results:
         # get essential gather info
         query_name = row['query_name']
+        unique_intersect_bp = int(row['unique_intersect_bp'])
+        # get query_bp
+        if query_name not in query_bp.keys():
+            bp = unique_intersect_bp + int(row['remaining_bp'])
+            query_bp[query_name] = bp
         query_md5 = row['query_md5']
         query_filename = row['query_filename']
         match_ident = row['name']
@@ -196,7 +202,6 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
         f_uniq_weighted = float(f_uniq_weighted)
         ## record some additional info
         f_unique_to_query = float(row['f_unique_to_query'])
-        unique_intersect_bp = float(row['unique_intersect_bp'])
 
         # 100% match? are we looking at something in the database?
         if f_uniq_weighted >= 1.0 and query_name not in seen_perfect: # only want to notify once, not for each rank
@@ -242,7 +247,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                 total_f_weighted += fraction
                 f_intersect_at_rank = sum_uniq_to_query[query_name][lineage]
                 total_f_classified += f_intersect_at_rank
-                bp_intersect_at_rank = sum_uniq_bp[query_name][lineage]
+                bp_intersect_at_rank = int(sum_uniq_bp[query_name][lineage])
                 total_bp_classified += bp_intersect_at_rank
                 sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename, f_intersect_at_rank, bp_intersect_at_rank)
                 sum_uniq_weighted_sorted.append(sres)
@@ -252,7 +257,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
             fraction = round(1.0 - total_f_weighted, 4)
             if fraction > 0:
                 f_intersect_at_rank = round(1.0 - total_f_classified, 4)
-                bp_intersect_at_rank = 0 #query_bp - total_bp_classified
+                bp_intersect_at_rank = query_bp[query_name] - total_bp_classified
                 sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename, f_intersect_at_rank, bp_intersect_at_rank)
                 sum_uniq_weighted_sorted.append(sres)
 
