@@ -3568,80 +3568,79 @@ def test_multigather_metagenome():
                     'NC_011294.1 Salmonella enterica subsp...' in out))
 
 
-# @utils.in_tempdir
-# def test_multigather_check_scaled_bounds_negative(c):
-#     testdata_glob = utils.get_test_data('gather/GCF*.sig')
-#     testdata_sigs = glob.glob(testdata_glob)
+@utils.in_tempdir
+def test_multigather_check_scaled_bounds_negative(c):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-#     query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-#     cmd = ['index', 'gcf_all']
-#     cmd.extend(testdata_sigs)
-#     cmd.extend(['-k', '21'])
-#     c.run_sourmash(*cmd)
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+    c.run_sourmash(*cmd)
 
-#     # make list w/query sig
-#     query_list = c.output('query.list')
-#     with open(query_list, 'wt') as fp:
-#         print(query_sig, file=fp)
+    # make list w/query sig
+    query_list = c.output('query.list')
+    with open(query_list, 'wt') as fp:
+        print(query_sig, file=fp)
 
-#     cmd = 'multigather --query-from-file {} --db gcf_all -k 21 --scaled -5 --threshold-bp=0'.format(query_list)
-#     cmd = cmd.split(' ')
-#     with pytest.raises(ValueError) as exc:
-#         c.run_sourmash(*cmd)
+    cmd = 'multigather --query-from-file {} --db gcf_all -k 21 --scaled -5 --threshold-bp=0'.format(query_list)
+    cmd = cmd.split(' ')
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash(*cmd)
 
-#     assert "ERROR: --scaled value must be positive" in str(exc.value)
-
-
-# @utils.in_tempdir
-# def test_multigather_check_scaled_bounds_less_than_minimum(c):
-#     testdata_glob = utils.get_test_data('gather/GCF*.sig')
-#     testdata_sigs = glob.glob(testdata_glob)
-
-#     query_sig = utils.get_test_data('gather/combined.sig')
-
-#     cmd = ['index', 'gcf_all']
-#     cmd.extend(testdata_sigs)
-#     cmd.extend(['-k', '21'])
-#     c.run_sourmash(*cmd)
-
-#     # make list w/query sig
-#     query_list = c.output('query.list')
-#     with open(query_list, 'wt') as fp:
-#         print(query_sig, file=fp)
-
-#     cmd = 'multigather --query-from-file {} --db gcf_all -k 21 --scaled 50 --threshold-bp=0'.format(query_list)
-#     cmd = cmd.split(' ')
-#     with pytest.raises(ValueError) as exc:
-#         c.run_sourmash(*cmd)
-
-#     assert "WARNING: --scaled value should be >= 100. Continuing anyway." in str(exc.value)
+    assert "ERROR: --scaled value must be positive" in str(exc.value)
 
 
-# @utils.in_tempdir
-# def test_multigather_check_scaled_bounds_more_than_maximum(c):
-#     testdata_glob = utils.get_test_data('gather/GCF*.sig')
-#     testdata_sigs = glob.glob(testdata_glob)
+@utils.in_tempdir
+def test_multigather_check_scaled_bounds_less_than_minimum(c):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-#     query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-#     cmd = ['index', 'gcf_all']
-#     cmd.extend(testdata_sigs)
-#     cmd.extend(['-k', '21'])
-#     c.run_sourmash(*cmd)
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+    c.run_sourmash(*cmd)
 
-#     # make list w/query sig
-#     query_list = c.output('query.list')
-#     with open(query_list, 'wt') as fp:
-#         print(query_sig, file=fp)
+    # make list w/query sig
+    query_list = c.output('query.list')
+    with open(query_list, 'wt') as fp:
+        print(query_sig, file=fp)
 
-#     cmd = 'multigather --query-from-file {} --db gcf_all -k 21 --scaled 1e9 --threshold-bp=0'.format(query_list)
-#     cmd = cmd.split(' ')
-#     c.run_sourmash(*cmd)
+    cmd = 'multigather --query-from-file {} --db gcf_all -k 21 --scaled 50 --threshold-bp=0'.format(query_list)
+    cmd = cmd.split(' ')
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash(*cmd)
 
-#     err = c.last_result.err
+    assert "WARNING: --scaled value should be >= 100. Continuing anyway." in str(exc.value)
 
-#     assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
+
+@utils.in_tempdir
+def test_multigather_check_scaled_bounds_more_than_maximum(c):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+    c.run_sourmash(*cmd)
+
+    # make list w/query sig
+    query_list = c.output('query.list')
+    with open(query_list, 'wt') as fp:
+        print(query_sig, file=fp)
+
+    cmd = 'multigather --query-from-file {} --db gcf_all -k 21 --scaled 1e9 --threshold-bp=0'.format(query_list)
+    cmd = cmd.split(' ')
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash(*cmd)
+
+    assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in str(exc.value)
 
 
 @utils.in_tempdir
