@@ -5361,3 +5361,22 @@ def test_gather_with_prefetch_picklist_5_search(runtmp):
 
     assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
     assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out
+
+
+def test_gather_scaled_1(runtmp, linear_gather, prefetch_gather):
+    # test gather on a sig indexed with scaled=1
+    inp = utils.get_test_data('short.fa')
+    outp = runtmp.output('out.sig')
+
+    # prepare a signature with a scaled of 1
+    runtmp.sourmash('sketch', 'dna', '-p', 'scaled=1,k=31', inp, '-o', outp)
+
+    # run with a low threshold
+    runtmp.sourmash('gather', outp, outp, '--threshold-bp', '0')
+
+    print(runtmp.last_result.out)
+    print('---')
+    print(runtmp.last_result.err)
+
+    assert "1.0 kbp      100.0%  100.0%" in runtmp.last_result.out
+    assert "found 1 matches total;" in runtmp.last_result.out
