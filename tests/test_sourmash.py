@@ -2008,49 +2008,49 @@ def test_search_traverse_incompatible(c):
     assert '100.0%       NC_009665.1 Shewanella baltica OS185, complete genome' in c.last_result.out
 
 
-# def test_search_check_scaled_bounds_negative():
+def test_search_check_scaled_bounds_negative():
 
-#     with utils.TempDirectory() as location:
-#         testdata_glob = utils.get_test_data('gather/GCF*.sig')
-#         testdata_sigs = glob.glob(testdata_glob)
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
 
-#         query_sig = utils.get_test_data('gather/combined.sig')
+        query_sig = utils.get_test_data('gather/combined.sig')
 
-#         cmd = 'search {} gcf_all -k 21 --scaled -5'.format(query_sig)
-#         status, out, err = utils.runscript('sourmash', cmd.split(' '),
-#                                             in_directory=location, fail_ok=True)
+        cmd = 'search {} gcf_all -k 21 --scaled -5'.format(query_sig)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                            in_directory=location, fail_ok=True)
 
-#         assert "ERROR: --scaled value must be positive" in err
-
-
-# def test_search_check_scaled_bounds_less_than_minimum():
-
-#     with utils.TempDirectory() as location:
-#         testdata_glob = utils.get_test_data('gather/GCF*.sig')
-#         testdata_sigs = glob.glob(testdata_glob)
-
-#         query_sig = utils.get_test_data('gather/combined.sig')
-
-#         cmd = 'search {} gcf_all -k 21 --scaled 50'.format(query_sig)
-#         status, out, err = utils.runscript('sourmash', cmd.split(' '),
-#                                             in_directory=location, fail_ok=True)
-
-#         assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
+        assert "ERROR: --scaled value must be positive" in err
 
 
-# def test_search_check_scaled_bounds_more_than_maximum():
+def test_search_check_scaled_bounds_less_than_minimum():
 
-#     with utils.TempDirectory() as location:
-#         testdata_glob = utils.get_test_data('gather/GCF*.sig')
-#         testdata_sigs = glob.glob(testdata_glob)
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
 
-#         query_sig = utils.get_test_data('gather/combined.sig')
+        query_sig = utils.get_test_data('gather/combined.sig')
 
-#         cmd = 'search {} gcf_all -k 21 --scaled 1e9'.format(query_sig)
-#         status, out, err = utils.runscript('sourmash', cmd.split(' '),
-#                                             in_directory=location, fail_ok=True)
+        cmd = 'search {} gcf_all -k 21 --scaled 50'.format(query_sig)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                            in_directory=location, fail_ok=True)
 
-#         assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
+        assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
+
+
+def test_search_check_scaled_bounds_more_than_maximum():
+
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = 'search {} gcf_all -k 21 --scaled 1e9'.format(query_sig)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                            in_directory=location, fail_ok=True)
+
+        assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
 
 
 # explanation: you cannot downsample a scaled SBT to match a scaled

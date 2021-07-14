@@ -466,16 +466,9 @@ def search(args):
                                              sourmash_args.get_moltype(query))
 
     if args.scaled:
-        # if args.scaled < 0:
-        #     error('ERROR: --scaled value must be positive')
-        #     sys.exit(-1)
-        # if args.scaled < 100:
-        #     notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
-        # if args.scaled > 1e6:
-        #     notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
-        # if not query.minhash.scaled:
-        #     error('cannot downsample a signature not created with --scaled')
-        #     sys.exit(-1)
+        if not query.minhash.scaled:
+            error('cannot downsample a signature not created with --scaled')
+            sys.exit(-1)
         if args.scaled != query.minhash.scaled:
             notify('downsampling query from scaled={} to {}',
                 query.minhash.scaled, int(args.scaled))
