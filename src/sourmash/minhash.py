@@ -682,8 +682,10 @@ class MinHash(RustObject):
         new_mh.__class__ = FrozenMinHash
         return new_mh
 
-    def inflate(self, from_mh):    
-        if from_mh.track_abundance:
+    def inflate(self, from_mh):  
+        print(self.track_abundance)
+        print(from_mh.track_abundance)
+        if (self.track_abundance == True) and (from_mh.track_abundance == True):
             hashes = set(self.hashes)
             orig_abunds = from_mh.hashes
             abunds = { h: orig_abunds[h] for h in hashes }
@@ -697,8 +699,8 @@ class MinHash(RustObject):
             return abund_query_mh
 
         else:
-            raise ValueError('value of track_abundance should be true') 
-
+            raise ValueError('value of track_abundance for self and from_mh should be true') 
+        
 
 class FrozenMinHash(MinHash):
     def add_sequence(self, *args, **kwargs):
@@ -791,5 +793,19 @@ class FrozenMinHash(MinHash):
         return self
     copy = __copy__
 
-    # def inflate(self, infl):
-    #     raise TypeError('FrozenMinHash does not support modification')
+    def inflate(self, from_mh):    
+        if (self.track_abundance == False) and (from_mh.track_abundance == True):
+            hashes = set(self.hashes)
+            orig_abunds = from_mh.hashes
+            abunds = { h: orig_abunds[h] for h in hashes }
+
+            abund_query_mh = from_mh.copy_and_clear()
+
+            abund_query_mh.downsample(scaled=self.scaled)
+            abund_query_mh.set_abundances(abunds)
+            self.minhash = abund_query_mh
+
+            return abund_query_mh
+
+        else:
+            raise ValueError('value of track_abundance for self and from_mh should be true') 

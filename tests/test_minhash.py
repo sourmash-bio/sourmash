@@ -1555,6 +1555,40 @@ def test_inflate():
     assert mh3.hashes[30] == 3
 
 
+def test_inflate_error():
+    # test behavior with scaled
+    scaled = _get_scaled_for_max_hash(35)
+    mh = MinHash(0, 4, track_abundance=False, scaled=scaled)
+    mh2 = MinHash(0, 4, track_abundance=True, scaled=scaled)
+    assert mh._max_hash == 35
+
+    mh.add_hash(10)
+    mh.add_hash(20)
+    mh.add_hash(30)
+
+    assert mh.hashes[10] == 1
+    assert mh.hashes[20] == 1
+    assert mh.hashes[30] == 1
+
+    mh2.add_hash(10)
+    mh2.add_hash(10)
+    mh2.add_hash(10)
+    mh2.add_hash(20)
+    mh2.add_hash(20)
+    mh2.add_hash(30)
+    mh2.add_hash(30)
+    mh2.add_hash(30)
+
+    assert mh2.hashes[10] == 3
+    assert mh2.hashes[20] == 2
+    assert mh2.hashes[30] == 3
+
+    with pytest.raises(ValueError) as exc:
+        mh = mh.inflate(mh2)
+
+    assert "value of track_abundance for self should be false and from_mh should be true" in str(exc.value)
+
+
 def test_add_kmer(track_abundance):
     # test add_kmer method
     mh1 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
