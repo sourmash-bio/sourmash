@@ -13,6 +13,10 @@ def subparser(subparsers):
         help='scaled value to downsample to'
     )
     subparser.add_argument(
+        '--from-file',
+        help='a text file containing a list of files to load signatures from'
+    )
+    subparser.add_argument(
         '--num', metavar='N', type=int, default=0,
         help='num value to downsample to'
     )
@@ -24,6 +28,10 @@ def subparser(subparsers):
         '-o', '--output', metavar='FILE',
         help='output signature to this file (default stdout)',
         default='-',
+    )
+    subparser.add_argument(
+        '-f', '--force', action='store_true',
+        help='try to load all files as signatures'
     )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)

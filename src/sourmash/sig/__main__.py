@@ -69,16 +69,19 @@ def cat(args):
     set_quiet(args.quiet)
 
     encountered_md5sums = defaultdict(int)   # used by --unique
-    progress = sourmash_args.SignatureLoadingProgress()
 
+    # open output for saving sigs
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
     save_sigs.open()
 
+    # extend input signatures with --from-file
     if args.from_file:
         more_files = sourmash_args.load_pathlist_from_file(args.from_file)
         args.signatures = list(args.signatures)
         args.signatures.extend(more_files)
 
+    # start loading!
+    progress = sourmash_args.SignatureLoadingProgress()
     for sigfile in args.signatures:
         try:
             loader = sourmash_args.load_file_as_signatures(sigfile,
@@ -741,32 +744,49 @@ def downsample(args):
     moltype = sourmash_args.calculate_moltype(args)
 
     if not args.num and not args.scaled:
-        error('must specify either --num or --scaled value')
+        error('ERROR: must specify either --num or --scaled value')
         sys.exit(-1)
 
     if args.num and args.scaled:
-        error('cannot specify both --num and --scaled')
+        error('ERROR: cannot specify both --num and --scaled')
         sys.exit(-1)
 
+    # open output for saving sigs
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
     save_sigs.open()
 
+    # extend input signatures with --from-file
+    if args.from_file:
+        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
+        args.signatures = list(args.signatures)
+        args.signatures.extend(more_files)
+
+    # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-
     for sigfile in args.signatures:
-        siglist = sourmash_args.load_file_as_signatures(sigfile,
-                                                        ksize=args.ksize,
-                                                        select_moltype=moltype,
-                                                        progress=progress)
+        notify(f'loading and downsampling signature from {sigfile}...',
+               end='\r')
+        try:
+            loader = sourmash_args.load_file_as_signatures(sigfile,
+                                                    ksize=args.ksize,
+                                                    select_moltype=moltype,
+                                                    progress=progress,
+                                                    yield_all_files=args.force)
+        except ValueError:
+            if args.force:
+                continue
+            else:
+                raise
 
-        for sigobj in siglist:
+        for sigobj in loader:
             mh = sigobj.minhash
 
-            notify('loading and downsampling signature from {}...', sigfile, end='\r')
             if args.scaled:
+                # downsample scaled to scaled? straightforward.
                 if mh.scaled:
                     mh_new = mh.downsample(scaled=args.scaled)
-                else:                         # try to turn a num into a scaled
+                # try to turn a num into a scaled - trickier.
+                else:
                     # first check: can we?
                     max_hash = _get_max_hash_for_scaled(args.scaled)
                     mins = mh.hashes
@@ -776,18 +796,21 @@ def downsample(args):
                     mh_new = mh.copy()
                     _set_num_scaled(mh_new, 0, args.scaled)
             elif args.num:
+                # downsample num to num? straightforward.
                 if mh.num:
                     mh_new = mh.downsample(num=args.num)
-                else:                         # try to turn a scaled into a num
+                # try to turn a scaled into a num - trickier.
+                else:
                     # first check: can we?
                     if len(mh) < args.num:
-                        raise ValueError("this scaled MinHash has only {} hashes")
+                        raise ValueError(f"this scaled MinHash has only {len(mh)} hashes")
 
                     mh_new = mh.copy()
                     _set_num_scaled(mh_new, args.num, 0)
 
             sigobj.minhash = mh_new
 
+            # save!
             save_sigs.add(sigobj)
 
     save_sigs.close()
