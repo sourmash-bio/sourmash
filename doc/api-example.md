@@ -395,7 +395,7 @@ True
 
 (Beware, these are confusing techniques for working with hashes that
 are easy to get wrong! We suggest
-[posting questions in the issue tracker](https://github.com/dib-lab/sourmash/issues)
+[posting questions in the issue tracker](https://github.com/sourmash-bio/sourmash/issues)
 as you go, if you are interested in exploring this area!)
 
 The hashing function used is identical between num and scaled signatures,
@@ -596,8 +596,8 @@ Now, let's load in all of the signatures from the test directory:
 ...    hashes_inserted = db.insert(sig)
 ...    print(f"Inserted {hashes_inserted} hashes into db.")
 Inserted 493 hashes into db.
-Inserted 525 hashes into db.
 Inserted 490 hashes into db.
+Inserted 525 hashes into db.
 
 ```
 

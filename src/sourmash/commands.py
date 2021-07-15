@@ -5,7 +5,6 @@ import csv
 import os
 import os.path
 import sys
-import copy
 
 import screed
 from .compare import (compare_all_pairs, compare_serial_containment,
@@ -29,6 +28,7 @@ def compare(args):
 
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     inp_files = list(args.signatures)
     if args.from_file:
@@ -46,11 +46,12 @@ def compare(args):
         loaded = sourmash_args.load_file_as_signatures(filename,
                                                        ksize=args.ksize,
                                                        select_moltype=moltype,
+                                                       picklist=picklist,
                                                        yield_all_files=args.force,
                                                        progress=progress)
         loaded = list(loaded)
         if not loaded:
-            notify('\nwarning: no signatures loaded at given ksize/molecule type from {}', filename)
+            notify('\nwarning: no signatures loaded at given ksize/molecule type/picklist from {}', filename)
         siglist.extend(loaded)
 
         # track ksizes/moltypes
@@ -79,6 +80,9 @@ def compare(args):
 
     notify(' '*79, end='\r')
     notify('loaded {} signatures total.'.format(len(siglist)))
+
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
     # check to make sure they're potentially compatible - either using
     # scaled, or not.
@@ -337,6 +341,7 @@ def index(args):
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     if args.append:
         tree = load_sbt_index(args.sbt_name)
@@ -373,6 +378,7 @@ def index(args):
                                                         ksize=args.ksize,
                                                         select_moltype=moltype,
                                                         yield_all_files=args.force,
+                                                        picklist=picklist,
                                                         progress=progress)
 
         # load all matching signatures in this file
@@ -418,6 +424,9 @@ def index(args):
         error('no signatures found to load into tree!? failing.')
         sys.exit(-1)
 
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
+
     notify('loaded {} sigs; saving SBT under "{}"', n, args.sbt_name)
     tree.save(args.sbt_name, sparseness=args.sparseness)
     if tree.storage:
@@ -430,6 +439,7 @@ def search(args):
 
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     # set up the query.
     query = sourmash_args.load_query_signature(args.query,
@@ -459,7 +469,8 @@ def search(args):
             sys.exit(-1)
 
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
-                                                not is_containment)
+                                                not is_containment,
+                                                picklist=picklist)
 
     if not len(databases):
         error('Nothing found to search!')
@@ -532,6 +543,9 @@ def search(args):
             for sr in results:
                 save_sig.add(sr.match)
 
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
+
 
 def categorize(args):
     "Use a database to find the best match to many signatures."
@@ -578,7 +592,7 @@ def categorize(args):
                orig_query.minhash.ksize, orig_query.minhash.moltype)
 
         if args.ignore_abundance:
-            query = copy.copy(orig_query)
+            query = orig_query.copy()
             query.minhash = query.minhash.flatten()
         else:
             if orig_query.minhash.track_abundance:
@@ -612,10 +626,11 @@ def categorize(args):
 
 
 def gather(args):
-    from .search import gather_databases, format_bp
+    from .search import GatherDatabases, format_bp
 
     set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
@@ -647,7 +662,8 @@ def gather(args):
     if args.cache_size == 0:
         cache_size = None
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
-                                                cache_size=cache_size)
+                                                cache_size=cache_size,
+                                                picklist=picklist)
 
     if not len(databases):
         error('Nothing found to search!')
@@ -658,21 +674,36 @@ def gather(args):
 
     if args.prefetch:           # note: on by default!
         notify("Starting prefetch sweep across databases.")
-        prefetch_query = copy.copy(query)
+        prefetch_query = query.copy()
         prefetch_query.minhash = prefetch_query.minhash.flatten()
+        noident_mh = prefetch_query.minhash.to_mutable()
         save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
         save_prefetch.open()
 
         counters = []
         for db in databases:
-            counter = db.counter_gather(prefetch_query, args.threshold_bp)
+            counter = None
+            try:
+                counter = db.counter_gather(prefetch_query, args.threshold_bp)
+            except ValueError:
+                if picklist:
+                    # catch "no signatures to search" ValueError...
+                    continue
+                else:
+                    raise       # re-raise other errors, if no picklist.
+
             save_prefetch.add_many(counter.siglist)
+            # subtract found hashes as we can.
+            for found_sig in counter.siglist:
+                noident_mh.remove_many(found_sig.minhash)
             counters.append(counter)
 
         notify(f"Found {len(save_prefetch)} signatures via prefetch; now doing gather.")
         save_prefetch.close()
     else:
         counters = databases
+        # we can't track unidentified hashes w/o prefetch
+        noident_mh = None
 
     ## ok! now do gather -
 
@@ -680,11 +711,12 @@ def gather(args):
     weighted_missed = 1
     is_abundance = query.minhash.track_abundance and not args.ignore_abundance
     orig_query_mh = query.minhash
-    next_query = query
+    gather_iter = GatherDatabases(query, counters,
+                                  threshold_bp=args.threshold_bp,
+                                  ignore_abundance=args.ignore_abundance,
+                                  noident_mh=noident_mh)
 
-    gather_iter = gather_databases(query, counters, args.threshold_bp,
-                                   args.ignore_abundance)
-    for result, weighted_missed, next_query in gather_iter:
+    for result, weighted_missed in gather_iter:
         if not len(found):                # first result? print header.
             if is_abundance:
                 print_results("")
@@ -716,6 +748,11 @@ def gather(args):
             break
 
 
+    # report on thresholding -
+    if gather_iter.query:
+        # if still a query, then we failed the threshold.
+        notify(f'found less than {format_bp(args.threshold_bp)} in common. => exiting')
+
     # basic reporting:
     print_results(f'\nfound {len(found)} matches total;')
     if args.num_results and len(found) == args.num_results:
@@ -724,6 +761,8 @@ def gather(args):
     p_covered = (1 - weighted_missed) * 100
     print_results(f'the recovered matches hit {p_covered:.1f}% of the query')
     print_results('')
+    if gather_iter.scaled != query.minhash.scaled:
+        print_results(f'WARNING: final scaled was {gather_iter.scaled}, vs query scaled of {query.minhash.scaled}')
 
     # save CSV?
     if found and args.output:
@@ -731,7 +770,8 @@ def gather(args):
                       'f_unique_to_query', 'f_unique_weighted',
                       'average_abund', 'median_abund', 'std_abund', 'name',
                       'filename', 'md5', 'f_match_orig', 'unique_intersect_bp',
-                      'gather_result_rank', 'remaining_bp']
+                      'gather_result_rank', 'remaining_bp',
+                      'query_filename', 'query_name', 'query_md5', 'query_bp']
 
         with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
@@ -750,31 +790,41 @@ def gather(args):
 
     # save unassigned hashes?
     if args.output_unassigned:
-        if not len(next_query.minhash):
+        remaining_query = gather_iter.query
+        if not (remaining_query.minhash or noident_mh):
             notify('no unassigned hashes to save with --output-unassigned!')
         else:
             notify(f"saving unassigned hashes to '{args.output_unassigned}'")
 
+            if noident_mh:
+                remaining_mh = remaining_query.minhash.to_mutable()
+                remaining_mh += noident_mh
+                remaining_query.minhash = remaining_mh
+
             if is_abundance:
-                # next_query is flattened; reinflate abundances
-                hashes = set(next_query.minhash.hashes)
+                # remaining_query is flattened; reinflate abundances
+                hashes = set(remaining_query.minhash.hashes)
                 orig_abunds = orig_query_mh.hashes
                 abunds = { h: orig_abunds[h] for h in hashes }
 
                 abund_query_mh = orig_query_mh.copy_and_clear()
                 # orig_query might have been downsampled...
-                abund_query_mh.downsample(scaled=next_query.minhash.scaled)
+                abund_query_mh.downsample(scaled=gather_iter.scaled)
                 abund_query_mh.set_abundances(abunds)
-                next_query.minhash = abund_query_mh
+                remaining_query.minhash = abund_query_mh
 
             with FileOutput(args.output_unassigned, 'wt') as fp:
-                sig.save_signatures([ next_query ], fp)
+                sig.save_signatures([ remaining_query ], fp)
+
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
+
     # DONE w/gather function.
 
 
 def multigather(args):
     "Gather many signatures against multiple databases."
-    from .search import gather_databases, format_bp
+    from .search import GatherDatabases, format_bp
 
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
@@ -830,18 +880,25 @@ def multigather(args):
                 continue
 
             counters = []
-            prefetch_query = copy.copy(query)
+            prefetch_query = query.copy()
             prefetch_query.minhash = prefetch_query.minhash.flatten()
+            noident_mh = prefetch_query.minhash.to_mutable()
 
             counters = []
             for db in databases:
                 counter = db.counter_gather(prefetch_query, args.threshold_bp)
+                for found_sig in counter.siglist:
+                    noident_mh.remove_many(found_sig.minhash)
                 counters.append(counter)
 
             found = []
             weighted_missed = 1
             is_abundance = query.minhash.track_abundance and not args.ignore_abundance
-            for result, weighted_missed, next_query in gather_databases(query, counters, args.threshold_bp, args.ignore_abundance):
+            gather_iter = GatherDatabases(query, counters,
+                                          threshold_bp=args.threshold_bp,
+                                          ignore_abundance=args.ignore_abundance,
+                                          noident_mh=noident_mh)
+            for result, weighted_missed in gather_iter:
                 if not len(found):                # first result? print header.
                     if is_abundance:
                         print_results("")
@@ -869,6 +926,10 @@ def multigather(args):
                               name)
                 found.append(result)
 
+            # report on thresholding -
+            if gather_iter.query.minhash:
+                # if still a query, then we failed the threshold.
+                notify(f'found less than {format_bp(args.threshold_bp)} in common. => exiting')
 
             # basic reporting
             print_results('\nfound {} matches total;', len(found))
@@ -894,7 +955,8 @@ def multigather(args):
                           'average_abund', 'median_abund', 'std_abund', 'name',
                           'filename', 'md5', 'f_match_orig',
                           'unique_intersect_bp', 'gather_result_rank',
-                          'remaining_bp']
+                          'remaining_bp', 'query_filename', 'query_name',
+                          'query_md5', 'query_bp']
             with FileOutputCSV(output_csv) as fp:
                 w = csv.DictWriter(fp, fieldnames=fieldnames)
                 w.writeheader()
@@ -911,18 +973,21 @@ def multigather(args):
 
             output_unassigned = output_base + '.unassigned.sig'
             with open(output_unassigned, 'wt') as fp:
+                remaining_query = gather_iter.query
+                if noident_mh:
+                    remaining_mh = remaining_query.minhash.to_mutable()
+                    remaining_mh += noident_mh.downsample(scaled=remaining_mh.scaled)
+                    remaining_query.minhash = remaining_mh
+
                 if not found:
                     notify('nothing found - entire query signature unassigned.')
-                elif not len(query.minhash):
+                elif not remaining_query:
                     notify('no unassigned hashes! not saving.')
                 else:
                     notify('saving unassigned hashes to "{}"', output_unassigned)
 
-                    e = MinHash(ksize=query.minhash.ksize, n=0,
-                                scaled=next_query.minhash.scaled)
-                    e.add_many(next_query.minhash.hashes)
                     # CTB: note, multigather does not save abundances
-                    sig.save_signatures([ sig.SourmashSignature(e) ], fp)
+                    sig.save_signatures([ remaining_query ], fp)
             n += 1
 
         # fini, next query!
@@ -1051,6 +1116,7 @@ def prefetch(args):
     # figure out what k-mer size and molecule type we're looking for here
     ksize = args.ksize
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
@@ -1106,6 +1172,7 @@ def prefetch(args):
 
     # iterate over signatures in db one at a time, for each db;
     # find those with sufficient overlap
+    ident_mh = query_mh.copy_and_clear()
     noident_mh = query_mh.to_mutable()
 
     did_a_search = False        # track whether we did _any_ search at all!
@@ -1119,7 +1186,8 @@ def prefetch(args):
             db = LazyLinearIndex(db)
 
         db = db.select(ksize=ksize, moltype=moltype,
-                       containment=True, scaled=True)
+                       containment=True, scaled=True,
+                       picklist=picklist)
 
         if not db:
             notify(f"...no compatible signatures in '{dbfilename}'; skipping")
@@ -1128,8 +1196,10 @@ def prefetch(args):
         for result in prefetch_database(query, db, args.threshold_bp):
             match = result.match
 
-            # track remaining "untouched" hashes.
-            noident_mh.remove_many(match.minhash.hashes)
+            # track found & "untouched" hashes.
+            match_mh = match.minhash.downsample(scaled=query.minhash.scaled)
+            ident_mh += query.minhash & match_mh.flatten()
+            noident_mh.remove_many(match.minhash)
 
             # output match info as we go
             if csvout_fp:
@@ -1165,24 +1235,35 @@ def prefetch(args):
         notify(f"saved {matches_out.count} matches to CSV file '{args.output}'")
         csvout_fp.close()
 
-    matched_query_mh = query_mh.to_mutable()
-    matched_query_mh.remove_many(noident_mh.hashes)
-    notify(f"of {len(query_mh)} distinct query hashes, {len(matched_query_mh)} were found in matches above threshold.")
+    assert len(query_mh) == len(ident_mh) + len(noident_mh)
+    notify(f"of {len(query_mh)} distinct query hashes, {len(ident_mh)} were found in matches above threshold.")
     notify(f"a total of {len(noident_mh)} query hashes remain unmatched.")
 
     if args.save_matching_hashes:
         filename = args.save_matching_hashes
-        notify(f"saving {len(matched_query_mh)} matched hashes to '{filename}'")
-        ss = sig.SourmashSignature(matched_query_mh)
+        notify(f"saving {len(ident_mh)} matched hashes to '{filename}'")
+
+        sig_name = ''
+        if query.name:
+            sig_name = f"{query.name}-known"
+
+        ss = sig.SourmashSignature(ident_mh, name=sig_name)
         with open(filename, "wt") as fp:
             sig.save_signatures([ss], fp)
 
     if args.save_unmatched_hashes:
         filename = args.save_unmatched_hashes
+
+        sig_name = ''
+        if query.name:
+            sig_name = f"{query.name}-unknown"
+
         notify(f"saving {len(noident_mh)} unmatched hashes to '{filename}'")
-        ss = sig.SourmashSignature(noident_mh)
+        ss = sig.SourmashSignature(noident_mh, name=sig_name)
         with open(filename, "wt") as fp:
             sig.save_signatures([ss], fp)
 
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
+
     return 0
-    

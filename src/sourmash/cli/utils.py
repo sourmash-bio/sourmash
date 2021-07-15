@@ -1,5 +1,6 @@
 from glob import glob
 import os
+import argparse
 
 
 def add_moltype_args(parser):
@@ -31,10 +32,10 @@ def add_moltype_args(parser):
     parser.set_defaults(hp=False)
 
     parser.add_argument(
-        '--dna', '--rna', dest='dna', default=None, action='store_true',
+        '--dna', '--rna', '--nucleotide', dest='dna', default=None, action='store_true',
         help='choose a nucleotide signature (default: True)')
     parser.add_argument(
-        '--no-dna', '--no-rna', dest='dna', action='store_false',
+        '--no-dna', '--no-rna', '--no-nucleotide', dest='dna', action='store_false',
         help='do not choose a nucleotide signature')
     parser.set_defaults(dna=None)
 
@@ -48,6 +49,37 @@ def add_ksize_arg(parser, default=31):
     parser.add_argument(
         '-k', '--ksize', metavar='K', default=None, type=int,
         help='k-mer size; default={d}'.format(d=default)
+    )
+
+#https://stackoverflow.com/questions/55324449/how-to-specify-a-minimum-or-maximum-float-value-with-argparse#55410582
+def range_limited_float_type(arg):
+    """ Type function for argparse - a float within some predefined bounds """
+    min_val = 0
+    max_val = 1
+    try:
+        f = float(arg)
+    except ValueError:
+        raise argparse.ArgumentTypeError("\n\tERROR: Must be a floating point number.")
+    if f < min_val or f > max_val:
+        raise argparse.ArgumentTypeError(f"\n\tERROR: Argument must be >{str(min_val)} and <{str(max_val)}.")
+    return f
+
+
+def add_tax_threshold_arg(parser, default=0.1):
+    parser.add_argument(
+        '--containment-threshold', default=default, type=range_limited_float_type,
+        help=f'minimum containment threshold for classification; default={default}'
+    )
+
+
+def add_picklist_args(parser):
+    parser.add_argument(
+        '--picklist', default=None,
+        help="select signatures based on a picklist, i.e. 'file.csv:colname:coltype'"
+    )
+    parser.add_argument(
+        '--picklist-require-all', default=False, action='store_true',
+        help="require that all picklist values be found or else fail"
     )
 
 

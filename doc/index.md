@@ -24,7 +24,7 @@ Please also see the `mash` [software](http://mash.readthedocs.io/en/latest/) and
 [paper (Ondov et al., 2016)](http://dx.doi.org/10.1186/s13059-016-0997-x) for
 background information on how and why MinHash works.
 
-**Questions? Thoughts?** Ask us on the [sourmash issue tracker](https://github.com/dib-lab/sourmash/issues/)!
+**Questions? Thoughts?** Ask us on the [sourmash issue tracker](https://github.com/sourmash-bio/sourmash/issues/)!
 
 **Want to migrate to sourmash v4?** sourmash v4 is now available, and
 has a number of incompatibilites with v2 and v3. Please see 
@@ -71,15 +71,15 @@ be stored, searched, explored, and taxonomically annotated.
 
 * `sourmash` relies on an underlying Rust core for performance.
 
-* `sourmash` is developed [on GitHub](https://github.com/dib-lab/sourmash)
+* `sourmash` is developed [on GitHub](https://github.com/sourmash-bio/sourmash)
   and is **freely and openly available** under the BSD 3-clause license.
-  Please see [the README](https://github.com/dib-lab/sourmash/blob/latest/README.md)
+  Please see [the README](https://github.com/sourmash-bio/sourmash/blob/latest/README.md)
   for more information on development, support, and contributing.
 
 You can take a look at sourmash analyses on real data
-[in a saved Jupyter notebook](https://github.com/dib-lab/sourmash/blob/latest/doc/sourmash-examples.ipynb),
+[in a saved Jupyter notebook](https://github.com/sourmash-bio/sourmash/blob/latest/doc/sourmash-examples.ipynb),
 and experiment with it yourself
-[interactively in a Jupyter Notebook](https://mybinder.org/v2/gh/dib-lab/sourmash/latest?filepath=doc%2Fsourmash-examples.ipynb)
+[interactively in a Jupyter Notebook](https://mybinder.org/v2/gh/sourmash-bio/sourmash/latest?filepath=doc%2Fsourmash-examples.ipynb)
 at [mybinder.org](http://mybinder.org).
 
 ## Installing sourmash
@@ -94,7 +94,7 @@ or conda:
 $ conda install -c conda-forge -c bioconda sourmash
 ```
 
-Please see [the README file in github.com/dib-lab/sourmash](https://github.com/dib-lab/sourmash/blob/latest/README.md)
+Please see [the README file in github.com/sourmash-bio/sourmash](https://github.com/sourmash-bio/sourmash/blob/latest/README.md)
 for more information.
 
 ## Memory and speed
@@ -104,7 +104,7 @@ many other software programs used for genome search and taxonomic
 classification.
 
 `sourmash search` and `sourmash gather` can be used to search 100k
-genbank microbial genomes ([using our prepared databases](databases.md)
+genbank microbial genomes ([using our prepared databases](databases.md))
 with about 20 GB of disk and in under 1 GB of RAM.
 Typically a search for a single genome takes about 30 seconds on a laptop.
 

@@ -202,7 +202,7 @@ impl Nodegraph {
                 let len = size_of::<u32>() * slice.len();
                 slice::from_raw_parts(slice.as_ptr() as *const u8, len)
             };
-            wtr.write_all(&buf)?;
+            wtr.write_all(buf)?;
             // Replace when byteorder PR is released
 
             if rem != 0 {
@@ -241,22 +241,19 @@ impl Nodegraph {
             let byte_size = tablesize / 8 + 1;
 
             let rem = byte_size % 4;
-            let blocks: Vec<u32> = if rem == 0 {
+            let blocks: Vec<u32> = {
                 let mut blocks = vec![0; byte_size / 4];
                 rdr.read_u32_into::<LittleEndian>(&mut blocks)?;
-                blocks
-            } else {
-                let mut blocks = vec![0; byte_size / 4];
-                rdr.read_u32_into::<LittleEndian>(&mut blocks)?;
-
-                let mut values = [0u8; 4];
-                for item in values.iter_mut().take(rem) {
-                    let byte = rdr.read_u8().expect("error reading bins");
-                    *item = byte;
+                if rem != 0 {
+                    let mut values = [0u8; 4];
+                    for item in values.iter_mut().take(rem) {
+                        let byte = rdr.read_u8().expect("error reading bins");
+                        *item = byte;
+                    }
+                    let mut block = vec![0u32; 1];
+                    LittleEndian::read_u32_into(&values, &mut block);
+                    blocks.push(block[0]);
                 }
-                let mut block = vec![0u32; 1];
-                LittleEndian::read_u32_into(&values, &mut block);
-                blocks.push(block[0]);
                 blocks
             };
 

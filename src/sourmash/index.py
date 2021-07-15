@@ -1,19 +1,56 @@
-"An Abstract Base Class for collections of signatures."
+"""An Abstract Base Class for collections of signatures, plus implementations.
+
+APIs and functionality
+----------------------
+
+Index classes support three sets of API functionality -
+
+'select(...)', which selects subsets of signatures based on ksize, moltype,
+and other criteria, including picklists.
+
+'find(...)', and the 'search', 'gather', and 'counter_gather' implementations
+built on top of 'find', which search for signatures that match a query.
+
+'signatures()', which yields all signatures in the Index subject to the
+selection criteria.
+
+Classes defined in this file
+----------------------------
+
+Index - abstract base class for all Index objects.
+
+LinearIndex - simple in-memory storage of signatures.
+
+LazyLinearIndex - lazy selection and linear search of signatures.
+
+ZipFileLinearIndex - simple on-disk storage of signatures.
+
+class MultiIndex - in-memory storage and selection of signatures from multiple
+index objects, using manifests.
+
+LazyLoadedIndex - selection on manifests with loading of index on demand.
+
+CounterGather - an ancillary class returned by the 'counter_gather()' method.
+"""
 
 import os
 import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
 import zipfile
-import copy
+from io import TextIOWrapper
 
 from .search import make_jaccard_search_query, make_gather_query
+from .manifest import CollectionManifest
+from .logging import debug_literal
+from .signature import load_signatures, save_signatures
 
 # generic return tuple for Index.search and Index.gather
 IndexSearchResult = namedtuple('Result', 'score, signature, location')
 
 class Index(ABC):
     is_database = False
+    manifest = None
 
     @property
     def location(self):
@@ -28,6 +65,16 @@ class Index(ABC):
         "Return an iterator over tuples (signature, location) in the Index."
         for ss in self.signatures():
             yield ss, self.location
+
+    def _signatures_with_internal(self):
+        """Return an iterator of tuples (ss, location, internal_location).
+
+        This is an internal API for use in generating manifests, and may
+        change without warning.
+
+        This method should be implemented separately for each Index object.
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def insert(self, signature):
@@ -195,9 +242,6 @@ class Index(ABC):
 
     def prefetch(self, query, threshold_bp, **kwargs):
         "Return all matches with minimum overlap."
-        query_mh = query.minhash
-        scaled = query_mh.scaled
-
         if not self:            # empty database? quit.
             raise ValueError("no signatures to search")
 
@@ -242,7 +286,7 @@ class Index(ABC):
         scaled = max(query_mh.scaled, match_mh.scaled)
         match_mh = match_mh.downsample(scaled=scaled).flatten()
         query_mh = query_mh.downsample(scaled=scaled)
-        intersect_mh = match_mh.intersection(query_mh)
+        intersect_mh = match_mh & query_mh
 
         return [sr, intersect_mh]
 
@@ -260,7 +304,7 @@ class Index(ABC):
         public `CounterGather` interface, of course.
         """
         # build a flat query
-        prefetch_query = copy.copy(query)
+        prefetch_query = query.copy()
         prefetch_query.minhash = prefetch_query.minhash.flatten()
 
         # find all matches and construct a CounterGather object.
@@ -291,8 +335,8 @@ class Index(ABC):
         """
 
 
-def select_signature(ss, ksize=None, moltype=None, scaled=0, num=0,
-                     containment=False):
+def select_signature(ss, *, ksize=None, moltype=None, scaled=0, num=0,
+                     containment=False, abund=None, picklist=None):
     "Check that the given signature matches the specificed requirements."
     # ksize match?
     if ksize and ksize != ss.minhash.ksize:
@@ -319,11 +363,24 @@ def select_signature(ss, ksize=None, moltype=None, scaled=0, num=0,
         if ss.minhash.scaled or num != ss.minhash.num:
             return False
 
+    if abund:
+        # note: minhash w/abund can always be flattened
+        if not ss.minhash.track_abundance:
+            return False
+
+    if picklist is not None and ss not in picklist:
+        return False
+
     return True
 
 
 class LinearIndex(Index):
-    "An Index for a collection of signatures. Can load from a .sig file."
+    """An Index for a collection of signatures. Can load from a .sig file.
+
+    Note: See MultiIndex for an in-memory class that uses manifests.
+
+    Concrete class; signatures held in memory; does not use manifests.
+    """
     def __init__(self, _signatures=None, filename=None):
         self._signatures = []
         if _signatures:
@@ -347,13 +404,12 @@ class LinearIndex(Index):
         self._signatures.append(node)
 
     def save(self, path):
-        from .signature import save_signatures
         with open(path, 'wt') as fp:
             save_signatures(self.signatures(), fp)
 
     @classmethod
     def load(cls, location):
-        from .signature import load_signatures
+        "Load signatures from a JSON signature file."
         si = load_signatures(location, do_raise=True)
 
         lidx = LinearIndex(si, filename=location)
@@ -364,9 +420,6 @@ class LinearIndex(Index):
 
         Does not raise ValueError, but may return an empty Index.
         """
-        # eliminate things from kwargs with None or zero value
-        kw = { k : v for (k, v) in kwargs.items() if v }
-
         siglist = []
         for ss in self._signatures:
             if select_signature(ss, **kwargs):
@@ -378,9 +431,22 @@ class LinearIndex(Index):
 class LazyLinearIndex(Index):
     """An Index for lazy linear search of another database.
 
-    The defining feature of this class is that 'find' is inherited
-    from the base Index class, which does a linear search with
-    signatures().
+    Wrapper class; does not use manifests.
+
+    One of the main purposes of this class is to _force_ linear 'find'
+    on index objects. So if this class wraps an SBT, for example, the
+    SBT find method will be overriden with the linear 'find' from the
+    base class. There are very few situations where this is an improvement,
+    so use this class wisely!
+
+    A few notes:
+    * selection criteria defined by 'select' are only executed when
+      signatures are actually requested (hence, 'lazy').
+    * this class stores the provided index 'db' in memory. If you need
+      a class that does lazy loading of signatures from disk and does not
+      store signatures in memory, see LazyLoadedIndex.
+    * if you want efficient manifest-based selection, consider
+      MultiIndex (signatures in memory).
     """
 
     def __init__(self, db, selection_dict={}):
@@ -401,7 +467,7 @@ class LazyLinearIndex(Index):
 
     def __bool__(self):
         try:
-            first_sig = next(iter(self.signatures()))
+            next(iter(self.signatures()))
             return True
         except StopIteration:
             return False
@@ -439,19 +505,52 @@ class ZipFileLinearIndex(Index):
     A read-only collection of signatures in a zip file.
 
     Does not support `insert` or `save`.
+
+    Concrete class; signatures dynamically loaded from disk; uses manifests.
     """
     is_database = True
 
-    def __init__(self, zf, selection_dict=None,
-                 traverse_yield_all=False):
+    def __init__(self, zf, *, selection_dict=None,
+                 traverse_yield_all=False, manifest=None, use_manifest=True):
         self.zf = zf
         self.selection_dict = selection_dict
         self.traverse_yield_all = traverse_yield_all
+        self.use_manifest = use_manifest
+
+        # do we have a manifest already? if not, try loading.
+        if use_manifest:
+            if manifest is not None:
+                debug_literal('ZipFileLinearIndex using passed-in manifest')
+                self.manifest = manifest
+            else:
+                self._load_manifest()
+        else:
+            self.manifest = None
+
+        if self.manifest is not None:
+            assert not self.selection_dict, self.selection_dict
+        if self.selection_dict:
+            assert self.manifest is None
+
+    def _load_manifest(self):
+        "Load a manifest if one exists"
+        try:
+            zi = self.zf.getinfo('SOURMASH-MANIFEST.csv')
+        except KeyError:
+            self.manifest = None
+        else:
+            debug_literal(f'found manifest when loading {self.zf.filename}')
+
+            with self.zf.open(zi, 'r') as mfp:
+                # wrap as text, since ZipFile.open only supports 'r' mode.
+                mfp = TextIOWrapper(mfp, 'utf-8')
+                # load manifest!
+                self.manifest = CollectionManifest.load_from_csv(mfp)
 
     def __bool__(self):
         "Are there any matching signatures in this zipfile? Avoid calling len."
         try:
-            first_sig = next(iter(self.signatures()))
+            next(iter(self.signatures()))
         except StopIteration:
             return False
 
@@ -474,38 +573,97 @@ class ZipFileLinearIndex(Index):
         raise NotImplementedError
 
     @classmethod
-    def load(cls, location, traverse_yield_all=False):
+    def load(cls, location, traverse_yield_all=False, use_manifest=True):
         "Class method to load a zipfile."
         zf = zipfile.ZipFile(location, 'r')
-        return cls(zf, traverse_yield_all=traverse_yield_all)
+        return cls(zf, traverse_yield_all=traverse_yield_all,
+                   use_manifest=use_manifest)
 
-    def signatures(self):
-        "Load all signatures in the zip file."
-        from .signature import load_signatures
+    def _signatures_with_internal(self):
+        """Return an iterator of tuples (ss, location, internal_location).
+
+        Note: does not limit signatures to subsets.
+        """
         for zipinfo in self.zf.infolist():
             # should we load this file? if it ends in .sig OR we are forcing:
             if zipinfo.filename.endswith('.sig') or \
                zipinfo.filename.endswith('.sig.gz') or \
                self.traverse_yield_all:
                 fp = self.zf.open(zipinfo)
-
-                # now load all the signatures and select on ksize/moltype:
-                selection_dict = self.selection_dict
-
-                # note: if 'fp' doesn't contain a valid JSON signature,
-                # load_signatures will silently fail & yield nothing.
                 for ss in load_signatures(fp):
-                    if selection_dict:
-                        if select_signature(ss, **self.selection_dict):
-                            yield ss
-                    else:
+                    yield ss, self.zf.filename, zipinfo.filename
+
+    def signatures(self):
+        "Load all signatures in the zip file."
+        selection_dict = self.selection_dict
+        manifest = None
+        if self.manifest is not None:
+            manifest = self.manifest
+            assert not selection_dict
+
+            # yield all signatures found in manifest
+            for filename in manifest.locations():
+                zi = self.zf.getinfo(filename)
+                fp = self.zf.open(zi)
+                for ss in load_signatures(fp):
+                    # in case multiple signatures are in the file, check
+                    # to make sure we want to return each one.
+                    if ss in manifest:
                         yield ss
+
+        # no manifest! iterate.
+        else:
+            for zipinfo in self.zf.infolist():
+                # should we load this file? if it ends in .sig OR force:
+                if zipinfo.filename.endswith('.sig') or \
+                   zipinfo.filename.endswith('.sig.gz') or \
+                   self.traverse_yield_all:
+                    fp = self.zf.open(zipinfo)
+
+                    if selection_dict:
+                        select = lambda x: select_signature(x,
+                                                            **selection_dict)
+                    else:
+                        select = lambda x: True
+
+                    for ss in load_signatures(fp):
+                        if select(ss):
+                            yield ss
 
     def select(self, **kwargs):
         "Select signatures in zip file based on ksize/moltype/etc."
-        return ZipFileLinearIndex(self.zf,
-                                  selection_dict=kwargs,
-                                  traverse_yield_all=self.traverse_yield_all)
+
+        # if we have a manifest, run 'select' on the manifest.
+        manifest = self.manifest
+        traverse_yield_all = self.traverse_yield_all
+
+        if manifest is not None:
+            manifest = manifest.select_to_manifest(**kwargs)
+            return ZipFileLinearIndex(self.zf,
+                                      selection_dict=None,
+                                      traverse_yield_all=traverse_yield_all,
+                                      manifest=manifest,
+                                      use_manifest=True)
+        else:
+            # no manifest? just pass along all the selection kwargs to
+            # the new ZipFileLinearIndex.
+
+            assert manifest is None
+            if self.selection_dict:
+                # combine selects...
+                d = dict(self.selection_dict)
+                for k, v in kwargs.items():
+                    if k in d:
+                        if d[k] is not None and d[k] != v:
+                            raise ValueError(f"incompatible select on '{k}'")
+                    d[k] = v
+                kwargs = d
+
+            return ZipFileLinearIndex(self.zf,
+                                      selection_dict=kwargs,
+                                      traverse_yield_all=traverse_yield_all,
+                                      manifest=None,
+                                      use_manifest=False)
 
 
 class CounterGather:
@@ -520,7 +678,7 @@ class CounterGather:
             raise ValueError('gather requires scaled signatures')
 
         # track query
-        self.orig_query_mh = copy.copy(query_mh).flatten()
+        self.orig_query_mh = query_mh.copy().flatten()
         self.scaled = query_mh.scaled
 
         # track matching signatures & their locations
@@ -623,7 +781,7 @@ class CounterGather:
 
         # calculate intersection of this "best match" with query.
         match_mh = match.minhash.downsample(scaled=scaled).flatten()
-        intersect_mh = cur_query_mh.intersection(match_mh)
+        intersect_mh = cur_query_mh & match_mh
         location = self.locations[dataset_id]
 
         # build result & return intersection
@@ -661,72 +819,154 @@ class CounterGather:
 
 
 class MultiIndex(Index):
-    """An Index class that wraps other Index classes.
-
-    The MultiIndex constructor takes two arguments: a list of Index
-    objects, and a matching list of sources (filenames, etc.)  If the
-    source is not None, then it will be used to override the 'filename'
-    in the triple that is returned by search and gather.
+    """
+    Load a collection of signatures, and retain their original locations.
 
     One specific use for this is when loading signatures from a directory;
-    MultiIndex will properly record which files provided which signatures.
+    MultiIndex will record which specific files provided which
+    signatures.
+
+    Creates a manifest on load.
+
+    Note: this is an in-memory collection, and does not do lazy loading:
+    all signatures are loaded upon instantiation and kept in memory.
+
+    Concrete class; signatures held in memory; builds and uses manifests.
     """
-    def __init__(self, index_list, source_list):
-        self.index_list = list(index_list)
-        self.source_list = list(source_list)
-        assert len(index_list) == len(source_list)
+    def __init__(self, manifest, parent=""):
+        """Constructor; takes manifest containing signatures, together with
+        optional top-level location to prepend to internal locations.
+        """
+        self.manifest = manifest
+        self.parent = parent
 
     def signatures(self):
-        for idx in self.index_list:
-            for ss in idx.signatures():
-                yield ss
+        for row in self.manifest.rows:
+            yield row['signature']
 
     def signatures_with_location(self):
-        for idx, loc in zip(self.index_list, self.source_list):
-            for ss in idx.signatures():
-                yield ss, loc
+        for row in self.manifest.rows:
+            loc = row['internal_location']
+            # here, 'parent' may have been removed from internal_location
+            # for directories; if so, add it back in.
+            if self.parent:
+                loc = os.path.join(self.parent, loc)
+            yield row['signature'], loc
+
+    def _signatures_with_internal(self):
+        """Return an iterator of tuples (ss, parent, location)
+
+        CTB note: here, 'internal_location' is the source file for the
+        index. This is a special feature of this (in memory) class.
+        """
+        parent = self.parent
+        for row in self.manifest.rows:
+            yield row['signature'], parent, row['internal_location']
+
 
     def __len__(self):
-        return sum([ len(idx) for idx in self.index_list ])
+        return len(self.manifest)
 
     def insert(self, *args):
         raise NotImplementedError
 
     @classmethod
-    def load(self, *args):
-        raise NotImplementedError
+    def load(cls, index_list, source_list, parent=""):
+        """Create a MultiIndex from already-loaded indices.
+
+        Takes two arguments: a list of Index objects, and a matching list
+        of source strings (filenames, etc.)  If the source is not None,
+        then it will be used to override the location provided by the
+        matching Index object.
+        """
+        assert len(index_list) == len(source_list)
+
+        # yield all signatures + locations
+        def sigloc_iter():
+            for idx, iloc in zip(index_list, source_list):
+                # override internal location if location is explicitly provided
+                if iloc is None:
+                    iloc = idx.location
+                for ss in idx.signatures():
+                    yield ss, iloc
+
+        # build manifest; note, signatures are stored in memory.
+        manifest = CollectionManifest.create_manifest(sigloc_iter())
+
+        # create!
+        return cls(manifest, parent=parent)
 
     @classmethod
-    def load_from_path(cls, pathname, force=False):
-        "Create a MultiIndex from a path (filename or directory)."
+    def load_from_directory(cls, pathname, *, force=False):
+        """Create a MultiIndex from a directory.
+
+        Takes directory path plus optional boolean 'force'. Attempts to
+        load all files ending in .sig or .sig.gz, by default; if 'force' is
+        True, will attempt to load _all_ files, ignoring errors.
+        """
         from .sourmash_args import traverse_find_sigs
-        if not os.path.exists(pathname): # CTB consider changing to isdir.
-            raise ValueError(f"'{pathname}' must be a directory")
+
+        if not os.path.isdir(pathname):
+            raise ValueError(f"'{pathname}' must be a directory.")
 
         index_list = []
         source_list = []
-        for thisfile in traverse_find_sigs([pathname], yield_all_files=force):
+
+        traversal = traverse_find_sigs([pathname], yield_all_files=force)
+        for thisfile in traversal:
             try:
                 idx = LinearIndex.load(thisfile)
                 index_list.append(idx)
-                source_list.append(thisfile)
+
+                rel = os.path.relpath(thisfile, pathname)
+                source_list.append(rel)
             except (IOError, sourmash.exceptions.SourmashError):
                 if force:
                     continue    # ignore error
                 else:
-                    raise       # continue past error!
+                    raise       # stop loading!
 
-        db = None
-        if index_list:
-            db = cls(index_list, source_list)
-        else:
+        # did we load anything? if not, error
+        if not index_list:
             raise ValueError(f"no signatures to load under directory '{pathname}'")
 
-        return db
+        return cls.load(index_list, source_list, parent=pathname)
+
+    @classmethod
+    def load_from_path(cls, pathname, force=False):
+        """
+        Create a MultiIndex from a path (filename or directory).
+
+        Note: this only uses LinearIndex.load(...), so will only load
+        signature JSON files.
+        """
+        if not os.path.exists(pathname):
+            raise ValueError(f"'{pathname}' must exist.")
+
+        if os.path.isdir(pathname): # traverse
+            return cls.load_from_directory(pathname, force=force)
+        else:                   # load as a .sig/JSON file
+            index_list = []
+            source_list = []
+            try:
+                idx = LinearIndex.load(pathname)
+                index_list = [idx]
+                source_list = [pathname]
+            except (IOError, sourmash.exceptions.SourmashError):
+                if not force:
+                    raise ValueError(f"no signatures to load from '{pathname}'")
+                return None
+
+            return cls.load(index_list, source_list)
 
     @classmethod
     def load_from_pathlist(cls, filename):
-        "Create a MultiIndex from all files listed in a text file."
+        """Create a MultiIndex from all files listed in a text file.
+
+        Note: this will load signatures from directories and databases, too,
+        if they are listed in the text file; it uses 'load_file_as_index'
+        underneath.
+        """
         from .sourmash_args import (load_pathlist_from_file,
                                     load_file_as_index)
         idx_list = []
@@ -740,52 +980,117 @@ class MultiIndex(Index):
             idx_list.append(idx)
             src_list.append(src)
 
-        db = MultiIndex(idx_list, src_list)
-        return db
+        return cls.load(idx_list, src_list)
 
     def save(self, *args):
         raise NotImplementedError
 
     def select(self, **kwargs):
-        "Run 'select' on all indices within this MultiIndex."
-        new_idx_list = []
-        new_src_list = []
-        for idx, src in zip(self.index_list, self.source_list):
-            idx = idx.select(**kwargs)
-            new_idx_list.append(idx)
-            new_src_list.append(src)
+        "Run 'select' on the manifest."
+        new_manifest = self.manifest.select_to_manifest(**kwargs)
+        return MultiIndex(new_manifest, parent=self.parent)
 
-        return MultiIndex(new_idx_list, new_src_list)
 
-    def search(self, query, **kwargs):
-        """Return the match with the best Jaccard similarity in the Index.
+class LazyLoadedIndex(Index):
+    """Given an index location and a manifest, do select only on the manifest
+    until signatures are actually requested, and only then load the index.
 
-        Note: this overrides the location of the match if needed.
+    This class is useful when you have an index object that consume
+    memory when it is loaded (e.g. JSON signature files, or LCA
+    databases) and you want to avoid keeping them in memory.  The
+    downside of using this class is that it will load the signatures
+    from disk every time they are needed (e.g. 'find(...)', 'signatures()').
+
+    Wrapper class; signatures dynamically loaded from disk; uses manifests.
+    """
+    def __init__(self, filename, manifest):
+        "Create an Index with given filename and manifest."
+        self.filename = filename
+        self.manifest = manifest
+
+    @property
+    def location(self):
+        "the 'location' attribute for this index will be the filename."
+        return self.filename
+
+    def signatures(self):
+        "yield all signatures from the manifest."
+        if not len(self):
+            # nothing in manifest? done!
+            return []
+
+        # ok - something in manifest, let's go get those signatures!
+        picklist = self.manifest.to_picklist()
+        idx = sourmash.load_file_as_index(self.location)
+
+        # convert remaining manifest into picklist
+        # CTB: one optimization down the road is, for storage-backed
+        # Index objects, to just reach in and get the signatures directly,
+        # without going through 'select'. Still, this is nice for abstraction
+        # because we don't need to care what the index is - it'll work on
+        # anything. It just might be a bit slower.
+        idx = idx.select(picklist=picklist)
+
+        # extract signatures.
+        for ss in idx.signatures():
+            yield ss
+
+    def find(self, *args, **kwargs):
+        """Run find after loading and selecting; this provides 'search',
+        "'gather', and 'prefetch' functionality, which are built on 'find'.
         """
-        # do the actual search:
-        matches = []
-        for idx, src in zip(self.index_list, self.source_list):
-            for sr in idx.search(query, **kwargs):
-                if src: # override 'sr.location' if 'src' specified'
-                    sr = IndexSearchResult(sr.score, sr.signature, src)
-                matches.append(sr)
-                
-        # sort!
-        matches.sort(key=lambda x: -x.score)
-        return matches
+        if not len(self):
+            # nothing in manifest? done!
+            return []
 
-    def prefetch(self, query, threshold_bp, **kwargs):
-        "Return all matches with specified overlap."
-        # actually do search!
-        results = []
+        # ok - something in manifest, let's go get those signatures!
+        picklist = self.manifest.to_picklist()
+        idx = sourmash.load_file_as_index(self.location)
 
-        for idx, src in zip(self.index_list, self.source_list):
-            if not idx:
-                continue
+        # convert remaining manifest into picklist
+        # CTB: one optimization down the road is, for storage-backed
+        # Index objects, to just reach in and get the signatures directly,
+        # without going through 'select'. Still, this is nice for abstraction
+        # because we don't need to care what the index is - it'll work on
+        # anything. It just might be a bit slower.
+        idx = idx.select(picklist=picklist)
 
-            for (score, ss, filename) in idx.prefetch(query, threshold_bp,
-                                                      **kwargs):
-                best_src = src or filename # override if src provided
-                yield IndexSearchResult(score, ss, best_src)
-            
-        return results
+        for x in idx.find(*args, **kwargs):
+            yield x
+
+    def __len__(self):
+        "track index size based on the manifest."
+        return len(self.manifest)
+
+    def __bool__(self):
+        return bool(self.manifest)
+
+    @classmethod
+    def load(cls, location):
+        """Load index from given location, but retain only the manifest.
+
+        Fail if no manifest.
+        """
+        idx = sourmash.load_file_as_index(location)
+        manifest = idx.manifest
+
+        if not idx.manifest:
+            raise ValueError(f"no manifest on index at {location}")
+
+        del idx
+        # NOTE: index is not retained outside this scope, just location.
+
+        return cls(location, manifest)
+
+    def insert(self, *args):
+        raise NotImplementedError
+
+    def save(self, *args):
+        raise NotImplementedError
+
+    def select(self, **kwargs):
+        "Run 'select' on manifest, return new object with new manifest."
+        manifest = self.manifest
+        new_manifest = manifest.select_to_manifest(**kwargs)
+
+        return LazyLoadedIndex(self.filename, new_manifest)

@@ -15,8 +15,10 @@ from .lca_db import LCA_Database
 from sourmash.sourmash_args import DEFAULT_LOAD_K
 
 
-def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
-                              use_headers=True, force=False):
+def load_taxonomy_assignments(filename, *, delimiter=',', start_column=2,
+                              use_headers=True, force=False,
+                              split_identifiers=False,
+                              keep_identifier_versions=False):
     """
     Load a taxonomy assignment spreadsheet into a dictionary.
 
@@ -65,6 +67,13 @@ def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
             ident = lineage[0][1]
             lineage = lineage[1:]
 
+            # fold, spindle, and mutilate ident?
+            if split_identifiers:
+                ident = ident.split(' ')[0]
+
+                if not keep_identifier_versions:
+                    ident = ident.split('.')[0]
+
             # clean lineage of null names, replace with 'unassigned'
             lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
             lineage = [ LineagePair(a, b) for (a, b) in lineage ]
@@ -111,19 +120,19 @@ def generate_report(record_duplicates, record_no_lineage, record_remnants,
     Output a report of anomalies from building the index.
     """
     with open(filename, 'wt') as fp:
-        print('Duplicate signatures:', file=fp)
+        print(f'Duplicate signatures: {len(record_duplicates)}', file=fp)
         fp.write("\n".join(record_duplicates))
         fp.write("\n")
-        print('----\nUnused identifiers:', file=fp)
+        print(f'----\nUnused identifiers: {len(unused_identifiers)}', file=fp)
         fp.write("\n".join(unused_identifiers))
         fp.write("\n")
-        print('----\nNo lineage provided for these identifiers:', file=fp)
+        print(f'----\nNo lineage provided for these identifiers: {len(record_no_lineage)}', file=fp)
         fp.write("\n".join(record_no_lineage))
         fp.write("\n")
-        print('----\nNo signatures found for these identifiers:', file=fp)
+        print(f'----\nNo signatures found for these identifiers: {len(record_remnants)}', file=fp)
         fp.write('\n'.join(record_remnants))
         fp.write("\n")
-        print('----\nUnused lineages:', file=fp)
+        print(f'----\nUnused lineages: {len(unused_lineages)}', file=fp)
         for lineage in unused_lineages:
             fp.write(";".join(lca_utils.zip_lineage(lineage)))
             fp.write("\n")
@@ -145,6 +154,7 @@ def index(args):
         args.ksize = DEFAULT_LOAD_K
 
     moltype = sourmash_args.calculate_moltype(args, default='DNA')
+    picklist = sourmash_args.load_picklist(args)
 
     notify('Building LCA database with ksize={} scaled={} moltype={}.',
            args.ksize, args.scaled, moltype)
@@ -157,7 +167,10 @@ def index(args):
                                                delimiter=delimiter,
                                                start_column=args.start_column,
                                                use_headers=not args.no_headers,
-                                               force=args.force)
+                                               force=args.force,
+                                               split_identifiers=args.split_identifiers,
+                                               keep_identifier_versions=args.keep_identifier_versions
+    )
 
     notify('{} distinct identities in spreadsheet out of {} rows.',
            len(assignments), num_rows)
@@ -190,6 +203,7 @@ def index(args):
         n += 1
         it = load_file_as_signatures(filename, ksize=args.ksize,
                                      select_moltype=moltype,
+                                     picklist=picklist,
                                      yield_all_files=args.force)
         for sig in it:
             notify(u'\r\033[K', end=u'')
@@ -199,7 +213,7 @@ def index(args):
             # block off duplicates.
             if sig.md5sum() in md5_to_name:
                 debug('WARNING: in file {}, duplicate md5sum: {}; skipping', filename, sig.md5sum())
-                record_duplicates.add(filename)
+                record_duplicates.add(sig.name)
                 continue
 
             md5_to_name[sig.md5sum()] = str(sig)
@@ -210,16 +224,24 @@ def index(args):
             else:
                 ident = sig.filename
 
+            orig_ident = ident
             if args.split_identifiers: # hack for NCBI-style names, etc.
                 # split on space...
                 ident = ident.split(' ')[0]
-                # ...and on period.
-                ident = ident.split('.')[0]
+
+                if not args.keep_identifier_versions:
+                    # ...and on period.
+                    ident = ident.split('.')[0]
 
             lineage = assignments.get(ident)
 
             # punt if no lineage and --require-taxonomy
             if lineage is None and args.require_taxonomy:
+                if args.fail_on_missing_taxonomy:
+                    notify(f"ERROR: no taxonomy found for identifier '{ident}'")
+                    if args.split_identifiers:
+                        notify(f"(Identifier extracted from name: '{orig_ident})')")
+                    sys.exit(-1)
                 debug('(skipping, because --require-taxonomy was specified)')
                 n_skipped += 1
                 continue
@@ -264,6 +286,9 @@ def index(args):
         sys.exit(1)
     notify('loaded {} hashes at ksize={} scaled={}', len(db.hashval_to_idx),
            args.ksize, args.scaled)
+
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
     # summarize:
     notify('{} assigned lineages out of {} distinct lineages in spreadsheet.',

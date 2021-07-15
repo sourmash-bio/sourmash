@@ -12,12 +12,15 @@ from pathlib import Path
 class Storage(ABC):
 
     @abc.abstractmethod
-    def save(self, path, content):
+    def save(self, path, content, *, overwrite=False):
         pass
 
     @abc.abstractmethod
     def load(self, path):
         pass
+
+    def list_sbts(self):
+        return []
 
     def init_args(self):
         return {}
@@ -49,7 +52,7 @@ class FSStorage(Storage):
     def init_args(self):
         return {'path': self.subdir}
 
-    def save(self, path, content):
+    def save(self, path, content, overwrite=False):
         "Save a node/leaf."
         newpath = path
         fullpath = os.path.join(self.location, self.subdir, path)
@@ -61,16 +64,19 @@ class FSStorage(Storage):
                 if old_content == content:
                     return path
 
-            # different content, need to find new path to save
-            newpath = None
-            n = 0
-            while newpath is None:
-                testpath = "{}_{}".format(fullpath, n)
-                if os.path.exists(testpath):
-                    n += 1
-                else:
-                    # testpath is available, use it as newpath
-                    newpath = "{}_{}".format(path, n)
+            if overwrite:
+                pass            #  fine to overwrite file!
+            else:
+                # different content, need to find new path to save
+                newpath = None
+                n = 0
+                while newpath is None:
+                    testpath = "{}_{}".format(fullpath, n)
+                    if os.path.exists(testpath):
+                        n += 1
+                    else:
+                        # testpath is available, use it as newpath
+                        newpath = "{}_{}".format(path, n)
 
         fullpath = os.path.join(self.location, self.subdir, newpath)
         with open(fullpath, 'wb') as f:
@@ -113,50 +119,75 @@ class ZipStorage(Storage):
         if len(subdirs) == 1:
             self.subdir = subdirs[0]
 
-    def _save_to_zf(self, zf, path, content):
-        # we repeat these steps for self.zipfile and self.bufferzip,
-        # so better to have an auxiliary method
+    def _content_matches(self, zf, path, content):
+        info = zf.getinfo(path)
+        entry_content = zf.read(info)
+        if entry_content == content:
+            return True
+        return False
+
+    def _generate_filename(self, zf, path, content):
         try:
-            info = zf.getinfo(path)
+            matches = self._content_matches(zf, path, content)
+            if matches:
+                return path, False
         except KeyError:
-            # entry not there yet, write a new one
-            newpath = path
-        else:
-            entry_content = zf.read(info)
+            # entry not there yet, use that path
+            return path, True
 
-            if entry_content == content:
-                # skip writing
-                return path
-
-            # Trying to write new content:
-            # create newpath based on path
-            newpath = None
-            n = 0
-            while newpath is None:
-                testpath = "{}_{}".format(path, n)
-                try:
-                    zf.getinfo(testpath)
-                except KeyError:
-                    # testpath is available, use it as newpath
-                    newpath = testpath
+        # content does not match - generate new path based on path
+        newpath = None
+        n = 0
+        while newpath is None:
+            testpath = "{}_{}".format(path, n)
+            try:
+                matches = self._content_matches(zf, testpath, content)
+                if matches:
+                    return testpath, False
                 else:
                     n += 1
+            except KeyError:
+                return testpath, True
 
-        zf.writestr(newpath, content)
-        return newpath
+        assert 0 # should never get here!
 
-    def save(self, path, content):
+    def _write_to_zf(self, zf, path, content, *, compress=False):
+        compress_type = zipfile.ZIP_STORED
+        if compress:
+            compress_type = zipfile.ZIP_DEFLATED
+
+        # save to zipfile
+        zf.writestr(path, content, compress_type=compress_type)
+
+        # set permissions
+        zi = zf.getinfo(path)
+        perms = 0o444 << 16     # give a+r access
+        if path.endswith('/'):
+            perms = 0o755 << 16 # directories get u+rwx, a+rx
+        zi.external_attr = perms
+
+    def save(self, path, content, *, overwrite=False, compress=False):
         # First try to save to self.zipfile, if it is not writable
         # or would introduce duplicates then try to save it in the buffer
-        try:
-            newpath = self._save_to_zf(self.zipfile, path, content)
-        except (ValueError, RuntimeError):
-            # Can't write in the zipfile, write in buffer instead
-            if self.bufferzip:
-                newpath = self._save_to_zf(self.bufferzip, path, content)
-            else:
-                # Throw error, can't write the data
-                raise ValueError("can't write data")
+        if overwrite:
+            newpath = path
+            do_write = True
+        else:
+            newpath, do_write = self._generate_filename(self.zipfile, path, content)
+        if do_write:
+            try:
+                self._write_to_zf(self.zipfile, newpath, content,
+                                  compress=compress)
+            except (ValueError, RuntimeError):
+                # Can't write in the zipfile, write in buffer instead
+                # CTB: do we need to generate a new filename wrt to the
+                # bufferzip, too? Not sure this code is working as intended...
+                if self.bufferzip:
+                    self._write_to_zf(self.bufferzip, newpath, content,
+                                      compress=compress)
+                else:
+                    # Throw error, can't write the data
+                    raise ValueError("can't write data")
 
         return newpath
 
@@ -207,7 +238,7 @@ class ZipStorage(Storage):
             zf_names = set(self.zipfile.namelist())
             if buffer_names:
                 new_data = buffer_names - zf_names
-                duplicated = buffer_names.intersection(zf_names)
+                duplicated = buffer_names & zf_names
 
                 if duplicated:
                     # bad news, need to create new file...
@@ -221,10 +252,10 @@ class ZipStorage(Storage):
                         if item in duplicated or item in buffer_names:
                             # we prioritize writing data from the buffer to the
                             # final file
-                            final_file.writestr(item, self.bufferzip.read(item))
+                            self._write_to_zf(final_file, item, self.bufferzip.read(item))
                         else:
                             # it is only in the zipfile, so write from it
-                            final_file.writestr(item, self.zipfile.read(item))
+                            self._write_to_zf(final_file, item, self.zipfile.read(item))
 
                     # close the files, remove the old one and copy the final
                     # file to the right place.
@@ -243,7 +274,7 @@ class ZipStorage(Storage):
                         zf = zipfile.ZipFile(self.path, mode='a',
                                              compression=zipfile.ZIP_STORED)
                     for item in new_data:
-                        zf.writestr(item, self.bufferzip.read(item))
+                        self._write_to_zf(zf, item, self.bufferzip.read(item))
                     self.zipfile = zf
             # finally, close the buffer and release memory
             self.bufferzip.close()
@@ -268,7 +299,7 @@ class IPFSStorage(Storage):
         self.pin_on_add = pin_on_add
         self.api = ipfshttpclient.connect(**self.ipfs_args)
 
-    def save(self, path, content):
+    def save(self, path, content, *, overwrite=False):
         new_obj = self.api.add_bytes(content)
         if self.pin_on_add:
             self.api.pin.add(new_obj)
@@ -306,7 +337,7 @@ class RedisStorage(Storage):
         self.redis_args = kwargs
         self.conn = redis.Redis(**self.redis_args)
 
-    def save(self, path, content):
+    def save(self, path, content, *, overwrite=False):
         if not isinstance(content, bytes):
             content = bytes(content)
         self.conn.set(path, content)

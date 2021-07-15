@@ -136,15 +136,24 @@ jobs:
   lints:
     name: Lints
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build: [beta, stable]
+        include:
+          - build: beta
+            rust: beta
+          - build: stable
+            rust: stable
     steps:
       - name: Checkout sources
         uses: actions/checkout@v1
 
-      - name: Install stable toolchain
+      - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: ${{ matrix.rust }}
           override: true
           components: rustfmt, clippy
 
@@ -171,10 +180,10 @@ jobs:
           toolchain: stable
           target: wasm32-unknown-unknown
 
-      - uses: actions-rs/install@v0.1
+      - uses: actions-rs/cargo@v1
         with:
-          crate: wasm-pack
-          version: latest
+          command: install
+          args: --force wasm-pack --version 0.10.0
 
       - name: Prepare node for running tests
         uses: actions/setup-node@v1
@@ -187,6 +196,14 @@ jobs:
 
       - name: run wasm-pack build
         run: wasm-pack build src/core -d ../../pkg
+
+      - name: Prepare package for NPM publishing
+        working-directory: pkg
+        run: npm pack
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: 'pkg/sourmash*.tgz'
 
   wasm32-wasi:
     name: Run tests under wasm32-wasi
