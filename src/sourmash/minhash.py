@@ -299,7 +299,7 @@ class MinHash(RustObject):
         "Convert sequence to hashes without adding to the sketch."
 
         if is_protein and self.moltype not in ["protein", "dayhoff"]:
-            raise ValueError("Expected DNA sequence, found Protein sequence.")
+            raise ValueError("cannot add protein sequence to DNA MinHash")
 
         size = ffi.new("uintptr_t *")
         hashes_ptr = self._methodcall(lib.kmerminhash_seq_to_hashes, to_bytes(sequence), self.ksize, len(sequence), force, is_protein, size)
