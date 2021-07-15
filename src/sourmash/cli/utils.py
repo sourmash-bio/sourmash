@@ -1,6 +1,7 @@
 from glob import glob
 import os
 import argparse
+from sourmash.logging import notify
 
 
 def add_moltype_args(parser):

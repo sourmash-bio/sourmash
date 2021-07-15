@@ -3612,6 +3612,7 @@ def test_multigather_check_scaled_bounds_less_than_minimum(c):
 
     cmd = 'multigather --query-from-file {} --db gcf_all -k 21 --scaled 50 --threshold-bp=0'.format(query_list)
     cmd = cmd.split(' ')
+    # Note: this is the value error that is emited, but we want the Warning from below to be generated instead. (ValueError: new scaled 50.0 is lower than current sample scaled 10000)
     with pytest.raises(ValueError) as exc:
         c.run_sourmash(*cmd)
 
@@ -3637,10 +3638,10 @@ def test_multigather_check_scaled_bounds_more_than_maximum(c):
 
     cmd = 'multigather --query-from-file {} --db gcf_all -k 21 --scaled 1e9 --threshold-bp=0'.format(query_list)
     cmd = cmd.split(' ')
-    with pytest.raises(ValueError) as exc:
-        c.run_sourmash(*cmd)
+    
+    c.run_sourmash(*cmd)
 
-    assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in str(exc.value)
+    assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in c.last_result.err
 
 
 @utils.in_tempdir
