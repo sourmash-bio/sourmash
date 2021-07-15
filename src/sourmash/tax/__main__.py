@@ -266,7 +266,6 @@ def annotate(args):
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
                        force=args.force)
-        available_ranks = tax_assign.available_ranks
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)

@@ -451,7 +451,7 @@ def test_metagenome_empty_tax_lineage_input(runtmp):
     print(runtmp.last_result.err)
 
     assert runtmp.last_result.status != 0
-    assert f"cannot read taxonomy assignments from" in str(exc.value)
+    assert "cannot read taxonomy assignments from" in str(exc.value)
 
 
 def test_metagenome_perfect_match_warning(runtmp):
@@ -509,7 +509,7 @@ def test_metagenome_over100percent_error(runtmp):
                 w.writerow(row)
                 print(row)
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError):
         runtmp.run_sourmash('tax', 'metagenome', '-g', perfect_g_csv, '--taxonomy-csv', tax)
 
     print(runtmp.last_result.status)
@@ -661,7 +661,7 @@ def test_genome_empty_tax_lineage_input(runtmp):
     print(runtmp.last_result.err)
 
     assert runtmp.last_result.status != 0
-    assert f"cannot read taxonomy assignments from" in str(exc.value)
+    assert "cannot read taxonomy assignments from" in str(exc.value)
 
 
 def test_genome_rank_stdout_0(runtmp):
@@ -1306,7 +1306,7 @@ def test_genome_containment_threshold_bounds(runtmp):
 
     above_threshold = "1.1"
     with pytest.raises(ValueError) as exc:
-        c.run_sourmash('tax', 'genome', '-g', tax, '--taxonomy-csv', tax,
+        c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
                        '--containment-threshold', above_threshold)
 
     print(c.last_result.status)
@@ -1322,7 +1322,7 @@ def test_genome_containment_threshold_type(runtmp):
     not_a_float = "str"
 
     with pytest.raises(ValueError) as exc:
-        c.run_sourmash('tax', 'genome', '-g', tax, '--taxonomy-csv', tax,
+        c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
                        '--containment-threshold', not_a_float)
 
     print(c.last_result.status)
@@ -1351,7 +1351,7 @@ def test_genome_over100percent_error(runtmp):
                 w.writerow(row)
                 print(row)
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError):
         runtmp.run_sourmash('tax', 'genome', '-g', perfect_g_csv, '--taxonomy-csv', tax)
 
     print(runtmp.last_result.status)
@@ -1471,7 +1471,7 @@ def test_annotate_empty_tax_lineage_input(runtmp):
     print(runtmp.last_result.err)
 
     assert runtmp.last_result.status != 0
-    assert f"cannot read taxonomy assignments from" in str(exc.value)
+    assert "cannot read taxonomy assignments from" in str(exc.value)
 
 
 def test_tax_prepare_1_csv_to_csv(runtmp, keep_identifiers, keep_versions):

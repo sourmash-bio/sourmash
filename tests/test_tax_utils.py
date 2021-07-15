@@ -264,7 +264,6 @@ def test_load_taxonomy_csv_duplicate_force(runtmp):
 
     # now force
     tax_assign = MultiLineageDB.load([duplicated_csv], force=True)
-    num_rows = len(tax_assign)
 
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1']
