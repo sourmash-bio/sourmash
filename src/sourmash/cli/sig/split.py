@@ -6,7 +6,7 @@ from sourmash.cli.utils import add_moltype_args, add_ksize_arg
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('split')
-    subparser.add_argument('signatures', nargs='+')
+    subparser.add_argument('signatures', nargs='*')
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'

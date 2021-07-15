@@ -24,6 +24,14 @@ def subparser(subparsers):
         '--name',
         help='rename merged signature'
     )
+    subparser.add_argument(
+        '-f', '--force', action='store_true',
+        help='try to load all files as signatures'
+    )
+    subparser.add_argument(
+        '--from-file',
+        help='a text file containing a list of files to load signatures from'
+    )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
 
