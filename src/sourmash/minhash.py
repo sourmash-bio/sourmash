@@ -302,12 +302,11 @@ class MinHash(RustObject):
             raise ValueError("Expected DNA sequence, found Protein sequence.")
 
         size = ffi.new("uintptr_t *")
-        hashes_ptr = self._methodcall(lib.kmerminhash_seq_to_hashes, to_bytes(sequence), len(sequence), force, is_protein, size)
+        hashes_ptr = self._methodcall(lib.kmerminhash_seq_to_hashes, to_bytes(sequence), self.ksize, len(sequence), force, is_protein, size)
         size = size[0]
 
         try:
-            d = ffi.unpack(hashes_ptr, size)
-            return _HashesWrapper([k for k in d])
+            return ffi.unpack(hashes_ptr, size)
 
         finally:
             lib.kmerminhash_slice_free(hashes_ptr, size)

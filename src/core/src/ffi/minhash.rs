@@ -5,6 +5,7 @@ use std::slice;
 use crate::encodings::{aa_to_dayhoff, aa_to_hp, translate_codon, HashFunctions};
 use crate::ffi::utils::{ForeignObject, SourmashStr};
 use crate::signature::SigsTrait;
+use crate::signature::SeqToHashes;
 use crate::sketch::minhash::KmerMinHash;
 
 pub struct SourmashKmerMinHash;
@@ -59,7 +60,7 @@ unsafe fn kmerminhash_add_sequence(ptr: *mut SourmashKmerMinHash, sequence: *con
 }
 
 ffi_fn! {
-unsafe fn kmerminhash_seq_to_hashes(ptr: *mut SourmashKmerMinHash, sequence: *const c_char, insize: usize, force: bool, is_protein: bool, size: *mut usize) ->
+unsafe fn kmerminhash_seq_to_hashes(ptr: *mut SourmashKmerMinHash, sequence: *const c_char, k_size: usize, insize: usize, force: bool, is_protein: bool, size: *mut usize) ->
 Result<*const u64> {
 
     let mh = SourmashKmerMinHash::as_rust_mut(ptr);
@@ -69,7 +70,7 @@ Result<*const u64> {
         slice::from_raw_parts(sequence as *const u8, insize)
     };
 
-    let output = mh.seq_to_hashes(buf, force, is_protein)?;
+    let output: Vec<u64> = SeqToHashes::new(buf, k_size, force, is_protein, mh.hash_function(), mh.seed()).collect();
 
     *size = output.len();
 

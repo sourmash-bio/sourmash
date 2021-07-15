@@ -20,6 +20,116 @@ use crate::sketch::Sketch;
 use crate::Error;
 use crate::HashIntoType;
 
+#[derive(Clone)]
+pub struct SeqToHashes<'a> {
+    sequence: &'a [u8],
+    kmer_index: usize,
+    k_size: usize,
+    max_index: usize,
+    force: bool,
+    is_protein: bool,
+    hash_function: HashFunctions,
+    seed: u64,
+}
+
+impl SeqToHashes<'_> {
+    pub fn new(
+        seq: &[u8],
+        k_size: usize,
+        force: bool,
+        is_protein: bool,
+        hash_function: HashFunctions,
+        seed: u64,
+    ) -> SeqToHashes {
+        let max_index = seq.len() - k_size + 1;
+        SeqToHashes {
+            sequence: seq,
+            k_size: k_size,
+            kmer_index: 0,
+            max_index: max_index,
+            force: force,
+            is_protein: is_protein,
+            hash_function: hash_function,
+            seed: seed,
+        }
+    }
+}
+
+impl Iterator for SeqToHashes<'_> {
+    type Item = u64;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.kmer_index < self.max_index {
+            if !self.is_protein {
+                let ksize = self.k_size as usize;
+                let len = self.sequence.len();
+                let hash_function = self.hash_function;
+                if len < ksize {
+                    return None;
+                }
+
+                // Here we convert the sequence to upper case and
+                // pre-calculate the reverse complement for the full sequence...
+                let sequence = self.sequence.to_ascii_uppercase();
+                let rc = revcomp(&sequence);
+
+                if hash_function.dna() {
+                    let mut last_position_check = 0;
+
+                    let mut is_valid_kmer = |i| {
+                        for j in std::cmp::max(i, last_position_check)..i + ksize {
+                            if !VALID[sequence[j] as usize] {
+                                return false;
+                            }
+                            last_position_check += 1;
+                        }
+                        true
+                    };
+
+                    // ... and then while moving the k-mer window forward for the sequence
+                    // we move another window backwards for the RC.
+                    //   For a ksize = 3, and a sequence AGTCGT (len = 6):
+                    //                   +-+---------+---------------+-------+
+                    //   seq      RC     |i|i + ksize|len - ksize - i|len - i|
+                    //  AGTCGT   ACGACT  +-+---------+---------------+-------+
+                    //  +->         +->  |0|    2    |       3       |   6   |
+                    //   +->       +->   |1|    3    |       2       |   5   |
+                    //    +->     +->    |2|    4    |       1       |   4   |
+                    //     +->   +->     |3|    5    |       0       |   3   |
+                    //                   +-+---------+---------------+-------+
+                    // (leaving this table here because I had to draw to
+                    //  get the indices correctly)
+
+                    let kmer = &self.sequence[self.kmer_index..self.kmer_index + ksize];
+
+                    if !is_valid_kmer(self.kmer_index) {
+                        if !self.force {
+                            return None;
+                            // throw error if DNA is not valid
+                            // return Err(Error::InvalidDNA {
+                            //     message: String::from_utf8(kmer.to_vec()).unwrap(),
+                            // });
+                        }else{
+                            self.kmer_index += 1;
+                        }
+                    }
+
+                    let krc = &rc[len - ksize - self.kmer_index..len - self.kmer_index];
+                    let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed);
+                    self.kmer_index += 1;
+                    Some(hash)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+}
+
 pub trait SigsTrait {
     fn size(&self) -> usize;
     fn to_vec(&self) -> Vec<u64>;
@@ -158,10 +268,18 @@ pub trait SigsTrait {
     }
 
     fn add_sequence(&mut self, seq: &[u8], force: bool) -> Result<(), Error> {
-        let ready_hashes = self.seq_to_hashes(seq, force, false)?;
 
-        for hash_value in &ready_hashes {
-            self.add_hash(*hash_value);
+        let ready_hashes = SeqToHashes::new(
+            seq,
+            self.ksize(),
+            force,
+            false,
+            self.hash_function(),
+            self.seed(),
+        );
+
+        for hash_value in ready_hashes {
+            self.add_hash(hash_value);
         }
 
         // Should be always ok
@@ -169,10 +287,18 @@ pub trait SigsTrait {
     }
 
     fn add_protein(&mut self, seq: &[u8]) -> Result<(), Error> {
-        let ready_hashes = self.seq_to_hashes(seq, false, true)?;
 
-        for hash_value in &ready_hashes {
-            self.add_hash(*hash_value);
+        let ready_hashes = SeqToHashes::new(
+            seq,
+            self.ksize(),
+            false,
+            true,
+            self.hash_function(),
+            self.seed(),
+        );
+
+        for hash_value in ready_hashes {
+            self.add_hash(hash_value);
         }
 
         // Should be always ok
