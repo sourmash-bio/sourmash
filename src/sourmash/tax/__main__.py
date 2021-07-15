@@ -96,10 +96,15 @@ def metagenome(args):
     summarized_gather = {}
     seen_perfect = set()
     for rank in sourmash.lca.taxlist(include_strain=False):
-        summarized_gather[rank], seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
+        try:
+            summarized_gather[rank], seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
                                                                 keep_full_identifiers=args.keep_full_identifiers,
                                                                 keep_identifier_versions = args.keep_identifier_versions,
                                                                 seen_perfect = seen_perfect)
+
+        except ValueError as exc:
+            error(f"ERROR: {str(exc)}")
+            sys.exit(-1)
 
     # write summarized output csv
     if "csv_summary" in args.output_format:
@@ -173,10 +178,14 @@ def genome(args):
 
     # if --rank is specified, classify to that rank
     if args.rank:
-        best_at_rank, seen_perfect = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
+        try:
+            best_at_rank, seen_perfect = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
                                                      keep_full_identifiers=args.keep_full_identifiers,
                                                      keep_identifier_versions = args.keep_identifier_versions,
                                                      best_only=True, seen_perfect=seen_perfect)
+        except ValueError as exc:
+            error(f"ERROR: {str(exc)}")
+            sys.exit(-1)
 
        # best at rank is a list of SummarizedGather tuples
         for sg in best_at_rank:
@@ -199,10 +208,14 @@ def genome(args):
         # To do - do we want to store anything for this match if nothing >= containment threshold?
         for rank in tax_utils.ascending_taxlist(include_strain=False):
             # gets best_at_rank for all queries in this gather_csv
-            best_at_rank, seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
+            try:
+                best_at_rank, seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
                                                          keep_full_identifiers=args.keep_full_identifiers,
                                                          keep_identifier_versions = args.keep_identifier_versions,
                                                          best_only=True, seen_perfect=seen_perfect)
+            except ValueError as exc:
+                error(f"ERROR: {str(exc)}")
+                sys.exit(-1)
 
             for sg in best_at_rank:
                 status = 'nomatch'

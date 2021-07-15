@@ -470,7 +470,11 @@ def test_metagenome_perfect_match_warning(runtmp):
             w.writeheader()
             for n, row in enumerate(r):
                 if n == 0:
+                    # make a perfect match
                     row["f_unique_to_query"] = 1.0
+                else:
+                    # set the rest to 0
+                    row["f_unique_to_query"] = 0.0
                 w.writerow(row)
                 print(row)
 
@@ -482,6 +486,38 @@ def test_metagenome_perfect_match_warning(runtmp):
 
     assert runtmp.last_result.status == 0
     assert 'WARNING: 100% match! Is query "test1" identical to its database match, GCF_001881345' in runtmp.last_result.err
+
+
+def test_metagenome_over100percent_error(runtmp):
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    perfect_g_csv = runtmp.output('g.csv')
+
+    #create a perfect gather result
+    with open(g_csv, 'r') as fp:
+        r = csv.DictReader(fp, delimiter=',')
+        header = r.fieldnames
+        print(header)
+        with open(perfect_g_csv, 'w') as out_fp:
+            w = csv.DictWriter(out_fp, header)
+            w.writeheader()
+            for n, row in enumerate(r):
+                if n == 0:
+                    row["f_unique_to_query"] = 1.0
+                # let the rest stay as they are (should be > 100% match now)
+                w.writerow(row)
+                print(row)
+
+    with pytest.raises(ValueError) as exc:
+        runtmp.run_sourmash('tax', 'metagenome', '-g', perfect_g_csv, '--taxonomy-csv', tax)
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == -1
+    assert "ERROR: The tax summary of query 'test1' is 1.1160749900279219, which is > 100% of the query!!" in runtmp.last_result.err
 
 
 def test_metagenome_gather_duplicate_query(runtmp):
@@ -1293,6 +1329,37 @@ def test_genome_containment_threshold_type(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
     assert "ERROR: Must be a floating point number" in str(exc.value)
+
+
+def test_genome_over100percent_error(runtmp):
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    perfect_g_csv = runtmp.output('g.csv')
+
+    #create an impossible gather result
+    with open(g_csv, 'r') as fp:
+        r = csv.DictReader(fp, delimiter=',')
+        header = r.fieldnames
+        print(header)
+        with open(perfect_g_csv, 'w') as out_fp:
+            w = csv.DictWriter(out_fp, header)
+            w.writeheader()
+            for n, row in enumerate(r):
+                if n == 0:
+                    row["f_unique_to_query"] = 1.1
+                w.writerow(row)
+                print(row)
+
+    with pytest.raises(ValueError) as exc:
+        runtmp.run_sourmash('tax', 'genome', '-g', perfect_g_csv, '--taxonomy-csv', tax)
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == -1
+    assert "ERROR: The tax summary of query 'test1' is 1.1, which is > 100% of the query!!" in runtmp.last_result.err
 
 
 def test_annotate_0(runtmp):

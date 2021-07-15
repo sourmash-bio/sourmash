@@ -429,7 +429,6 @@ def test_summarize_gather_at_perfect_match():
 
 def test_summarize_gather_at_over100percent_f_unique_to_query():
     """gather matches that add up to >100% f_unique_to_query"""
-    ## should we make this fail?
     # make mini gather_results
     gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
     gB = ["queryA", "gB","0.3","0.6", "queryA_md5", "queryA.sig", '0.5', '60', '40']
@@ -441,20 +440,15 @@ def test_summarize_gather_at_over100percent_f_unique_to_query():
     taxD = make_mini_taxonomy([gA_tax,gB_tax])
 
     # run summarize_gather_at and check results!
-    sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res)
-    # superkingdom
-    assert len(sk_sum) == 1
-    print("superkingdom summarized gather: ", sk_sum[0])
-    assert sk_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),)
-    assert sk_sum[0].fraction == 1.1
-    assert sk_sum[0].bp_match_at_rank == 110
+    with pytest.raises(ValueError) as exc:
+        sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res)
+    assert "The tax summary of query 'queryA' is 1.1, which is > 100% of the query!!" in str(exc)
+
     # phylum
-    phy_sum, _ = summarize_gather_at("phylum", taxD, g_res)
-    print("phylum summarized gather: ", phy_sum[0])
-    assert len(phy_sum) == 1
-    assert phy_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),LineagePair(rank='phylum', name='b'))
-    assert phy_sum[0].fraction == 1.1
-    assert phy_sum[0].bp_match_at_rank == 110
+    with pytest.raises(ValueError) as exc:
+        phy_sum, _ = summarize_gather_at("phylum", taxD, g_res)
+    assert "The tax summary of query 'queryA' is 1.1, which is > 100% of the query!!" in str(exc)
+
     # class
     cl_sum, _ = summarize_gather_at("class", taxD, g_res)
     assert len(cl_sum) == 2

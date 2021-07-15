@@ -237,6 +237,10 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
         sumgather_items.sort(key = lambda x: -x[1])
         if best_only:
             lineage, fraction = sumgather_items[0]
+            if fraction > 1:
+                raise ValueError(f"The tax summary of query '{query_name}' is {fraction}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
+            elif fraction == 0:
+                continue
             f_weighted_at_rank = sum_uniq_weighted[query_name][lineage]
             bp_intersect_at_rank = sum_uniq_bp[query_name][lineage]
             sres = SummarizedGatherResult(query_name, rank, fraction, lineage, qInfo.query_md5, qInfo.query_filename, f_weighted_at_rank, bp_intersect_at_rank)
@@ -246,6 +250,10 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
             total_f_classified = 0.0
             total_bp_classified = 0
             for lineage, fraction in sumgather_items:
+                if fraction > 1:
+                    raise ValueError(f"The tax summary of query '{query_name}' is {fraction}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
+                elif fraction == 0:
+                    continue
                 total_f_classified += fraction
                 f_weighted_at_rank = sum_uniq_weighted[query_name][lineage]
                 total_f_weighted += f_weighted_at_rank
