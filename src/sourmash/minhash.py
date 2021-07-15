@@ -295,7 +295,7 @@ class MinHash(RustObject):
         self._methodcall(lib.kmerminhash_add_sequence, to_bytes(sequence),
                          force)
 
-    def seq_to_hashes(self, sequence, force=False, is_protein = False):
+    def seq_to_hashes(self, sequence, *, force=False, is_protein=False):
         "Convert sequence to hashes without adding to the sketch."
 
         if is_protein and self.moltype not in ["protein", "dayhoff"]:
