@@ -585,6 +585,49 @@ class SignatureLoadingProgress(object):
                           end='\r')
 
 
+class LoadManySignatures:
+    def __init__(self, locations, progress, *,
+                 yield_all_files=False, ksize=None, moltype=None,
+                 picklist=None, force=False):
+        self.locations = locations
+        self.progress = progress
+
+        self.yield_all_files = yield_all_files
+        self.ksize = ksize
+        self.moltype = moltype
+        self.picklist = picklist
+        self.force = force
+
+    def __iter__(self):
+        progress = self.progress
+        for loc in self.locations:
+            try:
+                idx = load_file_as_index(loc,
+                                         yield_all_files=self.yield_all_files)
+                idx = idx.select(ksize=self.ksize,
+                                 moltype=self.moltype,
+                                 picklist=self.picklist)
+
+                loader = idx.signatures_with_location()
+
+                n = 0
+                for sig, sigloc in progress.start_file(loc, loader):
+                    yield sig, sigloc
+                    n += 1
+                notify(f"loaded {n} isgnatures from '{loc}'", end='\r')
+            except ValueError as exc:
+                if self.force:
+                    notify(str(exc))
+                    continue
+                else:
+                    raise
+            except KeyboardInterrupt:
+                notify("Received CTRL-C - exiting.")
+                sys.exit(-1)
+
+        n_files = len(self.locations)
+        notify(f"loaded {len(progress)} signatures total, from {n_files} files")
+
 #
 # enum and classes for saving signatures progressively
 #
