@@ -7,7 +7,7 @@ from sourmash.cli.utils import add_moltype_args, add_ksize_arg
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('downsample')
-    subparser.add_argument('signatures', nargs="+")
+    subparser.add_argument('signatures', nargs="*")
     subparser.add_argument(
         '--scaled', type=int, default=0,
         help='scaled value to downsample to'

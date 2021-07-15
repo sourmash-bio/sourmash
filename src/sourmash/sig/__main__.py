@@ -738,7 +738,7 @@ def flatten(args):
 
 def downsample(args):
     """
-    downsample a scaled signature.
+    downsample num and scaled signatures, and also interconvert.
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
@@ -764,54 +764,57 @@ def downsample(args):
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
     for sigfile in args.signatures:
-        notify(f'loading and downsampling signature from {sigfile}...',
-               end='\r')
         try:
             loader = sourmash_args.load_file_as_signatures(sigfile,
                                                     ksize=args.ksize,
                                                     select_moltype=moltype,
                                                     progress=progress,
                                                     yield_all_files=args.force)
-        except ValueError:
+
+            for sigobj in progress.start_file(sigfile, loader):
+                mh = sigobj.minhash
+
+                if args.scaled:
+                    # downsample scaled to scaled? straightforward.
+                    if mh.scaled:
+                        mh_new = mh.downsample(scaled=args.scaled)
+                    # try to turn a num into a scaled - trickier.
+                    else:
+                        # first check: can we?
+                        max_hash = _get_max_hash_for_scaled(args.scaled)
+                        mins = mh.hashes
+                        if max(mins) < max_hash:
+                            raise ValueError("this num MinHash does not have enough hashes to convert it into a scaled MinHash.")
+
+                        mh_new = mh.copy()
+                        _set_num_scaled(mh_new, 0, args.scaled)
+                elif args.num:
+                    # downsample num to num? straightforward.
+                    if mh.num:
+                        mh_new = mh.downsample(num=args.num)
+                    # try to turn a scaled into a num - trickier.
+                    else:
+                        # first check: can we?
+                        if len(mh) < args.num:
+                            raise ValueError(f"this scaled MinHash has only {len(mh)} hashes")
+
+                        mh_new = mh.copy()
+                        _set_num_scaled(mh_new, args.num, 0)
+
+                sigobj.minhash = mh_new
+
+                # save!
+                save_sigs.add(sigobj)
+        except ValueError as exc:
             if args.force:
+                error(str(exc))
+                error('(continuing)')
                 continue
             else:
                 raise
-
-        for sigobj in loader:
-            mh = sigobj.minhash
-
-            if args.scaled:
-                # downsample scaled to scaled? straightforward.
-                if mh.scaled:
-                    mh_new = mh.downsample(scaled=args.scaled)
-                # try to turn a num into a scaled - trickier.
-                else:
-                    # first check: can we?
-                    max_hash = _get_max_hash_for_scaled(args.scaled)
-                    mins = mh.hashes
-                    if max(mins) < max_hash:
-                        raise ValueError("this num MinHash does not have enough hashes to convert it into a scaled MinHash.")
-
-                    mh_new = mh.copy()
-                    _set_num_scaled(mh_new, 0, args.scaled)
-            elif args.num:
-                # downsample num to num? straightforward.
-                if mh.num:
-                    mh_new = mh.downsample(num=args.num)
-                # try to turn a scaled into a num - trickier.
-                else:
-                    # first check: can we?
-                    if len(mh) < args.num:
-                        raise ValueError(f"this scaled MinHash has only {len(mh)} hashes")
-
-                    mh_new = mh.copy()
-                    _set_num_scaled(mh_new, args.num, 0)
-
-            sigobj.minhash = mh_new
-
-            # save!
-            save_sigs.add(sigobj)
+        except KeyboardInterrupt:
+            error("Received CTRL-C. Exiting.")
+            sys.exit(-1)
 
     save_sigs.close()
 
