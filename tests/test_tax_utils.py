@@ -657,9 +657,9 @@ def test_make_krona_header_fail():
 def test_aggregate_by_lineage_at_rank_by_query():
     """test two queries, aggregate lineage at rank for each"""
     # make gather results
-    gA = ["queryA","gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '10', '1']
-    gB = ["queryA","gB","0.3","0.4", "queryA_md5", "queryA.sig", '0.5', '10', '1']
-    gC = ["queryB","gB","0.3","0.3", "queryB_md5", "queryB.sig", '0.5', '10', '1']
+    gA = ["queryA","gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '100', '100']
+    gB = ["queryA","gB","0.3","0.4", "queryA_md5", "queryA.sig", '0.5', '60', '140']
+    gC = ["queryB","gB","0.3","0.3", "queryB_md5", "queryB.sig", '0.5', '60', '140']
     g_res = make_mini_gather_results([gA,gB,gC])
 
     # make mini taxonomy
@@ -674,18 +674,22 @@ def test_aggregate_by_lineage_at_rank_by_query():
     assert sk_sum[0].query_name == "queryA"
     assert sk_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),)
     assert sk_sum[0].fraction == 0.9
+    assert sk_sum[0].bp_match_at_rank == 160
     # check for unassigned for queryA
     assert sk_sum[1].query_name == "queryA"
     assert sk_sum[1].lineage == ()
+    assert sk_sum[1].bp_match_at_rank == 40
     assert round(sk_sum[1].fraction,1) == 0.1
     # queryB
     assert sk_sum[2].query_name == "queryB"
     assert sk_sum[2].lineage == (LineagePair(rank='superkingdom', name='a'),)
     assert sk_sum[2].fraction == 0.3
+    assert sk_sum[2].bp_match_at_rank == 60
     # check for unassigned for queryA
     assert sk_sum[3].query_name == "queryB"
     assert sk_sum[3].lineage == ()
     assert sk_sum[3].fraction == 0.7
+    assert sk_sum[3].bp_match_at_rank == 140
     sk_lin_sum, query_names, num_queries = aggregate_by_lineage_at_rank(sk_sum, by_query=True)
     print("superkingdom lineage summary:", sk_lin_sum, '\n')
     assert sk_lin_sum == {(LineagePair(rank='superkingdom', name='a'),): {'queryA': 0.9, 'queryB': 0.3},
