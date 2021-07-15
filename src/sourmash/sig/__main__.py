@@ -818,7 +818,8 @@ def downsample(args):
 
     save_sigs.close()
 
-    notify(f"loaded and downsampled {len(progress)} signatures")
+    notify(f"loaded {len(progress)} signatures")
+    notify(f"output {len(save_sigs)} downsampled signatures", len(save_sigs))
 
 
 def sig_import(args):
