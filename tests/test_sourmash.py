@@ -1970,7 +1970,7 @@ def test_search_metagenome_traverse_check_csv():
             r = csv.DictReader(fp)
             for row in r:
                 filename = row['filename']
-                assert filename.startswith(testdata_dir)
+                assert filename.startswith(testdata_dir), filename
                 # should have full path to file sig was loaded from
                 assert len(filename) > prefix_len
 
@@ -5351,3 +5351,243 @@ def test_gather_with_prefetch_picklist(runtmp, linear_gather):
 
     assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
     assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out
+
+
+def test_gather_with_prefetch_picklist_2_prefetch(runtmp, linear_gather):
+    # test 'gather' using a picklist taken from 'sourmash prefetch' output
+    # using ::prefetch
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    prefetch_csv = runtmp.output('prefetch-out.csv')
+
+    runtmp.sourmash('prefetch', metag_sig, *gcf_sigs,
+                    '-k', '21', '-o', prefetch_csv)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "total of 12 matching signatures." in err
+    assert "of 1466 distinct query hashes, 1466 were found in matches above threshold." in err
+
+    # now, do a gather with the results
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs, linear_gather,
+                    '-k', '21', '--picklist',
+                    f'{prefetch_csv}::prefetch')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "found 11 matches total;" in out
+    assert "the recovered matches hit 99.9% of the query" in out
+
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
+    assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out
+
+
+def test_gather_with_prefetch_picklist_3_gather(runtmp, linear_gather):
+    # test 'gather' using a picklist taken from 'sourmash gather' output,
+    # using ::gather.
+    # (this doesn't really do anything useful, but it's an ok test :)
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    gather_csv = runtmp.output('gather-out.csv')
+
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs,
+                    '-k', '21', '-o', gather_csv)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "found 11 matches total;" in out
+    assert "the recovered matches hit 99.9% of the query" in out
+
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
+    assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out
+
+    # now, do another gather with the results
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs, linear_gather,
+                    '-k', '21', '--picklist',
+                    f'{gather_csv}::gather')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "found 11 matches total;" in out
+    assert "the recovered matches hit 99.9% of the query" in out
+
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
+    assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out
+
+
+def test_gather_with_prefetch_picklist_3_gather_badcol(runtmp):
+    # test 'gather' using a picklist taken from 'sourmash gather' output,
+    # using ::gather.
+    # (this doesn't really do anything useful, but it's an ok test :)
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    gather_csv = runtmp.output('gather-out.csv')
+
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs,
+                    '-k', '21', '-o', gather_csv)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "found 11 matches total;" in out
+    assert "the recovered matches hit 99.9% of the query" in out
+
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
+    assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out
+
+    # now, do another gather with the results, but with a bad picklist
+    # parameter
+    with pytest.raises(ValueError):
+        runtmp.sourmash('gather', metag_sig, *gcf_sigs,
+                        '-k', '21', '--picklist',
+                        f'{gather_csv}:FOO:gather')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "ERROR: could not load picklist." in err
+    assert "no column name allowed for coltype 'gather'" in err
+
+
+def test_gather_with_prefetch_picklist_4_manifest(runtmp, linear_gather):
+    # test 'gather' using a picklist taken from 'sourmash sig manifest'
+    # output, using ::manifest.
+    # (this doesn't really do anything useful, but it's an ok test :)
+    gather_dir = utils.get_test_data('gather/')
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    manifest_csv = runtmp.output('manifest.csv')
+
+    runtmp.sourmash('sig', 'manifest', gather_dir, '-o', manifest_csv)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    # now, do a gather on the manifest
+    runtmp.sourmash('gather', metag_sig, gather_dir, linear_gather,
+                    '-k', '21', '--picklist',
+                    f'{manifest_csv}::manifest')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "found 1 matches total;" in out
+    assert "the recovered matches hit 100.0% of the query" in out
+
+    # the query sig itself is in there, so :shrug: that matches at 100%
+    assert "14.7 Mbp     100.0%  100.0%    -" in out
+
+
+def test_gather_with_prefetch_picklist_4_manifest_excl(runtmp, linear_gather):
+    # test 'gather' using a picklist taken from 'sourmash sig manifest'
+    # output, using ::manifest.
+    # (this doesn't really do anything useful, but it's an ok test :)
+    gather_dir = utils.get_test_data('gather/')
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    manifest_csv = runtmp.output('manifest.csv')
+
+    runtmp.sourmash('sig', 'manifest', gather_dir, '-o', manifest_csv)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    # now, do a gather on the manifest
+    runtmp.sourmash('gather', metag_sig, gather_dir, linear_gather,
+                    '-k', '21', '--picklist',
+                    f'{manifest_csv}::manifest:exclude')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    # excluded everything, so nothing to match!
+    assert "found 0 matches total;" in out
+    assert "the recovered matches hit 0.0% of the query" in out
+
+
+def test_gather_with_prefetch_picklist_5_search(runtmp):
+    # test 'gather' using a picklist taken from 'sourmash prefetch' output
+    # using ::prefetch
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    search_csv = runtmp.output('search-out.csv')
+
+    runtmp.sourmash('search', '--containment', metag_sig, *gcf_sigs,
+                    '-k', '21', '-o', search_csv)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "12 matches; showing first 3:" in out
+    assert " 33.2%       NC_003198.1 Salmonella enterica subsp." in out
+
+    # now, do a gather with the results
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs,
+                    '-k', '21', '--picklist',
+                    f'{search_csv}::search')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "found 11 matches total;" in out
+    assert "the recovered matches hit 99.9% of the query" in out
+
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
+    assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out
+
+
+def test_gather_scaled_1(runtmp, linear_gather, prefetch_gather):
+    # test gather on a sig indexed with scaled=1
+    inp = utils.get_test_data('short.fa')
+    outp = runtmp.output('out.sig')
+
+    # prepare a signature with a scaled of 1
+    runtmp.sourmash('sketch', 'dna', '-p', 'scaled=1,k=31', inp, '-o', outp)
+
+    # run with a low threshold
+    runtmp.sourmash('gather', outp, outp, '--threshold-bp', '0')
+
+    print(runtmp.last_result.out)
+    print('---')
+    print(runtmp.last_result.err)
+
+    assert "1.0 kbp      100.0%  100.0%" in runtmp.last_result.out
+    assert "found 1 matches total;" in runtmp.last_result.out

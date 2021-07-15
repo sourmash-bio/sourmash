@@ -9,6 +9,7 @@ import shutil
 import copy
 
 import sourmash
+from sourmash import index
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             make_jaccard_search_query, CounterGather,
@@ -890,15 +891,68 @@ def test_zipfile_API_signatures_select(use_manifest):
     zipfile_db = utils.get_test_data('prot/all.zip')
 
     zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(moltype='DNA')
+
     zipidx = zipidx.select(moltype='DNA')
     siglist = list(zipidx.signatures())
 
     if use_manifest:
         assert len(siglist) == 2
         assert len(zipidx) == 2
+        assert len(ziplist_pre) == 2
     else:
         assert len(siglist) == 1
         assert len(zipidx) == 1
+        assert len(ziplist_pre) == 1
+
+
+def test_zipfile_API_signatures_select_abund_false(use_manifest):
+    # check for abund=False (all signatures match b/c can convert)
+    zipfile_db = utils.get_test_data('track_abund/track_abund.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(abund=False)
+
+    zipidx = zipidx.select(abund=False)
+    siglist = list(zipidx.signatures())
+
+    assert len(siglist) == 2
+    assert len(zipidx) == 2
+    assert len(ziplist_pre) == 2
+
+
+def test_zipfile_API_signatures_select_abund_true(use_manifest):
+    # find all abund=True (all signatures match, b/c abund)
+    zipfile_db = utils.get_test_data('track_abund/track_abund.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(abund=True)
+
+    zipidx = zipidx.select(abund=True)
+    siglist = list(zipidx.signatures())
+
+    assert len(siglist) == 2
+    assert len(zipidx) == 2
+    assert len(ziplist_pre) == 2
+
+
+def test_zipfile_API_signatures_select_abund_none(use_manifest):
+    # find all abund=None (all signatures match, b/c no selection criteria)
+    zipfile_db = utils.get_test_data('track_abund/track_abund.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(abund=None)
+
+    zipidx = zipidx.select(abund=None)
+    siglist = list(zipidx.signatures())
+
+    assert len(siglist) == 2
+    assert len(zipidx) == 2
+    assert len(ziplist_pre) == 2
 
 
 def test_zipfile_API_signatures_select_twice(use_manifest):
@@ -906,6 +960,10 @@ def test_zipfile_API_signatures_select_twice(use_manifest):
     zipfile_db = utils.get_test_data('prot/all.zip')
 
     zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(moltype='DNA')
+    ziplist_pre = ziplist_pre.select(ksize=31)
+
     zipidx = zipidx.select(moltype='DNA')
     zipidx = zipidx.select(ksize=31)
     siglist = list(zipidx.signatures())
@@ -913,9 +971,11 @@ def test_zipfile_API_signatures_select_twice(use_manifest):
     if use_manifest:
         assert len(siglist) == 2
         assert len(zipidx) == 2
+        assert len(ziplist_pre) == 2
     else:
         assert len(siglist) == 1
         assert len(zipidx) == 1
+        assert len(ziplist_pre) == 1
 
 
 def test_zipfile_API_save():
@@ -1099,11 +1159,32 @@ def test_multi_index_signatures():
 
 
 def test_multi_index_load_from_path():
+    # test MultiIndex loading from a directory. The full paths to the
+    # signature files should be available via 'signatures_with_location()'
     dirname = utils.get_test_data('prot/protein')
     mi = MultiIndex.load_from_path(dirname, force=False)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 2
+
+    # check to make sure that full paths to expected sig files are returned
+    locs = [ x[1] for x in mi.signatures_with_location() ]
+
+    endings = ('GCA_001593925.1_ASM159392v1_protein.faa.gz.sig',
+               'GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+    for loc in locs:
+        found = False
+        for end in endings:
+            if loc.endswith(end):
+                found = True
+        assert found, f"could not find full filename in locations for {end}"
+
+    # also check internal locations and parent value --
+    assert mi.parent.endswith('prot/protein')
+
+    ilocs = [ x[2] for x in mi._signatures_with_internal() ]
+    assert endings[0] in ilocs, ilocs
+    assert endings[1] in ilocs, ilocs
 
 
 def test_multi_index_load_from_path_2():
@@ -2121,3 +2202,82 @@ def test_lazy_index_wraps_multi_index_location():
     for (ss_tup, ss_lazy_tup) in zip(mi2.signatures_with_location(),
                                      lazy2.signatures_with_location()):
         assert ss_tup == ss_lazy_tup
+
+
+def test_lazy_loaded_index_1(runtmp):
+    # some basic tests for LazyLoadedIndex
+    lcafile = utils.get_test_data('prot/protein.lca.json.gz')
+    sigzip = utils.get_test_data('prot/protein.zip')
+
+    with pytest.raises(ValueError) as exc:
+        db = index.LazyLoadedIndex.load(lcafile)
+    # no manifest on LCA database
+    assert "no manifest on index at" in str(exc)
+
+    # load something, check that it's only accessed upon .signatures(...)
+    test_zip = runtmp.output('test.zip')
+    shutil.copyfile(sigzip, test_zip)
+    db = index.LazyLoadedIndex.load(test_zip)
+    assert len(db) == 2
+    assert db.location == test_zip
+
+    # now remove!
+    os.unlink(test_zip)
+
+    # can still access manifest...
+    assert len(db) == 2
+
+    # ...but we should get an error when we call signatures.
+    with pytest.raises(FileNotFoundError):
+        list(db.signatures())
+
+    # but put it back, and all is forgiven. yay!
+    shutil.copyfile(sigzip, test_zip)
+    x = list(db.signatures())
+    assert len(x) == 2
+
+
+def test_lazy_loaded_index_2_empty(runtmp):
+    # some basic tests for LazyLoadedIndex that is empty
+    sigzip = utils.get_test_data('prot/protein.zip')
+
+    # load something:
+    test_zip = runtmp.output('test.zip')
+    shutil.copyfile(sigzip, test_zip)
+    db = index.LazyLoadedIndex.load(test_zip)
+    assert len(db) == 2
+    assert db.location == test_zip
+    assert bool(db)
+
+    # select to empty:
+    db = db.select(ksize=50)
+
+    assert len(db) == 0
+    assert not bool(db)
+
+    x = list(db.signatures())
+    assert len(x) == 0
+
+
+def test_lazy_loaded_index_3_find(runtmp):
+    # test 'find'
+    query_file = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigzip = utils.get_test_data('prot/protein.zip')
+
+    # load something:
+    test_zip = runtmp.output('test.zip')
+    shutil.copyfile(sigzip, test_zip)
+    db = index.LazyLoadedIndex.load(test_zip)
+
+    # can we find matches? should find two.
+    query = sourmash.load_one_signature(query_file)
+    assert query.minhash.ksize == 19
+    x = db.search(query, threshold=0.0)
+    x = list(x)
+    assert len(x) == 2
+
+    # no matches!
+    db = db.select(ksize=20)
+    x = db.search(query, threshold=0.0)
+    x = list(x)
+    assert len(x) == 0

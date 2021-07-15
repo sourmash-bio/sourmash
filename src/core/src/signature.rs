@@ -14,9 +14,6 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
-#[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
-use wasm_bindgen::prelude::*;
-
 use crate::encodings::{aa_to_dayhoff, aa_to_hp, revcomp, to_aa, HashFunctions, VALID};
 use crate::index::storage::ToWriter;
 use crate::sketch::Sketch;
@@ -134,7 +131,7 @@ pub trait SigsTrait {
 
         if hash_function.protein() {
             for aa_kmer in seq.windows(ksize) {
-                let hash = crate::_hash_murmur(&aa_kmer, self.seed());
+                let hash = crate::_hash_murmur(aa_kmer, self.seed());
                 self.add_hash(hash);
             }
             return Ok(());
@@ -151,7 +148,7 @@ pub trait SigsTrait {
         };
 
         for aa_kmer in aa_seq.windows(ksize) {
-            let hash = crate::_hash_murmur(&aa_kmer, self.seed());
+            let hash = crate::_hash_murmur(aa_kmer, self.seed());
             self.add_hash(hash);
         }
 
@@ -242,7 +239,6 @@ impl SigsTrait for Sketch {
     }
 }
 
-#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[derive(Serialize, Deserialize, Debug, Clone, TypedBuilder)]
 pub struct Signature {
     #[serde(default = "default_class")]
@@ -478,7 +474,7 @@ impl Signature {
             self.signatures
                 .iter_mut()
                 .for_each(|sketch| {
-                    sketch.add_sequence(&seq, force).unwrap(); }
+                    sketch.add_sequence(seq, force).unwrap(); }
                 );
         }
         }
@@ -498,7 +494,7 @@ impl Signature {
             self.signatures
                 .iter_mut()
                 .try_for_each(|sketch| {
-                    sketch.add_protein(&seq) }
+                    sketch.add_protein(seq) }
                 )?;
         }
         }

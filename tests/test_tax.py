@@ -6,6 +6,7 @@ import csv
 import pytest
 
 import sourmash_tst_utils as utils
+from sourmash.tax import tax_utils
 
 ## command line tests
 def test_run_sourmash_tax():
@@ -19,6 +20,38 @@ def test_metagenome_stdout_0(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
+
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,rank,fraction,lineage" in c.last_result.out
+    assert 'test1,superkingdom,0.131,d__Bacteria' in c.last_result.out
+    assert "test1,phylum,0.073,d__Bacteria;p__Bacteroidota" in c.last_result.out
+    assert "test1,phylum,0.058,d__Bacteria;p__Proteobacteria" in c.last_result.out
+    assert "test1,class,0.073,d__Bacteria;p__Bacteroidota;c__Bacteroidia" in c.last_result.out
+    assert "test1,class,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria" in c.last_result.out
+    assert "test1,order,0.073,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales" in c.last_result.out
+    assert "test1,order,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales" in c.last_result.out
+    assert "test1,family,0.073,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae" in c.last_result.out
+    assert "test1,family,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae" in c.last_result.out
+    assert "test1,genus,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia" in c.last_result.out
+    assert "test1,genus,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella" in c.last_result.out
+    assert "test1,genus,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola" in c.last_result.out
+    assert "test1,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "test1,species,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in c.last_result.out
+    assert "test1,species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus" in c.last_result.out
+
+
+def test_metagenome_stdout_0_db(runtmp):
+    # test basic metagenome with sqlite database
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.db')
 
     c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax)
 
@@ -201,14 +234,16 @@ def test_metagenome_duplicated_taxonomy_fail(runtmp):
     duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
     with open(duplicated_csv, 'w') as dup:
         tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
-        tax.append(tax[1]) # add first tax_assign again
+        tax.append(tax[1] + 'FOO') # add first tax_assign again
         dup.write("\n".join(tax))
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(ValueError) as exc:
         c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', duplicated_csv)
-        assert str(exc.value == "multiple lineages for identifier GCF_001881345")
+
+    assert "cannot read taxonomy" in str(exc.value)
+    assert "multiple lineages for identifier GCF_001881345" in str(exc.value)
 
 
 def test_metagenome_duplicated_taxonomy_force(runtmp):
@@ -384,7 +419,7 @@ def test_metagenome_empty_tax_lineage_input(runtmp):
     print(runtmp.last_result.err)
 
     assert runtmp.last_result.status != 0
-    assert f"Cannot read taxonomy assignments from {tax_empty}. Is file empty?" in str(exc.value)
+    assert f"cannot read taxonomy assignments from" in str(exc.value)
 
 
 def test_metagenome_perfect_match_warning(runtmp):
@@ -554,7 +589,7 @@ def test_genome_empty_tax_lineage_input(runtmp):
     print(runtmp.last_result.err)
 
     assert runtmp.last_result.status != 0
-    assert f"Cannot read taxonomy assignments from {tax_empty}. Is file empty?" in str(exc.value)
+    assert f"cannot read taxonomy assignments from" in str(exc.value)
 
 
 def test_genome_rank_stdout_0(runtmp):
@@ -566,6 +601,25 @@ def test_genome_rank_stdout_0(runtmp):
 
     c.run_sourmash('tax', 'genome', '--gather-csv', g_csv, '--taxonomy-csv', tax,
                    '--rank', 'species', '--containment-threshold', '0')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,status,rank,fraction,lineage" in c.last_result.out
+    assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+
+
+def test_genome_rank_stdout_0_db(runtmp):
+    # test basic genome with sqlite database
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.db')
+
+    c.run_sourmash('tax', 'genome', '--gather-csv', g_csv, '--taxonomy-csv',
+                   tax, '--rank', 'species', '--containment-threshold', '0')
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -851,6 +905,39 @@ def test_genome_gather_from_file_below_threshold(runtmp):
     assert "test1,below_threshold,,0.000," in c.last_result.out
 
 
+def test_genome_gather_two_queries(runtmp):
+    '''
+    This checks for initial bug where classification
+    would only happen for one genome per rank when
+    doing --containment-threshold classification
+    '''
+    c = runtmp
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    g_res = utils.get_test_data('tax/47+63_x_gtdb-rs202.gather.csv')
+
+    # split 47+63 into two fake queries: q47, q63
+    g_res2 = runtmp.output("two-queries.gather.csv")
+    q2_results = [x for x in open(g_res, 'r')]
+    # rename queries
+    q2_results[1] = q2_results[1].replace('47+63', 'q47')
+    q2_results[2] = q2_results[2].replace('47+63', 'q63')
+    with open(g_res2, 'w') as fp:
+        for line in q2_results:
+            print(line)
+            fp.write(line)
+
+    c.run_sourmash('tax', 'genome', '-g', g_res2, '--taxonomy-csv', taxonomy_csv,
+                   '--containment-threshold', '0')
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,status,rank,fraction,lineage" in c.last_result.out
+    assert "q63,match,species,0.336,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Shewanellaceae;g__Shewanella;s__Shewanella baltica,491c0a81," in c.last_result.out
+    assert "q47,match,species,0.664,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Shewanellaceae;g__Shewanella;s__Shewanella baltica," in c.last_result.out
+
+
 def test_genome_rank_duplicated_taxonomy_fail(runtmp):
     c = runtmp
     # write temp taxonomy with duplicates
@@ -858,15 +945,16 @@ def test_genome_rank_duplicated_taxonomy_fail(runtmp):
     duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
     with open(duplicated_csv, 'w') as dup:
         tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
-        tax.append(tax[1]) # add first tax_assign again
+        tax.append(tax[1] + 'FOO') # add first tax_assign again
         dup.write("\n".join(tax))
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(ValueError) as exc:
         c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', duplicated_csv,
                        '--rank', 'species')
-        assert str(exc.value == "multiple lineages for identifier GCF_001881345")
+    assert "cannot read taxonomy assignments" in str(exc.value)
+    assert "multiple lineages for identifier GCF_001881345" in str(exc.value)
 
 
 def test_genome_rank_duplicated_taxonomy_force(runtmp):
@@ -1134,12 +1222,82 @@ def test_genome_empty_gather_results_with_csv_force(runtmp):
     assert "test1,match,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
 
 
+def test_genome_containment_threshold_bounds(runtmp):
+    c = runtmp
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    below_threshold = "-1"
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('tax', 'genome', '-g', tax, '--taxonomy-csv', tax,
+                       '--containment-threshold', below_threshold)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert "ERROR: Argument must be >0 and <1" in str(exc.value)
+
+    above_threshold = "1.1"
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('tax', 'genome', '-g', tax, '--taxonomy-csv', tax,
+                       '--containment-threshold', above_threshold)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert "ERROR: Argument must be >0 and <1" in str(exc.value)
+
+
+def test_genome_containment_threshold_type(runtmp):
+    c = runtmp
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    not_a_float = "str"
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('tax', 'genome', '-g', tax, '--taxonomy-csv', tax,
+                       '--containment-threshold', not_a_float)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert "ERROR: Must be a floating point number" in str(exc.value)
+
+
 def test_annotate_0(runtmp):
     # test annotate
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csvout = runtmp.output("test1.gather.with-lineages.csv")
+    out_dir = os.path.dirname(csvout)
+
+    c.run_sourmash('tax', 'annotate', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', out_dir)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+
+    lin_gather_results = [x.rstrip() for x in open(csvout)]
+    print("\n".join(lin_gather_results))
+    assert f"saving `annotate` output to {csvout}" in runtmp.last_result.err
+
+    assert "lineage" in lin_gather_results[0]
+    assert "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in lin_gather_results[1]
+    assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in lin_gather_results[2]
+    assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus" in lin_gather_results[3]
+    assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in lin_gather_results[4]
+
+
+def test_annotate_0_db(runtmp):
+    # test annotate with sqlite db
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.db')
     csvout = runtmp.output("test1.gather.with-lineages.csv")
     out_dir = os.path.dirname(csvout)
 
@@ -1215,5 +1373,95 @@ def test_annotate_empty_tax_lineage_input(runtmp):
     print(runtmp.last_result.err)
 
     assert runtmp.last_result.status != 0
-    assert f"Cannot read taxonomy assignments from {tax_empty}. Is file empty?" in str(exc.value)
+    assert f"cannot read taxonomy assignments from" in str(exc.value)
 
+
+def test_tax_prepare_1_csv_to_csv(runtmp, keep_identifiers, keep_versions):
+    # CSV -> CSV; same assignments
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    taxout = runtmp.output('out.csv')
+
+    args = []
+    if keep_identifiers:
+        args.append('--keep-full-identifiers')
+    if keep_versions:
+        args.append('--keep-identifier-versions')
+
+    # this is an error - can't strip versions if not splitting identifiers
+    if keep_identifiers and not keep_versions:
+        with pytest.raises(ValueError):
+            runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o',
+                                taxout, '-F', 'csv', *args)
+        return
+
+    runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o',
+                        taxout, '-F', 'csv', *args)
+    assert os.path.exists(taxout)
+
+    db1 = tax_utils.MultiLineageDB.load([tax],
+                                        keep_full_identifiers=keep_identifiers,
+                                        keep_identifier_versions=keep_versions)
+
+    db2 = tax_utils.MultiLineageDB.load([taxout])
+
+    assert set(db1) == set(db2)
+
+
+def test_tax_prepare_2_csv_to_sql(runtmp, keep_identifiers, keep_versions):
+    # CSV -> SQL; same assignments?
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    taxout = runtmp.output('out.db')
+
+    args = []
+    if keep_identifiers:
+        args.append('--keep-full-identifiers')
+    if keep_versions:
+        args.append('--keep-identifier-versions')
+
+    # this is an error - can't strip versions if not splitting identifiers
+    if keep_identifiers and not keep_versions:
+        with pytest.raises(ValueError):
+            runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o', taxout,
+                                '-F', 'sql', *args)
+        return
+
+    runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o', taxout,
+                        '-F', 'sql', *args)
+    assert os.path.exists(taxout)
+
+    db1 = tax_utils.MultiLineageDB.load([tax],
+                                        keep_full_identifiers=keep_identifiers,
+                                        keep_identifier_versions=keep_versions)
+    db2 = tax_utils.MultiLineageDB.load([taxout])
+
+    assert set(db1) == set(db2)
+
+    # cannot overwrite -
+    with pytest.raises(ValueError) as exc:
+        runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o', taxout,
+                            '-F', 'sql', *args)
+    assert 'taxonomy table already exists' in str(exc.value)
+
+
+def test_tax_prepare_3_db_to_csv(runtmp):
+    # CSV -> CSV; same assignments
+    taxcsv = utils.get_test_data('tax/test.taxonomy.csv')
+    taxdb = utils.get_test_data('tax/test.taxonomy.db')
+    taxout = runtmp.output('out.csv')
+
+    runtmp.run_sourmash('tax', 'prepare', '-t', taxdb,
+                        '-o', taxout, '-F', 'csv')
+    assert os.path.exists(taxout)
+    with open(taxout) as fp:
+        print(fp.read())
+
+    db1 = tax_utils.MultiLineageDB.load([taxcsv],
+                                        keep_full_identifiers=False,
+                                        keep_identifier_versions=False)
+
+    db2 = tax_utils.MultiLineageDB.load([taxout])
+    db3 = tax_utils.MultiLineageDB.load([taxdb],
+                                        keep_full_identifiers=False,
+                                        keep_identifier_versions=False)
+    assert set(db1) == set(db2)
+    assert set(db1) == set(db3)

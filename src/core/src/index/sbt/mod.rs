@@ -822,7 +822,7 @@ impl BinaryTree {
                 let mut similar_node_pos = 0;
                 let mut current_max = 0;
                 for (pos, cmpe) in current_round.iter().enumerate() {
-                    let common = BinaryTree::intersection_size(&next_node, &cmpe);
+                    let common = BinaryTree::intersection_size(&next_node, cmpe);
                     if common > current_max {
                         current_max = common;
                         similar_node_pos = pos;

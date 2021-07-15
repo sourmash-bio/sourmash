@@ -60,9 +60,9 @@ def range_limited_float_type(arg):
     try:
         f = float(arg)
     except ValueError:
-        raise argparse.ArgumentTypeError("Must be a floating point number")
+        raise argparse.ArgumentTypeError("\n\tERROR: Must be a floating point number.")
     if f < min_val or f > max_val:
-        raise argparse.ArgumentTypeError(f"Argument must be >{str(min_val)} and <{str(max_val)}")
+        raise argparse.ArgumentTypeError(f"\n\tERROR: Argument must be >{str(min_val)} and <{str(max_val)}.")
     return f
 
 

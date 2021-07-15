@@ -11,6 +11,7 @@ import pytest
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash.signature import load_signatures
+from sourmash.manifest import CollectionManifest
 
 ## command line tests
 
@@ -762,31 +763,13 @@ def test_sig_cat_2_out_inplace(c):
 
 
 @utils.in_tempdir
-def test_sig_cat_filelist(c):
+def test_sig_cat_3_filelist(c):
     # cat using a file list as input
     sig47 = utils.get_test_data('47.fa.sig')
-    # sig47list = list(load_signatures(sig47))
-    # print("sig47: ",sig47)
-    # print(type(sig47))
-    # print("length sig47: ",len(sig47list))
-    # print("\n")
-
     sig47abund = utils.get_test_data('track_abund/47.fa.sig')
-    # sig47abundlist = list(load_signatures(sig47abund))
-    # print("sig47abund: ",sig47abund)
-    # print(type(sig47abund))
-    # print("length sig47abund: ",len(sig47abundlist))
-    # print("\n")
-
     multisig = utils.get_test_data('47+63-multisig.sig')
-    # multisiglist = list(load_signatures(multisig))
-    # print("multisig: ",multisig)
-    # print(type(multisig))
-    # print("length multisig: ",len(multisiglist))
-    # print("\n")
 
     filelist = c.output("filelist")
-
     with open(filelist, 'w') as f:
         f.write("\n".join((sig47, sig47abund, multisig)))
 
@@ -813,16 +796,11 @@ def test_sig_cat_filelist(c):
     # sort the signatures by something deterministic and unique
     siglist.sort(key = lambda x: x.md5sum())
 
-    # print(len(siglist))
-    # print("siglist: ",siglist)
-    # print("\n")
-    # print("\n")
-
     assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequence', 485c3377), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 57e2b22f), SourmashSignature('NC_011668.1 Shewanella baltica OS223 plasmid pS22302, complete sequence', 837bf2a7), SourmashSignature('NC_011664.1 Shewanella baltica OS223 plasmid pS22301, complete sequence', 87a9aec4), SourmashSignature('NC_009661.1 Shewanella baltica OS185 plasmid pS18501, complete sequence', bde81a41), SourmashSignature('NC_011663.1 Shewanella baltica OS223, complete genome', f033bbd8)]"""
 
 
 @utils.in_tempdir
-def test_sig_cat_filelist_with_dbs(c):
+def test_sig_cat_4_filelist_with_dbs(c):
     # cat using a file list as input
     sig47 = utils.get_test_data('47.fa.sig')
     sig47abund = utils.get_test_data('track_abund/47.fa.sig')
@@ -833,6 +811,43 @@ def test_sig_cat_filelist_with_dbs(c):
         f.write("\n".join((sig47, sig47abund, sbt)))
 
     c.run_sourmash('sig', 'cat', filelist,
+                   '-o', 'out.sig')
+
+    # stdout should be same signatures
+    out = c.output('out.sig')
+
+    siglist = list(load_signatures(out))
+    print(len(siglist))
+    # print("siglist: ",siglist)
+    # print("\n")
+
+    # verify the number of signatures matches what we expect to see based
+    # on the input files
+    all_sigs = []
+    all_sigs += list(load_signatures(sig47))
+    all_sigs += list(load_signatures(sig47abund))
+    all_sigs += list(sourmash.load_file_as_signatures(sbt))
+
+    assert len(all_sigs) == len(siglist)
+
+    # sort the signatures by something deterministic and unique
+    siglist.sort(key = lambda x: x.md5sum())
+
+    assert repr(siglist) == """[SourmashSignature('', 0107d767), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('', 4e94e602), SourmashSignature('', 60f7e23c), SourmashSignature('', 6d6e87e1), SourmashSignature('', b59473c9), SourmashSignature('', f0c834bc), SourmashSignature('', f71e7817)]"""
+
+
+@utils.in_tempdir
+def test_sig_cat_5_from_file(c):
+    # cat using a file list as input
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    sbt = utils.get_test_data('v6.sbt.zip')
+
+    filelist = c.output("filelist")
+    with open(filelist, 'w') as f:
+        f.write("\n".join((sig47, sig47abund, sbt)))
+
+    c.run_sourmash('sig', 'cat', '--from-file', filelist,
                    '-o', 'out.sig')
 
     # stdout should be same signatures
@@ -2391,9 +2406,13 @@ def test_sig_describe_1_dir(c):
     out = c.last_result.out
     print(c.last_result)
 
+    # make sure signature names, as well as full path to .sig file under
+    # directory, show up in output.
     expected_output = """\
 signature: GCA_001593925
 signature: GCA_001593935
+prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig
+prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -2566,8 +2585,6 @@ def test_import_mash_csv_to_sig(runtmp):
 
 def test_sig_manifest_1_zipfile(runtmp):
     # make a manifest from a .zip file
-    from sourmash.index import CollectionManifest
-
     protzip = utils.get_test_data('prot/protein.zip')
     runtmp.sourmash('sig', 'manifest', protzip, '-o', 'SOURMASH-MANIFEST.csv')
 
@@ -2584,22 +2601,24 @@ def test_sig_manifest_1_zipfile(runtmp):
 def test_sig_manifest_2_sigfile(runtmp):
     # make a manifest from a .sig file
     sigfile = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
-    with pytest.raises(ValueError):
-        runtmp.sourmash('sig', 'manifest', sigfile, '-o',
-                        'SOURMASH-MANIFEST.csv')
+
+    runtmp.sourmash('sig', 'manifest', sigfile, '-o', 'SOURMASH-MANIFEST.csv')
 
     status = runtmp.last_result.status
     out = runtmp.last_result.out
     err = runtmp.last_result.err
 
-    assert status != 0
-    assert "ERROR: manifests cannot be generated for this file." in err
+    manifest_fn = runtmp.output('SOURMASH-MANIFEST.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 1
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
 
 
 def test_sig_manifest_3_sbt(runtmp):
     # make a manifest from an SBT
-    from sourmash.index import CollectionManifest
-
     protzip = utils.get_test_data('prot/protein.sbt.zip')
     runtmp.sourmash('sig', 'manifest', protzip, '-o', 'SOURMASH-MANIFEST.csv')
 
@@ -2631,16 +2650,20 @@ def test_sig_manifest_4_lca(runtmp):
 def test_sig_manifest_5_dir(runtmp):
     # make a manifest from a directory
     sigfile = utils.get_test_data('prot/protein/')
-    with pytest.raises(ValueError):
-        runtmp.sourmash('sig', 'manifest', sigfile, '-o',
-                        'SOURMASH-MANIFEST.csv')
+    runtmp.sourmash('sig', 'manifest', sigfile, '-o', 'SOURMASH-MANIFEST.csv')
 
     status = runtmp.last_result.status
     out = runtmp.last_result.out
     err = runtmp.last_result.err
 
-    assert status != 0
-    assert "ERROR: manifests cannot be generated for this file." in err
+    manifest_fn = runtmp.output('SOURMASH-MANIFEST.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
 
 
 def test_sig_manifest_6_pathlist(runtmp):
@@ -2652,13 +2675,17 @@ def test_sig_manifest_6_pathlist(runtmp):
     with open(pathlist, 'wt') as fp:
         fp.write("\n".join(sigfiles))
 
-    with pytest.raises(ValueError):
-        runtmp.sourmash('sig', 'manifest', pathlist, '-o',
-                        'SOURMASH-MANIFEST.csv')
+    runtmp.sourmash('sig', 'manifest', pathlist, '-o', 'SOURMASH-MANIFEST.csv')
 
     status = runtmp.last_result.status
     out = runtmp.last_result.out
     err = runtmp.last_result.err
 
-    assert status != 0
-    assert "ERROR: manifests cannot be generated for this file." in err
+    manifest_fn = runtmp.output('SOURMASH-MANIFEST.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list

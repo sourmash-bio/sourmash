@@ -183,7 +183,7 @@ class SBT(Index):
                     yield ss
 
     def _signatures_with_internal(self):
-        """Return an iterator of tuples (ss, location, internal_location).
+        """Return an iterator of tuples (ss, storage_path, internal_location).
 
         Note: does not limit signatures to subsets.
         """
@@ -192,7 +192,7 @@ class SBT(Index):
             yield ss, self.location, k._path
 
     def select(self, ksize=None, moltype=None, num=0, scaled=0,
-               containment=False, picklist=None):
+               containment=False, abund=None, picklist=None):
         """Make sure this database matches the requested requirements.
 
         Will always raise ValueError if a requirement cannot be met.
@@ -243,6 +243,9 @@ class SBT(Index):
             # we can downsample SBTs for containment operations.
             if scaled > db_mh.scaled and not containment:
                 raise ValueError(f"search scaled value {scaled} is less than database scaled value of {db_mh.scaled}")
+
+        if abund:
+            raise ValueError("SBT indices do not support sketches with abund=True")
 
         if picklist is not None:
             self.picklists.append(picklist)

@@ -8,19 +8,18 @@ import sourmash_tst_utils as utils
 
 from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_results,
                                     summarize_gather_at, find_missing_identities,
-                                    write_summary, load_taxonomy_csv,
+                                    write_summary, MultiLineageDB,
                                     collect_gather_csvs, check_and_load_gather_csvs,
                                     SummarizedGatherResult, ClassificationResult,
                                     write_classifications,
                                     aggregate_by_lineage_at_rank,
                                     make_krona_header, format_for_krona, write_krona,
-                                    combine_sumgather_csvs_by_lineage, write_lineage_sample_frac)
+                                    combine_sumgather_csvs_by_lineage, write_lineage_sample_frac,
+                                    LineageDB, LineageDB_Sqlite)
 
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import LineagePair
-
-#from sourmash.lca.command_index import load_taxonomy_assignments
 
 # utility functions for testing
 def make_mini_gather_results(g_infolist):
@@ -64,7 +63,7 @@ def test_get_ident_split_but_keep_version():
 
 def test_get_ident_no_split():
     ident = "GCF_001881345.1 secondname"
-    n_id = get_ident(ident, split_identifiers=False)
+    n_id = get_ident(ident, keep_full_identifiers=True)
     assert n_id == "GCF_001881345.1 secondname"
 
 
@@ -87,12 +86,13 @@ def test_check_and_load_gather_csvs_empty(runtmp):
     csvs = [g_res]
     # load taxonomy csv
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign, num_rows, ranks = load_taxonomy_csv(taxonomy_csv, split_identifiers=True)
+    tax_assign = MultiLineageDB.load([taxonomy_csv], keep_full_identifiers=1)
+
     print(tax_assign)
     # check gather results and missing ids
     with pytest.raises(Exception) as exc:
         gather_results, ids_missing, n_missing, header = check_and_load_gather_csvs(csvs, tax_assign)
-        assert "No gather results loaded from" in str(exc.value)
+    assert "Cannot read gather results from" in str(exc.value)
 
 
 def test_check_and_load_gather_csvs_with_empty_force(runtmp):
@@ -112,7 +112,9 @@ def test_check_and_load_gather_csvs_with_empty_force(runtmp):
 
     # load taxonomy csv
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign, num_rows, ranks = load_taxonomy_csv(taxonomy_csv, split_identifiers=True)
+    tax_assign = MultiLineageDB.load([taxonomy_csv],
+                                     keep_full_identifiers=False,
+                                     keep_identifier_versions=False)
     print(tax_assign)
     # check gather results and missing ids
     gather_results, ids_missing, n_missing, header = check_and_load_gather_csvs(csvs, tax_assign, force=True)
@@ -136,7 +138,7 @@ def test_check_and_load_gather_csvs_fail_on_missing(runtmp):
 
     # load taxonomy csv
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign, num_rows, ranks = load_taxonomy_csv(taxonomy_csv, split_identifiers=True)
+    tax_assign = MultiLineageDB.load([taxonomy_csv], keep_full_identifiers=1)
     print(tax_assign)
     # check gather results and missing ids
     with pytest.raises(ValueError) as exc:
@@ -181,18 +183,19 @@ def test_load_gather_results_empty(runtmp):
 
 def test_load_taxonomy_csv():
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign, num_rows, ranks = load_taxonomy_csv(taxonomy_csv)
+    tax_assign = MultiLineageDB.load([taxonomy_csv])
     print("taxonomy assignments: \n", tax_assign)
-    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1']
-    assert num_rows == 5 # should have read 5 rows
+    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1']
+    assert len(tax_assign) == 6 # should have read 6 rows
 
 
 def test_load_taxonomy_csv_split_id():
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    tax_assign, num_rows, ranks = load_taxonomy_csv(taxonomy_csv, split_identifiers=True)
+    tax_assign = MultiLineageDB.load([taxonomy_csv], keep_full_identifiers=0,
+                                     keep_identifier_versions=False)
     print("taxonomy assignments: \n", tax_assign)
-    assert list(tax_assign.keys()) == ['GCF_001881345', 'GCF_009494285', 'GCF_013368705', 'GCF_003471795', 'GCF_000017325']
-    assert num_rows == 5 # should have read 4 rows
+    assert list(tax_assign.keys()) == ['GCF_001881345', 'GCF_009494285', 'GCF_013368705', 'GCF_003471795', 'GCF_000017325', 'GCF_000021665']
+    assert len(tax_assign) == 6 # should have read 6 rows
 
 
 def test_load_taxonomy_csv_with_ncbi_id(runtmp):
@@ -206,10 +209,10 @@ def test_load_taxonomy_csv_with_ncbi_id(runtmp):
         tax.append(ncbi_tax)
         new_tax.write("\n".join(tax))
 
-    tax_assign, num_rows, ranks = load_taxonomy_csv(upd_csv)
+    tax_assign = MultiLineageDB.load([upd_csv], keep_full_identifiers=True)
     print("taxonomy assignments: \n", tax_assign)
-    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', "ncbi_id after_space"]
-    assert num_rows == 6  # should have read 6 rows
+    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1', "ncbi_id after_space"]
+    assert len(tax_assign) == 7  # should have read 7 rows
 
 
 def test_load_taxonomy_csv_split_id_ncbi(runtmp):
@@ -223,10 +226,16 @@ def test_load_taxonomy_csv_split_id_ncbi(runtmp):
         tax.append(ncbi_tax)
         new_tax.write("\n".join(tax))
 
-    tax_assign, num_rows, ranks = load_taxonomy_csv(upd_csv, split_identifiers=True)
+    tax_assign = MultiLineageDB.load([upd_csv], keep_full_identifiers=False,
+                                     keep_identifier_versions=False)
     print("taxonomy assignments: \n", tax_assign)
-    assert list(tax_assign.keys()) == ['GCF_001881345', 'GCF_009494285', 'GCF_013368705', 'GCF_003471795', 'GCF_000017325', "ncbi_id"]
-    assert num_rows == 6 # should have read 5 rows
+    assert list(tax_assign.keys()) == ['GCF_001881345', 'GCF_009494285', 'GCF_013368705', 'GCF_003471795', 'GCF_000017325', 'GCF_000021665', "ncbi_id"]
+    assert len(tax_assign) == 7 # should have read 7 rows
+
+    # check for non-sensical args.
+    with pytest.raises(ValueError):
+        tax_assign = MultiLineageDB.load([upd_csv], keep_full_identifiers=1,
+                                         keep_identifier_versions=False)
 
 
 def test_load_taxonomy_csv_duplicate(runtmp):
@@ -234,12 +243,15 @@ def test_load_taxonomy_csv_duplicate(runtmp):
     duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
     with open(duplicated_csv, 'w') as dup:
         tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
-        tax.append(tax[1]) # add first tax_assign again
+        tax.append(tax[1] + 'FOO') # add first tax_assign again
+        print(tax[-1])
         dup.write("\n".join(tax))
 
     with pytest.raises(Exception) as exc:
-        tax_assign, num_rows, ranks = load_taxonomy_csv(duplicated_csv)
-        assert str(exc.value == "multiple lineages for identifier GCF_001881345.1")
+        MultiLineageDB.load([duplicated_csv])
+
+    assert "cannot read taxonomy assignments" in str(exc.value)
+    assert "multiple lineages for identifier GCF_001881345.1" in str(exc.value)
 
 
 def test_load_taxonomy_csv_duplicate_force(runtmp):
@@ -251,10 +263,11 @@ def test_load_taxonomy_csv_duplicate_force(runtmp):
         dup.write("\n".join(tax))
 
     # now force
-    tax_assign, num_rows, ranks = load_taxonomy_csv(duplicated_csv, force=True)
+    tax_assign = MultiLineageDB.load([duplicated_csv], force=True)
+    num_rows = len(tax_assign)
+
     print("taxonomy assignments: \n", tax_assign)
-    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1']
-    assert num_rows == 6 # should have read 6 rows
+    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1']
 
 
 def test_find_missing_identities():
@@ -480,7 +493,7 @@ def test_summarize_gather_at_missing_fail():
     # run summarize_gather_at and check results!
     with pytest.raises(ValueError) as exc:
         sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res)
-        assert exc.value == "ident gB is not in the taxonomy database."
+    assert "ident gB is not in the taxonomy database." in str(exc.value)
 
 
 def test_summarize_gather_at_best_only_0():
@@ -603,7 +616,7 @@ def test_make_krona_header_strain():
 def test_make_krona_header_fail():
     with pytest.raises(ValueError) as exc:
         make_krona_header("strain")
-        assert str(exc.value) == "Rank strain not present in available ranks"
+    assert "Rank strain not present in available ranks" in str(exc.value)
 
 
 def test_aggregate_by_lineage_at_rank_by_query():
@@ -857,4 +870,180 @@ def test_combine_sumgather_csvs_by_lineage_improper_rank(runtmp):
     with pytest.raises(ValueError) as exc:
         linD, sample_names = combine_sumgather_csvs_by_lineage([sg1,sg2], rank="strain")
         print("ValueError: ", exc.value)
-        assert exc.value == "Rank strain not available."
+    assert "Rank strain not available." in str(exc.value)
+
+
+def test_tax_multi_load_files(runtmp):
+    # test loading various good and bad files
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    taxonomy_csv2 = utils.get_test_data('tax/test-strain.taxonomy.csv')
+    badcsv = utils.get_test_data('tax/47+63_x_gtdb-rs202.gather.csv')
+
+    db = MultiLineageDB.load([taxonomy_csv])
+    assert len(db) == 6
+    assert 'strain' not in db.available_ranks
+
+    db = MultiLineageDB.load([taxonomy_csv2])
+    assert len(db) == 6
+    assert 'strain' in db.available_ranks
+    assert db['GCF_001881345.1'][0].rank == 'superkingdom'
+
+    # load a string rather than a list
+    with pytest.raises(TypeError):
+        MultiLineageDB.load(badcsv)
+
+    # load a bad CSV
+    with pytest.raises(ValueError):
+        MultiLineageDB.load([badcsv])
+
+    # load a directory
+    with pytest.raises(ValueError):
+        MultiLineageDB.load([runtmp.output('')])
+
+    # file does not exist
+    with pytest.raises(ValueError):
+        MultiLineageDB.load([runtmp.output('no-such-file')])
+
+
+def test_tax_multi_load_files_shadowed(runtmp):
+    # test loading various good and bad files
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    taxonomy_csv2 = utils.get_test_data('tax/test-strain.taxonomy.csv')
+    taxonomy_db = utils.get_test_data('tax/test.taxonomy.db')
+
+    db = MultiLineageDB.load([taxonomy_csv, taxonomy_csv2, taxonomy_db],
+                             keep_full_identifiers=False,
+                             keep_identifier_versions=False)
+    assert len(db.shadowed_identifiers()) == 6
+
+    # we should have everything including strain
+    assert set(lca_utils.taxlist()) == set(db.available_ranks)
+
+    db = MultiLineageDB.load([taxonomy_csv, taxonomy_db],
+                             keep_full_identifiers=False,
+                             keep_identifier_versions=False)
+    assert len(db.shadowed_identifiers()) == 6
+    assert set(lca_utils.taxlist(include_strain=False)) == set(db.available_ranks)
+
+
+def test_tax_multi_save_files(runtmp, keep_identifiers, keep_versions):
+    # test save
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+
+    if keep_identifiers and not keep_versions:
+        with pytest.raises(ValueError):
+            db = MultiLineageDB.load([taxonomy_csv],
+                                     keep_full_identifiers=keep_identifiers,
+                                     keep_identifier_versions=keep_versions)
+        return
+
+    db = MultiLineageDB.load([taxonomy_csv],
+                             keep_full_identifiers=keep_identifiers,
+                             keep_identifier_versions=keep_versions)
+
+    out_db = runtmp.output('out.db')
+    out_csv = runtmp.output('out.csv')
+    out2_csv = runtmp.output('out2.csv')
+
+    # can't save to fp with sql
+    with open(out_csv, 'wt') as fp:
+        with pytest.raises(ValueError):
+            db.save(fp, 'sql')
+
+    # these should all work...
+    with open(out_csv, 'wt') as fp:
+        db.save(fp, 'csv')
+
+    db.save(out2_csv, 'csv')
+    db.save(out_db, 'sql')
+
+    # ...and be equal
+    db1 = db.load([out_db])
+    db2 = db.load([out_csv])
+    db3 = db.load([out2_csv])
+
+    def strip_strain(it):
+        for k, v in it:
+            if v[-1].rank == 'strain':
+                v = v[:-1]
+            yield k, v
+
+    import pprint
+    db_items = list(strip_strain(db.items()))
+    db1_items = list(strip_strain(db1.items()))
+    db2_items = list(strip_strain(db2.items()))
+    db3_items = list(strip_strain(db3.items()))
+    pprint.pprint(db_items)
+    print('XXX')
+    pprint.pprint(list(db1_items))
+    print('XXX')
+    pprint.pprint(list(db2_items))
+
+    assert set(db_items) == set(db1_items)
+    assert set(db_items) == set(db2_items)
+    assert set(db_items) == set(db3_items)
+
+
+def test_lineage_db_csv_load(runtmp):
+    # test LineageDB.load
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    taxonomy_csv2 = utils.get_test_data('tax/test-strain.taxonomy.csv')
+    badcsv = utils.get_test_data('tax/47+63_x_gtdb-rs202.gather.csv')
+    badcsv2 = utils.get_test_data('tax/test-missing-ranks.taxonomy.csv')
+
+    db = LineageDB.load(taxonomy_csv)
+    assert len(db) == 6
+    assert 'strain' not in db.available_ranks
+
+    db = LineageDB.load(taxonomy_csv2)
+    assert len(db) == 6
+    assert 'strain' in db.available_ranks
+
+    # load the wrong kind of csv
+    with pytest.raises(ValueError):
+        LineageDB.load(badcsv)
+
+    # load a bad CSV
+    with pytest.raises(ValueError):
+        LineageDB.load(badcsv2)
+
+    # load a directory
+    with pytest.raises(ValueError):
+        LineageDB.load(runtmp.output(''))
+
+    # file does not exist
+    with pytest.raises(ValueError):
+        LineageDB.load(runtmp.output('no-such-file'))
+
+    # construct a CSV with bad headers
+    with open(runtmp.output('xxx.csv'), 'w', newline="") as fp:
+        fp.write('x,y,z\n')
+    with pytest.raises(ValueError):
+        LineageDB.load(runtmp.output('xxx.csv'))
+
+
+def test_lineage_db_sql_load(runtmp):
+    # test LineageDB_sqlite.load
+    taxonomy_db = utils.get_test_data('tax/test.taxonomy.db')
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+
+    db = LineageDB_Sqlite.load(taxonomy_db)
+    assert bool(db)
+    assert len(db) == 6
+    db.available_ranks
+    assert 'strain' not in db.available_ranks
+    assert db['GCF_001881345'][0].rank == 'superkingdom'
+    with pytest.raises(KeyError):
+        db['foo']
+
+    # load any kind of CSV
+    with pytest.raises(ValueError):
+        LineageDB_Sqlite.load(taxonomy_csv)
+
+    # load a directory
+    with pytest.raises(ValueError):
+        LineageDB_Sqlite.load(runtmp.output(''))
+
+    # file does not exist
+    with pytest.raises(ValueError):
+        LineageDB_Sqlite.load(runtmp.output('no-such-file'))
