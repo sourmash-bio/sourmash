@@ -18,8 +18,9 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
 from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
 
-SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_unique_at_rank, bp_match_at_rank")
-ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_unique_at_rank, bp_match_at_rank")
+QueryInfo = namedtuple("QueryInfo", "query_md5, query_filename, query_bp")
+SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank")
+ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank")
 
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
@@ -185,26 +186,26 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
     # store together w/ ^ instead?
     sum_uniq_to_query = defaultdict(lambda: defaultdict(float))
     sum_uniq_bp = defaultdict(lambda: defaultdict(float))
-    query_bp = defaultdict(int)
+    query_info = {}
 
     for row in gather_results:
         # get essential gather info
         query_name = row['query_name']
+        f_unique_to_query = float(row['f_unique_to_query'])
+        f_uniq_weighted = float(row['f_unique_weighted'])
         unique_intersect_bp = int(row['unique_intersect_bp'])
-        # get query_bp
-        if query_name not in query_bp.keys():
-            bp = unique_intersect_bp + int(row['remaining_bp'])
-            query_bp[query_name] = bp
         query_md5 = row['query_md5']
         query_filename = row['query_filename']
+        # get query_bp
+        if query_name not in query_info.keys():
+            query_bp = unique_intersect_bp + int(row['remaining_bp'])
+        # store query info
+        query_info[query_name] = QueryInfo(query_md5=query_md5, query_filename=query_filename, query_bp=query_bp)
         match_ident = row['name']
-        f_uniq_weighted = row['f_unique_weighted']
-        f_uniq_weighted = float(f_uniq_weighted)
-        ## record some additional info
-        f_unique_to_query = float(row['f_unique_to_query'])
+
 
         # 100% match? are we looking at something in the database?
-        if f_uniq_weighted >= 1.0 and query_name not in seen_perfect: # only want to notify once, not for each rank
+        if f_unique_to_query >= 1.0 and query_name not in seen_perfect: # only want to notify once, not for each rank
             ident = get_ident(match_ident,
                               keep_full_identifiers=keep_full_identifiers,
                               keep_identifier_versions=keep_identifier_versions)
@@ -224,44 +225,45 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
         lineage = pop_to_rank(lineage, rank)
         assert lineage[-1].rank == rank, lineage[-1]
         # record info
-        sum_uniq_weighted[query_name][lineage] += f_uniq_weighted
         sum_uniq_to_query[query_name][lineage] += f_unique_to_query
+        sum_uniq_weighted[query_name][lineage] += f_uniq_weighted
         sum_uniq_bp[query_name][lineage] += unique_intersect_bp
 
     # sort and store each as SummarizedGatherResult
-    sum_uniq_weighted_sorted = []
-    for query_name, lineage_weights in sum_uniq_weighted.items():
+    sum_uniq_to_query_sorted = []
+    for query_name, lineage_weights in sum_uniq_to_query.items():
+        qInfo = query_info[query_name]
         sumgather_items = list(lineage_weights.items())
         sumgather_items.sort(key = lambda x: -x[1])
         if best_only:
             lineage, fraction = sumgather_items[0]
-            f_intersect_at_rank = sum_uniq_to_query[query_name][lineage]
+            f_weighted_at_rank = sum_uniq_weighted[query_name][lineage]
             bp_intersect_at_rank = sum_uniq_bp[query_name][lineage]
-            sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename, f_intersect_at_rank, bp_intersect_at_rank)
-            sum_uniq_weighted_sorted.append(sres)
+            sres = SummarizedGatherResult(query_name, rank, fraction, lineage, qInfo.query_md5, qInfo.query_filename, f_weighted_at_rank, bp_intersect_at_rank)
+            sum_uniq_to_query_sorted.append(sres)
         else:
-            total_f_weighted= 0
-            total_f_classified = 0
+            total_f_weighted= 0.0
+            total_f_classified = 0.0
             total_bp_classified = 0
             for lineage, fraction in sumgather_items:
-                total_f_weighted += fraction
-                f_intersect_at_rank = sum_uniq_to_query[query_name][lineage]
-                total_f_classified += f_intersect_at_rank
+                total_f_classified += fraction
+                f_weighted_at_rank = sum_uniq_weighted[query_name][lineage]
+                total_f_weighted += f_weighted_at_rank
                 bp_intersect_at_rank = int(sum_uniq_bp[query_name][lineage])
                 total_bp_classified += bp_intersect_at_rank
-                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename, f_intersect_at_rank, bp_intersect_at_rank)
-                sum_uniq_weighted_sorted.append(sres)
+                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_intersect_at_rank)
+                sum_uniq_to_query_sorted.append(sres)
 
             # record unclassified
             lineage = ()
-            fraction = round(1.0 - total_f_weighted, 4)
+            fraction = 1.0 - total_f_classified
             if fraction > 0:
-                f_intersect_at_rank = round(1.0 - total_f_classified, 4)
-                bp_intersect_at_rank = query_bp[query_name] - total_bp_classified
-                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename, f_intersect_at_rank, bp_intersect_at_rank)
-                sum_uniq_weighted_sorted.append(sres)
+                f_weighted_at_rank = 1.0 - total_f_weighted
+                bp_intersect_at_rank = qInfo.query_bp - total_bp_classified
+                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_intersect_at_rank)
+                sum_uniq_to_query_sorted.append(sres)
 
-    return sum_uniq_weighted_sorted, seen_perfect
+    return sum_uniq_to_query_sorted, seen_perfect
 
 
 def find_missing_identities(gather_results, tax_assign):
@@ -370,7 +372,7 @@ def write_summary(summarized_gather, csv_fp, *, sep=','):
         for res in rank_results:
             rD = res._asdict()
             rD['fraction'] = f'{res.fraction:.3f}'
-            rD['f_unique_at_rank'] = f'{res.fraction:.3f}'
+            rD['f_weighted_at_rank'] = f'{res.f_weighted_at_rank:.3f}'
             rD['lineage'] = display_lineage(res.lineage)
             if rD['lineage'] == "":
                 rD['lineage'] = "unclassified"
@@ -388,7 +390,7 @@ def write_classifications(classifications, csv_fp, *, sep=','):
         for res in rank_results:
             rD = res._asdict()
             rD['fraction'] = f'{res.fraction:.3f}'
-            rD['f_unique_at_rank'] = f'{res.fraction:.3f}'
+            rD['f_weighted_at_rank'] = f'{res.f_weighted_at_rank:.3f}'
             rD['lineage'] = display_lineage(res.lineage)
             # needed?
             if rD['lineage'] == "":
@@ -470,7 +472,7 @@ def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, format_line
         row.update(sampleinfo)
         # if unclassified, save this row for the end
         if lin == "":
-            lin = "unclassified"
+            row.update({'lineage': 'unclassified'})
             unclassified_row = row
             continue
         # write row
