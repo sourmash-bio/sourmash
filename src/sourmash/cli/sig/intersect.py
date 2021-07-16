@@ -1,7 +1,5 @@
 """intersect one or more signatures"""
 
-import sys
-
 from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
                                 add_picklist_args)
 

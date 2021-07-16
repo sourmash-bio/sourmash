@@ -1,7 +1,5 @@
 """filter k-mers on abundance"""
 
-import sys
-
 from sourmash.cli.utils import add_moltype_args, add_ksize_arg
 
 
