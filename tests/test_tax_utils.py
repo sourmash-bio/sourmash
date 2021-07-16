@@ -611,8 +611,8 @@ def test_write_summary_csv(runtmp):
     sr = [x.rstrip().split(',') for x in open(outs, 'r')]
     print("gather_summary_results_from_file: \n", sr)
     assert ['query_name', 'rank', 'fraction', 'lineage', 'query_md5', 'query_filename', 'f_weighted_at_rank', 'bp_match_at_rank'] == sr[0]
-    assert ['queryA', 'superkingdom', '1.000', 'a', 'queryA_md5', 'queryA.sig', '1.000', '100'] == sr[1]
-    assert ['queryA', 'phylum', '1.000', 'a;b', 'queryA_md5', 'queryA.sig', '1.000', '100'] == sr[2]
+    assert ['queryA', 'superkingdom', '1.0', 'a', 'queryA_md5', 'queryA.sig', '1.0', '100'] == sr[1]
+    assert ['queryA', 'phylum', '1.0', 'a;b', 'queryA_md5', 'queryA.sig', '1.0', '100'] == sr[2]
 
 
 def test_write_classification(runtmp):
@@ -631,7 +631,7 @@ def test_write_classification(runtmp):
     sr = [x.rstrip().split(',') for x in open(outs, 'r')]
     print("gather_classification_results_from_file: \n", sr)
     assert ['query_name', 'status', 'rank', 'fraction', 'lineage', 'query_md5', 'query_filename', 'f_weighted_at_rank', 'bp_match_at_rank'] == sr[0]
-    assert ['queryA', 'match', 'phylum', '1.000', 'a;b', 'queryA_md5', 'queryA.sig', '1.000', '100'] == sr[1]
+    assert ['queryA', 'match', 'phylum', '1.0', 'a;b', 'queryA_md5', 'queryA.sig', '1.0', '100'] == sr[1]
 
 
 def test_make_krona_header_0():
@@ -844,11 +844,11 @@ def test_combine_sumgather_csvs_by_lineage(runtmp):
     # test combine_summarized_gather_csvs_by_lineage_at_rank
     linD, query_names = combine_sumgather_csvs_by_lineage([sg1,sg2], rank="phylum")
     print("lineage_dict", linD)
-    assert linD == {'a;b': {'queryA': '0.500'}, 'a;c': {'queryB': '0.700'}}
+    assert linD == {'a;b': {'queryA': '0.5'}, 'a;c': {'queryB': '0.7'}}
     assert query_names == ['queryA', 'queryB']
     linD, query_names = combine_sumgather_csvs_by_lineage([sg1,sg2], rank="superkingdom")
     print("lineage dict: \n", linD)
-    assert linD, query_names == {'a': {'queryA': '0.500', 'queryB': '0.700'}}
+    assert linD, query_names == {'a': {'queryA': '0.5', 'queryB': '0.7'}}
     assert query_names == ['queryA', 'queryB']
 
 

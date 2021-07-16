@@ -22,6 +22,9 @@ QueryInfo = namedtuple("QueryInfo", "query_md5, query_filename, query_bp")
 SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank")
 ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank")
 
+# Essential Gather column names that must be in gather_csv to allow `tax` summarization
+EssentialGatherColnames = ('query_name', 'name', 'f_unique_weighted', 'f_unique_to_query', 'unique_intersect_bp', 'remaining_bp', 'query_md5', 'query_filename')
+
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import (LineagePair, taxlist, display_lineage, pop_to_rank)
@@ -73,8 +76,10 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     return gather_csvs
 
 
-def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=['query_name', 'name', 'f_unique_weighted', 'f_unique_to_query', 'unique_intersect_bp', 'remaining_bp', 'query_md5', 'query_filename'], seen_queries=set(), force=False):
+def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=EssentialGatherColnames, seen_queries=None, force=False):
     "Load a single gather csv"
+    if not seen_queries:
+        seen_queries=set()
     header = []
     gather_results = []
     gather_queries = set()
@@ -369,7 +374,7 @@ def write_krona(rank, krona_results, out_fp, *, sep='\t'):
         tsv_output.writerow(res)
 
 
-def write_summary(summarized_gather, csv_fp, *, sep=','):
+def write_summary(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=False):
     '''
     Write taxonomy-summarized gather results for each rank.
     '''
@@ -379,15 +384,16 @@ def write_summary(summarized_gather, csv_fp, *, sep=','):
     for rank, rank_results in summarized_gather.items():
         for res in rank_results:
             rD = res._asdict()
-            rD['fraction'] = f'{res.fraction:.3f}'
-            rD['f_weighted_at_rank'] = f'{res.f_weighted_at_rank:.3f}'
+            if limit_float_decimals:
+                rD['fraction'] = f'{res.fraction:.3f}'
+                rD['f_weighted_at_rank'] = f'{res.f_weighted_at_rank:.3f}'
             rD['lineage'] = display_lineage(res.lineage)
             if rD['lineage'] == "":
                 rD['lineage'] = "unclassified"
             w.writerow(rD)
 
 
-def write_classifications(classifications, csv_fp, *, sep=','):
+def write_classifications(classifications, csv_fp, *, sep=',', limit_float_decimals=False):
     '''
     Write taxonomy-classifed gather results.
     '''
@@ -397,8 +403,9 @@ def write_classifications(classifications, csv_fp, *, sep=','):
     for rank, rank_results in classifications.items():
         for res in rank_results:
             rD = res._asdict()
-            rD['fraction'] = f'{res.fraction:.3f}'
-            rD['f_weighted_at_rank'] = f'{res.f_weighted_at_rank:.3f}'
+            if limit_float_decimals:
+                rD['fraction'] = f'{res.fraction:.3f}'
+                rD['f_weighted_at_rank'] = f'{res.f_weighted_at_rank:.3f}'
             rD['lineage'] = display_lineage(res.lineage)
             # needed?
             if rD['lineage'] == "":
@@ -479,7 +486,7 @@ def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, format_line
         # add info for query_names that exist for this lineage
         row.update(sampleinfo)
         # if unclassified, save this row for the end
-        if lin == "":
+        if not lin:
             row.update({'lineage': 'unclassified'})
             unclassified_row = row
             continue
