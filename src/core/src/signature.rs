@@ -30,6 +30,12 @@ pub struct SeqToHashes<'a> {
     hash_function: HashFunctions,
     seed: u64,
     _hashes_buffer: Vec<u64>, // RefCell<Vec<u64>>,
+
+    _dna_configured: bool,
+    _dna_sequence: Vec<u8>,
+    _dna_rc: Vec<u8>,
+    _dna_ksize: usize,
+    _dna_len: usize,
 }
 
 impl SeqToHashes<'_> {
@@ -47,18 +53,23 @@ impl SeqToHashes<'_> {
             ksize = k_size / 3;
         }
 
-        let max_index = seq.len() - ksize + 1;
+        let _max_index = seq.len() - ksize + 1;
 
         SeqToHashes {
             sequence: seq,
             k_size: ksize,
             kmer_index: 0,
-            max_index: max_index,
-            force: force,
-            is_protein: is_protein,
-            hash_function: hash_function,
-            seed: seed,
+            max_index: _max_index,
+            force,
+            is_protein,
+            hash_function,
+            seed,
             _hashes_buffer: Vec::with_capacity(1000), //RefCell::new(Vec::new()),
+            _dna_configured: false,
+            _dna_sequence: Vec::with_capacity(1000),
+            _dna_rc: Vec::with_capacity(1000),
+            _dna_ksize: 0,
+            _dna_len: 0,
         }
     }
 }
@@ -70,27 +81,29 @@ impl Iterator for SeqToHashes<'_> {
         // TODO: Remove the hashes buffer
         // Priority for the hashes buffer
 
-        if (&self.kmer_index < &self.max_index) || !self._hashes_buffer.is_empty() {
+        if (self.kmer_index < self.max_index) || !self._hashes_buffer.is_empty() {
             // DNA
+
             if !self.is_protein {
-                let ksize = self.k_size as usize;
-                let len = self.sequence.len();
-                let hash_function = self.hash_function;
-                if len < ksize {
-                    return None;
+                if !self._dna_configured {
+                    self._dna_ksize = self.k_size as usize;
+                    self._dna_len = self.sequence.len();
+                    if self._dna_len < self._dna_ksize {
+                        return None;
+                    }
+                    // Here we convert the sequence to upper case and
+                    // pre-calculate the reverse complement for the full sequence...
+                    self._dna_sequence = self.sequence.to_ascii_uppercase();
+                    self._dna_rc = revcomp(&self._dna_sequence);
+                    self._dna_configured = true;
                 }
 
-                // Here we convert the sequence to upper case and
-                // pre-calculate the reverse complement for the full sequence...
-                let sequence = self.sequence.to_ascii_uppercase();
-                let rc = revcomp(&sequence);
-
-                if hash_function.dna() {
+                if self.hash_function.dna() {
                     let mut last_position_check = 0;
 
                     let mut is_valid_kmer = |i| {
-                        for j in std::cmp::max(i, last_position_check)..i + ksize {
-                            if !VALID[sequence[j] as usize] {
+                        for j in std::cmp::max(i, last_position_check)..i + self._dna_ksize {
+                            if !VALID[self._dna_sequence[j] as usize] {
                                 return false;
                             }
                             last_position_check += 1;
@@ -112,7 +125,7 @@ impl Iterator for SeqToHashes<'_> {
                     // (leaving this table here because I had to draw to
                     //  get the indices correctly)
 
-                    let kmer = &self.sequence[self.kmer_index..self.kmer_index + ksize];
+                    let kmer = &self.sequence[self.kmer_index..self.kmer_index + self._dna_ksize];
 
                     if !is_valid_kmer(self.kmer_index) {
                         if !self.force {
@@ -126,97 +139,106 @@ impl Iterator for SeqToHashes<'_> {
                         }
                     }
 
-                    let krc = &rc[len - ksize - &self.kmer_index..len - &self.kmer_index];
+                    let krc = &self._dna_rc[self._dna_len - self._dna_ksize - self.kmer_index
+                        ..self._dna_len - self.kmer_index];
                     let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed);
                     self.kmer_index += 1;
                     Some(hash)
-                } else {
-                    if self._hashes_buffer.is_empty() {
-                        // translated protein
-                        let aa_ksize = self.k_size / 3;
+                } else if self._hashes_buffer.is_empty() {
+                    // translated protein
+                    let aa_ksize = self.k_size / 3;
 
-                        // Three frames
-                        for i in 0..3 {
-                            // Get i frame
-                            let substr: Vec<u8> = sequence
-                                .iter()
-                                .cloned()
-                                .skip(i)
-                                .take(sequence.len() - i)
-                                .collect();
+                    // Three frames
+                    for i in 0..3 {
+                        // Get i frame
+                        let substr: Vec<u8> = self
+                            ._dna_sequence
+                            .iter()
+                            .cloned()
+                            .skip(i)
+                            .take(self._dna_sequence.len() - i)
+                            .collect();
 
-                            let aa = to_aa(&substr, hash_function.dayhoff(), hash_function.hp())
-                                .unwrap();
+                        let aa = to_aa(
+                            &substr,
+                            self.hash_function.dayhoff(),
+                            self.hash_function.hp(),
+                        )
+                        .unwrap();
 
-                            aa.windows(aa_ksize as usize).for_each(|n| {
-                                let hash = crate::_hash_murmur(n, self.seed);
-                                self._hashes_buffer.push(hash);
-                            });
-
-                            let rc_substr: Vec<u8> =
-                                rc.iter().cloned().skip(i).take(rc.len() - i).collect();
-                            let aa_rc =
-                                to_aa(&rc_substr, hash_function.dayhoff(), hash_function.hp())
-                                    .unwrap();
-
-                            aa_rc.windows(aa_ksize as usize).for_each(|n| {
-                                let hash = crate::_hash_murmur(n, self.seed);
-                                self._hashes_buffer.push(hash);
-                            });
-                        }
-                        self.kmer_index = self.max_index;
-                        let last_element: u64 = self._hashes_buffer.pop().unwrap();
-                        Some(last_element)
-                    } else {
-                        let last_element: u64 = self._hashes_buffer.pop().unwrap();
-                        Some(last_element)
-                    }
-                }
-            } else {
-                if self._hashes_buffer.is_empty() {
-                    let ksize = self.k_size as usize;
-                    let len = self.sequence.len();
-                    let hash_function = self.hash_function;
-
-                    // original k_size must be >= 3
-                    if len < ksize {
-                        return None;
-                    }
-
-                    if hash_function.protein() {
-                        for aa_kmer in self.sequence.windows(ksize) {
-                            let hash = crate::_hash_murmur(aa_kmer, self.seed);
+                        aa.windows(aa_ksize as usize).for_each(|n| {
+                            let hash = crate::_hash_murmur(n, self.seed);
                             self._hashes_buffer.push(hash);
-                        }
-                        self.kmer_index = len;
-                        return Some(self._hashes_buffer.pop().unwrap());
-                    }
+                        });
 
-                    let aa_seq: Vec<_> = match hash_function {
-                        HashFunctions::murmur64_dayhoff => {
-                            self.sequence.iter().cloned().map(aa_to_dayhoff).collect()
-                        }
-                        HashFunctions::murmur64_hp => {
-                            self.sequence.iter().cloned().map(aa_to_hp).collect()
-                        }
-                        invalid => {
-                            return None;
-                            // return Err(Error::InvalidHashFunction {
-                            //     function: format!("{}", invalid),
-                            // })
-                        }
-                    };
+                        let rc_substr: Vec<u8> = self
+                            ._dna_rc
+                            .iter()
+                            .cloned()
+                            .skip(i)
+                            .take(self._dna_rc.len() - i)
+                            .collect();
+                        let aa_rc = to_aa(
+                            &rc_substr,
+                            self.hash_function.dayhoff(),
+                            self.hash_function.hp(),
+                        )
+                        .unwrap();
 
-                    for aa_kmer in aa_seq.windows(ksize) {
-                        let hash = crate::_hash_murmur(aa_kmer, self.seed);
-                        self._hashes_buffer.push(hash);
+                        aa_rc.windows(aa_ksize as usize).for_each(|n| {
+                            let hash = crate::_hash_murmur(n, self.seed);
+                            self._hashes_buffer.push(hash);
+                        });
                     }
+                    self.kmer_index = self.max_index;
                     Some(self._hashes_buffer.pop().unwrap())
                 } else {
-                    self.kmer_index = self.max_index;
                     let last_element: u64 = self._hashes_buffer.pop().unwrap();
                     Some(last_element)
                 }
+            } else if self._hashes_buffer.is_empty() {
+                let ksize = self.k_size as usize;
+                let len = self.sequence.len();
+                let hash_function = self.hash_function;
+
+                // original k_size must be >= 3
+                if len < ksize {
+                    return None;
+                }
+
+                if hash_function.protein() {
+                    for aa_kmer in self.sequence.windows(ksize) {
+                        let hash = crate::_hash_murmur(aa_kmer, self.seed);
+                        self._hashes_buffer.push(hash);
+                    }
+                    self.kmer_index = len;
+                    return Some(self._hashes_buffer.pop().unwrap());
+                }
+
+                let aa_seq: Vec<_> = match hash_function {
+                    HashFunctions::murmur64_dayhoff => {
+                        self.sequence.iter().cloned().map(aa_to_dayhoff).collect()
+                    }
+                    HashFunctions::murmur64_hp => {
+                        self.sequence.iter().cloned().map(aa_to_hp).collect()
+                    }
+                    _invalid => {
+                        return None;
+                        // return Err(Error::InvalidHashFunction {
+                        //     function: format!("{}", invalid),
+                        // })
+                    }
+                };
+
+                for aa_kmer in aa_seq.windows(ksize) {
+                    let hash = crate::_hash_murmur(aa_kmer, self.seed);
+                    self._hashes_buffer.push(hash);
+                }
+                Some(self._hashes_buffer.pop().unwrap())
+            } else {
+                self.kmer_index = self.max_index;
+                let last_element: u64 = self._hashes_buffer.pop().unwrap();
+                Some(last_element)
             }
         } else {
             None
@@ -235,131 +257,131 @@ pub trait SigsTrait {
 
     fn add_hash(&mut self, hash: HashIntoType);
 
-    fn seq_to_hashes(&self, seq: &[u8], force: bool, is_protein: bool) -> Result<Vec<u64>, Error> {
-        let mut seq_hashes: Vec<u64> = Vec::new();
+    // fn seq_to_hashes(&self, seq: &[u8], force: bool, is_protein: bool) -> Result<Vec<u64>, Error> {
+    //     let mut seq_hashes: Vec<u64> = Vec::new();
 
-        if !is_protein {
-            let ksize = self.ksize() as usize;
-            let len = seq.len();
-            let hash_function = self.hash_function();
-            if len < ksize {
-                return Ok(seq_hashes);
-            };
+    //     if !is_protein {
+    //         let ksize = self.ksize() as usize;
+    //         let len = seq.len();
+    //         let hash_function = self.hash_function();
+    //         if len < ksize {
+    //             return Ok(seq_hashes);
+    //         };
 
-            // Here we convert the sequence to upper case and
-            // pre-calculate the reverse complement for the full sequence...
-            let sequence = seq.to_ascii_uppercase();
-            let rc = revcomp(&sequence);
+    //         // Here we convert the sequence to upper case and
+    //         // pre-calculate the reverse complement for the full sequence...
+    //         let sequence = seq.to_ascii_uppercase();
+    //         let rc = revcomp(&sequence);
 
-            if hash_function.dna() {
-                let mut last_position_check = 0;
+    //         if hash_function.dna() {
+    //             let mut last_position_check = 0;
 
-                let mut is_valid_kmer = |i| {
-                    for j in std::cmp::max(i, last_position_check)..i + ksize {
-                        if !VALID[sequence[j] as usize] {
-                            return false;
-                        }
-                        last_position_check += 1;
-                    }
-                    true
-                };
+    //             let mut is_valid_kmer = |i| {
+    //                 for j in std::cmp::max(i, last_position_check)..i + ksize {
+    //                     if !VALID[sequence[j] as usize] {
+    //                         return false;
+    //                     }
+    //                     last_position_check += 1;
+    //                 }
+    //                 true
+    //             };
 
-                for i in 0..=len - ksize {
-                    // ... and then while moving the k-mer window forward for the sequence
-                    // we move another window backwards for the RC.
-                    //   For a ksize = 3, and a sequence AGTCGT (len = 6):
-                    //                   +-+---------+---------------+-------+
-                    //   seq      RC     |i|i + ksize|len - ksize - i|len - i|
-                    //  AGTCGT   ACGACT  +-+---------+---------------+-------+
-                    //  +->         +->  |0|    2    |       3       |   6   |
-                    //   +->       +->   |1|    3    |       2       |   5   |
-                    //    +->     +->    |2|    4    |       1       |   4   |
-                    //     +->   +->     |3|    5    |       0       |   3   |
-                    //                   +-+---------+---------------+-------+
-                    // (leaving this table here because I had to draw to
-                    //  get the indices correctly)
+    //             for i in 0..=len - ksize {
+    //                 // ... and then while moving the k-mer window forward for the sequence
+    //                 // we move another window backwards for the RC.
+    //                 //   For a ksize = 3, and a sequence AGTCGT (len = 6):
+    //                 //                   +-+---------+---------------+-------+
+    //                 //   seq      RC     |i|i + ksize|len - ksize - i|len - i|
+    //                 //  AGTCGT   ACGACT  +-+---------+---------------+-------+
+    //                 //  +->         +->  |0|    2    |       3       |   6   |
+    //                 //   +->       +->   |1|    3    |       2       |   5   |
+    //                 //    +->     +->    |2|    4    |       1       |   4   |
+    //                 //     +->   +->     |3|    5    |       0       |   3   |
+    //                 //                   +-+---------+---------------+-------+
+    //                 // (leaving this table here because I had to draw to
+    //                 //  get the indices correctly)
 
-                    let kmer = &sequence[i..i + ksize];
+    //                 let kmer = &sequence[i..i + ksize];
 
-                    if !is_valid_kmer(i) {
-                        if !force {
-                            // throw error if DNA is not valid
-                            return Err(Error::InvalidDNA {
-                                message: String::from_utf8(kmer.to_vec()).unwrap(),
-                            });
-                        }
+    //                 if !is_valid_kmer(i) {
+    //                     if !force {
+    //                         // throw error if DNA is not valid
+    //                         return Err(Error::InvalidDNA {
+    //                             message: String::from_utf8(kmer.to_vec()).unwrap(),
+    //                         });
+    //                     }
 
-                        continue; // skip invalid k-mer
-                    }
+    //                     continue; // skip invalid k-mer
+    //                 }
 
-                    let krc = &rc[len - ksize - i..len - i];
-                    let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed());
-                    seq_hashes.push(hash);
-                }
-            } else {
-                // protein
-                let aa_ksize = self.ksize() / 3;
+    //                 let krc = &rc[len - ksize - i..len - i];
+    //                 let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed());
+    //                 seq_hashes.push(hash);
+    //             }
+    //         } else {
+    //             // protein
+    //             let aa_ksize = self.ksize() / 3;
 
-                for i in 0..3 {
-                    let substr: Vec<u8> = sequence
-                        .iter()
-                        .cloned()
-                        .skip(i)
-                        .take(sequence.len() - i)
-                        .collect();
-                    let aa = to_aa(&substr, hash_function.dayhoff(), hash_function.hp()).unwrap();
+    //             for i in 0..3 {
+    //                 let substr: Vec<u8> = sequence
+    //                     .iter()
+    //                     .cloned()
+    //                     .skip(i)
+    //                     .take(sequence.len() - i)
+    //                     .collect();
+    //                 let aa = to_aa(&substr, hash_function.dayhoff(), hash_function.hp()).unwrap();
 
-                    aa.windows(aa_ksize as usize).for_each(|n| {
-                        let hash = crate::_hash_murmur(n, self.seed());
-                        seq_hashes.push(hash);
-                    });
+    //                 aa.windows(aa_ksize as usize).for_each(|n| {
+    //                     let hash = crate::_hash_murmur(n, self.seed());
+    //                     seq_hashes.push(hash);
+    //                 });
 
-                    let rc_substr: Vec<u8> =
-                        rc.iter().cloned().skip(i).take(rc.len() - i).collect();
-                    let aa_rc =
-                        to_aa(&rc_substr, hash_function.dayhoff(), hash_function.hp()).unwrap();
+    //                 let rc_substr: Vec<u8> =
+    //                     rc.iter().cloned().skip(i).take(rc.len() - i).collect();
+    //                 let aa_rc =
+    //                     to_aa(&rc_substr, hash_function.dayhoff(), hash_function.hp()).unwrap();
 
-                    aa_rc.windows(aa_ksize as usize).for_each(|n| {
-                        let hash = crate::_hash_murmur(n, self.seed());
-                        seq_hashes.push(hash);
-                    });
-                }
-            }
-        } else {
-            let ksize = (self.ksize() / 3) as usize;
-            let len = seq.len();
-            let hash_function = self.hash_function();
+    //                 aa_rc.windows(aa_ksize as usize).for_each(|n| {
+    //                     let hash = crate::_hash_murmur(n, self.seed());
+    //                     seq_hashes.push(hash);
+    //                 });
+    //             }
+    //         }
+    //     } else {
+    //         let ksize = (self.ksize() / 3) as usize;
+    //         let len = seq.len();
+    //         let hash_function = self.hash_function();
 
-            if len < ksize {
-                return Ok(seq_hashes);
-            }
+    //         if len < ksize {
+    //             return Ok(seq_hashes);
+    //         }
 
-            if hash_function.protein() {
-                for aa_kmer in seq.windows(ksize) {
-                    let hash = crate::_hash_murmur(aa_kmer, self.seed());
-                    seq_hashes.push(hash);
-                }
-                return Ok(seq_hashes);
-            }
+    //         if hash_function.protein() {
+    //             for aa_kmer in seq.windows(ksize) {
+    //                 let hash = crate::_hash_murmur(aa_kmer, self.seed());
+    //                 seq_hashes.push(hash);
+    //             }
+    //             return Ok(seq_hashes);
+    //         }
 
-            let aa_seq: Vec<_> = match hash_function {
-                HashFunctions::murmur64_dayhoff => seq.iter().cloned().map(aa_to_dayhoff).collect(),
-                HashFunctions::murmur64_hp => seq.iter().cloned().map(aa_to_hp).collect(),
-                invalid => {
-                    return Err(Error::InvalidHashFunction {
-                        function: format!("{}", invalid),
-                    })
-                }
-            };
+    //         let aa_seq: Vec<_> = match hash_function {
+    //             HashFunctions::murmur64_dayhoff => seq.iter().cloned().map(aa_to_dayhoff).collect(),
+    //             HashFunctions::murmur64_hp => seq.iter().cloned().map(aa_to_hp).collect(),
+    //             invalid => {
+    //                 return Err(Error::InvalidHashFunction {
+    //                     function: format!("{}", invalid),
+    //                 })
+    //             }
+    //         };
 
-            for aa_kmer in aa_seq.windows(ksize) {
-                let hash = crate::_hash_murmur(aa_kmer, self.seed());
-                seq_hashes.push(hash);
-            }
-        }
+    //         for aa_kmer in aa_seq.windows(ksize) {
+    //             let hash = crate::_hash_murmur(aa_kmer, self.seed());
+    //             seq_hashes.push(hash);
+    //         }
+    //     }
 
-        Ok(seq_hashes)
-    }
+    //     Ok(seq_hashes)
+    // }
 
     fn add_sequence(&mut self, seq: &[u8], force: bool) -> Result<(), Error> {
         let ready_hashes = SeqToHashes::new(
