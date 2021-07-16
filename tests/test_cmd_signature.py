@@ -1020,6 +1020,24 @@ def test_sig_split_5_no_exist(c):
         c.run_sourmash('sig', 'split', 'foo')
 
 
+def test_sig_split_6_numsigs(runtmp):
+    c = runtmp
+
+    sigs11 = utils.get_test_data('genome-s11.fa.gz.sig')
+    c.run_sourmash('sig', 'split', sigs11)
+
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    outlist = ['1437d8ea.k=21.num=500.DNA.dup=0.genome-s11.fa.gz.sig',
+               '37aea787.k=7.num=500.protein.dup=0.genome-s11.fa.gz.sig',
+               '68c565be.k=30.num=500.DNA.dup=0.genome-s11.fa.gz.sig',
+               '73b6df1c.k=10.num=500.protein.dup=0.genome-s11.fa.gz.sig']
+
+    for filename in outlist:
+        assert os.path.exists(c.output(filename))
+
+
 @utils.in_tempdir
 def test_sig_extract_1(c):
     # extract 47 from 47... :)
