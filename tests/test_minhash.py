@@ -287,9 +287,9 @@ def test_dayhoff_2(track_abundance):
     assert len(mh) == 1
     hashval = list(mh.hashes)[0]
     assert hashval == hash_murmur('abcdefa')
+    assert hashval == list(mh.seq_to_hashes('CADHIFC'))[0]
 
-    # @CTB: this should not yield any hashes at all, IMO.
-    # but it demonstrates the problem :).
+    # do we handle stop codons properly?
     mh = mh.copy_and_clear()
     mh.add_protein('CADHIF*')
     assert len(mh) == 1
