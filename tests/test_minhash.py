@@ -240,6 +240,8 @@ def test_dayhoff_2(track_abundance):
     hashval = list(mh.hashes)[0]
     assert hashval == hash_murmur('abcdefa')
 
+    # @CTB: this should not yield any hashes at all, IMO.
+    # but it demonstrates the problem :).
     mh = mh.copy_and_clear()
     mh.add_protein('CADHIF*')
     assert len(mh) == 1
@@ -262,6 +264,24 @@ def test_hp(track_abundance):
 
     assert len(mh_protein.hashes) == 2
     assert mh_protein.hashes != mh_hp.hashes
+
+
+def test_hp_2(track_abundance):
+    mh = MinHash(0, 3, scaled=1, is_protein=True, dayhoff=False,
+                 hp=True, track_abundance=1)
+
+    mh.add_protein('ANA')
+    assert len(mh) == 1
+    hashval = list(mh.hashes)[0]
+    assert hashval == hash_murmur('hph')
+
+    # @CTB: this should not yield any hashes at all, IMO.
+    # but it demonstrates the problem :).
+    mh = mh.copy_and_clear()
+    mh.add_protein('AN*')
+    assert len(mh) == 1
+    hashval = list(mh.hashes)[0]
+    assert hashval == hash_murmur('hp*')
 
 
 def test_protein_short(track_abundance):
