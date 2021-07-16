@@ -68,6 +68,7 @@ def cat(args):
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     encountered_md5sums = defaultdict(int)   # used by --unique
 
@@ -86,6 +87,7 @@ def cat(args):
     loader = sourmash_args.load_many_signatures(args.signatures,
                                                 ksize=args.ksize,
                                                 moltype=moltype,
+                                                picklist=picklist,
                                                 progress=progress,
                                                 yield_all_files=args.force,
                                                 force=args.force)
@@ -98,6 +100,8 @@ def cat(args):
         save_sigs.add(ss)
 
     notify('loaded {} signatures total.', len(save_sigs))
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
     save_sigs.close()
 
@@ -116,6 +120,7 @@ def split(args):
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     output_names = set()
     output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}.sig'
@@ -136,6 +141,7 @@ def split(args):
     loader = sourmash_args.load_many_signatures(args.signatures,
                                                 ksize=args.ksize,
                                                 moltype=moltype,
+                                                picklist=picklist,
                                                 progress=progress,
                                                 yield_all_files=args.force,
                                                 force=args.force)
@@ -184,6 +190,8 @@ def split(args):
             notify('writing sig to {}', output_name)
 
     notify(f'loaded and split {len(progress)} signatures total.')
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
 
 def describe(args):
@@ -192,6 +200,7 @@ def describe(args):
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     # write CSV?
     w = None
@@ -217,6 +226,7 @@ def describe(args):
     loader = sourmash_args.load_many_signatures(args.signatures,
                                                 ksize=args.ksize,
                                                 moltype=moltype,
+                                                picklist=picklist,
                                                 progress=progress,
                                                 yield_all_files=args.force,
                                                 force=args.force)
@@ -256,6 +266,9 @@ signature license: {license}
 
     if csv_fp:
         csv_fp.close()
+
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
 
 def manifest(args):
@@ -384,6 +397,7 @@ def merge(args):
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     first_sig = None
     mh = None
@@ -400,6 +414,7 @@ def merge(args):
     loader = sourmash_args.load_many_signatures(args.signatures,
                                                 ksize=args.ksize,
                                                 moltype=moltype,
+                                                picklist=picklist,
                                                 progress=progress,
                                                 yield_all_files=args.force,
                                                 force=args.force)
@@ -438,6 +453,9 @@ def merge(args):
 
     notify(f'loaded and merged {len(progress)} signatures')
 
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
+
 
 def intersect(args):
     """
@@ -447,6 +465,7 @@ def intersect(args):
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     first_sig = None
     mins = None
@@ -462,6 +481,7 @@ def intersect(args):
     loader = sourmash_args.load_many_signatures(args.signatures,
                                                 ksize=args.ksize,
                                                 moltype=moltype,
+                                                picklist=picklist,
                                                 progress=progress,
                                                 yield_all_files=args.force,
                                                 force=args.force)
@@ -512,6 +532,8 @@ def intersect(args):
         sourmash.save_signatures([intersect_sigobj], fp=fp)
 
     notify(f'loaded and intersected {len(progress)} signatures')
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
 
 def subtract(args):
@@ -520,6 +542,7 @@ def subtract(args):
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     from_sigfile = args.signature_from
     from_sigobj = sourmash.load_one_signature(from_sigfile, ksize=args.ksize, select_moltype=moltype)
@@ -556,7 +579,6 @@ def subtract(args):
         error("no signatures to subtract!?")
         sys.exit(-1)
 
-
     subtract_mh = from_sigobj.minhash.copy_and_clear()
     subtract_mh.add_many(subtract_mins)
 
@@ -566,6 +588,8 @@ def subtract(args):
         sourmash.save_signatures([subtract_sigobj], fp=fp)
 
     notify(f'loaded and subtracted {len(progress)} signatures')
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
 
 def rename(args):
@@ -574,6 +598,7 @@ def rename(args):
     """
     set_quiet(args.quiet, args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
     save_sigs.open()
@@ -589,6 +614,7 @@ def rename(args):
     loader = sourmash_args.load_many_signatures(args.signatures,
                                                 ksize=args.ksize,
                                                 moltype=moltype,
+                                                picklist=picklist,
                                                 progress=progress,
                                                 yield_all_files=args.force,
                                                 force=args.force)
@@ -600,6 +626,8 @@ def rename(args):
     save_sigs.close()
 
     notify(f"set name to '{args.name}' on {len(save_sigs)} signatures")
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
 
 def extract(args):
@@ -722,6 +750,7 @@ def flatten(args):
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
     save_sigs.open()
@@ -737,6 +766,7 @@ def flatten(args):
     loader = sourmash_args.load_many_signatures(args.signatures,
                                                 ksize=args.ksize,
                                                 moltype=moltype,
+                                                picklist=picklist,
                                                 progress=progress,
                                                 yield_all_files=args.force,
                                                 force=args.force)
@@ -758,6 +788,8 @@ def flatten(args):
     notify(f"loaded {len(progress)} total that matched ksize & molecule type")
     notify("extracted {} signatures from {} file(s)", len(save_sigs),
            len(args.signatures))
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
 
 def downsample(args):
@@ -766,6 +798,7 @@ def downsample(args):
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     if not args.num and not args.scaled:
         error('ERROR: must specify either --num or --scaled value')
@@ -790,6 +823,7 @@ def downsample(args):
     loader = sourmash_args.load_many_signatures(args.signatures,
                                                 ksize=args.ksize,
                                                 moltype=moltype,
+                                                picklist=picklist,
                                                 progress=progress,
                                                 yield_all_files=args.force,
                                                 force=args.force)
@@ -832,6 +866,8 @@ def downsample(args):
 
     notify(f"loaded {len(progress)} signatures")
     notify(f"output {len(save_sigs)} downsampled signatures", len(save_sigs))
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
 
 def sig_import(args):
