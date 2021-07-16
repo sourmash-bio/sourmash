@@ -1,7 +1,5 @@
 """export a signature, e.g. to mash"""
 
-import sys
-
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
 
