@@ -2642,7 +2642,7 @@ signature license: CC0
     for line in out.splitlines():
         cleaned_line = line.strip().replace(
             testdata_dirname, '').replace(location, '')
-        assert cleaned_line in expected_output
+        assert cleaned_line in expected_output, cleaned_line
 
 
 @utils.in_tempdir

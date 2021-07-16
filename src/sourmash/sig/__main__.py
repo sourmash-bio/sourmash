@@ -524,7 +524,6 @@ def subtract(args):
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
-    picklist = sourmash_args.load_picklist(args)
 
     from_sigfile = args.signature_from
     from_sigobj = sourmash.load_one_signature(from_sigfile, ksize=args.ksize, select_moltype=moltype)
@@ -570,8 +569,6 @@ def subtract(args):
         sourmash.save_signatures([subtract_sigobj], fp=fp)
 
     notify(f'loaded and subtracted {len(progress)} signatures')
-    if picklist:
-        sourmash_args.report_picklist(args, picklist)
 
 
 def rename(args):
