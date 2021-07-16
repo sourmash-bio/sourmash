@@ -2080,7 +2080,48 @@ def test_sig_flatten_1(c):
 
 
 @utils.in_tempdir
-def test_sig_flatten_2_ksize(c):
+def test_sig_flatten_1_select_name(c):
+    # extract matches to several names from among several signatures & flatten
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'flatten', sig2, sig47abund, '--name', 'Shewanella')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    siglist = load_signatures(out)
+    siglist = list(siglist)
+
+    assert len(siglist) == 1
+
+    test_flattened = sourmash.load_one_signature(sig47)
+    assert test_flattened.minhash == siglist[0].minhash
+
+
+def test_sig_flatten_1_select_md5(runtmp):
+    c = runtmp
+
+    # extract matches to several names from among several signatures & flatten
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'flatten', sig2, sig47abund, '--md5', '09a08691c')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    siglist = load_signatures(out)
+    siglist = list(siglist)
+
+    assert len(siglist) == 1
+
+    test_flattened = sourmash.load_one_signature(sig47)
+    assert test_flattened.minhash == siglist[0].minhash
+
+
+def test_sig_flatten_2_ksize(runtmp):
+    c = runtmp
     # flatten only one signature selected using ksize
     psw_mag = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
     c.run_sourmash('sig', 'flatten', psw_mag, '-k', '31')
