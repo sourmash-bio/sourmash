@@ -976,6 +976,44 @@ def test_sig_cat_5_from_file(c):
     assert repr(siglist) == """[SourmashSignature('', 0107d767), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('', 4e94e602), SourmashSignature('', 60f7e23c), SourmashSignature('', 6d6e87e1), SourmashSignature('', b59473c9), SourmashSignature('', f0c834bc), SourmashSignature('', f71e7817)]"""
 
 
+def test_sig_cat_5_from_file_picklist(runtmp):
+    c = runtmp
+
+    # cat using a file list as input
+    sig47 = utils.get_test_data('47.fa.sig')
+    sbt = utils.get_test_data('v6.sbt.zip')
+
+    filelist = c.output("filelist")
+    with open(filelist, 'w') as f:
+        f.write("\n".join((sig47, sbt)))
+
+    picklist = _write_file(runtmp, 'pl.csv', ['md5short', '09a08691'])
+
+    c.run_sourmash('sig', 'cat', '--from-file', filelist,
+                   '--picklist', f'{picklist}:md5short:md5short',
+                   '-o', 'out.sig')
+
+    # stdout should be same signatures
+    out = c.output('out.sig')
+
+    siglist = list(load_signatures(out))
+    print(len(siglist))
+    # print("siglist: ",siglist)
+    # print("\n")
+
+    # verify the number of signatures matches what we expect to see based
+    # on the input files
+    all_sigs = []
+    all_sigs += list(load_signatures(sig47, ksize=31))
+
+    assert len(all_sigs) == len(siglist)
+
+    # sort the signatures by something deterministic and unique
+    siglist.sort(key = lambda x: x.md5sum())
+
+    assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691)]"""
+
+
 def test_sig_split_1(runtmp):
     c = runtmp
     # split 47 into 1 sig :)
