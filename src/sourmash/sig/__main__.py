@@ -83,12 +83,12 @@ def cat(args):
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.LoadManySignatures(args.signatures,
-                                              ksize=args.ksize,
-                                              moltype=moltype,
-                                              progress=progress,
-                                              yield_all_files=args.force,
-                                              force=args.force)
+    loader = sourmash_args.load_many_signatures(args.signatures,
+                                                ksize=args.ksize,
+                                                moltype=moltype,
+                                                progress=progress,
+                                                yield_all_files=args.force,
+                                                force=args.force)
     for ss, sigloc in loader:
         md5 = ss.md5sum()
         encountered_md5sums[md5] += 1
@@ -133,12 +133,12 @@ def split(args):
         args.signatures.extend(more_files)
 
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.LoadManySignatures(args.signatures,
-                                              ksize=args.ksize,
-                                              moltype=moltype,
-                                              progress=progress,
-                                              yield_all_files=args.force,
-                                              force=args.force)
+    loader = sourmash_args.load_many_signatures(args.signatures,
+                                                ksize=args.ksize,
+                                                moltype=moltype,
+                                                progress=progress,
+                                                yield_all_files=args.force,
+                                                force=args.force)
 
     for sig, sigloc in loader:
         # save each file individually --
@@ -214,12 +214,12 @@ def describe(args):
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.LoadManySignatures(args.signatures,
-                                              ksize=args.ksize,
-                                              moltype=moltype,
-                                              progress=progress,
-                                              yield_all_files=args.force,
-                                              force=args.force)
+    loader = sourmash_args.load_many_signatures(args.signatures,
+                                                ksize=args.ksize,
+                                                moltype=moltype,
+                                                progress=progress,
+                                                yield_all_files=args.force,
+                                                force=args.force)
 
     for sig, location in loader:
         # extract info, write as appropriate.
@@ -397,12 +397,12 @@ def merge(args):
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.LoadManySignatures(args.signatures,
-                                              ksize=args.ksize,
-                                              moltype=moltype,
-                                              progress=progress,
-                                              yield_all_files=args.force,
-                                              force=args.force)
+    loader = sourmash_args.load_many_signatures(args.signatures,
+                                                ksize=args.ksize,
+                                                moltype=moltype,
+                                                progress=progress,
+                                                yield_all_files=args.force,
+                                                force=args.force)
 
     for sigobj, sigloc in loader:
         # first signature? initialize a bunch of stuff
@@ -459,12 +459,12 @@ def intersect(args):
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.LoadManySignatures(args.signatures,
-                                              ksize=args.ksize,
-                                              moltype=moltype,
-                                              progress=progress,
-                                              yield_all_files=args.force,
-                                              force=args.force)
+    loader = sourmash_args.load_many_signatures(args.signatures,
+                                                ksize=args.ksize,
+                                                moltype=moltype,
+                                                progress=progress,
+                                                yield_all_files=args.force,
+                                                force=args.force)
 
     for sigobj, sigloc in loader:
 
@@ -586,12 +586,12 @@ def rename(args):
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.LoadManySignatures(args.signatures,
-                                              ksize=args.ksize,
-                                              moltype=moltype,
-                                              progress=progress,
-                                              yield_all_files=args.force,
-                                              force=args.force)
+    loader = sourmash_args.load_many_signatures(args.signatures,
+                                                ksize=args.ksize,
+                                                moltype=moltype,
+                                                progress=progress,
+                                                yield_all_files=args.force,
+                                                force=args.force)
 
     for sigobj, sigloc in loader:
         sigobj._name = args.name
@@ -637,13 +637,13 @@ def extract(args):
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.LoadManySignatures(args.signatures,
-                                              ksize=args.ksize,
-                                              moltype=moltype,
-                                              picklist=picklist,
-                                              progress=progress,
-                                              yield_all_files=args.force,
-                                              force=args.force)
+    loader = sourmash_args.load_many_signatures(args.signatures,
+                                                ksize=args.ksize,
+                                                moltype=moltype,
+                                                picklist=picklist,
+                                                progress=progress,
+                                                yield_all_files=args.force,
+                                                force=args.force)
     for ss, sigloc in loader:
         if filter_fn(ss):
             save_sigs.add(ss)
@@ -734,12 +734,12 @@ def flatten(args):
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.LoadManySignatures(args.signatures,
-                                              ksize=args.ksize,
-                                              moltype=moltype,
-                                              progress=progress,
-                                              yield_all_files=args.force,
-                                              force=args.force)
+    loader = sourmash_args.load_many_signatures(args.signatures,
+                                                ksize=args.ksize,
+                                                moltype=moltype,
+                                                progress=progress,
+                                                yield_all_files=args.force,
+                                                force=args.force)
     for ss, sigloc in loader:
         # select!
         if args.md5 is not None:
@@ -787,12 +787,12 @@ def downsample(args):
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.LoadManySignatures(args.signatures,
-                                              ksize=args.ksize,
-                                              moltype=moltype,
-                                              progress=progress,
-                                              yield_all_files=args.force,
-                                              force=args.force)
+    loader = sourmash_args.load_many_signatures(args.signatures,
+                                                ksize=args.ksize,
+                                                moltype=moltype,
+                                                progress=progress,
+                                                yield_all_files=args.force,
+                                                force=args.force)
     for ss, sigloc in loader:
         mh = ss.minhash
 
