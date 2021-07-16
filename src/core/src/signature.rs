@@ -20,8 +20,9 @@ use crate::sketch::Sketch;
 use crate::Error;
 use crate::HashIntoType;
 
-pub struct SeqToHashes<'a> {
-    sequence: &'a [u8],
+#[derive(Debug, Clone)]
+pub struct SeqToHashes {
+    sequence: Vec<u8>,
     kmer_index: usize,
     k_size: usize,
     max_index: usize,
@@ -32,14 +33,14 @@ pub struct SeqToHashes<'a> {
     _hashes_buffer: Vec<u64>,
 
     _dna_configured: bool,
-    _dna_sequence: Vec<u8>,
+    // _dna_sequence: Vec<u8>,
     _dna_rc: Vec<u8>,
     _dna_ksize: usize,
     _dna_len: usize,
     _dna_last_position_check: usize,
 }
 
-impl SeqToHashes<'_> {
+impl SeqToHashes {
     pub fn new(
         seq: &[u8],
         k_size: usize,
@@ -57,7 +58,7 @@ impl SeqToHashes<'_> {
         let _max_index = seq.len() - ksize + 1;
 
         SeqToHashes {
-            sequence: seq,
+            sequence: seq.to_ascii_uppercase(),
             k_size: ksize,
             kmer_index: 0,
             max_index: _max_index,
@@ -67,24 +68,16 @@ impl SeqToHashes<'_> {
             seed,
             _hashes_buffer: Vec::with_capacity(1000), //RefCell::new(Vec::new()),
             _dna_configured: false,
-            _dna_sequence: Vec::with_capacity(1000),
+            // _dna_sequence: seq.to_ascii_uppercase(),
             _dna_rc: Vec::with_capacity(1000),
             _dna_ksize: 0,
             _dna_len: 0,
             _dna_last_position_check: 0,
         }
     }
-
-    pub fn get_dna_last_position_check(self) -> usize {
-        self._dna_last_position_check
-    }
-
-    pub fn increment_dna_last_position_check(&mut self) {
-        self._dna_last_position_check += 1;
-    }
 }
 
-impl Iterator for SeqToHashes<'_> {
+impl Iterator for SeqToHashes {
     type Item = Result<u64, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -103,23 +96,28 @@ impl Iterator for SeqToHashes<'_> {
                     }
                     // Here we convert the sequence to upper case and
                     // pre-calculate the reverse complement for the full sequence...
-                    self._dna_sequence = self.sequence.to_ascii_uppercase();
-                    self._dna_rc = revcomp(&self._dna_sequence);
+                    self._dna_rc = revcomp(&self.sequence);
                     self._dna_configured = true;
                 }
 
                 if self.hash_function.dna() {
-                    let is_valid_kmer = |i, ptr_self: &mut SeqToHashes| {
-                        for j in std::cmp::max(i, ptr_self._dna_last_position_check)
-                            ..i + ptr_self._dna_ksize
-                        {
-                            if !VALID[ptr_self._dna_sequence[j] as usize] {
-                                return false;
+                    let kmer = &self.sequence[self.kmer_index..self.kmer_index + self._dna_ksize];
+
+                    for j in std::cmp::max(self.kmer_index, self._dna_last_position_check)
+                        ..self.kmer_index + self._dna_ksize
+                    {
+                        if !VALID[self.sequence[j] as usize] {
+                            if !self.force {
+                                return Some(Err(Error::InvalidDNA {
+                                    message: String::from_utf8(kmer.to_vec()).unwrap(),
+                                }));
+                            } else {
+                                self.kmer_index += 1;
+                                return self.next();
                             }
-                            ptr_self._dna_last_position_check += 1;
                         }
-                        true
-                    };
+                        self._dna_last_position_check += 1;
+                    }
 
                     // ... and then while moving the k-mer window forward for the sequence
                     // we move another window backwards for the RC.
@@ -135,20 +133,6 @@ impl Iterator for SeqToHashes<'_> {
                     // (leaving this table here because I had to draw to
                     //  get the indices correctly)
 
-                    let kmer = &self.sequence[self.kmer_index..self.kmer_index + self._dna_ksize];
-
-                    if !is_valid_kmer(self.kmer_index, self) {
-                        if !self.force {
-                            // throw error if DNA is not valid
-                            return Some(Err(Error::InvalidDNA {
-                                message: String::from_utf8(kmer.to_vec()).unwrap(),
-                            }));
-                        } else {
-                            self.kmer_index += 1;
-                            return self.next();
-                        }
-                    }
-
                     let krc = &self._dna_rc[self._dna_len - self._dna_ksize - self.kmer_index
                         ..self._dna_len - self.kmer_index];
                     let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed);
@@ -162,11 +146,11 @@ impl Iterator for SeqToHashes<'_> {
                     for i in 0..3 {
                         // Get i frame
                         let substr: Vec<u8> = self
-                            ._dna_sequence
+                            .sequence
                             .iter()
                             .cloned()
                             .skip(i)
-                            .take(self._dna_sequence.len() - i)
+                            .take(self.sequence.len() - i)
                             .collect();
 
                         let aa = to_aa(
