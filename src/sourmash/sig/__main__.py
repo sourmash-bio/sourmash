@@ -470,7 +470,6 @@ def intersect(args):
                                                 force=args.force)
 
     for sigobj, sigloc in loader:
-
         if first_sig is None:
             first_sig = sigobj
             mins = set(sigobj.minhash.hashes)
