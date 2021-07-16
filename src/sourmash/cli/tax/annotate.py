@@ -2,7 +2,7 @@
 
 usage="""
 
-    sourmash tax annotate --gather-csv [gather_csv(s)] --taxonomy-csv [taxonomy-csv(s)]
+    sourmash tax annotate --gather-csv <gather_csv> [ ... ] --taxonomy-csv <taxonomy_csv> [ ... ]
 
 The 'tax annotate' command reads in gather results CSVs and annotates them
  with taxonomic information.
@@ -35,7 +35,7 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
-        '-t', '--taxonomy-csv', metavar='FILE',
+        '-t', '--taxonomy-csv', '--taxonomy', metavar='FILE',
         nargs="+", required=True,
         help='database lineages CSV'
     )
