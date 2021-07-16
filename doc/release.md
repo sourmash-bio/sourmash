@@ -17,7 +17,7 @@ You will also need a Rust installation (see
 [Development Environment](developer.md)); be sure to update it to the
 latest version with `rustup update`.
 
-Your conda version will need to be at least `.4.9.0`. You can check your
+Your conda version will need to be at least `v4.9.0`. You can check your
 conda version with `conda --version` and update with `conda update conda`.
 
 ## Testing a release
