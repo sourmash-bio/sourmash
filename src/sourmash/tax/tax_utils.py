@@ -18,8 +18,12 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
 from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
 
-SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename")
-ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename")
+QueryInfo = namedtuple("QueryInfo", "query_md5, query_filename, query_bp")
+SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank")
+ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank")
+
+# Essential Gather column names that must be in gather_csv to allow `tax` summarization
+EssentialGatherColnames = ('query_name', 'name', 'f_unique_weighted', 'f_unique_to_query', 'unique_intersect_bp', 'remaining_bp', 'query_md5', 'query_filename')
 
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
@@ -72,8 +76,10 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     return gather_csvs
 
 
-def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=['query_name', 'name', 'f_unique_weighted', 'query_md5', 'query_filename'], seen_queries=set(), force=False):
+def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=EssentialGatherColnames, seen_queries=None, force=False):
     "Load a single gather csv"
+    if not seen_queries:
+        seen_queries=set()
     header = []
     gather_results = []
     gather_queries = set()
@@ -180,18 +186,31 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
     """
     Summarize gather results at specified taxonomic rank
     """
+    # init dictionaries
     sum_uniq_weighted = defaultdict(lambda: defaultdict(float))
+    # store together w/ ^ instead?
+    sum_uniq_to_query = defaultdict(lambda: defaultdict(float))
+    sum_uniq_bp = defaultdict(lambda: defaultdict(float))
+    query_info = {}
+
     for row in gather_results:
         # get essential gather info
         query_name = row['query_name']
+        f_unique_to_query = float(row['f_unique_to_query'])
+        f_uniq_weighted = float(row['f_unique_weighted'])
+        unique_intersect_bp = int(row['unique_intersect_bp'])
         query_md5 = row['query_md5']
         query_filename = row['query_filename']
+        # get query_bp
+        if query_name not in query_info.keys():
+            query_bp = unique_intersect_bp + int(row['remaining_bp'])
+        # store query info
+        query_info[query_name] = QueryInfo(query_md5=query_md5, query_filename=query_filename, query_bp=query_bp)
         match_ident = row['name']
-        f_uniq_weighted = row['f_unique_weighted']
-        f_uniq_weighted = float(f_uniq_weighted)
+
 
         # 100% match? are we looking at something in the database?
-        if f_uniq_weighted >= 1.0 and query_name not in seen_perfect: # only want to notify once, not for each rank
+        if f_unique_to_query >= 1.0 and query_name not in seen_perfect: # only want to notify once, not for each rank
             ident = get_ident(match_ident,
                               keep_full_identifiers=keep_full_identifiers,
                               keep_identifier_versions=keep_identifier_versions)
@@ -211,23 +230,53 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
         lineage = pop_to_rank(lineage, rank)
         assert lineage[-1].rank == rank, lineage[-1]
         # record info
+        sum_uniq_to_query[query_name][lineage] += f_unique_to_query
         sum_uniq_weighted[query_name][lineage] += f_uniq_weighted
+        sum_uniq_bp[query_name][lineage] += unique_intersect_bp
 
     # sort and store each as SummarizedGatherResult
-    sum_uniq_weighted_sorted = []
-    for query_name, lineage_weights in sum_uniq_weighted.items():
+    sum_uniq_to_query_sorted = []
+    for query_name, lineage_weights in sum_uniq_to_query.items():
+        qInfo = query_info[query_name]
         sumgather_items = list(lineage_weights.items())
         sumgather_items.sort(key = lambda x: -x[1])
         if best_only:
             lineage, fraction = sumgather_items[0]
-            sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename)
-            sum_uniq_weighted_sorted.append(sres)
+            if fraction > 1:
+                raise ValueError(f"The tax summary of query '{query_name}' is {fraction}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
+            elif fraction == 0:
+                continue
+            f_weighted_at_rank = sum_uniq_weighted[query_name][lineage]
+            bp_intersect_at_rank = sum_uniq_bp[query_name][lineage]
+            sres = SummarizedGatherResult(query_name, rank, fraction, lineage, qInfo.query_md5, qInfo.query_filename, f_weighted_at_rank, bp_intersect_at_rank)
+            sum_uniq_to_query_sorted.append(sres)
         else:
+            total_f_weighted= 0.0
+            total_f_classified = 0.0
+            total_bp_classified = 0
             for lineage, fraction in sumgather_items:
-                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename)
-                sum_uniq_weighted_sorted.append(sres)
+                if fraction > 1:
+                    raise ValueError(f"The tax summary of query '{query_name}' is {fraction}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
+                elif fraction == 0:
+                    continue
+                total_f_classified += fraction
+                f_weighted_at_rank = sum_uniq_weighted[query_name][lineage]
+                total_f_weighted += f_weighted_at_rank
+                bp_intersect_at_rank = int(sum_uniq_bp[query_name][lineage])
+                total_bp_classified += bp_intersect_at_rank
+                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_intersect_at_rank)
+                sum_uniq_to_query_sorted.append(sres)
 
-    return sum_uniq_weighted_sorted, seen_perfect
+            # record unclassified
+            lineage = ()
+            fraction = 1.0 - total_f_classified
+            if fraction > 0:
+                f_weighted_at_rank = 1.0 - total_f_weighted
+                bp_intersect_at_rank = qInfo.query_bp - total_bp_classified
+                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_intersect_at_rank)
+                sum_uniq_to_query_sorted.append(sres)
+
+    return sum_uniq_to_query_sorted, seen_perfect
 
 
 def find_missing_identities(gather_results, tax_assign):
@@ -287,7 +336,7 @@ def format_for_krona(rank, summarized_gather):
     for res_rank, rank_results in summarized_gather.items():
         if res_rank == rank:
             lineage_summary, all_queries, num_queries = aggregate_by_lineage_at_rank(rank_results, by_query=False)
-    # if multiple_samples, divide fraction by the total number of query files
+    # if aggregating across queries divide fraction by the total number of queries
     for lin, fraction in lineage_summary.items():
         # divide total fraction by total number of queries
         lineage_summary[lin] = fraction/num_queries
@@ -298,9 +347,20 @@ def format_for_krona(rank, summarized_gather):
 
     # reformat lineage for krona_results printing
     krona_results = []
+    unclassified_fraction = 0
     for lin, fraction in lin_items:
+        # save unclassified fraction for the end
+        if lin == ():
+            unclassified_fraction = fraction
+            continue
         lin_list = display_lineage(lin).split(';')
         krona_results.append((fraction, *lin_list))
+
+    # handle unclassified
+    if unclassified_fraction:
+        len_unclassified_lin = len(krona_results[-1]) -1
+        unclassifed_lin = ["unclassified"]*len_unclassified_lin
+        krona_results.append((unclassified_fraction, *unclassifed_lin))
 
     return krona_results
 
@@ -314,7 +374,7 @@ def write_krona(rank, krona_results, out_fp, *, sep='\t'):
         tsv_output.writerow(res)
 
 
-def write_summary(summarized_gather, csv_fp, *, sep=','):
+def write_summary(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=False):
     '''
     Write taxonomy-summarized gather results for each rank.
     '''
@@ -324,12 +384,16 @@ def write_summary(summarized_gather, csv_fp, *, sep=','):
     for rank, rank_results in summarized_gather.items():
         for res in rank_results:
             rD = res._asdict()
-            rD['fraction'] = f'{res.fraction:.3f}'
+            if limit_float_decimals:
+                rD['fraction'] = f'{res.fraction:.3f}'
+                rD['f_weighted_at_rank'] = f'{res.f_weighted_at_rank:.3f}'
             rD['lineage'] = display_lineage(res.lineage)
+            if rD['lineage'] == "":
+                rD['lineage'] = "unclassified"
             w.writerow(rD)
 
 
-def write_classifications(classifications, csv_fp, *, sep=','):
+def write_classifications(classifications, csv_fp, *, sep=',', limit_float_decimals=False):
     '''
     Write taxonomy-classifed gather results.
     '''
@@ -339,8 +403,13 @@ def write_classifications(classifications, csv_fp, *, sep=','):
     for rank, rank_results in classifications.items():
         for res in rank_results:
             rD = res._asdict()
-            rD['fraction'] = f'{res.fraction:.3f}'
+            if limit_float_decimals:
+                rD['fraction'] = f'{res.fraction:.3f}'
+                rD['f_weighted_at_rank'] = f'{res.f_weighted_at_rank:.3f}'
             rD['lineage'] = display_lineage(res.lineage)
+            # needed?
+            if rD['lineage'] == "":
+                rD['lineage'] = "unclassified"
             w.writerow(rD)
 
 
@@ -406,16 +475,25 @@ def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, format_line
     w = csv.DictWriter(out_fp, header, delimiter=sep)
     w.writeheader()
     blank_row = {query_name: 0 for query_name in sample_names}
+    unclassified_row = None
     for lin, sampleinfo in sorted(lineage_dict.items()):
         if format_lineage:
             lin = display_lineage(lin)
+
         #add lineage and 0 placeholders
         row = {'lineage': lin}
         row.update(blank_row)
         # add info for query_names that exist for this lineage
         row.update(sampleinfo)
+        # if unclassified, save this row for the end
+        if not lin:
+            row.update({'lineage': 'unclassified'})
+            unclassified_row = row
+            continue
         # write row
         w.writerow(row)
+    if unclassified_row:
+        w.writerow(unclassified_row)
 
 
 class LineageDB(abc.Mapping):
