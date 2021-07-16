@@ -302,7 +302,7 @@ class MinHash(RustObject):
             raise ValueError("cannot add protein sequence to DNA MinHash")
 
         size = ffi.new("uintptr_t *")
-        hashes_ptr = self._methodcall(lib.kmerminhash_seq_to_hashes, to_bytes(sequence), self.ksize, len(sequence), force, is_protein, size)
+        hashes_ptr = self._methodcall(lib.kmerminhash_seq_to_hashes, to_bytes(sequence), len(sequence), force, is_protein, size)
         size = size[0]
 
         try:

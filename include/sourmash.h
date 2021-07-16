@@ -237,7 +237,6 @@ uint64_t kmerminhash_seed(const SourmashKmerMinHash *ptr);
 
 const uint64_t *kmerminhash_seq_to_hashes(SourmashKmerMinHash *ptr,
                                           const char *sequence,
-                                          uintptr_t k_size,
                                           uintptr_t insize,
                                           bool force,
                                           bool is_protein,
