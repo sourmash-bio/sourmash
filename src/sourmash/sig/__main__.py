@@ -47,6 +47,13 @@ def _check_abundance_compatibility(sig1, sig2):
         raise ValueError("incompatible signatures: track_abundance is {} in first sig, {} in second".format(sig1.minhash.track_abundance, sig2.minhash.track_abundance))
 
 
+def _extend_signatures_with_from_file(args):
+    # extend input signatures with --from-file
+    if args.from_file:
+        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
+        args.signatures = list(args.signatures)
+        args.signatures.extend(more_files)
+
 def _set_num_scaled(mh, num, scaled):
     "set num and scaled values on a MinHash object"
     mh_params = list(mh.__getstate__())
@@ -76,11 +83,7 @@ def cat(args):
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
     save_sigs.open()
 
-    # extend input signatures with --from-file
-    if args.from_file:
-        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
-        args.signatures = list(args.signatures)
-        args.signatures.extend(more_files)
+    _extend_signatures_with_from_file(args)
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
@@ -121,6 +124,7 @@ def split(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    _extend_signatures_with_from_file(args)
 
     output_names = set()
     output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}.sig'
@@ -130,12 +134,6 @@ def split(args):
         if not os.path.exists(args.outdir):
             notify('Creating --outdir {}', args.outdir)
             os.mkdir(args.outdir)
-
-    # extend input signatures with --from-file
-    if args.from_file:
-        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
-        args.signatures = list(args.signatures)
-        args.signatures.extend(more_files)
 
     progress = sourmash_args.SignatureLoadingProgress()
     loader = sourmash_args.load_many_signatures(args.signatures,
@@ -201,6 +199,7 @@ def describe(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    _extend_signatures_with_from_file(args)
 
     # write CSV?
     w = None
@@ -214,12 +213,6 @@ def describe(args):
                             'name', 'filename', 'license'],
                            extrasaction='ignore')
         w.writeheader()
-
-    # extend input signatures with --from-file
-    if args.from_file:
-        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
-        args.signatures = list(args.signatures)
-        args.signatures.extend(more_files)
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
@@ -398,16 +391,10 @@ def merge(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    _extend_signatures_with_from_file(args)
 
     first_sig = None
     mh = None
-    total_loaded = 0
-
-    # extend input signatures with --from-file
-    if args.from_file:
-        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
-        args.signatures = list(args.signatures)
-        args.signatures.extend(more_files)
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
@@ -438,8 +425,9 @@ def merge(args):
 
             mh.merge(sigobj_mh)
         except:
+            assert 0
             error("ERROR when merging signature '{}' ({}) from file {}",
-                  sigobj, sigobj.md5sum()[:8], sigfile)
+                  sigobj, sigobj.md5sum()[:8], sigloc)
             raise
 
     if not len(progress):
@@ -466,15 +454,10 @@ def intersect(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    _extend_signatures_with_from_file(args)
 
     first_sig = None
     mins = None
-
-    # extend input signatures with --from-file
-    if args.from_file:
-        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
-        args.signatures = list(args.signatures)
-        args.signatures.extend(more_files)
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
@@ -599,15 +582,11 @@ def rename(args):
     set_quiet(args.quiet, args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    _extend_signatures_with_from_file(args)
+
 
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
     save_sigs.open()
-
-    # extend input signatures with --from-file
-    if args.from_file:
-        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
-        args.signatures = list(args.signatures)
-        args.signatures.extend(more_files)
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
@@ -637,6 +616,7 @@ def extract(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    _extend_signatures_with_from_file(args)
 
     # further filtering on md5 or name?
     if args.md5 is not None or args.name is not None:
@@ -656,12 +636,6 @@ def extract(args):
     # ok! filtering defined, let's go forward
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
     save_sigs.open()
-
-    # extend input signatures with --from-file
-    if args.from_file:
-        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
-        args.signatures = list(args.signatures)
-        args.signatures.extend(more_files)
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
@@ -751,15 +725,10 @@ def flatten(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    _extend_signatures_with_from_file(args)
 
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
     save_sigs.open()
-
-    # extend input signatures with --from-file
-    if args.from_file:
-        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
-        args.signatures = list(args.signatures)
-        args.signatures.extend(more_files)
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
@@ -799,6 +768,7 @@ def downsample(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    _extend_signatures_with_from_file(args)
 
     if not args.num and not args.scaled:
         error('ERROR: must specify either --num or --scaled value')
@@ -811,12 +781,6 @@ def downsample(args):
     # open output for saving sigs
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
     save_sigs.open()
-
-    # extend input signatures with --from-file
-    if args.from_file:
-        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
-        args.signatures = list(args.signatures)
-        args.signatures.extend(more_files)
 
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
