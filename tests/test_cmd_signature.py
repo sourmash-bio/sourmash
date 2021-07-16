@@ -2259,6 +2259,16 @@ def test_sig_downsample_2_num_to_scaled_fail(c):
 
 
 @utils.in_tempdir
+def test_sig_downsample_2_num_and_scaled_both_fail(c):
+    # cannot specify both --num and --scaled
+    sigs11 = utils.get_test_data('genome-s11.fa.gz.sig')
+
+    with pytest.raises(ValueError):
+        c.run_sourmash('sig', 'downsample', '--scaled', '100', '--num', '50',
+                       '-k', '21', '--dna', sigs11)
+
+
+@utils.in_tempdir
 def test_sig_downsample_2_num_empty(c):
     # downsample a num signature
     sigs11 = utils.get_test_data('genome-s11.fa.gz.sig')
