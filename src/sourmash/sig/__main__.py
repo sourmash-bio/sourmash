@@ -424,11 +424,11 @@ def merge(args):
                 sigobj_mh.track_abundance = False
 
             mh.merge(sigobj_mh)
-        except:
-            assert 0
+        except (TypeError, ValueError) as exc:
             error("ERROR when merging signature '{}' ({}) from file {}",
                   sigobj, sigobj.md5sum()[:8], sigloc)
-            raise
+            error(str(exc))
+            sys.exit(-1)
 
     if not len(progress):
         error("no signatures to merge!?")

@@ -139,8 +139,10 @@ def test_sig_merge_1_ksize_moltype_fail(c):
     sig63 = utils.get_test_data('63.fa.sig')
     sig2and63 = utils.get_test_data('2+63.fa.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as exc:
         c.run_sourmash('sig', 'merge', sig2, sig63)
+
+    assert "ERROR when merging signature" in str(exc.value)
 
 
 @utils.in_tempdir
