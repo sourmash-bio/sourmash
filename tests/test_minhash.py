@@ -231,6 +231,22 @@ def test_dayhoff(track_abundance):
     assert mh_protein.hashes != mh_dayhoff.hashes
 
 
+def test_dayhoff_2(track_abundance):
+    mh = MinHash(0, 7, scaled=1, is_protein=True, dayhoff=True,
+                 track_abundance=1)
+
+    mh.add_protein('CADHIFC')
+    assert len(mh) == 1
+    hashval = list(mh.hashes)[0]
+    assert hashval == hash_murmur('abcdefa')
+
+    mh = mh.copy_and_clear()
+    mh.add_protein('CADHIF*')
+    assert len(mh) == 1
+    hashval = list(mh.hashes)[0]
+    assert hashval == hash_murmur('abcdef*')
+
+
 def test_hp(track_abundance):
     # verify that we can hash to hp-encoded protein/aa sequences
     mh_hp = MinHash(10, 2, is_protein=True,
