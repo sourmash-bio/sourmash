@@ -29,13 +29,14 @@ pub struct SeqToHashes<'a> {
     is_protein: bool,
     hash_function: HashFunctions,
     seed: u64,
-    _hashes_buffer: Vec<u64>, // RefCell<Vec<u64>>,
+    _hashes_buffer: Vec<u64>,
 
     _dna_configured: bool,
     _dna_sequence: Vec<u8>,
     _dna_rc: Vec<u8>,
     _dna_ksize: usize,
     _dna_len: usize,
+    _dna_last_position_check: usize,
 }
 
 impl SeqToHashes<'_> {
@@ -70,12 +71,21 @@ impl SeqToHashes<'_> {
             _dna_rc: Vec::with_capacity(1000),
             _dna_ksize: 0,
             _dna_len: 0,
+            _dna_last_position_check: 0,
         }
+    }
+
+    pub fn get_dna_last_position_check(self) -> usize {
+        self._dna_last_position_check
+    }
+
+    pub fn increment_dna_last_position_check(&mut self) {
+        self._dna_last_position_check += 1;
     }
 }
 
 impl Iterator for SeqToHashes<'_> {
-    type Item = u64;
+    type Item = Result<u64, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // TODO: Remove the hashes buffer
@@ -99,14 +109,14 @@ impl Iterator for SeqToHashes<'_> {
                 }
 
                 if self.hash_function.dna() {
-                    let mut last_position_check = 0;
-
-                    let mut is_valid_kmer = |i| {
-                        for j in std::cmp::max(i, last_position_check)..i + self._dna_ksize {
-                            if !VALID[self._dna_sequence[j] as usize] {
+                    let is_valid_kmer = |i, ptr_self: &mut SeqToHashes| {
+                        for j in std::cmp::max(i, ptr_self._dna_last_position_check)
+                            ..i + ptr_self._dna_ksize
+                        {
+                            if !VALID[ptr_self._dna_sequence[j] as usize] {
                                 return false;
                             }
-                            last_position_check += 1;
+                            ptr_self._dna_last_position_check += 1;
                         }
                         true
                     };
@@ -127,15 +137,15 @@ impl Iterator for SeqToHashes<'_> {
 
                     let kmer = &self.sequence[self.kmer_index..self.kmer_index + self._dna_ksize];
 
-                    if !is_valid_kmer(self.kmer_index) {
+                    if !is_valid_kmer(self.kmer_index, self) {
                         if !self.force {
-                            return None;
                             // throw error if DNA is not valid
-                            // return Err(Error::InvalidDNA {
-                            //     message: String::from_utf8(kmer.to_vec()).unwrap(),
-                            // });
+                            return Some(Err(Error::InvalidDNA {
+                                message: String::from_utf8(kmer.to_vec()).unwrap(),
+                            }));
                         } else {
                             self.kmer_index += 1;
+                            return self.next();
                         }
                     }
 
@@ -143,7 +153,7 @@ impl Iterator for SeqToHashes<'_> {
                         ..self._dna_len - self.kmer_index];
                     let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed);
                     self.kmer_index += 1;
-                    Some(hash)
+                    Some(Ok(hash))
                 } else if self._hashes_buffer.is_empty() {
                     // translated protein
                     let aa_ksize = self.k_size / 3;
@@ -191,10 +201,10 @@ impl Iterator for SeqToHashes<'_> {
                         });
                     }
                     self.kmer_index = self.max_index;
-                    Some(self._hashes_buffer.pop().unwrap())
+                    Some(Ok(self._hashes_buffer.pop().unwrap()))
                 } else {
                     let last_element: u64 = self._hashes_buffer.pop().unwrap();
-                    Some(last_element)
+                    Some(Ok(last_element))
                 }
             } else if self._hashes_buffer.is_empty() {
                 let ksize = self.k_size as usize;
@@ -212,7 +222,7 @@ impl Iterator for SeqToHashes<'_> {
                         self._hashes_buffer.push(hash);
                     }
                     self.kmer_index = len;
-                    return Some(self._hashes_buffer.pop().unwrap());
+                    return Some(Ok(self._hashes_buffer.pop().unwrap()));
                 }
 
                 let aa_seq: Vec<_> = match hash_function {
@@ -222,11 +232,10 @@ impl Iterator for SeqToHashes<'_> {
                     HashFunctions::murmur64_hp => {
                         self.sequence.iter().cloned().map(aa_to_hp).collect()
                     }
-                    _invalid => {
-                        return None;
-                        // return Err(Error::InvalidHashFunction {
-                        //     function: format!("{}", invalid),
-                        // })
+                    invalid => {
+                        return Some(Err(Error::InvalidHashFunction {
+                            function: format!("{}", invalid),
+                        }));
                     }
                 };
 
@@ -234,11 +243,11 @@ impl Iterator for SeqToHashes<'_> {
                     let hash = crate::_hash_murmur(aa_kmer, self.seed);
                     self._hashes_buffer.push(hash);
                 }
-                Some(self._hashes_buffer.pop().unwrap())
+                Some(Ok(self._hashes_buffer.pop().unwrap()))
             } else {
                 self.kmer_index = self.max_index;
                 let last_element: u64 = self._hashes_buffer.pop().unwrap();
-                Some(last_element)
+                Some(Ok(last_element))
             }
         } else {
             None
@@ -394,7 +403,7 @@ pub trait SigsTrait {
         );
 
         for hash_value in ready_hashes {
-            self.add_hash(hash_value);
+            self.add_hash(hash_value?);
         }
 
         // Should be always ok
@@ -412,7 +421,7 @@ pub trait SigsTrait {
         );
 
         for hash_value in ready_hashes {
-            self.add_hash(hash_value);
+            self.add_hash(hash_value?);
         }
 
         // Should be always ok

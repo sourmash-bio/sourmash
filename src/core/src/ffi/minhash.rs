@@ -70,7 +70,11 @@ Result<*const u64> {
         slice::from_raw_parts(sequence as *const u8, insize)
     };
 
-    let output: Vec<u64> = SeqToHashes::new(buf, mh.ksize(), force, is_protein, mh.hash_function(), mh.seed()).collect();
+    let mut output: Vec<u64> = Vec::with_capacity(insize);
+
+    for i in SeqToHashes::new(buf, mh.ksize(), force, is_protein, mh.hash_function(), mh.seed()){
+        output.push(i?);
+    }
 
     *size = output.len();
 
