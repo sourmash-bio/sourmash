@@ -115,5 +115,5 @@ def check_scaled_bounds(arg):
 def add_scaled_arg(parser, default=None):
     parser.add_argument(
         '--scaled', metavar='FLOAT', type=check_scaled_bounds,
-        help='scaled value should be between 100 and 1e6; default={d}'
+        help='scaled value should be between 100 and 1e6'
     )
