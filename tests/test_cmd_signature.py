@@ -649,6 +649,15 @@ def test_sig_rename_3_file_dne(c):
     assert "Error while reading signatures from 'no-such-sig'" in c.last_result.err
 
 
+@utils.in_tempdir
+def test_sig_rename_3_file_dne_force(c):
+    # rename on a file that does not exist should fail!
+    c.run_sourmash('sig', 'rename', 'no-such-sig', 'fiz bar', '-f')
+    print(c.last_result.err)
+
+    assert "Error while reading signatures from 'no-such-sig'" in c.last_result.err
+
+
 @utils.in_thisdir
 def test_sig_cat_1(c):
     # cat 47 to 47...

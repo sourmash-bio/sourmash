@@ -613,11 +613,12 @@ def load_many_signatures(locations, progress, *, yield_all_files=False,
             notify(f"loaded {n} isgnatures from '{loc}'", end='\r')
         except ValueError as exc:
             # trap expected errors, and either power through or display + exit.
-            if self.force:
-                notify(str(exc))
+            if force:
+                notify("ERROR: {}", str(exc))
+                notify("(continuing)")
                 continue
             else:
-                notify(str(exc))
+                notify("ERROR: {}". str(exc))
                 sys.exit(-1)
         except KeyboardInterrupt:
             notify("Received CTRL-C - exiting.")
