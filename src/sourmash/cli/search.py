@@ -46,10 +46,6 @@ def subparser(subparsers):
         help='do NOT use k-mer abundances if present; note: has no effect if '
         '--containment or --max-containment is specified'
     )
-    # subparser.add_argument(
-    #     '--scaled', metavar='FLOAT', type=float, default=0,
-    #     help='downsample query to this scaled factor (yields greater speed)'
-    # )
     subparser.add_argument(
         '-o', '--output', metavar='FILE',
         help='output CSV containing matches to this file'
