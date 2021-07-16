@@ -457,7 +457,7 @@ def search(args):
             sys.exit(-1)
         if args.scaled != query.minhash.scaled:
             notify('downsampling query from scaled={} to {}',
-            query.minhash.scaled, int(args.scaled))
+                query.minhash.scaled, int(args.scaled))
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # set up the search databases
@@ -647,7 +647,7 @@ def gather(args):
 
     if args.scaled:
         notify('downsampling query from scaled={} to {}',
-        query.minhash.scaled, int(args.scaled))
+            query.minhash.scaled, int(args.scaled))
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # empty?
@@ -868,7 +868,7 @@ def multigather(args):
 
             if args.scaled:
                 notify('downsampling query from scaled={} to {}',
-                query.minhash.scaled, int(args.scaled))
+                    query.minhash.scaled, int(args.scaled))
                 query.minhash = query.minhash.downsample(scaled=args.scaled)
  
             # empty?
