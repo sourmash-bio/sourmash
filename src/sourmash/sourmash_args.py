@@ -620,7 +620,8 @@ class LoadManySignatures:
                     notify(str(exc))
                     continue
                 else:
-                    raise
+                    notify(str(exc))
+                    sys.exit(-1)
             except KeyboardInterrupt:
                 notify("Received CTRL-C - exiting.")
                 sys.exit(-1)
