@@ -36,6 +36,7 @@ pub struct SeqToHashes {
     _dna_ksize: usize,
     _dna_len: usize,
     _dna_last_position_check: usize,
+    // iter: std::slice::Iter<Result<u64, Error>>,
 }
 
 impl SeqToHashes {
@@ -46,6 +47,7 @@ impl SeqToHashes {
         is_protein: bool,
         hash_function: HashFunctions,
         seed: u64,
+        // iter: std::slice::Iter<'a, T>,
     ) -> SeqToHashes {
         let mut ksize: usize = k_size;
 
@@ -120,7 +122,7 @@ impl Iterator for SeqToHashes {
                                 self.kmer_index += 1;
                                 // Move the iterator to the next step
                                 // This is a recursion, will cause a stack overflow in long seqs with non-ACGT
-                                return self.next();
+                                return Some(Ok(0));
                             }
                         }
                         self._dna_last_position_check += 1;
@@ -270,7 +272,11 @@ pub trait SigsTrait {
         );
 
         for hash_value in ready_hashes {
-            self.add_hash(hash_value?);
+            match hash_value {
+                Ok(0) => continue,
+                Ok(x) => self.add_hash(x),
+                Err(err) => return Err(err),
+            }
         }
 
         // Should be always ok
@@ -288,7 +294,11 @@ pub trait SigsTrait {
         );
 
         for hash_value in ready_hashes {
-            self.add_hash(hash_value?);
+            match hash_value {
+                Ok(0) => continue,
+                Ok(x) => self.add_hash(x),
+                Err(err) => return Err(err),
+            }
         }
 
         // Should be always ok

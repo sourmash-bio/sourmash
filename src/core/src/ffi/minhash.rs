@@ -72,8 +72,12 @@ Result<*const u64> {
 
     let mut output: Vec<u64> = Vec::with_capacity(insize);
 
-    for i in SeqToHashes::new(buf, mh.ksize(), force, is_protein, mh.hash_function(), mh.seed()){
-        output.push(i?);
+    for hash_value in SeqToHashes::new(buf, mh.ksize(), force, is_protein, mh.hash_function(), mh.seed()){
+        match hash_value{
+            Ok(0) => continue,
+            Ok(x) => output.push(x),
+            Err(err) => return Err(err),
+        }
     }
 
     *size = output.len();
