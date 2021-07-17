@@ -685,7 +685,7 @@ class MinHash(RustObject):
         return new_mh
 
     def inflate(self, from_mh):  
-        if (self.track_abundance == True) and (from_mh.track_abundance == True):
+        if (self.track_abundance == False) and (from_mh.track_abundance == True):
             hashes = set(self.hashes)
             orig_abunds = from_mh.hashes
             abunds = { h: orig_abunds[h] for h in hashes }

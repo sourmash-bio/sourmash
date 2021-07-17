@@ -1523,7 +1523,7 @@ def test_flatten():
 def test_inflate():
     # test behavior with scaled
     scaled = _get_scaled_for_max_hash(35)
-    mh = MinHash(0, 4, track_abundance=True, scaled=scaled)
+    mh = MinHash(0, 4, track_abundance=False, scaled=scaled)
     mh2 = MinHash(0, 4, track_abundance=True, scaled=scaled)
     assert mh._max_hash == 35
 
@@ -1558,7 +1558,7 @@ def test_inflate():
 def test_inflate_error():
     # test behavior with scaled
     scaled = _get_scaled_for_max_hash(35)
-    mh = MinHash(0, 4, track_abundance=False, scaled=scaled)
+    mh = MinHash(0, 4, track_abundance=True, scaled=scaled)
     mh2 = MinHash(0, 4, track_abundance=True, scaled=scaled)
     assert mh._max_hash == 35
 
