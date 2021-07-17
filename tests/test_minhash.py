@@ -312,6 +312,141 @@ def test_dayhoff_2(track_abundance):
     assert hashval == hashes[0]
 
 
+def test_dna_kmers():
+    mh = MinHash(0, ksize=31, scaled=1) # DNA
+    seq = "ATGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGCAAATGCAGAACGTTTTCTGCGTGTTGCCGATATTCTGGAAAGCAATGCCAGGCAGGGGCAGGTGGCCACCGTCCTCTCTGCCCCCGCCAAAATCACCAACCACCTGGTGGCGATGATTGAAAAAACCATTAGCGGCCAGGATGCTTTACCCAATATCAGCGATGCCGAACGTATTTTTGCCGAACTTTTGACGGGACTCGCCGCCGCCCAGCCGGGGTTCCCGCTGGCGCAATTGAAAACTTTCGTCGATCAGGAATTTGCCCAAATAAAACATGTCCTGCATGGCATTAGTTTGTTGGGGCAGTGCCCGGATAGCATCAACGCTGCGCTGATTTGCCGTGGCGAGAAAATGTCGATCGCCATTATGGCCGGCGTATTAGAAGCGCGCGGTCACAACGTTACTGTTATCGATCCGGTCGAAAAACTGCTGGCAGTGGGGCATTACCTCGAATCTACCGTCGATATTGCTGAGTCCACCCGCCGTATTGCGGCAAGCCGCATTCCGGCTGATCACATGGTGCTGAT"
+
+    # first calculate seq to hashes
+    hashes = mh.seq_to_hashes(seq)
+
+    # then calculate all hashes for the sequence
+    mh.add_sequence(seq)
+
+    # identical?
+    assert set(hashes) == set(mh.hashes)
+
+    # k-mer by k-mer?
+    for i in range(0, len(seq) - 31 + 1):
+        # calculate each k-mer
+        kmer = seq[i:i+31]
+
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+        single_mh.add_sequence(kmer)
+        assert len(single_mh) == 1
+
+        # also calculate via seq_to_hashes
+        hashvals = mh.seq_to_hashes(kmer)
+        assert len(hashvals) == 1
+        hashval = hashvals[0]
+
+        # confirm it all matches
+        assert hashval == list(single_mh.hashes)[0]
+        assert hashval == hashes[i]
+
+
+def test_protein_kmers():
+    mh = MinHash(0, ksize=7, is_protein=True, scaled=1)
+    seq = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
+
+    # first calculate seq to hashes
+    hashes = mh.seq_to_hashes(seq, is_protein=True)
+    hashes = list(reversed(hashes)) # @CTB
+
+    # then calculate all hashes for the sequence
+    mh.add_protein(seq)
+
+    # identical?
+    assert set(hashes) == set(mh.hashes)
+
+    # k-mer by k-mer?
+    for i in range(0, len(seq) - 7 + 1):
+        # calculate each k-mer
+        kmer = seq[i:i+7]
+
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+        single_mh.add_protein(kmer)
+        assert len(single_mh) == 1
+
+        # also calculate via seq_to_hashes
+        hashvals = mh.seq_to_hashes(kmer, is_protein=True)
+        assert len(hashvals) == 1
+        hashval = hashvals[0]
+
+        # confirm it all matches
+        assert hashval == list(single_mh.hashes)[0]
+        assert hashval == hashes[i]
+
+
+def test_dayhoff_kmers():
+    mh = MinHash(0, ksize=7, dayhoff=True, scaled=1)
+    seq = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
+
+    # first calculate seq to hashes
+    hashes = mh.seq_to_hashes(seq, is_protein=True)
+    hashes = list(reversed(hashes)) # @CTB
+
+    # then calculate all hashes for the sequence
+    mh.add_protein(seq)
+
+    # identical?
+    assert set(hashes) == set(mh.hashes)
+
+    # k-mer by k-mer?
+    for i in range(0, len(seq) - 7 + 1):
+        # calculate each k-mer
+        kmer = seq[i:i+7]
+
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+        single_mh.add_protein(kmer)
+        assert len(single_mh) == 1
+
+        # also calculate via seq_to_hashes
+        hashvals = mh.seq_to_hashes(kmer, is_protein=True)
+        assert len(hashvals) == 1
+        hashval = hashvals[0]
+
+        # confirm it all matches
+        assert hashval == list(single_mh.hashes)[0]
+        assert hashval == hashes[i]
+
+
+def test_hp_kmers():
+    mh = MinHash(0, ksize=7, hp=True, scaled=1)
+    seq = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
+
+    # first calculate seq to hashes
+    hashes = mh.seq_to_hashes(seq, is_protein=True)
+    hashes = list(reversed(hashes)) # @CTB
+
+    # then calculate all hashes for the sequence
+    mh.add_protein(seq)
+
+    # identical?
+    assert set(hashes) == set(mh.hashes)
+
+    # k-mer by k-mer?
+    for i in range(0, len(seq) - 7 + 1):
+        # calculate each k-mer
+        kmer = seq[i:i+7]
+
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+        single_mh.add_protein(kmer)
+        assert len(single_mh) == 1
+
+        # also calculate via seq_to_hashes
+        hashvals = mh.seq_to_hashes(kmer, is_protein=True)
+        assert len(hashvals) == 1
+        hashval = hashvals[0]
+
+        # confirm it all matches
+        assert hashval == list(single_mh.hashes)[0]
+        assert hashval == hashes[i]
+
+
 def test_hp(track_abundance):
     # verify that we can hash to hp-encoded protein/aa sequences
     mh_hp = MinHash(10, 2, is_protein=True,
