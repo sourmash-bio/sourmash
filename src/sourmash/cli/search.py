@@ -1,7 +1,7 @@
 """search a signature against other signatures"""
 
 from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
-                                add_picklist_args)
+                                add_picklist_args, add_scaled_arg)
 
 
 def subparser(subparsers):
@@ -47,10 +47,6 @@ def subparser(subparsers):
         '--containment or --max-containment is specified'
     )
     subparser.add_argument(
-        '--scaled', metavar='FLOAT', type=float, default=0,
-        help='downsample query to this scaled factor (yields greater speed)'
-    )
-    subparser.add_argument(
         '-o', '--output', metavar='FILE',
         help='output CSV containing matches to this file'
     )
@@ -61,6 +57,7 @@ def subparser(subparsers):
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
+    add_scaled_arg(subparser, 0)
 
 
 def main(args):
