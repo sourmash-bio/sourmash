@@ -1,7 +1,5 @@
 "'sourmash categorize' - query an SBT for bes match, with many signatures."
 
-import argparse
-
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
 
