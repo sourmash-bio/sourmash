@@ -288,14 +288,17 @@ def test_dayhoff(track_abundance):
 
 
 def test_dayhoff_2(track_abundance):
-    mh = MinHash(0, 7, scaled=1, is_protein=True, dayhoff=True,
-                 track_abundance=1)
+    mh = MinHash(0, 7, scaled=1, dayhoff=True, track_abundance=1)
 
+    # first, check protein -> dayhoff hashes via minhash
     mh.add_protein('CADHIFC')
     assert len(mh) == 1
     hashval = list(mh.hashes)[0]
     assert hashval == hash_murmur('abcdefa')
-    assert hashval == list(mh.seq_to_hashes('CADHIFC'))[0]
+
+    # also check seq_to_hashes
+    hashes = list(mh.seq_to_hashes('CADHIFC', is_protein=True))
+    assert hashval == hashes[0]
 
     # do we handle stop codons properly?
     mh = mh.copy_and_clear()
@@ -303,6 +306,10 @@ def test_dayhoff_2(track_abundance):
     assert len(mh) == 1
     hashval = list(mh.hashes)[0]
     assert hashval == hash_murmur('abcdef*')
+
+    # again, check seq_to_hashes
+    hashes = list(mh.seq_to_hashes('CADHIF*', is_protein=True))
+    assert hashval == hashes[0]
 
 
 def test_hp(track_abundance):
@@ -323,21 +330,26 @@ def test_hp(track_abundance):
 
 
 def test_hp_2(track_abundance):
-    mh = MinHash(0, 3, scaled=1, is_protein=True, dayhoff=False,
-                 hp=True, track_abundance=1)
+    mh = MinHash(0, 3, scaled=1, hp=True, track_abundance=track_abundance)
 
     mh.add_protein('ANA')
     assert len(mh) == 1
     hashval = list(mh.hashes)[0]
     assert hashval == hash_murmur('hph')
 
-    # @CTB: this should not yield any hashes at all, IMO.
-    # but it demonstrates the problem :).
+    # also check seq_to_hashes
+    hashes = list(mh.seq_to_hashes('ANA', is_protein=True))
+    assert hashval == hashes[0]
+
     mh = mh.copy_and_clear()
     mh.add_protein('AN*')
     assert len(mh) == 1
     hashval = list(mh.hashes)[0]
     assert hashval == hash_murmur('hp*')
+
+    # also check seq_to_hashes
+    hashes = list(mh.seq_to_hashes('AN*', is_protein=True))
+    assert hashval == hashes[0]
 
 
 def test_protein_short(track_abundance):
