@@ -130,6 +130,8 @@ class JaccardSearch:
 
     def score_jaccard(self, query_size, shared_size, subject_size, total_size):
         "Calculate Jaccard similarity."
+        if total_size == 0:
+            return 0
         return shared_size / total_size
 
     def score_containment(self, query_size, shared_size, subject_size,
@@ -310,7 +312,7 @@ class GatherDatabases:
         self.orig_query_mh = orig_query_mh
         self.orig_query_abunds = orig_query_abunds
 
-        self.cmp_scaled = 1
+        self.cmp_scaled = 0     # initialize with something very low!
         self._update_scaled(cmp_scaled)
 
     def _update_scaled(self, scaled):

@@ -1,7 +1,5 @@
 """ingest/import a mash or other signature"""
 
-import sys
-
 
 def subparser(subparsers):
     # Dirty hack to simultaneously support new and previous interface

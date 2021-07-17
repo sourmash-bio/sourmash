@@ -7,6 +7,7 @@ from enum import Enum
 import traceback
 import gzip
 import zipfile
+from io import StringIO
 
 import screed
 import sourmash
@@ -19,7 +20,8 @@ from .logging import notify, error, debug_literal
 
 from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
 from . import signature as sigmod
-from .picklist import SignaturePicklist
+from .picklist import SignaturePicklist, PickStyle
+from .manifest import CollectionManifest
 
 
 DEFAULT_LOAD_K = 31
@@ -53,7 +55,7 @@ def calculate_moltype(args, default=None):
         n += 1
 
     if n > 1:
-        error("cannot specify more than one of --dna/--rna/--protein/--hp/--dayhoff")
+        error("cannot specify more than one of --dna/--rna/--nucleotide/--protein/--hp/--dayhoff")
         sys.exit(-1)
 
     return moltype
@@ -84,10 +86,15 @@ def load_picklist(args):
 
 
 def report_picklist(args, picklist):
-    notify(f"for given picklist, found {len(picklist.found)} matches to {len(picklist.pickset)} distinct values")
-    n_missing = len(picklist.pickset - picklist.found)
+    if picklist.pickstyle == PickStyle.INCLUDE:
+        notify(f"for given picklist, found {len(picklist.found)} matches to {len(picklist.pickset)} distinct values")
+        n_missing = len(picklist.pickset - picklist.found)
+    elif picklist.pickstyle == PickStyle.EXCLUDE:
+        notify(f"for given picklist, found {len(picklist.found)} matches by excluding {len(picklist.pickset)} distinct values")
+        n_missing = 0
     if n_missing:
         notify(f"WARNING: {n_missing} missing picklist values.")
+        # Note - picklist_require_all is currently only relevant for PickStyle.INCLUDE
         if args.picklist_require_all:
             error("ERROR: failing because --picklist-require-all was set")
             sys.exit(-1)
@@ -271,16 +278,6 @@ def _multiindex_load_from_path(filename, **kwargs):
     return db
 
 
-def _load_sigfile(filename, **kwargs):
-    "Load collection from a signature JSON file"
-    try:
-        db = LinearIndex.load(filename)
-    except sourmash.exceptions.SourmashError as exc:
-        raise ValueError(exc)
-
-    return db
-
-
 def _load_sbt(filename, **kwargs):
     "Load collection from an SBT."
     cache_size = kwargs.get('cache_size')
@@ -312,8 +309,7 @@ def _load_zipfile(filename, **kwargs):
 # all loader functions, in order.
 _loader_functions = [
     ("load from stdin", _load_stdin),
-    ("load from directory", _multiindex_load_from_path),
-    ("load from sig file", _load_sigfile),
+    ("load from path (file or directory)", _multiindex_load_from_path),
     ("load from file list", _multiindex_load_from_pathlist),
     ("load SBT", _load_sbt),
     ("load revindex", _load_revindex),
@@ -332,14 +328,14 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
 
     # iterate through loader functions, trying them all. Catch ValueError
     # but nothing else.
-    for (desc, load_fn) in _loader_functions:
+    for n, (desc, load_fn) in enumerate(_loader_functions):
         try:
-            debug_literal(f"_load_databases: trying loader fn {desc}")
+            debug_literal(f"_load_databases: trying loader fn {n} {desc}")
             db = load_fn(filename,
                          traverse_yield_all=traverse_yield_all,
                          cache_size=cache_size)
         except ValueError:
-            debug_literal(f"_load_databases: FAIL on fn {desc}.")
+            debug_literal(f"_load_databases: FAIL on fn {n} {desc}.")
             debug_literal(traceback.format_exc())
 
         if db is not None:
@@ -393,7 +389,8 @@ def load_file_as_index(filename, *, yield_all_files=False):
 def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
                             picklist=None,
                             yield_all_files=False,
-                            progress=None):
+                            progress=None,
+                            _use_manifest=True):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
     If 'filename' contains an SBT or LCA indexed database, or a regular
@@ -414,6 +411,11 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
         progress.notify(filename)
 
     db = _load_database(filename, yield_all_files)
+
+    # test fixture ;)
+    if not _use_manifest and db.manifest:
+        db.manifest = None
+
     db = db.select(moltype=select_moltype, ksize=ksize, picklist=picklist)
     loader = db.signatures()
 
@@ -435,7 +437,7 @@ def load_pathlist_from_file(filename):
             if not os.path.exists(checkfile):
                 raise ValueError(f"file '{checkfile}' inside the pathlist does not exist")
     except IOError:
-        raise ValueError(f"pathlist file '{filename}' does not exist")    
+        raise ValueError(f"pathlist file '{filename}' does not exist")
     except OSError:
         raise ValueError(f"cannot open file '{filename}'")
     except UnicodeDecodeError:
@@ -526,10 +528,10 @@ class SignatureLoadingProgress(object):
     Instantiate this class once, and then pass it to load_file_as_signatures
     with progress=<obj>.
 
-    Alternatively, call obj.start_file(filename, iter) each time you
+    Alternatively, call obj.start_file(location, iter) each time you
     start loading signatures from a new file via iter.
 
-    You can optionally notify of reading a file with `.notify(filename)`.
+    You can optionally notify of reading a file with `.notify(location)`.
     """
     def __init__(self, reporting_interval=10):
         self.n_sig = 0
@@ -555,11 +557,10 @@ class SignatureLoadingProgress(object):
 
         notify(msg, end=end)
 
-    def notify(self, filename):
-        self.short_notify("...reading from file '{}'",
-                          filename, end='\r')
+    def notify(self, location):
+        self.short_notify(f"...{self.n_sig} sigs so far. Now reading from file '{location}'", end='\r')
 
-    def start_file(self, filename, loader):
+    def start_file(self, location, loader):
         n_this = 0
         n_before = self.n_sig
 
@@ -570,7 +571,7 @@ class SignatureLoadingProgress(object):
                 n_total = n_before + n_this
                 if n_this and n_total % self.interval == 0:
                     self.short_notify("...loading from '{}' / {} sigs total",
-                                      filename, n_total, end='\r')
+                                      location, n_total, end='\r')
 
                 yield result
         except KeyboardInterrupt:
@@ -580,7 +581,51 @@ class SignatureLoadingProgress(object):
         finally:
             self.n_sig += n_this
 
-        self.short_notify("loaded {} sigs from '{}'", n_this, filename)
+        self.short_notify(f"Loaded {n_this} sigs from '{location}'",
+                          end='\r')
+
+
+def load_many_signatures(locations, progress, *, yield_all_files=False,
+                         ksize=None, moltype=None, picklist=None, force=False):
+    """
+    Load many signatures from multiple files, with progress indicators.
+
+    Takes ksize, moltype, and picklist selectors.
+
+    If 'yield_all_files=True' then tries to load all files in specified
+    directories.
+
+    If 'force=True' then continues past survivable errors.
+
+    Yields (sig, location) tuples.
+    """
+    for loc in locations:
+        try:
+            idx = load_file_as_index(loc, yield_all_files=yield_all_files)
+            idx = idx.select(ksize=ksize, moltype=moltype, picklist=picklist)
+
+            loader = idx.signatures_with_location()
+
+            n = 0
+            for sig, sigloc in progress.start_file(loc, loader):
+                yield sig, sigloc
+                n += 1
+            notify(f"loaded {n} isgnatures from '{loc}'", end='\r')
+        except ValueError as exc:
+            # trap expected errors, and either power through or display + exit.
+            if force:
+                notify("ERROR: {}", str(exc))
+                notify("(continuing)")
+                continue
+            else:
+                notify("ERROR: {}". str(exc))
+                sys.exit(-1)
+        except KeyboardInterrupt:
+            notify("Received CTRL-C - exiting.")
+            sys.exit(-1)
+
+    n_files = len(locations)
+    notify(f"loaded {len(progress)} signatures total, from {n_files} files")
 
 
 #
@@ -632,7 +677,7 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
     "Save signatures within a directory, using md5sum names."
     def __init__(self, location):
         super().__init__(location)
-        
+
     def __repr__(self):
         return f"SaveSignatures_Directory('{self.location}')"
 
@@ -709,15 +754,32 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
     def __init__(self, location):
         super().__init__(location)
         self.zf = None
-        
+
     def __repr__(self):
         return f"SaveSignatures_ZipFile('{self.location}')"
 
     def close(self):
+        # finish constructing manifest object & save
+        manifest = CollectionManifest(self.manifest_rows)
+        manifest_name = f"SOURMASH-MANIFEST.csv"
+
+        manifest_fp = StringIO()
+        manifest.write_to_csv(manifest_fp, write_header=True)
+        manifest_data = manifest_fp.getvalue().encode("utf-8")
+
+        # compress the manifest --
+        self.zf.writestr(manifest_name, manifest_data,
+                         compress_type=zipfile.ZIP_DEFLATED)
+
+        # set permissions:
+        zi = self.zf.getinfo(manifest_name)
+        zi.external_attr = 0o444 << 16 # give a+r access
+
         self.zf.close()
 
     def open(self):
         self.zf = zipfile.ZipFile(self.location, 'w', zipfile.ZIP_STORED)
+        self.manifest_rows = []
 
     def _exists(self, name):
         try:
@@ -745,6 +807,15 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
 
         json_str = sourmash.save_signatures([ss], compression=1)
         self.zf.writestr(outname, json_str)
+
+        # set permissions:
+        zi = self.zf.getinfo(outname)
+        zi.external_attr = 0o444 << 16 # give a+r access
+
+        # update manifest
+        row = CollectionManifest.make_manifest_row(ss, outname,
+                                                   include_signature=False)
+        self.manifest_rows.append(row)
 
 
 class SigFileSaveType(Enum):

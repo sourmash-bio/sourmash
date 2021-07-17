@@ -1924,6 +1924,16 @@ def test_intersection_7_full_scaled():
     assert mh1.intersection_and_union_size(mh2) == (50, 150)
 
 
+def test_intersection_and_union_8_incompatible_ksize():
+    # cannot intersect different ksizes
+    mh1 = MinHash(0, 21, scaled=1)
+    mh2 = MinHash(0, 31, scaled=1)
+
+    with pytest.raises(TypeError) as exc:
+        mh1.intersection_and_union_size(mh2)
+    assert "incompatible MinHash objects" in str(exc)
+
+
 def test_merge_abund():
     mh1 = MinHash(10, 21, track_abundance=True)
     mh2 = MinHash(10, 21, track_abundance=True)
