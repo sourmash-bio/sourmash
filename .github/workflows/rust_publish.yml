@@ -18,9 +18,10 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: install
-          args: --force wasm-pack --version 0.8.1
+          args: --force wasm-pack --version 0.10.0
       - name: run wasm-pack
-        run: wasm-pack build src/core -d ../../pkg
+        run: |
+          wasm-pack build src/core -d ../../pkg
 
       - name: Prepare node for NPM publishing
         uses: actions/setup-node@v1
@@ -29,7 +30,8 @@ jobs:
           registry-url: https://registry.npmjs.org/
 
       - name: Publish to NPM
-        run: '(cd pkg && npm publish)'
+        working-directory: pkg
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

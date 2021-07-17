@@ -12,6 +12,7 @@ from . import extract
 from . import filter
 from . import flatten
 from . import intersect
+from . import manifest
 from . import merge
 from . import rename
 from . import subtract

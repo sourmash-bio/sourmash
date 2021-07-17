@@ -1,6 +1,5 @@
 """'sourmash import_csv' description goes here"""
 
-import sys
 from sourmash.logging import notify
 
 

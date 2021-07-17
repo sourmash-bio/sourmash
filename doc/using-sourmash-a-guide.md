@@ -8,7 +8,7 @@ So! You've installed sourmash, run a few of the tutorials and commands,
 and now you actually want to *use* it.  This guide is here to answer some
 of your questions, and explain why we can't answer others.
 
-(If you have additional questions, please [file an issue!](https://github.com/dib-lab/sourmash/issues))
+(If you have additional questions, please [file an issue!](https://github.com/sourmash-bio/sourmash/issues))
 
 ## What k-mer size(s) should I use?
 
