@@ -192,10 +192,10 @@ impl Iterator for SeqToHashes {
                         });
                     }
                     self.kmer_index = self.max_index;
-                    Some(Ok(self._hashes_buffer.pop().unwrap()))
+                    Some(Ok(self._hashes_buffer.remove(0)))
                 } else {
-                    let last_element: u64 = self._hashes_buffer.pop().unwrap();
-                    Some(Ok(last_element))
+                    let first_element: u64 = self._hashes_buffer.remove(0);
+                    Some(Ok(first_element))
                 }
             } else if self._hashes_buffer.is_empty() {
                 // Processing protein
@@ -215,7 +215,7 @@ impl Iterator for SeqToHashes {
                         self._hashes_buffer.push(hash);
                     }
                     self.kmer_index = len;
-                    return Some(Ok(self._hashes_buffer.pop().unwrap()));
+                    return Some(Ok(self._hashes_buffer.remove(0)));
                 }
 
                 let aa_seq: Vec<_> = match hash_function {
@@ -237,11 +237,10 @@ impl Iterator for SeqToHashes {
                     self._hashes_buffer.push(hash);
                 }
                 self.kmer_index = self.max_index;
-                Some(Ok(self._hashes_buffer.pop().unwrap()))
+                Some(Ok(self._hashes_buffer.remove(0)))
             } else {
                 self.kmer_index = self.max_index;
-                let last_element: u64 = self._hashes_buffer.pop().unwrap();
-                Some(Ok(last_element))
+                Some(Ok(self._hashes_buffer.remove(0)))
             }
         } else {
             // End the iterator
