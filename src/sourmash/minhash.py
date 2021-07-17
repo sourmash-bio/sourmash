@@ -298,7 +298,7 @@ class MinHash(RustObject):
     def seq_to_hashes(self, sequence, *, force=False, is_protein=False):
         "Convert sequence to hashes without adding to the sketch."
 
-        if is_protein and self.moltype not in ["protein", "dayhoff"]:
+        if is_protein and self.moltype not in ["protein", "dayhoff", "hp"]:
             raise ValueError("cannot add protein sequence to DNA MinHash")
 
         size = ffi.new("uintptr_t *")
