@@ -351,7 +351,6 @@ def test_protein_kmers():
 
     # first calculate seq to hashes
     hashes = mh.seq_to_hashes(seq, is_protein=True)
-    hashes = list(reversed(hashes)) # @CTB
 
     # then calculate all hashes for the sequence
     mh.add_protein(seq)
@@ -385,7 +384,6 @@ def test_dayhoff_kmers():
 
     # first calculate seq to hashes
     hashes = mh.seq_to_hashes(seq, is_protein=True)
-    hashes = list(reversed(hashes)) # @CTB
 
     # then calculate all hashes for the sequence
     mh.add_protein(seq)
@@ -419,7 +417,6 @@ def test_hp_kmers():
 
     # first calculate seq to hashes
     hashes = mh.seq_to_hashes(seq, is_protein=True)
-    hashes = list(reversed(hashes)) # @CTB
 
     # then calculate all hashes for the sequence
     mh.add_protein(seq)
