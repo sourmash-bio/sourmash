@@ -2,7 +2,7 @@
 
 usage="""
 
-    sourmash tax genome --gather-csv [gather_csv(s)] --taxonomy-csv [taxonomy-csv(s)]
+    sourmash tax genome --gather-csv <gather_csv> [ ... ] --taxonomy-csv <taxonomy-csv> [ ... ]
 
 The 'tax genome' command reads in genome gather result CSVs and reports likely
 classification for each query genome.
@@ -50,7 +50,7 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
-        '-t', '--taxonomy-csv',  metavar='FILE',
+        '-t', '--taxonomy-csv', '--taxonomy', metavar='FILE',
         nargs='+', required=True,
         help='database lineages CSV'
     )

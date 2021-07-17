@@ -17,9 +17,6 @@ use crate::signature::SigsTrait;
 use crate::sketch::hyperloglog::HyperLogLog;
 use crate::Error;
 
-#[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
-use wasm_bindgen::prelude::*;
-
 pub fn max_hash_for_scaled(scaled: u64) -> u64 {
     match scaled {
         0 => 0,
@@ -35,7 +32,6 @@ pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
     }
 }
 
-#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[derive(Debug, TypedBuilder)]
 pub struct KmerMinHash {
     num: u32,
@@ -939,7 +935,6 @@ mod test {
 //#############
 // A MinHash implementation for low scaled or large cardinalities
 
-#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[derive(Debug, TypedBuilder)]
 pub struct KmerMinHashBTree {
     num: u32,

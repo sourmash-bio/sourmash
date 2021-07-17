@@ -1,5 +1,7 @@
 from glob import glob
 import os
+import argparse
+from sourmash.logging import notify
 
 
 def add_moltype_args(parser):
@@ -58,9 +60,9 @@ def range_limited_float_type(arg):
     try:
         f = float(arg)
     except ValueError:
-        raise argparse.ArgumentTypeError("Must be a floating point number")
+        raise argparse.ArgumentTypeError("\n\tERROR: Must be a floating point number.")
     if f < min_val or f > max_val:
-        raise argparse.ArgumentTypeError(f"Argument must be >{str(min_val)} and <{str(max_val)}")
+        raise argparse.ArgumentTypeError(f"\n\tERROR: Argument must be >{str(min_val)} and <{str(max_val)}.")
     return f
 
 
@@ -92,3 +94,26 @@ def command_list(dirpath):
     basenames = [os.path.splitext(path)[0] for path in filenames if not path.startswith('__')]
     basenames = filter(opfilter, basenames)
     return sorted(basenames)
+
+
+def check_scaled_bounds(arg):
+    actual_min_val = 0
+    min_val = 100
+    max_val = 1e6
+
+    f = float(arg)
+
+    if f < actual_min_val:
+        raise argparse.ArgumentTypeError(f"ERROR: --scaled value must be positive")
+    if f < min_val:
+        notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
+    if f > max_val:
+        notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
+    return f
+
+
+def add_scaled_arg(parser, default=None):
+    parser.add_argument(
+        '--scaled', metavar='FLOAT', type=check_scaled_bounds,
+        help='scaled value should be between 100 and 1e6'
+    )

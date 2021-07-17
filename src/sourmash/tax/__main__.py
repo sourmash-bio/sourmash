@@ -12,7 +12,7 @@ from sourmash.logging import set_quiet, error, notify
 from sourmash.lca.lca_utils import display_lineage
 
 from . import tax_utils
-from .tax_utils import ClassificationResult
+from .tax_utils import ClassificationResult, MultiLineageDB
 
 usage='''
 sourmash taxonomy <command> [<args>] - manipulate/work with taxonomy information.
@@ -33,8 +33,10 @@ sourmash taxonomy metagenome -h
 
 # some utils
 def make_outfile(base, output_type, *, output_dir = ""):
+    limit_float_decimals=False
     if base == "-":
-        return base
+        limit_float_decimals=True
+        return base, limit_float_decimals
     ext=""
     if output_type == 'csv_summary':
         ext = '.summarized.csv'
@@ -50,7 +52,7 @@ def make_outfile(base, output_type, *, output_dir = ""):
     if output_dir:
         fname = os.path.join(output_dir, fname)
     notify(f"saving `{output_type}` output to {fname}.")
-    return fname
+    return fname, limit_float_decimals
 
 
 ##### taxonomy command line functions
@@ -61,21 +63,15 @@ def metagenome(args):
     set_quiet(args.quiet)
 
     # first, load taxonomic_assignments
-    tax_assign = {}
-    available_ranks = set()
-    for tax_csv in args.taxonomy_csv:
-
-        try:
-            this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
-                                              keep_identifier_versions = args.keep_identifier_versions,
-                                              force=args.force)
-            # maybe check for overlapping tax assignments? currently, later ones will override earlier ones
-            tax_assign.update(this_tax_assign)
-            available_ranks.update(set(avail_ranks))
-
-        except ValueError as exc:
-            error(f"ERROR: {str(exc)}")
-            sys.exit(-1)
+    try:
+        tax_assign = MultiLineageDB.load(args.taxonomy_csv,
+                       keep_full_identifiers=args.keep_full_identifiers,
+                       keep_identifier_versions=args.keep_identifier_versions,
+                       force=args.force)
+        available_ranks = tax_assign.available_ranks
+    except ValueError as exc:
+        error(f"ERROR: {str(exc)}")
+        sys.exit(-1)
 
     if not tax_assign:
         error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
@@ -102,20 +98,25 @@ def metagenome(args):
     summarized_gather = {}
     seen_perfect = set()
     for rank in sourmash.lca.taxlist(include_strain=False):
-        summarized_gather[rank], seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                                split_identifiers=not args.keep_full_identifiers,
+        try:
+            summarized_gather[rank], seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
+                                                                keep_full_identifiers=args.keep_full_identifiers,
                                                                 keep_identifier_versions = args.keep_identifier_versions,
                                                                 seen_perfect = seen_perfect)
 
+        except ValueError as exc:
+            error(f"ERROR: {str(exc)}")
+            sys.exit(-1)
+
     # write summarized output csv
     if "csv_summary" in args.output_format:
-        summary_outfile = make_outfile(args.output_base, "csv_summary", output_dir=args.output_dir)
+        summary_outfile, limit_float = make_outfile(args.output_base, "csv_summary", output_dir=args.output_dir)
         with FileOutputCSV(summary_outfile) as out_fp:
-            tax_utils.write_summary(summarized_gather, out_fp)
+            tax_utils.write_summary(summarized_gather, out_fp, limit_float_decimals=limit_float)
 
     # if lineage summary table
     if "lineage_summary" in args.output_format:
-        lineage_outfile = make_outfile(args.output_base, "lineage_summary", output_dir=args.output_dir)
+        lineage_outfile, limit_float = make_outfile(args.output_base, "lineage_summary", output_dir=args.output_dir)
 
         ## aggregate by lineage, by query
         lineageD, query_names, num_queries = tax_utils.aggregate_by_lineage_at_rank(summarized_gather[args.rank], by_query=True)
@@ -127,7 +128,7 @@ def metagenome(args):
     if "krona" in args.output_format:
         krona_resultslist = tax_utils.format_for_krona(args.rank, summarized_gather)
 
-        krona_outfile = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
+        krona_outfile, limit_float = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
         with FileOutputCSV(krona_outfile) as out_fp:
             tax_utils.write_krona(args.rank, krona_resultslist, out_fp)
 
@@ -139,19 +140,15 @@ def genome(args):
     set_quiet(args.quiet)
 
     # first, load taxonomic_assignments
-    tax_assign = {}
-    available_ranks = set()
-    for tax_csv in args.taxonomy_csv:
-
-        try:
-            this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
-                                              keep_identifier_versions = args.keep_identifier_versions,
-                                              force=args.force)
-            # maybe check for overlapping tax assignments? currently later ones will override earlier ones
-            tax_assign.update(this_tax_assign)
-            available_ranks.update(set(avail_ranks))
-        except ValueError as exc:
-            error(f"ERROR: {str(exc)}")
+    try:
+        tax_assign = MultiLineageDB.load(args.taxonomy_csv,
+                       keep_full_identifiers=args.keep_full_identifiers,
+                       keep_identifier_versions=args.keep_identifier_versions,
+                       force=args.force)
+        available_ranks = tax_assign.available_ranks
+    except ValueError as exc:
+        error(f"ERROR: {str(exc)}")
+        sys.exit(-1)
 
     if not tax_assign:
         error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
@@ -183,10 +180,14 @@ def genome(args):
 
     # if --rank is specified, classify to that rank
     if args.rank:
-        best_at_rank, seen_perfect = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                     split_identifiers=not args.keep_full_identifiers,
+        try:
+            best_at_rank, seen_perfect = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
+                                                     keep_full_identifiers=args.keep_full_identifiers,
                                                      keep_identifier_versions = args.keep_identifier_versions,
                                                      best_only=True, seen_perfect=seen_perfect)
+        except ValueError as exc:
+            error(f"ERROR: {str(exc)}")
+            sys.exit(-1)
 
        # best at rank is a list of SummarizedGather tuples
         for sg in best_at_rank:
@@ -198,7 +199,7 @@ def genome(args):
                 notify(f"WARNING: classifying query {sg.query_name} at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
             else:
                 status="match"
-            classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename)
+            classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename, sg.f_weighted_at_rank, sg.bp_match_at_rank)
             classifications[args.rank].append(classif)
             matched_queries.add(sg.query_name)
             if "krona" in args.output_format:
@@ -209,10 +210,14 @@ def genome(args):
         # To do - do we want to store anything for this match if nothing >= containment threshold?
         for rank in tax_utils.ascending_taxlist(include_strain=False):
             # gets best_at_rank for all queries in this gather_csv
-            best_at_rank, seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                         split_identifiers=not args.keep_full_identifiers,
+            try:
+                best_at_rank, seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
+                                                         keep_full_identifiers=args.keep_full_identifiers,
                                                          keep_identifier_versions = args.keep_identifier_versions,
                                                          best_only=True, seen_perfect=seen_perfect)
+            except ValueError as exc:
+                error(f"ERROR: {str(exc)}")
+                sys.exit(-1)
 
             for sg in best_at_rank:
                 status = 'nomatch'
@@ -220,7 +225,7 @@ def genome(args):
                     continue
                 if sg.fraction >= args.containment_threshold:
                     status = "match"
-                    classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename)
+                    classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename, sg.f_weighted_at_rank, sg.bp_match_at_rank)
                     classifications[sg.rank].append(classif)
                     matched_queries.add(sg.query_name)
                     continue
@@ -228,7 +233,8 @@ def genome(args):
                     status="below_threshold"
                     classif = ClassificationResult(query_name=sg.query_name, status=status,
                                                    rank="", fraction=0, lineage="",
-                                                   query_md5=sg.query_md5, query_filename=sg.query_filename)
+                                                   query_md5=sg.query_md5, query_filename=sg.query_filename,
+                                                   f_weighted_at_rank=sg.f_weighted_at_rank, bp_match_at_rank=sg.bp_match_at_rank)
                     classifications[sg.rank].append(classif)
 
     if not any([classifications, krona_results]):
@@ -237,12 +243,12 @@ def genome(args):
 
     # write outputs
     if "csv_summary" in args.output_format:
-        summary_outfile = make_outfile(args.output_base, "classification", output_dir=args.output_dir)
+        summary_outfile, limit_float = make_outfile(args.output_base, "classification", output_dir=args.output_dir)
         with FileOutputCSV(summary_outfile) as out_fp:
-            tax_utils.write_classifications(classifications, out_fp)
+            tax_utils.write_classifications(classifications, out_fp, limit_float_decimals=limit_float)
 
     if "krona" in args.output_format:
-        krona_outfile = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
+        krona_outfile, limit_float = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
         with FileOutputCSV(krona_outfile) as out_fp:
             tax_utils.write_krona(args.rank, krona_results, out_fp)
 
@@ -257,21 +263,14 @@ def annotate(args):
     set_quiet(args.quiet)
 
     # first, load taxonomic_assignments
-    tax_assign = {}
-    this_tax_assign = None
-    for tax_csv in args.taxonomy_csv:
-
-        try:
-            this_tax_assign, _, avail_ranks = tax_utils.load_taxonomy_csv(tax_csv, split_identifiers=not args.keep_full_identifiers,
-                                              keep_identifier_versions = args.keep_identifier_versions,
-                                              force=args.force)
-        except ValueError as exc:
-            error(f"ERROR: {str(exc)}")
-            sys.exit(-1)
-
-        # maybe check for overlapping tax assignments? currently later ones will override earlier ones
-        if this_tax_assign:
-            tax_assign.update(this_tax_assign)
+    try:
+        tax_assign = MultiLineageDB.load(args.taxonomy_csv,
+                       keep_full_identifiers=args.keep_full_identifiers,
+                       keep_identifier_versions=args.keep_identifier_versions,
+                       force=args.force)
+    except ValueError as exc:
+        error(f"ERROR: {str(exc)}")
+        sys.exit(-1)
 
     if not tax_assign:
         error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
@@ -289,7 +288,7 @@ def annotate(args):
             continue
 
         out_base = os.path.basename(g_csv.rsplit('.csv')[0])
-        this_outfile = make_outfile(out_base, "annotate", output_dir=args.output_dir)
+        this_outfile, limit_float = make_outfile(out_base, "annotate", output_dir=args.output_dir)
 
         with FileOutputCSV(this_outfile) as out_fp:
             header.append("lineage")
@@ -300,10 +299,35 @@ def annotate(args):
             for row in gather_results:
                 match_ident = row['name']
                 lineage = tax_utils.find_match_lineage(match_ident, tax_assign, skip_idents=idents_missed,
-                                             split_identifiers=not args.keep_full_identifiers,
+                                             keep_full_identifiers=args.keep_full_identifiers,
                                              keep_identifier_versions=args.keep_identifier_versions)
                 row['lineage'] = display_lineage(lineage)
                 w.writerow(row)
+
+
+def prepare(args):
+    "Combine multiple taxonomy databases into one and/or translate formats."
+    notify("loading taxonomies...")
+    try:
+        tax_assign = MultiLineageDB.load(args.taxonomy_csv,
+                       keep_full_identifiers=args.keep_full_identifiers,
+                       keep_identifier_versions=args.keep_identifier_versions)
+    except ValueError as exc:
+        error("ERROR while loading taxonomies!")
+        error(str(exc))
+        sys.exit(-1)
+
+    notify(f"...loaded {len(tax_assign)} entries.")
+
+    notify(f"saving to '{args.output}', format {args.database_format}...")
+    try:
+        tax_assign.save(args.output, args.database_format)
+    except ValueError as exc:
+        error("ERROR while saving!")
+        error(str(exc))
+        sys.exit(-1)
+
+    notify("done!")
 
 
 def main(arglist=None):

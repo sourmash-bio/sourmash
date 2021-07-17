@@ -278,19 +278,6 @@ def _multiindex_load_from_path(filename, **kwargs):
     return db
 
 
-def _load_sigfile(filename, **kwargs):
-    "Load collection from a signature JSON file"
-    # CTB: note, all .sig files are loaded by _multiindex_load_from_path,
-    # before this function is called; this effectively only loads
-    # files not named .sig.
-    try:
-        db = LinearIndex.load(filename)
-    except sourmash.exceptions.SourmashError as exc:
-        raise ValueError(exc)
-
-    return db
-
-
 def _load_sbt(filename, **kwargs):
     "Load collection from an SBT."
     cache_size = kwargs.get('cache_size')
@@ -322,8 +309,7 @@ def _load_zipfile(filename, **kwargs):
 # all loader functions, in order.
 _loader_functions = [
     ("load from stdin", _load_stdin),
-    ("load from directory", _multiindex_load_from_path),
-    ("load from sig file", _load_sigfile),
+    ("load from path (file or directory)", _multiindex_load_from_path),
     ("load from file list", _multiindex_load_from_pathlist),
     ("load SBT", _load_sbt),
     ("load revindex", _load_revindex),
@@ -342,14 +328,14 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
 
     # iterate through loader functions, trying them all. Catch ValueError
     # but nothing else.
-    for (desc, load_fn) in _loader_functions:
+    for n, (desc, load_fn) in enumerate(_loader_functions):
         try:
-            debug_literal(f"_load_databases: trying loader fn {desc}")
+            debug_literal(f"_load_databases: trying loader fn {n} {desc}")
             db = load_fn(filename,
                          traverse_yield_all=traverse_yield_all,
                          cache_size=cache_size)
         except ValueError:
-            debug_literal(f"_load_databases: FAIL on fn {desc}.")
+            debug_literal(f"_load_databases: FAIL on fn {n} {desc}.")
             debug_literal(traceback.format_exc())
 
         if db is not None:
@@ -542,10 +528,10 @@ class SignatureLoadingProgress(object):
     Instantiate this class once, and then pass it to load_file_as_signatures
     with progress=<obj>.
 
-    Alternatively, call obj.start_file(filename, iter) each time you
+    Alternatively, call obj.start_file(location, iter) each time you
     start loading signatures from a new file via iter.
 
-    You can optionally notify of reading a file with `.notify(filename)`.
+    You can optionally notify of reading a file with `.notify(location)`.
     """
     def __init__(self, reporting_interval=10):
         self.n_sig = 0
@@ -571,11 +557,10 @@ class SignatureLoadingProgress(object):
 
         notify(msg, end=end)
 
-    def notify(self, filename):
-        self.short_notify("...reading from file '{}'",
-                          filename, end='\r')
+    def notify(self, location):
+        self.short_notify(f"...{self.n_sig} sigs so far. Now reading from file '{location}'", end='\r')
 
-    def start_file(self, filename, loader):
+    def start_file(self, location, loader):
         n_this = 0
         n_before = self.n_sig
 
@@ -586,7 +571,7 @@ class SignatureLoadingProgress(object):
                 n_total = n_before + n_this
                 if n_this and n_total % self.interval == 0:
                     self.short_notify("...loading from '{}' / {} sigs total",
-                                      filename, n_total, end='\r')
+                                      location, n_total, end='\r')
 
                 yield result
         except KeyboardInterrupt:
@@ -596,7 +581,51 @@ class SignatureLoadingProgress(object):
         finally:
             self.n_sig += n_this
 
-        self.short_notify("loaded {} sigs from '{}'", n_this, filename)
+        self.short_notify(f"Loaded {n_this} sigs from '{location}'",
+                          end='\r')
+
+
+def load_many_signatures(locations, progress, *, yield_all_files=False,
+                         ksize=None, moltype=None, picklist=None, force=False):
+    """
+    Load many signatures from multiple files, with progress indicators.
+
+    Takes ksize, moltype, and picklist selectors.
+
+    If 'yield_all_files=True' then tries to load all files in specified
+    directories.
+
+    If 'force=True' then continues past survivable errors.
+
+    Yields (sig, location) tuples.
+    """
+    for loc in locations:
+        try:
+            idx = load_file_as_index(loc, yield_all_files=yield_all_files)
+            idx = idx.select(ksize=ksize, moltype=moltype, picklist=picklist)
+
+            loader = idx.signatures_with_location()
+
+            n = 0
+            for sig, sigloc in progress.start_file(loc, loader):
+                yield sig, sigloc
+                n += 1
+            notify(f"loaded {n} isgnatures from '{loc}'", end='\r')
+        except ValueError as exc:
+            # trap expected errors, and either power through or display + exit.
+            if force:
+                notify("ERROR: {}", str(exc))
+                notify("(continuing)")
+                continue
+            else:
+                notify("ERROR: {}". str(exc))
+                sys.exit(-1)
+        except KeyboardInterrupt:
+            notify("Received CTRL-C - exiting.")
+            sys.exit(-1)
+
+    n_files = len(locations)
+    notify(f"loaded {len(progress)} signatures total, from {n_files} files")
 
 
 #

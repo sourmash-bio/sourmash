@@ -1803,6 +1803,48 @@ def test_search_4():
 
 
 @utils.in_tempdir
+def test_index_check_scaled_bounds_negative(c):
+    with utils.TempDirectory() as location:
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig',
+                                            '-k', '31', '--scaled', '-5',
+                                            '--dna'],
+                                           in_directory=location, fail_ok=True)
+
+        assert "ERROR: --scaled value must be positive" in err
+
+
+@utils.in_tempdir
+def test_index_check_scaled_bounds_less_than_minimum(c):
+    with utils.TempDirectory() as location:
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig',
+                                            '-k', '31', '--scaled', '50',
+                                            '--dna'],
+                                           in_directory=location, fail_ok=True)
+
+        assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
+
+
+@utils.in_tempdir
+def test_index_check_scaled_bounds_more_than_maximum(c):
+    with utils.TempDirectory() as location:
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig',
+                                            '-k', '31', '--scaled', '1e9',
+                                            '--dna'],
+                                           in_directory=location, fail_ok=True)
+
+        assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
+
+
+@utils.in_tempdir
 def test_index_metagenome_fromfile(c):
     # test index --from-file
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
@@ -1928,7 +1970,7 @@ def test_search_metagenome_traverse_check_csv():
             r = csv.DictReader(fp)
             for row in r:
                 filename = row['filename']
-                assert filename.startswith(testdata_dir)
+                assert filename.startswith(testdata_dir), filename
                 # should have full path to file sig was loaded from
                 assert len(filename) > prefix_len
 
@@ -1964,6 +2006,51 @@ def test_search_traverse_incompatible(c):
 
     c.run_sourmash("search", scaled_sig, c.output('searchme'))
     assert '100.0%       NC_009665.1 Shewanella baltica OS185, complete genome' in c.last_result.out
+
+
+def test_search_check_scaled_bounds_negative():
+
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = 'search {} gcf_all -k 21 --scaled -5'.format(query_sig)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                            in_directory=location, fail_ok=True)
+
+        assert "ERROR: --scaled value must be positive" in err
+
+
+def test_search_check_scaled_bounds_less_than_minimum():
+
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = 'search {} gcf_all -k 21 --scaled 50'.format(query_sig)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                            in_directory=location, fail_ok=True)
+
+        assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
+
+
+def test_search_check_scaled_bounds_more_than_maximum():
+
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = 'search {} gcf_all -k 21 --scaled 1e9'.format(query_sig)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                            in_directory=location, fail_ok=True)
+
+        assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
 
 
 # explanation: you cannot downsample a scaled SBT to match a scaled
@@ -3482,6 +3569,67 @@ def test_multigather_metagenome():
 
 
 @utils.in_tempdir
+def test_multigather_check_scaled_bounds_negative(c):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+    c.run_sourmash(*cmd)
+
+    cmd = 'multigather --query {} --db gcf_all -k 21 --scaled -5 --threshold-bp=0'.format(query_sig)
+    cmd = cmd.split(' ')
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash(*cmd)
+
+    assert "ERROR: --scaled value must be positive" in str(exc.value)
+
+
+@utils.in_tempdir
+def test_multigather_check_scaled_bounds_less_than_minimum(c):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+    c.run_sourmash(*cmd)
+
+    cmd = 'multigather --query {} --db gcf_all -k 21 --scaled 50 --threshold-bp=0'.format(query_sig)
+    cmd = cmd.split(' ')
+    # Note: this is the value error that is emited, but we want the Warning from below to be generated instead. (ValueError: new scaled 50.0 is lower than current sample scaled 10000)
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash(*cmd)
+
+    assert "WARNING: --scaled value should be >= 100. Continuing anyway." in str(exc.value)
+
+
+@utils.in_tempdir
+def test_multigather_check_scaled_bounds_more_than_maximum(c):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+    c.run_sourmash(*cmd)
+
+    cmd = 'multigather --query {} --db gcf_all -k 21 --scaled 1e9 --threshold-bp=0'.format(query_sig)
+    cmd = cmd.split(' ')
+    
+    c.run_sourmash(*cmd)
+
+    assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in c.last_result.err
+
+
+@utils.in_tempdir
 def test_multigather_metagenome_query_from_file(c):
     # test multigather --query-from-file
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
@@ -4000,6 +4148,54 @@ def test_gather_metagenome_output_unassigned_nomatches_protein(runtmp, linear_ga
 
     assert x.minhash == y.minhash
     assert y.minhash.moltype == "protein"
+
+
+def test_gather_check_scaled_bounds_negative(prefetch_gather, linear_gather):
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = 'gather {} {} {} gcf_all -k 21 --scaled -5 --threshold-bp 50000'.format(query_sig, prefetch_gather, linear_gather)
+
+        status, out, err = utils.runscript('sourmash',
+                                        cmd.split(' '),
+                                        in_directory=location, fail_ok=True)
+
+        assert "ERROR: --scaled value must be positive" in err
+
+
+def test_gather_check_scaled_bounds_less_than_minimum(prefetch_gather, linear_gather):
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = 'gather {} {} {} gcf_all -k 21 --scaled 50 --threshold-bp 50000'.format(query_sig, prefetch_gather, linear_gather)
+
+        status, out, err = utils.runscript('sourmash',
+                                           cmd.split(' '),
+                                           in_directory=location, fail_ok=True)
+
+        assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
+
+
+def test_gather_check_scaled_bounds_more_than_maximum(prefetch_gather, linear_gather):
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = 'gather {} {} {} gcf_all -k 21 --scaled 1e9 --threshold-bp 50000'.format(query_sig, prefetch_gather, linear_gather)
+
+        status, out, err = utils.runscript('sourmash',
+                                           cmd.split(' '),
+                                           in_directory=location, fail_ok=True)
+    
+        assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
 
 
 def test_gather_metagenome_downsample(prefetch_gather, linear_gather):
@@ -5140,3 +5336,243 @@ def test_gather_with_prefetch_picklist(runtmp, linear_gather):
 
     assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
     assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out
+
+
+def test_gather_with_prefetch_picklist_2_prefetch(runtmp, linear_gather):
+    # test 'gather' using a picklist taken from 'sourmash prefetch' output
+    # using ::prefetch
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    prefetch_csv = runtmp.output('prefetch-out.csv')
+
+    runtmp.sourmash('prefetch', metag_sig, *gcf_sigs,
+                    '-k', '21', '-o', prefetch_csv)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "total of 12 matching signatures." in err
+    assert "of 1466 distinct query hashes, 1466 were found in matches above threshold." in err
+
+    # now, do a gather with the results
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs, linear_gather,
+                    '-k', '21', '--picklist',
+                    f'{prefetch_csv}::prefetch')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "found 11 matches total;" in out
+    assert "the recovered matches hit 99.9% of the query" in out
+
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
+    assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out
+
+
+def test_gather_with_prefetch_picklist_3_gather(runtmp, linear_gather):
+    # test 'gather' using a picklist taken from 'sourmash gather' output,
+    # using ::gather.
+    # (this doesn't really do anything useful, but it's an ok test :)
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    gather_csv = runtmp.output('gather-out.csv')
+
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs,
+                    '-k', '21', '-o', gather_csv)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "found 11 matches total;" in out
+    assert "the recovered matches hit 99.9% of the query" in out
+
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
+    assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out
+
+    # now, do another gather with the results
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs, linear_gather,
+                    '-k', '21', '--picklist',
+                    f'{gather_csv}::gather')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "found 11 matches total;" in out
+    assert "the recovered matches hit 99.9% of the query" in out
+
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
+    assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out
+
+
+def test_gather_with_prefetch_picklist_3_gather_badcol(runtmp):
+    # test 'gather' using a picklist taken from 'sourmash gather' output,
+    # using ::gather.
+    # (this doesn't really do anything useful, but it's an ok test :)
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    gather_csv = runtmp.output('gather-out.csv')
+
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs,
+                    '-k', '21', '-o', gather_csv)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "found 11 matches total;" in out
+    assert "the recovered matches hit 99.9% of the query" in out
+
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
+    assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out
+
+    # now, do another gather with the results, but with a bad picklist
+    # parameter
+    with pytest.raises(ValueError):
+        runtmp.sourmash('gather', metag_sig, *gcf_sigs,
+                        '-k', '21', '--picklist',
+                        f'{gather_csv}:FOO:gather')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "ERROR: could not load picklist." in err
+    assert "no column name allowed for coltype 'gather'" in err
+
+
+def test_gather_with_prefetch_picklist_4_manifest(runtmp, linear_gather):
+    # test 'gather' using a picklist taken from 'sourmash sig manifest'
+    # output, using ::manifest.
+    # (this doesn't really do anything useful, but it's an ok test :)
+    gather_dir = utils.get_test_data('gather/')
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    manifest_csv = runtmp.output('manifest.csv')
+
+    runtmp.sourmash('sig', 'manifest', gather_dir, '-o', manifest_csv)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    # now, do a gather on the manifest
+    runtmp.sourmash('gather', metag_sig, gather_dir, linear_gather,
+                    '-k', '21', '--picklist',
+                    f'{manifest_csv}::manifest')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "found 1 matches total;" in out
+    assert "the recovered matches hit 100.0% of the query" in out
+
+    # the query sig itself is in there, so :shrug: that matches at 100%
+    assert "14.7 Mbp     100.0%  100.0%    -" in out
+
+
+def test_gather_with_prefetch_picklist_4_manifest_excl(runtmp, linear_gather):
+    # test 'gather' using a picklist taken from 'sourmash sig manifest'
+    # output, using ::manifest.
+    # (this doesn't really do anything useful, but it's an ok test :)
+    gather_dir = utils.get_test_data('gather/')
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    manifest_csv = runtmp.output('manifest.csv')
+
+    runtmp.sourmash('sig', 'manifest', gather_dir, '-o', manifest_csv)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    # now, do a gather on the manifest
+    runtmp.sourmash('gather', metag_sig, gather_dir, linear_gather,
+                    '-k', '21', '--picklist',
+                    f'{manifest_csv}::manifest:exclude')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    # excluded everything, so nothing to match!
+    assert "found 0 matches total;" in out
+    assert "the recovered matches hit 0.0% of the query" in out
+
+
+def test_gather_with_prefetch_picklist_5_search(runtmp):
+    # test 'gather' using a picklist taken from 'sourmash prefetch' output
+    # using ::prefetch
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+    search_csv = runtmp.output('search-out.csv')
+
+    runtmp.sourmash('search', '--containment', metag_sig, *gcf_sigs,
+                    '-k', '21', '-o', search_csv)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "12 matches; showing first 3:" in out
+    assert " 33.2%       NC_003198.1 Salmonella enterica subsp." in out
+
+    # now, do a gather with the results
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs,
+                    '-k', '21', '--picklist',
+                    f'{search_csv}::search')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "found 11 matches total;" in out
+    assert "the recovered matches hit 99.9% of the query" in out
+
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 " in out
+    assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 " in out
+
+
+def test_gather_scaled_1(runtmp, linear_gather, prefetch_gather):
+    # test gather on a sig indexed with scaled=1
+    inp = utils.get_test_data('short.fa')
+    outp = runtmp.output('out.sig')
+
+    # prepare a signature with a scaled of 1
+    runtmp.sourmash('sketch', 'dna', '-p', 'scaled=1,k=31', inp, '-o', outp)
+
+    # run with a low threshold
+    runtmp.sourmash('gather', outp, outp, '--threshold-bp', '0')
+
+    print(runtmp.last_result.out)
+    print('---')
+    print(runtmp.last_result.err)
+
+    assert "1.0 kbp      100.0%  100.0%" in runtmp.last_result.out
+    assert "found 1 matches total;" in runtmp.last_result.out
