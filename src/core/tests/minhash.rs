@@ -2,14 +2,14 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
-use sourmash::encodings::HashFunctions;
-use sourmash::signature::{Signature, SigsTrait};
-use sourmash::sketch::minhash::{max_hash_for_scaled, KmerMinHash, KmerMinHashBTree};
-use sourmash::sketch::Sketch;
-
 use proptest::collection::vec;
 use proptest::num::u64;
 use proptest::proptest;
+use sourmash::encodings::HashFunctions;
+use sourmash::signature::SeqToHashes;
+use sourmash::signature::{Signature, SigsTrait};
+use sourmash::sketch::minhash::{max_hash_for_scaled, KmerMinHash, KmerMinHashBTree};
+use sourmash::sketch::Sketch;
 
 // TODO: use f64::EPSILON when we bump MSRV
 const EPSILON: f64 = 0.01;
@@ -708,5 +708,30 @@ fn load_save_minhash_dna(seq in "ACGTN{0,1000}") {
 
     assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < EPSILON);
     assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
+}
+}
+
+proptest! {
+#[test]
+fn seq_to_hashes(seq in "ACGTGTAGCTAGACACTGACTGACTGAC") {
+
+    let scaled = 1;
+    let mut mh = KmerMinHash::new(scaled, 21, HashFunctions::murmur64_DNA, 42, true, 0);
+    mh.add_sequence(seq.as_bytes(), false)?; // .unwrap();
+
+    let mut hashes: Vec<u64> = Vec::new();
+
+    for hash_value in SeqToHashes::new(seq.as_bytes(), mh.ksize(), false, false, mh.hash_function(), mh.seed()){
+        match hash_value{
+            Ok(0) => continue,
+            Ok(x) => hashes.push(x),
+            Err(_) => (),
+        }
+    }
+
+    mh.mins().sort();
+    hashes.sort();
+    assert_eq!(mh.mins(), hashes);
+
 }
 }
