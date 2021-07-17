@@ -20,6 +20,7 @@ use crate::sketch::Sketch;
 use crate::Error;
 use crate::HashIntoType;
 
+// Iterator for converting sequence to hashes
 pub struct SeqToHashes {
     sequence: Vec<u8>,
     kmer_index: usize,
@@ -36,7 +37,6 @@ pub struct SeqToHashes {
     _dna_ksize: usize,
     _dna_len: usize,
     _dna_last_position_check: usize,
-    // iter: std::slice::Iter<Result<u64, Error>>,
 }
 
 impl SeqToHashes {
@@ -47,7 +47,6 @@ impl SeqToHashes {
         is_protein: bool,
         hash_function: HashFunctions,
         seed: u64,
-        // iter: std::slice::Iter<'a, T>,
     ) -> SeqToHashes {
         let mut ksize: usize = k_size;
 
@@ -237,6 +236,7 @@ impl Iterator for SeqToHashes {
                     let hash = crate::_hash_murmur(aa_kmer, self.seed);
                     self._hashes_buffer.push(hash);
                 }
+                self.kmer_index = self.max_index;
                 Some(Ok(self._hashes_buffer.pop().unwrap()))
             } else {
                 self.kmer_index = self.max_index;
