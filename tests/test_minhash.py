@@ -148,6 +148,14 @@ def test_bytes_dna(track_abundance):
     assert list(a) == list(b)
     assert len(b) == 1
 
+def test_add_long_seqs_force():
+    # Test for (All kmers are invalid)
+
+    mh = sourmash.minhash.MinHash(n = 0, ksize=21, scaled =10, seed = 42)
+    seq = "ACGTN" * 100000
+    hashes = mh.seq_to_hashes(seq, force = True)
+    assert(len(mh.hashes) == 0)
+
 
 def test_seq_to_hashes(track_abundance):
     mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1, track_abundance=track_abundance)
