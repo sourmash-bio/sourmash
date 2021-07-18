@@ -734,4 +734,28 @@ fn seq_to_hashes(seq in "ACGTGTAGCTAGACACTGACTGACTGAC") {
     assert_eq!(mh.mins(), hashes);
 
 }
+
+#[test]
+fn seq_to_hashes_2(seq in "QRMTHINK") {
+
+    let scaled = 1;
+    let mut mh = KmerMinHash::new(scaled, 3, HashFunctions::murmur64_protein, 42, true, 0);
+    mh.add_protein(seq.as_bytes())?; // .unwrap();
+
+    let mut hashes: Vec<u64> = Vec::new();
+
+    for hash_value in SeqToHashes::new(seq.as_bytes(), mh.ksize(), false, true, mh.hash_function(), mh.seed()){
+        match hash_value{
+            Ok(0) => continue,
+            Ok(x) => hashes.push(x),
+            Err(_) => (),
+        }
+    }
+
+    mh.mins().sort();
+    hashes.sort();
+    assert_eq!(mh.mins(), hashes);
+
+}
+
 }
