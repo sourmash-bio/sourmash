@@ -135,7 +135,7 @@ call `add_protein` on it --
 ```
 >>> K = 7
 >>> mh = MinHash(50, K, is_protein=True)
->>> protseq = 'MVKVYAPAS'
+>>> protseq = "MVKVYAPAS"
 >>> mh.add_protein(protseq)
 
 ```
@@ -206,6 +206,55 @@ of 30.
 If a dayhoff or hp `MinHash` object is used, then `add_sequence(...)`
 will first translate each sequence into protein space in all six frames,
 and then further encode the sequences into Dayhoff or hp encodings.
+
+### Invalid characters in DNA and protein sequences
+
+sourmash detects invalid DNA characters (non-ACTG) and raises an
+exception on `add_sequence`, unless `force=True`, in which case
+k-mers containing invalid characters are ignored.
+```
+>>> dnaseq = "nTGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGC"
+>>> K = 31
+>>> mh = MinHash(50, K)
+>>> mh.add_sequence(dnaseq)
+Traceback (most recent call last):
+    ...
+ValueError: invalid DNA character in input k-mer: NTGCGAGTGTTGAAGTTCGGCGGTACATCAG
+>>> mh.add_sequence(dnaseq, force=True)
+>>> len(mh)
+4
+
+```
+
+For protein sequences, sourmash does not currently do any invalid
+character detection; k-mers are hashed as they are, and can only be
+matched by an identical k-mer (with the same invalid character).
+(Please [file an issue](https://github.com/dib-lab/sourmash/issues) if
+you'd like us to change this!)
+```
+>>> K = 7
+>>> mh = MinHash(50, K, is_protein=True)
+>>> protseq = "XVKVYAPAS"
+>>> mh.add_protein(protseq)
+>>> len(mh)
+3
+
+```
+
+For the Dayhoff and hp encodings on top of amino acids, invalid amino
+acids (any letter for which no encoded character exists) are replaced with
+'X'.
+```
+>>> K = 7
+>>> mh = MinHash(50, K, dayhoff=True)
+>>> protseq1 = ".VKVYAPAS"
+>>> hashes1 = mh.seq_to_hashes(protseq1, is_protein=True)
+>>> protseq2 = "XVKVYAPAS"
+>>> hashes2 = mh.seq_to_hashes(protseq2, is_protein=True)
+>>> hashes1 == hashes2
+True
+
+```
 
 ### Summary
 
