@@ -51,7 +51,7 @@ impl SeqToHashes {
         let mut ksize: usize = k_size;
 
         // Divide the kmer size by 3 if protein
-        if is_protein {
+        if is_protein || !hash_function.dna() {
             ksize = k_size / 3;
         }
 
@@ -148,7 +148,7 @@ impl Iterator for SeqToHashes {
                     Some(Ok(hash))
                 } else if self._hashes_buffer.is_empty() {
                     // Processing protein by translating DNA
-                    let aa_ksize = self.k_size / 3;
+                    // TODO: make it a real iterator not a buffer
 
                     // Three frames
                     for i in 0..3 {
@@ -167,7 +167,7 @@ impl Iterator for SeqToHashes {
                         )
                         .unwrap();
 
-                        aa.windows(aa_ksize as usize).for_each(|n| {
+                        aa.windows(self.k_size as usize).for_each(|n| {
                             let hash = crate::_hash_murmur(n, self.seed);
                             self._hashes_buffer.push(hash);
                         });
@@ -186,7 +186,7 @@ impl Iterator for SeqToHashes {
                         )
                         .unwrap();
 
-                        aa_rc.windows(aa_ksize as usize).for_each(|n| {
+                        aa_rc.windows(self.k_size as usize).for_each(|n| {
                             let hash = crate::_hash_murmur(n, self.seed);
                             self._hashes_buffer.push(hash);
                         });
@@ -201,24 +201,16 @@ impl Iterator for SeqToHashes {
                 // Processing protein
                 // The kmer size is already divided by 3
 
-                let ksize = self.k_size as usize;
-                let len = self.sequence.len();
-                let hash_function = self.hash_function;
-
-                if len < ksize {
-                    return None;
-                }
-
-                if hash_function.protein() {
-                    for aa_kmer in self.sequence.windows(ksize) {
+                if self.hash_function.protein() {
+                    for aa_kmer in self.sequence.windows(self.k_size) {
                         let hash = crate::_hash_murmur(aa_kmer, self.seed);
                         self._hashes_buffer.push(hash);
                     }
-                    self.kmer_index = len;
+                    self.kmer_index = self.max_index;
                     return Some(Ok(self._hashes_buffer.remove(0)));
                 }
 
-                let aa_seq: Vec<_> = match hash_function {
+                let aa_seq: Vec<_> = match self.hash_function {
                     HashFunctions::murmur64_dayhoff => {
                         self.sequence.iter().cloned().map(aa_to_dayhoff).collect()
                     }
@@ -232,7 +224,7 @@ impl Iterator for SeqToHashes {
                     }
                 };
 
-                for aa_kmer in aa_seq.windows(ksize) {
+                for aa_kmer in aa_seq.windows(self.k_size) {
                     let hash = crate::_hash_murmur(aa_kmer, self.seed);
                     self._hashes_buffer.push(hash);
                 }
