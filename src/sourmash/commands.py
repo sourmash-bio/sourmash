@@ -390,6 +390,7 @@ def index(args):
 
             if args.scaled:
                 ss.minhash = ss.minhash.downsample(scaled=args.scaled)
+
             if ss.minhash.track_abundance:
                 ss.minhash = ss.minhash.flatten()
             scaleds.add(ss.minhash.scaled)
@@ -450,15 +451,13 @@ def search(args):
                                              query.minhash.ksize,
                                              sourmash_args.get_moltype(query))
 
-    # downsample if requested
     if args.scaled:
         if not query.minhash.scaled:
             error('cannot downsample a signature not created with --scaled')
             sys.exit(-1)
-
         if args.scaled != query.minhash.scaled:
             notify('downsampling query from scaled={} to {}',
-                   query.minhash.scaled, int(args.scaled))
+                query.minhash.scaled, int(args.scaled))
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # set up the search databases
@@ -646,10 +645,9 @@ def gather(args):
         error('query signature needs to be created with --scaled')
         sys.exit(-1)
 
-    # downsample if requested
     if args.scaled:
         notify('downsampling query from scaled={} to {}',
-               query.minhash.scaled, int(args.scaled))
+            query.minhash.scaled, int(args.scaled))
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # empty?
@@ -868,12 +866,11 @@ def multigather(args):
                 error('query signature needs to be created with --scaled; skipping')
                 continue
 
-            # downsample if requested
             if args.scaled:
                 notify('downsampling query from scaled={} to {}',
-                       query.minhash.scaled, int(args.scaled))
+                    query.minhash.scaled, int(args.scaled))
                 query.minhash = query.minhash.downsample(scaled=args.scaled)
-
+ 
             # empty?
             if not len(query.minhash):
                 error('no query hashes!? skipping to next..')
@@ -1137,7 +1134,6 @@ def prefetch(args):
     if query_mh.track_abundance:
         query_mh = query_mh.flatten()
 
-    # downsample if/as requested
     if args.scaled:
         notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
         query_mh = query_mh.downsample(scaled=args.scaled)
@@ -1242,14 +1238,24 @@ def prefetch(args):
     if args.save_matching_hashes:
         filename = args.save_matching_hashes
         notify(f"saving {len(ident_mh)} matched hashes to '{filename}'")
-        ss = sig.SourmashSignature(ident_mh)
+
+        sig_name = ''
+        if query.name:
+            sig_name = f"{query.name}-known"
+
+        ss = sig.SourmashSignature(ident_mh, name=sig_name)
         with open(filename, "wt") as fp:
             sig.save_signatures([ss], fp)
 
     if args.save_unmatched_hashes:
         filename = args.save_unmatched_hashes
+
+        sig_name = ''
+        if query.name:
+            sig_name = f"{query.name}-unknown"
+
         notify(f"saving {len(noident_mh)} unmatched hashes to '{filename}'")
-        ss = sig.SourmashSignature(noident_mh)
+        ss = sig.SourmashSignature(noident_mh, name=sig_name)
         with open(filename, "wt") as fp:
             sig.save_signatures([ss], fp)
 

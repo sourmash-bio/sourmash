@@ -177,7 +177,7 @@ class LCA_Database(Index):
         for v in self._signatures.values():
             yield v
 
-    def select(self, ksize=None, moltype=None, num=0, scaled=0,
+    def select(self, ksize=None, moltype=None, num=0, scaled=0, abund=None,
                containment=False, picklist=None):
         """Make sure this database matches the requested requirements.
 
@@ -198,6 +198,9 @@ class LCA_Database(Index):
             raise ValueError(f"ksize on this database is {self.ksize}; this is different from requested ksize of {ksize}")
         if moltype is not None and moltype != self.moltype:
             raise ValueError(f"moltype on this database is {self.moltype}; this is different from requested moltype of {moltype}")
+
+        if abund:
+            raise ValueError("LCA databases do not support sketches with abund=True")
 
         if picklist is not None:
             self.picklists.append(picklist)
@@ -470,7 +473,11 @@ class LCA_Database(Index):
             # NOTE: one future low-mem optimization could be to support doing
             # this piecemeal by iterating across all the hashes, instead.
 
-            subj = self._signatures[idx]
+            subj = self._signatures.get(idx)
+            if subj is None:    # must be because of a picklist exclusion
+                assert self.picklists
+                continue
+
             subj_mh = prepare_subject(subj.minhash)
 
             # all numbers calculated after downsampling --

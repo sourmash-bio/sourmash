@@ -5,7 +5,7 @@ We have changed how the database is stored (uncompressed `.zip`) and how we name
 All SBT databases below are in `.sbt.zip` format.
 Note that the SBT and LCA databases can be used with sourmash v3.5 and later, while Zipfile collections can only be used with sourmash v4.1.0 and up.
 We detail these changes below, and include links to legacy databases.
-See [github.com/dib-lab/sourmash_databases](https://github.com/dib-lab/sourmash_databases) for a Snakemake workflow that builds current and legacy databases.
+See [github.com/sourmash-bio/databases](https://github.com/sourmash-bio/databases) for a Snakemake workflow that builds current and legacy databases.
 
 ## Sourmash signature names
 

@@ -4,14 +4,23 @@ Tests for the 'sourmash signature' command line.
 import csv
 import shutil
 import os
+import glob
 
 import pytest
 
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash.signature import load_signatures
+from sourmash.manifest import CollectionManifest
 
 ## command line tests
+
+
+def _write_file(runtmp, basename, lines):
+    loc = runtmp.output(basename)
+    with open(loc, 'wt') as fp:
+        fp.write("\n".join(lines))
+    return loc
 
 
 def test_run_sourmash_signature_cmd():
@@ -28,13 +37,42 @@ def test_run_sourmash_sig_cmd():
     assert status != 0                    # no args provided, ok ;)
 
 
-@utils.in_tempdir
-def test_sig_merge_1_use_full_signature_in_cmd(c):
+def test_sig_merge_1_use_full_signature_in_cmd(runtmp):
+    c = runtmp
+
     # merge of 47 & 63 should be union of mins
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
     sig47and63 = utils.get_test_data('47+63.fa.sig')
     c.run_sourmash('signature', 'merge', sig47, sig63)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_merge_sig = sourmash.load_one_signature(sig47and63)
+    actual_merge_sig = sourmash.load_one_signature(out)
+
+    print(test_merge_sig.minhash)
+    print(actual_merge_sig.minhash)
+    print(out)
+
+    assert actual_merge_sig.minhash == test_merge_sig.minhash
+
+
+def test_sig_merge_1_fromfile_picklist(runtmp):
+    c = runtmp
+
+    # merge of 47 & 63 should be union of mins
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    sig47and63 = utils.get_test_data('47+63.fa.sig')
+
+    from_file = _write_file(runtmp, 'list.txt', [sig47, sig63])
+    picklist = _write_file(runtmp, 'pl.csv',
+                           ['md5short', '09a08691', '38729c63'])
+
+    c.run_sourmash('signature', 'merge', '--from-file', from_file,
+                   '--picklist', f'{picklist}:md5short:md5short')
 
     # stdout should be new signature
     out = c.last_result.out
@@ -100,7 +138,7 @@ def test_sig_merge_1_name(c):
     outsig = c.output('merged2and63.sig')
 
     c.run_sourmash('sig', 'merge', sig2, sig63, '--dna', '-k', '31', '-o', "merged2and63.sig", '--name', assignedSigName )
-    
+
     test_merge_sig = sourmash.load_one_signature(outsig)
 
     print("outsig", outsig)
@@ -137,8 +175,10 @@ def test_sig_merge_1_ksize_moltype_fail(c):
     sig63 = utils.get_test_data('63.fa.sig')
     sig2and63 = utils.get_test_data('2+63.fa.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as exc:
         c.run_sourmash('sig', 'merge', sig2, sig63)
+
+    assert "ERROR when merging signature" in str(exc.value)
 
 
 @utils.in_tempdir
@@ -318,13 +358,42 @@ def test_sig_merge_flatten_2(c):
     assert actual_merge_sig.minhash == test_merge_sig.minhash
 
 
-@utils.in_tempdir
-def test_sig_intersect_1(c):
+def test_sig_intersect_1(runtmp):
+    c = runtmp
+
     # intersect of 47 and 63 should be intersection of mins
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
     sig47and63 = utils.get_test_data('47+63-intersect.fa.sig')
     c.run_sourmash('sig', 'intersect', sig47, sig63)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_intersect_sig = sourmash.load_one_signature(sig47and63)
+    actual_intersect_sig = sourmash.load_one_signature(out)
+
+    print(test_intersect_sig.minhash)
+    print(actual_intersect_sig.minhash)
+    print(out)
+
+    assert actual_intersect_sig.minhash == test_intersect_sig.minhash
+
+
+def test_sig_intersect_1_fromfile_picklist(runtmp):
+    c = runtmp
+
+    # intersect of 47 and 63 should be intersection of mins
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    sig47and63 = utils.get_test_data('47+63-intersect.fa.sig')
+
+    from_file = _write_file(runtmp, 'list.txt', [sig47, sig63])
+    picklist = _write_file(runtmp, 'pl.csv',
+                           ['md5short', '09a08691', '38729c63'])
+
+    c.run_sourmash('signature', 'intersect', '--from-file', from_file,
+                   '--picklist', f'{picklist}:md5short:md5short')
 
     # stdout should be new signature
     out = c.last_result.out
@@ -567,11 +636,38 @@ def test_sig_subtract_4_ksize_succeed(c):
     assert 'loaded and subtracted 1 signatures' in c.last_result.err
 
 
-@utils.in_tempdir
-def test_sig_rename_1(c):
+def test_sig_rename_1(runtmp):
+    c = runtmp
+
     # set new name for 47
     sig47 = utils.get_test_data('47.fa.sig')
     c.run_sourmash('sig', 'rename', sig47, 'fiz bar')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_rename_sig = sourmash.load_one_signature(sig47)
+    actual_rename_sig = sourmash.load_one_signature(out)
+
+    print(test_rename_sig.minhash)
+    print(actual_rename_sig.minhash)
+
+    assert actual_rename_sig.minhash == test_rename_sig.minhash
+    assert test_rename_sig.name != actual_rename_sig.name
+    assert actual_rename_sig.name == 'fiz bar'
+
+
+def test_sig_rename_1_fromfile_picklist(runtmp):
+    c = runtmp
+
+    # set new name for 47
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    from_file = _write_file(runtmp, 'list.txt', [sig47])
+    picklist = _write_file(runtmp, 'pl.csv', ['md5short', '09a08691'])
+
+    c.run_sourmash('sig', 'rename', '--from-file', from_file, 'fiz bar',
+                   '--picklist', f'{picklist}:md5short:md5short')
 
     # stdout should be new signature
     out = c.last_result.out
@@ -643,6 +739,15 @@ def test_sig_rename_3_file_dne(c):
     # rename on a file that does not exist should fail!
     with pytest.raises(ValueError) as e:
         c.run_sourmash('sig', 'rename', 'no-such-sig', 'fiz bar')
+
+    assert "Error while reading signatures from 'no-such-sig'" in c.last_result.err
+
+
+@utils.in_tempdir
+def test_sig_rename_3_file_dne_force(c):
+    # rename on a file that does not exist should fail!
+    c.run_sourmash('sig', 'rename', 'no-such-sig', 'fiz bar', '-f')
+    print(c.last_result.err)
 
     assert "Error while reading signatures from 'no-such-sig'" in c.last_result.err
 
@@ -761,31 +866,13 @@ def test_sig_cat_2_out_inplace(c):
 
 
 @utils.in_tempdir
-def test_sig_cat_filelist(c):
+def test_sig_cat_3_filelist(c):
     # cat using a file list as input
     sig47 = utils.get_test_data('47.fa.sig')
-    # sig47list = list(load_signatures(sig47))
-    # print("sig47: ",sig47)
-    # print(type(sig47))
-    # print("length sig47: ",len(sig47list))
-    # print("\n")
-
     sig47abund = utils.get_test_data('track_abund/47.fa.sig')
-    # sig47abundlist = list(load_signatures(sig47abund))
-    # print("sig47abund: ",sig47abund)
-    # print(type(sig47abund))
-    # print("length sig47abund: ",len(sig47abundlist))
-    # print("\n")
-
     multisig = utils.get_test_data('47+63-multisig.sig')
-    # multisiglist = list(load_signatures(multisig))
-    # print("multisig: ",multisig)
-    # print(type(multisig))
-    # print("length multisig: ",len(multisiglist))
-    # print("\n")
 
-    filelist = c.output("filelist")   
-
+    filelist = c.output("filelist")
     with open(filelist, 'w') as f:
         f.write("\n".join((sig47, sig47abund, multisig)))
 
@@ -811,17 +898,12 @@ def test_sig_cat_filelist(c):
 
     # sort the signatures by something deterministic and unique
     siglist.sort(key = lambda x: x.md5sum())
-    
-    # print(len(siglist))
-    # print("siglist: ",siglist)
-    # print("\n")
-    # print("\n")
-    
+
     assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequence', 485c3377), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 57e2b22f), SourmashSignature('NC_011668.1 Shewanella baltica OS223 plasmid pS22302, complete sequence', 837bf2a7), SourmashSignature('NC_011664.1 Shewanella baltica OS223 plasmid pS22301, complete sequence', 87a9aec4), SourmashSignature('NC_009661.1 Shewanella baltica OS185 plasmid pS18501, complete sequence', bde81a41), SourmashSignature('NC_011663.1 Shewanella baltica OS223, complete genome', f033bbd8)]"""
 
 
 @utils.in_tempdir
-def test_sig_cat_filelist_with_dbs(c):
+def test_sig_cat_4_filelist_with_dbs(c):
     # cat using a file list as input
     sig47 = utils.get_test_data('47.fa.sig')
     sig47abund = utils.get_test_data('track_abund/47.fa.sig')
@@ -858,10 +940,106 @@ def test_sig_cat_filelist_with_dbs(c):
 
 
 @utils.in_tempdir
-def test_sig_split_1(c):
+def test_sig_cat_5_from_file(c):
+    # cat using a file list as input
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    sbt = utils.get_test_data('v6.sbt.zip')
+
+    filelist = c.output("filelist")
+    with open(filelist, 'w') as f:
+        f.write("\n".join((sig47, sig47abund, sbt)))
+
+    c.run_sourmash('sig', 'cat', '--from-file', filelist,
+                   '-o', 'out.sig')
+
+    # stdout should be same signatures
+    out = c.output('out.sig')
+
+    siglist = list(load_signatures(out))
+    print(len(siglist))
+    # print("siglist: ",siglist)
+    # print("\n")
+
+    # verify the number of signatures matches what we expect to see based
+    # on the input files
+    all_sigs = []
+    all_sigs += list(load_signatures(sig47))
+    all_sigs += list(load_signatures(sig47abund))
+    all_sigs += list(sourmash.load_file_as_signatures(sbt))
+
+    assert len(all_sigs) == len(siglist)
+
+    # sort the signatures by something deterministic and unique
+    siglist.sort(key = lambda x: x.md5sum())
+
+    assert repr(siglist) == """[SourmashSignature('', 0107d767), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('', 4e94e602), SourmashSignature('', 60f7e23c), SourmashSignature('', 6d6e87e1), SourmashSignature('', b59473c9), SourmashSignature('', f0c834bc), SourmashSignature('', f71e7817)]"""
+
+
+def test_sig_cat_5_from_file_picklist(runtmp):
+    c = runtmp
+
+    # cat using a file list as input
+    sig47 = utils.get_test_data('47.fa.sig')
+    sbt = utils.get_test_data('v6.sbt.zip')
+
+    filelist = c.output("filelist")
+    with open(filelist, 'w') as f:
+        f.write("\n".join((sig47, sbt)))
+
+    picklist = _write_file(runtmp, 'pl.csv', ['md5short', '09a08691'])
+
+    c.run_sourmash('sig', 'cat', '--from-file', filelist,
+                   '--picklist', f'{picklist}:md5short:md5short',
+                   '-o', 'out.sig')
+
+    # stdout should be same signatures
+    out = c.output('out.sig')
+
+    siglist = list(load_signatures(out))
+    print(len(siglist))
+    # print("siglist: ",siglist)
+    # print("\n")
+
+    # verify the number of signatures matches what we expect to see based
+    # on the input files
+    all_sigs = []
+    all_sigs += list(load_signatures(sig47, ksize=31))
+
+    assert len(all_sigs) == len(siglist)
+
+    # sort the signatures by something deterministic and unique
+    siglist.sort(key = lambda x: x.md5sum())
+
+    assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691)]"""
+
+
+def test_sig_split_1(runtmp):
+    c = runtmp
     # split 47 into 1 sig :)
     sig47 = utils.get_test_data('47.fa.sig')
     c.run_sourmash('sig', 'split', sig47)
+
+    outname = '09a08691.k=31.scaled=1000.DNA.dup=0.47.fa.sig'
+
+    assert os.path.exists(c.output(outname))
+
+    test_split_sig = sourmash.load_one_signature(sig47)
+    actual_split_sig = sourmash.load_one_signature(c.output(outname))
+
+    assert actual_split_sig == test_split_sig
+
+
+def test_sig_split_1_fromfile_picklist(runtmp):
+    c = runtmp
+    # split 47 into 1 sig :)
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    from_file = _write_file(runtmp, 'list.txt', [sig47])
+    picklist = _write_file(runtmp, 'pl.csv', ['md5short', '09a08691'])
+
+    c.run_sourmash('sig', 'split', '--from-file', from_file,
+                   '--picklist', f'{picklist}:md5short:md5short')
 
     outname = '09a08691.k=31.scaled=1000.DNA.dup=0.47.fa.sig'
 
@@ -995,11 +1173,47 @@ def test_sig_split_5_no_exist(c):
         c.run_sourmash('sig', 'split', 'foo')
 
 
-@utils.in_tempdir
-def test_sig_extract_1(c):
+def test_sig_split_6_numsigs(runtmp):
+    c = runtmp
+
+    sigs11 = utils.get_test_data('genome-s11.fa.gz.sig')
+    c.run_sourmash('sig', 'split', sigs11)
+
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    outlist = ['1437d8ea.k=21.num=500.DNA.dup=0.genome-s11.fa.gz.sig',
+               '37aea787.k=7.num=500.protein.dup=0.genome-s11.fa.gz.sig',
+               '68c565be.k=30.num=500.DNA.dup=0.genome-s11.fa.gz.sig',
+               '73b6df1c.k=10.num=500.protein.dup=0.genome-s11.fa.gz.sig']
+
+    for filename in outlist:
+        assert os.path.exists(c.output(filename))
+
+
+def test_sig_extract_1(runtmp):
+    c = runtmp
+
     # extract 47 from 47... :)
     sig47 = utils.get_test_data('47.fa.sig')
     c.run_sourmash('sig', 'extract', sig47)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig47)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    assert actual_extract_sig == test_extract_sig
+
+
+def test_sig_extract_1(runtmp):
+    c = runtmp
+
+    # extract 47 from 47... :)
+    sig47 = utils.get_test_data('47.fa.sig')
+    from_file = _write_file(runtmp, 'list.txt', [sig47])
+    c.run_sourmash('sig', 'extract', '--from-file', from_file)
 
     # stdout should be new signature
     out = c.last_result.out
@@ -1148,6 +1362,83 @@ def test_sig_extract_8_picklist_md5(runtmp):
     assert "extracted 1 signatures from 2 file(s)" in err
     assert "for given picklist, found 1 matches to 1 distinct values" in err
 
+def test_sig_extract_8_picklist_md5_include(runtmp):
+    # extract 47 from 47, using a picklist w/full md5:: explicit include
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='09a08691ce52952152f0e866a59f6261',
+               md5short='09a08691ce5295215',
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:md5full:md5:include"
+    runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist', picklist_arg)
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig47)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    assert actual_extract_sig == test_extract_sig
+
+    err = runtmp.last_result.err
+
+    print(err)
+    assert "loaded 1 distinct values into picklist." in err
+    assert "loaded 1 total that matched ksize & molecule type" in err
+    assert "extracted 1 signatures from 2 file(s)" in err
+    assert "for given picklist, found 1 matches to 1 distinct values" in err
+
+
+def test_sig_extract_8_picklist_md5_exclude(runtmp):
+    # extract 63 from 47,63 by excluding 47, using a picklist w/full md5
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='09a08691ce52952152f0e866a59f6261',
+               md5short='09a08691ce5295215',
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:md5full:md5:exclude"
+    runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist', picklist_arg)
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig63)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    assert actual_extract_sig == test_extract_sig
+
+    err = runtmp.last_result.err
+
+    print(err)
+    assert "loaded 1 distinct values into picklist." in err
+    assert "loaded 1 total that matched ksize & molecule type" in err
+    assert "extracted 1 signatures from 2 file(s)" in err
+    assert "for given picklist, found 1 matches by excluding 1 distinct values" in err
+
 
 def test_sig_extract_8_picklist_md5_require_all(runtmp):
     # extract 47 from 47, using a picklist w/full md5;
@@ -1227,6 +1518,37 @@ def test_sig_extract_8_picklist_name(runtmp):
     assert actual_extract_sig == test_extract_sig
 
 
+def test_sig_extract_8_picklist_name_exclude(runtmp):
+    # exclude 47 based on name
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='09a08691ce52952152f0e866a59f6261',
+               md5short='09a08691ce5295215',
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:exactName:name:exclude"
+    runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist', picklist_arg)
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig63)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    assert actual_extract_sig == test_extract_sig
+
+
 def test_sig_extract_8_picklist_ident(runtmp):
     # extract 47 from 47, using a picklist w/full md5
     sig47 = utils.get_test_data('47.fa.sig')
@@ -1253,6 +1575,37 @@ def test_sig_extract_8_picklist_ident(runtmp):
     out = runtmp.last_result.out
 
     test_extract_sig = sourmash.load_one_signature(sig47)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    assert actual_extract_sig == test_extract_sig
+
+
+def test_sig_extract_8_picklist_ident_exclude(runtmp):
+    # exclude 47 based on ident
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='09a08691ce52952152f0e866a59f6261',
+               md5short='09a08691ce5295215',
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:fullIdent:ident:exclude"
+    runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist', picklist_arg)
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig63)
     actual_extract_sig = sourmash.load_one_signature(out)
 
     assert actual_extract_sig == test_extract_sig
@@ -1289,6 +1642,37 @@ def test_sig_extract_8_picklist_ident_dot(runtmp):
     assert actual_extract_sig == test_extract_sig
 
 
+def test_sig_extract_8_picklist_ident_dot_exclude(runtmp):
+    # exlude 47 based on identprefix
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='09a08691ce52952152f0e866a59f6261',
+               md5short='09a08691ce5295215',
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:nodotIdent:identprefix:exclude"
+    runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist', picklist_arg)
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig63)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    assert actual_extract_sig == test_extract_sig
+
+
 def test_sig_extract_8_picklist_md5_short(runtmp):
     # extract 47 from 47, using a picklist w/full md5
     sig47 = utils.get_test_data('47.fa.sig')
@@ -1315,6 +1699,37 @@ def test_sig_extract_8_picklist_md5_short(runtmp):
     out = runtmp.last_result.out
 
     test_extract_sig = sourmash.load_one_signature(sig47)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    assert actual_extract_sig == test_extract_sig
+
+
+def test_sig_extract_8_picklist_md5_short_exclude(runtmp):
+    # exclude 47 based on md5prefix8
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='09a08691ce52952152f0e866a59f6261',
+               md5short='09a08691ce5295215',
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:md5short:md5prefix8:exclude"
+    runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist', picklist_arg)
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig63)
     actual_extract_sig = sourmash.load_one_signature(out)
 
     assert actual_extract_sig == test_extract_sig
@@ -1351,6 +1766,37 @@ def test_sig_extract_8_picklist_md5_short_alias(runtmp):
     assert actual_extract_sig == test_extract_sig
 
 
+def test_sig_extract_8_picklist_md5_short_alias_exclude(runtmp):
+    # exlude 47 based on md5prefix8 alias, md5short
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='09a08691ce52952152f0e866a59f6261',
+               md5short='09a08691ce5295215',
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:md5short:md5short:exclude"
+    runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist', picklist_arg)
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig63)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    assert actual_extract_sig == test_extract_sig
+
+
 def test_sig_extract_8_picklist_md5_short_alias_with_md5_selector_nomatch(runtmp):
     # extract 47 from 47, using a picklist w/full md5 and also md5 selector
     sig47 = utils.get_test_data('47.fa.sig')
@@ -1371,6 +1817,35 @@ def test_sig_extract_8_picklist_md5_short_alias_with_md5_selector_nomatch(runtmp
         w.writerow(row)
 
     picklist_arg = f"{picklist_csv}:md5short:md5short"
+    with pytest.raises(ValueError):
+        runtmp.sourmash('sig', 'extract', sig47, sig63,
+                        '--picklist', picklist_arg,
+                        '--md5', 'XXX') # no match to md5 selector here
+
+    err = runtmp.last_result.err
+    assert "no matching signatures to save!" in err
+
+
+def test_sig_extract_8_picklist_md5_short_alias_with_md5_selector_nomatch_exclude(runtmp):
+    # exclude 47 using a picklist w/full md5 and also md5 selector
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='09a08691ce52952152f0e866a59f6261',
+               md5short='09a08691ce5295215',
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:md5short:md5short:exclude"
     with pytest.raises(ValueError):
         runtmp.sourmash('sig', 'extract', sig47, sig63,
                         '--picklist', picklist_arg,
@@ -1411,6 +1886,37 @@ def test_sig_extract_8_picklist_md5_short_alias_with_md5_selector(runtmp):
 
     assert actual_extract_sig == test_extract_sig
 
+def test_sig_extract_8_picklist_md5_short_alias_with_md5_selector_exclude(runtmp):
+    # exclude 47, using a picklist w/full md5; but try to select with md5 selector
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='09a08691ce52952152f0e866a59f6261',
+               md5short='09a08691ce5295215',
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:md5short:md5short:exclude"
+    with pytest.raises(ValueError):
+        runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist', picklist_arg,
+                    '--md5', '09a08691ce5295215')
+
+    # NTP: do we want to emit a more informative "conflicting selectors" type of msg?
+    err = runtmp.last_result.err
+    print(err)
+    assert "loaded 1 distinct values into picklist." in err
+    assert "loaded 1 total that matched ksize & molecule type" in err
+    assert 'no matching signatures to save!' in err
+
 
 def test_sig_extract_8_picklist_md5_nomatch(runtmp):
     # use an empty picklist => no match
@@ -1438,6 +1944,41 @@ def test_sig_extract_8_picklist_md5_nomatch(runtmp):
     assert runtmp.last_result.status != 0
 
 
+def test_sig_extract_8_picklist_md5_nomatch_exclude(runtmp):
+    # use an empty picklist to exclude => no match => include everything
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=['md5short'])
+        w.writeheader()
+
+    picklist_arg = f"{picklist_csv}:md5short:md5prefix8:exclude"
+
+    runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist',
+                        picklist_arg)
+
+    # stdout should be both signatures
+    out = runtmp.last_result.out
+    extract_siglist = list(load_signatures(out))
+    print(len(extract_siglist))
+    s47 = sourmash.load_file_as_signatures(sig47)
+    s63 = sourmash.load_file_as_signatures(sig63)
+    actual_extract_siglist = list(s47) + list(s63)
+
+    assert set(extract_siglist) == set(actual_extract_siglist)
+
+    err = runtmp.last_result.err
+    print(err)
+    assert runtmp.last_result.status == 0
+    assert 'loaded 0 distinct values into picklist.' in err
+    assert 'loaded 2 total that matched ksize & molecule type' in err
+    assert 'extracted 2 signatures from 2 file(s)' in err
+    assert 'for given picklist, found 2 matches by excluding 0 distinct values' in err
+
+
 def test_sig_extract_9_picklist_md5_ksize_hp_select(runtmp):
     # test with -k and moltype selector
     sigdir = utils.get_test_data('prot/')
@@ -1458,6 +1999,36 @@ def test_sig_extract_9_picklist_md5_ksize_hp_select(runtmp):
     out = runtmp.last_result.out
     actual_extract_sig = sourmash.load_one_signature(out)
 
+    print(actual_extract_sig.md5sum)
+    assert str(actual_extract_sig) == 'GCA_001593925'
+    assert actual_extract_sig.md5sum() == 'ea2a1ad233c2908529d124a330bcb672'
+    assert actual_extract_sig.minhash.ksize == 19
+    assert actual_extract_sig.minhash.moltype == 'hp'
+
+
+def test_sig_extract_9_picklist_md5_ksize_hp_select_exclude(runtmp):
+    # test picklist exclude with -k and moltype selector
+    sigdir = utils.get_test_data('prot/')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=['md5'])
+        w.writeheader()
+        w.writerow(dict(md5='ea2a1ad233c2908529d124a330bcb672'))
+
+    picklist_arg = f"{picklist_csv}:md5:md5:exclude"
+
+    runtmp.sourmash('sig', 'extract', sigdir, '--picklist',
+                    picklist_arg, '-k', '19', '--hp')
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+    actual_extract_sig = sourmash.load_one_signature(out)
+    print(actual_extract_sig.md5sum)
+
+    assert str(actual_extract_sig) == 'GCA_001593935'
+    assert actual_extract_sig.md5sum() == 'bb0e6d90df01b7bd5d0956a5f9e3ed12'
     assert actual_extract_sig.minhash.ksize == 19
     assert actual_extract_sig.minhash.moltype == 'hp'
 
@@ -1486,6 +2057,40 @@ def test_sig_extract_10_picklist_md5_dups_and_empty(runtmp):
 
     assert actual_extract_sig.minhash.ksize == 19
     assert actual_extract_sig.minhash.moltype == 'hp'
+    assert actual_extract_sig.md5sum() == 'ea2a1ad233c2908529d124a330bcb672'
+
+    err = runtmp.last_result.err
+    print(err)
+
+    assert "WARNING: 1 empty values in column 'md5' in picklist file" in err
+    assert "WARNING: 1 values in picklist column 'md5' were not distinct" in err
+
+
+def test_sig_extract_10_picklist_md5_dups_and_empty_exclude(runtmp):
+    # test empty picklist values, and duplicate picklist values for exclude
+    sigdir = utils.get_test_data('prot/')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=['md5'])
+        w.writeheader()
+        w.writerow(dict(md5='ea2a1ad233c2908529d124a330bcb672'))
+        w.writerow(dict(md5='ea2a1ad233c2908529d124a330bcb672'))
+        w.writerow(dict(md5=''))
+
+    picklist_arg = f"{picklist_csv}:md5:md5:exclude"
+
+    runtmp.sourmash('sig', 'extract', sigdir, '--picklist',
+                    picklist_arg, '-k', '19', '--hp')
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    assert actual_extract_sig.minhash.ksize == 19
+    assert actual_extract_sig.minhash.moltype == 'hp'
+    assert actual_extract_sig.md5sum() == 'bb0e6d90df01b7bd5d0956a5f9e3ed12'
 
     err = runtmp.last_result.err
     print(err)
@@ -1506,6 +2111,28 @@ def test_sig_extract_11_picklist_bad_coltype(runtmp):
         w.writerow(dict(md5='ea2a1ad233c2908529d124a330bcb672'))
 
     picklist_arg = f"{picklist_csv}:md5:BADCOLTYPE"
+
+    with pytest.raises(ValueError):
+        runtmp.sourmash('sig', 'extract', sigdir, '--picklist',
+                        picklist_arg, '-k', '19', '--hp')
+
+    err = runtmp.last_result.err
+    print(err)
+    assert "invalid picklist column type 'BADCOLTYPE'" in err
+
+
+def test_sig_extract_11_picklist_bad_coltype_exclude(runtmp):
+    # test with invalid picklist coltype
+    sigdir = utils.get_test_data('prot/')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=['md5'])
+        w.writeheader()
+        w.writerow(dict(md5='ea2a1ad233c2908529d124a330bcb672'))
+
+    picklist_arg = f"{picklist_csv}:md5:BADCOLTYPE:exclude"
 
     with pytest.raises(ValueError):
         runtmp.sourmash('sig', 'extract', sigdir, '--picklist',
@@ -1538,6 +2165,28 @@ def test_sig_extract_12_picklist_bad_argstr(runtmp):
     assert "invalid picklist argument" in err
 
 
+def test_sig_extract_12_picklist_bad_pickstyle(runtmp):
+    # test with invalid argument format to --picklist
+    sigdir = utils.get_test_data('prot/')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=['md5'])
+        w.writeheader()
+        w.writerow(dict(md5='ea2a1ad233c2908529d124a330bcb672'))
+
+    picklist_arg = f"{picklist_csv}:md5:md5:XXX"
+
+    with pytest.raises(ValueError):
+        runtmp.sourmash('sig', 'extract', sigdir, '--picklist',
+                        picklist_arg, '-k', '19', '--hp')
+
+    err = runtmp.last_result.err
+    print(err)
+    assert "invalid picklist 'pickstyle' argument, 'XXX': must be 'include' or 'exclude'" in err
+
+
 def test_sig_extract_12_picklist_bad_colname(runtmp):
     # test with invalid picklist colname
     sigdir = utils.get_test_data('prot/')
@@ -1560,8 +2209,31 @@ def test_sig_extract_12_picklist_bad_colname(runtmp):
     assert "column 'BADCOLNAME' not in pickfile" in err
 
 
-@utils.in_tempdir
-def test_sig_flatten_1(c):
+def test_sig_extract_12_picklist_bad_colname_exclude(runtmp):
+    # test with invalid picklist colname
+    sigdir = utils.get_test_data('prot/')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=['md5'])
+        w.writeheader()
+        w.writerow(dict(md5='ea2a1ad233c2908529d124a330bcb672'))
+
+    picklist_arg = f"{picklist_csv}:BADCOLNAME:md5:exclude"
+
+    with pytest.raises(ValueError):
+        runtmp.sourmash('sig', 'extract', sigdir, '--picklist',
+                        picklist_arg, '-k', '19', '--hp')
+
+    err = runtmp.last_result.err
+    print(err)
+    assert "column 'BADCOLNAME' not in pickfile" in err
+
+
+def test_sig_flatten_1(runtmp):
+    c = runtmp
+
     # extract matches to several names from among several signatures & flatten
     sig47abund = utils.get_test_data('track_abund/47.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
@@ -1579,8 +2251,74 @@ def test_sig_flatten_1(c):
     assert test_flattened.minhash == siglist[0].minhash
 
 
+def test_sig_flatten_1(runtmp):
+    c = runtmp
+
+    # extract matches to several names from among several signatures & flatten
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    from_file = _write_file(runtmp, 'list.txt', [sig47abund])
+    picklist = _write_file(runtmp, 'pl.csv', ['md5short', '09a08691'])
+
+    c.run_sourmash('sig', 'flatten', '--from-file', from_file,
+                   '--picklist', f'{picklist}:md5short:md5short')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    siglist = load_signatures(out)
+    siglist = list(siglist)
+
+    assert len(siglist) == 1
+
+    test_flattened = sourmash.load_one_signature(sig47)
+    assert test_flattened.minhash == siglist[0].minhash
+
+
 @utils.in_tempdir
-def test_sig_flatten_2_ksize(c):
+def test_sig_flatten_1_select_name(c):
+    # extract matches to several names from among several signatures & flatten
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'flatten', sig2, sig47abund, '--name', 'Shewanella')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    siglist = load_signatures(out)
+    siglist = list(siglist)
+
+    assert len(siglist) == 1
+
+    test_flattened = sourmash.load_one_signature(sig47)
+    assert test_flattened.minhash == siglist[0].minhash
+
+
+def test_sig_flatten_1_select_md5(runtmp):
+    c = runtmp
+
+    # extract matches to several names from among several signatures & flatten
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'flatten', sig2, sig47abund, '--md5', '09a08691c')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    siglist = load_signatures(out)
+    siglist = list(siglist)
+
+    assert len(siglist) == 1
+
+    test_flattened = sourmash.load_one_signature(sig47)
+    assert test_flattened.minhash == siglist[0].minhash
+
+
+def test_sig_flatten_2_ksize(runtmp):
+    c = runtmp
     # flatten only one signature selected using ksize
     psw_mag = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
     c.run_sourmash('sig', 'flatten', psw_mag, '-k', '31')
@@ -1718,6 +2456,16 @@ def test_sig_downsample_2_num_to_scaled_fail(c):
 
 
 @utils.in_tempdir
+def test_sig_downsample_2_num_and_scaled_both_fail(c):
+    # cannot specify both --num and --scaled
+    sigs11 = utils.get_test_data('genome-s11.fa.gz.sig')
+
+    with pytest.raises(ValueError):
+        c.run_sourmash('sig', 'downsample', '--scaled', '100', '--num', '50',
+                       '-k', '21', '--dna', sigs11)
+
+
+@utils.in_tempdir
 def test_sig_downsample_2_num_empty(c):
     # downsample a num signature
     sigs11 = utils.get_test_data('genome-s11.fa.gz.sig')
@@ -1726,11 +2474,38 @@ def test_sig_downsample_2_num_empty(c):
         c.run_sourmash('sig', 'downsample', '-k', '21', '--dna', sigs11)
 
 
-@utils.in_tempdir
-def test_sig_describe_1(c):
+def test_sig_describe_1(runtmp):
+    c = runtmp
+
     # get basic info on a signature
     sig47 = utils.get_test_data('47.fa.sig')
     c.run_sourmash('sig', 'describe', sig47)
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: NC_009665.1 Shewanella baltica OS185, complete genome
+source file: 47.fa
+md5: 09a08691ce52952152f0e866a59f6261
+k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=0
+size: 5177
+signature license: CC0
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+def test_sig_describe_1_fromfile_picklist(runtmp):
+    c = runtmp
+
+    # get basic info on a signature
+    sig47 = utils.get_test_data('47.fa.sig')
+    from_file = _write_file(runtmp, 'list.txt', [sig47])
+    picklist = _write_file(runtmp, 'pl.csv', ['md5short', '09a08691'])
+
+    c.run_sourmash('sig', 'describe',  '--from-file', from_file,
+                   '--picklist', f'{picklist}:md5short:md5short')
 
     out = c.last_result.out
     print(c.last_result)
@@ -1867,7 +2642,7 @@ signature license: CC0
     for line in out.splitlines():
         cleaned_line = line.strip().replace(
             testdata_dirname, '').replace(location, '')
-        assert cleaned_line in expected_output
+        assert cleaned_line in expected_output, cleaned_line
 
 
 @utils.in_tempdir
@@ -1933,9 +2708,13 @@ def test_sig_describe_1_dir(c):
     out = c.last_result.out
     print(c.last_result)
 
+    # make sure signature names, as well as full path to .sig file under
+    # directory, show up in output.
     expected_output = """\
 signature: GCA_001593925
 signature: GCA_001593935
+prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig
+prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -2104,3 +2883,111 @@ def test_import_mash_csv_to_sig(runtmp):
 
     assert '1 matches:' in runtmp.last_result.out
     assert '100.0%       short.fa' in runtmp.last_result.out
+
+
+def test_sig_manifest_1_zipfile(runtmp):
+    # make a manifest from a .zip file
+    protzip = utils.get_test_data('prot/protein.zip')
+    runtmp.sourmash('sig', 'manifest', protzip, '-o', 'SOURMASH-MANIFEST.csv')
+
+    manifest_fn = runtmp.output('SOURMASH-MANIFEST.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+
+def test_sig_manifest_2_sigfile(runtmp):
+    # make a manifest from a .sig file
+    sigfile = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+
+    runtmp.sourmash('sig', 'manifest', sigfile, '-o', 'SOURMASH-MANIFEST.csv')
+
+    status = runtmp.last_result.status
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    manifest_fn = runtmp.output('SOURMASH-MANIFEST.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 1
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+
+
+def test_sig_manifest_3_sbt(runtmp):
+    # make a manifest from an SBT
+    protzip = utils.get_test_data('prot/protein.sbt.zip')
+    runtmp.sourmash('sig', 'manifest', protzip, '-o', 'SOURMASH-MANIFEST.csv')
+
+    manifest_fn = runtmp.output('SOURMASH-MANIFEST.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+
+def test_sig_manifest_4_lca(runtmp):
+    # make a manifest from a .lca.json file
+    sigfile = utils.get_test_data('prot/protein.lca.json.gz')
+    with pytest.raises(ValueError):
+        runtmp.sourmash('sig', 'manifest', sigfile, '-o',
+                        'SOURMASH-MANIFEST.csv')
+
+    status = runtmp.last_result.status
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert status != 0
+    assert "ERROR: manifests cannot be generated for this file." in err
+
+
+def test_sig_manifest_5_dir(runtmp):
+    # make a manifest from a directory
+    sigfile = utils.get_test_data('prot/protein/')
+    runtmp.sourmash('sig', 'manifest', sigfile, '-o', 'SOURMASH-MANIFEST.csv')
+
+    status = runtmp.last_result.status
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    manifest_fn = runtmp.output('SOURMASH-MANIFEST.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+
+def test_sig_manifest_6_pathlist(runtmp):
+    # make a manifest from a pathlist file
+    sigfiles = utils.get_test_data('prot/protein/*.sig')
+    sigfiles = glob.glob(sigfiles)
+
+    pathlist = runtmp.output('pathlist.txt')
+    with open(pathlist, 'wt') as fp:
+        fp.write("\n".join(sigfiles))
+
+    runtmp.sourmash('sig', 'manifest', pathlist, '-o', 'SOURMASH-MANIFEST.csv')
+
+    status = runtmp.last_result.status
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    manifest_fn = runtmp.output('SOURMASH-MANIFEST.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list

@@ -1,5 +1,7 @@
 from glob import glob
 import os
+import argparse
+from sourmash.logging import notify
 
 
 def add_moltype_args(parser):
@@ -31,10 +33,10 @@ def add_moltype_args(parser):
     parser.set_defaults(hp=False)
 
     parser.add_argument(
-        '--dna', '--rna', dest='dna', default=None, action='store_true',
+        '--dna', '--rna', '--nucleotide', dest='dna', default=None, action='store_true',
         help='choose a nucleotide signature (default: True)')
     parser.add_argument(
-        '--no-dna', '--no-rna', dest='dna', action='store_false',
+        '--no-dna', '--no-rna', '--no-nucleotide', dest='dna', action='store_false',
         help='do not choose a nucleotide signature')
     parser.set_defaults(dna=None)
 
@@ -49,6 +51,27 @@ def add_ksize_arg(parser, default=31):
         '-k', '--ksize', metavar='K', default=None, type=int,
         help='k-mer size; default={d}'.format(d=default)
     )
+
+#https://stackoverflow.com/questions/55324449/how-to-specify-a-minimum-or-maximum-float-value-with-argparse#55410582
+def range_limited_float_type(arg):
+    """ Type function for argparse - a float within some predefined bounds """
+    min_val = 0
+    max_val = 1
+    try:
+        f = float(arg)
+    except ValueError:
+        raise argparse.ArgumentTypeError("\n\tERROR: Must be a floating point number.")
+    if f < min_val or f > max_val:
+        raise argparse.ArgumentTypeError(f"\n\tERROR: Argument must be >{str(min_val)} and <{str(max_val)}.")
+    return f
+
+
+def add_tax_threshold_arg(parser, default=0.1):
+    parser.add_argument(
+        '--containment-threshold', default=default, type=range_limited_float_type,
+        help=f'minimum containment threshold for classification; default={default}'
+    )
+
 
 def add_picklist_args(parser):
     parser.add_argument(
@@ -71,3 +94,26 @@ def command_list(dirpath):
     basenames = [os.path.splitext(path)[0] for path in filenames if not path.startswith('__')]
     basenames = filter(opfilter, basenames)
     return sorted(basenames)
+
+
+def check_scaled_bounds(arg):
+    actual_min_val = 0
+    min_val = 100
+    max_val = 1e6
+
+    f = float(arg)
+
+    if f < actual_min_val:
+        raise argparse.ArgumentTypeError(f"ERROR: --scaled value must be positive")
+    if f < min_val:
+        notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
+    if f > max_val:
+        notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
+    return f
+
+
+def add_scaled_arg(parser, default=None):
+    parser.add_argument(
+        '--scaled', metavar='FLOAT', type=check_scaled_bounds,
+        help='scaled value should be between 100 and 1e6'
+    )

@@ -4,7 +4,7 @@
 
 You can get the latest development branch with:
 ```
-git clone https://github.com/dib-lab/sourmash.git
+git clone https://github.com/sourmash-bio/sourmash.git
 ```
 sourmash runs under Python 3.7 and later.
 
@@ -102,8 +102,8 @@ We use [GitHub Actions][2] for continuous integration.
 
 Code coverage can be viewed interactively at [codecov.io][1].
 
-[1]: https://codecov.io/gh/dib-lab/sourmash/
-[2]: https://github.com/dib-lab/sourmash/actions
+[1]: https://codecov.io/gh/sourmash-bio/sourmash/
+[2]: https://github.com/sourmash-bio/sourmash/actions
 
 ## Code organization
 
