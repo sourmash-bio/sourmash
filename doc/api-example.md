@@ -148,7 +148,7 @@ This creates three 7-mers from the sequence and hashes them:
 ```
 
 As with DNA k-mers, above, you can also use `seq_to_hashes` to generate
-the hashes, if you add the `is_protein=True` flag:
+the hashes for protein k-mers, if you add the `is_protein=True` flag:
 ```
 >>> for i in range(0, len(protseq) - K + 1):
 ...    kmer = protseq[i:i+K]
@@ -214,6 +214,10 @@ In sum,
 * `MinHash.add_protein(...)` converts protein sequence into protein k-mers, and then hashes them and stores them.
 * `MinHash.seq_to_hashes(...)` will give you the hash values without storing them.
 * The `dayhoff` and `hp` encodings can be calculated on aa k-mers as well, using `MinHash` objects.
+
+Note that this is the code that is used by the command-line
+functionality in `sourmash sketch`, so the results at the command-line
+should match the results from the Python API.
 
 ## Set operations on hashes
 
