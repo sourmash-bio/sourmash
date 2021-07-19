@@ -202,34 +202,32 @@ impl Iterator for SeqToHashes {
                 // The kmer size is already divided by 3
 
                 if self.hash_function.protein() {
-                    for aa_kmer in self.sequence.windows(self.k_size) {
+                    let aa_kmer = &self.sequence[self.kmer_index..self.kmer_index + self.k_size];
+                    let hash = crate::_hash_murmur(aa_kmer, self.seed);
+                    self.kmer_index += 1;
+                    Some(Ok(hash))
+                } else {
+                    let aa_seq: Vec<_> = match self.hash_function {
+                        HashFunctions::murmur64_dayhoff => {
+                            self.sequence.iter().cloned().map(aa_to_dayhoff).collect()
+                        }
+                        HashFunctions::murmur64_hp => {
+                            self.sequence.iter().cloned().map(aa_to_hp).collect()
+                        }
+                        invalid => {
+                            return Some(Err(Error::InvalidHashFunction {
+                                function: format!("{}", invalid),
+                            }));
+                        }
+                    };
+
+                    for aa_kmer in aa_seq.windows(self.k_size) {
                         let hash = crate::_hash_murmur(aa_kmer, self.seed);
                         self._hashes_buffer.push(hash);
                     }
                     self.kmer_index = self.max_index;
-                    return Some(Ok(self._hashes_buffer.remove(0)));
+                    Some(Ok(self._hashes_buffer.remove(0)))
                 }
-
-                let aa_seq: Vec<_> = match self.hash_function {
-                    HashFunctions::murmur64_dayhoff => {
-                        self.sequence.iter().cloned().map(aa_to_dayhoff).collect()
-                    }
-                    HashFunctions::murmur64_hp => {
-                        self.sequence.iter().cloned().map(aa_to_hp).collect()
-                    }
-                    invalid => {
-                        return Some(Err(Error::InvalidHashFunction {
-                            function: format!("{}", invalid),
-                        }));
-                    }
-                };
-
-                for aa_kmer in aa_seq.windows(self.k_size) {
-                    let hash = crate::_hash_murmur(aa_kmer, self.seed);
-                    self._hashes_buffer.push(hash);
-                }
-                self.kmer_index = self.max_index;
-                Some(Ok(self._hashes_buffer.remove(0)))
             } else {
                 self.kmer_index = self.max_index;
                 Some(Ok(self._hashes_buffer.remove(0)))
