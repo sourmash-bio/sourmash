@@ -37,6 +37,9 @@ pub struct SeqToHashes {
     _dna_ksize: usize,
     _dna_len: usize,
     _dna_last_position_check: usize,
+
+    _prot_configured: bool,
+    _aa_seq: Vec<u8>,
 }
 
 impl SeqToHashes {
@@ -79,6 +82,8 @@ impl SeqToHashes {
             _dna_ksize: 0,
             _dna_len: 0,
             _dna_last_position_check: 0,
+            _prot_configured: false,
+            _aa_seq: Vec::new(),
         }
     }
 }
@@ -197,7 +202,7 @@ impl Iterator for SeqToHashes {
                     let first_element: u64 = self._hashes_buffer.remove(0);
                     Some(Ok(first_element))
                 }
-            } else if self._hashes_buffer.is_empty() {
+            } else {
                 // Processing protein
                 // The kmer size is already divided by 3
 
@@ -207,30 +212,27 @@ impl Iterator for SeqToHashes {
                     self.kmer_index += 1;
                     Some(Ok(hash))
                 } else {
-                    let aa_seq: Vec<_> = match self.hash_function {
-                        HashFunctions::murmur64_dayhoff => {
-                            self.sequence.iter().cloned().map(aa_to_dayhoff).collect()
-                        }
-                        HashFunctions::murmur64_hp => {
-                            self.sequence.iter().cloned().map(aa_to_hp).collect()
-                        }
-                        invalid => {
-                            return Some(Err(Error::InvalidHashFunction {
-                                function: format!("{}", invalid),
-                            }));
-                        }
-                    };
-
-                    for aa_kmer in aa_seq.windows(self.k_size) {
-                        let hash = crate::_hash_murmur(aa_kmer, self.seed);
-                        self._hashes_buffer.push(hash);
+                    if !self._prot_configured {
+                        self._aa_seq = match self.hash_function {
+                            HashFunctions::murmur64_dayhoff => {
+                                self.sequence.iter().cloned().map(aa_to_dayhoff).collect()
+                            }
+                            HashFunctions::murmur64_hp => {
+                                self.sequence.iter().cloned().map(aa_to_hp).collect()
+                            }
+                            invalid => {
+                                return Some(Err(Error::InvalidHashFunction {
+                                    function: format!("{}", invalid),
+                                }));
+                            }
+                        };
                     }
-                    self.kmer_index = self.max_index;
-                    Some(Ok(self._hashes_buffer.remove(0)))
+
+                    let aa_kmer = &self._aa_seq[self.kmer_index..self.kmer_index + self.k_size];
+                    let hash = crate::_hash_murmur(aa_kmer, self.seed);
+                    self.kmer_index += 1;
+                    Some(Ok(hash))
                 }
-            } else {
-                self.kmer_index = self.max_index;
-                Some(Ok(self._hashes_buffer.remove(0)))
             }
         } else {
             // End the iterator
