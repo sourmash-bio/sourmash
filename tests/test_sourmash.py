@@ -556,7 +556,7 @@ def test_compare_containment_require_scaled(c):
 def test_do_plot_comparison(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1, testdata2)
 
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '-o', 'cmp')
 
@@ -570,7 +570,7 @@ def test_do_plot_comparison(c):
 def test_do_plot_comparison_2(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1, testdata2)
 
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '-o', 'cmp')
 
@@ -583,7 +583,7 @@ def test_do_plot_comparison_2(c):
 def test_do_plot_comparison_3(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1, testdata2)
 
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '-o', 'cmp')
 
@@ -599,7 +599,7 @@ def test_do_plot_comparison_4_output_dir(c):
 
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1, testdata2)
 
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '-o', 'cmp')
 
@@ -789,7 +789,7 @@ def test_plot_subsample_2():
 @utils.in_tempdir
 def test_search_query_sig_does_not_exist(c):
     testdata1 = utils.get_test_data('short.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1)
 
     with pytest.raises(ValueError) as exc:
         c.run_sourmash('search', 'short2.fa.sig', 'short.fa.sig', fail_ok=True)
@@ -803,7 +803,7 @@ def test_search_query_sig_does_not_exist(c):
 @utils.in_tempdir
 def test_search_subject_sig_does_not_exist(c):
     testdata1 = utils.get_test_data('short.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1)
 
     with pytest.raises(ValueError) as exc:
         c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig', fail_ok=True)
@@ -816,7 +816,7 @@ def test_search_subject_sig_does_not_exist(c):
 @utils.in_tempdir
 def test_search_second_subject_sig_does_not_exist(c):
     testdata1 = utils.get_test_data('short.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1)
 
     with pytest.raises(ValueError) as exc:
         c.run_sourmash('search', 'short.fa.sig', 'short.fa.sig',
@@ -831,7 +831,7 @@ def test_search_second_subject_sig_does_not_exist(c):
 def test_search(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
 
     c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig')
     print(c.last_result.status, c.last_result.out, c.last_result.err)
