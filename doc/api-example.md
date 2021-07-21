@@ -20,13 +20,13 @@ Create two MinHashes using 3-mers, and add the sequences:
 
 ```
 >>> import sourmash
->>> mh1 = sourmash.MinHash(n=20, ksize=3)
+>>> mh1 = sourmash.MinHash(n=0, ksize=3, scaled=1)
 >>> mh1.add_sequence(seq1)
 
 ```
 
 ```
->>> mh2 = sourmash.MinHash(n=20, ksize=3)
+>>> mh2 = sourmash.MinHash(n=0, ksize=3, scaled=1)
 >>> mh2.add_sequence(seq2)
 
 ```
@@ -83,7 +83,7 @@ function is via the `seq_to_hashes` method on `MinHash` objects, which
 returns a list:
 ```
 >>> from sourmash import MinHash
->>> mh = MinHash(n=50, ksize=K)
+>>> mh = MinHash(n=0, ksize=K, scaled=1)
 >>> for i in range(0, len(dnaseq) - K + 1):
 ...    kmer = dnaseq[i:i+K]
 ...    print(i, kmer, mh.seq_to_hashes(kmer))
@@ -134,7 +134,7 @@ call `add_protein` on it --
 
 ```
 >>> K = 7
->>> mh = MinHash(50, K, is_protein=True)
+>>> mh = MinHash(0, K, is_protein=True, scaled=1)
 >>> protseq = "MVKVYAPAS"
 >>> mh.add_protein(protseq)
 
@@ -169,7 +169,7 @@ their encodings and then hashed. So, for example, the amino acid sequence
 `CADHIF*` is mapped to `abcdef*` in the Dayhoff encoding:
 
 ```
->>> mh = MinHash(50, K, dayhoff=True)
+>>> mh = MinHash(0, K, dayhoff=True, scaled=1)
 >>> h1 = mh.seq_to_hashes('CADHIF*', is_protein=True)[0]
 >>> h1
 12061624913065022412
@@ -191,7 +191,7 @@ is used as the k-mer size of the amino acids, i.e. 7 aa is 21 DNA bases.
 >>> len(dnaseq)
 35
 >>> K = 7
->>> mh = MinHash(50, K, is_protein=True)
+>>> mh = MinHash(n=0, ksize=K, is_protein=True, scaled=1)
 >>> mh.add_sequence(dnaseq)
 >>> len(mh)
 30
@@ -215,7 +215,7 @@ k-mers containing invalid characters are ignored.
 ```
 >>> dnaseq = "nTGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGC"
 >>> K = 31
->>> mh = MinHash(50, K)
+>>> mh = MinHash(n=0, ksize=K, scaled=1)
 >>> mh.add_sequence(dnaseq)
 Traceback (most recent call last):
     ...
@@ -233,7 +233,7 @@ matched by an identical k-mer (with the same invalid character).
 you'd like us to change this!)
 ```
 >>> K = 7
->>> mh = MinHash(50, K, is_protein=True)
+>>> mh = MinHash(n=0, ksize=K, is_protein=True, scaled=1)
 >>> protseq = "XVKVYAPAS"
 >>> mh.add_protein(protseq)
 >>> len(mh)
@@ -246,7 +246,7 @@ acids (any letter for which no encoded character exists) are replaced with
 'X'.
 ```
 >>> K = 7
->>> mh = MinHash(50, K, dayhoff=True)
+>>> mh = MinHash(n=0, ksize=K, dayhoff=True, scaled=1)
 >>> protseq1 = ".VKVYAPAS"
 >>> hashes1 = mh.seq_to_hashes(protseq1, is_protein=True)
 >>> protseq2 = "XVKVYAPAS"
@@ -274,6 +274,11 @@ All of the hashes in a `MinHash` object are available via the `hashes`
 property:
 
 ```
+>>> mh1 = sourmash.MinHash(n=0, ksize=3, scaled=1)
+>>> seq1 = "ATGGCA"
+>>> mh1.add_sequence(seq1)
+>>> seq2 = "AGAGCA"
+>>> mh1.add_sequence(seq2)
 >>> list(mh1.hashes)
 [1274996984489324440, 2529443451610975987, 3115010115530738562, 5059920851104263793, 5740495330885152257, 8652222673649005300, 18398176440806921933]
 
@@ -308,9 +313,9 @@ and you can also access the various parameters of a MinHash object directly as p
 >>> mh1.ksize
 3
 >>> mh1.scaled
-0
+1
 >>> mh1.num
-20
+0
 >>> mh1.is_dna
 True
 >>> mh1.is_protein
