@@ -127,7 +127,7 @@ of 42 and taking the first 64 bits.
 ### Protein-based encodings
 
 By default, `MinHash` objects work with DNA. However, sourmash supports
-amino acid, Dayhoff, and hydrophilic/hydrophobic encodings as well.
+amino acid, Dayhoff, and hydrophobic-polar encodings as well.
 
 The simplest way to use a protein `MinHash` object is to create one and
 call `add_protein` on it --
@@ -164,7 +164,7 @@ In this case, the k-mers are always hashed in the forward direction
 
 sourmash also supports the
 [Dayhoff](https://en.wikipedia.org/wiki/Margaret_Oakley_Dayhoff#Table_of_Dayhoff_encoding_of_amino_acids)
-and hydrophilic-polar encodings; here, amino acids are first mapped to
+and hydrophobic-polar encodings; here, amino acids are first mapped to
 their encodings and then hashed. So, for example, the amino acid sequence
 `CADHIF*` is mapped to `abcdef*` in the Dayhoff encoding:
 
