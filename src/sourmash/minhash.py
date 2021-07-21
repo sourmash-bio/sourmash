@@ -698,7 +698,7 @@ class MinHash(RustObject):
 
             return abund_query_mh
         else:
-            raise ValueError('value of track_abundance for self and from_mh should be true') 
+            raise ValueError('value of track_abundance for self should be false and from_mh should be true') 
         
 
 class FrozenMinHash(MinHash):
@@ -807,4 +807,4 @@ class FrozenMinHash(MinHash):
             return abund_query_mh
 
         else:
-            raise ValueError('value of track_abundance for self and from_mh should be true') 
+            raise ValueError('value of track_abundance for self should be false and from_mh should be true') 

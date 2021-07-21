@@ -1521,7 +1521,7 @@ def test_flatten():
 
 
 def test_inflate():
-    # test behavior with scaled
+    # test behavior of inflate function
     scaled = _get_scaled_for_max_hash(35)
     mh = MinHash(0, 4, track_abundance=False, scaled=scaled)
     mh2 = MinHash(0, 4, track_abundance=True, scaled=scaled)
@@ -1556,7 +1556,7 @@ def test_inflate():
 
 
 def test_inflate_error():
-    # test behavior with scaled
+    # test behavior of inflate function
     scaled = _get_scaled_for_max_hash(35)
     mh = MinHash(0, 4, track_abundance=True, scaled=scaled)
     mh2 = MinHash(0, 4, track_abundance=True, scaled=scaled)
@@ -1586,7 +1586,7 @@ def test_inflate_error():
     with pytest.raises(ValueError) as exc:
         mh = mh.inflate(mh2)
 
-    assert "value of track_abundance for self and from_mh should be true" in str(exc.value)
+    assert "value of track_abundance for self should be false and from_mh should be true" in str(exc.value)
 
 
 def test_add_kmer(track_abundance):
