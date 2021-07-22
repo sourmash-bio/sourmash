@@ -20,13 +20,13 @@ Create two MinHashes using 3-mers, and add the sequences:
 
 ```
 >>> import sourmash
->>> mh1 = sourmash.MinHash(n=20, ksize=3)
+>>> mh1 = sourmash.MinHash(n=0, ksize=3, scaled=1)
 >>> mh1.add_sequence(seq1)
 
 ```
 
 ```
->>> mh2 = sourmash.MinHash(n=20, ksize=3)
+>>> mh2 = sourmash.MinHash(n=0, ksize=3, scaled=1)
 >>> mh2.add_sequence(seq2)
 
 ```
@@ -57,11 +57,228 @@ We can add sequences to the MinHash objects and query at any time --
 
 ```
 
-## Set operations on hashes
+## Introduction: k-mers, molecule types, and hashing.
 
-All of the hashes are available via the `hashes` property:
+### DNA k-mers
+
+The basis of sourmash is k-mers. Suppose we have a 35 base DNA sequence, and
+we break it into four 31-mers:
+```
+>>> K = 31
+>>> dnaseq = "ATGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGC"
+>>> for i in range(0, len(dnaseq) - K + 1):
+...    kmer = dnaseq[i:i+K]
+...    print(i, kmer)
+0 ATGCGAGTGTTGAAGTTCGGCGGTACATCAG
+1 TGCGAGTGTTGAAGTTCGGCGGTACATCAGT
+2 GCGAGTGTTGAAGTTCGGCGGTACATCAGTG
+3 CGAGTGTTGAAGTTCGGCGGTACATCAGTGG
+4 GAGTGTTGAAGTTCGGCGGTACATCAGTGGC
 
 ```
+
+sourmash provides a hash function (by default MurmurHash) that will convert
+each k-mer into 64-bit numbers. The easiest way to access this hash
+function is via the `seq_to_hashes` method on `MinHash` objects, which
+returns a list:
+```
+>>> from sourmash import MinHash
+>>> mh = MinHash(n=0, ksize=K, scaled=1)
+>>> for i in range(0, len(dnaseq) - K + 1):
+...    kmer = dnaseq[i:i+K]
+...    print(i, kmer, mh.seq_to_hashes(kmer))
+0 ATGCGAGTGTTGAAGTTCGGCGGTACATCAG [7488148386897425535]
+1 TGCGAGTGTTGAAGTTCGGCGGTACATCAGT [3674733966066518639]
+2 GCGAGTGTTGAAGTTCGGCGGTACATCAGTG [2135725670290847794]
+3 CGAGTGTTGAAGTTCGGCGGTACATCAGTGG [14521729668397845245]
+4 GAGTGTTGAAGTTCGGCGGTACATCAGTGGC [15919051675656106963]
+
+```
+
+Underneath, sourmash DNA hashing takes each k-mer, builds the reverse
+complement, chooses the lexicographically lesser of the two, and then
+hashes it - for example, for the first and second k-mers above, you
+get:
+
+```
+>>> from sourmash.minhash import hash_murmur
+>>> from screed import rc
+>>> kmer_1 = "ATGCGAGTGTTGAAGTTCGGCGGTACATCAG"
+>>> hash_murmur(kmer_1)
+7488148386897425535
+>>> hash_murmur(kmer_1) == mh.seq_to_hashes(kmer_1)[0]
+True
+>>> kmer_2 = "TGCGAGTGTTGAAGTTCGGCGGTACATCAGT"
+>>> hash_murmur(kmer_2)
+6388498842523164783
+>>> kmer_2_rc = rc(kmer_2)
+>>> kmer_2_rc
+'ACTGATGTACCGCCGAACTTCAACACTCGCA'
+>>> hash_murmur(kmer_2_rc) == mh.seq_to_hashes(kmer_2)[0]
+True
+
+```
+where the second k-mer's reverse complement starts with 'A' and is therefore
+chosen for hashing by sourmash.
+
+Note that this is the same as using the MurmurHash hash function with a seed
+of 42 and taking the first 64 bits.
+
+### Protein-based encodings
+
+By default, `MinHash` objects work with DNA. However, sourmash supports
+amino acid, Dayhoff, and hydrophobic-polar encodings as well.
+
+The simplest way to use a protein `MinHash` object is to create one and
+call `add_protein` on it --
+
+```
+>>> K = 7
+>>> mh = MinHash(0, K, is_protein=True, scaled=1)
+>>> protseq = "MVKVYAPAS"
+>>> mh.add_protein(protseq)
+
+```
+
+This creates three 7-mers from the sequence and hashes them:
+```
+>>> list(sorted(mh.hashes))
+[5834377656419371297, 8846570680426381265, 10273850291677879123]
+
+```
+
+As with DNA k-mers, above, you can also use `seq_to_hashes` to generate
+the hashes for protein k-mers, if you add the `is_protein=True` flag:
+```
+>>> for i in range(0, len(protseq) - K + 1):
+...    kmer = protseq[i:i+K]
+...    print(i, kmer, mh.seq_to_hashes(kmer, is_protein=True))
+0 MVKVYAP [5834377656419371297]
+1 VKVYAPA [10273850291677879123]
+2 KVYAPAS [8846570680426381265]
+
+```
+
+In this case, the k-mers are always hashed in the forward direction
+(because protein sequence always has an orientation, unlike DNA).
+
+sourmash also supports the
+[Dayhoff](https://en.wikipedia.org/wiki/Margaret_Oakley_Dayhoff#Table_of_Dayhoff_encoding_of_amino_acids)
+and hydrophobic-polar encodings; here, amino acids are first mapped to
+their encodings and then hashed. So, for example, the amino acid sequence
+`CADHIF*` is mapped to `abcdef*` in the Dayhoff encoding:
+
+```
+>>> mh = MinHash(0, K, dayhoff=True, scaled=1)
+>>> h1 = mh.seq_to_hashes('CADHIF*', is_protein=True)[0]
+>>> h1
+12061624913065022412
+>>> h1 == hash_murmur('abcdef*')
+True
+
+```
+
+### Translating DNA into protein-based encodings.
+
+If you use `add_sequence(...)` to add DNA sequence to a protein encoding,
+or call `seq_to_hashes(...)` on a protein encoding without `is_protein`,
+sourmash will *translate* the sequences in all possible reading frames
+and hash the translated amino acids. The k-mer size for the `MinHash`
+is used as the k-mer size of the amino acids, i.e. 7 aa is 21 DNA bases.
+
+```
+>>> dnaseq = "ATGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGC"
+>>> len(dnaseq)
+35
+>>> K = 7
+>>> mh = MinHash(n=0, ksize=K, is_protein=True, scaled=1)
+>>> mh.add_sequence(dnaseq)
+>>> len(mh)
+30
+
+```
+Here, 30 hashes are added to the `MinHash` object because we are starting
+with a 35 base DNA sequence, and using 21-mers of DNA (7-mer of protein),
+which give us 15 distinct 21-mers in the three forward frames, and
+15 distinct 21-mers in the three reverse-complement frames, for a total
+of 30.
+
+If a dayhoff or hp `MinHash` object is used, then `add_sequence(...)`
+will first translate each sequence into protein space in all six frames,
+and then further encode the sequences into Dayhoff or hp encodings.
+
+### Invalid characters in DNA and protein sequences
+
+sourmash detects invalid DNA characters (non-ACTG) and raises an
+exception on `add_sequence`, unless `force=True`, in which case
+k-mers containing invalid characters are ignored.
+```
+>>> dnaseq = "nTGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGC"
+>>> K = 31
+>>> mh = MinHash(n=0, ksize=K, scaled=1)
+>>> mh.add_sequence(dnaseq)
+Traceback (most recent call last):
+    ...
+ValueError: invalid DNA character in input k-mer: NTGCGAGTGTTGAAGTTCGGCGGTACATCAG
+>>> mh.add_sequence(dnaseq, force=True)
+>>> len(mh)
+4
+
+```
+
+For protein sequences, sourmash does not currently do any invalid
+character detection; k-mers are hashed as they are, and can only be
+matched by an identical k-mer (with the same invalid character).
+(Please [file an issue](https://github.com/dib-lab/sourmash/issues) if
+you'd like us to change this!)
+```
+>>> K = 7
+>>> mh = MinHash(n=0, ksize=K, is_protein=True, scaled=1)
+>>> protseq = "XVKVYAPAS"
+>>> mh.add_protein(protseq)
+>>> len(mh)
+3
+
+```
+
+For the Dayhoff and hp encodings on top of amino acids, invalid amino
+acids (any letter for which no encoded character exists) are replaced with
+'X'.
+```
+>>> K = 7
+>>> mh = MinHash(n=0, ksize=K, dayhoff=True, scaled=1)
+>>> protseq1 = ".VKVYAPAS"
+>>> hashes1 = mh.seq_to_hashes(protseq1, is_protein=True)
+>>> protseq2 = "XVKVYAPAS"
+>>> hashes2 = mh.seq_to_hashes(protseq2, is_protein=True)
+>>> hashes1 == hashes2
+True
+
+```
+
+### Summary
+
+In sum,
+* `MinHash.add_sequence(...)` converts DNA sequence into DNA or protein k-mers, and then hashes them and stores them.
+* `MinHash.add_protein(...)` converts protein sequence into protein k-mers, and then hashes them and stores them.
+* `MinHash.seq_to_hashes(...)` will give you the hash values without storing them.
+* The `dayhoff` and `hp` encodings can be calculated on aa k-mers as well, using `MinHash` objects.
+
+Note that this is the code that is used by the command-line
+functionality in `sourmash sketch`, so the results at the command-line
+should match the results from the Python API.
+
+## Set operations on hashes
+
+All of the hashes in a `MinHash` object are available via the `hashes`
+property:
+
+```
+>>> mh1 = sourmash.MinHash(n=0, ksize=3, scaled=1)
+>>> seq1 = "ATGGCA"
+>>> mh1.add_sequence(seq1)
+>>> seq2 = "AGAGCA"
+>>> mh1.add_sequence(seq2)
 >>> list(mh1.hashes)
 [1274996984489324440, 2529443451610975987, 3115010115530738562, 5059920851104263793, 5740495330885152257, 8652222673649005300, 18398176440806921933]
 
@@ -96,9 +313,9 @@ and you can also access the various parameters of a MinHash object directly as p
 >>> mh1.ksize
 3
 >>> mh1.scaled
-0
+1
 >>> mh1.num
-20
+0
 >>> mh1.is_dna
 True
 >>> mh1.is_protein
