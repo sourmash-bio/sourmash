@@ -844,10 +844,13 @@ def test_search_ignore_abundance():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
+        # status, out, err = utils.runscript('sourmash',
+        #                                    ['compute', '-k', '31',
+        #                                     '--track-abundance',
+        #                                     testdata1, testdata2],
+        #                                    in_directory=location)
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
-                                            '--track-abundance',
-                                            testdata1, testdata2],
+                                           ['sketch', 'translate', '-p','k=31,num=500', '--ignore-abundance', testdata1, testdata2],
                                            in_directory=location)
 
         # Make sure there's different percent matches when using or
@@ -879,7 +882,7 @@ def test_search_ignore_abundance():
 def test_search_csv(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
 
     c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
     print(c.last_result.status, c.last_result.out, c.last_result.err)
@@ -1006,9 +1009,7 @@ def test_compare_deduce_molecule():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '30',
-                                            '--no-dna', '--protein',
-                                            testdata1, testdata2],
+                                           ['sketch', 'protein', '-p', 'k=15,num=500', testdata1,testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1025,9 +1026,7 @@ def test_compare_choose_molecule_dna():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '30',
-                                            '--dna', '--protein',
-                                            testdata1, testdata2],
+                                           ['sketch', 'dna', '-p', 'k=30,num=500',testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1044,9 +1043,7 @@ def test_compare_choose_molecule_protein():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '30',
-                                            '--dna', '--protein',
-                                            testdata1, testdata2],
+                                           ['sketch', 'translate', '-p', 'k=15,num=500',testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1063,14 +1060,10 @@ def test_compare_no_choose_molecule_fail():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '30',
-                                            '--dna',
-                                            testdata1],
+                                           ['sketch', 'dna', '-p', 'k=30,num=500',testdata1],
                                            in_directory=location)
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '90',
-                                            '--no-dna', '--protein',
-                                            testdata2],
+                                           ['sketch', 'protein', '-p', 'k=30,num=500', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1089,8 +1082,7 @@ def test_compare_deduce_ksize():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '29',
-                                            testdata1, testdata2],
+                                           ['sketch', 'dna', '-p', 'k=29,num=500', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1107,11 +1099,8 @@ def test_search_deduce_molecule():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '30',
-                                            '--no-dna', '--protein',
-                                            testdata1, testdata2],
-                                           in_directory=location)
-
+                                           ['sketch', 'translate', '-p', 'k=10,num=500', testdata1, testdata2],
+                                           in_directory=location)               
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'short.fa.sig',
                                             'short2.fa.sig'],
@@ -1127,10 +1116,8 @@ def test_search_deduce_ksize():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '23',
-                                            testdata1, testdata2],
-                                           in_directory=location)
-
+                                           ['sketch', 'translate', '-p', 'k=23,num=500', testdata1, testdata2],
+                                           in_directory=location)         
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'short.fa.sig',
                                             'short2.fa.sig'],
@@ -1145,10 +1132,10 @@ def test_do_sourmash_index_multik_fail():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1],
+                                           ['sketch', 'translate', '-p', 'k=31,num=500', testdata1],
                                            in_directory=location)
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '32', testdata2],
+                                           ['sketch', 'translate', '-p', 'k=32,num=500', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1166,11 +1153,10 @@ def test_do_sourmash_index_multimol_fail():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1],
+                                           ['sketch', 'translate', testdata1],
                                            in_directory=location)
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--protein', '-k', '30',
-                                            testdata2],
+                                           ['sketch', 'translate', '-p', 'k=30,num=500', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
