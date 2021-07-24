@@ -850,7 +850,7 @@ def test_search_ignore_abundance():
         #                                     testdata1, testdata2],
         #                                    in_directory=location)
         status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate', '-p','k=31,num=500', '--ignore-abundance', testdata1, testdata2],
+                                           ['sketch', 'translate', '-p','k=31,num=500,noabund', testdata1, testdata2],
                                            in_directory=location)
 
         # Make sure there's different percent matches when using or
