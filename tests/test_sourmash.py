@@ -850,7 +850,7 @@ def test_search_ignore_abundance():
         #                                     testdata1, testdata2],
         #                                    in_directory=location)
         status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate', '-p','k=31,num=500,noabund', testdata1, testdata2],
+                                           ['sketch', 'dna', '-p','k=31,num=500,noabund', testdata1, testdata2],
                                            in_directory=location)
 
         # Make sure there's different percent matches when using or
@@ -1456,8 +1456,7 @@ def test_search_containment():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled', '1'],
+                                           ['sketch', 'dna', '-p', 'scaled=1', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1475,8 +1474,7 @@ def test_search_containment_sbt():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled', '1'],
+                                           ['sketch', 'dna', '-p', 'scaled=1', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1702,7 +1700,7 @@ def test_search_gzip():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2],
                                            in_directory=location)
 
         data = open(os.path.join(location, 'short.fa.sig'), 'rb').read()
@@ -1728,7 +1726,7 @@ def test_search_2():
         testdata2 = utils.get_test_data('short2.fa')
         testdata3 = utils.get_test_data('short3.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
+                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2,
                                             testdata3],
                                            in_directory=location)
 
@@ -1748,7 +1746,7 @@ def test_search_3():
         testdata2 = utils.get_test_data('short2.fa')
         testdata3 = utils.get_test_data('short3.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
+                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2,
                                             testdata3],
                                            in_directory=location)
 
@@ -1767,7 +1765,7 @@ def test_search_4():
         testdata2 = utils.get_test_data('short2.fa')
         testdata3 = utils.get_test_data('short3.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
+                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2,
                                             testdata3],
                                            in_directory=location)
 
