@@ -216,6 +216,8 @@ def test_load_empty_zipfile(runtmp):
 def test_load_many_sigs_empty_file(runtmp):
     # make sure load_many_signatures behaves properly on empty file
     outloc = runtmp.output("empty.sig")
+    with open(outloc, "wt") as fp:
+        pass
 
     progress = sourmash_args.SignatureLoadingProgress()
 
@@ -234,6 +236,8 @@ def test_load_many_sigs_empty_file(runtmp):
 def test_load_many_sigs_empty_file_force(runtmp):
     # make sure load_many_signatures behaves properly on empty file w/force
     outloc = runtmp.output("empty.sig")
+    with open(outloc, "wt") as fp:
+        pass
 
     progress = sourmash_args.SignatureLoadingProgress()
 
