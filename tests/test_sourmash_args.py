@@ -211,3 +211,43 @@ def test_load_empty_zipfile(runtmp):
 
     sigiter = sourmash.load_file_as_signatures(outloc)
     assert list(sigiter) == []
+
+
+def test_load_many_sigs_empty_file(runtmp):
+    # make sure load_many_signatures behaves properly on empty file
+    outloc = runtmp.output("empty.sig")
+    with open(outloc, "wt") as fp:
+        pass
+
+    progress = sourmash_args.SignatureLoadingProgress()
+
+    with contextlib.redirect_stderr(io.StringIO()) as errfp:
+        with pytest.raises(SystemExit) as exc:
+            for ss, sigloc in sourmash_args.load_many_signatures([outloc],
+                                                                 progress):
+                pass
+
+    err = errfp.getvalue()
+    print(err)
+    assert f"ERROR: Error while reading signatures from '{outloc}'." in err
+    assert "(continuing)" not in err
+
+
+def test_load_many_sigs_empty_file_force(runtmp):
+    # make sure load_many_signatures behaves properly on empty file w/force
+    outloc = runtmp.output("empty.sig")
+    with open(outloc, "wt") as fp:
+        pass
+
+    progress = sourmash_args.SignatureLoadingProgress()
+
+    with contextlib.redirect_stderr(io.StringIO()) as errfp:
+        for ss, sigloc in sourmash_args.load_many_signatures([outloc],
+                                                             progress,
+                                                             force=True):
+            pass
+
+    err = errfp.getvalue()
+    print(err)
+    assert f"ERROR: Error while reading signatures from '{outloc}'." in err
+    assert "(continuing)" in err

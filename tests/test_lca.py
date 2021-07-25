@@ -452,6 +452,19 @@ def test_load_single_db():
     assert scaled == 10000
 
 
+def test_load_single_db_empty(runtmp):
+    # test load_single_database on an empty file; should raise ValueError
+    empty = runtmp.output('empty.lca.json')
+
+    with open(empty, "wt") as fp:
+        pass
+
+    with pytest.raises(ValueError) as exc:
+        db, ksize, scaled = lca_utils.load_single_database(empty)
+
+    assert f"'{empty}' is not an LCA database file." in str(exc.value)
+
+
 def test_databases():
     filename1 = utils.get_test_data('lca/delmont-1.lca.json')
     filename2 = utils.get_test_data('lca/delmont-2.lca.json')
