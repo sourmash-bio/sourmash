@@ -226,7 +226,7 @@ class LCA_Database(Index):
                 first_ch = fp.read(1)
             except ValueError:
                 first_ch = 'X'
-            if first_ch[0] != '{':
+            if not first_ch or first_ch[0] != '{':
                 raise ValueError(f"'{db_name}' is not an LCA database file.")
 
             fp.seek(0)
