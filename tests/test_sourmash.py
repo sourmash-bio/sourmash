@@ -556,7 +556,7 @@ def test_compare_containment_require_scaled(c):
 def test_do_plot_comparison(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1, testdata2)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
 
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '-o', 'cmp')
 
@@ -1004,7 +1004,7 @@ def test_compare_deduce_molecule():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'protein', '-p', 'k=37,num=500', testdata1,testdata2],
+                                           ['sketch', 'translate', '-p', 'k=10,num=500', testdata1,testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2441,9 +2441,8 @@ def test_do_sourmash_sbt_search_dnaprotquery():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
 
-        # args = ['compute', testdata1, testdata2,
-        #         '--protein', '--dna', '-k', '30']
-        args = ['sketch', 'protein', '-p', 'k=30,num=500',testdata1, testdata2]
+        args = ['compute', testdata1, testdata2,
+                '--protein', '--dna', '-k', '30']
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
 
@@ -2856,7 +2855,7 @@ def test_do_sourmash_sbt_search_bestonly_scaled():
         status, out, err = utils.runscript('sourmash',
                                            ['sketch','dna', '-p', 'scaled=1', testdata1, testdata2],
                                            in_directory=location)
-        
+
         status, out, err = utils.runscript('sourmash',
                                            ['index', '-k', '31', 'zzz',
                                             'short.fa.sig',
