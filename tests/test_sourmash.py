@@ -2730,17 +2730,10 @@ def test_do_sourmash_sbt_search_scaled_vs_num_3():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
 
-        # status, out, err = utils.runscript('sourmash',
-        #                                    ['compute', testdata1],
-        #                                    in_directory=location)
         status, out, err = utils.runscript('sourmash',
                                            ['sketch','dna', '-p', 'k=31,num=500', testdata1],
                                            in_directory=location)
 
-        # status, out, err = utils.runscript('sourmash',
-        #                                    ['compute', testdata2,
-        #                                     '--scaled', '1000'],
-        #                                    in_directory=location)
         status, out, err = utils.runscript('sourmash',
                                            ['sketch','dna', '-p', 'scaled=1000', testdata2],
                                            in_directory=location)
@@ -2763,17 +2756,10 @@ def test_do_sourmash_sbt_search_scaled_vs_num_4():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
 
-        # status, out, err = utils.runscript('sourmash',
-        #                                    ['compute', testdata1],
-        #                                    in_directory=location)
         status, out, err = utils.runscript('sourmash',
                                            ['sketch','dna', '-p', 'k=31,num=500', testdata1],
                                            in_directory=location)
 
-        # status, out, err = utils.runscript('sourmash',
-        #                                    ['compute', testdata2,
-        #                                     '--scaled', '1000'],
-        #                                    in_directory=location)
         status, out, err = utils.runscript('sourmash',
                                            ['sketch','dna', '-p', 'scaled=1000', testdata2],
                                            in_directory=location)
@@ -2841,7 +2827,7 @@ def test_do_sourmash_sbt_search_bestonly():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['sketch','dna', '-p', 'k=31,num=500', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2868,10 +2854,9 @@ def test_do_sourmash_sbt_search_bestonly_scaled():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled', '1'],
+                                           ['sketch','dna', '-p', 'scaled=1', testdata1, testdata2],
                                            in_directory=location)
-
+        
         status, out, err = utils.runscript('sourmash',
                                            ['index', '-k', '31', 'zzz',
                                             'short.fa.sig',
