@@ -2467,31 +2467,32 @@ def test_do_sourmash_sbt_search_selectprot():
         assert status != 0
 
 
-def test_do_sourmash_sbt_search_dnaprotquery():
-    # sbt_search should fail if non-single query sig given
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
+def test_do_sourmash_search_multimoltype_query(runtmp):
+    # 'search' should fail if multiple sigs are given as query, due to
+    # multiple molecule types.
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        args = ['compute', testdata1, testdata2,
-                '--protein', '--dna', '-k', '30']
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    # first, calculate signatures with multiple molecule types
+    args = ['sketch', 'translate', testdata1, testdata2,
+            '-p', 'protein', '-p', 'dayhoff']
+    runtmp.sourmash(*args)
 
-        args = ['index', 'zzz', 'short.fa.sig', 'short2.fa.sig',
-                '--protein']
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    # now, index one of 'em
+    args = ['index', 'zzz', 'short.fa.sig', 'short2.fa.sig', '--protein']
+    runtmp.sourmash(*args)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    # output exists, yes?
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        args = ['search', 'short.fa.sig', 'zzz']
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location, fail_ok=True)
-        assert status != 0
-        print(out)
-        print(err)
-        assert 'need exactly one' in err
+    # now, try searching. Should raise error.
+    args = ['search', 'short.fa.sig', 'zzz']
+    with pytest.raises(ValueError) as exc:
+        runtmp.sourmash(*args)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert 'need exactly one' in runtmp.last_result.err
 
 
 def test_do_sourmash_index_traverse():
