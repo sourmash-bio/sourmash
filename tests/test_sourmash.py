@@ -2882,7 +2882,7 @@ def test_sbt_search_order_dependence():
         testdata3 = utils.get_test_data('genome-s12.fa.gz')
         testdata4 = utils.get_test_data('genome-s10+s11.fa.gz')
 
-        cmd = 'compute --scaled 10000 -k 21,31 {} {} {} {}'
+        cmd = 'sketch dna -p k=21,scaled=10000 -p k=31,scaled=10000 {} {} {} {}'
         cmd = cmd.format(testdata1, testdata2, testdata3, testdata4)
 
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
@@ -2910,7 +2910,7 @@ def test_sbt_search_order_dependence_2():
         testdata3 = utils.get_test_data('genome-s12.fa.gz')
         testdata4 = utils.get_test_data('genome-s10+s11.fa.gz')
 
-        cmd = 'compute --scaled 10000 -k 21,31 {} {} {} {}'
+        cmd = 'sketch dna -p k=21,scaled=10000 -p k=31,scaled=10000 {} {} {} {}'
         cmd = cmd.format(testdata1, testdata2, testdata3, testdata4)
 
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
@@ -3060,14 +3060,11 @@ def test_gather(linear_gather, prefetch_gather):
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled', '10'],
+                                           ['sketch', 'dna', '-p', 'scaled=10', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '10',
-                                            '-o', 'query.fa.sig'],
+                                           ['sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -3096,16 +3093,11 @@ def test_gather_csv(linear_gather, prefetch_gather):
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled', '10',
-                                            '--name-from-first'],
+                                           ['sketch','dna','-p','scaled=10', '--name-from-first', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '10',
-                                            '--name-from-first',
-                                            '-o', 'query.fa.sig'],
+                                           ['sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', '--name-from-first', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -3162,14 +3154,11 @@ def test_gather_multiple_sbts(prefetch_gather, linear_gather):
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled', '10'],
+                                           ['sketch','dna', '-p', 'scaled=10', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '10',
-                                            '-o', 'query.fa.sig'],
+                                           ['sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -3208,14 +3197,11 @@ def test_gather_multiple_sbts_save_prefetch(linear_gather):
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled', '10'],
+                                           ['sketch','dna', '-p', 'scaled=10', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '10',
-                                            '-o', 'query.fa.sig'],
+                                           ['sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
