@@ -1021,7 +1021,9 @@ def test_compare_choose_molecule_dna():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-p', 'k=30,num=500',testdata1, testdata2],
+                                           ['compute', '-k', '30',
+                                            '--dna', '--protein',
+                                            testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1038,7 +1040,9 @@ def test_compare_choose_molecule_protein():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate', '-p', 'k=15,num=500',testdata1, testdata2],
+                                           ['compute', '-k', '30',
+                                            '--dna', '--protein',
+                                            testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
