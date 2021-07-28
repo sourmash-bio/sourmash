@@ -801,6 +801,7 @@ def gather(args):
 
             if is_abundance:
                 abund_query_mh = remaining_query.minhash.inflate(orig_query_mh)
+                remaining_query.minhash = abund_query_mh
 
             with FileOutput(args.output_unassigned, 'wt') as fp:
                 sig.save_signatures([ remaining_query ], fp)
