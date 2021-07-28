@@ -57,7 +57,6 @@ def subparser(subparsers):
         '-n', '--num-hashes', type=int, default=500,
         help='number of hashes to use in each sketch; default=%(default)i'
     )
-    # add_num_arg(subparser, 0)
     sketch_args.add_argument(
         '--track-abundance', action='store_true',
         help='track k-mer abundances in the generated signature'
@@ -124,6 +123,7 @@ def subparser(subparsers):
     )
     subparser._positionals.title = 'Required arguments'
     subparser._optionals.title = 'Miscellaneous options'
+    # add_num_arg(sketch_args, 0)
 
 
 def main(args):

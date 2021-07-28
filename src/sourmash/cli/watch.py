@@ -24,7 +24,6 @@ def subparser(subparsers):
         help='Consume protein sequences - no translation needed'
     )
     add_moltype_args(subparser)
-    # add_num_arg(subparser, 0)
     subparser.add_argument(
         '-n', '--num-hashes', type=int, default=500,
         help='number of hashes to use in each sketch (default: %(default)i)'
@@ -34,7 +33,7 @@ def subparser(subparsers):
         help='name to use for generated signature'
     )
     add_ksize_arg(subparser, 31)
-
+    # add_num_arg(subparser, 0)
 
 def main(args):
     import sourmash

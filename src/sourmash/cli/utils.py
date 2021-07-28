@@ -124,7 +124,7 @@ def check_num_bounds(arg):
     min_val = 50
     max_val = 50000
 
-    f = float(arg)
+    f = int(arg)
 
     if f < actual_min_val:
         raise argparse.ArgumentTypeError(f"ERROR: --num value must be positive")
