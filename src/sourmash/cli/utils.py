@@ -117,3 +117,26 @@ def add_scaled_arg(parser, default=None):
         '--scaled', metavar='FLOAT', type=check_scaled_bounds,
         help='scaled value should be between 100 and 1e6'
     )
+
+
+def check_num_bounds(arg):
+    actual_min_val = 0
+    min_val = 50
+    max_val = 50000
+
+    f = float(arg)
+
+    if f < actual_min_val:
+        raise argparse.ArgumentTypeError(f"ERROR: --num value must be positive")
+    if f < min_val:
+        notify('WARNING: --num value should be >= 50. Continuing anyway.')
+    if f > max_val:
+        notify('WARNING: --num value should be <= 50000. Continuing anyway.')
+    return f
+
+
+def add_num_arg(parser, default=None):
+    parser.add_argument(
+        '--num', metavar='N', type=check_num_bounds,
+        help='num value should be between 50 and 50000'
+    )

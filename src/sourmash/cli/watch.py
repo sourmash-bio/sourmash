@@ -1,6 +1,6 @@
 """classify a stream of sequences"""
 
-from sourmash.cli.utils import add_ksize_arg, add_moltype_args
+from sourmash.cli.utils import add_ksize_arg, add_moltype_args, add_num_arg
 
 
 def subparser(subparsers):
@@ -24,6 +24,7 @@ def subparser(subparsers):
         help='Consume protein sequences - no translation needed'
     )
     add_moltype_args(subparser)
+    # add_num_arg(subparser, 0)
     subparser.add_argument(
         '-n', '--num-hashes', type=int, default=500,
         help='number of hashes to use in each sketch (default: %(default)i)'
