@@ -2582,18 +2582,20 @@ signature license: CC0
 signature filename: short.fa.sig
 signature: ** no name **
 source file: short.fa
-md5: ef4fa1f3a90f3873187370f1eacc0d9a
+md5: c027e96c3379d38942639219daa24fdc
 k=7 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
 size: 500
 signature license: CC0
+
 ---
 signature filename: short.fa.sig
 signature: ** no name **
 source file: short.fa
-md5: 20be00d9d577da9faeb77477bf07d3fb
+md5: 4b50ae79657d9dd07a1d543ba8b986a0
 k=7 molecule=hp num=500 scaled=0 seed=42 track_abundance=0
 size: 500
 signature license: CC0
+
 ---
 signature filename: short.fa.sig
 signature: ** no name **
@@ -2616,7 +2618,7 @@ signature license: CC0
 signature filename: short.fa.sig
 signature: ** no name **
 source file: short.fa
-md5: 5647819f2eac913e04af51c8d548ad56
+md5: 396dcb7c1875f48ca31e0759bec72ee1
 k=10 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
 size: 500
 signature license: CC0
@@ -2625,7 +2627,7 @@ signature license: CC0
 signature filename: short.fa.sig
 signature: ** no name **
 source file: short.fa
-md5: ad1e329dd98b5e32422e9decf298aa5f
+md5: 4c43878296459783dbd6a4a071ab7e9d
 k=10 molecule=hp num=500 scaled=0 seed=42 track_abundance=0
 size: 500
 signature license: CC0
@@ -2638,6 +2640,7 @@ md5: 71f7c111c01785e5f38efad45b00a0e1
 k=30 molecule=DNA num=500 scaled=0 seed=42 track_abundance=0
 size: 500
 signature license: CC0
+
 """.splitlines()
     for line in out.splitlines():
         cleaned_line = line.strip().replace(

@@ -259,7 +259,10 @@ similarity   match
 ```
 
 Note, as of sourmash 4.2.0, `search` supports `--picklist`, to
-[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures).
+[select a subset of signatures to search, based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
+can be used to search only a small subset of a large collection, or to
+exclude a few signatures from a collection, without modifying the
+collection itself.
 
 ### `sourmash gather` - find metagenome members
 
@@ -302,7 +305,10 @@ which matches are no longer reported; by default, this is set to
 [Classifying Signatures](classifying-signatures.md) for details.
 
 As of sourmash 4.2.0, `gather` supports `--picklist`, to
-[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures).
+[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
+can be used to search only a small subset of a large collection, or to
+exclude a few signatures from a collection, without modifying the
+collection itself.
 
 Note:
 
@@ -366,7 +372,9 @@ signature files, directories full of signatures, or other sourmash
 databases.
 
 As of sourmash 4.2.0, `index` supports `--picklist`, to
-[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures).
+[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
+can be used to index a subset of a large collection, or to
+exclude a few signatures from an index being built from a large collection.
 
 ### `sourmash prefetch` - select subsets of very large databases for more processing
 
@@ -393,7 +401,7 @@ Other options include:
 * `--threshold-bp` to require a minimum estimated bp overlap for output;
 * `--scaled` for downsampling;
 * `--force` to continue past survivable errors;
-* `--picklist` select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
+* `--picklist` will select a subset of signatures to search, using [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
 
 ### Alternative search mode for low-memory (but slow) search: `--linear`
 
@@ -903,7 +911,9 @@ You can use `--from-file` to pass `lca index` a text file containing a
 list of file names to index.
 
 As of sourmash 4.2.0, `lca index` supports `--picklist`, to
-[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures).
+[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
+can be used to index a subset of a large collection, or to
+exclude a few signatures from an index being built from a large collection.
 
 ### `sourmash lca rankinfo` - examine an LCA database
 
@@ -1256,7 +1266,8 @@ scaled values will be made compatible.
 
 As of sourmash 4.2.0, many commands support *picklists*, a feature by
 which you can select or "pick out" signatures based on values in a CSV
-file.
+file. This is typically used to index, extract, or search a subset of
+a large collection where modifying the collection itself isn't desired.
 
 For example,
 ```
