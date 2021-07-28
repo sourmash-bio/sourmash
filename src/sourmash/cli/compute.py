@@ -53,10 +53,10 @@ def subparser(subparsers):
         type=ksize_parser,
         help='comma-separated list of k-mer sizes; default=%(default)s'
     )
-    sketch_args.add_argument(
-        '-n', '--num-hashes', type=int, default=500,
-        help='number of hashes to use in each sketch; default=%(default)i'
-    )
+    # sketch_args.add_argument(
+    #     '-n', '--num-hashes', type=int, default=500,
+    #     help='number of hashes to use in each sketch; default=%(default)i'
+    # )
     sketch_args.add_argument(
         '--track-abundance', action='store_true',
         help='track k-mer abundances in the generated signature'
@@ -123,7 +123,7 @@ def subparser(subparsers):
     )
     subparser._positionals.title = 'Required arguments'
     subparser._optionals.title = 'Miscellaneous options'
-    # add_num_arg(sketch_args, 0)
+    add_num_arg(sketch_args, 0)
 
 
 def main(args):
