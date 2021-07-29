@@ -556,7 +556,7 @@ def test_compare_containment_require_scaled(c):
 def test_do_plot_comparison(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
 
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '-o', 'cmp')
 
@@ -570,7 +570,7 @@ def test_do_plot_comparison(c):
 def test_do_plot_comparison_2(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1, testdata2)
 
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '-o', 'cmp')
 
@@ -583,7 +583,7 @@ def test_do_plot_comparison_2(c):
 def test_do_plot_comparison_3(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1, testdata2)
 
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '-o', 'cmp')
 
@@ -599,7 +599,7 @@ def test_do_plot_comparison_4_output_dir(c):
 
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1, testdata2)
 
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '-o', 'cmp')
 
@@ -789,7 +789,7 @@ def test_plot_subsample_2():
 @utils.in_tempdir
 def test_search_query_sig_does_not_exist(c):
     testdata1 = utils.get_test_data('short.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1)
 
     with pytest.raises(ValueError) as exc:
         c.run_sourmash('search', 'short2.fa.sig', 'short.fa.sig', fail_ok=True)
@@ -803,7 +803,7 @@ def test_search_query_sig_does_not_exist(c):
 @utils.in_tempdir
 def test_search_subject_sig_does_not_exist(c):
     testdata1 = utils.get_test_data('short.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1)
 
     with pytest.raises(ValueError) as exc:
         c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig', fail_ok=True)
@@ -816,7 +816,7 @@ def test_search_subject_sig_does_not_exist(c):
 @utils.in_tempdir
 def test_search_second_subject_sig_does_not_exist(c):
     testdata1 = utils.get_test_data('short.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1)
 
     with pytest.raises(ValueError) as exc:
         c.run_sourmash('search', 'short.fa.sig', 'short.fa.sig',
@@ -831,7 +831,7 @@ def test_search_second_subject_sig_does_not_exist(c):
 def test_search(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
 
     c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig')
     print(c.last_result.status, c.last_result.out, c.last_result.err)
@@ -845,9 +845,7 @@ def test_search_ignore_abundance():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
-                                            '--track-abundance',
-                                            testdata1, testdata2],
+                                           ['sketch', 'dna', '-p','k=31,num=500,abund', testdata1, testdata2],
                                            in_directory=location)
 
         # Make sure there's different percent matches when using or
@@ -879,7 +877,7 @@ def test_search_ignore_abundance():
 def test_search_csv(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
 
     c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
     print(c.last_result.status, c.last_result.out, c.last_result.err)
@@ -1006,9 +1004,7 @@ def test_compare_deduce_molecule():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '30',
-                                            '--no-dna', '--protein',
-                                            testdata1, testdata2],
+                                           ['sketch', 'translate', '-p', 'k=10,num=500', testdata1,testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1063,14 +1059,10 @@ def test_compare_no_choose_molecule_fail():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '30',
-                                            '--dna',
-                                            testdata1],
+                                           ['sketch', 'dna', '-p', 'k=30,num=500',testdata1],
                                            in_directory=location)
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '90',
-                                            '--no-dna', '--protein',
-                                            testdata2],
+                                           ['sketch', 'protein', '-p', 'k=30,num=500', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1089,8 +1081,7 @@ def test_compare_deduce_ksize():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '29',
-                                            testdata1, testdata2],
+                                           ['sketch', 'dna', '-p', 'k=29,num=500', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1107,11 +1098,8 @@ def test_search_deduce_molecule():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '30',
-                                            '--no-dna', '--protein',
-                                            testdata1, testdata2],
-                                           in_directory=location)
-
+                                           ['sketch', 'translate', '-p', 'k=10,num=500', testdata1, testdata2],
+                                           in_directory=location)               
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'short.fa.sig',
                                             'short2.fa.sig'],
@@ -1127,10 +1115,8 @@ def test_search_deduce_ksize():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '23',
-                                            testdata1, testdata2],
-                                           in_directory=location)
-
+                                           ['sketch', 'translate', '-p', 'k=23,num=500', testdata1, testdata2],
+                                           in_directory=location)         
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'short.fa.sig',
                                             'short2.fa.sig'],
@@ -1145,10 +1131,10 @@ def test_do_sourmash_index_multik_fail():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1],
+                                           ['sketch', 'translate', '-p', 'k=31,num=500', testdata1],
                                            in_directory=location)
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '32', testdata2],
+                                           ['sketch', 'translate', '-p', 'k=32,num=500', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1166,11 +1152,10 @@ def test_do_sourmash_index_multimol_fail():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1],
+                                           ['sketch', 'translate', testdata1],
                                            in_directory=location)
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--protein', '-k', '30',
-                                            testdata2],
+                                           ['sketch', 'translate', '-p', 'k=30,num=500', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1188,12 +1173,10 @@ def test_do_sourmash_index_multinum_fail():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
-                                               '-n', '500', testdata1],
+                                           ['sketch', 'translate', '-p', 'k=31,num=500', testdata1],
                                            in_directory=location)
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
-                                               '-n', '1000', testdata2],
+                                           ['sketch', 'translate', '-p', 'k=31,num=1000', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1212,11 +1195,10 @@ def test_do_sourmash_index_multiscaled_fail():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--scaled',
-                                               '10', testdata1],
+                                           ['sketch', 'dna', '-p', 'scaled=10', testdata1],
                                            in_directory=location)
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--scaled', '1', testdata2],
+                                           ['sketch', 'dna', '-p', 'scaled=1', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1236,8 +1218,8 @@ def test_do_sourmash_index_multiscaled_rescale(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
-    c.run_sourmash('compute', '--scaled', '10', testdata1)
-    c.run_sourmash('compute', '--scaled', '1', testdata2)
+    c.run_sourmash('sketch', 'dna', '-p', 'scaled=10', testdata1)
+    c.run_sourmash('sketch', 'dna', '-p', 'scaled=1', testdata2)
 
     c.run_sourmash('index', 'zzz',
                    'short.fa.sig',
@@ -1255,8 +1237,8 @@ def test_do_sourmash_index_multiscaled_rescale_fail(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
-    c.run_sourmash('compute', '--scaled', '10', testdata1)
-    c.run_sourmash('compute', '--scaled', '1', testdata2)
+    c.run_sourmash('sketch', 'dna', '-p', 'scaled=10', testdata1)
+    c.run_sourmash('sketch', 'dna', '-p', 'scaled=1', testdata2)
     # this should fail: cannot go from a scaled value of 10 to 5
 
     with pytest.raises(ValueError) as e:
@@ -1276,7 +1258,7 @@ def test_do_sourmash_sbt_search_output():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['sketch', 'dna', '-p', 'k=31,num=500', testdata1,testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1356,7 +1338,7 @@ def test_do_sourmash_sbt_move_and_search_output():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['sketch', 'dna', '-p', 'k=31,num=500', testdata1,testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1398,13 +1380,11 @@ def test_search_deduce_ksize_and_select_appropriate():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '24',
-                                            testdata1],
+                                           ['sketch', 'translate', '-p', 'k=24,num=500', testdata1],
                                            in_directory=location)
         # The DB contains signatres for multiple ksizes
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '23,24',
-                                            testdata2],
+                                           ['sketch', 'translate', '-p', 'k=23,num=500', '-p', 'k=24,num=500', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1422,8 +1402,7 @@ def test_search_deduce_ksize_not_unique():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '23,25',
-                                            testdata1, testdata2],
+                                           ['sketch', 'translate', '-p', 'k=23,num=500', '-p', 'k=25,num=500', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1442,8 +1421,8 @@ def test_search_deduce_ksize_no_match(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
-    c.run_sourmash('compute', '-k', '23', testdata1)
-    c.run_sourmash('compute', '-k', '25', testdata2)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=23,num=500', testdata1)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=25,num=500', testdata2)
 
     with pytest.raises(ValueError) as exc:
         c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig')
@@ -1456,7 +1435,7 @@ def test_search_deduce_ksize_vs_user_specified():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '23',
+                                           ['sketch', 'translate', '-p', 'k=23,num=500',
                                             testdata1, testdata2],
                                            in_directory=location)
 
@@ -1476,8 +1455,7 @@ def test_search_containment():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled', '1'],
+                                           ['sketch', 'dna', '-p', 'scaled=1', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1495,8 +1473,7 @@ def test_search_containment_sbt():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled', '1'],
+                                           ['sketch', 'dna', '-p', 'scaled=1', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1722,7 +1699,7 @@ def test_search_gzip():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2],
                                            in_directory=location)
 
         data = open(os.path.join(location, 'short.fa.sig'), 'rb').read()
@@ -1748,7 +1725,7 @@ def test_search_2():
         testdata2 = utils.get_test_data('short2.fa')
         testdata3 = utils.get_test_data('short3.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
+                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2,
                                             testdata3],
                                            in_directory=location)
 
@@ -1768,7 +1745,7 @@ def test_search_3():
         testdata2 = utils.get_test_data('short2.fa')
         testdata3 = utils.get_test_data('short3.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
+                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2,
                                             testdata3],
                                            in_directory=location)
 
@@ -1787,7 +1764,7 @@ def test_search_4():
         testdata2 = utils.get_test_data('short2.fa')
         testdata3 = utils.get_test_data('short3.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
+                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2,
                                             testdata3],
                                            in_directory=location)
 
@@ -2195,8 +2172,7 @@ def test_mash_csv_to_sig():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
-                                            '-n', '970', testdata2],
+                                           ['sketch', 'dna', '-p','k=31,num=970',testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2213,7 +2189,7 @@ def test_do_sourmash_index_bad_args():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2234,7 +2210,7 @@ def test_do_sourmash_sbt_search():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2261,8 +2237,7 @@ def test_do_sourmash_sbt_search_wrong_ksize():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '-k', '31,51'],
+                                           ['sketch', 'translate', '-p', 'k=31,num=500', '-p', 'k=51,num=500', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2293,7 +2268,7 @@ def test_do_sourmash_sbt_search_multiple():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2328,7 +2303,7 @@ def test_do_sourmash_sbt_search_and_sigs():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2354,14 +2329,12 @@ def test_do_sourmash_sbt_search_downsample():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled=10'],
+                                           ['sketch', 'dna', '-p', 'k=31,scaled=10', testdata1, testdata2],
                                            in_directory=location)
-
+        
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1,
-                                            '--scaled=5', '-o', 'query.sig'],
+                                           ['sketch','dna','-p','k=31,scaled=5', '-o', 'query.sig', testdata1],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2428,7 +2401,7 @@ def test_do_sourmash_index_single():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2453,8 +2426,7 @@ def test_do_sourmash_sbt_search_selectprot():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
 
-        args = ['compute', testdata1, testdata2,
-                '--protein', '--dna', '-k', '30']
+        args = ['sketch', 'dna', '-p', 'k=30,num=500',testdata1, testdata2]
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
 
@@ -2499,7 +2471,7 @@ def test_do_sourmash_index_traverse():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2530,8 +2502,8 @@ def test_do_sourmash_index_traverse_force(c):
     out1 = os.path.join(outdir, 'short1')
     out2 = os.path.join(outdir, 'short2')
 
-    c.run_sourmash('compute', testdata1, '-o', out1)
-    c.run_sourmash('compute', testdata2, '-o', out2)
+    c.run_sourmash('sketch','dna','-p','k=31,scaled=5', '-o', out1, testdata1)
+    c.run_sourmash('sketch','dna','-p','k=31,scaled=5', '-o', out2, testdata2)
 
     c.run_sourmash('index', '-k', '31', 'zzz', '.', '-f')
 
@@ -2553,7 +2525,7 @@ def test_do_sourmash_index_sparseness():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2618,8 +2590,8 @@ def test_do_sourmash_index_append():
         testdata2 = utils.get_test_data('short2.fa')
         testdata3 = utils.get_test_data('short3.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1,
-                                               testdata2, testdata3],
+                                           ['sketch','dna', '-p', 'k=31,num=500', testdata1,
+                                            testdata2, testdata3],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2665,7 +2637,8 @@ def test_do_sourmash_sbt_search_otherdir():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['sketch','dna', '-p', 'k=31,num=500', testdata1,
+                                            testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2693,12 +2666,11 @@ def test_do_sourmash_sbt_search_scaled_vs_num_1():
         testdata2 = utils.get_test_data('short2.fa')
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1],
+                                           ['sketch','dna', '-p', 'k=31,num=500', testdata1],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '1000'],
+                                           ['sketch','dna', '-p', 'scaled=1000', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2728,12 +2700,11 @@ def test_do_sourmash_sbt_search_scaled_vs_num_2():
         testdata2 = utils.get_test_data('short2.fa')
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1],
+                                           ['sketch','dna', '-p', 'k=31,num=500', testdata1],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '1000'],
+                                           ['sketch','dna', '-p', 'scaled=1000', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2763,12 +2734,11 @@ def test_do_sourmash_sbt_search_scaled_vs_num_3():
         testdata2 = utils.get_test_data('short2.fa')
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1],
+                                           ['sketch','dna', '-p', 'k=31,num=500', testdata1],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '1000'],
+                                           ['sketch','dna', '-p', 'scaled=1000', testdata2],
                                            in_directory=location)
 
         sig_loc = os.path.join(location, 'short.fa.sig')
@@ -2790,12 +2760,11 @@ def test_do_sourmash_sbt_search_scaled_vs_num_4():
         testdata2 = utils.get_test_data('short2.fa')
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1],
+                                           ['sketch','dna', '-p', 'k=31,num=500', testdata1],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '1000'],
+                                           ['sketch','dna', '-p', 'scaled=1000', testdata2],
                                            in_directory=location)
 
         sig_loc = os.path.join(location, 'short.fa.sig')
@@ -2861,7 +2830,7 @@ def test_do_sourmash_sbt_search_bestonly():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['sketch','dna', '-p', 'k=31,num=500', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2888,8 +2857,7 @@ def test_do_sourmash_sbt_search_bestonly_scaled():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled', '1'],
+                                           ['sketch','dna', '-p', 'scaled=1', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2917,7 +2885,7 @@ def test_sbt_search_order_dependence():
         testdata3 = utils.get_test_data('genome-s12.fa.gz')
         testdata4 = utils.get_test_data('genome-s10+s11.fa.gz')
 
-        cmd = 'compute --scaled 10000 -k 21,31 {} {} {} {}'
+        cmd = 'sketch dna -p k=21,scaled=10000 -p k=31,scaled=10000 {} {} {} {}'
         cmd = cmd.format(testdata1, testdata2, testdata3, testdata4)
 
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
@@ -2945,7 +2913,7 @@ def test_sbt_search_order_dependence_2():
         testdata3 = utils.get_test_data('genome-s12.fa.gz')
         testdata4 = utils.get_test_data('genome-s10+s11.fa.gz')
 
-        cmd = 'compute --scaled 10000 -k 21,31 {} {} {} {}'
+        cmd = 'sketch dna -p k=21,scaled=10000 -p k=31,scaled=10000 {} {} {} {}'
         cmd = cmd.format(testdata1, testdata2, testdata3, testdata4)
 
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
@@ -3095,14 +3063,11 @@ def test_gather(linear_gather, prefetch_gather):
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled', '10'],
+                                           ['sketch', 'dna', '-p', 'scaled=10', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '10',
-                                            '-o', 'query.fa.sig'],
+                                           ['sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -3131,16 +3096,11 @@ def test_gather_csv(linear_gather, prefetch_gather):
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled', '10',
-                                            '--name-from-first'],
+                                           ['sketch','dna','-p','scaled=10', '--name-from-first', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '10',
-                                            '--name-from-first',
-                                            '-o', 'query.fa.sig'],
+                                           ['sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', '--name-from-first', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -3197,14 +3157,11 @@ def test_gather_multiple_sbts(prefetch_gather, linear_gather):
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled', '10'],
+                                           ['sketch','dna', '-p', 'scaled=10', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '10',
-                                            '-o', 'query.fa.sig'],
+                                           ['sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -3243,14 +3200,11 @@ def test_gather_multiple_sbts_save_prefetch(linear_gather):
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled', '10'],
+                                           ['sketch','dna', '-p', 'scaled=10', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '10',
-                                            '-o', 'query.fa.sig'],
+                                           ['sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -3290,14 +3244,11 @@ def test_gather_sbt_and_sigs(linear_gather, prefetch_gather):
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1, testdata2,
-                                            '--scaled', '10'],
+                                           ['sketch', 'dna', '-p', 'k=31,scaled=10', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '10',
-                                            '-o', 'query.fa.sig'],
+                                           ['sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -3326,14 +3277,11 @@ def test_gather_file_output(linear_gather, prefetch_gather):
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled', '10'],
+                                           ['sketch', 'dna', '-p', 'scaled=10', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '10',
-                                            '-o', 'query.fa.sig'],
+                                           ['sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -4428,13 +4376,12 @@ def test_gather_error_no_cardinality_query(linear_gather, prefetch_gather):
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
-                                               testdata1, testdata2],
+                                           ['sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2],
                                            in_directory=location)
 
         testdata3 = utils.get_test_data('short3.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata3],
+        tatus, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'translate', '-p', 'k=31,num=500', testdata3],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -4460,14 +4407,11 @@ def test_gather_deduce_ksize(prefetch_gather, linear_gather):
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled', '10', '-k', '23'],
+                                           ['sketch', 'dna', '-p', 'k=23,scaled=10', testdata1, testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '10', '-k', '23',
-                                            '-o', 'query.fa.sig'],
+                                           ['sketch','dna','-p','k=23,scaled=10', '-o', 'query.fa.sig', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -4495,16 +4439,11 @@ def test_gather_deduce_moltype(linear_gather, prefetch_gather):
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--scaled', '10', '-k', '30',
-                                            '--no-dna', '--protein'],
+                                           ['sketch', 'translate', '-p', 'k=10,scaled=10', testdata1,testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '10', '-k', '30',
-                                            '--no-dna', '--protein',
-                                            '-o', 'query.fa.sig'],
+                                           ['sketch', 'translate', '-p', 'k=10,scaled=10', '-o', 'query.fa.sig',testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -4932,7 +4871,7 @@ def test_watch(c):
 @utils.in_tempdir
 def test_watch_deduce_ksize(c):
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
-    c.run_sourmash('compute', testdata0, '-k', '29', '-o', '1.sig')
+    c.run_sourmash('sketch','dna','-p','k=29,num=500', '-o', '1.sig', testdata0)
 
     c.run_sourmash('index', '--dna', '-k', '29', 'zzz', '1.sig')
 
@@ -5080,7 +5019,7 @@ def test_license_cc0():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1],
+                                           ['sketch','translate', '-p', 'k=31', testdata1],
                                            in_directory=location)
 
         sigfile = os.path.join(location, 'short.fa.sig')
@@ -5096,8 +5035,8 @@ def test_license_non_cc0():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
-                                            testdata1, '--license', 'GPL'],
+                                           ['sketch', 'translate', '-p','k=31', '--license', 'GPL',
+                                            testdata1],
                                            in_directory=location, fail_ok=True)
 
         assert status != 0
