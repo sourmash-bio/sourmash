@@ -296,9 +296,15 @@ class MinHash(RustObject):
                          force)
 
     def seq_to_hashes(self, sequence, *, force=False, is_protein=False):
-        "Convert sequence to hashes without adding to the sketch."
+        """Convert sequence to hashes without adding to the sketch.
 
-        if is_protein and self.moltype not in ["protein", "dayhoff", "hp"]:
+        If input sequence is DNA and this is a protein, dayhoff, or hp
+        MinHash, translate the DNA appropriately before hashing.
+
+        If input sequence is protein, set is_protein=True.
+        """
+
+        if is_protein and self.moltype not in ("protein", "dayhoff", "hp"):
             raise ValueError("cannot add protein sequence to DNA MinHash")
 
         size = ffi.new("uintptr_t *")
@@ -310,6 +316,33 @@ class MinHash(RustObject):
 
         finally:
             lib.kmerminhash_slice_free(hashes_ptr, size)
+
+    def kmers_and_hashes(self, sequence, *, force=False, is_protein=False):
+        """Convert sequence into (k-mer, hashval) tuples without adding
+        it to the sketch.
+
+        If input sequence is DNA and this is a protein, dayhoff, or hp
+        MinHash, translate the DNA appropriately before hashing.
+
+        If input sequence is protein, set is_protein=True.
+        """
+        hashvals = self.seq_to_hashes(sequence,
+                                      force=force, is_protein=is_protein)
+
+        ksize = self.ksize
+        if self.moltype == 'DNA':
+            pass
+        elif is_protein:
+            pass
+        else:                   # translate input DNA sequence => aa
+            assert self.moltype in ('protein', 'dayhoff', 'hp')
+            ksize = self.ksize * 3
+
+        assert len(sequence) - ksize + 1 == len(hashvals)
+
+        for i, hashval in zip(range(0, len(sequence) - ksize + 1), hashvals):
+            kmer = sequence[i:i+ksize]
+            yield kmer, hashval
 
     def add_kmer(self, kmer):
         "Add a kmer into the sketch."

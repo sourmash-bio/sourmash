@@ -968,6 +968,16 @@ def kmers(args):
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
+    is_protein = False
+    if query_mh.moltype == 'DNA':
+        if args.translate:
+            error("ERROR: cannot use --translate with DNA sketches.")
+            sys.exit(-1)
+    else:
+        is_protein = True
+        if args.translate:      # input sequence is DNA
+            is_protein = False
+
     notify("")
     notify(f"merged signature has the following properties:")
     notify(f"k={query_mh.ksize} molecule={query_mh.moltype} num={query_mh.num} scaled={query_mh.scaled} seed={query_mh.seed}")
@@ -1012,10 +1022,9 @@ def kmers(args):
                 # output matching k-mers:
                 if kmer_w:
                     seq = record.sequence
-                    ksize = seq_mh.ksize
-                    for i in range(0, len(seq) - ksize + 1):
-                        kmer = seq[i:i+ksize]
-                        hashval = seq_mh.seq_to_hashes(kmer)[0]
+                    kh_iter = seq_mh.kmers_and_hashes(seq, force=False,
+                                                      is_protein=False)
+                    for kmer, hashval in kh_iter:
                         if hashval in query_mh.hashes:
                             found_mh.add_hash(hashval)
                             d = dict(sequence_file=filename,
