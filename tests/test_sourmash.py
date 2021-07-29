@@ -4897,6 +4897,23 @@ def test_sbt_categorize_multiple_ksizes_moltypes():
                                            in_directory=location)
 
 
+# @utils.in_tempdir
+# def test_watch_check_num_bounds_negative(c):
+#     testdata0 = utils.get_test_data('genome-s10.fa.gz')
+#     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+#     shutil.copyfile(testdata1, c.output('1.sig'))
+
+#     c.run_sourmash('index', '--dna', '-k', '21', 'zzz', '1.sig')
+
+#     with pytest.raises(ValueError) as exc:
+#         c.run_sourmash('watch', '--ksize', '21', '-n', '-5', '--dna', 'zzz', testdata0)
+
+#     # print(c.last_result.out)
+#     # print(c.last_result.err)
+#     # assert 'FOUND: genome-s10, at 1.000' in c.last_result.out
+#     assert "ERROR: --scaled value must be positive" in str(exc.value)
+
+
 @utils.in_tempdir
 def test_watch(c):
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
