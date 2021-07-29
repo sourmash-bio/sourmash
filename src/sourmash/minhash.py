@@ -330,15 +330,21 @@ class MinHash(RustObject):
                                       force=force, is_protein=is_protein)
 
         ksize = self.ksize
+        translate = False
         if self.moltype == 'DNA':
             pass
         elif is_protein:
             pass
         else:                   # translate input DNA sequence => aa
             assert self.moltype in ('protein', 'dayhoff', 'hp')
+            translate = True
             ksize = self.ksize * 3
 
-        assert len(sequence) - ksize + 1 == len(hashvals)
+        # double check
+        if translate:
+            assert (len(sequence) - ksize + 1) * 2 == len(hashvals), (len(sequence), ksize, len(hashvals))
+        else:
+            assert len(sequence) - ksize + 1 == len(hashvals), (len(sequence), ksize, len(hashvals))
 
         for i, hashval in zip(range(0, len(sequence) - ksize + 1), hashvals):
             kmer = sequence[i:i+ksize]
