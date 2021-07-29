@@ -326,6 +326,9 @@ class MinHash(RustObject):
 
         If input sequence is protein, set is_protein=True.
         """
+        import screed
+
+        sequence = sequence.upper()
         hashvals = self.seq_to_hashes(sequence,
                                       force=force, is_protein=is_protein)
 
@@ -342,17 +345,27 @@ class MinHash(RustObject):
 
         # double check
         if translate:
-            raise Exception("cannot do translated yet")
+            #raise Exception("cannot do translated yet")
 
             # forward AND reverse complement => twice the k-mers
             n_kmers = (len(sequence) - ksize + 1) * 2
             assert n_kmers == len(hashvals)
 
-            # this doesn't work...
-            for i in range(0, n_kmers // 2):
-                start = i
-                kmer = sequence[start:start+ksize]
-                yield kmer, hashvals[i]
+            # get forward k-mers
+            hash_i = 0
+            for frame in (0, 1, 2):
+                for start in range(0, len(sequence) - ksize + 1 - frame, 3):
+                    kmer = sequence[start:start + ksize]
+                    yield kmer, hashvals[hash_i]
+                    hash_i += 1
+
+            # get rc k-mers
+            seqrc = screed.rc(sequence)
+            for frame in (0, 1, 2):
+                for start in range(0, len(seqrc) - ksize + 1 - frame, 3):
+                    kmer = seqrc[start:start + ksize]
+                    yield kmer, hashvals[hash_i]
+                    hash_i += 1
         else:
             n_kmers = len(sequence) - ksize + 1
             assert n_kmers == len(hashvals)

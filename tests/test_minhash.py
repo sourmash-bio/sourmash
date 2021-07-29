@@ -39,6 +39,8 @@ import math
 
 import pytest
 
+import screed
+
 import sourmash
 from sourmash.minhash import (
     MinHash,
@@ -2372,6 +2374,43 @@ def test_translate_protein_hashes():
 
 
 def test_translate_protein_hashes_2():
+    # test kmers_and_hashes for dna -> protein
+    mh_translate = MinHash(0, ksize=7, is_protein=True, scaled=1)
+
+    dna = "atggttaaagtttatgccccggcttccagtgccaatatgagcgtcgggtttgatgtgctcggggcggcggtgacacctgttgatggtgcattgctcggagatgtagtcacggttgaggcggcagagacattcagtctcaacaacctcggacgctttgccgataagctgccgtcagaaccacgggaaaatatcgtttatcagtgctgggagcgtttttgccaggaactgggtaagcaaattccagtggcgatgaccctggaaaagaatatgccgatcggttcgggcttaggctccagtgcctgttcggtggtcgcggcgctgatggcgatgaatgaacactgcggcaagccgcttaatgacactcgtttgctggctttgatgggcgagctggaaggccgtatctccggcagcattcattacgacaacgtggcaccgtgttttctcggtggtatgcagttgatgatcgaagaaaacgacatcatcagccagcaagtgccagggtttgatgagtggctgtgggtgctggcgtatccggggattaaagtctcgacggcagaagccagggctattttaccggcgcagtatcgccgccaggattgcattgcgcacgggcgacatctggcaggcttcattcacgcctgctattcccgtcagcctgagcttgccgcgaagctgatgaaagatgttatcgctgaaccctaccgtgaacggttactgccaggcttccggcaggcgcggcaggcggtcgcggaaatcggcgcggtagcgagcggtatctccggctccggcccgaccttgttcgctctgtgtgacaagccggaaaccgcccagcgcgttgccgactggttgggtaagaactacctgcaaaatcaggaaggttttgttcatatttgccggctggatacggcgggcgcacgagtactggaaaactaa".upper()
+    dna = dna[:23]
+
+    print(mh_translate.seq_to_hashes(dna))
+    print(list(mh_translate.kmers_and_hashes(dna)))
+
+    # retrieve only the hashval of the +1 reading frame:
+    def hash_fwd_only(seq):
+        assert len(seq) == mh_translate.ksize*3
+        # return first hashval only
+        xx = mh_translate.seq_to_hashes(seq)[0]
+        return xx
+
+    k_and_h = list(mh_translate.kmers_and_hashes(dna))
+    half = len(k_and_h) // 2
+    for start, (k, h) in enumerate(k_and_h[:half]):
+        #assert dna[start:start+21].upper() == k
+        print('----')
+        print('position', start)
+        print(mh_translate.seq_to_hashes(k))
+        print(h)
+        assert hash_fwd_only(k) == h
+
+    assert 0
+
+    dna_rc = screed.rc(dna)
+    for start, (k, h) in enumerate(k_and_h[half:]):
+        assert dna_rc[start:start+21].upper() == k
+        assert hash_fwd_only(dna_rc[start:start+21]) == h
+
+    assert 0
+
+
+def test_translate_protein_hashes_3():
     return # don't run test, for now @CTB
 
     # test kmers_and_hashes for dna -> protein
