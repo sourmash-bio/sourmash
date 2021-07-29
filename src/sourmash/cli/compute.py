@@ -123,7 +123,7 @@ def subparser(subparsers):
     )
     subparser._positionals.title = 'Required arguments'
     subparser._optionals.title = 'Miscellaneous options'
-    add_num_arg(sketch_args, 0)
+    add_num_arg(sketch_args, 500)
 
 
 def main(args):

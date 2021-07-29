@@ -33,7 +33,7 @@ def subparser(subparsers):
         help='name to use for generated signature'
     )
     add_ksize_arg(subparser, 31)
-    add_num_arg(subparser, 0)
+    add_num_arg(subparser, 500)
 
 def main(args):
     import sourmash
