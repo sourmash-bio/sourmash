@@ -23,6 +23,14 @@ def subparser(subparsers):
     add_moltype_args(subparser)
     add_picklist_args(subparser)
 
+    subparser.add_argument('--sequences', nargs='+', required=True,
+                           help="FASTA/FASTQ/bz2/gz files with sequences")
+
+    subparser.add_argument('--save-kmers',
+                           help="save k-mers and hash values to a CSV file")
+    subparser.add_argument('--save-sequences',
+                           help="save sequences with matching hashes to a FASTA file")
+
 
 def main(args):
     import sourmash

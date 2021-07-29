@@ -7,6 +7,7 @@ import json
 import os
 from collections import defaultdict
 
+import screed
 import sourmash
 from sourmash.sourmash_args import FileOutput
 
@@ -926,7 +927,7 @@ def kmers(args):
     _extend_signatures_with_from_file(args)
 
     first_sig = None
-    mh = None
+    query_mh = None
 
 
     # start loading!
@@ -943,16 +944,16 @@ def kmers(args):
         # first signature? initialize a bunch of stuff
         if first_sig is None:
             first_sig = sigobj
-            mh = first_sig.minhash.copy_and_clear()
+            query_mh = first_sig.minhash.copy_and_clear()
 
             # remove abundance as it has no purpose here --
-            mh.track_abundance = False
+            query_mh.track_abundance = False
 
         try:
             sigobj_mh = sigobj.minhash
             sigobj_mh.track_abundance = False
 
-            mh.merge(sigobj_mh)
+            query_mh.merge(sigobj_mh)
         except (TypeError, ValueError) as exc:
             error("ERROR when merging signature '{}' ({}) from file {}",
                   sigobj, sigobj.md5sum()[:8], sigloc)
@@ -964,15 +965,75 @@ def kmers(args):
         sys.exit(-1)
 
     notify(f"loaded and merged {len(progress)} signatures")
-    notify(f"merged signature has the following properties:")
-    notify(f"k={mh.ksize} molecule={mh.moltype} num={mh.num} scaled={mh.scaled} seed={mh.seed}")
-    notify(f"total hashes in merged signature: {len(mh)}")
-    notify("now processing sequence files for matches!")
-
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
-    # xxx
+    notify("")
+    notify(f"merged signature has the following properties:")
+    notify(f"k={query_mh.ksize} molecule={query_mh.moltype} num={query_mh.num} scaled={query_mh.scaled} seed={query_mh.seed}")
+    notify(f"total hashes in merged signature: {len(query_mh)}")
+    notify("")
+    notify("now processing sequence files for matches!")
+
+    found_mh = query_mh.copy_and_clear()
+
+    # open outputs...
+    save_kmers = None
+    kmer_w = None
+    if args.save_kmers:
+        save_kmers = sourmash_args.FileOutputCSV(args.save_kmers)
+        save_kmers.open()
+        kmer_w = csv.DictWriter(save_kmers.fp,
+                                fieldnames=['sequence_file',
+                                            'sequence_name',
+                                            'kmer',
+                                            'hashval'])
+        kmer_w.writeheader()
+
+    save_seqs = None
+    if args.save_sequences:
+        save_seqs = sourmash_args.FileOutput(args.save_sequences)
+        save_seqs.open()
+
+    for filename in args.sequences:
+        notify(f"opening sequence file '{filename}'")
+        seq_mh = query_mh.copy_and_clear()
+        for record in screed.open(filename):
+            # do some kind of progress indicator based on bp...
+            # dna to dna, vs dna to protein, vs protein to protein <sigh>
+            seq_mh.add_sequence(record.sequence)
+            if seq_mh.intersection(query_mh):
+                # match!
+                # output sequence, and/or matching k-mers
+                # output matching sequences:
+                if save_seqs:
+                    save_seqs.fp.write(f">{record.name}\n{record.sequence}\n")
+
+                # output matching k-mers:
+                if kmer_w:
+                    seq = record.sequence
+                    ksize = seq_mh.ksize
+                    for i in range(0, len(seq) - ksize + 1):
+                        kmer = seq[i:i+ksize]
+                        hashval = seq_mh.seq_to_hashes(kmer)[0]
+                        if hashval in query_mh.hashes:
+                            found_mh.add_hash(hashval)
+                            d = dict(sequence_file=filename,
+                                     sequence_name=record.name,
+                                     kmer=kmer, hashval=hashval)
+                            kmer_w.writerow(d)
+
+    if kmer_w:
+        cont = found_mh.contained_by(query_mh)
+        notify(f"found {len(found_mh)} matching hashes ({cont*100:.1f}%)")
+
+    if save_kmers:
+        # @CTB: output number of k-mers saved? include dups?
+        save_kmers.close()
+
+    if save_seqs:
+        # @CTB: output number of sequences saved?
+        save_seqs.close()
 
 
 def main(arglist=None):
