@@ -916,6 +916,65 @@ def export(args):
     notify("exported signature {} ({})", query, query.md5sum()[:8])
 
 
+def kmers(args):
+    """
+    retrieve k-mers and/or sequences contained by the minhashes
+    """
+    set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
+    _extend_signatures_with_from_file(args)
+
+    first_sig = None
+    mh = None
+
+
+    # start loading!
+    progress = sourmash_args.SignatureLoadingProgress()
+    loader = sourmash_args.load_many_signatures(args.signatures,
+                                                ksize=args.ksize,
+                                                moltype=moltype,
+                                                picklist=picklist,
+                                                progress=progress,
+                                                yield_all_files=args.force,
+                                                force=args.force)
+
+    for sigobj, sigloc in loader:
+        # first signature? initialize a bunch of stuff
+        if first_sig is None:
+            first_sig = sigobj
+            mh = first_sig.minhash.copy_and_clear()
+
+            # remove abundance as it has no purpose here --
+            mh.track_abundance = False
+
+        try:
+            sigobj_mh = sigobj.minhash
+            sigobj_mh.track_abundance = False
+
+            mh.merge(sigobj_mh)
+        except (TypeError, ValueError) as exc:
+            error("ERROR when merging signature '{}' ({}) from file {}",
+                  sigobj, sigobj.md5sum()[:8], sigloc)
+            error(str(exc))
+            sys.exit(-1)
+
+    if not len(progress):
+        error("no signatures in query!?")
+        sys.exit(-1)
+
+    notify(f"loaded and merged {len(progress)} signatures")
+    notify(f"merged signature has the following properties:")
+    notify(f"k={mh.ksize} molecule={mh.moltype} num={mh.num} scaled={mh.scaled} seed={mh.seed}")
+    notify(f"total hashes in merged signature: {len(mh)}")
+    notify("now processing sequence files for matches!")
+
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
+
+    # xxx
+
+
 def main(arglist=None):
     args = sourmash.cli.get_parser().parse_args(arglist)
     submod = getattr(sourmash.cli.sig, args.subcmd)
