@@ -342,13 +342,23 @@ class MinHash(RustObject):
 
         # double check
         if translate:
-            assert (len(sequence) - ksize + 1) * 2 == len(hashvals), (len(sequence), ksize, len(hashvals))
-        else:
-            assert len(sequence) - ksize + 1 == len(hashvals), (len(sequence), ksize, len(hashvals))
+            raise Exception("cannot do translated yet")
 
-        for i, hashval in zip(range(0, len(sequence) - ksize + 1), hashvals):
-            kmer = sequence[i:i+ksize]
-            yield kmer, hashval
+            # forward AND reverse complement => twice the k-mers
+            n_kmers = (len(sequence) - ksize + 1) * 2
+            assert n_kmers == len(hashvals)
+
+            # this doesn't work...
+            for i in range(0, n_kmers // 2):
+                start = i
+                kmer = sequence[start:start+ksize]
+                yield kmer, hashvals[i]
+        else:
+            n_kmers = len(sequence) - ksize + 1
+            assert n_kmers == len(hashvals)
+            for i, hashval in zip(range(0, n_kmers), hashvals):
+                kmer = sequence[i:i+ksize]
+                yield kmer, hashval
 
     def add_kmer(self, kmer):
         "Add a kmer into the sketch."

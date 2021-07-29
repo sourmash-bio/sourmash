@@ -2372,7 +2372,7 @@ def test_translate_protein_hashes():
 
 
 def test_translate_protein_hashes_2():
-    return
+    return # don't run test, for now @CTB
 
     # test kmers_and_hashes for dna -> protein
     mh_translate = MinHash(0, ksize=7, is_protein=True, scaled=1)
@@ -2380,8 +2380,12 @@ def test_translate_protein_hashes_2():
 
     translate_it = mh_translate.kmers_and_hashes(dna)
     for i, (dna_kmer, hashval) in enumerate(translate_it):
-        assert dna[i].startswith(dna_kmer)
-        assert dna_kmer == mh_translate.seq_to_hashes(dna_kmer)[0]
+        print(dna_kmer)
+        if i % 2: continue
+        half = i // 2
+        #assert dna[half:].startswith(dna_kmer), (i, dna_kmer, dna[half:half+21])
+        assert hashval == mh_translate.seq_to_hashes(dna_kmer)[0], i
+    assert 0
 
 
 def test_translate_hp_hashes():
