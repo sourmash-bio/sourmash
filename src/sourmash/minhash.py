@@ -351,19 +351,20 @@ class MinHash(RustObject):
             n_kmers = (len(sequence) - ksize + 1) * 2
             assert n_kmers == len(hashvals)
 
-            # get forward k-mers
+            # generate reverse complement of sequence
+            seqrc = screed.rc(sequence)
+
             hash_i = 0
             for frame in (0, 1, 2):
+                # get forward k-mers
                 for start in range(0, len(sequence) - ksize + 1 - frame, 3):
-                    kmer = sequence[start:start + ksize]
+                    kmer = sequence[start + frame:start + frame + ksize]
                     yield kmer, hashvals[hash_i]
                     hash_i += 1
 
-            # get rc k-mers
-            seqrc = screed.rc(sequence)
-            for frame in (0, 1, 2):
+                # get rc k-mers
                 for start in range(0, len(seqrc) - ksize + 1 - frame, 3):
-                    kmer = seqrc[start:start + ksize]
+                    kmer = seqrc[start + frame:start + frame + ksize]
                     yield kmer, hashvals[hash_i]
                     hash_i += 1
         else:

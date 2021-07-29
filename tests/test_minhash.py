@@ -2378,36 +2378,41 @@ def test_translate_protein_hashes_2():
     mh_translate = MinHash(0, ksize=7, is_protein=True, scaled=1)
 
     dna = "atggttaaagtttatgccccggcttccagtgccaatatgagcgtcgggtttgatgtgctcggggcggcggtgacacctgttgatggtgcattgctcggagatgtagtcacggttgaggcggcagagacattcagtctcaacaacctcggacgctttgccgataagctgccgtcagaaccacgggaaaatatcgtttatcagtgctgggagcgtttttgccaggaactgggtaagcaaattccagtggcgatgaccctggaaaagaatatgccgatcggttcgggcttaggctccagtgcctgttcggtggtcgcggcgctgatggcgatgaatgaacactgcggcaagccgcttaatgacactcgtttgctggctttgatgggcgagctggaaggccgtatctccggcagcattcattacgacaacgtggcaccgtgttttctcggtggtatgcagttgatgatcgaagaaaacgacatcatcagccagcaagtgccagggtttgatgagtggctgtgggtgctggcgtatccggggattaaagtctcgacggcagaagccagggctattttaccggcgcagtatcgccgccaggattgcattgcgcacgggcgacatctggcaggcttcattcacgcctgctattcccgtcagcctgagcttgccgcgaagctgatgaaagatgttatcgctgaaccctaccgtgaacggttactgccaggcttccggcaggcgcggcaggcggtcgcggaaatcggcgcggtagcgagcggtatctccggctccggcccgaccttgttcgctctgtgtgacaagccggaaaccgcccagcgcgttgccgactggttgggtaagaactacctgcaaaatcaggaaggttttgttcatatttgccggctggatacggcgggcgcacgagtactggaaaactaa".upper()
-    dna = dna[:23]
-
-    print(mh_translate.seq_to_hashes(dna))
-    print(list(mh_translate.kmers_and_hashes(dna)))
 
     # retrieve only the hashval of the +1 reading frame:
     def hash_fwd_only(seq):
+        "Return the first hashval only."
         assert len(seq) == mh_translate.ksize*3
-        # return first hashval only
         xx = mh_translate.seq_to_hashes(seq)[0]
         return xx
 
+    def kmers_from_all_coding_frames(sequence, ksize):
+        """Mimic the internal rust code for translation of DNA into aa.
+
+        For each frame, yield all fwd k-mers, then all reverse k-mers
+        from that frame. Then do next frame.
+        """
+        seqrc = screed.rc(sequence)
+
+        for frame in (0, 1, 2):
+            # get forward k-mers
+            for start in range(0, len(sequence) - ksize + 1 - frame, 3):
+                kmer = sequence[start + frame:start + frame + ksize]
+                yield kmer
+
+            # get rc k-mers
+            for start in range(0, len(seqrc) - ksize + 1 - frame, 3):
+                kmer = seqrc[start + frame:start + frame + ksize]
+                yield kmer
+
+    # do they all match? check:
     k_and_h = list(mh_translate.kmers_and_hashes(dna))
-    half = len(k_and_h) // 2
-    for start, (k, h) in enumerate(k_and_h[:half]):
-        #assert dna[start:start+21].upper() == k
-        print('----')
-        print('position', start)
-        print(mh_translate.seq_to_hashes(k))
-        print(h)
-        assert hash_fwd_only(k) == h
+    for idx, kmer in enumerate(kmers_from_all_coding_frames(dna, 21)):
+        k, h = k_and_h[idx]
 
-    assert 0
+        assert kmer == k
+        assert hash_fwd_only(kmer) == h
 
-    dna_rc = screed.rc(dna)
-    for start, (k, h) in enumerate(k_and_h[half:]):
-        assert dna_rc[start:start+21].upper() == k
-        assert hash_fwd_only(dna_rc[start:start+21]) == h
-
-    assert 0
 
 
 def test_translate_protein_hashes_3():
