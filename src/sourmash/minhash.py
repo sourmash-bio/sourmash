@@ -343,10 +343,8 @@ class MinHash(RustObject):
             translate = True
             ksize = self.ksize * 3
 
-        # double check
+        # special code for translation -
         if translate:
-            #raise Exception("cannot do translated yet")
-
             # forward AND reverse complement => twice the k-mers
             n_kmers = (len(sequence) - ksize + 1) * 2
             assert n_kmers == len(hashvals)
@@ -368,6 +366,7 @@ class MinHash(RustObject):
                     yield kmer, hashvals[hash_i]
                     hash_i += 1
         else:
+            # otherwise, all very straightforward :)
             n_kmers = len(sequence) - ksize + 1
             assert n_kmers == len(hashvals)
             for i, hashval in zip(range(0, n_kmers), hashvals):
