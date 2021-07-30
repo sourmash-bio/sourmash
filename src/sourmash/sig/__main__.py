@@ -1011,13 +1011,23 @@ def kmers(args):
         if not args.translate:
             is_protein = True
 
+    n_files_searched = 0
+    n_sequences_searched = 0
+    n_bp_searched = 0
+    n_kmers_found = 0
+    n_sequences_found = 0
+    n_bp_saved = 0
+
+    progress_threshold = 1e6
+    progress_interval = 1e6
     for filename in args.sequences:
         notify(f"opening sequence file '{filename}'")
+        n_files_searched += 1
 
         for record in screed.open(filename):
-            # do some kind of progress indicator based on bp...
-            # dna to dna, vs dna to protein, vs protein to protein <sigh>
             seq_mh = query_mh.copy_and_clear()
+
+            # protein? dna?
             if is_protein:
                 seq_mh.add_protein(record.sequence)
             else:
@@ -1025,10 +1035,12 @@ def kmers(args):
 
             if seq_mh.intersection(query_mh):
                 # match!
-                # output sequence, and/or matching k-mers
+
                 # output matching sequences:
                 if save_seqs:
                     save_seqs.fp.write(f">{record.name}\n{record.sequence}\n")
+                    n_sequences_found += 1
+                    n_bp_saved += len(record.sequence)
 
                 # output matching k-mers:
                 if kmer_w:
@@ -1038,10 +1050,34 @@ def kmers(args):
                     for kmer, hashval in kh_iter:
                         if hashval in query_mh.hashes:
                             found_mh.add_hash(hashval)
+                            n_kmers_found += 1
                             d = dict(sequence_file=filename,
                                      sequence_name=record.name,
                                      kmer=kmer, hashval=hashval)
                             kmer_w.writerow(d)
+
+            # provide progress indicator based on bp...
+            n_sequences_searched += 1
+            n_bp_searched += len(record.sequence)
+
+            if n_bp_searched >= progress_threshold:
+                notify(f"... searched {n_bp_searched} from {n_files_searched} so far")
+                while n_bp_searched >= progress_threshold:
+                    progress_threshold += progress_interval
+
+    # END major for loop. Now, clean up!
+    if save_kmers:
+        save_kmers.close()
+
+    if save_seqs:
+        save_seqs.close()
+
+    # ...and report!
+    notify("DONE.")
+    notify(f"searched {n_sequences_searched} sequences from {n_files_searched} files, containing a total of {n_bp_searched/1e6:.1f} Mbp.")
+
+    if save_seqs:
+        notify(f"matched and saved a total of {n_sequences_found} sequences with {n_bp_saved/1e6:.1f} Mbp.")
 
     if kmer_w:
         # calculate overlap, even for num minhashes which ordinarily don't
@@ -1051,15 +1087,8 @@ def kmers(args):
         found_hashes = set(found_mh.hashes)
         cont = len(query_hashes.intersection(found_hashes)) / len(query_hashes)
 
-        notify(f"found {len(found_mh)} matching hashes ({cont*100:.1f}%)")
-
-    if save_kmers:
-        # @CTB: output number of k-mers saved? include dups?
-        save_kmers.close()
-
-    if save_seqs:
-        # @CTB: output number of sequences saved?
-        save_seqs.close()
+        notify(f"matched and saved a total of {n_kmers_found} k-mers.")
+        notify(f"found {len(found_mh)} distinct matching hashes ({cont*100:.1f}%)")
 
 
 def main(arglist=None):
