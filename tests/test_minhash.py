@@ -2374,13 +2374,15 @@ def test_hp_kmers_2():
     mh = MinHash(0, ksize=7, hp=True, scaled=1)
     seq = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
 
-    # does everything match? check!
-    k_and_h = list(mh_translate.kmers_and_hashes(dna))
-    for idx, kmer in enumerate(_kmers_from_all_coding_frames(dna, 21)):
-        k, h = k_and_h[idx]
+    # k-mer by k-mer?
+    for kmer, hashval in mh.kmers_and_hashes(seq, is_protein=True):
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+        single_mh.add_protein(kmer)
+        assert len(single_mh) == 1
 
-        assert kmer == k
-        assert _hash_fwd_only(mh_translate, kmer) == h
+        # confirm it all matches
+        assert hashval == list(single_mh.hashes)[0]
 
 
 def test_translate_protein_hashes():
