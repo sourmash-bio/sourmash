@@ -1005,13 +1005,24 @@ def kmers(args):
         save_seqs = sourmash_args.FileOutput(args.save_sequences)
         save_seqs.open()
 
+    # figure out protein vs dna
+    is_protein = False
+    if query_mh.moltype != 'DNA':
+        if not args.translate:
+            is_protein = True
+
     for filename in args.sequences:
         notify(f"opening sequence file '{filename}'")
-        seq_mh = query_mh.copy_and_clear()
+
         for record in screed.open(filename):
             # do some kind of progress indicator based on bp...
             # dna to dna, vs dna to protein, vs protein to protein <sigh>
-            seq_mh.add_sequence(record.sequence)
+            seq_mh = query_mh.copy_and_clear()
+            if is_protein:
+                seq_mh.add_protein(record.sequence)
+            else:
+                seq_mh.add_sequence(record.sequence) # CTB force?
+
             if seq_mh.intersection(query_mh):
                 # match!
                 # output sequence, and/or matching k-mers
@@ -1023,7 +1034,7 @@ def kmers(args):
                 if kmer_w:
                     seq = record.sequence
                     kh_iter = seq_mh.kmers_and_hashes(seq, force=False,
-                                                      is_protein=False)
+                                                      is_protein=is_protein)
                     for kmer, hashval in kh_iter:
                         if hashval in query_mh.hashes:
                             found_mh.add_hash(hashval)

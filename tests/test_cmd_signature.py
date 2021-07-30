@@ -2997,7 +2997,8 @@ def test_sig_manifest_6_pathlist(runtmp):
     assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
 
 
-def test_sig_kmers_1(runtmp):
+def test_sig_kmers_1_dna(runtmp):
+    # test sig kmers on dna
     seqfile = utils.get_test_data('short.fa')
 
     runtmp.sourmash('sketch', 'dna', seqfile, '-p', 'scaled=1')
@@ -3024,3 +3025,38 @@ def test_sig_kmers_1(runtmp):
         r = csv.DictReader(fp)
         rows = list(r)
         assert len(rows) == 970
+
+    # @CTB add hash checks on both seq and csv
+
+
+def test_sig_kmers_2_protein(runtmp):
+    # test out sig kmers on an faa file
+    seqfile = utils.get_test_data('ecoli.faa')
+
+    runtmp.sourmash('sketch', 'protein', seqfile, '-p', 'scaled=1')
+    runtmp.sourmash('sig', 'kmers', '--sig', 'ecoli.faa.sig',
+                    '--seq', seqfile,
+                    '--save-kmers', 'ecoli.csv',
+                    '--save-sequences', 'matched.fa')
+
+    out = runtmp.last_result.out
+    print(out)
+    err = runtmp.last_result.err
+    print(err)
+
+    assert 'total hashes in merged signature: 1112' in err
+    assert 'found 1112 matching hashes (100.0%)' in err
+
+    assert os.path.exists(runtmp.output('matched.fa'))
+    records = list(screed.open(runtmp.output('matched.fa')))
+    assert len(records) == 2
+    assert len(records[0].sequence) == 820, len(records[0].sequence)
+    assert len(records[1].sequence) == 310, len(records[1].sequence)
+
+    assert os.path.exists(runtmp.output('ecoli.csv'))
+    with open(runtmp.output('ecoli.csv'), newline='') as fp:
+        r = csv.DictReader(fp)
+        rows = list(r)
+        assert len(rows) == 1112
+
+    # @CTB add hash checks on both seq and csv
