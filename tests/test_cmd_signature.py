@@ -3046,6 +3046,104 @@ def test_sig_kmers_1_dna(runtmp):
     assert check_mh2.similarity(mh) == 1.0
 
 
+def test_sig_kmers_1_dna_lowscaled(runtmp):
+    # test sig kmers on dna with a scaled of 100, so not all k-mers
+    seqfile = utils.get_test_data('short.fa')
+
+    runtmp.sourmash('sketch', 'dna', seqfile, '-p', 'scaled=100')
+    ss = sourmash.load_one_signature(runtmp.output('short.fa.sig'))
+    mh = ss.minhash
+    assert mh.moltype == 'DNA'
+
+    runtmp.sourmash('sig', 'kmers', '--sig', 'short.fa.sig',
+                    '--seq', seqfile,
+                    '--save-kmers', 'short.csv',
+                    '--save-sequences', 'matched.fa')
+
+    out = runtmp.last_result.out
+    print(out)
+    err = runtmp.last_result.err
+    print(err)
+
+    assert 'total hashes in merged signature: 5' in err
+    assert 'found 5 matching hashes (100.0%)' in err
+
+    # check FASTA output
+    assert os.path.exists(runtmp.output('matched.fa'))
+    records = list(screed.open(runtmp.output('matched.fa')))
+    assert len(records) == 1
+    assert len(records[0].sequence) == 1000, len(records[0].sequence)
+
+    seq_mh = mh.copy_and_clear()
+    for record in records:
+        seq_mh.add_sequence(record.sequence)
+    assert seq_mh.similarity(mh) == 1.0
+
+    # check CSV output w/k-mers and hashes etc
+    assert os.path.exists(runtmp.output('short.csv'))
+    with open(runtmp.output('short.csv'), newline='') as fp:
+        r = csv.DictReader(fp)
+        rows = list(r)
+        assert len(rows) == 5
+
+    check_mh = mh.copy_and_clear()
+    check_mh2 = mh.copy_and_clear()
+    for row in rows:
+        check_mh.add_sequence(row['kmer'])
+        check_mh2.add_hash(int(row['hashval']))
+    assert check_mh.similarity(mh) == 1.0
+    assert check_mh2.similarity(mh) == 1.0
+
+
+def test_sig_kmers_1_dna_num(runtmp):
+    # test sig kmers on dna with a scaled of 100, so not all k-mers
+    seqfile = utils.get_test_data('short.fa')
+
+    runtmp.sourmash('sketch', 'dna', seqfile, '-p', 'num=50')
+    ss = sourmash.load_one_signature(runtmp.output('short.fa.sig'))
+    mh = ss.minhash
+    assert mh.moltype == 'DNA'
+
+    runtmp.sourmash('sig', 'kmers', '--sig', 'short.fa.sig',
+                    '--seq', seqfile,
+                    '--save-kmers', 'short.csv',
+                    '--save-sequences', 'matched.fa')
+
+    out = runtmp.last_result.out
+    print(out)
+    err = runtmp.last_result.err
+    print(err)
+
+    assert 'total hashes in merged signature: 50' in err
+    assert 'found 50 matching hashes (100.0%)' in err
+
+    # check FASTA output
+    assert os.path.exists(runtmp.output('matched.fa'))
+    records = list(screed.open(runtmp.output('matched.fa')))
+    assert len(records) == 1
+    assert len(records[0].sequence) == 1000, len(records[0].sequence)
+
+    seq_mh = mh.copy_and_clear()
+    for record in records:
+        seq_mh.add_sequence(record.sequence)
+    assert seq_mh.similarity(mh) == 1.0
+
+    # check CSV output w/k-mers and hashes etc
+    assert os.path.exists(runtmp.output('short.csv'))
+    with open(runtmp.output('short.csv'), newline='') as fp:
+        r = csv.DictReader(fp)
+        rows = list(r)
+        assert len(rows) == 50
+
+    check_mh = mh.copy_and_clear()
+    check_mh2 = mh.copy_and_clear()
+    for row in rows:
+        check_mh.add_sequence(row['kmer'])
+        check_mh2.add_hash(int(row['hashval']))
+    assert check_mh.similarity(mh) == 1.0
+    assert check_mh2.similarity(mh) == 1.0
+
+
 def test_sig_kmers_1_dna_translate_protein(runtmp):
     # test sig kmers on dna
     seqfile = utils.get_test_data('short.fa')

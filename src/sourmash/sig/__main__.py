@@ -1044,7 +1044,13 @@ def kmers(args):
                             kmer_w.writerow(d)
 
     if kmer_w:
-        cont = found_mh.contained_by(query_mh)
+        # calculate overlap, even for num minhashes which ordinarily don't
+        # permit it, because here we are interested in knowing how many
+        # of the expected hashes we found.
+        query_hashes = set(query_mh.hashes)
+        found_hashes = set(found_mh.hashes)
+        cont = len(query_hashes.intersection(found_hashes)) / len(query_hashes)
+
         notify(f"found {len(found_mh)} matching hashes ({cont*100:.1f}%)")
 
     if save_kmers:
