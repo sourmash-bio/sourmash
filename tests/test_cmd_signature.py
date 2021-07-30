@@ -7,6 +7,7 @@ import os
 import glob
 
 import pytest
+import screed
 
 import sourmash_tst_utils as utils
 import sourmash
@@ -2994,3 +2995,32 @@ def test_sig_manifest_6_pathlist(runtmp):
     md5_list = [ row['md5'] for row in manifest.rows ]
     assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
     assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+
+def test_sig_kmers_1(runtmp):
+    seqfile = utils.get_test_data('short.fa')
+
+    runtmp.sourmash('sketch', 'dna', seqfile, '-p', 'scaled=1')
+    runtmp.sourmash('sig', 'kmers', '--sig', 'short.fa.sig',
+                    '--seq', seqfile,
+                    '--save-kmers', 'short.csv',
+                    '--save-sequences', 'matched.fa')
+
+    out = runtmp.last_result.out
+    print(out)
+    err = runtmp.last_result.err
+    print(err)
+
+    assert 'total hashes in merged signature: 970' in err
+    assert 'found 970 matching hashes (100.0%)' in err
+
+    assert os.path.exists(runtmp.output('matched.fa'))
+    records = list(screed.open(runtmp.output('matched.fa')))
+    assert len(records) == 1
+    assert len(records[0].sequence) == 1000, len(records[0].sequence)
+    
+    assert os.path.exists(runtmp.output('short.csv'))
+    with open(runtmp.output('short.csv'), newline='') as fp:
+        r = csv.DictReader(fp)
+        rows = list(r)
+        assert len(rows) == 970
