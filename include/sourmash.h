@@ -235,6 +235,13 @@ void kmerminhash_remove_many(SourmashKmerMinHash *ptr,
 
 uint64_t kmerminhash_seed(const SourmashKmerMinHash *ptr);
 
+const uint64_t *kmerminhash_seq_to_hashes(SourmashKmerMinHash *ptr,
+                                          const char *sequence,
+                                          uintptr_t insize,
+                                          bool force,
+                                          bool is_protein,
+                                          uintptr_t *size);
+
 void kmerminhash_set_abundances(SourmashKmerMinHash *ptr,
                                 const uint64_t *hashes_ptr,
                                 const uint64_t *abunds_ptr,

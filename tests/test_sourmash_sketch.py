@@ -1021,3 +1021,198 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
         good_trans = list(signature.load_signatures(knowngood))[0]
 
         assert sig2_trans.similarity(good_trans) == 1.0
+
+
+def test_protein_with_stop_codons(runtmp):
+    # compare protein seq with/without stop codons, via cli and also python
+    # apis
+
+    testdata1 = utils.get_test_data('ecoli.faa')
+    ecoli_seq = [ record.sequence for record in screed.open(testdata1) ]
+
+    # first, via CLI w/o stop codons
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7,scaled=1', testdata1)
+    sig1 = runtmp.output('ecoli.faa.sig')
+    assert os.path.exists(sig1)
+
+    x = signature.load_one_signature(sig1)
+    cli_mh1 = x.minhash
+
+    # second, via CLI w/stop codons
+    ecoli_stop = runtmp.output('ecoli.stop.faa')
+    with open(ecoli_stop, 'wt') as fp:
+        for seq in ecoli_seq:
+            fp.write(f'>seq\n{seq}*\n')
+
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7,scaled=1', ecoli_stop)
+    sig2 = runtmp.output('ecoli.stop.faa.sig')
+    assert os.path.exists(sig2)
+
+    x = signature.load_one_signature(sig2)
+    cli_mh2 = x.minhash
+
+    # now calculate sketch with MinHash...
+    py_mh1 = MinHash(n=0, ksize=7, is_protein=True, scaled=1)
+    for seq in ecoli_seq:
+        py_mh1.add_protein(seq)
+
+    # now calculate sketch with MinHash and stop codons...
+    py_mh2 = MinHash(n=0, ksize=7, is_protein=True, scaled=1)
+    for seq in ecoli_seq:
+        py_mh2.add_protein(seq + '*')
+
+    # and, last, calculate hashes separately with seq_to_hashes
+    h_mh1 = MinHash(n=0, ksize=7, is_protein=True, scaled=1)
+    h_mh2 = MinHash(n=0, ksize=7, is_protein=True, scaled=1)
+
+    for seq in ecoli_seq:
+        h = h_mh1.seq_to_hashes(seq, is_protein=1)
+        h_mh1.add_many(h)
+
+        h = h_mh2.seq_to_hashes(seq + '*', is_protein=1)
+        h_mh2.add_many(h)
+
+    # check!
+    assert cli_mh1 == py_mh1
+    assert cli_mh2 == py_mh2
+
+    assert cli_mh1 == h_mh1
+    assert cli_mh2 == h_mh2
+
+    assert cli_mh1.contained_by(cli_mh2) == 1.0
+    assert py_mh1.contained_by(cli_mh2) == 1.0
+    assert h_mh1.contained_by(h_mh2) == 1.0
+
+    assert cli_mh2.contained_by(cli_mh1) < 1
+    assert py_mh2.contained_by(cli_mh1) < 1
+    assert h_mh2.contained_by(h_mh1) < 1
+
+
+def test_hp_with_stop_codons(runtmp):
+    # compare hp seq with/without stop codons, via cli and also python
+    # apis
+
+    testdata1 = utils.get_test_data('ecoli.faa')
+    ecoli_seq = [ record.sequence for record in screed.open(testdata1) ]
+
+    # first, via CLI w/o stop codons
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7,scaled=1,hp', testdata1)
+    sig1 = runtmp.output('ecoli.faa.sig')
+    assert os.path.exists(sig1)
+
+    x = signature.load_one_signature(sig1)
+    cli_mh1 = x.minhash
+
+    # second, via CLI w/stop codons
+    ecoli_stop = runtmp.output('ecoli.stop.faa')
+    with open(ecoli_stop, 'wt') as fp:
+        for seq in ecoli_seq:
+            fp.write(f'>seq\n{seq}*\n')
+
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7,scaled=1,hp', ecoli_stop)
+    sig2 = runtmp.output('ecoli.stop.faa.sig')
+    assert os.path.exists(sig2)
+
+    x = signature.load_one_signature(sig2)
+    cli_mh2 = x.minhash
+
+    # now calculate sketch with MinHash...
+    py_mh1 = MinHash(n=0, ksize=7, hp=True, scaled=1)
+    for seq in ecoli_seq:
+        py_mh1.add_protein(seq)
+
+    # now calculate sketch with MinHash and stop codons...
+    py_mh2 = MinHash(n=0, ksize=7, hp=True, scaled=1)
+    for seq in ecoli_seq:
+        py_mh2.add_protein(seq + '*')
+
+    # and, last, calculate hashes separately with seq_to_hashes
+    h_mh1 = MinHash(n=0, ksize=7, hp=True, scaled=1)
+    h_mh2 = MinHash(n=0, ksize=7, hp=True, scaled=1)
+
+    for seq in ecoli_seq:
+        h = h_mh1.seq_to_hashes(seq, is_protein=1)
+        h_mh1.add_many(h)
+
+        h = h_mh2.seq_to_hashes(seq + '*', is_protein=1)
+        h_mh2.add_many(h)
+
+    # check!
+    assert cli_mh1 == py_mh1
+    assert cli_mh2 == py_mh2
+
+    assert cli_mh1 == h_mh1
+    assert cli_mh2 == h_mh2
+
+    assert cli_mh1.contained_by(cli_mh2) == 1.0
+    assert py_mh1.contained_by(cli_mh2) == 1.0
+    assert h_mh1.contained_by(h_mh2) == 1.0
+
+    assert cli_mh2.contained_by(cli_mh1) < 1
+    assert py_mh2.contained_by(cli_mh1) < 1
+    assert h_mh2.contained_by(h_mh1) < 1
+
+
+def test_dayhoff_with_stop_codons(runtmp):
+    # compare dayhoff seq with/without stop codons, via cli and also python
+    # apis
+
+    testdata1 = utils.get_test_data('ecoli.faa')
+    ecoli_seq = [ record.sequence for record in screed.open(testdata1) ]
+
+    # first, via CLI w/o stop codons
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7,scaled=1,dayhoff', testdata1)
+    sig1 = runtmp.output('ecoli.faa.sig')
+    assert os.path.exists(sig1)
+
+    x = signature.load_one_signature(sig1)
+    cli_mh1 = x.minhash
+
+    # second, via CLI w/stop codons
+    ecoli_stop = runtmp.output('ecoli.stop.faa')
+    with open(ecoli_stop, 'wt') as fp:
+        for seq in ecoli_seq:
+            fp.write(f'>seq\n{seq}*\n')
+
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7,scaled=1,dayhoff', ecoli_stop)
+    sig2 = runtmp.output('ecoli.stop.faa.sig')
+    assert os.path.exists(sig2)
+
+    x = signature.load_one_signature(sig2)
+    cli_mh2 = x.minhash
+
+    # now calculate sketch with MinHash...
+    py_mh1 = MinHash(n=0, ksize=7, dayhoff=True, scaled=1)
+    for seq in ecoli_seq:
+        py_mh1.add_protein(seq)
+
+    # now calculate sketch with MinHash and stop codons...
+    py_mh2 = MinHash(n=0, ksize=7, dayhoff=True, scaled=1)
+    for seq in ecoli_seq:
+        py_mh2.add_protein(seq + '*')
+
+    # and, last, calculate hashes separately with seq_to_hashes
+    h_mh1 = MinHash(n=0, ksize=7, dayhoff=True, scaled=1)
+    h_mh2 = MinHash(n=0, ksize=7, dayhoff=True, scaled=1)
+
+    for seq in ecoli_seq:
+        h = h_mh1.seq_to_hashes(seq, is_protein=1)
+        h_mh1.add_many(h)
+
+        h = h_mh2.seq_to_hashes(seq + '*', is_protein=1)
+        h_mh2.add_many(h)
+
+    # check!
+    assert cli_mh1 == py_mh1
+    assert cli_mh2 == py_mh2
+
+    assert cli_mh1 == h_mh1
+    assert cli_mh2 == h_mh2
+
+    assert cli_mh1.contained_by(cli_mh2) == 1.0
+    assert py_mh1.contained_by(cli_mh2) == 1.0
+    assert h_mh1.contained_by(h_mh2) == 1.0
+
+    assert cli_mh2.contained_by(cli_mh1) < 1
+    assert py_mh2.contained_by(cli_mh1) < 1
+    assert h_mh2.contained_by(h_mh1) < 1

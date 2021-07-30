@@ -585,6 +585,54 @@ class SignatureLoadingProgress(object):
                           end='\r')
 
 
+def load_many_signatures(locations, progress, *, yield_all_files=False,
+                         ksize=None, moltype=None, picklist=None, force=False):
+    """
+    Load many signatures from multiple files, with progress indicators.
+
+    Takes ksize, moltype, and picklist selectors.
+
+    If 'yield_all_files=True' then tries to load all files in specified
+    directories.
+
+    If 'force=True' then continues past survivable errors.
+
+    Yields (sig, location) tuples.
+    """
+    for loc in locations:
+        try:
+            # open index,
+            idx = load_file_as_index(loc, yield_all_files=yield_all_files)
+
+            # select on parameters as desired,
+            idx = idx.select(ksize=ksize, moltype=moltype, picklist=picklist)
+
+            # start up iterator,
+            loader = idx.signatures_with_location()
+
+            # go!
+            n = 0               # count signatures loaded
+            for sig, sigloc in progress.start_file(loc, loader):
+                yield sig, sigloc
+                n += 1
+            notify(f"loaded {n} signatures from '{loc}'", end='\r')
+        except ValueError as exc:
+            # trap expected errors, and either power through or display + exit.
+            if force:
+                notify("ERROR: {}", str(exc))
+                notify("(continuing)")
+                continue
+            else:
+                notify("ERROR: {}", str(exc))
+                sys.exit(-1)
+        except KeyboardInterrupt:
+            notify("Received CTRL-C - exiting.")
+            sys.exit(-1)
+
+    n_files = len(locations)
+    notify(f"loaded {len(progress)} signatures total, from {n_files} files")
+
+
 #
 # enum and classes for saving signatures progressively
 #

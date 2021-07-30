@@ -1,6 +1,7 @@
 from glob import glob
 import os
 import argparse
+from sourmash.logging import notify
 
 
 def add_moltype_args(parser):
@@ -93,3 +94,26 @@ def command_list(dirpath):
     basenames = [os.path.splitext(path)[0] for path in filenames if not path.startswith('__')]
     basenames = filter(opfilter, basenames)
     return sorted(basenames)
+
+
+def check_scaled_bounds(arg):
+    actual_min_val = 0
+    min_val = 100
+    max_val = 1e6
+
+    f = float(arg)
+
+    if f < actual_min_val:
+        raise argparse.ArgumentTypeError(f"ERROR: --scaled value must be positive")
+    if f < min_val:
+        notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
+    if f > max_val:
+        notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
+    return f
+
+
+def add_scaled_arg(parser, default=None):
+    parser.add_argument(
+        '--scaled', metavar='FLOAT', type=check_scaled_bounds,
+        help='scaled value should be between 100 and 1e6'
+    )
