@@ -3002,6 +3002,9 @@ def test_sig_kmers_1_dna(runtmp):
     seqfile = utils.get_test_data('short.fa')
 
     runtmp.sourmash('sketch', 'dna', seqfile, '-p', 'scaled=1')
+    ss = sourmash.load_one_signature(runtmp.output('short.fa.sig'))
+    mh = ss.minhash
+
     runtmp.sourmash('sig', 'kmers', '--sig', 'short.fa.sig',
                     '--seq', seqfile,
                     '--save-kmers', 'short.csv',
@@ -3015,18 +3018,31 @@ def test_sig_kmers_1_dna(runtmp):
     assert 'total hashes in merged signature: 970' in err
     assert 'found 970 matching hashes (100.0%)' in err
 
+    # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
     records = list(screed.open(runtmp.output('matched.fa')))
     assert len(records) == 1
     assert len(records[0].sequence) == 1000, len(records[0].sequence)
-    
+
+    seq_mh = mh.copy_and_clear()
+    for record in records:
+        seq_mh.add_sequence(record.sequence)
+    assert seq_mh.similarity(mh) == 1.0
+
+    # check CSV output w/k-mers and hashes etc
     assert os.path.exists(runtmp.output('short.csv'))
     with open(runtmp.output('short.csv'), newline='') as fp:
         r = csv.DictReader(fp)
         rows = list(r)
         assert len(rows) == 970
 
-    # @CTB add hash checks on both seq and csv
+    check_mh = mh.copy_and_clear()
+    check_mh2 = mh.copy_and_clear()
+    for row in rows:
+        check_mh.add_sequence(row['kmer'])
+        check_mh2.add_hash(int(row['hashval']))
+    assert check_mh.similarity(mh) == 1.0
+    assert check_mh2.similarity(mh) == 1.0
 
 
 def test_sig_kmers_2_protein(runtmp):
@@ -3034,6 +3050,9 @@ def test_sig_kmers_2_protein(runtmp):
     seqfile = utils.get_test_data('ecoli.faa')
 
     runtmp.sourmash('sketch', 'protein', seqfile, '-p', 'scaled=1')
+    ss = sourmash.load_one_signature(runtmp.output('ecoli.faa.sig'))
+    mh = ss.minhash
+
     runtmp.sourmash('sig', 'kmers', '--sig', 'ecoli.faa.sig',
                     '--seq', seqfile,
                     '--save-kmers', 'ecoli.csv',
@@ -3047,16 +3066,29 @@ def test_sig_kmers_2_protein(runtmp):
     assert 'total hashes in merged signature: 1112' in err
     assert 'found 1112 matching hashes (100.0%)' in err
 
+    # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
     records = list(screed.open(runtmp.output('matched.fa')))
     assert len(records) == 2
     assert len(records[0].sequence) == 820, len(records[0].sequence)
     assert len(records[1].sequence) == 310, len(records[1].sequence)
 
+    seq_mh = mh.copy_and_clear()
+    for record in records:
+        seq_mh.add_protein(record.sequence)
+    assert seq_mh.similarity(mh) == 1.0
+
+    # check CSV output w/k-mers and hashes etc
     assert os.path.exists(runtmp.output('ecoli.csv'))
     with open(runtmp.output('ecoli.csv'), newline='') as fp:
         r = csv.DictReader(fp)
         rows = list(r)
         assert len(rows) == 1112
 
-    # @CTB add hash checks on both seq and csv
+    check_mh = mh.copy_and_clear()
+    check_mh2 = mh.copy_and_clear()
+    for row in rows:
+        check_mh.add_protein(row['kmer'])
+        check_mh2.add_hash(int(row['hashval']))
+    assert check_mh.similarity(mh) == 1.0
+    assert check_mh2.similarity(mh) == 1.0
