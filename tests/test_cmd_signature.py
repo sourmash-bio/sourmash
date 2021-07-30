@@ -3017,7 +3017,7 @@ def test_sig_kmers_1_dna(runtmp):
     print(err)
 
     assert 'total hashes in merged signature: 970' in err
-    assert 'found 970 matching hashes (100.0%)' in err
+    assert 'found 970 distinct matching hashes (100.0%)' in err
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
@@ -3066,7 +3066,7 @@ def test_sig_kmers_1_dna_lowscaled(runtmp):
     print(err)
 
     assert 'total hashes in merged signature: 5' in err
-    assert 'found 5 matching hashes (100.0%)' in err
+    assert 'found 5 distinct matching hashes (100.0%)' in err
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
@@ -3115,7 +3115,7 @@ def test_sig_kmers_1_dna_num(runtmp):
     print(err)
 
     assert 'total hashes in merged signature: 50' in err
-    assert 'found 50 matching hashes (100.0%)' in err
+    assert 'found 50 distinct matching hashes (100.0%)' in err
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
@@ -3164,7 +3164,7 @@ def test_sig_kmers_1_dna_translate_protein(runtmp):
     print(err)
 
     assert 'total hashes in merged signature: 1942' in err
-    assert 'found 1942 matching hashes (100.0%)' in err
+    assert 'found 1942 distinct matching hashes (100.0%)' in err
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
@@ -3213,7 +3213,7 @@ def test_sig_kmers_1_dna_translate_dayhoff(runtmp):
     print(err)
 
     assert 'total hashes in merged signature: 1906' in err
-    assert 'found 1906 matching hashes (100.0%)' in err
+    assert 'found 1906 distinct matching hashes (100.0%)' in err
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
@@ -3262,7 +3262,7 @@ def test_sig_kmers_1_dna_translate_hp(runtmp):
     print(err)
 
     assert 'total hashes in merged signature: 1750' in err
-    assert 'found 1750 matching hashes (100.0%)' in err
+    assert 'found 1750 distinct matching hashes (100.0%)' in err
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
@@ -3311,7 +3311,7 @@ def test_sig_kmers_2_protein(runtmp):
     print(err)
 
     assert 'total hashes in merged signature: 1112' in err
-    assert 'found 1112 matching hashes (100.0%)' in err
+    assert 'found 1112 distinct matching hashes (100.0%)' in err
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
@@ -3361,7 +3361,7 @@ def test_sig_kmers_2_dayhoff(runtmp):
     print(err)
 
     assert 'total hashes in merged signature: 1100' in err
-    assert 'found 1100 matching hashes (100.0%)' in err
+    assert 'found 1100 distinct matching hashes (100.0%)' in err
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
@@ -3411,7 +3411,7 @@ def test_sig_kmers_2_hp(runtmp):
     print(err)
 
     assert 'total hashes in merged signature: 1048' in err
-    assert 'found 1048 matching hashes (100.0%)' in err
+    assert 'found 1048 distinct matching hashes (100.0%)' in err
 
     # check FASTA output
     assert os.path.exists(runtmp.output('matched.fa'))
