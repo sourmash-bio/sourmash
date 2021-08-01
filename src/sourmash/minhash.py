@@ -295,20 +295,26 @@ class MinHash(RustObject):
         self._methodcall(lib.kmerminhash_add_sequence, to_bytes(sequence),
                          force)
 
-    def seq_to_hashes(self, sequence, *, force=False, is_protein=False):
+    def seq_to_hashes(self, sequence, *, force=False, bad_kmers_as_zeroes=False, is_protein=False):
         """Convert sequence to hashes without adding to the sketch.
 
         If input sequence is DNA and this is a protein, dayhoff, or hp
         MinHash, translate the DNA appropriately before hashing.
 
         If input sequence is protein, set is_protein=True.
+
+        If `force = True` and `bad_kmers_as_zeroes = True`,
+        invalid kmers hashes will be represented as `0`.
         """
 
         if is_protein and self.moltype not in ("protein", "dayhoff", "hp"):
             raise ValueError("cannot add protein sequence to DNA MinHash")
+        
+        if bad_kmers_as_zeroes and not force:
+            raise ValueError("cannot represent invalid kmers as 0 while force is not set to True")
 
         size = ffi.new("uintptr_t *")
-        hashes_ptr = self._methodcall(lib.kmerminhash_seq_to_hashes, to_bytes(sequence), len(sequence), force, is_protein, size)
+        hashes_ptr = self._methodcall(lib.kmerminhash_seq_to_hashes, to_bytes(sequence), len(sequence), force, bad_kmers_as_zeroes, is_protein, size)
         size = size[0]
 
         try:
