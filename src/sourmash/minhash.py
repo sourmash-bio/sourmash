@@ -331,6 +331,8 @@ class MinHash(RustObject):
         MinHash, translate the DNA appropriately before hashing.
 
         If input sequence is protein, set is_protein=True.
+
+        If 'force' is True, invalid k-mers will be represented with 'None'.
         """
         import screed
 
@@ -342,6 +344,9 @@ class MinHash(RustObject):
         hashvals = self.seq_to_hashes(sequence,
                                       force=force, is_protein=is_protein,
                                       bad_kmers_as_zeroes=bad_kmers_as_zeroes)
+
+        if bad_kmers_as_zeroes:
+            hashvals = [ None if h == 0 else h for h in hashvals ]
 
         ksize = self.ksize
         translate = False

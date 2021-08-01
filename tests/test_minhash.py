@@ -2267,21 +2267,23 @@ def test_dna_kmers_4_bad_dna():
     seq = "NTGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGCAAATGCAGAACGTTTTCTGCGTGTTGCCGATATTCTGGAAAGCAATGCCAGGCAGGGGCAGGTGGCCACCGTCCTCTCTGCCCCCGCCAAAATCACCAACCACCTGGTGGCGATGATTGAAAAAACCATTAGCGGCCAGGATGCTTTACCCAATATCAGCGATGCCGAACGTATTTTTGCCGAACTTTTGACGGGACTCGCCGCCGCCCAGCCGGGGTTCCCGCTGGCGCAATTGAAAACTTTCGTCGATCAGGAATTTGCCCAAATAAAACATGTCCTGCATGGCATTAGTTTGTTGGGGCAGTGCCCGGATAGCATCAACGCTGCGCTGATTTGCCGTGGCGAGAAAATGTCGATCGCCATTATGGCCGGCGTATTAGAAGCGCGCGGTCACAACGTTACTGTTATCGATCCGGTCGAAAAACTGCTGGCAGTGGGGCATTACCTCGAATCTACCGTCGATATTGCTGAGTCCACCCGCCGTATTGCGGCAAGCCGCATTCCGGCTGATCACATGGTGCTGAT"
 
     # k-mer by k-mer?
+    found_bad_kmer = False
     for kmer, hashval in mh.kmers_and_hashes(seq, force=True):
         # add to minhash obj
         single_mh = mh.copy_and_clear()
 
-        bad_kmer = False
-        try:
-            single_mh.add_sequence(kmer)
-            assert len(single_mh) == 1
-        except ValueError:
-            # bad k-mer :)
-            bad_kmer = True
+        if hashval == None:
+            assert kmer == seq[:31] # first k-mer is baaaaad.
+            found_bad_kmer = True
+            continue
 
-        # confirm it all matches
-        if not bad_kmer:
-            assert hashval == list(single_mh.hashes)[0]
+        # if the below code raises an exception, it's because the above
+        # 'if' statement was not triggered (but should have been :)
+        single_mh.add_sequence(kmer)
+        assert len(single_mh) == 1
+        assert hashval == list(single_mh.hashes)[0]
+
+    assert found_bad_kmer, "there is one bad k-mer in here"
 
 
 def test_protein_kmers():
