@@ -39,6 +39,8 @@ import math
 
 import pytest
 
+import screed
+
 import sourmash
 from sourmash.minhash import (
     MinHash,
@@ -63,6 +65,33 @@ import sourmash_tst_utils as utils
 scaled50 = _get_scaled_for_max_hash(50)
 scaled100 = _get_scaled_for_max_hash(100)
 scaled5000 = _get_scaled_for_max_hash(5000)
+
+
+def _kmers_from_all_coding_frames(sequence, ksize):
+    """Mimic the internal rust code for translation of DNA into aa.
+
+    For each frame, yield all fwd k-mers, then all reverse k-mers
+    from that frame. Then do next frame.
+    """
+    seqrc = screed.rc(sequence)
+
+    for frame in (0, 1, 2):
+        # get forward k-mers
+        for start in range(0, len(sequence) - ksize + 1 - frame, 3):
+            kmer = sequence[start + frame:start + frame + ksize]
+            yield kmer
+
+        # get rc k-mers
+        for start in range(0, len(seqrc) - ksize + 1 - frame, 3):
+            kmer = seqrc[start + frame:start + frame + ksize]
+            yield kmer
+
+
+def _hash_fwd_only(mh_translate, seq):
+    "Return the first hashval only, for coding frame +1."
+    assert len(seq) == mh_translate.ksize*3
+    xx = mh_translate.seq_to_hashes(seq)[0]
+    return xx
 
 
 def test_basic_dna(track_abundance):
@@ -203,6 +232,21 @@ def test_seq_to_hashes_translated(track_abundance):
 
     assert set(golden_hashes) == set(new_hashes)
 
+def test_seq_to_hashes_bad_kmers_as_zeroes_1():
+    mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1)
+    seq = "ATGAGAGACGATAGACAGATGACN"
+    
+    # New seq to hashes without adding to the sketch
+    hashes = mh.seq_to_hashes(seq, force=True, bad_kmers_as_zeroes=True)
+
+    assert len(hashes) == len(seq) - 21 + 1
+
+def test_seq_to_hashes_bad_kmers_as_zeroes_2():
+    mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1)
+    seq = "ATGAGAGACGATAGACAGATGACN"
+    
+    with pytest.raises(ValueError):
+        hashes = mh.seq_to_hashes(seq, bad_kmers_as_zeroes=True)
 
 
 def test_bytes_protein_dayhoff(track_abundance, dayhoff):
@@ -2156,9 +2200,8 @@ def test_frozen_and_mutable_3(track_abundance):
     assert 12 not in mh1.hashes
 
 
-
-
 def test_dna_kmers():
+    # test seq_to_hashes for dna -> dna
     mh = MinHash(0, ksize=31, scaled=1) # DNA
     seq = "ATGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGCAAATGCAGAACGTTTTCTGCGTGTTGCCGATATTCTGGAAAGCAATGCCAGGCAGGGGCAGGTGGCCACCGTCCTCTCTGCCCCCGCCAAAATCACCAACCACCTGGTGGCGATGATTGAAAAAACCATTAGCGGCCAGGATGCTTTACCCAATATCAGCGATGCCGAACGTATTTTTGCCGAACTTTTGACGGGACTCGCCGCCGCCCAGCCGGGGTTCCCGCTGGCGCAATTGAAAACTTTCGTCGATCAGGAATTTGCCCAAATAAAACATGTCCTGCATGGCATTAGTTTGTTGGGGCAGTGCCCGGATAGCATCAACGCTGCGCTGATTTGCCGTGGCGAGAAAATGTCGATCGCCATTATGGCCGGCGTATTAGAAGCGCGCGGTCACAACGTTACTGTTATCGATCCGGTCGAAAAACTGCTGGCAGTGGGGCATTACCTCGAATCTACCGTCGATATTGCTGAGTCCACCCGCCGTATTGCGGCAAGCCGCATTCCGGCTGATCACATGGTGCTGAT"
 
@@ -2191,7 +2234,60 @@ def test_dna_kmers():
         assert hashval == hashes[i]
 
 
+def test_dna_kmers_2():
+    # test kmers_and_hashes for dna -> dna
+    mh = MinHash(0, ksize=31, scaled=1) # DNA
+    seq = "ATGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGCAAATGCAGAACGTTTTCTGCGTGTTGCCGATATTCTGGAAAGCAATGCCAGGCAGGGGCAGGTGGCCACCGTCCTCTCTGCCCCCGCCAAAATCACCAACCACCTGGTGGCGATGATTGAAAAAACCATTAGCGGCCAGGATGCTTTACCCAATATCAGCGATGCCGAACGTATTTTTGCCGAACTTTTGACGGGACTCGCCGCCGCCCAGCCGGGGTTCCCGCTGGCGCAATTGAAAACTTTCGTCGATCAGGAATTTGCCCAAATAAAACATGTCCTGCATGGCATTAGTTTGTTGGGGCAGTGCCCGGATAGCATCAACGCTGCGCTGATTTGCCGTGGCGAGAAAATGTCGATCGCCATTATGGCCGGCGTATTAGAAGCGCGCGGTCACAACGTTACTGTTATCGATCCGGTCGAAAAACTGCTGGCAGTGGGGCATTACCTCGAATCTACCGTCGATATTGCTGAGTCCACCCGCCGTATTGCGGCAAGCCGCATTCCGGCTGATCACATGGTGCTGAT"
+
+    # k-mer by k-mer?
+    for kmer, hashval in mh.kmers_and_hashes(seq):
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+        single_mh.add_sequence(kmer)
+        assert len(single_mh) == 1
+
+        # confirm it all matches
+        assert hashval == list(single_mh.hashes)[0]
+
+
+def test_dna_kmers_3_bad_dna():
+    # test kmers_and_hashes for dna -> dna, with some bad k-mers in there
+    mh = MinHash(0, ksize=31, scaled=1) # DNA
+    seq = "NTGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGCAAATGCAGAACGTTTTCTGCGTGTTGCCGATATTCTGGAAAGCAATGCCAGGCAGGGGCAGGTGGCCACCGTCCTCTCTGCCCCCGCCAAAATCACCAACCACCTGGTGGCGATGATTGAAAAAACCATTAGCGGCCAGGATGCTTTACCCAATATCAGCGATGCCGAACGTATTTTTGCCGAACTTTTGACGGGACTCGCCGCCGCCCAGCCGGGGTTCCCGCTGGCGCAATTGAAAACTTTCGTCGATCAGGAATTTGCCCAAATAAAACATGTCCTGCATGGCATTAGTTTGTTGGGGCAGTGCCCGGATAGCATCAACGCTGCGCTGATTTGCCGTGGCGAGAAAATGTCGATCGCCATTATGGCCGGCGTATTAGAAGCGCGCGGTCACAACGTTACTGTTATCGATCCGGTCGAAAAACTGCTGGCAGTGGGGCATTACCTCGAATCTACCGTCGATATTGCTGAGTCCACCCGCCGTATTGCGGCAAGCCGCATTCCGGCTGATCACATGGTGCTGAT"
+
+    with pytest.raises(ValueError) as exc:
+        list(mh.kmers_and_hashes(seq))
+
+    assert "invalid DNA character in input k-mer: NTGCGAGTGT" in str(exc)
+
+
+def test_dna_kmers_4_bad_dna():
+    # test kmers_and_hashes for bad dna -> dna, using force
+    mh = MinHash(0, ksize=31, scaled=1) # DNA
+    seq = "NTGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGCAAATGCAGAACGTTTTCTGCGTGTTGCCGATATTCTGGAAAGCAATGCCAGGCAGGGGCAGGTGGCCACCGTCCTCTCTGCCCCCGCCAAAATCACCAACCACCTGGTGGCGATGATTGAAAAAACCATTAGCGGCCAGGATGCTTTACCCAATATCAGCGATGCCGAACGTATTTTTGCCGAACTTTTGACGGGACTCGCCGCCGCCCAGCCGGGGTTCCCGCTGGCGCAATTGAAAACTTTCGTCGATCAGGAATTTGCCCAAATAAAACATGTCCTGCATGGCATTAGTTTGTTGGGGCAGTGCCCGGATAGCATCAACGCTGCGCTGATTTGCCGTGGCGAGAAAATGTCGATCGCCATTATGGCCGGCGTATTAGAAGCGCGCGGTCACAACGTTACTGTTATCGATCCGGTCGAAAAACTGCTGGCAGTGGGGCATTACCTCGAATCTACCGTCGATATTGCTGAGTCCACCCGCCGTATTGCGGCAAGCCGCATTCCGGCTGATCACATGGTGCTGAT"
+
+    # k-mer by k-mer?
+    found_bad_kmer = False
+    for kmer, hashval in mh.kmers_and_hashes(seq, force=True):
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+
+        if hashval == None:
+            assert kmer == seq[:31] # first k-mer is baaaaad.
+            found_bad_kmer = True
+            continue
+
+        # if the below code raises an exception, it's because the above
+        # 'if' statement was not triggered (but should have been :)
+        single_mh.add_sequence(kmer)
+        assert len(single_mh) == 1
+        assert hashval == list(single_mh.hashes)[0]
+
+    assert found_bad_kmer, "there is one bad k-mer in here"
+
+
 def test_protein_kmers():
+    # test seq_to_hashes for protein -> protein
     mh = MinHash(0, ksize=7, is_protein=True, scaled=1)
     seq = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
 
@@ -2222,9 +2318,26 @@ def test_protein_kmers():
         # confirm it all matches
         assert hashval == list(single_mh.hashes)[0]
         assert hashval == hashes[i]
+
+
+def test_protein_kmers_2():
+    # test kmers_and_hashes for protein -> protein
+    mh = MinHash(0, ksize=7, is_protein=True, scaled=1)
+    seq = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
+
+    # k-mer by k-mer?
+    for kmer, hashval in mh.kmers_and_hashes(seq, is_protein=True):
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+        single_mh.add_protein(kmer)
+        assert len(single_mh) == 1
+
+        # confirm it all matches
+        assert hashval == list(single_mh.hashes)[0]
 
 
 def test_dayhoff_kmers():
+    # test seq_to_hashes for protein -> dayhoff
     mh = MinHash(0, ksize=7, dayhoff=True, scaled=1)
     seq = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
 
@@ -2257,7 +2370,24 @@ def test_dayhoff_kmers():
         assert hashval == hashes[i]
 
 
+def test_dayhoff_kmers_2():
+    # test kmers_and_hashes for protein -> dayhoff
+    mh = MinHash(0, ksize=7, dayhoff=True, scaled=1)
+    seq = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
+
+    # k-mer by k-mer?
+    for kmer, hashval in mh.kmers_and_hashes(seq, is_protein=True):
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+        single_mh.add_protein(kmer)
+        assert len(single_mh) == 1
+
+        # confirm it all matches
+        assert hashval == list(single_mh.hashes)[0]
+
+
 def test_hp_kmers():
+    # test hashes_to_seq for protein -> hp
     mh = MinHash(0, ksize=7, hp=True, scaled=1)
     seq = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
 
@@ -2290,7 +2420,24 @@ def test_hp_kmers():
         assert hashval == hashes[i]
 
 
+def test_hp_kmers_2():
+    # test kmers_and_hashes for protein -> hp
+    mh = MinHash(0, ksize=7, hp=True, scaled=1)
+    seq = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
+
+    # k-mer by k-mer?
+    for kmer, hashval in mh.kmers_and_hashes(seq, is_protein=True):
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+        single_mh.add_protein(kmer)
+        assert len(single_mh) == 1
+
+        # confirm it all matches
+        assert hashval == list(single_mh.hashes)[0]
+
+
 def test_translate_protein_hashes():
+    # test seq_to_hashes for dna -> protein
     mh = MinHash(0, ksize=7, is_protein=True, scaled=1)
     mh_translate = mh.copy()
     dna = "atggttaaagtttatgccccggcttccagtgccaatatgagcgtcgggtttgatgtgctcggggcggcggtgacacctgttgatggtgcattgctcggagatgtagtcacggttgaggcggcagagacattcagtctcaacaacctcggacgctttgccgataagctgccgtcagaaccacgggaaaatatcgtttatcagtgctgggagcgtttttgccaggaactgggtaagcaaattccagtggcgatgaccctggaaaagaatatgccgatcggttcgggcttaggctccagtgcctgttcggtggtcgcggcgctgatggcgatgaatgaacactgcggcaagccgcttaatgacactcgtttgctggctttgatgggcgagctggaaggccgtatctccggcagcattcattacgacaacgtggcaccgtgttttctcggtggtatgcagttgatgatcgaagaaaacgacatcatcagccagcaagtgccagggtttgatgagtggctgtgggtgctggcgtatccggggattaaagtctcgacggcagaagccagggctattttaccggcgcagtatcgccgccaggattgcattgcgcacgggcgacatctggcaggcttcattcacgcctgctattcccgtcagcctgagcttgccgcgaagctgatgaaagatgttatcgctgaaccctaccgtgaacggttactgccaggcttccggcaggcgcggcaggcggtcgcggaaatcggcgcggtagcgagcggtatctccggctccggcccgaccttgttcgctctgtgtgacaagccggaaaccgcccagcgcgttgccgactggttgggtaagaactacctgcaaaatcaggaaggttttgttcatatttgccggctggatacggcgggcgcacgagtactggaaaactaa"
@@ -2304,7 +2451,23 @@ def test_translate_protein_hashes():
     assert not set(hashes_translate).issubset(set(hashes_prot))
 
 
+def test_translate_protein_hashes_2():
+    # test kmers_and_hashes for dna -> protein
+    mh_translate = MinHash(0, ksize=7, is_protein=True, scaled=1)
+
+    dna = "atggttaaagtttatgccccggcttccagtgccaatatgagcgtcgggtttgatgtgctcggggcggcggtgacacctgttgatggtgcattgctcggagatgtagtcacggttgaggcggcagagacattcagtctcaacaacctcggacgctttgccgataagctgccgtcagaaccacgggaaaatatcgtttatcagtgctgggagcgtttttgccaggaactgggtaagcaaattccagtggcgatgaccctggaaaagaatatgccgatcggttcgggcttaggctccagtgcctgttcggtggtcgcggcgctgatggcgatgaatgaacactgcggcaagccgcttaatgacactcgtttgctggctttgatgggcgagctggaaggccgtatctccggcagcattcattacgacaacgtggcaccgtgttttctcggtggtatgcagttgatgatcgaagaaaacgacatcatcagccagcaagtgccagggtttgatgagtggctgtgggtgctggcgtatccggggattaaagtctcgacggcagaagccagggctattttaccggcgcagtatcgccgccaggattgcattgcgcacgggcgacatctggcaggcttcattcacgcctgctattcccgtcagcctgagcttgccgcgaagctgatgaaagatgttatcgctgaaccctaccgtgaacggttactgccaggcttccggcaggcgcggcaggcggtcgcggaaatcggcgcggtagcgagcggtatctccggctccggcccgaccttgttcgctctgtgtgacaagccggaaaccgcccagcgcgttgccgactggttgggtaagaactacctgcaaaatcaggaaggttttgttcatatttgccggctggatacggcgggcgcacgagtactggaaaactaa".upper()
+
+    # does everything match? check!
+    k_and_h = list(mh_translate.kmers_and_hashes(dna))
+    for idx, kmer in enumerate(_kmers_from_all_coding_frames(dna, 21)):
+        k, h = k_and_h[idx]
+
+        assert kmer == k
+        assert _hash_fwd_only(mh_translate, kmer) == h
+
+
 def test_translate_hp_hashes():
+    # test seq_to_hashes for dna -> protein -> hp
     mh = MinHash(0, ksize=7, hp=True, scaled=1)
     mh_translate = mh.copy()
     dna = "atggttaaagtttatgccccggcttccagtgccaatatgagcgtcgggtttgatgtgctcggggcggcggtgacacctgttgatggtgcattgctcggagatgtagtcacggttgaggcggcagagacattcagtctcaacaacctcggacgctttgccgataagctgccgtcagaaccacgggaaaatatcgtttatcagtgctgggagcgtttttgccaggaactgggtaagcaaattccagtggcgatgaccctggaaaagaatatgccgatcggttcgggcttaggctccagtgcctgttcggtggtcgcggcgctgatggcgatgaatgaacactgcggcaagccgcttaatgacactcgtttgctggctttgatgggcgagctggaaggccgtatctccggcagcattcattacgacaacgtggcaccgtgttttctcggtggtatgcagttgatgatcgaagaaaacgacatcatcagccagcaagtgccagggtttgatgagtggctgtgggtgctggcgtatccggggattaaagtctcgacggcagaagccagggctattttaccggcgcagtatcgccgccaggattgcattgcgcacgggcgacatctggcaggcttcattcacgcctgctattcccgtcagcctgagcttgccgcgaagctgatgaaagatgttatcgctgaaccctaccgtgaacggttactgccaggcttccggcaggcgcggcaggcggtcgcggaaatcggcgcggtagcgagcggtatctccggctccggcccgaccttgttcgctctgtgtgacaagccggaaaccgcccagcgcgttgccgactggttgggtaagaactacctgcaaaatcaggaaggttttgttcatatttgccggctggatacggcgggcgcacgagtactggaaaactaa"
@@ -2318,7 +2481,23 @@ def test_translate_hp_hashes():
     assert not set(hashes_translate).issubset(set(hashes_prot))
 
 
+def test_translate_hp_hashes_2():
+    # test kmers_and_hashes for dna -> protein -> hp
+    mh_translate = MinHash(0, ksize=7, hp=True, scaled=1)
+    dna = "atggttaaagtttatgccccggcttccagtgccaatatgagcgtcgggtttgatgtgctcggggcggcggtgacacctgttgatggtgcattgctcggagatgtagtcacggttgaggcggcagagacattcagtctcaacaacctcggacgctttgccgataagctgccgtcagaaccacgggaaaatatcgtttatcagtgctgggagcgtttttgccaggaactgggtaagcaaattccagtggcgatgaccctggaaaagaatatgccgatcggttcgggcttaggctccagtgcctgttcggtggtcgcggcgctgatggcgatgaatgaacactgcggcaagccgcttaatgacactcgtttgctggctttgatgggcgagctggaaggccgtatctccggcagcattcattacgacaacgtggcaccgtgttttctcggtggtatgcagttgatgatcgaagaaaacgacatcatcagccagcaagtgccagggtttgatgagtggctgtgggtgctggcgtatccggggattaaagtctcgacggcagaagccagggctattttaccggcgcagtatcgccgccaggattgcattgcgcacgggcgacatctggcaggcttcattcacgcctgctattcccgtcagcctgagcttgccgcgaagctgatgaaagatgttatcgctgaaccctaccgtgaacggttactgccaggcttccggcaggcgcggcaggcggtcgcggaaatcggcgcggtagcgagcggtatctccggctccggcccgaccttgttcgctctgtgtgacaagccggaaaccgcccagcgcgttgccgactggttgggtaagaactacctgcaaaatcaggaaggttttgttcatatttgccggctggatacggcgggcgcacgagtactggaaaactaa"
+    dna = dna.upper()
+
+    # does everything match? check!
+    k_and_h = list(mh_translate.kmers_and_hashes(dna))
+    for idx, kmer in enumerate(_kmers_from_all_coding_frames(dna, 21)):
+        k, h = k_and_h[idx]
+
+        assert kmer == k
+        assert _hash_fwd_only(mh_translate, kmer) == h
+
+
 def test_translate_dayhoff_hashes():
+    # test seq_to_hashes for dna -> protein -> dayhoff
     mh = MinHash(0, ksize=7, dayhoff=True, scaled=1)
     mh_translate = mh.copy()
     dna = "atggttaaagtttatgccccggcttccagtgccaatatgagcgtcgggtttgatgtgctcggggcggcggtgacacctgttgatggtgcattgctcggagatgtagtcacggttgaggcggcagagacattcagtctcaacaacctcggacgctttgccgataagctgccgtcagaaccacgggaaaatatcgtttatcagtgctgggagcgtttttgccaggaactgggtaagcaaattccagtggcgatgaccctggaaaagaatatgccgatcggttcgggcttaggctccagtgcctgttcggtggtcgcggcgctgatggcgatgaatgaacactgcggcaagccgcttaatgacactcgtttgctggctttgatgggcgagctggaaggccgtatctccggcagcattcattacgacaacgtggcaccgtgttttctcggtggtatgcagttgatgatcgaagaaaacgacatcatcagccagcaagtgccagggtttgatgagtggctgtgggtgctggcgtatccggggattaaagtctcgacggcagaagccagggctattttaccggcgcagtatcgccgccaggattgcattgcgcacgggcgacatctggcaggcttcattcacgcctgctattcccgtcagcctgagcttgccgcgaagctgatgaaagatgttatcgctgaaccctaccgtgaacggttactgccaggcttccggcaggcgcggcaggcggtcgcggaaatcggcgcggtagcgagcggtatctccggctccggcccgaccttgttcgctctgtgtgacaagccggaaaccgcccagcgcgttgccgactggttgggtaagaactacctgcaaaatcaggaaggttttgttcatatttgccggctggatacggcgggcgcacgagtactggaaaactaa"
@@ -2330,3 +2509,18 @@ def test_translate_dayhoff_hashes():
     # one is a subset of other, b/c of six frame translation
     assert set(hashes_prot).issubset(set(hashes_translate))
     assert not set(hashes_translate).issubset(set(hashes_prot))
+
+
+def test_translate_dayhoff_hashes_2():
+    # test kmers_and_hashes for dna -> protein -> dayhoff
+    mh_translate = MinHash(0, ksize=7, dayhoff=True, scaled=1)
+    dna = "atggttaaagtttatgccccggcttccagtgccaatatgagcgtcgggtttgatgtgctcggggcggcggtgacacctgttgatggtgcattgctcggagatgtagtcacggttgaggcggcagagacattcagtctcaacaacctcggacgctttgccgataagctgccgtcagaaccacgggaaaatatcgtttatcagtgctgggagcgtttttgccaggaactgggtaagcaaattccagtggcgatgaccctggaaaagaatatgccgatcggttcgggcttaggctccagtgcctgttcggtggtcgcggcgctgatggcgatgaatgaacactgcggcaagccgcttaatgacactcgtttgctggctttgatgggcgagctggaaggccgtatctccggcagcattcattacgacaacgtggcaccgtgttttctcggtggtatgcagttgatgatcgaagaaaacgacatcatcagccagcaagtgccagggtttgatgagtggctgtgggtgctggcgtatccggggattaaagtctcgacggcagaagccagggctattttaccggcgcagtatcgccgccaggattgcattgcgcacgggcgacatctggcaggcttcattcacgcctgctattcccgtcagcctgagcttgccgcgaagctgatgaaagatgttatcgctgaaccctaccgtgaacggttactgccaggcttccggcaggcgcggcaggcggtcgcggaaatcggcgcggtagcgagcggtatctccggctccggcccgaccttgttcgctctgtgtgacaagccggaaaccgcccagcgcgttgccgactggttgggtaagaactacctgcaaaatcaggaaggttttgttcatatttgccggctggatacggcgggcgcacgagtactggaaaactaa"
+    dna = dna.upper()
+
+    # does everything match? check!
+    k_and_h = list(mh_translate.kmers_and_hashes(dna))
+    for idx, kmer in enumerate(_kmers_from_all_coding_frames(dna, 21)):
+        k, h = k_and_h[idx]
+
+        assert kmer == k
+        assert _hash_fwd_only(mh_translate, kmer) == h

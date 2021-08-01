@@ -240,6 +240,7 @@ const uint64_t *kmerminhash_seq_to_hashes(SourmashKmerMinHash *ptr,
                                           const char *sequence,
                                           uintptr_t insize,
                                           bool force,
+                                          bool bad_kmers_as_zeroes,
                                           bool is_protein,
                                           uintptr_t *size);
 
