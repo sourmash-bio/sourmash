@@ -309,7 +309,7 @@ class MinHash(RustObject):
 
         if is_protein and self.moltype not in ("protein", "dayhoff", "hp"):
             raise ValueError("cannot add protein sequence to DNA MinHash")
-        
+
         if bad_kmers_as_zeroes and not force:
             raise ValueError("cannot represent invalid kmers as 0 while force is not set to True")
 
