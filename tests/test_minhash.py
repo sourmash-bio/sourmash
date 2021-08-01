@@ -232,6 +232,21 @@ def test_seq_to_hashes_translated(track_abundance):
 
     assert set(golden_hashes) == set(new_hashes)
 
+def test_seq_to_hashes_bad_kmers_as_zeroes_1():
+    mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1)
+    seq = "ATGAGAGACGATAGACAGATGACN"
+    
+    # New seq to hashes without adding to the sketch
+    hashes = mh.seq_to_hashes(seq, force=True, bad_kmers_as_zeroes=True)
+
+    assert len(hashes) == len(seq) - 21 + 1
+
+def test_seq_to_hashes_bad_kmers_as_zeroes_2():
+    mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1)
+    seq = "ATGAGAGACGATAGACAGATGACN"
+    
+    with pytest.raises(ValueError):
+        hashes = mh.seq_to_hashes(seq, bad_kmers_as_zeroes=True)
 
 
 def test_bytes_protein_dayhoff(track_abundance, dayhoff):
@@ -2247,8 +2262,6 @@ def test_dna_kmers_3_bad_dna():
 
 
 def test_dna_kmers_4_bad_dna():
-    # @CTB: THIS DOESN'T CURRENTLY WORK :(
-    return
     # test kmers_and_hashes for bad dna -> dna, using force
     mh = MinHash(0, ksize=31, scaled=1) # DNA
     seq = "NTGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGCAAATGCAGAACGTTTTCTGCGTGTTGCCGATATTCTGGAAAGCAATGCCAGGCAGGGGCAGGTGGCCACCGTCCTCTCTGCCCCCGCCAAAATCACCAACCACCTGGTGGCGATGATTGAAAAAACCATTAGCGGCCAGGATGCTTTACCCAATATCAGCGATGCCGAACGTATTTTTGCCGAACTTTTGACGGGACTCGCCGCCGCCCAGCCGGGGTTCCCGCTGGCGCAATTGAAAACTTTCGTCGATCAGGAATTTGCCCAAATAAAACATGTCCTGCATGGCATTAGTTTGTTGGGGCAGTGCCCGGATAGCATCAACGCTGCGCTGATTTGCCGTGGCGAGAAAATGTCGATCGCCATTATGGCCGGCGTATTAGAAGCGCGCGGTCACAACGTTACTGTTATCGATCCGGTCGAAAAACTGCTGGCAGTGGGGCATTACCTCGAATCTACCGTCGATATTGCTGAGTCCACCCGCCGTATTGCGGCAAGCCGCATTCCGGCTGATCACATGGTGCTGAT"
@@ -2257,11 +2270,18 @@ def test_dna_kmers_4_bad_dna():
     for kmer, hashval in mh.kmers_and_hashes(seq, force=True):
         # add to minhash obj
         single_mh = mh.copy_and_clear()
-        single_mh.add_sequence(kmer)
-        assert len(single_mh) == 1
+
+        bad_kmer = False
+        try:
+            single_mh.add_sequence(kmer)
+            assert len(single_mh) == 1
+        except ValueError:
+            # bad k-mer :)
+            bad_kmer = True
 
         # confirm it all matches
-        assert hashval == list(single_mh.hashes)[0]
+        if not bad_kmer:
+            assert hashval == list(single_mh.hashes)[0]
 
 
 def test_protein_kmers():
