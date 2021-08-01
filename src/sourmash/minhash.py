@@ -334,9 +334,14 @@ class MinHash(RustObject):
         """
         import screed
 
+        bad_kmers_as_zeroes = False
+        if force:
+            bad_kmers_as_zeroes = True
+
         sequence = sequence.upper()
         hashvals = self.seq_to_hashes(sequence,
-                                      force=force, is_protein=is_protein)
+                                      force=force, is_protein=is_protein,
+                                      bad_kmers_as_zeroes=bad_kmers_as_zeroes)
 
         ksize = self.ksize
         translate = False
