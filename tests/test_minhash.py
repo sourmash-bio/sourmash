@@ -2262,8 +2262,6 @@ def test_dna_kmers_3_bad_dna():
 
 
 def test_dna_kmers_4_bad_dna():
-    # @CTB: THIS DOESN'T CURRENTLY WORK :(
-    return
     # test kmers_and_hashes for bad dna -> dna, using force
     mh = MinHash(0, ksize=31, scaled=1) # DNA
     seq = "NTGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGCAAATGCAGAACGTTTTCTGCGTGTTGCCGATATTCTGGAAAGCAATGCCAGGCAGGGGCAGGTGGCCACCGTCCTCTCTGCCCCCGCCAAAATCACCAACCACCTGGTGGCGATGATTGAAAAAACCATTAGCGGCCAGGATGCTTTACCCAATATCAGCGATGCCGAACGTATTTTTGCCGAACTTTTGACGGGACTCGCCGCCGCCCAGCCGGGGTTCCCGCTGGCGCAATTGAAAACTTTCGTCGATCAGGAATTTGCCCAAATAAAACATGTCCTGCATGGCATTAGTTTGTTGGGGCAGTGCCCGGATAGCATCAACGCTGCGCTGATTTGCCGTGGCGAGAAAATGTCGATCGCCATTATGGCCGGCGTATTAGAAGCGCGCGGTCACAACGTTACTGTTATCGATCCGGTCGAAAAACTGCTGGCAGTGGGGCATTACCTCGAATCTACCGTCGATATTGCTGAGTCCACCCGCCGTATTGCGGCAAGCCGCATTCCGGCTGATCACATGGTGCTGAT"
@@ -2272,11 +2270,18 @@ def test_dna_kmers_4_bad_dna():
     for kmer, hashval in mh.kmers_and_hashes(seq, force=True):
         # add to minhash obj
         single_mh = mh.copy_and_clear()
-        single_mh.add_sequence(kmer)
-        assert len(single_mh) == 1
+
+        bad_kmer = False
+        try:
+            single_mh.add_sequence(kmer)
+            assert len(single_mh) == 1
+        except ValueError:
+            # bad k-mer :)
+            bad_kmer = True
 
         # confirm it all matches
-        assert hashval == list(single_mh.hashes)[0]
+        if not bad_kmer:
+            assert hashval == list(single_mh.hashes)[0]
 
 
 def test_protein_kmers():
