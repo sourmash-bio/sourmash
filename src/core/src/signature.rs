@@ -241,7 +241,9 @@ impl Iterator for SeqToHashes {
                 if !self.dna_configured {
                     self.dna_ksize = self.k_size as usize;
                     self.dna_len = self.sequence.len();
-                    if self.dna_len < self.dna_ksize || (!self.hash_function.dna() && self.dna_len < self.k_size * 3) {
+                    if self.dna_len < self.dna_ksize
+                        || (!self.hash_function.dna() && self.dna_len < self.k_size * 3)
+                    {
                         return None;
                     }
                     // pre-calculate the reverse complement for the full sequence...
