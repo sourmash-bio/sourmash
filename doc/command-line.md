@@ -1256,6 +1256,15 @@ yield all the k-mers and their matching hashes.  Likewise, if the
 sketch is built from the intersection of two other sketches, only
 the k-mers and hash values present in both sketches will be used.
 
+Input sequences can be in FASTA or FASTQ format, and either flat text
+or compressed with gzip or bzip2; formats are auto-detected.
+
+By default, `sig kmers` ignores bad k-mers (e.g. non-ACGT characters
+in DNA). If `--check-sequence` is provided, `sig kmers` will error
+exit on the first bad k-mer.  If `--check-sequence --force` is provided,
+`sig kmers` will provide error messages (and skip bad sequences), but
+will continue processing input sequences.
+
 ## Advanced command-line usage
 
 ### Loading signatures and databases

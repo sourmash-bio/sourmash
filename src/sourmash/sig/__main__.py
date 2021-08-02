@@ -1031,7 +1031,21 @@ def kmers(args):
             if is_protein:
                 seq_mh.add_protein(record.sequence)
             else:
-                seq_mh.add_sequence(record.sequence) # CTB force?
+                # @CTB test --check-sequence and --force
+                try:
+                    seq_mh.add_sequence(record.sequence,
+                                        not args.check_sequence)
+                except ValueError as exc:
+                    seqname = record.name
+                    if len(seqname) > 40:
+                        seqname = seqname[:37] + '...'
+                    notify(f"ERROR in sequence '{seqname}', file '{filename}'")
+                    notify(str(exc))
+                    if args.force:
+                        notify("(continuing)")
+                        continue
+                    else:
+                        sys.exit(-1)
 
             if seq_mh.intersection(query_mh):
                 # match!

@@ -38,6 +38,10 @@ sourmash sketch dna -p k=21,k=31,k=51,abund metagenome.fq.gz
 ```
 to create three abundance-weighted sketches at k=21, 31, and 51, for the given FASTQ file.
 
+By default, `sketch dna` ignores bad k-mers (e.g. non-ACGT characters
+in DNA). If `--check-sequence` is provided, `sketch dna` will error
+exit on the first bad k-mer.
+
 ### Protein sketches for genomes and proteomes
 
 Likewise,
