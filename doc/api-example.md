@@ -256,17 +256,95 @@ True
 
 ```
 
+### Extracting both k-mers and hashes for a sequence
+
+As of sourmash 4.2.2, `MinHash` objects provide a method called
+`kmers_and_hashes` that will return the k-mers and their corresponding
+hashes for an input sequence --
+
+```
+>>> mh = MinHash(n=0, ksize=31, scaled=1)
+>>> dnaseq = "ATGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGC"
+>>> for kmer, hashval in mh.kmers_and_hashes(dnaseq):
+...    print(kmer, hashval)
+ATGCGAGTGTTGAAGTTCGGCGGTACATCAG 7488148386897425535
+TGCGAGTGTTGAAGTTCGGCGGTACATCAGT 3674733966066518639
+GCGAGTGTTGAAGTTCGGCGGTACATCAGTG 2135725670290847794
+CGAGTGTTGAAGTTCGGCGGTACATCAGTGG 14521729668397845245
+GAGTGTTGAAGTTCGGCGGTACATCAGTGGC 15919051675656106963
+
+```
+
+This works for protein `MinHash` objects as well, of course, although
+you have to provide the `is_protein` flag, since `MinHash` objects assume
+input sequence is DNA otherwise --
+
+```
+>>> K = 7
+>>> mh = MinHash(n=0, ksize=K, is_protein=True, scaled=1)
+>>> protseq = "XVKVYAPAS"
+>>> for (kmer, hashval) in mh.kmers_and_hashes(protseq, is_protein=True):
+...     print(kmer, hashval)
+XVKVYAP 3140823561012061964
+VKVYAPA 10273850291677879123
+KVYAPAS 8846570680426381265
+
+```
+
+For translated `MinHash`, the k-mers and hashes corresponding to all
+six reading frames are returned.
+
+```
+>>> dnaseq = "ATGCGAGTGTTGAAGTTCGGCGGTA"
+>>> K = 7
+>>> mh = MinHash(n=0, ksize=K, is_protein=True, scaled=1)
+>>> for (kmer, hashval) in mh.kmers_and_hashes(dnaseq):
+...    print(kmer, hashval)
+ATGCGAGTGTTGAAGTTCGGC 16652503548557650904
+CGAGTGTTGAAGTTCGGCGGT 9978056796243419534
+TACCGCCGAACTTCAACACTC 2748622134668949083
+CGCCGAACTTCAACACTCGCA 4263227699724621735
+TGCGAGTGTTGAAGTTCGGCG 14299765336094039482
+GAGTGTTGAAGTTCGGCGGTA 18155608748862746902
+ACCGCCGAACTTCAACACTCG 14490181201772650983
+GCCGAACTTCAACACTCGCAT 17205086974168937105
+GCGAGTGTTGAAGTTCGGCGG 13354527969598897281
+CCGCCGAACTTCAACACTCGC 16506504121672505595
+
+```
+
+In all cases, the k-mers are taken from the sequence itself, so the
+k-mers will match to the input sequence, even when there are multiple
+k-mers that hash to the same value (e.g. in the case of reverse
+complements, or DNA k-mers that are translated to the same amino acid
+sequence).
+
+Note that sourmash also provides a `translate_codon` function if you
+are interested in getting the specific amino acids -
+
+```
+>>> from sourmash.minhash import translate_codon
+>>> kmer = 'ATGCGAGT'
+>>> for start in range(0, len(kmer) - 3 + 1, 3):
+...    codon = kmer[start:start+3]
+...    print(codon, translate_codon(codon))
+ATG M
+CGA R
+
+```
+
 ### Summary
 
 In sum,
 * `MinHash.add_sequence(...)` converts DNA sequence into DNA or protein k-mers, and then hashes them and stores them.
 * `MinHash.add_protein(...)` converts protein sequence into protein k-mers, and then hashes them and stores them.
-* `MinHash.seq_to_hashes(...)` will give you the hash values without storing them.
-* The `dayhoff` and `hp` encodings can be calculated on aa k-mers as well, using `MinHash` objects.
+* `MinHash.seq_to_hashes(...)` will give you the hash values without adding them to the `MinHash` object.
+* `MinHash.kmers_and_hashes(...)` will provide tuples of `(kmer, hashval)` for an input sequence.
+* The `dayhoff` and `hp` encodings can be calculated on amino acid k-mers as well, using `MinHash` objects.
 
 Note that this is the code that is used by the command-line
 functionality in `sourmash sketch`, so the results at the command-line
-should match the results from the Python API.
+will match the results from the Python API.
 
 ## Set operations on hashes
 
