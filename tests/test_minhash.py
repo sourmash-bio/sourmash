@@ -232,6 +232,7 @@ def test_seq_to_hashes_translated(track_abundance):
 
     assert set(golden_hashes) == set(new_hashes)
 
+
 def test_seq_to_hashes_bad_kmers_as_zeroes_1():
     mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1)
     seq = "ATGAGAGACGATAGACAGATGACN"
@@ -241,12 +242,20 @@ def test_seq_to_hashes_bad_kmers_as_zeroes_1():
 
     assert len(hashes) == len(seq) - 21 + 1
 
+
 def test_seq_to_hashes_bad_kmers_as_zeroes_2():
     mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1)
     seq = "ATGAGAGACGATAGACAGATGACN"
     
     with pytest.raises(ValueError):
         hashes = mh.seq_to_hashes(seq, bad_kmers_as_zeroes=True)
+
+
+def test_seq_to_hashes_translated_short():
+    mh = MinHash(0, 2, True, dayhoff=True, hp=False, scaled = 1)
+    hashes = mh.seq_to_hashes("ACTGA")
+
+    assert(len(hashes) == 0)
 
 
 def test_bytes_protein_dayhoff(track_abundance, dayhoff):
