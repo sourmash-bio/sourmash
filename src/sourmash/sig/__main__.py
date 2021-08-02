@@ -1056,12 +1056,15 @@ def kmers(args):
                                      kmer=kmer, hashval=hashval)
                             kmer_w.writerow(d)
 
+                # no output? add to found_mh anyway, I guess
+                found_mh += seq_mh
+
             # provide progress indicator based on bp...
             n_sequences_searched += 1
             n_bp_searched += len(record.sequence)
 
             if n_bp_searched >= progress_threshold:
-                notify(f"... searched {n_bp_searched} from {n_files_searched} so far")
+                notify(f"... searched {n_bp_searched} from {n_files_searched} files so far")
                 while n_bp_searched >= progress_threshold:
                     progress_threshold += progress_interval
 
@@ -1080,15 +1083,21 @@ def kmers(args):
         notify(f"matched and saved a total of {n_sequences_found} sequences with {n_bp_saved/1e6:.1f} Mbp.")
 
     if kmer_w:
-        # calculate overlap, even for num minhashes which ordinarily don't
-        # permit it, because here we are interested in knowing how many
-        # of the expected hashes we found.
-        query_hashes = set(query_mh.hashes)
-        found_hashes = set(found_mh.hashes)
-        cont = len(query_hashes.intersection(found_hashes)) / len(query_hashes)
-
         notify(f"matched and saved a total of {n_kmers_found} k-mers.")
-        notify(f"found {len(found_mh)} distinct matching hashes ({cont*100:.1f}%)")
+
+    # @CTB test with empty query, and also with empty found
+    # @CTB test also with manipulated sketch, e.g. a single hash or something.
+    # calculate overlap, even for num minhashes which ordinarily don't
+    # permit it, because here we are interested in knowing how many
+    # of the expected hashes we found.
+    query_hashes = set(query_mh.hashes)
+    found_hashes = set(found_mh.hashes)
+    cont = len(query_hashes.intersection(found_hashes)) / len(query_hashes)
+
+    notify(f"found {len(found_mh)} distinct matching hashes ({cont*100:.1f}%)")
+
+    if not kmer_w and not save_seqs:
+        notify("NOTE: see --save-kmers or --save-sequences for output options.")
 
 
 def main(arglist=None):
