@@ -607,11 +607,9 @@ impl Signature {
     pub fn add_sequence(&mut self, seq: &[u8], force: bool) -> Result<(), Error> {
         cfg_if! {
         if #[cfg(feature = "parallel")] {
-            self.signatures
-                .par_iter_mut()
-                .for_each(|sketch| {
-                    sketch.add_sequence(&seq, force)?; }
-                );
+            for sketch in self.signatures.par_iter_mut(){
+                sketch.add_sequence(&seq, force)?;
+            }
         } else {
             for sketch in self.signatures.iter_mut(){
                 sketch.add_sequence(seq, force)?;
