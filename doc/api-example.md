@@ -77,8 +77,11 @@ we break it into four 31-mers:
 
 ```
 
-sourmash provides a hash function (by default MurmurHash) that will convert
-each k-mer into 64-bit numbers. The easiest way to access this hash
+sourmash uses a hash function (by default MurmurHash) that converts
+each k-mer into 64-bit numbers. These numbers form the basis of everything
+else sourmash does; the k-mer strings are not used internally at all.
+
+The easiest way to access the hash
 function is via the `seq_to_hashes` method on `MinHash` objects, which
 returns a list:
 ```
@@ -95,10 +98,19 @@ returns a list:
 
 ```
 
-Underneath, sourmash DNA hashing takes each k-mer, builds the reverse
-complement, chooses the lexicographically lesser of the two, and then
-hashes it - for example, for the first and second k-mers above, you
-get:
+Note that this is the same as using the MurmurHash hash function with a seed
+of 42 and taking the first 64 bits.
+
+Because DNA is double-stranded and has no inherent directionality, but
+computers represent DNA with only one strand, it's important for
+sourmash to represent both strands. sourmash does this by building a
+canonical representation for each k-mer so that reverse-complement
+sequences match to their forward sequence.
+
+Underneath, sourmash DNA hashing does this by taking each k-mer,
+building the reverse complement, choosing the lexicographically lesser of
+the two, and then hashes it - for example, for the first and second
+k-mers above, you get:
 
 ```
 >>> from sourmash.minhash import hash_murmur
@@ -119,15 +131,15 @@ True
 
 ```
 where the second k-mer's reverse complement starts with 'A' and is therefore
-chosen for hashing by sourmash.
-
-Note that this is the same as using the MurmurHash hash function with a seed
-of 42 and taking the first 64 bits.
+chosen for hashing by sourmash. This method was chosen to be compatible
+with [mash](https://mash.readthedocs.io/.
 
 ### Protein-based encodings
 
-By default, `MinHash` objects work with DNA. However, sourmash supports
-amino acid, Dayhoff, and hydrophobic-polar encodings as well.
+By default, `MinHash` objects work with DNA. However, sourmash
+supports amino acid, Dayhoff, and hydrophobic-polar 'hp) encodings as
+well. The Dayhoff and hp encodings support degenerate
+matching that is less stringent than exact matches.
 
 The simplest way to use a protein `MinHash` object is to create one and
 call `add_protein` on it --
@@ -181,7 +193,7 @@ True
 ### Translating DNA into protein-based encodings.
 
 If you use `add_sequence(...)` to add DNA sequence to a protein encoding,
-or call `seq_to_hashes(...)` on a protein encoding without `is_protein`,
+or call `seq_to_hashes(...)` on a protein encoding without `is_protein=True`,
 sourmash will *translate* the sequences in all possible reading frames
 and hash the translated amino acids. The k-mer size for the `MinHash`
 is used as the k-mer size of the amino acids, i.e. 7 aa is 21 DNA bases.
@@ -320,7 +332,7 @@ complements, or DNA k-mers that are translated to the same amino acid
 sequence).
 
 Note that sourmash also provides a `translate_codon` function if you
-are interested in getting the specific amino acids -
+need to get the specific amino acids -
 
 ```
 >>> from sourmash.minhash import translate_codon

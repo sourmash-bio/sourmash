@@ -1230,7 +1230,8 @@ will display the detailed comparison of `file1.sig` and `file2.sig`.
 
 Given one or more compatible sketches and some sequence files, extract
 the k-mers and/or sequences corresponding to the hash values in the
-sketch.
+sketch. Because the sourmash hash function is one-way, this requires
+FASTA or FASTQ sequence files in addition to the sketch.
 
 For example,
 ```
@@ -1245,9 +1246,11 @@ together with their originating filename and sequence name.
 
 If the sketch is a protein sketch (protein, dayhoff, or hp), then
 the input sequences are assumed to be protein. To search DNA sequences
-for translated protein hashes, provide the `--translate` flag.
+for translated protein hashes, provide the `--translate` flag to `sig kmers`.
 
-`--save-sequences` and `--save-kmers` are both optional.
+`--save-sequences` and `--save-kmers` are both optional.  If neither are
+given, basic statistics on k-mer matching are given.
+
 Please note that `--save-kmers` can be very slow on large files!
 
 The input sketches are the source of the input hashes.  So, for example,
@@ -1256,6 +1259,8 @@ yield all the k-mers and their matching hashes.  Likewise, if the
 sketch is built from the intersection of two other sketches, only
 the k-mers and hash values present in both sketches will be used.
 
+Likewise, the input sequences are used for matching; they do not need
+to be the same sequences that were used to create the sketches.
 Input sequences can be in FASTA or FASTQ format, and either flat text
 or compressed with gzip or bzip2; formats are auto-detected.
 
