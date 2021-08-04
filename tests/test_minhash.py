@@ -203,6 +203,11 @@ def test_seq_to_hashes_translated(track_abundance):
 
     assert set(golden_hashes) == set(new_hashes)
 
+def test_seq_to_hashes_translated_short():
+    mh = MinHash(0, 2, True, dayhoff=True, hp=False, scaled = 1)
+    hashes = mh.seq_to_hashes("ACTGA")
+
+    assert(len(hashes) == 0)
 
 
 def test_bytes_protein_dayhoff(track_abundance, dayhoff):
