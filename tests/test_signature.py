@@ -225,6 +225,17 @@ def test_similarity_downsample(track_abundance):
     assert round(x, 1) == 1.0
 
 
+def test_add_sequence_bad_dna(track_abundance):
+    # test add_sequence behavior on bad DNA
+    mh = MinHash(n=1, ksize=21)
+    sig = SourmashSignature(mh)
+
+    with pytest.raises(ValueError) as e:
+        sig.add_sequence("N" * 21, force=False)
+
+    assert 'invalid DNA character in input k-mer: NNNNNNNNNNNNNNNNNNNNN' in str(e.value)
+
+
 def test_md5(track_abundance):
     e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add_hash(5)

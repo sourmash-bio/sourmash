@@ -295,6 +295,22 @@ class MinHash(RustObject):
         self._methodcall(lib.kmerminhash_add_sequence, to_bytes(sequence),
                          force)
 
+    def seq_to_hashes(self, sequence, *, force=False, is_protein=False):
+        "Convert sequence to hashes without adding to the sketch."
+
+        if is_protein and self.moltype not in ["protein", "dayhoff", "hp"]:
+            raise ValueError("cannot add protein sequence to DNA MinHash")
+
+        size = ffi.new("uintptr_t *")
+        hashes_ptr = self._methodcall(lib.kmerminhash_seq_to_hashes, to_bytes(sequence), len(sequence), force, is_protein, size)
+        size = size[0]
+
+        try:
+            return ffi.unpack(hashes_ptr, size)
+
+        finally:
+            lib.kmerminhash_slice_free(hashes_ptr, size)
+
     def add_kmer(self, kmer):
         "Add a kmer into the sketch."
         if self.is_dna:

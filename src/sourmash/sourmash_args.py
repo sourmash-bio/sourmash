@@ -601,16 +601,21 @@ def load_many_signatures(locations, progress, *, yield_all_files=False,
     """
     for loc in locations:
         try:
+            # open index,
             idx = load_file_as_index(loc, yield_all_files=yield_all_files)
+
+            # select on parameters as desired,
             idx = idx.select(ksize=ksize, moltype=moltype, picklist=picklist)
 
+            # start up iterator,
             loader = idx.signatures_with_location()
 
-            n = 0
+            # go!
+            n = 0               # count signatures loaded
             for sig, sigloc in progress.start_file(loc, loader):
                 yield sig, sigloc
                 n += 1
-            notify(f"loaded {n} isgnatures from '{loc}'", end='\r')
+            notify(f"loaded {n} signatures from '{loc}'", end='\r')
         except ValueError as exc:
             # trap expected errors, and either power through or display + exit.
             if force:
@@ -618,7 +623,7 @@ def load_many_signatures(locations, progress, *, yield_all_files=False,
                 notify("(continuing)")
                 continue
             else:
-                notify("ERROR: {}". str(exc))
+                notify("ERROR: {}", str(exc))
                 sys.exit(-1)
         except KeyboardInterrupt:
             notify("Received CTRL-C - exiting.")

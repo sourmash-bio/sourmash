@@ -236,6 +236,8 @@ static DAYHOFFTABLE: Lazy<HashMap<u8, u8>> = Lazy::new(|| {
         (b'F', b'f'),
         (b'W', b'f'),
         (b'Y', b'f'),
+        // stop aa
+        (b'*', b'*'),
     ]
     .iter()
     .cloned()
@@ -275,6 +277,8 @@ static HPTABLE: Lazy<HashMap<u8, u8>> = Lazy::new(|| {
         (b'H', b'p'),
         (b'K', b'p'),
         (b'Q', b'p'),
+        // stop aa
+        (b'*', b'*'),
     ]
     .iter()
     .cloned()
