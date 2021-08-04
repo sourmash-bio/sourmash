@@ -921,6 +921,8 @@ def kmers(args):
     """
     retrieve k-mers and/or sequences contained by the minhashes
     """
+    from sourmash.search import format_bp
+
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
@@ -1098,7 +1100,7 @@ def kmers(args):
 
     # ...and report!
     notify("DONE.")
-    notify(f"searched {n_sequences_searched} sequences from {n_files_searched} files, containing a total of {n_bp_searched/1e6:.1f} Mbp.")
+    notify(f"searched {n_sequences_searched} sequences from {n_files_searched} files, containing a total of {format_bp(n_bp_searched)}.")
 
     if save_seqs:
         notify(f"matched and saved a total of {n_sequences_found} sequences with {n_bp_saved/1e6:.1f} Mbp.")
