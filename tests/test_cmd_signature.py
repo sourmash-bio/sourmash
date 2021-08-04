@@ -3070,6 +3070,7 @@ def test_sig_kmers_1_dna_more_in_query(runtmp):
     print(err)
 
     assert 'total hashes in merged signature: 970' in err
+    # should only find 970 overlapping hashes here --
     assert 'found 970 distinct matching hashes (100.0%)' in err
 
 

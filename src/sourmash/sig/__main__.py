@@ -1070,8 +1070,8 @@ def kmers(args):
                                      kmer=kmer, hashval=hashval)
                             kmer_w.writerow(d)
 
-                # no output? add to found_mh anyway, I guess
-                found_mh += seq_mh
+                # add seq_mh to found_mh
+                found_mh += seq_mh.intersection(query_mh)
 
             # provide progress indicator based on bp...
             n_sequences_searched += 1
