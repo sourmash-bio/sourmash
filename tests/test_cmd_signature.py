@@ -3046,6 +3046,33 @@ def test_sig_kmers_1_dna(runtmp):
     assert check_mh2.similarity(mh) == 1.0
 
 
+def test_sig_kmers_1_dna_more_in_query(runtmp):
+    # test sig kmers on dna, where query has more than matches
+    seqfile = utils.get_test_data('short.fa')
+
+    runtmp.sourmash('sketch', 'dna', seqfile, '-p', 'scaled=1')
+    ss = sourmash.load_one_signature(runtmp.output('short.fa.sig'))
+    mh = ss.minhash
+    assert mh.moltype == 'DNA'
+
+    # make a new sequence for query, with more k-mers
+    query_seqfile = runtmp.output('query.fa')
+    with open(query_seqfile, 'wt') as fp:
+        for record in screed.open(seqfile):
+            fp.write(f">{record.name}\n{record.sequence}AGTTACGATC\n")
+
+    runtmp.sourmash('sig', 'kmers', '--sig', 'short.fa.sig',
+                    '--seq', query_seqfile)
+
+    out = runtmp.last_result.out
+    print(out)
+    err = runtmp.last_result.err
+    print(err)
+
+    assert 'total hashes in merged signature: 970' in err
+    assert 'found 970 distinct matching hashes (100.0%)' in err
+
+
 def test_sig_kmers_1_dna_lowscaled(runtmp):
     # test sig kmers on dna with a scaled of 100, so not all k-mers
     seqfile = utils.get_test_data('short.fa')
