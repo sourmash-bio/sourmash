@@ -3074,6 +3074,75 @@ def test_sig_kmers_1_dna_more_in_query(runtmp):
     assert 'found 970 distinct matching hashes (100.0%)' in err
 
 
+def test_sig_kmers_1_dna_empty_seq(runtmp):
+    # test sig kmers with empty query seq
+    seqfile = utils.get_test_data('short.fa')
+
+    runtmp.sourmash('sketch', 'dna', seqfile, '-p', 'scaled=1')
+    ss = sourmash.load_one_signature(runtmp.output('short.fa.sig'))
+    mh = ss.minhash
+    assert mh.moltype == 'DNA'
+
+    # make a new sequence for query, with more k-mers
+    query_seqfile = runtmp.output('query.fa')
+    with open(query_seqfile, 'wt') as fp:
+        pass
+
+    with pytest.raises(ValueError):
+        runtmp.sourmash('sig', 'kmers', '--sig', 'short.fa.sig',
+                        '--seq', query_seqfile)
+
+    out = runtmp.last_result.out
+    print(out)
+    err = runtmp.last_result.err
+    print(err)
+
+    assert "ERROR: no sequences searched!?" in err
+
+
+def test_sig_kmers_1_dna_empty_sig(runtmp):
+    # test sig kmers with empty query sig
+    seqfile = utils.get_test_data('short.fa')
+
+    mh = sourmash.MinHash(ksize=31, n=0, scaled=1)
+    ss = sourmash.SourmashSignature(mh, name="empty")
+    with open(runtmp.output('empty.sig'), 'wt') as fp:
+        sourmash.save_signatures([ss], fp)
+
+    with pytest.raises(ValueError):
+        runtmp.sourmash('sig', 'kmers', '--sig', 'empty.sig',
+                        '--seq', seqfile)
+
+    out = runtmp.last_result.out
+    print(out)
+    err = runtmp.last_result.err
+    print(err)
+
+    assert "ERROR: no hashes in query signature!?" in err
+
+
+def test_sig_kmers_1_dna_single_sig(runtmp):
+    # test sig kmers with a fabricated query sig with a single hash
+    seqfile = utils.get_test_data('short.fa')
+
+    mh = sourmash.MinHash(ksize=31, n=0, scaled=1)
+    mh.add_hash(1070961951490202715)
+    ss = sourmash.SourmashSignature(mh, name="small")
+    with open(runtmp.output('small.sig'), 'wt') as fp:
+        sourmash.save_signatures([ss], fp)
+
+    runtmp.sourmash('sig', 'kmers', '--sig', 'small.sig',
+                    '--seq', seqfile)
+
+    out = runtmp.last_result.out
+    print(out)
+    err = runtmp.last_result.err
+    print(err)
+
+    assert 'total hashes in merged signature: 1' in err
+    assert 'found 1 distinct matching hashes (100.0%)' in err
+
+
 def test_sig_kmers_1_dna_lowscaled(runtmp):
     # test sig kmers on dna with a scaled of 100, so not all k-mers
     seqfile = utils.get_test_data('short.fa')

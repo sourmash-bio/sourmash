@@ -978,6 +978,10 @@ def kmers(args):
         if args.translate:      # input sequence is DNA
             is_protein = False
 
+    if not query_mh:
+        notify("ERROR: no hashes in query signature!?")
+        sys.exit(-1)
+
     notify("")
     notify(f"merged signature has the following properties:")
     notify(f"k={query_mh.ksize} molecule={query_mh.moltype} num={query_mh.num} scaled={query_mh.scaled} seed={query_mh.seed}")
@@ -1031,7 +1035,6 @@ def kmers(args):
             if is_protein:
                 seq_mh.add_protein(record.sequence)
             else:
-                # @CTB test --check-sequence and --force
                 try:
                     seq_mh.add_sequence(record.sequence,
                                         not args.check_sequence)
@@ -1089,6 +1092,10 @@ def kmers(args):
     if save_seqs:
         save_seqs.close()
 
+    if not n_sequences_searched:
+        notify("ERROR: no sequences searched!?")
+        sys.exit(-1)
+
     # ...and report!
     notify("DONE.")
     notify(f"searched {n_sequences_searched} sequences from {n_files_searched} files, containing a total of {n_bp_searched/1e6:.1f} Mbp.")
@@ -1099,8 +1106,6 @@ def kmers(args):
     if kmer_w:
         notify(f"matched and saved a total of {n_kmers_found} k-mers.")
 
-    # @CTB test with empty query, and also with empty found
-    # @CTB test also with manipulated sketch, e.g. a single hash or something.
     # calculate overlap, even for num minhashes which ordinarily don't
     # permit it, because here we are interested in knowing how many
     # of the expected hashes we found.
