@@ -1103,7 +1103,7 @@ def kmers(args):
     notify(f"searched {n_sequences_searched} sequences from {n_files_searched} files, containing a total of {format_bp(n_bp_searched)}.")
 
     if save_seqs:
-        notify(f"matched and saved a total of {n_sequences_found} sequences with {n_bp_saved/1e6:.1f} Mbp.")
+        notify(f"matched and saved a total of {n_sequences_found} sequences with {format_bp(n_bp_saved)}.")
 
     if kmer_w:
         notify(f"matched and saved a total of {n_kmers_found} k-mers.")
