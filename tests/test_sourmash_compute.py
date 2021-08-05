@@ -133,7 +133,7 @@ def test_do_sourmash_compute_output_and_name_valid_file_outdir(c):
     testdata3 = utils.get_test_data('short3.fa')
     sigfile = os.path.join(c.location, 'short.fa.sig')
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.run_sourmash('compute', '-k', '31', '-o', sigfile,
                        '--merge', '"name"',
                        testdata1, testdata2, testdata3,

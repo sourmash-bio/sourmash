@@ -162,7 +162,7 @@ class TempDirectory(object):
 class SourmashCommandFailed(Exception):
     def __init__(self, msg):
         Exception.__init__(self)
-        self.message = msg
+        self.message = msg 
 
 
 class RunnerContext(object):
@@ -193,7 +193,7 @@ class RunnerContext(object):
 
         if self.last_result.status:
             # raise ValueError(self)
-            raise SourmashCommandFailed(self, self.last_result.err)
+            raise SourmashCommandFailed(self.last_result.err)
 
         return self.last_result
     sourmash = run_sourmash

@@ -312,7 +312,7 @@ def test_prefetch_no_num_query(runtmp, linear_gather):
     sig47 = utils.get_test_data('num/47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(utils.SourmashCommandFailed):
         c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig47,
                        linear_gather)
 
@@ -330,7 +330,7 @@ def test_prefetch_no_num_subj(runtmp, linear_gather):
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('num/63.fa.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(utils.SourmashCommandFailed):
         c.run_sourmash('prefetch', '-k', '31', sig47, sig63, linear_gather)
 
     print(c.last_result.status)
@@ -380,7 +380,7 @@ def test_prefetch_no_db(runtmp, linear_gather):
     # test a basic prefetch with no databases/signatures
     sig47 = utils.get_test_data('47.fa.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(utils.SourmashCommandFailed):
         c.run_sourmash('prefetch', '-k', '31', sig47, linear_gather)
     print(c.last_result.status)
     print(c.last_result.out)
@@ -397,7 +397,7 @@ def test_prefetch_check_scaled_bounds_negative(runtmp, linear_gather):
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
                     '--scaled', '-5', linear_gather)
 
@@ -411,7 +411,7 @@ def test_prefetch_check_scaled_bounds_less_than_minimum(runtmp, linear_gather):
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
                     '--scaled', '50', linear_gather)
 
@@ -425,7 +425,7 @@ def test_prefetch_check_scaled_bounds_more_than_maximum(runtmp, linear_gather):
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
                     '--scaled', '1e9', linear_gather)
 
@@ -458,7 +458,7 @@ def test_prefetch_empty(runtmp, linear_gather):
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(utils.SourmashCommandFailed):
         c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
                        '--scaled', '1e9', linear_gather)
     print(c.last_result.status)

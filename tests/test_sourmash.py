@@ -362,7 +362,7 @@ def test_do_compare_output_multiple_k(c):
     c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', testdata1)
     c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata2)
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx',
                        fail_ok=True)
 
@@ -380,7 +380,7 @@ def test_do_compare_output_multiple_moltype(c):
     c.run_sourmash('sketch', 'dna', '-p', 'k=21,num=500', testdata1)
     c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', testdata2)
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx',
                        fail_ok=True)
 
@@ -516,7 +516,7 @@ def test_compare_max_containment_and_containment(c):
     testdata_glob = utils.get_test_data('scaled/*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.run_sourmash('compare', '--max-containment', '-k', '31',
                        '--containment',
                        '--csv', 'output.csv', *testdata_sigs)
@@ -543,7 +543,7 @@ def test_compare_containment_require_scaled(c):
     s47 = utils.get_test_data('num/47.fa.sig')
     s63 = utils.get_test_data('num/63.fa.sig')
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.run_sourmash('compare', '--containment', '-k', '31', s47, s63,
                        fail_ok=True)
 
@@ -636,7 +636,7 @@ def test_do_plot_comparison_4_fail_not_distance(c):
     with open(c.output('cmp.labels.txt'), 'wt') as fp:
         fp.write("a\nb\n")
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.run_sourmash('plot', 'cmp', '--labels', fail_ok=True)
 
     print(c.last_result.status, c.last_result.out, c.last_result.err)
@@ -791,7 +791,7 @@ def test_search_query_sig_does_not_exist(c):
     testdata1 = utils.get_test_data('short.fa')
     c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1)
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.run_sourmash('search', 'short2.fa.sig', 'short.fa.sig', fail_ok=True)
 
     print(c.last_result.status, c.last_result.out, c.last_result.err)
@@ -805,7 +805,7 @@ def test_search_subject_sig_does_not_exist(c):
     testdata1 = utils.get_test_data('short.fa')
     c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1)
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig', fail_ok=True)
 
     print(c.last_result.status, c.last_result.out, c.last_result.err)
@@ -818,7 +818,7 @@ def test_search_second_subject_sig_does_not_exist(c):
     testdata1 = utils.get_test_data('short.fa')
     c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1)
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.run_sourmash('search', 'short.fa.sig', 'short.fa.sig',
                        'short2.fa.sig', fail_ok=True)
 
@@ -929,7 +929,7 @@ def test_gather_query_db_md5_ambiguous(runtmp, linear_gather, prefetch_gather):
     # what if we give an ambiguous md5 prefix?
     db = utils.get_test_data('prot/protein.sbt.zip')
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.run_sourmash('gather', db, db, '--md5', '1', linear_gather,
                        prefetch_gather)
 
@@ -968,7 +968,7 @@ def test_gather_csv_output_filename_bug(runtmp, linear_gather, prefetch_gather):
 
 @utils.in_tempdir
 def test_compare_no_such_file(c):
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(utils.SourmashCommandFailed) as e:
         c.run_sourmash('compare', 'nosuchfile.sig')
 
     assert "Error while reading signatures from 'nosuchfile.sig'." in c.last_result.err
@@ -976,7 +976,7 @@ def test_compare_no_such_file(c):
 
 @utils.in_tempdir
 def test_compare_no_such_file_force(c):
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(utils.SourmashCommandFailed) as e:
         c.run_sourmash('compare', 'nosuchfile.sig', '-f')
 
     print(c.last_result.err)
@@ -987,7 +987,7 @@ def test_compare_no_such_file_force(c):
 def test_compare_no_matching_sigs(c):
     query = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.last_result.status, c.last_result.out, c.last_result.err = \
             c.run_sourmash('compare', '-k', '100', query, fail_ok=True)
 
@@ -1241,7 +1241,7 @@ def test_do_sourmash_index_multiscaled_rescale_fail(c):
     c.run_sourmash('sketch', 'dna', '-p', 'scaled=1', testdata2)
     # this should fail: cannot go from a scaled value of 10 to 5
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(utils.SourmashCommandFailed) as e:
         c.run_sourmash('index', 'zzz',
                        'short.fa.sig',
                        'short2.fa.sig',
@@ -1424,7 +1424,7 @@ def test_search_deduce_ksize_no_match(c):
     c.run_sourmash('sketch', 'translate', '-p', 'k=23,num=500', testdata1)
     c.run_sourmash('sketch', 'translate', '-p', 'k=25,num=500', testdata2)
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig')
     assert "no compatible signatures found in 'short2.fa.sig'" in str(exc.value)
 
@@ -1509,7 +1509,7 @@ def test_search_containment_s10_no_max(run):
     q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
     q2 = utils.get_test_data('scaled/genome-s10-small.fa.gz.sig')
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         run.run_sourmash('search', q1, q2, '--containment',
                        '--max-containment')
 
@@ -1960,7 +1960,7 @@ def test_search_incompatible(c):
     num_sig = utils.get_test_data('num/47.fa.sig')
     scaled_sig = utils.get_test_data('47.fa.sig')
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.run_sourmash("search", scaled_sig, num_sig, fail_ok=True)
     assert c.last_result.status != 0
     print(c.last_result.out)
@@ -2459,7 +2459,7 @@ def test_do_sourmash_search_multimoltype_query(runtmp):
 
     # now, try searching. Should raise error.
     args = ['search', 'short.fa.sig', 'zzz']
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         runtmp.sourmash(*args)
 
     print(runtmp.last_result.out)
@@ -3531,7 +3531,7 @@ def test_multigather_check_scaled_bounds_negative(c):
 
     cmd = 'multigather --query {} --db gcf_all -k 21 --scaled -5 --threshold-bp=0'.format(query_sig)
     cmd = cmd.split(' ')
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.run_sourmash(*cmd)
 
     assert "ERROR: --scaled value must be positive" in str(exc.value)
@@ -3552,7 +3552,7 @@ def test_multigather_check_scaled_bounds_less_than_minimum(c):
     cmd = 'multigather --query {} --db gcf_all -k 21 --scaled 50 --threshold-bp=0'.format(query_sig)
     cmd = cmd.split(' ')
     # Note: this is the value error that is emited, but we want the Warning from below to be generated instead. (ValueError: new scaled 50.0 is lower than current sample scaled 10000)
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(utils.SourmashCommandFailed) as exc:
         c.run_sourmash(*cmd)
 
     assert "WARNING: --scaled value should be >= 100. Continuing anyway." in str(exc.value)
@@ -3815,7 +3815,7 @@ def test_multigather_metagenome_sbt_query_from_file_incorrect(c):
     cmd = 'multigather --query-from-file gcf_all.sbt.zip --db gcf_all.sbt.zip -k 21 --threshold-bp=0'
     cmd = cmd.split(' ')
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(utils.SourmashCommandFailed) as e:
         c.run_sourmash(*cmd)
 
     print(c.last_result.out)
@@ -4363,7 +4363,7 @@ def test_gather_error_no_sigs_traverse(c):
 
     emptydir = c.output('')
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(utils.SourmashCommandFailed) as e:
         c.run_sourmash('gather', query, emptydir)
 
     err = c.last_result.err
@@ -5381,7 +5381,7 @@ def test_gather_with_prefetch_picklist_3_gather_badcol(runtmp):
 
     # now, do another gather with the results, but with a bad picklist
     # parameter
-    with pytest.raises(ValueError):
+    with pytest.raises(utils.SourmashCommandFailed):
         runtmp.sourmash('gather', metag_sig, *gcf_sigs,
                         '-k', '21', '--picklist',
                         f'{gather_csv}:FOO:gather')
