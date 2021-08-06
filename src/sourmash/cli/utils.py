@@ -127,11 +127,11 @@ def check_num_bounds(arg):
     f = int(arg)
 
     if f < actual_min_val:
-        raise argparse.ArgumentTypeError(f"ERROR: --num value must be positive")
+        raise argparse.ArgumentTypeError(f"ERROR: --num-hashes value must be positive")
     if f < min_val:
-        notify('WARNING: --num value should be >= 50. Continuing anyway.')
+        notify('WARNING: --num-hashes value should be >= 50. Continuing anyway.')
     if f > max_val:
-        notify('WARNING: --num value should be <= 50000. Continuing anyway.')
+        notify('WARNING: --num-hashes value should be <= 50000. Continuing anyway.')
     return f
 
 

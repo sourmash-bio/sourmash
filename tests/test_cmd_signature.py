@@ -2392,7 +2392,7 @@ def test_sig_downsample_check_num_bounds_negative(runtmp):
     with pytest.raises(ValueError):
         c.run_sourmash('sig', 'downsample', '--num', '-5', sig47)
 
-    assert "ERROR: --num value must be positive" in c.last_result.err
+    assert "ERROR: --num-hashes value must be positive" in c.last_result.err
 
 
 def test_sig_downsample_check_num_bounds_less_than_minimum(runtmp):
@@ -2401,7 +2401,7 @@ def test_sig_downsample_check_num_bounds_less_than_minimum(runtmp):
 
     c.run_sourmash('sig', 'downsample', '--num', '25', sig47)
 
-    assert "WARNING: --num value should be >= 50. Continuing anyway." in c.last_result.err
+    assert "WARNING: --num-hashes value should be >= 50. Continuing anyway." in c.last_result.err
 
 
 def test_sig_downsample_check_num_bounds_more_than_maximum(runtmp):
@@ -2411,7 +2411,7 @@ def test_sig_downsample_check_num_bounds_more_than_maximum(runtmp):
     with pytest.raises(ValueError):
         c.run_sourmash('sig', 'downsample', '--num', '100000', sig47)
 
-    assert "WARNING: --num value should be <= 50000. Continuing anyway." in c.last_result.err
+    assert "WARNING: --num-hashes value should be <= 50000. Continuing anyway." in c.last_result.err
 
 
 @utils.in_tempdir
