@@ -2385,6 +2385,35 @@ def test_sig_downsample_1_scaled_to_num(c):
     assert actual_mins == test_mins
 
 
+def test_sig_downsample_check_num_bounds_negative(runtmp):
+    c=runtmp
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    with pytest.raises(ValueError):
+        c.run_sourmash('sig', 'downsample', '--num', '-5', sig47)
+
+    assert "ERROR: --num value must be positive" in c.last_result.err
+
+
+def test_sig_downsample_check_num_bounds_less_than_minimum(runtmp):
+    c=runtmp
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    c.run_sourmash('sig', 'downsample', '--num', '25', sig47)
+
+    assert "WARNING: --num value should be >= 50. Continuing anyway." in c.last_result.err
+
+
+def test_sig_downsample_check_num_bounds_more_than_maximum(runtmp):
+    c=runtmp
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    with pytest.raises(ValueError):
+        c.run_sourmash('sig', 'downsample', '--num', '100000', sig47)
+
+    assert "WARNING: --num value should be <= 50000. Continuing anyway." in c.last_result.err
+
+
 @utils.in_tempdir
 def test_sig_downsample_1_scaled_to_num_fail(c):
     # downsample a scaled signature
