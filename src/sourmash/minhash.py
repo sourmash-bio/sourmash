@@ -805,3 +805,18 @@ class FrozenMinHash(MinHash):
     def __copy__(self):
         return self
     copy = __copy__
+
+
+    def inflate(self, from_mh):  
+        if not self.track_abundance and from_mh.track_abundance:
+            orig_abunds = from_mh.hashes
+            abunds = { h: orig_abunds[h] for h in self.hashes }
+
+            abund_query_mh = from_mh.copy_and_clear()
+
+            abund_query_mh.downsample(scaled=self.scaled)
+            abund_query_mh.set_abundances(abunds)
+
+            return abund_query_mh
+        else:
+            raise ValueError('value of track_abundance for self should be false and from_mh should be true') 
