@@ -295,14 +295,26 @@ class MinHash(RustObject):
         self._methodcall(lib.kmerminhash_add_sequence, to_bytes(sequence),
                          force)
 
-    def seq_to_hashes(self, sequence, *, force=False, is_protein=False):
-        "Convert sequence to hashes without adding to the sketch."
+    def seq_to_hashes(self, sequence, *, force=False, bad_kmers_as_zeroes=False, is_protein=False):
+        """Convert sequence to hashes without adding to the sketch.
 
-        if is_protein and self.moltype not in ["protein", "dayhoff", "hp"]:
+        If input sequence is DNA and this is a protein, dayhoff, or hp
+        MinHash, translate the DNA appropriately before hashing.
+
+        If input sequence is protein, set is_protein=True.
+
+        If `force = True` and `bad_kmers_as_zeroes = True`,
+        invalid kmers hashes will be represented as `0`.
+        """
+
+        if is_protein and self.moltype not in ("protein", "dayhoff", "hp"):
             raise ValueError("cannot add protein sequence to DNA MinHash")
 
+        if bad_kmers_as_zeroes and not force:
+            raise ValueError("cannot represent invalid kmers as 0 while force is not set to True")
+
         size = ffi.new("uintptr_t *")
-        hashes_ptr = self._methodcall(lib.kmerminhash_seq_to_hashes, to_bytes(sequence), len(sequence), force, is_protein, size)
+        hashes_ptr = self._methodcall(lib.kmerminhash_seq_to_hashes, to_bytes(sequence), len(sequence), force, bad_kmers_as_zeroes, is_protein, size)
         size = size[0]
 
         try:
@@ -310,6 +322,72 @@ class MinHash(RustObject):
 
         finally:
             lib.kmerminhash_slice_free(hashes_ptr, size)
+
+    def kmers_and_hashes(self, sequence, *, force=False, is_protein=False):
+        """Convert sequence into (k-mer, hashval) tuples without adding
+        it to the sketch.
+
+        If input sequence is DNA and this is a protein, dayhoff, or hp
+        MinHash, translate the DNA appropriately before hashing.
+
+        If input sequence is protein, set is_protein=True.
+
+        If 'force' is True, invalid k-mers will be represented with 'None'.
+        """
+        import screed
+
+        bad_kmers_as_zeroes = False
+        if force:
+            bad_kmers_as_zeroes = True
+
+        sequence = sequence.upper()
+        hashvals = self.seq_to_hashes(sequence,
+                                      force=force, is_protein=is_protein,
+                                      bad_kmers_as_zeroes=bad_kmers_as_zeroes)
+
+        if bad_kmers_as_zeroes:
+            hashvals = [ None if h == 0 else h for h in hashvals ]
+
+        ksize = self.ksize
+        translate = False
+        if self.moltype == 'DNA':
+            pass
+        elif is_protein:
+            pass
+        else:                   # translate input DNA sequence => aa
+            assert self.moltype in ('protein', 'dayhoff', 'hp')
+            translate = True
+            ksize = self.ksize * 3
+
+        # special code for translation -
+        if translate:
+            # forward AND reverse complement => twice the k-mers
+            n_kmers = (len(sequence) - ksize + 1) * 2
+            assert n_kmers == len(hashvals)
+
+            # generate reverse complement of sequence
+            seqrc = screed.rc(sequence)
+
+            hash_i = 0
+            for frame in (0, 1, 2):
+                # get forward k-mers
+                for start in range(0, len(sequence) - ksize + 1 - frame, 3):
+                    kmer = sequence[start + frame:start + frame + ksize]
+                    yield kmer, hashvals[hash_i]
+                    hash_i += 1
+
+                # get rc k-mers
+                for start in range(0, len(seqrc) - ksize + 1 - frame, 3):
+                    kmer = seqrc[start + frame:start + frame + ksize]
+                    yield kmer, hashvals[hash_i]
+                    hash_i += 1
+        else:
+            # otherwise, all very straightforward :)
+            n_kmers = len(sequence) - ksize + 1
+            assert n_kmers == len(hashvals)
+            for i, hashval in zip(range(0, n_kmers), hashvals):
+                kmer = sequence[i:i+ksize]
+                yield kmer, hashval
 
     def add_kmer(self, kmer):
         "Add a kmer into the sketch."
