@@ -77,8 +77,11 @@ we break it into four 31-mers:
 
 ```
 
-sourmash provides a hash function (by default MurmurHash) that will convert
-each k-mer into 64-bit numbers. The easiest way to access this hash
+sourmash uses a hash function (by default MurmurHash) that converts
+each k-mer into 64-bit numbers. These numbers form the basis of everything
+else sourmash does; the k-mer strings are not used internally at all.
+
+The easiest way to access the hash
 function is via the `seq_to_hashes` method on `MinHash` objects, which
 returns a list:
 ```
@@ -95,10 +98,19 @@ returns a list:
 
 ```
 
-Underneath, sourmash DNA hashing takes each k-mer, builds the reverse
-complement, chooses the lexicographically lesser of the two, and then
-hashes it - for example, for the first and second k-mers above, you
-get:
+Note that this is the same as using the MurmurHash hash function with a seed
+of 42 and taking the first 64 bits.
+
+Because DNA is double-stranded and has no inherent directionality, but
+computers represent DNA with only one strand, it's important for
+sourmash to represent both strands. sourmash does this by building a
+canonical representation for each k-mer so that reverse-complement
+sequences match to their forward sequence.
+
+Underneath, sourmash DNA hashing does this by taking each k-mer,
+building the reverse complement, choosing the lexicographically lesser of
+the two, and then hashes it - for example, for the first and second
+k-mers above, you get:
 
 ```
 >>> from sourmash.minhash import hash_murmur
@@ -119,15 +131,15 @@ True
 
 ```
 where the second k-mer's reverse complement starts with 'A' and is therefore
-chosen for hashing by sourmash.
-
-Note that this is the same as using the MurmurHash hash function with a seed
-of 42 and taking the first 64 bits.
+chosen for hashing by sourmash. This method was chosen to be compatible
+with [mash](https://mash.readthedocs.io/.
 
 ### Protein-based encodings
 
-By default, `MinHash` objects work with DNA. However, sourmash supports
-amino acid, Dayhoff, and hydrophobic-polar encodings as well.
+By default, `MinHash` objects work with DNA. However, sourmash
+supports amino acid, Dayhoff, and hydrophobic-polar (hp) encodings as
+well. The Dayhoff and hp encodings support degenerate
+matching that is less stringent than exact matches.
 
 The simplest way to use a protein `MinHash` object is to create one and
 call `add_protein` on it --
@@ -181,7 +193,7 @@ True
 ### Translating DNA into protein-based encodings.
 
 If you use `add_sequence(...)` to add DNA sequence to a protein encoding,
-or call `seq_to_hashes(...)` on a protein encoding without `is_protein`,
+or call `seq_to_hashes(...)` on a protein encoding without `is_protein=True`,
 sourmash will *translate* the sequences in all possible reading frames
 and hash the translated amino acids. The k-mer size for the `MinHash`
 is used as the k-mer size of the amino acids, i.e. 7 aa is 21 DNA bases.
@@ -256,17 +268,95 @@ True
 
 ```
 
+### Extracting both k-mers and hashes for a sequence
+
+As of sourmash 4.2.2, `MinHash` objects provide a method called
+`kmers_and_hashes` that will return the k-mers and their corresponding
+hashes for an input sequence --
+
+```
+>>> mh = MinHash(n=0, ksize=31, scaled=1)
+>>> dnaseq = "ATGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGC"
+>>> for kmer, hashval in mh.kmers_and_hashes(dnaseq):
+...    print(kmer, hashval)
+ATGCGAGTGTTGAAGTTCGGCGGTACATCAG 7488148386897425535
+TGCGAGTGTTGAAGTTCGGCGGTACATCAGT 3674733966066518639
+GCGAGTGTTGAAGTTCGGCGGTACATCAGTG 2135725670290847794
+CGAGTGTTGAAGTTCGGCGGTACATCAGTGG 14521729668397845245
+GAGTGTTGAAGTTCGGCGGTACATCAGTGGC 15919051675656106963
+
+```
+
+This works for protein `MinHash` objects as well, of course, although
+you have to provide the `is_protein` flag, since `MinHash` objects assume
+input sequence is DNA otherwise --
+
+```
+>>> K = 7
+>>> mh = MinHash(n=0, ksize=K, is_protein=True, scaled=1)
+>>> protseq = "XVKVYAPAS"
+>>> for (kmer, hashval) in mh.kmers_and_hashes(protseq, is_protein=True):
+...     print(kmer, hashval)
+XVKVYAP 3140823561012061964
+VKVYAPA 10273850291677879123
+KVYAPAS 8846570680426381265
+
+```
+
+For translated `MinHash`, the k-mers and hashes corresponding to all
+six reading frames are returned.
+
+```
+>>> dnaseq = "ATGCGAGTGTTGAAGTTCGGCGGTA"
+>>> K = 7
+>>> mh = MinHash(n=0, ksize=K, is_protein=True, scaled=1)
+>>> for (kmer, hashval) in mh.kmers_and_hashes(dnaseq):
+...    print(kmer, hashval)
+ATGCGAGTGTTGAAGTTCGGC 16652503548557650904
+CGAGTGTTGAAGTTCGGCGGT 9978056796243419534
+TACCGCCGAACTTCAACACTC 2748622134668949083
+CGCCGAACTTCAACACTCGCA 4263227699724621735
+TGCGAGTGTTGAAGTTCGGCG 14299765336094039482
+GAGTGTTGAAGTTCGGCGGTA 18155608748862746902
+ACCGCCGAACTTCAACACTCG 14490181201772650983
+GCCGAACTTCAACACTCGCAT 17205086974168937105
+GCGAGTGTTGAAGTTCGGCGG 13354527969598897281
+CCGCCGAACTTCAACACTCGC 16506504121672505595
+
+```
+
+In all cases, the k-mers are taken from the sequence itself, so the
+k-mers will match to the input sequence, even when there are multiple
+k-mers that hash to the same value (e.g. in the case of reverse
+complements, or DNA k-mers that are translated to the same amino acid
+sequence).
+
+Note that sourmash also provides a `translate_codon` function if you
+need to get the specific amino acids -
+
+```
+>>> from sourmash.minhash import translate_codon
+>>> kmer = 'ATGCGAGT'
+>>> for start in range(0, len(kmer) - 3 + 1, 3):
+...    codon = kmer[start:start+3]
+...    print(codon, translate_codon(codon))
+ATG M
+CGA R
+
+```
+
 ### Summary
 
 In sum,
 * `MinHash.add_sequence(...)` converts DNA sequence into DNA or protein k-mers, and then hashes them and stores them.
 * `MinHash.add_protein(...)` converts protein sequence into protein k-mers, and then hashes them and stores them.
-* `MinHash.seq_to_hashes(...)` will give you the hash values without storing them.
-* The `dayhoff` and `hp` encodings can be calculated on aa k-mers as well, using `MinHash` objects.
+* `MinHash.seq_to_hashes(...)` will give you the hash values without adding them to the `MinHash` object.
+* `MinHash.kmers_and_hashes(...)` will provide tuples of `(kmer, hashval)` for an input sequence.
+* The `dayhoff` and `hp` encodings can be calculated on amino acid k-mers as well, using `MinHash` objects.
 
 Note that this is the code that is used by the command-line
 functionality in `sourmash sketch`, so the results at the command-line
-should match the results from the Python API.
+will match the results from the Python API.
 
 ## Set operations on hashes
 
