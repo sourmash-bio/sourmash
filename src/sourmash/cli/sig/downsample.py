@@ -15,10 +15,6 @@ def subparser(subparsers):
         '--from-file',
         help='a text file containing a list of files to load signatures from'
     )
-    # subparser.add_argument(
-    #     '--num', metavar='N', type=int, default=0,
-    #     help='num value to downsample to'
-    # )
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
