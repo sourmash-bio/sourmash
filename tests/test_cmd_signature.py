@@ -3110,7 +3110,7 @@ def test_sig_kmers_1_dna_empty_sig(runtmp):
     with open(runtmp.output('empty.sig'), 'wt') as fp:
         sourmash.save_signatures([ss], fp)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sig', 'kmers', '--sig', 'empty.sig',
                         '--seq', seqfile)
 
