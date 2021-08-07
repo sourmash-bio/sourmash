@@ -137,7 +137,7 @@ with [mash](https://mash.readthedocs.io/.
 ### Protein-based encodings
 
 By default, `MinHash` objects work with DNA. However, sourmash
-supports amino acid, Dayhoff, and hydrophobic-polar 'hp) encodings as
+supports amino acid, Dayhoff, and hydrophobic-polar (hp) encodings as
 well. The Dayhoff and hp encodings support degenerate
 matching that is less stringent than exact matches.
 
