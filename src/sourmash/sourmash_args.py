@@ -480,6 +480,9 @@ class FileOutput(object):
                        encoding=self.encoding)
         return self.fp
 
+    def close(self):
+        self.fp.close()
+
     def __enter__(self):
         return self.open()
 
