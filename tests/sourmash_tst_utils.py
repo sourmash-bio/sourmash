@@ -192,7 +192,6 @@ class RunnerContext(object):
         self.last_result = runscript('sourmash', args, **kwargs)
 
         if self.last_result.status:
-            # raise ValueError(self)
             raise SourmashCommandFailed(self.last_result.err)
 
         return self.last_result
