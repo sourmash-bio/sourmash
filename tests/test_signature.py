@@ -7,6 +7,7 @@ from sourmash.signature import SourmashSignature, save_signatures, \
     load_signatures, load_one_signature
 import sourmash_tst_utils as utils
 from sourmash import MinHash
+from sourmash_tst_utils import SourmashCommandFailed
 
 
 def test_minhash_copy(track_abundance):
@@ -230,7 +231,7 @@ def test_add_sequence_bad_dna(track_abundance):
     mh = MinHash(n=1, ksize=21)
     sig = SourmashSignature(mh)
 
-    with pytest.raises(utils.SourmashCommandFailed) as e:
+    with pytest.raises(ValueError) as e:
         sig.add_sequence("N" * 21, force=False)
 
     assert 'invalid DNA character in input k-mer: NNNNNNNNNNNNNNNNNNNNN' in str(e.value)

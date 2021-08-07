@@ -7,6 +7,7 @@ import pytest
 
 import sourmash_tst_utils as utils
 from sourmash.tax import tax_utils
+from sourmash_tst_utils import SourmashCommandFailed
 
 ## command line tests
 def test_run_sourmash_tax():
@@ -199,7 +200,7 @@ def test_metagenome_no_taxonomy_fail(runtmp):
     c = runtmp
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'metagenome', '-g', g_csv)
     assert "error: the following arguments are required: -t/--taxonomy-csv" in str(exc.value)
 
@@ -209,7 +210,7 @@ def test_metagenome_no_rank_lineage_summary(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'lineage_summary')
     assert "Rank (--rank) is required for krona and lineage_summary output formats." in str(exc.value)
 
@@ -219,7 +220,7 @@ def test_metagenome_no_rank_krona(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona')
     assert "Rank (--rank) is required for krona and lineage_summary output formats." in str(exc.value)
 
@@ -229,7 +230,7 @@ def test_genome_no_rank_krona(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona')
     assert "Rank (--rank) is required for krona output format." in str(exc.value)
 
@@ -240,7 +241,7 @@ def test_metagenome_rank_not_available(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
                        '--rank', 'strain')
 
@@ -262,7 +263,7 @@ def test_metagenome_duplicated_taxonomy_fail(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', duplicated_csv)
 
     assert "cannot read taxonomy" in str(exc.value)
@@ -336,7 +337,7 @@ def test_metagenome_missing_fail_taxonomy(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', subset_csv, '--fail-on-missing-taxonomy')
 
     print(str(exc.value))
@@ -407,7 +408,7 @@ def test_metagenome_empty_gather_results(runtmp):
         fp.write("")
     print("g_csv: ", g_csv)
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax)
 
     assert f'Cannot read gather results from {g_csv}. Is file empty?' in str(exc.value)
@@ -427,7 +428,7 @@ def test_metagenome_bad_gather_header(runtmp):
             fp.write(line)
     print("bad_gather_results: \n", bad_g)
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'metagenome', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
     assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
@@ -443,7 +444,7 @@ def test_metagenome_empty_tax_lineage_input(runtmp):
     print("t_csv: ", tax_empty)
 
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax_empty)
 
     print(runtmp.last_result.status)
@@ -509,7 +510,7 @@ def test_metagenome_over100percent_error(runtmp):
                 w.writerow(row)
                 print(row)
 
-    with pytest.raises(utils.SourmashCommandFailed):
+    with pytest.raises(SourmashCommandFailed):
         runtmp.run_sourmash('tax', 'metagenome', '-g', perfect_g_csv, '--taxonomy-csv', tax)
 
     print(runtmp.last_result.status)
@@ -531,7 +532,7 @@ def test_metagenome_gather_duplicate_query(runtmp):
         for line in open(g_res, 'r'):
             fp.write(line)
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'metagenome',  '--gather-csv', g_res, g_res2,
                    '--taxonomy-csv', taxonomy_csv)
 
@@ -617,7 +618,7 @@ def test_genome_empty_gather_results(runtmp):
         fp.write("")
     print("g_csv: ", g_csv)
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax)
 
     assert f'Cannot read gather results from {g_csv}. Is file empty?' in str(exc.value)
@@ -637,7 +638,7 @@ def test_genome_bad_gather_header(runtmp):
             fp.write(line)
     print("bad_gather_results: \n", bad_g)
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'genome', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
     assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
@@ -653,7 +654,7 @@ def test_genome_empty_tax_lineage_input(runtmp):
     print("t_csv: ", tax_empty)
 
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax_empty)
 
     print(runtmp.last_result.status)
@@ -858,7 +859,7 @@ def test_genome_gather_from_file_duplicate_query(runtmp):
         f_csv.write(f"{g_res}\n")
         f_csv.write(f"{g_res2}\n")
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'genome', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
                    '--rank', 'species', '--containment-threshold', '0')
     assert c.last_result.status == -1
@@ -1017,7 +1018,7 @@ def test_genome_rank_duplicated_taxonomy_fail(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', duplicated_csv,
                        '--rank', 'species')
     assert "cannot read taxonomy assignments" in str(exc.value)
@@ -1105,7 +1106,7 @@ def test_genome_missing_taxonomy_fail_threshold(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', subset_csv,
                        '--fail-on-missing-taxonomy', '--containment-threshold', '0')
 
@@ -1131,7 +1132,7 @@ def test_genome_missing_taxonomy_fail_rank(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', subset_csv,
                        '--fail-on-missing-taxonomy', '--rank', 'species')
 
@@ -1151,7 +1152,7 @@ def test_genome_rank_not_available(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
                        '--rank', 'strain', '--containment-threshold', '0')
 
@@ -1175,7 +1176,7 @@ def test_genome_empty_gather_results_with_header_single(runtmp):
     with open(empty_gather_with_header, "w") as fp:
         fp.write(gather_results[0])
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'genome', '-g', empty_gather_with_header, '--taxonomy-csv', taxonomy_csv)
 
     print(str(exc.value))
@@ -1197,7 +1198,7 @@ def test_genome_empty_gather_results_single(runtmp):
     with open(empty_tax, "w") as fp:
         fp.write("")
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'genome', '-g', empty_tax, '--taxonomy-csv', taxonomy_csv)
 
 
@@ -1219,7 +1220,7 @@ def test_genome_empty_gather_results_single_force(runtmp):
     with open(empty_tax, "w") as fp:
         fp.write("")
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'genome', '-g', empty_tax, '--taxonomy-csv', taxonomy_csv,
                        '--force')
 
@@ -1246,7 +1247,7 @@ def test_genome_empty_gather_results_with_empty_csv_force(runtmp):
     with open(g_from_file, 'w') as f_csv:
         f_csv.write(f"{empty_tax}\n")
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'genome', '-g', empty_tax, '--from-file', g_from_file,
                        '--taxonomy-csv', taxonomy_csv, '--rank', 'species', '--force')
 
@@ -1295,7 +1296,7 @@ def test_genome_containment_threshold_bounds(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     below_threshold = "-1"
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'genome', '-g', tax, '--taxonomy-csv', tax,
                        '--containment-threshold', below_threshold)
 
@@ -1305,7 +1306,7 @@ def test_genome_containment_threshold_bounds(runtmp):
     assert "ERROR: Argument must be >0 and <1" in str(exc.value)
 
     above_threshold = "1.1"
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
                        '--containment-threshold', above_threshold)
 
@@ -1321,7 +1322,7 @@ def test_genome_containment_threshold_type(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     not_a_float = "str"
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
                        '--containment-threshold', not_a_float)
 
@@ -1351,7 +1352,7 @@ def test_genome_over100percent_error(runtmp):
                 w.writerow(row)
                 print(row)
 
-    with pytest.raises(utils.SourmashCommandFailed):
+    with pytest.raises(SourmashCommandFailed):
         runtmp.run_sourmash('tax', 'genome', '-g', perfect_g_csv, '--taxonomy-csv', tax)
 
     print(runtmp.last_result.status)
@@ -1427,7 +1428,7 @@ def test_annotate_empty_gather_results(runtmp):
         fp.write("")
     print("g_csv: ", g_csv)
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'annotate', '-g', g_csv, '--taxonomy-csv', tax)
 
     assert f'Cannot read gather results from {g_csv}. Is file empty?' in str(exc.value)
@@ -1447,7 +1448,7 @@ def test_annotate_bad_gather_header(runtmp):
             fp.write(line)
     print("bad_gather_results: \n", bad_g)
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'annotate', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
     assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
@@ -1463,7 +1464,7 @@ def test_annotate_empty_tax_lineage_input(runtmp):
     print("t_csv: ", tax_empty)
 
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'annotate', '-g', g_csv, '--taxonomy-csv', tax_empty)
 
     print(runtmp.last_result.status)
@@ -1487,7 +1488,7 @@ def test_tax_prepare_1_csv_to_csv(runtmp, keep_identifiers, keep_versions):
 
     # this is an error - can't strip versions if not splitting identifiers
     if keep_identifiers and not keep_versions:
-        with pytest.raises(utils.SourmashCommandFailed):
+        with pytest.raises(SourmashCommandFailed):
             runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o',
                                 taxout, '-F', 'csv', *args)
         return
@@ -1518,7 +1519,7 @@ def test_tax_prepare_2_csv_to_sql(runtmp, keep_identifiers, keep_versions):
 
     # this is an error - can't strip versions if not splitting identifiers
     if keep_identifiers and not keep_versions:
-        with pytest.raises(utils.SourmashCommandFailed):
+        with pytest.raises(SourmashCommandFailed):
             runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o', taxout,
                                 '-F', 'sql', *args)
         return
@@ -1535,7 +1536,7 @@ def test_tax_prepare_2_csv_to_sql(runtmp, keep_identifiers, keep_versions):
     assert set(db1) == set(db2)
 
     # cannot overwrite -
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o', taxout,
                             '-F', 'sql', *args)
     assert 'taxonomy table already exists' in str(exc.value)

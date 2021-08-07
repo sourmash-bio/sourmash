@@ -19,6 +19,7 @@ from sourmash.sbtmh import SigLeaf
 from sourmash import sourmash_args
 from sourmash.search import JaccardSearch, SearchType
 from sourmash.picklist import SignaturePicklist, PickStyle
+from sourmash_tst_utils import SourmashCommandFailed
 
 import sourmash_tst_utils as utils
 
@@ -807,7 +808,7 @@ def test_zipfile_dayhoff_command_search_protein(c):
     sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/protein.zip')
 
-    with pytest.raises(utils.SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
 
     print(c.last_result.out)

@@ -161,7 +161,7 @@ class TempDirectory(object):
 
 class SourmashCommandFailed(Exception):
     def __init__(self, msg):
-        Exception.__init__(self)
+        Exception.__init__(self, msg)
         self.message = msg 
 
 
