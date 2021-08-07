@@ -1695,7 +1695,7 @@ def test_inflate_error():
     with pytest.raises(ValueError) as exc:
         mh = mh.inflate(mh2)
 
-    assert "value of track_abundance for self should be false and from_mh should be true" in str(exc.value)
+    assert "inflate operates on a flat MinHash and takes a MinHash object with track_abundance=True" in str(exc.value)
 
 
 def test_add_kmer(track_abundance):
