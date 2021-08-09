@@ -1,6 +1,6 @@
 """downsample one or more signatures"""
 
-from sourmash.cli.utils import (add_moltype_args, add_ksize_arg, add_num_arg,
+from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
                                 add_picklist_args, add_num_arg)
 
 
