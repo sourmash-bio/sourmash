@@ -3089,7 +3089,7 @@ def test_sig_kmers_1_dna_empty_seq(runtmp):
     with open(query_seqfile, 'wt') as fp:
         pass
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sig', 'kmers', '--sig', 'short.fa.sig',
                         '--seq', query_seqfile)
 
