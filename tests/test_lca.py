@@ -15,6 +15,7 @@ from sourmash.search import make_jaccard_search_query
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import LineagePair
 from sourmash.picklist import SignaturePicklist, PickStyle
+from sourmash_tst_utils import SourmashCommandFailed
 
 
 def test_api_create_search():
@@ -1051,7 +1052,7 @@ def test_index_fail_on_num(c):
     sigfile = utils.get_test_data('num/63.fa.sig')
     taxcsv = utils.get_test_data('lca/podar-lineage.csv')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('lca', 'index', taxcsv, 'xxx.lca.json', sigfile, '-C', '3')
 
     err = c.last_result.err
@@ -2111,7 +2112,7 @@ def test_incompat_lca_db_ksize_2(c):
 
     # this should fail: the LCA database has ksize 25, and the query sig has
     # no compatible ksizes.
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(SourmashCommandFailed) as e:
         c.run_sourmash('gather', utils.get_test_data('lca/TARA_ASE_MAG_00031.sig'), 'test.lca.json')
 
     err = c.last_result.err

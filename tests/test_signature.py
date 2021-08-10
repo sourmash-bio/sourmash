@@ -7,6 +7,7 @@ from sourmash.signature import SourmashSignature, save_signatures, \
     load_signatures, load_one_signature
 import sourmash_tst_utils as utils
 from sourmash import MinHash
+from sourmash_tst_utils import SourmashCommandFailed
 
 
 def test_minhash_copy(track_abundance):
