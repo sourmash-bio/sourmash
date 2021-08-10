@@ -3552,7 +3552,7 @@ def test_multigather_check_scaled_bounds_less_than_minimum(c):
 
     cmd = 'multigather --query {} --db gcf_all -k 21 --scaled 50 --threshold-bp=0'.format(query_sig)
     cmd = cmd.split(' ')
-    # Note: this is the value error that is emited, but we want the Warning from below to be generated instead. (ValueError: new scaled 50.0 is lower than current sample scaled 10000)
+    # Note: this is the value error that is emitted, but we want the Warning from below to be generated instead. (ValueError: new scaled 50.0 is lower than current sample scaled 10000)
     with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash(*cmd)
 
@@ -4846,7 +4846,7 @@ def test_watch_check_num_bounds_negative(runtmp):
 
     c.run_sourmash('index', '--dna', '-k', '21', 'zzz', '1.sig')
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('watch', '--ksize', '21', '-n', '-5', '--dna', 'zzz', testdata0)
 
     assert "ERROR: --num-hashes value must be positive" in c.last_result.err
