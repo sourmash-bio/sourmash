@@ -767,11 +767,11 @@ def downsample(args):
     picklist = sourmash_args.load_picklist(args)
     _extend_signatures_with_from_file(args)
 
-    if not args.num and not args.scaled:
+    if not args.num_hashes and not args.scaled:
         error('ERROR: must specify either --num or --scaled value')
         sys.exit(-1)
 
-    if args.num and args.scaled:
+    if args.num_hashes and args.scaled:
         error('ERROR: cannot specify both --num and --scaled')
         sys.exit(-1)
 
@@ -805,18 +805,18 @@ def downsample(args):
 
                 mh_new = mh.copy()
                 _set_num_scaled(mh_new, 0, args.scaled)
-        elif args.num:
+        elif args.num_hashes:
             # downsample num to num? straightforward.
             if mh.num:
-                mh_new = mh.downsample(num=args.num)
+                mh_new = mh.downsample(num=args.num_hashes)
             # try to turn a scaled into a num - trickier.
             else:
                 # first check: can we?
-                if len(mh) < args.num:
+                if len(mh) < args.num_hashes:
                     raise ValueError(f"this scaled MinHash has only {len(mh)} hashes")
 
                 mh_new = mh.copy()
-                _set_num_scaled(mh_new, args.num, 0)
+                _set_num_scaled(mh_new, args.num_hashes, 0)
 
         ss.minhash = mh_new
 

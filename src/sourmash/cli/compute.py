@@ -30,7 +30,7 @@ Please see -h for all of the options as well as more detailed help.
 """
 
 from sourmash.minhash import get_minhash_default_seed
-from sourmash.cli.utils import add_construct_moltype_args
+from sourmash.cli.utils import add_construct_moltype_args, add_num_arg
 
 
 def ksize_parser(ksizes):
@@ -52,10 +52,6 @@ def subparser(subparsers):
         '-k', '--ksizes', default='21,31,51',
         type=ksize_parser,
         help='comma-separated list of k-mer sizes; default=%(default)s'
-    )
-    sketch_args.add_argument(
-        '-n', '--num-hashes', type=int, default=500,
-        help='number of hashes to use in each sketch; default=%(default)i'
     )
     sketch_args.add_argument(
         '--track-abundance', action='store_true',
@@ -123,6 +119,7 @@ def subparser(subparsers):
     )
     subparser._positionals.title = 'Required arguments'
     subparser._optionals.title = 'Miscellaneous options'
+    add_num_arg(sketch_args, 500)
 
 
 def main(args):

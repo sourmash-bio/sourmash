@@ -4837,6 +4837,46 @@ def test_sbt_categorize_multiple_ksizes_moltypes():
                                            in_directory=location)
 
 
+def test_watch_check_num_bounds_negative(runtmp):
+    c=runtmp
+    testdata0 = utils.get_test_data('genome-s10.fa.gz')
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    shutil.copyfile(testdata1, c.output('1.sig'))
+
+    c.run_sourmash('index', '--dna', '-k', '21', 'zzz', '1.sig')
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('watch', '--ksize', '21', '-n', '-5', '--dna', 'zzz', testdata0)
+
+    assert "ERROR: --num-hashes value must be positive" in c.last_result.err
+
+
+def test_watch_check_num_bounds_less_than_minimum(runtmp):
+    c=runtmp
+    testdata0 = utils.get_test_data('genome-s10.fa.gz')
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    shutil.copyfile(testdata1, c.output('1.sig'))
+
+    c.run_sourmash('index', '--dna', '-k', '21', 'zzz', '1.sig')
+
+    c.run_sourmash('watch', '--ksize', '21', '-n', '25', '--dna', 'zzz', testdata0)
+
+    assert "WARNING: --num-hashes value should be >= 50. Continuing anyway." in c.last_result.err
+
+
+def test_watch_check_num_bounds_more_than_maximum(runtmp):
+    c=runtmp
+    testdata0 = utils.get_test_data('genome-s10.fa.gz')
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    shutil.copyfile(testdata1, c.output('1.sig'))
+
+    c.run_sourmash('index', '--dna', '-k', '21', 'zzz', '1.sig')
+
+    c.run_sourmash('watch', '--ksize', '21', '-n', '100000', '--dna', 'zzz', testdata0)
+
+    assert "WARNING: --num-hashes value should be <= 50000. Continuing anyway." in c.last_result.err
+
+
 @utils.in_tempdir
 def test_watch(c):
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
