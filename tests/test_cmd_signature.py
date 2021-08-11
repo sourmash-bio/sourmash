@@ -2584,6 +2584,7 @@ def test_sig_describe_dayhoff(c):
 def test_sig_describe_1_hp(c):
     # get basic info on a signature
     testdata = utils.get_test_data('short.fa')
+    # working on this
     c.run_sourmash('compute', '-k', '21,30',
                    '--dayhoff', '--hp', '--protein',
                    '--dna',
