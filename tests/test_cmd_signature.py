@@ -2391,7 +2391,7 @@ def test_sig_downsample_check_num_bounds_negative(runtmp):
     c=runtmp
     sig47 = utils.get_test_data('47.fa.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('sig', 'downsample', '--num', '-5', sig47)
 
     assert "ERROR: --num-hashes value must be positive" in c.last_result.err
@@ -2410,7 +2410,7 @@ def test_sig_downsample_check_num_bounds_more_than_maximum(runtmp):
     c=runtmp
     sig47 = utils.get_test_data('47.fa.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('sig', 'downsample', '--num', '100000', sig47)
 
     assert "WARNING: --num-hashes value should be <= 50000. Continuing anyway." in c.last_result.err

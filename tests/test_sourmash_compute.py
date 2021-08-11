@@ -46,7 +46,7 @@ def test_do_sourmash_compute_check_num_bounds_negative(runtmp):
     testdata3 = utils.get_test_data('short3.fa')
     sigfile = c.output('short.fa.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('compute', '-k', '31', '--num-hashes', '-5', '-o', sigfile, '--merge', '"name"', testdata1, testdata2, testdata3)
     
     assert "ERROR: --num-hashes value must be positive" in c.last_result.err
