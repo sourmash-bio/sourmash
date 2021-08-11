@@ -140,5 +140,3 @@ def add_num_arg(parser, default=0):
         '-n', '--num-hashes', '--num', metavar='N', type=check_num_bounds, default=default,
         help='num value should be between 50 and 50000'
     )
-
-# working on this for sketch
