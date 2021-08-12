@@ -2584,11 +2584,11 @@ def test_sig_describe_dayhoff(c):
 def test_sig_describe_1_hp(c):
     # get basic info on a signature
     testdata = utils.get_test_data('short.fa')
-    # working on this
-    c.run_sourmash('compute', '-k', '21,30',
-                   '--dayhoff', '--hp', '--protein',
-                   '--dna',
-                   testdata)
+    # c.run_sourmash('compute', '-k', '21,30',
+    #                '--dayhoff', '--hp', '--protein',
+    #                '--dna',
+    #                testdata)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', '-p', 'k=30,num=500', '--dayhoff', '--hp', testdata)             
     # stdout should be new signature
     computed_sig = os.path.join(c.location, 'short.fa.sig')
     c.run_sourmash('sig', 'describe', computed_sig)
@@ -2910,7 +2910,7 @@ def test_import_mash_csv_to_sig(runtmp):
 
     runtmp.sourmash('sig', 'import', '--csv', testdata1, '-o', 'xxx.sig')
 
-    runtmp.sourmash('compute', '-k', '31', '-n', '970', testdata2)
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=31,num=970', testdata2)
 
     runtmp.sourmash('search', '-k', '31', 'short.fa.sig', 'xxx.sig')
 
