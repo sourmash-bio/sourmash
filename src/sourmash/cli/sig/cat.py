@@ -5,6 +5,7 @@ from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
 
 
 def subparser(subparsers):
+    # working on this
     subparser = subparsers.add_parser('cat')
     subparser.add_argument('signatures', nargs='*')
     subparser.add_argument(
