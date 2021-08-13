@@ -281,11 +281,10 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e .
 
-      - name: Run tests
+      - name: Check if it builds properly
         uses: actions-rs/cargo@v1
         with:
-          command: test
-          args: --no-fail-fast
+          command: build
 
   check_cbindgen:
     name: "Check if cbindgen runs cleanly for generating the C headers"
