@@ -39,7 +39,6 @@ def test_do_sourmash_sketch_check_scaled_bounds_negative():
                                            in_directory=location,
                                            fail_ok=True)
 
-        assert status != 0
         assert "ERROR: --scaled value must be positive" in err
 
 
@@ -67,6 +66,45 @@ def test_do_sourmash_sketch_check_scaled_bounds_more_than_maximum():
                                            fail_ok=True)
 
         assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
+
+
+def test_do_sourmash_sketch_check_num_bounds_negative():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'translate',
+                                            '-p', 'num=-5',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert "ERROR: --num-hashes value must be positive" in err
+
+
+def test_do_sourmash_sketch_check_num_bounds_less_than_minimum():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'translate',
+                                            '-p', 'num=25',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert "WARNING: --num-hashes value should be >= 50. Continuing anyway." in err
+
+
+def test_do_sourmash_sketch_check_num_bounds_more_than_maximum():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'translate',
+                                            '-p', 'num=100000',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert "WARNING: --num-hashes value should be <= 50000. Continuing anyway." in err
 
 
 def test_dna_defaults():
