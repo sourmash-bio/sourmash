@@ -2587,7 +2587,7 @@ def test_sig_describe_1_hp(c):
     c.run_sourmash('compute', '-k', '21,30',
                    '--dayhoff', '--hp', '--protein',
                    '--dna',
-                   testdata) 
+                   testdata)
     # stdout should be new signature
     computed_sig = os.path.join(c.location, 'short.fa.sig')
     c.run_sourmash('sig', 'describe', computed_sig)
