@@ -29,6 +29,46 @@ from sourmash.command_sketch import _signatures_for_sketch_factory
 from sourmash_tst_utils import SourmashCommandFailed
 
 
+def test_do_sourmash_sketch_check_scaled_bounds_negative():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'translate',
+                                            '-p', 'scaled=-5',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert status != 0
+        assert "ERROR: --scaled value must be positive" in err
+
+
+def test_do_sourmash_sketch_check_scaled_bounds_less_than_minimum():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'translate',
+                                            '-p', 'scaled=50',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
+
+
+def test_do_sourmash_sketch_check_scaled_bounds_more_than_maximum():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'translate',
+                                            '-p', 'scaled=1000000000',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
+
+
 def test_dna_defaults():
     factory = _signatures_for_sketch_factory([], 'dna', False)
     params_list = list(factory.get_compute_params())
