@@ -1,12 +1,27 @@
 """concatenate signature files"""
 
+usage="""
+
+### `sourmash signature cat` - concatenate multiple signatures together
+
+Concatenate signature files.
+
+For example,
+```
+sourmash signature cat file1.sig file2.sig -o all.sig
+```
+will combine all signatures in `file1.sig` and `file2.sig` and put them
+in the file `all.sig`.
+
+"""
+
 from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
                                 add_picklist_args)
 
 
 def subparser(subparsers):
     # working on this
-    subparser = subparsers.add_parser('cat')
+    subparser = subparsers.add_parser('cat', description=__doc__, usage=usage)
     subparser.add_argument('signatures', nargs='*')
     subparser.add_argument(
         '--from-file',
