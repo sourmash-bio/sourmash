@@ -39,7 +39,7 @@ def test_do_sourmash_sketch_check_scaled_bounds_negative():
                                            in_directory=location,
                                            fail_ok=True)
 
-        assert "ERROR: --scaled value must be positive" in err
+        assert "ERROR: scaled value must be positive" in err
 
 
 def test_do_sourmash_sketch_check_scaled_bounds_less_than_minimum():
@@ -52,7 +52,7 @@ def test_do_sourmash_sketch_check_scaled_bounds_less_than_minimum():
                                            in_directory=location,
                                            fail_ok=True)
 
-        assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
+        assert "WARNING: scaled value should be >= 100. Continuing anyway." in err
 
 
 def test_do_sourmash_sketch_check_scaled_bounds_more_than_maximum():
@@ -65,7 +65,7 @@ def test_do_sourmash_sketch_check_scaled_bounds_more_than_maximum():
                                            in_directory=location,
                                            fail_ok=True)
 
-        assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
+        assert "WARNING: scaled value should be <= 1e6. Continuing anyway." in err
 
 
 def test_do_sourmash_sketch_check_num_bounds_negative():
@@ -78,7 +78,7 @@ def test_do_sourmash_sketch_check_num_bounds_negative():
                                            in_directory=location,
                                            fail_ok=True)
 
-        assert "ERROR: --num-hashes value must be positive" in err
+        assert "ERROR: num value must be positive" in err
 
 
 def test_do_sourmash_sketch_check_num_bounds_less_than_minimum():
@@ -91,7 +91,7 @@ def test_do_sourmash_sketch_check_num_bounds_less_than_minimum():
                                            in_directory=location,
                                            fail_ok=True)
 
-        assert "WARNING: --num-hashes value should be >= 50. Continuing anyway." in err
+        assert "WARNING: num value should be >= 50. Continuing anyway." in err
 
 
 def test_do_sourmash_sketch_check_num_bounds_more_than_maximum():
@@ -104,7 +104,7 @@ def test_do_sourmash_sketch_check_num_bounds_more_than_maximum():
                                            in_directory=location,
                                            fail_ok=True)
 
-        assert "WARNING: --num-hashes value should be <= 50000. Continuing anyway." in err
+        assert "WARNING: num value should be <= 50000. Continuing anyway." in err
 
 
 def test_dna_defaults():
@@ -926,7 +926,7 @@ def test_do_sourmash_sketchdna_with_bad_scaled():
 
         assert status != 0
         # assert 'scaled is -1, must be >= 1' in err
-        assert 'ERROR: --scaled value must be positive' in err
+        assert 'ERROR: scaled value must be positive' in err
 
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'dna',
@@ -946,7 +946,7 @@ def test_do_sourmash_sketchdna_with_bad_scaled():
 
         assert status == 0
         # assert 'WARNING: scaled value of 1000000000 is nonsensical!?' in err
-        assert 'WARNING: --scaled value should be <= 1e6. Continuing anyway.' in err
+        assert 'WARNING: scaled value should be <= 1e6. Continuing anyway.' in err
 
 
 def test_do_sketch_with_seed():

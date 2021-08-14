@@ -41,11 +41,11 @@ def _parse_params_str(params_str):
             # if num < 0:
             #     raise ValueError(f"num is {num}, must be >= 0")
             if num < 0:
-                raise ValueError(f"ERROR: --num-hashes value must be positive")
+                raise ValueError(f"ERROR: num value must be positive")
             if num < 50:
-                notify('WARNING: --num-hashes value should be >= 50. Continuing anyway.')
+                notify('WARNING: num value should be >= 50. Continuing anyway.')
             if num > 50000:
-                notify('WARNING: --num-hashes value should be <= 50000. Continuing anyway.')
+                notify('WARNING: num value should be <= 50000. Continuing anyway.')
             params['num'] = int(item[4:])
             params['scaled'] = 0
         elif item.startswith('scaled='):
@@ -61,11 +61,11 @@ def _parse_params_str(params_str):
             # if scaled > 1e8:
             #     notify(f"WARNING: scaled value of {scaled} is nonsensical!?")
             if scaled < 0:
-                raise ValueError(f"ERROR: --scaled value must be positive")
+                raise ValueError(f"ERROR: scaled value must be positive")
             if scaled < 100:
-                notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
+                notify('WARNING: scaled value should be >= 100. Continuing anyway.')
             if scaled > 1e6:
-                notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
+                notify('WARNING: scaled value should be <= 1e6. Continuing anyway.')
             params['scaled'] = scaled
             params['num'] = 0
         elif item.startswith('seed='):
