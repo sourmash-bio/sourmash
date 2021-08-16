@@ -645,6 +645,7 @@ def test_do_plot_comparison_4_fail_not_distance(c):
 
 
 def test_plot_override_labeltext():
+    #working on this
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
         testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
