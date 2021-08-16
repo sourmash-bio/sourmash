@@ -7,7 +7,8 @@ from .signature import SourmashSignature
 from .logging import notify, error, set_quiet
 from .command_compute import (_compute_individual, _compute_merged,
                               ComputeParameters)
-
+from sourmash.sourmash_args import check_scaled_bounds
+from sourmash.sourmash_args import check_num_bounds
 
 DEFAULTS = dict(
     dna='k=31,scaled=1000,noabund',
@@ -40,12 +41,16 @@ def _parse_params_str(params_str):
                 raise ValueError(f"cannot parse num='{num}' as a number")
             # if num < 0:
             #     raise ValueError(f"num is {num}, must be >= 0")
-            if num < 0:
-                raise ValueError(f"ERROR: num value must be positive")
-            if num < 50:
-                notify('WARNING: num value should be >= 50. Continuing anyway.')
-            if num > 50000:
-                notify('WARNING: num value should be <= 50000. Continuing anyway.')
+
+            # if num < 0:
+            #     raise ValueError(f"ERROR: num value must be positive")
+            # if num < 50:
+            #     notify('WARNING: num value should be >= 50. Continuing anyway.')
+            # if num > 50000:
+            #     notify('WARNING: num value should be <= 50000. Continuing anyway.')
+
+            num = check_num_bounds(num)
+
             params['num'] = int(item[4:])
             params['scaled'] = 0
         elif item.startswith('scaled='):
@@ -60,12 +65,16 @@ def _parse_params_str(params_str):
             #     raise ValueError(f"scaled is {scaled}, must be >= 1")
             # if scaled > 1e8:
             #     notify(f"WARNING: scaled value of {scaled} is nonsensical!?")
-            if scaled < 0:
-                raise ValueError(f"ERROR: scaled value must be positive")
-            if scaled < 100:
-                notify('WARNING: scaled value should be >= 100. Continuing anyway.')
-            if scaled > 1e6:
-                notify('WARNING: scaled value should be <= 1e6. Continuing anyway.')
+
+            # if scaled < 0:
+            #     raise ValueError(f"ERROR: scaled value must be positive")
+            # if scaled < 100:
+            #     notify('WARNING: scaled value should be >= 100. Continuing anyway.')
+            # if scaled > 1e6:
+            #     notify('WARNING: scaled value should be <= 1e6. Continuing anyway.')
+
+            scaled = check_scaled_bounds(scaled)
+
             params['scaled'] = scaled
             params['num'] = 0
         elif item.startswith('seed='):
