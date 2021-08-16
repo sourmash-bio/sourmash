@@ -2,13 +2,13 @@
 
 usage="""
 
-### `sourmash signature cat` - concatenate multiple signatures together
+    sourmash sig cat *.sig -o combined.sig
 
-Concatenate signature files.
+sourmash sig cat concatenates signature files.
 
 For example,
 
-sourmash signature cat file1.sig file2.sig -o all.sig
+    sourmash signature cat file1.sig file2.sig -o all.sig
 
 will combine all signatures in `file1.sig` and `file2.sig` and put them
 in the file `all.sig`.
