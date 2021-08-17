@@ -842,38 +842,28 @@ def test_search(c):
     assert '93.0%' in c.last_result.out
 
 
-def test_search_ignore_abundance():
+def test_search_ignore_abundance(runtmp):
     # note: uses num signatures.
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-p','k=31,num=500,abund', testdata1, testdata2],
-                                           in_directory=location)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    runtmp.sourmash('sketch', 'dna', '-p','k=31,num=500,abund', testdata1, testdata2)
 
-        # Make sure there's different percent matches when using or
-        # not using abundance
-        status1, out1, err1 = utils.runscript('sourmash',
-                                              ['search',
-                                               'short.fa.sig',
-                                               'short2.fa.sig'],
-                                              in_directory=location)
-        print(status1, out1, err1)
-        assert '1 matches' in out1
-        assert '81.5%' in out1
+    # Make sure there's different percent matches when using or
+    # not using abundance
+    runtmp.sourmash('search', 'short.fa.sig', 'short2.fa.sig')
+    out1 = runtmp.last_result.out
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '1 matches' in runtmp.last_result.out
+    assert '81.5%' in runtmp.last_result.out
 
-        status2, out2, err2 = utils.runscript('sourmash',
-                                              ['search',
-                                               '--ignore-abundance',
-                                               'short.fa.sig',
-                                               'short2.fa.sig'],
-                                              in_directory=location)
-        print(status2, out2, err2)
-        assert '1 matches' in out2
-        assert '93.0%' in out2
+    runtmp.sourmash('search', '--ignore-abundance', 'short.fa.sig', 'short2.fa.sig')
+    out2 = runtmp.last_result.out
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '1 matches' in runtmp.last_result.out
+    assert '93.0%' in runtmp.last_result.out
 
-        # Make sure results are different!
-        assert out1 != out2
+    # Make sure results are different!
+    assert out1 != out2
 
 
 @utils.in_tempdir
@@ -1001,115 +991,115 @@ def test_compare_no_matching_sigs(c):
     assert 'no signatures found! exiting.' in c.last_result.err
 
 
-def test_compare_deduce_molecule():
+def test_compare_deduce_molecule(runtmp):
     # deduce DNA vs protein from query, if it is unique
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate', '-p', 'k=10,num=500', testdata1,testdata2],
-                                           in_directory=location)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert 'min similarity in matrix: 0.91' in out
+    runtmp.sourmash('sketch', 'translate', '-p', 'k=10,num=500', testdata1,testdata2)
+
+    runtmp.sourmash('compare', 'short.fa.sig', 'short2.fa.sig')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert 'min similarity in matrix: 0.91' in runtmp.last_result.out
 
 
-def test_compare_choose_molecule_dna():
+def test_compare_choose_molecule_dna(runtmp):
     # choose molecule type
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '30',
-                                            '--dna', '--protein',
-                                            testdata1, testdata2],
-                                           in_directory=location)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', '--dna', 'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert 'min similarity in matrix: 0.938' in out
+    runtmp.sourmash('compute', '-k', '30', '--dna', '--protein', testdata1, testdata2)
+
+    runtmp.sourmash('compare', '--dna', 'short.fa.sig', 'short2.fa.sig')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert 'min similarity in matrix: 0.938' in runtmp.last_result.out
 
 
-def test_compare_choose_molecule_protein():
+def test_compare_choose_molecule_protein(runtmp):
     # choose molecule type
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '30',
-                                            '--dna', '--protein',
-                                            testdata1, testdata2],
-                                           in_directory=location)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', '--protein', 'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert 'min similarity in matrix: 0.91' in out
+    runtmp.sourmash('compute', '-k', '30', '--dna', '--protein', testdata1, testdata2)
+
+    runtmp.sourmash('compare', '--protein', 'short.fa.sig', 'short2.fa.sig')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert 'min similarity in matrix: 0.91' in runtmp.last_result.out
 
 
-def test_compare_no_choose_molecule_fail():
+def test_compare_no_choose_molecule_fail(runtmp):
     # choose molecule type
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-p', 'k=30,num=500',testdata1],
-                                           in_directory=location)
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'protein', '-p', 'k=30,num=500', testdata2],
-                                           in_directory=location)
+    # with utils.TempDirectory() as location:
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location,
-                                           fail_ok=True)
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=30,num=500',testdata1)
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['sketch', 'dna', '-p', 'k=30,num=500',testdata1],
+    #                                     in_directory=location)
 
-        assert 'multiple molecule types loaded; please specify' in err
-        assert status != 0
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=30,num=500', testdata2)
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['sketch', 'protein', '-p', 'k=30,num=500', testdata2],
+    #                                     in_directory=location)
+
+    runtmp.sourmash('compare', 'short.fa.sig', 'short2.fa.sig')
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['compare', 'short.fa.sig',
+    #                                     'short2.fa.sig'],
+    #                                     in_directory=location,
+    #                                     fail_ok=True)
+    # print("\n\n\n\n")
+    # print(runtmp.last_result.err)
+    # print("\n\n\n\n")
+    assert 'multiple molecule types loaded; please specify' in runtmp.last_result.err
+    assert runtmp.last_result.status != 0
 
 
-def test_compare_deduce_ksize():
+def test_compare_deduce_ksize(runtmp):
     # deduce ksize, if it is unique
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-p', 'k=29,num=500', testdata1, testdata2],
-                                           in_directory=location)
+    # with utils.TempDirectory() as location:
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert 'min similarity in matrix: 0.938' in out
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=29,num=500', testdata1, testdata2)
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['sketch', 'dna', '-p', 'k=29,num=500', testdata1, testdata2],
+    #                                     in_directory=location)
+
+    runtmp.sourmash('compare', 'short.fa.sig', 'short2.fa.sig')
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['compare', 'short.fa.sig',
+    #                                     'short2.fa.sig'],
+    #                                     in_directory=location)
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert 'min similarity in matrix: 0.938' in runtmp.last_result.out
 
 
-def test_search_deduce_molecule():
+def test_search_deduce_molecule(runtmp):
     # deduce DNA vs protein from query, if it is unique
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate', '-p', 'k=10,num=500', testdata1, testdata2],
-                                           in_directory=location)               
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '1 matches' in out
-        assert '(k=10, protein)' in err
+    # with utils.TempDirectory() as location:
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    runtmp.sourmash('sketch', 'translate', '-p', 'k=10,num=500', testdata1, testdata2)
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['sketch', 'translate', '-p', 'k=10,num=500', testdata1, testdata2],
+    #                                     in_directory=location)   
+
+    runtmp.sourmash('search', 'short.fa.sig', 'short2.fa.sig')            
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['search', 'short.fa.sig',
+    #                                     'short2.fa.sig'],
+    #                                     in_directory=location)
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '1 matches' in runtmp.last_result.out
+    assert '(k=10, protein)' in runtmp.last_result.err
 
 
 def test_search_deduce_ksize():
