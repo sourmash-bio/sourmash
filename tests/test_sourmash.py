@@ -1372,22 +1372,18 @@ def test_search_deduce_ksize_vs_user_specified(runtmp):
     assert '0 signatures matching ksize' in runtmp.last_result.err
 
 
-def test_search_containment():
+def test_search_containment(runtmp):
     # search with --containment in signatures
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-p', 'scaled=1', testdata1, testdata2],
-                                           in_directory=location)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
-                                            'short2.fa.sig', '--containment'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '1 matches' in out
-        assert '95.6%' in out
+    runtmp.sourmash('sketch', 'dna', '-p', 'scaled=1', testdata1, testdata2)
+
+    runtmp.sourmash('search', 'short.fa.sig', 'short2.fa.sig', '--containment')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '1 matches' in runtmp.last_result.out
+    assert '95.6%' in runtmp.last_result.out
 
 
 def test_search_containment_sbt():
@@ -1414,17 +1410,16 @@ def test_search_containment_sbt():
         assert '95.6%' in out
 
 
-def test_search_containment_s10():
+def test_search_containment_s10(runtmp):
     # check --containment for s10/s10-small
-    with utils.TempDirectory() as location:
-        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
-        q2 = utils.get_test_data('scaled/genome-s10-small.fa.gz.sig')
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', q1, q2, '--containment'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '1 matches' in out
-        assert '16.7%' in out
+    q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+    q2 = utils.get_test_data('scaled/genome-s10-small.fa.gz.sig')
+
+    runtmp.sourmash('search', q1, q2, '--containment')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '1 matches' in runtmp.last_result.out
+    assert '16.7%' in runtmp.last_result.out
 
 
 def test_search_containment_s10_no_max(run):
@@ -1441,180 +1436,175 @@ def test_search_containment_s10_no_max(run):
     assert "ERROR: cannot specify both --containment and --max-containment!" in run.last_result.err
 
 
-def test_search_max_containment_s10_pairwise():
+def test_search_max_containment_s10_pairwise(runtmp):
     # check --containment for s10/s10-small
-    with utils.TempDirectory() as location:
-        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
-        q2 = utils.get_test_data('scaled/genome-s10-small.fa.gz.sig')
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', q1, q2,
-                                            '--max-containment'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '1 matches' in out
-        assert '100.0%' in out
+    q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+    q2 = utils.get_test_data('scaled/genome-s10-small.fa.gz.sig')
+
+    runtmp.sourmash('search', q1, q2,'--max-containment')
+    
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '1 matches' in runtmp.last_result.out
+    assert '100.0%' in runtmp.last_result.out
 
 
-def test_search_containment_s10_siglist():
+def test_search_containment_s10_siglist(runtmp):
     # check --containment for s10/s10-small
-    with utils.TempDirectory() as location:
-        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
-        q2 = utils.get_test_data('scaled/*.sig')
-        q2 = glob.glob(q2)
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', q1, *q2,
-                                            '--containment'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '3 matches' in out
-        assert ' 16.7%       ../genome-s10-small.fa.gz' in out
-        assert '100.0%       ../genome-s10.fa.gz' in out
-        assert '100.0%       ../genome-s10+s11.fa.gz' in out
+    q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+    q2 = utils.get_test_data('scaled/*.sig')
+    q2 = glob.glob(q2)
+
+    runtmp.sourmash('search', q1, *q2, '--containment')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '3 matches' in runtmp.last_result.out
+    assert ' 16.7%       ../genome-s10-small.fa.gz' in runtmp.last_result.out
+    assert '100.0%       ../genome-s10.fa.gz' in runtmp.last_result.out
+    assert '100.0%       ../genome-s10+s11.fa.gz' in runtmp.last_result.out
 
 
-def test_search_max_containment_s10_siglist():
+def test_search_max_containment_s10_siglist(runtmp):
     # check --max-containment for s10/s10-small
-    with utils.TempDirectory() as location:
-        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
-        q2 = utils.get_test_data('scaled/*.sig')
-        q2 = glob.glob(q2)
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', q1, *q2,
-                                            '--max-containment'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '3 matches' in out
-        assert '100.0%       ../genome-s10-small.fa.gz' in out
-        assert '100.0%       ../genome-s10.fa.gz' in out
-        assert '100.0%       ../genome-s10+s11.fa.gz' in out
+    q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+    q2 = utils.get_test_data('scaled/*.sig')
+    q2 = glob.glob(q2)
+
+    runtmp.sourmash('search', q1, *q2, '--max-containment')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '3 matches' in runtmp.last_result.out
+    assert '100.0%       ../genome-s10-small.fa.gz' in runtmp.last_result.out
+    assert '100.0%       ../genome-s10.fa.gz' in runtmp.last_result.out
+    assert '100.0%       ../genome-s10+s11.fa.gz' in runtmp.last_result.out
 
 
-def test_search_containment_s10_sbt():
+def test_search_containment_s10_sbt(runtmp):
     # check --containment for s10/s10-small
-    with utils.TempDirectory() as location:
-        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
-        q2 = utils.get_test_data('scaled/all.sbt.zip')
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', q1, q2,
-                                            '--containment'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '3 matches' in out
-        assert '100.0%       ../genome-s10+s11.fa.gz' in out
-        assert '100.0%       ../genome-s10.fa.gz' in out
-        assert ' 16.7%       ../genome-s10-small.fa.gz' in out
+    q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+    q2 = utils.get_test_data('scaled/all.sbt.zip')
+
+    runtmp.sourmash('search', q1, q2, '--containment')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '3 matches' in runtmp.last_result.out
+    assert '100.0%       ../genome-s10+s11.fa.gz' in runtmp.last_result.out
+    assert '100.0%       ../genome-s10.fa.gz' in runtmp.last_result.out
+    assert ' 16.7%       ../genome-s10-small.fa.gz' in runtmp.last_result.out
 
 
-def test_search_containment_s10_sbt_best_only():
+def test_search_containment_s10_sbt_best_only(runtmp):
     # check --containment for s10/s10-small
-    with utils.TempDirectory() as location:
-        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
-        q2 = utils.get_test_data('scaled/all.sbt.zip')
+    q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+    q2 = utils.get_test_data('scaled/all.sbt.zip')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', q1, q2,
-                                            '--containment', '--best-only'],
-                                           in_directory=location, fail_ok=True)
+    runtmp.sourmash('search', q1, q2, '--containment', '--best-only')
 
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert '100.0%       ' in out # there are at least two perfect matches!
+    assert '100.0%       ' in runtmp.last_result.out # there are at least two perfect matches!
 
-        assert status == 0
+    assert runtmp.last_result.status == 0
 
 
-def test_search_containment_s10_sbt_empty():
+def test_search_containment_s10_sbt_empty(runtmp):
     # check --containment for s10/s10-small at absurd scaled/empty mh
-    with utils.TempDirectory() as location:
-        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
-        q2 = utils.get_test_data('scaled/all.sbt.zip')
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', q1, q2,
-                                            '--scaled', '1e7',
-                                            '--containment'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '0 matches' in out
+    q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+    q2 = utils.get_test_data('scaled/all.sbt.zip')
+
+    runtmp.sourmash('search', q1, q2, '--scaled', '1e7', '--containment')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '0 matches' in runtmp.last_result.out
 
 
-def test_search_max_containment_s10_sbt():
+def test_search_max_containment_s10_sbt(runtmp):
     # check --max-containment for s10/s10-small
     with utils.TempDirectory() as location:
         q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
         q2 = utils.get_test_data('scaled/all.sbt.zip')
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', q1, q2,
-                                            '--max-containment'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '3 matches' in out
-        assert '100.0%       ../genome-s10-small.fa.gz' in out
-        assert '100.0%       ../genome-s10.fa.gz' in out
-        assert '100.0%       ../genome-s10+s11.fa.gz' in out
+
+        runtmp.sourmash('search', q1, q2, '--max-containment')
+        # status, out, err = utils.runscript('sourmash',
+        #                                    ['search', q1, q2,
+        #                                     '--max-containment'],
+        #                                    in_directory=location)
+        print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+        assert '3 matches' in runtmp.last_result.out
+        assert '100.0%       ../genome-s10-small.fa.gz' in runtmp.last_result.out
+        assert '100.0%       ../genome-s10.fa.gz' in runtmp.last_result.out
+        assert '100.0%       ../genome-s10+s11.fa.gz' in runtmp.last_result.out
 
 
-def test_search_max_containment_s10_sbt_best_only():
+def test_search_max_containment_s10_sbt_best_only(runtmp):
     # check --max-containment for s10/s10-small
-    with utils.TempDirectory() as location:
-        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
-        q2 = utils.get_test_data('scaled/all.sbt.zip')
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', q1, q2,
-                                            '--max-containment',
-                                            '--best-only'],
-                                           in_directory=location, fail_ok=True)
+    # with utils.TempDirectory() as location:
+    q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+    q2 = utils.get_test_data('scaled/all.sbt.zip')
 
-        print(out)
-        print(err)
+    runtmp.sourmash('search', q1, q2, '--max-containment', '--best-only')
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['search', q1, q2,
+    #                                     '--max-containment',
+    #                                     '--best-only'],
+    #                                     in_directory=location, fail_ok=True)
 
-        assert status == 0
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
 
 
-def test_search_max_containment_s10_sbt_empty():
+def test_search_max_containment_s10_sbt_empty(runtmp):
     # check --max-containment for s10/s10-small at absurd scaled/empty mh.
-    with utils.TempDirectory() as location:
-        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
-        q2 = utils.get_test_data('scaled/all.sbt.zip')
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', q1, q2,
-                                            '--scaled', '1e7',
-                                            '--max-containment'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '0 matches' in out
+    # with utils.TempDirectory() as location:
+    q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+    q2 = utils.get_test_data('scaled/all.sbt.zip')
+
+    runtmp.sourmash('search', q1, q2, '--scaled', '1e7', '--max-containment')
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['search', q1, q2,
+    #                                     '--scaled', '1e7',
+    #                                     '--max-containment'],
+    #                                     in_directory=location)
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '0 matches' in runtmp.last_result.out
 
 
-def test_search_containment_s10_lca():
+def test_search_containment_s10_lca(runtmp):
     # check --containment for s10/s10-small
-    with utils.TempDirectory() as location:
-        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
-        q2 = utils.get_test_data('scaled/all.lca.json')
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', q1, q2,
-                                            '--containment'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '3 matches' in out
-        assert '100.0%       455c2f95' in out
-        assert '100.0%       684aa226' in out
-        assert ' 16.7%       7f7835d2' in out
+    # with utils.TempDirectory() as location:
+    q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+    q2 = utils.get_test_data('scaled/all.lca.json')
+
+    runtmp.sourmash('search', q1, q2, '--containment')
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['search', q1, q2,
+    #                                     '--containment'],
+    #                                     in_directory=location)
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '3 matches' in runtmp.last_result.out
+    assert '100.0%       455c2f95' in runtmp.last_result.out
+    assert '100.0%       684aa226' in runtmp.last_result.out
+    assert ' 16.7%       7f7835d2' in runtmp.last_result.out
 
 
-def test_search_max_containment_s10_lca():
+def test_search_max_containment_s10_lca(runtmp):
     # check --max-containment for s10/s10-small
-    with utils.TempDirectory() as location:
-        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
-        q2 = utils.get_test_data('scaled/all.lca.json')
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', q1, q2,
-                                            '--max-containment'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '3 matches' in out
-        assert '100.0%       455c2f95' in out
-        assert '100.0%       684aa226' in out
-        assert '100.0%       7f7835d2' in out
+    # with utils.TempDirectory() as location:
+    q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+    q2 = utils.get_test_data('scaled/all.lca.json')
+
+    runtmp.sourmash('search', q1, q2, '--max-containment')
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['search', q1, q2,
+    #                                     '--max-containment'],
+    #                                     in_directory=location)
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '3 matches' in runtmp.last_result.out
+    assert '100.0%       455c2f95' in runtmp.last_result.out
+    assert '100.0%       684aa226' in runtmp.last_result.out
+    assert '100.0%       7f7835d2' in runtmp.last_result.out
 
 
 def test_search_gzip():
