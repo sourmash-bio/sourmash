@@ -1032,29 +1032,16 @@ def test_compare_choose_molecule_protein(runtmp):
 
 def test_compare_no_choose_molecule_fail(runtmp):
     # choose molecule type
-    # with utils.TempDirectory() as location:
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
     runtmp.sourmash('sketch', 'dna', '-p', 'k=30,num=500',testdata1)
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['sketch', 'dna', '-p', 'k=30,num=500',testdata1],
-    #                                     in_directory=location)
-
+    
     runtmp.sourmash('sketch', 'protein', '-p', 'k=30,num=500', testdata2)
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['sketch', 'protein', '-p', 'k=30,num=500', testdata2],
-    #                                     in_directory=location)
 
-    runtmp.sourmash('compare', 'short.fa.sig', 'short2.fa.sig')
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['compare', 'short.fa.sig',
-    #                                     'short2.fa.sig'],
-    #                                     in_directory=location,
-    #                                     fail_ok=True)
-    # print("\n\n\n\n")
-    # print(runtmp.last_result.err)
-    # print("\n\n\n\n")
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('compare', 'short.fa.sig', 'short2.fa.sig')
+
     assert 'multiple molecule types loaded; please specify' in runtmp.last_result.err
     assert runtmp.last_result.status != 0
 
@@ -1101,78 +1088,45 @@ def test_search_deduce_ksize(runtmp):
 
 
 def test_do_sourmash_index_multik_fail(runtmp):
-    # with utils.TempDirectory() as location:
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
     runtmp.sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1)
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['sketch', 'translate', '-p', 'k=31,num=500', testdata1],
-    #                                     in_directory=location)
 
     runtmp.sourmash('sketch', 'translate', '-p', 'k=32,num=500', testdata2)
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['sketch', 'translate', '-p', 'k=32,num=500', testdata2],
-    #                                     in_directory=location)
 
-    runtmp.sourmash('index', 'zzz', 'short.fa.sig',  'short2.fa.sig')
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['index', 'zzz',
-    #                                     'short.fa.sig',
-    #                                     'short2.fa.sig'],
-    #                                     in_directory=location, fail_ok=True)
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('index', 'zzz', 'short.fa.sig',  'short2.fa.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
     assert runtmp.last_result.status == -1
 
 
 def test_do_sourmash_index_multimol_fail(runtmp):
-    # with utils.TempDirectory() as location:
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
     runtmp.sourmash('sketch', 'translate', testdata1)
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['sketch', 'translate', testdata1],
-    #                                     in_directory=location)
 
     runtmp.sourmash('sketch', 'translate', '-p', 'k=30,num=500', testdata2)
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['sketch', 'translate', '-p', 'k=30,num=500', testdata2],
-    #                                     in_directory=location)
 
-    runtmp.sourmash('index', 'zzz', 'short.fa.sig', 'short2.fa.sig')
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['index', 'zzz',
-    #                                     'short.fa.sig',
-    #                                     'short2.fa.sig'],
-    #                                     in_directory=location, fail_ok=True)
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('index', 'zzz', 'short.fa.sig', 'short2.fa.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
     assert runtmp.last_result.status == -1
 
 
 def test_do_sourmash_index_multinum_fail(runtmp):
-    # with utils.TempDirectory() as location:
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
     runtmp.sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1)
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['sketch', 'translate', '-p', 'k=31,num=500', testdata1],
-    #                                     in_directory=location)
 
     runtmp.sourmash('sketch', 'translate', '-p', 'k=31,num=1000', testdata2)
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['sketch', 'translate', '-p', 'k=31,num=1000', testdata2],
-    #                                     in_directory=location)
 
-    runtmp.sourmash('index', 'zzz', 'short.fa.sig', 'short2.fa.sig')
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['index', 'zzz',
-    #                                     'short.fa.sig',
-    #                                     'short2.fa.sig'],
-    #                                     in_directory=location, fail_ok=True)
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('index', 'zzz', 'short.fa.sig', 'short2.fa.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
     assert runtmp.last_result.status == -1
@@ -1180,26 +1134,15 @@ def test_do_sourmash_index_multinum_fail(runtmp):
 
 
 def test_do_sourmash_index_multiscaled_fail(runtmp):
-    # with utils.TempDirectory() as location:
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
     runtmp.sourmash('sketch', 'dna', '-p', 'scaled=10', testdata1)
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['sketch', 'dna', '-p', 'scaled=10', testdata1],
-    #                                     in_directory=location)
 
     runtmp.sourmash('sketch', 'dna', '-p', 'scaled=1', testdata2)
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['sketch', 'dna', '-p', 'scaled=1', testdata2],
-    #                                     in_directory=location)
 
-    runtmp.sourmash('index', '-k', '31', 'zzz', 'short.fa.sig', 'short2.fa.sig')
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['index', '-k', '31', 'zzz',
-    #                                     'short.fa.sig',
-    #                                     'short2.fa.sig'],
-    #                                     in_directory=location, fail_ok=True)
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('index', '-k', '31', 'zzz', 'short.fa.sig', 'short2.fa.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
     assert runtmp.last_result.status == -1
@@ -1368,45 +1311,36 @@ def test_do_sourmash_sbt_move_and_search_output():
         assert 'e26a306d2651' in output
 
 
-def test_search_deduce_ksize_and_select_appropriate():
+def test_search_deduce_ksize_and_select_appropriate(runtmp):
     # deduce ksize from query and select correct signature from DB
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate', '-p', 'k=24,num=500', testdata1],
-                                           in_directory=location)
-        # The DB contains signatres for multiple ksizes
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate', '-p', 'k=23,num=500', '-p', 'k=24,num=500', testdata2],
-                                           in_directory=location)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '1 matches' in out
-        assert 'k=24' in err
+    runtmp.sourmash('sketch', 'translate', '-p', 'k=24,num=500', testdata1)
+
+    # The DB contains signatres for multiple ksizes
+    runtmp.sourmash('sketch', 'translate', '-p', 'k=23,num=500', '-p', 'k=24,num=500', testdata2)
+
+    runtmp.sourmash('search', 'short.fa.sig', 'short2.fa.sig')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '1 matches' in runtmp.last_result.out
+    assert 'k=24' in runtmp.last_result.err
 
 
-def test_search_deduce_ksize_not_unique():
+def test_search_deduce_ksize_not_unique(runtmp):
     # deduce ksize from query, fail because it is not unique
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate', '-p', 'k=23,num=500', '-p', 'k=25,num=500', testdata1, testdata2],
-                                           in_directory=location)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location,
-                                           fail_ok=True)
-        print(status, out, err)
-        assert status == -1
-        assert '2 signatures matching ksize' in err
+    runtmp.sourmash('sketch', 'translate', '-p', 'k=23,num=500', '-p', 'k=25,num=500', testdata1, testdata2)
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('search', 'short.fa.sig', 'short2.fa.sig')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert runtmp.last_result.status == -1
+    assert '2 signatures matching ksize' in runtmp.last_result.err
 
 
 @utils.in_tempdir
@@ -1423,24 +1357,19 @@ def test_search_deduce_ksize_no_match(c):
     assert "no compatible signatures found in 'short2.fa.sig'" in str(exc.value)
 
 
-def test_search_deduce_ksize_vs_user_specified():
+def test_search_deduce_ksize_vs_user_specified(runtmp):
     # user specified ksize is not available
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate', '-p', 'k=23,num=500',
-                                            testdata1, testdata2],
-                                           in_directory=location)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', '-k', '24',
-                                            'short.fa.sig', 'short2.fa.sig'],
-                                           in_directory=location,
-                                           fail_ok=True)
-        print(status, out, err)
-        assert status == -1
-        assert '0 signatures matching ksize' in err
+    runtmp.sourmash('sketch', 'translate', '-p', 'k=23,num=500', testdata1, testdata2)
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('search', '-k', '24', 'short.fa.sig', 'short2.fa.sig')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert runtmp.last_result.status == -1
+    assert '0 signatures matching ksize' in runtmp.last_result.err
 
 
 def test_search_containment():
