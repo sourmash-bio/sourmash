@@ -644,39 +644,39 @@ def test_do_plot_comparison_4_fail_not_distance(c):
     assert c.last_result.status != 0
 
 
-def test_plot_override_labeltext(runtmp):
-    # with utils.TempDirectory() as location:
-    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
-    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
-    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
-    testdata4 = utils.get_test_data('genome-s10+s11.sig')
-    inp_sigs = [testdata1, testdata2, testdata3, testdata4]
+def test_plot_override_labeltext():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+        testdata4 = utils.get_test_data('genome-s10+s11.sig')
+        inp_sigs = [testdata1, testdata2, testdata3, testdata4]
 
-    runtmp.sourmash('compare', inp_sigs, '-o', 'cmp', '-k', '21', '--dna')
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['compare'] + inp_sigs +
-    #                                     ['-o', 'cmp', '-k', '21', '--dna'],
-    #                                     in_directory=location)
+        # runtmp.sourmash('compare', inp_sigs, '-o', 'cmp', '-k', '21', '--dna')
+        status, out, err = utils.runscript('sourmash',
+                                            ['compare'] + inp_sigs +
+                                            ['-o', 'cmp', '-k', '21', '--dna'],
+                                            in_directory=location)
 
-    with open(os.path.join(location, 'new.labels.txt'), 'wt') as fp:
-        fp.write('a\nb\nc\nd\n')
+        with open(os.path.join(location, 'new.labels.txt'), 'wt') as fp:
+            fp.write('a\nb\nc\nd\n')
 
-    runtmp.sourmash('plot', 'cmp', '--labeltext', 'new.labels.txt')
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['plot', 'cmp',
-    #                                     '--labeltext', 'new.labels.txt'],
-    #                                     in_directory=location)
+        # runtmp.sourmash('plot', 'cmp', '--labeltext', 'new.labels.txt')
+        status, out, err = utils.runscript('sourmash',
+                                            ['plot', 'cmp',
+                                            '--labeltext', 'new.labels.txt'],
+                                            in_directory=location)
 
-    print(runtmp.last_result.out)
+        print(out)
 
-    assert 'loading labels from new.labels.txt' in runtmp.last_result.err
+        assert 'loading labels from new.labels.txt' in err
 
-    expected = """\
+        expected = """\
 0\ta
 1\tb
 2\tc
 3\td"""
-    assert expected in out
+        assert expected in out
 
 
 def test_plot_override_labeltext_fail():
@@ -1759,22 +1759,18 @@ def test_search_metagenome():
         assert '12 matches; showing first 3:' in out
 
 
-def test_search_metagenome_traverse():
-    with utils.TempDirectory() as location:
-        testdata_dir = utils.get_test_data('gather')
+def test_search_metagenome_traverse(runtmp):
+    testdata_dir = utils.get_test_data('gather')
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = 'search {} {} -k 21'
-        cmd = cmd.format(query_sig, testdata_dir)
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    runtmp.sourmash('search', query_sig, testdata_dir, '-k', '21')
 
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
-        assert '13 matches; showing first 3:' in out
+    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in runtmp.last_result.out
+    assert '13 matches; showing first 3:' in runtmp.last_result.out
 
 
 def test_search_metagenome_traverse_check_csv():
@@ -1837,49 +1833,40 @@ def test_search_traverse_incompatible(c):
     assert '100.0%       NC_009665.1 Shewanella baltica OS185, complete genome' in c.last_result.out
 
 
-def test_search_check_scaled_bounds_negative():
+def test_search_check_scaled_bounds_negative(runtmp):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('search', query_sig, 'gcf_all', '-k', '21', '--scaled', '-5')
 
-        cmd = 'search {} gcf_all -k 21 --scaled -5'.format(query_sig)
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                            in_directory=location, fail_ok=True)
-
-        assert "ERROR: --scaled value must be positive" in err
+    assert "ERROR: --scaled value must be positive" in runtmp.last_result.err
 
 
-def test_search_check_scaled_bounds_less_than_minimum():
+def test_search_check_scaled_bounds_less_than_minimum(runtmp):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('search', query_sig, 'gcf_all', '-k', '21', '--scaled', '50')
 
-        cmd = 'search {} gcf_all -k 21 --scaled 50'.format(query_sig)
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                            in_directory=location, fail_ok=True)
-
-        assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
+    assert "WARNING: --scaled value should be >= 100. Continuing anyway." in runtmp.last_result.err
 
 
-def test_search_check_scaled_bounds_more_than_maximum():
+def test_search_check_scaled_bounds_more_than_maximum(runtmp):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('search', query_sig, 'gcf_all', '-k', '21', '--scaled', '1e9')
 
-        cmd = 'search {} gcf_all -k 21 --scaled 1e9'.format(query_sig)
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                            in_directory=location, fail_ok=True)
-
-        assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
+    assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in runtmp.last_result.err
 
 
 # explanation: you cannot downsample a scaled SBT to match a scaled
