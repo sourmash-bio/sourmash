@@ -1190,125 +1190,98 @@ def test_do_sourmash_index_multiscaled_rescale_fail(c):
     assert 'new scaled 5 is lower than current sample scaled 10' in c.last_result.err
 
 
-def test_do_sourmash_sbt_search_output():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-p', 'k=31,num=500', testdata1,testdata2],
-                                           in_directory=location)
+def test_do_sourmash_sbt_search_output(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig',
-                                            '-k', '31'],
-                                           in_directory=location)
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1,testdata2)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    runtmp.sourmash('index', 'zzz', 'short.fa.sig', 'short2.fa.sig', '-k', '31')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
-                                            'zzz', '-o', 'foo'],
-                                           in_directory=location)
-        outfile = open(os.path.join(location, 'foo'))
-        output = outfile.read()
-        print(output)
-        assert 'e26a306d26512' in output
-        assert '914591cd1130aa915' in output
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('search', 'short.fa.sig', 'zzz', '-o', 'foo')
+
+    outfile = open(runtmp.output('foo'))
+    output = outfile.read()
+    print(output)
+    assert 'e26a306d26512' in output
+    assert '914591cd1130aa915' in output
 
 
 # check against a bug in sbt search triggered by incorrect max Jaccard
 # calculation.
-def test_do_sourmash_sbt_search_check_bug():
-    with utils.TempDirectory() as location:
-        # mins: 431
-        testdata1 = utils.get_test_data('sbt-search-bug/nano.sig')
+def test_do_sourmash_sbt_search_check_bug(runtmp):
+    # mins: 431
+    testdata1 = utils.get_test_data('sbt-search-bug/nano.sig')
 
-        # mins: 6264
-        testdata2 = utils.get_test_data('sbt-search-bug/bacteroides.sig')
+    # mins: 6264
+    testdata2 = utils.get_test_data('sbt-search-bug/bacteroides.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
-                                            testdata1, testdata2,
-                                            '-k', '31'],
-                                           in_directory=location)
+    runtmp.sourmash('index', 'zzz', testdata1, testdata2, '-k', '31')
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', testdata1, 'zzz'],
-                                           in_directory=location)
-        assert '1 matches:' in out
+    runtmp.sourmash('search', testdata1, 'zzz')
 
-        tree = load_sbt_index(os.path.join(location, 'zzz.sbt.zip'))
-        assert tree._nodes[0].metadata['min_n_below'] == 431
+    assert '1 matches:' in runtmp.last_result.out
+
+    tree = load_sbt_index(runtmp.output('zzz.sbt.zip'))
+    assert tree._nodes[0].metadata['min_n_below'] == 431
 
 
-def test_do_sourmash_sbt_search_empty_sig():
-    with utils.TempDirectory() as location:
-        # mins: 431
-        testdata1 = utils.get_test_data('sbt-search-bug/nano.sig')
+def test_do_sourmash_sbt_search_empty_sig(runtmp):
+    # mins: 431
+    testdata1 = utils.get_test_data('sbt-search-bug/nano.sig')
 
-        # mins: 0
-        testdata2 = utils.get_test_data('sbt-search-bug/empty.sig')
+    # mins: 0
+    testdata2 = utils.get_test_data('sbt-search-bug/empty.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
-                                            testdata1, testdata2,
-                                            '-k', '31'],
-                                           in_directory=location)
+    runtmp.sourmash('index', 'zzz', testdata1, testdata2, '-k', '31')
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', testdata1, 'zzz'],
-                                           in_directory=location)
-        assert '1 matches:' in out
+    runtmp.sourmash('search', testdata1, 'zzz')
 
-        tree = load_sbt_index(os.path.join(location, 'zzz.sbt.zip'))
-        assert tree._nodes[0].metadata['min_n_below'] == 1
+    assert '1 matches:' in runtmp.last_result.out
+
+    tree = load_sbt_index(runtmp.output('zzz.sbt.zip'))
+    assert tree._nodes[0].metadata['min_n_below'] == 1
 
 
-def test_do_sourmash_sbt_move_and_search_output():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-p', 'k=31,num=500', testdata1,testdata2],
-                                           in_directory=location)
+def test_do_sourmash_sbt_move_and_search_output(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz.sbt.json',
-                                            'short.fa.sig',
-                                            'short2.fa.sig',
-                                            '-k', '31'],
-                                           in_directory=location)
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1,testdata2)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+    runtmp.sourmash('index', 'zzz.sbt.json', 'short.fa.sig', 'short2.fa.sig', '-k', '31')
 
-        print(out)
+    assert os.path.exists(runtmp.output('zzz.sbt.json'))
 
-        with open(os.path.join(location, 'zzz.sbt.json')) as fp:
-            d = json.load(fp)
-            assert d['storage']['args']['path'] == '.sbt.zzz'
+    print(runtmp.last_result.out)
 
-        newpath = os.path.join(location, 'subdir')
-        os.mkdir(newpath)
+    with open(runtmp.output('zzz.sbt.json')) as fp:
+        d = json.load(fp)
+        assert d['storage']['args']['path'] == '.sbt.zzz'
 
-        # move both JSON file and subdirectory.
-        shutil.move(os.path.join(location, 'zzz.sbt.json'), newpath)
-        shutil.move(os.path.join(location, '.sbt.zzz'), newpath)
+    newpath = runtmp.output('subdir')
+    os.mkdir(newpath)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', '../short.fa.sig',
-                                            'zzz.sbt.json', '-o', 'foo'],
-                                           in_directory=newpath)
-        outfile = open(os.path.join(newpath, 'foo'))
-        output = outfile.read()
-        print(output)
-        assert '914591cd1130aa91' in output
-        assert 'e26a306d2651' in output
+    # move both JSON file and subdirectory.
+    shutil.move(runtmp.output('zzz.sbt.json'), newpath)
+    shutil.move(runtmp.output('.sbt.zzz'), newpath)
+
+    status, out, err = utils.runscript('sourmash',
+                                        ['search', '../short.fa.sig',
+                                        'zzz.sbt.json', '-o', 'foo'],
+                                        in_directory=newpath)
+    
+    outfile = open(os.path.join(newpath, 'foo'))
+    output = outfile.read()
+    print(output)
+    assert '914591cd1130aa91' in output
+    assert 'e26a306d2651' in output
 
 
 def test_search_deduce_ksize_and_select_appropriate(runtmp):
@@ -1386,28 +1359,22 @@ def test_search_containment(runtmp):
     assert '95.6%' in runtmp.last_result.out
 
 
-def test_search_containment_sbt():
+def test_search_containment_sbt(runtmp):
     # search with --containment in an SBT
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-p', 'scaled=1', testdata1, testdata2],
-                                           in_directory=location)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
+    runtmp.sourmash('sketch', 'dna', '-p', 'scaled=1', testdata1, testdata2)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
-                                            'zzz', '--containment'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '1 matches' in out
-        assert '95.6%' in out
+    runtmp.sourmash('index', '-k', '31', 'zzz', 'short2.fa.sig')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('search', 'short.fa.sig', 'zzz', '--containment')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '1 matches' in runtmp.last_result.out
+    assert '95.6%' in runtmp.last_result.out
 
 
 def test_search_containment_s10(runtmp):
@@ -1584,29 +1551,25 @@ def test_search_max_containment_s10_lca(runtmp):
     assert '100.0%       7f7835d2' in runtmp.last_result.out
 
 
-def test_search_gzip():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2],
-                                           in_directory=location)
+def test_search_gzip(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        data = open(os.path.join(location, 'short.fa.sig'), 'rb').read()
-        with gzip.open(os.path.join(location, 'zzz.gz'), 'wb') as fp:
-            fp.write(data)
+    runtmp.sourmash('sketch','dna','-p','k=31,num=500', testdata1, testdata2)
 
-        data = open(os.path.join(location, 'short2.fa.sig'), 'rb').read()
-        with gzip.open(os.path.join(location, 'yyy.gz'), 'wb') as fp:
-            fp.write(data)
+    data = open(runtmp.output('short.fa.sig'), 'rb').read()
+    with gzip.open(runtmp.output('zzz.gz'), 'wb') as fp:
+        fp.write(data)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'zzz.gz',
-                                            'yyy.gz'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '1 matches' in out
-        assert '93.0%' in out
+    data = open(runtmp.output('short2.fa.sig'), 'rb').read()
+    with gzip.open(runtmp.output('yyy.gz'), 'wb') as fp:
+        fp.write(data)
+
+    runtmp.sourmash('search', 'zzz.gz', 'yyy.gz')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '1 matches' in runtmp.last_result.out
+    assert '93.0%' in runtmp.last_result.out
 
 
 def test_search_2(runtmp):
@@ -1732,31 +1695,27 @@ def test_index_metagenome_fromfile_no_cmdline_sig(c):
     assert '12 matches; showing first 3:' in out
 
 
-def test_search_metagenome():
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+def test_search_metagenome(runtmp):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all']
-        cmd.extend(testdata_sigs)
-        cmd.extend(['-k', '21'])
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+    
+    runtmp.sourmash(*cmd)
 
-        status, out, err = utils.runscript('sourmash', cmd,
-                                           in_directory=location)
+    assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
+    runtmp.sourmash('search', query_sig, 'gcf_all', '-k', '21')
 
-        cmd = 'search {} gcf_all -k 21'.format(query_sig)
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        print(out)
-        print(err)
-
-        assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
-        assert '12 matches; showing first 3:' in out
+    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in runtmp.last_result.out
+    assert '12 matches; showing first 3:' in runtmp.last_result.out
 
 
 def test_search_metagenome_traverse(runtmp):
@@ -1773,34 +1732,31 @@ def test_search_metagenome_traverse(runtmp):
     assert '13 matches; showing first 3:' in runtmp.last_result.out
 
 
-def test_search_metagenome_traverse_check_csv():
+def test_search_metagenome_traverse_check_csv(runtmp):
     # this test confirms that the CSV 'filename' output for signatures loaded
     # via directory traversal properly contains the actual path to the
     # signature file from which the signature was loaded.
-    with utils.TempDirectory() as location:
-        testdata_dir = utils.get_test_data('gather')
+    testdata_dir = utils.get_test_data('gather')
 
-        query_sig = utils.get_test_data('gather/combined.sig')
-        out_csv = os.path.join(location, 'out.csv')
+    query_sig = utils.get_test_data('gather/combined.sig')
+    out_csv = runtmp.output('out.csv')
 
-        cmd = f'search {query_sig} {testdata_dir} -k 21 -o {out_csv}'
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    runtmp.sourmash('search', query_sig, testdata_dir, '-k', '21', '-o', out_csv)
 
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        with open(out_csv, 'rt') as fp:
-            prefix_len = len(testdata_dir)
-            r = csv.DictReader(fp)
-            for row in r:
-                filename = row['filename']
-                assert filename.startswith(testdata_dir), filename
-                # should have full path to file sig was loaded from
-                assert len(filename) > prefix_len
+    with open(out_csv, 'rt') as fp:
+        prefix_len = len(testdata_dir)
+        r = csv.DictReader(fp)
+        for row in r:
+            filename = row['filename']
+            assert filename.startswith(testdata_dir), filename
+            # should have full path to file sig was loaded from
+            assert len(filename) > prefix_len
 
-        assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
-        assert '13 matches; showing first 3:' in out
+    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in runtmp.last_result.out
+    assert '13 matches; showing first 3:' in runtmp.last_result.out
 
 
 @utils.in_thisdir
@@ -1872,60 +1828,55 @@ def test_search_check_scaled_bounds_more_than_maximum(runtmp):
 # explanation: you cannot downsample a scaled SBT to match a scaled
 # signature, so make sure that when you try such a search, it fails!
 # (you *can* downsample a signature to match an SBT.)
-def test_search_metagenome_downsample():
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+def test_search_metagenome_downsample(runtmp):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all']
-        cmd.extend(testdata_sigs)
-        cmd.extend(['-k', '21'])
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
 
-        status, out, err = utils.runscript('sourmash', cmd,
-                                           in_directory=location)
+    runtmp.sourmash(*cmd)
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
+    assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
 
-        cmd = 'search {} gcf_all -k 21 --scaled 100000'.format(query_sig)
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location, fail_ok=True)
-        assert status == -1
+    cmd = 'search {} gcf_all -k 21 --scaled 100000'.format(query_sig)
 
-        print(out)
-        print(err)
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('search', query_sig, 'gcf_all', '-k', '21', '--scaled', '100000')
 
-        assert "ERROR: cannot use 'gcf_all' for this query." in err
-        assert "search scaled value 100000 is less than database scaled value of 10000" in err
+    assert runtmp.last_result.status == -1
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "ERROR: cannot use 'gcf_all' for this query." in runtmp.last_result.err
+    assert "search scaled value 100000 is less than database scaled value of 10000" in runtmp.last_result.err
 
 
-def test_search_metagenome_downsample_containment():
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+def test_search_metagenome_downsample_containment(runtmp):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all']
-        cmd.extend(testdata_sigs)
-        cmd.extend(['-k', '21'])
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
 
-        status, out, err = utils.runscript('sourmash', cmd,
-                                           in_directory=location)
+    runtmp.sourmash(*cmd)
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
+    assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
 
-        cmd = 'search {} gcf_all -k 21 --scaled 100000 --containment'
-        cmd = cmd.format(query_sig)
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    runtmp.sourmash('search', query_sig, 'gcf_all', '-k', '21', '--scaled', '100000', '--containment')
 
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
-        assert '12 matches; showing first 3:' in out
+    assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in runtmp.last_result.out
+    assert '12 matches; showing first 3:' in runtmp.last_result.out
 
 
 @utils.in_tempdir
