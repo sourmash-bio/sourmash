@@ -1520,34 +1520,24 @@ def test_search_containment_s10_sbt_empty(runtmp):
 
 def test_search_max_containment_s10_sbt(runtmp):
     # check --max-containment for s10/s10-small
-    with utils.TempDirectory() as location:
-        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
-        q2 = utils.get_test_data('scaled/all.sbt.zip')
+    q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+    q2 = utils.get_test_data('scaled/all.sbt.zip')
 
-        runtmp.sourmash('search', q1, q2, '--max-containment')
-        # status, out, err = utils.runscript('sourmash',
-        #                                    ['search', q1, q2,
-        #                                     '--max-containment'],
-        #                                    in_directory=location)
-        print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
-        assert '3 matches' in runtmp.last_result.out
-        assert '100.0%       ../genome-s10-small.fa.gz' in runtmp.last_result.out
-        assert '100.0%       ../genome-s10.fa.gz' in runtmp.last_result.out
-        assert '100.0%       ../genome-s10+s11.fa.gz' in runtmp.last_result.out
+    runtmp.sourmash('search', q1, q2, '--max-containment')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '3 matches' in runtmp.last_result.out
+    assert '100.0%       ../genome-s10-small.fa.gz' in runtmp.last_result.out
+    assert '100.0%       ../genome-s10.fa.gz' in runtmp.last_result.out
+    assert '100.0%       ../genome-s10+s11.fa.gz' in runtmp.last_result.out
 
 
 def test_search_max_containment_s10_sbt_best_only(runtmp):
     # check --max-containment for s10/s10-small
-    # with utils.TempDirectory() as location:
     q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
     q2 = utils.get_test_data('scaled/all.sbt.zip')
 
     runtmp.sourmash('search', q1, q2, '--max-containment', '--best-only')
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['search', q1, q2,
-    #                                     '--max-containment',
-    #                                     '--best-only'],
-    #                                     in_directory=location, fail_ok=True)
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
@@ -1557,31 +1547,22 @@ def test_search_max_containment_s10_sbt_best_only(runtmp):
 
 def test_search_max_containment_s10_sbt_empty(runtmp):
     # check --max-containment for s10/s10-small at absurd scaled/empty mh.
-    # with utils.TempDirectory() as location:
     q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
     q2 = utils.get_test_data('scaled/all.sbt.zip')
 
     runtmp.sourmash('search', q1, q2, '--scaled', '1e7', '--max-containment')
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['search', q1, q2,
-    #                                     '--scaled', '1e7',
-    #                                     '--max-containment'],
-    #                                     in_directory=location)
+
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
     assert '0 matches' in runtmp.last_result.out
 
 
 def test_search_containment_s10_lca(runtmp):
     # check --containment for s10/s10-small
-    # with utils.TempDirectory() as location:
     q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
     q2 = utils.get_test_data('scaled/all.lca.json')
 
     runtmp.sourmash('search', q1, q2, '--containment')
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['search', q1, q2,
-    #                                     '--containment'],
-    #                                     in_directory=location)
+
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
     assert '3 matches' in runtmp.last_result.out
     assert '100.0%       455c2f95' in runtmp.last_result.out
@@ -1591,15 +1572,11 @@ def test_search_containment_s10_lca(runtmp):
 
 def test_search_max_containment_s10_lca(runtmp):
     # check --max-containment for s10/s10-small
-    # with utils.TempDirectory() as location:
     q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
     q2 = utils.get_test_data('scaled/all.lca.json')
 
     runtmp.sourmash('search', q1, q2, '--max-containment')
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['search', q1, q2,
-    #                                     '--max-containment'],
-    #                                     in_directory=location)
+
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
     assert '3 matches' in runtmp.last_result.out
     assert '100.0%       455c2f95' in runtmp.last_result.out
@@ -1632,106 +1609,68 @@ def test_search_gzip():
         assert '93.0%' in out
 
 
-def test_search_2():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        testdata3 = utils.get_test_data('short3.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2,
-                                            testdata3],
-                                           in_directory=location)
+def test_search_2(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    testdata3 = utils.get_test_data('short3.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
-                                            'short2.fa.sig', 'short3.fa.sig'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '2 matches' in out
-        assert '93.0%' in out
-        assert '89.6%' in out
+    runtmp.sourmash('sketch','dna','-p','k=31,num=500', testdata1, testdata2, testdata3)
+   
+    runtmp.sourmash('search', 'short.fa.sig', 'short2.fa.sig', 'short3.fa.sig')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '2 matches' in runtmp.last_result.out
+    assert '93.0%' in runtmp.last_result.out
+    assert '89.6%' in runtmp.last_result.out
 
 
-def test_search_3():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        testdata3 = utils.get_test_data('short3.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2,
-                                            testdata3],
-                                           in_directory=location)
+def test_search_3(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    testdata3 = utils.get_test_data('short3.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', '-n', '1',
-                                            'short.fa.sig',
-                                            'short2.fa.sig', 'short3.fa.sig'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '2 matches; showing first 1' in out
+    runtmp.sourmash('sketch','dna','-p','k=31,num=500', testdata1, testdata2, testdata3)
+
+    runtmp.sourmash('search', '-n', '1', 'short.fa.sig', 'short2.fa.sig', 'short3.fa.sig')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '2 matches; showing first 1' in runtmp.last_result.out
 
 
-def test_search_4():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        testdata3 = utils.get_test_data('short3.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2,
-                                            testdata3],
-                                           in_directory=location)
+def test_search_4(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    testdata3 = utils.get_test_data('short3.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', '-n', '0',
-                                            'short.fa.sig',
-                                            'short2.fa.sig', 'short3.fa.sig'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '2 matches:' in out
-        assert 'short2.fa' in out
-        assert 'short3.fa' in out
+    runtmp.sourmash('sketch','dna','-p','k=31,num=500', testdata1, testdata2, testdata3)
+
+    runtmp.sourmash('search', '-n', '0', 'short.fa.sig', 'short2.fa.sig', 'short3.fa.sig')
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '2 matches:' in runtmp.last_result.out
+    assert 'short2.fa' in runtmp.last_result.out
+    assert 'short3.fa' in runtmp.last_result.out
 
 
-@utils.in_tempdir
-def test_index_check_scaled_bounds_negative(c):
-    with utils.TempDirectory() as location:
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig',
-                                            '-k', '31', '--scaled', '-5',
-                                            '--dna'],
-                                           in_directory=location, fail_ok=True)
+def test_index_check_scaled_bounds_negative(runtmp):
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('index', 'zzz', 'short.fa.sig', 'short2.fa.sig', '-k', '31', '--scaled', '-5', '--dna')
 
-        assert "ERROR: --scaled value must be positive" in err
+    assert "ERROR: --scaled value must be positive" in runtmp.last_result.err
 
 
-@utils.in_tempdir
-def test_index_check_scaled_bounds_less_than_minimum(c):
-    with utils.TempDirectory() as location:
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig',
-                                            '-k', '31', '--scaled', '50',
-                                            '--dna'],
-                                           in_directory=location, fail_ok=True)
+def test_index_check_scaled_bounds_less_than_minimum(runtmp):
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('index', 'zzz', 'short.fa.sig', 'short2.fa.sig', '-k', '31', '--scaled', '50', '--dna')
 
-        assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
+    assert "WARNING: --scaled value should be >= 100. Continuing anyway." in runtmp.last_result.err
 
 
-@utils.in_tempdir
-def test_index_check_scaled_bounds_more_than_maximum(c):
-    with utils.TempDirectory() as location:
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig',
-                                            '-k', '31', '--scaled', '1e9',
-                                            '--dna'],
-                                           in_directory=location, fail_ok=True)
+def test_index_check_scaled_bounds_more_than_maximum(runtmp):
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('index', 'zzz', 'short.fa.sig', 'short2.fa.sig', '-k', '31', '--scaled', '1e9', '--dna')
 
-        assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
+    assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in runtmp.last_result.err
 
 
 @utils.in_tempdir
