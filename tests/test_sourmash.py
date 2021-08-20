@@ -2231,33 +2231,38 @@ def test_do_sourmash_index_traverse_force(c):
     assert 'short2.fa' in out
 
 
-def test_do_sourmash_index_sparseness():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna','-p','k=31,num=500', testdata1, testdata2],
-                                           in_directory=location)
+def test_do_sourmash_index_sparseness(runtmp):
+    # with utils.TempDirectory() as location:
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz.sbt.json', '.',
-                                            '--sparseness', '1.0'],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna','-p','k=31,num=500', testdata1, testdata2)
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['sketch','dna','-p','k=31,num=500', testdata1, testdata2],
+    #                                     in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
-        assert 'loaded 2 sigs; saving SBT under' in err
+    runtmp.sourmash('index', '-k', '31', 'zzz.sbt.json', '.', '--sparseness', '1.0')
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['index', '-k', '31', 'zzz.sbt.json', '.',
+    #                                     '--sparseness', '1.0'],
+    #                                     in_directory=location)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
-                                            'zzz.sbt.json'],
-                                           in_directory=location)
-        print(out)
+    assert os.path.exists(runtmp.output('zzz.sbt.json'))
+    assert 'loaded 2 sigs; saving SBT under' in runtmp.last_result.err
 
-        assert len(glob.glob(os.path.join(location, '.sbt.zzz', '*'))) == 3
-        assert not glob.glob(os.path.join(location, '.sbt.zzz', '*internal*'))
+    runtmp.sourmash('search', 'short.fa.sig', 'zzz.sbt.json')
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['search', 'short.fa.sig',
+    #                                     'zzz.sbt.json'],
+    #                                     in_directory=location)
 
-        assert 'short.fa' in out
-        assert 'short2.fa' in out
+    print(runtmp.last_result.out)
+
+    assert len(glob.glob(runtmp.output('.sbt.zzz', '*'))) == 3
+    assert not glob.glob(runtmp.output('.sbt.zzz', '*internal*'))
+
+    assert 'short.fa' in runtmp.last_result.out
+    assert 'short2.fa' in runtmp.last_result.out
 
 
 def test_do_sourmash_sbt_combine():
@@ -2295,173 +2300,148 @@ def test_do_sourmash_sbt_combine():
         assert out.count(filename) == 1
 
 
-def test_do_sourmash_index_append():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        testdata3 = utils.get_test_data('short3.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna', '-p', 'k=31,num=500', testdata1,
-                                            testdata2, testdata3],
-                                           in_directory=location)
+def test_do_sourmash_index_append(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    testdata3 = utils.get_test_data('short3.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            'short.fa.sig', 'short2.fa.sig'],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna', '-p', 'k=31,num=500', testdata1, testdata2, testdata3)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    runtmp.sourmash('index', '-k', '31', 'zzz', 'short.fa.sig', 'short2.fa.sig')
 
-        sbt_name = os.path.join(location, 'zzz',)
-        sig_loc = os.path.join(location, 'short3.fa.sig')
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', sig_loc, sbt_name])
-        print(out)
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        assert 'short.fa' in out
-        assert 'short2.fa' in out
-        assert 'short3.fa' not in out
+    sbt_name = runtmp.output('zzz',)
+    sig_loc = runtmp.output('short3.fa.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', '--append',
-                                            'zzz',
-                                            'short3.fa.sig'],
-                                           in_directory=location)
+    runtmp.sourmash('search', sig_loc, sbt_name)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    print(runtmp.last_result.out)
 
-        sbt_name = os.path.join(location, 'zzz',)
-        sig_loc = os.path.join(location, 'short3.fa.sig')
-        status, out, err = utils.runscript('sourmash',
-                                           ['search',
-                                            '--threshold', '0.95',
-                                            sig_loc, sbt_name])
-        print(out)
+    assert 'short.fa' in runtmp.last_result.out
+    assert 'short2.fa' in runtmp.last_result.out
+    assert 'short3.fa' not in runtmp.last_result.out
 
-        assert 'short.fa' not in out
-        assert 'short2.fa' in out
-        assert 'short3.fa' in out
+    runtmp.sourmash('index', '-k', '31', '--append', 'zzz', 'short3.fa.sig')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    sbt_name = runtmp.output('zzz',)
+    sig_loc = runtmp.output('short3.fa.sig')
+
+    runtmp.sourmash('search', '--threshold', '0.95', sig_loc, sbt_name)
+
+    print(runtmp.last_result.out)
+
+    assert 'short.fa' not in runtmp.last_result.out
+    assert 'short2.fa' in runtmp.last_result.out
+    assert 'short3.fa' in runtmp.last_result.out
 
 
-def test_do_sourmash_sbt_search_otherdir():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna', '-p', 'k=31,num=500', testdata1,
-                                            testdata2],
-                                           in_directory=location)
+def test_do_sourmash_sbt_search_otherdir(runtmp):
+    # with utils.TempDirectory() as location:
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'xxx/zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna', '-p', 'k=31,num=500', testdata1, testdata2)
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['sketch','dna', '-p', 'k=31,num=500', testdata1,
+    #                                     testdata2],
+    #                                     in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'xxx', 'zzz.sbt.zip'))
+    runtmp.sourmash('index', '-k', '31', 'xxx/zzz', 'short.fa.sig', 'short2.fa.sig')
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['index', '-k', '31', 'xxx/zzz',
+    #                                     'short.fa.sig',
+    #                                     'short2.fa.sig'],
+    #                                     in_directory=location)
 
-        sbt_name = os.path.join(location, 'xxx', 'zzz',)
-        sig_loc = os.path.join(location, 'short.fa.sig')
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', sig_loc, sbt_name])
-        print(out)
+    assert os.path.exists(runtmp.output('xxx', 'zzz.sbt.zip'))
 
-        assert 'short.fa' in out
-        assert 'short2.fa' in out
+    sbt_name = runtmp.output('xxx', 'zzz',)
+    sig_loc = runtmp.output('short.fa.sig')
+
+    runtmp.sourmash('search', sig_loc, sbt_name)
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['search', sig_loc, sbt_name])
+
+    print(runtmp.last_result.out)
+
+    assert 'short.fa' in runtmp.last_result.out
+    assert 'short2.fa' in runtmp.last_result.out
 
 
-def test_do_sourmash_sbt_search_scaled_vs_num_1():
+def test_do_sourmash_sbt_search_scaled_vs_num_1(runtmp):
     # should not work: scaled query against num tree
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna', '-p', 'k=31,num=500', testdata1],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna', '-p', 'k=31,num=500', testdata1)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna', '-p', 'scaled=1000', testdata2],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna', '-p', 'scaled=1000', testdata2)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            'short.fa.sig'],
-                                           in_directory=location)
+    runtmp.sourmash('index', '-k', '31', 'zzz', 'short.fa.sig')
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        sbt_name = os.path.join(location, 'zzz',)
-        sig_loc = os.path.join(location, 'short2.fa.sig')
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', sig_loc, sbt_name],
-                                           fail_ok=True)
+    sbt_name = runtmp.output('zzz',)
+    sig_loc = runtmp.output('short2.fa.sig')
 
-        assert status == -1
-        print(out)
-        print(err)
-        assert "ERROR: cannot use '" in err
-        assert "this database was created with 'num' MinHash sketches, not 'scaled'" in err
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('search', sig_loc, sbt_name)
+
+    assert runtmp.last_result.status == -1
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert "ERROR: cannot use '" in runtmp.last_result.err
+    assert "this database was created with 'num' MinHash sketches, not 'scaled'" in runtmp.last_result.err
 
 
-def test_do_sourmash_sbt_search_scaled_vs_num_2():
+def test_do_sourmash_sbt_search_scaled_vs_num_2(runtmp):
     # should not work: num query against scaled tree
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna', '-p', 'k=31,num=500', testdata1],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna', '-p', 'k=31,num=500', testdata1)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna', '-p', 'scaled=1000', testdata2],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna', '-p', 'scaled=1000', testdata2)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
+    runtmp.sourmash('index', '-k', '31', 'zzz', 'short2.fa.sig')
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        sbt_name = os.path.join(location, 'zzz',)
-        sig_loc = os.path.join(location, 'short.fa.sig')
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', sig_loc, sbt_name],
-                                           fail_ok=True)
+    sbt_name = runtmp.output('zzz',)
+    sig_loc = runtmp.output('short.fa.sig')
 
-        assert status == -1
-        print(out)
-        print(err)
-        assert "ERROR: cannot use '" in err
-        assert "this database was created with 'scaled' MinHash sketches, not 'num'" in err
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('search', sig_loc, sbt_name)
+
+    assert runtmp.last_result.status == -1
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert "ERROR: cannot use '" in runtmp.last_result.err
+    assert "this database was created with 'scaled' MinHash sketches, not 'num'" in runtmp.last_result.err
 
 
-def test_do_sourmash_sbt_search_scaled_vs_num_3():
+def test_do_sourmash_sbt_search_scaled_vs_num_3(runtmp):
     # should not work: scaled query against num signature
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna', '-p', 'k=31,num=500', testdata1],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna', '-p', 'k=31,num=500', testdata1)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna', '-p', 'scaled=1000', testdata2],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna', '-p', 'scaled=1000', testdata2)
 
-        sig_loc = os.path.join(location, 'short.fa.sig')
-        sig_loc2 = os.path.join(location, 'short2.fa.sig')
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', sig_loc, sig_loc2],
-                                           fail_ok=True)
+    sig_loc = runtmp.output('short.fa.sig')
+    sig_loc2 = runtmp.output('short2.fa.sig')
 
-        assert status == -1
-        print(out)
-        print(err)
-        assert "no compatible signatures found in " in err
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('search', sig_loc, sig_loc2)
+
+    assert runtmp.last_result.status == -1
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert "no compatible signatures found in " in runtmp.last_result.err
 
 
 def test_do_sourmash_sbt_search_scaled_vs_num_4():
