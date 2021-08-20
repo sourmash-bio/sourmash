@@ -2444,30 +2444,25 @@ def test_do_sourmash_sbt_search_scaled_vs_num_3(runtmp):
     assert "no compatible signatures found in " in runtmp.last_result.err
 
 
-def test_do_sourmash_sbt_search_scaled_vs_num_4():
+def test_do_sourmash_sbt_search_scaled_vs_num_4(runtmp):
     # should not work: num query against scaled signature
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna', '-p', 'k=31,num=500', testdata1],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna', '-p', 'k=31,num=500', testdata1)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna', '-p', 'scaled=1000', testdata2],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna', '-p', 'scaled=1000', testdata2)
 
-        sig_loc = os.path.join(location, 'short.fa.sig')
-        sig_loc2 = os.path.join(location, 'short2.fa.sig')
+    sig_loc = runtmp.output('short.fa.sig')
+    sig_loc2 = runtmp.output('short2.fa.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', sig_loc2, sig_loc],
-                                           fail_ok=True)
-        assert status == -1
-        print(out)
-        print(err)
-        assert "no compatible signatures found in " in err
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('search', sig_loc2, sig_loc)
+
+    assert runtmp.last_result.status == -1
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert "no compatible signatures found in " in runtmp.last_result.err
 
 
 def test_do_sourmash_check_search_vs_actual_similarity():
@@ -2516,194 +2511,150 @@ def test_do_sourmash_check_sbt_filenames():
             assert f in sig_md5s
 
 
-def test_do_sourmash_sbt_search_bestonly():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna', '-p', 'k=31,num=500', testdata1, testdata2],
-                                           in_directory=location)
+def test_do_sourmash_sbt_search_bestonly(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna', '-p', 'k=31,num=500', testdata1, testdata2)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    runtmp.sourmash('index', '-k', '31', 'zzz', 'short.fa.sig', 'short2.fa.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', '--best-only',
-                                            'short.fa.sig', 'zzz'],
-                                           in_directory=location)
-        print(out)
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        assert 'short.fa' in out
+    runtmp.sourmash('search', '--best-only', 'short.fa.sig', 'zzz')
+
+    print(runtmp.last_result.out)
+
+    assert 'short.fa' in runtmp.last_result.out
 
 
-def test_do_sourmash_sbt_search_bestonly_scaled():
+def test_do_sourmash_sbt_search_bestonly_scaled(runtmp):
     # as currently implemented, the query signature will be automatically
     # downsampled to match the tree.
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna', '-p', 'scaled=1', testdata1, testdata2],
-                                           in_directory=location)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig',
-                                            '--scaled', '10'],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna', '-p', 'scaled=1', testdata1, testdata2)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    runtmp.sourmash('index', '-k', '31', 'zzz', 'short.fa.sig', 'short2.fa.sig', '--scaled', '10')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', '--best-only',
-                                            'short.fa.sig', 'zzz'],
-                                           in_directory=location)
-        print(out)
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        assert 'short.fa' in out
+    runtmp.sourmash('search', '--best-only', 'short.fa.sig', 'zzz')
+
+    print(runtmp.last_result.out)
+
+    assert 'short.fa' in runtmp.last_result.out
 
 
-def test_sbt_search_order_dependence():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('genome-s10.fa.gz')
-        testdata2 = utils.get_test_data('genome-s11.fa.gz')
-        testdata3 = utils.get_test_data('genome-s12.fa.gz')
-        testdata4 = utils.get_test_data('genome-s10+s11.fa.gz')
+def test_sbt_search_order_dependence(runtmp):
+    testdata1 = utils.get_test_data('genome-s10.fa.gz')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz')
+    testdata4 = utils.get_test_data('genome-s10+s11.fa.gz')
 
-        cmd = 'sketch dna -p k=21,scaled=10000 -p k=31,scaled=10000 {} {} {} {}'
-        cmd = cmd.format(testdata1, testdata2, testdata3, testdata4)
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=21,scaled=10000', '-p', 'k=31,scaled=10000', testdata1, testdata2, testdata3, testdata4)
 
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    runtmp.sourmash('index', '-k', '21', '134', 'genome-s10+s11.fa.gz.sig', 'genome-s11.fa.gz.sig', 'genome-s12.fa.gz.sig')
 
-        cmd = 'index -k 21 134 genome-s10+s11.fa.gz.sig genome-s11.fa.gz.sig genome-s12.fa.gz.sig'
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    runtmp.sourmash('search', '-k', '21', 'genome-s11.fa.gz.sig', '134', '--best-only', '-k', '21', '--dna')
 
-        cmd = 'search -k 21 genome-s11.fa.gz.sig 134 --best-only -k 21 --dna'
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
-
-        print(out)
-        print(err)
-        assert '100.0%' in out
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert '100.0%' in runtmp.last_result.out
 
 
-def test_sbt_search_order_dependence_2():
+def test_sbt_search_order_dependence_2(runtmp):
     # *should* return the same result as test_sbt_search_order_dependence,
     # but does not due to a bug.
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('genome-s10.fa.gz')
-        testdata2 = utils.get_test_data('genome-s11.fa.gz')
-        testdata3 = utils.get_test_data('genome-s12.fa.gz')
-        testdata4 = utils.get_test_data('genome-s10+s11.fa.gz')
+    testdata1 = utils.get_test_data('genome-s10.fa.gz')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz')
+    testdata4 = utils.get_test_data('genome-s10+s11.fa.gz')
 
-        cmd = 'sketch dna -p k=21,scaled=10000 -p k=31,scaled=10000 {} {} {} {}'
-        cmd = cmd.format(testdata1, testdata2, testdata3, testdata4)
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=21,scaled=10000', '-p', 'k=31,scaled=10000', testdata1, testdata2, testdata3, testdata4)
 
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    runtmp.sourmash('index', '-k', '21', '314', 'genome-s11.fa.gz.sig', 'genome-s10+s11.fa.gz.sig', 'genome-s12.fa.gz.sig')
 
-        cmd = 'index -k 21 314 genome-s11.fa.gz.sig genome-s10+s11.fa.gz.sig genome-s12.fa.gz.sig'
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    runtmp.sourmash('search', '-k', '21', 'genome-s11.fa.gz.sig', '314', '--best-only', '--dna')
 
-        cmd = 'search -k 21 genome-s11.fa.gz.sig 314 --best-only --dna'
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
-
-        print(out)
-        print(err)
-        assert '100.0%' in out
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert '100.0%' in runtmp.last_result.out
 
 
-def test_compare_with_abundance_1():
-    with utils.TempDirectory() as location:
-        # create two signatures
-        E1 = MinHash(ksize=5, n=5, is_protein=False,
-                     track_abundance=True)
-        E2 = MinHash(ksize=5, n=5, is_protein=False,
-                     track_abundance=True)
+def test_compare_with_abundance_1(runtmp):
+    # create two signatures
+    E1 = MinHash(ksize=5, n=5, is_protein=False,
+                    track_abundance=True)
+    E2 = MinHash(ksize=5, n=5, is_protein=False,
+                    track_abundance=True)
 
-        E1.add_sequence('ATGGA')
-        E2.add_sequence('ATGGA')
+    E1.add_sequence('ATGGA')
+    E2.add_sequence('ATGGA')
 
-        s1 = signature.SourmashSignature(E1, filename='e1', name='e1')
-        s2 = signature.SourmashSignature(E2, filename='e2', name='e2')
+    s1 = signature.SourmashSignature(E1, filename='e1', name='e1')
+    s2 = signature.SourmashSignature(E2, filename='e2', name='e2')
 
-        signature.save_signatures([s1],
-                                  open(os.path.join(location, 'e1.sig'), 'w'))
-        signature.save_signatures([s2],
-                                  open(os.path.join(location, 'e2.sig'), 'w'))
+    signature.save_signatures([s1],
+                                open(runtmp.output('e1.sig'), 'w'))
+    signature.save_signatures([s2],
+                                open(runtmp.output('e2.sig'), 'w'))
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'e1.sig', 'e2.sig',
-                                            '-k', '5'],
-                                           in_directory=location)
-        assert '100.0%' in out
+    runtmp.sourmash('search', 'e1.sig', 'e2.sig', '-k', '5')
+
+    assert '100.0%' in runtmp.last_result.out
 
 
-def test_compare_with_abundance_2():
-    with utils.TempDirectory() as location:
-        # create two signatures
-        E1 = MinHash(ksize=5, n=5, is_protein=False,
-                     track_abundance=True)
-        E2 = MinHash(ksize=5, n=5, is_protein=False,
-                     track_abundance=True)
+def test_compare_with_abundance_2(runtmp):
+    # create two signatures
+    E1 = MinHash(ksize=5, n=5, is_protein=False,
+                    track_abundance=True)
+    E2 = MinHash(ksize=5, n=5, is_protein=False,
+                    track_abundance=True)
 
-        E1.add_sequence('ATGGA')
+    E1.add_sequence('ATGGA')
 
-        E1.add_sequence('ATGGA')
-        E2.add_sequence('ATGGA')
+    E1.add_sequence('ATGGA')
+    E2.add_sequence('ATGGA')
 
-        s1 = signature.SourmashSignature(E1, filename='e1', name='e1')
-        s2 = signature.SourmashSignature(E2, filename='e2', name='e2')
+    s1 = signature.SourmashSignature(E1, filename='e1', name='e1')
+    s2 = signature.SourmashSignature(E2, filename='e2', name='e2')
 
-        signature.save_signatures([s1],
-                                  open(os.path.join(location, 'e1.sig'), 'w'))
-        signature.save_signatures([s2],
-                                  open(os.path.join(location, 'e2.sig'), 'w'))
+    signature.save_signatures([s1],
+                                open(runtmp.output('e1.sig'), 'w'))
+    signature.save_signatures([s2],
+                                open(runtmp.output('e2.sig'), 'w'))
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'e1.sig', 'e2.sig',
-                                            '-k', '5'],
-                                           in_directory=location)
-        assert '100.0%' in out
+    runtmp.sourmash('search', 'e1.sig', 'e2.sig', '-k', '5')
+
+    assert '100.0%' in runtmp.last_result.out
 
 
-def test_compare_with_abundance_3():
-    with utils.TempDirectory() as location:
-        # create two signatures
-        E1 = MinHash(ksize=5, n=5, is_protein=False,
-                     track_abundance=True)
-        E2 = MinHash(ksize=5, n=5, is_protein=False,
-                     track_abundance=True)
+def test_compare_with_abundance_3(runtmp):
+    # create two signatures
+    E1 = MinHash(ksize=5, n=5, is_protein=False,
+                    track_abundance=True)
+    E2 = MinHash(ksize=5, n=5, is_protein=False,
+                    track_abundance=True)
 
-        E1.add_sequence('ATGGA')
-        E1.add_sequence('GGACA')
+    E1.add_sequence('ATGGA')
+    E1.add_sequence('GGACA')
 
-        E1.add_sequence('ATGGA')
-        E2.add_sequence('ATGGA')
+    E1.add_sequence('ATGGA')
+    E2.add_sequence('ATGGA')
 
-        s1 = signature.SourmashSignature(E1, filename='e1', name='e1')
-        s2 = signature.SourmashSignature(E2, filename='e2', name='e2')
+    s1 = signature.SourmashSignature(E1, filename='e1', name='e1')
+    s2 = signature.SourmashSignature(E2, filename='e2', name='e2')
 
-        signature.save_signatures([s1],
-                                  open(os.path.join(location, 'e1.sig'), 'w'))
-        signature.save_signatures([s2],
-                                  open(os.path.join(location, 'e2.sig'), 'w'))
+    signature.save_signatures([s1],
+                                open(runtmp.output('e1.sig'), 'w'))
+    signature.save_signatures([s2],
+                                open(runtmp.output('e2.sig'), 'w'))
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'e1.sig', 'e2.sig',
-                                            '-k', '5'],
-                                           in_directory=location)
-        assert '70.5%' in out
+    runtmp.sourmash('search', 'e1.sig', 'e2.sig', '-k', '5')
+
+    assert '70.5%' in runtmp.last_result.out
 
 
 def test_compare_with_picklist(runtmp):
