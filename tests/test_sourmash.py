@@ -644,68 +644,50 @@ def test_do_plot_comparison_4_fail_not_distance(c):
     assert c.last_result.status != 0
 
 
-def test_plot_override_labeltext():
-    with utils.TempDirectory() as location:
+def test_plot_override_labeltext(runtmp):
         testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
         testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
         testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
         testdata4 = utils.get_test_data('genome-s10+s11.sig')
-        inp_sigs = [testdata1, testdata2, testdata3, testdata4]
 
-        # runtmp.sourmash('compare', inp_sigs, '-o', 'cmp', '-k', '21', '--dna')
-        status, out, err = utils.runscript('sourmash',
-                                            ['compare'] + inp_sigs +
-                                            ['-o', 'cmp', '-k', '21', '--dna'],
-                                            in_directory=location)
+        runtmp.run_sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna')
 
-        with open(os.path.join(location, 'new.labels.txt'), 'wt') as fp:
+        with open(runtmp.output('new.labels.txt'), 'wt') as fp:
             fp.write('a\nb\nc\nd\n')
 
-        # runtmp.sourmash('plot', 'cmp', '--labeltext', 'new.labels.txt')
-        status, out, err = utils.runscript('sourmash',
-                                            ['plot', 'cmp',
-                                            '--labeltext', 'new.labels.txt'],
-                                            in_directory=location)
+        runtmp.sourmash('plot', 'cmp', '--labeltext', 'new.labels.txt')
 
-        print(out)
+        print(runtmp.last_result.out)
 
-        assert 'loading labels from new.labels.txt' in err
+        assert 'loading labels from new.labels.txt' in runtmp.last_result.err
 
         expected = """\
 0\ta
 1\tb
 2\tc
 3\td"""
-        assert expected in out
+        assert expected in runtmp.last_result.out
 
 
-def test_plot_override_labeltext_fail():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
-        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
-        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
-        testdata4 = utils.get_test_data('genome-s10+s11.sig')
-        inp_sigs = [testdata1, testdata2, testdata3, testdata4]
+def test_plot_override_labeltext_fail(runtmp):
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata4 = utils.get_test_data('genome-s10+s11.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare'] + inp_sigs +
-                                           ['-o', 'cmp', '-k', '21', '--dna'],
-                                           in_directory=location)
+    runtmp.sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna')
 
-        with open(os.path.join(location, 'new.labels.txt'), 'wt') as fp:
-            fp.write('a\nb\nc\n')
+    with open(runtmp.output('new.labels.txt'), 'wt') as fp:
+        fp.write('a\nb\nc\n')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['plot', 'cmp',
-                                            '--labeltext', 'new.labels.txt'],
-                                           in_directory=location,
-                                           fail_ok=True)
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('plot', 'cmp', '--labeltext', 'new.labels.txt')
 
-        print(out)
-        print(err)
-        assert status != 0
-        assert 'loading labels from new.labels.txt' in err
-        assert '3 labels != matrix size, exiting' in err
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert runtmp.last_result.status != 0
+    assert 'loading labels from new.labels.txt' in runtmp.last_result.err
+    assert '3 labels != matrix size, exiting' in runtmp.last_result.err
 
 
 @utils.in_tempdir
@@ -735,58 +717,41 @@ def test_plot_reordered_labels_csv(c):
     assert files != header           # ...different order.
 
 
-def test_plot_subsample_1():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
-        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
-        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
-        testdata4 = utils.get_test_data('genome-s10+s11.sig')
-        inp_sigs = [testdata1, testdata2, testdata3, testdata4]
+def test_plot_subsample_1(runtmp):
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata4 = utils.get_test_data('genome-s10+s11.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare'] + inp_sigs +
-                                           ['-o', 'cmp', '-k', '21', '--dna'],
-                                           in_directory=location)
+    runtmp.sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['plot', 'cmp',
-                                            '--subsample', '3'],
-                                           in_directory=location)
+    runtmp.sourmash('plot', 'cmp', '--subsample', '3')
 
-        print(out)
+    print(runtmp.last_result.out)
 
-        expected = """\
+    expected = """\
 0\tgenome-s10+s11
 1\tgenome-s12
 2\tgenome-s10"""
-        assert expected in out
+    assert expected in runtmp.last_result.out
 
 
-def test_plot_subsample_2():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
-        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
-        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
-        testdata4 = utils.get_test_data('genome-s10+s11.sig')
-        inp_sigs = [testdata1, testdata2, testdata3, testdata4]
+def test_plot_subsample_2(runtmp):
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata4 = utils.get_test_data('genome-s10+s11.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare'] + inp_sigs +
-                                           ['-o', 'cmp', '-k', '21', '--dna'],
-                                           in_directory=location)
+    runtmp.sourmash('compare', testdata1, testdata2, testdata3, testdata4, '-o', 'cmp', '-k', '21', '--dna')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['plot', 'cmp',
-                                            '--subsample', '3',
-                                            '--subsample-seed=2'],
-                                           in_directory=location)
+    runtmp.sourmash('plot', 'cmp', '--subsample', '3', '--subsample-seed=2')
 
-        print(out)
-        expected = """\
+    print(runtmp.last_result.out)
+    expected = """\
 0\tgenome-s12
 1\tgenome-s10+s11
 2\tgenome-s11"""
-        assert expected in out
+    assert expected in runtmp.last_result.out
 
 
 @utils.in_tempdir
@@ -2232,72 +2197,67 @@ def test_do_sourmash_index_traverse_force(c):
 
 
 def test_do_sourmash_index_sparseness(runtmp):
-    # with utils.TempDirectory() as location:
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
     runtmp.sourmash('sketch','dna','-p','k=31,num=500', testdata1, testdata2)
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['sketch','dna','-p','k=31,num=500', testdata1, testdata2],
-    #                                     in_directory=location)
 
     runtmp.sourmash('index', '-k', '31', 'zzz.sbt.json', '.', '--sparseness', '1.0')
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['index', '-k', '31', 'zzz.sbt.json', '.',
-    #                                     '--sparseness', '1.0'],
-    #                                     in_directory=location)
 
     assert os.path.exists(runtmp.output('zzz.sbt.json'))
     assert 'loaded 2 sigs; saving SBT under' in runtmp.last_result.err
 
     runtmp.sourmash('search', 'short.fa.sig', 'zzz.sbt.json')
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['search', 'short.fa.sig',
-    #                                     'zzz.sbt.json'],
-    #                                     in_directory=location)
 
     print(runtmp.last_result.out)
 
-    assert len(glob.glob(runtmp.output('.sbt.zzz', '*'))) == 3
-    assert not glob.glob(runtmp.output('.sbt.zzz', '*internal*'))
+    assert len(glob.glob(runtmp.output('.sbt.zzz/*'))) == 3
+    assert not glob.glob(runtmp.output('.sbt.zzz/*internal*'))
 
     assert 'short.fa' in runtmp.last_result.out
     assert 'short2.fa' in runtmp.last_result.out
 
 
-def test_do_sourmash_sbt_combine():
-    with utils.TempDirectory() as location:
-        files = [utils.get_test_data(f) for f in utils.SIG_FILES]
+def test_do_sourmash_sbt_combine(runtmp):
+    # with utils.TempDirectory() as location:
+    files = [utils.get_test_data(f) for f in utils.SIG_FILES]
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz'] + files,
-                                           in_directory=location)
+    # with pytest.raises(SourmashCommandFailed):
+    runtmp.sourmash('index', '-k', '31', 'zzz', files)
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['index', '-k', '31', 'zzz'] + files,
+    #                                     in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sbt_combine', 'joined',
-                                            'zzz.sbt.zip', 'zzz.sbt.zip'],
-                                           in_directory=location)
+    runtmp.sourmash('sbt_combine', 'joined', 'zzz.sbt.zip', 'zzz.sbt.zip')
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['sbt_combine', 'joined',
+    #                                     'zzz.sbt.zip', 'zzz.sbt.zip'],
+    #                                     in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'joined.sbt.zip'))
+    assert os.path.exists(runtmp.output('joined.sbt.zip'))
 
-        filename = os.path.splitext(os.path.basename(utils.SIG_FILES[0]))[0]
+    filename = os.path.splitext(os.path.basename(utils.SIG_FILES[0]))[0]
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', files[0], 'zzz'],
-                                           in_directory=location)
-        print(out)
+    runtmp.sourmash('search', files[0], 'zzz')
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['search', files[0], 'zzz'],
+    #                                     in_directory=location)
 
-        # we get notification of signature loading, too - so notify + result.
-        assert out.count(filename) == 1
+    print(runtmp.last_result.out)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', files[0], 'joined'],
-                                           in_directory=location)
-        print(out)
+    # we get notification of signature loading, too - so notify + result.
+    assert runtmp.last_result.out.count(filename) == 1
 
-        assert out.count(filename) == 1
+    runtmp.sourmash('search', files[0], 'joined')
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['search', files[0], 'joined'],
+    #                                     in_directory=location)
+
+    print(runtmp.last_result.out)
+
+    assert runtmp.last_result.out.count(filename) == 1
 
 
 def test_do_sourmash_index_append(runtmp):
@@ -2339,31 +2299,19 @@ def test_do_sourmash_index_append(runtmp):
 
 
 def test_do_sourmash_sbt_search_otherdir(runtmp):
-    # with utils.TempDirectory() as location:
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
     runtmp.sourmash('sketch','dna', '-p', 'k=31,num=500', testdata1, testdata2)
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['sketch','dna', '-p', 'k=31,num=500', testdata1,
-    #                                     testdata2],
-    #                                     in_directory=location)
 
     runtmp.sourmash('index', '-k', '31', 'xxx/zzz', 'short.fa.sig', 'short2.fa.sig')
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['index', '-k', '31', 'xxx/zzz',
-    #                                     'short.fa.sig',
-    #                                     'short2.fa.sig'],
-    #                                     in_directory=location)
 
-    assert os.path.exists(runtmp.output('xxx', 'zzz.sbt.zip'))
+    assert os.path.exists(runtmp.output('xxx/zzz.sbt.zip'))
 
-    sbt_name = runtmp.output('xxx', 'zzz',)
+    sbt_name = runtmp.output('xxx/zzz',)
     sig_loc = runtmp.output('short.fa.sig')
 
     runtmp.sourmash('search', sig_loc, sbt_name)
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['search', sig_loc, sbt_name])
 
     print(runtmp.last_result.out)
 
