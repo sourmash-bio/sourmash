@@ -2648,89 +2648,63 @@ def test_compare_with_picklist_exclude(runtmp):
     assert "NC_011294.1 Sal..." in out
 
 
-def test_gather(linear_gather, prefetch_gather):
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-p', 'scaled=10', testdata1, testdata2],
-                                           in_directory=location)
+def test_gather(runtmp, linear_gather, prefetch_gather):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2],
-                                           in_directory=location)
+    runtmp.sourmash('sketch', 'dna', '-p', 'scaled=10', testdata1, testdata2)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    runtmp.sourmash('index', '-k', '31', 'zzz', 'short.fa.sig', 'short2.fa.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather',
-                                            'query.fa.sig', 'zzz', '-o',
-                                            'foo.csv', '--threshold-bp=1',
-                                            linear_gather, prefetch_gather],
-                                           in_directory=location)
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        print(out)
-        print(err)
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', '-o', 'foo.csv', '--threshold-bp=1', linear_gather, prefetch_gather)
 
-        assert '0.9 kbp      100.0%  100.0%' in out
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
 
 
-def test_gather_csv(linear_gather, prefetch_gather):
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna','-p','scaled=10', '--name-from-first', testdata1, testdata2],
-                                           in_directory=location)
+def test_gather_csv(runtmp, linear_gather, prefetch_gather):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', '--name-from-first', testdata2],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '--name-from-first', testdata1, testdata2)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', '--name-from-first', testdata2)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    runtmp.sourmash('index', '-k', '31', 'zzz', 'short.fa.sig', 'short2.fa.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather',
-                                            'query.fa.sig', 'zzz', '-o',
-                                            'foo.csv', '--threshold-bp=1',
-                                            linear_gather, prefetch_gather],
-                                           in_directory=location)
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        print(out)
-        print(err)
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', '-o', 'foo.csv', '--threshold-bp=1', linear_gather, prefetch_gather)
 
-        csv_file = os.path.join(location, 'foo.csv')
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        with open(csv_file) as fp:
-            reader = csv.DictReader(fp)
-            row = next(reader)
-            print(row)
-            assert float(row['intersect_bp']) == 910
-            assert float(row['unique_intersect_bp']) == 910
-            assert float(row['remaining_bp']) == 0
-            assert float(row['f_orig_query']) == 1.0
-            assert float(row['f_unique_to_query']) == 1.0
-            assert float(row['f_match']) == 1.0
-            assert row['filename'] == 'zzz'
-            assert row['name'] == 'tr1 4'
-            assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
-            assert row['gather_result_rank'] == '0'
-            assert row['query_filename'].endswith('short2.fa')
-            assert row['query_name'] == 'tr1 4'
-            assert row['query_md5'] == 'c9d5a795'
-            assert row['query_bp'] == '910'
+    csv_file = runtmp.output('foo.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert float(row['intersect_bp']) == 910
+        assert float(row['unique_intersect_bp']) == 910
+        assert float(row['remaining_bp']) == 0
+        assert float(row['f_orig_query']) == 1.0
+        assert float(row['f_unique_to_query']) == 1.0
+        assert float(row['f_match']) == 1.0
+        assert row['filename'] == 'zzz'
+        assert row['name'] == 'tr1 4'
+        assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
+        assert row['gather_result_rank'] == '0'
+        assert row['query_filename'].endswith('short2.fa')
+        assert row['query_name'] == 'tr1 4'
+        assert row['query_md5'] == 'c9d5a795'
+        assert row['query_bp'] == '910'
 
 
 def test_gather_abund_x_abund(runtmp, prefetch_gather, linear_gather):
@@ -2742,161 +2716,97 @@ def test_gather_abund_x_abund(runtmp, prefetch_gather, linear_gather):
     assert '2.5 Mbp       49.2%   48.3%       1.0    NC_011663.1' in runtmp.last_result.out
 
 
-def test_gather_multiple_sbts(prefetch_gather, linear_gather):
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna', '-p', 'scaled=10', testdata1, testdata2],
-                                           in_directory=location)
+def test_gather_multiple_sbts(runtmp, prefetch_gather, linear_gather):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna', '-p', 'scaled=10', testdata1, testdata2)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
-                                            'short.fa.sig',
-                                           '-k', '31'],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    runtmp.sourmash('index', 'zzz', 'short.fa.sig', '-k', '31')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz2',
-                                            'short2.fa.sig',
-                                             '-k', '31'],
-                                           in_directory=location)
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    runtmp.sourmash('index', 'zzz2', 'short2.fa.sig', '-k', '31')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather',
-                                            'query.fa.sig', 'zzz', 'zzz2',
-                                            '-o', 'foo.csv',
-                                            '--threshold-bp=1',
-                                            linear_gather, prefetch_gather],
-                                           in_directory=location)
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        print(out)
-        print(err)
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', 'zzz2', '-o', 'foo.csv', '--threshold-bp=1', linear_gather, prefetch_gather)
 
-        assert '0.9 kbp      100.0%  100.0%' in out
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
 
 
-def test_gather_multiple_sbts_save_prefetch(linear_gather):
+def test_gather_multiple_sbts_save_prefetch(runtmp, linear_gather):
     # test --save-prefetch with multiple databases
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna', '-p', 'scaled=10', testdata1, testdata2],
-                                           in_directory=location)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna', '-p', 'scaled=10', testdata1, testdata2)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
-                                            'short.fa.sig',
-                                           '-k', '31'],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    runtmp.sourmash('index', 'zzz', 'short.fa.sig', '-k', '31')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz2',
-                                            'short2.fa.sig',
-                                             '-k', '31'],
-                                           in_directory=location)
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    runtmp.sourmash('index', 'zzz2', 'short2.fa.sig', '-k', '31')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather',
-                                            'query.fa.sig', 'zzz', 'zzz2',
-                                            '-o', 'foo.csv',
-                                            '--save-prefetch', 'out.zip',
-                                            '--threshold-bp=1',
-                                            linear_gather],
-                                           in_directory=location)
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        print(out)
-        print(err)
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', 'zzz2', '-o', 'foo.csv', '--save-prefetch', 'out.zip', '--threshold-bp=1', linear_gather)
 
-        assert '0.9 kbp      100.0%  100.0%' in out
-        assert os.path.exists(os.path.join(location, 'out.zip'))
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
+    assert os.path.exists(runtmp.output('out.zip'))
 
 
-def test_gather_sbt_and_sigs(linear_gather, prefetch_gather):
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-p', 'k=31,scaled=10', testdata1, testdata2],
-                                           in_directory=location)
+def test_gather_sbt_and_sigs(runtmp, linear_gather, prefetch_gather):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2],
-                                           in_directory=location)
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=31,scaled=10', testdata1, testdata2)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            'short.fa.sig'],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    runtmp.sourmash('index', '-k', '31', 'zzz', 'short.fa.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather',
-                                            'query.fa.sig', 'zzz', 'short2.fa.sig',
-                                            '-o', 'foo.csv',
-                                            linear_gather, prefetch_gather,
-                                            '--threshold-bp=1'],
-                                           in_directory=location)
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        print(out)
-        print(err)
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', 'short2.fa.sig', '-o', 'foo.csv', linear_gather, prefetch_gather, '--threshold-bp=1')
 
-        assert '0.9 kbp      100.0%  100.0%' in out
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
 
 
-def test_gather_file_output(linear_gather, prefetch_gather):
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-p', 'scaled=10', testdata1, testdata2],
-                                           in_directory=location)
+def test_gather_file_output(runtmp, linear_gather, prefetch_gather):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2],
-                                           in_directory=location)
+    runtmp.sourmash('sketch', 'dna', '-p', 'scaled=10', testdata1, testdata2)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    runtmp.sourmash('index', '-k', '31', 'zzz', 'short.fa.sig', 'short2.fa.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather',
-                                            'query.fa.sig', 'zzz',
-                                            '--threshold-bp=500',
-                                            linear_gather, prefetch_gather,
-                                            '-o', 'foo.out'],
-                                           in_directory=location)
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        print(out)
-        print(err)
-        assert '0.9 kbp      100.0%  100.0%' in out
-        with open(os.path.join(location, 'foo.out')) as f:
-            output = f.read()
-            print((output,))
-            assert '910,1.0,1.0' in output
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', '--threshold-bp=500', linear_gather, prefetch_gather, '-o', 'foo.out')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
+    with open(runtmp.output('foo.out')) as f:
+        output = f.read()
+        print((output,))
+        assert '910,1.0,1.0' in output
 
 
 def test_gather_f_match_orig(runtmp, linear_gather, prefetch_gather):
@@ -2962,52 +2872,45 @@ def test_gather_f_match_orig(runtmp, linear_gather, prefetch_gather):
             remaining_mh.remove_many(match.minhash.hashes.keys())
 
 
-def test_gather_nomatch():
-    with utils.TempDirectory() as location:
-        testdata_query = utils.get_test_data(
-            'gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig')
-        testdata_match = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+def test_gather_nomatch(runtmp):
+    testdata_query = utils.get_test_data(
+        'gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig')
+    testdata_match = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
-        cmd = 'gather {} {}'.format(testdata_query, testdata_match)
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    runtmp.sourmash('gather', testdata_query, testdata_match)
 
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'found 0 matches total' in out
-        assert 'the recovered matches hit 0.0% of the query' in out
+    assert 'found 0 matches total' in runtmp.last_result.out
+    assert 'the recovered matches hit 0.0% of the query' in runtmp.last_result.out
 
 
-def test_gather_metagenome():
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+def test_gather_metagenome(runtmp):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all']
-        cmd.extend(testdata_sigs)
-        cmd.extend(['-k', '21'])
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
 
-        status, out, err = utils.runscript('sourmash', cmd,
-                                           in_directory=location)
+    runtmp.sourmash(*cmd)
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
+    assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
 
-        cmd = 'gather {} gcf_all -k 21 --threshold-bp=0'.format(query_sig)
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    runtmp.sourmash('gather', query_sig, 'gcf_all', '-k', '21', '--threshold-bp=0')
 
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'found 12 matches total' in out
-        assert 'the recovered matches hit 100.0% of the query' in out
-        assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                    'NC_003198.1 Salmonella enterica subsp...' in out))
-        assert all(('4.7 Mbp        0.5%    1.5%' in out,
-                    'NC_011294.1 Salmonella enterica subsp...' in out))
+    assert 'found 12 matches total' in runtmp.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
+    assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
+                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+    assert all(('4.7 Mbp        0.5%    1.5%' in runtmp.last_result.out,
+                'NC_011294.1 Salmonella enterica subsp...' in runtmp.last_result.out))
 
 
 @utils.in_tempdir
@@ -3043,67 +2946,58 @@ def test_gather_metagenome_num_results(c):
     assert '4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp' in out
 
 
-def test_gather_metagenome_threshold_bp():
+def test_gather_metagenome_threshold_bp(runtmp):
     # set a threshold on the gather output
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all']
-        cmd.extend(testdata_sigs)
-        cmd.extend(['-k', '21'])
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
 
-        status, out, err = utils.runscript('sourmash', cmd,
-                                           in_directory=location)
+    runtmp.sourmash(*cmd)
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
+    assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
 
-        cmd = 'gather {} gcf_all -k 21 --threshold-bp 2e6'.format(query_sig)
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    runtmp.sourmash('gather', query_sig, 'gcf_all', '-k',  '21', '--threshold-bp', '2e6')
 
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'found 1 matches total' in out
-        assert 'found less than 2.0 Mbp in common. => exiting' in err
-        assert 'the recovered matches hit 33.2% of the query' in out
-        assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                    'NC_003198.1 Salmonella enterica subsp...' in out))
+    assert 'found 1 matches total' in runtmp.last_result.out
+    assert 'found less than 2.0 Mbp in common. => exiting' in runtmp.last_result.err
+    assert 'the recovered matches hit 33.2% of the query' in runtmp.last_result.out
+    assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
+                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
 
 
-def test_multigather_metagenome():
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+def test_multigather_metagenome(runtmp):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all']
-        cmd.extend(testdata_sigs)
-        cmd.extend(['-k', '21'])
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
 
-        status, out, err = utils.runscript('sourmash', cmd,
-                                           in_directory=location)
+    runtmp.sourmash(*cmd)
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
+    assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
 
-        cmd = 'multigather --query {} --db gcf_all -k 21 --threshold-bp=0'.format(
-            query_sig)
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    runtmp.sourmash('multigather', '--query', query_sig,  '--db', 'gcf_all', '-k', '21', '--threshold-bp=0')
 
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'found 12 matches total' in out
-        assert 'the recovered matches hit 100.0% of the query' in out
-        assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                    'NC_003198.1 Salmonella enterica subsp...' in out))
-        assert all(('4.7 Mbp        0.5%    1.5%' in out,
-                    'NC_011294.1 Salmonella enterica subsp...' in out))
+    assert 'found 12 matches total' in runtmp.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
+    assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
+                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+    assert all(('4.7 Mbp        0.5%    1.5%' in runtmp.last_result.out,
+                'NC_011294.1 Salmonella enterica subsp...' in runtmp.last_result.out))
 
 
 @utils.in_tempdir
