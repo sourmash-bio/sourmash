@@ -3566,111 +3566,94 @@ def test_gather_metagenome_output_unassigned_nomatches_protein(runtmp, linear_ga
     assert y.minhash.moltype == "protein"
 
 
-def test_gather_check_scaled_bounds_negative(prefetch_gather, linear_gather):
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+def test_gather_check_scaled_bounds_negative(runtmp, prefetch_gather, linear_gather):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = 'gather {} {} {} gcf_all -k 21 --scaled -5 --threshold-bp 50000'.format(query_sig, prefetch_gather, linear_gather)
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('gather', query_sig, prefetch_gather, linear_gather, 'gcf_all', '-k', '21', '--scaled', '-5', '--threshold-bp', '50000')
 
-        status, out, err = utils.runscript('sourmash',
-                                        cmd.split(' '),
-                                        in_directory=location, fail_ok=True)
-
-        assert "ERROR: --scaled value must be positive" in err
+    assert "ERROR: --scaled value must be positive" in runtmp.last_result.err
 
 
-def test_gather_check_scaled_bounds_less_than_minimum(prefetch_gather, linear_gather):
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+def test_gather_check_scaled_bounds_less_than_minimum(runtmp, prefetch_gather, linear_gather):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = 'gather {} {} {} gcf_all -k 21 --scaled 50 --threshold-bp 50000'.format(query_sig, prefetch_gather, linear_gather)
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('gather', query_sig, prefetch_gather, linear_gather, 'gcf_all', '-k', '21', '--scaled', '50', '--threshold-bp', '50000')
 
-        status, out, err = utils.runscript('sourmash',
-                                           cmd.split(' '),
-                                           in_directory=location, fail_ok=True)
-
-        assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
+    assert "WARNING: --scaled value should be >= 100. Continuing anyway." in runtmp.last_result.err
 
 
-def test_gather_check_scaled_bounds_more_than_maximum(prefetch_gather, linear_gather):
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+def test_gather_check_scaled_bounds_more_than_maximum(runtmp, prefetch_gather, linear_gather):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = 'gather {} {} {} gcf_all -k 21 --scaled 1e9 --threshold-bp 50000'.format(query_sig, prefetch_gather, linear_gather)
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('gather', query_sig, prefetch_gather, linear_gather, '-k', '21', '--scaled', '1e9', '--threshold-bp', '50000')
 
-        status, out, err = utils.runscript('sourmash',
-                                           cmd.split(' '),
-                                           in_directory=location, fail_ok=True)
-    
-        assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
+    assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in runtmp.last_result.err
 
 
-def test_gather_metagenome_downsample(prefetch_gather, linear_gather):
+def test_gather_metagenome_downsample(runtmp, prefetch_gather, linear_gather):
     # downsample w/scaled of 100,000
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all']
-        cmd.extend(testdata_sigs)
-        cmd.extend(['-k', '21'])
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
 
-        status, out, err = utils.runscript('sourmash', cmd,
-                                           in_directory=location)
+    runtmp.sourmash(*cmd)
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
+    assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather', query_sig, 'gcf_all',
-                                            '-k', '21', '--scaled', '100000',
-                                            prefetch_gather, linear_gather,
-                                            '--threshold-bp', '50000'],
-                                           in_directory=location)
+    runtmp.sourmash('gather', query_sig, 'gcf_all', '-k', '21', '--scaled', '100000', prefetch_gather, linear_gather, '--threshold-bp', '50000')
 
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'found 11 matches total' in out
-        assert 'the recovered matches hit 100.0% of the query' in out
-        assert all(('5.2 Mbp       32.9%  100.0%' in out,
-                    'NC_003198.1' in out))
-        assert all(('4.1 Mbp        0.6%    2.4%' in out,
-                    '4.1 Mbp        4.4%   17.1%' in out))
+    assert 'found 11 matches total' in runtmp.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
+    assert all(('5.2 Mbp       32.9%  100.0%' in runtmp.last_result.out,
+                'NC_003198.1' in runtmp.last_result.out))
+    assert all(('4.1 Mbp        0.6%    2.4%' in runtmp.last_result.out,
+                '4.1 Mbp        4.4%   17.1%' in runtmp.last_result.out))
 
 
-def test_gather_query_downsample(linear_gather, prefetch_gather):
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
-        print(testdata_sigs)
+def test_gather_query_downsample(runtmp, linear_gather, prefetch_gather):
+    # with utils.TempDirectory() as location:
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+    print(testdata_sigs)
 
-        query_sig = utils.get_test_data('GCF_000006945.2-s500.sig')
+    query_sig = utils.get_test_data('GCF_000006945.2-s500.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather', '-k', '31',
-                                            linear_gather, prefetch_gather,
-                                            query_sig] + testdata_sigs,
-                                           in_directory=location)
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('gather', '-k', '31', linear_gather, prefetch_gather, query_sig, testdata_glob)
+    # status, out, err = utils.runscript('sourmash',
+    #                                     ['gather', '-k', '31',
+    #                                     linear_gather, prefetch_gather,
+    #                                     query_sig] + testdata_sigs,
+    #                                     in_directory=location)
 
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'loaded 12 signatures' in err
-        assert all(('4.9 Mbp      100.0%  100.0%' in out,
-                    'NC_003197.2' in out))
+    assert 'loaded 12 signatures' in runtmp.last_result.err
+    assert all(('4.9 Mbp      100.0%  100.0%' in runtmp.last_result.out,
+                'NC_003197.2' in runtmp.last_result.out))
 
-        assert 'WARNING: final scaled was 10000, vs query scaled of 500' in out
+    assert 'WARNING: final scaled was 10000, vs query scaled of 500' in runtmp.last_result.out
 
 
 def test_gather_query_downsample_explicit(linear_gather, prefetch_gather):
