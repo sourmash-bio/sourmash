@@ -2222,8 +2222,8 @@ def test_do_sourmash_sbt_combine(runtmp):
     # with utils.TempDirectory() as location:
     files = [utils.get_test_data(f) for f in utils.SIG_FILES]
 
-    # with pytest.raises(SourmashCommandFailed):
-    runtmp.sourmash('index', '-k', '31', 'zzz', files)
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('index', '-k', '31', 'zzz', ", ".join(files))
     # status, out, err = utils.runscript('sourmash',
     #                                     ['index', '-k', '31', 'zzz'] + files,
     #                                     in_directory=location)
@@ -3384,78 +3384,67 @@ def test_multigather_metagenome_query_from_file_with_addl_query(c):
     assert 'the recovered matches hit 100.0% of the query' in out
 
 
-def test_gather_metagenome_traverse(linear_gather, prefetch_gather):
-    with utils.TempDirectory() as location:
-        # set up a directory $location/gather that contains
-        # everything in the 'tests/test-data/gather' directory
-        # *except* the query sequence, which is 'combined.sig'.
-        testdata_dir = utils.get_test_data('gather')
-        copy_testdata = os.path.join(location, 'somesigs')
-        shutil.copytree(testdata_dir, copy_testdata)
-        os.unlink(os.path.join(copy_testdata, 'combined.sig'))
+def test_gather_metagenome_traverse(runtmp, linear_gather, prefetch_gather):
+    # set up a directory $location/gather that contains
+    # everything in the 'tests/test-data/gather' directory
+    # *except* the query sequence, which is 'combined.sig'.
+    testdata_dir = utils.get_test_data('gather')
+    copy_testdata = runtmp.output('somesigs')
+    shutil.copytree(testdata_dir, copy_testdata)
+    os.unlink(os.path.join(copy_testdata, 'combined.sig'))
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        # now, feed in the new directory --
-        cmd = 'gather {} {} -k 21 --threshold-bp=0 {} {}'
-        cmd = cmd.format(query_sig, copy_testdata, linear_gather,
-                         prefetch_gather)
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    # now, feed in the new directory --
+    runtmp.sourmash('gather', query_sig, copy_testdata, '-k', '21', '--threshold-bp=0', linear_gather, prefetch_gather)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'found 12 matches total' in out
-        assert 'the recovered matches hit 100.0% of the query' in out
-        assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                    'NC_003198.1 Salmonella enterica subsp...' in out))
-        assert all(('4.7 Mbp        0.5%    1.5%' in out,
-                    'NC_011294.1 Salmonella enterica subsp...' in out))
+    assert 'found 12 matches total' in runtmp.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
+    assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
+                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+    assert all(('4.7 Mbp        0.5%    1.5%' in runtmp.last_result.out,
+                'NC_011294.1 Salmonella enterica subsp...' in runtmp.last_result.out))
 
 
-def test_gather_metagenome_traverse_check_csv(linear_gather, prefetch_gather):
+def test_gather_metagenome_traverse_check_csv(runtmp, linear_gather, prefetch_gather):
     # this test confirms that the CSV 'filename' output for signatures loaded
     # via directory traversal properly contains the actual path to the
     # signature file from which the signature was loaded.
-    with utils.TempDirectory() as location:
-        # set up a directory $location/gather that contains
-        # everything in the 'tests/test-data/gather' directory
-        # *except* the query sequence, which is 'combined.sig'.
-        testdata_dir = utils.get_test_data('gather')
-        copy_testdata = os.path.join(location, 'somesigs')
-        shutil.copytree(testdata_dir, copy_testdata)
-        os.unlink(os.path.join(copy_testdata, 'combined.sig'))
+    # set up a directory $location/gather that contains
+    # everything in the 'tests/test-data/gather' directory
+    # *except* the query sequence, which is 'combined.sig'.
+    testdata_dir = utils.get_test_data('gather')
+    copy_testdata = runtmp.output('somesigs')
+    shutil.copytree(testdata_dir, copy_testdata)
+    os.unlink(os.path.join(copy_testdata, 'combined.sig'))
 
-        query_sig = utils.get_test_data('gather/combined.sig')
-        out_csv = os.path.join(location, 'out.csv')
+    query_sig = utils.get_test_data('gather/combined.sig')
+    out_csv = runtmp.output('out.csv')
 
-        # now, feed in the new directory --
-        cmd = f'gather {query_sig} {copy_testdata} -k 21 --threshold-bp=0'
-        cmd += f' -o {out_csv} {linear_gather} {prefetch_gather}'
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    # now, feed in the new directory --
+    runtmp.sourmash('gather', query_sig, copy_testdata, '-k', '21', '--threshold-bp=0', '-o', out_csv, linear_gather, prefetch_gather)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        with open(out_csv, 'rt') as fp:
-            prefix_len = len(copy_testdata)
-            r = csv.DictReader(fp)
-            for row in r:
-                filename = row['filename']
-                assert filename.startswith(copy_testdata)
-                # should have full path to file sig was loaded from
-                assert len(filename) > prefix_len
+    with open(out_csv, 'rt') as fp:
+        prefix_len = len(copy_testdata)
+        r = csv.DictReader(fp)
+        for row in r:
+            filename = row['filename']
+            assert filename.startswith(copy_testdata)
+            # should have full path to file sig was loaded from
+            assert len(filename) > prefix_len
 
-        assert 'found 12 matches total' in out
-        assert 'the recovered matches hit 100.0% of the query' in out
-        assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                    'NC_003198.1 Salmonella enterica subsp...' in out))
-        assert all(('4.7 Mbp        0.5%    1.5%' in out,
-                    'NC_011294.1 Salmonella enterica subsp...' in out))
+    assert 'found 12 matches total' in runtmp.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
+    assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
+                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+    assert all(('4.7 Mbp        0.5%    1.5%' in runtmp.last_result.out,
+                'NC_011294.1 Salmonella enterica subsp...' in runtmp.last_result.out))
 
 
 @utils.in_tempdir
@@ -3474,68 +3463,63 @@ def test_gather_traverse_incompatible(c):
     assert "5.2 Mbp      100.0%  100.0%    NC_009665.1 Shewanella baltica OS185,..." in c.last_result.out
 
 
-def test_gather_metagenome_output_unassigned():
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF_000195995*g')
-        testdata_sigs = glob.glob(testdata_glob)[0]
+def test_gather_metagenome_output_unassigned(runtmp):
+    testdata_glob = utils.get_test_data('gather/GCF_000195995*g')
+    testdata_sigs = glob.glob(testdata_glob)[0]
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = 'gather {} {} -k 21'.format(query_sig, testdata_sigs)
-        cmd += ' --output-unassigned=unassigned.sig'
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    runtmp.sourmash('gather', query_sig, testdata_sigs, '-k', '21', '--output-unassigned=unassigned.sig')
 
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'found 1 matches total' in out
-        assert 'the recovered matches hit 33.2% of the query' in out
-        assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                    'NC_003198.1 Salmonella enterica subsp...' in out))
+    assert 'found 1 matches total' in runtmp.last_result.out
+    assert 'the recovered matches hit 33.2% of the query' in runtmp.last_result.out
+    assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
+                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
 
-        # now examine unassigned
-        testdata2_glob = utils.get_test_data('gather/GCF_000009505.1*.sig')
-        testdata2_sigs = glob.glob(testdata2_glob)[0]
+    # now examine unassigned
+    testdata2_glob = utils.get_test_data('gather/GCF_000009505.1*.sig')
+    testdata2_sigs = glob.glob(testdata2_glob)[0]
 
-        cmd = 'gather {} {} {} -k 21'.format('unassigned.sig',
-                                             testdata_sigs, testdata2_sigs)
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    runtmp.sourmash('gather', 'unassigned.sig', testdata_sigs, testdata2_sigs, '-k', '21')
 
-        print(out)
-        print(err)
-        assert all(('1.3 Mbp       13.6%   28.2%' in out,
-                    'NC_011294.1' in out))
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert all(('1.3 Mbp       13.6%   28.2%' in runtmp.last_result.out,
+                'NC_011294.1' in runtmp.last_result.out))
 
 
-def test_gather_metagenome_output_unassigned_none():
+def test_gather_metagenome_output_unassigned_none(runtmp):
     # test what happens when there's nothing unassigned to output
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF_*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+    # with utils.TempDirectory() as location:
+    testdata_glob = utils.get_test_data('gather/GCF_*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = 'gather {} {} -k 21'.format(query_sig, " ".join(testdata_sigs))
-        cmd += ' --output-unassigned=unassigned.sig'
-        cmd += ' --threshold=0'
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    # cmd = 'gather {} {} -k 21'.format(query_sig, " ".join(testdata_sigs))
+    # cmd += ' --output-unassigned=unassigned.sig'
+    # cmd += ' --threshold=0'
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('gather', query_sig, ", ".join(testdata_sigs), '-k', '21', '--output-unassigned=unassigned.sig', '--threshold=0')
+    # status, out, err = utils.runscript('sourmash', cmd.split(' '),
+    #                                     in_directory=location)
 
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'found 12 matches total' in out
-        assert 'the recovered matches hit 100.0% of the query' in out
-        assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                    'NC_003198.1 Salmonella enterica subsp...' in out))
-        assert all(('4.5 Mbp        0.1%    0.4%' in out,
-                    'NC_004631.1 Salmonella enterica subsp...' in out))
+    assert 'found 12 matches total' in runtmp.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
+    assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
+                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+    assert all(('4.5 Mbp        0.1%    0.4%' in runtmp.last_result.out,
+                'NC_004631.1 Salmonella enterica subsp...' in runtmp.last_result.out))
 
-        # now examine unassigned
-        assert not os.path.exists(os.path.join(location, 'unassigned.sig'))
-        assert 'no unassigned hashes to save with --output-unassigned!' in err
+    # now examine unassigned
+    assert not os.path.exists(runtmp.output('unassigned.sig'))
+    assert 'no unassigned hashes to save with --output-unassigned!' in runtmp.last_result.err
 
 
 def test_gather_metagenome_output_unassigned_nomatches(runtmp, prefetch_gather, linear_gather):
