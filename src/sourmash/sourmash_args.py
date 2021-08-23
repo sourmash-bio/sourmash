@@ -29,33 +29,25 @@ DEFAULT_LOAD_K = 31
 
 
 def check_scaled_bounds(arg):
-    actual_min_val = 0
-    min_val = 100
-    max_val = 1e6
-
     f = float(arg)
 
-    if f < actual_min_val:
+    if f < 0:
         raise argparse.ArgumentTypeError(f"ERROR: scaled value must be positive")
-    if f < min_val:
+    if f < 100:
         notify('WARNING: scaled value should be >= 100. Continuing anyway.')
-    if f > max_val:
+    if f > 1e6:
         notify('WARNING: scaled value should be <= 1e6. Continuing anyway.')
     return f
 
 
 def check_num_bounds(arg):
-    actual_min_val = 0
-    min_val = 50
-    max_val = 50000
-
     f = int(arg)
 
-    if f < actual_min_val:
+    if f < 0:
         raise argparse.ArgumentTypeError(f"ERROR: num value must be positive")
-    if f < min_val:
+    if f < 50:
         notify('WARNING: num value should be >= 50. Continuing anyway.')
-    if f > max_val:
+    if f > 50000:
         notify('WARNING: num value should be <= 50000. Continuing anyway.')
     return f
 
