@@ -1,6 +1,7 @@
 """
 Tests for the 'sourmash' command line.
 """
+import argparse
 import os
 import gzip
 import shutil
@@ -2219,31 +2220,19 @@ def test_do_sourmash_index_sparseness(runtmp):
 
 
 def test_do_sourmash_sbt_combine(runtmp):
-    # with utils.TempDirectory() as location:
     files = [utils.get_test_data(f) for f in utils.SIG_FILES]
 
-    with pytest.raises(SourmashCommandFailed):
-        runtmp.sourmash('index', '-k', '31', 'zzz', ", ".join(files))
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['index', '-k', '31', 'zzz'] + files,
-    #                                     in_directory=location)
+    runtmp.sourmash('index', '-k', '31', 'zzz', *files)
 
     assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
     runtmp.sourmash('sbt_combine', 'joined', 'zzz.sbt.zip', 'zzz.sbt.zip')
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['sbt_combine', 'joined',
-    #                                     'zzz.sbt.zip', 'zzz.sbt.zip'],
-    #                                     in_directory=location)
 
     assert os.path.exists(runtmp.output('joined.sbt.zip'))
 
     filename = os.path.splitext(os.path.basename(utils.SIG_FILES[0]))[0]
 
     runtmp.sourmash('search', files[0], 'zzz')
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['search', files[0], 'zzz'],
-    #                                     in_directory=location)
 
     print(runtmp.last_result.out)
 
@@ -2251,9 +2240,6 @@ def test_do_sourmash_sbt_combine(runtmp):
     assert runtmp.last_result.out.count(filename) == 1
 
     runtmp.sourmash('search', files[0], 'joined')
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['search', files[0], 'joined'],
-    #                                     in_directory=location)
 
     print(runtmp.last_result.out)
 
@@ -2413,50 +2399,43 @@ def test_do_sourmash_sbt_search_scaled_vs_num_4(runtmp):
     assert "no compatible signatures found in " in runtmp.last_result.err
 
 
-def test_do_sourmash_check_search_vs_actual_similarity():
-    with utils.TempDirectory() as location:
-        files = [utils.get_test_data(f) for f in utils.SIG_FILES]
+def test_do_sourmash_check_search_vs_actual_similarity(runtmp):
+    files = [utils.get_test_data(f) for f in utils.SIG_FILES]
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz'] + files,
-                                           in_directory=location)
+    runtmp.sourmash('index', '-k', '31', 'zzz', *files)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        filename = os.path.splitext(os.path.basename(utils.SIG_FILES[0]))[0]
+    filename = os.path.splitext(os.path.basename(utils.SIG_FILES[0]))[0]
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', files[0], 'zzz'],
-                                           in_directory=location)
-        assert status == 0
+    runtmp.sourmash('search', files[0], 'zzz')
+
+    assert runtmp.last_result.status == 0
 
 
-def test_do_sourmash_check_sbt_filenames():
-    with utils.TempDirectory() as location:
-        files = [utils.get_test_data(f) for f in utils.SIG_FILES]
+def test_do_sourmash_check_sbt_filenames(runtmp):
+    files = [utils.get_test_data(f) for f in utils.SIG_FILES]
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz.sbt.json'] + files,
-                                           in_directory=location)
+    runtmp.sourmash('index', '-k', '31', 'zzz.sbt.json', *files)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+    assert os.path.exists(runtmp.output('zzz.sbt.json'))
 
-        sig_names = set()
-        sig_md5s = set()
-        for f in files:
-            sig = signature.load_one_signature(f)
-            sig_names.add(sig.name)
-            sig_md5s.add(sig.md5sum())
+    sig_names = set()
+    sig_md5s = set()
+    for f in files:
+        sig = signature.load_one_signature(f)
+        sig_names.add(sig.name)
+        sig_md5s.add(sig.md5sum())
 
-        sbt_files = glob.glob(os.path.join(location, '.sbt.zzz', '*'))
-        assert len(sbt_files) == 14
+    sbt_files = glob.glob(runtmp.output('.sbt.zzz/*'))
+    assert len(sbt_files) == 14
 
-        for f in sbt_files:
-            if 'internal' in f or f.endswith('zzz.manifest.csv'):
-                continue
-            f = os.path.basename(f)
-            assert f not in sig_names
-            assert f in sig_md5s
+    for f in sbt_files:
+        if 'internal' in f or f.endswith('zzz.manifest.csv'):
+            continue
+        f = os.path.basename(f)
+        assert f not in sig_names
+        assert f in sig_md5s
 
 
 def test_do_sourmash_sbt_search_bestonly(runtmp):
@@ -3493,19 +3472,12 @@ def test_gather_metagenome_output_unassigned(runtmp):
 
 def test_gather_metagenome_output_unassigned_none(runtmp):
     # test what happens when there's nothing unassigned to output
-    # with utils.TempDirectory() as location:
     testdata_glob = utils.get_test_data('gather/GCF_*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
     query_sig = utils.get_test_data('gather/combined.sig')
 
-    # cmd = 'gather {} {} -k 21'.format(query_sig, " ".join(testdata_sigs))
-    # cmd += ' --output-unassigned=unassigned.sig'
-    # cmd += ' --threshold=0'
-    with pytest.raises(SourmashCommandFailed):
-        runtmp.sourmash('gather', query_sig, ", ".join(testdata_sigs), '-k', '21', '--output-unassigned=unassigned.sig', '--threshold=0')
-    # status, out, err = utils.runscript('sourmash', cmd.split(' '),
-    #                                     in_directory=location)
+    runtmp.sourmash('gather', query_sig, *testdata_sigs, '-k', '21', '--output-unassigned=unassigned.sig', '--threshold=0')
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
@@ -3631,20 +3603,13 @@ def test_gather_metagenome_downsample(runtmp, prefetch_gather, linear_gather):
 
 
 def test_gather_query_downsample(runtmp, linear_gather, prefetch_gather):
-    # with utils.TempDirectory() as location:
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
     print(testdata_sigs)
 
     query_sig = utils.get_test_data('GCF_000006945.2-s500.sig')
 
-    with pytest.raises(SourmashCommandFailed):
-        runtmp.sourmash('gather', '-k', '31', linear_gather, prefetch_gather, query_sig, testdata_glob)
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['gather', '-k', '31',
-    #                                     linear_gather, prefetch_gather,
-    #                                     query_sig] + testdata_sigs,
-    #                                     in_directory=location)
+    runtmp.sourmash('gather', '-k', '31', linear_gather, prefetch_gather, query_sig, *testdata_sigs)
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
@@ -3656,27 +3621,21 @@ def test_gather_query_downsample(runtmp, linear_gather, prefetch_gather):
     assert 'WARNING: final scaled was 10000, vs query scaled of 500' in runtmp.last_result.out
 
 
-def test_gather_query_downsample_explicit(linear_gather, prefetch_gather):
+def test_gather_query_downsample_explicit(runtmp, linear_gather, prefetch_gather):
     # do an explicit downsampling to fix `test_gather_query_downsample`
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-        query_sig = utils.get_test_data('GCF_000006945.2-s500.sig')
+    query_sig = utils.get_test_data('GCF_000006945.2-s500.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather', '-k', '31',
-                                            '--scaled', '10000',
-                                            linear_gather, prefetch_gather,
-                                            query_sig] + testdata_sigs,
-                                           in_directory=location)
+    runtmp.sourmash('gather', '-k', '31', '--scaled', '10000', linear_gather, prefetch_gather, query_sig, *testdata_sigs)
 
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'loaded 12 signatures' in err
-        assert all(('4.9 Mbp      100.0%  100.0%' in out,
-                    'NC_003197.2' in out))
+    assert 'loaded 12 signatures' in runtmp.last_result.err
+    assert all(('4.9 Mbp      100.0%  100.0%' in runtmp.last_result.out,
+                'NC_003197.2' in runtmp.last_result.out))
 
 
 def test_gather_with_picklist(runtmp, linear_gather, prefetch_gather):
@@ -3732,78 +3691,61 @@ def test_gather_with_picklist_exclude(runtmp, linear_gather, prefetch_gather):
     assert "4.5 Mbp        0.1%    0.4%    NC_004631.1 Salmonella enterica subsp..." in out
 
 
-def test_gather_save_matches(linear_gather, prefetch_gather):
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+def test_gather_save_matches(runtmp, linear_gather, prefetch_gather):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all']
-        cmd.extend(testdata_sigs)
-        cmd.extend(['-k', '21'])
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
 
-        status, out, err = utils.runscript('sourmash', cmd,
-                                           in_directory=location)
+    runtmp.sourmash(*cmd)
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
+    assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather', query_sig, 'gcf_all',
-                                            '-k', '21',
-                                            '--save-matches', 'save.sigs',
-                                            linear_gather, prefetch_gather,
-                                            '--threshold-bp', '0'],
-                                           in_directory=location)
+    runtmp.sourmash('gather', query_sig, 'gcf_all', '-k', '21', '--save-matches', 'save.sigs', linear_gather, prefetch_gather, '--threshold-bp', '0')
 
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'found 12 matches total' in out
-        assert 'the recovered matches hit 100.0% of the query' in out
-        assert os.path.exists(os.path.join(location, 'save.sigs'))
+    assert 'found 12 matches total' in runtmp.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
+    assert os.path.exists(runtmp.output('save.sigs'))
 
 
-def test_gather_save_matches_and_save_prefetch(linear_gather):
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+def test_gather_save_matches_and_save_prefetch(runtmp, linear_gather):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all']
-        cmd.extend(testdata_sigs)
-        cmd.extend(['-k', '21'])
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
 
-        status, out, err = utils.runscript('sourmash', cmd,
-                                           in_directory=location)
+    runtmp.sourmash(*cmd)
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
+    assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather', query_sig, 'gcf_all',
-                                            '-k', '21',
-                                            '--save-matches', 'save.sigs',
-                                            '--save-prefetch', 'save2.sigs',
-                                            linear_gather,
-                                            '--threshold-bp', '0'],
-                                           in_directory=location)
+    runtmp.sourmash('gather', query_sig, 'gcf_all', '-k', '21', '--save-matches', 'save.sigs', '--save-prefetch', 'save2.sigs', linear_gather, '--threshold-bp', '0')
 
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'found 12 matches total' in out
-        assert 'the recovered matches hit 100.0% of the query' in out
+    assert 'found 12 matches total' in runtmp.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
 
-        matches_save = os.path.join(location, 'save.sigs')
-        prefetch_save = os.path.join(location, 'save2.sigs')
-        assert os.path.exists(matches_save)
-        assert os.path.exists(prefetch_save)
+    matches_save = runtmp.output('save.sigs')
+    prefetch_save = runtmp.output('save2.sigs')
+    assert os.path.exists(matches_save)
+    assert os.path.exists(prefetch_save)
 
-        matches = list(sourmash.load_file_as_signatures(matches_save))
-        prefetch = list(sourmash.load_file_as_signatures(prefetch_save))
+    matches = list(sourmash.load_file_as_signatures(matches_save))
+    prefetch = list(sourmash.load_file_as_signatures(prefetch_save))
 
-        assert set(matches) == set(prefetch)
+    assert set(matches) == set(prefetch)
 
 
 @utils.in_tempdir
@@ -3822,99 +3764,65 @@ def test_gather_error_no_sigs_traverse(c):
     assert not 'found 0 matches total;' in err
 
 
-def test_gather_error_no_cardinality_query(linear_gather, prefetch_gather):
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2],
-                                           in_directory=location)
+def test_gather_error_no_cardinality_query(runtmp, linear_gather, prefetch_gather):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        testdata3 = utils.get_test_data('short3.fa')
-        tatus, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate', '-p', 'k=31,num=500', testdata3],
-                                           in_directory=location)
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
+    testdata3 = utils.get_test_data('short3.fa')
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    runtmp.sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata3)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather',
-                                            'short3.fa.sig', 'zzz',
-                                            linear_gather, prefetch_gather],
-                                           in_directory=location,
-                                           fail_ok=True)
-        assert status == -1
-        assert "query signature needs to be created with --scaled" in err
+    runtmp.sourmash('index', 'zzz', 'short.fa.sig', 'short2.fa.sig')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('gather', 'short3.fa.sig', 'zzz', linear_gather, prefetch_gather)
+
+    assert runtmp.last_result.status == -1
+    assert "query signature needs to be created with --scaled" in runtmp.last_result.err
 
 
-def test_gather_deduce_ksize(prefetch_gather, linear_gather):
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-p', 'k=23,scaled=10', testdata1, testdata2],
-                                           in_directory=location)
+def test_gather_deduce_ksize(runtmp, prefetch_gather, linear_gather):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','dna','-p','k=23,scaled=10', '-o', 'query.fa.sig', testdata2],
-                                           in_directory=location)
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=23,scaled=10', testdata1, testdata2)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
+    runtmp.sourmash('sketch','dna','-p','k=23,scaled=10', '-o', 'query.fa.sig', testdata2)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    runtmp.sourmash('index', 'zzz', 'short.fa.sig', 'short2.fa.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather', 'query.fa.sig', 'zzz',
-                                            prefetch_gather, linear_gather,
-                                            '--threshold-bp=1'],
-                                           in_directory=location)
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        print(out)
-        print(err)
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', prefetch_gather, linear_gather, '--threshold-bp=1')
 
-        assert '0.9 kbp      100.0%  100.0%' in out
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
 
 
-def test_gather_deduce_moltype(linear_gather, prefetch_gather):
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate', '-p', 'k=10,scaled=10', testdata1,testdata2],
-                                           in_directory=location)
+def test_gather_deduce_moltype(runtmp, linear_gather, prefetch_gather):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate', '-p', 'k=10,scaled=10', '-o', 'query.fa.sig',testdata2],
-                                           in_directory=location)
+    runtmp.sourmash('sketch', 'translate', '-p', 'k=10,scaled=10', testdata1,testdata2)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
+    runtmp.sourmash('sketch', 'translate', '-p', 'k=10,scaled=10', '-o', 'query.fa.sig',testdata2)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+    runtmp.sourmash('index', 'zzz', 'short.fa.sig', 'short2.fa.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather', 'query.fa.sig', 'zzz',
-                                            linear_gather, prefetch_gather,
-                                            '--threshold-bp=1'],
-                                           in_directory=location)
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
-        print(out)
-        print(err)
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', linear_gather, prefetch_gather, '--threshold-bp=1')
 
-        assert '1.9 kbp      100.0%  100.0%' in out
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '1.9 kbp      100.0%  100.0%' in runtmp.last_result.out
 
 
 def test_gather_abund_1_1(runtmp, linear_gather, prefetch_gather):
@@ -4110,181 +4018,162 @@ def test_gather_output_unassigned_with_abundance(runtmp, prefetch_gather, linear
             assert nomatch_mh.hashes[hashval] == abund
 
 
-def test_sbt_categorize():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
-        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
-        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
-        testdata4 = utils.get_test_data('genome-s10+s11.sig')
+def test_sbt_categorize(runtmp):
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata4 = utils.get_test_data('genome-s10+s11.sig')
 
-        # all four in the current directory for categorize .
-        shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
-        shutil.copyfile(testdata2, os.path.join(location, '2.sig'))
-        shutil.copyfile(testdata3, os.path.join(location, '3.sig'))
-        shutil.copyfile(testdata4, os.path.join(location, '4.sig'))
+    # all four in the current directory for categorize .
+    shutil.copyfile(testdata1, runtmp.output('1.sig'))
+    shutil.copyfile(testdata2, runtmp.output('2.sig'))
+    shutil.copyfile(testdata3, runtmp.output('3.sig'))
+    shutil.copyfile(testdata4, runtmp.output('4.sig'))
 
-        # omit 3
-        args = ['index', '--dna', '-k', '21', 'zzz', '1.sig', '2.sig']
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    # omit 3
+    args = ['index', '--dna', '-k', '21', 'zzz', '1.sig', '2.sig']
+    runtmp.sourmash(*args)
 
-        # categorize all of the ones that were copied to 'location'
-        args = ['categorize', 'zzz', '.',
-                '--ksize', '21', '--dna', '--csv', 'out.csv']
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    # categorize all of the ones that were copied to 'location'
+    args = ['categorize', 'zzz', '.',
+            '--ksize', '21', '--dna', '--csv', 'out.csv']
+    runtmp.sourmash(*args)
 
-        print(out)
-        print(err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        # mash dist genome-s10.fa.gz genome-s10+s11.fa.gz
-        # yields 521/1000 ==> ~0.5
-        assert 'for genome-s10+s11, found: 0.50 genome-s10' in err
+    # mash dist genome-s10.fa.gz genome-s10+s11.fa.gz
+    # yields 521/1000 ==> ~0.5
+    assert 'for genome-s10+s11, found: 0.50 genome-s10' in runtmp.last_result.err
 
-        out_csv = open(os.path.join(location, 'out.csv')).read()
-        print(out_csv)
-        assert './4.sig,genome-s10+s11,genome-s10,0.504' in out_csv
+    out_csv = open(runtmp.output('out.csv')).read()
+    print(out_csv)
+    assert './4.sig,genome-s10+s11,genome-s10,0.504' in out_csv
 
 
-def test_sbt_categorize_ignore_abundance_1():
+def test_sbt_categorize_ignore_abundance_1(runtmp):
     # --- Categorize without ignoring abundance ---
-    with utils.TempDirectory() as location:
-        query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
-        against_list = ['reads-s10-s11']
-        against_list = ['gather-abund/' + i + '.sig'
-                        for i in against_list]
-        against_list = [utils.get_test_data(i) for i in against_list]
+    query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+    against_list = ['reads-s10-s11']
+    against_list = ['gather-abund/' + i + '.sig'
+                    for i in against_list]
+    against_list = [utils.get_test_data(i) for i in against_list]
 
-        # omit 3
-        args = ['index', '--dna', '-k', '21', 'thebestdatabase'] + against_list
-        status2, out2, err2 = utils.runscript('sourmash', args,
-                                              in_directory=location)
+    # omit 3
+    args = ['index', '--dna', '-k', '21', 'thebestdatabase'] + against_list
+    runtmp.sourmash(*args)
 
-        args = ['categorize', 'thebestdatabase',
-                '--ksize', '21', '--dna', '--csv', 'out3.csv', query]
+    args = ['categorize', 'thebestdatabase',
+            '--ksize', '21', '--dna', '--csv', 'out3.csv', query]
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash(*args)
 
-        status3, out3, err3 = utils.runscript('sourmash', args,
-                                              in_directory=location,
-                                              fail_ok=True)
+    assert runtmp.last_result.status != 0
 
-        assert status3 != 0
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        print(out3)
-        print(err3)
-
-        assert "ERROR: this search cannot be done on signatures calculated with abundance." in err3
-        assert "ERROR: please specify --ignore-abundance." in err3
+    assert "ERROR: this search cannot be done on signatures calculated with abundance." in runtmp.last_result.err
+    assert "ERROR: please specify --ignore-abundance." in runtmp.last_result.err
 
 
-def test_sbt_categorize_ignore_abundance_3():
+def test_sbt_categorize_ignore_abundance_3(runtmp):
     # --- Now categorize with ignored abundance ---
-    with utils.TempDirectory() as location:
-        query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
-        against_list = ['reads-s10-s11']
-        against_list = ['gather-abund/' + i + '.sig'
-                        for i in against_list]
-        against_list = [utils.get_test_data(i) for i in against_list]
+    query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+    against_list = ['reads-s10-s11']
+    against_list = ['gather-abund/' + i + '.sig'
+                    for i in against_list]
+    against_list = [utils.get_test_data(i) for i in against_list]
 
-        # omit 3
-        args = ['index', '--dna', '-k', '21', 'thebestdatabase'] + against_list
-        status2, out2, err2 = utils.runscript('sourmash', args,
-                                              in_directory=location)
+    # omit 3
+    args = ['index', '--dna', '-k', '21', 'thebestdatabase'] + against_list
+    runtmp.sourmash(*args)
 
-        args = ['categorize', '--ignore-abundance',
-                '--ksize', '21', '--dna', '--csv', 'out4.csv',
-                'thebestdatabase', query]
-        status4, out4, err4 = utils.runscript('sourmash', args,
-                                              in_directory=location)
+    args = ['categorize', '--ignore-abundance',
+            '--ksize', '21', '--dna', '--csv', 'out4.csv',
+            'thebestdatabase', query]
+    runtmp.sourmash(*args)
 
-        print(out4)
-        print(err4)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'for 1-1, found: 0.88 1-1' in err4
+    assert 'for 1-1, found: 0.88 1-1' in runtmp.last_result.err
 
-        out_csv4 = open(os.path.join(location, 'out4.csv')).read()
-        assert 'reads-s10x10-s11.sig,1-1,1-1,0.87699' in out_csv4
+    out_csv4 = open(runtmp.output('out4.csv')).read()
+    assert 'reads-s10x10-s11.sig,1-1,1-1,0.87699' in out_csv4
 
 
-def test_sbt_categorize_already_done():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
-        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
-        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
-        testdata4 = utils.get_test_data('genome-s10+s11.sig')
+def test_sbt_categorize_already_done(runtmp):
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata4 = utils.get_test_data('genome-s10+s11.sig')
 
-        shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
-        shutil.copyfile(testdata2, os.path.join(location, '2.sig'))
-        shutil.copyfile(testdata3, os.path.join(location, '3.sig'))
-        shutil.copyfile(testdata4, os.path.join(location, '4.sig'))
+    shutil.copyfile(testdata1, runtmp.output('1.sig'))
+    shutil.copyfile(testdata2, runtmp.output('2.sig'))
+    shutil.copyfile(testdata3, runtmp.output('3.sig'))
+    shutil.copyfile(testdata4, runtmp.output('4.sig'))
 
-        # omit 3
-        args = ['index', '--dna', '-k', '21', 'zzz', '1.sig', '2.sig']
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    # omit 3
+    args = ['index', '--dna', '-k', '21', 'zzz', '1.sig', '2.sig']
+    runtmp.sourmash(*args)
 
-        with open(os.path.join(location, 'in.csv'), 'wt') as fp:
-            fp.write('./4.sig,genome-s10.fa.gz,0.50')
+    with open(runtmp.output('in.csv'), 'wt') as fp:
+        fp.write('./4.sig,genome-s10.fa.gz,0.50')
 
-        args = ['categorize', 'zzz', './2.sig', './4.sig',
-                '--ksize', '21', '--dna', '--load-csv', 'in.csv']
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    args = ['categorize', 'zzz', './2.sig', './4.sig',
+            '--ksize', '21', '--dna', '--load-csv', 'in.csv']
+    runtmp.sourmash(*args)
 
-        print(out)
-        print(err)
-        assert 'for genome-s11.fa.gz, no match found'
-        assert not 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert 'for genome-s11.fa.gz, no match found'
+    assert not 'for s10+s11, found: 0.50 genome-s10.fa.gz' in runtmp.last_result.err
 
 
-def test_sbt_categorize_already_done_traverse():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
-        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
-        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
-        testdata4 = utils.get_test_data('genome-s10+s11.sig')
+def test_sbt_categorize_already_done_traverse(runtmp):
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata4 = utils.get_test_data('genome-s10+s11.sig')
 
-        shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
-        shutil.copyfile(testdata2, os.path.join(location, '2.sig'))
-        shutil.copyfile(testdata3, os.path.join(location, '3.sig'))
-        shutil.copyfile(testdata4, os.path.join(location, '4.sig'))
+    shutil.copyfile(testdata1, runtmp.output('1.sig'))
+    shutil.copyfile(testdata2, runtmp.output('2.sig'))
+    shutil.copyfile(testdata3, runtmp.output('3.sig'))
+    shutil.copyfile(testdata4, runtmp.output('4.sig'))
 
-        # omit 3
-        args = ['index', '--dna', '-k', '21', 'zzz', '1.sig', '2.sig']
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    # omit 3
+    args = ['index', '--dna', '-k', '21', 'zzz', '1.sig', '2.sig']
+    runtmp.sourmash(*args)
 
-        with open(os.path.join(location, 'in.csv'), 'wt') as fp:
-            fp.write('./4.sig,genome-s10.fa.gz,0.50')
+    with open(runtmp.output('in.csv'), 'wt') as fp:
+        fp.write('./4.sig,genome-s10.fa.gz,0.50')
 
-        args = ['categorize', 'zzz', '.',
-                '--ksize', '21', '--dna', '--load-csv', 'in.csv']
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    args = ['categorize', 'zzz', '.',
+            '--ksize', '21', '--dna', '--load-csv', 'in.csv']
+    runtmp.sourmash(*args)
 
-        print(out)
-        print(err)
-        assert 'for genome-s11.fa.gz, no match found'
-        assert not 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert 'for genome-s11.fa.gz, no match found'
+    assert not 'for s10+s11, found: 0.50 genome-s10.fa.gz' in runtmp.last_result.err
 
 
-def test_sbt_categorize_multiple_ksizes_moltypes():
+def test_sbt_categorize_multiple_ksizes_moltypes(runtmp):
     # 'categorize' works fine with multiple moltypes/ksizes
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
-        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
-        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+    testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
 
-        shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
-        shutil.copyfile(testdata2, os.path.join(location, '2.sig'))
-        shutil.copyfile(testdata3, os.path.join(location, '3.sig'))
+    shutil.copyfile(testdata1, runtmp.output('1.sig'))
+    shutil.copyfile(testdata2, runtmp.output('2.sig'))
+    shutil.copyfile(testdata3, runtmp.output('3.sig'))
 
-        args = ['index', '--dna', '-k', '21', 'zzz', '1.sig', '2.sig']
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    args = ['index', '--dna', '-k', '21', 'zzz', '1.sig', '2.sig']
+    runtmp.sourmash(*args)
 
-        args = ['categorize', 'zzz', '.']
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    args = ['categorize', 'zzz', '.']
+    runtmp.sourmash(*args)
 
 
 def test_watch_check_num_bounds_negative(runtmp):
@@ -4357,176 +4246,171 @@ def test_watch_deduce_ksize(c):
     assert 'genome-s10.fa.gz, at 1.000' in c.last_result.out
 
 
-def test_watch_coverage():
-    with utils.TempDirectory() as location:
-        testdata0 = utils.get_test_data('genome-s10.fa.gz')
-        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
-        shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
+def test_watch_coverage(runtmp):
+    testdata0 = utils.get_test_data('genome-s10.fa.gz')
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    shutil.copyfile(testdata1, runtmp.output('1.sig'))
 
-        args = ['index', '--dna', '-k', '21', 'zzz', '1.sig']
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    args = ['index', '--dna', '-k', '21', 'zzz', '1.sig']
+    runtmp.sourmash(*args)
 
-        with open(os.path.join(location, 'query.fa'), 'wt') as fp:
-            record = list(screed.open(testdata0))[0]
-            for start in range(0, len(record), 100):
-                fp.write('>{}\n{}\n'.format(start,
-                                            record.sequence[start:start+500]))
+    with open(runtmp.output('query.fa'), 'wt') as fp:
+        record = list(screed.open(testdata0))[0]
+        for start in range(0, len(record), 100):
+            fp.write('>{}\n{}\n'.format(start,
+                                        record.sequence[start:start+500]))
 
-        args = ['watch', '--ksize', '21', '--dna', 'zzz', 'query.fa']
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    args = ['watch', '--ksize', '21', '--dna', 'zzz', 'query.fa']
+    runtmp.sourmash(*args)
 
-        print(out)
-        print(err)
-        assert 'FOUND: genome-s10, at 1.000' in out
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert 'FOUND: genome-s10, at 1.000' in runtmp.last_result.out
 
 
-def test_storage_convert():
+def test_storage_convert(runtmp):
     import pytest
 
-    with utils.TempDirectory() as location:
-        testdata = utils.get_test_data('v2.sbt.json')
-        shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
-        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
-                        os.path.join(location, '.sbt.v2'))
-        testsbt = os.path.join(location, 'v2.sbt.json')
+    # with utils.TempDirectory() as location:
+    testdata = utils.get_test_data('v2.sbt.json')
+    shutil.copyfile(testdata, runtmp.output('v2.sbt.json'))
+    shutil.copytree(runtmp.output(os.path.dirname(testdata), '.sbt.v2'),
+                    runtmp.output('.sbt.v2'))
+    testsbt = runtmp.output('v2.sbt.json')
 
-        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+    original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        args = ['storage', 'convert', '-b', 'ipfs', testsbt]
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location, fail_ok=True)
-        if not status and "ipfs.exceptions.ConnectionError" in err:
-            raise pytest.xfail('ipfs probably not running')
+    args = ['storage', 'convert', '-b', 'ipfs', testsbt]
+    runtmp.sourmash(*args)
+    # status, out, err = utils.runscript('sourmash', args,
+    #                                     in_directory=location, fail_ok=True)
+    if not runtmp.last_result.status and "ipfs.exceptions.ConnectionError" in runtmp.last_result.err:
+        raise pytest.xfail('ipfs probably not running')
 
-        ipfs = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+    ipfs = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        assert len(original) == len(ipfs)
-        assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original), sorted(ipfs)))
+    assert len(original) == len(ipfs)
+    assert all(n1[1].name == n2[1].name
+                for (n1, n2) in zip(sorted(original), sorted(ipfs)))
 
-        args = ['storage', 'convert',
-                '-b', """'ZipStorage("{}")'""".format(
-                    os.path.join(location, 'v2.sbt.zip')),
-                testsbt]
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
-        tar = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+    args = ['storage', 'convert',
+            '-b', """'ZipStorage("{}")'""".format(
+                runtmp.output('v2.sbt.zip')),
+            testsbt]
+    runtmp.sourmash(*args)
+    # status, out, err = utils.runscript('sourmash', args,
+    #                                     in_directory=location)
+    tar = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        assert len(original) == len(tar)
-        assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original), sorted(tar)))
-
-
-def test_storage_convert_identity():
-    with utils.TempDirectory() as location:
-        testdata = utils.get_test_data('v2.sbt.json')
-        shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
-        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
-                        os.path.join(location, '.sbt.v2'))
-        testsbt = os.path.join(location, 'v2.sbt.json')
-
-        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
-
-        args = ['storage', 'convert', '-b', 'fsstorage', testsbt]
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
-
-        identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
-
-        assert len(original) == len(identity)
-        assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original), sorted(identity)))
+    assert len(original) == len(tar)
+    assert all(n1[1].name == n2[1].name
+                for (n1, n2) in zip(sorted(original), sorted(tar)))
 
 
-def test_storage_convert_fsstorage_newpath():
-    with utils.TempDirectory() as location:
-        testdata = utils.get_test_data('v2.sbt.json')
-        shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
-        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
-                        os.path.join(location, '.sbt.v2'))
-        testsbt = os.path.join(location, 'v2.sbt.json')
+def test_storage_convert_identity(runtmp):
+    # with utils.TempDirectory() as location:
+    testdata = utils.get_test_data('v2.sbt.json')
+    shutil.copyfile(testdata, runtmp.output('v2.sbt.json'))
+    shutil.copytree(runtmp.output(os.path.dirname(testdata), '.sbt.v2'),
+                    runtmp.output('.sbt.v2'))
+    testsbt = runtmp.output('v2.sbt.json')
 
-        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+    original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        args = ['storage', 'convert',
-                           '-b', 'fsstorage({})'.format(os.path.join(location, 'v3')),
-                           testsbt]
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    args = ['storage', 'convert', '-b', 'fsstorage', testsbt]
+    runtmp.sourmash(*args)
+    # status, out, err = utils.runscript('sourmash', args,
+    #                                     in_directory=location)
 
-        identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+    identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        assert len(original) == len(identity)
-        assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original), sorted(identity)))
-
-
-def test_migrate():
-    with utils.TempDirectory() as location:
-        testdata = utils.get_test_data('v3.sbt.json')
-        shutil.copyfile(testdata, os.path.join(location, 'v3.sbt.json'))
-        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v3'),
-                        os.path.join(location, '.sbt.v3'))
-        testsbt = os.path.join(location, 'v3.sbt.json')
-
-        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
-
-        status, out, err = utils.runscript('sourmash', ['migrate', testsbt],
-                                           in_directory=location)
-
-        identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
-
-        assert len(original) == len(identity)
-        assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original),
-                                       sorted(identity)))
-
-        assert "this is an old index version" not in err
-        assert all('min_n_below' in node.metadata
-                   for node in identity
-                   if isinstance(node, Node))
+    assert len(original) == len(identity)
+    assert all(n1[1].name == n2[1].name
+                for (n1, n2) in zip(sorted(original), sorted(identity)))
 
 
-def test_license_cc0():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch','translate', '-p', 'k=31', testdata1],
-                                           in_directory=location)
+def test_storage_convert_fsstorage_newpath(runtmp):
+    # with utils.TempDirectory() as location:
+    testdata = utils.get_test_data('v2.sbt.json')
+    shutil.copyfile(testdata, runtmp.output('v2.sbt.json'))
+    shutil.copytree(runtmp.output(os.path.dirname(testdata), '.sbt.v2'),
+                    runtmp.output('.sbt.v2'))
+    testsbt = runtmp.output('v2.sbt.json')
 
-        sigfile = os.path.join(location, 'short.fa.sig')
-        assert os.path.exists(sigfile)
+    original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        sig = next(signature.load_signatures(sigfile))
-        assert str(sig).endswith('short.fa')
+    args = ['storage', 'convert',
+                        '-b', 'fsstorage({})'.format(runtmp.output('v3')),
+                        testsbt]
+    runtmp.sourmash(*args)
+    # status, out, err = utils.runscript('sourmash', args,
+    #                                     in_directory=location)
 
-        assert sig.license == 'CC0'
+    identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+    assert len(original) == len(identity)
+    assert all(n1[1].name == n2[1].name
+                for (n1, n2) in zip(sorted(original), sorted(identity)))
 
 
-def test_license_non_cc0():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate', '-p','k=31', '--license', 'GPL',
-                                            testdata1],
-                                           in_directory=location, fail_ok=True)
+def test_migrate(runtmp):
+    # with utils.TempDirectory() as location:
+    testdata = utils.get_test_data('v3.sbt.json')
+    shutil.copyfile(testdata, runtmp.output('v3.sbt.json'))
+    shutil.copytree(runtmp.output(os.path.dirname(testdata), '.sbt.v3'),
+                    runtmp.output('.sbt.v3'))
+    testsbt = runtmp.output('v3.sbt.json')
 
-        assert status != 0
-        print(out)
-        print(err)
-        assert 'sourmash only supports CC0' in err
+    original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+    runtmp.sourmash('migrate', testsbt)
+    # status, out, err = utils.runscript('sourmash', ['migrate', testsbt],
+    #                                     in_directory=location)
+
+    identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+    assert len(original) == len(identity)
+    assert all(n1[1].name == n2[1].name
+                for (n1, n2) in zip(sorted(original),
+                                    sorted(identity)))
+
+    assert "this is an old index version" not in runtmp.last_result.err
+    assert all('min_n_below' in node.metadata
+                for node in identity
+                if isinstance(node, Node))
+
+
+def test_license_cc0(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch','translate', '-p', 'k=31', testdata1)
+
+    sigfile = runtmp.output('short.fa.sig')
+    assert os.path.exists(sigfile)
+
+    sig = next(signature.load_signatures(sigfile))
+    assert str(sig).endswith('short.fa')
+
+    assert sig.license == 'CC0'
+
+
+def test_license_non_cc0(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'translate', '-p','k=31', '--license', 'GPL', testdata1)
+
+    assert runtmp.last_result.status != 0
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert 'sourmash only supports CC0' in runtmp.last_result.err
 
 
 def test_license_load_non_cc0():
-    with utils.TempDirectory() as location:
-        sigfile = utils.get_test_data('bad-license.sig')
+    sigfile = utils.get_test_data('bad-license.sig')
 
-        try:
-            sig = next(signature.load_signatures(sigfile, do_raise=True))
-        except Exception as e:
-            assert "sourmash only supports CC0-licensed signatures" in str(e)
+    try:
+        sig = next(signature.load_signatures(sigfile, do_raise=True))
+    except Exception as e:
+        assert "sourmash only supports CC0-licensed signatures" in str(e)
 
 
 @utils.in_tempdir
