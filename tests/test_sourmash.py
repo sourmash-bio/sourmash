@@ -4661,34 +4661,6 @@ def test_gather_output_unassigned_with_abundance(runtmp, prefetch_gather, linear
             assert nomatch_mh.hashes[hashval] == abund
 
 
-def test_multigather_output_unassigned_with_abundance(runtmp, prefetch_gather, linear_gather):
-    c = runtmp
-    query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
-    against = utils.get_test_data('gather-abund/genome-s10.fa.gz.sig')
-
-    with pytest.raises(SourmashCommandFailed):
-        c.run_sourmash('multigather', query, against, '--output-unassigned',
-                   c.output('unassigned.sig'), linear_gather, prefetch_gather)
-
-    assert os.path.exists(c.output('unassigned.sig'))
-
-    nomatch = sourmash.load_one_signature(c.output('unassigned.sig'))
-    assert nomatch.minhash.track_abundance
-
-    query_ss = sourmash.load_one_signature(query)
-    against_ss = sourmash.load_one_signature(against)
-
-    # unassigned should have nothing that is in the database
-    nomatch_mh = nomatch.minhash
-    for hashval in against_ss.minhash.hashes:
-        assert hashval not in nomatch_mh.hashes
-
-    # unassigned should have abundances from original query, if not in database
-    for hashval, abund in query_ss.minhash.hashes.items():
-        if hashval not in against_ss.minhash.hashes:
-            assert nomatch_mh.hashes[hashval] == abund
-
-
 def test_sbt_categorize():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
