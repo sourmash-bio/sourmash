@@ -19,7 +19,7 @@ from sourmash.picklist import SignaturePicklist, PickStyle
 import sourmash_tst_utils as utils
 
 
-def test_simple(n_children):
+def test_simple(runtmp, n_children):
     factory = GraphFactory(5, 100, 3)
     root = SBT(factory, d=n_children)
 
@@ -83,15 +83,14 @@ def test_simple(n_children):
     print([ x.metadata for x in root._find_nodes(search_kmer, "GAAAA") ])
 
     # save SBT to a directory and then reload
-    with utils.TempDirectory() as location:
-        root.save(os.path.join(location, 'demo'))
-        root = SBT.load(os.path.join(location, 'demo'))
+    root.save(runtmp.output('demo'))
+    root = SBT.load(runtmp.output('demo'))
 
-        for kmer in kmers:
-            new_result = {str(r) for r in root._find_nodes(search_kmer, kmer)}
-            print(*new_result, sep='\n')
+    for kmer in kmers:
+        new_result = {str(r) for r in root._find_nodes(search_kmer, kmer)}
+        print(*new_result, sep='\n')
 
-            assert new_result == {str(r) for r in search_kmer_in_list(kmer)}
+        assert new_result == {str(r) for r in search_kmer_in_list(kmer)}
 
 
 def test_longer_search(n_children):
@@ -187,7 +186,7 @@ def test_load_future(tmpdir):
     assert "index format is not supported" in str(excinfo.value)
 
 
-def test_tree_save_load(n_children):
+def test_tree_save_load(runtmp, n_children):
     factory = GraphFactory(31, 1e5, 4)
     tree = SBT(factory, d=n_children)
 
@@ -203,18 +202,17 @@ def test_tree_save_load(n_children):
     old_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
     print(*old_result, sep='\n')
 
-    with utils.TempDirectory() as location:
-        tree.save(os.path.join(location, 'demo'))
-        tree = SBT.load(os.path.join(location, 'demo'),
-                        leaf_loader=SigLeaf.load)
+    tree.save(runtmp.output('demo'))
+    tree = SBT.load(runtmp.output('demo'),
+                    leaf_loader=SigLeaf.load)
 
-        print('*' * 60)
-        print("{}:".format(to_search.metadata))
-        search_obj = make_jaccard_search_query(threshold=0.1)
-        new_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
-        print(*new_result, sep='\n')
+    print('*' * 60)
+    print("{}:".format(to_search.metadata))
+    search_obj = make_jaccard_search_query(threshold=0.1)
+    new_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
+    print(*new_result, sep='\n')
 
-        assert old_result == new_result
+    assert old_result == new_result
 
 
 def test_search_minhashes():
@@ -317,38 +315,39 @@ def test_sbt_combine(n_children):
     assert tree_1.next_node == next_empty
 
 
-def test_sbt_fsstorage():
+def test_sbt_fsstorage(runtmp):
     factory = GraphFactory(31, 1e5, 4)
-    with utils.TempDirectory() as location:
-        tree = SBT(factory)
+    # with utils.TempDirectory() as location:
+    tree = SBT(factory)
 
-        for f in utils.SIG_FILES:
-            sig = load_one_signature(utils.get_test_data(f))
+    for f in utils.SIG_FILES:
+        sig = load_one_signature(utils.get_test_data(f))
 
-            leaf = SigLeaf(os.path.basename(f), sig)
-            tree.add_node(leaf)
-            to_search = leaf
+        leaf = SigLeaf(os.path.basename(f), sig)
+        tree.add_node(leaf)
+        to_search = leaf
 
-        print('*' * 60)
-        print("{}:".format(to_search.metadata))
-        search_obj = make_jaccard_search_query(threshold=0.1)
-        old_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
-        print(*old_result, sep='\n')
+    print('*' * 60)
+    print("{}:".format(to_search.metadata))
+    search_obj = make_jaccard_search_query(threshold=0.1)
+    old_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
+    print(*old_result, sep='\n')
 
-        with FSStorage(location, '.fstree') as storage:
-            tree.save(os.path.join(location, 'tree.sbt.json'), storage=storage)
+    # with FSStorage(location, '.fstree') as storage:
+    with runtmp.output.FSStorage('.fstree') as storage:
+        tree.save(runtmp.output('tree.sbt.json'), storage=storage)
 
-        tree = SBT.load(os.path.join(location, 'tree.sbt.json'), leaf_loader=SigLeaf.load)
-        print('*' * 60)
-        print("{}:".format(to_search.metadata))
-        search_obj = make_jaccard_search_query(threshold=0.1)
-        new_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
-        print(*new_result, sep='\n')
+    tree = SBT.load(runtmp.output('tree.sbt.json'), leaf_loader=SigLeaf.load)
+    print('*' * 60)
+    print("{}:".format(to_search.metadata))
+    search_obj = make_jaccard_search_query(threshold=0.1)
+    new_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
+    print(*new_result, sep='\n')
 
-        assert old_result == new_result
+    assert old_result == new_result
 
-        assert os.path.exists(os.path.join(location, tree.storage.subdir))
-        assert os.path.exists(os.path.join(location, '.fstree'))
+    assert os.path.exists(runtmp.output(tree.storage.subdir))
+    assert os.path.exists(runtmp.output('.fstree'))
 
 
 def test_sbt_zipstorage(tmpdir):
@@ -386,83 +385,81 @@ def test_sbt_zipstorage(tmpdir):
         assert old_result == new_result
 
 
-def test_sbt_ipfsstorage():
+def test_sbt_ipfsstorage(runtmp):
     ipfshttpclient = pytest.importorskip('ipfshttpclient')
 
     factory = GraphFactory(31, 1e5, 4)
-    with utils.TempDirectory() as location:
-        tree = SBT(factory)
+    tree = SBT(factory)
 
-        for f in utils.SIG_FILES:
-            sig = load_one_signature(utils.get_test_data(f))
+    for f in utils.SIG_FILES:
+        sig = load_one_signature(utils.get_test_data(f))
 
-            leaf = SigLeaf(os.path.basename(f), sig)
-            tree.add_node(leaf)
-            to_search = leaf
+        leaf = SigLeaf(os.path.basename(f), sig)
+        tree.add_node(leaf)
+        to_search = leaf
+
+    print('*' * 60)
+    print("{}:".format(to_search.metadata))
+    search_obj = make_jaccard_search_query(threshold=0.1)
+    old_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
+    print(*old_result, sep='\n')
+
+    try:
+        with IPFSStorage() as storage:
+            tree.save(runtmp.output('tree.sbt.json'), storage=storage)
+    except ipfshttpclient.exceptions.ConnectionError:
+        pytest.xfail("ipfs not installed/functioning probably")
+
+    with IPFSStorage() as storage:
+        tree = SBT.load(runtmp.output('tree.sbt.json'),
+                        leaf_loader=SigLeaf.load,
+                        storage=storage)
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
         search_obj = make_jaccard_search_query(threshold=0.1)
-        old_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
-        print(*old_result, sep='\n')
+        new_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
+        print(*new_result, sep='\n')
 
-        try:
-            with IPFSStorage() as storage:
-                tree.save(os.path.join(location, 'tree.sbt.json'), storage=storage)
-        except ipfshttpclient.exceptions.ConnectionError:
-            pytest.xfail("ipfs not installed/functioning probably")
-
-        with IPFSStorage() as storage:
-            tree = SBT.load(os.path.join(location, 'tree.sbt.json'),
-                            leaf_loader=SigLeaf.load,
-                            storage=storage)
-
-            print('*' * 60)
-            print("{}:".format(to_search.metadata))
-            search_obj = make_jaccard_search_query(threshold=0.1)
-            new_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
-            print(*new_result, sep='\n')
-
-            assert old_result == new_result
+        assert old_result == new_result
 
 
-def test_sbt_redisstorage():
+def test_sbt_redisstorage(runtmp):
     redis = pytest.importorskip('redis')
     factory = GraphFactory(31, 1e5, 4)
-    with utils.TempDirectory() as location:
-        tree = SBT(factory)
+    tree = SBT(factory)
 
-        for f in utils.SIG_FILES:
-            sig = load_one_signature(utils.get_test_data(f))
+    for f in utils.SIG_FILES:
+        sig = load_one_signature(utils.get_test_data(f))
 
-            leaf = SigLeaf(os.path.basename(f), sig)
-            tree.add_node(leaf)
-            to_search = leaf
+        leaf = SigLeaf(os.path.basename(f), sig)
+        tree.add_node(leaf)
+        to_search = leaf
+
+    print('*' * 60)
+    print("{}:".format(to_search.metadata))
+    search_obj = make_jaccard_search_query(threshold=0.1)
+    old_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
+    print(*old_result, sep='\n')
+
+    try:
+        with RedisStorage() as storage:
+            tree.save(runtmp.output('tree.sbt.json'), storage=storage)
+    except redis.exceptions.ConnectionError:
+        pytest.xfail("Couldn't connect to redis server")
+
+    with RedisStorage() as storage:
+        tree = SBT.load(runtmp.output('tree.sbt.json'),
+                        leaf_loader=SigLeaf.load,
+                        storage=storage)
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
         search_obj = make_jaccard_search_query(threshold=0.1)
-        old_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
-        print(*old_result, sep='\n')
+        new_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
+        print(*new_result, sep='\n')
 
-        try:
-            with RedisStorage() as storage:
-                tree.save(os.path.join(location, 'tree.sbt.json'), storage=storage)
-        except redis.exceptions.ConnectionError:
-            pytest.xfail("Couldn't connect to redis server")
-
-        with RedisStorage() as storage:
-            tree = SBT.load(os.path.join(location, 'tree.sbt.json'),
-                            leaf_loader=SigLeaf.load,
-                            storage=storage)
-
-            print('*' * 60)
-            print("{}:".format(to_search.metadata))
-            search_obj = make_jaccard_search_query(threshold=0.1)
-            new_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
-            print(*new_result, sep='\n')
-
-            assert old_result == new_result
+        assert old_result == new_result
 
 
 def test_save_zip(tmpdir):
@@ -573,7 +570,7 @@ def test_tree_repair_insert():
             assert all(c.node is None for c in tree_repair.children(pos))
 
 
-def test_save_sparseness(n_children):
+def test_save_sparseness(runtmp, n_children):
     factory = GraphFactory(31, 1e5, 4)
     tree = SBT(factory, d=n_children)
 
@@ -590,29 +587,28 @@ def test_save_sparseness(n_children):
     old_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
     print(*old_result, sep='\n')
 
-    with utils.TempDirectory() as location:
-        tree.save(os.path.join(location, 'demo'), sparseness=1.0)
-        tree_loaded = SBT.load(os.path.join(location, 'demo'),
-                               leaf_loader=SigLeaf.load)
-        assert all(not isinstance(n, Node) for _, n in tree_loaded)
+    tree.save(runtmp.output('demo'), sparseness=1.0)
+    tree_loaded = SBT.load(runtmp.output('demo'),
+                            leaf_loader=SigLeaf.load)
+    assert all(not isinstance(n, Node) for _, n in tree_loaded)
 
-        print('*' * 60)
-        print("{}:".format(to_search.metadata))
-        new_result = {str(s.signature) for s in tree_loaded.find(search_obj,
-                                                       to_search.data)}
-        print(*new_result, sep='\n')
+    print('*' * 60)
+    print("{}:".format(to_search.metadata))
+    new_result = {str(s.signature) for s in tree_loaded.find(search_obj,
+                                                    to_search.data)}
+    print(*new_result, sep='\n')
 
-        assert old_result == new_result
+    assert old_result == new_result
 
-        for pos, node in tree_loaded:
-            # Every parent of a node must be an internal node (and not a leaf),
-            # except for node 0 (the root), whose parent is None.
-            if pos != 0:
-                assert isinstance(tree_loaded.parent(pos).node, Node)
+    for pos, node in tree_loaded:
+        # Every parent of a node must be an internal node (and not a leaf),
+        # except for node 0 (the root), whose parent is None.
+        if pos != 0:
+            assert isinstance(tree_loaded.parent(pos).node, Node)
 
-            # Leaf nodes can't have children
-            if isinstance(node, Leaf):
-                assert all(c.node is None for c in tree_loaded.children(pos))
+        # Leaf nodes can't have children
+        if isinstance(node, Leaf):
+            assert all(c.node is None for c in tree_loaded.children(pos))
 
 
 def test_sbt_as_index_select():
