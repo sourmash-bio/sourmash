@@ -4271,19 +4271,18 @@ def test_watch_coverage(runtmp):
 def test_storage_convert(runtmp):
     import pytest
 
-    # with utils.TempDirectory() as location:
     testdata = utils.get_test_data('v2.sbt.json')
     shutil.copyfile(testdata, runtmp.output('v2.sbt.json'))
-    shutil.copytree(runtmp.output(os.path.dirname(testdata), '.sbt.v2'),
+    shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
                     runtmp.output('.sbt.v2'))
     testsbt = runtmp.output('v2.sbt.json')
 
     original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
     args = ['storage', 'convert', '-b', 'ipfs', testsbt]
-    runtmp.sourmash(*args)
-    # status, out, err = utils.runscript('sourmash', args,
-    #                                     in_directory=location, fail_ok=True)
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash(*args)
+
     if not runtmp.last_result.status and "ipfs.exceptions.ConnectionError" in runtmp.last_result.err:
         raise pytest.xfail('ipfs probably not running')
 
@@ -4298,8 +4297,7 @@ def test_storage_convert(runtmp):
                 runtmp.output('v2.sbt.zip')),
             testsbt]
     runtmp.sourmash(*args)
-    # status, out, err = utils.runscript('sourmash', args,
-    #                                     in_directory=location)
+
     tar = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
     assert len(original) == len(tar)
@@ -4308,10 +4306,9 @@ def test_storage_convert(runtmp):
 
 
 def test_storage_convert_identity(runtmp):
-    # with utils.TempDirectory() as location:
     testdata = utils.get_test_data('v2.sbt.json')
     shutil.copyfile(testdata, runtmp.output('v2.sbt.json'))
-    shutil.copytree(runtmp.output(os.path.dirname(testdata), '.sbt.v2'),
+    shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
                     runtmp.output('.sbt.v2'))
     testsbt = runtmp.output('v2.sbt.json')
 
@@ -4319,8 +4316,6 @@ def test_storage_convert_identity(runtmp):
 
     args = ['storage', 'convert', '-b', 'fsstorage', testsbt]
     runtmp.sourmash(*args)
-    # status, out, err = utils.runscript('sourmash', args,
-    #                                     in_directory=location)
 
     identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
@@ -4330,10 +4325,9 @@ def test_storage_convert_identity(runtmp):
 
 
 def test_storage_convert_fsstorage_newpath(runtmp):
-    # with utils.TempDirectory() as location:
     testdata = utils.get_test_data('v2.sbt.json')
     shutil.copyfile(testdata, runtmp.output('v2.sbt.json'))
-    shutil.copytree(runtmp.output(os.path.dirname(testdata), '.sbt.v2'),
+    shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
                     runtmp.output('.sbt.v2'))
     testsbt = runtmp.output('v2.sbt.json')
 
@@ -4343,8 +4337,6 @@ def test_storage_convert_fsstorage_newpath(runtmp):
                         '-b', 'fsstorage({})'.format(runtmp.output('v3')),
                         testsbt]
     runtmp.sourmash(*args)
-    # status, out, err = utils.runscript('sourmash', args,
-    #                                     in_directory=location)
 
     identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
@@ -4354,18 +4346,15 @@ def test_storage_convert_fsstorage_newpath(runtmp):
 
 
 def test_migrate(runtmp):
-    # with utils.TempDirectory() as location:
     testdata = utils.get_test_data('v3.sbt.json')
     shutil.copyfile(testdata, runtmp.output('v3.sbt.json'))
-    shutil.copytree(runtmp.output(os.path.dirname(testdata), '.sbt.v3'),
-                    runtmp.output('.sbt.v3'))
+    shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v3'),
+                        runtmp.output('.sbt.v3'))
     testsbt = runtmp.output('v3.sbt.json')
 
     original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
     runtmp.sourmash('migrate', testsbt)
-    # status, out, err = utils.runscript('sourmash', ['migrate', testsbt],
-    #                                     in_directory=location)
 
     identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
