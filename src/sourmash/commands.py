@@ -1072,7 +1072,7 @@ def migrate(args):
     "Migrate an SBT database to the latest version."
     tree = load_sbt_index(args.sbt_name, print_version_warning=False)
 
-    notify('saving SBT under "{}".', args.sbt_name)
+    notify(f'saving SBT under "{args.sbt_name}".')
     tree.save(args.sbt_name, structure_only=True)
 
 
@@ -1102,9 +1102,7 @@ def prefetch(args):
                                                ksize=args.ksize,
                                                select_moltype=moltype,
                                                select_md5=args.md5)
-    notify('loaded query: {}... (k={}, {})', str(query)[:30],
-                                             query.minhash.ksize,
-                                             sourmash_args.get_moltype(query))
+    notify(f'loaded query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})')
 
     # verify signature was computed with scaled.
     if not query.minhash.scaled:
@@ -1145,8 +1143,7 @@ def prefetch(args):
     matches_out = SaveSignaturesToLocation(args.save_matches)
     matches_out.open()
     if args.save_matches:
-        notify("saving all matching database signatures to '{}'",
-               args.save_matches)
+        notify(f"saving all matching database signatures to '{args.save_matches}'")
 
     # iterate over signatures in db one at a time, for each db;
     # find those with sufficient overlap
