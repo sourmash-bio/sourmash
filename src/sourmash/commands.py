@@ -42,6 +42,7 @@ def compare(args):
     ksizes = set()
     moltypes = set()
     for filename in inp_files:
+        # working on this
         notify("loading '{}'", filename, end='\r')
         loaded = sourmash_args.load_file_as_signatures(filename,
                                                        ksize=args.ksize,
