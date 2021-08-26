@@ -314,16 +314,16 @@ def import_csv(args):
             e.add_many(hashes)
             s = sig.SourmashSignature(e, filename=name)
             siglist.append(s)
-            notify('loaded signature: {} {}', name, s.md5sum()[:8])
+            notify(f'loaded signature: {name} {s.md5sum()[:8]}')
 
-        notify('saving {} signatures to JSON', len(siglist))
+        notify(f'saving {len(siglist)} signatures to JSON')
         with FileOutput(args.output, 'wt') as outfp:
             sig.save_signatures(siglist, outfp)
 
 
 def sbt_combine(args):
     inp_files = list(args.sbts)
-    notify('combining {} SBTs', len(inp_files))
+    notify(f'combining {len(inp_files)} SBTs')
 
     tree = load_sbt_index(inp_files.pop(0))
 
@@ -332,7 +332,7 @@ def sbt_combine(args):
         # TODO: check if parameters are the same for both trees!
         tree.combine(new_tree)
 
-    notify('saving SBT under "{}".', args.sbt_name)
+    notify(f'saving SBT under "{args.sbt_name}".')
     tree.save(args.sbt_name)
 
 
