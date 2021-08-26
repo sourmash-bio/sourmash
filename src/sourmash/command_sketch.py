@@ -172,7 +172,7 @@ def _execute_sketch(args, signatures_factory):
         error('error: sourmash only supports CC0-licensed signatures. sorry!')
         sys.exit(-1)
 
-    notify('computing signatures for files: {}', ", ".join(args.filenames))
+    notify(f'computing signatures for files: {", ".join(args.filenames)}')
 
     if args.merge and not args.output:
         error("ERROR: must specify -o with --merge")
@@ -184,7 +184,7 @@ def _execute_sketch(args, signatures_factory):
 
     # get number of output sigs:
     num_sigs = len(signatures_factory.params_list)
-    notify('Computing a total of {} signature(s).', num_sigs)
+    notify(f'Computing a total of {num_sigs} signature(s).')
 
     if num_sigs == 0:
         error('...nothing to calculate!? Exiting!')
