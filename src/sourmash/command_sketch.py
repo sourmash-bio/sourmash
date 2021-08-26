@@ -38,15 +38,6 @@ def _parse_params_str(params_str):
                 num = int(num)
             except ValueError:
                 raise ValueError(f"cannot parse num='{num}' as a number")
-            # if num < 0:
-            #     raise ValueError(f"num is {num}, must be >= 0")
-
-            # if num < 0:
-            #     raise ValueError(f"ERROR: num value must be positive")
-            # if num < 50:
-            #     notify('WARNING: num value should be >= 50. Continuing anyway.')
-            # if num > 50000:
-            #     notify('WARNING: num value should be <= 50000. Continuing anyway.')
 
             num = check_num_bounds(num)
 
@@ -60,17 +51,6 @@ def _parse_params_str(params_str):
                 scaled = int(scaled)
             except ValueError:
                 raise ValueError(f"cannot parse scaled='{scaled}' as an integer")
-            # if scaled < 0:
-            #     raise ValueError(f"scaled is {scaled}, must be >= 1")
-            # if scaled > 1e8:
-            #     notify(f"WARNING: scaled value of {scaled} is nonsensical!?")
-
-            # if scaled < 0:
-            #     raise ValueError(f"ERROR: scaled value must be positive")
-            # if scaled < 100:
-            #     notify('WARNING: scaled value should be >= 100. Continuing anyway.')
-            # if scaled > 1e6:
-            #     notify('WARNING: scaled value should be <= 1e6. Continuing anyway.')
 
             scaled = check_scaled_bounds(scaled)
 

@@ -885,7 +885,6 @@ def test_do_sourmash_sketchdna_with_bad_scaled():
                                             fail_ok=True)
 
         assert status != 0
-        # assert 'scaled is -1, must be >= 1' in err
         assert 'ERROR: scaled value must be positive' in err
 
         status, out, err = utils.runscript('sourmash',
@@ -905,7 +904,6 @@ def test_do_sourmash_sketchdna_with_bad_scaled():
                                             in_directory=location)
 
         assert status == 0
-        # assert 'WARNING: scaled value of 1000000000 is nonsensical!?' in err
         assert 'WARNING: scaled value should be <= 1e6. Continuing anyway.' in err
 
 
