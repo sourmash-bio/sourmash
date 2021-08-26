@@ -354,7 +354,7 @@ def index(args):
 
     if args.scaled:
         args.scaled = int(args.scaled)
-        notify('downsampling signatures to scaled={}', args.scaled)
+        notify(f'downsampling signatures to scaled={args.scaled}')
 
     inp_files = list(args.signatures)
     if args.from_file:
@@ -365,7 +365,7 @@ def index(args):
         error("ERROR: no files to index!? Supply on command line or use --from-file")
         sys.exit(-1)
 
-    notify('loading {} files into SBT', len(inp_files))
+    notify(f'loading {len(inp_files)} files into SBT')
 
     progress = sourmash_args.SignatureLoadingProgress()
 
@@ -429,7 +429,7 @@ def index(args):
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
-    notify('loaded {} sigs; saving SBT under "{}"', n, args.sbt_name)
+    notify(f'loaded {n} sigs; saving SBT under "{args.sbt_name}"')
     tree.save(args.sbt_name, sparseness=args.sparseness)
     if tree.storage:
         tree.storage.close()
@@ -448,17 +448,14 @@ def search(args):
                                                ksize=args.ksize,
                                                select_moltype=moltype,
                                                select_md5=args.md5)
-    notify('loaded query: {}... (k={}, {})', str(query)[:30],
-                                             query.minhash.ksize,
-                                             sourmash_args.get_moltype(query))
+    notify(f'loaded query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})')
 
     if args.scaled:
         if not query.minhash.scaled:
             error('cannot downsample a signature not created with --scaled')
             sys.exit(-1)
         if args.scaled != query.minhash.scaled:
-            notify('downsampling query from scaled={} to {}',
-                query.minhash.scaled, int(args.scaled))
+            notify(f'downsampling query from scaled={query.minhash.scaled} to {int(args.scaled)}')
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # set up the search databases
@@ -537,7 +534,7 @@ def search(args):
 
     # save matching signatures upon request
     if args.save_matches:
-        notify('saving all matched signatures to "{}"', args.save_matches)
+        notify(f'saving all matched signatures to "{args.save_matches}"')
 
         with SaveSignaturesToLocation(args.save_matches) as save_sig:
             for sr in results:
