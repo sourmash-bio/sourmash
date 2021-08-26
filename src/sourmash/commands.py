@@ -842,8 +842,7 @@ def multigather(args):
         for query in sourmash_args.load_file_as_signatures(queryfile,
                                                        ksize=args.ksize,
                                                        select_moltype=moltype):
-            notify('loaded query: {}... (k={}, {})', str(query)[:30],
-                   query.minhash.ksize, sourmash_args.get_moltype(query))
+            notify(f'loaded query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})')
 
             # verify signature was computed right.
             if not query.minhash.scaled:
@@ -851,8 +850,7 @@ def multigather(args):
                 continue
 
             if args.scaled:
-                notify('downsampling query from scaled={} to {}',
-                    query.minhash.scaled, int(args.scaled))
+                notify(f'downsampling query from scaled={query.minhash.scaled} to {int(args.scaled)}')
                 query.minhash = query.minhash.downsample(scaled=args.scaled)
  
             # empty?
@@ -949,7 +947,7 @@ def multigather(args):
             output_matches = output_base + '.matches.sig'
             with open(output_matches, 'wt') as fp:
                 outname = output_matches
-                notify('saving all matches to "{}"', outname)
+                notify(f'saving all matches to "{outname}"')
                 sig.save_signatures([ r.match for r in found ], fp)
 
             output_unassigned = output_base + '.unassigned.sig'
@@ -965,14 +963,14 @@ def multigather(args):
                 elif not remaining_query:
                     notify('no unassigned hashes! not saving.')
                 else:
-                    notify('saving unassigned hashes to "{}"', output_unassigned)
+                    notify(f'saving unassigned hashes to "{output_unassigned}"')
 
                     # CTB: note, multigather does not save abundances
                     sig.save_signatures([ remaining_query ], fp)
             n += 1
 
         # fini, next query!
-    notify('\nconducted gather searches on {} signatures', n)
+    notify(f'\nconducted gather searches on {n} signatures')
 
 
 def watch(args):
@@ -1019,7 +1017,7 @@ def watch(args):
 
     E = MinHash(ksize=ksize, n=args.num_hashes, is_protein=is_protein, dayhoff=dayhoff, hp=hp)
 
-    notify('Computing signature for k={}, {} from stdin', ksize, moltype)
+    notify(f'Computing signature for k={ksize}, {moltype} from stdin')
 
     def do_search():
         results = []
@@ -1042,7 +1040,7 @@ def watch(args):
     for n, record in enumerate(screed_iter):
         # at each watermark, print status & check cardinality
         if n >= watermark:
-            notify('\r... read {} sequences', n, end='')
+            notify(f'\r... read {n} sequences', end='')
             watermark += WATERMARK_SIZE
 
             if do_search():
@@ -1055,7 +1053,7 @@ def watch(args):
 
     results = do_search()
     if not results:
-        notify('... read {} sequences, no matches found.', n)
+        notify(f'... read {n} sequences, no matches found.')
     else:
         results.sort(key=lambda x: -x[0])   # take best
         similarity, found_sig = results[0]
@@ -1063,7 +1061,7 @@ def watch(args):
                similarity)
 
     if args.output:
-        notify('saving signature to {}', args.output)
+        notify(f'saving signature to {args.output}')
         with FileOutput(args.output, 'wt') as fp:
             streamsig = sig.SourmashSignature(E, filename='stdin',
                                               name=args.name)
