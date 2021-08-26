@@ -7,8 +7,7 @@ from .signature import SourmashSignature
 from .logging import notify, error, set_quiet
 from .command_compute import (_compute_individual, _compute_merged,
                               ComputeParameters)
-from sourmash.sourmash_args import check_scaled_bounds
-from sourmash.sourmash_args import check_num_bounds
+from sourmash.sourmash_args import check_scaled_bounds, check_num_bounds
 
 DEFAULTS = dict(
     dna='k=31,scaled=1000,noabund',
