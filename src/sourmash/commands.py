@@ -42,8 +42,7 @@ def compare(args):
     ksizes = set()
     moltypes = set()
     for filename in inp_files:
-        # working on this
-        notify("loading '{}'", filename, end='\r')
+        notify(f"loading '{filename}'", end='\r')
         loaded = sourmash_args.load_file_as_signatures(filename,
                                                        ksize=args.ksize,
                                                        select_moltype=moltype,
@@ -52,7 +51,7 @@ def compare(args):
                                                        progress=progress)
         loaded = list(loaded)
         if not loaded:
-            notify('\nwarning: no signatures loaded at given ksize/molecule type/picklist from {}', filename)
+            notify(f'\nwarning: no signatures loaded at given ksize/molecule type/picklist from {filename}')
         siglist.extend(loaded)
 
         # track ksizes/moltypes
@@ -80,7 +79,7 @@ def compare(args):
         sys.exit(-1)
 
     notify(' '*79, end='\r')
-    notify('loaded {} signatures total.'.format(len(siglist)))
+    notify(f'loaded {format(len(siglist))} signatures total.')
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
@@ -122,7 +121,7 @@ def compare(args):
         for s in siglist:
             if s.minhash.scaled != max_scaled:
                 if not printed_scaled_msg:
-                    notify('downsampling to scaled value of {}'.format(max_scaled))
+                    notify(f'downsampling to scaled value of {format(max_scaled)}')
                     printed_scaled_msg = True
                 s.minhash = s.minhash.downsample(scaled=max_scaled)
 
@@ -158,11 +157,11 @@ def compare(args):
     # shall we output a matrix?
     if args.output:
         labeloutname = args.output + '.labels.txt'
-        notify('saving labels to: {}', labeloutname)
+        notify(f'saving labels to: {labeloutname}')
         with open(labeloutname, 'w') as fp:
             fp.write("\n".join(labeltext))
 
-        notify('saving comparison matrix to: {}', args.output)
+        notify(f'saving comparison matrix to: {args.output}')
         with open(args.output, 'wb') as fp:
             numpy.save(fp, similarity)
 
@@ -192,13 +191,14 @@ def plot(args):
     D_filename = args.distances
     labelfilename = D_filename + '.labels.txt'
 
-    notify('loading comparison matrix from {}...', D_filename)
+    notify(f'loading comparison matrix from {D_filename}...')
     D = numpy.load(open(D_filename, 'rb'))
+    # not sure how to change this to use f-strings
     notify('...got {} x {} matrix.', *D.shape)
 
     if args.labeltext:
         labelfilename = args.labeltext
-    notify('loading labels from {}', labelfilename)
+    notify(f'loading labels from {labelfilename}')
     labeltext = [ x.strip() for x in open(labelfilename) ]
     if len(labeltext) != D.shape[0]:
         error('{} labels != matrix size, exiting', len(labeltext))
@@ -232,7 +232,7 @@ def plot(args):
         hist_out = os.path.join(args.output_dir, hist_out)
 
     # make the histogram
-    notify('saving histogram of matrix values => {}', hist_out)
+    notify(f'saving histogram of matrix values => {hist_out}')
     fig = pylab.figure(figsize=(8,5))
     pylab.hist(numpy.array(D.flat), bins=100)
     fig.savefig(hist_out)
@@ -259,7 +259,7 @@ def plot(args):
     Y = sch.linkage(D, method='single')
     sch.dendrogram(Y, orientation='right', labels=labeltext)
     fig.savefig(dendrogram_out)
-    notify('wrote dendrogram to: {}', dendrogram_out)
+    notify(f'wrote dendrogram to: {dendrogram_out}')
 
     ### make the dendrogram+matrix:
     (fig, rlabels, rmat) = sourmash_fig.plot_composite_matrix(D, labeltext,
@@ -269,7 +269,7 @@ def plot(args):
                                              vmax=args.vmax,
                                              force=args.force)
     fig.savefig(matrix_out)
-    notify('wrote numpy distance matrix to: {}', matrix_out)
+    notify(f'wrote numpy distance matrix to: {matrix_out}')
 
     if len(labeltext) < 30:
         # for small matrices, print out sample numbering for FYI.
@@ -287,7 +287,7 @@ def plot(args):
                 for j in range(len(rlabels)):
                     y.append('{}'.format(rmat[i][j]))
                 w.writerow(y)
-        notify('Wrote clustered matrix and labels out to {}', args.csv)
+        notify(f'Wrote clustered matrix and labels out to {args.csv}')
 
 
 def import_csv(args):
