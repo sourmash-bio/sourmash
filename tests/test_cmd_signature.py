@@ -2909,7 +2909,7 @@ def test_import_mash_csv_to_sig(runtmp):
 
     runtmp.sourmash('sig', 'import', '--csv', testdata1, '-o', 'xxx.sig')
 
-    runtmp.sourmash('compute', '-k', '31', '-n', '970', testdata2)
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=31,num=970', testdata2)
 
     runtmp.sourmash('search', '-k', '31', 'short.fa.sig', 'xxx.sig')
 

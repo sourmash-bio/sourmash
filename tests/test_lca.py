@@ -2101,7 +2101,7 @@ def test_compare_csv_real():
 def test_incompat_lca_db_ksize_2(c):
     # test on gather - create a database with ksize of 25
     testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
-    c.run_sourmash('compute', '-k', '25', '--scaled', '1000', testdata1,
+    c.run_sourmash('sketch', 'dna', '-p', 'k=25,scaled=1000', testdata1,
                    '-o', 'test_db.sig')
     print(c)
 
