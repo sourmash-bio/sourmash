@@ -2,8 +2,7 @@ from glob import glob
 import os
 import argparse
 from sourmash.logging import notify
-from sourmash.sourmash_args import check_scaled_bounds
-from sourmash.sourmash_args import check_num_bounds
+from sourmash.sourmash_args import check_scaled_bounds, check_num_bounds
 
 
 def add_moltype_args(parser):
