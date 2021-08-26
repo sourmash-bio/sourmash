@@ -622,11 +622,11 @@ def load_many_signatures(locations, progress, *, yield_all_files=False,
         except ValueError as exc:
             # trap expected errors, and either power through or display + exit.
             if force:
-                notify("ERROR: {}", str(exc))
+                notify(f"ERROR: {str(exc)}")
                 notify("(continuing)")
                 continue
             else:
-                notify("ERROR: {}", str(exc))
+                notify(f"ERROR: {str(exc)}")
                 sys.exit(-1)
         except KeyboardInterrupt:
             notify("Received CTRL-C - exiting.")
@@ -698,8 +698,7 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
         except FileExistsError:
             pass
         except:
-            notify("ERROR: cannot create signature output directory '{}'",
-                   self.location)
+            notify(f"ERROR: cannot create signature output directory '{self.location}'")
             sys.exit(-1)
 
     def add(self, ss):
