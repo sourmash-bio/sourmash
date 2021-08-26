@@ -585,8 +585,7 @@ def categorize(args):
         if loc in already_names:
             continue
 
-        notify('loaded query: {}... (k={}, {})', str(orig_query)[:30],
-               orig_query.minhash.ksize, orig_query.minhash.moltype)
+        notify(f'loaded query: {str(orig_query)[:30]}... (k={orig_query.minhash.ksize}, {orig_query.minhash.moltype})')
 
         if args.ignore_abundance:
             query = orig_query.copy()
@@ -608,15 +607,13 @@ def categorize(args):
         if results:
             results.sort(key=lambda x: -x[0])   # reverse sort on similarity
             best_hit_sim, best_hit_query = results[0]
-            notify('for {}, found: {:.2f} {}', query,
-                                               best_hit_sim,
-                                               best_hit_query)
+            notify(f'for {query}, found: {best_hit_sim:.2f} {best_hit_query}')
             best_hit_query_name = best_hit_query.name
             if csv_w:
                 csv_w.writerow([loc, query, best_hit_query_name,
                                best_hit_sim])
         else:
-            notify('for {}, no match found', query)
+            notify(f'for {query}, no match found')
 
     if csv_fp:
         csv_fp.close()
@@ -634,9 +631,7 @@ def gather(args):
                                                ksize=args.ksize,
                                                select_moltype=moltype,
                                                select_md5=args.md5)
-    notify('loaded query: {}... (k={}, {})', str(query)[:30],
-                                             query.minhash.ksize,
-                                             sourmash_args.get_moltype(query))
+    notify(f'loaded query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})')
 
     # verify signature was computed right.
     if not query.minhash.scaled:
@@ -644,8 +639,7 @@ def gather(args):
         sys.exit(-1)
 
     if args.scaled:
-        notify('downsampling query from scaled={} to {}',
-            query.minhash.scaled, int(args.scaled))
+        notify(f'downsampling query from scaled={query.minhash.scaled} to {int(args.scaled)}')
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # empty?
