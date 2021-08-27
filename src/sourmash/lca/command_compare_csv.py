@@ -19,13 +19,12 @@ def compare_csv(args):
     set_quiet(args.quiet, args.debug)
 
     # first, load classify-style spreadsheet
-    notify('loading classify output from: {}', args.csv1)
+    notify(f'loading classify output from: {args.csv1}')
     assignments0, num_rows0 = load_taxonomy_assignments(args.csv1,
                                                         start_column=3,
                                                         force=args.force)
 
-    notify('loaded {} distinct lineages, {} rows',
-           len(set(assignments0.values())), num_rows0)
+    notify(f'loaded {len(set(assignments0.values()))} distinct lineages, {num_rows0} rows')
     notify('----')
 
     # next, load custom taxonomy spreadsheet
@@ -33,22 +32,21 @@ def compare_csv(args):
     if args.tabs:
         delimiter = '\t'
 
-    notify('loading custom spreadsheet from: {}', args.csv2)
+    notify(f'loading custom spreadsheet from: {args.csv2}')
     assignments, num_rows = load_taxonomy_assignments(args.csv2,
                                                delimiter=delimiter,
                                                start_column=args.start_column,
                                                use_headers=not args.no_headers,
                                                force=args.force)
-    notify('loaded {} distinct lineages, {} rows',
-           len(set(assignments.values())), num_rows)
+    notify(f'loaded {len(set(assignments.values()))} distinct lineages, {num_rows} rows')
 
     # now, compute basic differences:
     missing_1 = set(assignments0.keys()) - set(assignments.keys())
     missing_2 = set(assignments.keys()) - set(assignments0.keys())
     if missing_2:
-        notify('missing {} assignments in classify spreadsheet.', len(missing_2))
+        notify(f'missing {len(missing_2)} assignments in classify spreadsheet.')
     if missing_1:
-        notify('missing {} assignments in custom spreadsheet.', len(missing_1))
+        notify(f'missing {len(missing_1)} assignments in custom spreadsheet.')
     if missing_1 or missing_2:
         notify('(these will not be evaluated any further)')
     else:
@@ -84,16 +82,13 @@ def compare_csv(args):
                     rank = lca[-1].rank
                 incompat_rank[rank] += 1
 
-    notify("{} total assignments, {} differ between spreadsheets.",
-           n_total, n_different)
-    notify("{} are compatible (one lineage is ancestor of another.",
-           n_compat)
-    notify("{} are incompatible (there is a disagreement in the trees).",
-           n_incompat)
+    notify(f"{n_total} total assignments, {n_different} differ between spreadsheets.")
+    notify(f"{n_compat} are compatible (one lineage is ancestor of another.")
+    notify(f"{n_incompat} are incompatible (there is a disagreement in the trees).")
 
     if n_incompat:
         for rank in lca_utils.taxlist():
-            notify('{} incompatible at rank {}', incompat_rank[rank], rank)
+            notify(f'{incompat_rank[rank]} incompatible at rank {rank}')
         
 
 if __name__ == '__main__':
