@@ -49,7 +49,7 @@ def test_do_sourmash_compute_check_num_bounds_negative(runtmp):
     with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('compute', '-k', '31', '--num-hashes', '-5', '-o', sigfile, '--merge', '"name"', testdata1, testdata2, testdata3)
     
-    assert "ERROR: --num-hashes value must be positive" in c.last_result.err
+    assert "ERROR: num value must be positive" in c.last_result.err
 
 
 def test_do_sourmash_compute_check_num_bounds_less_than_minimum(runtmp):
@@ -61,7 +61,7 @@ def test_do_sourmash_compute_check_num_bounds_less_than_minimum(runtmp):
 
     c.run_sourmash('compute', '-k', '31', '--num-hashes', '25', '-o', sigfile, '--merge', '"name"', testdata1, testdata2, testdata3)
     
-    assert "WARNING: --num-hashes value should be >= 50. Continuing anyway." in c.last_result.err
+    assert "WARNING: num value should be >= 50. Continuing anyway." in c.last_result.err
 
 
 def test_do_sourmash_compute_check_num_bounds_more_than_maximum(runtmp):
@@ -73,7 +73,7 @@ def test_do_sourmash_compute_check_num_bounds_more_than_maximum(runtmp):
 
     c.run_sourmash('compute', '-k', '31', '--num-hashes', '100000', '-o', sigfile, '--merge', '"name"', testdata1, testdata2, testdata3)
     
-    assert "WARNING: --num-hashes value should be <= 50000. Continuing anyway." in c.last_result.err
+    assert "WARNING: num value should be <= 50000. Continuing anyway." in c.last_result.err
 
 
 @utils.in_tempdir

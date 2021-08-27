@@ -2996,7 +2996,7 @@ def test_multigather_check_scaled_bounds_negative(c):
     with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash(*cmd)
 
-    assert "ERROR: --scaled value must be positive" in str(exc.value)
+    assert "ERROR: scaled value must be positive" in str(exc.value)
 
 
 @utils.in_tempdir
@@ -3017,7 +3017,7 @@ def test_multigather_check_scaled_bounds_less_than_minimum(c):
     with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash(*cmd)
 
-    assert "WARNING: --scaled value should be >= 100. Continuing anyway." in str(exc.value)
+    assert "WARNING: scaled value should be >= 100. Continuing anyway." in str(exc.value)
 
 
 @utils.in_tempdir
@@ -3037,7 +3037,7 @@ def test_multigather_check_scaled_bounds_more_than_maximum(c):
     
     c.run_sourmash(*cmd)
 
-    assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in c.last_result.err
+    assert "WARNING: scaled value should be <= 1e6. Continuing anyway." in c.last_result.err
 
 
 @utils.in_tempdir
@@ -4187,7 +4187,7 @@ def test_watch_check_num_bounds_negative(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('watch', '--ksize', '21', '-n', '-5', '--dna', 'zzz', testdata0)
 
-    assert "ERROR: --num-hashes value must be positive" in c.last_result.err
+    assert "ERROR: num value must be positive" in c.last_result.err
 
 
 def test_watch_check_num_bounds_less_than_minimum(runtmp):
@@ -4200,7 +4200,7 @@ def test_watch_check_num_bounds_less_than_minimum(runtmp):
 
     c.run_sourmash('watch', '--ksize', '21', '-n', '25', '--dna', 'zzz', testdata0)
 
-    assert "WARNING: --num-hashes value should be >= 50. Continuing anyway." in c.last_result.err
+    assert "WARNING: num value should be >= 50. Continuing anyway." in c.last_result.err
 
 
 def test_watch_check_num_bounds_more_than_maximum(runtmp):
@@ -4213,7 +4213,7 @@ def test_watch_check_num_bounds_more_than_maximum(runtmp):
 
     c.run_sourmash('watch', '--ksize', '21', '-n', '100000', '--dna', 'zzz', testdata0)
 
-    assert "WARNING: --num-hashes value should be <= 50000. Continuing anyway." in c.last_result.err
+    assert "WARNING: num value should be <= 50000. Continuing anyway." in c.last_result.err
 
 
 @utils.in_tempdir

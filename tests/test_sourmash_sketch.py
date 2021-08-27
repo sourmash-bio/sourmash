@@ -29,6 +29,44 @@ from sourmash.command_sketch import _signatures_for_sketch_factory
 from sourmash_tst_utils import SourmashCommandFailed
 
 
+def test_do_sourmash_sketch_check_scaled_bounds_negative(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'translate', '-p', 'scaled=-5', testdata1)
+    assert "ERROR: scaled value must be positive" in runtmp.last_result.err
+
+
+def test_do_sourmash_sketch_check_scaled_bounds_less_than_minimum(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'translate', '-p', 'scaled=50', testdata1)
+    assert "WARNING: scaled value should be >= 100. Continuing anyway." in runtmp.last_result.err
+
+
+def test_do_sourmash_sketch_check_scaled_bounds_more_than_maximum(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'translate', '-p', 'scaled=1000000000', testdata1)
+    assert "WARNING: scaled value should be <= 1e6. Continuing anyway." in runtmp.last_result.err
+
+
+def test_do_sourmash_sketch_check_num_bounds_negative(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'translate', '-p', 'num=-5', testdata1)
+    assert "ERROR: num value must be positive" in runtmp.last_result.err
+
+
+def test_do_sourmash_sketch_check_num_bounds_less_than_minimum(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'translate', '-p', 'num=25', testdata1)
+    assert "WARNING: num value should be >= 50. Continuing anyway." in runtmp.last_result.err
+
+
+def test_do_sourmash_sketch_check_num_bounds_more_than_maximum(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'translate', '-p', 'num=100000', testdata1)
+    assert "WARNING: num value should be <= 50000. Continuing anyway." in runtmp.last_result.err
+
+
 def test_dna_defaults():
     factory = _signatures_for_sketch_factory([], 'dna', False)
     params_list = list(factory.get_compute_params())
@@ -664,6 +702,59 @@ def test_do_sketch_protein_multik_input_from_file(runtmp):
     with open(outfile, 'rt') as fp:
         sigdata = fp.read()
         siglist = list(signature.load_signatures(sigdata))
+
+        max_hashes = [ x.minhash._max_hash for x in siglist ]
+        assert len(max_hashes) == 2
+        assert set(max_hashes) == set([ int(2**64 /100.) ])
+
+
+def test_do_sourmash_sketchdna_with_bad_scaled():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        outfile = os.path.join(location, 'FOO.xxx')
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'dna',
+                                            '-p', 'k=21,k=31,scaled=-1',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location,
+                                            fail_ok=True)
+
+        assert status != 0
+        assert 'ERROR: scaled value must be positive' in err
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'dna',
+                                            '-p', 'k=21,k=31,scaled=1000.5',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location,
+                                            fail_ok=True)
+
+        assert status != 0
+        assert "cannot parse scaled='1000.5' as an integer" in err
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'dna',
+                                            '-p', 'k=21,k=31,scaled=1000000000',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location)
+
+        assert status == 0
+        assert 'WARNING: scaled value should be <= 1e6. Continuing anyway.' in err
+
+
+def test_do_sketch_with_seed():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        outfile = os.path.join(location, 'FOO.xxx')
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'dna',
+                                            '-p', 'k=21,k=31,seed=43',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location)
+        assert os.path.exists(outfile)
+
+        siglist = list(signature.load_signatures(outfile))
+
         assert len(siglist) == 2
         ksizes = set([ x.minhash.ksize for x in siglist ])
         assert 7 in ksizes
