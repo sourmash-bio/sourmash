@@ -333,8 +333,7 @@ def test_sbt_fsstorage(runtmp):
     old_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
     print(*old_result, sep='\n')
 
-    # with FSStorage(location, '.fstree') as storage:
-    with runtmp.output.FSStorage('.fstree') as storage:
+    with FSStorage(runtmp.location, '.fstree') as storage:
         tree.save(runtmp.output('tree.sbt.json'), storage=storage)
 
     tree = SBT.load(runtmp.output('tree.sbt.json'), leaf_loader=SigLeaf.load)
