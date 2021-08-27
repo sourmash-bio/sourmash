@@ -402,7 +402,7 @@ def test_prefetch_check_scaled_bounds_negative(runtmp, linear_gather):
         c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
                     '--scaled', '-5', linear_gather)
 
-    assert "ERROR: --scaled value must be positive" in str(exc.value)
+    assert "ERROR: scaled value must be positive" in str(exc.value)
 
 
 def test_prefetch_check_scaled_bounds_less_than_minimum(runtmp, linear_gather):
@@ -416,7 +416,7 @@ def test_prefetch_check_scaled_bounds_less_than_minimum(runtmp, linear_gather):
         c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
                     '--scaled', '50', linear_gather)
 
-    assert "WARNING: --scaled value should be >= 100. Continuing anyway." in str(exc.value)
+    assert "WARNING: scaled value should be >= 100. Continuing anyway." in str(exc.value)
 
 
 def test_prefetch_check_scaled_bounds_more_than_maximum(runtmp, linear_gather):
@@ -430,7 +430,7 @@ def test_prefetch_check_scaled_bounds_more_than_maximum(runtmp, linear_gather):
         c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
                     '--scaled', '1e9', linear_gather)
 
-    assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in str(exc.value)
+    assert "WARNING: scaled value should be <= 1e6. Continuing anyway." in str(exc.value)
 
 
 def test_prefetch_downsample_scaled(runtmp, linear_gather):
