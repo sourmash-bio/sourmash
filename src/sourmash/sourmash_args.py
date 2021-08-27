@@ -22,9 +22,34 @@ from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
 from . import signature as sigmod
 from .picklist import SignaturePicklist, PickStyle
 from .manifest import CollectionManifest
+import argparse
 
 
 DEFAULT_LOAD_K = 31
+
+
+def check_scaled_bounds(arg):
+    f = float(arg)
+
+    if f < 0:
+        raise argparse.ArgumentTypeError(f"ERROR: scaled value must be positive")
+    if f < 100:
+        notify('WARNING: scaled value should be >= 100. Continuing anyway.')
+    if f > 1e6:
+        notify('WARNING: scaled value should be <= 1e6. Continuing anyway.')
+    return f
+
+
+def check_num_bounds(arg):
+    f = int(arg)
+
+    if f < 0:
+        raise argparse.ArgumentTypeError(f"ERROR: num value must be positive")
+    if f < 50:
+        notify('WARNING: num value should be >= 50. Continuing anyway.')
+    if f > 50000:
+        notify('WARNING: num value should be <= 50000. Continuing anyway.')
+    return f
 
 
 def get_moltype(sig, require=False):
