@@ -883,6 +883,7 @@ def multigather(args):
             found = []
             weighted_missed = 1
             is_abundance = query.minhash.track_abundance and not args.ignore_abundance
+            orig_query_mh = query.minhash
             gather_iter = GatherDatabases(query, counters,
                                           threshold_bp=args.threshold_bp,
                                           ignore_abundance=args.ignore_abundance,
@@ -967,6 +968,10 @@ def multigather(args):
                     remaining_mh = remaining_query.minhash.to_mutable()
                     remaining_mh += noident_mh.downsample(scaled=remaining_mh.scaled)
                     remaining_query.minhash = remaining_mh
+
+                if is_abundance:
+                    abund_query_mh = remaining_query.minhash.inflate(orig_query_mh)
+                    remaining_query.minhash = abund_query_mh
 
                 if not found:
                     notify('nothing found - entire query signature unassigned.')

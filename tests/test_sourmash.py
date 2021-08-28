@@ -4661,14 +4661,14 @@ def test_gather_output_unassigned_with_abundance(runtmp, prefetch_gather, linear
             assert nomatch_mh.hashes[hashval] == abund
 
 
-def test_multigather_output_unassigned_with_abundance(runtmp, prefetch_gather, linear_gather):
+def test_multigather_output_unassigned_with_abundance(runtmp):
     c = runtmp
     query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
     against = utils.get_test_data('gather-abund/genome-s10.fa.gz.sig')
 
     with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('multigather', query, against, '--output-unassigned',
-                   c.output('unassigned.sig'), linear_gather, prefetch_gather)
+                c.output('unassigned.sig'))
 
     assert os.path.exists(c.output('unassigned.sig'))
 
