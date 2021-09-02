@@ -702,46 +702,32 @@ def test_do_sketch_protein_multik_input_from_file(runtmp):
     with open(outfile, 'rt') as fp:
         sigdata = fp.read()
         siglist = list(signature.load_signatures(sigdata))
+        assert len(siglist) == 2
+        ksizes = set([ x.minhash.ksize for x in siglist ])
+        assert 7 in ksizes
+        assert 10 in ksizes
 
-        max_hashes = [ x.minhash._max_hash for x in siglist ]
-        assert len(max_hashes) == 2
-        assert set(max_hashes) == set([ int(2**64 /100.) ])
+        moltype = set([ x.minhash.moltype == 'protein'
+                        for x in siglist ])
+        assert len(moltype) == 1
+        assert True in moltype
 
 
 def test_do_sourmash_sketchdna_with_bad_scaled(runtmp):
-    # with utils.TempDirectory() as location:
     testdata1 = utils.get_test_data('short.fa')
     outfile = runtmp.output('FOO.xxx')
 
-    # with pytest.raises(SourmashCommandFailed):
     runtmp.sourmash('sketch', 'dna', '-p', 'k=21,k=31,scaled=-1', testdata1, '-o', outfile)
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['sketch', 'dna',
-    #                                     '-p', 'k=21,k=31,scaled=-1',
-    #                                     testdata1, '-o', outfile],
-    #                                     in_directory=location,
-    #                                     fail_ok=True)
 
     assert runtmp.last_result.status != 0
     assert "ERROR: scaled value must be positive" in runtmp.last_result.err
 
     runtmp.sourmash('sketch', 'dna', '-p', 'k=21,k=31,scaled=1000.5', testdata1, '-o', outfile)
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['sketch', 'dna',
-    #                                     '-p', 'k=21,k=31,scaled=1000.5',
-    #                                     testdata1, '-o', outfile],
-    #                                     in_directory=location,
-    #                                     fail_ok=True)
 
     assert runtmp.last_result.status != 0
     assert "cannot parse scaled='1000.5' as an integer" in runtmp.last_result.err
 
     runtmp.sourmash('sketch', 'dna', '-p', 'k=21,k=31,scaled=1000000000', testdata1, '-o', outfile)
-    # status, out, err = utils.runscript('sourmash',
-    #                                     ['sketch', 'dna',
-    #                                     '-p', 'k=21,k=31,scaled=1000000000',
-    #                                     testdata1, '-o', outfile],
-    #                                     in_directory=location)
 
     assert runtmp.last_result.status == 0
     assert 'WARNING: scaled value should be <= 1e6. Continuing anyway.' in runtmp.last_result.err
