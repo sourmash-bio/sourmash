@@ -839,7 +839,8 @@ def test_do_sourmash_sketchdna_with_bad_scaled(runtmp):
         runtmp.sourmash('sketch', 'dna', '-p', 'k=21,k=31,scaled=-1', testdata1, '-o', outfile)
 
     assert runtmp.last_result.status != 0
-    assert 'scaled is -1, must be >= 1' in runtmp.last_result.err
+    print(runtmp.last_result.err)
+    assert 'ERROR: scaled value must be positive' in runtmp.last_result.err
 
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sketch', 'dna', '-p', 'k=21,k=31,scaled=1000.5', testdata1, '-o', outfile)
@@ -850,7 +851,9 @@ def test_do_sourmash_sketchdna_with_bad_scaled(runtmp):
     runtmp.sourmash('sketch', 'dna', '-p', 'k=21,k=31,scaled=1000000000', testdata1, '-o', outfile)
 
     assert runtmp.last_result.status == 0
-    assert 'WARNING: scaled value of 1000000000 is nonsensical!?' in runtmp.last_result.err
+    print('XXX')
+    print(runtmp.last_result.err)
+    assert 'WARNING: scaled value should be <= 1e6. Continuing anyway.' in runtmp.last_result.err
 
 
 def test_do_sketch_with_seed(runtmp):

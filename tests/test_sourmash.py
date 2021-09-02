@@ -1585,21 +1585,23 @@ def test_index_check_scaled_bounds_negative(runtmp):
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('index', 'zzz', 'short.fa.sig', 'short2.fa.sig', '-k', '31', '--scaled', '-5', '--dna')
 
-    assert "ERROR: --scaled value must be positive" in runtmp.last_result.err
+    print(runtmp.last_result.err)
+
+    assert "ERROR: scaled value must be positive" in runtmp.last_result.err
 
 
 def test_index_check_scaled_bounds_less_than_minimum(runtmp):
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('index', 'zzz', 'short.fa.sig', 'short2.fa.sig', '-k', '31', '--scaled', '50', '--dna')
 
-    assert "WARNING: --scaled value should be >= 100. Continuing anyway." in runtmp.last_result.err
+    assert "WARNING: scaled value should be >= 100. Continuing anyway." in runtmp.last_result.err
 
 
 def test_index_check_scaled_bounds_more_than_maximum(runtmp):
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('index', 'zzz', 'short.fa.sig', 'short2.fa.sig', '-k', '31', '--scaled', '1e9', '--dna')
 
-    assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in runtmp.last_result.err
+    assert "WARNING: scaled value should be <= 1e6. Continuing anyway." in runtmp.last_result.err
 
 
 @utils.in_tempdir
@@ -1764,7 +1766,7 @@ def test_search_check_scaled_bounds_negative(runtmp):
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('search', query_sig, 'gcf_all', '-k', '21', '--scaled', '-5')
 
-    assert "ERROR: --scaled value must be positive" in runtmp.last_result.err
+    assert "ERROR: scaled value must be positive" in runtmp.last_result.err
 
 
 def test_search_check_scaled_bounds_less_than_minimum(runtmp):
@@ -1776,7 +1778,7 @@ def test_search_check_scaled_bounds_less_than_minimum(runtmp):
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('search', query_sig, 'gcf_all', '-k', '21', '--scaled', '50')
 
-    assert "WARNING: --scaled value should be >= 100. Continuing anyway." in runtmp.last_result.err
+    assert "WARNING: scaled value should be >= 100. Continuing anyway." in runtmp.last_result.err
 
 
 def test_search_check_scaled_bounds_more_than_maximum(runtmp):
@@ -1788,7 +1790,7 @@ def test_search_check_scaled_bounds_more_than_maximum(runtmp):
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('search', query_sig, 'gcf_all', '-k', '21', '--scaled', '1e9')
 
-    assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in runtmp.last_result.err
+    assert "WARNING: scaled value should be <= 1e6. Continuing anyway." in runtmp.last_result.err
 
 
 # explanation: you cannot downsample a scaled SBT to match a scaled
@@ -3547,7 +3549,7 @@ def test_gather_check_scaled_bounds_negative(runtmp, prefetch_gather, linear_gat
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('gather', query_sig, prefetch_gather, linear_gather, 'gcf_all', '-k', '21', '--scaled', '-5', '--threshold-bp', '50000')
 
-    assert "ERROR: --scaled value must be positive" in runtmp.last_result.err
+    assert "ERROR: scaled value must be positive" in runtmp.last_result.err
 
 
 def test_gather_check_scaled_bounds_less_than_minimum(runtmp, prefetch_gather, linear_gather):
@@ -3559,7 +3561,7 @@ def test_gather_check_scaled_bounds_less_than_minimum(runtmp, prefetch_gather, l
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('gather', query_sig, prefetch_gather, linear_gather, 'gcf_all', '-k', '21', '--scaled', '50', '--threshold-bp', '50000')
 
-    assert "WARNING: --scaled value should be >= 100. Continuing anyway." in runtmp.last_result.err
+    assert "WARNING: scaled value should be >= 100. Continuing anyway." in runtmp.last_result.err
 
 
 def test_gather_check_scaled_bounds_more_than_maximum(runtmp, prefetch_gather, linear_gather):
@@ -3571,7 +3573,7 @@ def test_gather_check_scaled_bounds_more_than_maximum(runtmp, prefetch_gather, l
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('gather', query_sig, prefetch_gather, linear_gather, '-k', '21', '--scaled', '1e9', '--threshold-bp', '50000')
 
-    assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in runtmp.last_result.err
+    assert "WARNING: scaled value should be <= 1e6. Continuing anyway." in runtmp.last_result.err
 
 
 def test_gather_metagenome_downsample(runtmp, prefetch_gather, linear_gather):
