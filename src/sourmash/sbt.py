@@ -720,7 +720,7 @@ class SBT(Index):
                     manifest_rows.append(row)
 
             if n % 100 == 0:
-                notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
+                notify(f"{format(n+1)} of {format(total_nodes)} nodes saved", end='\r')
 
         # now, save the index file and manifests.
         #
@@ -772,7 +772,7 @@ class SBT(Index):
             with open(index_filename, 'wb') as tree_fp:
                 tree_fp.write(tree_data)
 
-        notify("Finished saving SBT index, available at {0}\n".format(index_filename))
+        notify(f"Finished saving SBT index, available at {format(index_filename)}\n")
 
         return path
 
