@@ -1,4 +1,5 @@
 """search a metagenome signature against dbs"""
+# working on this
 
 from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
                                 add_picklist_args, add_scaled_arg)
