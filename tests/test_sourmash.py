@@ -4472,7 +4472,7 @@ def test_gather_abund_1_1(runtmp, linear_gather, prefetch_gather):
     c = runtmp
     #
     # make r1.fa with 2x coverage of genome s10
-    # make r2.fa with 10x coverage of genome s10.
+    # make r2.fa with 20x coverage of genome s10.
     # make r3.fa with 2x coverage of genome s11.
     #
     # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
