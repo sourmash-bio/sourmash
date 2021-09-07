@@ -238,7 +238,7 @@ data set abundances of 2x each, and a third read data set with 20x.
 First, we make some synthetic data sets:
 
 * r1.fa with 2x coverage of genome s10
-* r2.fa with 10x coverage of genome s10.
+* r2.fa with 20x coverage of genome s10.
 * r3.fa with 2x coverage of genome s11.
 
 then we make signature s10-s11 with r1 and r3, i.e. 1:1 abundance, and
