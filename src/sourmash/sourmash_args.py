@@ -22,9 +22,34 @@ from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
 from . import signature as sigmod
 from .picklist import SignaturePicklist, PickStyle
 from .manifest import CollectionManifest
+import argparse
 
 
 DEFAULT_LOAD_K = 31
+
+
+def check_scaled_bounds(arg):
+    f = float(arg)
+
+    if f < 0:
+        raise argparse.ArgumentTypeError(f"ERROR: scaled value must be positive")
+    if f < 100:
+        notify('WARNING: scaled value should be >= 100. Continuing anyway.')
+    if f > 1e6:
+        notify('WARNING: scaled value should be <= 1e6. Continuing anyway.')
+    return f
+
+
+def check_num_bounds(arg):
+    f = int(arg)
+
+    if f < 0:
+        raise argparse.ArgumentTypeError(f"ERROR: num value must be positive")
+    if f < 50:
+        notify('WARNING: num value should be >= 50. Continuing anyway.')
+    if f > 50000:
+        notify('WARNING: num value should be <= 50000. Continuing anyway.')
+    return f
 
 
 def get_moltype(sig, require=False):
@@ -622,11 +647,11 @@ def load_many_signatures(locations, progress, *, yield_all_files=False,
         except ValueError as exc:
             # trap expected errors, and either power through or display + exit.
             if force:
-                notify("ERROR: {}", str(exc))
+                notify(f"ERROR: {str(exc)}")
                 notify("(continuing)")
                 continue
             else:
-                notify("ERROR: {}", str(exc))
+                notify(f"ERROR: {str(exc)}")
                 sys.exit(-1)
         except KeyboardInterrupt:
             notify("Received CTRL-C - exiting.")
@@ -698,8 +723,7 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
         except FileExistsError:
             pass
         except:
-            notify("ERROR: cannot create signature output directory '{}'",
-                   self.location)
+            notify(f"ERROR: cannot create signature output directory '{self.location}'")
             sys.exit(-1)
 
     def add(self, ss):

@@ -29,6 +29,44 @@ from sourmash.command_sketch import _signatures_for_sketch_factory
 from sourmash_tst_utils import SourmashCommandFailed
 
 
+def test_do_sourmash_sketch_check_scaled_bounds_negative(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'translate', '-p', 'scaled=-5', testdata1)
+    assert "ERROR: scaled value must be positive" in runtmp.last_result.err
+
+
+def test_do_sourmash_sketch_check_scaled_bounds_less_than_minimum(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'translate', '-p', 'scaled=50', testdata1)
+    assert "WARNING: scaled value should be >= 100. Continuing anyway." in runtmp.last_result.err
+
+
+def test_do_sourmash_sketch_check_scaled_bounds_more_than_maximum(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'translate', '-p', 'scaled=1000000000', testdata1)
+    assert "WARNING: scaled value should be <= 1e6. Continuing anyway." in runtmp.last_result.err
+
+
+def test_do_sourmash_sketch_check_num_bounds_negative(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'translate', '-p', 'num=-5', testdata1)
+    assert "ERROR: num value must be positive" in runtmp.last_result.err
+
+
+def test_do_sourmash_sketch_check_num_bounds_less_than_minimum(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'translate', '-p', 'num=25', testdata1)
+    assert "WARNING: num value should be >= 50. Continuing anyway." in runtmp.last_result.err
+
+
+def test_do_sourmash_sketch_check_num_bounds_more_than_maximum(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'translate', '-p', 'num=100000', testdata1)
+    assert "WARNING: num value should be <= 50000. Continuing anyway." in runtmp.last_result.err
+
+
 def test_dna_defaults():
     factory = _signatures_for_sketch_factory([], 'dna', False)
     params_list = list(factory.get_compute_params())
@@ -847,7 +885,7 @@ def test_do_sourmash_sketchdna_with_bad_scaled():
                                             fail_ok=True)
 
         assert status != 0
-        assert 'scaled is -1, must be >= 1' in err
+        assert 'ERROR: scaled value must be positive' in err
 
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'dna',
@@ -866,7 +904,7 @@ def test_do_sourmash_sketchdna_with_bad_scaled():
                                             in_directory=location)
 
         assert status == 0
-        assert 'WARNING: scaled value of 1000000000 is nonsensical!?' in err
+        assert 'WARNING: scaled value should be <= 1e6. Continuing anyway.' in err
 
 
 def test_do_sketch_with_seed():
