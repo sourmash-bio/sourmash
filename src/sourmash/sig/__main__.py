@@ -103,17 +103,17 @@ def cat(args):
 
         save_sigs.add(ss)
 
-    notify('loaded {} signatures total.', len(save_sigs))
+    notify(f'loaded {len(save_sigs)} signatures total.')
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
     save_sigs.close()
 
-    notify('output {} signatures', len(save_sigs))
+    notify(f'output {len(save_sigs)} signatures')
 
     multiple_md5 = [ 1 for cnt in encountered_md5sums.values() if cnt > 1 ]
     if multiple_md5:
-        notify('encountered {} MinHashes multiple times', sum(multiple_md5))
+        notify(f'encountered {sum(multiple_md5)} MinHashes multiple times')
         if args.unique:
             notify('...and removed the duplicates, because --unique was specified.')
 
@@ -133,7 +133,7 @@ def split(args):
 
     if args.outdir:
         if not os.path.exists(args.outdir):
-            notify('Creating --outdir {}', args.outdir)
+            notify(f'Creating --outdir {args.outdir}')
             os.mkdir(args.outdir)
 
     progress = sourmash_args.SignatureLoadingProgress()
@@ -181,12 +181,12 @@ def split(args):
             output_name = os.path.join(args.outdir, output_name)
 
         if os.path.exists(output_name):
-            notify("** overwriting existing file {}".format(output_name))
+            notify(f"** overwriting existing file {format(output_name)}")
 
         # save!
         with open(output_name, 'wt') as outfp:
             sourmash.save_signatures([sig], outfp)
-            notify('writing sig to {}', output_name)
+            notify(f'writing sig to {output_name}')
 
     notify(f'loaded and split {len(progress)} signatures total.')
     if picklist:
@@ -321,8 +321,7 @@ def overlap(args):
     sig2 = sourmash.load_one_signature(args.signature2, ksize=args.ksize,
                                        select_moltype=moltype)
 
-    notify('loaded one signature each from {} and {}', args.signature1,
-           args.signature2)
+    notify(f'loaded one signature each from {args.signature1} and {args.signature2}')
 
     try:
         similarity = sig1.similarity(sig2)
@@ -493,8 +492,7 @@ def intersect(args):
         intersect_mh.add_many(mins)
         intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
     else:
-        notify('loading signature from {}, keeping abundances',
-               args.abundances_from)
+        notify(f'loading signature from {args.abundances_from}, keeping abundances')
         abund_sig = sourmash.load_one_signature(args.abundances_from,
                                                 ksize=args.ksize,
                                                 select_moltype=moltype)
@@ -536,7 +534,7 @@ def subtract(args):
 
     subtract_mins = set(from_mh.hashes)
 
-    notify('loaded signature from {}...', from_sigfile, end='\r')
+    notify(f'loaded signature from {from_sigfile}...', end='\r')
 
     progress = sourmash_args.SignatureLoadingProgress()
 
@@ -555,7 +553,7 @@ def subtract(args):
 
             subtract_mins -= set(sigobj.minhash.hashes)
 
-            notify('loaded and subtracted signatures from {}...', sigfile, end='\r')
+            notify(f'loaded and subtracted signatures from {sigfile}...', end='\r')
 
     if not len(progress):
         error("no signatures to subtract!?")
@@ -654,8 +652,7 @@ def extract(args):
 
     save_sigs.close()
 
-    notify("extracted {} signatures from {} file(s)", len(save_sigs),
-           len(args.signatures))
+    notify(f"extracted {len(save_sigs)} signatures from {len(args.signatures)} file(s)")
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
@@ -689,8 +686,7 @@ def filter(args):
         for ss in siglist:
             mh = ss.minhash
             if not mh.track_abundance:
-                notify('ignoring signature {} - track_abundance not set.',
-                       ss)
+                notify(f'ignoring signature {ss} - track_abundance not set.')
                 continue
 
             abunds = mh.hashes
@@ -711,8 +707,7 @@ def filter(args):
     save_sigs.close()
 
     notify(f"loaded {len(progress)} total that matched ksize & molecule type")
-    notify("extracted {} signatures from {} file(s)", len(save_sigs),
-           len(args.signatures))
+    notify(f"extracted {len(save_sigs)} signatures from {len(args.signatures)} file(s)")
 
 
 def flatten(args):
@@ -752,8 +747,7 @@ def flatten(args):
     save_sigs.close()
 
     notify(f"loaded {len(progress)} total that matched ksize & molecule type")
-    notify("extracted {} signatures from {} file(s)", len(save_sigs),
-           len(args.signatures))
+    notify(f"extracted {len(save_sigs)} signatures from {len(args.signatures)} file(s)")
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
@@ -861,7 +855,7 @@ def sig_import(args):
                     e.add_many(hashes)
                     s = sourmash.SourmashSignature(e, filename=name)
                     siglist.append(s)
-                    notify('loaded signature: {} {}', name, s.md5sum()[:8])
+                    notify(f'loaded signature: {name} {s.md5sum()[:8]}')
     else:
         for filename in args.filenames:
             with open(filename) as fp:
@@ -883,7 +877,7 @@ def sig_import(args):
             s = sourmash.SourmashSignature(mh, filename=filename)
             siglist.append(s)
 
-    notify('saving {} signatures to JSON', len(siglist))
+    notify(f'saving {len(siglist)} signatures to JSON')
     with FileOutput(args.output, 'wt') as fp:
         sourmash.save_signatures(siglist, fp)
 
@@ -914,7 +908,7 @@ def export(args):
 
     with FileOutput(args.output, 'wt') as fp:
         print(json.dumps(x), file=fp)
-    notify("exported signature {} ({})", query, query.md5sum()[:8])
+    notify(f"exported signature {query} ({query.md5sum()[:8]})")
 
 
 def kmers(args):

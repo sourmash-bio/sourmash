@@ -1791,7 +1791,7 @@ def test_index_check_scaled_bounds_negative(c):
                                             '--dna'],
                                            in_directory=location, fail_ok=True)
 
-        assert "ERROR: --scaled value must be positive" in err
+        assert "ERROR: scaled value must be positive" in err
 
 
 @utils.in_tempdir
@@ -1805,7 +1805,7 @@ def test_index_check_scaled_bounds_less_than_minimum(c):
                                             '--dna'],
                                            in_directory=location, fail_ok=True)
 
-        assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
+        assert "WARNING: scaled value should be >= 100. Continuing anyway." in err
 
 
 @utils.in_tempdir
@@ -1819,7 +1819,7 @@ def test_index_check_scaled_bounds_more_than_maximum(c):
                                             '--dna'],
                                            in_directory=location, fail_ok=True)
 
-        assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
+        assert "WARNING: scaled value should be <= 1e6. Continuing anyway." in err
 
 
 @utils.in_tempdir
@@ -1998,7 +1998,7 @@ def test_search_check_scaled_bounds_negative():
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                             in_directory=location, fail_ok=True)
 
-        assert "ERROR: --scaled value must be positive" in err
+        assert "ERROR: scaled value must be positive" in err
 
 
 def test_search_check_scaled_bounds_less_than_minimum():
@@ -2013,7 +2013,7 @@ def test_search_check_scaled_bounds_less_than_minimum():
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                             in_directory=location, fail_ok=True)
 
-        assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
+        assert "WARNING: scaled value should be >= 100. Continuing anyway." in err
 
 
 def test_search_check_scaled_bounds_more_than_maximum():
@@ -2028,7 +2028,7 @@ def test_search_check_scaled_bounds_more_than_maximum():
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                             in_directory=location, fail_ok=True)
 
-        assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
+        assert "WARNING: scaled value should be <= 1e6. Continuing anyway." in err
 
 
 # explanation: you cannot downsample a scaled SBT to match a scaled
@@ -3535,7 +3535,7 @@ def test_multigather_check_scaled_bounds_negative(c):
     with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash(*cmd)
 
-    assert "ERROR: --scaled value must be positive" in str(exc.value)
+    assert "ERROR: scaled value must be positive" in str(exc.value)
 
 
 @utils.in_tempdir
@@ -3556,7 +3556,7 @@ def test_multigather_check_scaled_bounds_less_than_minimum(c):
     with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash(*cmd)
 
-    assert "WARNING: --scaled value should be >= 100. Continuing anyway." in str(exc.value)
+    assert "WARNING: scaled value should be >= 100. Continuing anyway." in str(exc.value)
 
 
 @utils.in_tempdir
@@ -3576,7 +3576,7 @@ def test_multigather_check_scaled_bounds_more_than_maximum(c):
     
     c.run_sourmash(*cmd)
 
-    assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in c.last_result.err
+    assert "WARNING: scaled value should be <= 1e6. Continuing anyway." in c.last_result.err
 
 
 @utils.in_tempdir
@@ -4113,7 +4113,7 @@ def test_gather_check_scaled_bounds_negative(prefetch_gather, linear_gather):
                                         cmd.split(' '),
                                         in_directory=location, fail_ok=True)
 
-        assert "ERROR: --scaled value must be positive" in err
+        assert "ERROR: scaled value must be positive" in err
 
 
 def test_gather_check_scaled_bounds_less_than_minimum(prefetch_gather, linear_gather):
@@ -4129,7 +4129,7 @@ def test_gather_check_scaled_bounds_less_than_minimum(prefetch_gather, linear_ga
                                            cmd.split(' '),
                                            in_directory=location, fail_ok=True)
 
-        assert "WARNING: --scaled value should be >= 100. Continuing anyway." in err
+        assert "WARNING: scaled value should be >= 100. Continuing anyway." in err
 
 
 def test_gather_check_scaled_bounds_more_than_maximum(prefetch_gather, linear_gather):
@@ -4145,7 +4145,7 @@ def test_gather_check_scaled_bounds_more_than_maximum(prefetch_gather, linear_ga
                                            cmd.split(' '),
                                            in_directory=location, fail_ok=True)
     
-        assert "WARNING: --scaled value should be <= 1e6. Continuing anyway." in err
+        assert "WARNING: scaled value should be <= 1e6. Continuing anyway." in err
 
 
 def test_gather_metagenome_downsample(prefetch_gather, linear_gather):
@@ -4472,7 +4472,7 @@ def test_gather_abund_1_1(runtmp, linear_gather, prefetch_gather):
     c = runtmp
     #
     # make r1.fa with 2x coverage of genome s10
-    # make r2.fa with 10x coverage of genome s10.
+    # make r2.fa with 20x coverage of genome s10.
     # make r3.fa with 2x coverage of genome s11.
     #
     # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
@@ -4878,7 +4878,7 @@ def test_watch_check_num_bounds_negative(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('watch', '--ksize', '21', '-n', '-5', '--dna', 'zzz', testdata0)
 
-    assert "ERROR: --num-hashes value must be positive" in c.last_result.err
+    assert "ERROR: num value must be positive" in c.last_result.err
 
 
 def test_watch_check_num_bounds_less_than_minimum(runtmp):
@@ -4891,7 +4891,7 @@ def test_watch_check_num_bounds_less_than_minimum(runtmp):
 
     c.run_sourmash('watch', '--ksize', '21', '-n', '25', '--dna', 'zzz', testdata0)
 
-    assert "WARNING: --num-hashes value should be >= 50. Continuing anyway." in c.last_result.err
+    assert "WARNING: num value should be >= 50. Continuing anyway." in c.last_result.err
 
 
 def test_watch_check_num_bounds_more_than_maximum(runtmp):
@@ -4904,7 +4904,7 @@ def test_watch_check_num_bounds_more_than_maximum(runtmp):
 
     c.run_sourmash('watch', '--ksize', '21', '-n', '100000', '--dna', 'zzz', testdata0)
 
-    assert "WARNING: --num-hashes value should be <= 50000. Continuing anyway." in c.last_result.err
+    assert "WARNING: num value should be <= 50000. Continuing anyway." in c.last_result.err
 
 
 @utils.in_tempdir

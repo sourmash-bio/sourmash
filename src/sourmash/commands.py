@@ -42,7 +42,7 @@ def compare(args):
     ksizes = set()
     moltypes = set()
     for filename in inp_files:
-        notify("loading '{}'", filename, end='\r')
+        notify(f"loading '{filename}'", end='\r')
         loaded = sourmash_args.load_file_as_signatures(filename,
                                                        ksize=args.ksize,
                                                        select_moltype=moltype,
@@ -51,7 +51,7 @@ def compare(args):
                                                        progress=progress)
         loaded = list(loaded)
         if not loaded:
-            notify('\nwarning: no signatures loaded at given ksize/molecule type/picklist from {}', filename)
+            notify(f'\nwarning: no signatures loaded at given ksize/molecule type/picklist from {filename}')
         siglist.extend(loaded)
 
         # track ksizes/moltypes
@@ -79,7 +79,7 @@ def compare(args):
         sys.exit(-1)
 
     notify(' '*79, end='\r')
-    notify('loaded {} signatures total.'.format(len(siglist)))
+    notify(f'loaded {format(len(siglist))} signatures total.')
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
@@ -121,7 +121,7 @@ def compare(args):
         for s in siglist:
             if s.minhash.scaled != max_scaled:
                 if not printed_scaled_msg:
-                    notify('downsampling to scaled value of {}'.format(max_scaled))
+                    notify(f'downsampling to scaled value of {format(max_scaled)}')
                     printed_scaled_msg = True
                 s.minhash = s.minhash.downsample(scaled=max_scaled)
 
@@ -157,11 +157,11 @@ def compare(args):
     # shall we output a matrix?
     if args.output:
         labeloutname = args.output + '.labels.txt'
-        notify('saving labels to: {}', labeloutname)
+        notify(f'saving labels to: {labeloutname}')
         with open(labeloutname, 'w') as fp:
             fp.write("\n".join(labeltext))
 
-        notify('saving comparison matrix to: {}', args.output)
+        notify(f'saving comparison matrix to: {args.output}')
         with open(args.output, 'wb') as fp:
             numpy.save(fp, similarity)
 
@@ -191,13 +191,14 @@ def plot(args):
     D_filename = args.distances
     labelfilename = D_filename + '.labels.txt'
 
-    notify('loading comparison matrix from {}...', D_filename)
+    notify(f'loading comparison matrix from {D_filename}...')
     D = numpy.load(open(D_filename, 'rb'))
+    # not sure how to change this to use f-strings
     notify('...got {} x {} matrix.', *D.shape)
 
     if args.labeltext:
         labelfilename = args.labeltext
-    notify('loading labels from {}', labelfilename)
+    notify(f'loading labels from {labelfilename}')
     labeltext = [ x.strip() for x in open(labelfilename) ]
     if len(labeltext) != D.shape[0]:
         error('{} labels != matrix size, exiting', len(labeltext))
@@ -231,7 +232,7 @@ def plot(args):
         hist_out = os.path.join(args.output_dir, hist_out)
 
     # make the histogram
-    notify('saving histogram of matrix values => {}', hist_out)
+    notify(f'saving histogram of matrix values => {hist_out}')
     fig = pylab.figure(figsize=(8,5))
     pylab.hist(numpy.array(D.flat), bins=100)
     fig.savefig(hist_out)
@@ -258,7 +259,7 @@ def plot(args):
     Y = sch.linkage(D, method='single')
     sch.dendrogram(Y, orientation='right', labels=labeltext)
     fig.savefig(dendrogram_out)
-    notify('wrote dendrogram to: {}', dendrogram_out)
+    notify(f'wrote dendrogram to: {dendrogram_out}')
 
     ### make the dendrogram+matrix:
     (fig, rlabels, rmat) = sourmash_fig.plot_composite_matrix(D, labeltext,
@@ -268,7 +269,7 @@ def plot(args):
                                              vmax=args.vmax,
                                              force=args.force)
     fig.savefig(matrix_out)
-    notify('wrote numpy distance matrix to: {}', matrix_out)
+    notify(f'wrote numpy distance matrix to: {matrix_out}')
 
     if len(labeltext) < 30:
         # for small matrices, print out sample numbering for FYI.
@@ -286,7 +287,7 @@ def plot(args):
                 for j in range(len(rlabels)):
                     y.append('{}'.format(rmat[i][j]))
                 w.writerow(y)
-        notify('Wrote clustered matrix and labels out to {}', args.csv)
+        notify(f'Wrote clustered matrix and labels out to {args.csv}')
 
 
 def import_csv(args):
@@ -313,16 +314,16 @@ def import_csv(args):
             e.add_many(hashes)
             s = sig.SourmashSignature(e, filename=name)
             siglist.append(s)
-            notify('loaded signature: {} {}', name, s.md5sum()[:8])
+            notify(f'loaded signature: {name} {s.md5sum()[:8]}')
 
-        notify('saving {} signatures to JSON', len(siglist))
+        notify(f'saving {len(siglist)} signatures to JSON')
         with FileOutput(args.output, 'wt') as outfp:
             sig.save_signatures(siglist, outfp)
 
 
 def sbt_combine(args):
     inp_files = list(args.sbts)
-    notify('combining {} SBTs', len(inp_files))
+    notify(f'combining {len(inp_files)} SBTs')
 
     tree = load_sbt_index(inp_files.pop(0))
 
@@ -331,7 +332,7 @@ def sbt_combine(args):
         # TODO: check if parameters are the same for both trees!
         tree.combine(new_tree)
 
-    notify('saving SBT under "{}".', args.sbt_name)
+    notify(f'saving SBT under "{args.sbt_name}".')
     tree.save(args.sbt_name)
 
 
@@ -353,7 +354,7 @@ def index(args):
 
     if args.scaled:
         args.scaled = int(args.scaled)
-        notify('downsampling signatures to scaled={}', args.scaled)
+        notify(f'downsampling signatures to scaled={args.scaled}')
 
     inp_files = list(args.signatures)
     if args.from_file:
@@ -364,7 +365,7 @@ def index(args):
         error("ERROR: no files to index!? Supply on command line or use --from-file")
         sys.exit(-1)
 
-    notify('loading {} files into SBT', len(inp_files))
+    notify(f'loading {len(inp_files)} files into SBT')
 
     progress = sourmash_args.SignatureLoadingProgress()
 
@@ -428,7 +429,7 @@ def index(args):
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
-    notify('loaded {} sigs; saving SBT under "{}"', n, args.sbt_name)
+    notify(f'loaded {n} sigs; saving SBT under "{args.sbt_name}"')
     tree.save(args.sbt_name, sparseness=args.sparseness)
     if tree.storage:
         tree.storage.close()
@@ -447,17 +448,14 @@ def search(args):
                                                ksize=args.ksize,
                                                select_moltype=moltype,
                                                select_md5=args.md5)
-    notify('loaded query: {}... (k={}, {})', str(query)[:30],
-                                             query.minhash.ksize,
-                                             sourmash_args.get_moltype(query))
+    notify(f'loaded query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})')
 
     if args.scaled:
         if not query.minhash.scaled:
             error('cannot downsample a signature not created with --scaled')
             sys.exit(-1)
         if args.scaled != query.minhash.scaled:
-            notify('downsampling query from scaled={} to {}',
-                query.minhash.scaled, int(args.scaled))
+            notify(f'downsampling query from scaled={query.minhash.scaled} to {int(args.scaled)}')
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # set up the search databases
@@ -536,7 +534,7 @@ def search(args):
 
     # save matching signatures upon request
     if args.save_matches:
-        notify('saving all matched signatures to "{}"', args.save_matches)
+        notify(f'saving all matched signatures to "{args.save_matches}"')
 
         with SaveSignaturesToLocation(args.save_matches) as save_sig:
             for sr in results:
@@ -587,8 +585,7 @@ def categorize(args):
         if loc in already_names:
             continue
 
-        notify('loaded query: {}... (k={}, {})', str(orig_query)[:30],
-               orig_query.minhash.ksize, orig_query.minhash.moltype)
+        notify(f'loaded query: {str(orig_query)[:30]}... (k={orig_query.minhash.ksize}, {orig_query.minhash.moltype})')
 
         if args.ignore_abundance:
             query = orig_query.copy()
@@ -610,15 +607,13 @@ def categorize(args):
         if results:
             results.sort(key=lambda x: -x[0])   # reverse sort on similarity
             best_hit_sim, best_hit_query = results[0]
-            notify('for {}, found: {:.2f} {}', query,
-                                               best_hit_sim,
-                                               best_hit_query)
+            notify(f'for {query}, found: {best_hit_sim:.2f} {best_hit_query}')
             best_hit_query_name = best_hit_query.name
             if csv_w:
                 csv_w.writerow([loc, query, best_hit_query_name,
                                best_hit_sim])
         else:
-            notify('for {}, no match found', query)
+            notify(f'for {query}, no match found')
 
     if csv_fp:
         csv_fp.close()
@@ -636,9 +631,7 @@ def gather(args):
                                                ksize=args.ksize,
                                                select_moltype=moltype,
                                                select_md5=args.md5)
-    notify('loaded query: {}... (k={}, {})', str(query)[:30],
-                                             query.minhash.ksize,
-                                             sourmash_args.get_moltype(query))
+    notify(f'loaded query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})')
 
     # verify signature was computed right.
     if not query.minhash.scaled:
@@ -646,8 +639,7 @@ def gather(args):
         sys.exit(-1)
 
     if args.scaled:
-        notify('downsampling query from scaled={} to {}',
-            query.minhash.scaled, int(args.scaled))
+        notify(f'downsampling query from scaled={query.minhash.scaled} to {int(args.scaled)}')
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # empty?
@@ -850,8 +842,7 @@ def multigather(args):
         for query in sourmash_args.load_file_as_signatures(queryfile,
                                                        ksize=args.ksize,
                                                        select_moltype=moltype):
-            notify('loaded query: {}... (k={}, {})', str(query)[:30],
-                   query.minhash.ksize, sourmash_args.get_moltype(query))
+            notify(f'loaded query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})')
 
             # verify signature was computed right.
             if not query.minhash.scaled:
@@ -859,8 +850,7 @@ def multigather(args):
                 continue
 
             if args.scaled:
-                notify('downsampling query from scaled={} to {}',
-                    query.minhash.scaled, int(args.scaled))
+                notify(f'downsampling query from scaled={query.minhash.scaled} to {int(args.scaled)}')
                 query.minhash = query.minhash.downsample(scaled=args.scaled)
  
             # empty?
@@ -958,7 +948,7 @@ def multigather(args):
             output_matches = output_base + '.matches.sig'
             with open(output_matches, 'wt') as fp:
                 outname = output_matches
-                notify('saving all matches to "{}"', outname)
+                notify(f'saving all matches to "{outname}"')
                 sig.save_signatures([ r.match for r in found ], fp)
 
             output_unassigned = output_base + '.unassigned.sig'
@@ -978,14 +968,14 @@ def multigather(args):
                 elif not remaining_query:
                     notify('no unassigned hashes! not saving.')
                 else:
-                    notify('saving unassigned hashes to "{}"', output_unassigned)
+                    notify(f'saving unassigned hashes to "{output_unassigned}"')
 
                     # CTB: note, multigather does not save abundances
                     sig.save_signatures([ remaining_query ], fp)
             n += 1
 
         # fini, next query!
-    notify('\nconducted gather searches on {} signatures', n)
+    notify(f'\nconducted gather searches on {n} signatures')
 
 
 def watch(args):
@@ -1032,7 +1022,7 @@ def watch(args):
 
     E = MinHash(ksize=ksize, n=args.num_hashes, is_protein=is_protein, dayhoff=dayhoff, hp=hp)
 
-    notify('Computing signature for k={}, {} from stdin', ksize, moltype)
+    notify(f'Computing signature for k={ksize}, {moltype} from stdin')
 
     def do_search():
         results = []
@@ -1055,7 +1045,7 @@ def watch(args):
     for n, record in enumerate(screed_iter):
         # at each watermark, print status & check cardinality
         if n >= watermark:
-            notify('\r... read {} sequences', n, end='')
+            notify(f'\r... read {n} sequences', end='')
             watermark += WATERMARK_SIZE
 
             if do_search():
@@ -1068,7 +1058,7 @@ def watch(args):
 
     results = do_search()
     if not results:
-        notify('... read {} sequences, no matches found.', n)
+        notify(f'... read {n} sequences, no matches found.')
     else:
         results.sort(key=lambda x: -x[0])   # take best
         similarity, found_sig = results[0]
@@ -1076,7 +1066,7 @@ def watch(args):
                similarity)
 
     if args.output:
-        notify('saving signature to {}', args.output)
+        notify(f'saving signature to {args.output}')
         with FileOutput(args.output, 'wt') as fp:
             streamsig = sig.SourmashSignature(E, filename='stdin',
                                               name=args.name)
@@ -1087,7 +1077,7 @@ def migrate(args):
     "Migrate an SBT database to the latest version."
     tree = load_sbt_index(args.sbt_name, print_version_warning=False)
 
-    notify('saving SBT under "{}".', args.sbt_name)
+    notify(f'saving SBT under "{args.sbt_name}".')
     tree.save(args.sbt_name, structure_only=True)
 
 
@@ -1117,9 +1107,7 @@ def prefetch(args):
                                                ksize=args.ksize,
                                                select_moltype=moltype,
                                                select_md5=args.md5)
-    notify('loaded query: {}... (k={}, {})', str(query)[:30],
-                                             query.minhash.ksize,
-                                             sourmash_args.get_moltype(query))
+    notify(f'loaded query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})')
 
     # verify signature was computed with scaled.
     if not query.minhash.scaled:
@@ -1160,8 +1148,7 @@ def prefetch(args):
     matches_out = SaveSignaturesToLocation(args.save_matches)
     matches_out.open()
     if args.save_matches:
-        notify("saving all matching database signatures to '{}'",
-               args.save_matches)
+        notify(f"saving all matching database signatures to '{args.save_matches}'")
 
     # iterate over signatures in db one at a time, for each db;
     # find those with sufficient overlap
