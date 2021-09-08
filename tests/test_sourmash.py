@@ -4936,7 +4936,6 @@ def test_watch_coverage():
 def test_storage_convert(runtmp):
     import pytest
 
-    # with utils.TempDirectory() as location:
     testdata = utils.get_test_data('v2.sbt.json')
     shutil.copyfile(testdata, runtmp.output('v2.sbt.json'))
     shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
@@ -4946,9 +4945,9 @@ def test_storage_convert(runtmp):
     original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
     args = ['storage', 'convert', '-b', 'ipfs', testsbt]
-    runtmp.sourmash(*args)
-    # status, out, err = utils.runscript('sourmash', args,
-    #                                     in_directory=location, fail_ok=True)
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash(*args)
+
     if not runtmp.last_result.status and "ipfs.exceptions.ConnectionError" in runtmp.last_result.err:
         raise pytest.xfail('ipfs probably not running')
 
