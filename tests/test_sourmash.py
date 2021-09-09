@@ -4962,8 +4962,7 @@ def test_storage_convert(runtmp):
                 runtmp.output('v2.sbt.zip')),
             testsbt]
     runtmp.sourmash(*args)
-    # status, out, err = utils.runscript('sourmash', args,
-    #                                     in_directory=location)
+
     tar = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
     assert len(original) == len(tar)
