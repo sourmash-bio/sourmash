@@ -4948,8 +4948,6 @@ def test_storage_convert(runtmp):
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash(*args)
 
-    # if not runtmp.last_result.status and "ipfs.exceptions.ConnectionError" in runtmp.last_result.err:
-    #     raise pytest.xfail('ipfs probably not running')
     if runtmp.last_result.status:
         if "ipfs.exceptions.ConnectionError" in runtmp.last_result.err:
             raise pytest.xfail('ipfs probably not running')
