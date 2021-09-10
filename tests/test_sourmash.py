@@ -4666,9 +4666,9 @@ def test_multigather_output_unassigned_with_abundance(runtmp):
     query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
     against = utils.get_test_data('gather-abund/genome-s10.fa.gz.sig')
 
+    cmd = 'multigather --query {} {} --output-unassigned {}'.format(query, against, c.output('unassigned.sig'))
     with pytest.raises(SourmashCommandFailed):
-        c.run_sourmash('multigather', query, against, '--output-unassigned',
-                c.output('unassigned.sig'))
+        c.run_sourmash(*cmd)
 
     assert os.path.exists(c.output('unassigned.sig'))
 
