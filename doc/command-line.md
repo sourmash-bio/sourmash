@@ -97,6 +97,7 @@ Finally, there are a number of utility and information commands:
 * `sbt_combine` combines multiple SBTs.
 * `categorize` is an experimental command to categorize many signatures.
 * `watch` is an experimental command to classify a stream of sequencing data.
+* `multigather` is an experimental command to run multiple gathers against the same collection of databases.
 
 Please use the command line option `--help` to get more detailed usage
 information for each command.
@@ -317,7 +318,7 @@ genomes with no (or incomplete) taxonomic information.  Use `sourmash
 lca summarize` to classify a metagenome using a collection of genomes
 with taxonomic information.
 
-### Alternative search mode for low-memory (but slow) search: `--linear`
+#### Alternative search mode for low-memory (but slow) search: `--linear`
 
 By default, `sourmash gather` uses all information available for
 faster search. In particular, for SBTs, `prefetch` will prune the search
@@ -328,7 +329,7 @@ across all leaf nodes in the tree.
 The results are the same whether `--no-linear` or `--linear` is
 used.
 
-### Alternative search mode: `--no-prefetch`
+#### Alternative search mode: `--no-prefetch`
 
 By default, `sourmash gather` does a "prefetch" to find *all* candidate
 signatures across all databases, before removing overlaps between the
