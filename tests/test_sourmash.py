@@ -1,6 +1,7 @@
 """
 Tests for the 'sourmash' command line.
 """
+# @CTB why do the .sbt.v3 files get created / checked in?
 import argparse
 import os
 import gzip
@@ -1715,7 +1716,7 @@ def test_search_metagenome_traverse_check_csv(runtmp):
     # this test confirms that the CSV 'filename' output for signatures loaded
     # via directory traversal properly contains the actual path to the
     # signature file from which the signature was loaded.
-    
+
     testdata_dir = utils.get_test_data('gather')
 
     query_sig = utils.get_test_data('gather/combined.sig')
@@ -2547,7 +2548,7 @@ def test_sbt_search_order_dependence(runtmp):
 
 def test_sbt_search_order_dependence_2(runtmp):
     # check that 'search' searches in order of provided sigs.
-    
+
     # *should* return the same result as test_sbt_search_order_dependence,
     # but does not due to a bug.
     testdata1 = utils.get_test_data('genome-s10.fa.gz')
