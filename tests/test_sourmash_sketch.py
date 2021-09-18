@@ -714,6 +714,8 @@ def test_do_sketch_protein_multik_input_from_file(runtmp):
 
 
 def test_do_sourmash_sketchdna_with_bad_scaled(runtmp):
+    # @CTB please check this test; it is a duplicate name that is shadowed by a later test.
+    # which one is right?
     testdata1 = utils.get_test_data('short.fa')
     outfile = runtmp.output('FOO.xxx')
 
@@ -734,6 +736,8 @@ def test_do_sourmash_sketchdna_with_bad_scaled(runtmp):
 
 
 def test_do_sketch_with_seed(runtmp):
+    # @CTB please double-check this function; name is duplicate, and this
+    # doesn't seem like the right test.
     testdata1 = utils.get_test_data('short.fa')
     outfile = runtmp.output('FOO.xxx')
 
