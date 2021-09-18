@@ -2619,7 +2619,9 @@ def test_compare_with_abundance_2(runtmp):
 
 
 def test_compare_with_abundance_3(runtmp):
-    # create two signatures
+    # create two signatures and verify pre-computed results
+    # @CTB should be 'search' not 'compare'!
+
     E1 = MinHash(ksize=5, n=5, is_protein=False,
                     track_abundance=True)
     E2 = MinHash(ksize=5, n=5, is_protein=False,
