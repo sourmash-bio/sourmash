@@ -1134,6 +1134,7 @@ def test_do_sourmash_index_multiscaled_rescale(c):
     assert c.last_result.status == 0
 
 
+# @CTB
 @utils.in_tempdir
 def test_do_sourmash_index_multiscaled_rescale_fail(c):
     # test sourmash index --scaled with invalid rescaling (10 -> 5)
@@ -1238,6 +1239,7 @@ def test_do_sourmash_sbt_move_and_search_output(runtmp):
     shutil.move(runtmp.output('zzz.sbt.json'), newpath)
     shutil.move(runtmp.output('.sbt.zzz'), newpath)
 
+    # @CTB
     status, out, err = utils.runscript('sourmash',
                                         ['search', '../short.fa.sig',
                                         'zzz.sbt.json', '-o', 'foo'],
@@ -1257,7 +1259,7 @@ def test_search_deduce_ksize_and_select_appropriate(runtmp):
 
     runtmp.sourmash('sketch', 'translate', '-p', 'k=24,num=500', testdata1)
 
-    # The DB contains signatres for multiple ksizes
+    # The DB contains signatures for multiple ksizes
     runtmp.sourmash('sketch', 'translate', '-p', 'k=23,num=500', '-p', 'k=24,num=500', testdata2)
 
     runtmp.sourmash('search', 'short.fa.sig', 'short2.fa.sig')
@@ -1518,6 +1520,7 @@ def test_search_max_containment_s10_lca(runtmp):
 
 
 def test_search_gzip(runtmp):
+    # test that we can search .sig files compressed w/gzip
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -1539,6 +1542,7 @@ def test_search_gzip(runtmp):
 
 
 def test_search_2(runtmp):
+    # check another set of search results on num signatures
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     testdata3 = utils.get_test_data('short3.fa')
@@ -1554,6 +1558,7 @@ def test_search_2(runtmp):
 
 
 def test_search_3(runtmp):
+    # check more search results (on num signatures)
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     testdata3 = utils.get_test_data('short3.fa')
@@ -1567,6 +1572,7 @@ def test_search_3(runtmp):
 
 
 def test_search_4(runtmp):
+    # check yet more search results, including a non-match
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     testdata3 = utils.get_test_data('short3.fa')
@@ -1582,6 +1588,7 @@ def test_search_4(runtmp):
 
 
 def test_index_check_scaled_bounds_negative(runtmp):
+    # check that 'scaled' parameters on index must be non-neg
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('index', 'zzz', 'short.fa.sig', 'short2.fa.sig', '-k', '31', '--scaled', '-5', '--dna')
 
@@ -1591,6 +1598,7 @@ def test_index_check_scaled_bounds_negative(runtmp):
 
 
 def test_index_check_scaled_bounds_less_than_minimum(runtmp):
+    # confirm a warning message for low scaled values
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('index', 'zzz', 'short.fa.sig', 'short2.fa.sig', '-k', '31', '--scaled', '50', '--dna')
 
@@ -1598,6 +1606,7 @@ def test_index_check_scaled_bounds_less_than_minimum(runtmp):
 
 
 def test_index_check_scaled_bounds_more_than_maximum(runtmp):
+    # confirm a warning message for highs caled values
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('index', 'zzz', 'short.fa.sig', 'short2.fa.sig', '-k', '31', '--scaled', '1e9', '--dna')
 
@@ -1633,6 +1642,7 @@ def test_index_metagenome_fromfile(c):
     assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
     assert '12 matches; showing first 3:' in out
 
+
 @utils.in_tempdir
 def test_index_metagenome_fromfile_no_cmdline_sig(c):
     # test index --from-file
@@ -1664,6 +1674,7 @@ def test_index_metagenome_fromfile_no_cmdline_sig(c):
 
 
 def test_search_metagenome(runtmp):
+    # test a straight 'search' on a metagenome
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -1704,6 +1715,7 @@ def test_search_metagenome_traverse_check_csv(runtmp):
     # this test confirms that the CSV 'filename' output for signatures loaded
     # via directory traversal properly contains the actual path to the
     # signature file from which the signature was loaded.
+    
     testdata_dir = utils.get_test_data('gather')
 
     query_sig = utils.get_test_data('gather/combined.sig')
@@ -1758,6 +1770,7 @@ def test_search_traverse_incompatible(c):
 
 
 def test_search_check_scaled_bounds_negative(runtmp):
+    # confirm that 'scaled' must be positive for search
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -1770,6 +1783,8 @@ def test_search_check_scaled_bounds_negative(runtmp):
 
 
 def test_search_check_scaled_bounds_less_than_minimum(runtmp):
+    # confirm that a warning is emitted for
+    # low scaled values.
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -1782,6 +1797,7 @@ def test_search_check_scaled_bounds_less_than_minimum(runtmp):
 
 
 def test_search_check_scaled_bounds_more_than_maximum(runtmp):
+    # confirm that a warning is emitted for high scaled vals.
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -1825,6 +1841,7 @@ def test_search_metagenome_downsample(runtmp):
 
 
 def test_search_metagenome_downsample_containment(runtmp):
+    # make sure that downsampling scaled works.
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -1920,6 +1937,8 @@ def test_search_with_picklist_exclude(runtmp):
 
 
 def test_mash_csv_to_sig(runtmp):
+    # confirm that we can convert a mash dumpfile to
+    # a signature and search with it.
     testdata1 = utils.get_test_data('short.fa.msh.dump')
     testdata2 = utils.get_test_data('short.fa')
 
@@ -1949,6 +1968,7 @@ def test_do_sourmash_index_bad_args(runtmp):
 
 
 def test_do_sourmash_sbt_search(runtmp):
+    # check search against an SBT
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -1967,6 +1987,7 @@ def test_do_sourmash_sbt_search(runtmp):
 
 
 def test_do_sourmash_sbt_search_wrong_ksize(runtmp):
+    # search doesn't work if ksize doesn't match
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -2029,6 +2050,7 @@ def test_do_sourmash_sbt_search_and_sigs(runtmp):
 
 
 def test_do_sourmash_sbt_search_downsample(runtmp):
+    # confirm that search against downsampled sbt works
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -2088,6 +2110,7 @@ def test_do_sourmash_index_abund(c):
 
 
 def test_do_sourmash_index_single(runtmp):
+    # 'index' works fine on a single signature
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -2152,6 +2175,7 @@ def test_do_sourmash_search_multimoltype_query(runtmp):
 
 
 def test_do_sourmash_index_traverse(runtmp):
+    # 'index' will traverse directories
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -2195,11 +2219,15 @@ def test_do_sourmash_index_traverse_force(c):
     out = c.last_result.out
     print(out)
 
+    # note: 'short.fa' and 'short2.fa' are in the signature
+    # as the source filename, even though the .sig files
+    # are not named that way.
     assert 'short.fa' in out
     assert 'short2.fa' in out
 
 
 def test_do_sourmash_index_sparseness(runtmp):
+    # test the --sparseness argument to sourmash index
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -2222,6 +2250,7 @@ def test_do_sourmash_index_sparseness(runtmp):
 
 
 def test_do_sourmash_sbt_combine(runtmp):
+    # test sourmash sbt_combine
     files = [utils.get_test_data(f) for f in utils.SIG_FILES]
 
     runtmp.sourmash('index', '-k', '31', 'zzz', *files)
@@ -2249,6 +2278,7 @@ def test_do_sourmash_sbt_combine(runtmp):
 
 
 def test_do_sourmash_index_append(runtmp):
+    # test sourmash index --append
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     testdata3 = utils.get_test_data('short3.fa')
@@ -2402,26 +2432,38 @@ def test_do_sourmash_sbt_search_scaled_vs_num_4(runtmp):
 
 
 def test_do_sourmash_check_search_vs_actual_similarity(runtmp):
+    # I'm not sure what this tests! - CTB
     files = [utils.get_test_data(f) for f in utils.SIG_FILES]
 
+    # build index.
     runtmp.sourmash('index', '-k', '31', 'zzz', *files)
 
+    # make sure it produces the index file.
     assert os.path.exists(runtmp.output('zzz.sbt.zip'))
 
+    # ???
     filename = os.path.splitext(os.path.basename(utils.SIG_FILES[0]))[0]
 
+    # do search
     runtmp.sourmash('search', files[0], 'zzz')
 
+    # ensure search does not fail.
     assert runtmp.last_result.status == 0
+
+    # @CTB add a test here, I think :)
 
 
 def test_do_sourmash_check_sbt_filenames(runtmp):
+    # not sure what this test does either - CTB
     files = [utils.get_test_data(f) for f in utils.SIG_FILES]
 
+    # build an index.
     runtmp.sourmash('index', '-k', '31', 'zzz.sbt.json', *files)
 
     assert os.path.exists(runtmp.output('zzz.sbt.json'))
 
+    # construct a list of signature names and md5sums
+    # that were added.
     sig_names = set()
     sig_md5s = set()
     for f in files:
@@ -2429,9 +2471,12 @@ def test_do_sourmash_check_sbt_filenames(runtmp):
         sig_names.add(sig.name)
         sig_md5s.add(sig.md5sum())
 
+    # look at all the files included in the sbt
     sbt_files = glob.glob(runtmp.output('.sbt.zzz/*'))
     assert len(sbt_files) == 14
 
+    # verify that the filename is not signature name or
+    # an md5sum name.
     for f in sbt_files:
         if 'internal' in f or f.endswith('zzz.manifest.csv'):
             continue
@@ -2439,8 +2484,11 @@ def test_do_sourmash_check_sbt_filenames(runtmp):
         assert f not in sig_names
         assert f in sig_md5s
 
+    # @CTB check what 'f' actually is here
+
 
 def test_do_sourmash_sbt_search_bestonly(runtmp):
+    # verify that search --best-only works.
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -2458,6 +2506,8 @@ def test_do_sourmash_sbt_search_bestonly(runtmp):
 
 
 def test_do_sourmash_sbt_search_bestonly_scaled(runtmp):
+    # verify that downsampling plus --best-only works.
+
     # as currently implemented, the query signature will be automatically
     # downsampled to match the tree.
     testdata1 = utils.get_test_data('short.fa')
@@ -2477,6 +2527,7 @@ def test_do_sourmash_sbt_search_bestonly_scaled(runtmp):
 
 
 def test_sbt_search_order_dependence(runtmp):
+    # check that 'search' searches in order of provided sigs.
     testdata1 = utils.get_test_data('genome-s10.fa.gz')
     testdata2 = utils.get_test_data('genome-s11.fa.gz')
     testdata3 = utils.get_test_data('genome-s12.fa.gz')
@@ -2491,9 +2542,12 @@ def test_sbt_search_order_dependence(runtmp):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
     assert '100.0%' in runtmp.last_result.out
+    # @CTB needs stronger checks?
 
 
 def test_sbt_search_order_dependence_2(runtmp):
+    # check that 'search' searches in order of provided sigs.
+    
     # *should* return the same result as test_sbt_search_order_dependence,
     # but does not due to a bug.
     testdata1 = utils.get_test_data('genome-s10.fa.gz')
@@ -2510,9 +2564,13 @@ def test_sbt_search_order_dependence_2(runtmp):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
     assert '100.0%' in runtmp.last_result.out
+    # @CTB needs stronger checks
 
 
 def test_compare_with_abundance_1(runtmp):
+    # build and search two signatures, verify result.
+    # @CTB should be 'test_search', presumably :)
+
     # create two signatures
     E1 = MinHash(ksize=5, n=5, is_protein=False,
                     track_abundance=True)
