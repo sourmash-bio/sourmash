@@ -1135,7 +1135,7 @@ def test_do_sourmash_index_multiscaled_rescale(c):
     assert c.last_result.status == 0
 
 
-# @CTB
+# @CTB scaled is 1, not 5; other things?
 @utils.in_tempdir
 def test_do_sourmash_index_multiscaled_rescale_fail(c):
     # test sourmash index --scaled with invalid rescaling (10 -> 5)
