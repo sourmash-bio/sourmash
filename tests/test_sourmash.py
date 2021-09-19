@@ -1135,7 +1135,7 @@ def test_do_sourmash_index_multiscaled_rescale(c):
     assert c.last_result.status == 0
 
 
-# @CTB scaled is 1, not 5; other things?
+# @CTB scaled is 1, not 5; tempdir also.
 @utils.in_tempdir
 def test_do_sourmash_index_multiscaled_rescale_fail(c):
     # test sourmash index --scaled with invalid rescaling (10 -> 5)
@@ -1240,7 +1240,7 @@ def test_do_sourmash_sbt_move_and_search_output(runtmp):
     shutil.move(runtmp.output('zzz.sbt.json'), newpath)
     shutil.move(runtmp.output('.sbt.zzz'), newpath)
 
-    # @CTB
+    # @CTB an old runscript!
     status, out, err = utils.runscript('sourmash',
                                         ['search', '../short.fa.sig',
                                         'zzz.sbt.json', '-o', 'foo'],
@@ -2691,6 +2691,7 @@ def test_compare_with_picklist_exclude(runtmp):
 
 
 def test_gather(runtmp, linear_gather, prefetch_gather):
+    # test basic gather results
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -2711,6 +2712,7 @@ def test_gather(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_csv(runtmp, linear_gather, prefetch_gather):
+    # test gather -o <csvfile> details
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -2750,6 +2752,7 @@ def test_gather_csv(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_abund_x_abund(runtmp, prefetch_gather, linear_gather):
+    # test gather results between two sigs w/abundance
     sig47 = utils.get_test_data('track_abund/47.fa.sig')
     sig63 = utils.get_test_data('track_abund/63.fa.sig')
 
@@ -2759,6 +2762,7 @@ def test_gather_abund_x_abund(runtmp, prefetch_gather, linear_gather):
 
 
 def test_gather_multiple_sbts(runtmp, prefetch_gather, linear_gather):
+    # test gather against multiple SBTs
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -2809,6 +2813,7 @@ def test_gather_multiple_sbts_save_prefetch(runtmp, linear_gather):
 
 
 def test_gather_sbt_and_sigs(runtmp, linear_gather, prefetch_gather):
+    # test gather with a mixture of signatures and databases
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -2829,6 +2834,7 @@ def test_gather_sbt_and_sigs(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_file_output(runtmp, linear_gather, prefetch_gather):
+    # test gather with csv output.
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -2852,6 +2858,7 @@ def test_gather_file_output(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_f_match_orig(runtmp, linear_gather, prefetch_gather):
+    # check calculations for f_match_orig
     import copy
 
     testdata_combined = utils.get_test_data('gather/combined.sig')
@@ -2915,6 +2922,7 @@ def test_gather_f_match_orig(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_nomatch(runtmp):
+    # check gather with no matches
     testdata_query = utils.get_test_data(
         'gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig')
     testdata_match = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
@@ -2929,6 +2937,7 @@ def test_gather_nomatch(runtmp):
 
 
 def test_gather_metagenome(runtmp):
+    # check gather on a synthetic metagenome
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -2957,7 +2966,7 @@ def test_gather_metagenome(runtmp):
 
 @utils.in_tempdir
 def test_gather_metagenome_num_results(c):
-    # set a threshold on the number of results to be reported by gather
+    # test threshold on the number of results to be reported
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3016,6 +3025,7 @@ def test_gather_metagenome_threshold_bp(runtmp):
 
 
 def test_multigather_metagenome(runtmp):
+    # test sourmash multigather
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3044,6 +3054,7 @@ def test_multigather_metagenome(runtmp):
 
 @utils.in_tempdir
 def test_multigather_check_scaled_bounds_negative(c):
+    # check multigather with an invalid (negative) scaled
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3064,6 +3075,7 @@ def test_multigather_check_scaled_bounds_negative(c):
 
 @utils.in_tempdir
 def test_multigather_check_scaled_bounds_less_than_minimum(c):
+    # check multigather with a too low scaled
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3076,7 +3088,7 @@ def test_multigather_check_scaled_bounds_less_than_minimum(c):
 
     cmd = 'multigather --query {} --db gcf_all -k 21 --scaled 50 --threshold-bp=0'.format(query_sig)
     cmd = cmd.split(' ')
-    # Note: this is the value error that is emitted, but we want the Warning from below to be generated instead. (ValueError: new scaled 50.0 is lower than current sample scaled 10000)
+    # Note: this is the value error that is emitted, but we want the Warning from below to be generated instead.
     with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash(*cmd)
 
@@ -3085,6 +3097,7 @@ def test_multigather_check_scaled_bounds_less_than_minimum(c):
 
 @utils.in_tempdir
 def test_multigather_check_scaled_bounds_more_than_maximum(c):
+    # check multigather with a too high scaled
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3142,7 +3155,7 @@ def test_multigather_metagenome_query_from_file(c):
 
 @utils.in_tempdir
 def test_multigather_metagenome_query_with_sbt(c):
-
+    # test multigather with an SBT
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3178,7 +3191,7 @@ def test_multigather_metagenome_query_with_sbt(c):
 
 @utils.in_tempdir
 def test_multigather_metagenome_query_with_lca(c):
-
+    # test multigather with an LCA database
     testdata_glob = utils.get_test_data('47*.fa.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3202,13 +3215,12 @@ def test_multigather_metagenome_query_with_lca(c):
 
     assert 'conducted gather searches on 2 signatures' in err
     assert 'the recovered matches hit 100.0% of the query' in out
-#    assert '5.1 Mbp      100.0%   64.9%    491c0a81'  in out
     assert '5.5 Mbp      100.0%   69.4%    491c0a81'  in out
 
 
 @utils.in_tempdir
 def test_multigather_metagenome_query_on_lca_db(c):
-
+    # test multigather with two different filenames as query
     testdata_sig1 = utils.get_test_data('47.fa.sig')
     testdata_sig2 = utils.get_test_data('63.fa.sig')
     lca_db = utils.get_test_data('lca/47+63.lca.json')
@@ -3232,7 +3244,7 @@ def test_multigather_metagenome_query_on_lca_db(c):
 
 @utils.in_tempdir
 def test_multigather_metagenome_query_with_sbt_addl_query(c):
-
+    # test multigather with an SBT as query
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3275,7 +3287,7 @@ def test_multigather_metagenome_query_with_sbt_addl_query(c):
 
 @utils.in_tempdir
 def test_multigather_metagenome_sbt_query_from_file_with_addl_query(c):
-
+    # test multigather with an SBT via --query-from-file
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3323,7 +3335,7 @@ def test_multigather_metagenome_sbt_query_from_file_with_addl_query(c):
 
 @utils.in_tempdir
 def test_multigather_metagenome_sbt_query_from_file_incorrect(c):
-
+    # test using --query-from-file to specify an SBT
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3349,6 +3361,7 @@ def test_multigather_metagenome_sbt_query_from_file_incorrect(c):
 
 @utils.in_tempdir
 def test_multigather_metagenome_lca_query_from_file(c):
+    # multigather query with an LCA database in a --from-file
     testdata_glob = utils.get_test_data('47*.fa.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3377,7 +3390,6 @@ def test_multigather_metagenome_lca_query_from_file(c):
 
     assert 'conducted gather searches on 2 signatures' in err
     assert 'the recovered matches hit 100.0% of the query' in out
-#    assert '5.1 Mbp      100.0%   64.9%    491c0a81'  in out
     assert '5.5 Mbp      100.0%   69.4%    491c0a81'  in out
 
 
@@ -3427,6 +3439,8 @@ def test_multigather_metagenome_query_from_file_with_addl_query(c):
 
 
 def test_gather_metagenome_traverse(runtmp, linear_gather, prefetch_gather):
+    # query with gather traversing a directory
+
     # set up a directory $location/gather that contains
     # everything in the 'tests/test-data/gather' directory
     # *except* the query sequence, which is 'combined.sig'.
@@ -3452,6 +3466,8 @@ def test_gather_metagenome_traverse(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_metagenome_traverse_check_csv(runtmp, linear_gather, prefetch_gather):
+    # gather traversing a directory => CSV file
+
     # this test confirms that the CSV 'filename' output for signatures loaded
     # via directory traversal properly contains the actual path to the
     # signature file from which the signature was loaded.
@@ -3491,6 +3507,8 @@ def test_gather_metagenome_traverse_check_csv(runtmp, linear_gather, prefetch_ga
 
 @utils.in_tempdir
 def test_gather_traverse_incompatible(c):
+    # check gather ignores incompatible signatures when traversing.
+
     searchdir = c.output('searchme')
     os.mkdir(searchdir)
 
@@ -3506,6 +3524,8 @@ def test_gather_traverse_incompatible(c):
 
 
 def test_gather_metagenome_output_unassigned(runtmp):
+    # test outputting of unassigned hashes to a file
+
     testdata_glob = utils.get_test_data('gather/GCF_000195995*g')
     testdata_sigs = glob.glob(testdata_glob)[0]
 
@@ -3558,6 +3578,8 @@ def test_gather_metagenome_output_unassigned_none(runtmp):
 
 
 def test_gather_metagenome_output_unassigned_nomatches(runtmp, prefetch_gather, linear_gather):
+    # check that unassigned hashes w/no matches equals query
+
     c = runtmp
 
     # test --output-unassigned when there are no matches
@@ -3578,6 +3600,7 @@ def test_gather_metagenome_output_unassigned_nomatches(runtmp, prefetch_gather, 
 
 
 def test_gather_metagenome_output_unassigned_nomatches_protein(runtmp, linear_gather, prefetch_gather):
+    # check that unassigned correctly retains molecule type
     c = runtmp
 
     # test --output-unassigned with protein signatures
@@ -3602,6 +3625,7 @@ def test_gather_metagenome_output_unassigned_nomatches_protein(runtmp, linear_ga
 
 
 def test_gather_check_scaled_bounds_negative(runtmp, prefetch_gather, linear_gather):
+    # check the error for a negative gather --scaled
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3614,6 +3638,7 @@ def test_gather_check_scaled_bounds_negative(runtmp, prefetch_gather, linear_gat
 
 
 def test_gather_check_scaled_bounds_less_than_minimum(runtmp, prefetch_gather, linear_gather):
+    # check the warning for small gather --scaled
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3626,6 +3651,7 @@ def test_gather_check_scaled_bounds_less_than_minimum(runtmp, prefetch_gather, l
 
 
 def test_gather_check_scaled_bounds_more_than_maximum(runtmp, prefetch_gather, linear_gather):
+    # check the warning for a very large gather --scaled
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3638,7 +3664,7 @@ def test_gather_check_scaled_bounds_more_than_maximum(runtmp, prefetch_gather, l
 
 
 def test_gather_metagenome_downsample(runtmp, prefetch_gather, linear_gather):
-    # downsample w/scaled of 100,000
+    # downsample w/scaled of 100,000, check results
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3666,6 +3692,7 @@ def test_gather_metagenome_downsample(runtmp, prefetch_gather, linear_gather):
 
 
 def test_gather_query_downsample(runtmp, linear_gather, prefetch_gather):
+    # check that the query gets appropriately downsampled
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
     print(testdata_sigs)
@@ -3685,7 +3712,7 @@ def test_gather_query_downsample(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_query_downsample_explicit(runtmp, linear_gather, prefetch_gather):
-    # do an explicit downsampling to fix `test_gather_query_downsample`
+    # do an explicit downsampling to fix `test_gather_query_downsample` - CTB I think this is unnecessary now
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3755,6 +3782,7 @@ def test_gather_with_picklist_exclude(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_save_matches(runtmp, linear_gather, prefetch_gather):
+    # test gather --save-matches
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3777,8 +3805,11 @@ def test_gather_save_matches(runtmp, linear_gather, prefetch_gather):
     assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
     assert os.path.exists(runtmp.output('save.sigs'))
 
+    # @CTB this could be expanded as a check
+
 
 def test_gather_save_matches_and_save_prefetch(runtmp, linear_gather):
+    # check --save-matches and --save-prefetch both
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3813,7 +3844,7 @@ def test_gather_save_matches_and_save_prefetch(runtmp, linear_gather):
 
 @utils.in_tempdir
 def test_gather_error_no_sigs_traverse(c):
-    # test gather applied to a directory
+    # test gather applied to an empty directory
     query = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
 
     emptydir = c.output('')
@@ -3828,6 +3859,7 @@ def test_gather_error_no_sigs_traverse(c):
 
 
 def test_gather_error_no_cardinality_query(runtmp, linear_gather, prefetch_gather):
+    # make sure that gather errors out on num sketches
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -3849,6 +3881,7 @@ def test_gather_error_no_cardinality_query(runtmp, linear_gather, prefetch_gathe
 
 
 def test_gather_deduce_ksize(runtmp, prefetch_gather, linear_gather):
+    # check that gather figures out ksizes automatically
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -3869,6 +3902,7 @@ def test_gather_deduce_ksize(runtmp, prefetch_gather, linear_gather):
 
 
 def test_gather_deduce_moltype(runtmp, linear_gather, prefetch_gather):
+    # check that gather figures out molecule type automatically
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -3889,6 +3923,7 @@ def test_gather_deduce_moltype(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_abund_1_1(runtmp, linear_gather, prefetch_gather):
+    # confirm numbers for gather w/abund signatures
     c = runtmp
     #
     # make r1.fa with 2x coverage of genome s10
@@ -3931,6 +3966,7 @@ def test_gather_abund_1_1(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
+    # confirm numbers for gather w/abund signatures
     c = runtmp
     # see comments in test_gather_abund_1_1, above.
     # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
@@ -4008,6 +4044,7 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
 
 
 def test_gather_abund_10_1_ignore_abundance(runtmp, linear_gather, prefetch_gather):
+    # confirm numbers for gather when ignoring abund signatures
     c = runtmp
     # see comments in test_gather_abund_1_1, above.
     # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
@@ -4055,6 +4092,7 @@ def test_gather_abund_10_1_ignore_abundance(runtmp, linear_gather, prefetch_gath
 
 
 def test_gather_output_unassigned_with_abundance(runtmp, prefetch_gather, linear_gather):
+    # confirm that gather --output-unassigned saves abundances
     c = runtmp
     query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
     against = utils.get_test_data('gather-abund/genome-s10.fa.gz.sig')
@@ -4082,6 +4120,7 @@ def test_gather_output_unassigned_with_abundance(runtmp, prefetch_gather, linear
 
 
 def test_sbt_categorize(runtmp):
+    # test catgorize
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
     testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
@@ -4115,7 +4154,7 @@ def test_sbt_categorize(runtmp):
 
 
 def test_sbt_categorize_ignore_abundance_1(runtmp):
-    # --- Categorize without ignoring abundance ---
+    # categorize requires --ignore-abundance on abund sigs
     query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
     against_list = ['reads-s10-s11']
     against_list = ['gather-abund/' + i + '.sig'
@@ -4141,7 +4180,7 @@ def test_sbt_categorize_ignore_abundance_1(runtmp):
 
 
 def test_sbt_categorize_ignore_abundance_3(runtmp):
-    # --- Now categorize with ignored abundance ---
+    # test categorize with --ignore-abundance
     query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
     against_list = ['reads-s10-s11']
     against_list = ['gather-abund/' + i + '.sig'
@@ -4167,6 +4206,7 @@ def test_sbt_categorize_ignore_abundance_3(runtmp):
 
 
 def test_sbt_categorize_already_done(runtmp):
+    # confirm that categorize recognizes already analyzed sigs
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
     testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
@@ -4195,6 +4235,7 @@ def test_sbt_categorize_already_done(runtmp):
 
 
 def test_sbt_categorize_already_done_traverse(runtmp):
+    # confirm that cetogirze automatically traverses directories for sigs
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
     testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
@@ -4240,7 +4281,8 @@ def test_sbt_categorize_multiple_ksizes_moltypes(runtmp):
 
 
 def test_watch_check_num_bounds_negative(runtmp):
-    c=runtmp
+    # confirm that categorize correctly requires a positive num
+    c = runtmp
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     shutil.copyfile(testdata1, c.output('1.sig'))
@@ -4254,7 +4296,8 @@ def test_watch_check_num_bounds_negative(runtmp):
 
 
 def test_watch_check_num_bounds_less_than_minimum(runtmp):
-    c=runtmp
+    # confirm that categorize warns on low num values
+    c = runtmp
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     shutil.copyfile(testdata1, c.output('1.sig'))
@@ -4267,7 +4310,8 @@ def test_watch_check_num_bounds_less_than_minimum(runtmp):
 
 
 def test_watch_check_num_bounds_more_than_maximum(runtmp):
-    c=runtmp
+    # confirm that watch warns on large num values
+    c = runtmp
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     shutil.copyfile(testdata1, c.output('1.sig'))
@@ -4281,6 +4325,7 @@ def test_watch_check_num_bounds_more_than_maximum(runtmp):
 
 @utils.in_tempdir
 def test_watch(c):
+    # test watch
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     shutil.copyfile(testdata1, c.output('1.sig'))
@@ -4296,6 +4341,7 @@ def test_watch(c):
 
 @utils.in_tempdir
 def test_watch_deduce_ksize(c):
+    # check that watch figures out the ksize automatically
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     c.run_sourmash('sketch','dna','-p','k=29,num=500', '-o', '1.sig', testdata0)
 
@@ -4310,6 +4356,7 @@ def test_watch_deduce_ksize(c):
 
 
 def test_watch_coverage(runtmp):
+    # CTB: I'm not sure what this tests
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     shutil.copyfile(testdata1, runtmp.output('1.sig'))
@@ -4388,6 +4435,7 @@ def test_storage_convert_identity(runtmp):
 
 
 def test_storage_convert_fsstorage_newpath(runtmp):
+    # check 'storage convert' from one path to a new path
     testdata = utils.get_test_data('v2.sbt.json')
     shutil.copyfile(testdata, runtmp.output('v2.sbt.json'))
     shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
@@ -4409,6 +4457,7 @@ def test_storage_convert_fsstorage_newpath(runtmp):
 
 
 def test_migrate(runtmp):
+    # test sourmash migrate
     testdata = utils.get_test_data('v3.sbt.json')
     shutil.copyfile(testdata, runtmp.output('v3.sbt.json'))
     shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v3'),
@@ -4433,6 +4482,7 @@ def test_migrate(runtmp):
 
 
 def test_license_cc0(runtmp):
+    # confirm that signature licenses are CC0
     testdata1 = utils.get_test_data('short.fa')
     runtmp.sourmash('sketch','translate', '-p', 'k=31', testdata1)
 
@@ -4446,6 +4496,7 @@ def test_license_cc0(runtmp):
 
 
 def test_license_non_cc0(runtmp):
+    # confirm that signatures must be CC0 when calculated
     testdata1 = utils.get_test_data('short.fa')
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sketch', 'translate', '-p','k=31', '--license', 'GPL', testdata1)
@@ -4457,6 +4508,7 @@ def test_license_non_cc0(runtmp):
 
 
 def test_license_load_non_cc0():
+    # confirm that licenses must be CC0 when loaded :)
     sigfile = utils.get_test_data('bad-license.sig')
 
     try:
@@ -4467,6 +4519,7 @@ def test_license_load_non_cc0():
 
 @utils.in_tempdir
 def test_do_sourmash_index_zipfile(c):
+    # check index outputting zipfiles
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -4493,6 +4546,7 @@ def test_do_sourmash_index_zipfile(c):
 
 @utils.in_tempdir
 def test_do_sourmash_index_zipfile_append(c):
+    # check index --append
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
     half_point = int(len(testdata_sigs) / 2)
@@ -4657,7 +4711,7 @@ def test_index_matches_search_with_picklist_exclude(runtmp):
     err = runtmp.last_result.err
     print(err)
     assert "for given picklist, found 10 matches by excluding 9 distinct values" in err
-    ### NTP: FIX REPORTING
+    ### NTP: FIX REPORTING @CTB
     assert "WARNING: -1 missing picklist values"
 
     out = runtmp.last_result.out
