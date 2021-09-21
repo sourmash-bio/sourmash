@@ -3794,7 +3794,11 @@ def test_gather_save_matches(runtmp, linear_gather, prefetch_gather):
     assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
     assert os.path.exists(runtmp.output('save.sigs'))
 
-    # @CTB this could be expanded as a check
+    # search should have found all matches -- compare database to saved matches
+    x = set(sourmash.load_file_as_signatures(runtmp.output('gcf_all.sbt.zip')))
+    y = set(sourmash.load_file_as_signatures(runtmp.output('save.sigs')))
+
+    assert x == y
 
 
 def test_gather_save_matches_and_save_prefetch(runtmp, linear_gather):
