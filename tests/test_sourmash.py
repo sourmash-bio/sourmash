@@ -4700,8 +4700,6 @@ def test_index_matches_search_with_picklist_exclude(runtmp):
     err = runtmp.last_result.err
     print(err)
     assert "for given picklist, found 10 matches by excluding 9 distinct values" in err
-    ### NTP: FIX REPORTING @CTB
-    assert "WARNING: -1 missing picklist values"
 
     out = runtmp.last_result.out
     print(out)
