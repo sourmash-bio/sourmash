@@ -1,7 +1,6 @@
 """
 Tests for the 'sourmash' command line.
 """
-# @CTB why do the .sbt.v3 files get created / checked in?
 import argparse
 import os
 import gzip
@@ -1135,7 +1134,6 @@ def test_do_sourmash_index_multiscaled_rescale(c):
     assert c.last_result.status == 0
 
 
-# @CTB scaled is 1, not 5; tempdir also.
 @utils.in_tempdir
 def test_do_sourmash_index_multiscaled_rescale_fail(c):
     # test sourmash index --scaled with invalid rescaling (10 -> 5)
@@ -1143,7 +1141,7 @@ def test_do_sourmash_index_multiscaled_rescale_fail(c):
     testdata2 = utils.get_test_data('short2.fa')
 
     c.run_sourmash('sketch', 'dna', '-p', 'scaled=10', testdata1)
-    c.run_sourmash('sketch', 'dna', '-p', 'scaled=1', testdata2)
+    c.run_sourmash('sketch', 'dna', '-p', 'scaled=5', testdata2)
     # this should fail: cannot go from a scaled value of 10 to 5
 
     with pytest.raises(SourmashCommandFailed) as e:
@@ -1784,8 +1782,7 @@ def test_search_check_scaled_bounds_negative(runtmp):
 
 
 def test_search_check_scaled_bounds_less_than_minimum(runtmp):
-    # confirm that a warning is emitted for
-    # low scaled values.
+    # confirm that a warning is emitted for low scaled values.
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -1938,8 +1935,7 @@ def test_search_with_picklist_exclude(runtmp):
 
 
 def test_mash_csv_to_sig(runtmp):
-    # confirm that we can convert a mash dumpfile to
-    # a signature and search with it.
+    # confirm that we can convert a mash dumpfile to a signature & use it
     testdata1 = utils.get_test_data('short.fa.msh.dump')
     testdata2 = utils.get_test_data('short.fa')
 
@@ -2451,7 +2447,7 @@ def test_do_sourmash_check_search_vs_actual_similarity(runtmp):
     # ensure search does not fail.
     assert runtmp.last_result.status == 0
 
-    # @CTB add a test here, I think :)
+    # @CTB add a check here, I think :)
 
 
 def test_do_sourmash_check_sbt_filenames(runtmp):
@@ -2543,7 +2539,7 @@ def test_sbt_search_order_dependence(runtmp):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
     assert '100.0%' in runtmp.last_result.out
-    # @CTB needs stronger checks?
+    # @CTB needs stronger checks
 
 
 def test_sbt_search_order_dependence_2(runtmp):
@@ -2568,9 +2564,8 @@ def test_sbt_search_order_dependence_2(runtmp):
     # @CTB needs stronger checks
 
 
-def test_compare_with_abundance_1(runtmp):
+def test_search_with_abundance_1(runtmp):
     # build and search two signatures, verify result.
-    # @CTB should be 'test_search', presumably :)
 
     # create two signatures
     E1 = MinHash(ksize=5, n=5, is_protein=False,
@@ -2594,7 +2589,7 @@ def test_compare_with_abundance_1(runtmp):
     assert '100.0%' in runtmp.last_result.out
 
 
-def test_compare_with_abundance_2(runtmp):
+def test_search_with_abundance_2(runtmp):
     # create two signatures
     E1 = MinHash(ksize=5, n=5, is_protein=False,
                     track_abundance=True)
@@ -2609,20 +2604,16 @@ def test_compare_with_abundance_2(runtmp):
     s1 = signature.SourmashSignature(E1, filename='e1', name='e1')
     s2 = signature.SourmashSignature(E2, filename='e2', name='e2')
 
-    signature.save_signatures([s1],
-                                open(runtmp.output('e1.sig'), 'w'))
-    signature.save_signatures([s2],
-                                open(runtmp.output('e2.sig'), 'w'))
+    signature.save_signatures([s1], open(runtmp.output('e1.sig'), 'w'))
+    signature.save_signatures([s2], open(runtmp.output('e2.sig'), 'w'))
 
     runtmp.sourmash('search', 'e1.sig', 'e2.sig', '-k', '5')
 
     assert '100.0%' in runtmp.last_result.out
 
 
-def test_compare_with_abundance_3(runtmp):
+def test_search_with_abundance_3(runtmp):
     # create two signatures and verify pre-computed results
-    # @CTB should be 'search' not 'compare'!
-
     E1 = MinHash(ksize=5, n=5, is_protein=False,
                     track_abundance=True)
     E2 = MinHash(ksize=5, n=5, is_protein=False,
@@ -2637,10 +2628,8 @@ def test_compare_with_abundance_3(runtmp):
     s1 = signature.SourmashSignature(E1, filename='e1', name='e1')
     s2 = signature.SourmashSignature(E2, filename='e2', name='e2')
 
-    signature.save_signatures([s1],
-                                open(runtmp.output('e1.sig'), 'w'))
-    signature.save_signatures([s2],
-                                open(runtmp.output('e2.sig'), 'w'))
+    signature.save_signatures([s1], open(runtmp.output('e1.sig'), 'w'))
+    signature.save_signatures([s2], open(runtmp.output('e2.sig'), 'w'))
 
     runtmp.sourmash('search', 'e1.sig', 'e2.sig', '-k', '5')
 
@@ -3712,7 +3701,7 @@ def test_gather_query_downsample(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_query_downsample_explicit(runtmp, linear_gather, prefetch_gather):
-    # do an explicit downsampling to fix `test_gather_query_downsample` - CTB I think this is unnecessary now
+    # do an explicit downsampling to fix `test_gather_query_downsample` - @CTB I think this is unnecessary now
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -4120,7 +4109,7 @@ def test_gather_output_unassigned_with_abundance(runtmp, prefetch_gather, linear
 
 
 def test_sbt_categorize(runtmp):
-    # test catgorize
+    # test categorize
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
     testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
