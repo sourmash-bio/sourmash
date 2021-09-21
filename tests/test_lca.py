@@ -1158,7 +1158,6 @@ def test_single_classify_to_output_no_name(runtmp):
     with open(runtmp.output('outfile.txt'), 'rt') as fp:
         outdata = fp.read()
     print((outdata,))
-    # @CTB why diff weird?
     assert 'xyz,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
     assert 'classified 1 signatures total' in runtmp.last_result.err
     assert 'loaded 1 LCA databases' in runtmp.last_result.err
