@@ -3701,7 +3701,7 @@ def test_gather_query_downsample(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_query_downsample_explicit(runtmp, linear_gather, prefetch_gather):
-    # do an explicit downsampling to fix `test_gather_query_downsample` - @CTB I think this is unnecessary now
+    # do an explicit downsampling and verify that it matches `test_gather_query_downsample` results
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
