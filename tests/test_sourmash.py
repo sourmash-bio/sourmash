@@ -4946,10 +4946,10 @@ def test_storage_convert(runtmp):
 
     args = ['storage', 'convert', '-b', 'ipfs', testsbt]
     with pytest.raises(SourmashCommandFailed):
-        runtmp.sourmash(*args)
+        runtmp.run(*args)
 
     if runtmp.last_result.status:
-        if "ipfs.exceptions.ConnectionError" in runtmp.last_result.err:
+        if "ipfshttpclient.ConnectionError" in runtmp.last_result.err:
             raise pytest.xfail('ipfs probably not running')
         if "No module named 'ipfshttpclient'" in runtmp.last_result.err:
             raise pytest.xfail('ipfshttpclient module not installed')
