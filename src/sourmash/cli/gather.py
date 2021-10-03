@@ -1,12 +1,13 @@
 """search a metagenome signature against dbs"""
 
 usage="""
+
 The `gather` subcommand selects the best reference genomes to use for
 a metagenome analysis, by finding the smallest set of non-overlapping
 matches to the query in a database.  This is specifically meant for
-metagenome and genome bin analysis.  (See
-[Classifying Signatures](classifying-signatures.md) for more
-information on the different approaches that can be used here.)
+metagenome and genome bin analysis.  (See "Classifying Signatures" [1]
+in the command line documentation for more information on the
+different approaches that can be used here.)
 
 If the input signature was created with `-p abund`, output
 will be abundance weighted (unless `--ignore-abundances` is
@@ -15,10 +16,10 @@ matches.
 
 `gather`, like `search`, will load all of provided signatures into
 memory.  You can use `sourmash index` to create a Sequence Bloom Tree
-(SBT) that can be quickly searched on disk; this is
-[the same format in which we provide GenBank and other databases](databases.md).
+(SBT) that can be quickly searched on disk; this is the same format in
+which we provide GenBank and other databases.
 
-Usage:
+Command line usage:
 ```
 sourmash gather query.sig [ list of signatures or SBTs ]
 ```
@@ -36,14 +37,8 @@ overlap     p_query p_match
 
 The command line option `--threshold-bp` sets the threshold below
 which matches are no longer reported; by default, this is set to
-50kb. see the Appendix in
-[Classifying Signatures](classifying-signatures.md) for details.
-
-As of sourmash 4.2.0, `gather` supports `--picklist`, to
-[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
-can be used to search only a small subset of a large collection, or to
-exclude a few signatures from a collection, without modifying the
-collection itself.
+50kb. see the Appendix in [Classifying
+Signatures](classifying-signatures.md) for details.
 
 Note:
 
@@ -52,28 +47,7 @@ genomes with no (or incomplete) taxonomic information.  Use `sourmash
 lca summarize` to classify a metagenome using a collection of genomes
 with taxonomic information.
 
-### Alternative search mode for low-memory (but slow) search: `--linear`
-
-By default, `sourmash gather` uses all information available for
-faster search. In particular, for SBTs, `prefetch` will prune the search
-tree.  This can be slow and/or memory intensive for very large databases,
-and `--linear` asks `sourmash prefetch` to instead use a linear search
-across all leaf nodes in the tree.
-
-The results are the same whether `--no-linear` or `--linear` is
-used.
-
-### Alternative search mode: `--no-prefetch`
-
-By default, `sourmash gather` does a "prefetch" to find *all* candidate
-signatures across all databases, before removing overlaps between the
-candidates. In rare circumstances, depending on the databases and parameters
-used, this may be slower or more memory intensive than doing iterative
-overlap removal. Prefetch behavior can be turned off with `--no-prefetch`.
-
-The results are the same whether `--prefetch` or `--no-prefetch` is
-used.  This option can be used with or without `--linear` (although
-`--no-prefetch --linear` will generally be MUCH slower).
+[1] https://sourmash.readthedocs.io/en/latest/classifying-signatures.html
 
 ---
 """
