@@ -37,8 +37,7 @@ overlap     p_query p_match
 
 The command line option `--threshold-bp` sets the threshold below
 which matches are no longer reported; by default, this is set to
-50kb. see the Appendix in [Classifying
-Signatures](classifying-signatures.md) for details.
+50kb. see the Appendix in Classifying Signatures [1] for details.
 
 Note:
 
