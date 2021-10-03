@@ -2,35 +2,26 @@
 
 usage="""
 
-The `compare` subcommand compares one or more signatures
-(created with `sketch`) using estimated [Jaccard index][3] or
-(if signatures are created with `-p abund`) the [angular
-similarity](https://en.wikipedia.org/wiki/Cosine_similarity#Angular_distance_and_similarity).
+The `compare` subcommand compares one or more signatures (created with
+`sketch`) using estimated Jaccard index [1] or (if signatures are
+created with `-p abund`) the angular similarity [2]).
 
-The default output
-is a text display of a similarity matrix where each entry `[i, j]`
-contains the estimated Jaccard index between input signature `i` and
-input signature `j`.  The output matrix can be saved to a file
-with `--output` and used with the `sourmash plot` subcommand (or loaded
-with `numpy.load(...)`.  Using `--csv` will output a CSV file that can
-be loaded into other languages than Python, such as R.
+The default output is a text display of a similarity matrix where each
+entry `[i, j]` contains the estimated Jaccard index between input
+signature `i` and input signature `j`.  The output matrix can be saved
+to a file with `--output` and used with the `sourmash plot` subcommand
+(or loaded with `numpy.load(...)`.  Using `--csv` will output a CSV
+file that can be loaded into other languages than Python, such as R.
 
-Usage:
+Command line usage:
 ```
 sourmash compare file1.sig [ file2.sig ... ]
 ```
 
-Options:
-
-* `--output` -- save the distance matrix to this file (as a numpy binary matrix)
-* `--ksize` -- do the comparisons at this k-mer size.
-* `--containment` -- calculate containment instead of similarity; `C(i, j) = size(i intersection j) / size(i)`
-* `--from-file` -- append the list of files in this text file to the input
-        signatures.
-* `--ignore-abundance` -- ignore abundances in signatures.
-* `--picklist` -- select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
-
 **Note:** compare by default produces a symmetric similarity matrix that can be used as an input to clustering. With `--containment`, however, this matrix is no longer symmetric and cannot formally be used for clustering.
+
+[1] https://en.wikipedia.org/wiki/Jaccard_index
+[2] https://en.wikipedia.org/wiki/Cosine_similarity#Angular_distance_and_similarity
 
 ---
 """
