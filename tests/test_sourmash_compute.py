@@ -22,6 +22,7 @@ from sourmash.cli import SourmashParser
 
 from sourmash import signature
 from sourmash import VERSION
+from sourmash_tst_utils import SourmashCommandFailed
 
 
 def test_do_sourmash_compute():
@@ -36,6 +37,43 @@ def test_do_sourmash_compute():
 
         sig = next(signature.load_signatures(sigfile))
         assert str(sig).endswith('short.fa')
+
+
+def test_do_sourmash_compute_check_num_bounds_negative(runtmp):
+    c=runtmp
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    testdata3 = utils.get_test_data('short3.fa')
+    sigfile = c.output('short.fa.sig')
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('compute', '-k', '31', '--num-hashes', '-5', '-o', sigfile, '--merge', '"name"', testdata1, testdata2, testdata3)
+    
+    assert "ERROR: num value must be positive" in c.last_result.err
+
+
+def test_do_sourmash_compute_check_num_bounds_less_than_minimum(runtmp):
+    c=runtmp
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    testdata3 = utils.get_test_data('short3.fa')
+    sigfile = c.output('short.fa.sig')
+
+    c.run_sourmash('compute', '-k', '31', '--num-hashes', '25', '-o', sigfile, '--merge', '"name"', testdata1, testdata2, testdata3)
+    
+    assert "WARNING: num value should be >= 50. Continuing anyway." in c.last_result.err
+
+
+def test_do_sourmash_compute_check_num_bounds_more_than_maximum(runtmp):
+    c=runtmp
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    testdata3 = utils.get_test_data('short3.fa')
+    sigfile = c.output('short.fa.sig')
+
+    c.run_sourmash('compute', '-k', '31', '--num-hashes', '100000', '-o', sigfile, '--merge', '"name"', testdata1, testdata2, testdata3)
+    
+    assert "WARNING: num value should be <= 50000. Continuing anyway." in c.last_result.err
 
 
 @utils.in_tempdir
@@ -133,7 +171,7 @@ def test_do_sourmash_compute_output_and_name_valid_file_outdir(c):
     testdata3 = utils.get_test_data('short3.fa')
     sigfile = os.path.join(c.location, 'short.fa.sig')
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('compute', '-k', '31', '-o', sigfile,
                        '--merge', '"name"',
                        testdata1, testdata2, testdata3,

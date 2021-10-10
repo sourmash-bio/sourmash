@@ -13,6 +13,7 @@ import sourmash_tst_utils as utils
 import sourmash
 from sourmash.signature import load_signatures
 from sourmash.manifest import CollectionManifest
+from sourmash_tst_utils import SourmashCommandFailed
 
 ## command line tests
 
@@ -176,7 +177,7 @@ def test_sig_merge_1_ksize_moltype_fail(c):
     sig63 = utils.get_test_data('63.fa.sig')
     sig2and63 = utils.get_test_data('2+63.fa.sig')
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('sig', 'merge', sig2, sig63)
 
     assert "ERROR when merging signature" in str(exc.value)
@@ -216,7 +217,7 @@ def test_sig_merge_3_abund_ab(c):
     sig47 = utils.get_test_data('47.fa.sig')
     sig63abund = utils.get_test_data('track_abund/63.fa.sig')
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(SourmashCommandFailed) as e:
         c.run_sourmash('sig', 'merge', sig47, sig63abund)
 
     print(c.last_result)
@@ -229,7 +230,7 @@ def test_sig_merge_3_abund_ba(c):
     sig47 = utils.get_test_data('47.fa.sig')
     sig63abund = utils.get_test_data('track_abund/63.fa.sig')
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(SourmashCommandFailed) as e:
         c.run_sourmash('sig', 'merge', sig63abund, sig47)
 
     print(c.last_result)
@@ -502,7 +503,7 @@ def test_sig_intersect_5(c):
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('track_abund/63.fa.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('sig', 'intersect', '--abundances-from', sig47, sig63)
 
 
@@ -513,7 +514,7 @@ def test_sig_intersect_6_ksize_fail(c):
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('sig', 'intersect', sig2, sig47)
 
 
@@ -603,7 +604,7 @@ def test_sig_subtract_2(c):
     sig47 = utils.get_test_data('track_abund/47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('sig', 'subtract', sig47, sig63)
 
 
@@ -613,7 +614,7 @@ def test_sig_subtract_3(c):
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('track_abund/63.fa.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('sig', 'subtract', sig47, sig63)
 
 
@@ -623,7 +624,7 @@ def test_sig_subtract_4_ksize_fail(c):
     sig47 = utils.get_test_data('47.fa.sig')
     sig2 = utils.get_test_data('2.fa.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('sig', 'subtract', sig47, sig2)
 
 
@@ -738,7 +739,7 @@ def test_sig_rename_2_output_to_same(c):
 @utils.in_tempdir
 def test_sig_rename_3_file_dne(c):
     # rename on a file that does not exist should fail!
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(SourmashCommandFailed) as e:
         c.run_sourmash('sig', 'rename', 'no-such-sig', 'fiz bar')
 
     assert "Error while reading signatures from 'no-such-sig'" in c.last_result.err
@@ -1170,7 +1171,7 @@ def test_sig_split_4_lca_prot(c):
 @utils.in_tempdir
 def test_sig_split_5_no_exist(c):
     # no such file
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(SourmashCommandFailed) as e:
         c.run_sourmash('sig', 'split', 'foo')
 
 
@@ -1248,7 +1249,7 @@ def test_sig_extract_2(c):
 def test_sig_extract_3(c):
     # extract nothing (no md5 match)
     sig47 = utils.get_test_data('47.fa.sig')
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('sig', 'extract', sig47, '--md5', 'FOO')
 
 
@@ -1275,7 +1276,7 @@ def test_sig_extract_4(c):
 def test_sig_extract_5(c):
     # extract nothing (no name match)
     sig47 = utils.get_test_data('47.fa.sig')
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('sig', 'extract', sig47, '--name', 'FOO')
 
 
@@ -1464,7 +1465,7 @@ def test_sig_extract_8_picklist_md5_require_all(runtmp):
                         md5short='', fullIdent='', nodotIdent=''))
 
     picklist_arg = f"{picklist_csv}:md5full:md5"
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sig', 'extract', sig47, sig63,
                         '--picklist', picklist_arg,
                         '--picklist-require-all')
@@ -1818,7 +1819,7 @@ def test_sig_extract_8_picklist_md5_short_alias_with_md5_selector_nomatch(runtmp
         w.writerow(row)
 
     picklist_arg = f"{picklist_csv}:md5short:md5short"
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sig', 'extract', sig47, sig63,
                         '--picklist', picklist_arg,
                         '--md5', 'XXX') # no match to md5 selector here
@@ -1847,7 +1848,7 @@ def test_sig_extract_8_picklist_md5_short_alias_with_md5_selector_nomatch_exclud
         w.writerow(row)
 
     picklist_arg = f"{picklist_csv}:md5short:md5short:exclude"
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sig', 'extract', sig47, sig63,
                         '--picklist', picklist_arg,
                         '--md5', 'XXX') # no match to md5 selector here
@@ -1907,7 +1908,7 @@ def test_sig_extract_8_picklist_md5_short_alias_with_md5_selector_exclude(runtmp
         w.writerow(row)
 
     picklist_arg = f"{picklist_csv}:md5short:md5short:exclude"
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist', picklist_arg,
                     '--md5', '09a08691ce5295215')
 
@@ -1932,7 +1933,7 @@ def test_sig_extract_8_picklist_md5_nomatch(runtmp):
 
     picklist_arg = f"{picklist_csv}:md5short:md5prefix8"
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist',
                         picklist_arg)
 
@@ -2113,7 +2114,7 @@ def test_sig_extract_11_picklist_bad_coltype(runtmp):
 
     picklist_arg = f"{picklist_csv}:md5:BADCOLTYPE"
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sig', 'extract', sigdir, '--picklist',
                         picklist_arg, '-k', '19', '--hp')
 
@@ -2135,7 +2136,7 @@ def test_sig_extract_11_picklist_bad_coltype_exclude(runtmp):
 
     picklist_arg = f"{picklist_csv}:md5:BADCOLTYPE:exclude"
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sig', 'extract', sigdir, '--picklist',
                         picklist_arg, '-k', '19', '--hp')
 
@@ -2157,7 +2158,7 @@ def test_sig_extract_12_picklist_bad_argstr(runtmp):
 
     picklist_arg = f"{picklist_csv}"
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sig', 'extract', sigdir, '--picklist',
                         picklist_arg, '-k', '19', '--hp')
 
@@ -2179,7 +2180,7 @@ def test_sig_extract_12_picklist_bad_pickstyle(runtmp):
 
     picklist_arg = f"{picklist_csv}:md5:md5:XXX"
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sig', 'extract', sigdir, '--picklist',
                         picklist_arg, '-k', '19', '--hp')
 
@@ -2201,7 +2202,7 @@ def test_sig_extract_12_picklist_bad_colname(runtmp):
 
     picklist_arg = f"{picklist_csv}:BADCOLNAME:md5"
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sig', 'extract', sigdir, '--picklist',
                         picklist_arg, '-k', '19', '--hp')
 
@@ -2223,7 +2224,7 @@ def test_sig_extract_12_picklist_bad_colname_exclude(runtmp):
 
     picklist_arg = f"{picklist_csv}:BADCOLNAME:md5:exclude"
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sig', 'extract', sigdir, '--picklist',
                         picklist_arg, '-k', '19', '--hp')
 
@@ -2386,12 +2387,41 @@ def test_sig_downsample_1_scaled_to_num(c):
     assert actual_mins == test_mins
 
 
+def test_sig_downsample_check_num_bounds_negative(runtmp):
+    c=runtmp
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('sig', 'downsample', '--num', '-5', sig47)
+
+    assert "ERROR: num value must be positive" in c.last_result.err
+
+
+def test_sig_downsample_check_num_bounds_less_than_minimum(runtmp):
+    c=runtmp
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    c.run_sourmash('sig', 'downsample', '--num', '25', sig47)
+
+    assert "WARNING: num value should be >= 50. Continuing anyway." in c.last_result.err
+
+
+def test_sig_downsample_check_num_bounds_more_than_maximum(runtmp):
+    c=runtmp
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('sig', 'downsample', '--num', '100000', sig47)
+
+    assert "WARNING: num value should be <= 50000. Continuing anyway." in c.last_result.err
+
+
 @utils.in_tempdir
 def test_sig_downsample_1_scaled_to_num_fail(c):
     # downsample a scaled signature
     sig47 = utils.get_test_data('47.fa.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('sig', 'downsample', '--num', '50000', sig47)
 
 
@@ -2400,7 +2430,7 @@ def test_sig_downsample_1_scaled_empty(c):
     # downsample a scaled signature
     sig47 = utils.get_test_data('47.fa.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('sig', 'downsample', sig47)
 
 
@@ -2451,7 +2481,7 @@ def test_sig_downsample_2_num_to_scaled_fail(c):
     # because new scaled is too low
     sigs11 = utils.get_test_data('genome-s11.fa.gz.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('sig', 'downsample', '--scaled', '100',
                        '-k', '21', '--dna', sigs11)
 
@@ -2461,7 +2491,7 @@ def test_sig_downsample_2_num_and_scaled_both_fail(c):
     # cannot specify both --num and --scaled
     sigs11 = utils.get_test_data('genome-s11.fa.gz.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('sig', 'downsample', '--scaled', '100', '--num', '50',
                        '-k', '21', '--dna', sigs11)
 
@@ -2471,7 +2501,7 @@ def test_sig_downsample_2_num_empty(c):
     # downsample a num signature
     sigs11 = utils.get_test_data('genome-s11.fa.gz.sig')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('sig', 'downsample', '-k', '21', '--dna', sigs11)
 
 
@@ -2879,7 +2909,7 @@ def test_import_mash_csv_to_sig(runtmp):
 
     runtmp.sourmash('sig', 'import', '--csv', testdata1, '-o', 'xxx.sig')
 
-    runtmp.sourmash('compute', '-k', '31', '-n', '970', testdata2)
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=31,num=970', testdata2)
 
     runtmp.sourmash('search', '-k', '31', 'short.fa.sig', 'xxx.sig')
 
@@ -2941,7 +2971,7 @@ def test_sig_manifest_3_sbt(runtmp):
 def test_sig_manifest_4_lca(runtmp):
     # make a manifest from a .lca.json file
     sigfile = utils.get_test_data('prot/protein.lca.json.gz')
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sig', 'manifest', sigfile, '-o',
                         'SOURMASH-MANIFEST.csv')
 
@@ -3044,6 +3074,103 @@ def test_sig_kmers_1_dna(runtmp):
         check_mh2.add_hash(int(row['hashval']))
     assert check_mh.similarity(mh) == 1.0
     assert check_mh2.similarity(mh) == 1.0
+
+
+def test_sig_kmers_1_dna_more_in_query(runtmp):
+    # test sig kmers on dna, where query has more than matches
+    seqfile = utils.get_test_data('short.fa')
+
+    runtmp.sourmash('sketch', 'dna', seqfile, '-p', 'scaled=1')
+    ss = sourmash.load_one_signature(runtmp.output('short.fa.sig'))
+    mh = ss.minhash
+    assert mh.moltype == 'DNA'
+
+    # make a new sequence for query, with more k-mers
+    query_seqfile = runtmp.output('query.fa')
+    with open(query_seqfile, 'wt') as fp:
+        for record in screed.open(seqfile):
+            fp.write(f">{record.name}\n{record.sequence}AGTTACGATC\n")
+
+    runtmp.sourmash('sig', 'kmers', '--sig', 'short.fa.sig',
+                    '--seq', query_seqfile)
+
+    out = runtmp.last_result.out
+    print(out)
+    err = runtmp.last_result.err
+    print(err)
+
+    assert 'total hashes in merged signature: 970' in err
+    # should only find 970 overlapping hashes here --
+    assert 'found 970 distinct matching hashes (100.0%)' in err
+
+
+def test_sig_kmers_1_dna_empty_seq(runtmp):
+    # test sig kmers with empty query seq
+    seqfile = utils.get_test_data('short.fa')
+
+    runtmp.sourmash('sketch', 'dna', seqfile, '-p', 'scaled=1')
+    ss = sourmash.load_one_signature(runtmp.output('short.fa.sig'))
+    mh = ss.minhash
+    assert mh.moltype == 'DNA'
+
+    # make a new sequence for query, with more k-mers
+    query_seqfile = runtmp.output('query.fa')
+    with open(query_seqfile, 'wt') as fp:
+        pass
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'kmers', '--sig', 'short.fa.sig',
+                        '--seq', query_seqfile)
+
+    out = runtmp.last_result.out
+    print(out)
+    err = runtmp.last_result.err
+    print(err)
+
+    assert "ERROR: no sequences searched!?" in err
+
+
+def test_sig_kmers_1_dna_empty_sig(runtmp):
+    # test sig kmers with empty query sig
+    seqfile = utils.get_test_data('short.fa')
+
+    mh = sourmash.MinHash(ksize=31, n=0, scaled=1)
+    ss = sourmash.SourmashSignature(mh, name="empty")
+    with open(runtmp.output('empty.sig'), 'wt') as fp:
+        sourmash.save_signatures([ss], fp)
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'kmers', '--sig', 'empty.sig',
+                        '--seq', seqfile)
+
+    out = runtmp.last_result.out
+    print(out)
+    err = runtmp.last_result.err
+    print(err)
+
+    assert "ERROR: no hashes in query signature!?" in err
+
+
+def test_sig_kmers_1_dna_single_sig(runtmp):
+    # test sig kmers with a fabricated query sig with a single hash
+    seqfile = utils.get_test_data('short.fa')
+
+    mh = sourmash.MinHash(ksize=31, n=0, scaled=1)
+    mh.add_hash(1070961951490202715)
+    ss = sourmash.SourmashSignature(mh, name="small")
+    with open(runtmp.output('small.sig'), 'wt') as fp:
+        sourmash.save_signatures([ss], fp)
+
+    runtmp.sourmash('sig', 'kmers', '--sig', 'small.sig',
+                    '--seq', seqfile)
+
+    out = runtmp.last_result.out
+    print(out)
+    err = runtmp.last_result.err
+    print(err)
+
+    assert 'total hashes in merged signature: 1' in err
+    assert 'found 1 distinct matching hashes (100.0%)' in err
 
 
 def test_sig_kmers_1_dna_lowscaled(runtmp):

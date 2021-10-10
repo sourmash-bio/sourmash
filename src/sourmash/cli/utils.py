@@ -2,6 +2,7 @@ from glob import glob
 import os
 import argparse
 from sourmash.logging import notify
+from sourmash.sourmash_args import check_scaled_bounds, check_num_bounds
 
 
 def add_moltype_args(parser):
@@ -96,24 +97,15 @@ def command_list(dirpath):
     return sorted(basenames)
 
 
-def check_scaled_bounds(arg):
-    actual_min_val = 0
-    min_val = 100
-    max_val = 1e6
-
-    f = float(arg)
-
-    if f < actual_min_val:
-        raise argparse.ArgumentTypeError(f"ERROR: --scaled value must be positive")
-    if f < min_val:
-        notify('WARNING: --scaled value should be >= 100. Continuing anyway.')
-    if f > max_val:
-        notify('WARNING: --scaled value should be <= 1e6. Continuing anyway.')
-    return f
-
-
 def add_scaled_arg(parser, default=None):
     parser.add_argument(
         '--scaled', metavar='FLOAT', type=check_scaled_bounds,
         help='scaled value should be between 100 and 1e6'
+    )
+
+
+def add_num_arg(parser, default=0):
+    parser.add_argument(
+        '-n', '--num-hashes', '--num', metavar='N', type=check_num_bounds, default=default,
+        help='num value should be between 50 and 50000'
     )

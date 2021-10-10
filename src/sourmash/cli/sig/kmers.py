@@ -31,7 +31,11 @@ def subparser(subparsers):
     subparser.add_argument('--save-sequences',
                            help="save sequences with matching hashes to a FASTA file")
     subparser.add_argument('--translate', action="store_true",
-                           help="translate DNA k-mers into amino acids (for protein, dayhoff, and hp sketches")
+                           help="translate DNA k-mers into amino acids (for protein, dayhoff, and hp sketches)")
+    subparser.add_argument(
+        '--check-sequence', action='store_true',
+        help='complain if input sequence is invalid (NOTE: only checks DNA)'
+    )
 
 
 def main(args):

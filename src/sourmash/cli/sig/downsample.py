@@ -1,7 +1,7 @@
 """downsample one or more signatures"""
 
 from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
-                                add_picklist_args)
+                                add_picklist_args, add_num_arg)
 
 
 def subparser(subparsers):
@@ -14,10 +14,6 @@ def subparser(subparsers):
     subparser.add_argument(
         '--from-file',
         help='a text file containing a list of files to load signatures from'
-    )
-    subparser.add_argument(
-        '--num', metavar='N', type=int, default=0,
-        help='num value to downsample to'
     )
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
@@ -35,6 +31,7 @@ def subparser(subparsers):
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
+    add_num_arg(subparser, 0)
 
 
 def main(args):

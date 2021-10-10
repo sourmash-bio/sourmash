@@ -119,6 +119,7 @@ Result<*const (u64, SourmashStr)> {
         }
     }
 
+
     *size = output.len();
 
     // FIXME: make a SourmashSlice_u64 type?

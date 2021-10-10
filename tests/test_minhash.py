@@ -248,6 +248,30 @@ def test_seq_to_hashes_bad_kmers_as_zeroes_2():
     with pytest.raises(ValueError):
         hashes = mh.seq_to_hashes(seq, bad_kmers_as_zeroes=True)
 
+def test_seq_to_hashes_bad_kmers_as_zeroes_1():
+    mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1)
+    seq = "ATGAGAGACGATAGACAGATGACN"
+    
+    # New seq to hashes without adding to the sketch
+    hashes = mh.seq_to_hashes(seq, force=True, bad_kmers_as_zeroes=True)
+
+    assert len(hashes) == len(seq) - 21 + 1
+
+
+def test_seq_to_hashes_bad_kmers_as_zeroes_2():
+    mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1)
+    seq = "ATGAGAGACGATAGACAGATGACN"
+    
+    with pytest.raises(ValueError):
+        hashes = mh.seq_to_hashes(seq, bad_kmers_as_zeroes=True)
+
+
+def test_seq_to_hashes_translated_short():
+    mh = MinHash(0, 2, True, dayhoff=True, hp=False, scaled = 1)
+    hashes = mh.seq_to_hashes("ACTGA")
+
+    assert(len(hashes) == 0)
+
 
 def test_bytes_protein_dayhoff(track_abundance, dayhoff):
     # verify that we can hash protein/aa sequences
@@ -1666,6 +1690,75 @@ def test_flatten():
     assert mh2.hashes[20] == 1
     assert mh2.hashes[30] == 1
     assert len(mh2) == 3
+
+
+def test_inflate():
+    # test behavior of inflate function
+    scaled = _get_scaled_for_max_hash(35)
+    mh = MinHash(0, 4, track_abundance=False, scaled=scaled)
+    mh2 = MinHash(0, 4, track_abundance=True, scaled=scaled)
+    assert mh._max_hash == 35
+
+    mh.add_hash(10)
+    mh.add_hash(20)
+    mh.add_hash(30)
+
+    assert mh.hashes[10] == 1
+    assert mh.hashes[20] == 1
+    assert mh.hashes[30] == 1
+
+    mh2.add_hash(10)
+    mh2.add_hash(10)
+    mh2.add_hash(10)
+    mh2.add_hash(20)
+    mh2.add_hash(20)
+    mh2.add_hash(30)
+    mh2.add_hash(30)
+    mh2.add_hash(30)
+
+    assert mh2.hashes[10] == 3
+    assert mh2.hashes[20] == 2
+    assert mh2.hashes[30] == 3
+
+    mh3 = mh.inflate(mh2)
+
+    assert mh3.hashes[10] == 3
+    assert mh3.hashes[20] == 2
+    assert mh3.hashes[30] == 3
+
+
+def test_inflate_error():
+    # test behavior of inflate function
+    scaled = _get_scaled_for_max_hash(35)
+    mh = MinHash(0, 4, track_abundance=True, scaled=scaled)
+    mh2 = MinHash(0, 4, track_abundance=True, scaled=scaled)
+    assert mh._max_hash == 35
+
+    mh.add_hash(10)
+    mh.add_hash(20)
+    mh.add_hash(30)
+
+    assert mh.hashes[10] == 1
+    assert mh.hashes[20] == 1
+    assert mh.hashes[30] == 1
+
+    mh2.add_hash(10)
+    mh2.add_hash(10)
+    mh2.add_hash(10)
+    mh2.add_hash(20)
+    mh2.add_hash(20)
+    mh2.add_hash(30)
+    mh2.add_hash(30)
+    mh2.add_hash(30)
+
+    assert mh2.hashes[10] == 3
+    assert mh2.hashes[20] == 2
+    assert mh2.hashes[30] == 3
+
+    with pytest.raises(ValueError) as exc:
+        mh = mh.inflate(mh2)
+
+    assert "inflate operates on a flat MinHash and takes a MinHash object with track_abundance=True" in str(exc.value)
 
 
 def test_add_kmer(track_abundance):

@@ -43,8 +43,7 @@ def load_taxonomy_assignments(filename, *, delimiter=',', start_column=2,
                 continue
 
             if column.lower() != value.lower():
-                notify("** assuming column '{}' is {} in spreadsheet",
-                       value, column)
+                notify(f"** assuming column '{value}' is {column} in spreadsheet")
                 n_disagree += 1
                 if n_disagree > 2:
                     error('whoa, too many assumptions. are the headers right?')
@@ -156,8 +155,7 @@ def index(args):
     moltype = sourmash_args.calculate_moltype(args, default='DNA')
     picklist = sourmash_args.load_picklist(args)
 
-    notify('Building LCA database with ksize={} scaled={} moltype={}.',
-           args.ksize, args.scaled, moltype)
+    notify(f'Building LCA database with ksize={args.ksize} scaled={args.scaled} moltype={moltype}.')
 
     # first, load taxonomy spreadsheet
     delimiter = ','
@@ -172,10 +170,8 @@ def index(args):
                                                keep_identifier_versions=args.keep_identifier_versions
     )
 
-    notify('{} distinct identities in spreadsheet out of {} rows.',
-           len(assignments), num_rows)
-    notify('{} distinct lineages in spreadsheet out of {} rows.',
-           len(set(assignments.values())), num_rows)
+    notify(f'{len(assignments)} distinct identities in spreadsheet out of {num_rows} rows.')
+    notify(f'{len(set(assignments.values()))} distinct lineages in spreadsheet out of {num_rows} rows.')
 
     db = LCA_Database(args.ksize, args.scaled, moltype)
 
@@ -207,7 +203,7 @@ def index(args):
                                      yield_all_files=args.force)
         for sig in it:
             notify(u'\r\033[K', end=u'')
-            notify('\r... loading signature {} ({} of {}); skipped {} so far', str(sig)[:30], n, total_n, n_skipped, end='')
+            notify(f'\r... loading signature {str(sig)[:30]} ({n} of {total_n}); skipped {n_skipped} so far', end='')
             debug(filename, sig)
 
             # block off duplicates.
@@ -271,9 +267,9 @@ def index(args):
     # end main add signatures loop
 
     if n_skipped:
-        notify('... loaded {} signatures; skipped {} because of --require-taxonomy.', total_n, n_skipped)
+        notify(f'... loaded {total_n} signatures; skipped {n_skipped} because of --require-taxonomy.')
     else:
-        notify('... loaded {} signatures.', total_n)
+        notify(f'... loaded {total_n} signatures.')
 
     # check -- did we find any signatures?
     if n == 0:
@@ -284,19 +280,16 @@ def index(args):
     if not db.hashval_to_idx:
         error('ERROR: no hash values found - are there any signatures?')
         sys.exit(1)
-    notify('loaded {} hashes at ksize={} scaled={}', len(db.hashval_to_idx),
-           args.ksize, args.scaled)
+    notify(f'loaded {len(db.hashval_to_idx)} hashes at ksize={args.ksize} scaled={args.scaled}')
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
     # summarize:
-    notify('{} assigned lineages out of {} distinct lineages in spreadsheet.',
-           len(record_used_lineages), len(set(assignments.values())))
+    notify(f'{len(record_used_lineages)} assigned lineages out of {len(set(assignments.values()))} distinct lineages in spreadsheet.')
     unused_lineages = set(assignments.values()) - record_used_lineages
 
-    notify('{} identifiers used out of {} distinct identifiers in spreadsheet.',
-           len(record_used_idents), len(set(assignments)))
+    notify(f'{len(record_used_idents)} identifiers used out of {len(set(assignments))} distinct identifiers in spreadsheet.')
 
     assert record_used_idents.issubset(set(assignments))
     unused_identifiers = set(assignments) - record_used_idents
@@ -306,7 +299,7 @@ def index(args):
     if not (db_outfile.endswith('.lca.json') or \
                 db_outfile.endswith('.lca.json.gz')):   # logic -> db.save
         db_outfile += '.lca.json'
-    notify('saving to LCA DB: {}'.format(db_outfile))
+    notify(f'saving to LCA DB: {format(db_outfile)}')
 
     db.save(db_outfile)
 
@@ -315,21 +308,19 @@ def index(args):
     # output a record of stuff if requested/available:
     if record_duplicates or record_no_lineage or record_remnants or unused_lineages:
         if record_duplicates:
-            notify('WARNING: {} duplicate signatures.', len(record_duplicates))
+            notify(f'WARNING: {len(record_duplicates)} duplicate signatures.')
         if record_no_lineage:
-            notify('WARNING: no lineage provided for {} signatures.',
-                   len(record_no_lineage))
+            notify(f'WARNING: no lineage provided for {len(record_no_lineage)} signatures.')
         if record_remnants:
-            notify('WARNING: no signatures for {} spreadsheet rows.',
-                   len(record_remnants))
+            notify(f'WARNING: no signatures for {len(record_remnants)} spreadsheet rows.')
         if unused_lineages:
-            notify('WARNING: {} unused lineages.', len(unused_lineages))
+            notify(f'WARNING: {len(unused_lineages)} unused lineages.')
 
         if unused_identifiers:
-            notify('WARNING: {} unused identifiers.', len(unused_identifiers))
+            notify(f'WARNING: {len(unused_identifiers)} unused identifiers.')
 
         if args.report:
-            notify("generating a report and saving in '{}'", args.report)
+            notify(f"generating a report and saving in '{args.report}'")
             generate_report(record_duplicates, record_no_lineage,
                             record_remnants, unused_lineages,
                             unused_identifiers, args.report)
