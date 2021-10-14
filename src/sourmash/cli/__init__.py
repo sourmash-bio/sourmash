@@ -52,7 +52,7 @@ class SourmashParser(ArgumentParser):
         if cls._citation_printed:
             return
         from sourmash.logging import notify
-        notify("\n== This is sourmash version {version}. ==", version=sourmash.VERSION)
+        notify(f"\n== This is sourmash version {sourmash.VERSION}. ==")
         notify("== Please cite Brown and Irber (2016), doi:10.21105/joss.00027. ==\n")
         cls._citation_printed = True
 

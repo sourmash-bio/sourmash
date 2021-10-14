@@ -259,7 +259,10 @@ similarity   match
 ```
 
 Note, as of sourmash 4.2.0, `search` supports `--picklist`, to
-[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures).
+[select a subset of signatures to search, based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
+can be used to search only a small subset of a large collection, or to
+exclude a few signatures from a collection, without modifying the
+collection itself.
 
 ### `sourmash gather` - find metagenome members
 
@@ -302,7 +305,10 @@ which matches are no longer reported; by default, this is set to
 [Classifying Signatures](classifying-signatures.md) for details.
 
 As of sourmash 4.2.0, `gather` supports `--picklist`, to
-[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures).
+[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
+can be used to search only a small subset of a large collection, or to
+exclude a few signatures from a collection, without modifying the
+collection itself.
 
 Note:
 
@@ -366,7 +372,9 @@ signature files, directories full of signatures, or other sourmash
 databases.
 
 As of sourmash 4.2.0, `index` supports `--picklist`, to
-[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures).
+[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
+can be used to index a subset of a large collection, or to
+exclude a few signatures from an index being built from a large collection.
 
 ### `sourmash prefetch` - select subsets of very large databases for more processing
 
@@ -393,7 +401,7 @@ Other options include:
 * `--threshold-bp` to require a minimum estimated bp overlap for output;
 * `--scaled` for downsampling;
 * `--force` to continue past survivable errors;
-* `--picklist` select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
+* `--picklist` will select a subset of signatures to search, using [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
 
 ### Alternative search mode for low-memory (but slow) search: `--linear`
 
@@ -903,7 +911,9 @@ You can use `--from-file` to pass `lca index` a text file containing a
 list of file names to index.
 
 As of sourmash 4.2.0, `lca index` supports `--picklist`, to
-[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures).
+[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
+can be used to index a subset of a large collection, or to
+exclude a few signatures from an index being built from a large collection.
 
 ### `sourmash lca rankinfo` - examine an LCA database
 
@@ -1215,6 +1225,51 @@ sourmash signature overlap file1.sig file2.sig
 ```
 will display the detailed comparison of `file1.sig` and `file2.sig`.
 
+
+### `sourmash signature kmers` - extract k-mers and/or sequences that match to signatures
+
+Given one or more compatible sketches and some sequence files, extract
+the k-mers and/or sequences corresponding to the hash values in the
+sketch. Because the sourmash hash function is one-way, this requires
+FASTA or FASTQ sequence files in addition to the sketch.
+
+For example,
+```
+sourmash sig kmers --signatures sig1.sig --sequences seqfile.fasta \
+    --save-sequences matches.fasta --save-kmers kmer-matches.csv
+```
+will search `seqfile.fasta` for matching sequences and k-mers,
+and produce two files. The file `matches.fasta` will contain FASTA
+sequences that match the hashes in the input signature, while the
+file `kmer-matches.csv` provides the matching k-mers and hash values,
+together with their originating filename and sequence name.
+
+If the sketch is a protein sketch (protein, dayhoff, or hp), then
+the input sequences are assumed to be protein. To search DNA sequences
+for translated protein hashes, provide the `--translate` flag to `sig kmers`.
+
+`--save-sequences` and `--save-kmers` are both optional.  If neither are
+given, basic statistics on k-mer matching are given.
+
+Please note that `--save-kmers` can be very slow on large files!
+
+The input sketches are the source of the input hashes.  So, for example,
+If `--scaled=1` sketches are provided, `sig kmers` can be used to
+yield all the k-mers and their matching hashes.  Likewise, if the
+sketch is built from the intersection of two other sketches, only
+the k-mers and hash values present in both sketches will be used.
+
+Likewise, the input sequences are used for matching; they do not need
+to be the same sequences that were used to create the sketches.
+Input sequences can be in FASTA or FASTQ format, and either flat text
+or compressed with gzip or bzip2; formats are auto-detected.
+
+By default, `sig kmers` ignores bad k-mers (e.g. non-ACGT characters
+in DNA). If `--check-sequence` is provided, `sig kmers` will error
+exit on the first bad k-mer.  If `--check-sequence --force` is provided,
+`sig kmers` will provide error messages (and skip bad sequences), but
+will continue processing input sequences.
+
 ## Advanced command-line usage
 
 ### Loading signatures and databases
@@ -1256,7 +1311,8 @@ scaled values will be made compatible.
 
 As of sourmash 4.2.0, many commands support *picklists*, a feature by
 which you can select or "pick out" signatures based on values in a CSV
-file.
+file. This is typically used to index, extract, or search a subset of
+a large collection where modifying the collection itself isn't desired.
 
 For example,
 ```

@@ -21,9 +21,34 @@ from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
 from . import signature as sigmod
 from .picklist import SignaturePicklist, PickStyle
 from .manifest import CollectionManifest
+import argparse
 
 
 DEFAULT_LOAD_K = 31
+
+
+def check_scaled_bounds(arg):
+    f = float(arg)
+
+    if f < 0:
+        raise argparse.ArgumentTypeError(f"ERROR: scaled value must be positive")
+    if f < 100:
+        notify('WARNING: scaled value should be >= 100. Continuing anyway.')
+    if f > 1e6:
+        notify('WARNING: scaled value should be <= 1e6. Continuing anyway.')
+    return f
+
+
+def check_num_bounds(arg):
+    f = int(arg)
+
+    if f < 0:
+        raise argparse.ArgumentTypeError(f"ERROR: num value must be positive")
+    if f < 50:
+        notify('WARNING: num value should be >= 50. Continuing anyway.')
+    if f > 50000:
+        notify('WARNING: num value should be <= 50000. Continuing anyway.')
+    return f
 
 
 def get_moltype(sig, require=False):
@@ -479,6 +504,9 @@ class FileOutput(object):
                        encoding=self.encoding)
         return self.fp
 
+    def close(self):
+        self.fp.close()
+
     def __enter__(self):
         return self.open()
 
@@ -584,6 +612,54 @@ class SignatureLoadingProgress(object):
                           end='\r')
 
 
+def load_many_signatures(locations, progress, *, yield_all_files=False,
+                         ksize=None, moltype=None, picklist=None, force=False):
+    """
+    Load many signatures from multiple files, with progress indicators.
+
+    Takes ksize, moltype, and picklist selectors.
+
+    If 'yield_all_files=True' then tries to load all files in specified
+    directories.
+
+    If 'force=True' then continues past survivable errors.
+
+    Yields (sig, location) tuples.
+    """
+    for loc in locations:
+        try:
+            # open index,
+            idx = load_file_as_index(loc, yield_all_files=yield_all_files)
+
+            # select on parameters as desired,
+            idx = idx.select(ksize=ksize, moltype=moltype, picklist=picklist)
+
+            # start up iterator,
+            loader = idx.signatures_with_location()
+
+            # go!
+            n = 0               # count signatures loaded
+            for sig, sigloc in progress.start_file(loc, loader):
+                yield sig, sigloc
+                n += 1
+            notify(f"loaded {n} signatures from '{loc}'", end='\r')
+        except ValueError as exc:
+            # trap expected errors, and either power through or display + exit.
+            if force:
+                notify(f"ERROR: {str(exc)}")
+                notify("(continuing)")
+                continue
+            else:
+                notify(f"ERROR: {str(exc)}")
+                sys.exit(-1)
+        except KeyboardInterrupt:
+            notify("Received CTRL-C - exiting.")
+            sys.exit(-1)
+
+    n_files = len(locations)
+    notify(f"loaded {len(progress)} signatures total, from {n_files} files")
+
+
 #
 # enum and classes for saving signatures progressively
 #
@@ -646,8 +722,7 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
         except FileExistsError:
             pass
         except:
-            notify("ERROR: cannot create signature output directory '{}'",
-                   self.location)
+            notify(f"ERROR: cannot create signature output directory '{self.location}'")
             sys.exit(-1)
 
     def add(self, ss):
