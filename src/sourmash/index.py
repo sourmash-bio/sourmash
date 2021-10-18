@@ -586,6 +586,9 @@ class ZipFileLinearIndex(Index):
         Note: does not limit signatures to subsets.
         """
         zf = self.storage.zipfile
+
+        # list all the files, without using the Storage interface; currently,
+        # 'Storage' does not provide a way to list all the files, so :shrug:.
         for zipinfo in zf.infolist():
             # should we load this file? if it ends in .sig OR we are forcing:
             if zipinfo.filename.endswith('.sig') or \
