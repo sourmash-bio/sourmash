@@ -204,7 +204,10 @@ class ZipStorage(Storage):
         try:
             return self._load_from_zf(self.zipfile, path)
         except KeyError:
-            return self._load_from_zf(self.bufferzip, path)
+            if self.bufferzip:
+                return self._load_from_zf(self.bufferzip, path)
+            else:
+                raise FileNotFoundError(path)
 
     def init_args(self):
         return {'path': self.path}
