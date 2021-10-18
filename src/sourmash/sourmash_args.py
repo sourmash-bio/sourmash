@@ -744,7 +744,7 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
 
 
 class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
-    "Save signatures within a directory, using md5sum names."
+    "Save signatures to a .sig JSON file."
     def __init__(self, location):
         super().__init__(location)
         self.keep = []
@@ -778,8 +778,6 @@ class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
     def add(self, ss):
         super().add(ss)
         self.keep.append(ss)
-
-
 
 
 class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):

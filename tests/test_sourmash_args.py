@@ -149,7 +149,7 @@ def test_save_signatures_to_location_1_zip_dup(runtmp):
         save_sig.add(ss47)
 
         # here we have to change the names so the sig content is different;
-        # exactly duplicates will not be saved, otherwise.
+        # exact duplicates will not be saved, otherwise.
         ss2.name = 'different name for ss2'
         save_sig.add(ss2)
         ss47.name = 'different name for ss47'
@@ -163,6 +163,82 @@ def test_save_signatures_to_location_1_zip_dup(runtmp):
     assert ss2 in saved
     assert ss47 in saved
     assert len(saved) == 4
+
+
+def test_save_signatures_to_location_2_zip_add(runtmp):
+    # create sigfile.zip; then, add a new signature.
+    sig2 = utils.get_test_data('2.fa.sig')
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+
+    # add only ss2
+    outloc = runtmp.output('foo.zip')
+    with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
+        print(save_sig)
+        save_sig.add(ss2)
+
+    # can we open as a .zip file?
+    with zipfile.ZipFile(outloc, "r") as zf:
+        assert list(zf.infolist())
+
+    saved = list(sourmash.load_file_as_signatures(outloc))
+    assert ss2 in saved
+    assert len(saved) == 1
+
+    # now, re-open and add ss47.
+    outloc = runtmp.output('foo.zip')
+    with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
+        print(save_sig)
+        save_sig.add(ss47)
+
+    # updated file should contain both.
+    saved = list(sourmash.load_file_as_signatures(outloc))
+    print(saved)
+    assert ss47 in saved
+    assert ss2 in saved
+
+
+def test_save_signatures_to_location_2_zip_add_dup(runtmp):
+    # create sigfile.zip; then, add a new signature, plus a ~duplicate.
+    sig2 = utils.get_test_data('2.fa.sig')
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+
+    # add only ss2
+    outloc = runtmp.output('foo.zip')
+    with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
+        print(save_sig)
+        save_sig.add(ss2)
+
+    # can we open as a .zip file?
+    with zipfile.ZipFile(outloc, "r") as zf:
+        assert list(zf.infolist())
+
+    saved = list(sourmash.load_file_as_signatures(outloc))
+    assert ss2 in saved
+    assert len(saved) == 1
+
+    # now, re-open and add ss47, plus a slightly renamed ss2.
+    outloc = runtmp.output('foo.zip')
+    with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
+        print(save_sig)
+        save_sig.add(ss47)
+
+        # add ss2; here we have to change the names so the sig content is
+        # different exact duplicates will not be saved, otherwise.
+        import copy
+        ss2copy = copy.copy(ss2)
+        ss2copy.name = 'different name for ss2'
+        save_sig.add(ss2copy)
+
+    # updated file should contain all three.
+    saved = list(sourmash.load_file_as_signatures(outloc))
+    print(len(saved), saved)
+    assert ss47 in saved
+    assert ss2 in saved
+    assert ss2copy in saved
 
 
 def test_save_signatures_to_location_1_dirout(runtmp):
