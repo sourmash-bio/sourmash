@@ -810,8 +810,18 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         if not storage.subdir:
             storage.subdir = 'signatures'
 
+        try:
+            manifest_data = storage.load('SOURMASH-MANIFEST.csv')
+        except FileNotFoundError:
+            self.manifest_rows = [] # CTB: load manifest here for append?
+        else:
+            # success! decode manifest_data
+            manifest_data = manifest_data.decode('utf-8')
+            manifest_fp = StringIO(manifest_data)
+            manifest = CollectionManifest.load_from_csv(manifest_fp)
+            self.manifest_rows = list(manifest._select())
+
         self.storage = storage
-        self.manifest_rows = [] # CTB: load manifest here for append?
 
     def _exists(self, name):
         try:

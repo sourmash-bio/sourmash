@@ -187,7 +187,6 @@ def test_save_signatures_to_location_2_zip_add(runtmp):
     assert len(saved) == 1
 
     # now, re-open and add ss47.
-    outloc = runtmp.output('foo.zip')
     with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
         print(save_sig)
         save_sig.add(ss47)
@@ -221,7 +220,6 @@ def test_save_signatures_to_location_2_zip_add_dup(runtmp):
     assert len(saved) == 1
 
     # now, re-open and add ss47, plus a slightly renamed ss2.
-    outloc = runtmp.output('foo.zip')
     with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
         print(save_sig)
         save_sig.add(ss47)

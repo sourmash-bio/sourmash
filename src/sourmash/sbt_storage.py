@@ -273,7 +273,9 @@ class ZipStorage(Storage):
                     # Since there is no duplicated data, we can
                     # reopen self.zipfile in append mode and write the new data
                     self.zipfile.close()
-                    if not keep_closed:
+                    if keep_closed:
+                        raise Exception("unexpected error")
+                    else:
                         zf = zipfile.ZipFile(self.path, mode='a',
                                              compression=zipfile.ZIP_STORED)
                     for item in new_data:

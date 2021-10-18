@@ -63,7 +63,8 @@ class CollectionManifest:
         row = None
 
         # do row type conversion
-        introws = ('num', 'scaled', 'with_abundance', 'ksize', 'n_hashes')
+        # @CTB wtf with_abundance in introws? never tested on string...
+        introws = ('num', 'scaled', 'ksize', 'n_hashes')
         boolrows = ('with_abundance',)
 
         for row in r:
