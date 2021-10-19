@@ -798,7 +798,6 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         manifest.write_to_csv(manifest_fp, write_header=True)
         manifest_data = manifest_fp.getvalue().encode("utf-8")
 
-        # NOTE: here we overwrite manifests that already exist. FIXME.
         self.storage.save(manifest_name, manifest_data, overwrite=True,
                           compress=True)
         self.storage.flush()
@@ -806,16 +805,25 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
 
     def open(self):
         from .sbt_storage import ZipStorage
+
+        do_create = True
+        if os.path.exists(self.location):
+            do_create = False
+
         storage = ZipStorage(self.location)
         if not storage.subdir:
             storage.subdir = 'signatures'
 
+        # now, try to load manifest
         try:
             manifest_data = storage.load('SOURMASH-MANIFEST.csv')
-        except FileNotFoundError:
-            self.manifest_rows = [] # CTB: load manifest here for append?
+        except (FileNotFoundError, KeyError):
+            # if file already exists must have manifest...
+            if not do_create:
+                raise ValueError(f"Cannot add to existing zipfile '{self.location}' without a manifest")
+            self.manifest_rows = []
         else:
-            # success! decode manifest_data
+            # success! decode manifest_data, create manifest rows => append.
             manifest_data = manifest_data.decode('utf-8')
             manifest_fp = StringIO(manifest_data)
             manifest = CollectionManifest.load_from_csv(manifest_fp)
