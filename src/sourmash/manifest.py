@@ -63,7 +63,6 @@ class CollectionManifest:
         row = None
 
         # do row type conversion
-        # @CTB wtf with_abundance in introws? never tested on string...
         introws = ('num', 'scaled', 'ksize', 'n_hashes')
         boolrows = ('with_abundance',)
 
