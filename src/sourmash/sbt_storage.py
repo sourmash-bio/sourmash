@@ -39,6 +39,11 @@ class Storage(ABC):
 
 
 class FSStorage(Storage):
+    """
+    Usage:
+
+    >>> storage = FSStorage(location, subdir)
+    """
 
     def __init__(self, location, subdir, make_dirs=True):
         self.location = location
@@ -90,6 +95,11 @@ class FSStorage(Storage):
 
 
 class ZipStorage(Storage):
+    """
+    Usage:
+
+    >>> storage = ZipStorage(path)
+    """
 
     def __init__(self, path):
         self.path = os.path.abspath(path)
