@@ -34,6 +34,9 @@ class Storage(ABC):
     def close(self):
         pass
 
+    def flush(self):
+        pass
+
     def can_open(self, location):
         return False
 
