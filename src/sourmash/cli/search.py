@@ -1,11 +1,49 @@
 """search a signature against other signatures"""
 
+usage="""
+
+The `search` subcommand searches a collection of signatures or SBTs
+for matches to the query signature.  It can search for matches with
+either high Jaccard similarity [1] or containment; the default is to
+use Jaccard similarity, unless `--containment` is specified.
+`-o/--output` will create a CSV file containing the matches.
+
+`search` will load all of provided signatures into memory, which can
+be slow and somewhat memory intensive for large collections.  You can
+use `sourmash index` to create a Sequence Bloom Tree (SBT) that can be
+quickly searched on disk; this is the same format in which we provide
+GenBank and other databases.
+
+Command line usage:
+```
+sourmash search query.sig [ list of signatures or SBTs ]
+```
+
+Example output:
+
+```
+49 matches; showing first 20:
+similarity   match
+----------   -----
+ 75.4%%      NZ_JMGW01000001.1 Escherichia coli 1-176-05_S4_C2 e117605...
+ 72.2%%      NZ_GG774190.1 Escherichia coli MS 196-1 Scfld2538, whole ...
+ 71.4%%      NZ_JMGU01000001.1 Escherichia coli 2-011-08_S3_C2 e201108...
+ 70.1%%      NZ_JHRU01000001.1 Escherichia coli strain 100854 100854_1...
+ 69.0%%      NZ_JH659569.1 Escherichia coli M919 supercont2.1, whole g...
+...  
+```
+
+[1] https://en.wikipedia.org/wiki/Jaccard_index
+
+---
+"""
+
 from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
                                 add_picklist_args, add_scaled_arg)
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('search')
+    subparser = subparsers.add_parser('search', description=__doc__, usage=usage)
     subparser.add_argument(
         'query', help='query signature'
     )
