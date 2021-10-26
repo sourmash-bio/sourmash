@@ -475,7 +475,7 @@ where
                 // Case 2: parent is a node and has an empty child spot available
                 // (if there isn't an empty spot, it was already covered by case 1)
                 Entry::Occupied(mut pnode) => {
-                    dataset.update(&mut pnode.get_mut())?;
+                    dataset.update(pnode.get_mut())?;
                     self.leaves.entry(pos).or_insert_with(|| dataset.into());
                     final_pos = pos;
                 }
@@ -500,7 +500,7 @@ where
                 //TODO: use children for this node to update, instead of dragging
                 // dataset up to the root? It would be more generic, but this
                 // works for minhash, draff signatures and nodegraphs...
-                data.update(&mut pnode.get_mut())?;
+                data.update(pnode.get_mut())?;
             }
             parent_pos = ppos;
         }
