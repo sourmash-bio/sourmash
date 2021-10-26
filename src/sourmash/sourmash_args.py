@@ -802,6 +802,7 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
                           compress=True)
         self.storage.flush()
         self.storage.close()
+<<<<<<< HEAD
 
     def open(self):
         from .sbt_storage import ZipStorage
