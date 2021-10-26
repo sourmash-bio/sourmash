@@ -45,7 +45,7 @@ rc=rc1
 ```
 and then tag the release candidate with the new version number prefixed by the letter 'v':
 ```
-git tag -a v${new_version}${rc}
+git tag -a v${new_version}${rc} -m "${new_version} release candidate ${rc}"
 git push --tags origin
 ```
 
