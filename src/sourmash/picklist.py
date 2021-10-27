@@ -41,8 +41,6 @@ class SignaturePicklist:
     * 'ident' - exact match to signature's identifier
     * 'identprefix' - match to signature's identifier, before '.'
 
-    @CTB add something about meta_coltypes.
-
     Identifiers are constructed by using the first space delimited word in
     the signature name.
 
@@ -123,7 +121,7 @@ class SignaturePicklist:
     def _get_sig_attribute(self, ss):
         "for a given SourmashSignature, return attribute for this picklist."
         coltype = self.coltype
-        if coltype in ('md5', 'md5prefix8', 'md5short', 'manifest', 'gather'):
+        if coltype in ('md5', 'md5prefix8', 'md5short'):
             q = ss.md5sum()
         elif coltype in ('name', 'ident', 'identprefix'):
             q = ss.name
