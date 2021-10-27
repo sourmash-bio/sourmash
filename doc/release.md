@@ -8,7 +8,7 @@ Michael Crusoe.
 The basic build environment needed below can be created as follows:
 
 ```
-conda create -y -n sourmash-rc python=3.8 pip cxx-compiler make twine tox tox-conda
+conda create -y -n sourmash-rc python=3.8 pip cxx-compiler make twine tox tox-conda setuptools_scm
 ```
 
 Then activate it with `conda activate sourmash-rc`.
@@ -16,6 +16,9 @@ Then activate it with `conda activate sourmash-rc`.
 You will also need a Rust installation (see
 [Development Environment](developer.md)); be sure to update it to the
 latest version with `rustup update`.
+
+Your conda version will need to be at least `v4.9.0`. You can check your
+conda version with `conda --version` and update with `conda update conda`.
 
 ## Testing a release
 
@@ -29,7 +32,7 @@ and also check if the [rendered docs] are updated.
 1\. The below should be done in a clean checkout:
 ```
 cd $(mktemp -d)
-git clone git@github.com:sourmash-bio/sourmash.git
+git clone https://github.com/sourmash-bio/sourmash
 cd sourmash
 ```
 
@@ -42,7 +45,7 @@ rc=rc1
 ```
 and then tag the release candidate with the new version number prefixed by the letter 'v':
 ```
-git tag -a v${new_version}${rc}
+git tag -a v${new_version}${rc} -m "${new_version} release candidate ${rc}"
 git push --tags origin
 ```
 
@@ -169,6 +172,7 @@ twine will correctly determine the version from the filenames.
 
 4\. Once the wheels are uploaded, publish the new release on PyPI (requires an authorized account).
 ```
+cd ..
 make dist
 twine upload dist/sourmash-${new_version}.tar.gz
 ```

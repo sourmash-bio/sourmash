@@ -7,7 +7,7 @@ from .signature import SourmashSignature
 from .logging import notify, error, set_quiet
 from .command_compute import (_compute_individual, _compute_merged,
                               ComputeParameters)
-
+from sourmash.sourmash_args import check_scaled_bounds, check_num_bounds
 
 DEFAULTS = dict(
     dna='k=31,scaled=1000,noabund',
@@ -38,8 +38,9 @@ def _parse_params_str(params_str):
                 num = int(num)
             except ValueError:
                 raise ValueError(f"cannot parse num='{num}' as a number")
-            if num < 0:
-                raise ValueError(f"num is {num}, must be >= 0")
+
+            num = check_num_bounds(num)
+
             params['num'] = int(item[4:])
             params['scaled'] = 0
         elif item.startswith('scaled='):
@@ -50,10 +51,9 @@ def _parse_params_str(params_str):
                 scaled = int(scaled)
             except ValueError:
                 raise ValueError(f"cannot parse scaled='{scaled}' as an integer")
-            if scaled < 0:
-                raise ValueError(f"scaled is {scaled}, must be >= 1")
-            if scaled > 1e8:
-                notify(f"WARNING: scaled value of {scaled} is nonsensical!?")
+
+            scaled = check_scaled_bounds(scaled)
+
             params['scaled'] = scaled
             params['num'] = 0
         elif item.startswith('seed='):
@@ -172,7 +172,7 @@ def _execute_sketch(args, signatures_factory):
         error('error: sourmash only supports CC0-licensed signatures. sorry!')
         sys.exit(-1)
 
-    notify('computing signatures for files: {}', ", ".join(args.filenames))
+    notify(f'computing signatures for files: {", ".join(args.filenames)}')
 
     if args.merge and not args.output:
         error("ERROR: must specify -o with --merge")
@@ -184,7 +184,7 @@ def _execute_sketch(args, signatures_factory):
 
     # get number of output sigs:
     num_sigs = len(signatures_factory.params_list)
-    notify('Computing a total of {} signature(s).', num_sigs)
+    notify(f'Computing a total of {num_sigs} signature(s).')
 
     if num_sigs == 0:
         error('...nothing to calculate!? Exiting!')

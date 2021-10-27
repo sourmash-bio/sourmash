@@ -26,6 +26,45 @@ from sourmash import VERSION
 ###
 
 from sourmash.command_sketch import _signatures_for_sketch_factory
+from sourmash_tst_utils import SourmashCommandFailed
+
+
+def test_do_sourmash_sketch_check_scaled_bounds_negative(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'translate', '-p', 'scaled=-5', testdata1)
+    assert "ERROR: scaled value must be positive" in runtmp.last_result.err
+
+
+def test_do_sourmash_sketch_check_scaled_bounds_less_than_minimum(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'translate', '-p', 'scaled=50', testdata1)
+    assert "WARNING: scaled value should be >= 100. Continuing anyway." in runtmp.last_result.err
+
+
+def test_do_sourmash_sketch_check_scaled_bounds_more_than_maximum(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'translate', '-p', 'scaled=1000000000', testdata1)
+    assert "WARNING: scaled value should be <= 1e6. Continuing anyway." in runtmp.last_result.err
+
+
+def test_do_sourmash_sketch_check_num_bounds_negative(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'translate', '-p', 'num=-5', testdata1)
+    assert "ERROR: num value must be positive" in runtmp.last_result.err
+
+
+def test_do_sourmash_sketch_check_num_bounds_less_than_minimum(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'translate', '-p', 'num=25', testdata1)
+    assert "WARNING: num value should be >= 50. Continuing anyway." in runtmp.last_result.err
+
+
+def test_do_sourmash_sketch_check_num_bounds_more_than_maximum(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'translate', '-p', 'num=100000', testdata1)
+    assert "WARNING: num value should be <= 50000. Continuing anyway." in runtmp.last_result.err
 
 
 def test_dna_defaults():
@@ -228,21 +267,21 @@ def test_multiple_moltypes():
 
 @utils.in_thisdir
 def test_do_sourmash_sketchdna_empty(c):
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('sketch', 'dna')
     assert 'error: no input filenames provided! nothing to do - exiting.' in c.last_result.err
 
 
 @utils.in_thisdir
 def test_do_sourmash_sketchprotein_empty(c):
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('sketch', 'protein')
     assert 'error: no input filenames provided! nothing to do - exiting.' in c.last_result.err
 
 
 @utils.in_thisdir
 def test_do_sourmash_sketchtranslate_empty(c):
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('sketch', 'translate')
     assert 'error: no input filenames provided! nothing to do - exiting.' in c.last_result.err
 
@@ -435,7 +474,7 @@ def test_do_sourmash_sketchdna_output_and_name_valid_file_outdir(c):
     testdata3 = utils.get_test_data('short3.fa')
     sigfile = os.path.join(c.location, 'short.fa.sig')
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('sketch', 'dna', '-o', sigfile,
                        '--merge', '"name"',
                        testdata1, testdata2, testdata3,
@@ -846,7 +885,7 @@ def test_do_sourmash_sketchdna_with_bad_scaled():
                                             fail_ok=True)
 
         assert status != 0
-        assert 'scaled is -1, must be >= 1' in err
+        assert 'ERROR: scaled value must be positive' in err
 
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'dna',
@@ -865,7 +904,7 @@ def test_do_sourmash_sketchdna_with_bad_scaled():
                                             in_directory=location)
 
         assert status == 0
-        assert 'WARNING: scaled value of 1000000000 is nonsensical!?' in err
+        assert 'WARNING: scaled value should be <= 1e6. Continuing anyway.' in err
 
 
 def test_do_sketch_with_seed():
@@ -1021,3 +1060,198 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
         good_trans = list(signature.load_signatures(knowngood))[0]
 
         assert sig2_trans.similarity(good_trans) == 1.0
+
+
+def test_protein_with_stop_codons(runtmp):
+    # compare protein seq with/without stop codons, via cli and also python
+    # apis
+
+    testdata1 = utils.get_test_data('ecoli.faa')
+    ecoli_seq = [ record.sequence for record in screed.open(testdata1) ]
+
+    # first, via CLI w/o stop codons
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7,scaled=1', testdata1)
+    sig1 = runtmp.output('ecoli.faa.sig')
+    assert os.path.exists(sig1)
+
+    x = signature.load_one_signature(sig1)
+    cli_mh1 = x.minhash
+
+    # second, via CLI w/stop codons
+    ecoli_stop = runtmp.output('ecoli.stop.faa')
+    with open(ecoli_stop, 'wt') as fp:
+        for seq in ecoli_seq:
+            fp.write(f'>seq\n{seq}*\n')
+
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7,scaled=1', ecoli_stop)
+    sig2 = runtmp.output('ecoli.stop.faa.sig')
+    assert os.path.exists(sig2)
+
+    x = signature.load_one_signature(sig2)
+    cli_mh2 = x.minhash
+
+    # now calculate sketch with MinHash...
+    py_mh1 = MinHash(n=0, ksize=7, is_protein=True, scaled=1)
+    for seq in ecoli_seq:
+        py_mh1.add_protein(seq)
+
+    # now calculate sketch with MinHash and stop codons...
+    py_mh2 = MinHash(n=0, ksize=7, is_protein=True, scaled=1)
+    for seq in ecoli_seq:
+        py_mh2.add_protein(seq + '*')
+
+    # and, last, calculate hashes separately with seq_to_hashes
+    h_mh1 = MinHash(n=0, ksize=7, is_protein=True, scaled=1)
+    h_mh2 = MinHash(n=0, ksize=7, is_protein=True, scaled=1)
+
+    for seq in ecoli_seq:
+        h = h_mh1.seq_to_hashes(seq, is_protein=1)
+        h_mh1.add_many(h)
+
+        h = h_mh2.seq_to_hashes(seq + '*', is_protein=1)
+        h_mh2.add_many(h)
+
+    # check!
+    assert cli_mh1 == py_mh1
+    assert cli_mh2 == py_mh2
+
+    assert cli_mh1 == h_mh1
+    assert cli_mh2 == h_mh2
+
+    assert cli_mh1.contained_by(cli_mh2) == 1.0
+    assert py_mh1.contained_by(cli_mh2) == 1.0
+    assert h_mh1.contained_by(h_mh2) == 1.0
+
+    assert cli_mh2.contained_by(cli_mh1) < 1
+    assert py_mh2.contained_by(cli_mh1) < 1
+    assert h_mh2.contained_by(h_mh1) < 1
+
+
+def test_hp_with_stop_codons(runtmp):
+    # compare hp seq with/without stop codons, via cli and also python
+    # apis
+
+    testdata1 = utils.get_test_data('ecoli.faa')
+    ecoli_seq = [ record.sequence for record in screed.open(testdata1) ]
+
+    # first, via CLI w/o stop codons
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7,scaled=1,hp', testdata1)
+    sig1 = runtmp.output('ecoli.faa.sig')
+    assert os.path.exists(sig1)
+
+    x = signature.load_one_signature(sig1)
+    cli_mh1 = x.minhash
+
+    # second, via CLI w/stop codons
+    ecoli_stop = runtmp.output('ecoli.stop.faa')
+    with open(ecoli_stop, 'wt') as fp:
+        for seq in ecoli_seq:
+            fp.write(f'>seq\n{seq}*\n')
+
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7,scaled=1,hp', ecoli_stop)
+    sig2 = runtmp.output('ecoli.stop.faa.sig')
+    assert os.path.exists(sig2)
+
+    x = signature.load_one_signature(sig2)
+    cli_mh2 = x.minhash
+
+    # now calculate sketch with MinHash...
+    py_mh1 = MinHash(n=0, ksize=7, hp=True, scaled=1)
+    for seq in ecoli_seq:
+        py_mh1.add_protein(seq)
+
+    # now calculate sketch with MinHash and stop codons...
+    py_mh2 = MinHash(n=0, ksize=7, hp=True, scaled=1)
+    for seq in ecoli_seq:
+        py_mh2.add_protein(seq + '*')
+
+    # and, last, calculate hashes separately with seq_to_hashes
+    h_mh1 = MinHash(n=0, ksize=7, hp=True, scaled=1)
+    h_mh2 = MinHash(n=0, ksize=7, hp=True, scaled=1)
+
+    for seq in ecoli_seq:
+        h = h_mh1.seq_to_hashes(seq, is_protein=1)
+        h_mh1.add_many(h)
+
+        h = h_mh2.seq_to_hashes(seq + '*', is_protein=1)
+        h_mh2.add_many(h)
+
+    # check!
+    assert cli_mh1 == py_mh1
+    assert cli_mh2 == py_mh2
+
+    assert cli_mh1 == h_mh1
+    assert cli_mh2 == h_mh2
+
+    assert cli_mh1.contained_by(cli_mh2) == 1.0
+    assert py_mh1.contained_by(cli_mh2) == 1.0
+    assert h_mh1.contained_by(h_mh2) == 1.0
+
+    assert cli_mh2.contained_by(cli_mh1) < 1
+    assert py_mh2.contained_by(cli_mh1) < 1
+    assert h_mh2.contained_by(h_mh1) < 1
+
+
+def test_dayhoff_with_stop_codons(runtmp):
+    # compare dayhoff seq with/without stop codons, via cli and also python
+    # apis
+
+    testdata1 = utils.get_test_data('ecoli.faa')
+    ecoli_seq = [ record.sequence for record in screed.open(testdata1) ]
+
+    # first, via CLI w/o stop codons
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7,scaled=1,dayhoff', testdata1)
+    sig1 = runtmp.output('ecoli.faa.sig')
+    assert os.path.exists(sig1)
+
+    x = signature.load_one_signature(sig1)
+    cli_mh1 = x.minhash
+
+    # second, via CLI w/stop codons
+    ecoli_stop = runtmp.output('ecoli.stop.faa')
+    with open(ecoli_stop, 'wt') as fp:
+        for seq in ecoli_seq:
+            fp.write(f'>seq\n{seq}*\n')
+
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7,scaled=1,dayhoff', ecoli_stop)
+    sig2 = runtmp.output('ecoli.stop.faa.sig')
+    assert os.path.exists(sig2)
+
+    x = signature.load_one_signature(sig2)
+    cli_mh2 = x.minhash
+
+    # now calculate sketch with MinHash...
+    py_mh1 = MinHash(n=0, ksize=7, dayhoff=True, scaled=1)
+    for seq in ecoli_seq:
+        py_mh1.add_protein(seq)
+
+    # now calculate sketch with MinHash and stop codons...
+    py_mh2 = MinHash(n=0, ksize=7, dayhoff=True, scaled=1)
+    for seq in ecoli_seq:
+        py_mh2.add_protein(seq + '*')
+
+    # and, last, calculate hashes separately with seq_to_hashes
+    h_mh1 = MinHash(n=0, ksize=7, dayhoff=True, scaled=1)
+    h_mh2 = MinHash(n=0, ksize=7, dayhoff=True, scaled=1)
+
+    for seq in ecoli_seq:
+        h = h_mh1.seq_to_hashes(seq, is_protein=1)
+        h_mh1.add_many(h)
+
+        h = h_mh2.seq_to_hashes(seq + '*', is_protein=1)
+        h_mh2.add_many(h)
+
+    # check!
+    assert cli_mh1 == py_mh1
+    assert cli_mh2 == py_mh2
+
+    assert cli_mh1 == h_mh1
+    assert cli_mh2 == h_mh2
+
+    assert cli_mh1.contained_by(cli_mh2) == 1.0
+    assert py_mh1.contained_by(cli_mh2) == 1.0
+    assert h_mh1.contained_by(h_mh2) == 1.0
+
+    assert cli_mh2.contained_by(cli_mh1) < 1
+    assert py_mh2.contained_by(cli_mh1) < 1
+    assert h_mh2.contained_by(h_mh1) < 1

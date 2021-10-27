@@ -15,6 +15,7 @@ from sourmash.search import make_jaccard_search_query
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import LineagePair
 from sourmash.picklist import SignaturePicklist, PickStyle
+from sourmash_tst_utils import SourmashCommandFailed
 
 
 def test_api_create_search():
@@ -450,6 +451,19 @@ def test_load_single_db():
 
     assert ksize == 31
     assert scaled == 10000
+
+
+def test_load_single_db_empty(runtmp):
+    # test load_single_database on an empty file; should raise ValueError
+    empty = runtmp.output('empty.lca.json')
+
+    with open(empty, "wt") as fp:
+        pass
+
+    with pytest.raises(ValueError) as exc:
+        db, ksize, scaled = lca_utils.load_single_database(empty)
+
+    assert f"'{empty}' is not an LCA database file." in str(exc.value)
 
 
 def test_databases():
@@ -1038,7 +1052,7 @@ def test_index_fail_on_num(c):
     sigfile = utils.get_test_data('num/63.fa.sig')
     taxcsv = utils.get_test_data('lca/podar-lineage.csv')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('lca', 'index', taxcsv, 'xxx.lca.json', sigfile, '-C', '3')
 
     err = c.last_result.err
@@ -2087,7 +2101,7 @@ def test_compare_csv_real():
 def test_incompat_lca_db_ksize_2(c):
     # test on gather - create a database with ksize of 25
     testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
-    c.run_sourmash('compute', '-k', '25', '--scaled', '1000', testdata1,
+    c.run_sourmash('sketch', 'dna', '-p', 'k=25,scaled=1000', testdata1,
                    '-o', 'test_db.sig')
     print(c)
 
@@ -2098,7 +2112,7 @@ def test_incompat_lca_db_ksize_2(c):
 
     # this should fail: the LCA database has ksize 25, and the query sig has
     # no compatible ksizes.
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(SourmashCommandFailed) as e:
         c.run_sourmash('gather', utils.get_test_data('lca/TARA_ASE_MAG_00031.sig'), 'test.lca.json')
 
     err = c.last_result.err

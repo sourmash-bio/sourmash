@@ -20,6 +20,7 @@ from sourmash.sbtmh import SigLeaf
 from sourmash import sourmash_args
 from sourmash.search import JaccardSearch, SearchType
 from sourmash.picklist import SignaturePicklist, PickStyle
+from sourmash_tst_utils import SourmashCommandFailed
 
 import sourmash_tst_utils as utils
 
@@ -808,7 +809,7 @@ def test_zipfile_dayhoff_command_search_protein(c):
     sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/protein.zip')
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
 
     print(c.last_result.out)
@@ -869,7 +870,7 @@ def test_zipfile_API_signatures_traverse_yield_all(use_manifest):
     assert len(zipidx) == 8
 
     # confirm that there are 12 files in there total, incl build.sh and dirs
-    zf = zipidx.zf
+    zf = zipidx.storage.zipfile
     allfiles = [ zi.filename for zi in zf.infolist() ]
     print(allfiles)
     assert len(allfiles) == 13

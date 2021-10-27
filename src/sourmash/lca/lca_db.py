@@ -226,7 +226,7 @@ class LCA_Database(Index):
                 first_ch = fp.read(1)
             except ValueError:
                 first_ch = 'X'
-            if first_ch[0] != '{':
+            if not first_ch or first_ch[0] != '{':
                 raise ValueError(f"'{db_name}' is not an LCA database file.")
 
             fp.seek(0)
@@ -531,7 +531,7 @@ def load_databases(filenames, scaled=None, verbose=True):
     for db_name in filenames:
         if verbose:
             notify(u'\r\033[K', end=u'')
-            notify('... loading database {}'.format(db_name), end='\r')
+            notify(f'... loading database {format(db_name)}', end='\r')
 
         lca_db = LCA_Database.load(db_name)
 
@@ -555,7 +555,6 @@ def load_databases(filenames, scaled=None, verbose=True):
 
     if verbose:
         notify(u'\r\033[K', end=u'')
-        notify('loaded {} LCA databases. ksize={}, scaled={} moltype={}',
-               len(dblist), ksize, scaled, moltype)
+        notify(f'loaded {len(dblist)} LCA databases. ksize={ksize}, scaled={scaled} moltype={moltype}')
 
     return dblist, ksize, scaled

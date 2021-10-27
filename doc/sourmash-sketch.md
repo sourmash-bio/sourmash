@@ -38,13 +38,17 @@ sourmash sketch dna -p k=21,k=31,k=51,abund metagenome.fq.gz
 ```
 to create three abundance-weighted sketches at k=21, 31, and 51, for the given FASTQ file.
 
+By default, `sketch dna` ignores bad k-mers (e.g. non-ACGT characters
+in DNA). If `--check-sequence` is provided, `sketch dna` will error
+exit on the first bad k-mer.
+
 ### Protein sketches for genomes and proteomes
 
 Likewise,
 ```
 sourmash sketch translate genome.fna
 ```
-will output a protein sketch in `./genome.fna.sig`, calculated by translating the genome sequence in all six frames and then using the default protein sketch parameters.
+will output a protein sketch in `./genome.fna.sig`, calculated by translating the genome sequence in all six frames and then using the default protein sketch parameters.  K-mers may include stop codons and stop codons are considered valid protein-coding sequence.
 
 And
 ```
@@ -92,6 +96,12 @@ The output signature(s) will be saved in locations that depend on your input par
 `sourmash sketch protein` and `sourmash sketch translate` output protein sketches by default, but can also use the `dayhoff` and `hp` encodings.  The [Dayhoff encoding](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-9-367/tables/1) collapses multiple amino acids into a smaller alphabet so that amino acids that share biochemical properties map to the same character. The hp encoding divides amino acids into hydrophobic and polar (hydrophilic) amino acids, collapsing amino acids with hydrophobic side chains together and doing the same for polar amino acids.
 
 We are still in the process of benchmarking these encodings; ask [on the issue tracker](https://github.com/sourmash-bio/sourmash/issues) if you are interested in updates.
+
+Note that stop characters (`*`) are considered valid in all three
+encodings, and are not truncated. For example, amino acid sequences
+that contain stop characters at the end will produce a k-mer containing
+the stop character, and that k-mer will be hashed and potentially included
+in the sketch.
 
 ### Parameter strings
 

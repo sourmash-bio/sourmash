@@ -6,7 +6,6 @@ import os
 from enum import Enum
 import traceback
 import gzip
-import zipfile
 from io import StringIO
 
 import screed
@@ -23,9 +22,34 @@ from .index import (LinearIndex, ZipFileLinearIndex,
 from . import signature as sigmod
 from .picklist import SignaturePicklist, PickStyle
 from .manifest import CollectionManifest
+import argparse
 
 
 DEFAULT_LOAD_K = 31
+
+
+def check_scaled_bounds(arg):
+    f = float(arg)
+
+    if f < 0:
+        raise argparse.ArgumentTypeError(f"ERROR: scaled value must be positive")
+    if f < 100:
+        notify('WARNING: scaled value should be >= 100. Continuing anyway.')
+    if f > 1e6:
+        notify('WARNING: scaled value should be <= 1e6. Continuing anyway.')
+    return f
+
+
+def check_num_bounds(arg):
+    f = int(arg)
+
+    if f < 0:
+        raise argparse.ArgumentTypeError(f"ERROR: num value must be positive")
+    if f < 50:
+        notify('WARNING: num value should be >= 50. Continuing anyway.')
+    if f > 50000:
+        notify('WARNING: num value should be <= 50000. Continuing anyway.')
+    return f
 
 
 def get_moltype(sig, require=False):
@@ -492,6 +516,9 @@ class FileOutput(object):
                        encoding=self.encoding)
         return self.fp
 
+    def close(self):
+        self.fp.close()
+
     def __enter__(self):
         return self.open()
 
@@ -598,6 +625,54 @@ class SignatureLoadingProgress(object):
         self.short_notify(f"\33[2KLoaded {n_this} sigs from '{location}' ({self.n_sig} sigs / {self.n_files} files total)", end='\r')
 
 
+def load_many_signatures(locations, progress, *, yield_all_files=False,
+                         ksize=None, moltype=None, picklist=None, force=False):
+    """
+    Load many signatures from multiple files, with progress indicators.
+
+    Takes ksize, moltype, and picklist selectors.
+
+    If 'yield_all_files=True' then tries to load all files in specified
+    directories.
+
+    If 'force=True' then continues past survivable errors.
+
+    Yields (sig, location) tuples.
+    """
+    for loc in locations:
+        try:
+            # open index,
+            idx = load_file_as_index(loc, yield_all_files=yield_all_files)
+
+            # select on parameters as desired,
+            idx = idx.select(ksize=ksize, moltype=moltype, picklist=picklist)
+
+            # start up iterator,
+            loader = idx.signatures_with_location()
+
+            # go!
+            n = 0               # count signatures loaded
+            for sig, sigloc in progress.start_file(loc, loader):
+                yield sig, sigloc
+                n += 1
+            notify(f"loaded {n} signatures from '{loc}'", end='\r')
+        except ValueError as exc:
+            # trap expected errors, and either power through or display + exit.
+            if force:
+                notify(f"ERROR: {str(exc)}")
+                notify("(continuing)")
+                continue
+            else:
+                notify(f"ERROR: {str(exc)}")
+                sys.exit(-1)
+        except KeyboardInterrupt:
+            notify("Received CTRL-C - exiting.")
+            sys.exit(-1)
+
+    n_files = len(locations)
+    notify(f"loaded {len(progress)} signatures total, from {n_files} files")
+
+
 #
 # enum and classes for saving signatures progressively
 #
@@ -660,8 +735,7 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
         except FileExistsError:
             pass
         except:
-            notify("ERROR: cannot create signature output directory '{}'",
-                   self.location)
+            notify(f"ERROR: cannot create signature output directory '{self.location}'")
             sys.exit(-1)
 
     def add(self, ss):
@@ -683,7 +757,7 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
 
 
 class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
-    "Save signatures within a directory, using md5sum names."
+    "Save signatures to a .sig JSON file."
     def __init__(self, location):
         super().__init__(location)
         self.keep = []
@@ -723,7 +797,7 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
     "Save compressed signatures in an uncompressed Zip file."
     def __init__(self, location):
         super().__init__(location)
-        self.zf = None
+        self.storage = None
 
     def __repr__(self):
         return f"SaveSignatures_ZipFile('{self.location}')"
@@ -737,53 +811,61 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         manifest.write_to_csv(manifest_fp, write_header=True)
         manifest_data = manifest_fp.getvalue().encode("utf-8")
 
-        # compress the manifest --
-        self.zf.writestr(manifest_name, manifest_data,
-                         compress_type=zipfile.ZIP_DEFLATED)
-
-        # set permissions:
-        zi = self.zf.getinfo(manifest_name)
-        zi.external_attr = 0o444 << 16 # give a+r access
-
-        self.zf.close()
+        self.storage.save(manifest_name, manifest_data, overwrite=True,
+                          compress=True)
+        self.storage.flush()
+        self.storage.close()
 
     def open(self):
-        self.zf = zipfile.ZipFile(self.location, 'w', zipfile.ZIP_STORED)
-        self.manifest_rows = []
+        from .sbt_storage import ZipStorage
+
+        do_create = True
+        if os.path.exists(self.location):
+            do_create = False
+
+        storage = ZipStorage(self.location)
+        if not storage.subdir:
+            storage.subdir = 'signatures'
+
+        # now, try to load manifest
+        try:
+            manifest_data = storage.load('SOURMASH-MANIFEST.csv')
+        except (FileNotFoundError, KeyError):
+            # if file already exists must have manifest...
+            if not do_create:
+                raise ValueError(f"Cannot add to existing zipfile '{self.location}' without a manifest")
+            self.manifest_rows = []
+        else:
+            # success! decode manifest_data, create manifest rows => append.
+            manifest_data = manifest_data.decode('utf-8')
+            manifest_fp = StringIO(manifest_data)
+            manifest = CollectionManifest.load_from_csv(manifest_fp)
+            self.manifest_rows = list(manifest._select())
+
+        self.storage = storage
 
     def _exists(self, name):
         try:
-            self.zf.getinfo(name)
+            self.storage.load(name)
             return True
         except KeyError:
             return False
 
     def add(self, ss):
-        if not self.zf:
+        if not self.storage:
             raise ValueError("this output is not open")
+
         super().add(ss)
 
+        buf = sigmod.save_signatures([ss], compression=1)
         md5 = ss.md5sum()
-        outname = f"signatures/{md5}.sig.gz"
 
-        # don't overwrite even if duplicate md5sum.
-        if self._exists(outname):
-            i = 0
-            while 1:
-                outname = os.path.join(self.location, f"{md5}_{i}.sig.gz")
-                if not self._exists(outname):
-                    break
-                i += 1
-
-        json_str = sourmash.save_signatures([ss], compression=1)
-        self.zf.writestr(outname, json_str)
-
-        # set permissions:
-        zi = self.zf.getinfo(outname)
-        zi.external_attr = 0o444 << 16 # give a+r access
+        storage = self.storage
+        path = f'{storage.subdir}/{md5}.sig.gz'
+        location = storage.save(path, buf)
 
         # update manifest
-        row = CollectionManifest.make_manifest_row(ss, outname,
+        row = CollectionManifest.make_manifest_row(ss, location,
                                                    include_signature=False)
         self.manifest_rows.append(row)
 

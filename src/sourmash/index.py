@@ -37,7 +37,7 @@ import os
 import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
-import zipfile
+import csv
 from io import TextIOWrapper
 
 from .search import make_jaccard_search_query, make_gather_query
@@ -514,9 +514,9 @@ class ZipFileLinearIndex(Index):
     """
     is_database = True
 
-    def __init__(self, zf, *, selection_dict=None,
+    def __init__(self, storage, *, selection_dict=None,
                  traverse_yield_all=False, manifest=None, use_manifest=True):
-        self.zf = zf
+        self.storage = storage
         self.selection_dict = selection_dict
         self.traverse_yield_all = traverse_yield_all
         self.use_manifest = use_manifest
@@ -539,17 +539,17 @@ class ZipFileLinearIndex(Index):
     def _load_manifest(self):
         "Load a manifest if one exists"
         try:
-            zi = self.zf.getinfo('SOURMASH-MANIFEST.csv')
+            manifest_data = self.storage.load('SOURMASH-MANIFEST.csv')
         except KeyError:
             self.manifest = None
         else:
-            debug_literal(f'found manifest when loading {self.zf.filename}')
+            debug_literal(f'found manifest on load for {self.storage.path}')
 
-            with self.zf.open(zi, 'r') as mfp:
-                # wrap as text, since ZipFile.open only supports 'r' mode.
-                mfp = TextIOWrapper(mfp, 'utf-8')
-                # load manifest!
-                self.manifest = CollectionManifest.load_from_csv(mfp)
+            # load manifest!
+            from io import StringIO
+            manifest_data = manifest_data.decode('utf-8')
+            manifest_fp = StringIO(manifest_data)
+            self.manifest = CollectionManifest.load_from_csv(manifest_fp)
 
     def __bool__(self):
         "Are there any matching signatures in this zipfile? Avoid calling len."
@@ -568,7 +568,7 @@ class ZipFileLinearIndex(Index):
 
     @property
     def location(self):
-        return self.zf.filename
+        return self.storage.path
 
     def insert(self, signature):
         raise NotImplementedError
@@ -579,8 +579,9 @@ class ZipFileLinearIndex(Index):
     @classmethod
     def load(cls, location, traverse_yield_all=False, use_manifest=True):
         "Class method to load a zipfile."
-        zf = zipfile.ZipFile(location, 'r')
-        return cls(zf, traverse_yield_all=traverse_yield_all,
+        from .sbt_storage import ZipStorage
+        storage = ZipStorage(location)
+        return cls(storage, traverse_yield_all=traverse_yield_all,
                    use_manifest=use_manifest)
 
     def _signatures_with_internal(self):
@@ -588,14 +589,18 @@ class ZipFileLinearIndex(Index):
 
         Note: does not limit signatures to subsets.
         """
-        for zipinfo in self.zf.infolist():
+        zf = self.storage.zipfile
+
+        # list all the files, without using the Storage interface; currently,
+        # 'Storage' does not provide a way to list all the files, so :shrug:.
+        for zipinfo in zf.infolist():
             # should we load this file? if it ends in .sig OR we are forcing:
             if zipinfo.filename.endswith('.sig') or \
                zipinfo.filename.endswith('.sig.gz') or \
                self.traverse_yield_all:
-                fp = self.zf.open(zipinfo)
+                fp = zf.open(zipinfo)
                 for ss in load_signatures(fp):
-                    yield ss, self.zf.filename, zipinfo.filename
+                    yield ss, zf.filename, zipinfo.filename
 
     def signatures(self):
         "Load all signatures in the zip file."
@@ -607,9 +612,8 @@ class ZipFileLinearIndex(Index):
 
             # yield all signatures found in manifest
             for filename in manifest.locations():
-                zi = self.zf.getinfo(filename)
-                fp = self.zf.open(zi)
-                for ss in load_signatures(fp):
+                data = self.storage.load(filename)
+                for ss in load_signatures(data):
                     # in case multiple signatures are in the file, check
                     # to make sure we want to return each one.
                     if ss in manifest:
@@ -617,20 +621,23 @@ class ZipFileLinearIndex(Index):
 
         # no manifest! iterate.
         else:
-            for zipinfo in self.zf.infolist():
+            storage = self.storage
+            # if no manifest here, break Storage class encapsulation
+            # and go for all the files. (This is necessary to support
+            # ad-hoc zipfiles that have no manifests.)
+            for zipinfo in storage.zipfile.infolist():
                 # should we load this file? if it ends in .sig OR force:
                 if zipinfo.filename.endswith('.sig') or \
                    zipinfo.filename.endswith('.sig.gz') or \
                    self.traverse_yield_all:
-                    fp = self.zf.open(zipinfo)
-
                     if selection_dict:
                         select = lambda x: select_signature(x,
                                                             **selection_dict)
                     else:
                         select = lambda x: True
 
-                    for ss in load_signatures(fp):
+                    data = self.storage.load(zipinfo.filename)
+                    for ss in load_signatures(data):
                         if select(ss):
                             yield ss
 
@@ -643,7 +650,7 @@ class ZipFileLinearIndex(Index):
 
         if manifest is not None:
             manifest = manifest.select_to_manifest(**kwargs)
-            return ZipFileLinearIndex(self.zf,
+            return ZipFileLinearIndex(self.storage,
                                       selection_dict=None,
                                       traverse_yield_all=traverse_yield_all,
                                       manifest=manifest,
@@ -663,7 +670,7 @@ class ZipFileLinearIndex(Index):
                     d[k] = v
                 kwargs = d
 
-            return ZipFileLinearIndex(self.zf,
+            return ZipFileLinearIndex(self.storage,
                                       selection_dict=kwargs,
                                       traverse_yield_all=traverse_yield_all,
                                       manifest=None,
