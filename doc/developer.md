@@ -30,7 +30,19 @@ To activate the new environment, run
 ```
 conda activate sourmash_dev
 ```
-and proceed to the ["Running tests and checks"](#running-tests-and-checks) section.
+
+#### Installing Sourmash in the editable mode
+
+Use pip to install the sourmash its testing requirements:
+
+```
+pip install -e ".[test]"
+```
+
+You can now use `pytest` to run tests. FYI, for contributing back to sourmash, we really
+recommend using tox instead, as it runs tests on multiple python versions.
+
+Then proceed to the ["Running tests and checks"](#running-tests-and-checks) section.
 
 ### Using Nix
 
