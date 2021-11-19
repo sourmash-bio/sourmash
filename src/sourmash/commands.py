@@ -702,10 +702,10 @@ def gather(args):
             for found_sig in counter.siglist:
                 noident_mh.remove_many(found_sig.minhash)
 
-                # optionally calculate and save prefetch csv, near duplicate of code from prefetch_gather (convert to fn?)
+                # optionally calculate and save prefetch csv
                 if prefetch_csvout_fp:
                     assert scaled
-                    # calculate expected threshold -
+                    # calculate expected threshold
                     threshold = args.threshold_bp / scaled
 
                     # calculate intersection stats and info
