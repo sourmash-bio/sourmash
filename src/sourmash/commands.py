@@ -669,12 +669,24 @@ def gather(args):
         noident_mh = prefetch_query.minhash.to_mutable()
         save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
         save_prefetch.open()
+        # set up prefetch CSV output, write headers, etc.
+        prefetch_csvout_fp = None
+        prefetch_csvout_w = None
+        if args.save_prefetch_csv:
+            fieldnames = ['intersect_bp', 'jaccard',
+                          'max_containment', 'f_query_match', 'f_match_query',
+                          'match_filename', 'match_name', 'match_md5', 'match_bp',
+                          'query_filename', 'query_name', 'query_md5', 'query_bp']
+
+            prefetch_csvout_fp = FileOutput(args.save_prefetch_csv, 'wt').open()
+            prefetch_csvout_w = csv.DictWriter(prefetch_csvout_fp, fieldnames=fieldnames)
+            prefetch_csvout_w.writeheader()
 
         counters = []
         for db in databases:
             counter = None
             try:
-                counter = db.counter_gather(prefetch_query, args.threshold_bp)
+                counter, prefetch_info = db.counter_gather(prefetch_query, args.threshold_bp, args.save_prefetch_csv)
             except ValueError:
                 if picklist:
                     # catch "no signatures to search" ValueError...
@@ -683,6 +695,11 @@ def gather(args):
                     raise       # re-raise other errors, if no picklist.
 
             save_prefetch.add_many(counter.siglist)
+
+            if prefetch_csvout_fp:
+                for prefetch_result in prefetch_info:
+                    prefetch_csvout_w.writerow(prefetch_result)
+
             # subtract found hashes as we can.
             for found_sig in counter.siglist:
                 noident_mh.remove_many(found_sig.minhash)
@@ -690,6 +707,8 @@ def gather(args):
 
         notify(f"Found {len(save_prefetch)} signatures via prefetch; now doing gather.")
         save_prefetch.close()
+        if prefetch_csvout_fp:
+            prefetch_csvout_fp.close()
     else:
         counters = databases
         # we can't track unidentified hashes w/o prefetch
@@ -852,7 +871,7 @@ def multigather(args):
             if args.scaled:
                 notify(f'downsampling query from scaled={query.minhash.scaled} to {int(args.scaled)}')
                 query.minhash = query.minhash.downsample(scaled=args.scaled)
- 
+
             # empty?
             if not len(query.minhash):
                 error('no query hashes!? skipping to next..')

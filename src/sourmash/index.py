@@ -294,7 +294,7 @@ class Index(ABC):
         "Mimic CounterGather.consume on top of Index. Yes, this is backwards."
         pass
 
-    def counter_gather(self, query, threshold_bp, **kwargs):
+    def counter_gather(self, query, threshold_bp, save_prefetch_csv=False, **kwargs):
         """Returns an object that permits 'gather' on top of the
         current contents of this Index.
 
@@ -303,6 +303,7 @@ class Index(ABC):
         implementations need only return an object that meets the
         public `CounterGather` interface, of course.
         """
+        prefetch_info=[]
         # build a flat query
         prefetch_query = query.copy()
         prefetch_query.minhash = prefetch_query.minhash.flatten()
@@ -311,9 +312,16 @@ class Index(ABC):
         counter = CounterGather(prefetch_query.minhash)
         for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
             counter.add(result.signature, result.location)
+            # optionally save info to output prefetch csv during gather
+            if save_prefetch_csv:
+                d = dict(result._asdict())
+                del d['signature']                 # actual signatures not in CSV.
+                del d['location']
+                del d['score']                     # keep same format as regular prefetch csv
+                prefetch_info.append(d)
 
         # tada!
-        return counter
+        return counter, prefetch_info
 
     @abstractmethod
     def select(self, ksize=None, moltype=None, scaled=None, num=None,
