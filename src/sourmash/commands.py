@@ -16,7 +16,7 @@ from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
 from .sourmash_args import (FileOutput, FileOutputCSV,
                             SaveSignaturesToLocation)
-from .search import prefetch_database, PrefetchResult
+from .search import prefetch_database, PrefetchResult, calculate_prefetch_info
 from .index import LazyLinearIndex
 
 WATERMARK_SIZE = 10000
@@ -703,40 +703,12 @@ def gather(args):
                 # optionally calculate and save prefetch csv, near duplicate of code from prefetch_gather (convert to fn?)
                 if prefetch_csvout_fp:
                     assert scaled
-
                     # for testing/double-checking purposes, calculate expected threshold -
                     threshold = args.threshold_bp / scaled
 
-                    # base intersections on downsampled minhashes
-                    match = found_sig #.signature
-                    db_mh = match.minhash.flatten().downsample(scaled=scaled)
-
-                    # calculate db match intersection with query hashes:
-                    intersect_mh = query_mh & db_mh
-                    assert len(intersect_mh) >= threshold
-
-                    f_query_match = db_mh.contained_by(query_mh)
-                    f_match_query = query_mh.contained_by(db_mh)
-                    max_containment = max(f_query_match, f_match_query)
-
-                    # build a result namedtuple
-                    prefetch_result = PrefetchResult(
-                        intersect_bp=len(intersect_mh) * scaled,
-                        query_bp = len(query_mh) * scaled,
-                        match_bp = len(db_mh) * scaled,
-                        jaccard=db_mh.jaccard(query_mh),
-                        max_containment=max_containment,
-                        f_query_match=f_query_match,
-                        f_match_query=f_match_query,
-                        match=match,                  # actual signature not in CSV
-                        match_filename=match.filename,
-                        match_name=match.name,
-                        match_md5=match.md5sum()[:8],
-                        query=query,
-                        query_filename=query.filename,
-                        query_name=query.name,
-                        query_md5=query.md5sum()[:8]
-                    )
+                    # calculate intersection stats and info
+                    prefetch_result = calculate_prefetch_info(prefetch_query, found_sig, scaled, threshold)
+                    # remove match and query signatures; write result to prefetch csv
                     d = dict(prefetch_result._asdict())
                     del d['match']
                     del d['query']
@@ -744,7 +716,12 @@ def gather(args):
 
                 # subtract found hashes as we can.
                 noident_mh.remove_many(found_sig.minhash)
+
             counters.append(counter)
+
+            # flush csvout so that things get saved progressively
+            if prefetch_csvout_fp:
+                prefetch_csvout_fp.flush()
 
         notify(f"Found {len(save_prefetch)} signatures via prefetch; now doing gather.")
         save_prefetch.close()
