@@ -689,7 +689,7 @@ def gather(args):
         for db in databases:
             counter = None
             try:
-                counter  = db.counter_gather(prefetch_query, args.threshold_bp)
+                counter = db.counter_gather(prefetch_query, args.threshold_bp)
             except ValueError:
                 if picklist:
                     # catch "no signatures to search" ValueError...
@@ -698,12 +698,14 @@ def gather(args):
                     raise       # re-raise other errors, if no picklist.
 
             save_prefetch.add_many(counter.siglist)
-
+            # subtract found hashes as we can.
             for found_sig in counter.siglist:
+                noident_mh.remove_many(found_sig.minhash)
+
                 # optionally calculate and save prefetch csv, near duplicate of code from prefetch_gather (convert to fn?)
                 if prefetch_csvout_fp:
                     assert scaled
-                    # for testing/double-checking purposes, calculate expected threshold -
+                    # calculate expected threshold -
                     threshold = args.threshold_bp / scaled
 
                     # calculate intersection stats and info
@@ -713,9 +715,6 @@ def gather(args):
                     del d['match']
                     del d['query']
                     prefetch_csvout_w.writerow(d)
-
-                # subtract found hashes as we can.
-                noident_mh.remove_many(found_sig.minhash)
 
             counters.append(counter)
 
