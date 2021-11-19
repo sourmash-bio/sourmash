@@ -33,7 +33,7 @@ conda activate sourmash_dev
 
 #### Installing Sourmash in the editable mode
 
-Use pip to install the sourmash its testing requirements:
+Use pip to do an editable install of sourmash (and its testing requirements):
 
 ```
 pip install -e ".[test]"
