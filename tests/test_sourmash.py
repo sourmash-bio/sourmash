@@ -2748,7 +2748,7 @@ def test_gather_multiple_sbts_save_prefetch(runtmp, linear_gather):
 
 
 def test_gather_multiple_sbts_save_prefetch_csv(runtmp, linear_gather):
-    # test --save-prefetch with multiple databases
+    # test --save-prefetch-csv with multiple databases
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -2774,8 +2774,7 @@ def test_gather_multiple_sbts_save_prefetch_csv(runtmp, linear_gather):
     with open(runtmp.output('prefetch.csv')) as f:
         output = f.read()
         print((output,))
-        # change this with actual results
-        assert '910,1.0,1.0' in output
+        assert '870,0.925531914893617,0.9666666666666667' in output
 
 
 def test_gather_sbt_and_sigs(runtmp, linear_gather, prefetch_gather):
