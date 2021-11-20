@@ -114,7 +114,7 @@ class ZipStorage(Storage):
             self.zipfile = zipfile.ZipFile(path, 'r')
             self.bufferzip = zipfile.ZipFile(BytesIO(), mode="w")
 
-        self.subdir = None
+        self.subdir = ""
         subdirs = [f for f in self.zipfile.namelist() if f.endswith("/")]
         if len(subdirs) == 1:
             self.subdir = subdirs[0]
@@ -204,7 +204,10 @@ class ZipStorage(Storage):
         try:
             return self._load_from_zf(self.zipfile, path)
         except KeyError:
-            return self._load_from_zf(self.bufferzip, path)
+            if self.bufferzip:
+                return self._load_from_zf(self.bufferzip, path)
+            else:
+                raise FileNotFoundError(path)
 
     def init_args(self):
         return {'path': self.path}
@@ -270,7 +273,9 @@ class ZipStorage(Storage):
                     # Since there is no duplicated data, we can
                     # reopen self.zipfile in append mode and write the new data
                     self.zipfile.close()
-                    if not keep_closed:
+                    if keep_closed:
+                        raise Exception("unexpected error")
+                    else:
                         zf = zipfile.ZipFile(self.path, mode='a',
                                              compression=zipfile.ZIP_STORED)
                     for item in new_data:
