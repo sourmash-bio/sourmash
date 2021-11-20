@@ -729,8 +729,8 @@ fn seq_to_hashes(seq in "ACGTGTAGCTAGACACTGACTGACTGAC") {
         }
     }
 
-    mh.mins().sort();
-    hashes.sort();
+    mh.mins().sort_unstable();
+    hashes.sort_unstable();
     assert_eq!(mh.mins(), hashes);
 
 }
@@ -752,8 +752,8 @@ fn seq_to_hashes_2(seq in "QRMTHINK") {
         }
     }
 
-    mh.mins().sort();
-    hashes.sort();
+    mh.mins().sort_unstable();
+    hashes.sort_unstable();
     assert_eq!(mh.mins(), hashes);
 
 }
