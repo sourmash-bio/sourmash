@@ -26,7 +26,7 @@ sourmash gather query.sig [ list of signatures or SBTs ]
 
 Example output:
 ```
-overlap     p_query p_match 
+overlap     p_query p_match
 ---------   ------- --------
 1.4 Mbp      11.0%%  58.0%%     JANA01000001.1 Fusobacterium sp. OBRC...
 1.0 Mbp       7.7%%  25.9%%     CP001957.1 Haloferax volcanii DS2 pla...
@@ -86,6 +86,11 @@ def subparser(subparsers):
         '--save-prefetch', metavar='FILE',
         help='save all prefetch-matched signatures from the databases to the '
         'specified file or directory'
+    )
+    subparser.add_argument(
+        '--save-prefetch-csv', metavar='FILE',
+        help='save a csv with information from all prefetch-matched signatures '
+        'to the specified file'
     )
     subparser.add_argument(
         '--threshold-bp', metavar='REAL', type=float, default=5e4,
