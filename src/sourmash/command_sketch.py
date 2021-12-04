@@ -28,6 +28,9 @@ def _parse_params_str(params_str):
             params['track_abundance'] = True
         elif item == 'noabund':
             params['track_abundance'] = False
+#        could add this, but I think I like it better as separate column in sketchlist file
+#        elif item.startswith("name=")
+#            params['name'] = item[5:]
         elif item.startswith('k='):
             params['ksize'].append(int(item[2:]))
         elif item.startswith('num='):
@@ -204,16 +207,26 @@ def dna(args):
     # for dna:
     args.input_is_protein = False
 
-    try:
-        signatures_factory = _signatures_for_sketch_factory(args.param_string,
-                                                            'dna',
-                                                            mult_ksize_by_3=False)
-    except ValueError as e:
-        error(f"Error creating signatures: {str(e)}")
-        sys.exit(-1)
-
+    # add --from-file input
     _add_from_file_to_filenames(args)
-    _execute_sketch(args, signatures_factory)
+
+    # initialize and populate sketchlist
+    sketchlist = SignatureSketchInfo()
+    # load cli --> sketchlist
+    sketchlist.parse_cli_to_sketchlist(args)
+    if args.sketchlist:
+        sketchlist.load_sketchlist_file(args)
+
+    #try:
+        #signatures_factory = _signatures_for_sketch_factory(args.param_string,
+        #                                                    'dna',
+        #                                                    mult_ksize_by_3=False)
+    #except ValueError as e:
+    #    error(f"Error creating signatures: {str(e)}")
+    #    sys.exit(-1)
+
+    #_execute_sketch(args, signatures_factory)
+    sketchlist._execute_sketches(args)
 
 
 def protein(args):
