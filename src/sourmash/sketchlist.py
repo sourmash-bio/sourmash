@@ -108,41 +108,41 @@ def check_inputs(self, inp):
 
 
     def parse_cli_to_sketchlist(self, args):
-		name,inp,outp,param_str,exists,valid_params,license= [None]*7
+        name,inp,outp,param_str,exists,valid_params,license= [None]*7
 
         if args.merge:
             if not args.output:
-			    error("ERROR: must specify -o with --merge")
-			    sys.exit(-1)
+                error("ERROR: must specify -o with --merge")
+                sys.exit(-1)
             else:
-			    name=args.merge
+                name=args.merge
 
-		if args.output and args.outdir:
-			error("ERROR: --outdir doesn't make sense with -o/--output")
-			sys.exit(-1)
-		elif args.output:
-			outp = args.output
+        if args.output and args.outdir:
+            error("ERROR: --outdir doesn't make sense with -o/--output")
+            sys.exit(-1)
+        elif args.output:
+            outp = args.output
         else:
             # can we just handle file vs dir later, or do we need to keep track of outdir,output separately?
             outp = args.outdir
 
-		# ntp note: inp needs to be list. I think it is, but check.
+        # ntp note: inp needs to be list. I think it is, but check.
         inp =  _add_from_file_to_filenames(args)
-		exists = check_inputs(inp)
+        exists = check_inputs(inp)
 
-		if args.license != 'CC0':
-			error('error: sourmash only supports CC0-licensed signatures. sorry!')
-			sys.exit(-1)
+        if args.license != 'CC0':
+            error('error: sourmash only supports CC0-licensed signatures. sorry!')
+            sys.exit(-1)
         license=args.license
 
-		if args.param_string:
-			param_str = args.param_str
-			# run this just to check that param str is ok?
-			try:
-				mt, par = _parse_params_str(param_str)
-				valid_params=True
-			except ValueError:
-				valid_params=False
+        if args.param_string:
+            param_str = args.param_str
+            # run this just to check that param str is ok?
+            try:
+                mt, par = _parse_params_str(param_str)
+                valid_params=True
+            except ValueError:
+                valid_params=False
 
          # do i want to do any param checking here?
          if name:
