@@ -575,7 +575,7 @@ class ZipFileLinearIndex(Index):
     @classmethod
     def load(cls, location, traverse_yield_all=False, use_manifest=True):
         "Class method to load a zipfile."
-        from .sbt_storage import ZipStorage
+        from ..sbt_storage import ZipStorage
 
         # we can only load from existing zipfiles in this method.
         if not os.path.exists(location):
@@ -916,7 +916,7 @@ class MultiIndex(Index):
         load all files ending in .sig or .sig.gz, by default; if 'force' is
         True, will attempt to load _all_ files, ignoring errors.
         """
-        from .sourmash_args import traverse_find_sigs
+        from ..sourmash_args import traverse_find_sigs
 
         if not os.path.isdir(pathname):
             raise ValueError(f"'{pathname}' must be a directory.")
