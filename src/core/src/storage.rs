@@ -9,6 +9,18 @@ use typed_builder::TypedBuilder;
 
 use crate::Error;
 
+/// An abstraction for any place where we can store data.
+pub trait Storage {
+    /// Save bytes into path
+    fn save(&self, path: &str, content: &[u8]) -> Result<String, Error>;
+
+    /// Load bytes from path
+    fn load(&self, path: &str) -> Result<Vec<u8>, Error>;
+
+    /// Args for initializing a new Storage
+    fn args(&self) -> StorageArgs;
+}
+
 #[derive(Clone)]
 pub struct InnerStorage(Arc<Mutex<dyn Storage>>);
 
@@ -63,18 +75,6 @@ impl From<&StorageArgs> for FSStorage {
             }
         }
     }
-}
-
-/// An abstraction for any place where we can store data.
-pub trait Storage {
-    /// Save bytes into path
-    fn save(&self, path: &str, content: &[u8]) -> Result<String, Error>;
-
-    /// Load bytes from path
-    fn load(&self, path: &str) -> Result<Vec<u8>, Error>;
-
-    /// Args for initializing a new Storage
-    fn args(&self) -> StorageArgs;
 }
 
 impl<L> Storage for Mutex<L>
@@ -152,5 +152,85 @@ impl Storage for FSStorage {
         StorageArgs::FSStorage {
             path: self.subdir.clone(),
         }
+    }
+}
+
+pub struct ZipStorage<'a> {
+    //original_file: File,
+    //mapping: memmap2::Mmap,
+    archive: piz::ZipArchive<'a>,
+    //metadata: piz::read::DirectoryContents<'a>,
+}
+
+impl<'a> Storage for ZipStorage<'a> {
+    fn save(&self, path: &str, content: &[u8]) -> Result<String, Error> {
+        unimplemented!();
+    }
+
+    fn load(&self, path: &str) -> Result<Vec<u8>, Error> {
+        use piz::read::FileTree;
+
+        // FIXME error
+        let tree =
+            piz::read::as_tree(self.archive.entries()).map_err(|_| StorageError::EmptyPathError)?;
+
+        // FIXME error
+        let entry = tree
+            .lookup(path)
+            .map_err(|_| StorageError::EmptyPathError)?;
+
+        // FIXME error
+        let mut reader = BufReader::new(
+            self.archive
+                .read(entry)
+                .map_err(|_| StorageError::EmptyPathError)?,
+        );
+        let mut contents = Vec::new();
+        reader.read_to_end(&mut contents)?;
+
+        Ok(contents)
+    }
+
+    fn args(&self) -> StorageArgs {
+        unimplemented!();
+    }
+}
+
+impl<'a> ZipStorage<'a> {
+    /*
+    pub fn new(location: &str) -> Result<Self, Error> {
+        let zip_file = File::open(location)?;
+        let mapping = unsafe { memmap2::Mmap::map(&zip_file)? };
+
+        //FIXME
+        let archive = piz::ZipArchive::new(&mapping).map_err(|_| StorageError::EmptyPathError)?;
+
+        //FIXME
+        //  let tree =
+        //      piz::read::as_tree(archive.entries()).map_err(|_| StorageError::EmptyPathError)?;
+
+        Ok(Self {
+            original_file: zip_file,
+            mapping: mapping,
+            file: archive,
+            //       metadata: tree,
+        })
+    }
+    */
+    pub fn from_slice(mapping: &'a [u8]) -> Result<Self, Error> {
+        //FIXME
+        let archive = piz::ZipArchive::new(&mapping).map_err(|_| StorageError::EmptyPathError)?;
+
+        //FIXME
+        //let entries: Vec<_> = archive.entries().iter().map(|x| x.to_owned()).collect();
+        //let tree =
+        //    piz::read::as_tree(entries.as_slice()).map_err(|_| StorageError::EmptyPathError)?;
+
+        Ok(Self {
+            archive,
+            /*            metadata: archive
+            .as_tree()
+            .map_err(|_| StorageError::EmptyPathError)?, */
+        })
     }
 }
