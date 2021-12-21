@@ -156,39 +156,47 @@ impl Storage for FSStorage {
 }
 
 pub struct ZipStorage<'a> {
-    //original_file: File,
-    //mapping: memmap2::Mmap,
-    archive: piz::ZipArchive<'a>,
+    mapping: Option<memmap2::Mmap>,
+    archive: Option<piz::ZipArchive<'a>>,
     //metadata: piz::read::DirectoryContents<'a>,
 }
 
+fn load_from_archive<'a>(archive: &'a piz::ZipArchive<'a>, path: &str) -> Result<Vec<u8>, Error> {
+    use piz::read::FileTree;
+
+    // FIXME error
+    let tree = piz::read::as_tree(archive.entries()).map_err(|_| StorageError::EmptyPathError)?;
+    // FIXME error
+    let entry = tree
+        .lookup(path)
+        .map_err(|_| StorageError::EmptyPathError)?;
+
+    // FIXME error
+    let mut reader = BufReader::new(
+        archive
+            .read(entry)
+            .map_err(|_| StorageError::EmptyPathError)?,
+    );
+    let mut contents = Vec::new();
+    reader.read_to_end(&mut contents)?;
+
+    Ok(contents)
+}
+
 impl<'a> Storage for ZipStorage<'a> {
-    fn save(&self, path: &str, content: &[u8]) -> Result<String, Error> {
+    fn save(&self, _path: &str, _content: &[u8]) -> Result<String, Error> {
         unimplemented!();
     }
 
     fn load(&self, path: &str) -> Result<Vec<u8>, Error> {
-        use piz::read::FileTree;
-
-        // FIXME error
-        let tree =
-            piz::read::as_tree(self.archive.entries()).map_err(|_| StorageError::EmptyPathError)?;
-
-        // FIXME error
-        let entry = tree
-            .lookup(path)
-            .map_err(|_| StorageError::EmptyPathError)?;
-
-        // FIXME error
-        let mut reader = BufReader::new(
-            self.archive
-                .read(entry)
-                .map_err(|_| StorageError::EmptyPathError)?,
-        );
-        let mut contents = Vec::new();
-        reader.read_to_end(&mut contents)?;
-
-        Ok(contents)
+        if let Some(archive) = &self.archive {
+            load_from_archive(&archive, path)
+        } else {
+            //FIXME
+            let archive = piz::ZipArchive::new(&(&self.mapping.as_ref()).unwrap())
+                .map_err(|_| StorageError::EmptyPathError)?;
+            load_from_archive(&archive, path)
+        }
     }
 
     fn args(&self) -> StorageArgs {
@@ -197,26 +205,24 @@ impl<'a> Storage for ZipStorage<'a> {
 }
 
 impl<'a> ZipStorage<'a> {
-    /*
     pub fn new(location: &str) -> Result<Self, Error> {
         let zip_file = File::open(location)?;
         let mapping = unsafe { memmap2::Mmap::map(&zip_file)? };
 
         //FIXME
-        let archive = piz::ZipArchive::new(&mapping).map_err(|_| StorageError::EmptyPathError)?;
+        //let archive = piz::ZipArchive::new(&mapping).map_err(|_| StorageError::EmptyPathError)?;
 
         //FIXME
         //  let tree =
         //      piz::read::as_tree(archive.entries()).map_err(|_| StorageError::EmptyPathError)?;
 
         Ok(Self {
-            original_file: zip_file,
-            mapping: mapping,
-            file: archive,
-            //       metadata: tree,
+            mapping: Some(mapping),
+            archive: None,
+            //metadata: tree,
         })
     }
-    */
+
     pub fn from_slice(mapping: &'a [u8]) -> Result<Self, Error> {
         //FIXME
         let archive = piz::ZipArchive::new(&mapping).map_err(|_| StorageError::EmptyPathError)?;
@@ -227,7 +233,8 @@ impl<'a> ZipStorage<'a> {
         //    piz::read::as_tree(entries.as_slice()).map_err(|_| StorageError::EmptyPathError)?;
 
         Ok(Self {
-            archive,
+            archive: Some(archive),
+            mapping: None,
             /*            metadata: archive
             .as_tree()
             .map_err(|_| StorageError::EmptyPathError)?, */
