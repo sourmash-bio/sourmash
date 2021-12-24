@@ -325,8 +325,14 @@ def _load_zipfile(filename, **kwargs):
     db = None
     if filename.endswith('.zip'):
         traverse_yield_all = kwargs['traverse_yield_all']
-        db = ZipFileLinearIndex.load(filename,
-                                     traverse_yield_all=traverse_yield_all)
+        try:
+            db = ZipFileLinearIndex.load(filename,
+                                         traverse_yield_all=traverse_yield_all)
+        except FileNotFoundError as exc:
+            # turn this into a ValueError => proper exception handling by
+            # _load_database.
+            raise ValueError(exc)
+
     return db
 
 
