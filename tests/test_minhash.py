@@ -2602,3 +2602,41 @@ def test_translate_dayhoff_hashes_2():
 
         assert kmer == k
         assert _hash_fwd_only(mh_translate, kmer) == h
+
+
+def test_containment():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh2.add_many((1, 5))
+
+    assert mh1.contained_by(mh2) == 1/4
+    assert mh2.contained_by(mh1) == 1/2
+
+
+def test_containment_with_abund():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=True)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=True)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    print(mh1.hashes)
+
+    assert mh1.contained_by(mh2) == 1/4
+    assert mh2.contained_by(mh1) == 1/2
+
+    import sourmash
+    x = sourmash.SourmashSignature(mh1, name='a')
+    y = sourmash.SourmashSignature(mh2, name='b')
+
+    with open('a.sig', 'wt') as fp:
+        sourmash.save_signatures([x], fp)
+    with open('b.sig', 'wt') as fp:
+        sourmash.save_signatures([y], fp)
+
+    assert 0
