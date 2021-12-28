@@ -1326,7 +1326,45 @@ def test_search_containment(runtmp):
 
 
 def test_search_containment_abund(runtmp):
-    "Construct some signatures with abund, make sure that containment flattens"
+    "Construct some signatures with abund, make sure that containment complains"
+
+    # build minhashes
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=True)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=True)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    # build signatures
+    x = sourmash.SourmashSignature(mh1, name='a')
+    y = sourmash.SourmashSignature(mh2, name='b')
+
+    # save!
+    with open(runtmp.output('a.sig'), 'wt') as fp:
+        sourmash.save_signatures([x], fp)
+    with open(runtmp.output('b.sig'), 'wt') as fp:
+        sourmash.save_signatures([y], fp)
+
+    # run sourmash search --containent
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('search', 'a.sig', 'b.sig', '-o', 'xxx.csv',
+                        '--containment')
+
+    assert "ERROR: cannot do containment searches on an abund signature; maybe specify --ignore-abundance?" in str(exc)
+
+    # run sourmash search --max-containment
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('search', 'a.sig', 'b.sig', '-o', 'xxx.csv',
+                        '--max-containment')
+
+    assert "ERROR: cannot do containment searches on an abund signature; maybe specify --ignore-abundance?" in str(exc)
+
+
+def test_search_containment_abund_ignore(runtmp):
+    "Construct some signatures with abund, check containment + ignore abund"
 
     # build minhashes
     mh1 = MinHash(0, 21, scaled=1, track_abundance=True)
@@ -1349,7 +1387,8 @@ def test_search_containment_abund(runtmp):
         sourmash.save_signatures([y], fp)
 
     # run sourmash search
-    runtmp.sourmash('search', 'a.sig', 'b.sig', '-o', 'xxx.csv', '--containment')
+    runtmp.sourmash('search', 'a.sig', 'b.sig', '-o', 'xxx.csv',
+                    '--containment', '--ignore-abundance')
 
     # check results
     with open(runtmp.output('xxx.csv'), 'rt') as fp:

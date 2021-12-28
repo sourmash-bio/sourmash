@@ -211,8 +211,8 @@ def search_databases_with_abund_query(query, databases, **kwargs):
     results = []
     found_md5 = set()
 
-    assert not 'do_containment' in kwargs
-    assert not 'do_max_containment' in kwargs
+    if kwargs.get('do_containment') or kwargs.get('do_max_containment'):
+        raise TypeError("containment searches cannot be done with abund sketches")
 
     for db in databases:
         search_iter = db.search_abund(query, **kwargs)

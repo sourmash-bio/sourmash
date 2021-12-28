@@ -473,12 +473,18 @@ def search(args):
         error('Nothing found to search!')
         sys.exit(-1)
 
-    # forcibly ignore abundances if query has no abundances
-    if not query.minhash.track_abundance:
-        args.ignore_abundance = True
-    else:
+    # handle signatures with abundance
+    if query.minhash.track_abundance:
         if args.ignore_abundance:
+            # abund sketch + ignore abundance => flatten sketch.
             query.minhash = query.minhash.flatten()
+        elif args.containment or args.max_containment:
+            # abund sketch + keep abundance => no containment searches
+            notify("ERROR: cannot do containment searches on an abund signature; maybe specify --ignore-abundance?")
+            sys.exit(-1)
+    else:
+        # forcibly ignore abundances if query has no abundances
+        args.ignore_abundance = True
 
     # do the actual search
     if query.minhash.track_abundance:
