@@ -39,7 +39,7 @@ jobs:
     - name: cache conda
       uses: actions/cache@v1
       env:
-        CACHE_NUMBER: 0
+        CACHE_NUMBER: 1
       with:
         path: ~/conda_pkgs_dir
         key:
