@@ -717,6 +717,18 @@ def test_index_same_md5sum_sbt_zipstorage(c):
     assert len([f for f in zout.namelist() if f.startswith(".sbt.zzz/")]) == 5
 
 
+def test_zipfile_does_not_exist(runtmp):
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sig', 'describe', 'no-exist.zip')
+
+    # old behavior, pre PR #1777
+    assert 'FileNotFoundError: SOURMASH-MANIFEST.csv' not in str(exc)
+    assert not os.path.exists(runtmp.output('no-exist.zip'))
+
+    # correct behavior
+    assert "ERROR: Error while reading signatures from 'no-exist.zip'." in str(exc)
+
+
 @utils.in_thisdir
 def test_zipfile_protein_command_search(c):
     # test command-line search/gather of zipfile with protein sigs
