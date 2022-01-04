@@ -197,7 +197,7 @@ def describe(args):
     """
     provide basic info on signatures
     """
-    set_quiet(args.quiet)
+    set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
     _extend_signatures_with_from_file(args)

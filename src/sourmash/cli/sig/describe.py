@@ -12,6 +12,10 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
+        '-d', '--debug', action='store_true',
+        help='provide debugging output'
+    )
+    subparser.add_argument(
         '--csv', metavar='FILE',
         help='output information to a CSV file'
     )
