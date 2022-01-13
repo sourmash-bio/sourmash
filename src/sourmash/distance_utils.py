@@ -8,6 +8,8 @@ from scipy.stats import norm as scipy_norm
 from scipy.special import hyp2f1
 from numpy import sqrt
 
+from .logging import notify
+
 #FROM  mrcc.kmer_mutation_formulas_thm5
 def r1_to_q(k,r1):
     r1 = float(r1)
@@ -24,11 +26,12 @@ def var_n_mutated(L,k,r1,q=None):
 	if (r1 == 0): return 0.0
 	r1 = float(r1)
 	if (q == None): # we assume that if q is provided, it is correct for r1
-		q = r1_to_q(k,r1)
+	    q = r1_to_q(k,r1)
 	varN = L*(1-q)*(q*(2*k+(2/r1)-1)-2*k) \
 	     + k*(k-1)*(1-q)**2 \
-	     + (2*(1-q)/(r1**2))*((1+(k-1)*(1-q))*r1-q)
-	assert (varN>=0.0)
+         + (2*(1-q)/(r1**2))*((1+(k-1)*(1-q))*r1-q)
+	if (varN<0.0):
+         raise ValueError('Error: varN <0.0!')
 	return float(varN)
 
 

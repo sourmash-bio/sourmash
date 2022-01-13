@@ -10,6 +10,7 @@ from enum import Enum
 from .logging import error
 from . import MinHash
 from .minhash import to_bytes, FrozenMinHash
+from .distance_utils import jaccard_to_distance,containment_to_distance
 from ._lowlevel import ffi, lib
 from .utils import RustObject, rustcall, decode_str
 
@@ -142,13 +143,42 @@ class SourmashSignature(RustObject):
         return self.minhash.similarity(other.minhash, ignore_abundance=True,
                                        downsample=False)
 
+    def jaccard_ani(self, other):
+        "Compute Jaccard similarity with the other MinHash signature."
+        jaccard = self.minhash.similarity(other.minhash, ignore_abundance=True,
+                                       downsample=False)
+        avg_scaled_kmers = (len(self.minhash.hashes) + len(other.minhash.hashes))/2
+        avg_n_kmers = avg_scaled_kmers * self.minhash.scaled # would be better if hll estimate
+        j_ani,ani_low,ani_high = jaccard_to_distance(jaccard, avg_n_kmers,
+                                        self.minhash.ksize, self.minhash.scaled,
+                                        return_identity=True)
+        return j_ani
+
     def contained_by(self, other, downsample=False):
         "Compute containment by the other signature. Note: ignores abundance."
         return self.minhash.contained_by(other.minhash, downsample)
 
+    def containment_ani(self, other, downsample=False):
+        "Estimate ANI from containment with the other MinHash signature."
+        containment = self.minhash.contained_by(other.minhash, downsample)
+        n_kmers = len(self.minhash.hashes) * self.minhash.scaled # would be better if hll estimate
+        c_ani,ani_low,ani_high = containment_to_distance(containment, n_kmers,
+                                        self.minhash.ksize, self.minhash.scaled,
+                                        return_identity=True)
+        return c_ani
+
     def max_containment(self, other, downsample=False):
         "Compute max containment w/other signature. Note: ignores abundance."
         return self.minhash.max_containment(other.minhash, downsample)
+
+    def max_containment_ani(self, other, downsample=False):
+        "Estimate ANI from max containment w/other signature. Note: ignores abundance."
+        max_containment =  self.minhash.max_containment(other.minhash, downsample)
+        n_kmers = len(self.minhash.hashes) * self.minhash.scaled # would be better if hll estimate
+        c_ani,ani_low,ani_high = containment_to_distance(max_containment, n_kmers,
+                                        self.minhash.ksize, self.minhash.scaled,
+                                        return_identity=True)
+        return c_ani
 
     def add_sequence(self, sequence, force=False):
         self._methodcall(lib.signature_add_sequence, to_bytes(sequence), force)
