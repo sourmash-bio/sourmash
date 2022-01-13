@@ -3,7 +3,7 @@ Utility functions for jaccard/containment --> distance estimates
 From https://github.com/KoslickiLab/mutation-rate-ci-calculator
 https://doi.org/10.1101/2022.01.11.475870
 """
-from scipy.optimize import brentq #, fsolve, newton
+from scipy.optimize import brentq
 from scipy.stats import norm as scipy_norm
 from scipy.special import hyp2f1
 from numpy import sqrt
@@ -14,7 +14,7 @@ def r1_to_q(k,r1):
     q = 1-(1-r1)**k
     return float(q)
 
-    
+
 def var_n_mutated(L,k,r1,q=None):
 	# there are computational issues in the variance formula that we solve here
 	# by the use of higher-precision arithmetic; the problem occurs when r is
@@ -59,14 +59,14 @@ def probit(p):
     return scipy_norm.ppf(p)
 
 
-def containment_to_distance(containment, n_unique_kmers, ksize, scaled, confidence=0.95):
+def containment_to_distance(containment, n_unique_kmers, ksize, scaled, confidence=0.95, return_identity=False):
     """
     Containment --> distance CI (one step)
     """
     if containment <= 0.0001: # changed from 0.0, to mirror jaccard_to_distance_CI_one_step
-        sol2 = sol1 = distance_point_estimate = 1.0
+        sol2 = sol1 = point_estimate = 1.0
     elif containment >= 0.9999:  # changed from 1.0, to mirror jaccard_to_distance_CI_one_step
-        sol1 = sol2 = distance_point_estimate = 0.0
+        sol1 = sol2 = point_estimate = 0.0
     else:
         alpha = 1 - confidence
         z_alpha = probit(1-alpha/2)
@@ -86,9 +86,11 @@ def containment_to_distance(containment, n_unique_kmers, ksize, scaled, confiden
         sol1 = brentq(f1, 0.0000001, 0.9999999)
         sol2 = brentq(f2, 0.0000001, 0.9999999)
 
-        distance_point_estimate = 1.0-containment**(1.0/ksize)
+        point_estimate = 1.0-containment**(1.0/ksize)
+    if return_identity:
+        point_estimate,sol2,sol1 = distance_to_identity(point_estimate,sol2,sol1)
         #distance_using_CImidpoint = (sol2+sol1)/2.0
-    return distance_point_estimate,sol2,sol1
+    return point_estimate,sol2,sol1
 
 
 #from from mrcc.p_from_scaled_jaccard
@@ -107,14 +109,14 @@ def variance_scaled_jaccard(L, p, k, s):
     return term1 + term2 - term3
 
 
-def jaccard_to_distance(jaccard, n_unique_kmers, ksize, scaled,confidence=0.95):
+def jaccard_to_distance(jaccard, n_unique_kmers, ksize, scaled, confidence=0.95, return_identity=False):
     """
     Scaled Jaccard to distance estimate and CI (one step)
     """
     if jaccard <= 0.0001:
-        sol2 = sol1 = distance_point_estimate = 1.0
+        sol2 = sol1 = point_estimate = 1.0
     elif jaccard >= 0.9999:
-        sol1 = sol2 = distance_point_estimate = 0.0
+        sol1 = sol2 = point_estimate = 0.0
     else:
         alpha = 1 - confidence
         z_alpha = probit(1-alpha/2)
@@ -128,6 +130,24 @@ def jaccard_to_distance(jaccard, n_unique_kmers, ksize, scaled,confidence=0.95):
         sol1 = brentq(f1, 0.0001, 0.9999)
         sol2 = brentq(f2, 0.0001, 0.9999)
 
-        distance_point_estimate = 1.0 - (2.0 - 2.0/(jaccard + 1))**(1.0/ksize)
+        point_estimate = 1.0 - (2.0 - 2.0/(jaccard + 1))**(1.0/ksize)
+    if return_identity:
+        point_estimate,sol2,sol1 = distance_to_identity(point_estimate,sol2,sol1)
 
-    return distance_point_estimate,sol2,sol1
+    return point_estimate,sol2,sol1
+
+
+def distance_to_identity(dist,d_low=None,d_high=None):
+    """
+    ANI = 1-distance
+    """
+    for d in [dist,d_low,d_high]:
+        if not 0 <= d <= 1:
+            raise ValueError(f"Error: distance value {d} is not between 0 and 1!")
+    id = 1-dist
+    id_low,id_high=None,None
+    if d_low is not None: # need to be explicit so will work on 0 value
+        id_high = 1-d_low
+    if d_high is not None: # need to be explicit so will work on 0 value
+        id_low = 1-d_high
+    return id,id_low,id_high

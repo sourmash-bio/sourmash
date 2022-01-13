@@ -1,7 +1,24 @@
 """
 Tests for distance utils.
 """
-from sourmash.distance_utils import containment_to_distance, jaccard_to_distance
+
+import pytest
+from sourmash.distance_utils import containment_to_distance, jaccard_to_distance,distance_to_identity
+
+def test_distance_to_identity():
+    id,id_low,id_high = distance_to_identity(0.5,0.4,0.6)
+    assert id == 0.5
+    assert id_low == 0.4
+    assert id_high ==0.6
+
+
+def test_distance_to_identity_fail():
+    with pytest.raises(Exception) as exc:
+        id,id_low,id_high = distance_to_identity(1.1,0.4,0.6)
+    assert "distance value 1.1 is not between 0 and 1!" in str(exc.value)
+    with pytest.raises(Exception) as exc:
+        id,id_low,id_high = distance_to_identity(-0.1,0.4,0.6)
+    assert "distance value -0.1 is not between 0 and 1!" in str(exc.value)
 
 
 def test_containment_to_distance_zero():
@@ -17,6 +34,12 @@ def test_containment_to_distance_zero():
     assert dist == exp_dist
     assert low == exp_low
     assert high == exp_high
+    # return identity instead
+    exp_id, exp_idlow,exp_idhigh = 0.0,0.0,0.0
+    ident,low,high = containment_to_distance(contain,nkmers,ksize,scaled,return_identity=True)
+    assert ident == exp_id
+    assert low == exp_idlow
+    assert high == exp_idhigh
 
 
 def test_containment_to_distance_one():
@@ -32,6 +55,12 @@ def test_containment_to_distance_one():
     assert dist == exp_dist
     assert low == exp_low
     assert high == exp_high
+    # return identity instead
+    exp_id, exp_idlow,exp_idhigh = 1.0,1.0,1.0
+    ident,low,high = containment_to_distance(contain,nkmers,ksize,scaled,return_identity=True)
+    assert ident == exp_id
+    assert low == exp_idlow
+    assert high == exp_idhigh
 
 
 def test_containment_to_distance_scaled1():
@@ -48,6 +77,13 @@ def test_containment_to_distance_scaled1():
     assert dist == exp_dist
     assert low == exp_low
     assert high == exp_high
+    # return identity instead
+    exp_id, exp_idlow,exp_idhigh = 0.9675317785238916,0.9635213980271021,0.9712900870335944
+    ident,low,high = containment_to_distance(contain,nkmers,ksize,scaled,return_identity=True)
+    print(f"{ident},{low},{high}")
+    assert ident == exp_id
+    assert low == exp_idlow
+    assert high == exp_idhigh
 
 
 def test_containment_to_distance_2():
@@ -139,6 +175,13 @@ def test_jaccard_to_distance_zero():
     assert dist == exp_dist
     assert low == exp_low
     assert high == exp_high
+    # return identity instead
+    exp_id, exp_idlow,exp_idhigh = 0.0,0.0,0.0
+    ident,low,high = jaccard_to_distance(jaccard,nkmers,ksize,scaled,return_identity=True)
+    print(f"{ident},{low},{high}")
+    assert ident == exp_id
+    assert low == exp_idlow
+    assert high == exp_idhigh
 
 
 def test_jaccard_to_distance_one():
@@ -155,6 +198,13 @@ def test_jaccard_to_distance_one():
     assert dist == exp_dist
     assert low == exp_low
     assert high == exp_high
+    # return identity instead
+    exp_id, exp_idlow,exp_idhigh = 1.0,1.0,1.0
+    ident,low,high = jaccard_to_distance(jaccard,nkmers,ksize,scaled,return_identity=True)
+    print(f"{ident},{low},{high}")
+    assert ident == exp_id
+    assert low == exp_idlow
+    assert high == exp_idhigh
 
 
 def test_jaccard_to_distance_scaled1():
@@ -171,6 +221,13 @@ def test_jaccard_to_distance_scaled1():
     assert dist == exp_dist
     assert low == exp_low
     assert high == exp_high
+    # return identity instead
+    exp_id, exp_idlow,exp_idhigh = 0.9808773406095179,0.979142479906669,0.9824501832354076
+    ident,low,high = jaccard_to_distance(jaccard,nkmers,ksize,scaled,return_identity=True)
+    print(f"{ident},{low},{high}")
+    assert ident == exp_id
+    assert low == exp_idlow
+    assert high == exp_idhigh
 
 
 def test_jaccard_to_distance_scaled100():
