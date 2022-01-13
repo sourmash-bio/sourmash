@@ -440,10 +440,10 @@ def test_containment_ANI():
     print("ss1 max containment", ss1.max_containment_ani(ss2))
     print("ss2 max containment", ss2.max_containment_ani(ss1))
 
-    assert ss1.containment_ani(ss2) == 1.0
-    assert ss2.containment_ani(ss1) == 0.9658183324254062
-    assert ss1.max_containment_ani(ss2) == 1.0
-    assert ss2.max_containment_ani(ss1) == 1.0
+    assert ss1.containment_ani(ss2) == (1.0, 1.0, 1.0)
+    assert ss2.containment_ani(ss1) == (0.9658183324254062, 0.9648452889933389, 0.966777042966207)
+    assert ss1.max_containment_ani(ss2) == (1.0, 1.0, 1.0)
+    assert ss2.max_containment_ani(ss1) == (1.0, 1.0, 1.0)
 
 
 def test_jaccard_ANI():
@@ -455,4 +455,4 @@ def test_jaccard_ANI():
 
     print("\nJACCARD_ANI", ss1.jaccard_ani(ss2))
 
-    assert ss1.jaccard_ani(ss2) == 0.9783711630110239
+    assert ss1.jaccard_ani(ss2) == (0.9783711630110239, 0.9776381521132324, 0.9790929734698981)

@@ -10,7 +10,7 @@ from enum import Enum
 from .logging import error
 from . import MinHash
 from .minhash import to_bytes, FrozenMinHash
-from .distance_utils import jaccard_to_distance,containment_to_distance
+from .distance_utils import jaccard_to_distance, containment_to_distance
 from ._lowlevel import ffi, lib
 from .utils import RustObject, rustcall, decode_str
 
@@ -152,7 +152,7 @@ class SourmashSignature(RustObject):
         j_ani,ani_low,ani_high = jaccard_to_distance(jaccard, avg_n_kmers,
                                         self.minhash.ksize, self.minhash.scaled,
                                         return_identity=True)
-        return j_ani
+        return j_ani, ani_low, ani_high
 
     def contained_by(self, other, downsample=False):
         "Compute containment by the other signature. Note: ignores abundance."
@@ -165,7 +165,7 @@ class SourmashSignature(RustObject):
         c_ani,ani_low,ani_high = containment_to_distance(containment, n_kmers,
                                         self.minhash.ksize, self.minhash.scaled,
                                         return_identity=True)
-        return c_ani
+        return c_ani, ani_low, ani_high
 
     def max_containment(self, other, downsample=False):
         "Compute max containment w/other signature. Note: ignores abundance."
@@ -178,7 +178,7 @@ class SourmashSignature(RustObject):
         c_ani,ani_low,ani_high = containment_to_distance(max_containment, n_kmers,
                                         self.minhash.ksize, self.minhash.scaled,
                                         return_identity=True)
-        return c_ani
+        return c_ani, ani_low, ani_high
 
     def add_sequence(self, sequence, force=False):
         self._methodcall(lib.signature_add_sequence, to_bytes(sequence), force)
