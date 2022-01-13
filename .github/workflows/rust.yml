@@ -126,7 +126,7 @@ jobs:
           mv cargo-binstall "$HOME/.cargo/bin"
 
       - name: Install cargo-tarpaulin
-        run: cargo binstall cargo-tarpaulin
+        run: cargo binstall --no-confirm cargo-tarpaulin
 
       - name: Coverage with tarpaulin
         run: cargo tarpaulin --all --all-features --timeout 600 --out Xml -- --test-threads 1
