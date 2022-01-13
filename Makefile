@@ -32,7 +32,7 @@ include/sourmash.h: src/core/src/lib.rs \
                     src/core/src/ffi/nodegraph.rs \
                     src/core/src/errors.rs
 	cd src/core && \
-	RUSTUP_TOOLCHAIN=nightly cbindgen -c cbindgen.toml . -o ../../$@
+	RUSTC_BOOTSTRAP=1 cbindgen -c cbindgen.toml . -o ../../$@
 
 coverage: all
 	tox -e coverage
