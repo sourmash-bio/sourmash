@@ -184,10 +184,8 @@ jobs:
           toolchain: stable
           target: wasm32-unknown-unknown
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: --force wasm-pack --version 0.10.2
+      - name: Install wasm-pack
+        run: "curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh"
 
       - name: Prepare node for running tests
         uses: actions/setup-node@v1
