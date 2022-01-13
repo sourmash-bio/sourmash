@@ -13,13 +13,18 @@ in
       (python38.withPackages(ps: with ps; [ virtualenv tox setuptools ]))
       (python39.withPackages(ps: with ps; [ virtualenv setuptools ]))
       (python37.withPackages(ps: with ps; [ virtualenv setuptools ]))
+
+      rust-cbindgen
+
+      wasmtime
+      wasm-pack
+      nodejs-16_x
+
       py-spy
       heaptrack
       cargo-watch
       cargo-limit
-      wasmtime
-      wasm-pack
-      rust-cbindgen
+      cargo-udeps
     ];
 
     shellHook = ''

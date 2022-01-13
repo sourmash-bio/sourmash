@@ -184,12 +184,12 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: install
-          args: --force wasm-pack --version 0.10.0
+          args: --force wasm-pack --version 0.10.2
 
       - name: Prepare node for running tests
         uses: actions/setup-node@v1
         with:
-          node-version: 12
+          node-version: 16
           registry-url: https://registry.npmjs.org/
 
       - name: run wasm tests
