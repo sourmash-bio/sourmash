@@ -610,7 +610,7 @@ impl Signature {
             self.signatures
                 .par_iter_mut()
                 .for_each(|sketch| {
-                    sketch.add_sequence(&seq, force).unwrap(); }
+                    sketch.add_sequence(seq, force).unwrap(); }
                 );
         } else {
             for sketch in self.signatures.iter_mut(){
@@ -628,7 +628,7 @@ impl Signature {
             self.signatures
                 .par_iter_mut()
                 .try_for_each(|sketch| {
-                    sketch.add_protein(&seq) }
+                    sketch.add_protein(seq) }
                 )?;
         } else {
             self.signatures
