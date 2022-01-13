@@ -97,6 +97,33 @@ def test_containment_to_distance_k10():
     assert low == exp_low
     assert high == exp_high
 
+def test_containment_to_distance_confidence():
+    contain = 0.1
+    scaled = 100
+    nkmers = 10000
+    ksize=31
+    confidence=0.99
+    dist,low,high = containment_to_distance(contain,nkmers,ksize,scaled,confidence)
+    print("\nDIST:", dist)
+    print("CI:", low, " - ", high)
+    print(f"{dist},{low},{high}")
+    # check results
+    exp_dist, exp_low,exp_high = 0.07158545548052564,0.04802880300938562,0.09619930040790341
+    assert dist == exp_dist
+    assert low == exp_low
+    assert high == exp_high
+
+    confidence=0.90
+    dist,low,high = containment_to_distance(contain,nkmers,ksize,scaled,confidence)
+    print("\nDIST:", dist)
+    print("CI:", low, " - ", high)
+    print(f"{dist},{low},{high}")
+    # check results
+    exp_dist, exp_low,exp_high = 0.07158545548052564,0.05599435479247415,0.08758718871990222
+    assert dist == exp_dist
+    assert low == exp_low
+    assert high == exp_high
+
 
 def test_jaccard_to_distance_zero():
     jaccard = 0
@@ -189,6 +216,33 @@ def test_jaccard_to_distance_k31_2():
     print(f"{dist},{low},{high}")
     # check results
     exp_dist, exp_low,exp_high = 0.0535071608231702,0.040739632227821516,0.06673746391115623
+    assert dist == exp_dist
+    assert low == exp_low
+    assert high == exp_high
+
+def test_jaccard_to_distance_confidence():
+    jaccard = 0.1
+    scaled = 100
+    nkmers = 10000
+    ksize=31
+    confidence=0.99
+    dist,low,high = jaccard_to_distance(jaccard,nkmers,ksize,scaled,confidence)
+    print("\nDIST:", dist)
+    print("CI:", low, " - ", high)
+    print(f"{dist},{low},{high}")
+    # check results
+    exp_dist, exp_low,exp_high = 0.0535071608231702,0.03702518586582857,0.07080999238232429
+    assert dist == exp_dist
+    assert low == exp_low
+    assert high == exp_high
+
+    confidence=0.90
+    dist,low,high = jaccard_to_distance(jaccard,nkmers,ksize,scaled,confidence)
+    print("\nDIST:", dist)
+    print("CI:", low, " - ", high)
+    print(f"{dist},{low},{high}")
+    # check results
+    exp_dist, exp_low,exp_high = 0.0535071608231702,0.042708361726101415,0.0646280650023921
     assert dist == exp_dist
     assert low == exp_low
     assert high == exp_high
