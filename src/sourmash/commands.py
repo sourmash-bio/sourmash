@@ -147,12 +147,12 @@ def compare(args):
 
     labeltext = [str(item) for item in siglist]
     if args.containment:
-        similarity = compare_serial_containment(siglist, return_ANI=return_ani)
+        similarity = compare_serial_containment(siglist, return_ani=return_ani)
     elif args.max_containment:
-        similarity = compare_serial_max_containment(siglist, return_ANI=return_ani)
+        similarity = compare_serial_max_containment(siglist, return_ani=return_ani)
     else:
         similarity = compare_all_pairs(siglist, args.ignore_abundance,
-                                       n_jobs=args.processes, return_ANI=return_ani)
+                                       n_jobs=args.processes, return_ani=return_ani)
 
     if len(siglist) < 30:
         for i, E in enumerate(siglist):

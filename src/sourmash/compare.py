@@ -9,7 +9,7 @@ from .logging import notify
 from sourmash.np_utils import to_memmap
 
 
-def compare_serial(siglist, ignore_abundance, downsample=False, return_ANI=False):
+def compare_serial(siglist, ignore_abundance, downsample=False, return_ani=False):
     """Compare all combinations of signatures and return a matrix
     of similarities. Processes combinations serially on a single
     process. Best to use when there is few signatures.
@@ -94,11 +94,11 @@ def compare_serial_max_containment(siglist, downsample=False, return_ANI=False):
     return containments
 
 
-def similarity_args_unpack(args, ignore_abundance, downsample, return_ANI=False):
+def similarity_args_unpack(args, ignore_abundance, downsample, return_ani=False):
     """Helper function to unpack the arguments. Written to use in pool.imap
     as it can only be given one argument."""
     sig1, sig2 = args
-    if return_ANI:
+    if return_ani:
         return sig1.jaccard_ani(sig2,
                            downsample=downsample)[0]
     else:
@@ -107,7 +107,7 @@ def similarity_args_unpack(args, ignore_abundance, downsample, return_ANI=False)
                            downsample=downsample)
 
 
-def get_similarities_at_index(index, ignore_abundance, downsample, siglist, return_ANI=False):
+def get_similarities_at_index(index, ignore_abundance, downsample, siglist, return_ani=False):
     """Returns similarities of all the combinations of signature at index in
     the siglist with the rest of the indices starting at index + 1. Doesn't
     redundantly calculate signatures with all the other indices prior to
@@ -129,14 +129,14 @@ def get_similarities_at_index(index, ignore_abundance, downsample, siglist, retu
     sig_iterator = itertools.product([siglist[index]], siglist[index + 1:])
     func = partial(similarity_args_unpack,
                    ignore_abundance=ignore_abundance,
-                   downsample=downsample, return_ANI=return_ANI)
+                   downsample=downsample, return_ani=return_ani)
     similarity_list = list(map(func, sig_iterator))
     notify(
         f"comparison for index {index} done in {time.time() - startt:.5f} seconds", end='\r')
     return similarity_list
 
 
-def compare_parallel(siglist, ignore_abundance, downsample, n_jobs, return_ANI=False):
+def compare_parallel(siglist, ignore_abundance, downsample, n_jobs, return_ani=False):
     """Compare all combinations of signatures and return a matrix
     of similarities. Processes combinations parallely on number of processes
     given by n_jobs
@@ -179,7 +179,7 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs, return_ANI=F
         siglist=siglist,
         ignore_abundance=ignore_abundance,
         downsample=downsample,
-        return_ANI=return_ANI)
+        return_ani=return_ani)
     notify("Created similarity func")
 
     # Initialize multiprocess.pool
@@ -214,7 +214,7 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs, return_ANI=F
     return np.memmap(filename, dtype=np.float64, shape=(length_siglist, length_siglist))
 
 
-def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None, return_ANI=False):
+def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None, return_ani=False):
     """Compare all combinations of signatures and return a matrix
     of similarities. Processes combinations either serially or
     based on parallely on number of processes given by n_jobs
@@ -232,7 +232,7 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None, 
     :return: np.array similarity matrix
     """
     if n_jobs is None or n_jobs == 1:
-        similarities = compare_serial(siglist, ignore_abundance, downsample, return_ANI)
+        similarities = compare_serial(siglist, ignore_abundance, downsample, return_ani)
     else:
-        similarities = compare_parallel(siglist, ignore_abundance, downsample, n_jobs, return_ANI)
+        similarities = compare_parallel(siglist, ignore_abundance, downsample, n_jobs, return_ani)
     return similarities
