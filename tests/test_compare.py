@@ -72,7 +72,7 @@ def test_compare_all_pairs(siglist, ignore_abundance):
 
 
 def test_compare_serial_jaccardANI(scaled_siglist, ignore_abundance):
-    similarities = compare_serial(scaled_siglist, ignore_abundance, downsample=False, return_ANI=True)
+    similarities = compare_serial(scaled_siglist, ignore_abundance, downsample=False, return_ani=True)
 
     true_similarities = np.array(
         [[1., 0.942, 0.988, 0.986, 0.],
@@ -85,7 +85,7 @@ def test_compare_serial_jaccardANI(scaled_siglist, ignore_abundance):
 
 
 def test_compare_parallel_jaccardANI(scaled_siglist, ignore_abundance):
-    similarities = compare_parallel(scaled_siglist, ignore_abundance, downsample=False, n_jobs=2, return_ANI=True)
+    similarities = compare_parallel(scaled_siglist, ignore_abundance, downsample=False, n_jobs=2, return_ani=True)
 
     true_containment = np.array(
         [[1., 0.942, 0.988, 0.986, 0.],
@@ -98,13 +98,13 @@ def test_compare_parallel_jaccardANI(scaled_siglist, ignore_abundance):
 
 
 def test_compare_all_pairs_jaccardANI(scaled_siglist, ignore_abundance):
-    similarities_parallel = compare_all_pairs(scaled_siglist, ignore_abundance, downsample=False, n_jobs=2, return_ANI=True)
-    similarities_serial = compare_serial(scaled_siglist, ignore_abundance, downsample=False, return_ANI=True)
+    similarities_parallel = compare_all_pairs(scaled_siglist, ignore_abundance, downsample=False, n_jobs=2, return_ani=True)
+    similarities_serial = compare_serial(scaled_siglist, ignore_abundance, downsample=False, return_ani=True)
     np.testing.assert_array_equal(similarities_parallel, similarities_serial)
 
 
 def test_compare_serial_containmentANI(scaled_siglist, ignore_abundance):
-    containment = compare_serial_containment(scaled_siglist, ignore_abundance, return_ANI=True)
+    containment = compare_serial_containment(scaled_siglist, ignore_abundance, return_ani=True)
 
     true_containment = np.array(
         [[1., 1., 1., 1., 0.],
@@ -116,7 +116,7 @@ def test_compare_serial_containmentANI(scaled_siglist, ignore_abundance):
     np.testing.assert_array_almost_equal(containment, true_containment, decimal=3)
 
     # check max_containment ANI
-    max_containment = compare_serial_max_containment(scaled_siglist, ignore_abundance, return_ANI=True)
+    max_containment = compare_serial_max_containment(scaled_siglist, ignore_abundance, return_ani=True)
 
     true_max_containment = np.array(
         [[1., 1., 1., 1., 0.],

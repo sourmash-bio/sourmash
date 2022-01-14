@@ -34,7 +34,7 @@ def compare_serial(siglist, ignore_abundance, downsample=False, return_ani=False
     similarities = np.ones((n, n))
 
     for i, j in iterator:
-        if return_ANI:
+        if return_ani:
             similarities[i][j] = similarities[j][i] = siglist[i].jaccard_ani(siglist[j], downsample)[0]
         else:
             similarities[i][j] = similarities[j][i] = siglist[i].similarity(siglist[j], ignore_abundance, downsample)
@@ -42,7 +42,7 @@ def compare_serial(siglist, ignore_abundance, downsample=False, return_ani=False
     return similarities
 
 
-def compare_serial_containment(siglist, downsample=False, return_ANI=False):
+def compare_serial_containment(siglist, downsample=False, return_ani=False):
     """Compare all combinations of signatures and return a matrix
     of containments. Processes combinations serially on a single
     process. Best to only use when there are few signatures.
@@ -58,7 +58,7 @@ def compare_serial_containment(siglist, downsample=False, return_ANI=False):
     containments = np.ones((n, n))
     for i in range(n):
         for j in range(n):
-            if return_ANI:
+            if return_ani:
                 containments[i][j] = siglist[j].containment_ani(siglist[i],
                                                          downsample=downsample)[0]
             else:
@@ -68,7 +68,7 @@ def compare_serial_containment(siglist, downsample=False, return_ANI=False):
     return containments
 
 
-def compare_serial_max_containment(siglist, downsample=False, return_ANI=False):
+def compare_serial_max_containment(siglist, downsample=False, return_ani=False):
     """Compare all combinations of signatures and return a matrix
     of max_containments. Processes combinations serially on a single
     process. Best to only use when there are few signatures.
@@ -84,7 +84,7 @@ def compare_serial_max_containment(siglist, downsample=False, return_ANI=False):
     containments = np.ones((n, n))
     for i in range(n):
         for j in range(n):
-            if return_ANI:
+            if return_ani:
                 containments[i][j] = siglist[j].max_containment_ani(siglist[i],
                                                          downsample=downsample)[0]
             else:

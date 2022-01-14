@@ -683,13 +683,6 @@ def gather(args):
         prefetch_csvout_w = None
         if args.save_prefetch_csv:
             fieldnames = PrefetchResult._fields
-#            fieldnames = ['intersect_bp', 'jaccard',
-#                          'max_containment', 'f_query_match', 'f_match_query',
-#                          'match_filename', 'match_name', 'match_md5', 'match_bp',
-#                          'query_filename', 'query_name', 'query_md5', 'query_bp',
-#                           'jaccard_ani', 'max_containment_ani', 'query_containment_ani',
-#                           'match_containment_ani']
-
             prefetch_csvout_fp = FileOutput(args.save_prefetch_csv, 'wt').open()
             prefetch_csvout_w = csv.DictWriter(prefetch_csvout_fp, fieldnames=fieldnames)
             prefetch_csvout_w.writeheader()
@@ -805,14 +798,6 @@ def gather(args):
     # save CSV?
     if found and args.output:
         fieldnames = GatherResult._fields
-#        fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
-#                      'f_unique_to_query', 'f_unique_weighted',
-#                      'average_abund', 'median_abund', 'std_abund', 'name',
-#                      'filename', 'md5', 'f_match_orig', 'unique_intersect_bp',
-#                      'gather_result_rank', 'remaining_bp',
-#                      'query_filename', 'query_name', 'query_md5', 'query_bp',
-#                       'match_containment_ani']
-
         with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
             w.writeheader()
@@ -979,13 +964,6 @@ def multigather(args):
             output_base = os.path.basename(query_filename)
             output_csv = output_base + '.csv'
             fieldnames = GatherResult._fields
-            #fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
-            #              'f_unique_to_query', 'f_unique_weighted',
-            #              'average_abund', 'median_abund', 'std_abund', 'name',
-            #              'filename', 'md5', 'f_match_orig',
-            #              'unique_intersect_bp', 'gather_result_rank',
-            #              'remaining_bp', 'query_filename', 'query_name',
-            #              'query_md5', 'query_bp', 'match_containment_ani']
             with FileOutputCSV(output_csv) as fp:
                 w = csv.DictWriter(fp, fieldnames=fieldnames)
                 w.writeheader()
