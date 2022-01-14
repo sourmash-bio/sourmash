@@ -59,7 +59,7 @@ def subparser(subparsers):
         help='calculate max containment instead of similarity'
     )
     subparser.add_argument(
-        '--estimate-ani', action='store_true',
+        '--estimate-ani', '--estimate-ANI', action='store_true',
         help='return ANI estimated from jaccard, containment, or max containment; see https://doi.org/10.1101/2022.01.11.475870'
     )
     subparser.add_argument(
