@@ -444,6 +444,16 @@ def test_containment_ANI():
     assert ss1.max_containment_ani(ss2) == (1.0, 1.0, 1.0)
     assert ss2.max_containment_ani(ss1) == (1.0, 1.0, 1.0)
 
+    # precalc containments and assert same results
+    s1c = ss1.contained_by(ss2)
+    s2c = ss2.contained_by(ss1)
+    mc = max(s1c, s2c)
+    assert ss1.containment_ani(ss2, containment=s1c) == (1.0, 1.0, 1.0)
+    assert ss2.containment_ani(ss1, containment=s2c) == (0.9658183324254062, 0.9648452889933389, 0.966777042966207)
+    assert ss1.max_containment_ani(ss2, max_containment=mc) == (1.0, 1.0, 1.0)
+    assert ss2.max_containment_ani(ss1, max_containment=mc) == (1.0, 1.0, 1.0)
+
+
 
 def test_jaccard_ANI():
     f1 = utils.get_test_data('2.fa.sig')
@@ -452,5 +462,11 @@ def test_jaccard_ANI():
     ss2 = load_one_signature(f2)
 
     print("\nJACCARD_ANI", ss1.jaccard_ani(ss2))
+
+    assert ss1.jaccard_ani(ss2) == (0.9783711630110239, 0.9776381521132324, 0.9790929734698981)
+
+    # precalc jaccard and assert same result
+    jaccard = ss1.jaccard(ss2)
+    print("\nJACCARD_ANI", ss1.jaccard_ani(ss2,jaccard=jaccard))
 
     assert ss1.jaccard_ani(ss2) == (0.9783711630110239, 0.9776381521132324, 0.9790929734698981)
