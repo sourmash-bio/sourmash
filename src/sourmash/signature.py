@@ -143,10 +143,10 @@ class SourmashSignature(RustObject):
         return self.minhash.similarity(other.minhash, ignore_abundance=True,
                                        downsample=False)
 
-    def jaccard_ani(self, other):
+    def jaccard_ani(self, other, downsample=False):
         "Compute Jaccard similarity with the other MinHash signature."
         jaccard = self.minhash.similarity(other.minhash, ignore_abundance=True,
-                                       downsample=False)
+                                          downsample=downsample)
         avg_scaled_kmers = (len(self.minhash.hashes) + len(other.minhash.hashes))/2
         avg_n_kmers = avg_scaled_kmers * self.minhash.scaled # would be better if hll estimate
         j_ani,ani_low,ani_high = jaccard_to_distance(jaccard, avg_n_kmers,
@@ -165,6 +165,14 @@ class SourmashSignature(RustObject):
         c_ani,ani_low,ani_high = containment_to_distance(containment, n_kmers,
                                         self.minhash.ksize, self.minhash.scaled,
                                         return_identity=True)
+        return c_ani, ani_low, ani_high
+
+    #def containment_distance(self, other, downsample=False):
+    #    "Estimate distance (1-ANI) from containment with the other MinHash signature."
+        containment = self.minhash.contained_by(other.minhash, downsample)
+        n_kmers = len(self.minhash.hashes) * self.minhash.scaled # would be better if hll estimate
+        c_ani,ani_low,ani_high = containment_to_distance(containment, n_kmers,
+                                        self.minhash.ksize, self.minhash.scaled)
         return c_ani, ani_low, ani_high
 
     def max_containment(self, other, downsample=False):

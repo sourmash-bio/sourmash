@@ -19,6 +19,16 @@ def siglist():
         sigs.extend(sourmash.load_file_as_signatures(filename))
     return sigs
 
+@pytest.fixture()
+def scaled_siglist():
+    demo_path = utils.get_test_data("scaled")
+    filenames = sorted(glob.glob(os.path.join(demo_path, "*.sig")))
+    sigs = []
+    for filename in filenames:
+        these_sigs = sourmash.load_file_as_signatures(filename)
+        scaled_sigs = [s for s in these_sigs if s.minhash.scaled != 0]
+        sigs.extend(scaled_sigs)
+    return sigs
 
 @pytest.fixture()
 def ignore_abundance(track_abundance):
@@ -58,4 +68,34 @@ def test_compare_parallel(siglist, ignore_abundance):
 def test_compare_all_pairs(siglist, ignore_abundance):
     similarities_parallel = compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=2)
     similarities_serial = compare_serial(siglist, ignore_abundance, downsample=False)
+    np.testing.assert_array_equal(similarities_parallel, similarities_serial)
+
+
+def test_compare_serial_ANI(scaled_siglist, ignore_abundance):
+    similarities = compare_serial(scaled_siglist, ignore_abundance, downsample=False, return_ANI=True)
+
+    true_similarities = np.array(
+        [[1., 0.942, 0.988, 0.986, 0.],
+        [0.942, 1., 0.960, 0., 0.],
+        [0.988, 0.960, 1., 0., 0.],
+        [0.986, 0., 0., 1., 0.],
+        [0., 0., 0., 0., 1.]])
+
+    np.testing.assert_array_almost_equal(similarities, true_similarities, decimal=3)
+
+def test_compare_parallel_ANI(scaled_siglist, ignore_abundance):
+    similarities = compare_parallel(scaled_siglist, ignore_abundance, downsample=False, n_jobs=2, return_ANI=True)
+
+    true_similarities = np.array(
+        [[1., 0.942, 0.988, 0.986, 0.],
+        [0.942, 1., 0.960, 0., 0.],
+        [0.988, 0.960, 1., 0., 0.],
+        [0.986, 0., 0., 1., 0.],
+        [0., 0., 0., 0., 1.]])
+
+    np.testing.assert_array_almost_equal(similarities, true_similarities, decimal=3)
+
+def test_compare_all_pairs_ANI(scaled_siglist, ignore_abundance):
+    similarities_parallel = compare_all_pairs(scaled_siglist, ignore_abundance, downsample=False, n_jobs=2, return_ANI=True)
+    similarities_serial = compare_serial(scaled_siglist, ignore_abundance, downsample=False, return_ANI=True)
     np.testing.assert_array_equal(similarities_parallel, similarities_serial)

@@ -108,11 +108,20 @@ def compare(args):
         error('must use scaled signatures with --containment and --max-containment')
         sys.exit(-1)
 
+    # complain if --ani and not is_scaled
+    return_ani = False
+    if args.estimate_ani:
+        return_ani = True
+
+    if return_ani and not is_scaled:
+        error('must use scaled signatures with --estimate-ani')
+        sys.exit(-1)
+
     # notify about implicit --ignore-abundance:
-    if is_containment:
+    if is_containment or return_ani:
         track_abundances = any(( s.minhash.track_abundance for s in siglist ))
         if track_abundances:
-            notify('NOTE: --containment and --max-containment ignore signature abundances.')
+            notify('NOTE: --containment, --max-containment, and --estimate-ani ignore signature abundances.')
 
     # if using --scaled, downsample appropriately
     printed_scaled_msg = False
@@ -138,12 +147,12 @@ def compare(args):
 
     labeltext = [str(item) for item in siglist]
     if args.containment:
-        similarity = compare_serial_containment(siglist)
+        similarity = compare_serial_containment(siglist, return_ANI=return_ani)
     elif args.max_containment:
-        similarity = compare_serial_max_containment(siglist)
+        similarity = compare_serial_max_containment(siglist, return_ANI=return_ani)
     else:
         similarity = compare_all_pairs(siglist, args.ignore_abundance,
-                                       n_jobs=args.processes)
+                                       n_jobs=args.processes, return_ANI=return_ani)
 
     if len(siglist) < 30:
         for i, E in enumerate(siglist):

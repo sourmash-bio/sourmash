@@ -429,7 +429,6 @@ def test_max_containment_equal():
 
 
 def test_containment_ANI():
-    ## todo: use sigs with known ANI vals
     f1 = utils.get_test_data('2.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')
     ss1 = load_one_signature(f1, ksize=31)
@@ -447,7 +446,6 @@ def test_containment_ANI():
 
 
 def test_jaccard_ANI():
-    ## todo: use sigs with known ANI vals
     f1 = utils.get_test_data('2.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')
     ss1 = load_one_signature(f1, ksize=31)
