@@ -169,7 +169,6 @@ class SourmashSignature(RustObject):
                                         return_identity=True)
         return c_ani, ani_low, ani_high
 
-
     def max_containment(self, other, downsample=False):
         "Compute max containment w/other signature. Note: ignores abundance."
         return self.minhash.max_containment(other.minhash, downsample)
