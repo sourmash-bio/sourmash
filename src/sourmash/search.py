@@ -5,6 +5,8 @@ from collections import namedtuple
 from enum import Enum
 import numpy as np
 
+from sourmash.distance_utils import containment_to_distance
+
 from .signature import SourmashSignature
 
 
@@ -241,7 +243,7 @@ def search_databases_with_abund_query(query, databases, **kwargs):
 ###
 
 GatherResult = namedtuple('GatherResult',
-                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, match, f_match_orig, unique_intersect_bp, gather_result_rank, remaining_bp, query_filename, query_name, query_md5, query_bp')
+                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, match, f_match_orig, unique_intersect_bp, gather_result_rank, remaining_bp, query_filename, query_name, query_md5, query_bp, match_containment_ani')
 
 
 def _find_best(counters, query, threshold_bp):
@@ -402,6 +404,10 @@ class GatherDatabases:
         # calculate fraction of subject match with orig query
         f_match_orig = found_mh.contained_by(orig_query_mh)
 
+        # calculate ani using match containment by query
+        match_containment_ani = containment_to_distance(f_match_orig, len(found_mh) * scaled,
+                                                        found_mh.ksize, scaled, return_identity=True)
+
         # calculate scores weighted by abundances
         f_unique_weighted = sum((orig_query_abunds[k] for k in intersect_mh.hashes ))
         f_unique_weighted /= sum_abunds
@@ -450,6 +456,7 @@ class GatherDatabases:
                               query_filename=self.orig_query_filename,
                               query_name=self.orig_query_name,
                               query_md5=self.orig_query_md5,
+                              match_containment_ani=match_containment_ani,
                               )
         self.result_n += 1
         self.query = new_query
@@ -463,7 +470,7 @@ class GatherDatabases:
 ###
 
 PrefetchResult = namedtuple('PrefetchResult',
-                            'intersect_bp, jaccard, max_containment, f_query_match, f_match_query, match, match_filename, match_name, match_md5, match_bp, query, query_filename, query_name, query_md5, query_bp')
+                            'intersect_bp, jaccard, max_containment, f_query_match, f_match_query, match, match_filename, match_name, match_md5, match_bp, query, query_filename, query_name, query_md5, query_bp, jaccard_ani, max_containment_ani, query_containment_ani, match_containment_ani')
 
 
 def calculate_prefetch_info(query, match, scaled, threshold):
@@ -481,13 +488,20 @@ def calculate_prefetch_info(query, match, scaled, threshold):
     f_query_match = db_mh.contained_by(query_mh)
     f_match_query = query_mh.contained_by(db_mh)
     max_containment = max(f_query_match, f_match_query)
+    jaccard=db_mh.jaccard(query_mh)
+
+    # passing in jaccard/containment avoids recalc (but it better be the right one :)
+    jaccard_ani = query.jaccard_ani(match, jaccard=jaccard)[0]
+    query_containment_ani = query.containment_ani(match, containment=f_match_query)[0]
+    match_containment_ani = match.containment_ani(query, containment=f_query_match)[0]
+    max_containment_ani = max(query_containment_ani, match_containment_ani)
 
     # build a result namedtuple
     result = PrefetchResult(
         intersect_bp=len(intersect_mh) * scaled,
         query_bp = len(query_mh) * scaled,
         match_bp = len(db_mh) * scaled,
-        jaccard=db_mh.jaccard(query_mh),
+        jaccard=jaccard,
         max_containment=max_containment,
         f_query_match=f_query_match,
         f_match_query=f_match_query,
@@ -498,7 +512,11 @@ def calculate_prefetch_info(query, match, scaled, threshold):
         query=query,
         query_filename=query.filename,
         query_name=query.name,
-        query_md5=query.md5sum()[:8]
+        query_md5=query.md5sum()[:8],
+        jaccard_ani=jaccard_ani,
+        max_containment_ani=max_containment_ani,
+        query_containment_ani=query_containment_ani,
+        match_containment_ani=match_containment_ani,
     )
 
     return result
