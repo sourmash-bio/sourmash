@@ -169,13 +169,6 @@ class SourmashSignature(RustObject):
                                         return_identity=True)
         return c_ani, ani_low, ani_high
 
-    #def containment_distance(self, other, downsample=False):
-    #    "Estimate distance (1-ANI) from containment with the other MinHash signature."
-        containment = self.minhash.contained_by(other.minhash, downsample)
-        n_kmers = len(self.minhash.hashes) * self.minhash.scaled # would be better if hll estimate
-        c_ani,ani_low,ani_high = containment_to_distance(containment, n_kmers,
-                                        self.minhash.ksize, self.minhash.scaled)
-        return c_ani, ani_low, ani_high
 
     def max_containment(self, other, downsample=False):
         "Compute max containment w/other signature. Note: ignores abundance."
