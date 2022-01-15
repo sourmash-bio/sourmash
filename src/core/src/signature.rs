@@ -198,12 +198,11 @@ impl SeqToHashes {
         }
 
         // By setting _max_index to 0, the iterator will return None and exit
-        let _max_index: usize;
-        if seq.len() >= ksize {
-            _max_index = seq.len() - ksize + 1;
+        let _max_index = if seq.len() >= ksize {
+            seq.len() - ksize + 1
         } else {
-            _max_index = 0;
-        }
+            0
+        };
 
         SeqToHashes {
             // Here we convert the sequence to upper case
