@@ -184,7 +184,7 @@ def _execute_sketch(args, signatures_factory):
 
     # get number of output sigs:
     num_sigs = len(signatures_factory.params_list)
-    notify(f'Computing a total of {num_sigs} signature(s).')
+    notify(f'Computing a total of {num_sigs} signature(s) for each input.')
 
     if num_sigs == 0:
         error('...nothing to calculate!? Exiting!')
