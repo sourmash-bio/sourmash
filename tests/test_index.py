@@ -2241,7 +2241,7 @@ def test_lazy_loaded_index_1(runtmp):
     assert len(db) == 2
 
     # ...but we should get an error when we call signatures.
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(ValueError):
         list(db.signatures())
 
     # but put it back, and all is forgiven. yay!
