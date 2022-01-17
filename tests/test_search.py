@@ -233,3 +233,18 @@ def test_index_gather_passthru():
     idx = FakeIndex(validate_kwarg_passthru)
 
     idx.search(query, threshold=0.0, this_kw_arg=5)
+
+
+def test_search_with_abund_query():
+    mh = MinHash(n=0, ksize=31, scaled=1, track_abundance=True)
+    query = SourmashSignature(mh)
+
+    with pytest.raises(TypeError):
+        search.search_databases_with_abund_query(query, [],
+                                                 threshold=0,
+                                                 do_containment=True)
+
+    with pytest.raises(TypeError):
+        search.search_databases_with_abund_query(query, [],
+                                                 threshold=0,
+                                                 do_max_containment=True)
