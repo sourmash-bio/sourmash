@@ -38,4 +38,4 @@ Development happens on github at
 
 ## Minimum supported Rust version
 
-Currently the minimum supported Rust version is 1.42.0.
+Currently the minimum supported Rust version is 1.48.0.
