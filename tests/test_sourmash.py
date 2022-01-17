@@ -1325,6 +1325,83 @@ def test_search_containment(runtmp):
     assert '95.6%' in runtmp.last_result.out
 
 
+def test_search_containment_abund(runtmp):
+    "Construct some signatures with abund, make sure that containment complains"
+
+    # build minhashes
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=True)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=True)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    # build signatures
+    x = sourmash.SourmashSignature(mh1, name='a')
+    y = sourmash.SourmashSignature(mh2, name='b')
+
+    # save!
+    with open(runtmp.output('a.sig'), 'wt') as fp:
+        sourmash.save_signatures([x], fp)
+    with open(runtmp.output('b.sig'), 'wt') as fp:
+        sourmash.save_signatures([y], fp)
+
+    # run sourmash search --containment
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('search', 'a.sig', 'b.sig', '-o', 'xxx.csv',
+                        '--containment')
+
+    assert "ERROR: cannot do containment searches on an abund signature; maybe specify --ignore-abundance?" in str(exc)
+
+    # run sourmash search --max-containment
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('search', 'a.sig', 'b.sig', '-o', 'xxx.csv',
+                        '--max-containment')
+
+    assert "ERROR: cannot do containment searches on an abund signature; maybe specify --ignore-abundance?" in str(exc)
+
+
+def test_search_containment_abund_ignore(runtmp):
+    "Construct some signatures with abund, check containment + ignore abund"
+
+    # build minhashes
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=True)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=True)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    # build signatures
+    x = sourmash.SourmashSignature(mh1, name='a')
+    y = sourmash.SourmashSignature(mh2, name='b')
+
+    # save!
+    with open(runtmp.output('a.sig'), 'wt') as fp:
+        sourmash.save_signatures([x], fp)
+    with open(runtmp.output('b.sig'), 'wt') as fp:
+        sourmash.save_signatures([y], fp)
+
+    # run sourmash search
+    runtmp.sourmash('search', 'a.sig', 'b.sig', '-o', 'xxx.csv',
+                    '--containment', '--ignore-abundance')
+
+    # check results
+    with open(runtmp.output('xxx.csv'), 'rt') as fp:
+        r = csv.DictReader(fp)
+        row = next(r)
+        similarity = row['similarity']
+        print(f'search output: similarity is {similarity}')
+    print(mh1.contained_by(mh2))
+
+    assert float(similarity) == mh1.contained_by(mh2)
+    assert float(similarity) == 0.25
+
+
 def test_search_containment_sbt(runtmp):
     # search with --containment in an SBT
     testdata1 = utils.get_test_data('short.fa')
