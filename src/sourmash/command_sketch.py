@@ -28,9 +28,13 @@ def _parse_params_str(params_str):
             params['track_abundance'] = True
         elif item == 'noabund':
             params['track_abundance'] = False
-        elif item.startswith('k='):
+        elif item.startswith('k'):
+            if len(item) < 3 or item[1] != '=':
+                raise ValueError("k takes a parameter, e.g. 'k=31'")
             params['ksize'].append(int(item[2:]))
-        elif item.startswith('num='):
+        elif item.startswith('num'):
+            if len(item) < 5 or item[3] != '=':
+                raise ValueError("num takes a parameter, e.g. 'num=500'")
             if params.get('scaled'):
                 raise ValueError("cannot set both num and scaled in a single minhash")
             try:
@@ -43,7 +47,9 @@ def _parse_params_str(params_str):
 
             params['num'] = int(item[4:])
             params['scaled'] = 0
-        elif item.startswith('scaled='):
+        elif item.startswith('scaled'):
+            if len(item) < 8 or item[6] != '=':
+                raise ValueError("scaled takes a parameter, e.g. 'scaled=1000'")
             if params.get('num'):
                 raise ValueError("cannot set both num and scaled in a single minhash")
             try:
@@ -56,7 +62,9 @@ def _parse_params_str(params_str):
 
             params['scaled'] = scaled
             params['num'] = 0
-        elif item.startswith('seed='):
+        elif item.startswith('seed'):
+            if len(item) < 6 or item[4] != '=':
+                raise ValueError("seed takes a parameter, e.g. 'seed=42'")
             params['seed'] = int(item[5:])
         elif item == 'protein':
             moltype = 'protein'
