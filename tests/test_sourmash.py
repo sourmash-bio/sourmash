@@ -1348,7 +1348,7 @@ def test_search_containment_abund(runtmp):
     with open(runtmp.output('b.sig'), 'wt') as fp:
         sourmash.save_signatures([y], fp)
 
-    # run sourmash search --containent
+    # run sourmash search --containment
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.sourmash('search', 'a.sig', 'b.sig', '-o', 'xxx.csv',
                         '--containment')
