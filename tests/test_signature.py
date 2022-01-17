@@ -431,28 +431,46 @@ def test_max_containment_equal():
 def test_containment_ANI():
     f1 = utils.get_test_data('2.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')
+    f3 = utils.get_test_data('47+63.fa.sig')
     ss1 = load_one_signature(f1, ksize=31)
     ss2 = load_one_signature(f2)
+    ss3 = load_one_signature(f3)
 
     print("\nss1 contained by ss2", ss1.containment_ani(ss2))
     print("ss2 contained by ss1",ss2.containment_ani(ss1))
     print("ss1 max containment", ss1.max_containment_ani(ss2))
     print("ss2 max containment", ss2.max_containment_ani(ss1))
 
+    print("\nss2 contained by ss3", ss2.containment_ani(ss3))
+    print("ss3 contained by ss2",ss3.containment_ani(ss2))
+
     assert ss1.containment_ani(ss2) == (1.0, 1.0, 1.0)
     assert ss2.containment_ani(ss1) == (0.9658183324254062, 0.9648452889933389, 0.966777042966207)
     assert ss1.max_containment_ani(ss2) == (1.0, 1.0, 1.0)
     assert ss2.max_containment_ani(ss1) == (1.0, 1.0, 1.0)
 
+    # containment 1 is special case. check max containment for non 0/1 values:
+    assert ss2.containment_ani(ss3) == (0.9866751346467802, 0.9861576758035308, 0.9871770716451368)
+    assert ss3.containment_ani(ss2) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
+    assert ss2.max_containment_ani(ss3) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
+    assert ss3.max_containment_ani(ss2) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
+    assert ss2.max_containment_ani(ss3)[0] == max(ss2.containment_ani(ss3)[0], ss3.containment_ani(ss2)[0])
+
     # precalc containments and assert same results
     s1c = ss1.contained_by(ss2)
     s2c = ss2.contained_by(ss1)
+    s3c = ss2.contained_by(ss3)
+    s4c = ss3.contained_by(ss2)
     mc = max(s1c, s2c)
     assert ss1.containment_ani(ss2, containment=s1c) == (1.0, 1.0, 1.0)
     assert ss2.containment_ani(ss1, containment=s2c) == (0.9658183324254062, 0.9648452889933389, 0.966777042966207)
     assert ss1.max_containment_ani(ss2, max_containment=mc) == (1.0, 1.0, 1.0)
     assert ss2.max_containment_ani(ss1, max_containment=mc) == (1.0, 1.0, 1.0)
 
+    assert ss2.containment_ani(ss3, containment=s3c) == (0.9866751346467802, 0.9861576758035308, 0.9871770716451368)
+    assert ss3.containment_ani(ss2, containment=s4c) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
+    assert ss2.max_containment_ani(ss3, max_containment=s4c) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
+    assert ss3.max_containment_ani(ss2, max_containment=s4c) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
 
 
 def test_jaccard_ANI():

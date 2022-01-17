@@ -177,7 +177,9 @@ class SourmashSignature(RustObject):
         "Estimate ANI from max containment w/other signature. Note: ignores abundance."
         if not max_containment:
             max_containment =  self.minhash.max_containment(other.minhash, downsample)
-        n_kmers = len(self.minhash.hashes) * self.minhash.scaled # would be better if hll estimate
+        # max_containment will always use smaller sig as denominator
+        min_n_kmers = min(len(self.minhash.hashes), len(other.minhash.hashes))
+        n_kmers = min_n_kmers * self.minhash.scaled
         c_ani,ani_low,ani_high = containment_to_distance(max_containment, n_kmers,
                                         self.minhash.ksize, self.minhash.scaled,
                                         return_identity=True)
