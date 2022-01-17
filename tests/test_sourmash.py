@@ -4158,6 +4158,36 @@ def test_gather_output_unassigned_with_abundance(runtmp, prefetch_gather, linear
             assert nomatch_mh.hashes[hashval] == abund
 
 
+def test_multigather_output_unassigned_with_abundance(runtmp):
+    c = runtmp
+    query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+    against = utils.get_test_data('gather-abund/genome-s10.fa.gz.sig')
+
+    cmd = 'multigather --query {} --db {}'.format(query, against).split()
+    c.run_sourmash(*cmd)
+
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert os.path.exists(c.output('r3.fa.unassigned.sig'))
+
+    nomatch = sourmash.load_one_signature(c.output('r3.fa.unassigned.sig'))
+    assert nomatch.minhash.track_abundance
+
+    query_ss = sourmash.load_one_signature(query)
+    against_ss = sourmash.load_one_signature(against)
+
+    # unassigned should have nothing that is in the database
+    nomatch_mh = nomatch.minhash
+    for hashval in against_ss.minhash.hashes:
+        assert hashval not in nomatch_mh.hashes
+
+    # unassigned should have abundances from original query, if not in database
+    for hashval, abund in query_ss.minhash.hashes.items():
+        if hashval not in against_ss.minhash.hashes:
+            assert nomatch_mh.hashes[hashval] == abund
+
+
 def test_sbt_categorize(runtmp):
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
@@ -4173,6 +4203,7 @@ def test_sbt_categorize(runtmp):
     # omit 3
     args = ['index', '--dna', '-k', '21', 'zzz', '1.sig', '2.sig']
     runtmp.sourmash(*args)
+
 
     # categorize all of the ones that were copied to 'location'
     args = ['categorize', 'zzz', '.',
