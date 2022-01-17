@@ -148,7 +148,7 @@ class SourmashSignature(RustObject):
         if not jaccard:
             jaccard = self.minhash.similarity(other.minhash, ignore_abundance=True,
                                             downsample=downsample)
-        avg_scaled_kmers = (len(self.minhash.hashes) + len(other.minhash.hashes))/2
+        avg_scaled_kmers = round((len(self.minhash.hashes) + len(other.minhash.hashes))/2)
         avg_n_kmers = avg_scaled_kmers * self.minhash.scaled # would be better if hll estimate
         j_ani,ani_low,ani_high = jaccard_to_distance(jaccard, avg_n_kmers,
                                         self.minhash.ksize, self.minhash.scaled,

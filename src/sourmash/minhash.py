@@ -651,7 +651,7 @@ class MinHash(RustObject):
         "Calculate Jaccard --> ANI of two MinHash objects."
         if not jaccard:
             jaccard = self.jaccard(other, downsample=downsample)
-        avg_scaled_kmers = (len(self) + len(other))/2
+        avg_scaled_kmers = round((len(self) + len(other))/2)
         avg_n_kmers = avg_scaled_kmers * self.scaled # would be better if hll estimate
         j_ani,ani_low,ani_high = jaccard_to_distance(jaccard, avg_n_kmers,
                                         self.ksize, self.scaled,
