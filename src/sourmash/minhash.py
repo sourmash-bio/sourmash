@@ -779,7 +779,6 @@ class MinHash(RustObject):
         return new_mh
 
     def inflate(self, from_mh):
-        # working on this
         "return a new MinHash object with abundances taken from 'from_mh'"
         if not self.track_abundance and from_mh.track_abundance:
             orig_abunds = from_mh.hashes
