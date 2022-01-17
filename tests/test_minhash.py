@@ -2604,6 +2604,21 @@ def test_translate_dayhoff_hashes_2():
         assert _hash_fwd_only(mh_translate, kmer) == h
 
 
+def test_containment(track_abundance):
+    "basic containment test. note: containment w/abundance ignores abundance."
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    assert mh1.contained_by(mh2) == 1/4
+    assert mh2.contained_by(mh1) == 1/2
+
+
 def test_containment_ANI():
     f1 = utils.get_test_data('2.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')
@@ -2646,7 +2661,7 @@ def test_containment_ANI():
     assert mh2.containment_ani(mh3, containment=s3c) == (0.9866751346467802, 0.9861576758035308, 0.9871770716451368)
     assert mh3.containment_ani(mh2, containment=s4c) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
     assert mh2.max_containment_ani(mh3, max_containment=s4c) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
-#    assert mh3.max_containment_ani(mh2, max_containment=s4c) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
+    assert mh3.max_containment_ani(mh2, max_containment=s4c) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
 
 
 def test_jaccard_ANI():

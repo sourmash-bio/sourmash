@@ -482,12 +482,18 @@ def search(args):
         error('Nothing found to search!')
         sys.exit(-1)
 
-    # forcibly ignore abundances if query has no abundances
-    if not query.minhash.track_abundance:
-        args.ignore_abundance = True
-    else:
+    # handle signatures with abundance
+    if query.minhash.track_abundance:
         if args.ignore_abundance:
+            # abund sketch + ignore abundance => flatten sketch.
             query.minhash = query.minhash.flatten()
+        elif args.containment or args.max_containment:
+            # abund sketch + keep abundance => no containment searches
+            notify("ERROR: cannot do containment searches on an abund signature; maybe specify --ignore-abundance?")
+            sys.exit(-1)
+    else:
+        # forcibly ignore abundances if query has no abundances
+        args.ignore_abundance = True
 
     # do the actual search
     if query.minhash.track_abundance:
@@ -908,6 +914,7 @@ def multigather(args):
             found = []
             weighted_missed = 1
             is_abundance = query.minhash.track_abundance and not args.ignore_abundance
+            orig_query_mh = query.minhash
             gather_iter = GatherDatabases(query, counters,
                                           threshold_bp=args.threshold_bp,
                                           ignore_abundance=args.ignore_abundance,
@@ -985,6 +992,10 @@ def multigather(args):
                     remaining_mh = remaining_query.minhash.to_mutable()
                     remaining_mh += noident_mh.downsample(scaled=remaining_mh.scaled)
                     remaining_query.minhash = remaining_mh
+
+                if is_abundance:
+                    abund_query_mh = remaining_query.minhash.inflate(orig_query_mh)
+                    remaining_query.minhash = abund_query_mh
 
                 if not found:
                     notify('nothing found - entire query signature unassigned.')
