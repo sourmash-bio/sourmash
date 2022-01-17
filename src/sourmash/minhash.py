@@ -6,6 +6,7 @@ class MinHash - core MinHash class.
 class FrozenMinHash - read-only MinHash class.
 """
 from __future__ import unicode_literals, division
+from .distance_utils import jaccard_to_distance, containment_to_distance
 
 __all__ = ['get_minhash_default_seed',
            'get_minhash_max_hash',
@@ -646,6 +647,17 @@ class MinHash(RustObject):
             raise TypeError(err)
         return self._methodcall(lib.kmerminhash_similarity, other._get_objptr(), True, downsample)
 
+    def jaccard_ani(self, other, downsample=False, jaccard=None):
+        "Calculate Jaccard --> ANI of two MinHash objects."
+        if not jaccard:
+            jaccard = self.jaccard(other, downsample=downsample)
+        avg_scaled_kmers = (len(self) + len(other))/2
+        avg_n_kmers = avg_scaled_kmers * self.scaled # would be better if hll estimate
+        j_ani,ani_low,ani_high = jaccard_to_distance(jaccard, avg_n_kmers,
+                                        self.ksize, self.scaled,
+                                        return_identity=True)
+        return j_ani, ani_low, ani_high
+
     def similarity(self, other, ignore_abundance=False, downsample=False):
         """Calculate similarity of two sketches.
 
@@ -683,6 +695,16 @@ class MinHash(RustObject):
 
         return self.count_common(other, downsample) / len(self)
 
+    def containment_ani(self, other, downsample=False, containment=None):
+        "Estimate ANI from containment with the other MinHash."
+        if not containment:
+            containment = self.contained_by(other, downsample)
+        n_kmers = len(self) * self.scaled # would be better if hll estimate
+        c_ani,ani_low,ani_high = containment_to_distance(containment, n_kmers,
+                                        self.ksize, self.scaled,
+                                        return_identity=True)
+        return c_ani, ani_low, ani_high
+
     def max_containment(self, other, downsample=False):
         """
         Calculate maximum containment.
@@ -694,6 +716,17 @@ class MinHash(RustObject):
             return 0.0
 
         return self.count_common(other, downsample) / min_denom
+
+    def max_containment_ani(self, other, downsample=False, max_containment=None):
+        "Estimate ANI from containment with the other MinHash."
+        if not max_containment:
+            max_containment = self.max_containment(other, downsample)
+        min_n_kmers = min(len(self), len(other))
+        n_kmers = min_n_kmers * self.scaled
+        c_ani,ani_low,ani_high = containment_to_distance(max_containment, n_kmers,
+                                        self.ksize, self.scaled,
+                                        return_identity=True)
+        return c_ani, ani_low, ani_high
 
     def __add__(self, other):
         if not isinstance(other, MinHash):

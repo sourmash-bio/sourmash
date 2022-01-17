@@ -2602,3 +2602,65 @@ def test_translate_dayhoff_hashes_2():
 
         assert kmer == k
         assert _hash_fwd_only(mh_translate, kmer) == h
+
+
+def test_containment_ANI():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    f3 = utils.get_test_data('47+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+    mh3 = sourmash.load_one_signature(f3, ksize=31).minhash
+
+    print("\nmh1 contained by mh2", mh1.containment_ani(mh2))
+    print("mh2 contained by mh1",mh2.containment_ani(mh1))
+    print("mh1 max containment", mh1.max_containment_ani(mh2))
+    print("mh2 max containment", mh2.max_containment_ani(mh1))
+
+    print("\nmh2 contained by mh3", mh2.containment_ani(mh3))
+    print("mh3 contained by mh2",mh3.containment_ani(mh2))
+
+    assert mh1.containment_ani(mh2) == (1.0, 1.0, 1.0)
+    assert mh2.containment_ani(mh1) == (0.9658183324254062, 0.9648452889933389, 0.966777042966207)
+    assert mh1.max_containment_ani(mh2) == (1.0, 1.0, 1.0)
+    assert mh2.max_containment_ani(mh1) == (1.0, 1.0, 1.0)
+
+    # containment 1 is special case. check max containment for non 0/1 values:
+    assert mh2.containment_ani(mh3) == (0.9866751346467802, 0.9861576758035308, 0.9871770716451368)
+    assert mh3.containment_ani(mh2) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
+    assert mh2.max_containment_ani(mh3) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
+    assert mh3.max_containment_ani(mh2) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
+    assert mh2.max_containment_ani(mh3)[0] == max(mh2.containment_ani(mh3)[0], mh3.containment_ani(mh2)[0])
+
+    # precalc containments and assert same results
+    s1c = mh1.contained_by(mh2)
+    s2c = mh2.contained_by(mh1)
+    s3c = mh2.contained_by(mh3)
+    s4c = mh3.contained_by(mh2)
+    mc = max(s1c, s2c)
+    assert mh1.containment_ani(mh2, containment=s1c) == (1.0, 1.0, 1.0)
+    assert mh2.containment_ani(mh1, containment=s2c) == (0.9658183324254062, 0.9648452889933389, 0.966777042966207)
+    assert mh1.max_containment_ani(mh2, max_containment=mc) == (1.0, 1.0, 1.0)
+    assert mh2.max_containment_ani(mh1, max_containment=mc) == (1.0, 1.0, 1.0)
+
+    assert mh2.containment_ani(mh3, containment=s3c) == (0.9866751346467802, 0.9861576758035308, 0.9871770716451368)
+    assert mh3.containment_ani(mh2, containment=s4c) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
+    assert mh2.max_containment_ani(mh3, max_containment=s4c) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
+#    assert mh3.max_containment_ani(mh2, max_containment=s4c) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
+
+
+def test_jaccard_ANI():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2).minhash
+
+    print("\nJACCARD_ANI", mh1.jaccard_ani(mh2))
+
+    assert mh1.jaccard_ani(mh2) == (0.9783711630110239, 0.9776381521132324, 0.9790929734698981)
+
+    # precalc jaccard and assert same result
+    jaccard = mh1.jaccard(mh2)
+    print("\nJACCARD_ANI", mh1.jaccard_ani(mh2,jaccard=jaccard))
+
+    assert mh1.jaccard_ani(mh2) == (0.9783711630110239, 0.9776381521132324, 0.9790929734698981)

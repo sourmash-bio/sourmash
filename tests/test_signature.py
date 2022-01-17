@@ -433,8 +433,8 @@ def test_containment_ANI():
     f2 = utils.get_test_data('2+63.fa.sig')
     f3 = utils.get_test_data('47+63.fa.sig')
     ss1 = load_one_signature(f1, ksize=31)
-    ss2 = load_one_signature(f2)
-    ss3 = load_one_signature(f3)
+    ss2 = load_one_signature(f2, ksize=31)
+    ss3 = load_one_signature(f3, ksize=31)
 
     print("\nss1 contained by ss2", ss1.containment_ani(ss2))
     print("ss2 contained by ss1",ss2.containment_ani(ss1))
