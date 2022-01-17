@@ -104,6 +104,33 @@ def test_dna_override_1():
     assert not params.protein
 
 
+def test_scaled_param_requires_equal():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory(['k=21,scaled'],
+                                                 'dna', False)
+
+
+def test_k_param_requires_equal():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory(['k'],
+                                                 'dna', False)
+
+
+def test_k_param_requires_equal_2():
+    with pytest.raises(ValueError) as exc:
+        factory = _signatures_for_sketch_factory(['k='],
+                                                 'dna', False)
+
+def test_seed_param_requires_equal():
+    with pytest.raises(ValueError) as exc:
+        factory = _signatures_for_sketch_factory(['seed='],
+                                                 'dna', False)
+
+def test_num_param_requires_equal():
+    with pytest.raises(ValueError) as exc:
+        factory = _signatures_for_sketch_factory(['num='],
+                                                 'dna', False)
+
 def test_dna_override_bad_1():
     with pytest.raises(ValueError):
         factory = _signatures_for_sketch_factory(['k=21,scaledFOO=2000,abund'],
