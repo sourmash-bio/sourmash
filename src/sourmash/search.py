@@ -466,6 +466,44 @@ PrefetchResult = namedtuple('PrefetchResult',
                             'intersect_bp, jaccard, max_containment, f_query_match, f_match_query, match, match_filename, match_name, match_md5, match_bp, query, query_filename, query_name, query_md5, query_bp')
 
 
+def calculate_prefetch_info(query, match, scaled, threshold):
+    """
+    For a single query and match, calculate all search info and return a PrefetchResult.
+    """
+    # base intersections on downsampled minhashes
+    query_mh = query.minhash
+    db_mh = match.minhash.flatten().downsample(scaled=scaled)
+
+    # calculate db match intersection with query hashes:
+    intersect_mh = query_mh & db_mh
+    assert len(intersect_mh) >= threshold
+
+    f_query_match = db_mh.contained_by(query_mh)
+    f_match_query = query_mh.contained_by(db_mh)
+    max_containment = max(f_query_match, f_match_query)
+
+    # build a result namedtuple
+    result = PrefetchResult(
+        intersect_bp=len(intersect_mh) * scaled,
+        query_bp = len(query_mh) * scaled,
+        match_bp = len(db_mh) * scaled,
+        jaccard=db_mh.jaccard(query_mh),
+        max_containment=max_containment,
+        f_query_match=f_query_match,
+        f_match_query=f_match_query,
+        match=match,
+        match_filename=match.filename,
+        match_name=match.name,
+        match_md5=match.md5sum()[:8],
+        query=query,
+        query_filename=query.filename,
+        query_name=query.name,
+        query_md5=query.md5sum()[:8]
+    )
+
+    return result
+
+
 def prefetch_database(query, database, threshold_bp):
     """
     Find all matches to `query_mh` >= `threshold_bp` in `database`.
@@ -480,35 +518,6 @@ def prefetch_database(query, database, threshold_bp):
     # iterate over all signatures in database, find matches
 
     for result in database.prefetch(query, threshold_bp):
-        # base intersections on downsampled minhashes
         match = result.signature
-        db_mh = match.minhash.flatten().downsample(scaled=scaled)
-
-        # calculate db match intersection with query hashes:
-        intersect_mh = query_mh & db_mh
-        assert len(intersect_mh) >= threshold
-
-        f_query_match = db_mh.contained_by(query_mh)
-        f_match_query = query_mh.contained_by(db_mh)
-        max_containment = max(f_query_match, f_match_query)
-
-        # build a result namedtuple
-        result = PrefetchResult(
-            intersect_bp=len(intersect_mh) * scaled,
-            query_bp = len(query_mh) * scaled,
-            match_bp = len(db_mh) * scaled,
-            jaccard=db_mh.jaccard(query_mh),
-            max_containment=max_containment,
-            f_query_match=f_query_match,
-            f_match_query=f_match_query,
-            match=match,
-            match_filename=match.filename,
-            match_name=match.name,
-            match_md5=match.md5sum()[:8],
-            query=query,
-            query_filename=query.filename,
-            query_name=query.name,
-            query_md5=query.md5sum()[:8]
-        )
-
+        result = calculate_prefetch_info(query, match, scaled, threshold)
         yield result

@@ -1002,7 +1002,7 @@ def test_compare_no_choose_molecule_fail(runtmp):
     testdata2 = utils.get_test_data('short2.fa')
 
     runtmp.sourmash('sketch', 'dna', '-p', 'k=30,num=500',testdata1)
-    
+
     runtmp.sourmash('sketch', 'protein', '-p', 'k=30,num=500', testdata2)
 
     with pytest.raises(SourmashCommandFailed):
@@ -1242,7 +1242,7 @@ def test_do_sourmash_sbt_move_and_search_output(runtmp):
                                         ['search', '../short.fa.sig',
                                         'zzz.sbt.json', '-o', 'foo'],
                                         in_directory=newpath)
-    
+
     outfile = open(os.path.join(newpath, 'foo'))
     output = outfile.read()
     print(output)
@@ -1375,7 +1375,7 @@ def test_search_max_containment_s10_pairwise(runtmp):
     q2 = utils.get_test_data('scaled/genome-s10-small.fa.gz.sig')
 
     runtmp.sourmash('search', q1, q2,'--max-containment')
-    
+
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
     assert '1 matches' in runtmp.last_result.out
     assert '100.0%' in runtmp.last_result.out
@@ -1544,7 +1544,7 @@ def test_search_2(runtmp):
     testdata3 = utils.get_test_data('short3.fa')
 
     runtmp.sourmash('sketch','dna','-p','k=31,num=500', testdata1, testdata2, testdata3)
-   
+
     runtmp.sourmash('search', 'short.fa.sig', 'short2.fa.sig', 'short3.fa.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
@@ -1672,7 +1672,7 @@ def test_search_metagenome(runtmp):
     cmd = ['index', 'gcf_all']
     cmd.extend(testdata_sigs)
     cmd.extend(['-k', '21'])
-    
+
     runtmp.sourmash(*cmd)
 
     assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
@@ -2033,7 +2033,7 @@ def test_do_sourmash_sbt_search_downsample(runtmp):
     testdata2 = utils.get_test_data('short2.fa')
 
     runtmp.sourmash('sketch', 'dna', '-p', 'k=31,scaled=10', testdata1, testdata2)
-    
+
     testdata1 = utils.get_test_data('short.fa')
 
     runtmp.sourmash('sketch','dna','-p','k=31,scaled=5', '-o', 'query.sig', testdata1)
@@ -2747,6 +2747,67 @@ def test_gather_multiple_sbts_save_prefetch(runtmp, linear_gather):
     assert os.path.exists(runtmp.output('out.zip'))
 
 
+def test_gather_multiple_sbts_save_prefetch_csv(runtmp, linear_gather):
+    # test --save-prefetch-csv with multiple databases
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    runtmp.sourmash('sketch','dna', '-p', 'scaled=10', testdata1, testdata2)
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2)
+
+    runtmp.sourmash('index', 'zzz', 'short.fa.sig', '-k', '31')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('index', 'zzz2', 'short2.fa.sig', '-k', '31')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', 'zzz2', '-o', 'foo.csv', '--save-prefetch-csv', 'prefetch.csv', '--threshold-bp=1', linear_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
+    assert os.path.exists(runtmp.output('prefetch.csv'))
+    with open(runtmp.output('prefetch.csv')) as f:
+        output = f.read()
+        print((output,))
+        assert '870,0.925531914893617,0.9666666666666667' in output
+
+
+def test_gather_multiple_sbts_save_prefetch_and_prefetch_csv(runtmp, linear_gather):
+    # test --save-prefetch-csv with multiple databases
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    runtmp.sourmash('sketch','dna', '-p', 'scaled=10', testdata1, testdata2)
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2)
+
+    runtmp.sourmash('index', 'zzz', 'short.fa.sig', '-k', '31')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('index', 'zzz2', 'short2.fa.sig', '-k', '31')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', 'zzz2', '-o', 'foo.csv', '--save-prefetch', 'out.zip', '--save-prefetch-csv', 'prefetch.csv', '--threshold-bp=1', linear_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
+    assert os.path.exists(runtmp.output('prefetch.csv'))
+    with open(runtmp.output('prefetch.csv')) as f:
+        output = f.read()
+        print((output,))
+        assert '870,0.925531914893617,0.9666666666666667' in output
+    assert os.path.exists(runtmp.output('out.zip'))
+
+
 def test_gather_sbt_and_sigs(runtmp, linear_gather, prefetch_gather):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
@@ -3036,7 +3097,7 @@ def test_multigather_check_scaled_bounds_more_than_maximum(c):
 
     cmd = 'multigather --query {} --db gcf_all -k 21 --scaled 1e9 --threshold-bp=0'.format(query_sig)
     cmd = cmd.split(' ')
-    
+
     c.run_sourmash(*cmd)
 
     assert "WARNING: scaled value should be <= 1e6. Continuing anyway." in c.last_result.err
