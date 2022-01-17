@@ -172,6 +172,7 @@ class SignaturePicklist:
                 else:
                     self.add(col)
 
+        self.pickfile = pickfile
         return n_empty_val, dup_vals
 
     def add(self, value):
