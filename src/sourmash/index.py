@@ -576,6 +576,11 @@ class ZipFileLinearIndex(Index):
     def load(cls, location, traverse_yield_all=False, use_manifest=True):
         "Class method to load a zipfile."
         from .sbt_storage import ZipStorage
+
+        # we can only load from existing zipfiles in this method.
+        if not os.path.exists(location):
+            raise FileNotFoundError(location)
+
         storage = ZipStorage(location)
         return cls(storage, traverse_yield_all=traverse_yield_all,
                    use_manifest=use_manifest)
