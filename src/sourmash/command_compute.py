@@ -105,7 +105,7 @@ def compute(args):
             error('bad ksizes: {}', ", ".join(bad_ksizes))
             sys.exit(-1)
 
-    notify('Computing a total of {} signature(s).', num_sigs)
+    notify('Computing a total of {} signature(s) for each input.', num_sigs)
 
     if num_sigs == 0:
         error('...nothing to calculate!? Exiting!')
@@ -183,6 +183,7 @@ def _compute_individual(args, signatures_factory):
             notify('... reading sequences from {}', filename)
             name = None
             n = None
+
             for n, record in enumerate(screed.open(filename)):
                 if n % 10000 == 0:
                     if n:
@@ -199,7 +200,7 @@ def _compute_individual(args, signatures_factory):
                 set_sig_name(sigs, filename, name)
                 siglist.extend(sigs)
 
-                notify(f'calculated {len(siglist)} signatures for {n+1} sequences in {filename}')
+                notify(f'calculated {len(sigs)} signatures for {n+1} sequences in {filename}')
             else:
                 notify(f"no sequences found in '{filename}'?!")
 
