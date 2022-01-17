@@ -226,12 +226,14 @@ To regenerate the C header, run
 ```
 $ make include/sourmash.h
 ```
-This requires a nightly Rust compiler and `cbindgen`.
-They can be installed by running
+This requires `cbindgen` (and technically a nightly Rust compiler,
+but we cheat with `RUSTC_BOOTSTRAP=1`. For more info check [this post]).
+`cbindgen` can be installed by running
 ```
-$ rustup toolchain add nightly
 $ cargo install --force cbindgen
 ```
+
+[this post]: https://fasterthanli.me/articles/my-ideal-rust-workflow
 
 ### Changing code touching all layers: an example PR
 

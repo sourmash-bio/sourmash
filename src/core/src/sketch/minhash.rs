@@ -185,20 +185,17 @@ impl KmerMinHash {
         track_abundance: bool,
         num: u32,
     ) -> KmerMinHash {
-        let mins: Vec<u64>;
-        let abunds: Option<Vec<u64>>;
-
-        if num > 0 {
-            mins = Vec::with_capacity(num as usize);
+        let mins = if num > 0 {
+            Vec::with_capacity(num as usize)
         } else {
-            mins = Vec::with_capacity(1000);
-        }
+            Vec::with_capacity(1000)
+        };
 
-        if track_abundance {
-            abunds = Some(Vec::with_capacity(mins.capacity()));
+        let abunds = if track_abundance {
+            Some(Vec::with_capacity(mins.capacity()))
         } else {
-            abunds = None
-        }
+            None
+        };
 
         let max_hash = max_hash_for_scaled(scaled);
 
@@ -435,19 +432,8 @@ impl KmerMinHash {
             let mut self_iter = self.mins.iter();
             let mut other_iter = other.mins.iter();
 
-            let mut self_abunds_iter: Option<std::slice::Iter<'_, u64>>;
-            if let Some(ref mut abunds) = self.abunds {
-                self_abunds_iter = Some(abunds.iter());
-            } else {
-                self_abunds_iter = None;
-            }
-
-            let mut other_abunds_iter: Option<std::slice::Iter<'_, u64>>;
-            if let Some(ref abunds) = other.abunds {
-                other_abunds_iter = Some(abunds.iter());
-            } else {
-                other_abunds_iter = None;
-            }
+            let mut self_abunds_iter = self.abunds.as_mut().map(|a| a.iter());
+            let mut other_abunds_iter = other.abunds.as_ref().map(|a| a.iter());
 
             let mut self_value = self_iter.next();
             let mut other_value = other_iter.next();
