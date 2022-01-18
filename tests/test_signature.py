@@ -444,6 +444,9 @@ def test_containment_ANI():
     print("\nss2 contained by ss3", ss2.containment_ani(ss3))
     print("ss3 contained by ss2",ss3.containment_ani(ss2))
 
+    print("\nss2 contained by ss3, CI 90%", ss2.containment_ani(ss3, confidence=0.9))
+    print("ss3 contained by ss2, CI 99%",ss3.containment_ani(ss2, confidence=0.99))
+
     assert ss1.containment_ani(ss2) == (1.0, 1.0, 1.0)
     assert ss2.containment_ani(ss1) == (0.9658183324254062, 0.9648452889933389, 0.966777042966207)
     assert ss1.max_containment_ani(ss2) == (1.0, 1.0, 1.0)
@@ -455,6 +458,10 @@ def test_containment_ANI():
     assert ss2.max_containment_ani(ss3) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
     assert ss3.max_containment_ani(ss2) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
     assert ss2.max_containment_ani(ss3)[0] == max(ss2.containment_ani(ss3)[0], ss3.containment_ani(ss2)[0])
+
+    # check confidence
+    assert ss2.containment_ani(ss3, confidence=0.9) == (0.9866751346467802, 0.986241913154108, 0.9870974232542815)
+    assert ss3.containment_ani(ss2, confidence=0.99) == (0.9868883523107224, 0.9862092287269876, 0.987540474733798)
 
     # precalc containments and assert same results
     s1c = ss1.contained_by(ss2)
@@ -469,6 +476,7 @@ def test_containment_ANI():
 
     assert ss2.containment_ani(ss3, containment=s3c) == (0.9866751346467802, 0.9861576758035308, 0.9871770716451368)
     assert ss3.containment_ani(ss2, containment=s4c) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
+    assert ss3.containment_ani(ss2, containment=s4c, confidence=0.99) == (0.9868883523107224, 0.9862092287269876, 0.987540474733798)
     assert ss2.max_containment_ani(ss3, max_containment=s4c) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
     assert ss3.max_containment_ani(ss2, max_containment=s4c) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
 
@@ -480,11 +488,16 @@ def test_jaccard_ANI():
     ss2 = load_one_signature(f2)
 
     print("\nJACCARD_ANI", ss1.jaccard_ani(ss2))
+    print("\nJACCARD_ANI 90% CI", ss1.jaccard_ani(ss2, confidence=0.9))
+    print("\nJACCARD_ANI 99% CI", ss1.jaccard_ani(ss2, confidence=0.99))
 
     assert ss1.jaccard_ani(ss2) == (0.9783711630110239, 0.9776381521132324, 0.9790929734698981)
+    assert ss1.jaccard_ani(ss2, confidence=0.9) == (0.9783711630110239, 0.9777567290812513, 0.97897770829732)
+    assert ss1.jaccard_ani(ss2, confidence=0.99) == (0.9783711630110239, 0.9774056164150092, 0.9793173653983135)
 
     # precalc jaccard and assert same result
     jaccard = ss1.jaccard(ss2)
     print("\nJACCARD_ANI", ss1.jaccard_ani(ss2,jaccard=jaccard))
 
-    assert ss1.jaccard_ani(ss2) == (0.9783711630110239, 0.9776381521132324, 0.9790929734698981)
+    assert ss1.jaccard_ani(ss2, jaccard=jaccard) == (0.9783711630110239, 0.9776381521132324, 0.9790929734698981)
+    assert ss1.jaccard_ani(ss2, jaccard=jaccard, confidence=0.9) == (0.9783711630110239, 0.9777567290812513, 0.97897770829732)
