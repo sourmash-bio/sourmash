@@ -249,7 +249,7 @@ GatherResult = namedtuple('GatherResult', ['intersect_bp', 'f_orig_query', 'f_ma
                             'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename',
                             'name', 'md5', 'match', 'f_match_orig', 'unique_intersect_bp', 'gather_result_rank',
                             'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
-                            'scaled', 'match_containment_ani'])#,'query_containment_ani'])
+                            'moltype', 'num', 'scaled', 'n_hashes', 'query_abundance', 'match_containment_ani'])#,'query_containment_ani'])
 
 
 def _find_best(counters, query, threshold_bp):
@@ -469,7 +469,11 @@ class GatherDatabases:
                               query_name=self.orig_query_name,
                               query_md5=self.orig_query_md5,
                               ksize =  self.orig_query_mh.ksize,
+                              moltype = self.orig_query_mh.moltype,
+                              num = self.orig_query_mh.num,
                               scaled = scaled,
+                              n_hashes=len(self.orig_query_mh),
+                              query_abundance=self.orig_query_mh.track_abundance,
                               match_containment_ani=match_containment_ani,
                               #query_containment_ani=orig_query_containment_ani,
                               )
