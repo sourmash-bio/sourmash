@@ -653,9 +653,9 @@ class MinHash(RustObject):
             jaccard = self.jaccard(other, downsample=downsample)
         avg_scaled_kmers = round((len(self) + len(other))/2)
         avg_n_kmers = avg_scaled_kmers * self.scaled # would be better if hll estimate
-        j_ani,ani_low,ani_high = jaccard_to_distance(jaccard, avg_n_kmers,
-                                        self.ksize, self.scaled, confidence=confidence,
-                                        return_identity=True)
+        j_ani,ani_low,ani_high = jaccard_to_distance(jaccard, self.ksize, self.scaled, 
+                                                    n_unique_kmers=avg_n_kmers, confidence=confidence,
+                                                    return_identity=True)
         return j_ani, ani_low, ani_high
 
     def similarity(self, other, ignore_abundance=False, downsample=False):
@@ -700,9 +700,9 @@ class MinHash(RustObject):
         if not containment:
             containment = self.contained_by(other, downsample)
         n_kmers = len(self) * self.scaled # would be better if hll estimate
-        c_ani,ani_low,ani_high = containment_to_distance(containment, n_kmers,
-                                        self.ksize, self.scaled, confidence=confidence,
-                                        return_identity=True)
+        c_ani,ani_low,ani_high = containment_to_distance(containment, self.ksize, self.scaled, 
+                                                        n_unique_kmers=n_kmers, confidence=confidence,
+                                                        return_identity=True)
         return c_ani, ani_low, ani_high
 
     def max_containment(self, other, downsample=False):
@@ -723,9 +723,9 @@ class MinHash(RustObject):
             max_containment = self.max_containment(other, downsample)
         min_n_kmers = min(len(self), len(other))
         n_kmers = min_n_kmers * self.scaled
-        c_ani,ani_low,ani_high = containment_to_distance(max_containment, n_kmers,
-                                        self.ksize, self.scaled, confidence=confidence,
-                                        return_identity=True)
+        c_ani,ani_low,ani_high = containment_to_distance(max_containment, self.ksize, self.scaled,
+                                                        n_unique_kmers=n_kmers,confidence=confidence,
+                                                        return_identity=True)
         return c_ani, ani_low, ani_high
 
     def __add__(self, other):

@@ -62,10 +62,17 @@ def probit(p):
     return scipy_norm.ppf(p)
 
 
-def containment_to_distance(containment, n_unique_kmers, ksize, scaled, confidence=0.95, return_identity=False):
+def sequence_len_to_n_kmers(sequence_len_bp, ksize):
+    n_kmers = sequence_len_bp - (ksize-1)
+    return n_kmers
+
+
+def containment_to_distance(containment, ksize, scaled,  n_unique_kmers=None, sequence_len_bp=None, confidence=0.95, return_identity=False):
     """
     Containment --> distance CI (one step)
     """
+    if sequence_len_bp and not n_unique_kmers:
+        n_unique_kmers = sequence_len_to_n_kmers(sequence_len_bp, ksize)
     if containment <= 0.0001: # changed from 0.0, to mirror jaccard_to_distance_CI_one_step
         sol2 = sol1 = point_estimate = 1.0
     elif containment >= 0.9999:  # changed from 1.0, to mirror jaccard_to_distance_CI_one_step
@@ -112,10 +119,12 @@ def variance_scaled_jaccard(L, p, k, s):
     return term1 + term2 - term3
 
 
-def jaccard_to_distance(jaccard, n_unique_kmers, ksize, scaled, confidence=0.95, return_identity=False):
+def jaccard_to_distance(jaccard, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None, confidence=0.95, return_identity=False):
     """
     Scaled Jaccard to distance estimate and CI (one step)
     """
+    if sequence_len_bp and not n_unique_kmers:
+        n_unique_kmers = sequence_len_to_n_kmers(sequence_len_bp, ksize)
     if jaccard <= 0.0001:
         sol2 = sol1 = point_estimate = 1.0
     elif jaccard >= 0.9999:

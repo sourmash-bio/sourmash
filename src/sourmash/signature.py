@@ -150,9 +150,9 @@ class SourmashSignature(RustObject):
                                             downsample=downsample)
         avg_scaled_kmers = round((len(self.minhash.hashes) + len(other.minhash.hashes))/2)
         avg_n_kmers = avg_scaled_kmers * self.minhash.scaled # would be better if hll estimate
-        j_ani,ani_low,ani_high = jaccard_to_distance(jaccard, avg_n_kmers, self.minhash.ksize,
-                                                    self.minhash.scaled, confidence=confidence,
-                                                    return_identity=True)
+        j_ani,ani_low,ani_high = jaccard_to_distance(jaccard, self.minhash.ksize,
+                                                    self.minhash.scaled, n_unique_kmers=avg_n_kmers,
+                                                    confidence=confidence, return_identity=True)
         return j_ani, ani_low, ani_high
 
     def contained_by(self, other, downsample=False):
@@ -164,9 +164,9 @@ class SourmashSignature(RustObject):
         if not containment:
             containment = self.minhash.contained_by(other.minhash, downsample)
         n_kmers = len(self.minhash.hashes) * self.minhash.scaled # would be better if hll estimate
-        c_ani,ani_low,ani_high = containment_to_distance(containment, n_kmers, self.minhash.ksize,
-                                                        self.minhash.scaled, confidence=confidence,
-                                                        return_identity=True)
+        c_ani,ani_low,ani_high = containment_to_distance(containment, self.minhash.ksize,
+                                                        self.minhash.scaled, n_unique_kmers=n_kmers, 
+                                                        confidence=confidence, return_identity=True)
         return c_ani, ani_low, ani_high
 
     def max_containment(self, other, downsample=False):
@@ -180,9 +180,9 @@ class SourmashSignature(RustObject):
         # max_containment will always use smaller sig as denominator
         min_n_kmers = min(len(self.minhash.hashes), len(other.minhash.hashes))
         n_kmers = min_n_kmers * self.minhash.scaled
-        c_ani,ani_low,ani_high = containment_to_distance(max_containment, n_kmers, self.minhash.ksize,
-                                                        self.minhash.scaled, confidence=confidence,
-                                                        return_identity=True)
+        c_ani,ani_low,ani_high = containment_to_distance(max_containment, self.minhash.ksize,
+                                                        self.minhash.scaled, n_unique_kmers=n_kmers,
+                                                        confidence=confidence, return_identity=True)
         return c_ani, ani_low, ani_high
 
     def add_sequence(self, sequence, force=False):
