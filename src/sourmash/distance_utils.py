@@ -67,7 +67,7 @@ def sequence_len_to_n_kmers(sequence_len_bp, ksize):
     return n_kmers
 
 
-def containment_to_distance(containment, ksize, scaled,  n_unique_kmers=None, sequence_len_bp=None, confidence=0.95, return_identity=False):
+def containment_to_distance(containment, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None, confidence=0.95, return_identity=False):
     """
     Containment --> distance CI (one step)
     """

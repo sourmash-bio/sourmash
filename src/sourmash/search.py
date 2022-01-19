@@ -245,8 +245,11 @@ def search_databases_with_abund_query(query, databases, **kwargs):
 ### gather code
 ###
 
-GatherResult = namedtuple('GatherResult',
-                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, match, f_match_orig, unique_intersect_bp, gather_result_rank, remaining_bp, query_filename, query_name, query_md5, query_bp, match_containment_ani')
+GatherResult = namedtuple('GatherResult', ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
+                            'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename',
+                            'name', 'md5', 'match', 'f_match_orig', 'unique_intersect_bp', 'gather_result_rank',
+                            'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
+                            'scaled', 'match_containment_ani'])#,'query_containment_ani'])
 
 
 def _find_best(counters, query, threshold_bp):
@@ -408,8 +411,14 @@ class GatherDatabases:
         f_match_orig = found_mh.contained_by(orig_query_mh)
 
         # calculate ani using match containment by query
-        match_containment_ani = containment_to_distance(f_match_orig, len(found_mh) * scaled,
-                                                        found_mh.ksize, scaled, return_identity=True)
+        match_containment_ani = containment_to_distance(f_match_orig, found_mh.ksize, scaled,
+                                                            n_unique_kmers=(len(found_mh) * scaled),
+                                                            return_identity=True)[0]
+
+        # calculate ani using query containment by match -- useful for genome classification
+        #orig_query_containment_ani = containment_to_distance(f_orig_query, orig_query_mh.ksize, scaled,
+        #                                                    n_unique_kmers=(orig_query_len * scaled),
+        #                                                    return_identity=True)[0]
 
         # calculate scores weighted by abundances
         f_unique_weighted = sum((orig_query_abunds[k] for k in intersect_mh.hashes ))
@@ -459,7 +468,10 @@ class GatherDatabases:
                               query_filename=self.orig_query_filename,
                               query_name=self.orig_query_name,
                               query_md5=self.orig_query_md5,
+                              ksize =  self.orig_query_mh.ksize,
+                              scaled = scaled,
                               match_containment_ani=match_containment_ani,
+                              #query_containment_ani=orig_query_containment_ani,
                               )
         self.result_n += 1
         self.query = new_query
