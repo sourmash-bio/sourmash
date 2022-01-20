@@ -702,6 +702,18 @@ def test_genome_rank_stdout_0_db(runtmp):
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0'  in c.last_result.out
 
+    # too stringent of containment threshold:
+    c.run_sourmash('tax', 'genome', '--gather-csv', g_csv, '--taxonomy-csv',
+                   tax, '--rank', 'species', '--containment-threshold', '1.0')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "WARNING: classifying query test1 at desired rank species does not meet containment threshold 1.0" in c.last_result.err
+    assert "test1,below_threshold,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0," in c.last_result.out
+
 
 def test_genome_rank_csv_0(runtmp):
     # test basic genome - output csv
@@ -1400,7 +1412,7 @@ def test_genome_ani_threshold_input_errors(runtmp):
     assert "ERROR: Must be a floating point number" in str(exc.value)
 
 
-def test_genome_ani_stdout(runtmp):
+def test_genome_ani_threshold(runtmp):
     c = runtmp
     g_csv = utils.get_test_data('tax/test1.gather_ani.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
@@ -1427,6 +1439,15 @@ def test_genome_ani_stdout(runtmp):
 
     assert c.last_result.status == 0
     assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0'  in c.last_result.out
+
+    # too stringent of threshold (using rank)
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
+                       '--ani-threshold', "1.0", '--rank', 'species')
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert "WARNING: classifying query test1 at desired rank species does not meet query ANI/AAI threshold 1.0" in c.last_result.err
+    assert "test1,below_threshold,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0,0.9247805047263588" in c.last_result.out
 
 
 def test_annotate_0(runtmp):

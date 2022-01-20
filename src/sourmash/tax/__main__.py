@@ -185,6 +185,7 @@ def genome(args):
                                                      keep_full_identifiers=args.keep_full_identifiers,
                                                      keep_identifier_versions = args.keep_identifier_versions,
                                                      best_only=True, seen_perfect=seen_perfect, estimate_query_ani=True)
+
         except ValueError as exc:
             error(f"ERROR: {str(exc)}")
             sys.exit(-1)
@@ -209,7 +210,7 @@ def genome(args):
                 lin_list = display_lineage(sg.lineage).split(';')
                 krona_results.append((sg.fraction, *lin_list))
     else:
-        # classify to the match that passes the containment threshold.
+        # classify to the rank/match that passes the containment threshold.
         # To do - do we want to store anything for this match if nothing >= containment threshold?
         for rank in tax_utils.ascending_taxlist(include_strain=False):
             # gets best_at_rank for all queries in this gather_csv
