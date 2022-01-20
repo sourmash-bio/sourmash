@@ -1363,6 +1363,72 @@ def test_genome_over100percent_error(runtmp):
     assert "ERROR: The tax summary of query 'test1' is 1.1, which is > 100% of the query!!" in runtmp.last_result.err
 
 
+def test_genome_ani_threshold_input_errors(runtmp):
+    c = runtmp
+    g_csv = utils.get_test_data('tax/test1.gather_ani.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    below_threshold = "-1"
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('tax', 'genome', '-g', tax, '--taxonomy-csv', tax,
+                       '--ani-threshold', below_threshold)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert "ERROR: Argument must be >0 and <1" in str(exc.value)
+
+    above_threshold = "1.1"
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
+                       '--ani-threshold', above_threshold)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert "ERROR: Argument must be >0 and <1" in str(exc.value)
+
+    not_a_float = "str"
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
+                       '--ani-threshold', not_a_float)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert "ERROR: Must be a floating point number" in str(exc.value)
+
+
+def test_genome_ani_stdout(runtmp):
+    c = runtmp
+    g_csv = utils.get_test_data('tax/test1.gather_ani.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
+                       '--ani-threshold', "0.95")
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "WARNING: Please run gather with sourmash >= 4.3 to estimate query ANI at rank. Continuing without ANI..." not in c.last_result.err
+    assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
+    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,0.9328896594471843' in c.last_result.out 
+
+    # more lax threshold
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
+                       '--ani-threshold', "0.9")
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0'  in c.last_result.out
+
+
 def test_annotate_0(runtmp):
     # test annotate
     c = runtmp

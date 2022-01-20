@@ -19,7 +19,7 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
 from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
 
-QueryInfo = namedtuple("QueryInfo", "query_md5, query_filename, query_bp")
+QueryInfo = namedtuple("QueryInfo", "query_md5, query_filename, query_bp, query_hashes")
 SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
 ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
 
@@ -193,7 +193,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
     sum_uniq_to_query = defaultdict(lambda: defaultdict(float))
     sum_uniq_bp = defaultdict(lambda: defaultdict(float))
     query_info = {}
-    ksize,scaled=None,None
+    ksize,scaled,query_nhashes=None,None,None
     for row in gather_results:
         # get essential gather info
         query_name = row['query_name']
@@ -203,20 +203,22 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
         query_md5 = row['query_md5']
         query_filename = row['query_filename']
         if query_name not in query_info.keys(): #REMOVING THIS AFFECTS GATHER RESULTS!!! BUT query bp should always be same for same query? bug?
+            if "query_nhashes" in row.keys():
+                query_nhashes = int(row["query_nhashes"])
             if "query_bp" in row.keys():
                 query_bp = int(row["query_bp"])
             else:
                 query_bp = unique_intersect_bp + int(row['remaining_bp'])
         # store query info
-        query_info[query_name] = QueryInfo(query_md5=query_md5, query_filename=query_filename, query_bp=query_bp)
+        query_info[query_name] = QueryInfo(query_md5=query_md5, query_filename=query_filename, query_bp=query_bp, query_hashes = query_nhashes)
 
         if estimate_query_ani and (not ksize or not scaled): # just need to set these once. BUT, if we have these, should we check for compatibility when loading the gather file?
             if "ksize" in row.keys(): # ksize and scaled were added to gather results in same PR
-                ksize = row['ksize']
-                scaled = row['scaled']
+                ksize = int(row['ksize'])
+                scaled = int(row['scaled'])
             else:
                 estimate_query_ani=False
-                notify("Error: Please run gather with sourmash >= 4.3 to estimate query ANI at rank. Continuing without ANI...")
+                notify("WARNING: Please run gather with sourmash >= 4.3 to estimate query ANI at rank. Continuing without ANI...")
 
         match_ident = row['name']
 
@@ -254,47 +256,51 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
         sumgather_items.sort(key = lambda x: -x[1])
         query_ani = None
         if best_only:
-            lineage, f_uniq_to_query_at_rank = sumgather_items[0]
-            if f_uniq_to_query_at_rank > 1:
-                raise ValueError(f"The tax summary of query '{query_name}' is {f_uniq_to_query_at_rank}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
-            elif f_uniq_to_query_at_rank == 0:
+            lineage, fraction = sumgather_items[0]
+            if fraction > 1:
+                raise ValueError(f"The tax summary of query '{query_name}' is {fraction}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
+            elif fraction == 0:
                 continue
             f_weighted_at_rank = sum_uniq_weighted[query_name][lineage]
             bp_intersect_at_rank = sum_uniq_bp[query_name][lineage]
             if estimate_query_ani:
-                query_ani = containment_to_distance(f_uniq_to_query_at_rank, ksize, scaled,
-                                                    n_unique_kmers= qInfo.query_bp, return_identity=True)[0]
-            sres = SummarizedGatherResult(query_name, rank, f_uniq_to_query_at_rank, lineage, qInfo.query_md5,
+                query_ani = containment_to_distance(fraction, ksize, scaled,
+                                                    n_unique_kmers= qInfo.query_hashes, sequence_len_bp= qInfo.query_bp,
+                                                    return_identity=True)[0]
+            sres = SummarizedGatherResult(query_name, rank, fraction, lineage, qInfo.query_md5,
                                           qInfo.query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
             sum_uniq_to_query_sorted.append(sres)
         else:
             total_f_weighted= 0.0
             total_f_classified = 0.0
             total_bp_classified = 0
-            for lineage, f_uniq_to_query_at_rank in sumgather_items:
-                if f_uniq_to_query_at_rank > 1:
-                    raise ValueError(f"The tax summary of query '{query_name}' is {f_uniq_to_query_at_rank}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
-                elif f_uniq_to_query_at_rank == 0:
+            for lineage, fraction in sumgather_items:
+                query_ani=None
+                if fraction > 1:
+                    raise ValueError(f"The tax summary of query '{query_name}' is {fraction}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
+                elif fraction == 0:
                     continue
-                total_f_classified += f_uniq_to_query_at_rank
+                total_f_classified += fraction
                 f_weighted_at_rank = sum_uniq_weighted[query_name][lineage]
                 total_f_weighted += f_weighted_at_rank
                 bp_intersect_at_rank = int(sum_uniq_bp[query_name][lineage])
                 total_bp_classified += bp_intersect_at_rank
                 if estimate_query_ani:
-                    query_ani = containment_to_distance(f_uniq_to_query_at_rank, ksize, scaled,
-                                                        n_unique_kmers= qInfo.query_bp, return_identity=True)[0]
-                sres = SummarizedGatherResult(query_name, rank, f_uniq_to_query_at_rank, lineage, query_md5,
+                    query_ani = containment_to_distance(fraction, ksize, scaled,
+                                                        n_unique_kmers=qInfo.query_hashes, sequence_len_bp=qInfo.query_bp,
+                                                        return_identity=True)[0]
+                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5,
                                               query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
                 sum_uniq_to_query_sorted.append(sres)
 
             # record unclassified
             lineage = ()
-            f_uniq_to_query_at_rank = 1.0 - total_f_classified
-            if f_uniq_to_query_at_rank > 0:
+            query_ani=None
+            fraction = 1.0 - total_f_classified
+            if fraction > 0:
                 f_weighted_at_rank = 1.0 - total_f_weighted
                 bp_intersect_at_rank = qInfo.query_bp - total_bp_classified
-                sres = SummarizedGatherResult(query_name, rank, f_uniq_to_query_at_rank, lineage, query_md5,
+                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5,
                                               query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
                 sum_uniq_to_query_sorted.append(sres)
 

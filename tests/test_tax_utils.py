@@ -1,6 +1,7 @@
 """
 Tests for functions in taxonomy submodule.
 """
+from types import NoneType
 import pytest
 from os.path import basename
 
@@ -353,30 +354,36 @@ def test_summarize_gather_at_0():
 def test_summarize_gather_at_1():
     """test two matches, diff f_unique_to_query"""
     # make mini gather_results
-    gA = ["queryA", "gA","0.5","0.6", "queryA_md5", "queryA.sig", '0.5', '60', '40']
-    gB = ["queryA", "gB","0.3","0.1", "queryA_md5", "queryA.sig", '0.1', '10', '90']
-    g_res = make_mini_gather_results([gA,gB])
+    ksize=31
+    scaled=10
+    gA = ["queryA", "gA","0.5","0.6", "queryA_md5", "queryA.sig", '0.5', '60', '40', ksize, scaled]
+    gB = ["queryA", "gB","0.3","0.1", "queryA_md5", "queryA.sig", '0.1', '10', '90', ksize, scaled]
+    g_res = make_mini_gather_results([gA,gB], include_ksize_and_scaled=True)
 
     # make mini taxonomy
     gA_tax = ("gA", "a;b;c")
     gB_tax = ("gB", "a;b;d")
     taxD = make_mini_taxonomy([gA_tax,gB_tax])
     # run summarize_gather_at and check results!
-    sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res)
+    sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res, estimate_query_ani=True)
 
     # superkingdom
     assert len(sk_sum) == 2
-    print("superkingdom summarized gather: ", sk_sum[0])
+    print("\nsuperkingdom summarized gather 0: ", sk_sum[0])
     assert sk_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),)
     assert sk_sum[0].fraction == 0.7
     assert sk_sum[0].bp_match_at_rank == 70
+    print("superkingdom summarized gather 1: ", sk_sum[1])
     assert sk_sum[1].lineage == ()
     assert round(sk_sum[1].fraction, 1) == 0.3
     assert sk_sum[1].bp_match_at_rank == 30
+    assert sk_sum[0].query_ani_at_rank == 0.9885602934376099
+    assert sk_sum[1].query_ani_at_rank == None
 
     # phylum
-    phy_sum, _ = summarize_gather_at("phylum", taxD, g_res)
-    print("phylum summarized gather: ", phy_sum[0])
+    phy_sum, _ = summarize_gather_at("phylum", taxD, g_res, estimate_query_ani=False)
+    print("phylum summarized gather 0: ", phy_sum[0])
+    print("phylum summarized gather 1: ", phy_sum[1])
     assert len(phy_sum) == 2
     assert phy_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),LineagePair(rank='phylum', name='b'))
     assert phy_sum[0].fraction == 0.7
@@ -385,8 +392,10 @@ def test_summarize_gather_at_1():
     assert phy_sum[1].lineage == ()
     assert round(phy_sum[1].fraction, 1) == 0.3
     assert phy_sum[1].bp_match_at_rank == 30
+    assert phy_sum[0].query_ani_at_rank == None
+    assert phy_sum[1].query_ani_at_rank == None
     # class
-    cl_sum, _ = summarize_gather_at("class", taxD, g_res)
+    cl_sum, _ = summarize_gather_at("class", taxD, g_res, estimate_query_ani=True)
     assert len(cl_sum) == 3
     print("class summarized gather: ", cl_sum)
     assert cl_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),
@@ -395,6 +404,7 @@ def test_summarize_gather_at_1():
     assert cl_sum[0].fraction == 0.6
     assert cl_sum[0].f_weighted_at_rank == 0.5
     assert cl_sum[0].bp_match_at_rank == 60
+    assert cl_sum[0].query_ani_at_rank == 0.9836567776983505
 
     assert cl_sum[1].rank == 'class'
     assert cl_sum[1].lineage == (LineagePair(rank='superkingdom', name='a'),
@@ -403,8 +413,10 @@ def test_summarize_gather_at_1():
     assert cl_sum[1].fraction == 0.1
     assert cl_sum[1].f_weighted_at_rank == 0.1
     assert cl_sum[1].bp_match_at_rank == 10
+    assert cl_sum[1].query_ani_at_rank == 0.9284145445194744
     assert cl_sum[2].lineage == ()
     assert round(cl_sum[2].fraction, 1) == 0.3
+    assert cl_sum[2].query_ani_at_rank == None
 
 
 def test_summarize_gather_at_perfect_match():
