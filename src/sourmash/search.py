@@ -249,8 +249,9 @@ GatherResult = namedtuple('GatherResult', ['intersect_bp', 'f_orig_query', 'f_ma
                             'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename',
                             'name', 'md5', 'match', 'f_match_orig', 'unique_intersect_bp', 'gather_result_rank',
                             'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
-                            'moltype', 'num', 'scaled', 'query_nhashes', 'query_abundance', 'match_containment_ani',
-                            'query_containment_ani'])
+                            'moltype', 'num', 'scaled', 'query_nhashes', 'query_abundance', 'match_ani',
+                            'match_ani_ci_low', 'match_ani_ci_high', 'query_ani', 'query_ani_ci_low', 
+                            'query_ani_ci_high'])
 
 
 def _find_best(counters, query, threshold_bp):
@@ -412,14 +413,14 @@ class GatherDatabases:
         f_match_orig = found_mh.contained_by(orig_query_mh)
 
         # calculate ani using match containment by query
-        match_containment_ani = containment_to_distance(f_match_orig, found_mh.ksize, scaled,
+        match_ani, match_ani_low, match_ani_high = containment_to_distance(f_match_orig, found_mh.ksize, scaled,
                                                             n_unique_kmers=(len(found_mh) * scaled),
-                                                            return_identity=True)[0]
+                                                            return_identity=True)
 
         # calculate ani using query containment by match -- useful for genome classification
-        orig_query_containment_ani = containment_to_distance(f_orig_query, orig_query_mh.ksize, scaled,
+        orig_query_ani, query_ani_low, query_ani_high = containment_to_distance(f_orig_query, orig_query_mh.ksize, scaled,
                                                             n_unique_kmers=(orig_query_len * scaled),
-                                                            return_identity=True)[0]
+                                                            return_identity=True)
 
         # calculate scores weighted by abundances
         f_unique_weighted = sum((orig_query_abunds[k] for k in intersect_mh.hashes ))
@@ -475,8 +476,12 @@ class GatherDatabases:
                               scaled = scaled,
                               query_nhashes=len(self.orig_query_mh),
                               query_abundance=self.orig_query_mh.track_abundance,
-                              match_containment_ani=match_containment_ani,
-                              query_containment_ani=orig_query_containment_ani,
+                              match_ani=match_ani,
+                              match_ani_ci_low=match_ani_low,
+                              match_ani_ci_high=match_ani_high,
+                              query_ani=orig_query_ani,
+                              query_ani_ci_low=query_ani_low,
+                              query_ani_ci_high=query_ani_high,
                               )
         self.result_n += 1
         self.query = new_query
@@ -493,9 +498,11 @@ PrefetchResult = namedtuple('PrefetchResult',
                             ['intersect_bp', 'jaccard', 'max_containment', 'f_query_match',
                             'f_match_query', 'match', 'match_filename', 'match_name',
                             'match_md5', 'match_bp', 'query', 'query_filename', 'query_name',
-                            'query_md5', 'query_bp', 'ksize','moltype', 'num', 'scaled',
-                            'query_nhashes', 'query_abundance','jaccard_ani', 'max_containment_ani',
-                            'query_containment_ani', 'match_containment_ani'])
+                            'query_md5', 'query_bp', 'ksize', 'moltype', 'num', 'scaled',
+                            'query_nhashes', 'query_abundance','jaccard_ani', 'jaccard_ani_ci_low',
+                            'jaccard_ani_ci_high', 'max_containment_ani', 'query_ani',
+                            'query_ani_ci_low', 'query_ani_ci_high', 'match_ani',
+                            'match_ani_ci_low', "match_ani_ci_high"])
 
 
 def calculate_prefetch_info(query, match, scaled, threshold):
@@ -516,10 +523,10 @@ def calculate_prefetch_info(query, match, scaled, threshold):
     jaccard=db_mh.jaccard(query_mh)
 
     # passing in jaccard/containment avoids recalc (but it better be the right one :)
-    jaccard_ani = query.jaccard_ani(match, jaccard=jaccard)[0]
-    query_containment_ani = query.containment_ani(match, containment=f_match_query)[0]
-    match_containment_ani = match.containment_ani(query, containment=f_query_match)[0]
-    max_containment_ani = max(query_containment_ani, match_containment_ani)
+    jaccard_ani, jaccard_ani_low, jaccard_ani_high = query.jaccard_ani(match, jaccard=jaccard)
+    query_ani, query_ani_low, query_ani_high = query.containment_ani(match, containment=f_match_query)
+    match_ani, match_ani_low, match_ani_high = match.containment_ani(query, containment=f_query_match)
+    max_containment_ani = max(query_ani, match_ani)
 
     # build a result namedtuple
     result = PrefetchResult(
@@ -545,9 +552,15 @@ def calculate_prefetch_info(query, match, scaled, threshold):
         query_nhashes=len(query_mh),
         query_abundance=query_mh.track_abundance,
         jaccard_ani=jaccard_ani,
+        jaccard_ani_ci_low=jaccard_ani_low,
+        jaccard_ani_ci_high=jaccard_ani_high,
         max_containment_ani=max_containment_ani,
-        query_containment_ani=query_containment_ani,
-        match_containment_ani=match_containment_ani,
+        query_ani=query_ani,
+        query_ani_ci_low=query_ani_low,
+        query_ani_ci_high=query_ani_high,
+        match_ani=match_ani,
+        match_ani_ci_low=match_ani_low,
+        match_ani_ci_high=match_ani_high,
     )
 
     return result
