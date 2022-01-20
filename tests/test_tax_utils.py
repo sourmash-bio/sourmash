@@ -1,7 +1,7 @@
 """
 Tests for functions in taxonomy submodule.
 """
-from types import NoneType
+
 import pytest
 from os.path import basename
 
