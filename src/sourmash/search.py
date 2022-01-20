@@ -249,7 +249,8 @@ GatherResult = namedtuple('GatherResult', ['intersect_bp', 'f_orig_query', 'f_ma
                             'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename',
                             'name', 'md5', 'match', 'f_match_orig', 'unique_intersect_bp', 'gather_result_rank',
                             'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
-                            'moltype', 'num', 'scaled', 'n_hashes', 'query_abundance', 'match_containment_ani'])#,'query_containment_ani'])
+                            'moltype', 'num', 'scaled', 'query_nhashes', 'query_abundance', 'match_containment_ani',
+                            'query_containment_ani'])
 
 
 def _find_best(counters, query, threshold_bp):
@@ -416,9 +417,9 @@ class GatherDatabases:
                                                             return_identity=True)[0]
 
         # calculate ani using query containment by match -- useful for genome classification
-        #orig_query_containment_ani = containment_to_distance(f_orig_query, orig_query_mh.ksize, scaled,
-        #                                                    n_unique_kmers=(orig_query_len * scaled),
-        #                                                    return_identity=True)[0]
+        orig_query_containment_ani = containment_to_distance(f_orig_query, orig_query_mh.ksize, scaled,
+                                                            n_unique_kmers=(orig_query_len * scaled),
+                                                            return_identity=True)[0]
 
         # calculate scores weighted by abundances
         f_unique_weighted = sum((orig_query_abunds[k] for k in intersect_mh.hashes ))
@@ -472,10 +473,10 @@ class GatherDatabases:
                               moltype = self.orig_query_mh.moltype,
                               num = self.orig_query_mh.num,
                               scaled = scaled,
-                              n_hashes=len(self.orig_query_mh),
+                              query_nhashes=len(self.orig_query_mh),
                               query_abundance=self.orig_query_mh.track_abundance,
                               match_containment_ani=match_containment_ani,
-                              #query_containment_ani=orig_query_containment_ani,
+                              query_containment_ani=orig_query_containment_ani,
                               )
         self.result_n += 1
         self.query = new_query
@@ -489,7 +490,12 @@ class GatherDatabases:
 ###
 
 PrefetchResult = namedtuple('PrefetchResult',
-                            'intersect_bp, jaccard, max_containment, f_query_match, f_match_query, match, match_filename, match_name, match_md5, match_bp, query, query_filename, query_name, query_md5, query_bp, jaccard_ani, max_containment_ani, query_containment_ani, match_containment_ani')
+                            ['intersect_bp', 'jaccard', 'max_containment', 'f_query_match',
+                            'f_match_query', 'match', 'match_filename', 'match_name',
+                            'match_md5', 'match_bp', 'query', 'query_filename', 'query_name',
+                            'query_md5', 'query_bp', 'ksize','moltype', 'num', 'scaled',
+                            'query_nhashes', 'query_abundance','jaccard_ani', 'max_containment_ani',
+                            'query_containment_ani', 'match_containment_ani'])
 
 
 def calculate_prefetch_info(query, match, scaled, threshold):
@@ -532,6 +538,12 @@ def calculate_prefetch_info(query, match, scaled, threshold):
         query_filename=query.filename,
         query_name=query.name,
         query_md5=query.md5sum()[:8],
+        ksize =  query_mh.ksize,
+        moltype = query_mh.moltype,
+        num = query_mh.num,
+        scaled = scaled,
+        query_nhashes=len(query_mh),
+        query_abundance=query_mh.track_abundance,
         jaccard_ani=jaccard_ani,
         max_containment_ani=max_containment_ani,
         query_containment_ani=query_containment_ani,

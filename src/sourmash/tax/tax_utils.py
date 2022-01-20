@@ -202,7 +202,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
         unique_intersect_bp = int(row['unique_intersect_bp'])
         query_md5 = row['query_md5']
         query_filename = row['query_filename']
-        if query_name not in query_info.keys(): #THIS AFFECTS GATHER RESULTS!!! BUT query bp should always be same?
+        if query_name not in query_info.keys(): #REMOVING THIS AFFECTS GATHER RESULTS!!! BUT query bp should always be same for same query? bug?
             if "query_bp" in row.keys():
                 query_bp = int(row["query_bp"])
             else:
@@ -263,7 +263,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
             bp_intersect_at_rank = sum_uniq_bp[query_name][lineage]
             if estimate_query_ani:
                 query_ani = containment_to_distance(f_uniq_to_query_at_rank, ksize, scaled,
-                                                    n_unique_kmers= qInfo.query_bp, return_identity=True)
+                                                    n_unique_kmers= qInfo.query_bp, return_identity=True)[0]
             sres = SummarizedGatherResult(query_name, rank, f_uniq_to_query_at_rank, lineage, qInfo.query_md5,
                                           qInfo.query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
             sum_uniq_to_query_sorted.append(sres)
@@ -283,7 +283,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                 total_bp_classified += bp_intersect_at_rank
                 if estimate_query_ani:
                     query_ani = containment_to_distance(f_uniq_to_query_at_rank, ksize, scaled,
-                                                        n_unique_kmers= qInfo.query_bp, return_identity=True)
+                                                        n_unique_kmers= qInfo.query_bp, return_identity=True)[0]
                 sres = SummarizedGatherResult(query_name, rank, f_uniq_to_query_at_rank, lineage, query_md5,
                                               query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
                 sum_uniq_to_query_sorted.append(sres)
