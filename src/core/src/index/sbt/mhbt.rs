@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::io::Write;
 
-use crate::index::sbt::{Factory, FromFactory, Node, Update, SBT};
-use crate::index::storage::{ReadData, ReadDataError, ToWriter};
-use crate::index::Comparable;
-use crate::signature::{Signature, SigsTrait};
+use crate::errors::ReadDataError;
+use crate::index::sbt::{Factory, FromFactory, Node, SBT};
+use crate::prelude::*;
+use crate::signature::SigsTrait;
 use crate::sketch::nodegraph::Nodegraph;
 use crate::sketch::Sketch;
 use crate::Error;
@@ -157,9 +157,8 @@ mod test {
     use crate::index::linear::LinearIndex;
     use crate::index::sbt::scaffold;
     use crate::index::search::{search_minhashes, search_minhashes_containment};
-    use crate::index::storage::ReadData;
     use crate::index::{Index, SigStore, MHBT};
-    use crate::signature::Signature;
+    use crate::prelude::*;
 
     #[test]
     fn save_sbt() {

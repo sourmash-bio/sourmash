@@ -14,17 +14,6 @@ pub enum StorageError {
     EmptyPathError,
 }
 
-#[derive(Debug, Error)]
-pub enum ReadDataError {
-    #[error("Could not load data")]
-    LoadError,
-}
-
-/// Implemented by anything that wants to read specific data from a storage.
-pub trait ReadData<D> {
-    fn data(&self) -> Result<&D, Error>;
-}
-
 #[derive(Serialize, Deserialize)]
 pub(crate) struct StorageInfo {
     pub backend: String,
@@ -125,10 +114,4 @@ impl Storage for FSStorage {
             path: self.subdir.clone(),
         }
     }
-}
-
-pub trait ToWriter {
-    fn to_writer<W>(&self, writer: &mut W) -> Result<(), Error>
-    where
-        W: Write;
 }
