@@ -322,7 +322,8 @@ def _load_revindex(filename, **kwargs):
 
 
 def _load_sqlitedb(filename, **kwargs):
-    return SqliteIndex.load(filename)
+    if os.path.exists(filename) and os.path.getsize(filename) > 0:
+        return SqliteIndex.load(filename)
 
 
 def _load_zipfile(filename, **kwargs):

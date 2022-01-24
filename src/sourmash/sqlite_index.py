@@ -62,17 +62,20 @@ class SqliteIndex(Index):
     
     def __init__(self, dbfile):
         self.dbfile = dbfile
-        self.conn = sqlite3.connect(dbfile,
-                                    detect_types=sqlite3.PARSE_DECLTYPES)
+        try:
+            self.conn = sqlite3.connect(dbfile,
+                                        detect_types=sqlite3.PARSE_DECLTYPES)
 
-        c = self.conn.cursor()
+            c = self.conn.cursor()
 
-        c.execute("PRAGMA cache_size=1000000")
-        c.execute("PRAGMA synchronous = OFF")
-        c.execute("PRAGMA journal_mode = MEMORY")
+            c.execute("PRAGMA cache_size=1000000")
+            c.execute("PRAGMA synchronous = OFF")
+            c.execute("PRAGMA journal_mode = MEMORY")
 
-        c.execute("CREATE TABLE IF NOT EXISTS sketches (id INTEGER PRIMARY KEY, name TEXT, num INTEGER NOT NULL, scaled INTEGER NOT NULL, ksize INTEGER NOT NULL, filename TEXT, is_dna BOOLEAN, is_protein BOOLEAN, is_dayhoff BOOLEAN, is_hp BOOLEAN, track_abundance BOOLEAN, seed INTEGER NOT NULL)")
-        c.execute("CREATE TABLE IF NOT EXISTS hashes (hashval INTEGER NOT NULL, sketch_id INTEGER NOT NULL, FOREIGN KEY (sketch_id) REFERENCES sketches (id))")
+            c.execute("CREATE TABLE IF NOT EXISTS sketches (id INTEGER PRIMARY KEY, name TEXT, num INTEGER NOT NULL, scaled INTEGER NOT NULL, ksize INTEGER NOT NULL, filename TEXT, is_dna BOOLEAN, is_protein BOOLEAN, is_dayhoff BOOLEAN, is_hp BOOLEAN, track_abundance BOOLEAN, seed INTEGER NOT NULL)")
+            c.execute("CREATE TABLE IF NOT EXISTS hashes (hashval INTEGER NOT NULL, sketch_id INTEGER NOT NULL, FOREIGN KEY (sketch_id) REFERENCES sketches (id))")
+        except (sqlite3.OperationalError, sqlite3.DatabaseError):
+            raise ValueError(f"cannot open '{dbfile}' as sqlite3 database")
 
     def cursor(self):
         return self.conn.cursor()
