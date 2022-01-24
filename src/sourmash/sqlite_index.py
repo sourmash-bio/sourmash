@@ -34,7 +34,8 @@ def load_sketch(db, sketch_id):
 def get_matching_sketches(db, unitig_mh):
     query_cursor = db.cursor()
     query_cursor.execute("DROP TABLE IF EXISTS hash_query")
-    query_cursor.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER PRIMARY KEY)")
+    # @CTB primary key for opt?
+    query_cursor.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER)")
     for hashval in unitig_mh.hashes:
         query_cursor.execute("INSERT INTO hash_query (hashval) VALUES (?)", (hashval,))
 
@@ -47,7 +48,7 @@ def get_matching_sketches(db, unitig_mh):
 
 def get_matching_hashes(query_cursor, unitig_mh):
     query_cursor.execute("DROP TABLE IF EXISTS hash_query")
-    query_cursor.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER PRIMARY KEY)")
+    query_cursor.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER)")
     for hashval in unitig_mh.hashes:
         query_cursor.execute("INSERT INTO hash_query (hashval) VALUES (?)", (hashval,))
 
