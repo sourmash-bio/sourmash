@@ -755,6 +755,27 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
             sigmod.save_signatures([ss], fp, compression=1)
 
 
+class SaveSignatures_SqliteIndex(_BaseSaveSignaturesToLocation):
+    "Save signatures within a directory, using md5sum names."
+    def __init__(self, location):
+        super().__init__(location)
+        self.location = location
+        self.idx = None
+
+    def __repr__(self):
+        return f"SaveSignatures_SqliteIndex('{self.location}')"
+
+    def close(self):
+        self.idx.close()
+
+    def open(self):
+        self.idx = SqliteIndex(self.location)
+
+    def add(self, ss):
+        super().add(ss)
+        self.idx.insert(ss)
+
+
 class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
     "Save signatures to a .sig JSON file."
     def __init__(self, location):
@@ -870,18 +891,20 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
 
 
 class SigFileSaveType(Enum):
+    NO_OUTPUT = 0
     SIGFILE = 1
     SIGFILE_GZ = 2
     DIRECTORY = 3
     ZIPFILE = 4
-    NO_OUTPUT = 5
+    SQLITEDB = 5
 
 _save_classes = {
+    SigFileSaveType.NO_OUTPUT: SaveSignatures_NoOutput,
     SigFileSaveType.SIGFILE: SaveSignatures_SigFile,
     SigFileSaveType.SIGFILE_GZ: SaveSignatures_SigFile,
     SigFileSaveType.DIRECTORY: SaveSignatures_Directory,
     SigFileSaveType.ZIPFILE: SaveSignatures_ZipFile,
-    SigFileSaveType.NO_OUTPUT: SaveSignatures_NoOutput
+    SigFileSaveType.SQLITEDB: SaveSignatures_SqliteIndex,
 }
 
 
@@ -898,6 +921,8 @@ def SaveSignaturesToLocation(filename, *, force_type=None):
             save_type = SigFileSaveType.SIGFILE_GZ
         elif filename.endswith('.zip'):
             save_type = SigFileSaveType.ZIPFILE
+        elif filename.endswith('.sqldb'):
+            save_type = SigFileSaveType.SQLITEDB
         else:
             # default to SIGFILE intentionally!
             save_type = SigFileSaveType.SIGFILE
