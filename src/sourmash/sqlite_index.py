@@ -74,9 +74,12 @@ class SqliteIndex(Index):
         c.execute("CREATE TABLE IF NOT EXISTS sketches (id INTEGER PRIMARY KEY, name TEXT, num INTEGER NOT NULL, scaled INTEGER NOT NULL, ksize INTEGER NOT NULL, filename TEXT, is_dna BOOLEAN, is_protein BOOLEAN, is_dayhoff BOOLEAN, is_hp BOOLEAN, track_abundance BOOLEAN, seed INTEGER NOT NULL)")
         c.execute("CREATE TABLE IF NOT EXISTS hashes (hashval INTEGER NOT NULL, sketch_id INTEGER NOT NULL, FOREIGN KEY (sketch_id) REFERENCES sketches (id))")
     def close(self):
+        self.conn.close()
+
+    def commit(self):
         self.conn.commit()
 
-    def insert(self, ss):
+    def insert(self, ss, commit=True):
         c = self.conn.cursor()
         c.execute("INSERT INTO sketches (name, num, scaled, ksize, filename, is_dna, is_protein, is_dayhoff, is_hp, track_abundance, seed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (ss.name, ss.minhash.num, ss.minhash.scaled, ss.minhash.ksize, ss.filename, ss.minhash.is_dna, ss.minhash.is_protein, ss.minhash.dayhoff, ss.minhash.hp, ss.minhash.track_abundance, ss.minhash.seed))
         c.execute("SELECT last_insert_rowid()")
@@ -84,7 +87,8 @@ class SqliteIndex(Index):
         for h in ss.minhash.hashes:
             c.execute("INSERT INTO hashes (hashval, sketch_id) VALUES (?, ?)", (h, id))
 
-        self.conn.commit()
+        if commit:
+            self.conn.commit()
 
     @property
     def location(self):
