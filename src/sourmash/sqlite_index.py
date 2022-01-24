@@ -91,9 +91,14 @@ class SqliteIndex(Index):
 
         c.execute("INSERT INTO sketches (name, num, scaled, ksize, filename, is_dna, is_protein, is_dayhoff, is_hp, track_abundance, seed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (ss.name, ss.minhash.num, ss.minhash.scaled, ss.minhash.ksize, ss.filename, ss.minhash.is_dna, ss.minhash.is_protein, ss.minhash.dayhoff, ss.minhash.hp, ss.minhash.track_abundance, ss.minhash.seed))
         c.execute("SELECT last_insert_rowid()")
-        id, = c.fetchone()
+        sketch_id, = c.fetchone()
+
+        x = []
         for h in ss.minhash.hashes:
-            c.execute("INSERT INTO hashes (hashval, sketch_id) VALUES (?, ?)", (h, id))
+            x.append((h, sketch_id))
+
+        c.executemany("INSERT INTO hashes (hashval, sketch_id) VALUES (?, ?)",
+                      x)
 
         if commit:
             self.conn.commit()
