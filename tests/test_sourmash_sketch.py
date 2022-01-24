@@ -964,6 +964,28 @@ def test_do_sourmash_check_knowngood_protein_comparisons(runtmp):
     assert sig2_trans.similarity(good_trans) == 1.0
 
 
+def test_do_sourmash_singleton_multiple_files_output(runtmp):
+    # this test checks that --singleton -o works
+    testdata1 = utils.get_test_data('ecoli.faa')
+    testdata2 = utils.get_test_data('shewanella.faa')
+
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7', '--singleton',
+                    testdata1, testdata2, '-o', 'output.sig')
+
+    sig1 = runtmp.output('output.sig')
+    assert os.path.exists(sig1)
+
+    x = list(signature.load_signatures(sig1))
+    for ss in x:
+        print(ss.name)
+
+    assert len(x) == 4
+
+    idents = [ ss.name.split()[0] for ss in x ]
+    print(idents)
+    assert set(['NP_414543.1', 'NP_414544.1', 'WP_006079348.1', 'WP_006079351.1']) == set(idents)
+
+
 def test_protein_with_stop_codons(runtmp):
     # compare protein seq with/without stop codons, via cli and also python
     # apis
