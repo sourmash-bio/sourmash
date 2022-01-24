@@ -18,6 +18,7 @@ import sourmash.exceptions
 from .logging import notify, error, debug_literal
 
 from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
+from .sqlite_index import SqliteIndex
 from . import signature as sigmod
 from .picklist import SignaturePicklist, PickStyle
 from .manifest import CollectionManifest
@@ -320,6 +321,10 @@ def _load_revindex(filename, **kwargs):
     return db
 
 
+def _load_sqlitedb(filename, **kwargs):
+    return SqliteIndex.load(filename)
+
+
 def _load_zipfile(filename, **kwargs):
     "Load collection from a .zip file."
     db = None
@@ -344,6 +349,7 @@ _loader_functions = [
     ("load SBT", _load_sbt),
     ("load revindex", _load_revindex),
     ("load collection from zipfile", _load_zipfile),
+    ("load collection from sqlitedb", _load_sqlitedb),
     ]
 
 
