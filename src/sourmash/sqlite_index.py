@@ -73,7 +73,7 @@ class SqliteIndex(Index):
 
     def signatures(self):
         "Return an iterator over all signatures in the Index object."
-        for ss, loc, iloc in self._signatures_with_internal():
+        for ss, loc in self.signatures_with_location():
             yield ss
 
     def signatures_with_location(self):
@@ -83,6 +83,7 @@ class SqliteIndex(Index):
 
         conditions = []
         values = []
+        picklist = None
         if self.selection_dict:
             select_d = self.selection_dict
             if 'ksize' in select_d and select_d['ksize']:
@@ -103,13 +104,15 @@ class SqliteIndex(Index):
                 elif moltype == 'hp':
                     conditions.append("sketches.is_hp")
             # TODO: num, abund, picklist
+            picklist = select_d.get('picklist')
 
         if conditions:
             conditions = "WHERE " + " AND ".join(conditions)
         #print('XXX', conditions, values)
         c.execute(f"SELECT id, name, num, scaled, ksize, filename, is_dna, is_protein, is_dayhoff, is_hp, track_abundance, seed FROM sketches {conditions}", values)
         for ss, loc, iloc in self._load_sketches(c, c2):
-            yield ss, loc
+            if picklist is None or ss in picklist:
+                yield ss, loc
 
     def _signatures_with_internal(self):
         """Return an iterator of tuples (ss, location, internal_location).
@@ -180,8 +183,11 @@ class SqliteIndex(Index):
         # check compatibility, etc. @CTB
         query_mh = query.minhash
 
+        picklist = self.selection_dict.get('picklist')
+
         cursor = self.conn.cursor()
         c = Counter()
+        # @CTB do select here
         for sketch_id, hashval in self._get_matching_hashes(cursor, query_mh.hashes):
             c[sketch_id] += 1
 
@@ -203,7 +209,7 @@ class SqliteIndex(Index):
 
             if search_fn.passes(score):
                 if search_fn.collect(score, subj):
-                    if 1: #passes_all_picklists(subj, self.picklists):
+                    if picklist is None or subj in picklist:
                         yield IndexSearchResult(score, subj, self.location)
 
     def select(self, **kwargs):
