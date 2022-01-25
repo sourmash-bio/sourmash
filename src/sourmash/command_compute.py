@@ -7,6 +7,7 @@ import sys
 import random
 import screed
 import time
+import itertools
 
 from . import sourmash_args
 from .signature import SourmashSignature
@@ -145,74 +146,89 @@ class _signatures_for_compute_factory(object):
         return [sig]
 
 
+def _is_empty(screed_obj):
+    # this is dependent on internal details of screed... CTB.
+    if screed_obj.iter_fn == []:
+        return True
+    return False
+
+
 def _compute_individual(args, signatures_factory):
     save_sigs = None
+    open_each_time = True
     if args.output:
         save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
         save_sigs.open()
+        open_each_time = False
 
     # @CTB wrap in try/except to close save_sigs?
     for filename in args.filenames:
-        sigfile = os.path.basename(filename) + '.sig'
-        if args.outdir:
-            sigfile = os.path.join(args.outdir, sigfile)
+        if open_each_time:
+            # construct output filename
+            sigfile = os.path.basename(filename) + '.sig'
+            if args.outdir:
+                sigfile = os.path.join(args.outdir, sigfile)
 
-        if not args.output:
+            # does it exist?
             if os.path.exists(sigfile) and not args.force:
                 notify('skipping {} - already done', filename)
                 continue        # go on to next file.
 
+            # nope? ok, let's save to it.
             assert not save_sigs
             save_sigs = sourmash_args.SaveSignaturesToLocation(sigfile)
-            save_sigs.open()
 
-        # make a new signature for each sequence
-        if args.singleton:
-            siglist = []
-            n = None
-            for n, record in enumerate(screed.open(filename)):
-                sigs = signatures_factory()
-                add_seq(sigs, record.sequence,
-                        args.input_is_protein, args.check_sequence)
+        # now, set up to iterate over sequences.
+        with screed.open(filename) as screed_iter:
+            if not screed_iter:
+                notify(f"no sequences found in '{filename}'?!")
+                continue
 
-                set_sig_name(sigs, filename, name=record.name)
-                save_sigs_to_location(sigs, save_sigs)
+            print('screed iter not empty - continuing.')
 
-            if n is not None:
+            # open output for signatures
+            if open_each_time:
+                save_sigs.open()
+
+            # make a new signature for each sequence?
+            if args.singleton:
+                siglist = []
+                for n, record in enumerate(screed_iter):
+                    sigs = signatures_factory()
+                    add_seq(sigs, record.sequence,
+                            args.input_is_protein, args.check_sequence)
+
+                    set_sig_name(sigs, filename, name=record.name)
+                    save_sigs_to_location(sigs, save_sigs)
+
                 notify('calculated {} signatures for {} sequences in {}',
                        len(save_sigs), n + 1, filename)
+
+            # nope; make a single sig for the whole file
             else:
-                notify(f"no sequences found in '{filename}'?!")
-        else:
-            # make a single sig for the whole file
-            sigs = signatures_factory()
+                sigs = signatures_factory()
 
-            # consume & calculate signatures
-            notify('... reading sequences from {}', filename)
-            name = None
-            n = None
+                # consume & calculate signatures
+                notify('... reading sequences from {}', filename)
+                name = None
+                for n, record in enumerate(screed_iter):
+                    if n % 10000 == 0:
+                        if n:
+                            notify('\r...{} {}', filename, n, end='')
+                        elif args.name_from_first:
+                            name = record.name
 
-            for n, record in enumerate(screed.open(filename)):
-                if n % 10000 == 0:
-                    if n:
-                        notify('\r...{} {}', filename, n, end='')
-                    elif args.name_from_first:
-                        name = record.name
+                    add_seq(sigs, record.sequence,
+                            args.input_is_protein, args.check_sequence)
 
-                add_seq(sigs, record.sequence,
-                        args.input_is_protein, args.check_sequence)
-
-            if n is not None:       # don't write out signatures if no input
                 notify('...{} {} sequences', filename, n, end='')
 
                 set_sig_name(sigs, filename, name)
                 save_sigs_to_location(sigs, save_sigs)
 
                 notify(f'calculated {len(sigs)} signatures for {n+1} sequences in {filename}')
-            else:
-                notify(f"no sequences found in '{filename}'?!")
 
-        if not args.output:
+        if open_each_time:
             save_sigs.close()
             save_sigs = None
 
