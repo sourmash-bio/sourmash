@@ -6,8 +6,6 @@ from sourmash import MinHash, SourmashSignature
 from sourmash.index import IndexSearchResult
 from collections import Counter
 
-x = "CREATE INDEX hashval_idx ON hashes (hashval)"
-
 # register converters for unsigned 64-bit ints. @CTB stackoverflow link.
 MAX_SQLITE_INT = 2 ** 63 - 1
 sqlite3.register_adapter(
@@ -35,6 +33,8 @@ class SqliteIndex(Index):
 
             c.execute("CREATE TABLE IF NOT EXISTS sketches (id INTEGER PRIMARY KEY, name TEXT, num INTEGER NOT NULL, scaled INTEGER NOT NULL, ksize INTEGER NOT NULL, filename TEXT, is_dna BOOLEAN, is_protein BOOLEAN, is_dayhoff BOOLEAN, is_hp BOOLEAN, track_abundance BOOLEAN, seed INTEGER NOT NULL)")
             c.execute("CREATE TABLE IF NOT EXISTS hashes (hashval INTEGER NOT NULL, sketch_id INTEGER NOT NULL, FOREIGN KEY (sketch_id) REFERENCES sketches (id))")
+            c.execute("CREATE INDEX IF NOT EXISTS hashval_idx ON hashes (hashval)")
+
         except (sqlite3.OperationalError, sqlite3.DatabaseError):
             raise ValueError(f"cannot open '{dbfile}' as sqlite3 database")
 
@@ -78,7 +78,6 @@ class SqliteIndex(Index):
 
     def signatures_with_location(self):
         "Return an iterator over tuples (signature, location) in the Index."
-        # @CTB use selection_dict
         c = self.conn.cursor()
         c2 = self.conn.cursor()
 
@@ -107,7 +106,7 @@ class SqliteIndex(Index):
 
         if conditions:
             conditions = "WHERE " + " AND ".join(conditions)
-        print('XXX', conditions, values)
+        #print('XXX', conditions, values)
         c.execute(f"SELECT id, name, num, scaled, ksize, filename, is_dna, is_protein, is_dayhoff, is_hp, track_abundance, seed FROM sketches {conditions}", values)
         for ss, loc, iloc in self._load_sketches(c, c2):
             yield ss, loc
@@ -149,23 +148,24 @@ class SqliteIndex(Index):
             mh = MinHash(n=num, ksize=ksize, scaled=scaled, seed=seed, is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp, track_abundance=track_abundance)
             c2.execute("SELECT hashval FROM hashes WHERE sketch_id=?", (sketch_id,))
 
-            for hashval, in c2:
+            hashvals = c2.fetchall()
+            for hashval, in hashvals:
                 mh.add_hash(hashval)
 
             ss = SourmashSignature(mh, name=name, filename=filename)
             yield ss, self.dbfile, sketch_id
 
-    def _get_matching_hashes(self, query_cursor, query_hashes):
-        query_cursor.execute("DROP TABLE IF EXISTS hash_query")
-        query_cursor.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER)")
-        for hashval in query_hashes:
-            query_cursor.execute("INSERT INTO hash_query (hashval) VALUES (?)", (hashval,))
+    def _get_matching_hashes(self, c, hashes):
+        c.execute("DROP TABLE IF EXISTS hash_query")
+        c.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER)")
+
+        hashvals = [ (h,) for h in hashes ]
+        c.executemany("INSERT INTO hash_query (hashval) VALUES (?)", hashvals)
 
         # @CTB do we want to add select stuff on here?
-        query_cursor.execute("SELECT DISTINCT hashes.sketch_id,hashes.hashval FROM hashes,hash_query WHERE hashes.hashval=hash_query.hashval")
+        c.execute("SELECT DISTINCT hashes.sketch_id,hashes.hashval FROM hashes,hash_query WHERE hashes.hashval=hash_query.hashval")
 
-        for sketch_id, hashval in query_cursor:
-            yield sketch_id, hashval
+        return c.fetchall()
 
     def save(self, *args, **kwargs):
         raise NotImplementedError
