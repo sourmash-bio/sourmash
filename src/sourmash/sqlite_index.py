@@ -6,63 +6,22 @@ from sourmash import MinHash, SourmashSignature
 from sourmash.index import IndexSearchResult
 from collections import Counter
 
+x = "CREATE INDEX hashval_idx ON hashes (hashval)"
 
+# register converters for unsigned 64-bit ints. @CTB stackoverflow link.
 MAX_SQLITE_INT = 2 ** 63 - 1
 sqlite3.register_adapter(
     int, lambda x: hex(x) if x > MAX_SQLITE_INT else x)
 sqlite3.register_converter(
     'integer', lambda b: int(b, 16 if b[:2] == b'0x' else 10))
 
-def load_sketch(db, sketch_id):
-    c2 = db.cursor()
-
-    c2.execute("SELECT name, num, scaled, ksize, filename, is_dna, is_protein, is_dayhoff, is_hp, track_abundance, seed FROM sketches WHERE id=?", (sketch_id,))
-
-    name, num, scaled, ksize, filename, is_dna, is_protein, is_dayhoff, is_hp, track_abundance, seed = c2.fetchone()
-
-    mh = sourmash.MinHash(n=num, ksize=ksize, scaled=scaled, seed=seed, is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp, track_abundance=track_abundance)
-
-    c2.execute("SELECT hashval FROM hashes WHERE sketch_id=?", (sketch_id,))
-
-    for hashval, in c2:
-        mh.add_hash(hashval)
-
-    ss = sourmash.SourmashSignature(mh, name=name, filename=filename)
-    return ss
-
-
-def get_matching_sketches(db, unitig_mh):
-    query_cursor = db.cursor()
-    query_cursor.execute("DROP TABLE IF EXISTS hash_query")
-    # @CTB primary key for opt?
-    query_cursor.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER)")
-    for hashval in unitig_mh.hashes:
-        query_cursor.execute("INSERT INTO hash_query (hashval) VALUES (?)", (hashval,))
-
-    # do we have an overlap with any query at all??
-    query_cursor.execute("SELECT DISTINCT sketches.id FROM sketches,hashes WHERE sketches.id=hashes.sketch_id AND hashes.hashval IN (SELECT hashval FROM hash_query)")
-
-    for sketch_id, in query_cursor:
-        yield load_sketch(db, sketch_id)
-
-
-def get_matching_hashes(query_cursor, unitig_mh):
-    query_cursor.execute("DROP TABLE IF EXISTS hash_query")
-    query_cursor.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER)")
-    for hashval in unitig_mh.hashes:
-        query_cursor.execute("INSERT INTO hash_query (hashval) VALUES (?)", (hashval,))
-
-    query_cursor.execute("SELECT DISTINCT hashes.sketch_id,hashes.hashval FROM hashes,hash_query WHERE hashes.hashval=hash_query.hashval")
-
-    for sketch_id, hashval in query_cursor:
-        yield sketch_id, hashval
-
 
 class SqliteIndex(Index):
     is_database = True
     
-    def __init__(self, dbfile):
+    def __init__(self, dbfile, selection_dict=None):
         self.dbfile = dbfile
+        self.selection_dict = selection_dict
         try:
             self.conn = sqlite3.connect(dbfile,
                                         detect_types=sqlite3.PARSE_DECLTYPES)
@@ -72,6 +31,7 @@ class SqliteIndex(Index):
             c.execute("PRAGMA cache_size=1000000")
             c.execute("PRAGMA synchronous = OFF")
             c.execute("PRAGMA journal_mode = MEMORY")
+            c.execute("PRAGMA temp_store = MEMORY")
 
             c.execute("CREATE TABLE IF NOT EXISTS sketches (id INTEGER PRIMARY KEY, name TEXT, num INTEGER NOT NULL, scaled INTEGER NOT NULL, ksize INTEGER NOT NULL, filename TEXT, is_dna BOOLEAN, is_protein BOOLEAN, is_dayhoff BOOLEAN, is_hp BOOLEAN, track_abundance BOOLEAN, seed INTEGER NOT NULL)")
             c.execute("CREATE TABLE IF NOT EXISTS hashes (hashval INTEGER NOT NULL, sketch_id INTEGER NOT NULL, FOREIGN KEY (sketch_id) REFERENCES sketches (id))")
@@ -118,7 +78,38 @@ class SqliteIndex(Index):
 
     def signatures_with_location(self):
         "Return an iterator over tuples (signature, location) in the Index."
-        for ss, loc, iloc in self._signatures_with_internal():
+        # @CTB use selection_dict
+        c = self.conn.cursor()
+        c2 = self.conn.cursor()
+
+        conditions = []
+        values = []
+        if self.selection_dict:
+            select_d = self.selection_dict
+            if 'ksize' in select_d and select_d['ksize']:
+                conditions.append("sketches.ksize = ?")
+                values.append(select_d['ksize'])
+            if 'scaled' in select_d and select_d['scaled'] > 0:
+                conditions.append("sketches.scaled > 0")
+            if 'containment' in select_d and select_d['containment']:
+                conditions.append("sketches.scaled > 0")
+            if 'moltype' in select_d:
+                moltype = select_d['moltype']
+                if moltype == 'DNA':
+                    conditions.append("sketches.is_dna")
+                elif moltype == 'protein':
+                    conditions.append("sketches.is_protein")
+                elif moltype == 'dayhoff':
+                    conditions.append("sketches.is_dayhoff")
+                elif moltype == 'hp':
+                    conditions.append("sketches.is_hp")
+            # TODO: num, abund, picklist
+
+        if conditions:
+            conditions = "WHERE " + " AND ".join(conditions)
+        print('XXX', conditions, values)
+        c.execute(f"SELECT id, name, num, scaled, ksize, filename, is_dna, is_protein, is_dayhoff, is_hp, track_abundance, seed FROM sketches {conditions}", values)
+        for ss, loc, iloc in self._load_sketches(c, c2):
             yield ss, loc
 
     def _signatures_with_internal(self):
@@ -133,7 +124,28 @@ class SqliteIndex(Index):
         c2 = self.conn.cursor()
 
         c.execute("SELECT id, name, num, scaled, ksize, filename, is_dna, is_protein, is_dayhoff, is_hp, track_abundance, seed FROM sketches")
-        for (sketch_id, name, num, scaled, ksize, filename, is_dna, is_protein, is_dayhoff, is_hp, track_abundance, seed) in c:
+        for ss, loc, iloc in self._load_sketches(c, c2):
+            yield ss, loc, iloc
+
+    def _load_sketch(self, c1, sketch_id):
+        # here, c1 should already have run an appropriate 'select' on 'sketches'
+        # c2 will be used to load the hash values.
+        c1.execute("SELECT id, name, num, scaled, ksize, filename, is_dna, is_protein, is_dayhoff, is_hp, track_abundance, seed FROM sketches WHERE id=?", (sketch_id,))
+        (sketch_id, name, num, scaled, ksize, filename, is_dna, is_protein, is_dayhoff, is_hp, track_abundance, seed) = c1.fetchone()
+        mh = MinHash(n=num, ksize=ksize, scaled=scaled, seed=seed, is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp, track_abundance=track_abundance)
+
+        c1.execute("SELECT hashval FROM hashes WHERE sketch_id=?", (sketch_id,))
+
+        for hashval, in c1:
+            mh.add_hash(hashval)
+
+            ss = SourmashSignature(mh, name=name, filename=filename)
+        return ss
+
+    def _load_sketches(self, c1, c2):
+        # here, c1 should already have run an appropriate 'select' on 'sketches'
+        # c2 will be used to load the hash values.
+        for (sketch_id, name, num, scaled, ksize, filename, is_dna, is_protein, is_dayhoff, is_hp, track_abundance, seed) in c1:
             mh = MinHash(n=num, ksize=ksize, scaled=scaled, seed=seed, is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp, track_abundance=track_abundance)
             c2.execute("SELECT hashval FROM hashes WHERE sketch_id=?", (sketch_id,))
 
@@ -142,6 +154,18 @@ class SqliteIndex(Index):
 
             ss = SourmashSignature(mh, name=name, filename=filename)
             yield ss, self.dbfile, sketch_id
+
+    def _get_matching_hashes(self, query_cursor, query_hashes):
+        query_cursor.execute("DROP TABLE IF EXISTS hash_query")
+        query_cursor.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER)")
+        for hashval in query_hashes:
+            query_cursor.execute("INSERT INTO hash_query (hashval) VALUES (?)", (hashval,))
+
+        # @CTB do we want to add select stuff on here?
+        query_cursor.execute("SELECT DISTINCT hashes.sketch_id,hashes.hashval FROM hashes,hash_query WHERE hashes.hashval=hash_query.hashval")
+
+        for sketch_id, hashval in query_cursor:
+            yield sketch_id, hashval
 
     def save(self, *args, **kwargs):
         raise NotImplementedError
@@ -158,13 +182,13 @@ class SqliteIndex(Index):
 
         cursor = self.conn.cursor()
         c = Counter()
-        for sketch_id, hashval in get_matching_hashes(cursor, query_mh):
+        for sketch_id, hashval in self._get_matching_hashes(cursor, query_mh.hashes):
             c[sketch_id] += 1
 
         for sketch_id, count in c.most_common():
-            subj = load_sketch(self.conn, sketch_id)
+            subj = self._load_sketch(cursor, sketch_id)
 
-            # @CTB more goes here
+            # @CTB more goes here?
 
             subj_mh = subj.minhash
 
@@ -182,6 +206,16 @@ class SqliteIndex(Index):
                     if 1: #passes_all_picklists(subj, self.picklists):
                         yield IndexSearchResult(score, subj, self.location)
 
-    def select(self, ksize=None, moltype=None, scaled=None, num=None,
-               abund=None, containment=None, picklist=None):
-        return self
+    def select(self, **kwargs):
+        # Pass along all the selection kwargs to a new instance
+        if self.selection_dict:
+            # combine selects...
+            d = dict(self.selection_dict)
+            for k, v in kwargs.items():
+                if k in d:
+                    if d[k] is not None and d[k] != v:
+                        raise ValueError(f"incompatible select on '{k}'")
+                d[k] = v
+            kwargs = d
+
+        return SqliteIndex(self.dbfile, selection_dict=kwargs)
