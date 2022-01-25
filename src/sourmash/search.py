@@ -5,7 +5,7 @@ from collections import namedtuple
 from enum import Enum
 import numpy as np
 
-from sourmash.distance_utils import containment_to_distance
+from sourmash.distance_utils import containment_to_distance, jaccard_to_distance
 
 from .signature import SourmashSignature
 
@@ -162,7 +162,9 @@ class JaccardSearchBestOnly(JaccardSearch):
 
 # generic SearchResult tuple.
 SearchResult = namedtuple('SearchResult',
-                          'similarity, match, md5, filename, name, query, query_filename, query_name, query_md5')
+                          ['similarity', 'match', 'md5', 'filename', 'name',
+                          'query', 'query_filename', 'query_name', 'query_md5',
+                          'ksize', 'scaled', 'estimated_ani', 'ani_ci_low', 'ani_ci_high'])
 
 
 def format_bp(bp):
@@ -195,7 +197,31 @@ def search_databases_with_flat_query(query, databases, **kwargs):
     results.sort(key=lambda x: -x[0])
 
     x = []
+    query_mh = query.minhash
+    ksize = query_mh.ksize
+    scaled = query_mh.scaled
+    search_scaled=0
+    ani, ani_low, ani_high = None, None, None
     for (score, match, filename) in results:
+        match_mh = match.minhash
+        if scaled: # if scaled, we can get ANI estimates
+            search_scaled = min(query_mh.scaled, match_mh.scaled)
+            if search_scaled > query_mh.scaled:
+                query_mh = query_mh.downsample(scaled=search_scaled)
+            if search_scaled > match_mh.scaled:
+                match_mh = match_mh.downsample(scaled=search_scaled)
+            if kwargs.get('do_containment'):
+                ani, ani_low, ani_high = containment_to_distance(score, ksize, search_scaled,
+                                            n_unique_kmers=len(query_mh), return_identity=True)
+            elif kwargs.get('do_max_containment'):
+                min_n_kmers = min(len(query_mh), len(match_mh))
+                ani, ani_low, ani_high = containment_to_distance(score, ksize, search_scaled,
+                                            n_unique_kmers=min_n_kmers, return_identity=True)
+            else:
+                avg_n_kmers = round(len(query_mh) + len(match_mh)/2)
+                ani, ani_low, ani_high = jaccard_to_distance(score, ksize, search_scaled,
+                                            n_unique_kmers=avg_n_kmers, return_identity=True)
+
         x.append(SearchResult(similarity=score,
                               match=match,
                               md5=match.md5sum(),
@@ -204,7 +230,12 @@ def search_databases_with_flat_query(query, databases, **kwargs):
                               query=query,
                               query_filename=query.filename,
                               query_name=query.name,
-                              query_md5=query.md5sum()[:8]
+                              query_md5=query.md5sum()[:8],
+                              ksize=ksize,
+                              scaled=search_scaled,
+                              estimated_ani=ani,
+                              ani_ci_low=ani_low,
+                              ani_ci_high=ani_high,
         ))
     return x
 
@@ -228,7 +259,10 @@ def search_databases_with_abund_query(query, databases, **kwargs):
     results.sort(key=lambda x: -x[0])
 
     x = []
+    search_scaled=0
     for (score, match, filename) in results:
+        if query.minhash.scaled:
+            search_scaled = min(query.minhash.scaled, match.minhash.scaled)
         x.append(SearchResult(similarity=score,
                               match=match,
                               md5=match.md5sum(),
@@ -237,7 +271,12 @@ def search_databases_with_abund_query(query, databases, **kwargs):
                               query=query,
                               query_filename=query.filename,
                               query_name=query.name,
-                              query_md5=query.md5sum()[:8]
+                              query_md5=query.md5sum()[:8],
+                              ksize=query.minhash.ksize,
+                              scaled=search_scaled,
+                              estimated_ani=None,
+                              ani_ci_low=None,
+                              ani_ci_high=None,
         ))
     return x
 

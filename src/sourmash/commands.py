@@ -16,7 +16,7 @@ from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
 from .sourmash_args import (FileOutput, FileOutputCSV,
                             SaveSignaturesToLocation)
-from .search import prefetch_database, PrefetchResult, GatherResult, calculate_prefetch_info
+from .search import SearchResult, prefetch_database, PrefetchResult, GatherResult, calculate_prefetch_info
 from .index import LazyLinearIndex
 
 WATERMARK_SIZE = 10000
@@ -534,8 +534,7 @@ def search(args):
         notify("** reporting only one match because --best-only was set")
 
     if args.output:
-        fieldnames = ['similarity', 'name', 'filename', 'md5',
-                      'query_filename', 'query_name', 'query_md5']
+        fieldnames = SearchResult._fields
 
         with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)

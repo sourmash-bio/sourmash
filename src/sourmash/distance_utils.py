@@ -78,28 +78,33 @@ def containment_to_distance(containment, ksize, scaled, n_unique_kmers=None, seq
     elif containment >= 0.9999:  # changed from 1.0, to mirror jaccard_to_distance_CI_one_step
         sol1 = sol2 = point_estimate = 0.0
     else:
-        alpha = 1 - confidence
-        z_alpha = probit(1-alpha/2)
-        f_scaled = 1.0/scaled # these use scaled as a fraction between 0 and 1
+        try:
+            alpha = 1 - confidence
+            z_alpha = probit(1-alpha/2)
+            f_scaled = 1.0/scaled # these use scaled as a fraction between 0 and 1
 
-        bias_factor = 1 - (1 - f_scaled) ** n_unique_kmers
+            bias_factor = 1 - (1 - f_scaled) ** n_unique_kmers
 
-        term_1 = (1.0-f_scaled) / (f_scaled * n_unique_kmers**3 * bias_factor**2)
-        term_2 = lambda pest: n_unique_kmers * exp_n_mutated(n_unique_kmers, ksize, pest) - exp_n_mutated_squared(n_unique_kmers, ksize, pest)
-        term_3 = lambda pest: var_n_mutated(n_unique_kmers, ksize, pest) / (n_unique_kmers**2)
+            term_1 = (1.0-f_scaled) / (f_scaled * n_unique_kmers**3 * bias_factor**2)
+            term_2 = lambda pest: n_unique_kmers * exp_n_mutated(n_unique_kmers, ksize, pest) - exp_n_mutated_squared(n_unique_kmers, ksize, pest)
+            term_3 = lambda pest: var_n_mutated(n_unique_kmers, ksize, pest) / (n_unique_kmers**2)
 
-        var_direct = lambda pest: term_1 * term_2(pest) + term_3(pest)
+            var_direct = lambda pest: term_1 * term_2(pest) + term_3(pest)
 
-        f1 = lambda pest: (1-pest)**ksize + z_alpha * sqrt(var_direct(pest)) - containment
-        f2 = lambda pest: (1-pest)**ksize - z_alpha * sqrt(var_direct(pest)) - containment
+            f1 = lambda pest: (1-pest)**ksize + z_alpha * sqrt(var_direct(pest)) - containment
+            f2 = lambda pest: (1-pest)**ksize - z_alpha * sqrt(var_direct(pest)) - containment
 
-        sol1 = brentq(f1, 0.0000001, 0.9999999)
-        sol2 = brentq(f2, 0.0000001, 0.9999999)
+            sol1 = brentq(f1, 0.0000001, 0.9999999)
+            sol2 = brentq(f2, 0.0000001, 0.9999999)
 
-        point_estimate = 1.0-containment**(1.0/ksize)
+            point_estimate = 1.0-containment**(1.0/ksize)
+
+        except ValueError as exc:
+            notify("WARNING: Cannot estimate ANI. Are your minhashes big enough?")
+            notify(str(exc))
+            return None, None, None
     if return_identity:
         point_estimate,sol2,sol1 = distance_to_identity(point_estimate,sol2,sol1)
-        #distance_using_CImidpoint = (sol2+sol1)/2.0
     return point_estimate,sol2,sol1
 
 
@@ -130,19 +135,25 @@ def jaccard_to_distance(jaccard, ksize, scaled, n_unique_kmers=None, sequence_le
     elif jaccard >= 0.9999:
         sol1 = sol2 = point_estimate = 0.0
     else:
-        alpha = 1 - confidence
-        z_alpha = probit(1-alpha/2)
-        f_scaled = 1.0/scaled # these use scaled as a fraction between 0 and 1
+        try:
+            alpha = 1 - confidence
+            z_alpha = probit(1-alpha/2)
+            f_scaled = 1.0/scaled # these use scaled as a fraction between 0 and 1
 
-        var_direct = lambda pest: variance_scaled_jaccard(n_unique_kmers, pest, ksize, f_scaled)
+            var_direct = lambda pest: variance_scaled_jaccard(n_unique_kmers, pest, ksize, f_scaled)
 
-        f1 = lambda pest: 2.0/(2- (1-pest)**ksize ) - 1 + z_alpha * sqrt(var_direct(pest)) - jaccard
-        f2 = lambda pest: 2.0/(2- (1-pest)**ksize ) - 1 - z_alpha * sqrt(var_direct(pest)) - jaccard
+            f1 = lambda pest: 2.0/(2- (1-pest)**ksize ) - 1 + z_alpha * sqrt(var_direct(pest)) - jaccard
+            f2 = lambda pest: 2.0/(2- (1-pest)**ksize ) - 1 - z_alpha * sqrt(var_direct(pest)) - jaccard
 
-        sol1 = brentq(f1, 0.0001, 0.9999)
-        sol2 = brentq(f2, 0.0001, 0.9999)
+            sol1 = brentq(f1, 0.0000001, 0.9999999)
+            sol2 = brentq(f2, 0.0000001, 0.9999999)
+            point_estimate = 1.0 - (2.0 - 2.0/(jaccard + 1))**(1.0/ksize)
 
-        point_estimate = 1.0 - (2.0 - 2.0/(jaccard + 1))**(1.0/ksize)
+        except ValueError as exc:
+            notify("WARNING: Cannot estimate ANI. Are your minhashes big enough?")
+            notify(str(exc))
+            return None, None, None
+
     if return_identity:
         point_estimate,sol2,sol1 = distance_to_identity(point_estimate,sol2,sol1)
 

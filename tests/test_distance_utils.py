@@ -233,19 +233,13 @@ def test_jaccard_to_distance_scaled1():
     dist,low,high = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
     print("\nDIST:", dist)
     print("CI:", low, " - ", high)
-    print(f"{dist},{low},{high}")
+    print(f"({dist},{low},{high})")
     # check results
-    exp_dist, exp_low,exp_high = 0.019122659390482077,0.017549816764592427,0.02085752009333101
-    assert dist == exp_dist
-    assert low == exp_low
-    assert high == exp_high
+    assert (dist,low,high) == (0.019122659390482077,0.017549816764593173,0.020857520093330525)
     # return identity instead
-    exp_id, exp_idlow,exp_idhigh = 0.9808773406095179,0.979142479906669,0.9824501832354076
     ident,low,high = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers,return_identity=True)
-    print(f"{ident},{low},{high}")
-    assert ident == exp_id
-    assert low == exp_idlow
-    assert high == exp_idhigh
+    print(f"({ident},{low},{high})")
+    assert (ident,low, high) == (0.9808773406095179,0.9791424799066695,0.9824501832354068)
 
 
 def test_jaccard_to_distance_scaled100():
@@ -258,10 +252,7 @@ def test_jaccard_to_distance_scaled100():
     print("CI:", low, " - ", high)
     print(f"{dist},{low},{high}")
     # check results
-    exp_dist, exp_low,exp_high = 0.019122659390482077,0.014156518319318126,0.025095471100086125
-    assert dist == exp_dist
-    assert low == exp_low
-    assert high == exp_high
+    (dist,low,high) = (0.019122659390482077,0.014156518319161603,0.02509547110001303)
 
 
 def test_jaccard_to_distance_k31():
@@ -272,12 +263,9 @@ def test_jaccard_to_distance_k31():
     dist,low,high = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
     print("\nDIST:", dist)
     print("CI:", low, " - ", high)
-    print(f"{dist},{low},{high}")
+    print(f"({dist},{low},{high})")
     # check results
-    exp_dist, exp_low,exp_high = 0.012994354410710174,0.009559840649526866,0.017172145712325716
-    assert dist == exp_dist
-    assert low == exp_low
-    assert high == exp_high
+    assert (dist, low, high) == (0.012994354410710174,0.009559840649526755,0.017172145712325677)
 
 
 def test_jaccard_to_distance_k31_2():
@@ -288,12 +276,9 @@ def test_jaccard_to_distance_k31_2():
     dist,low,high = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
     print("\nDIST:", dist)
     print("CI:", low, " - ", high)
-    print(f"{dist},{low},{high}")
+    print(f"({dist},{low},{high})")
     # check results
-    exp_dist, exp_low,exp_high = 0.0535071608231702,0.040739632227821516,0.06673746391115623
-    assert dist == exp_dist
-    assert low == exp_low
-    assert high == exp_high
+    assert (dist, low, high) == (0.0535071608231702,0.04073963222782166,0.0667374639111566)
 
 
 def test_jaccard_to_distance_confidence():
@@ -305,27 +290,21 @@ def test_jaccard_to_distance_confidence():
     dist,low,high = jaccard_to_distance(jaccard,ksize,scaled,confidence=confidence,n_unique_kmers=nkmers)
     print("\nDIST:", dist)
     print("CI:", low, " - ", high)
-    print(f"{dist},{low},{high}")
+    print(f"({dist},{low},{high})")
     # check results
-    exp_dist, exp_low,exp_high = 0.0535071608231702,0.03702518586582857,0.07080999238232429
-    assert dist == exp_dist
-    assert low == exp_low
-    assert high == exp_high
+    assert (dist,low,high) == (0.0535071608231702,0.03702518586582811,0.07080999238232542)
 
     confidence=0.90
     dist,low,high = jaccard_to_distance(jaccard,ksize,scaled,confidence=confidence,n_unique_kmers=nkmers)
     print("\nDIST:", dist)
     print("CI:", low, " - ", high)
-    print(f"{dist},{low},{high}")
+    print(f"({dist},{low},{high})")
     # check results
-    exp_dist, exp_low,exp_high = 0.0535071608231702,0.042708361726101415,0.0646280650023921
-    assert dist == exp_dist
-    assert low == exp_low
-    assert high == exp_high
+    assert(dist,low,high) == (0.0535071608231702,0.04270836172610141,0.06462806500239282)
 
 
 def test_nkmers_to_bp():
-    jaccard = 0.1
+    jaccard = containment = 0.1
     scaled = 100
     bp_len = 10030
     ksize=31
@@ -334,9 +313,18 @@ def test_nkmers_to_bp():
     confidence=0.99
     kmer_dist = jaccard_to_distance(jaccard,ksize,scaled,confidence=confidence,n_unique_kmers=nkmers)
     bp_dist = jaccard_to_distance(jaccard,ksize,scaled,confidence=confidence,sequence_len_bp=bp_len)
-    print(f"\nkDIST:", kmer_dist)
-    print(f"\nbpDIST:",bp_dist)
+    print(f"\nk_jDIST:", kmer_dist)
+    print(f"\nbp_jDIST:",bp_dist)
     # check results
-    assert kmer_dist == (0.0535071608231702, 0.03702518586582857, 0.07080999238232429)
-    assert bp_dist ==  (0.0535071608231702, 0.03702518586582857, 0.07080999238232429)
+    assert kmer_dist == (0.0535071608231702, 0.03702518586582811, 0.07080999238232542)
+    assert bp_dist ==  (0.0535071608231702, 0.03702518586582811, 0.07080999238232542)
     assert kmer_dist==bp_dist
+
+    kmer_cdist = containment_to_distance(containment,ksize,scaled,confidence=confidence,n_unique_kmers=nkmers)
+    bp_cdist = containment_to_distance(containment,ksize,scaled,confidence=confidence,sequence_len_bp=bp_len)
+    print(f"\nk_cDIST:", kmer_cdist)
+    print(f"\nbp_cDIST:",bp_cdist)
+    # check results
+    assert kmer_cdist == (0.07158545548052564, 0.04802880300938562, 0.09619930040790341)
+    assert bp_cdist == (0.07158545548052564, 0.04802880300938562, 0.09619930040790341)
+    assert kmer_cdist==bp_cdist

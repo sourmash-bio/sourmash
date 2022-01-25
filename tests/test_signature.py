@@ -491,13 +491,13 @@ def test_jaccard_ANI():
     print("\nJACCARD_ANI 90% CI", ss1.jaccard_ani(ss2, confidence=0.9))
     print("\nJACCARD_ANI 99% CI", ss1.jaccard_ani(ss2, confidence=0.99))
 
-    assert ss1.jaccard_ani(ss2) == (0.9783711630110239, 0.9776381521132324, 0.9790929734698981)
-    assert ss1.jaccard_ani(ss2, confidence=0.9) == (0.9783711630110239, 0.9777567290812513, 0.97897770829732)
-    assert ss1.jaccard_ani(ss2, confidence=0.99) == (0.9783711630110239, 0.9774056164150092, 0.9793173653983135)
+    assert ss1.jaccard_ani(ss2) == (0.9783711630110239, 0.9776381521132318, 0.9790929734698974)
+    assert ss1.jaccard_ani(ss2, confidence=0.9) == (0.9783711630110239, 0.9777567290812516, 0.9789777082973189)
+    assert ss1.jaccard_ani(ss2, confidence=0.99) == (0.9783711630110239, 0.9774056164150094, 0.9793173653983231)
 
     # precalc jaccard and assert same result
     jaccard = ss1.jaccard(ss2)
     print("\nJACCARD_ANI", ss1.jaccard_ani(ss2,jaccard=jaccard))
 
-    assert ss1.jaccard_ani(ss2, jaccard=jaccard) == (0.9783711630110239, 0.9776381521132324, 0.9790929734698981)
-    assert ss1.jaccard_ani(ss2, jaccard=jaccard, confidence=0.9) == (0.9783711630110239, 0.9777567290812513, 0.97897770829732)
+    assert ss1.jaccard_ani(ss2, jaccard=jaccard) == (0.9783711630110239, 0.9776381521132318, 0.9790929734698974)
+    assert ss1.jaccard_ani(ss2, jaccard=jaccard, confidence=0.9) == (0.9783711630110239, 0.9777567290812516, 0.9789777082973189)

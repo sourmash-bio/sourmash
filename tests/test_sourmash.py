@@ -1551,11 +1551,18 @@ def test_search_containment_abund_ignore(runtmp):
         r = csv.DictReader(fp)
         row = next(r)
         similarity = row['similarity']
+        estimated_ani = row['estimated_ani']
         print(f'search output: similarity is {similarity}')
+        print(f'search output: ani is {estimated_ani}')
     print(mh1.contained_by(mh2))
 
     assert float(similarity) == mh1.contained_by(mh2)
     assert float(similarity) == 0.25
+    
+    print(runtmp.last_result.err)
+    assert "WARNING: Cannot estimate ANI. Are your minhashes big enough?" in runtmp.last_result.err
+    assert "Error: varN <0.0!" in runtmp.last_result.err
+    assert estimated_ani == ""
 
 
 def test_search_containment_sbt(runtmp):
@@ -5206,3 +5213,117 @@ def test_gather_scaled_1(runtmp, linear_gather, prefetch_gather):
 
     assert "1.0 kbp      100.0%  100.0%" in runtmp.last_result.out
     assert "found 1 matches total;" in runtmp.last_result.out
+
+
+@utils.in_tempdir
+def test_search_ani_jaccard(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', testdata1, testdata2)
+
+    c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    csv_file = c.output('xxx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert float(row['similarity']) == 0.9288577154308617 
+        assert row['filename'].endswith('short2.fa.sig')
+        assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
+        assert row['query_filename'].endswith('short.fa')
+        assert row['query_name'] == ''
+        assert row['query_md5'] == '9191284a'
+        assert row['estimated_ani'] == "0.9987884602947684"
+
+
+@utils.in_tempdir
+def test_search_ani_empty_abund(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=10,abund', testdata1, testdata2)
+
+    c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    csv_file = c.output('xxx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert float(row['similarity']) == 0.8224046424612483 
+        assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
+        assert row['filename'].endswith('short2.fa.sig')
+        assert row['query_filename'].endswith('short.fa')
+        assert row['query_name'] == ''
+        assert row['query_md5'] == 'b5cc464c'
+        assert row['estimated_ani'] == ""
+
+
+@utils.in_tempdir
+def test_search_ani_containment(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', testdata1, testdata2)
+
+    c.run_sourmash('search', '--containment', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    csv_file = c.output('xxx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert float(row['similarity']) == 0.9556701030927836 
+        assert row['filename'].endswith('short2.fa.sig')
+        assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
+        assert row['query_filename'].endswith('short.fa')
+        assert row['query_name'] == ''
+        assert row['query_md5'] == '9191284a'
+        assert row['estimated_ani'] == "0.9985384076863009"
+
+    # search other direction
+    c.run_sourmash('search', '--containment', 'short2.fa.sig', 'short.fa.sig', '-o', 'xxxx.csv')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    
+    csv_file = c.output('xxxx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert float(row['similarity']) == 0.9706806282722513 
+        assert row['filename'].endswith('short.fa.sig')
+        assert row['md5'] == '9191284a3a23a913d8d410f3d53ce8f0'
+        assert row['query_filename'].endswith('short2.fa')
+        assert row['query_name'] == ''
+        assert row['query_md5'] == 'bf752903'
+        assert row['estimated_ani'] == "0.9990405323606487"
+
+
+@utils.in_tempdir
+def test_search_ani_max_containment(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', testdata1, testdata2)
+
+    c.run_sourmash('search', '--max-containment', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    csv_file = c.output('xxx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert float(row['similarity']) == 0.9706806282722513 
+        assert row['filename'].endswith('short2.fa.sig')
+        assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
+        assert row['query_filename'].endswith('short.fa')
+        assert row['query_name'] == ''
+        assert row['query_md5'] == '9191284a'
+        assert row['estimated_ani'] == "0.9990405323606487"

@@ -201,7 +201,7 @@ class Index(ABC):
                 raise TypeError("'search_abund' requires subject signatures with abundance information")
             score = query.similarity(subj)
             if score >= threshold:
-                matches.append(IndexSearchResult(score, subj, self.location))
+                matches.append(IndexSearchResult(score, subj, loc))
 
         # sort!
         matches.sort(key=lambda x: -x.score)
