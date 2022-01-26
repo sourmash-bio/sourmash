@@ -30,7 +30,7 @@ def var_n_mutated(L,k,r1,q=None):
 	varN = L*(1-q)*(q*(2*k+(2/r1)-1)-2*k) \
 	     + k*(k-1)*(1-q)**2 \
          + (2*(1-q)/(r1**2))*((1+(k-1)*(1-q))*r1-q)
-	if (varN<0.0):
+	if (varN<0.0): # this seems to happen only with super tiny test data
          raise ValueError('Error: varN <0.0!')
 	return float(varN)
 
