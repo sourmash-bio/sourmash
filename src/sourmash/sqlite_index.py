@@ -16,6 +16,23 @@ sqlite3.register_converter(
     'integer', lambda b: int(b, 16 if b[:2] == b'0x' else 10))
 
 
+picklist_transforms = dict(
+    name=lambda x: x,
+    ident=lambda x: x + ' %',
+    identprefix=lambda x: x + '%',
+    md5short=lambda x: x[:8] + '%',
+    md5=lambda x: x,
+    )
+
+picklist_selects = dict(
+    name='INSERT INTO pickset SELECT id FROM sketches WHERE name=?',
+    ident='INSERT INTO pickset SELECT id FROM sketches WHERE name LIKE ?',
+    identprefix='INSERT INTO pickset SELECT id FROM sketches WHERE name LIKE ?',
+    md5short='INSERT INTO pickset SELECT id FROM sketches WHERE md5sum LIKE ?',
+    md5='INSERT INTO pickset SELECT id FROM sketches WHERE md5sum=?',
+    )
+
+
 class SqliteIndex(Index):
     is_database = True
     
@@ -138,30 +155,20 @@ class SqliteIndex(Index):
             # TODO: num, abund
             picklist = select_d.get('picklist')
 
-            # note: support md5, md5short, name, ident?, identprefix?
-            c.execute("DROP TABLE IF EXISTS pickset")
-            c.execute("CREATE TABLE pickset (sketch_id INTEGER)")
+            # support picklists!
+            if picklist is not None:
+                c.execute("DROP TABLE IF EXISTS pickset")
+                c.execute("CREATE TABLE pickset (sketch_id INTEGER)")
 
-            if picklist.coltype == 'name':
-                names = [ (name,) for name in picklist.pickset ]
-                c.executemany('INSERT INTO pickset SELECT id FROM sketches WHERE name=?', names)
-                conditions.append('sketches.id in (SELECT sketch_id FROM pickset)')
-            elif picklist.coltype == 'ident':
-                pidents = [ (p + ' %',) for p in picklist.pickset ]
-                c.executemany('INSERT INTO pickset SELECT id FROM sketches WHERE name LIKE ?', pidents)
-                conditions.append('sketches.id in (SELECT sketch_id FROM pickset)')
-            elif picklist.coltype == 'identprefix':
-                pidents = [ (p + '%',) for p in picklist.pickset ]
-                c.executemany('INSERT INTO pickset SELECT id FROM sketches WHERE name LIKE ?', pidents)
-                conditions.append('sketches.id in (SELECT sketch_id FROM pickset)')
-            elif picklist.coltype == 'md5short': # @CTB no md5sum in our table!
-                md5shorts = [ (p[:8] + '%',) for p in picklist.pickset ]
-                c.executemany('INSERT INTO pickset SELECT id FROM sketches WHERE md5sum LIKE ?', md5shorts)
-                conditions.append('sketches.id in (SELECT sketch_id FROM pickset)')
-            elif picklist.coltype == 'md5': # @CTB no md5sum in our table!
-                md5s = [ (p,) for p in picklist.pickset ]
-                c.executemany('INSERT INTO pickset SELECT id FROM sketches WHERE md5sum=?', md5s)
-                conditions.append('sketches.id in (SELECT sketch_id FROM pickset)')
+                transform = picklist_transforms[picklist.coltype]
+                sql_stmt = picklist_selects[picklist.coltype]
+
+                vals = [ (transform(v),) for v in picklist.pickset ]
+                c.executemany(sql_stmt, vals)
+
+                conditions.append("""
+                sketches.id in (SELECT sketch_id FROM pickset)
+                """)
 
         if conditions:
             conditions = "WHERE " + " AND ".join(conditions)
