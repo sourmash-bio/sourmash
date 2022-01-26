@@ -164,7 +164,7 @@ class JaccardSearchBestOnly(JaccardSearch):
 SearchResult = namedtuple('SearchResult',
                           ['similarity', 'match', 'md5', 'filename', 'name',
                           'query', 'query_filename', 'query_name', 'query_md5',
-                          'ksize', 'scaled', 'estimated_ani', 'ani_ci_low', 'ani_ci_high'])
+                          'ksize', 'search_scaled', 'estimated_ani', 'ani_ci_low', 'ani_ci_high'])
 
 
 def format_bp(bp):
@@ -205,7 +205,7 @@ def search_databases_with_flat_query(query, databases, **kwargs):
     for (score, match, filename) in results:
         match_mh = match.minhash
         if scaled: # if scaled, we can get ANI estimates
-            search_scaled = min(query_mh.scaled, match_mh.scaled)
+            search_scaled = max(query_mh.scaled, match_mh.scaled)
             if search_scaled > query_mh.scaled:
                 query_mh = query_mh.downsample(scaled=search_scaled)
             if search_scaled > match_mh.scaled:
@@ -218,7 +218,7 @@ def search_databases_with_flat_query(query, databases, **kwargs):
                 ani, ani_low, ani_high = containment_to_distance(score, ksize, search_scaled,
                                             n_unique_kmers=min_n_kmers, return_identity=True)
             else:
-                avg_n_kmers = round(len(query_mh) + len(match_mh)/2)
+                avg_n_kmers = round((len(query_mh) + len(match_mh))/2)
                 ani, ani_low, ani_high = jaccard_to_distance(score, ksize, search_scaled,
                                             n_unique_kmers=avg_n_kmers, return_identity=True)
 
@@ -232,7 +232,7 @@ def search_databases_with_flat_query(query, databases, **kwargs):
                               query_name=query.name,
                               query_md5=query.md5sum()[:8],
                               ksize=ksize,
-                              scaled=search_scaled,
+                              search_scaled=search_scaled,
                               estimated_ani=ani,
                               ani_ci_low=ani_low,
                               ani_ci_high=ani_high,
@@ -273,7 +273,7 @@ def search_databases_with_abund_query(query, databases, **kwargs):
                               query_name=query.name,
                               query_md5=query.md5sum()[:8],
                               ksize=query.minhash.ksize,
-                              scaled=search_scaled,
+                              search_scaled=search_scaled,
                               estimated_ani=None,
                               ani_ci_low=None,
                               ani_ci_high=None,
