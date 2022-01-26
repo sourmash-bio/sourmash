@@ -5327,3 +5327,49 @@ def test_search_ani_max_containment(c):
         assert row['query_name'] == ''
         assert row['query_md5'] == '9191284a'
         assert row['estimated_ani'] == "0.9990405323606487"
+
+
+@utils.in_tempdir
+def test_search_jaccard_ani_downsample(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=2', '--force', testdata1)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', '--force', testdata1)
+    sig1 = sourmash.load_one_signature("short.fa.sig")
+    sig2 = sourmash.load_one_signature("short2.fa.sig")
+    print(f"SCALED: sig1: {sig1.minhash.scaled}, sig2: {sig2.minhash.scaled}") # if don't change name, just reads prior sigfile!!?
+
+    sig1F = c.output('sig1.sig')
+    sig2F = c.output('sig2.sig')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=2', '--force', testdata1, '-o', sig1F)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', '--force', testdata2, '-o', sig2F)
+
+    sig1 = sourmash.load_one_signature(sig1F)
+    sig2 = sourmash.load_one_signature(sig2F)
+    print(f"SCALED: sig1: {sig1.minhash.scaled}, sig2: {sig2.minhash.scaled}")
+
+    c.run_sourmash('search', sig1F, sig2F, '-o', 'xdx.csv')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    csv_file = c.output('xdx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert float(row['similarity']) == 0.9296066252587992
+        assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
+        assert row['filename'].endswith('sig2.sig')
+        assert row['query_filename'].endswith('short.fa')
+        assert row['query_name'] == ''
+        assert row['query_md5'] == '8f74b0b8'
+        assert row['estimated_ani'] == "0.9988019200011651"
+
+    #downsample manually and assert same ANI
+    mh1 = sig1.minhash
+    mh2 = sig2.minhash
+    mh2_sc2 = mh2.downsample(scaled=mh1.scaled)
+    print("SCALED:", mh1.scaled, mh2_sc2.scaled)
+    ani= mh1.jaccard_ani(mh2_sc2)
+    print(ani)
+    assert ani == (0.9988019200011651, 0.9980440877843673, 0.9991807844672299)
