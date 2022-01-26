@@ -120,16 +120,7 @@ class SqliteIndex(Index):
     def location(self):
         return self.dbfile
 
-    def signatures(self):
-        "Return an iterator over all signatures in the Index object."
-        for ss, loc in self.signatures_with_location():
-            yield ss
-
-    def signatures_with_location(self):
-        "Return an iterator over tuples (signature, location) in the Index."
-        c = self.conn.cursor()
-        c2 = self.conn.cursor()
-
+    def _select_signatures(self, c):
         conditions = []
         values = []
         picklist = None
@@ -152,7 +143,8 @@ class SqliteIndex(Index):
                     conditions.append("sketches.is_dayhoff")
                 elif moltype == 'hp':
                     conditions.append("sketches.is_hp")
-            # TODO: num, abund
+            # TODO: num, abund @CTB
+
             picklist = select_d.get('picklist')
 
             # support picklists!
@@ -172,6 +164,22 @@ class SqliteIndex(Index):
 
         if conditions:
             conditions = "WHERE " + " AND ".join(conditions)
+        else:
+            conditions = ""
+
+        return conditions, values, picklist
+
+    def signatures(self):
+        "Return an iterator over all signatures in the Index object."
+        for ss, loc in self.signatures_with_location():
+            yield ss
+
+    def signatures_with_location(self):
+        "Return an iterator over tuples (signature, location) in the Index."
+        c = self.conn.cursor()
+        c2 = self.conn.cursor()
+
+        conditions, values, picklist = self._select_signatures(c)
 
         c.execute(f"""
         SELECT id, name, num, scaled, ksize, filename, is_dna, is_protein,
