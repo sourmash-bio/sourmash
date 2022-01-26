@@ -1,16 +1,26 @@
-"""
-Provide SqliteIndex, a sqlite3-based Index class for storing and searching
+"""Provide SqliteIndex, a sqlite3-based Index class for storing and searching
 sourmash signatures.
 
 Note that SqliteIndex supports both storage and fast _search_ of scaled
 signatures, via a reverse index.
 
 Features and limitations:
+
+* Currently we try to maintain only one database connection.  It's not 100%
+  clear what happens if the same database is opened by multiple independent
+  processes and one or more of them write to it. It should all work, because
+  SQL...
+
+* Unlike LCA_Database, SqliteIndex supports multiple ksizes and moltypes.
+
 * SqliteIndex does not support 'num' signatures. It could store them easily, but
   since it cannot search them properly with 'find', we've omitted them.
 
-Questions: do we want to enforce a single 'scaled' for this database?
-* 'find' may require it...
+Questions:
+
+* do we want to enforce a single 'scaled' for this database? 'find'
+  may require it...
+
 """
 import sqlite3
 from collections import Counter
