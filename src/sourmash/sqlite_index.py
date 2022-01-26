@@ -16,6 +16,9 @@ Features and limitations:
 * SqliteIndex does not support 'num' signatures. It could store them easily, but
   since it cannot search them properly with 'find', we've omitted them.
 
+* Likewise, SqliteIndex does not support 'abund' signatures because it cannot
+  search them (just like SBTs cannot).
+
 Questions:
 
 * do we want to enforce a single 'scaled' for this database? 'find'
@@ -26,7 +29,6 @@ import sqlite3
 from collections import Counter
 
 # @CTB add DISTINCT to sketch and hash select
-# @CTB abund signatures
 
 from .index import Index
 import sourmash
@@ -100,7 +102,6 @@ class SqliteIndex(Index):
                    is_protein BOOLEAN NOT NULL,
                    is_dayhoff BOOLEAN NOT NULL,
                    is_hp BOOLEAN NOT NULL,
-                   track_abundance BOOLEAN NOT NULL,
                    md5sum TEXT NOT NULL, 
                    seed INTEGER NOT NULL)
                 """)
@@ -142,16 +143,18 @@ class SqliteIndex(Index):
 
         if ss.minhash.num:
             raise ValueError("cannot store 'num' signatures in SqliteIndex")
+        if ss.minhash.track_abundance:
+            raise ValueError("cannot store signatures with abundance in SqliteIndex")
 
         c.execute("""
         INSERT INTO sketches
           (name, scaled, ksize, filename, md5sum,
-           is_dna, is_protein, is_dayhoff, is_hp, track_abundance, seed)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           is_dna, is_protein, is_dayhoff, is_hp, seed)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (ss.name, ss.minhash.scaled, ss.minhash.ksize,
          ss.filename, ss.md5sum(),
          ss.minhash.is_dna, ss.minhash.is_protein, ss.minhash.dayhoff,
-         ss.minhash.hp, ss.minhash.track_abundance, ss.minhash.seed))
+         ss.minhash.hp, ss.minhash.seed))
 
         c.execute("SELECT last_insert_rowid()")
         sketch_id, = c.fetchone()
@@ -193,7 +196,6 @@ class SqliteIndex(Index):
                     conditions.append("sketches.is_dayhoff")
                 elif moltype == 'hp':
                     conditions.append("sketches.is_hp")
-            # TODO: abund @CTB
 
             picklist = select_d.get('picklist')
 
@@ -238,7 +240,7 @@ class SqliteIndex(Index):
 
         c.execute(f"""
         SELECT id, name, scaled, ksize, filename, is_dna, is_protein,
-        is_dayhoff, is_hp, track_abundance, seed FROM sketches {conditions}""",
+        is_dayhoff, is_hp, seed FROM sketches {conditions}""",
                   values)
 
         for ss, loc, iloc in self._load_sketches(c, c2):
@@ -258,7 +260,7 @@ class SqliteIndex(Index):
 
         c.execute("""
         SELECT id, name, scaled, ksize, filename, is_dna, is_protein,
-        is_dayhoff, is_hp, track_abundance, seed FROM sketches
+        is_dayhoff, is_hp, seed FROM sketches
         """)
         
         for ss, loc, iloc in self._load_sketches(c, c2):
@@ -269,14 +271,13 @@ class SqliteIndex(Index):
         # c2 will be used to load the hash values.
         c1.execute("""
         SELECT id, name, scaled, ksize, filename, is_dna, is_protein,
-        is_dayhoff, is_hp, track_abundance, seed FROM sketches WHERE id=?""",
+        is_dayhoff, is_hp, seed FROM sketches WHERE id=?""",
                    (sketch_id,))
 
         (sketch_id, name, scaled, ksize, filename, is_dna,
-         is_protein, is_dayhoff, is_hp, track_abundance, seed) = c1.fetchone()
+         is_protein, is_dayhoff, is_hp, seed) = c1.fetchone()
         mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
-                     is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp,
-                     track_abundance=track_abundance)
+                     is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp)
 
         c1.execute("SELECT hashval FROM hashes WHERE sketch_id=?", (sketch_id,))
 
@@ -290,10 +291,9 @@ class SqliteIndex(Index):
         # here, c1 should already have run an appropriate 'select' on 'sketches'
         # c2 will be used to load the hash values.
         for (sketch_id, name, scaled, ksize, filename, is_dna, is_protein,
-             is_dayhoff, is_hp, track_abundance, seed) in c1:
+             is_dayhoff, is_hp, seed) in c1:
             mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
-                         is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp,
-                         track_abundance=track_abundance)
+                         is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp)
             c2.execute("SELECT hashval FROM hashes WHERE sketch_id=?",
                        (sketch_id,))
 
@@ -363,11 +363,13 @@ class SqliteIndex(Index):
                     if picklist is None or subj in picklist:
                         yield IndexSearchResult(score, subj, self.location)
 
-    def select(self, *, num=0, **kwargs):
+    def select(self, *, num=0, track_abundance=False, **kwargs):
         if num:
-            # @CTB is this the right thing to do?
             # @CTB testme
             raise ValueError("cannot select on 'num' in SqliteIndex")
+        if track_abundance:
+            # @CTB testme
+            raise ValueError("cannot store or search signatures with abundance")
 
         # Pass along all the selection kwargs to a new instance
         if self.selection_dict:

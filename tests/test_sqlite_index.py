@@ -1,27 +1,11 @@
 "Tests for SqliteIndex"
 
-# @CTB: run flakes
-
 import pytest
-import glob
-import os
-import zipfile
-import shutil
-import copy
 
 import sourmash
 from sourmash.sqlite_index import SqliteIndex
-from sourmash import index
 from sourmash import load_one_signature, SourmashSignature
-from sourmash.index import (LinearIndex, ZipFileLinearIndex,
-                            make_jaccard_search_query, CounterGather,
-                            LazyLinearIndex, MultiIndex)
-from sourmash.sbt import SBT, GraphFactory, Leaf
-from sourmash.sbtmh import SigLeaf
-from sourmash import sourmash_args
-from sourmash.search import JaccardSearch, SearchType
 from sourmash.picklist import SignaturePicklist, PickStyle
-from sourmash_tst_utils import SourmashCommandFailed
 
 import sourmash_tst_utils as utils
 
@@ -144,41 +128,6 @@ def test_sqlite_index_gather():
     assert matches[0][1] == ss47
 
 
-def test_sqlite_index_search_subj_has_abundance():
-    # check that signatures in the index are flattened appropriately.
-    queryfile = utils.get_test_data('47.fa.sig')
-    subjfile = utils.get_test_data('track_abund/47.fa.sig')
-
-    qs = sourmash.load_one_signature(queryfile)
-    ss = sourmash.load_one_signature(subjfile)
-
-    sqlidx = SqliteIndex(":memory:")
-    sqlidx.insert(ss)
-
-    results = list(sqlidx.search(qs, threshold=0))
-    assert len(results) == 1
-    # note: search returns _original_ signature, not flattened
-    assert results[0].signature == ss
-
-
-def test_sqlite_index_gather_subj_has_abundance():
-    # check that signatures in the index are flattened appropriately.
-    queryfile = utils.get_test_data('47.fa.sig')
-    subjfile = utils.get_test_data('track_abund/47.fa.sig')
-
-    qs = sourmash.load_one_signature(queryfile)
-    ss = sourmash.load_one_signature(subjfile)
-
-    sqlidx = SqliteIndex(":memory:")
-    sqlidx.insert(ss)
-
-    results = list(sqlidx.gather(qs, threshold=0))
-    assert len(results) == 1
-
-    # note: gather returns _original_ signature, not flattened
-    assert results[0].signature == ss
-
-
 def test_index_search_subj_scaled_is_lower():
     # check that subject sketches are appropriately downsampled
     sigfile = utils.get_test_data('scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz')
@@ -199,123 +148,6 @@ def test_index_search_subj_scaled_is_lower():
     assert len(results) == 1
     # original signature (not downsampled) is returned
     assert results[0].signature == ss
-
-
-def test_index_search_subj_num_is_lower():
-    return # @CTB num
-    # check that subject sketches are appropriately downsampled
-    sigfile = utils.get_test_data('num/47.fa.sig')
-    ss = sourmash.load_one_signature(sigfile, ksize=31)
-
-    # double check :)
-    assert ss.minhash.num == 500
-
-    # build a new query that has a num of 250
-    qs = SourmashSignature(ss.minhash.downsample(num=250))
-
-    # create Index to search
-    sqlidx = SqliteIndex(":memory:")
-    sqlidx.insert(ss)
-
-    # search!
-    results = list(sqlidx.search(qs, threshold=0))
-    assert len(results) == 1
-    # original signature (not downsampled) is returned
-    assert results[0].signature == ss
-
-
-def test_index_search_query_num_is_lower():
-    return # @CTB num
-    # check that query sketches are appropriately downsampled
-    sigfile = utils.get_test_data('num/47.fa.sig')
-    qs = sourmash.load_one_signature(sigfile, ksize=31)
-
-    # double check :)
-    assert qs.minhash.num == 500
-
-    # build a new subject that has a num of 250
-    ss = SourmashSignature(qs.minhash.downsample(num=250))
-
-    # create Index to search
-    sqlidx = SqliteIndex(":memory:")
-    sqlidx.insert(ss)
-
-    # search!
-    results = list(sqlidx.search(qs, threshold=0))
-    assert len(results) == 1
-    assert results[0].signature == ss
-
-
-def test_sqlite_index_search_abund():
-    # test Index.search_abund
-    sig47 = utils.get_test_data('track_abund/47.fa.sig')
-    sig63 = utils.get_test_data('track_abund/63.fa.sig')
-
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
-
-    sqlidx = SqliteIndex(":memory:")
-    sqlidx.insert(ss47)
-    sqlidx.insert(ss63)
-
-    results = list(sqlidx.search_abund(ss47, threshold=0))
-    assert len(results) == 2
-    assert results[0].signature == ss47
-    assert results[1].signature == ss63
-
-
-def test_sqlite_index_search_abund_requires_threshold():
-    # test Index.search_abund
-    sig47 = utils.get_test_data('track_abund/47.fa.sig')
-    sig63 = utils.get_test_data('track_abund/63.fa.sig')
-
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
-
-    sqlidx = SqliteIndex(":memory:")
-    sqlidx.insert(ss47)
-    sqlidx.insert(ss63)
-
-    with pytest.raises(TypeError) as exc:
-        results = list(sqlidx.search_abund(ss47, threshold=None))
-
-    assert "'search_abund' requires 'threshold'" in str(exc.value)
-
-
-def test_sqlite_index_search_abund_query_flat():
-    # test Index.search_abund
-    sig47 = utils.get_test_data('47.fa.sig')
-    sig63 = utils.get_test_data('track_abund/63.fa.sig')
-
-    ss47 = sourmash.load_one_signature(sig47, ksize=31)
-    ss63 = sourmash.load_one_signature(sig63)
-
-    sqlidx = SqliteIndex(":memory:")
-    sqlidx.insert(ss47)
-    sqlidx.insert(ss63)
-
-    with pytest.raises(TypeError) as exc:
-        results = list(sqlidx.search_abund(ss47, threshold=0))
-
-    assert "'search_abund' requires query signature with abundance information" in str(exc.value)
-
-
-def test_sqlite_index_search_abund_subj_flat():
-    # test Index.search_abund
-    sig47 = utils.get_test_data('track_abund/47.fa.sig')
-    sig63 = utils.get_test_data('63.fa.sig')
-
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
-
-    sqlidx = SqliteIndex(":memory:")
-    sqlidx.insert(ss47)
-    sqlidx.insert(ss63)
-
-    with pytest.raises(TypeError) as exc:
-        results = list(sqlidx.search_abund(ss47, threshold=0))
-
-    assert "'search_abund' requires subject signatures with abundance information" in str(exc.value)
 
 
 def test_sqlite_index_save_load(runtmp):
