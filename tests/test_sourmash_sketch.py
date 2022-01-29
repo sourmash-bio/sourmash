@@ -347,6 +347,9 @@ def test_do_sourmash_sketchdna_noinput(c):
     cmd = ['sketch', 'dna', '-', '-o', c.output('xxx.sig')]
     c.run_sourmash(*cmd, stdin_data=data)
 
+    print(c.last_result.out)
+    print(c.last_result.err)
+
     sigfile = c.output('xxx.sig')
     assert not os.path.exists(sigfile)
     assert 'no sequences found' in c.last_result.err
