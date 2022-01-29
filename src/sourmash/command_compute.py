@@ -146,30 +146,31 @@ class _signatures_for_compute_factory(object):
         return [sig]
 
 
-def _is_empty(screed_obj):
-    # this is dependent on internal details of screed... CTB.
-    if screed_obj.iter_fn == []:
-        return True
-    return False
-
-
 def _compute_individual(args, signatures_factory):
+    # this is where output signatures will go.
     save_sigs = None
-    open_each_time = True
-    if args.output:
-        save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
-        save_sigs.open()
-        open_each_time = False
 
-    # @CTB wrap in try/except to close save_sigs?
+    # track: is this the first file? in cases where we have empty inputs,
+    # we don't want to open any outputs.
+    first_file_for_output = True
+
+    # open an output file each time?
+    open_each_time = True
+
+    # if args.output is set, we are aggregating all output to a single file.
+    # do not open a new output file for each input.
+    open_output_each_time = True
+    if args.output:
+        open_output_each_time = False
+
     for filename in args.filenames:
-        if open_each_time:
-            # construct output filename
+        if open_output_each_time:
+            # for each input file, construct output filename
             sigfile = os.path.basename(filename) + '.sig'
             if args.outdir:
                 sigfile = os.path.join(args.outdir, sigfile)
 
-            # does it exist?
+            # does it already exist? skip if so.
             if os.path.exists(sigfile) and not args.force:
                 notify('skipping {} - already done', filename)
                 continue        # go on to next file.
@@ -178,17 +179,24 @@ def _compute_individual(args, signatures_factory):
             assert not save_sigs
             save_sigs = sourmash_args.SaveSignaturesToLocation(sigfile)
 
+        #
+        # calculate signatures!
+        #
+
         # now, set up to iterate over sequences.
         with screed.open(filename) as screed_iter:
             if not screed_iter:
                 notify(f"no sequences found in '{filename}'?!")
                 continue
 
-            print('screed iter not empty - continuing.')
-
             # open output for signatures
-            if open_each_time:
+            if open_output_each_time:
                 save_sigs.open()
+            # or... is this the first time to write something to args.output?
+            elif first_file_for_output:
+                save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
+                save_sigs.open()
+                first_file_for_output = False
 
             # make a new signature for each sequence?
             if args.singleton:
@@ -228,13 +236,15 @@ def _compute_individual(args, signatures_factory):
 
                 notify(f'calculated {len(sigs)} signatures for {n+1} sequences in {filename}')
 
-        if open_each_time:
+        # if not args.output, close output for every input filename.
+        if open_output_each_time:
             save_sigs.close()
             save_sigs = None
 
 
-    # if --output specified, all collected signatures => args.output
-    if args.output:
+    # if --output specified, all collected signatures => args.output,
+    # and we need to close here.
+    if args.output and save_sigs is not None:
         save_sigs.close()
 
 
