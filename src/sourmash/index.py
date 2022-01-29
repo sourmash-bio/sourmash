@@ -842,6 +842,7 @@ class MultiIndex(Index):
 
     Note: this is an in-memory collection, and does not do lazy loading:
     all signatures are loaded upon instantiation and kept in memory.
+    (@CTB update this with information on the various load functions.)
 
     Concrete class; signatures held in memory; builds and uses manifests.
     """
