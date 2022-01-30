@@ -233,6 +233,7 @@ def _compute_individual(args, signatures_factory):
         # if not args.output, close output for every input filename.
         if open_output_each_time:
             save_sigs.close()
+            notify(f"saved {len(save_sigs)} signature(s) to '{save_sigs.location}'. Note: signature license is CC0.'")
             save_sigs = None
 
 
@@ -240,6 +241,7 @@ def _compute_individual(args, signatures_factory):
     # and we need to close here.
     if args.output and save_sigs is not None:
         save_sigs.close()
+        notify(f"saved {len(save_sigs)} signature(s) to '{save_sigs.location}'. Note: signature license is CC0.'")
 
 
 def _compute_merged(args, signatures_factory):
@@ -309,8 +311,7 @@ def save_siglist(siglist, sigfile_name):
                 for ss in sourmash.load_signatures(json_str):
                     save_sig.add(ss)
 
-    notify('saved signature(s) to {}. Note: signature license is CC0.',
-           sigfile_name)
+        notify(f"saved {len(save_sig)} signature(s) to '{save_sig.location}'")
 
 
 def save_sigs_to_location(siglist, save_sig):
@@ -328,9 +329,6 @@ def save_sigs_to_location(siglist, save_sig):
             json_str = sourmash.save_signatures([ss])
             for ss in sourmash.load_signatures(json_str):
                 save_sig.add(ss)
-
-    notify('saved signature(s) to {}. Note: signature license is CC0.',
-           save_sig.location)
 
 
 class ComputeParameters(RustObject):
