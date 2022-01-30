@@ -6,8 +6,6 @@ import os.path
 import sys
 import random
 import screed
-import time
-import itertools
 
 from . import sourmash_args
 from .signature import SourmashSignature
@@ -154,9 +152,6 @@ def _compute_individual(args, signatures_factory):
     # we don't want to open any outputs.
     first_file_for_output = True
 
-    # open an output file each time?
-    open_each_time = True
-
     # if args.output is set, we are aggregating all output to a single file.
     # do not open a new output file for each input.
     open_output_each_time = True
@@ -200,7 +195,6 @@ def _compute_individual(args, signatures_factory):
 
             # make a new signature for each sequence?
             if args.singleton:
-                siglist = []
                 for n, record in enumerate(screed_iter):
                     sigs = signatures_factory()
                     add_seq(sigs, record.sequence,
