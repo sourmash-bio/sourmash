@@ -329,8 +329,8 @@ def save_sigs_to_location(siglist, save_sig):
             for ss in sourmash.load_signatures(json_str):
                 save_sig.add(ss)
 
-    #notify('saved signature(s) to {}. Note: signature license is CC0.',
-    #       sigfile_name)
+    notify('saved signature(s) to {}. Note: signature license is CC0.',
+           save_sig.location)
 
 
 class ComputeParameters(RustObject):
