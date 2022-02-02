@@ -832,6 +832,34 @@ def test_search_ignore_abundance(runtmp):
     assert out1 != out2
 
 
+def test_search_abund_csv(runtmp):
+    # test search with abundance signatures, look at CSV output
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    runtmp.sourmash('sketch', 'dna', '-p','k=31,scaled=1,abund', testdata1, testdata2)
+
+    runtmp.sourmash('search', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
+    out1 = runtmp.last_result.out
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '1 matches' in runtmp.last_result.out
+    assert '82.7%' in runtmp.last_result.out
+
+    with open(runtmp.output('xxx.csv'), newline="") as fp:
+        r = csv.DictReader(fp)
+        row = next(r)
+
+        print(row)
+
+        assert float(row['similarity']) == 0.8266277454288367
+        assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
+        assert row['filename'].endswith('short2.fa.sig')
+        assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
+        assert row['query_filename'].endswith('short.fa')
+        assert row['query_name'] == ''
+        assert row['query_md5'] == '9191284a'
+        assert row['filename'] == 'short2.fa.sig', row['filename']
+
+
 @utils.in_tempdir
 def test_search_csv(c):
     testdata1 = utils.get_test_data('short.fa')
