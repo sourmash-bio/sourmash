@@ -826,6 +826,34 @@ def test_search_ignore_abundance(runtmp):
     assert out1 != out2
 
 
+def test_search_abund_csv(runtmp):
+    # test search with abundance signatures, look at CSV output
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    runtmp.sourmash('sketch', 'dna', '-p','k=31,scaled=1,abund', testdata1, testdata2)
+
+    runtmp.sourmash('search', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
+    out1 = runtmp.last_result.out
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '1 matches' in runtmp.last_result.out
+    assert '82.7%' in runtmp.last_result.out
+
+    with open(runtmp.output('xxx.csv'), newline="") as fp:
+        r = csv.DictReader(fp)
+        row = next(r)
+
+        print(row)
+
+        assert float(row['similarity']) == 0.8266277454288367
+        assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
+        assert row['filename'].endswith('short2.fa.sig')
+        assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
+        assert row['query_filename'].endswith('short.fa')
+        assert row['query_name'] == ''
+        assert row['query_md5'] == '9191284a'
+        assert row['filename'] == 'short2.fa.sig', row['filename']
+
+
 @utils.in_tempdir
 def test_search_csv(c):
     testdata1 = utils.get_test_data('short.fa')
@@ -4000,6 +4028,8 @@ def test_gather_abund_1_1(runtmp, linear_gather, prefetch_gather):
     assert '50.4%   80.0%       1.9    tests/test-data/genome-s11.fa.gz' in out
     assert 'genome-s12.fa.gz' not in out
 
+    assert "the recovered matches hit 100.0% of the abundance-weighted query" in out
+
 
 def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
     c = runtmp
@@ -4035,6 +4065,7 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
     assert '91.0%  100.0%      14.5    tests/test-data/genome-s10.fa.gz' in out
     assert '9.0%   80.0%       1.9    tests/test-data/genome-s11.fa.gz' in out
     assert 'genome-s12.fa.gz' not in out
+    assert "the recovered matches hit 100.0% of the abundance-weighted query" in out
 
     # check the calculations behind the above output by looking into
     # the CSV.
@@ -4102,6 +4133,7 @@ def test_gather_abund_10_1_ignore_abundance(runtmp, linear_gather, prefetch_gath
 
     print(out)
     print(err)
+    assert "the recovered matches hit 100.0% of the query (unweighted)" in out
 
     # when we project s10x10-s11 (r2+r3), 10:1 abundance,
     # onto s10 and s11 genomes with gather --ignore-abundance, we get:
