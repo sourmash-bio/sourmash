@@ -359,6 +359,50 @@ def test_linear_index_search_abund():
     assert results[1].signature == ss63
 
 
+def test_linear_index_search_abund_downsample_query():
+    # test Index.search_abund with query with higher scaled
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    # forcibly downsample ss47 for the purpose of this test :)
+    ss47.minhash = ss63.minhash.downsample(scaled=2000)
+    assert ss63.minhash.scaled != ss47.minhash.scaled
+
+    lidx = LinearIndex()
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    results = list(lidx.search_abund(ss47, threshold=0))
+    assert len(results) == 2
+    assert results[0].signature == ss47
+    assert results[1].signature == ss63
+
+
+def test_linear_index_search_abund_downsample_subj():
+    # test Index.search_abund with subj with higher scaled
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    # forcibly downsample ss63 for the purpose of this test :)
+    ss63.minhash = ss63.minhash.downsample(scaled=2000)
+    assert ss63.minhash.scaled != ss47.minhash.scaled
+
+    lidx = LinearIndex()
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    results = list(lidx.search_abund(ss47, threshold=0))
+    assert len(results) == 2
+    assert results[0].signature == ss47
+    assert results[1].signature == ss63
+
+
 def test_linear_index_search_abund_requires_threshold():
     # test Index.search_abund
     sig47 = utils.get_test_data('track_abund/47.fa.sig')
