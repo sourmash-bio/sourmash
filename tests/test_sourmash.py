@@ -693,29 +693,23 @@ def test_plot_override_labeltext_fail(runtmp):
 
 @utils.in_tempdir
 def test_plot_reordered_labels_csv(c):
-    files = utils.get_test_data('demo/*.sig')
-    files = glob.glob(files)
-    files.sort()
-    assert len(files) == 7
+    ss2 = utils.get_test_data('2.fa.sig')
+    ss47 = utils.get_test_data('47.fa.sig')
+    ss63 = utils.get_test_data('63.fa.sig')
 
-    c.run_sourmash('compare', '-o', 'cmp', *files)
+    c.run_sourmash('compare', '-k', '31', '-o', 'cmp', ss2, ss47, ss63)
     c.run_sourmash('plot', 'cmp', '--csv', 'neworder.csv')
 
-    with open(c.output('neworder.csv'), 'rt') as fp:
-        out_mat = fp.readlines()
+    with open(c.output('neworder.csv'), newline="") as fp:
+        r = csv.DictReader(fp)
 
-    # turns out to be hard to guarantee output order, so... just make sure
-    # matrix labels are in different order than inputs!
+        akker_vals = set()
+        for row in r:
+            akker_vals.add(row['CP001071.1 Akkermansia muciniphila ATCC BAA-835, complete genome'])
 
-    header = out_mat[0].strip().split(',')
-
-    files = [ os.path.basename(x)[:-4] + '.fastq.gz' for x in files ]
-
-    print(files)
-    print(header)
-
-    assert set(files) == set(header) # same file names...
-    assert files != header           # ...different order.
+        assert '1.0' in akker_vals
+        assert '0.0' in akker_vals
+        assert len(akker_vals) == 2
 
 
 def test_plot_subsample_1(runtmp):
