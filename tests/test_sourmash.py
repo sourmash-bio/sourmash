@@ -4034,6 +4034,8 @@ def test_gather_abund_1_1(runtmp, linear_gather, prefetch_gather):
     assert '50.4%   80.0%       1.9    tests/test-data/genome-s11.fa.gz' in out
     assert 'genome-s12.fa.gz' not in out
 
+    assert "the recovered matches hit 100.0% of the abundance-weighted query" in out
+
 
 def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
     c = runtmp
@@ -4069,6 +4071,7 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
     assert '91.0%  100.0%      14.5    tests/test-data/genome-s10.fa.gz' in out
     assert '9.0%   80.0%       1.9    tests/test-data/genome-s11.fa.gz' in out
     assert 'genome-s12.fa.gz' not in out
+    assert "the recovered matches hit 100.0% of the abundance-weighted query" in out
 
     # check the calculations behind the above output by looking into
     # the CSV.
@@ -4136,6 +4139,7 @@ def test_gather_abund_10_1_ignore_abundance(runtmp, linear_gather, prefetch_gath
 
     print(out)
     print(err)
+    assert "the recovered matches hit 100.0% of the query (unweighted)" in out
 
     # when we project s10x10-s11 (r2+r3), 10:1 abundance,
     # onto s10 and s11 genomes with gather --ignore-abundance, we get:
