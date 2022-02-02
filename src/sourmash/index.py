@@ -199,7 +199,7 @@ class Index(ABC):
         for subj, loc in self.signatures_with_location():
             if not subj.minhash.track_abundance:
                 raise TypeError("'search_abund' requires subject signatures with abundance information")
-            score = query.similarity(subj)
+            score = query.similarity(subj, downsample=True)
             if score >= threshold:
                 matches.append(IndexSearchResult(score, subj, loc))
 

@@ -795,7 +795,10 @@ def gather(args):
         print_results(f'(truncated gather because --num-results={args.num_results})')
 
     p_covered = (1 - weighted_missed) * 100
-    print_results(f'the recovered matches hit {p_covered:.1f}% of the query')
+    if is_abundance:
+        print_results(f'the recovered matches hit {p_covered:.1f}% of the abundance-weighted query')
+    else:
+        print_results(f'the recovered matches hit {p_covered:.1f}% of the query (unweighted)')
     print_results('')
     if gather_iter.scaled != query.minhash.scaled:
         print_results(f'WARNING: final scaled was {gather_iter.scaled}, vs query scaled of {query.minhash.scaled}')
