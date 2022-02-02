@@ -145,13 +145,19 @@ class SourmashSignature(RustObject):
 
     def jaccard_ani(self, other, downsample=False, jaccard=None, confidence=0.95):
         "Compute Jaccard similarity with the other MinHash signature."
-        if not jaccard:
-            jaccard = self.minhash.similarity(other.minhash, ignore_abundance=True,
-                                            downsample=downsample)
-        avg_scaled_kmers = round((len(self.minhash.hashes) + len(other.minhash.hashes))/2)
-        avg_n_kmers = avg_scaled_kmers * self.minhash.scaled # would be better if hll estimate
-        j_ani,ani_low,ani_high = jaccard_to_distance(jaccard, self.minhash.ksize,
-                                                    self.minhash.scaled, n_unique_kmers=avg_n_kmers,
+        self_mh = self.minhash
+        other_mh = other.minhash
+        scaled = self_mh.scaled
+        if downsample:
+            scaled = max(self_mh.scaled, other_mh.scaled)
+            self_mh = self.minhash.downsample(scaled=scaled)
+            other_mh = other.minhash.downsample(scaled=scaled)
+        if jaccard is None:
+            jaccard = self_mh.similarity(other_mh, ignore_abundance=True)
+        avg_scaled_kmers = round((len(self_mh) + len(other_mh))/2)
+        avg_n_kmers = avg_scaled_kmers * scaled # would be better if hll estimate
+        j_ani,ani_low,ani_high = jaccard_to_distance(jaccard, self_mh.ksize,
+                                                    scaled, n_unique_kmers=avg_n_kmers,
                                                     confidence=confidence, return_identity=True)
         return j_ani, ani_low, ani_high
 
@@ -161,11 +167,18 @@ class SourmashSignature(RustObject):
 
     def containment_ani(self, other, downsample=False, containment=None, confidence=0.95):
         "Estimate ANI from containment with the other MinHash signature."
-        if not containment:
-            containment = self.minhash.contained_by(other.minhash, downsample)
-        n_kmers = len(self.minhash.hashes) * self.minhash.scaled # would be better if hll estimate
-        c_ani,ani_low,ani_high = containment_to_distance(containment, self.minhash.ksize,
-                                                        self.minhash.scaled, n_unique_kmers=n_kmers, 
+        self_mh = self.minhash
+        other_mh = other.minhash
+        scaled = self_mh.scaled
+        if downsample:
+            scaled = max(self_mh.scaled, other_mh.scaled)
+            self_mh = self.minhash.downsample(scaled=scaled)
+            other_mh = other.minhash.downsample(scaled=scaled)
+        if containment is None:
+            containment = self_mh.contained_by(other_mh)
+        n_kmers = len(self_mh) * scaled # would be better if hll estimate
+        c_ani,ani_low,ani_high = containment_to_distance(containment, self_mh.ksize,
+                                                        scaled, n_unique_kmers=n_kmers,
                                                         confidence=confidence, return_identity=True)
         return c_ani, ani_low, ani_high
 
@@ -175,13 +188,20 @@ class SourmashSignature(RustObject):
 
     def max_containment_ani(self, other, downsample=False, max_containment=None, confidence=0.95):
         "Estimate ANI from max containment w/other signature. Note: ignores abundance."
-        if not max_containment:
-            max_containment =  self.minhash.max_containment(other.minhash, downsample)
+        self_mh = self.minhash
+        other_mh = other.minhash
+        scaled = self_mh.scaled
+        if downsample:
+            scaled = max(self_mh.scaled, other_mh.scaled)
+            self_mh = self.minhash.downsample(scaled=scaled)
+            other_mh = other.minhash.downsample(scaled=scaled)
+        if max_containment is None:
+            max_containment = self_mh.max_containment(other_mh)
         # max_containment will always use smaller sig as denominator
-        min_n_kmers = min(len(self.minhash.hashes), len(other.minhash.hashes))
-        n_kmers = min_n_kmers * self.minhash.scaled
-        c_ani,ani_low,ani_high = containment_to_distance(max_containment, self.minhash.ksize,
-                                                        self.minhash.scaled, n_unique_kmers=n_kmers,
+        min_n_hashes = min(len(self_mh), len(other_mh))
+        n_kmers = min_n_hashes * scaled
+        c_ani,ani_low,ani_high = containment_to_distance(max_containment, self_mh.ksize,
+                                                        scaled, n_unique_kmers=n_kmers,
                                                         confidence=confidence, return_identity=True)
         return c_ani, ani_low, ani_high
 

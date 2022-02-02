@@ -463,6 +463,15 @@ def test_containment_ANI():
     assert ss2.containment_ani(ss3, confidence=0.9) == (0.9866751346467802, 0.986241913154108, 0.9870974232542815)
     assert ss3.containment_ani(ss2, confidence=0.99) == (0.9868883523107224, 0.9862092287269876, 0.987540474733798)
 
+
+def test_containment_ANI_precalc_containment():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    f3 = utils.get_test_data('47+63.fa.sig')
+    ss1 = load_one_signature(f1, ksize=31)
+    ss2 = load_one_signature(f2, ksize=31)
+    ss3 = load_one_signature(f3, ksize=31)
+
     # precalc containments and assert same results
     s1c = ss1.contained_by(ss2)
     s2c = ss2.contained_by(ss1)
@@ -481,6 +490,38 @@ def test_containment_ANI():
     assert ss3.max_containment_ani(ss2, max_containment=s4c) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
 
 
+def test_containment_ANI_downsample():
+    f2 = utils.get_test_data('2+63.fa.sig')
+    f3 = utils.get_test_data('47+63.fa.sig')
+    ss2 = load_one_signature(f2, ksize=31)
+    ss3 = load_one_signature(f3, ksize=31)
+    # check that downsampling works properly
+    print(ss2.minhash.scaled)
+    ss2.minhash = ss2.minhash.downsample(scaled=2000)
+    assert ss2.minhash.scaled != ss3.minhash.scaled
+    ds_s3c = ss2.containment_ani(ss3, downsample=True)
+    ds_s4c = ss3.containment_ani(ss2, downsample=True)
+    mc_w_ds_1 =  ss2.max_containment_ani(ss3, downsample=True)
+    mc_w_ds_2 =  ss3.max_containment_ani(ss2, downsample=True)
+
+    with pytest.raises(ValueError) as e:
+        ss2.containment_ani(ss3)
+        assert "ValueError: mismatch in scaled; comparison fail" in e
+
+    with pytest.raises(ValueError) as e:
+        ss2.max_containment_ani(ss3)
+        assert "ValueError: mismatch in scaled; comparison fail" in e
+
+    ss3.minhash = ss3.minhash.downsample(scaled=2000)
+    assert ss2.minhash.scaled == ss3.minhash.scaled
+    ds_s3c_manual = ss2.containment_ani(ss3)
+    ds_s4c_manual = ss3.containment_ani(ss2)
+    ds_mc_manual =  ss2.max_containment_ani(ss3)
+    assert ds_s3c == ds_s3c_manual
+    assert ds_s4c == ds_s4c_manual
+    assert mc_w_ds_1 == mc_w_ds_2 == ds_mc_manual
+
+
 def test_jaccard_ANI():
     f1 = utils.get_test_data('2.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')
@@ -495,9 +536,37 @@ def test_jaccard_ANI():
     assert ss1.jaccard_ani(ss2, confidence=0.9) == (0.9783711630110239, 0.9777567290812516, 0.9789777082973189)
     assert ss1.jaccard_ani(ss2, confidence=0.99) == (0.9783711630110239, 0.9774056164150094, 0.9793173653983231)
 
+
+def test_jaccard_ANI_precalc_jaccard():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    ss1 = load_one_signature(f1, ksize=31)
+    ss2 = load_one_signature(f2)
     # precalc jaccard and assert same result
     jaccard = ss1.jaccard(ss2)
     print("\nJACCARD_ANI", ss1.jaccard_ani(ss2,jaccard=jaccard))
 
     assert ss1.jaccard_ani(ss2, jaccard=jaccard) == (0.9783711630110239, 0.9776381521132318, 0.9790929734698974)
     assert ss1.jaccard_ani(ss2, jaccard=jaccard, confidence=0.9) == (0.9783711630110239, 0.9777567290812516, 0.9789777082973189)
+
+
+def test_jaccard_ANI_downsample():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    ss1 = load_one_signature(f1, ksize=31)
+    ss2 = load_one_signature(f2)
+    # check that downsampling works properly
+    print(ss2.minhash.scaled)
+    ss1.minhash = ss1.minhash.downsample(scaled=2000)
+    assert ss1.minhash.scaled != ss2.minhash.scaled
+    ds_s1c = ss1.jaccard_ani(ss2, downsample=True)
+    ds_s2c = ss2.jaccard_ani(ss1, downsample=True)
+
+    with pytest.raises(ValueError) as e:
+        ss1.jaccard_ani(ss2)
+        assert "ValueError: mismatch in scaled; comparison fail" in e
+
+    ss2.minhash = ss2.minhash.downsample(scaled=2000)
+    assert ss1.minhash.scaled == ss2.minhash.scaled
+    ds_j_manual = ss1.jaccard_ani(ss2)
+    assert ds_s1c == ds_s2c == ds_j_manual

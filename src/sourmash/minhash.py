@@ -649,11 +649,18 @@ class MinHash(RustObject):
 
     def jaccard_ani(self, other, downsample=False, jaccard=None, confidence=0.95):
         "Calculate Jaccard --> ANI of two MinHash objects."
-        if not jaccard:
-            jaccard = self.jaccard(other, downsample=downsample)
-        avg_scaled_kmers = round((len(self) + len(other))/2)
-        avg_n_kmers = avg_scaled_kmers * self.scaled # would be better if hll estimate
-        j_ani,ani_low,ani_high = jaccard_to_distance(jaccard, self.ksize, self.scaled, 
+        self_mh = self
+        other_mh = other
+        scaled = self.scaled
+        if downsample:
+            scaled = max(self_mh.scaled, other_mh.scaled)
+            self_mh = self.downsample(scaled=scaled)
+            other_mh = other.downsample(scaled=scaled)
+        if jaccard is None:
+            jaccard = self_mh.similarity(other_mh, ignore_abundance=True)
+        avg_scaled_kmers = round((len(self_mh) + len(other_mh))/2)
+        avg_n_kmers = avg_scaled_kmers * scaled # would be better if hll estimate
+        j_ani,ani_low,ani_high = jaccard_to_distance(jaccard, self_mh.ksize, scaled,
                                                     n_unique_kmers=avg_n_kmers, confidence=confidence,
                                                     return_identity=True)
         return j_ani, ani_low, ani_high
@@ -697,10 +704,17 @@ class MinHash(RustObject):
 
     def containment_ani(self, other, downsample=False, containment=None, confidence=0.95):
         "Estimate ANI from containment with the other MinHash."
-        if not containment:
-            containment = self.contained_by(other, downsample)
-        n_kmers = len(self) * self.scaled # would be better if hll estimate
-        c_ani,ani_low,ani_high = containment_to_distance(containment, self.ksize, self.scaled, 
+        self_mh = self
+        other_mh = other
+        scaled = self.scaled
+        if downsample:
+            scaled = max(self_mh.scaled, other_mh.scaled)
+            self_mh = self.downsample(scaled=scaled)
+            other_mh = other.downsample(scaled=scaled)
+        if containment is None:
+            containment = self_mh.contained_by(other_mh)
+        n_kmers = len(self_mh) * scaled # would be better if hll estimate
+        c_ani,ani_low,ani_high = containment_to_distance(containment, self_mh.ksize, self_mh.scaled,
                                                         n_unique_kmers=n_kmers, confidence=confidence,
                                                         return_identity=True)
         return c_ani, ani_low, ani_high
@@ -719,11 +733,18 @@ class MinHash(RustObject):
 
     def max_containment_ani(self, other, downsample=False, max_containment=None, confidence=0.95):
         "Estimate ANI from containment with the other MinHash."
-        if not max_containment:
-            max_containment = self.max_containment(other, downsample)
-        min_n_kmers = min(len(self), len(other))
-        n_kmers = min_n_kmers * self.scaled
-        c_ani,ani_low,ani_high = containment_to_distance(max_containment, self.ksize, self.scaled,
+        self_mh = self
+        other_mh = other
+        scaled = self.scaled
+        if downsample:
+            scaled = max(self_mh.scaled, other_mh.scaled)
+            self_mh = self.downsample(scaled=scaled)
+            other_mh = other.downsample(scaled=scaled)
+        if max_containment is None:
+            max_containment = self_mh.max_containment(other_mh)
+        min_n_kmers = min(len(self_mh), len(other_mh))
+        n_kmers = min_n_kmers * scaled
+        c_ani,ani_low,ani_high = containment_to_distance(max_containment, self_mh.ksize, scaled,
                                                         n_unique_kmers=n_kmers,confidence=confidence,
                                                         return_identity=True)
         return c_ani, ani_low, ani_high
