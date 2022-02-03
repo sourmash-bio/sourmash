@@ -6,8 +6,6 @@ import os.path
 import sys
 import random
 import screed
-import time
-import itertools
 
 from . import sourmash_args
 from .signature import SourmashSignature
@@ -154,9 +152,6 @@ def _compute_individual(args, signatures_factory):
     # we don't want to open any outputs.
     first_file_for_output = True
 
-    # open an output file each time?
-    open_each_time = True
-
     # if args.output is set, we are aggregating all output to a single file.
     # do not open a new output file for each input.
     open_output_each_time = True
@@ -200,7 +195,6 @@ def _compute_individual(args, signatures_factory):
 
             # make a new signature for each sequence?
             if args.singleton:
-                siglist = []
                 for n, record in enumerate(screed_iter):
                     sigs = signatures_factory()
                     add_seq(sigs, record.sequence,
@@ -239,6 +233,7 @@ def _compute_individual(args, signatures_factory):
         # if not args.output, close output for every input filename.
         if open_output_each_time:
             save_sigs.close()
+            notify(f"saved {len(save_sigs)} signature(s) to '{save_sigs.location}'. Note: signature license is CC0.'")
             save_sigs = None
 
 
@@ -246,6 +241,7 @@ def _compute_individual(args, signatures_factory):
     # and we need to close here.
     if args.output and save_sigs is not None:
         save_sigs.close()
+        notify(f"saved {len(save_sigs)} signature(s) to '{save_sigs.location}'. Note: signature license is CC0.'")
 
 
 def _compute_merged(args, signatures_factory):
@@ -315,8 +311,7 @@ def save_siglist(siglist, sigfile_name):
                 for ss in sourmash.load_signatures(json_str):
                     save_sig.add(ss)
 
-    notify('saved signature(s) to {}. Note: signature license is CC0.',
-           sigfile_name)
+        notify(f"saved {len(save_sig)} signature(s) to '{save_sig.location}'")
 
 
 def save_sigs_to_location(siglist, save_sig):
@@ -334,9 +329,6 @@ def save_sigs_to_location(siglist, save_sig):
             json_str = sourmash.save_signatures([ss])
             for ss in sourmash.load_signatures(json_str):
                 save_sig.add(ss)
-
-    #notify('saved signature(s) to {}. Note: signature license is CC0.',
-    #       sigfile_name)
 
 
 class ComputeParameters(RustObject):
