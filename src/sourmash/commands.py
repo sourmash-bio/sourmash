@@ -1272,6 +1272,10 @@ def prefetch(args):
         if query.name:
             sig_name = f"{query.name}-known"
 
+        # restore abundances, if present in original query
+        if query.minhash.track_abundance:
+            ident_mh = ident_mh.inflate(query.minhash)
+
         ss = sig.SourmashSignature(ident_mh, name=sig_name)
         with open(filename, "wt") as fp:
             sig.save_signatures([ss], fp)
@@ -1284,6 +1288,11 @@ def prefetch(args):
             sig_name = f"{query.name}-unknown"
 
         notify(f"saving {len(noident_mh)} unmatched hashes to '{filename}'")
+
+        # restore abundances, if present in original query
+        if query.minhash.track_abundance:
+            noident_mh = noident_mh.inflate(query.minhash)
+
         ss = sig.SourmashSignature(noident_mh, name=sig_name)
         with open(filename, "wt") as fp:
             sig.save_signatures([ss], fp)
