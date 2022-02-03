@@ -670,6 +670,22 @@ def load_many_signatures(locations, progress, *, yield_all_files=False,
 # enum and classes for saving signatures progressively
 #
 
+def _get_signatures_from_rust(siglist):
+    for ss in siglist:
+        try:
+            ss.md5sum()
+            yield ss
+        except sourmash.exceptions.Panic:
+            # this deals with a disconnect between the way Rust
+            # and Python handle signatures; Python expects one
+            # minhash (and hence one md5sum) per signature, while
+            # Rust supports multiple. For now, go through serializing
+            # and deserializing the signature! See issue #1167 for more.
+            json_str = sourmash.save_signatures([ss])
+            for ss in sourmash.load_signatures(json_str):
+                yield ss
+
+
 class _BaseSaveSignaturesToLocation:
     "Base signature saving class. Track location (if any) and count."
     def __init__(self, location):
@@ -844,23 +860,23 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         except KeyError:
             return False
 
-    def add(self, ss):
+    def add(self, add_sig):
         if not self.storage:
             raise ValueError("this output is not open")
 
-        super().add(ss)
+        for ss in _get_signatures_from_rust([add_sig]):
+            buf = sigmod.save_signatures([ss], compression=1)
+            md5 = ss.md5sum()
 
-        buf = sigmod.save_signatures([ss], compression=1)
-        md5 = ss.md5sum()
+            storage = self.storage
+            path = f'{storage.subdir}/{md5}.sig.gz'
+            location = storage.save(path, buf)
 
-        storage = self.storage
-        path = f'{storage.subdir}/{md5}.sig.gz'
-        location = storage.save(path, buf)
-
-        # update manifest
-        row = CollectionManifest.make_manifest_row(ss, location,
-                                                   include_signature=False)
-        self.manifest_rows.append(row)
+            # update manifest
+            row = CollectionManifest.make_manifest_row(ss, location,
+                                                       include_signature=False)
+            self.manifest_rows.append(row)
+            super().add(ss)
 
 
 class SigFileSaveType(Enum):
