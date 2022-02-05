@@ -117,6 +117,7 @@ from . import sbtmh
 from . import sbt_storage
 from . import signature
 from . import sig
+from . import database
 from . import cli
 from . import commands
 from .sourmash_args import load_file_as_index

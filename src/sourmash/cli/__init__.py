@@ -38,6 +38,7 @@ from . import sig as signature
 from . import sketch
 from . import storage
 from . import tax
+from . import database
 
 
 class SourmashParser(ArgumentParser):
@@ -97,10 +98,13 @@ def get_parser():
         'lca': 'Taxonomic operations',
         'sketch': 'Create signatures',
         'sig': 'Manipulate signature files',
+        'database': 'Manipulate indexed databases',
         'storage': 'Operations on storage',
     }
     alias = {
-        "sig": "signature"
+        "sig": "signature",
+        "database": "db",
+        "tax": "taxonomy"
     }
     expert = set(['categorize', 'import_csv', 'migrate', 'multigather', 'sbt_combine', 'watch'])
 
