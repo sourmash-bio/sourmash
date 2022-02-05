@@ -38,6 +38,10 @@ def create_picklist_from_args(args):
         name = str(args.name)
         picklist = SignaturePicklist('name')
         picklist.init([name])
+    elif args.identprefix:
+        ip = str(args.identprefix)
+        picklist = SignaturePicklist("identprefix")
+        picklist.init([ip])
     elif args.md5:
         md5 = str(args.md5)
         if len(md5) == 8:

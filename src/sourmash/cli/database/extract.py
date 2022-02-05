@@ -18,10 +18,14 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '--md5', default=None,
-        help='select signatures whose md5 contains this substring'
+        help='select signatures whose md5 exactly matches this string'
     )
     subparser.add_argument(
-        '--name', default=None,
+        '--name', '--ident', default=None,
+        help='select signatures whose name exactly matches this string'
+    )
+    subparser.add_argument(
+        '--identprefix', default=None,
         help='select signatures whose name contains this substring'
     )
     subparser.add_argument(
