@@ -294,6 +294,9 @@ def test_sqlite_index_multik_select():
 
 
 def test_sqlite_index_moltype_select():
+    # @CTB
+    return
+
     # this loads multiple ksizes (19, 31) and moltypes (DNA, protein, hp, etc)
     filename = utils.get_test_data('prot/all.zip')
     siglist = sourmash.load_file_as_signatures(filename)

@@ -118,6 +118,17 @@ class SqliteIndex(Index):
             except (sqlite3.OperationalError, sqlite3.DatabaseError):
                 raise ValueError(f"cannot open '{dbfile}' as sqlite3 database")
 
+        c = self.conn.cursor()
+        c.execute("SELECT DISTINCT scaled FROM sketches")
+        scaled_vals = c.fetchall()
+        if len(scaled_vals) > 1:
+            raise ValueError("this database has multiple scaled values, which is not currently allowed")
+
+        if scaled_vals:
+            self.scaled = scaled_vals[0][0]
+        else:
+            self.scaled = None
+
     def cursor(self):
         return self.conn.cursor()
 
@@ -145,6 +156,11 @@ class SqliteIndex(Index):
             raise ValueError("cannot store 'num' signatures in SqliteIndex")
         if ss.minhash.track_abundance:
             raise ValueError("cannot store signatures with abundance in SqliteIndex")
+
+        if self.scaled is not None and self.scaled != ss.minhash.scaled:
+            raise ValueError("this database can only store scaled values = {self.scaled}")
+        elif self.scaled is None:
+            self.scaled = ss.minhash.scaled
 
         c.execute("""
         INSERT INTO sketches
