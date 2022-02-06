@@ -112,7 +112,7 @@ class SqliteIndex(Index):
                    FOREIGN KEY (sketch_id) REFERENCES sketches (id))
                 """)
                 c.execute("""
-                CREATE INDEX IF NOT EXISTS hashval_idx ON hashes (hashval)
+                CREATE INDEX IF NOT EXISTS hashval_idx ON hashes (sketch_id, hashval)
                 """)
 
             except (sqlite3.OperationalError, sqlite3.DatabaseError):
@@ -321,6 +321,7 @@ class SqliteIndex(Index):
             yield ss, self.dbfile, sketch_id
 
     def _get_matching_hashes(self, c, hashes):
+        assert 0
         c.execute("DROP TABLE IF EXISTS hash_query")
         c.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER)")
 
@@ -343,8 +344,8 @@ class SqliteIndex(Index):
 
         # @CTB do we want to add select stuff on here?
         c.execute("""
-        SELECT DISTINCT hashes.sketch_id FROM hashes,hash_query
-        WHERE hashes.hashval=hash_query.hashval""")
+        SELECT DISTINCT hashes.sketch_id,COUNT(hashes.hashval) FROM hashes,hash_query
+        WHERE hashes.hashval=hash_query.hashval GROUP BY hashes.sketch_id""")
 
         return c.fetchall()
 
@@ -360,6 +361,7 @@ class SqliteIndex(Index):
 
         # check compatibility, etc. @CTB
         query_mh = query.minhash
+        query_mh = query_mh.downsample(scaled=self.scaled)
 
         picklist = None
         if self.selection_dict:
@@ -367,7 +369,8 @@ class SqliteIndex(Index):
 
         cursor = self.conn.cursor()
         # @CTB do select here
-        for sketch_id, in self._get_matching_sketches(cursor, query_mh.hashes):
+        for sketch_id, cnt in self._get_matching_sketches(cursor, query_mh.hashes):
+            #print('XXX', sketch_id, cnt)
             subj = self._load_sketch(cursor, sketch_id)
 
             # @CTB more goes here? evaluate downsampling/upsampling.
@@ -378,8 +381,10 @@ class SqliteIndex(Index):
             # all numbers calculated after downsampling --
             query_size = len(query_mh)
             subj_size = len(subj_mh)
-            shared_size = query_mh.count_common(subj_mh)
+            #shared_size = query_mh.count_common(subj_mh)
+            #assert shared_size == cnt #  @CTB could be used...?
             total_size = len(query_mh + subj_mh)
+            shared_size = cnt
 
             score = search_fn.score_fn(query_size, shared_size, subj_size,
                                        total_size)
@@ -388,6 +393,7 @@ class SqliteIndex(Index):
                 if search_fn.collect(score, subj):
                     if picklist is None or subj in picklist:
                         yield IndexSearchResult(score, subj, self.location)
+            # could truncate based on shared hashes here? @CTB
 
     def select(self, *, num=0, track_abundance=False, **kwargs):
         if num:
