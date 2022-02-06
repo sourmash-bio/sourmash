@@ -334,6 +334,20 @@ class SqliteIndex(Index):
 
         return c.fetchall()
 
+    def _get_matching_sketches(self, c, hashes):
+        c.execute("DROP TABLE IF EXISTS hash_query")
+        c.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER)")
+
+        hashvals = [ (h,) for h in hashes ]
+        c.executemany("INSERT INTO hash_query (hashval) VALUES (?)", hashvals)
+
+        # @CTB do we want to add select stuff on here?
+        c.execute("""
+        SELECT DISTINCT hashes.sketch_id FROM hashes,hash_query
+        WHERE hashes.hashval=hash_query.hashval""")
+
+        return c.fetchall()
+
     def save(self, *args, **kwargs):
         raise NotImplementedError
 
@@ -352,12 +366,8 @@ class SqliteIndex(Index):
             picklist = self.selection_dict.get('picklist')
 
         cursor = self.conn.cursor()
-        c = Counter()
         # @CTB do select here
-        for sketch_id, hashval in self._get_matching_hashes(cursor, query_mh.hashes):
-            c[sketch_id] += 1
-
-        for sketch_id, count in c.most_common():
+        for sketch_id, in self._get_matching_sketches(cursor, query_mh.hashes):
             subj = self._load_sketch(cursor, sketch_id)
 
             # @CTB more goes here? evaluate downsampling/upsampling.
