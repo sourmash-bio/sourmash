@@ -20,8 +20,82 @@ use crate::sketch::Sketch;
 use crate::Error;
 use crate::HashIntoType;
 
-type HashToColor = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>;
 type SigCounter = counter::Counter<Idx>;
+
+#[derive(Serialize, Deserialize)]
+struct HashToColor(HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>);
+
+impl HashToColor {
+    fn new() -> Self {
+        HashToColor(HashMap::<
+            HashIntoType,
+            Color,
+            BuildNoHashHasher<HashIntoType>,
+        >::with_hasher(BuildNoHashHasher::default()))
+    }
+
+    fn get(&self, hash: &HashIntoType) -> Option<&Color> {
+        self.0.get(hash)
+    }
+
+    fn retain(&mut self, hashes: &HashSet<HashIntoType>) {
+        self.0.retain(|hash, _| hashes.contains(hash))
+    }
+
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    fn add_to(&mut self, colors: &mut Colors, dataset_id: usize, matched_hashes: Vec<u64>) {
+        let mut color = None;
+
+        matched_hashes.into_iter().for_each(|hash| {
+            color = Some(colors.update(color, &[dataset_id as Idx]).unwrap());
+            self.0.insert(hash, color.unwrap());
+        });
+    }
+
+    fn reduce_hashes_colors(
+        a: (HashToColor, Colors),
+        b: (HashToColor, Colors),
+    ) -> (HashToColor, Colors) {
+        let ((small_hashes, small_colors), (mut large_hashes, mut large_colors)) =
+            if a.0.len() > b.0.len() {
+                (b, a)
+            } else {
+                (a, b)
+            };
+
+        small_hashes.0.into_iter().for_each(|(hash, color)| {
+            large_hashes
+                .0
+                .entry(hash)
+                .and_modify(|entry| {
+                    // Hash is already present.
+                    // Update the current color by adding the indices from
+                    // small_colors.
+                    let ids = small_colors.indices(&color);
+                    let new_color = large_colors.update(Some(*entry), ids).unwrap();
+                    *entry = new_color;
+                })
+                .or_insert_with(|| {
+                    // In this case, the hash was not present yet.
+                    // we need to create the same color from small_colors
+                    // into large_colors.
+                    let ids = small_colors.indices(&color);
+                    let new_color = large_colors.update(None, ids).unwrap();
+                    assert_eq!(new_color, color);
+                    new_color
+                });
+        });
+
+        (large_hashes, large_colors)
+    }
+}
 
 // Use rkyv for serialization?
 // https://davidkoloski.me/rkyv/
@@ -72,9 +146,7 @@ impl RevIndex {
             //let mut revindex: RevIndex = PartialRevIndex::new(hashes).deserialize(&rdr).unwrap();
 
             let mut revindex: RevIndex = serde_json::from_reader(rdr)?;
-            revindex
-                .hash_to_color
-                .retain(|hash, _| hashes.contains(hash));
+            revindex.hash_to_color.retain(&hashes);
             revindex
         } else {
             // Load the full revindex
@@ -131,11 +203,11 @@ impl RevIndex {
                 .reduce(
                     || {
                         (
-                            HashToColor::with_hasher(BuildNoHashHasher::default()),
+                            HashToColor::new(),
                             Colors::default(),
                         )
                     },
-                    RevIndex::reduce_hashes_colors,
+                    HashToColor::reduce_hashes_colors,
                 );
           } else {
             let (hash_to_color, colors) = search_sigs
@@ -157,10 +229,10 @@ impl RevIndex {
                 })
                 .fold(
                     (
-                        HashToColor::with_hasher(BuildNoHashHasher::default()),
+                        HashToColor::new(),
                         Colors::default(),
                     ),
-                    RevIndex::reduce_hashes_colors,
+                    HashToColor::reduce_hashes_colors,
                 );
           }
         }
@@ -253,11 +325,11 @@ impl RevIndex {
                 .reduce(
                     || {
                         (
-                            HashToColor::with_hasher(BuildNoHashHasher::default()),
+                            HashToColor::new(),
                             Colors::default(),
                         )
                     },
-                    RevIndex::reduce_hashes_colors,
+                    HashToColor::reduce_hashes_colors,
                 );
           } else {
             let (hash_to_color, colors) = search_sigs
@@ -279,10 +351,10 @@ impl RevIndex {
                 })
                 .fold(
                     (
-                        HashToColor::with_hasher(BuildNoHashHasher::default()),
+                        HashToColor::new(),
                         Colors::default(),
                     ),
-                    RevIndex::reduce_hashes_colors,
+                    HashToColor::reduce_hashes_colors,
                 );
           }
         }
@@ -311,33 +383,29 @@ impl RevIndex {
         }
 
         let search_mh = search_mh.expect("Couldn't find a compatible MinHash");
-        let mut hash_to_color = HashToColor::with_hasher(BuildNoHashHasher::default());
+        let mut hash_to_color = HashToColor::new();
         let mut colors = Colors::default();
-        let mut color = None;
-
-        let mut add_to = |matched_hashes: Vec<u64>, intersection| {
-            if !matched_hashes.is_empty() || intersection > threshold as u64 {
-                matched_hashes.into_iter().for_each(|hash| {
-                    color = Some(colors.update(color, &[dataset_id as Idx]).unwrap());
-                    hash_to_color.insert(hash, color.unwrap());
-                });
-            }
-        };
 
         if let Some(qs) = queries {
             if let Some(ref merged) = merged_query {
                 let (matched_hashes, intersection) = merged.intersection(search_mh).unwrap();
-                add_to(matched_hashes, intersection);
+                if !matched_hashes.is_empty() || intersection > threshold as u64 {
+                    hash_to_color.add_to(&mut colors, dataset_id, matched_hashes);
+                }
             } else {
                 for query in qs {
                     let (matched_hashes, intersection) = query.intersection(search_mh).unwrap();
-                    add_to(matched_hashes, intersection);
+                    if !matched_hashes.is_empty() || intersection > threshold as u64 {
+                        hash_to_color.add_to(&mut colors, dataset_id, matched_hashes);
+                    }
                 }
             }
         } else {
             let matched = search_mh.mins();
             let size = matched.len() as u64;
-            add_to(matched, size);
+            if !matched.is_empty() || size > threshold as u64 {
+                hash_to_color.add_to(&mut colors, dataset_id, matched);
+            }
         };
 
         if hash_to_color.is_empty() {
@@ -367,42 +435,6 @@ impl RevIndex {
             threshold,
             template,
         )
-    }
-
-    fn reduce_hashes_colors(
-        a: (HashToColor, Colors),
-        b: (HashToColor, Colors),
-    ) -> (HashToColor, Colors) {
-        let ((small_hashes, small_colors), (mut large_hashes, mut large_colors)) =
-            if a.0.len() > b.0.len() {
-                (b, a)
-            } else {
-                (a, b)
-            };
-
-        small_hashes.into_iter().for_each(|(hash, color)| {
-            large_hashes
-                .entry(hash)
-                .and_modify(|entry| {
-                    // Hash is already present.
-                    // Update the current color by adding the indices from
-                    // small_colors.
-                    let ids = small_colors.indices(&color);
-                    let new_color = large_colors.update(Some(*entry), ids).unwrap();
-                    *entry = new_color;
-                })
-                .or_insert_with(|| {
-                    // In this case, the hash was not present yet.
-                    // we need to create the same color from small_colors
-                    // into large_colors.
-                    let ids = small_colors.indices(&color);
-                    let new_color = large_colors.update(None, ids).unwrap();
-                    assert_eq!(new_color, color);
-                    new_color
-                });
-        });
-
-        (large_hashes, large_colors)
     }
 
     pub fn search(
@@ -532,17 +564,10 @@ impl RevIndex {
             .collect()
     }
 
-    pub fn counter(&self) -> SigCounter {
-        self.hash_to_color
-            .iter()
-            .flat_map(|(_, color)| self.colors.indices(color))
-            .cloned()
-            .collect()
-    }
-
     pub fn template(&self) -> Sketch {
         self.template.clone()
     }
+
     // TODO: mh should be a sketch, or even a sig...
     pub(crate) fn find_signatures(
         &self,
