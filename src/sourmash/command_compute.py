@@ -233,7 +233,7 @@ def _compute_individual(args, signatures_factory):
         # if not args.output, close output for every input filename.
         if open_output_each_time:
             save_sigs.close()
-            notify(f"saved {len(save_sigs)} signature(s) to '{save_sigs.location}'. Note: signature license is CC0.'")
+            notify(f"saved {len(save_sigs)} signature(s) to '{save_sigs.location}'. Note: signature license is CC0.")
             save_sigs = None
 
 
@@ -241,7 +241,7 @@ def _compute_individual(args, signatures_factory):
     # and we need to close here.
     if args.output and save_sigs is not None:
         save_sigs.close()
-        notify(f"saved {len(save_sigs)} signature(s) to '{save_sigs.location}'. Note: signature license is CC0.'")
+        notify(f"saved {len(save_sigs)} signature(s) to '{save_sigs.location}'. Note: signature license is CC0.")
 
 
 def _compute_merged(args, signatures_factory):
@@ -294,41 +294,22 @@ def set_sig_name(sigs, filename, name=None):
 
 
 def save_siglist(siglist, sigfile_name):
-    import sourmash
+    "Save multiple signatures to a filename."
 
     # save!
     with sourmash_args.SaveSignaturesToLocation(sigfile_name) as save_sig:
         for ss in siglist:
-            try:
-                save_sig.add(ss)
-            except sourmash.exceptions.Panic:
-                # this deals with a disconnect between the way Rust
-                # and Python handle signatures; Python expects one
-                # minhash (and hence one md5sum) per signature, while
-                # Rust supports multiple. For now, go through serializing
-                # and deserializing the signature! See issue #1167 for more.
-                json_str = sourmash.save_signatures([ss])
-                for ss in sourmash.load_signatures(json_str):
-                    save_sig.add(ss)
+            save_sig.add(ss)
 
         notify(f"saved {len(save_sig)} signature(s) to '{save_sig.location}'")
 
 
 def save_sigs_to_location(siglist, save_sig):
+    "Save multiple signatures to an already-open location."
     import sourmash
 
     for ss in siglist:
-        try:
-            save_sig.add(ss)
-        except sourmash.exceptions.Panic:
-            # this deals with a disconnect between the way Rust
-            # and Python handle signatures; Python expects one
-            # minhash (and hence one md5sum) per signature, while
-            # Rust supports multiple. For now, go through serializing
-            # and deserializing the signature! See issue #1167 for more.
-            json_str = sourmash.save_signatures([ss])
-            for ss in sourmash.load_signatures(json_str):
-                save_sig.add(ss)
+        save_sig.add(ss)
 
 
 class ComputeParameters(RustObject):
