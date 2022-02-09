@@ -1580,7 +1580,7 @@ def test_search_containment_abund_ignore(runtmp):
 
     assert float(similarity) == mh1.contained_by(mh2)
     assert float(similarity) == 0.25
-    
+
     print(runtmp.last_result.err)
     assert "WARNING: Cannot estimate ANI. Are your minhashes big enough?" in runtmp.last_result.err
     assert "Error: varN <0.0!" in runtmp.last_result.err
@@ -5256,7 +5256,7 @@ def test_search_ani_jaccard(c):
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
-        assert float(row['similarity']) == 0.9288577154308617 
+        assert float(row['similarity']) == 0.9288577154308617
         assert row['filename'].endswith('short2.fa.sig')
         assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
         assert row['query_filename'].endswith('short.fa')
@@ -5280,7 +5280,7 @@ def test_search_ani_empty_abund(c):
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
-        assert float(row['similarity']) == 0.8224046424612483 
+        assert float(row['similarity']) == 0.8224046424612483
         assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
         assert row['filename'].endswith('short2.fa.sig')
         assert row['query_filename'].endswith('short.fa')
@@ -5304,7 +5304,7 @@ def test_search_ani_containment(c):
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
-        assert float(row['similarity']) == 0.9556701030927836 
+        assert float(row['similarity']) == 0.9556701030927836
         assert row['filename'].endswith('short2.fa.sig')
         assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
         assert row['query_filename'].endswith('short.fa')
@@ -5315,14 +5315,14 @@ def test_search_ani_containment(c):
     # search other direction
     c.run_sourmash('search', '--containment', 'short2.fa.sig', 'short.fa.sig', '-o', 'xxxx.csv')
     print(c.last_result.status, c.last_result.out, c.last_result.err)
-    
+
     csv_file = c.output('xxxx.csv')
 
     with open(csv_file) as fp:
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
-        assert float(row['similarity']) == 0.9706806282722513 
+        assert float(row['similarity']) == 0.9706806282722513
         assert row['filename'].endswith('short.fa.sig')
         assert row['md5'] == '9191284a3a23a913d8d410f3d53ce8f0'
         assert row['query_filename'].endswith('short2.fa')
@@ -5346,7 +5346,7 @@ def test_search_ani_max_containment(c):
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
-        assert float(row['similarity']) == 0.9706806282722513 
+        assert float(row['similarity']) == 0.9706806282722513
         assert row['filename'].endswith('short2.fa.sig')
         assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
         assert row['query_filename'].endswith('short.fa')
@@ -5359,10 +5359,12 @@ def test_search_ani_max_containment(c):
 def test_search_jaccard_ani_downsample(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=2', '--force', testdata1)
-    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', '--force', testdata1)
-    sig1 = sourmash.load_one_signature("short.fa.sig")
-    sig2 = sourmash.load_one_signature("short2.fa.sig")
+    sig1_out = c.output('short.fa.sig')
+    sig2_out = c.output('short2.fa.sig')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=2', '--force', testdata1, '-o', sig1_out)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', '--force', testdata1, '-o', sig2_out)
+    sig1 = sourmash.load_one_signature(sig1_out)
+    sig2 = sourmash.load_one_signature(sig2_out)
     print(f"SCALED: sig1: {sig1.minhash.scaled}, sig2: {sig2.minhash.scaled}") # if don't change name, just reads prior sigfile!!?
 
     sig1F = c.output('sig1.sig')
@@ -5398,4 +5400,5 @@ def test_search_jaccard_ani_downsample(c):
     print("SCALED:", mh1.scaled, mh2_sc2.scaled)
     ani= mh1.jaccard_ani(mh2_sc2)
     print(ani)
-    assert ani == (0.9988019200011651, 0.9980440877843673, 0.9991807844672299)
+    assert ani == (0.9988019200011651, 0.9980440877843673, 0.9991807844672298)
+
