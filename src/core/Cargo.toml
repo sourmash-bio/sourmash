@@ -93,4 +93,3 @@ wasm-bindgen-test = "0.3.0"
 
 ### These crates don't compile on wasm
 [target.'cfg(not(all(target_arch = "wasm32", target_vendor="unknown")))'.dependencies]
-rocksdb = "0.17.0"
