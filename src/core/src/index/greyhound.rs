@@ -16,7 +16,6 @@ use crate::index::Index;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
-//use crate::storage::{InnerStorage, MemStorage};
 use crate::Error;
 use crate::HashIntoType;
 
