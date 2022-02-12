@@ -399,7 +399,7 @@ impl Colors {
             if let Some(idxs) = self.colors.get_mut(&color) {
                 let idx_to_add: Vec<_> = new_idxs
                     .into_iter()
-                    .filter(|new_idx| !idxs.0.contains(&new_idx))
+                    .filter(|new_idx| !idxs.0.contains(new_idx))
                     .collect();
 
                 if idx_to_add.is_empty() {
@@ -475,7 +475,7 @@ impl Colors {
     pub fn indices(&self, color: &Color) -> Indices {
         // TODO: what if color is not present?
         Indices {
-            iter: self.colors.get(&color).unwrap().0.iter(),
+            iter: self.colors.get(color).unwrap().0.iter(),
         }
     }
 

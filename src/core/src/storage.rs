@@ -193,7 +193,7 @@ impl<'a> Storage for ZipStorage<'a> {
             load_from_archive(&archive, path)
         } else {
             //FIXME
-            let archive = piz::ZipArchive::new(&(&self.mapping.as_ref()).unwrap())
+            let archive = piz::ZipArchive::new((&self.mapping.as_ref()).unwrap())
                 .map_err(|_| StorageError::EmptyPathError)?;
             load_from_archive(&archive, path)
         }
@@ -225,7 +225,7 @@ impl<'a> ZipStorage<'a> {
 
     pub fn from_slice(mapping: &'a [u8]) -> Result<Self, Error> {
         //FIXME
-        let archive = piz::ZipArchive::new(&mapping).map_err(|_| StorageError::EmptyPathError)?;
+        let archive = piz::ZipArchive::new(mapping).map_err(|_| StorageError::EmptyPathError)?;
 
         //FIXME
         //let entries: Vec<_> = archive.entries().iter().map(|x| x.to_owned()).collect();

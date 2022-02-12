@@ -19,91 +19,95 @@ impl ForeignObject for SourmashRevIndex {
 }
 
 ffi_fn! {
-  unsafe fn revindex_new_with_paths(
-      search_sigs_ptr: *const *const SourmashStr,
-      insigs: usize,
-      template_ptr: *const SourmashKmerMinHash,
-      threshold: usize,
-      queries_ptr: *const *const SourmashKmerMinHash,
-      inqueries: usize,
-      keep_sigs: bool,
-  ) -> Result<*mut SourmashRevIndex> {
+unsafe fn revindex_new_with_paths(
+    search_sigs_ptr: *const *const SourmashStr,
+    insigs: usize,
+    template_ptr: *const SourmashKmerMinHash,
+    threshold: usize,
+    queries_ptr: *const *const SourmashKmerMinHash,
+    inqueries: usize,
+    keep_sigs: bool,
+) -> Result<*mut SourmashRevIndex> {
     let search_sigs: Vec<PathBuf> = {
-      assert!(!search_sigs_ptr.is_null());
-        slice::from_raw_parts(search_sigs_ptr, insigs).iter().map(|path| {
-          let mut new_path = PathBuf::new();
-          new_path.push(SourmashStr::as_rust(*path).as_str());
-          new_path}
-          ).collect()
+        assert!(!search_sigs_ptr.is_null());
+        slice::from_raw_parts(search_sigs_ptr, insigs)
+            .iter()
+            .map(|path| {
+                let mut new_path = PathBuf::new();
+                new_path.push(SourmashStr::as_rust(*path).as_str());
+                new_path
+            })
+            .collect()
     };
 
     let template = {
-      assert!(!template_ptr.is_null());
-      //TODO: avoid clone here
-      Sketch::MinHash(SourmashKmerMinHash::as_rust(template_ptr).clone())
+        assert!(!template_ptr.is_null());
+        //TODO: avoid clone here
+        Sketch::MinHash(SourmashKmerMinHash::as_rust(template_ptr).clone())
     };
 
     let queries_vec: Vec<KmerMinHash>;
     let queries: Option<&[KmerMinHash]> = if queries_ptr.is_null() {
-      None
+        None
     } else {
-        queries_vec =
-          slice::from_raw_parts(queries_ptr, inqueries).iter().map(|mh_ptr|
+        queries_vec = slice::from_raw_parts(queries_ptr, inqueries)
+            .iter()
+            .map(|mh_ptr|
             // TODO: avoid this clone
-          SourmashKmerMinHash::as_rust(*mh_ptr).clone()).collect();
+          SourmashKmerMinHash::as_rust(*mh_ptr).clone())
+            .collect();
         Some(queries_vec.as_ref())
     };
-      let revindex = RevIndex::new(
+    let revindex = RevIndex::new(
         search_sigs.as_ref(),
         &template,
         threshold,
         queries,
-        keep_sigs
-      );
-      Ok(SourmashRevIndex::from_rust(revindex))
-  }
+        keep_sigs,
+    );
+    Ok(SourmashRevIndex::from_rust(revindex))
+}
 }
 
 ffi_fn! {
-  unsafe fn revindex_new_with_sigs(
-      search_sigs_ptr: *const *const SourmashSignature,
-      insigs: usize,
-      template_ptr: *const SourmashKmerMinHash,
-      threshold: usize,
-      queries_ptr: *const *const SourmashKmerMinHash,
-      inqueries: usize,
-  ) -> Result<*mut SourmashRevIndex> {
+unsafe fn revindex_new_with_sigs(
+    search_sigs_ptr: *const *const SourmashSignature,
+    insigs: usize,
+    template_ptr: *const SourmashKmerMinHash,
+    threshold: usize,
+    queries_ptr: *const *const SourmashKmerMinHash,
+    inqueries: usize,
+) -> Result<*mut SourmashRevIndex> {
     let search_sigs: Vec<Signature> = {
-      assert!(!search_sigs_ptr.is_null());
-        slice::from_raw_parts(search_sigs_ptr, insigs).iter().map(|sig|
-          SourmashSignature::as_rust(*sig)
-          ).cloned().collect()
+        assert!(!search_sigs_ptr.is_null());
+        slice::from_raw_parts(search_sigs_ptr, insigs)
+            .iter()
+            .map(|sig| SourmashSignature::as_rust(*sig))
+            .cloned()
+            .collect()
     };
 
     let template = {
-      assert!(!template_ptr.is_null());
-      //TODO: avoid clone here
-      Sketch::MinHash(SourmashKmerMinHash::as_rust(template_ptr).clone())
+        assert!(!template_ptr.is_null());
+        //TODO: avoid clone here
+        Sketch::MinHash(SourmashKmerMinHash::as_rust(template_ptr).clone())
     };
 
     let queries_vec: Vec<KmerMinHash>;
     let queries: Option<&[KmerMinHash]> = if queries_ptr.is_null() {
-      None
+        None
     } else {
-        queries_vec =
-          slice::from_raw_parts(queries_ptr, inqueries).iter().map(|mh_ptr|
+        queries_vec = slice::from_raw_parts(queries_ptr, inqueries)
+            .iter()
+            .map(|mh_ptr|
             // TODO: avoid this clone
-          SourmashKmerMinHash::as_rust(*mh_ptr).clone()).collect();
+          SourmashKmerMinHash::as_rust(*mh_ptr).clone())
+            .collect();
         Some(queries_vec.as_ref())
     };
-      let revindex = RevIndex::new_with_sigs(
-        search_sigs,
-        &template,
-        threshold,
-        queries,
-      );
-      Ok(SourmashRevIndex::from_rust(revindex))
-  }
+    let revindex = RevIndex::new_with_sigs(search_sigs, &template, threshold, queries);
+    Ok(SourmashRevIndex::from_rust(revindex))
+}
 }
 
 #[no_mangle]
@@ -118,7 +122,7 @@ unsafe fn revindex_search(
     threshold: f64,
     do_containment: bool,
     _ignore_abundance: bool,
-    size: *mut usize
+    size: *mut usize,
 ) -> Result<*const *const SourmashSearchResult> {
     let revindex = SourmashRevIndex::as_rust(ptr);
     let sig = SourmashSignature::as_rust(sig_ptr);
@@ -141,9 +145,10 @@ unsafe fn revindex_search(
         .collect();
 
     // FIXME: use the ForeignObject trait, maybe define new method there...
-    let ptr_sigs: Vec<*const SourmashSearchResult> = results.into_iter().map(|x| {
-      Box::into_raw(Box::new(x)) as *const SourmashSearchResult
-    }).collect();
+    let ptr_sigs: Vec<*const SourmashSearchResult> = results
+        .into_iter()
+        .map(|x| Box::into_raw(Box::new(x)) as *const SourmashSearchResult)
+        .collect();
 
     let b = ptr_sigs.into_boxed_slice();
     *size = b.len();
@@ -159,7 +164,7 @@ unsafe fn revindex_gather(
     threshold: f64,
     _do_containment: bool,
     _ignore_abundance: bool,
-    size: *mut usize
+    size: *mut usize,
 ) -> Result<*const *const SourmashSearchResult> {
     let revindex = SourmashRevIndex::as_rust(ptr);
     let sig = SourmashSignature::as_rust(sig_ptr);
@@ -179,8 +184,8 @@ unsafe fn revindex_gather(
     // TODO: proper threshold calculation
     let threshold: usize = (threshold * (mh.size() as f64)) as _;
 
-    let counter = revindex.counter_for_query(&mh);
-        dbg!(&counter);
+    let counter = revindex.counter_for_query(mh);
+    dbg!(&counter);
 
     let results: Vec<(f64, Signature, String)> = revindex
         .gather(counter, threshold, mh)
@@ -193,11 +198,11 @@ unsafe fn revindex_gather(
         })
         .collect();
 
-
     // FIXME: use the ForeignObject trait, maybe define new method there...
-    let ptr_sigs: Vec<*const SourmashSearchResult> = results.into_iter().map(|x| {
-      Box::into_raw(Box::new(x)) as *const SourmashSearchResult
-    }).collect();
+    let ptr_sigs: Vec<*const SourmashSearchResult> = results
+        .into_iter()
+        .map(|x| Box::into_raw(Box::new(x)) as *const SourmashSearchResult)
+        .collect();
 
     let b = ptr_sigs.into_boxed_slice();
     *size = b.len();
@@ -217,16 +222,19 @@ pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> u64 {
 }
 
 ffi_fn! {
-unsafe fn revindex_signatures(ptr: *const SourmashRevIndex,
-                              size: *mut usize) -> Result<*mut *mut SourmashSignature> {
+unsafe fn revindex_signatures(
+    ptr: *const SourmashRevIndex,
+    size: *mut usize,
+) -> Result<*mut *mut SourmashSignature> {
     let revindex = SourmashRevIndex::as_rust(ptr);
 
     let sigs = revindex.signatures();
 
     // FIXME: use the ForeignObject trait, maybe define new method there...
-    let ptr_sigs: Vec<*mut SourmashSignature> = sigs.into_iter().map(|x| {
-      Box::into_raw(Box::new(x)) as *mut SourmashSignature
-    }).collect();
+    let ptr_sigs: Vec<*mut SourmashSignature> = sigs
+        .into_iter()
+        .map(|x| Box::into_raw(Box::new(x)) as *mut SourmashSignature)
+        .collect();
 
     let b = ptr_sigs.into_boxed_slice();
     *size = b.len();

@@ -377,7 +377,7 @@ impl RevIndex {
         template: &Sketch,
     ) -> Option<(HashToColor, Colors)> {
         let mut search_mh = None;
-        if let Some(Sketch::MinHash(mh)) = search_sig.select_sketch(&template) {
+        if let Some(Sketch::MinHash(mh)) = search_sig.select_sketch(template) {
             search_mh = Some(mh);
         }
 
@@ -604,7 +604,7 @@ impl RevIndex {
         // TODO: proper threshold calculation
         let threshold: usize = (threshold * (mh.size() as f64)) as _;
 
-        let counter = self.counter_for_query(&mh);
+        let counter = self.counter_for_query(mh);
 
         debug!(
             "number of matching signatures for hashes: {}",
@@ -711,7 +711,7 @@ impl<'a> Index<'a> for RevIndex {
 
     fn signatures(&self) -> Vec<Self::Item> {
         if let Some(ref sigs) = self.ref_sigs {
-            sigs.iter().map(|x| x.clone()).collect()
+            sigs.to_vec()
         } else {
             unimplemented!()
         }
