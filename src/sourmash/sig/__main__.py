@@ -265,38 +265,6 @@ signature license: {license}
         sourmash_args.report_picklist(args, picklist)
 
 
-# @CTB this belongs in some other module :). maybe sourmash_args.py?
-def get_manifest(idx, require=True, rebuild=False):
-    from sourmash.index import CollectionManifest
-
-    m = idx.manifest
-
-    # has one, and don't want to rebuild? easy! return!
-    if m and not rebuild:
-        return m
-
-
-    # CTB: CollectionManifest.create_manifest wants (ss, iloc)
-    def manifest_iloc_iter(idx):
-        for (ss, loc, iloc) in idx._signatures_with_internal():
-            yield ss, iloc
-
-    # need to build one...
-    print("XXX building manifest")
-    try:
-        m = CollectionManifest.create_manifest(manifest_iloc_iter(idx),
-                                               include_signature=False)
-    except NotImplementedError:
-        if require:
-            # @CTB what happens if idx.location is None?
-            error(f"ERROR: manifests cannot be generated for {idx.location}")
-            sys.exit(-1)
-        else:
-            return None
-
-    return m
-
-
 def manifest(args):
     """
     build a signature manifest
@@ -311,7 +279,7 @@ def manifest(args):
         error(str(exc))
         sys.exit(-1)
 
-    manifest = get_manifest(loader, require=True, rebuild=True)
+    manifest = sourmash_args.get_manifest(loader, require=True, rebuild=True)
 
     # CTB: might want to switch to sourmash_args.FileOutputCSV here?
     with open(args.output, "w", newline='') as csv_fp:
@@ -1134,6 +1102,7 @@ def fileinfo(args):
     """
     # load as index!
     try:
+        notify(f"** loading from '{args.path}'")
         idx = sourmash_args.load_file_as_index(args.path,
                                                yield_all_files=args.force)
     except ValueError:
@@ -1143,20 +1112,20 @@ def fileinfo(args):
     print_bool = lambda x: "yes" if x else "no"
     print_none = lambda x: "n/a" if x is None else x
 
-    notify(f"path filetype: {type(idx).__name__}")
-    notify(f"location: {print_none(idx.location)}")
-    notify(f"is database? {print_bool(idx.is_database)}")
-    notify(f"has manifest? {print_bool(idx.manifest)}")
-    notify(f"is empty? {print_bool(idx)}")
-    notify(f"num signatures: {len(idx)}")
+    print_results(f"path filetype: {type(idx).__name__}")
+    print_results(f"location: {print_none(idx.location)}")
+    print_results(f"is database? {print_bool(idx.is_database)}")
+    print_results(f"has manifest? {print_bool(idx.manifest)}")
+    print_results(f"is empty? {print_bool(idx)}")
+    print_results(f"num signatures: {len(idx)}")
 
-    # print type! @CTB
-
-    # manifest foo HERE @CTB have arg to prevent calculation
-    # also have arg to force recalculation?
-    manifest = get_manifest(idx)
+    # also have arg to fileinfo to force recalculation
+    manifest = sourmash_args.get_manifest(idx)
     if manifest is None:
-        notify("no manifest and cannot be generated; exiting.")
+        notify("** no manifest and cannot be generated; exiting.")
+        sys.exit(0)
+
+    notify("** examining manifest...")
 
     ksizes = set()
     moltypes = set()
@@ -1174,28 +1143,28 @@ def fileinfo(args):
         total_size += row['n_hashes']
         has_abundance = has_abundance or row['with_abundance']
 
-    notify(f"{total_size} total hashes")
-    notify(f"abundance information available: {print_bool(has_abundance)}")
+    print_results(f"{total_size} total hashes")
+    print_results(f"abundance information available: {print_bool(has_abundance)}")
 
     ksizes = ", ".join([str(x) for x in sorted(ksizes)])
-    notify(f"ksizes present: {ksizes}")
+    print_results(f"ksizes present: {ksizes}")
 
     moltypes = ", ".join(sorted(moltypes))
-    notify(f"moltypes present: {moltypes}")
+    print_results(f"moltypes present: {moltypes}")
 
     if 0 in scaled_vals: scaled_vals.remove(0)
     scaled_vals = ", ".join([str(x) for x in sorted(scaled_vals)])
     if scaled_vals:
-        notify(f"scaled vals present: {scaled_vals}")
+        print_results(f"scaled vals present: {scaled_vals}")
     else:
-        notify("no scaled sketches present")
+        print_results("no scaled sketches present")
 
     if 0 in num_vals: num_vals.remove(0)
     num_vals = ", ".join([str(x) for x in sorted(num_vals)])
     if num_vals:
-        notify(f"num vals present: {num_vals}")
+        print_results(f"num vals present: {num_vals}")
     else:
-        notify("no num sketches present")
+        print_results("no num sketches present")
 
 
 def main(arglist=None):

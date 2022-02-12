@@ -903,6 +903,7 @@ class MultiIndex(Index):
                     yield ss, iloc
 
         # build manifest; note, signatures are stored in memory.
+        # CTB: could do this on demand?
         manifest = CollectionManifest.create_manifest(sigloc_iter())
 
         # create!
