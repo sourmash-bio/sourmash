@@ -1115,6 +1115,72 @@ def kmers(args):
         notify("NOTE: see --save-kmers or --save-sequences for output options.")
 
 
+def fileinfo(args):
+    """
+    provide summary information on the given path (collection, index, etc.)
+    """
+    # load as index!
+    try:
+        idx = sourmash_args.load_file_as_index(args.path,
+                                               yield_all_files=args.force)
+    except ValueError:
+        error("Cannot open '{args.path}'.")
+        sys.exit(-1)
+
+    print_bool = lambda x: "yes" if x else "no"
+    print_none = lambda x: "n/a" if x is None else x
+
+    notify(f"location: {print_none(idx.location)}")
+    notify(f"is database? {print_bool(idx.is_database)}")
+    notify(f"has manifest? {print_bool(idx.manifest)}")
+    notify(f"is empty? {print_bool(idx)}")
+    notify(f"num signatures: {len(idx)}")
+
+    # print type! @CTB
+
+    # manifest foo HERE @CTB have arg to prevent calculation
+    assert idx.manifest
+    manifest = idx.manifest
+
+    ksizes = set()
+    moltypes = set()
+    scaled_vals = set()
+    num_vals = set()
+    total_size = 0
+    has_abundance = False
+
+    for row in manifest.rows:
+        ksizes.add(row['ksize'])
+        moltypes.add(row['moltype'])
+        scaled_vals.add(row['scaled'])
+        num_vals.add(row['num'])
+        total_size += row['n_hashes']
+        has_abundance = has_abundance or row['with_abundance']
+
+    notify(f"{total_size} total hashes in database")
+    notify(f"abundance information available: {print_bool(has_abundance)}")
+
+    ksizes = ", ".join([str(x) for x in sorted(ksizes)])
+    notify(f"ksizes present: {ksizes}")
+
+    moltypes = ", ".join(sorted(moltypes))
+    notify(f"moltypes present: {moltypes}")
+
+    if 0 in scaled_vals: scaled_vals.remove(0)
+    scaled_vals = ", ".join([str(x) for x in sorted(scaled_vals)])
+    if scaled_vals:
+        notify(f"scaled vals present: {scaled_vals}")
+    else:
+        notify("no scaled sketches present")
+
+    if 0 in num_vals: num_vals.remove(0)
+    num_vals = ", ".join([str(x) for x in sorted(num_vals)])
+    if num_vals:
+        notify(f"num vals present: {num_vals}")
+    else:
+        notify("no num sketches present")
+
+
 def main(arglist=None):
     args = sourmash.cli.get_parser().parse_args(arglist)
     submod = getattr(sourmash.cli.sig, args.subcmd)
