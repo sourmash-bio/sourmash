@@ -2,6 +2,7 @@
 Manifests for collections of signatures.
 """
 import csv
+from io import StringIO
 
 from sourmash.picklist import SignaturePicklist
 
@@ -75,6 +76,16 @@ class CollectionManifest:
             manifest_list.append(row)
 
         return cls(manifest_list)
+
+    @classmethod
+    def load_from_storage(cls, storage, filename="SOURMASH-MANIFEST.csv"):
+        "load manifest from bytes in storage."
+        manifest_data = storage.load(filename)
+        manifest_data = manifest_data.decode("utf-8")
+        manifest_fp = StringIO(manifest_data)
+        manifest = cls.load_from_csv(manifest_fp)
+
+        return manifest
 
     @classmethod
     def write_csv_header(cls, fp):

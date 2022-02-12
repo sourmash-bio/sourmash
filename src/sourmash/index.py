@@ -535,17 +535,10 @@ class ZipFileLinearIndex(Index):
     def _load_manifest(self):
         "Load a manifest if one exists"
         try:
-            manifest_data = self.storage.load('SOURMASH-MANIFEST.csv')
+            self.manifest = CollectionManifest.load_from_storage(self.storage)
+            debug_literal(f'found manifest on load for {self.storage.path}')
         except KeyError:
             self.manifest = None
-        else:
-            debug_literal(f'found manifest on load for {self.storage.path}')
-
-            # load manifest!
-            from io import StringIO
-            manifest_data = manifest_data.decode('utf-8')
-            manifest_fp = StringIO(manifest_data)
-            self.manifest = CollectionManifest.load_from_csv(manifest_fp)
 
     def __bool__(self):
         "Are there any matching signatures in this zipfile? Avoid calling len."

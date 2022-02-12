@@ -526,7 +526,7 @@ Both `load_file_as_signatures` and `load_one_signature` take molecule type and k
 ```
 will load precisely one signature containing a DNA MinHash created at k-mer size of 31.
 
-## Going from signatures back to MinHash objects and their hashes -
+## Going from signatures back to MinHash objects and their hashes
 
 Once you load a signature, you can go back to its MinHash object with
 `.minhash`; e.g.

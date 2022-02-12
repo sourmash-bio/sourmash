@@ -876,10 +876,8 @@ class SBT(Index):
 
         if 'manifest_path' in jnodes:
             manifest_path = jnodes['manifest_path']
-            manifest_data = storage.load(manifest_path)
-            manifest_data = manifest_data.decode('utf-8')
-            manifest_fp = StringIO(manifest_data)
-            obj.manifest = CollectionManifest.load_from_csv(manifest_fp)
+            obj.manifest = CollectionManifest.load_from_storage(storage,
+                                                        filename=manifest_path)
         else:
             obj.manifest = None
 

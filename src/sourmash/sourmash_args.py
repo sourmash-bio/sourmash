@@ -838,18 +838,13 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
 
         # now, try to load manifest
         try:
-            manifest_data = storage.load('SOURMASH-MANIFEST.csv')
+            manifest = CollectionManifest.load_from_storage(storage)
+            self.manifest_rows = list(manifest._select())
         except (FileNotFoundError, KeyError):
             # if file already exists must have manifest...
             if not do_create:
                 raise ValueError(f"Cannot add to existing zipfile '{self.location}' without a manifest")
             self.manifest_rows = []
-        else:
-            # success! decode manifest_data, create manifest rows => append.
-            manifest_data = manifest_data.decode('utf-8')
-            manifest_fp = StringIO(manifest_data)
-            manifest = CollectionManifest.load_from_csv(manifest_fp)
-            self.manifest_rows = list(manifest._select())
 
         self.storage = storage
 
