@@ -265,47 +265,60 @@ signature license: {license}
         sourmash_args.report_picklist(args, picklist)
 
 
+# @CTB this belongs in some other module :). maybe sourmash_args.py?
+def get_manifest(idx, require=True, rebuild=False):
+    from sourmash.index import CollectionManifest
+
+    m = idx.manifest
+
+    # has one, and don't want to rebuild? easy! return!
+    if m and not rebuild:
+        return m
+
+
+    # CTB: CollectionManifest.create_manifest wants (ss, iloc)
+    def manifest_iloc_iter(idx):
+        for (ss, loc, iloc) in idx._signatures_with_internal():
+            yield ss, iloc
+
+    # need to build one...
+    print("XXX building manifest")
+    try:
+        m = CollectionManifest.create_manifest(manifest_iloc_iter(idx),
+                                               include_signature=False)
+    except NotImplementedError:
+        if require:
+            # @CTB what happens if idx.location is None?
+            error(f"ERROR: manifests cannot be generated for {idx.location}")
+            sys.exit(-1)
+        else:
+            return None
+
+    return m
+
+
 def manifest(args):
     """
     build a signature manifest
     """
-    from sourmash.index import CollectionManifest
-
     set_quiet(args.quiet)
-
-    # CTB: might want to switch to sourmash_args.FileOutputCSV here?
-    csv_fp = open(args.output, 'w', newline='')
-
-    CollectionManifest.write_csv_header(csv_fp)
-    w = csv.DictWriter(csv_fp, fieldnames=CollectionManifest.required_keys)
 
     try:
         loader = sourmash_args.load_file_as_index(args.location,
                                                   yield_all_files=args.force)
-    except Exception as exc:
+    except ValueError as exc:
         error('\nError while reading signatures from {}:'.format(args.location))
         error(str(exc))
-        error('(continuing)')
-        raise
-
-    n = 0
-    # Need to ignore existing manifests here! otherwise circularity...
-    try:
-        manifest_iter = loader._signatures_with_internal()
-    except NotImplementedError:
-        error("ERROR: manifests cannot be generated for this file.")
         sys.exit(-1)
 
-    for n, (sig, parent, loc) in enumerate(manifest_iter):
-        # extract info, write as appropriate.
-        row = CollectionManifest.make_manifest_row(sig, loc,
-                                                   include_signature=False)
-        w.writerow(row)
+    manifest = get_manifest(loader, require=True, rebuild=True)
 
-    notify(f'built manifest for {n} signatures total.')
+    # CTB: might want to switch to sourmash_args.FileOutputCSV here?
+    with open(args.output, "w", newline='') as csv_fp:
+        manifest.write_to_csv(csv_fp, write_header=True)
 
-    if csv_fp:
-        csv_fp.close()
+    notify(f"built manifest for {len(manifest)} signatures total.")
+    notify(f"wrote manifest to '{args.output}'")
 
 
 def overlap(args):
@@ -1130,6 +1143,7 @@ def fileinfo(args):
     print_bool = lambda x: "yes" if x else "no"
     print_none = lambda x: "n/a" if x is None else x
 
+    notify(f"path filetype: {type(idx).__name__}")
     notify(f"location: {print_none(idx.location)}")
     notify(f"is database? {print_bool(idx.is_database)}")
     notify(f"has manifest? {print_bool(idx.manifest)}")
@@ -1139,8 +1153,10 @@ def fileinfo(args):
     # print type! @CTB
 
     # manifest foo HERE @CTB have arg to prevent calculation
-    assert idx.manifest
-    manifest = idx.manifest
+    # also have arg to force recalculation?
+    manifest = get_manifest(idx)
+    if manifest is None:
+        notify("no manifest and cannot be generated; exiting.")
 
     ksizes = set()
     moltypes = set()
@@ -1149,6 +1165,7 @@ def fileinfo(args):
     total_size = 0
     has_abundance = False
 
+    # @CTB: track _number_ of sketches with those values?
     for row in manifest.rows:
         ksizes.add(row['ksize'])
         moltypes.add(row['moltype'])
@@ -1157,7 +1174,7 @@ def fileinfo(args):
         total_size += row['n_hashes']
         has_abundance = has_abundance or row['with_abundance']
 
-    notify(f"{total_size} total hashes in database")
+    notify(f"{total_size} total hashes")
     notify(f"abundance information available: {print_bool(has_abundance)}")
 
     ksizes = ", ".join([str(x) for x in sorted(ksizes)])
