@@ -116,7 +116,8 @@ def output_results(lineage_counts, total_counts, filename=None, sig=None):
 
         print_results('{:5} {:>5}   {}   {}:{} {}'.format(p, count, lineage, filename, sig.md5sum()[:8], sig))
 
-def output_csv(lineage_counts, csv_fp, filename, sig, write_header=True):
+def output_csv(lineage_counts, total_counts, csv_fp, filename, sig,
+               write_header=True):
     """\
     Output results in CSV.
     """
@@ -124,13 +125,13 @@ def output_csv(lineage_counts, csv_fp, filename, sig, write_header=True):
     w = csv.writer(csv_fp)
     if write_header:
         headers = ['count'] + list(lca_utils.taxlist())
-        headers += ['filename', 'sig_name', 'sig_md5']
+        headers += ['filename', 'sig_name', 'sig_md5', 'total_counts']
         w.writerow(headers)
 
     for (lineage, count) in lineage_counts.items():
         debug('lineage:', lineage)
         row = [count] + lca_utils.zip_lineage(lineage, truncate_empty=False)
-        row += [filename, sig.name, sig.md5sum()]
+        row += [filename, sig.name, sig.md5sum(), total_counts]
         w.writerow(row)
 
 
@@ -198,7 +199,7 @@ def summarize_main(args):
                            filename=filename, sig=sig)
 
             if csv_fp:
-                output_csv(lineage_counts, csv_fp, filename, sig,
+                output_csv(lineage_counts, total, csv_fp, filename, sig,
                            write_header=write_header)
                 write_header = False
     finally:

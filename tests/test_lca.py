@@ -1693,10 +1693,9 @@ def test_single_summarize_to_output_check_filename(runtmp):
     outdata = open(runtmp.output('output.txt'), 'rt').read()
 
     assert 'loaded 1 signatures from 1 files total.' in runtmp.last_result.err
-    assert 'count,superkingdom,phylum,class,order,family,genus,species,strain,filename,sig_name,sig_md5\n' in outdata
-    assert '200,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii,,'+os.path.join(in_dir, 'q.sig')+',TARA_ASE_MAG_00031,5b438c6c858cdaf9e9b05a207fa3f9f0' in outdata
-
-
+    assert 'count,superkingdom,phylum,class,order,family,genus,species,strain,filename,sig_name,sig_md5,total_counts\n' in outdata
+    assert '200,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii,,'+os.path.join(in_dir, 'q.sig')+',TARA_ASE_MAG_00031,5b438c6c858cdaf9e9b05a207fa3f9f0,200.0\n' in outdata
+    print(outdata)
 
 
 def test_single_summarize_scaled(runtmp):
