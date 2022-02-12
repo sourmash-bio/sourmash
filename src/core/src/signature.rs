@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::encodings::{aa_to_dayhoff, aa_to_hp, revcomp, to_aa, HashFunctions, VALID};
-use crate::index::storage::ToWriter;
+use crate::prelude::*;
 use crate::sketch::Sketch;
 use crate::Error;
 use crate::HashIntoType;
