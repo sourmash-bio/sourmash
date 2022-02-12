@@ -1115,6 +1115,180 @@ def kmers(args):
         notify("NOTE: see --save-kmers or --save-sequences for output options.")
 
 
+def kmers(args):
+    """
+    retrieve k-mers and/or sequences contained by the minhashes
+    """
+    set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
+    _extend_signatures_with_from_file(args)
+
+    first_sig = None
+    query_mh = None
+
+
+    # start loading!
+    progress = sourmash_args.SignatureLoadingProgress()
+    loader = sourmash_args.load_many_signatures(args.signatures,
+                                                ksize=args.ksize,
+                                                moltype=moltype,
+                                                picklist=picklist,
+                                                progress=progress,
+                                                yield_all_files=args.force,
+                                                force=args.force)
+
+    for sigobj, sigloc in loader:
+        # first signature? initialize a bunch of stuff
+        if first_sig is None:
+            first_sig = sigobj
+            query_mh = first_sig.minhash.copy_and_clear()
+
+            # remove abundance as it has no purpose here --
+            query_mh.track_abundance = False
+
+        try:
+            sigobj_mh = sigobj.minhash
+            sigobj_mh.track_abundance = False
+
+            query_mh.merge(sigobj_mh)
+        except (TypeError, ValueError) as exc:
+            error("ERROR when merging signature '{}' ({}) from file {}",
+                  sigobj, sigobj.md5sum()[:8], sigloc)
+            error(str(exc))
+            sys.exit(-1)
+
+    if not len(progress):
+        error("no signatures in query!?")
+        sys.exit(-1)
+
+    notify(f"loaded and merged {len(progress)} signatures")
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
+
+    is_protein = False
+    if query_mh.moltype == 'DNA':
+        if args.translate:
+            error("ERROR: cannot use --translate with DNA sketches.")
+            sys.exit(-1)
+    else:
+        is_protein = True
+        if args.translate:      # input sequence is DNA
+            is_protein = False
+
+    notify("")
+    notify(f"merged signature has the following properties:")
+    notify(f"k={query_mh.ksize} molecule={query_mh.moltype} num={query_mh.num} scaled={query_mh.scaled} seed={query_mh.seed}")
+    notify(f"total hashes in merged signature: {len(query_mh)}")
+    notify("")
+    notify("now processing sequence files for matches!")
+
+    found_mh = query_mh.copy_and_clear()
+
+    # open outputs...
+    save_kmers = None
+    kmer_w = None
+    if args.save_kmers:
+        save_kmers = sourmash_args.FileOutputCSV(args.save_kmers)
+        save_kmers.open()
+        kmer_w = csv.DictWriter(save_kmers.fp,
+                                fieldnames=['sequence_file',
+                                            'sequence_name',
+                                            'kmer',
+                                            'hashval'])
+        kmer_w.writeheader()
+
+    save_seqs = None
+    if args.save_sequences:
+        save_seqs = sourmash_args.FileOutput(args.save_sequences)
+        save_seqs.open()
+
+    # figure out protein vs dna
+    is_protein = False
+    if query_mh.moltype != 'DNA':
+        if not args.translate:
+            is_protein = True
+
+    n_files_searched = 0
+    n_sequences_searched = 0
+    n_bp_searched = 0
+    n_kmers_found = 0
+    n_sequences_found = 0
+    n_bp_saved = 0
+
+    progress_threshold = 1e6
+    progress_interval = 1e6
+    for filename in args.sequences:
+        notify(f"opening sequence file '{filename}'")
+        n_files_searched += 1
+
+        for record in screed.open(filename):
+            seq_mh = query_mh.copy_and_clear()
+
+            # protein? dna?
+            if is_protein:
+                seq_mh.add_protein(record.sequence)
+            else:
+                seq_mh.add_sequence(record.sequence) # CTB force?
+
+            if seq_mh.intersection(query_mh):
+                # match!
+
+                # output matching sequences:
+                if save_seqs:
+                    save_seqs.fp.write(f">{record.name}\n{record.sequence}\n")
+                    n_sequences_found += 1
+                    n_bp_saved += len(record.sequence)
+
+                # output matching k-mers:
+                if kmer_w:
+                    seq = record.sequence
+                    kh_iter = seq_mh.kmers_and_hashes(seq, force=False,
+                                                      is_protein=is_protein)
+                    for kmer, hashval in kh_iter:
+                        if hashval in query_mh.hashes:
+                            found_mh.add_hash(hashval)
+                            n_kmers_found += 1
+                            d = dict(sequence_file=filename,
+                                     sequence_name=record.name,
+                                     kmer=kmer, hashval=hashval)
+                            kmer_w.writerow(d)
+
+            # provide progress indicator based on bp...
+            n_sequences_searched += 1
+            n_bp_searched += len(record.sequence)
+
+            if n_bp_searched >= progress_threshold:
+                notify(f"... searched {n_bp_searched} from {n_files_searched} so far")
+                while n_bp_searched >= progress_threshold:
+                    progress_threshold += progress_interval
+
+    # END major for loop. Now, clean up!
+    if save_kmers:
+        save_kmers.close()
+
+    if save_seqs:
+        save_seqs.close()
+
+    # ...and report!
+    notify("DONE.")
+    notify(f"searched {n_sequences_searched} sequences from {n_files_searched} files, containing a total of {n_bp_searched/1e6:.1f} Mbp.")
+
+    if save_seqs:
+        notify(f"matched and saved a total of {n_sequences_found} sequences with {n_bp_saved/1e6:.1f} Mbp.")
+
+    if kmer_w:
+        # calculate overlap, even for num minhashes which ordinarily don't
+        # permit it, because here we are interested in knowing how many
+        # of the expected hashes we found.
+        query_hashes = set(query_mh.hashes)
+        found_hashes = set(found_mh.hashes)
+        cont = len(query_hashes.intersection(found_hashes)) / len(query_hashes)
+
+        notify(f"matched and saved a total of {n_kmers_found} k-mers.")
+        notify(f"found {len(found_mh)} distinct matching hashes ({cont*100:.1f}%)")
+
+
 def main(arglist=None):
     args = sourmash.cli.get_parser().parse_args(arglist)
     submod = getattr(sourmash.cli.sig, args.subcmd)

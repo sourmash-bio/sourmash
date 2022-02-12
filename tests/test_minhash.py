@@ -232,6 +232,21 @@ def test_seq_to_hashes_translated(track_abundance):
 
     assert set(golden_hashes) == set(new_hashes)
 
+def test_seq_to_hashes_bad_kmers_as_zeroes_1():
+    mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1)
+    seq = "ATGAGAGACGATAGACAGATGACN"
+    
+    # New seq to hashes without adding to the sketch
+    hashes = mh.seq_to_hashes(seq, force=True, bad_kmers_as_zeroes=True)
+
+    assert len(hashes) == len(seq) - 21 + 1
+
+def test_seq_to_hashes_bad_kmers_as_zeroes_2():
+    mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1)
+    seq = "ATGAGAGACGATAGACAGATGACN"
+    
+    with pytest.raises(ValueError):
+        hashes = mh.seq_to_hashes(seq, bad_kmers_as_zeroes=True)
 
 def test_seq_to_hashes_bad_kmers_as_zeroes_1():
     mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1)

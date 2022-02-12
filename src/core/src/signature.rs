@@ -380,6 +380,236 @@ impl Iterator for SeqToHashes {
     }
 }
 
+// Mo: This is expermintal code to demonstrate an idea (a lot of duplication)!
+
+pub struct kmers_and_hashes{
+    kmer_hash: u64,
+    kmer_str: String,
+}
+
+// Iterator for converting sequence to hashes
+pub struct SeqToKmersAndHashes {
+    sequence: Vec<u8>,
+    kmer_index: usize,
+    k_size: usize,
+    max_index: usize,
+    force: bool,
+    is_protein: bool,
+    hash_function: HashFunctions,
+    seed: u64,
+    hashes_buffer: Vec<(u64, String)>,
+
+    dna_configured: bool,
+    dna_rc: Vec<u8>,
+    dna_ksize: usize,
+    dna_len: usize,
+    dna_last_position_check: usize,
+
+    prot_configured: bool,
+    aa_seq: Vec<u8>,
+}
+
+impl SeqToKmersAndHashes {
+    pub fn new(
+        seq: &[u8],
+        k_size: usize,
+        force: bool,
+        is_protein: bool,
+        hash_function: HashFunctions,
+        seed: u64,
+    ) -> SeqToKmersAndHashes {
+        let mut ksize: usize = k_size;
+
+        // Divide the kmer size by 3 if protein
+        if is_protein || !hash_function.dna() {
+            ksize = k_size / 3;
+        }
+
+        // By setting _max_index to 0, the iterator will return None and exit
+        let _max_index: usize;
+        if seq.len() >= ksize {
+            _max_index = seq.len() - ksize + 1;
+        } else {
+            _max_index = 0;
+        }
+
+        SeqToKmersAndHashes {
+            // Here we convert the sequence to upper case
+            sequence: seq.to_ascii_uppercase(),
+            k_size: ksize,
+            kmer_index: 0,
+            max_index: _max_index as usize,
+            force,
+            is_protein,
+            hash_function,
+            seed,
+            hashes_buffer: Vec::with_capacity(1000),
+            dna_configured: false,
+            dna_rc: Vec::with_capacity(1000),
+            dna_ksize: 0,
+            dna_len: 0,
+            dna_last_position_check: 0,
+            prot_configured: false,
+            aa_seq: Vec::new(),
+        }
+    }
+}
+
+impl Iterator for SeqToKmersAndHashes {
+    type Item = Result<(u64, String), Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // TODO: Remove the hashes buffer
+        // Priority for flushing the hashes buffer
+
+        if (self.kmer_index < self.max_index) || !self.hashes_buffer.is_empty() {
+            // Processing DNA or Translated DNA
+            if !self.is_protein {
+                // Setting the parameters only in the first iteration
+                if !self.dna_configured {
+                    self.dna_ksize = self.k_size as usize;
+                    self.dna_len = self.sequence.len();
+                    if self.dna_len < self.dna_ksize {
+                        return None;
+                    }
+                    // pre-calculate the reverse complement for the full sequence...
+                    self.dna_rc = revcomp(&self.sequence);
+                    self.dna_configured = true;
+                }
+
+                // Processing DNA
+                if self.hash_function.dna() {
+                    let kmer = &self.sequence[self.kmer_index..self.kmer_index + self.dna_ksize];
+
+                    for j in std::cmp::max(self.kmer_index, self.dna_last_position_check)
+                        ..self.kmer_index + self.dna_ksize
+                    {
+                        if !VALID[self.sequence[j] as usize] {
+                            if !self.force {
+                                return Some(Err(Error::InvalidDNA {
+                                    message: String::from_utf8(kmer.to_vec()).unwrap(),
+                                }));
+                            } else {
+                                self.kmer_index += 1;
+                                // Move the iterator to the next step
+                                return Some(Ok((0, "".to_string())));
+                            }
+                        }
+                        self.dna_last_position_check += 1;
+                    }
+
+                    // ... and then while moving the k-mer window forward for the sequence
+                    // we move another window backwards for the RC.
+                    //   For a ksize = 3, and a sequence AGTCGT (len = 6):
+                    //                   +-+---------+---------------+-------+
+                    //   seq      RC     |i|i + ksize|len - ksize - i|len - i|
+                    //  AGTCGT   ACGACT  +-+---------+---------------+-------+
+                    //  +->         +->  |0|    2    |       3       |   6   |
+                    //   +->       +->   |1|    3    |       2       |   5   |
+                    //    +->     +->    |2|    4    |       1       |   4   |
+                    //     +->   +->     |3|    5    |       0       |   3   |
+                    //                   +-+---------+---------------+-------+
+                    // (leaving this table here because I had to draw to
+                    //  get the indices correctly)
+
+                    let krc = &self.dna_rc[self.dna_len - self.dna_ksize - self.kmer_index
+                        ..self.dna_len - self.kmer_index];
+                    let min_kmer = std::cmp::min(kmer, krc);
+                    let hash = crate::_hash_murmur(min_kmer, self.seed);
+                    self.kmer_index += 1;
+                    Some(Ok((hash, String::from_utf8(min_kmer.to_vec()).unwrap())))
+                } else if self.hashes_buffer.is_empty() {
+                    // Processing protein by translating DNA
+                    // TODO: make it a real iterator not a buffer
+
+                    // Three frames
+                    for i in 0..3 {
+                        let substr: Vec<u8> = self
+                            .sequence
+                            .iter()
+                            .cloned()
+                            .skip(i)
+                            .take(self.sequence.len() - i)
+                            .collect();
+
+                        let aa = to_aa(
+                            &substr,
+                            self.hash_function.dayhoff(),
+                            self.hash_function.hp(),
+                        )
+                        .unwrap();
+
+                        aa.windows(self.k_size as usize).for_each(|n| {
+                            let hash = crate::_hash_murmur(n, self.seed);
+                            self.hashes_buffer
+                                .push((hash, String::from_utf8(n.to_vec()).unwrap()));
+                        });
+
+                        let rc_substr: Vec<u8> = self
+                            .dna_rc
+                            .iter()
+                            .cloned()
+                            .skip(i)
+                            .take(self.dna_rc.len() - i)
+                            .collect();
+                        let aa_rc = to_aa(
+                            &rc_substr,
+                            self.hash_function.dayhoff(),
+                            self.hash_function.hp(),
+                        )
+                        .unwrap();
+
+                        aa_rc.windows(self.k_size as usize).for_each(|n| {
+                            let hash = crate::_hash_murmur(n, self.seed);
+                            self.hashes_buffer
+                                .push((hash, String::from_utf8(n.to_vec()).unwrap()));
+                        });
+                    }
+                    self.kmer_index = self.max_index;
+                    Some(Ok(self.hashes_buffer.remove(0)))
+                } else {
+                    let first_element: (u64, String) = self.hashes_buffer.remove(0);
+                    Some(Ok(first_element))
+                }
+            } else {
+                // Processing protein
+                // The kmer size is already divided by 3
+
+                if self.hash_function.protein() {
+                    let aa_kmer = &self.sequence[self.kmer_index..self.kmer_index + self.k_size];
+                    let hash = crate::_hash_murmur(aa_kmer, self.seed);
+                    self.kmer_index += 1;
+                    Some(Ok((hash, String::from_utf8(aa_kmer.to_vec()).unwrap())))
+                } else {
+                    if !self.prot_configured {
+                        self.aa_seq = match self.hash_function {
+                            HashFunctions::murmur64_dayhoff => {
+                                self.sequence.iter().cloned().map(aa_to_dayhoff).collect()
+                            }
+                            HashFunctions::murmur64_hp => {
+                                self.sequence.iter().cloned().map(aa_to_hp).collect()
+                            }
+                            invalid => {
+                                return Some(Err(Error::InvalidHashFunction {
+                                    function: format!("{}", invalid),
+                                }));
+                            }
+                        };
+                    }
+
+                    let aa_kmer = &self.aa_seq[self.kmer_index..self.kmer_index + self.k_size];
+                    let hash = crate::_hash_murmur(aa_kmer, self.seed);
+                    self.kmer_index += 1;
+                    Some(Ok((hash, String::from_utf8(aa_kmer.to_vec()).unwrap())))
+                }
+            }
+        } else {
+            // End the iterator
+            None
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, TypedBuilder)]
 pub struct Signature {
     #[serde(default = "default_class")]

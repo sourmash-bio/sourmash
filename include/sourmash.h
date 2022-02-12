@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <tuple>
 
 enum HashFunctions {
   HASH_FUNCTIONS_MURMUR64_DNA = 1,
@@ -242,6 +243,8 @@ const uint64_t *kmerminhash_seq_to_hashes(SourmashKmerMinHash *ptr,
                                           bool bad_kmers_as_zeroes,
                                           bool is_protein,
                                           uintptr_t *size);
+
+const std::tuple(uint64_t, SourmashStr) *kmerminhash_seq_to_kmers_and_hashes(SourmashKmerMinHash *ptr, const char *sequence, uintptr_t insize, bool force, bool is_protein, uintptr_t *size);
 
 void kmerminhash_set_abundances(SourmashKmerMinHash *ptr,
                                 const uint64_t *hashes_ptr,
