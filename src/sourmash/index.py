@@ -852,6 +852,10 @@ class MultiIndex(Index):
         self.manifest = manifest
         self.parent = parent
 
+    @property
+    def location(self):
+        return self.parent
+
     def signatures(self):
         for row in self.manifest.rows:
             yield row['signature']

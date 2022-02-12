@@ -275,13 +275,16 @@ def manifest(args):
         loader = sourmash_args.load_file_as_index(args.location,
                                                   yield_all_files=args.force)
     except ValueError as exc:
-        error('\nError while reading signatures from {}:'.format(args.location))
+        error("\nError while reading signatures from '{}':".format(args.location))
         error(str(exc))
         sys.exit(-1)
 
-    manifest = sourmash_args.get_manifest(loader, require=True, rebuild=True)
+    rebuild = True
+    if args.no_rebuild_manifest:
+        rebuild = False
+    manifest = sourmash_args.get_manifest(loader, require=True,
+                                          rebuild=rebuild)
 
-    # CTB: might want to switch to sourmash_args.FileOutputCSV here?
     with open(args.output, "w", newline='') as csv_fp:
         manifest.write_to_csv(csv_fp, write_header=True)
 
@@ -1120,7 +1123,7 @@ def fileinfo(args):
     print_results(f"num signatures: {len(idx)}")
 
     # also have arg to fileinfo to force recalculation
-    manifest = sourmash_args.get_manifest(idx)
+    manifest = sourmash_args.get_manifest(idx, rebuild=args.rebuild_manifest)
     if manifest is None:
         notify("** no manifest and cannot be generated; exiting.")
         sys.exit(0)
