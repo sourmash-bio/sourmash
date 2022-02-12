@@ -42,7 +42,7 @@ def compare_serial(siglist, ignore_abundance, downsample=False):
 def compare_serial_containment(siglist, downsample=False):
     """Compare all combinations of signatures and return a matrix
     of containments. Processes combinations serially on a single
-    process. Best to use when there is few signatures.
+    process. Best to only use when there are few signatures.
 
     :param list siglist: list of signatures to compare
     :param boolean downsample by scaled if True
@@ -56,6 +56,28 @@ def compare_serial_containment(siglist, downsample=False):
     for i in range(n):
         for j in range(n):
             containments[i][j] = siglist[j].contained_by(siglist[i],
+                                                         downsample=downsample)
+
+    return containments
+
+
+def compare_serial_max_containment(siglist, downsample=False):
+    """Compare all combinations of signatures and return a matrix
+    of max_containments. Processes combinations serially on a single
+    process. Best to only use when there are few signatures.
+
+    :param list siglist: list of signatures to compare
+    :param boolean downsample by scaled if True
+    :return: np.array similarity matrix
+    """
+    import numpy as np
+
+    n = len(siglist)
+
+    containments = np.ones((n, n))
+    for i in range(n):
+        for j in range(n):
+            containments[i][j] = siglist[j].max_containment(siglist[i],
                                                          downsample=downsample)
 
     return containments
@@ -95,10 +117,7 @@ def get_similarities_at_index(index, ignore_abundance, downsample, siglist):
                    downsample=downsample)
     similarity_list = list(map(func, sig_iterator))
     notify(
-        "comparison for index {} done in {:.5f} seconds",
-        index,
-        time.time() - startt,
-        end='\r')
+        f"comparison for index {index} done in {time.time() - startt:.5f} seconds", end='\r')
     return similarity_list
 
 
@@ -169,16 +188,13 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs):
         for idx_condensed, item in enumerate(l):
             memmap_similarities[index, col_idx + idx_condensed] = memmap_similarities[idx_condensed + col_idx, index] = item
         notify(
-            "Setting similarities matrix for index {} done in {:.5f} seconds",
-            index,
-            time.time() - startt,
-            end='\r')
+            f"Setting similarities matrix for index {index} done in {time.time() - startt:.5f} seconds", end='\r')
     notify("Setting similarities completed")
 
     pool.close()
     pool.join()
 
-    notify("Time taken to compare all pairs parallely is {:.5f} seconds ", time.time() - start_initial)
+    notify(f"Time taken to compare all pairs parallely is {time.time() - start_initial:.5f} seconds ")
     return np.memmap(filename, dtype=np.float64, shape=(length_siglist, length_siglist))
 
 

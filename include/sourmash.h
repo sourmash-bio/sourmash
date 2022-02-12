@@ -195,7 +195,12 @@ void kmerminhash_hash_function_set(SourmashKmerMinHash *ptr, HashFunctions hash_
 
 bool kmerminhash_hp(const SourmashKmerMinHash *ptr);
 
-uint64_t kmerminhash_intersection(const SourmashKmerMinHash *ptr, const SourmashKmerMinHash *other);
+SourmashKmerMinHash *kmerminhash_intersection(const SourmashKmerMinHash *ptr,
+                                              const SourmashKmerMinHash *other);
+
+uint64_t kmerminhash_intersection_union_size(const SourmashKmerMinHash *ptr,
+                                             const SourmashKmerMinHash *other,
+                                             uint64_t *union_size);
 
 bool kmerminhash_is_compatible(const SourmashKmerMinHash *ptr, const SourmashKmerMinHash *other);
 
@@ -220,6 +225,8 @@ SourmashKmerMinHash *kmerminhash_new(uint64_t scaled,
 
 uint32_t kmerminhash_num(const SourmashKmerMinHash *ptr);
 
+void kmerminhash_remove_from(SourmashKmerMinHash *ptr, const SourmashKmerMinHash *other);
+
 void kmerminhash_remove_hash(SourmashKmerMinHash *ptr, uint64_t h);
 
 void kmerminhash_remove_many(SourmashKmerMinHash *ptr,
@@ -227,6 +234,14 @@ void kmerminhash_remove_many(SourmashKmerMinHash *ptr,
                              uintptr_t insize);
 
 uint64_t kmerminhash_seed(const SourmashKmerMinHash *ptr);
+
+const uint64_t *kmerminhash_seq_to_hashes(SourmashKmerMinHash *ptr,
+                                          const char *sequence,
+                                          uintptr_t insize,
+                                          bool force,
+                                          bool bad_kmers_as_zeroes,
+                                          bool is_protein,
+                                          uintptr_t *size);
 
 void kmerminhash_set_abundances(SourmashKmerMinHash *ptr,
                                 const uint64_t *hashes_ptr,

@@ -11,8 +11,11 @@ import sourmash_tst_utils as utils
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
 
+from sourmash.search import make_jaccard_search_query
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import LineagePair
+from sourmash.picklist import SignaturePicklist, PickStyle
+from sourmash_tst_utils import SourmashCommandFailed
 
 
 def test_api_create_search():
@@ -29,6 +32,74 @@ def test_api_create_search():
     assert len(results) == 1
     (similarity, match, filename) = results[0]
     assert match.minhash == ss.minhash
+
+
+def test_api_find_picklist_select():
+    # does 'find' respect picklists?
+
+    sig47 = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                        ksize=31)
+    sig63 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                        ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(sig47)
+    lca_db.insert(sig63)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('md5prefix8')
+    picklist.init(['09a08691'])
+
+    # run a 'find' with sig63, should find 47 and 63 both.
+    search_obj = make_jaccard_search_query(do_containment=True, threshold=0.0)
+    results = list(lca_db.find(search_obj, sig63))
+    print(results)
+    assert len(results) == 2
+
+    # now, select on picklist and do another find...
+    lca_db = lca_db.select(picklist=picklist)
+    results = list(lca_db.find(search_obj, sig63))
+    print(results)
+    assert len(results) == 1
+
+    # and check that it is the expected one!
+    ss = results[0].signature
+    assert ss.minhash.ksize == 31
+    assert ss.md5sum().startswith('09a08691c')
+
+
+def test_api_find_picklist_select_exclude():
+    # does 'find' respect picklists?
+
+    sig47 = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                        ksize=31)
+    sig63 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                        ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(sig47)
+    lca_db.insert(sig63)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('md5prefix8', pickstyle= PickStyle.EXCLUDE)
+    picklist.init(['09a08691'])
+
+    # run a 'find' with sig63, should find 47 and 63 both.
+    search_obj = make_jaccard_search_query(do_containment=True, threshold=0.0)
+    results = list(lca_db.find(search_obj, sig63))
+    print(results)
+    assert len(results) == 2
+
+    # now, select on picklist and do another find...
+    lca_db = lca_db.select(picklist=picklist)
+    results = list(lca_db.find(search_obj, sig63))
+    print(results)
+    assert len(results) == 1
+
+    # and check that it is the expected one!
+    ss = results[0].signature
+    assert ss.minhash.ksize == 31
+    assert ss.md5sum().startswith('38729c637')
 
 
 def test_api_create_insert():
@@ -67,6 +138,24 @@ def test_api_create_insert_bad_ksize():
     lca_db = sourmash.lca.LCA_Database(ksize=21, scaled=1000)
     with pytest.raises(ValueError):
         lca_db.insert(ss)
+
+
+def test_api_create_insert_bad_ident():
+    # can we insert a signature with no/empty ident?
+    ss1 = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                      ksize=31)
+    ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                      ksize=31)
+    ss1.name = ''
+    ss1.filename = ''
+    ss2.name = ''
+    ss2.filename = ''
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss1)
+    lca_db.insert(ss2)
+    # SUCCESS!
+    # would fail, previously :)
 
 
 def test_api_create_insert_bad_scaled():
@@ -364,6 +453,19 @@ def test_load_single_db():
     assert scaled == 10000
 
 
+def test_load_single_db_empty(runtmp):
+    # test load_single_database on an empty file; should raise ValueError
+    empty = runtmp.output('empty.lca.json')
+
+    with open(empty, "wt") as fp:
+        pass
+
+    with pytest.raises(ValueError) as exc:
+        db, ksize, scaled = lca_utils.load_single_database(empty)
+
+    assert f"'{empty}' is not an LCA database file." in str(exc.value)
+
+
 def test_databases():
     filename1 = utils.get_test_data('lca/delmont-1.lca.json')
     filename2 = utils.get_test_data('lca/delmont-2.lca.json')
@@ -375,6 +477,37 @@ def test_databases():
     assert ksize == 31
     assert scaled == 10000
 
+
+def test_databases_load_fail_on_no_JSON():
+    filename1 = utils.get_test_data('prot/protein.zip')
+    with pytest.raises(ValueError) as exc:
+        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+
+    err = str(exc.value)
+    print(err)
+    assert f"'{filename1}' is not an LCA database file." in err
+
+
+def test_databases_load_fail_on_dir():
+    filename1 = utils.get_test_data('lca')
+    with pytest.raises(ValueError) as exc:
+        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+
+    err = str(exc.value)
+    print(err)
+    assert f"'{filename1}' is not a file and cannot be loaded as an LCA database" in err
+    assert not 'found 0 matches total;' in err
+
+
+def test_databases_load_fail_on_not_exist():
+    filename1 = utils.get_test_data('does-not-exist')
+    with pytest.raises(ValueError) as exc:
+        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+
+    err = str(exc.value)
+    print(err)
+    assert f"'{filename1}' is not a file and cannot be loaded as an LCA database" in err
+    assert not 'found 0 matches total;' in err
 
 def test_db_repr():
     filename = utils.get_test_data('lca/delmont-1.lca.json')
@@ -404,22 +537,97 @@ def test_lca_index_select():
     xx = db.select(moltype='DNA')
     assert xx == db
 
+    xx = db.select(abund=False)
+    assert xx == db
+
     with pytest.raises(ValueError):
         db.select(ksize=21)
 
     with pytest.raises(ValueError):
         db.select(moltype='protein')
 
+    with pytest.raises(ValueError):
+        db.select(abund=True)
 
-def test_lca_index_find_method():
-    # test 'signatures' method from base class Index
+
+def test_lca_index_select_picklist():
+    # test 'select' method from Index base class with a picklist.
+
     filename = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(filename)
 
-    sig = next(iter(db.signatures()))
+    # construct a picklist...
+    picklist = SignaturePicklist('md5prefix8')
+    picklist.init(['50a92740'])
 
-    with pytest.raises(NotImplementedError) as e:
-        db.find(None)
+    xx = db.select(picklist=picklist)
+    assert xx == db
+
+    siglist = list(db.signatures())
+    assert len(siglist) == 1
+    ss = siglist[0]
+    assert ss.md5sum().startswith('50a92740')
+    assert ss.minhash.ksize == 31
+
+
+def test_lca_index_find_picklist_check_overlap():
+    # make sure 'find' works for picklists that exclude relevant signatures
+    # (bug #1638)
+
+    query_fn = utils.get_test_data('47.fa.sig')
+    query_sig = sourmash.load_one_signature(query_fn, ksize=31)
+    db_fn = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(db_fn)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('ident')
+    picklist.init(['NC_009665.1'])
+
+    xx = db.select(picklist=picklist)
+    assert xx == db
+
+    results = list(db.search(query_sig, threshold=0.1))
+    assert len(results) == 1
+
+
+def test_lca_index_select_picklist_exclude():
+    # test 'select' method from Index base class with a picklist.
+
+    filename = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('md5prefix8', pickstyle=PickStyle.EXCLUDE)
+    picklist.init(['50a92740'])
+
+    xx = db.select(picklist=picklist)
+    assert xx == db
+
+    siglist = list(db.signatures())
+    assert len(siglist) == 1
+    ss = siglist[0]
+    assert ss.md5sum().startswith('e88dc390')
+    assert ss.minhash.ksize == 31
+
+
+def test_lca_index_select_picklist_twice():
+    # test 'select' method from Index base class with a picklist.
+
+    filename = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    # construct a picklist...
+    picklist = SignaturePicklist('md5prefix8')
+    picklist.init(['50a92740'])
+
+    xx = db.select(picklist=picklist)
+    assert xx == db
+
+    with pytest.raises(ValueError) as exc:
+        xx = db.select(picklist=picklist)
+
+    assert "we do not (yet) support multiple picklists for LCA databases" in str(exc)
+
 
 
 def test_search_db_scaled_gt_sig_scaled():
@@ -440,8 +648,13 @@ def test_search_db_scaled_lt_sig_scaled():
     sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
     sig.minhash = sig.minhash.downsample(scaled=100000)
 
-    with pytest.raises(ValueError) as e:
-        results = db.search(sig, threshold=.01, ignore_abundance=True)
+    results = db.search(sig, threshold=.01, ignore_abundance=True)
+    print(results)
+    assert results[0][0] == 1.0
+    match = results[0][1]
+
+    orig_sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
+    assert orig_sig.minhash.jaccard(match.minhash, downsample=True) == 1.0
 
 
 def test_gather_db_scaled_gt_sig_scaled():
@@ -522,212 +735,228 @@ def test_run_sourmash_lca():
     assert status != 0                    # no args provided, ok ;)
 
 
-def test_basic_index():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/delmont-1.csv')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
+def test_basic_index(runtmp):
+    taxcsv = utils.get_test_data('lca/delmont-1.csv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = runtmp.output('delmont-1.lca.json')
 
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert os.path.exists(lca_db)
+    assert os.path.exists(lca_db)
 
-        assert 'Building LCA database with ksize=31 scaled=10000 moltype=DNA' in err
-        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
-
-
-def test_basic_index_bad_spreadsheet():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/bad-spreadsheet.csv')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
-
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert os.path.exists(lca_db)
-
-        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
+    assert 'Building LCA database with ksize=31 scaled=10000 moltype=DNA' in runtmp.last_result.err
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in runtmp.last_result.err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in runtmp.last_result.err
+    assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in runtmp.last_result.err
 
 
-def test_basic_index_broken_spreadsheet():
+def test_basic_index_bad_spreadsheet(runtmp):
+    taxcsv = utils.get_test_data('lca/bad-spreadsheet.csv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = runtmp.output('delmont-1.lca.json')
+
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(lca_db)
+
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in runtmp.last_result.err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in runtmp.last_result.err
+    assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in runtmp.last_result.err
+
+
+def test_basic_index_broken_spreadsheet(runtmp):
     # duplicate identifiers in this spreadsheet
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/bad-spreadsheet-2.csv')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
+    taxcsv = utils.get_test_data('lca/bad-spreadsheet-2.csv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = runtmp.output('delmont-1.lca.json')
 
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
-        status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash(*cmd)
 
-        assert status != 0
-        assert "multiple lineages for identifier TARA_ASE_MAG_00031" in err
+    assert runtmp.last_result.status != 0
+    assert "multiple lineages for identifier TARA_ASE_MAG_00031" in runtmp.last_result.err
 
 
-def test_basic_index_too_many_strains_too_few_species():
+def test_basic_index_too_many_strains_too_few_species(runtmp):
     # explicit test for #841, where 'n_species' wasn't getting counted
     # if lineage was at strain level resolution.
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/podar-lineage.csv')
-        input_sig = utils.get_test_data('47.fa.sig')
-        lca_db = os.path.join(location, 'out.lca.json')
+    taxcsv = utils.get_test_data('lca/podar-lineage.csv')
+    input_sig = utils.get_test_data('47.fa.sig')
+    lca_db = runtmp.output('out.lca.json')
 
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig,
-               '-C', '3', '--split-identifiers']
-        status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig,
+            '-C', '3', '--split-identifiers']
+    runtmp.sourmash(*cmd)
 
-        assert not 'error: fewer than 20% of lineages' in err
-        assert status == 0
+    assert not 'error: fewer than 20% of lineages' in runtmp.last_result.err
+    assert runtmp.last_result.status == 0
 
 
-def test_basic_index_too_few_species():
+def test_basic_index_too_few_species(runtmp):
     # spreadsheets with too few species should be flagged, unless -f specified
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/tully-genome-sigs.classify.csv')
+    taxcsv = utils.get_test_data('lca/tully-genome-sigs.classify.csv')
 
-        # (these don't really matter, should break on load spreadsheet)
-        input_sig = utils.get_test_data('47.fa.sig')
-        lca_db = os.path.join(location, 'out.lca.json')
+    # (these don't really matter, should break on load spreadsheet)
+    input_sig = utils.get_test_data('47.fa.sig')
+    lca_db = runtmp.output('out.lca.json')
 
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-C', '3']
-        status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-C', '3']
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash(*cmd)
 
-        assert not '"ERROR: fewer than 20% of lineages have species-level resolution' in err
-        assert status != 0
+    assert not '"ERROR: fewer than 20% of lineages have species-level resolution' in runtmp.last_result.err
+    assert runtmp.last_result.status != 0
 
 
-def test_basic_index_require_taxonomy():
+def test_basic_index_require_taxonomy(runtmp):
     # no taxonomy in here
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/bad-spreadsheet-3.csv')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
+    taxcsv = utils.get_test_data('lca/bad-spreadsheet-3.csv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = runtmp.output('delmont-1.lca.json')
 
-        cmd = ['lca', 'index', '--require-taxonomy', taxcsv, lca_db, input_sig]
-        status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
+    cmd = ['lca', 'index', '--require-taxonomy', taxcsv, lca_db, input_sig]
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash(*cmd)
 
-        assert status != 0
-        assert "ERROR: no hash values found - are there any signatures?" in err
-
-
-def test_basic_index_column_start():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/delmont-3.csv')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
-
-        cmd = ['lca', 'index', '-C', '3', taxcsv, lca_db, input_sig]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert os.path.exists(lca_db)
-
-        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
+    assert runtmp.last_result.status != 0
+    assert "ERROR: no hash values found - are there any signatures?" in runtmp.last_result.err
 
 
-def test_basic_index_and_classify_with_tsv_and_gz():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/delmont-1.tsv')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json.gz')
+def test_basic_index_column_start(runtmp):
+    taxcsv = utils.get_test_data('lca/delmont-3.csv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = runtmp.output('delmont-1.lca.json')
 
-        cmd = ['lca', 'index', '--tabs', '--no-header', taxcsv, lca_db, input_sig]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'index', '-C', '3', taxcsv, lca_db, input_sig]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert os.path.exists(lca_db)
+    assert os.path.exists(lca_db)
 
-        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
-
-        cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
-        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in out
-        assert 'classified 1 signatures total' in err
-        assert 'loaded 1 LCA databases' in err
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in runtmp.last_result.err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in runtmp.last_result.err
+    assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in runtmp.last_result.err
 
 
-def test_basic_index_and_classify():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/delmont-1.csv')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
+@utils.in_tempdir
+def test_index_empty_sketch_name(c):
+    # create two signatures with empty 'name' attributes
+    cmd = ['sketch', 'dna', utils.get_test_data('genome-s12.fa.gz'),
+           utils.get_test_data('genome-s11.fa.gz')]
+    c.run_sourmash(*cmd)
 
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
-        status, out, err = utils.runscript('sourmash', cmd)
+    sig1 = c.output('genome-s11.fa.gz.sig')
+    assert os.path.exists(sig1)
+    sig2 = c.output('genome-s12.fa.gz.sig')
+    assert os.path.exists(sig2)
 
-        print(cmd)
-        print(out)
-        print(err)
+    # can we insert them both?
+    taxcsv = utils.get_test_data('lca/delmont-1.csv')
+    cmd = ['lca', 'index', taxcsv, 'zzz', sig1, sig2]
+    c.run_sourmash(*cmd)
+    assert os.path.exists(c.output('zzz.lca.json'))
 
-        assert os.path.exists(lca_db)
-
-        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
-
-        cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
-        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in out
-        assert 'classified 1 signatures total' in err
-        assert 'loaded 1 LCA databases' in err
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert 'WARNING: no lineage provided for 2 sig' in c.last_result.err
 
 
-def test_index_traverse():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/delmont-1.csv')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
+def test_basic_index_and_classify_with_tsv_and_gz(runtmp):
+    taxcsv = utils.get_test_data('lca/delmont-1.tsv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = runtmp.output('delmont-1.lca.json.gz')
 
-        in_dir = os.path.join(location, 'sigs')
-        os.mkdir(in_dir)
-        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
+    cmd = ['lca', 'index', '--tabs', '--no-header', taxcsv, lca_db, input_sig]
+    runtmp.sourmash(*cmd)
 
-        cmd = ['lca', 'index', taxcsv, lca_db, in_dir]
-        status, out, err = utils.runscript('sourmash', cmd)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        print(cmd)
-        print(out)
-        print(err)
+    assert os.path.exists(lca_db)
 
-        assert os.path.exists(lca_db)
+    assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in runtmp.last_result.err
 
-        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
-        assert 'WARNING: 1 duplicate signatures.' not in err
+    cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in runtmp.last_result.out
+    assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in runtmp.last_result.out
+    assert 'classified 1 signatures total' in runtmp.last_result.err
+    assert 'loaded 1 LCA databases' in runtmp.last_result.err
+
+
+def test_basic_index_and_classify(runtmp):
+    taxcsv = utils.get_test_data('lca/delmont-1.csv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = runtmp.output('delmont-1.lca.json')
+
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(lca_db)
+
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in runtmp.last_result.err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in runtmp.last_result.err
+    assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in runtmp.last_result.err
+
+    cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in runtmp.last_result.out
+    assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in runtmp.last_result.out
+    assert 'classified 1 signatures total' in runtmp.last_result.err
+    assert 'loaded 1 LCA databases' in runtmp.last_result.err
+
+
+def test_index_traverse(runtmp):
+    taxcsv = utils.get_test_data('lca/delmont-1.csv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = runtmp.output('delmont-1.lca.json')
+
+    in_dir = runtmp.output('sigs')
+    os.mkdir(in_dir)
+    shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
+
+    cmd = ['lca', 'index', taxcsv, lca_db, in_dir]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(lca_db)
+
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in runtmp.last_result.err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in runtmp.last_result.err
+    assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in runtmp.last_result.err
+    assert 'WARNING: 1 duplicate signatures.' not in runtmp.last_result.err
 
 
 @utils.in_tempdir
@@ -816,7 +1045,7 @@ def test_index_fail_on_num(c):
     sigfile = utils.get_test_data('num/63.fa.sig')
     taxcsv = utils.get_test_data('lca/podar-lineage.csv')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('lca', 'index', taxcsv, 'xxx.lca.json', sigfile, '-C', '3')
 
     err = c.last_result.err
@@ -826,152 +1055,172 @@ def test_index_fail_on_num(c):
     assert 'ERROR: cannot downsample signature; is it a scaled signature?' in err
 
 
-def test_index_traverse_real_spreadsheet_no_report():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
+def test_index_traverse_real_spreadsheet_no_report(runtmp):
+    taxcsv = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = runtmp.output('delmont-1.lca.json')
 
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-f']
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-f']
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert os.path.exists(lca_db)
+    assert os.path.exists(lca_db)
 
-        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '1 identifiers used out of 957 distinct identifiers in spreadsheet.' in err
-        assert 'WARNING: no signatures for 956 spreadsheet rows.' in err
-        assert 'WARNING: 105 unused lineages.' in err
-        assert '(You can use --report to generate a detailed report.)' in err
-
-
-def test_index_traverse_real_spreadsheet_report():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
-        report_loc = os.path.join(location, 'report.txt')
-
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '--report',
-               report_loc, '-f']
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert os.path.exists(lca_db)
-
-        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '1 identifiers used out of 957 distinct identifiers in spreadsheet.' in err
-        assert 'WARNING: no signatures for 956 spreadsheet rows.' in err
-        assert 'WARNING: 105 unused lineages.' in err
-        assert '(You can use --report to generate a detailed report.)' not in err
-        assert os.path.exists(report_loc)
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in runtmp.last_result.err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in runtmp.last_result.err
+    assert '1 identifiers used out of 957 distinct identifiers in spreadsheet.' in runtmp.last_result.err
+    assert 'WARNING: no signatures for 956 spreadsheet rows.' in runtmp.last_result.err
+    assert 'WARNING: 105 unused lineages.' in runtmp.last_result.err
+    assert '(You can use --report to generate a detailed report.)' in runtmp.last_result.err
 
 
-def test_single_classify():
-    with utils.TempDirectory() as location:
-        db1 = utils.get_test_data('lca/delmont-1.lca.json')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+def test_index_traverse_real_spreadsheet_report(runtmp):
+    taxcsv = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = runtmp.output('delmont-1.lca.json')
+    report_loc = runtmp.output('report.txt')
 
-        cmd = ['lca', 'classify', '--db', db1, '--query', input_sig]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '--report',
+            report_loc, '-f']
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in out
-        assert 'classified 1 signatures total' in err
-        assert 'loaded 1 LCA databases' in err
+    assert os.path.exists(lca_db)
 
-
-def test_single_classify_to_output():
-    with utils.TempDirectory() as location:
-        db1 = utils.get_test_data('lca/delmont-1.lca.json')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-
-        cmd = ['lca', 'classify', '--db', db1, '--query', input_sig,
-               '-o', os.path.join(location, 'outfile.txt')]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        outdata = open(os.path.join(location, 'outfile.txt'), 'rt').read()
-        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
-        assert 'classified 1 signatures total' in err
-        assert 'loaded 1 LCA databases' in err
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in runtmp.last_result.err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in runtmp.last_result.err
+    assert '1 identifiers used out of 957 distinct identifiers in spreadsheet.' in runtmp.last_result.err
+    assert 'WARNING: no signatures for 956 spreadsheet rows.' in runtmp.last_result.err
+    assert 'WARNING: 105 unused lineages.' in runtmp.last_result.err
+    assert '(You can use --report to generate a detailed report.)' not in runtmp.last_result.err
+    assert os.path.exists(report_loc)
 
 
-def test_single_classify_empty():
-    with utils.TempDirectory() as location:
-        db1 = utils.get_test_data('lca/both.lca.json')
-        input_sig = utils.get_test_data('GCF_000005845.2_ASM584v2_genomic.fna.gz.sig')
+def test_single_classify(runtmp):
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
-        cmd = ['lca', 'classify', '--db', db1, '--query', input_sig]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'classify', '--db', db1, '--query', input_sig]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'GCF_000005845,nomatch,,,,,,,,' in out
-        assert 'classified 1 signatures total' in err
-        assert 'loaded 1 LCA databases' in err
-
-
-def test_single_classify_traverse():
-    with utils.TempDirectory() as location:
-        db1 = utils.get_test_data('lca/delmont-1.lca.json')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        in_dir = os.path.join(location, 'sigs')
-        os.mkdir(in_dir)
-        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
-
-        cmd = ['lca', 'classify', '--db', db1, '--query', input_sig]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in out
-        assert 'classified 1 signatures total' in err
-        assert 'loaded 1 LCA databases' in err
+    assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in runtmp.last_result.out
+    assert 'classified 1 signatures total' in runtmp.last_result.err
+    assert 'loaded 1 LCA databases' in runtmp.last_result.err
 
 
-def test_multi_query_classify_traverse():
-    with utils.TempDirectory() as location:
-        # both.lca.json is built from both dir and dir2
-        db1 = utils.get_test_data('lca/both.lca.json')
-        dir1 = utils.get_test_data('lca/dir1')
-        dir2 = utils.get_test_data('lca/dir2')
+def test_single_classify_to_output(runtmp):
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
-        cmd = ['lca', 'classify', '--db', db1, '--query', dir1, dir2]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'classify', '--db', db1, '--query', input_sig,
+            '-o', runtmp.output('outfile.txt')]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        with open(utils.get_test_data('lca/classify-by-both.csv'), 'rt') as fp:
-            fp_lines = fp.readlines()
-            out_lines = out.splitlines()
+    with open(runtmp.output('outfile.txt'), 'rt') as fp:
+        outdata = fp.read()
+    assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
+    assert 'classified 1 signatures total' in runtmp.last_result.err
+    assert 'loaded 1 LCA databases' in runtmp.last_result.err
 
-            fp_lines.sort()
-            out_lines.sort()
 
-            assert len(fp_lines) == len(out_lines)
-            for line1, line2 in zip(fp_lines, out_lines):
-                assert line1.strip() == line2.strip(), (line1, line2)
+def test_single_classify_to_output_no_name(runtmp):
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    ss = sourmash.load_one_signature(input_sig, ksize=31)
+
+    outsig_filename = runtmp.output('q.sig')
+    with open(outsig_filename, 'wt') as fp:
+        # remove name from signature here --
+        new_sig = sourmash.SourmashSignature(ss.minhash, filename='xyz')
+        sourmash.save_signatures([new_sig], fp)
+
+    cmd = ['lca', 'classify', '--db', db1, '--query', outsig_filename,
+            '-o', runtmp.output('outfile.txt')]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    with open(runtmp.output('outfile.txt'), 'rt') as fp:
+        outdata = fp.read()
+    print((outdata,))
+    assert 'xyz,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
+    assert 'classified 1 signatures total' in runtmp.last_result.err
+    assert 'loaded 1 LCA databases' in runtmp.last_result.err
+
+
+def test_single_classify_empty(runtmp):
+    db1 = utils.get_test_data('lca/both.lca.json')
+    input_sig = utils.get_test_data('GCF_000005845.2_ASM584v2_genomic.fna.gz.sig')
+
+    cmd = ['lca', 'classify', '--db', db1, '--query', input_sig]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'GCF_000005845,nomatch,,,,,,,,' in runtmp.last_result.out
+    assert 'classified 1 signatures total' in runtmp.last_result.err
+    assert 'loaded 1 LCA databases' in runtmp.last_result.err
+
+
+def test_single_classify_traverse(runtmp):
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    in_dir = runtmp.output('sigs')
+    os.mkdir(in_dir)
+    shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
+
+    cmd = ['lca', 'classify', '--db', db1, '--query', input_sig]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in runtmp.last_result.out
+    assert 'classified 1 signatures total' in runtmp.last_result.err
+    assert 'loaded 1 LCA databases' in runtmp.last_result.err
+
+
+def test_multi_query_classify_traverse(runtmp):
+    # both.lca.json is built from both dir and dir2
+    db1 = utils.get_test_data('lca/both.lca.json')
+    dir1 = utils.get_test_data('lca/dir1')
+    dir2 = utils.get_test_data('lca/dir2')
+
+    cmd = ['lca', 'classify', '--db', db1, '--query', dir1, dir2]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    with open(utils.get_test_data('lca/classify-by-both.csv'), 'rt') as fp:
+        fp_lines = fp.readlines()
+        out_lines = runtmp.last_result.out.splitlines()
+
+        fp_lines.sort()
+        out_lines.sort()
+
+        assert len(fp_lines) == len(out_lines)
+        for line1, line2 in zip(fp_lines, out_lines):
+            assert line1.strip() == line2.strip(), (line1, line2)
 
 
 @utils.in_tempdir
@@ -1035,142 +1284,138 @@ def test_multi_query_classify_query_from_file_and_query(c):
             assert line1.strip() == line2.strip(), (line1, line2)
 
 
-def test_multi_db_multi_query_classify_traverse():
-    with utils.TempDirectory() as location:
-        # two halves of both.lca.json, see above test.
-        db1 = utils.get_test_data('lca/dir1.lca.json')
-        db2 = utils.get_test_data('lca/dir2.lca.json')
-        dir1 = utils.get_test_data('lca/dir1')
-        dir2 = utils.get_test_data('lca/dir2')
+def test_multi_db_multi_query_classify_traverse(runtmp):
+    # two halves of both.lca.json, see above test.
+    db1 = utils.get_test_data('lca/dir1.lca.json')
+    db2 = utils.get_test_data('lca/dir2.lca.json')
+    dir1 = utils.get_test_data('lca/dir1')
+    dir2 = utils.get_test_data('lca/dir2')
 
-        cmd = ['lca', 'classify', '--db', db1, db2, '--query', dir1, dir2]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'classify', '--db', db1, db2, '--query', dir1, dir2]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        with open(utils.get_test_data('lca/classify-by-both.csv'), 'rt') as fp:
-            fp_lines = fp.readlines()
-            out_lines = out.splitlines()
+    with open(utils.get_test_data('lca/classify-by-both.csv'), 'rt') as fp:
+        fp_lines = fp.readlines()
+        out_lines = runtmp.last_result.out.splitlines()
 
-            fp_lines.sort()
-            out_lines.sort()
+        fp_lines.sort()
+        out_lines.sort()
 
-            assert len(fp_lines) == len(out_lines)
-            for line1, line2 in zip(fp_lines, out_lines):
-                assert line1.strip() == line2.strip(), (line1, line2)
-
-
-def test_unassigned_internal_index_and_classify():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/delmont-4.csv')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
-
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert os.path.exists(lca_db)
-
-        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
-
-        cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
-        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,unassigned,Alteromonadaceae,unassigned,Alteromonas_macleodii' in out
-        assert 'classified 1 signatures total' in err
-        assert 'loaded 1 LCA databases' in err
+        assert len(fp_lines) == len(out_lines)
+        for line1, line2 in zip(fp_lines, out_lines):
+            assert line1.strip() == line2.strip(), (line1, line2)
 
 
-def test_unassigned_last_index_and_classify():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/delmont-5.csv')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
+def test_unassigned_internal_index_and_classify(runtmp):
+    taxcsv = utils.get_test_data('lca/delmont-4.csv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = runtmp.output('delmont-1.lca.json')
 
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert os.path.exists(lca_db)
+    assert os.path.exists(lca_db)
 
-        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in runtmp.last_result.err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in runtmp.last_result.err
+    assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in runtmp.last_result.err
 
-        cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
-        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,,,\r\n' in out
-        assert 'classified 1 signatures total' in err
-        assert 'loaded 1 LCA databases' in err
+    assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in runtmp.last_result.out
+    assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,unassigned,Alteromonadaceae,unassigned,Alteromonas_macleodii' in runtmp.last_result.out
+    assert 'classified 1 signatures total' in runtmp.last_result.err
+    assert 'loaded 1 LCA databases' in runtmp.last_result.err
 
 
-def test_index_and_classify_internal_unassigned_multi():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/delmont-6.csv')
-        input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
+def test_unassigned_last_index_and_classify(runtmp):
+    taxcsv = utils.get_test_data('lca/delmont-5.csv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = runtmp.output('delmont-1.lca.json')
 
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert os.path.exists(lca_db)
+    assert os.path.exists(lca_db)
 
-        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in runtmp.last_result.err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in runtmp.last_result.err
+    assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in runtmp.last_result.err
 
-        # classify input_sig1
-        cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig1]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
-        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,unassigned,unassigned,Alteromonadaceae,,,\r\n' in out
-        assert 'classified 1 signatures total' in err
-        assert 'loaded 1 LCA databases' in err
+    assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in runtmp.last_result.out
+    assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,,,\r\n' in runtmp.last_result.out
+    assert 'classified 1 signatures total' in runtmp.last_result.err
+    assert 'loaded 1 LCA databases' in runtmp.last_result.err
 
-        # classify input_sig2
-        cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig2]
-        status, out, err = utils.runscript('sourmash', cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+def test_index_and_classify_internal_unassigned_multi(runtmp):
+    taxcsv = utils.get_test_data('lca/delmont-6.csv')
+    input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+    lca_db = runtmp.output('delmont-1.lca.json')
 
-        assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
-        assert 'TARA_PSW_MAG_00136,found,Eukaryota,Chlorophyta,Prasinophyceae,unassigned,unassigned,Ostreococcus,,\r\n' in out
-        assert 'classified 1 signatures total' in err
-        assert 'loaded 1 LCA databases' in err
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(lca_db)
+
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in runtmp.last_result.err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in runtmp.last_result.err
+    assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in runtmp.last_result.err
+
+    # classify input_sig1
+    cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig1]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in runtmp.last_result.out
+    assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,unassigned,unassigned,Alteromonadaceae,,,\r\n' in runtmp.last_result.out
+    assert 'classified 1 signatures total' in runtmp.last_result.err
+    assert 'loaded 1 LCA databases' in runtmp.last_result.err
+
+    # classify input_sig2
+    cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig2]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in runtmp.last_result.out
+    assert 'TARA_PSW_MAG_00136,found,Eukaryota,Chlorophyta,Prasinophyceae,unassigned,unassigned,Ostreococcus,,\r\n' in runtmp.last_result.out
+    assert 'classified 1 signatures total' in runtmp.last_result.err
+    assert 'loaded 1 LCA databases' in runtmp.last_result.err
 
 
 @utils.in_tempdir
@@ -1291,85 +1536,81 @@ def test_classify_majority_vote_3(c):
     assert 'loaded 1 LCA databases' in c.last_result.err
 
 
-def test_multi_db_classify():
-    with utils.TempDirectory() as location:
-        db1 = utils.get_test_data('lca/delmont-1.lca.json')
-        db2 = utils.get_test_data('lca/delmont-2.lca.json')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+def test_multi_db_classify(runtmp):
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    db2 = utils.get_test_data('lca/delmont-2.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
-        cmd = ['lca', 'classify', '--db', db1, db2, '--query', input_sig]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'classify', '--db', db1, db2, '--query', input_sig]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
-        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,,,,' in out
-        assert 'classified 1 signatures total' in err
-        assert 'loaded 2 LCA databases' in err
-
-
-def test_classify_unknown_hashes():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca-root/tax.csv')
-        input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
-        input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
-        lca_db = os.path.join(location, 'lca-root.lca.json')
-
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig2]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert os.path.exists(lca_db)
-
-        assert '1 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
-
-        cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig1]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert '(root)' not in out
-        assert 'TARA_MED_MAG_00029,found,Archaea,Euryarcheoata,unassigned,unassigned,novelFamily_I' in out
+    assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in runtmp.last_result.out
+    assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,,,,' in runtmp.last_result.out
+    assert 'classified 1 signatures total' in runtmp.last_result.err
+    assert 'loaded 2 LCA databases' in runtmp.last_result.err
 
 
-def test_single_summarize():
-    with utils.TempDirectory() as location:
-        db1 = utils.get_test_data('lca/delmont-1.lca.json')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+def test_classify_unknown_hashes(runtmp):
+    taxcsv = utils.get_test_data('lca-root/tax.csv')
+    input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
+    input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
+    lca_db = runtmp.output('lca-root.lca.json')
 
-        cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig2]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'loaded 1 signatures from 1 files total.' in err
-        assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
+    assert os.path.exists(lca_db)
+
+    assert '1 identifiers used out of 2 distinct identifiers in spreadsheet.' in runtmp.last_result.err
+
+    cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig1]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '(root)' not in runtmp.last_result.out
+    assert 'TARA_MED_MAG_00029,found,Archaea,Euryarcheoata,unassigned,unassigned,novelFamily_I' in runtmp.last_result.out
 
 
-def test_single_summarize_singleton():
-    with utils.TempDirectory() as location:
-        db1 = utils.get_test_data('lca/delmont-1.lca.json')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+def test_single_summarize(runtmp):
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
-        cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig,]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'loaded 1 signatures from 1 files total.' in err
-        assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
-        assert 'test-data/lca/TARA_ASE_MAG_00031.sig:5b438c6c TARA_ASE_MAG_00031' in out
+    assert 'loaded 1 signatures from 1 files total.' in runtmp.last_result.err
+    assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in runtmp.last_result.out
+
+
+def test_single_summarize_singleton(runtmp):
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+
+    cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig,]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'loaded 1 signatures from 1 files total.' in runtmp.last_result.err
+    assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in runtmp.last_result.out
+    assert 'test-data/lca/TARA_ASE_MAG_00031.sig:5b438c6c TARA_ASE_MAG_00031' in runtmp.last_result.out
 
 
 @utils.in_tempdir
@@ -1412,219 +1653,237 @@ def test_single_summarize_singleton_traverse(c):
     assert 'q.sig:5b438c6c TARA_ASE_MAG_00031' in out
 
 
-def test_single_summarize_to_output():
-    with utils.TempDirectory() as location:
-        db1 = utils.get_test_data('lca/delmont-1.lca.json')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        in_dir = os.path.join(location, 'sigs')
-        os.mkdir(in_dir)
-        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
+def test_single_summarize_to_output(runtmp):
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    in_dir = runtmp.output('sigs')
+    os.mkdir(in_dir)
+    shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
 
-        cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig,
-               '-o', os.path.join(location, 'output.txt')]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig,
+            '-o', runtmp.output('output.txt')]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        outdata = open(os.path.join(location, 'output.txt'), 'rt').read()
-
-        assert 'loaded 1 signatures from 1 files total.' in err
-        assert '200,Bacteria,Proteobacteria,Gammaproteobacteria' in outdata
-
-
-def test_single_summarize_scaled():
-    with utils.TempDirectory() as location:
-        db1 = utils.get_test_data('lca/delmont-1.lca.json')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        in_dir = os.path.join(location, 'sigs')
-        os.mkdir(in_dir)
-        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
-
-        cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig,
-               '--scaled', '100000']
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert 'loaded 1 signatures from 1 files total.' in err
-        assert '100.0%    27   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales'
+    with open(runtmp.output('output.txt'), 'rt') as fp:
+        outdata = fp.read()
+    assert 'loaded 1 signatures from 1 files total.' in runtmp.last_result.err
+    assert '200,Bacteria,Proteobacteria,Gammaproteobacteria' in outdata
 
 
-def test_multi_summarize_with_unassigned_singleton():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/delmont-6.csv')
-        input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
 
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
-        status, out, err = utils.runscript('sourmash', cmd)
+def test_single_summarize_to_output_check_filename(runtmp):
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    in_dir = runtmp.output('sigs')
+    os.mkdir(in_dir)
+    shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
 
-        print(cmd)
-        print(out)
-        print(err)
+    cmd = ['lca', 'summarize', '--db', db1, '--query', os.path.join(in_dir, 'q.sig'),
+            '-o', runtmp.output('output.txt')]
+    runtmp.sourmash(*cmd)
 
-        assert os.path.exists(lca_db)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
+    outdata = open(runtmp.output('output.txt'), 'rt').read()
 
-        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
-               input_sig2, '--ignore-abundance']
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert 'loaded 2 signatures from 2 files total.' in err
-
-        out_lines = out.splitlines()
-        def remove_line_startswith(x, check=None):
-           for line in out_lines:
-               if line.startswith(x):
-                   out_lines.remove(line)
-                   if check:
-                       # make sure the check value is in there
-                       assert check in line
-                   return line
-           assert 0, "couldn't find {}".format(x)
-
-        # note, proportions/percentages are now per-file
-        remove_line_startswith('100.0%   200   Bacteria ', 'TARA_ASE_MAG_00031.sig:5b438c6c')
-        remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned;unassigned ')
-        remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta ')
-        remove_line_startswith('100.0%  1231   Eukaryota ', 'TARA_PSW_MAG_00136.sig:db50b713')
-        remove_line_startswith('100.0%   200   Bacteria;Proteobacteria ')
-        remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned ')
-        remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae ')
-        remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned;unassigned;Alteromonadaceae ')
-        remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned ')
-        remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned ')
-        remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus ')
-        assert not out_lines
+    assert 'loaded 1 signatures from 1 files total.' in runtmp.last_result.err
+    assert 'count,superkingdom,phylum,class,order,family,genus,species,strain,filename,sig_name,sig_md5\n' in outdata
+    assert '200,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii,,'+os.path.join(in_dir, 'q.sig')+',TARA_ASE_MAG_00031,5b438c6c858cdaf9e9b05a207fa3f9f0' in outdata
 
 
-def test_summarize_to_root():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca-root/tax.csv')
-        input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
-        input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
-        lca_db = os.path.join(location, 'lca-root.lca.json')
-
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert os.path.exists(lca_db)
-
-        assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
-
-        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig2,
-               '--ignore-abundance']
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert '78.6%    99   Archaea' in out
-        assert '21.4%    27   (root)' in out
 
 
-def test_summarize_unknown_hashes():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca-root/tax.csv')
-        input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
-        input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
-        lca_db = os.path.join(location, 'lca-root.lca.json')
+def test_single_summarize_scaled(runtmp):
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    in_dir = runtmp.output('sigs')
+    os.mkdir(in_dir)
+    shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
 
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig2]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig,
+            '--scaled', '100000']
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert os.path.exists(lca_db)
-
-        assert '1 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
-
-        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert '(root)' not in out
-        assert '11.5%    27   Archaea;Euryarcheoata;unassigned;unassigned;novelFamily_I' in out
+    assert 'loaded 1 signatures from 1 files total.' in runtmp.last_result.err
+    assert '100.0%    27   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales'
 
 
-def test_summarize_to_root_abund():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca-root/tax.csv')
-        input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
-        input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
-        lca_db = os.path.join(location, 'lca-root.lca.json')
+def test_multi_summarize_with_unassigned_singleton(runtmp):
+    taxcsv = utils.get_test_data('lca/delmont-6.csv')
+    input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+    lca_db = runtmp.output('delmont-1.lca.json')
 
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert os.path.exists(lca_db)
+    assert os.path.exists(lca_db)
 
-        assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in runtmp.last_result.err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in runtmp.last_result.err
+    assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in runtmp.last_result.err
 
-        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig2]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
+            input_sig2, '--ignore-abundance']
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert '78.9%   101   Archaea' in out
-        assert '21.1%    27   (root)' in out
+    assert 'loaded 2 signatures from 2 files total.' in runtmp.last_result.err
+
+    out_lines = runtmp.last_result.out.splitlines()
+    def remove_line_startswith(x, check=None):
+        for line in out_lines:
+            if line.startswith(x):
+                out_lines.remove(line)
+                if check:
+                    # make sure the check value is in there
+                    assert check in line
+                return line
+        assert 0, "couldn't find {}".format(x)
+
+    # note, proportions/percentages are now per-file
+    remove_line_startswith('100.0%   200   Bacteria ', 'TARA_ASE_MAG_00031.sig:5b438c6c')
+    remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned;unassigned ')
+    remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta ')
+    remove_line_startswith('100.0%  1231   Eukaryota ', 'TARA_PSW_MAG_00136.sig:db50b713')
+    remove_line_startswith('100.0%   200   Bacteria;Proteobacteria ')
+    remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned ')
+    remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae ')
+    remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned;unassigned;Alteromonadaceae ')
+    remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned ')
+    remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned ')
+    remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus ')
+    assert not out_lines
 
 
-def test_summarize_unknown_hashes_abund():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca-root/tax.csv')
-        input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
-        input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
-        lca_db = os.path.join(location, 'lca-root.lca.json')
+def test_summarize_to_root(runtmp):
+    taxcsv = utils.get_test_data('lca-root/tax.csv')
+    input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
+    input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
+    lca_db = runtmp.output('lca-root.lca.json')
 
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig2]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert os.path.exists(lca_db)
+    assert os.path.exists(lca_db)
 
-        assert '1 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
+    assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in runtmp.last_result.err
 
-        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig2,
+            '--ignore-abundance']
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert '(root)' not in out
-        assert '11.5%    27   Archaea;Euryarcheoata;unassigned;unassigned;novelFamily_I' in out
+    assert '78.6%    99   Archaea' in runtmp.last_result.out
+    assert '21.4%    27   (root)' in runtmp.last_result.out
+
+
+def test_summarize_unknown_hashes(runtmp):
+    taxcsv = utils.get_test_data('lca-root/tax.csv')
+    input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
+    input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
+    lca_db = runtmp.output('lca-root.lca.json')
+
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig2]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(lca_db)
+
+    assert '1 identifiers used out of 2 distinct identifiers in spreadsheet.' in runtmp.last_result.err
+
+    cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '(root)' not in runtmp.last_result.out
+    assert '11.5%    27   Archaea;Euryarcheoata;unassigned;unassigned;novelFamily_I' in runtmp.last_result.out
+
+
+def test_summarize_to_root_abund(runtmp):
+    taxcsv = utils.get_test_data('lca-root/tax.csv')
+    input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
+    input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
+    lca_db = runtmp.output('lca-root.lca.json')
+
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(lca_db)
+
+    assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in runtmp.last_result.err
+
+    cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig2]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '78.9%   101   Archaea' in runtmp.last_result.out
+    assert '21.1%    27   (root)' in runtmp.last_result.out
+
+
+def test_summarize_unknown_hashes_abund(runtmp):
+    taxcsv = utils.get_test_data('lca-root/tax.csv')
+    input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
+    input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
+    lca_db = runtmp.output('lca-root.lca.json')
+
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig2]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(lca_db)
+
+    assert '1 identifiers used out of 2 distinct identifiers in spreadsheet.' in runtmp.last_result.err
+
+    cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '(root)' not in runtmp.last_result.out
+    assert '11.5%    27   Archaea;Euryarcheoata;unassigned;unassigned;novelFamily_I' in runtmp.last_result.out
 
 
 @utils.in_thisdir
@@ -1664,154 +1923,148 @@ def test_lca_summarize_abund_fake_yes_abund(c):
     assert '56.8%   740   Archaea' in c.last_result.out
 
 
-def test_rankinfo_on_multi():
-    with utils.TempDirectory() as location:
-        db1 = utils.get_test_data('lca/dir1.lca.json')
-        db2 = utils.get_test_data('lca/dir2.lca.json')
+def test_rankinfo_on_multi(runtmp):
+    db1 = utils.get_test_data('lca/dir1.lca.json')
+    db2 = utils.get_test_data('lca/dir2.lca.json')
 
-        cmd = ['lca', 'rankinfo', db1, db2]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'rankinfo', db1, db2]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        lines = out.splitlines()
-        lines.remove('superkingdom: 0 (0.0%)')
-        lines.remove('phylum: 464 (12.8%)')
-        lines.remove('class: 533 (14.7%)')
-        lines.remove('order: 1050 (29.0%)')
-        lines.remove('family: 695 (19.2%)')
-        lines.remove('genus: 681 (18.8%)')
-        lines.remove('species: 200 (5.5%)')
-        lines.remove('strain: 0 (0.0%)')
+    lines = runtmp.last_result.out.splitlines()
+    lines.remove('superkingdom: 0 (0.0%)')
+    lines.remove('phylum: 464 (12.8%)')
+    lines.remove('class: 533 (14.7%)')
+    lines.remove('order: 1050 (29.0%)')
+    lines.remove('family: 695 (19.2%)')
+    lines.remove('genus: 681 (18.8%)')
+    lines.remove('species: 200 (5.5%)')
+    lines.remove('strain: 0 (0.0%)')
 
-        assert not lines
-
-
-def test_rankinfo_on_single():
-    with utils.TempDirectory() as location:
-        db1 = utils.get_test_data('lca/both.lca.json')
-
-        cmd = ['lca', 'rankinfo', db1]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        lines = out.splitlines()
-        lines.remove('superkingdom: 0 (0.0%)')
-        lines.remove('phylum: 464 (12.8%)')
-        lines.remove('class: 533 (14.7%)')
-        lines.remove('order: 1050 (29.0%)')
-        lines.remove('family: 695 (19.2%)')
-        lines.remove('genus: 681 (18.8%)')
-        lines.remove('species: 200 (5.5%)')
-        lines.remove('strain: 0 (0.0%)')
-
-        assert not lines
+    assert not lines
 
 
-def test_rankinfo_no_tax():
-    with utils.TempDirectory() as location:
-        # note: TARA_PSW_MAG_00136 is _not_ in delmont-1.csv.
-        taxcsv = utils.get_test_data('lca/delmont-1.csv')
-        input_sig = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
+def test_rankinfo_on_single(runtmp):
+    db1 = utils.get_test_data('lca/both.lca.json')
 
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'rankinfo', db1]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert os.path.exists(lca_db)
+    lines = runtmp.last_result.out.splitlines()
+    lines.remove('superkingdom: 0 (0.0%)')
+    lines.remove('phylum: 464 (12.8%)')
+    lines.remove('class: 533 (14.7%)')
+    lines.remove('order: 1050 (29.0%)')
+    lines.remove('family: 695 (19.2%)')
+    lines.remove('genus: 681 (18.8%)')
+    lines.remove('species: 200 (5.5%)')
+    lines.remove('strain: 0 (0.0%)')
 
-        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '0 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
-
-        cmd = ['lca', 'rankinfo', lca_db]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-
-def test_rankinfo_with_min():
-    with utils.TempDirectory() as location:
-        db1 = utils.get_test_data('lca/dir1.lca.json')
-        db2 = utils.get_test_data('lca/dir2.lca.json')
-
-        cmd = ['lca', 'rankinfo', db1, db2, '--minimum-num', '1']
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        lines = out.splitlines()
-        lines.remove('superkingdom: 0 (0.0%)')
-        lines.remove('phylum: 464 (12.8%)')
-        lines.remove('class: 533 (14.7%)')
-        lines.remove('order: 1050 (29.0%)')
-        lines.remove('family: 695 (19.2%)')
-        lines.remove('genus: 681 (18.8%)')
-        lines.remove('species: 200 (5.5%)')
-        lines.remove('strain: 0 (0.0%)')
-
-        assert not lines
+    assert not lines
 
 
-def test_compare_csv():
-    with utils.TempDirectory() as location:
-        a = utils.get_test_data('lca/classify-by-both.csv')
-        b = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
+def test_rankinfo_no_tax(runtmp):
+    # note: TARA_PSW_MAG_00136 is _not_ in delmont-1.csv.
+    taxcsv = utils.get_test_data('lca/delmont-1.csv')
+    input_sig = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+    lca_db = runtmp.output('delmont-1.lca.json')
 
-        cmd = ['lca', 'compare_csv', a, b, '-f']
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'loaded 106 distinct lineages, 957 rows' in err
-        assert 'missing 937 assignments in classify spreadsheet.' in err
-        assert '20 total assignments, 0 differ between spreadsheets.' in err
+    assert os.path.exists(lca_db)
+
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in runtmp.last_result.err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in runtmp.last_result.err
+    assert '0 identifiers used out of 1 distinct identifiers in spreadsheet.' in runtmp.last_result.err
+
+    cmd = ['lca', 'rankinfo', lca_db]
+    runtmp.sourmash(*cmd)
 
 
-def test_compare_csv_real():
-    with utils.TempDirectory() as location:
-        a = utils.get_test_data('lca/tully-genome-sigs.classify.csv')
-        b = utils.get_test_data('lca/tully-query.delmont-db.sigs.classify.csv')
+def test_rankinfo_with_min(runtmp):
+    db1 = utils.get_test_data('lca/dir1.lca.json')
+    db2 = utils.get_test_data('lca/dir2.lca.json')
 
-        cmd = ['lca', 'compare_csv', a, b, '--start-column=3', '-f']
-        status, out, err = utils.runscript('sourmash', cmd)
+    cmd = ['lca', 'rankinfo', db1, db2, '--minimum-num', '1']
+    runtmp.sourmash(*cmd)
 
-        print(cmd)
-        print(out)
-        print(err)
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
-        assert 'loaded 87 distinct lineages, 2631 rows' in err
-        assert 'missing 71 assignments in classify spreadsheet.' in err
-        assert 'missing 1380 assignments in custom spreadsheet.' in err
-        assert '(these will not be evaluated any further)' in err
-        assert '987 total assignments, 889 differ between spreadsheets.' in err
-        assert '296 are compatible (one lineage is ancestor of another.' in err
-        assert '593 are incompatible (there is a disagreement in the trees).' in err
-        assert '164 incompatible at rank superkingdom' in err
-        assert '255 incompatible at rank phylum' in err
-        assert '107 incompatible at rank class' in err
-        assert '54 incompatible at rank order' in err
-        assert '13 incompatible at rank family' in err
-        assert '0 incompatible at rank genus' in err
-        assert '0 incompatible at rank species' in err
+    lines = runtmp.last_result.out.splitlines()
+    lines.remove('superkingdom: 0 (0.0%)')
+    lines.remove('phylum: 464 (12.8%)')
+    lines.remove('class: 533 (14.7%)')
+    lines.remove('order: 1050 (29.0%)')
+    lines.remove('family: 695 (19.2%)')
+    lines.remove('genus: 681 (18.8%)')
+    lines.remove('species: 200 (5.5%)')
+    lines.remove('strain: 0 (0.0%)')
+
+    assert not lines
+
+
+def test_compare_csv(runtmp):
+    a = utils.get_test_data('lca/classify-by-both.csv')
+    b = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
+
+    cmd = ['lca', 'compare_csv', a, b, '-f']
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'loaded 106 distinct lineages, 957 rows' in runtmp.last_result.err
+    assert 'missing 937 assignments in classify spreadsheet.' in runtmp.last_result.err
+    assert '20 total assignments, 0 differ between spreadsheets.' in runtmp.last_result.err
+
+
+def test_compare_csv_real(runtmp):
+    a = utils.get_test_data('lca/tully-genome-sigs.classify.csv')
+    b = utils.get_test_data('lca/tully-query.delmont-db.sigs.classify.csv')
+
+    cmd = ['lca', 'compare_csv', a, b, '--start-column=3', '-f']
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'loaded 87 distinct lineages, 2631 rows' in runtmp.last_result.err
+    assert 'missing 71 assignments in classify spreadsheet.' in runtmp.last_result.err
+    assert 'missing 1380 assignments in custom spreadsheet.' in runtmp.last_result.err
+    assert '(these will not be evaluated any further)' in runtmp.last_result.err
+    assert '987 total assignments, 889 differ between spreadsheets.' in runtmp.last_result.err
+    assert '296 are compatible (one lineage is ancestor of another.' in runtmp.last_result.err
+    assert '593 are incompatible (there is a disagreement in the trees).' in runtmp.last_result.err
+    assert '164 incompatible at rank superkingdom' in runtmp.last_result.err
+    assert '255 incompatible at rank phylum' in runtmp.last_result.err
+    assert '107 incompatible at rank class' in runtmp.last_result.err
+    assert '54 incompatible at rank order' in runtmp.last_result.err
+    assert '13 incompatible at rank family' in runtmp.last_result.err
+    assert '0 incompatible at rank genus' in runtmp.last_result.err
+    assert '0 incompatible at rank species' in runtmp.last_result.err
 
 
 @utils.in_tempdir
 def test_incompat_lca_db_ksize_2(c):
     # test on gather - create a database with ksize of 25
     testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
-    c.run_sourmash('compute', '-k', '25', '--scaled', '1000', testdata1,
+    c.run_sourmash('sketch', 'dna', '-p', 'k=25,scaled=1000', testdata1,
                    '-o', 'test_db.sig')
     print(c)
 
@@ -1822,14 +2075,14 @@ def test_incompat_lca_db_ksize_2(c):
 
     # this should fail: the LCA database has ksize 25, and the query sig has
     # no compatible ksizes.
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(SourmashCommandFailed) as e:
         c.run_sourmash('gather', utils.get_test_data('lca/TARA_ASE_MAG_00031.sig'), 'test.lca.json')
 
     err = c.last_result.err
     print(err)
 
-    assert "ksize on db 'test.lca.json' is 25;" in err
-    assert 'this is different from query ksize of 31.' in err
+    assert "ERROR: cannot use 'test.lca.json' for this query." in err
+    assert "ksize on this database is 25; this is different from requested ksize of 31"
 
 
 @utils.in_tempdir
@@ -1885,7 +2138,8 @@ def test_lca_gather_threshold_1():
 
     # query with empty hashes
     assert not new_mh
-    assert not db.gather(SourmashSignature(new_mh))
+    with pytest.raises(ValueError):
+        db.gather(SourmashSignature(new_mh))
 
     # add one hash
     new_mh.add_hash(mins.pop())
@@ -1899,8 +2153,8 @@ def test_lca_gather_threshold_1():
     assert name == None
 
     # check with a threshold -> should be no results.
-    results = db.gather(SourmashSignature(new_mh), threshold_bp=5000)
-    assert not results
+    with pytest.raises(ValueError):
+        db.gather(SourmashSignature(new_mh), threshold_bp=5000)
 
     # add three more hashes => length of 4
     new_mh.add_hash(mins.pop())
@@ -1916,8 +2170,8 @@ def test_lca_gather_threshold_1():
     assert name == None
 
     # check with a too-high threshold -> should be no results.
-    results = db.gather(SourmashSignature(new_mh), threshold_bp=5000)
-    assert not results
+    with pytest.raises(ValueError):
+        db.gather(SourmashSignature(new_mh), threshold_bp=5000)
 
 
 def test_lca_gather_threshold_5():
@@ -2317,3 +2571,59 @@ def test_lca_db_dayhoff_command_search(c):
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+def test_lca_index_with_picklist(runtmp):
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    outdb = runtmp.output('gcf.lca.json')
+    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
+
+    # create an empty spreadsheet
+    with open(runtmp.output('empty.csv'), 'wt') as fp:
+        fp.write('accession,superkingdom,phylum,class,order,family,genus,species,strain')
+
+    runtmp.sourmash('lca', 'index', 'empty.csv', outdb, *gcf_sigs,
+                    '-k', '21', '--picklist', f"{picklist}:md5:md5")
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(out)
+    print(err)
+
+    assert "for given picklist, found 3 matches to 9 distinct values" in err
+    assert "WARNING: 6 missing picklist values."
+    assert "WARNING: no lineage provided for 3 signatures" in err
+
+    siglist = list(sourmash.load_file_as_signatures(outdb))
+    assert len(siglist) == 3
+    for ss in siglist:
+        assert 'Thermotoga' in ss.name
+
+
+def test_lca_index_with_picklist_exclude(runtmp):
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    outdb = runtmp.output('gcf.lca.json')
+    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
+
+    # create an empty spreadsheet
+    with open(runtmp.output('empty.csv'), 'wt') as fp:
+        fp.write('accession,superkingdom,phylum,class,order,family,genus,species,strain')
+
+    runtmp.sourmash('lca', 'index', 'empty.csv', outdb, *gcf_sigs,
+                    '-k', '21', '--picklist', f"{picklist}:md5:md5:exclude")
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(out)
+    print(err)
+
+    assert "for given picklist, found 9 matches by excluding 9 distinct values" in err
+    assert "WARNING: 3 missing picklist values."
+    assert "WARNING: no lineage provided for 9 signatures" in err
+
+    siglist = list(sourmash.load_file_as_signatures(outdb))
+    assert len(siglist) == 9
+    for ss in siglist:
+        assert 'Thermotoga' not in ss.name

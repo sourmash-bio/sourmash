@@ -9,7 +9,7 @@ from enum import Enum
 
 from .logging import error
 from . import MinHash
-from .minhash import to_bytes
+from .minhash import to_bytes, FrozenMinHash
 from ._lowlevel import ffi, lib
 from .utils import RustObject, rustcall, decode_str
 
@@ -42,7 +42,7 @@ class SourmashSignature(RustObject):
 
     @property
     def minhash(self):
-        return MinHash._from_objptr(
+        return FrozenMinHash._from_objptr(
             self._methodcall(lib.signature_first_mh)
         )
 
@@ -146,6 +146,10 @@ class SourmashSignature(RustObject):
         "Compute containment by the other signature. Note: ignores abundance."
         return self.minhash.contained_by(other.minhash, downsample)
 
+    def max_containment(self, other, downsample=False):
+        "Compute max containment w/other signature. Note: ignores abundance."
+        return self.minhash.max_containment(other.minhash, downsample)
+
     def add_sequence(self, sequence, force=False):
         self._methodcall(lib.signature_add_sequence, to_bytes(sequence), force)
 
@@ -188,6 +192,17 @@ class SourmashSignature(RustObject):
             ),
         )
 
+    def __copy__(self):
+        mh = self.minhash
+        mh = mh.to_frozen()
+        a = SourmashSignature(
+            mh,
+            name=self.name,
+            filename=self.filename,
+        )
+        return a
+
+    copy = __copy__
 
 def _detect_input_type(data):
     """\
@@ -248,7 +263,7 @@ def load_signatures(
     input_type = _detect_input_type(data)
     if input_type == SigInput.UNKNOWN:
         if do_raise:
-            raise Exception("Error in parsing signature; quitting. Cannot open file or invalid signature")
+            raise ValueError("Error in parsing signature; quitting. Cannot open file or invalid signature")
         return
 
     size = ffi.new("uintptr_t *")

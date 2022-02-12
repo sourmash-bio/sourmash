@@ -7,20 +7,19 @@ import os.path
 import sys
 
 import screed
-from .compare import compare_all_pairs, compare_serial_containment
+from .compare import (compare_all_pairs, compare_serial_containment,
+                      compare_serial_max_containment)
 from . import MinHash
 from .sbtmh import load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
-from .sbtmh import SearchMinHashesFindBest, SigLeaf
+from .sourmash_args import (FileOutput, FileOutputCSV,
+                            SaveSignaturesToLocation)
+from .search import prefetch_database, PrefetchResult, calculate_prefetch_info
+from .index import LazyLinearIndex
 
-from .sourmash_args import DEFAULT_LOAD_K, FileOutput
-
-DEFAULT_N = 500
 WATERMARK_SIZE = 10000
-
-from .command_compute import compute
 
 
 def compare(args):
@@ -29,10 +28,11 @@ def compare(args):
 
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     inp_files = list(args.signatures)
     if args.from_file:
-        more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
+        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
         inp_files.extend(more_files)
 
     progress = sourmash_args.SignatureLoadingProgress()
@@ -42,15 +42,16 @@ def compare(args):
     ksizes = set()
     moltypes = set()
     for filename in inp_files:
-        notify("loading '{}'", filename, end='\r')
+        notify(f"loading '{filename}'", end='\r')
         loaded = sourmash_args.load_file_as_signatures(filename,
                                                        ksize=args.ksize,
                                                        select_moltype=moltype,
+                                                       picklist=picklist,
                                                        yield_all_files=args.force,
                                                        progress=progress)
         loaded = list(loaded)
         if not loaded:
-            notify('\nwarning: no signatures loaded at given ksize/molecule type from {}', filename)
+            notify(f'\nwarning: no signatures loaded at given ksize/molecule type/picklist from {filename}')
         siglist.extend(loaded)
 
         # track ksizes/moltypes
@@ -78,7 +79,10 @@ def compare(args):
         sys.exit(-1)
 
     notify(' '*79, end='\r')
-    notify('loaded {} signatures total.'.format(len(siglist)))
+    notify(f'loaded {format(len(siglist))} signatures total.')
+
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
     # check to make sure they're potentially compatible - either using
     # scaled, or not.
@@ -91,16 +95,24 @@ def compare(args):
         error('cannot mix scaled signatures with bounded signatures')
         sys.exit(-1)
 
+    is_containment = False
+    if args.containment or args.max_containment:
+        is_containment = True
+
+        if args.containment and args.max_containment:
+            notify("ERROR: cannot specify both --containment and --max-containment!")
+            sys.exit(-1)
+
     # complain if --containment and not is_scaled
-    if args.containment and not is_scaled:
-        error('must use scaled signatures with --containment option')
+    if is_containment and not is_scaled:
+        error('must use scaled signatures with --containment and --max-containment')
         sys.exit(-1)
 
     # notify about implicit --ignore-abundance:
-    if args.containment:
+    if is_containment:
         track_abundances = any(( s.minhash.track_abundance for s in siglist ))
         if track_abundances:
-            notify('NOTE: --containment means signature abundances are flattened.')
+            notify('NOTE: --containment and --max-containment ignore signature abundances.')
 
     # if using --scaled, downsample appropriately
     printed_scaled_msg = False
@@ -109,7 +121,7 @@ def compare(args):
         for s in siglist:
             if s.minhash.scaled != max_scaled:
                 if not printed_scaled_msg:
-                    notify('downsampling to scaled value of {}'.format(max_scaled))
+                    notify(f'downsampling to scaled value of {format(max_scaled)}')
                     printed_scaled_msg = True
                 s.minhash = s.minhash.downsample(scaled=max_scaled)
 
@@ -127,6 +139,8 @@ def compare(args):
     labeltext = [str(item) for item in siglist]
     if args.containment:
         similarity = compare_serial_containment(siglist)
+    elif args.max_containment:
+        similarity = compare_serial_max_containment(siglist)
     else:
         similarity = compare_all_pairs(siglist, args.ignore_abundance,
                                        n_jobs=args.processes)
@@ -143,17 +157,17 @@ def compare(args):
     # shall we output a matrix?
     if args.output:
         labeloutname = args.output + '.labels.txt'
-        notify('saving labels to: {}', labeloutname)
+        notify(f'saving labels to: {labeloutname}')
         with open(labeloutname, 'w') as fp:
             fp.write("\n".join(labeltext))
 
-        notify('saving comparison matrix to: {}', args.output)
+        notify(f'saving comparison matrix to: {args.output}')
         with open(args.output, 'wb') as fp:
             numpy.save(fp, similarity)
 
     # output CSV?
     if args.csv:
-        with FileOutput(args.csv, 'wt') as csv_fp:
+        with FileOutputCSV(args.csv) as csv_fp:
             w = csv.writer(csv_fp)
             w.writerow(labeltext)
 
@@ -177,13 +191,14 @@ def plot(args):
     D_filename = args.distances
     labelfilename = D_filename + '.labels.txt'
 
-    notify('loading comparison matrix from {}...', D_filename)
+    notify(f'loading comparison matrix from {D_filename}...')
     D = numpy.load(open(D_filename, 'rb'))
+    # not sure how to change this to use f-strings
     notify('...got {} x {} matrix.', *D.shape)
 
     if args.labeltext:
         labelfilename = args.labeltext
-    notify('loading labels from {}', labelfilename)
+    notify(f'loading labels from {labelfilename}')
     labeltext = [ x.strip() for x in open(labelfilename) ]
     if len(labeltext) != D.shape[0]:
         error('{} labels != matrix size, exiting', len(labeltext))
@@ -217,7 +232,7 @@ def plot(args):
         hist_out = os.path.join(args.output_dir, hist_out)
 
     # make the histogram
-    notify('saving histogram of matrix values => {}', hist_out)
+    notify(f'saving histogram of matrix values => {hist_out}')
     fig = pylab.figure(figsize=(8,5))
     pylab.hist(numpy.array(D.flat), bins=100)
     fig.savefig(hist_out)
@@ -244,7 +259,7 @@ def plot(args):
     Y = sch.linkage(D, method='single')
     sch.dendrogram(Y, orientation='right', labels=labeltext)
     fig.savefig(dendrogram_out)
-    notify('wrote dendrogram to: {}', dendrogram_out)
+    notify(f'wrote dendrogram to: {dendrogram_out}')
 
     ### make the dendrogram+matrix:
     (fig, rlabels, rmat) = sourmash_fig.plot_composite_matrix(D, labeltext,
@@ -254,7 +269,7 @@ def plot(args):
                                              vmax=args.vmax,
                                              force=args.force)
     fig.savefig(matrix_out)
-    notify('wrote numpy distance matrix to: {}', matrix_out)
+    notify(f'wrote numpy distance matrix to: {matrix_out}')
 
     if len(labeltext) < 30:
         # for small matrices, print out sample numbering for FYI.
@@ -263,7 +278,7 @@ def plot(args):
 
     # write out re-ordered matrix and labels
     if args.csv:
-        with FileOutput(args.csv, 'wt') as csv_fp:
+        with FileOutputCSV(args.csv) as csv_fp:
             w = csv.writer(csv_fp)
             w.writerow(rlabels)
 
@@ -272,13 +287,13 @@ def plot(args):
                 for j in range(len(rlabels)):
                     y.append('{}'.format(rmat[i][j]))
                 w.writerow(y)
-        notify('Wrote clustered matrix and labels out to {}', args.csv)
+        notify(f'Wrote clustered matrix and labels out to {args.csv}')
 
 
 def import_csv(args):
     "Import a CSV file full of signatures/hashes."
 
-    with open(args.mash_csvfile, 'r') as fp:
+    with open(args.mash_csvfile, newline='') as fp:
         reader = csv.reader(fp)
         siglist = []
         for row in reader:
@@ -299,16 +314,16 @@ def import_csv(args):
             e.add_many(hashes)
             s = sig.SourmashSignature(e, filename=name)
             siglist.append(s)
-            notify('loaded signature: {} {}', name, s.md5sum()[:8])
+            notify(f'loaded signature: {name} {s.md5sum()[:8]}')
 
-        notify('saving {} signatures to JSON', len(siglist))
+        notify(f'saving {len(siglist)} signatures to JSON')
         with FileOutput(args.output, 'wt') as outfp:
             sig.save_signatures(siglist, outfp)
 
 
 def sbt_combine(args):
     inp_files = list(args.sbts)
-    notify('combining {} SBTs', len(inp_files))
+    notify(f'combining {len(inp_files)} SBTs')
 
     tree = load_sbt_index(inp_files.pop(0))
 
@@ -317,7 +332,7 @@ def sbt_combine(args):
         # TODO: check if parameters are the same for both trees!
         tree.combine(new_tree)
 
-    notify('saving SBT under "{}".', args.sbt_name)
+    notify(f'saving SBT under "{args.sbt_name}".')
     tree.save(args.sbt_name)
 
 
@@ -327,6 +342,7 @@ def index(args):
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     if args.append:
         tree = load_sbt_index(args.sbt_name)
@@ -338,18 +354,18 @@ def index(args):
 
     if args.scaled:
         args.scaled = int(args.scaled)
-        notify('downsampling signatures to scaled={}', args.scaled)
+        notify(f'downsampling signatures to scaled={args.scaled}')
 
     inp_files = list(args.signatures)
     if args.from_file:
-        more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
+        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
         inp_files.extend(more_files)
 
     if not inp_files:
         error("ERROR: no files to index!? Supply on command line or use --from-file")
         sys.exit(-1)
 
-    notify('loading {} files into SBT', len(inp_files))
+    notify(f'loading {len(inp_files)} files into SBT')
 
     progress = sourmash_args.SignatureLoadingProgress()
 
@@ -363,6 +379,7 @@ def index(args):
                                                         ksize=args.ksize,
                                                         select_moltype=moltype,
                                                         yield_all_files=args.force,
+                                                        picklist=picklist,
                                                         progress=progress)
 
         # load all matching signatures in this file
@@ -374,6 +391,9 @@ def index(args):
 
             if args.scaled:
                 ss.minhash = ss.minhash.downsample(scaled=args.scaled)
+
+            if ss.minhash.track_abundance:
+                ss.minhash = ss.minhash.flatten()
             scaleds.add(ss.minhash.scaled)
 
             tree.insert(ss)
@@ -406,53 +426,81 @@ def index(args):
         error('no signatures found to load into tree!? failing.')
         sys.exit(-1)
 
-    notify('loaded {} sigs; saving SBT under "{}"', n, args.sbt_name)
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
+
+    notify(f'loaded {n} sigs; saving SBT under "{args.sbt_name}"')
     tree.save(args.sbt_name, sparseness=args.sparseness)
+    if tree.storage:
+        tree.storage.close()
 
 
 def search(args):
-    from .search import search_databases
+    from .search import (search_databases_with_flat_query,
+                         search_databases_with_abund_query)
 
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     # set up the query.
     query = sourmash_args.load_query_signature(args.query,
                                                ksize=args.ksize,
                                                select_moltype=moltype,
                                                select_md5=args.md5)
-    notify('loaded query: {}... (k={}, {})', str(query)[:30],
-                                             query.minhash.ksize,
-                                             sourmash_args.get_moltype(query))
+    notify(f'loaded query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})')
 
-    # downsample if requested
     if args.scaled:
         if not query.minhash.scaled:
             error('cannot downsample a signature not created with --scaled')
             sys.exit(-1)
-
         if args.scaled != query.minhash.scaled:
-            notify('downsampling query from scaled={} to {}',
-                   query.minhash.scaled, int(args.scaled))
+            notify(f'downsampling query from scaled={query.minhash.scaled} to {int(args.scaled)}')
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # set up the search databases
-    databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
-                                                not args.containment)
+    is_containment = args.containment or args.max_containment
+    if is_containment:
+        if args.containment and args.max_containment:
+            notify("ERROR: cannot specify both --containment and --max-containment!")
+            sys.exit(-1)
 
-    # forcibly ignore abundances if query has no abundances
-    if not query.minhash.track_abundance:
-        args.ignore_abundance = True
+    databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
+                                                not is_containment,
+                                                picklist=picklist)
 
     if not len(databases):
         error('Nothing found to search!')
         sys.exit(-1)
 
+    # handle signatures with abundance
+    if query.minhash.track_abundance:
+        if args.ignore_abundance:
+            # abund sketch + ignore abundance => flatten sketch.
+            query.minhash = query.minhash.flatten()
+        elif args.containment or args.max_containment:
+            # abund sketch + keep abundance => no containment searches
+            notify("ERROR: cannot do containment searches on an abund signature; maybe specify --ignore-abundance?")
+            sys.exit(-1)
+    else:
+        # forcibly ignore abundances if query has no abundances
+        args.ignore_abundance = True
+
     # do the actual search
-    results = search_databases(query, databases,
-                               args.threshold, args.containment,
-                               args.best_only, args.ignore_abundance,
-                               unload_data=True)
+    if query.minhash.track_abundance:
+        results = search_databases_with_abund_query(query, databases,
+                                   threshold=args.threshold,
+                                   do_containment=args.containment,
+                                   do_max_containment=args.max_containment,
+                                   best_only=args.best_only,
+                                   unload_data=True)
+    else:
+        results = search_databases_with_flat_query(query, databases,
+                                   threshold=args.threshold,
+                                   do_containment=args.containment,
+                                   do_max_containment=args.max_containment,
+                                   best_only=args.best_only,
+                                   unload_data=True)
 
     n_matches = len(results)
     if args.best_only:
@@ -477,118 +525,127 @@ def search(args):
         notify("** reporting only one match because --best-only was set")
 
     if args.output:
-        fieldnames = ['similarity', 'name', 'filename', 'md5']
+        fieldnames = ['similarity', 'name', 'filename', 'md5',
+                      'query_filename', 'query_name', 'query_md5']
 
-        with FileOutput(args.output, 'wt') as fp:
+        with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
 
             w.writeheader()
             for sr in results:
                 d = dict(sr._asdict())
                 del d['match']
+                del d['query']
                 w.writerow(d)
 
     # save matching signatures upon request
     if args.save_matches:
-        notify('saving all matched signatures to "{}"', args.save_matches)
-        with FileOutput(args.save_matches, 'wt') as fp:
-            sig.save_signatures([ sr.match for sr in results ], fp)
+        notify(f'saving all matched signatures to "{args.save_matches}"')
+
+        with SaveSignaturesToLocation(args.save_matches) as save_sig:
+            for sr in results:
+                save_sig.add(sr.match)
+
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
 
 
 def categorize(args):
     "Use a database to find the best match to many signatures."
+    from .index import MultiIndex
+    from .search import make_jaccard_search_query
+
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
     # eliminate names we've already categorized
     already_names = set()
     if args.load_csv:
-        with open(args.load_csv, 'rt') as fp:
+        with open(args.load_csv, newline='') as fp:
             r = csv.reader(fp)
             for row in r:
                 already_names.add(row[0])
 
     # load search database
-    tree = load_sbt_index(args.sbt_name)
+    db = sourmash_args.load_file_as_index(args.database)
+    if args.ksize or moltype:
+        db = db.select(ksize=args.ksize, moltype=moltype)
 
-    # load query filenames
-    inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
-    inp_files = inp_files - already_names
-
-    notify('found {} files to query', len(inp_files))
-
-    loader = sourmash_args.LoadSingleSignatures(inp_files,
-                                                args.ksize, moltype)
+    # utility function to load & select relevant signatures.
+    def _yield_all_sigs(queries, ksize, moltype):
+        for filename in queries:
+            mi = MultiIndex.load_from_path(filename, False)
+            mi = mi.select(ksize=ksize, moltype=moltype)
+            for ss, loc in mi.signatures_with_location():
+                yield ss, loc
 
     csv_w = None
     csv_fp = None
     if args.csv:
-        csv_fp = open(args.csv, 'wt')
+        csv_fp = open(args.csv, 'w', newline='')
         csv_w = csv.writer(csv_fp)
 
-    for queryfile, query, query_moltype, query_ksize in loader:
-        notify('loaded query: {}... (k={}, {})', str(query)[:30],
-               query_ksize, query_moltype)
+    search_obj = make_jaccard_search_query(threshold=args.threshold)
+    for orig_query, loc in _yield_all_sigs(args.queries, args.ksize, moltype):
+        # skip if we've already done signatures from this file.
+        if loc in already_names:
+            continue
+
+        notify(f'loaded query: {str(orig_query)[:30]}... (k={orig_query.minhash.ksize}, {orig_query.minhash.moltype})')
+
+        if args.ignore_abundance:
+            query = orig_query.copy()
+            query.minhash = query.minhash.flatten()
+        else:
+            if orig_query.minhash.track_abundance:
+                notify("ERROR: this search cannot be done on signatures calculated with abundance.")
+                notify("ERROR: please specify --ignore-abundance.")
+                sys.exit(-1)
+
+            query = orig_query
 
         results = []
-        search_fn = SearchMinHashesFindBest().search
+        for sr in db.find(search_obj, query):
+            match = sr.signature
+            if match.md5sum() != query.md5sum(): # ignore self.
+                results.append((orig_query.similarity(match), match))
 
-        # note, "ignore self" here may prevent using newer 'tree.search' fn.
-        for leaf in tree.find(search_fn, query, args.threshold):
-            if leaf.data.md5sum() != query.md5sum(): # ignore self.
-                similarity = query.similarity(
-                    leaf.data, ignore_abundance=args.ignore_abundance)
-                results.append((similarity, leaf.data))
-
-        best_hit_sim = 0.0
-        best_hit_query_name = ""
         if results:
             results.sort(key=lambda x: -x[0])   # reverse sort on similarity
             best_hit_sim, best_hit_query = results[0]
-            notify('for {}, found: {:.2f} {}', query,
-                                               best_hit_sim,
-                                               best_hit_query)
+            notify(f'for {query}, found: {best_hit_sim:.2f} {best_hit_query}')
             best_hit_query_name = best_hit_query.name
+            if csv_w:
+                csv_w.writerow([loc, query, best_hit_query_name,
+                               best_hit_sim])
         else:
-            notify('for {}, no match found', query)
-
-        if csv_w:
-            csv_w.writerow([queryfile, query, best_hit_query_name,
-                           best_hit_sim])
-
-    if loader.skipped_ignore:
-        notify('skipped/ignore: {}', loader.skipped_ignore)
-    if loader.skipped_nosig:
-        notify('skipped/nosig: {}', loader.skipped_nosig)
+            notify(f'for {query}, no match found')
 
     if csv_fp:
         csv_fp.close()
 
 
 def gather(args):
-    from .search import gather_databases, format_bp
+    from .search import GatherDatabases, format_bp
 
     set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
 
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
                                                ksize=args.ksize,
                                                select_moltype=moltype,
                                                select_md5=args.md5)
-    notify('loaded query: {}... (k={}, {})', str(query)[:30],
-                                             query.minhash.ksize,
-                                             sourmash_args.get_moltype(query))
+    notify(f'loaded query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})')
 
     # verify signature was computed right.
     if not query.minhash.scaled:
         error('query signature needs to be created with --scaled')
         sys.exit(-1)
 
-    # downsample if requested
     if args.scaled:
-        notify('downsampling query from scaled={} to {}',
-               query.minhash.scaled, int(args.scaled))
+        notify(f'downsampling query from scaled={query.minhash.scaled} to {int(args.scaled)}')
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # empty?
@@ -601,20 +658,99 @@ def gather(args):
     if args.cache_size == 0:
         cache_size = None
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
-                                                cache_size=cache_size)
+                                                cache_size=cache_size,
+                                                picklist=picklist)
 
     if not len(databases):
         error('Nothing found to search!')
         sys.exit(-1)
 
+    if args.linear:             # force linear traversal?
+        databases = [ LazyLinearIndex(db) for db in databases ]
+
+    if args.prefetch:           # note: on by default!
+        notify("Starting prefetch sweep across databases.")
+        prefetch_query = query.copy()
+        prefetch_query.minhash = prefetch_query.minhash.flatten()
+        noident_mh = prefetch_query.minhash.to_mutable()
+        save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
+        save_prefetch.open()
+        # set up prefetch CSV output, write headers, etc.
+        prefetch_csvout_fp = None
+        prefetch_csvout_w = None
+        if args.save_prefetch_csv:
+            fieldnames = ['intersect_bp', 'jaccard',
+                          'max_containment', 'f_query_match', 'f_match_query',
+                          'match_filename', 'match_name', 'match_md5', 'match_bp',
+                          'query_filename', 'query_name', 'query_md5', 'query_bp']
+
+            prefetch_csvout_fp = FileOutput(args.save_prefetch_csv, 'wt').open()
+            prefetch_csvout_w = csv.DictWriter(prefetch_csvout_fp, fieldnames=fieldnames)
+            prefetch_csvout_w.writeheader()
+
+            query_mh = prefetch_query.minhash
+            scaled = query_mh.scaled
+
+        counters = []
+        for db in databases:
+            counter = None
+            try:
+                counter = db.counter_gather(prefetch_query, args.threshold_bp)
+            except ValueError:
+                if picklist:
+                    # catch "no signatures to search" ValueError...
+                    continue
+                else:
+                    raise       # re-raise other errors, if no picklist.
+
+            save_prefetch.add_many(counter.siglist)
+            # subtract found hashes as we can.
+            for found_sig in counter.siglist:
+                noident_mh.remove_many(found_sig.minhash)
+
+                # optionally calculate and save prefetch csv
+                if prefetch_csvout_fp:
+                    assert scaled
+                    # calculate expected threshold
+                    threshold = args.threshold_bp / scaled
+
+                    # calculate intersection stats and info
+                    prefetch_result = calculate_prefetch_info(prefetch_query, found_sig, scaled, threshold)
+                    # remove match and query signatures; write result to prefetch csv
+                    d = dict(prefetch_result._asdict())
+                    del d['match']
+                    del d['query']
+                    prefetch_csvout_w.writerow(d)
+
+            counters.append(counter)
+
+            # flush csvout so that things get saved progressively
+            if prefetch_csvout_fp:
+                prefetch_csvout_fp.flush()
+
+        notify(f"Found {len(save_prefetch)} signatures via prefetch; now doing gather.")
+        save_prefetch.close()
+        if prefetch_csvout_fp:
+            prefetch_csvout_fp.close()
+    else:
+        counters = databases
+        # we can't track unidentified hashes w/o prefetch
+        noident_mh = None
+
+    ## ok! now do gather -
+
     found = []
     weighted_missed = 1
-    new_max_hash = query.minhash._max_hash
-    next_query = query
+    is_abundance = query.minhash.track_abundance and not args.ignore_abundance
+    orig_query_mh = query.minhash
+    gather_iter = GatherDatabases(query, counters,
+                                  threshold_bp=args.threshold_bp,
+                                  ignore_abundance=args.ignore_abundance,
+                                  noident_mh=noident_mh)
 
-    for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
+    for result, weighted_missed in gather_iter:
         if not len(found):                # first result? print header.
-            if query.minhash.track_abundance and not args.ignore_abundance:
+            if is_abundance:
                 print_results("")
                 print_results("overlap     p_query p_match avg_abund")
                 print_results("---------   ------- ------- ---------")
@@ -629,7 +765,7 @@ def gather(args):
         pct_genome = '{:.1f}%'.format(result.f_match*100)
         name = result.match._display_name(40)
 
-        if query.minhash.track_abundance and not args.ignore_abundance:
+        if is_abundance:
             average_abund ='{:.1f}'.format(result.average_abund)
             print_results('{:9}   {:>7} {:>7} {:>9}    {}',
                       format_bp(result.intersect_bp), pct_query, pct_genome,
@@ -644,24 +780,35 @@ def gather(args):
             break
 
 
-    # basic reporting
-    print_results('\nfound {} matches total;', len(found))
+    # report on thresholding -
+    if gather_iter.query:
+        # if still a query, then we failed the threshold.
+        notify(f'found less than {format_bp(args.threshold_bp)} in common. => exiting')
+
+    # basic reporting:
+    print_results(f'\nfound {len(found)} matches total;')
     if args.num_results and len(found) == args.num_results:
-        print_results('(truncated gather because --num-results={})',
-                      args.num_results)
+        print_results(f'(truncated gather because --num-results={args.num_results})')
 
-    print_results('the recovered matches hit {:.1f}% of the query',
-           (1 - weighted_missed) * 100)
+    p_covered = (1 - weighted_missed) * 100
+    if is_abundance:
+        print_results(f'the recovered matches hit {p_covered:.1f}% of the abundance-weighted query')
+    else:
+        print_results(f'the recovered matches hit {p_covered:.1f}% of the query (unweighted)')
     print_results('')
+    if gather_iter.scaled != query.minhash.scaled:
+        print_results(f'WARNING: final scaled was {gather_iter.scaled}, vs query scaled of {query.minhash.scaled}')
 
+    # save CSV?
     if found and args.output:
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
                       'f_unique_to_query', 'f_unique_weighted',
                       'average_abund', 'median_abund', 'std_abund', 'name',
                       'filename', 'md5', 'f_match_orig', 'unique_intersect_bp',
-                      'gather_result_rank', 'remaining_bp']
+                      'gather_result_rank', 'remaining_bp',
+                      'query_filename', 'query_name', 'query_md5', 'query_bp']
 
-        with FileOutput(args.output, 'wt') as fp:
+        with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
             w.writeheader()
             for result in found:
@@ -669,24 +816,42 @@ def gather(args):
                 del d['match']                 # actual signature not in CSV.
                 w.writerow(d)
 
+    # save matching signatures?
     if found and args.save_matches:
-        notify('saving all matches to "{}"', args.save_matches)
-        with FileOutput(args.save_matches, 'wt') as fp:
-            sig.save_signatures([ r.match for r in found ], fp)
+        notify(f"saving all matches to '{args.save_matches}'")
+        with SaveSignaturesToLocation(args.save_matches) as save_sig:
+            for sr in found:
+                save_sig.add(sr.match)
 
+    # save unassigned hashes?
     if args.output_unassigned:
-        if not len(next_query.minhash):
+        remaining_query = gather_iter.query
+        if not (remaining_query.minhash or noident_mh):
             notify('no unassigned hashes to save with --output-unassigned!')
         else:
-            notify('saving unassigned hashes to "{}"', args.output_unassigned)
+            notify(f"saving unassigned hashes to '{args.output_unassigned}'")
+
+            if noident_mh:
+                remaining_mh = remaining_query.minhash.to_mutable()
+                remaining_mh += noident_mh
+                remaining_query.minhash = remaining_mh
+
+            if is_abundance:
+                abund_query_mh = remaining_query.minhash.inflate(orig_query_mh)
+                remaining_query.minhash = abund_query_mh
 
             with FileOutput(args.output_unassigned, 'wt') as fp:
-                sig.save_signatures([ next_query ], fp)
+                sig.save_signatures([ remaining_query ], fp)
+
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
+
+    # DONE w/gather function.
 
 
 def multigather(args):
     "Gather many signatures against multiple databases."
-    from .search import gather_databases, format_bp
+    from .search import GatherDatabases, format_bp
 
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
@@ -703,7 +868,7 @@ def multigather(args):
     args.db = [item for sublist in args.db for item in sublist]
     inp_files = [item for sublist in args.query for item in sublist]
     if args.query_from_file:
-        more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
+        more_files = sourmash_args.load_pathlist_from_file(args.query_from_file)
         inp_files.extend(more_files)
 
     # need a query to get ksize, moltype for db loading
@@ -722,18 +887,15 @@ def multigather(args):
         for query in sourmash_args.load_file_as_signatures(queryfile,
                                                        ksize=args.ksize,
                                                        select_moltype=moltype):
-            notify('loaded query: {}... (k={}, {})', str(query)[:30],
-                   query.minhash.ksize, sourmash_args.get_moltype(query))
+            notify(f'loaded query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})')
 
             # verify signature was computed right.
             if not query.minhash.scaled:
                 error('query signature needs to be created with --scaled; skipping')
                 continue
 
-            # downsample if requested
             if args.scaled:
-                notify('downsampling query from scaled={} to {}',
-                       query.minhash.scaled, int(args.scaled))
+                notify(f'downsampling query from scaled={query.minhash.scaled} to {int(args.scaled)}')
                 query.minhash = query.minhash.downsample(scaled=args.scaled)
 
             # empty?
@@ -741,11 +903,29 @@ def multigather(args):
                 error('no query hashes!? skipping to next..')
                 continue
 
+            counters = []
+            prefetch_query = query.copy()
+            prefetch_query.minhash = prefetch_query.minhash.flatten()
+            noident_mh = prefetch_query.minhash.to_mutable()
+
+            counters = []
+            for db in databases:
+                counter = db.counter_gather(prefetch_query, args.threshold_bp)
+                for found_sig in counter.siglist:
+                    noident_mh.remove_many(found_sig.minhash)
+                counters.append(counter)
+
             found = []
             weighted_missed = 1
-            for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
+            is_abundance = query.minhash.track_abundance and not args.ignore_abundance
+            orig_query_mh = query.minhash
+            gather_iter = GatherDatabases(query, counters,
+                                          threshold_bp=args.threshold_bp,
+                                          ignore_abundance=args.ignore_abundance,
+                                          noident_mh=noident_mh)
+            for result, weighted_missed in gather_iter:
                 if not len(found):                # first result? print header.
-                    if query.minhash.track_abundance and not args.ignore_abundance:
+                    if is_abundance:
                         print_results("")
                         print_results("overlap     p_query p_match avg_abund")
                         print_results("---------   ------- ------- ---------")
@@ -760,7 +940,7 @@ def multigather(args):
                 pct_genome = '{:.1f}%'.format(result.f_match*100)
                 name = result.match._display_name(40)
 
-                if query.minhash.track_abundance and not args.ignore_abundance:
+                if is_abundance:
                     average_abund ='{:.1f}'.format(result.average_abund)
                     print_results('{:9}   {:>7} {:>7} {:>9}    {}',
                               format_bp(result.intersect_bp), pct_query, pct_genome,
@@ -771,6 +951,10 @@ def multigather(args):
                               name)
                 found.append(result)
 
+            # report on thresholding -
+            if gather_iter.query.minhash:
+                # if still a query, then we failed the threshold.
+                notify(f'found less than {format_bp(args.threshold_bp)} in common. => exiting')
 
             # basic reporting
             print_results('\nfound {} matches total;', len(found))
@@ -796,8 +980,9 @@ def multigather(args):
                           'average_abund', 'median_abund', 'std_abund', 'name',
                           'filename', 'md5', 'f_match_orig',
                           'unique_intersect_bp', 'gather_result_rank',
-                          'remaining_bp']
-            with open(output_csv, 'wt') as fp:
+                          'remaining_bp', 'query_filename', 'query_name',
+                          'query_md5', 'query_bp']
+            with FileOutputCSV(output_csv) as fp:
                 w = csv.DictWriter(fp, fieldnames=fieldnames)
                 w.writeheader()
                 for result in found:
@@ -808,25 +993,34 @@ def multigather(args):
             output_matches = output_base + '.matches.sig'
             with open(output_matches, 'wt') as fp:
                 outname = output_matches
-                notify('saving all matches to "{}"', outname)
+                notify(f'saving all matches to "{outname}"')
                 sig.save_signatures([ r.match for r in found ], fp)
 
             output_unassigned = output_base + '.unassigned.sig'
             with open(output_unassigned, 'wt') as fp:
+                remaining_query = gather_iter.query
+                if noident_mh:
+                    remaining_mh = remaining_query.minhash.to_mutable()
+                    remaining_mh += noident_mh.downsample(scaled=remaining_mh.scaled)
+                    remaining_query.minhash = remaining_mh
+
+                if is_abundance:
+                    abund_query_mh = remaining_query.minhash.inflate(orig_query_mh)
+                    remaining_query.minhash = abund_query_mh
+
                 if not found:
                     notify('nothing found - entire query signature unassigned.')
-                elif not len(query.minhash):
+                elif not remaining_query:
                     notify('no unassigned hashes! not saving.')
                 else:
-                    notify('saving unassigned hashes to "{}"', output_unassigned)
+                    notify(f'saving unassigned hashes to "{output_unassigned}"')
 
-                    e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash)
-                    e.add_many(next_query.minhash.hashes)
-                    sig.save_signatures([ sig.SourmashSignature(e) ], fp)
+                    # CTB: note, multigather does not save abundances
+                    sig.save_signatures([ remaining_query ], fp)
             n += 1
 
         # fini, next query!
-    notify('\nconducted gather searches on {} signatures', n)
+    notify(f'\nconducted gather searches on {n} signatures')
 
 
 def watch(args):
@@ -873,7 +1067,7 @@ def watch(args):
 
     E = MinHash(ksize=ksize, n=args.num_hashes, is_protein=is_protein, dayhoff=dayhoff, hp=hp)
 
-    notify('Computing signature for k={}, {} from stdin', ksize, moltype)
+    notify(f'Computing signature for k={ksize}, {moltype} from stdin')
 
     def do_search():
         results = []
@@ -896,7 +1090,7 @@ def watch(args):
     for n, record in enumerate(screed_iter):
         # at each watermark, print status & check cardinality
         if n >= watermark:
-            notify('\r... read {} sequences', n, end='')
+            notify(f'\r... read {n} sequences', end='')
             watermark += WATERMARK_SIZE
 
             if do_search():
@@ -909,7 +1103,7 @@ def watch(args):
 
     results = do_search()
     if not results:
-        notify('... read {} sequences, no matches found.', n)
+        notify(f'... read {n} sequences, no matches found.')
     else:
         results.sort(key=lambda x: -x[0])   # take best
         similarity, found_sig = results[0]
@@ -917,7 +1111,7 @@ def watch(args):
                similarity)
 
     if args.output:
-        notify('saving signature to {}', args.output)
+        notify(f'saving signature to {args.output}')
         with FileOutput(args.output, 'wt') as fp:
             streamsig = sig.SourmashSignature(E, filename='stdin',
                                               name=args.name)
@@ -928,5 +1122,183 @@ def migrate(args):
     "Migrate an SBT database to the latest version."
     tree = load_sbt_index(args.sbt_name, print_version_warning=False)
 
-    notify('saving SBT under "{}".', args.sbt_name)
+    notify(f'saving SBT under "{args.sbt_name}".')
     tree.save(args.sbt_name, structure_only=True)
+
+
+def prefetch(args):
+    "Output the 'raw' results of a containment/overlap search."
+
+    # load databases from files, too.
+    if args.db_from_file:
+        more_db = sourmash_args.load_pathlist_from_file(args.db_from_file)
+        args.databases.extend(more_db)
+
+    if not args.databases:
+        notify("ERROR: no databases or signatures to search!?")
+        sys.exit(-1)
+
+    if not (args.save_unmatched_hashes or args.save_matching_hashes or
+            args.save_matches or args.output):
+        notify("WARNING: no output(s) specified! Nothing will be saved from this prefetch!")
+
+    # figure out what k-mer size and molecule type we're looking for here
+    ksize = args.ksize
+    moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
+
+    # load the query signature & figure out all the things
+    query = sourmash_args.load_query_signature(args.query,
+                                               ksize=args.ksize,
+                                               select_moltype=moltype,
+                                               select_md5=args.md5)
+    notify(f'loaded query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})')
+
+    # verify signature was computed with scaled.
+    if not query.minhash.scaled:
+        error('query signature needs to be created with --scaled')
+        sys.exit(-1)
+
+    # if with track_abund, flatten me
+    query_mh = query.minhash
+    orig_query_mh = query_mh
+    if query_mh.track_abundance:
+        query_mh = query_mh.flatten()
+
+    if args.scaled:
+        notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
+        query_mh = query_mh.downsample(scaled=args.scaled)
+    notify(f"all sketches will be downsampled to scaled={query_mh.scaled}")
+
+    # empty?
+    if not len(query_mh):
+        error('no query hashes!? exiting.')
+        sys.exit(-1)
+
+    query.minhash = query_mh
+
+    # set up CSV output, write headers, etc.
+    csvout_fp = None
+    csvout_w = None
+    if args.output:
+        fieldnames = ['intersect_bp', 'jaccard',
+                      'max_containment', 'f_query_match', 'f_match_query',
+                      'match_filename', 'match_name', 'match_md5', 'match_bp',
+                      'query_filename', 'query_name', 'query_md5', 'query_bp']
+
+        csvout_fp = FileOutput(args.output, 'wt').open()
+        csvout_w = csv.DictWriter(csvout_fp, fieldnames=fieldnames)
+        csvout_w.writeheader()
+
+    # track & maybe save matches progressively
+    matches_out = SaveSignaturesToLocation(args.save_matches)
+    matches_out.open()
+    if args.save_matches:
+        notify(f"saving all matching database signatures to '{args.save_matches}'")
+
+    # iterate over signatures in db one at a time, for each db;
+    # find those with sufficient overlap
+    ident_mh = query_mh.copy_and_clear()
+    noident_mh = query_mh.to_mutable()
+
+    did_a_search = False        # track whether we did _any_ search at all!
+    for dbfilename in args.databases:
+        notify(f"loading signatures from '{dbfilename}'")
+
+        db = sourmash_args.load_file_as_index(dbfilename)
+
+        # force linear traversal?
+        if args.linear:
+            db = LazyLinearIndex(db)
+
+        db = db.select(ksize=ksize, moltype=moltype,
+                       containment=True, scaled=True,
+                       picklist=picklist)
+
+        if not db:
+            notify(f"...no compatible signatures in '{dbfilename}'; skipping")
+            continue
+
+        for result in prefetch_database(query, db, args.threshold_bp):
+            match = result.match
+
+            # track found & "untouched" hashes.
+            match_mh = match.minhash.downsample(scaled=query.minhash.scaled)
+            ident_mh += query.minhash & match_mh.flatten()
+            noident_mh.remove_many(match.minhash)
+
+            # output match info as we go
+            if csvout_fp:
+                d = dict(result._asdict())
+                del d['match']                 # actual signatures not in CSV.
+                del d['query']
+                csvout_w.writerow(d)
+
+            # output match signatures as we go (maybe)
+            matches_out.add(match)
+
+            if matches_out.count % 10 == 0:
+                notify(f"total of {matches_out.count} matching signatures so far.",
+                       end="\r")
+
+        did_a_search = True
+
+        # flush csvout so that things get saved progressively
+        if csvout_fp:
+            csvout_fp.flush()
+
+        # delete db explicitly ('cause why not)
+        del db
+
+    if not did_a_search:
+        notify("ERROR in prefetch: no compatible signatures in any databases?!")
+        sys.exit(-1)
+
+    notify(f"total of {matches_out.count} matching signatures.")
+    matches_out.close()
+
+    if csvout_fp:
+        notify(f"saved {matches_out.count} matches to CSV file '{args.output}'")
+        csvout_fp.close()
+
+    assert len(query_mh) == len(ident_mh) + len(noident_mh)
+    notify(f"of {len(query_mh)} distinct query hashes, {len(ident_mh)} were found in matches above threshold.")
+    notify(f"a total of {len(noident_mh)} query hashes remain unmatched.")
+
+    if args.save_matching_hashes:
+        filename = args.save_matching_hashes
+        notify(f"saving {len(ident_mh)} matched hashes to '{filename}'")
+
+        sig_name = ''
+        if query.name:
+            sig_name = f"{query.name}-known"
+
+        # restore abundances, if present in original query
+        if orig_query_mh.track_abundance:
+            ident_mh = ident_mh.inflate(orig_query_mh)
+
+        ss = sig.SourmashSignature(ident_mh, name=sig_name)
+        with open(filename, "wt") as fp:
+            sig.save_signatures([ss], fp)
+
+    if args.save_unmatched_hashes:
+        filename = args.save_unmatched_hashes
+
+        sig_name = ''
+        if query.name:
+            sig_name = f"{query.name}-unknown"
+
+        notify(f"saving {len(noident_mh)} unmatched hashes to '{filename}'")
+
+        # restore abundances, if present in original query
+        if orig_query_mh.track_abundance:
+            noident_mh = noident_mh.inflate(orig_query_mh)
+
+        ss = sig.SourmashSignature(noident_mh, name=sig_name)
+        with open(filename, "wt") as fp:
+            sig.save_signatures([ss], fp)
+
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
+
+    return 0

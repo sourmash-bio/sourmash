@@ -22,7 +22,7 @@ def test_jaccard_1(track_abundance):
         E2.add_hash(i)
 
     # here the union is [1, 2, 3, 4, 5]
-    # and the intesection is [1, 2, 3, 4] => 4/5.
+    # and the intersection is [1, 2, 3, 4] => 4/5.
 
     assert round(E1.jaccard(E2), 2) == round(4 / 5.0, 2)
     assert round(E2.jaccard(E1), 2) == round(4 / 5.0, 2)
@@ -223,26 +223,21 @@ def test_scaled_on_real_data():
     assert round(mh1.similarity(mh2), 5) == 0.01644
     assert round(mh2.similarity(mh1), 5) == 0.01644
 
-    mh1 = mh1.downsample(num=10000)
-    mh2 = mh2.downsample(num=10000)
+    mh1 = mh1.downsample(scaled=100)
+    mh2 = mh2.downsample(scaled=100)
+    assert round(mh1.similarity(mh2), 5) == 0.01644
+    assert round(mh2.similarity(mh1), 5) == 0.01644
 
-    assert mh1.similarity(mh2) == 0.0183
-    assert mh2.similarity(mh1) == 0.0183
+    mh1 = mh1.downsample(scaled=1000)
+    mh2 = mh2.downsample(scaled=1000)
+    assert round(mh1.similarity(mh2), 5) == 0.01874
+    assert round(mh2.similarity(mh1), 5) == 0.01874
 
-    mh1 = mh1.downsample(num=1000)
-    mh2 = mh2.downsample(num=1000)
-    assert mh1.similarity(mh2) == 0.011
-    assert mh2.similarity(mh1) == 0.011
+    mh1 = mh1.downsample(scaled=10000)
+    mh2 = mh2.downsample(scaled=10000)
 
-    mh1 = mh1.downsample(num=100)
-    mh2 = mh2.downsample(num=100)
     assert mh1.similarity(mh2) == 0.01
     assert mh2.similarity(mh1) == 0.01
-
-    mh1 = mh1.downsample(num=10)
-    mh2 = mh2.downsample(num=10)
-    assert mh1.similarity(mh2) == 0.0
-    assert mh2.similarity(mh1) == 0.0
 
 
 def test_scaled_on_real_data_2():
@@ -276,3 +271,17 @@ def test_scaled_on_real_data_2():
     mh2 = mh2.downsample(scaled=100000)
     assert round(mh1.similarity(mh2), 2) == 0.01
     assert round(mh2.similarity(mh1), 2) == 0.01
+
+
+def test_downsample_scaled_with_num():
+    from sourmash.signature import load_signatures
+
+    afile = 'scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz'
+    a = utils.get_test_data(afile)
+    sig1 = list(load_signatures(a))[0]
+    mh1 = sig1.minhash
+
+    with pytest.raises(ValueError) as exc:
+        mh = mh1.downsample(num=500)
+
+    assert 'cannot downsample a scaled MinHash using num' in str(exc.value)

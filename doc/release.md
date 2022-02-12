@@ -8,7 +8,7 @@ Michael Crusoe.
 The basic build environment needed below can be created as follows:
 
 ```
-conda create -y -n sourmash-rc python=3.7 pip cxx-compiler make twine
+conda create -y -n sourmash-rc python=3.8 pip cxx-compiler make twine tox tox-conda setuptools_scm
 ```
 
 Then activate it with `conda activate sourmash-rc`.
@@ -16,6 +16,9 @@ Then activate it with `conda activate sourmash-rc`.
 You will also need a Rust installation (see
 [Development Environment](developer.md)); be sure to update it to the
 latest version with `rustup update`.
+
+Your conda version will need to be at least `v4.9.0`. You can check your
+conda version with `conda --version` and update with `conda update conda`.
 
 ## Testing a release
 
@@ -29,7 +32,7 @@ and also check if the [rendered docs] are updated.
 1\. The below should be done in a clean checkout:
 ```
 cd $(mktemp -d)
-git clone git@github.com:dib-lab/sourmash.git
+git clone https://github.com/sourmash-bio/sourmash
 cd sourmash
 ```
 
@@ -42,11 +45,11 @@ rc=rc1
 ```
 and then tag the release candidate with the new version number prefixed by the letter 'v':
 ```
-git tag -a v${new_version}${rc}
+git tag -a v${new_version}${rc} -m "${new_version} release candidate ${rc}"
 git push --tags origin
 ```
 
-[the releases page]: https://github.com/dib-lab/sourmash/releases
+[the releases page]: https://github.com/sourmash-bio/sourmash/releases
 
 3\. Test the release candidate. Bonus: repeat on macOS:
 ```
@@ -62,9 +65,9 @@ python -m venv testenv4
 
 cd testenv1
 source bin/activate
-git clone --depth 1 --branch v${new_version}${rc} https://github.com/dib-lab/sourmash.git
+git clone --depth 1 --branch v${new_version}${rc} https://github.com/sourmash-bio/sourmash.git
 cd sourmash
-python -m pip install -U setuptools pip wheel
+python -m pip install -U setuptools pip wheel setuptools_scm
 python -m pip install -r requirements.txt
 make test
 
@@ -73,8 +76,8 @@ make test
 cd ../../testenv2
 deactivate
 source bin/activate
-python -m pip install -U setuptools pip wheel
-python -m pip install -e git+https://github.com/dib-lab/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
+python -m pip install -U setuptools pip wheel setuptools_scm
+python -m pip install -e git+https://github.com/sourmash-bio/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
 cd src/sourmash
 make test
 make dist
@@ -86,7 +89,7 @@ cp dist/sourmash*tar.gz ../../../testenv3/
 cd ../../../testenv3/
 deactivate
 source bin/activate
-python -m pip install -U setuptools pip wheel
+python -m pip install -U setuptools pip wheel setuptools_scm
 python -m pip install sourmash*tar.gz
 python -m pip install pytest
 tar xzf sourmash-${new_version}${rc}.tar.gz
@@ -145,7 +148,7 @@ git push --delete origin v${new_version}${rc}
 
 3\. Upload wheels from GitHub Releases to PyPI
 
-[GitHub Actions will automatically build wheels and upload them to GitHub Releases](https://github.com/dib-lab/sourmash/actions?query=workflow%3Acibuildwheel).
+[GitHub Actions will automatically build wheels and upload them to GitHub Releases](https://github.com/sourmash-bio/sourmash/actions?query=workflow%3Acibuildwheel).
 This will take about 45 minutes, or more. After they're built, they must be
 copied over to PyPI manually.
 
@@ -169,6 +172,7 @@ twine will correctly determine the version from the filenames.
 
 4\. Once the wheels are uploaded, publish the new release on PyPI (requires an authorized account).
 ```
+cd ..
 make dist
 twine upload dist/sourmash-${new_version}.tar.gz
 ```

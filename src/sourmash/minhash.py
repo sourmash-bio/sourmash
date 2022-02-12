@@ -1,13 +1,23 @@
 # -*- coding: UTF-8 -*-
+"""
+sourmash submodule that provides MinHash class and utility functions.
+
+class MinHash - core MinHash class.
+class FrozenMinHash - read-only MinHash class.
+"""
 from __future__ import unicode_literals, division
 
-import math
-import copy
+__all__ = ['get_minhash_default_seed',
+           'get_minhash_max_hash',
+           'hash_murmur',
+           'MinHash',
+           'FrozenMinHash']
+
 from collections.abc import Mapping
 
 from . import VERSION
 from ._lowlevel import ffi, lib
-from .utils import RustObject, rustcall, decode_str
+from .utils import RustObject, rustcall
 from .exceptions import SourmashError
 from deprecation import deprecated
 
@@ -222,6 +232,8 @@ class MinHash(RustObject):
         a.merge(self)
         return a
 
+    copy = __copy__
+
     def __getstate__(self):
         "support pickling via __getstate__/__setstate__"
         return (
@@ -283,6 +295,100 @@ class MinHash(RustObject):
         self._methodcall(lib.kmerminhash_add_sequence, to_bytes(sequence),
                          force)
 
+    def seq_to_hashes(self, sequence, *, force=False, bad_kmers_as_zeroes=False, is_protein=False):
+        """Convert sequence to hashes without adding to the sketch.
+
+        If input sequence is DNA and this is a protein, dayhoff, or hp
+        MinHash, translate the DNA appropriately before hashing.
+
+        If input sequence is protein, set is_protein=True.
+
+        If `force = True` and `bad_kmers_as_zeroes = True`,
+        invalid kmers hashes will be represented as `0`.
+        """
+
+        if is_protein and self.moltype not in ("protein", "dayhoff", "hp"):
+            raise ValueError("cannot add protein sequence to DNA MinHash")
+
+        if bad_kmers_as_zeroes and not force:
+            raise ValueError("cannot represent invalid kmers as 0 while force is not set to True")
+
+        size = ffi.new("uintptr_t *")
+        hashes_ptr = self._methodcall(lib.kmerminhash_seq_to_hashes, to_bytes(sequence), len(sequence), force, bad_kmers_as_zeroes, is_protein, size)
+        size = size[0]
+
+        try:
+            return ffi.unpack(hashes_ptr, size)
+
+        finally:
+            lib.kmerminhash_slice_free(hashes_ptr, size)
+
+    def kmers_and_hashes(self, sequence, *, force=False, is_protein=False):
+        """Convert sequence into (k-mer, hashval) tuples without adding
+        it to the sketch.
+
+        If input sequence is DNA and this is a protein, dayhoff, or hp
+        MinHash, translate the DNA appropriately before hashing.
+
+        If input sequence is protein, set is_protein=True.
+
+        If 'force' is True, invalid k-mers will be represented with 'None'.
+        """
+        import screed
+
+        bad_kmers_as_zeroes = False
+        if force:
+            bad_kmers_as_zeroes = True
+
+        sequence = sequence.upper()
+        hashvals = self.seq_to_hashes(sequence,
+                                      force=force, is_protein=is_protein,
+                                      bad_kmers_as_zeroes=bad_kmers_as_zeroes)
+
+        if bad_kmers_as_zeroes:
+            hashvals = [ None if h == 0 else h for h in hashvals ]
+
+        ksize = self.ksize
+        translate = False
+        if self.moltype == 'DNA':
+            pass
+        elif is_protein:
+            pass
+        else:                   # translate input DNA sequence => aa
+            assert self.moltype in ('protein', 'dayhoff', 'hp')
+            translate = True
+            ksize = self.ksize * 3
+
+        # special code for translation -
+        if translate:
+            # forward AND reverse complement => twice the k-mers
+            n_kmers = (len(sequence) - ksize + 1) * 2
+            assert n_kmers == len(hashvals)
+
+            # generate reverse complement of sequence
+            seqrc = screed.rc(sequence)
+
+            hash_i = 0
+            for frame in (0, 1, 2):
+                # get forward k-mers
+                for start in range(0, len(sequence) - ksize + 1 - frame, 3):
+                    kmer = sequence[start + frame:start + frame + ksize]
+                    yield kmer, hashvals[hash_i]
+                    hash_i += 1
+
+                # get rc k-mers
+                for start in range(0, len(seqrc) - ksize + 1 - frame, 3):
+                    kmer = seqrc[start + frame:start + frame + ksize]
+                    yield kmer, hashvals[hash_i]
+                    hash_i += 1
+        else:
+            # otherwise, all very straightforward :)
+            n_kmers = len(sequence) - ksize + 1
+            assert n_kmers == len(hashvals)
+            for i, hashval in zip(range(0, n_kmers), hashvals):
+                kmer = sequence[i:i+ksize]
+                yield kmer, hashval
+
     def add_kmer(self, kmer):
         "Add a kmer into the sketch."
         if self.is_dna:
@@ -305,8 +411,15 @@ class MinHash(RustObject):
             self._methodcall(lib.kmerminhash_add_many, list(hashes), len(hashes))
 
     def remove_many(self, hashes):
-        "Remove many hashes at once; ``hashes`` must be an iterable."
-        self._methodcall(lib.kmerminhash_remove_many, list(hashes), len(hashes))
+        """Remove many hashes from a sketch at once.
+
+        ``hashes`` can be either an iterable (list, set, etc.), or another
+        ``MinHash`` object.
+        """
+        if isinstance(hashes, MinHash):
+            self._methodcall(lib.kmerminhash_remove_from, hashes._objptr)
+        else:
+            self._methodcall(lib.kmerminhash_remove_many, list(hashes), len(hashes))
 
     def __len__(self):
         "Number of hashes."
@@ -450,32 +563,57 @@ class MinHash(RustObject):
             raise TypeError("Must be a MinHash!")
         return self._methodcall(lib.kmerminhash_count_common, other._get_objptr(), downsample)
 
-    def downsample(self, num=None, scaled=None):
+    def intersection_and_union_size(self, other):
+        "Calculate intersection and union sizes between `self` and `other`."
+        if not isinstance(other, MinHash):
+            raise TypeError("Must be a MinHash!")
+        if not self.is_compatible(other):
+            raise TypeError("incompatible MinHash objects")
+
+        usize = ffi.new("uint64_t *")
+        common = self._methodcall(lib.kmerminhash_intersection_union_size,
+                                  other._get_objptr(), usize)
+
+        usize = ffi.unpack(usize, 1)[0]
+        return common, usize
+
+    def downsample(self, *, num=None, scaled=None):
         """Copy this object and downsample new object to either `num` or
         `scaled`.
         """
+        # first, evaluate provided parameters --
+
+        # at least one must be specified!
         if num is None and scaled is None:
             raise ValueError('must specify either num or scaled to downsample')
-        elif num is not None:
-            if self.num and self.num < num:
-                raise ValueError("new sample num is higher than current sample num")
-            max_hash=0
-        elif scaled is not None:
-            if self.num:
-                raise ValueError("num != 0 - cannot downsample a standard MinHash")
-            old_scaled = self.scaled
-            if old_scaled > scaled:
-                raise ValueError(
-                    "new scaled {} is lower than current sample scaled {}".format(
-                        scaled, old_scaled
-                    )
-                )
 
+        # both cannot be specified
+        if num is not None and scaled is not None:
+            raise ValueError('cannot specify both num and scaled')
+
+        if num is not None:
+            # cannot downsample a scaled MinHash with num:
+            if self.scaled:
+                raise ValueError("cannot downsample a scaled MinHash using num")
+            # cannot upsample
+            if self.num < num:
+                raise ValueError("new sample num is higher than current sample num")
+
+            # acceptable num value? make sure to set max_hash to 0.
+            max_hash = 0
+            
+        elif scaled is not None:
+            # cannot downsample a num MinHash with scaled
+            if self.num:
+                raise ValueError("cannot downsample a num MinHash using scaled")
+            if self.scaled > scaled:
+                raise ValueError(f"new scaled {scaled} is lower than current sample scaled {self.scaled}")
+
+            # acceptable scaled value? reconfigure max_hash, keep num 0.
             max_hash = _get_max_hash_for_scaled(scaled)
             num = 0
-        ###
 
-        # create new object:
+        # end checks! create new object:
         a = MinHash(
             num, self.ksize, self.is_protein, self.dayhoff, self.hp,
             self.track_abundance, self.seed, max_hash
@@ -489,15 +627,17 @@ class MinHash(RustObject):
         return a
 
     def flatten(self):
-        """Return a new MinHash with track_abundance=False."""
-        # create new object:
-        a = MinHash(
-            self.num, self.ksize, self.is_protein, self.dayhoff, self.hp,
-            False, self.seed, self._max_hash
-        )
-        a.add_many(self)
+        """If track_abundance=True, return a new flattened MinHash."""
+        if self.track_abundance:
+            # create new object:
+            a = MinHash(
+                self.num, self.ksize, self.is_protein, self.dayhoff, self.hp,
+                False, self.seed, self._max_hash
+            )
+            a.add_many(self)
 
-        return a
+            return a
+        return self
 
     def jaccard(self, other, downsample=False):
         "Calculate Jaccard similarity of two MinHash objects."
@@ -536,18 +676,37 @@ class MinHash(RustObject):
         """\
         Calculate how much of self is contained by other.
         """
+        if not (self.scaled and other.scaled):
+            raise TypeError("can only calculate containment for scaled MinHashes")
         if not len(self):
             return 0.0
 
         return self.count_common(other, downsample) / len(self)
 
+    def max_containment(self, other, downsample=False):
+        """
+        Calculate maximum containment.
+        """
+        if not (self.scaled and other.scaled):
+            raise TypeError("can only calculate containment for scaled MinHashes")
+        min_denom = min((len(self), len(other)))
+        if not min_denom:
+            return 0.0
+
+        return self.count_common(other, downsample) / min_denom
+
     def __add__(self, other):
         if not isinstance(other, MinHash):
             raise TypeError("can only add MinHash objects to MinHash objects!")
 
-        new_obj = self.__copy__()
+        if self.num and other.num:
+            if self.num != other.num:
+                raise TypeError(f"incompatible num values: self={self.num} other={other.num}")
+
+        new_obj = self.to_mutable()
         new_obj += other
         return new_obj
+    __or__ = __add__
 
     def __iadd__(self, other):
         if not isinstance(other, MinHash):
@@ -560,16 +719,31 @@ class MinHash(RustObject):
             raise TypeError("can only add MinHash objects to MinHash objects!")
         self._methodcall(lib.kmerminhash_merge, other._get_objptr())
 
+    def intersection(self, other):
+        if not isinstance(other, MinHash):
+            raise TypeError("can only intersect MinHash objects")
+        if self.track_abundance or other.track_abundance:
+            raise TypeError("can only intersect flat MinHash objects")
+
+        ptr = self._methodcall(lib.kmerminhash_intersection, other._get_objptr())
+        return MinHash._from_objptr(ptr)
+    __and__ = intersection
+
     def set_abundances(self, values, clear=True):
         """Set abundances for hashes from ``values``, where
         ``values[hash] = abund``
+
+        If ``abund`` value is set to zero, the ``hash`` will be removed from the sketch.
+        ``abund`` cannot be set to a negative value.
         """
         if self.track_abundance:
             hashes = []
             abunds = []
 
             for h, v in values.items():
-                hashes.append(h)
+                hashes.append(h)                
+                if v < 0:
+                    raise ValueError("Abundance cannot be set to a negative value.")
                 abunds.append(v)
 
             self._methodcall(lib.kmerminhash_set_abundances, hashes, abunds, len(hashes), clear)
@@ -593,3 +767,120 @@ class MinHash(RustObject):
             return 'hp'
         else:
             return 'DNA'
+
+    def to_mutable(self):
+        "Return a copy of this MinHash that can be changed."
+        return self.__copy__()
+
+    def to_frozen(self):
+        "Return a frozen copy of this MinHash that cannot be changed."
+        new_mh = self.__copy__()
+        new_mh.__class__ = FrozenMinHash
+        return new_mh
+
+    def inflate(self, from_mh):
+        "return a new MinHash object with abundances taken from 'from_mh'"
+        if not self.track_abundance and from_mh.track_abundance:
+            orig_abunds = from_mh.hashes
+            abunds = { h: orig_abunds[h] for h in self.hashes }
+
+            abund_mh = from_mh.copy_and_clear()
+
+            abund_mh.downsample(scaled=self.scaled)
+            abund_mh.set_abundances(abunds)
+
+            return abund_mh
+        else:
+            raise ValueError("inflate operates on a flat MinHash and takes a MinHash object with track_abundance=True") 
+        
+
+class FrozenMinHash(MinHash):
+    def add_sequence(self, *args, **kwargs):
+        raise TypeError('FrozenMinHash does not support modification')
+
+    def add_kmer(self, *args, **kwargs):
+        raise TypeError('FrozenMinHash does not support modification')
+
+    def add_many(self, *args, **kwargs):
+        raise TypeError('FrozenMinHash does not support modification')
+
+    def remove_many(self, *args, **kwargs):
+        raise TypeError('FrozenMinHash does not support modification')
+
+    def add_hash(self, *args, **kwargs):
+        raise TypeError('FrozenMinHash does not support modification')
+
+    def add_hash_with_abundance(self, *args, **kwargs):
+        raise TypeError('FrozenMinHash does not support modification')
+
+    def clear(self, *args, **kwargs):
+        raise TypeError('FrozenMinHash does not support modification')
+
+    def set_abundances(self, *args, **kwargs):
+        raise TypeError('FrozenMinHash does not support modification')
+
+    def add_protein(self, *args, **kwargs):
+        raise TypeError('FrozenMinHash does not support modification')
+
+    def downsample(self, *, num=None, scaled=None):
+        if scaled and self.scaled == scaled:
+            return self
+        if num and self.num == num:
+            return self
+
+        return MinHash.downsample(self, num=num, scaled=scaled).to_frozen()
+
+    def flatten(self):
+        if not self.track_abundance:
+            return self
+        return MinHash.flatten(self).to_frozen()
+
+    def __iadd__(self, *args, **kwargs):
+        raise TypeError('FrozenMinHash does not support modification')
+
+    def merge(self, *args, **kwargs):
+        raise TypeError('FrozenMinHash does not support modification')
+
+    def to_mutable(self):
+        "Return a copy of this MinHash that can be changed."
+        mut = MinHash.__new__(MinHash)
+        state_tup = self.__getstate__()
+
+        # is protein/hp/dayhoff?
+        if state_tup[2] or state_tup[3] or state_tup[4]:
+            state_tup = list(state_tup)
+            # adjust ksize.
+            state_tup[1] = state_tup[1] * 3
+        mut.__setstate__(state_tup)
+        return mut
+
+    def to_frozen(self):
+        "Return a frozen copy of this MinHash that cannot be changed."
+        return self
+
+    def __setstate__(self, tup):
+        "support pickling via __getstate__/__setstate__"
+        (n, ksize, is_protein, dayhoff, hp, mins, _, track_abundance,
+         max_hash, seed) = tup
+
+        self.__del__()
+
+        hash_function = (
+            lib.HASH_FUNCTIONS_MURMUR64_DAYHOFF if dayhoff else
+            lib.HASH_FUNCTIONS_MURMUR64_HP if hp else
+            lib.HASH_FUNCTIONS_MURMUR64_PROTEIN if is_protein else
+            lib.HASH_FUNCTIONS_MURMUR64_DNA
+        )
+
+        scaled = _get_scaled_for_max_hash(max_hash)
+        self._objptr = lib.kmerminhash_new(
+            scaled, ksize, hash_function, seed, track_abundance, n
+        )
+        if track_abundance:
+            MinHash.set_abundances(self, mins)
+        else:
+            MinHash.add_many(self, mins)
+
+    def __copy__(self):
+        return self
+    copy = __copy__

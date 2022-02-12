@@ -4,7 +4,7 @@
 
 You can get the latest development branch with:
 ```
-git clone https://github.com/dib-lab/sourmash.git
+git clone https://github.com/sourmash-bio/sourmash.git
 ```
 sourmash runs under Python 3.7 and later.
 
@@ -64,11 +64,17 @@ tox -e dev
 . .tox/dev/bin/activate
 ```
 
-Finally, ou can also explicitly install all the Python dependencies for sourmash by running
+Finally, you can also explicitly install all the Python dependencies for sourmash by running
 ```
 pip install -r requirements.txt
 ```
 (but they are already installed in the virtualenv created with `tox -e dev`).
+
+## Updating your developer environment
+
+To update rust to the latest version, use `rustup update`.
+
+To update your Python dependencies to the latest required for sourmash, you can run `pip install -r requirements.txt`.
 
 ## Running tests and checks
 
@@ -96,8 +102,8 @@ We use [GitHub Actions][2] for continuous integration.
 
 Code coverage can be viewed interactively at [codecov.io][1].
 
-[1]: https://codecov.io/gh/dib-lab/sourmash/
-[2]: https://github.com/dib-lab/sourmash/actions
+[1]: https://codecov.io/gh/sourmash-bio/sourmash/
+[2]: https://github.com/sourmash-bio/sourmash/actions
 
 ## Code organization
 
@@ -220,12 +226,14 @@ To regenerate the C header, run
 ```
 $ make include/sourmash.h
 ```
-This requires a nightly Rust compiler and `cbindgen`.
-They can be installed by running
+This requires `cbindgen` (and technically a nightly Rust compiler,
+but we cheat with `RUSTC_BOOTSTRAP=1`. For more info check [this post]).
+`cbindgen` can be installed by running
 ```
-$ rustup toolchain add nightly
 $ cargo install --force cbindgen
 ```
+
+[this post]: https://fasterthanli.me/articles/my-ideal-rust-workflow
 
 ### Changing code touching all layers: an example PR
 

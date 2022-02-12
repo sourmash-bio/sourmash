@@ -1,13 +1,23 @@
 import os
 
-import matplotlib.pyplot as plt
-plt.rcParams.update({'figure.max_open_warning': 0})
-
 from hypothesis import settings, Verbosity
 import pytest
 
 import matplotlib.pyplot as plt
 plt.rcParams.update({'figure.max_open_warning': 0})
+
+from sourmash_tst_utils import TempDirectory, RunnerContext
+
+
+@pytest.fixture
+def runtmp():
+    with TempDirectory() as location:
+        yield RunnerContext(location)
+
+
+@pytest.fixture
+def run():
+    yield RunnerContext(os.getcwd())
 
 
 @pytest.fixture(params=[True, False])
@@ -25,8 +35,32 @@ def hp(request):
     return request.param
 
 
+@pytest.fixture(params=[True, False])
+def keep_identifiers(request):
+    return request.param
+
+
+@pytest.fixture(params=[True, False])
+def keep_versions(request):
+    return request.param
+
+
 @pytest.fixture(params=[2, 5, 10])
 def n_children(request):
+    return request.param
+
+
+@pytest.fixture(params=["--linear", "--no-linear"])
+def linear_gather(request):
+    return request.param
+
+
+@pytest.fixture(params=["--prefetch", "--no-prefetch"])
+def prefetch_gather(request):
+    return request.param
+
+@pytest.fixture(params=[True, False])
+def use_manifest(request):
     return request.param
 
 

@@ -4,6 +4,7 @@ use std::slice;
 
 use crate::encodings::{aa_to_dayhoff, aa_to_hp, translate_codon, HashFunctions};
 use crate::ffi::utils::{ForeignObject, SourmashStr};
+use crate::signature::SeqToHashes;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash;
 
@@ -55,6 +56,44 @@ unsafe fn kmerminhash_add_sequence(ptr: *mut SourmashKmerMinHash, sequence: *con
     };
 
     mh.add_sequence(c_str.to_bytes(), force)
+}
+}
+
+ffi_fn! {
+unsafe fn kmerminhash_seq_to_hashes(ptr: *mut SourmashKmerMinHash, sequence: *const c_char, insize: usize, force: bool, bad_kmers_as_zeroes: bool, is_protein: bool, size: *mut usize) ->
+Result<*const u64> {
+
+    let mh = SourmashKmerMinHash::as_rust_mut(ptr);
+
+    let buf = {
+        assert!(!ptr.is_null());
+        slice::from_raw_parts(sequence as *const u8, insize)
+    };
+
+    let mut output: Vec<u64> = Vec::with_capacity(insize);
+
+    if force && bad_kmers_as_zeroes{
+        for hash_value in SeqToHashes::new(buf, mh.ksize(), force, is_protein, mh.hash_function(), mh.seed()){
+            match hash_value{
+                Ok(x) => output.push(x),
+                Err(err) => return Err(err),
+            }
+        }
+    }else{
+        for hash_value in SeqToHashes::new(buf, mh.ksize(), force, is_protein, mh.hash_function(), mh.seed()){
+            match hash_value{
+                Ok(0) => continue,
+                Ok(x) => output.push(x),
+                Err(err) => return Err(err),
+            }
+        }
+    }
+
+
+    *size = output.len();
+
+    // FIXME: make a SourmashSlice_u64 type?
+    Ok(Box::into_raw(output.into_boxed_slice()) as *const u64)
 }
 }
 
@@ -367,6 +406,15 @@ unsafe fn kmerminhash_add_from(ptr: *mut SourmashKmerMinHash, other: *const Sour
 }
 
 ffi_fn! {
+    unsafe fn kmerminhash_remove_from(ptr: *mut SourmashKmerMinHash, other: *const SourmashKmerMinHash)
+    -> Result<()> {
+        let mh = SourmashKmerMinHash::as_rust_mut(ptr);
+        let other_mh = SourmashKmerMinHash::as_rust(other);
+        mh.remove_from(other_mh)
+    }
+}
+
+ffi_fn! {
 unsafe fn kmerminhash_count_common(ptr: *const SourmashKmerMinHash, other: *const SourmashKmerMinHash, downsample: bool)
     -> Result<u64> {
     let mh = SourmashKmerMinHash::as_rust(ptr);
@@ -377,14 +425,31 @@ unsafe fn kmerminhash_count_common(ptr: *const SourmashKmerMinHash, other: *cons
 
 ffi_fn! {
 unsafe fn kmerminhash_intersection(ptr: *const SourmashKmerMinHash, other: *const SourmashKmerMinHash)
+    -> Result<*mut SourmashKmerMinHash> {
+    let mh = SourmashKmerMinHash::as_rust(ptr);
+    let other_mh = SourmashKmerMinHash::as_rust(other);
+
+    let isect = mh.intersection(other_mh)?;
+    let mut new_mh = mh.clone();
+    new_mh.clear();
+    new_mh.add_many(&isect.0)?;
+
+    Ok(SourmashKmerMinHash::from_rust(new_mh))
+}
+}
+
+ffi_fn! {
+unsafe fn kmerminhash_intersection_union_size(ptr: *const SourmashKmerMinHash, other: *const SourmashKmerMinHash, union_size: *mut u64)
     -> Result<u64> {
     let mh = SourmashKmerMinHash::as_rust(ptr);
     let other_mh = SourmashKmerMinHash::as_rust(other);
 
-    if let Ok((_, size)) = mh.intersection_size(other_mh) {
-        return Ok(size);
+    if let Ok((common, union_s)) = mh.intersection_size(other_mh) {
+        *union_size = union_s;
+        return Ok(common);
     }
 
+    *union_size = 0;
     Ok(0)
 }
 }

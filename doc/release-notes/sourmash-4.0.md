@@ -16,6 +16,16 @@ migrating to sourmash 4.0 in the
 
 ## Major changes for 4.0
 
+### Numerical output and search results are unchanged
+
+There are no changes to numerical output or search results in this
+release; you should get the same results with v4 as you get with v3,
+except where command-line parameters need to be adjusted as noted
+below (see: protein ksize #1277, lca summarize changes #1175, sourmash
+gather on signatures without abundance #1328). Please
+[file an issue](https://github.com/dib-lab/sourmash/issues) if your
+results change!
+
 ### New or changed behavior
 
 * default SBT storage is now .sbt.zip (#1174, #1170)
@@ -27,6 +37,8 @@ migrating to sourmash 4.0 in the
 *  `lca summarize` no longer merges all signatures, and uses hash abundance by default (#1175)
 * `index `and `lca index` (#1186, #1222) now support `--from-file` and no longer require signature files on command line
 * `--traverse-directory` is now on by default for signature loading behavior (#1178)
+* `sourmash sketch` and `sourmash compute` no longer create empty signatures from empty files and stdin (#1347)
+* `sourmash sketch` and `sourmash compute` set `sig.filename` to empty string when filename is `-` (#1347)
 
 ### Feature removal
 

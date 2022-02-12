@@ -7,7 +7,7 @@ from .signature import SourmashSignature
 from .logging import notify, error, set_quiet
 from .command_compute import (_compute_individual, _compute_merged,
                               ComputeParameters)
-
+from sourmash.sourmash_args import check_scaled_bounds, check_num_bounds
 
 DEFAULTS = dict(
     dna='k=31,scaled=1000,noabund',
@@ -28,9 +28,13 @@ def _parse_params_str(params_str):
             params['track_abundance'] = True
         elif item == 'noabund':
             params['track_abundance'] = False
-        elif item.startswith('k='):
+        elif item.startswith('k'):
+            if len(item) < 3 or item[1] != '=':
+                raise ValueError("k takes a parameter, e.g. 'k=31'")
             params['ksize'].append(int(item[2:]))
-        elif item.startswith('num='):
+        elif item.startswith('num'):
+            if len(item) < 5 or item[3] != '=':
+                raise ValueError("num takes a parameter, e.g. 'num=500'")
             if params.get('scaled'):
                 raise ValueError("cannot set both num and scaled in a single minhash")
             try:
@@ -38,11 +42,14 @@ def _parse_params_str(params_str):
                 num = int(num)
             except ValueError:
                 raise ValueError(f"cannot parse num='{num}' as a number")
-            if num < 0:
-                raise ValueError(f"num is {num}, must be >= 0")
+
+            num = check_num_bounds(num)
+
             params['num'] = int(item[4:])
             params['scaled'] = 0
-        elif item.startswith('scaled='):
+        elif item.startswith('scaled'):
+            if len(item) < 8 or item[6] != '=':
+                raise ValueError("scaled takes a parameter, e.g. 'scaled=1000'")
             if params.get('num'):
                 raise ValueError("cannot set both num and scaled in a single minhash")
             try:
@@ -50,13 +57,14 @@ def _parse_params_str(params_str):
                 scaled = int(scaled)
             except ValueError:
                 raise ValueError(f"cannot parse scaled='{scaled}' as an integer")
-            if scaled < 0:
-                raise ValueError(f"scaled is {scaled}, must be >= 1")
-            if scaled > 1e8:
-                notify(f"WARNING: scaled value of {scaled} is nonsensical!?")
+
+            scaled = check_scaled_bounds(scaled)
+
             params['scaled'] = scaled
             params['num'] = 0
-        elif item.startswith('seed='):
+        elif item.startswith('seed'):
+            if len(item) < 6 or item[4] != '=':
+                raise ValueError("seed takes a parameter, e.g. 'seed=42'")
             params['seed'] = int(item[5:])
         elif item == 'protein':
             moltype = 'protein'
@@ -152,15 +160,27 @@ class _signatures_for_sketch_factory(object):
         return sigs
 
 
+def _add_from_file_to_filenames(args):
+    "Add filenames from --from-file to args.filenames"
+    from .sourmash_args import load_pathlist_from_file
+    if args.from_file:
+        file_list = load_pathlist_from_file(args.from_file)
+        args.filenames.extend(file_list)
+
+
 def _execute_sketch(args, signatures_factory):
     "Once configured, run 'sketch' the same way underneath."
     set_quiet(args.quiet)
+
+    if not args.filenames:
+        error('error: no input filenames provided! nothing to do - exiting.')
+        sys.exit(-1)
 
     if args.license != 'CC0':
         error('error: sourmash only supports CC0-licensed signatures. sorry!')
         sys.exit(-1)
 
-    notify('computing signatures for files: {}', ", ".join(args.filenames))
+    notify(f'computing signatures for files: {", ".join(args.filenames)}')
 
     if args.merge and not args.output:
         error("ERROR: must specify -o with --merge")
@@ -172,7 +192,7 @@ def _execute_sketch(args, signatures_factory):
 
     # get number of output sigs:
     num_sigs = len(signatures_factory.params_list)
-    notify('Computing a total of {} signature(s).', num_sigs)
+    notify(f'Computing a total of {num_sigs} signature(s) for each input.')
 
     if num_sigs == 0:
         error('...nothing to calculate!? Exiting!')
@@ -200,6 +220,7 @@ def dna(args):
         error(f"Error creating signatures: {str(e)}")
         sys.exit(-1)
 
+    _add_from_file_to_filenames(args)
     _execute_sketch(args, signatures_factory)
 
 
@@ -229,6 +250,7 @@ def protein(args):
         error(f"Error creating signatures: {str(e)}")
         sys.exit(-1)
 
+    _add_from_file_to_filenames(args)
     _execute_sketch(args, signatures_factory)
 
 
@@ -258,4 +280,5 @@ def translate(args):
         error(f"Error creating signatures: {str(e)}")
         sys.exit(-1)
 
+    _add_from_file_to_filenames(args)
     _execute_sketch(args, signatures_factory)

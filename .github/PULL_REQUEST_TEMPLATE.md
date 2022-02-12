@@ -1,10 +1,15 @@
-## Checklist
+Please replace this text with:
 
-- [ ] Is it mergeable?
-- [ ] `make test` Did it pass the tests?
-- [ ] `make coverage` Is the new code covered?
-- [ ] Did it change the command-line interface? Only additions are allowed
-  without a major version increment. Changing file formats also requires a
-  major version number increment.
-- [ ] Was a spellchecker run on the source code and documentation after
-  changes were made?
+* a brief description of your changes in this PR
+* which issues this fixes in the issue tracker, if any ("Fixes #XXX")
+* which issues this PR is related to, if any ("Ref #XXX")
+
+Please also be sure to note here if file formats, command-line
+interface, and/or the top-level sourmash API will change because of
+this PR.
+
+If you are a new contributor, please provide
+[your ORCID](https://orcid.org).  If you don't have one, please
+[register for one](https://orcid.org/register).
+
+Once the items above are done, and all checks pass, request a review!

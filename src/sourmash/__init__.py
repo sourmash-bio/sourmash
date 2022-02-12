@@ -1,11 +1,33 @@
-#! /usr/bin/env python
+"""A library for computing hash sketches from DNA sequences, comparing
+them to each other, and plotting the results.
+
+Public API:
+
+    load_file_as_signatures(...) - load `[SourmashSignature, ]` from filename
+    load_file_as_index(...) - load collections of `SourmashSignature`s
+    save_signatures(...) - save `[SourmashSignature, ]`
+
+    class SourmashSignature - one or more hash sketches
+    class MinHash - hash sketch class
+
+Please see https://sourmash.readthedocs.io/en/latest/api.html for API docs.
+
+The sourmash code is available at github.com/dib-lab/sourmash/ under the
+BSD 3-Clause license.
 """
-An implementation of a MinHash bottom sketch, applied to k-mers in DNA.
-"""
-import re
-import math
-import os
 from deprecation import deprecated
+
+__all__ = ['MinHash', 'SourmashSignature',
+           'load_one_signature',
+           'SourmashSignature',
+           'load_file_as_index',
+           'load_file_as_signatures',
+           'save_signatures',
+           'create_sbt_index',
+           'load_signatures',     # deprecated - remove in 5.0
+           'load_sbt_index',      # deprecated - remove in 5.0
+           'search_sbt_index',    # deprecated - remove in 5.0
+          ]
 
 from ._lowlevel import ffi, lib
 
@@ -85,10 +107,11 @@ def search_sbt_index(*args, **kwargs):
     This function has been deprecated as of 3.5.1; please use
     'idx = load_file_as_index(...); idx.search(query, threshold=...)' instead.
     """
-    return load_sbt_index_private(*args, **kwargs)
+    return search_sbt_index_private(*args, **kwargs)
 
 from .sbtmh import create_sbt_index
 from . import lca
+from . import tax
 from . import sbt
 from . import sbtmh
 from . import sbt_storage

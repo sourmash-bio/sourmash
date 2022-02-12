@@ -38,13 +38,17 @@ sourmash sketch dna -p k=21,k=31,k=51,abund metagenome.fq.gz
 ```
 to create three abundance-weighted sketches at k=21, 31, and 51, for the given FASTQ file.
 
+By default, `sketch dna` ignores bad k-mers (e.g. non-ACGT characters
+in DNA). If `--check-sequence` is provided, `sketch dna` will error
+exit on the first bad k-mer.
+
 ### Protein sketches for genomes and proteomes
 
 Likewise,
 ```
 sourmash sketch translate genome.fna
 ```
-will output a protein sketch in `./genome.fna.sig`, calculated by translating the genome sequence in all six frames and then using the default protein sketch parameters.
+will output a protein sketch in `./genome.fna.sig`, calculated by translating the genome sequence in all six frames and then using the default protein sketch parameters.  K-mers may include stop codons and stop codons are considered valid protein-coding sequence.
 
 And
 ```
@@ -63,11 +67,23 @@ sourmash sketch protein -p k=25,scaled=500,dayhoff genome.faa
 
 `sourmash sketch` auto-detects and reads FASTQ or FASTA files, either uncompressed or compressed with gzip or bzip2. The filename doesn't matter; `sourmash sketch` will figure out the format from the file contents.
 
-You can also stream any of these formats into `sourmash sketch` via stdin by using `-` as the input filename.
+You can also stream any of these formats into `sourmash sketch` via stdin by using `-` as the input filename. For example,
+```
+gunzip -c data/GCF*.fna.gz | sourmash sketch dna - -o out.sig
+```
+will make a single DNA signature from all of the FASTA sequences in
+`data/GCF*.fna.gz`.
+
+Note, for signatures calculated from stdin, the signature filename attribute
+will be left empty, and `sourmash sig describe` will output `** no name **`.
 
 ### Input contents and output signatures
 
-By default, `sourmash sketch` will produce signatures for each input *file*. If the file contains multiple FASTA/FASTQ records, these records will be merged into the output signature.
+By default, `sourmash sketch` will produce signatures for each input
+*file*. If the file contains multiple FASTA/FASTQ records, these
+records will be merged into the output signature.  You can provide a
+*list of FASTA files* in a text file to `sourmash sketch` by passing
+the text file path in via `--from-file`.
 
 If you specify `--singleton`, `sourmash sketch` will produce signatures for each *record*.
 
@@ -79,7 +95,13 @@ The output signature(s) will be saved in locations that depend on your input par
 
 `sourmash sketch protein` and `sourmash sketch translate` output protein sketches by default, but can also use the `dayhoff` and `hp` encodings.  The [Dayhoff encoding](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-9-367/tables/1) collapses multiple amino acids into a smaller alphabet so that amino acids that share biochemical properties map to the same character. The hp encoding divides amino acids into hydrophobic and polar (hydrophilic) amino acids, collapsing amino acids with hydrophobic side chains together and doing the same for polar amino acids.
 
-We are still in the process of benchmarking these encodings; ask [on the issue tracker](https://github.com/dib-lab/sourmash/issues) if you are interested in updates.
+We are still in the process of benchmarking these encodings; ask [on the issue tracker](https://github.com/sourmash-bio/sourmash/issues) if you are interested in updates.
+
+Note that stop characters (`*`) are considered valid in all three
+encodings, and are not truncated. For example, amino acid sequences
+that contain stop characters at the end will produce a k-mer containing
+the stop character, and that k-mer will be hashed and potentially included
+in the sketch.
 
 ### Parameter strings
 
@@ -109,7 +131,7 @@ These were chosen by a committee of PhDs as being good defaults for an initial a
 
 More seriously, the DNA parameters were chosen based on the analyses done by Koslicki and Falush in [MetaPalette: a k-mer Painting Approach for Metagenomic Taxonomic Profiling and Quantification of Novel Strain Variation](https://msystems.asm.org/content/1/3/e00020-16).
 
-The protein, dayhoff, and hp parameters were selected based on unpublished research results and/or magic formulas. We are working on publishing the results! Please ask on the [issue tracker](https://github.com/dib-lab/sourmash/issues) if you are curious.
+The protein, dayhoff, and hp parameters were selected based on unpublished research results and/or magic formulas. We are working on publishing the results! Please ask on the [issue tracker](https://github.com/sourmash-bio/sourmash/issues) if you are curious.
 
 ### More complex parameter string examples
 
@@ -173,4 +195,4 @@ You can use `sourmash sig describe` to get detailed information about the conten
 
 We try to provide good documentation and error messages, but may not succeed in answer all your questions! So we're happy to help out!
 
-Please post questions [on the sourmash issue tracker](https://github.com/dib-lab/sourmash/issues). If you find something confusing or buggy about the documentation or about sourmash, we'd love to fix it -- for you *and* for everyone else!
+Please post questions [on the sourmash issue tracker](https://github.com/sourmash-bio/sourmash/issues). If you find something confusing or buggy about the documentation or about sourmash, we'd love to fix it -- for you *and* for everyone else!

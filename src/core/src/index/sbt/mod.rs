@@ -24,18 +24,10 @@ use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
-use crate::index::storage::{FSStorage, ReadData, Storage, StorageInfo, ToWriter};
 use crate::index::{Comparable, DatasetInfo, Index, SigStore};
-use crate::signature::Signature;
+use crate::prelude::*;
+use crate::storage::{FSStorage, StorageInfo};
 use crate::Error;
-
-pub trait Update<O> {
-    fn update(&self, other: &mut O) -> Result<(), Error>;
-}
-
-pub trait FromFactory<N> {
-    fn factory(&self, name: &str) -> Result<N, Error>;
-}
 
 #[derive(TypedBuilder)]
 pub struct SBT<N, L> {
@@ -475,7 +467,7 @@ where
                 // Case 2: parent is a node and has an empty child spot available
                 // (if there isn't an empty spot, it was already covered by case 1)
                 Entry::Occupied(mut pnode) => {
-                    dataset.update(&mut pnode.get_mut())?;
+                    dataset.update(pnode.get_mut())?;
                     self.leaves.entry(pos).or_insert_with(|| dataset.into());
                     final_pos = pos;
                 }
@@ -500,7 +492,7 @@ where
                 //TODO: use children for this node to update, instead of dragging
                 // dataset up to the root? It would be more generic, but this
                 // works for minhash, draff signatures and nodegraphs...
-                data.update(&mut pnode.get_mut())?;
+                data.update(pnode.get_mut())?;
             }
             parent_pos = ppos;
         }
@@ -822,7 +814,7 @@ impl BinaryTree {
                 let mut similar_node_pos = 0;
                 let mut current_max = 0;
                 for (pos, cmpe) in current_round.iter().enumerate() {
-                    let common = BinaryTree::intersection_size(&next_node, &cmpe);
+                    let common = BinaryTree::intersection_size(&next_node, cmpe);
                     if common > current_max {
                         current_max = common;
                         similar_node_pos = pos;

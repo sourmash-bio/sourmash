@@ -7,8 +7,6 @@ pub mod bigsi;
 pub mod linear;
 pub mod sbt;
 
-pub mod storage;
-
 pub mod search;
 
 use std::ops::Deref;
@@ -19,12 +17,14 @@ use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
+use crate::errors::ReadDataError;
 use crate::index::sbt::{Node, SBT};
 use crate::index::search::{search_minhashes, search_minhashes_containment};
-use crate::index::storage::{ReadData, ReadDataError, Storage};
-use crate::signature::{Signature, SigsTrait};
+use crate::prelude::*;
+use crate::signature::SigsTrait;
 use crate::sketch::nodegraph::Nodegraph;
 use crate::sketch::Sketch;
+use crate::storage::Storage;
 use crate::Error;
 
 pub type MHBT = SBT<Node<Nodegraph>, Signature>;
@@ -103,22 +103,16 @@ pub trait Index<'a> {
     */
 }
 
-// TODO: split into two traits, Similarity and Containment?
-pub trait Comparable<O> {
-    fn similarity(&self, other: &O) -> f64;
-    fn containment(&self, other: &O) -> f64;
-}
-
 impl<'a, N, L> Comparable<L> for &'a N
 where
     N: Comparable<L>,
 {
     fn similarity(&self, other: &L) -> f64 {
-        (*self).similarity(&other)
+        (*self).similarity(other)
     }
 
     fn containment(&self, other: &L) -> f64 {
-        (*self).containment(&other)
+        (*self).containment(other)
     }
 }
 
@@ -195,7 +189,7 @@ impl SigStore<Signature> {
         // TODO: better matching here, what if it is not a mh?
         if let Sketch::MinHash(mh) = &ng.signatures[0] {
             if let Sketch::MinHash(omh) = &ong.signatures[0] {
-                return mh.count_common(&omh, false).unwrap() as u64;
+                return mh.count_common(omh, false).unwrap() as u64;
             }
         }
         unimplemented!();
@@ -252,7 +246,7 @@ impl Comparable<SigStore<Signature>> for SigStore<Signature> {
         // TODO: better matching here, what if it is not a mh?
         if let Sketch::MinHash(mh) = &ng.signatures[0] {
             if let Sketch::MinHash(omh) = &ong.signatures[0] {
-                return mh.similarity(&omh, true, false).unwrap();
+                return mh.similarity(omh, true, false).unwrap();
             }
         }
 
@@ -275,7 +269,7 @@ impl Comparable<SigStore<Signature>> for SigStore<Signature> {
         // TODO: better matching here, what if it is not a mh?
         if let Sketch::MinHash(mh) = &ng.signatures[0] {
             if let Sketch::MinHash(omh) = &ong.signatures[0] {
-                let common = mh.count_common(&omh, false).unwrap();
+                let common = mh.count_common(omh, false).unwrap();
                 let size = mh.size();
                 return common as f64 / size as f64;
             }
@@ -290,7 +284,7 @@ impl Comparable<Signature> for Signature {
         // TODO: better matching here, what if it is not a mh?
         if let Sketch::MinHash(mh) = &self.signatures[0] {
             if let Sketch::MinHash(omh) = &other.signatures[0] {
-                return mh.similarity(&omh, true, false).unwrap();
+                return mh.similarity(omh, true, false).unwrap();
             }
         }
 
@@ -310,7 +304,7 @@ impl Comparable<Signature> for Signature {
         // TODO: better matching here, what if it is not a mh?
         if let Sketch::MinHash(mh) = &self.signatures[0] {
             if let Sketch::MinHash(omh) = &other.signatures[0] {
-                let common = mh.count_common(&omh, false).unwrap();
+                let common = mh.count_common(omh, false).unwrap();
                 let size = mh.size();
                 return common as f64 / size as f64;
             }

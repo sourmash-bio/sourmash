@@ -4,12 +4,9 @@ use std::iter::Iterator;
 use std::str;
 
 use once_cell::sync::Lazy;
-#[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
-use wasm_bindgen::prelude::*;
 
 use crate::Error;
 
-#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(u32)]
@@ -239,6 +236,8 @@ static DAYHOFFTABLE: Lazy<HashMap<u8, u8>> = Lazy::new(|| {
         (b'F', b'f'),
         (b'W', b'f'),
         (b'Y', b'f'),
+        // stop aa
+        (b'*', b'*'),
     ]
     .iter()
     .cloned()
@@ -278,6 +277,8 @@ static HPTABLE: Lazy<HashMap<u8, u8>> = Lazy::new(|| {
         (b'H', b'p'),
         (b'K', b'p'),
         (b'Q', b'p'),
+        // stop aa
+        (b'*', b'*'),
     ]
     .iter()
     .cloned()

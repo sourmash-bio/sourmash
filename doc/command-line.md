@@ -22,48 +22,44 @@ taken.
 
 ## An example
 
-Grab three bacterial genomes from NCBI:
+Download three bacterial genomes from NCBI:
 ```
+curl -L -O https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/017/325/GCF_000017325.1_ASM1732v1/GCF_000017325.1_ASM1732v1_genomic.fna.gz
+curl -L -O https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/021/665/GCF_000021665.1_ASM2166v1/GCF_000021665.1_ASM2166v1_genomic.fna.gz
 curl -L -O https://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Escherichia_coli/reference/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz
-curl -L -O https://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Salmonella_enterica/reference/GCF_000006945.2_ASM694v2/GCF_000006945.2_ASM694v2_genomic.fna.gz
-curl -L -O https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/783/305/GCA_000783305.1_ASM78330v1/GCA_000783305.1_ASM78330v1_genomic.fna.gz
 ```
-Compute signatures for each:
+Compute sourmash signatures for them all:
 ```
 sourmash sketch dna -p k=31 *.fna.gz
 ```
-This will produce three `.sig` files containing MinHash signatures at k=31.
+This will produce three `.sig` files containing MinHash signatures using a k-mer size of 31.
 
 Next, compare all the signatures to each other:
 ```
 sourmash compare *.sig -o cmp.dist
 ```
 
-Optionally, parallelize compare to 8 threads with `-p 8`:
-
-```
-sourmash compare -p 8 *.sig -o cmp.dist
-```
-
-Finally, plot a dendrogram:
-```
-sourmash plot cmp.dist --labels
-```
-This will output two files, `cmp.dist.dendro.png` and `cmp.dist.matrix.png`,
-containing a clustering & dendrogram of the sequences, as well as a
-similarity matrix and heatmap.
+Finally, plot a dendrogram: ``` sourmash plot cmp.dist --labels ```
+This will output three files, `cmp.dist.dendro.png`,
+`cmp.dist.matrix.png`, and `cmp.dist.hist.png`, containing a
+clustering & dendrogram of the sequences, a similarity matrix and
+heatmap, and a histogram of the pairwise distances between the three
+genomes.
 
 Matrix:
 
 ![Matrix](_static/cmp.matrix.png)
 
+Here, the two genomes that cluster together are strains of the same
+species, while the third is from a completely different genus.
+
 ## The `sourmash` command and its subcommands
 
 To get a list of subcommands, run `sourmash` without any arguments.
 
-There are six main subcommands: `sketch`, `compare`, `plot`,
-`search`, `gather`, and `index`.  See [the tutorial](tutorials.md) for a
-walkthrough of these commands.
+There are seven main subcommands: `sketch`, `compare`, `plot`,
+`search`, `gather`, `index`, and `prefetch`.  See
+[the tutorial](tutorials.md) for a walkthrough of these commands.
 
 * `sketch` creates signatures.
 * `compare` compares signatures and builds a distance matrix.
@@ -71,17 +67,28 @@ walkthrough of these commands.
 * `search` finds matches to a query signature in a collection of signatures.
 * `gather` finds the best reference genomes for a metagenome, using the provided collection of signatures.
 * `index` builds a fast index for many (thousands) of signatures.
+* `prefetch` selects signatures of interest from a very large collection of signatures, for later processing.
 
 There are also a number of commands that work with taxonomic
-information; these are grouped under the `sourmash lca`
-subcommand. See [the LCA tutorial](tutorials-lca.md) for a
-walkthrough of these commands.
+information; these are grouped under the `sourmash tax` and
+`sourmash lca` subcommands.
+
+`sourmash tax` commands:
+
+* `tax metagenome` - summarize metagenome gather results at each taxonomic rank.
+* `tax genome`     - summarize single-genome gather results and report most likely classification.
+* `tax annotate`   - annotate gather results with lineage information (no summarization or classification).
+
+`sourmash lca` commands:
 
 * `lca classify` classifies many signatures against an LCA database.
 * `lca summarize` summarizes the content of metagenomes using an LCA database.
 * `lca index` creates a database for use with LCA subcommands.
 * `lca rankinfo` summarizes the content of a database.
 * `lca compare_csv` compares lineage spreadsheets, e.g. those output by `lca classify`.
+
+> See [the LCA tutorial](tutorials-lca.md) for a
+walkthrough of some of these commands.
 
 Finally, there are a number of utility and information commands:
 
@@ -90,6 +97,7 @@ Finally, there are a number of utility and information commands:
 * `sbt_combine` combines multiple SBTs.
 * `categorize` is an experimental command to categorize many signatures.
 * `watch` is an experimental command to classify a stream of sequencing data.
+* `multigather` is an experimental command to run multiple gathers against the same collection of databases.
 
 Please use the command line option `--help` to get more detailed usage
 information for each command.
@@ -180,15 +188,14 @@ sourmash compare file1.sig [ file2.sig ... ]
 ```
 
 Options:
-```
---output -- save the distance matrix to this file (as a numpy binary matrix)
---ksize -- do the comparisons at this k-mer size.
---containment -- calculate containment instead of similarity.
-        C(i, j) = size(i intersection j) / size(i).
---from-file -- append the list of files in this text file to the input
+
+* `--output` -- save the distance matrix to this file (as a numpy binary matrix)
+* `--ksize` -- do the comparisons at this k-mer size.
+* `--containment` -- calculate containment instead of similarity; `C(i, j) = size(i intersection j) / size(i)`
+* `--from-file` -- append the list of files in this text file to the input
         signatures.
---ignore-abundance -- ignore abundances in signatures.
-```
+* `--ignore-abundance` -- ignore abundances in signatures.
+* `--picklist` -- select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
 
 **Note:** compare by default produces a symmetric similarity matrix that can be used as an input to clustering. With `--containment`, however, this matrix is no longer symmetric and cannot formally be used for clustering.
 
@@ -252,6 +259,12 @@ similarity   match
 ...    
 ```
 
+Note, as of sourmash 4.2.0, `search` supports `--picklist`, to
+[select a subset of signatures to search, based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
+can be used to search only a small subset of a large collection, or to
+exclude a few signatures from a collection, without modifying the
+collection itself.
+
 ### `sourmash gather` - find metagenome members
 
 The `gather` subcommand selects the best reference genomes to use for
@@ -292,12 +305,41 @@ which matches are no longer reported; by default, this is set to
 50kb. see the Appendix in
 [Classifying Signatures](classifying-signatures.md) for details.
 
+As of sourmash 4.2.0, `gather` supports `--picklist`, to
+[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
+can be used to search only a small subset of a large collection, or to
+exclude a few signatures from a collection, without modifying the
+collection itself.
+
 Note:
 
 Use `sourmash gather` to classify a metagenome against a collection of
 genomes with no (or incomplete) taxonomic information.  Use `sourmash
 lca summarize` to classify a metagenome using a collection of genomes
 with taxonomic information.
+
+#### Alternative search mode for low-memory (but slow) search: `--linear`
+
+By default, `sourmash gather` uses all information available for
+faster search. In particular, for SBTs, `prefetch` will prune the search
+tree.  This can be slow and/or memory intensive for very large databases,
+and `--linear` asks `sourmash prefetch` to instead use a linear search
+across all leaf nodes in the tree.
+
+The results are the same whether `--no-linear` or `--linear` is
+used.
+
+#### Alternative search mode: `--no-prefetch`
+
+By default, `sourmash gather` does a "prefetch" to find *all* candidate
+signatures across all databases, before removing overlaps between the
+candidates. In rare circumstances, depending on the databases and parameters
+used, this may be slower or more memory intensive than doing iterative
+overlap removal. Prefetch behavior can be turned off with `--no-prefetch`.
+
+The results are the same whether `--prefetch` or `--no-prefetch` is
+used.  This option can be used with or without `--linear` (although
+`--no-prefetch --linear` will generally be MUCH slower).
 
 ### `sourmash index` - build an SBT index of signatures
 
@@ -309,11 +351,11 @@ used to create databases for e.g. subsets of GenBank.
 These databases support fast search and gather on large collections
 of signatures in low memory.
 
-SBTs can only be created on scaled signatures, and all signatures in
+All signatures in
 an SBT must be of compatible types (i.e. the same k-mer size and
 molecule type). You can specify the usual command line selectors
 (`-k`, `--scaled`, `--dna`, `--protein`, etc.) to pick out the types
-of signatures to include.
+of signatures to include when running `index`.
 
 Usage:
 ```
@@ -330,7 +372,359 @@ containing a list of file names to index; you can also provide individual
 signature files, directories full of signatures, or other sourmash
 databases.
 
-## `sourmash lca` subcommands for taxonomic classification
+As of sourmash 4.2.0, `index` supports `--picklist`, to
+[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
+can be used to index a subset of a large collection, or to
+exclude a few signatures from an index being built from a large collection.
+
+### `sourmash prefetch` - select subsets of very large databases for more processing
+
+The `prefetch` subcommand searches a collection of scaled signatures
+for matches in a large database, using containment. It is similar to
+`search --containment`, while taking a `--threshold-bp` argument like
+`gather` does for thresholding matches (instead of using Jaccard
+similarity or containment).
+
+`sourmash prefetch` is intended to select a subset of a large database
+for further processing. As such, it can search very large collections
+of signatures (potentially millions or more), operates in very low
+memory (see `--linear` option, below), and does no post-processing of signatures.
+
+`prefetch` has four main output options, which can all be used individually
+or together:
+* `-o/--output` produces a CSV summary file;
+* `--save-matches` saves all matching signatures;
+* `-save-matching-hashes` saves a single signature containing all of the hashes that matched any signature in the database at or above the specified threshold;
+* `--save-unmatched-hashes` saves a single signature containing the complement of `--save-matching-hashes`.
+
+Other options include:
+* the usual `-k/--ksize` and `--dna`/`--protein`/`--dayhoff`/`--hp` signature selectors;
+* `--threshold-bp` to require a minimum estimated bp overlap for output;
+* `--scaled` for downsampling;
+* `--force` to continue past survivable errors;
+* `--picklist` will select a subset of signatures to search, using [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
+
+### Alternative search mode for low-memory (but slow) search: `--linear`
+
+By default, `sourmash prefetch` uses all information available for
+faster search. In particular, for SBTs, `prefetch` will prune the search
+tree.  This can be slow and/or memory intensive for very large databases,
+and `--linear` asks `sourmash prefetch` to instead use a linear search
+across all leaf nodes in the tree.
+
+### Caveats and comments
+
+`sourmash prefetch` provides no guarantees on output order. It runs in
+"streaming mode" on its inputs, in that each input file is loaded,
+searched, and then unloaded.  And `sourmash prefetch` can be run
+separately on multiple databases, after which the results can be
+searched in combination with `search`, `gather`, `compare`, etc.
+
+A motivating use case for `sourmash prefetch` is to run it on multiple
+large databases with a metagenome query using `--threshold-bp=0`,
+`--save-matching-hashes matching_hashes.sig`, and `--save-matches
+db-matches.sig`, and then run `sourmash gather matching-hashes.sig
+db-matches.sig`. 
+
+This combination of commands ensures that the more time- and
+memory-intensive `gather` step is run only on a small set of relevant
+signatures, rather than all the signatures in the database.
+
+## `sourmash tax` subcommands for integrating taxonomic information into gather results
+
+The sourmash `tax` or `taxonomy` commands integrate taxonomic
+ information into the results of `sourmash gather`. All `tax` commands
+ require one or more properly formatted `taxonomy` files where the
+ identifiers correspond to those in the database(s) used for
+ `gather`. Note that if using multiple databases, the `gather` needs
+ to have been conducted against all desired databases within the same
+ `gather` command (we cannot combine separate `gather` runs for the
+ same query). For supported databases (e.g. GTDB, NCBI), we provide
+ taxonomy csv files, but they can also be generated for user-generated
+ databases. For more information, see [databases](databases.md).
+
+`tax` commands rely upon the fact that `gather` provides both the total
+ fraction of the query matched to each database matched, as well as a
+ non-overlapping `f_unique_to_query`, which is the fraction of the query
+ uniquely matched to each reference genome. The `f_unique_to_query` for
+ any reference match will always be between (0% of query matched) and 1
+ (100% of query matched), and for a query matched to multiple references,
+ the `f_unique_to_query` will sum to at most 1 (100% of query matched).
+ We use this property to aggregate gather matches at the desired
+ taxonomic rank. For example, if the gather results for a metagenome
+ include results for 30 different strains of a given species, we can sum
+ the fraction uniquely matched to each strain to obtain the fraction
+ uniquely matched to this species. Note that this summarization can
+ also take into account abundance weighting; see
+ [classifying signatures](classifying-signatures.md) for more
+ information.
+
+As with all reference-based analysis, results can be affected by the
+ completeness of the reference database. However, summarizing taxonomic
+ results from `gather` minimizes issues associated with increasing size
+ and redundancy of reference databases.
+
+For more details on how `gather` works and can be used to classify
+ signatures, see [classifying-signatures](classifying-signatures.md).
+
+
+### `sourmash tax metagenome` - summarize metagenome content from `gather` results
+
+`sourmash tax metagenome` summarizes gather results for each query metagenome by
+ taxonomic lineage.
+
+example command to summarize a single `gather csv`, where the query was gathered
+ against `gtdb-rs202` representative species database:
+
+```
+sourmash tax metagenome
+    --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
+    --taxonomy gtdb-rs202.taxonomy.v2.csv
+```
+
+There are three possible output formats, `csv_summary`, `lineage_summary`, and
+ `krona`.
+
+#### `csv_summary` output format
+
+`csv_summary` is the default output format. This outputs a `csv` with lineage
+ summarization for each taxonomic rank. This output currently consists of six
+ columns, `query_name,rank,fraction,lineage,query_md5,query_filename`, where
+ `fraction` is the  fraction of the query matched to the reported rank and
+ lineage.
+
+example `csv_summary` output from the command above:
+
+```
+query_name,rank,fraction,lineage
+HSMA33MX,superkingdom,0.131,d__Bacteria
+HSMA33MX,phylum,0.073,d__Bacteria;p__Bacteroidota
+HSMA33MX,phylum,0.058,d__Bacteria;p__Proteobacteria
+.
+.
+.
+HSMA33MX,species,0.058,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;
+o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli
+HSMA33MX,species,0.057,d__Bacteria;p__Bacteroidota;c__Bacteroidia;
+o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri
+HSMA33MX,species,0.016,d__Bacteria;p__Bacteroidota;c__Bacteroidia;
+o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus
+```
+> The `query_md5` and `query_filename` columns are omitted here for brevity.
+
+#### `krona` output format
+
+`krona` format is a tab-separated list of these results at a specific rank.
+ The first column, `fraction` is the fraction of the query matched to the
+ reported rank and lineage. The remaining columns are `superkingdom`, `phylum`,
+ ... etc down to the rank used for summarization. This output can be used
+ directly for summary visualization.
+
+To generate `krona`, we add `--output-format krona` to the command above, and
+ need to specify a rank to summarize. Here's the command for reporting `krona`
+ summary at `species` level:
+
+```
+sourmash tax metagenome
+    --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
+    --taxonomy gtdb-rs202.taxonomy.v2.csv \
+    --output-format krona --rank species
+```
+
+example krona output from this command:
+
+```
+fraction	superkingdom	phylum	class	order	family	genus	species
+0.05815279361459521	Bacteria	Proteobacteria	Gammaproteobacteria	Enterobacterales	Enterobacteriaceae	Escherichia	Escherichia coli
+0.05701254275940707	Bacteria	Bacteroidetes	Bacteroidia	Bacteroidales	Prevotellaceae	Prevotella	Prevotella copri
+0.015637726014008795	Bacteria	Bacteroidetes	Bacteroidia	Bacteroidales	Bacteroidaceae	Bacteroides	Bacteroides vulgatus
+```
+
+#### `lineage_summary` output format
+
+The lineage summary format is most useful when comparing across metagenome queries.
+ Each row is a lineage at the desired reporting rank. The columns are each query
+ used for gather, with the fraction match reported for each lineage. This format
+ is commonly used as input for many external multi-sample visualization tools.
+
+To generate `lineage_summary`, we add `--output-format lineage_summary` to the summarize
+ command, and need to specify a rank to summarize. Here's the command for reporting
+ `lineage_summary` for two queries (HSMA33MX, PSM6XBW3) summary at `species` level.
+
+```
+sourmash tax metagenome
+    --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
+    --gather-csv PSM6XBW3_gather_x_gtdbrs202_k31.csv \
+    --taxonomy gtdb-rs202.taxonomy.v2.csv \
+    --output-format krona --rank species
+```
+
+example `lineage_summary`:
+
+```
+lineage HSMA33MX   PSM6XBW3
+d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus    0.015637726014008795    0.015642822225843248
+d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri 0.05701254275940707     0.05703112269838684
+d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli       0.05815279361459521     0.05817174515235457
+```
+
+To produce multiple output types from the same command, add the types into the
+ `--output-format` argument, e.g. `--output-format summary krona lineage_summary`
+
+
+### `sourmash tax genome` - classify a genome using `gather` results
+
+`sourmash tax genome` reports likely classification for each query,
+ based on `gather` matches. By default, classification requires at least 10% of
+ the query to be matched. Thus, if 10% of the query was matched to a species, the
+ species-level classification can be reported. However, if 7% of the query was
+ matched to one species, and an additional 5% matched to a different species in
+ the same genus, the genus-level classification will be reported.
+
+Optionally, `genome` can instead report classifications at a desired `rank`,
+ regardless of match threshold (`--rank` argument, e.g. `--rank species`).
+
+Note that these thresholds and strategies are under active testing.
+
+To illustrate the utility of `genome`, let's consider a signature consisting
+ of two different Shewanella strains, `Shewanella baltica OS185 strain=OS185`
+ and `Shewanella baltica OS223 strain=OS223`. For simplicity, we gave this query
+ the name "Sb47+63".
+
+When we gather this signature against the `gtdb-rs202` representatives database,
+we see 66% matches to one strain, and 33% to the other:
+
+abbreviated gather_csv:
+
+```
+f_match,f_unique_to_query,name,query_name
+0.664,0.664,"GCF_000021665.1 Shewanella baltica OS223 strain=OS223, ASM2166v1",Sb47+63
+0.656,0.335,"GCF_000017325.1 Shewanella baltica OS185 strain=OS185, ASM1732v1",Sb47+63
+```
+
+> Here, `f_match` shows that independently, both strains match ~65% percent of
+ this mixed query. The `f_unique_to_query` column has the results of gather-style
+ decomposition. As the OS223 strain had a slightly higher `f_match` (66%), it
+ was the first match. The remaining 33% of the query matched to strain OS185.
+
+We can use `tax genome` on this gather csv to classify our "Sb47+63" mixed-strain query:
+
+```
+sourmash tax genome
+    --gather-csv 47+63_x_gtdb-rs202.gather.csv \
+    --taxonomy gtdb-rs202.taxonomy.v2.csv
+```
+> This command uses the default classification strategy, which uses a
+containment threshold of 0.1 (10%).
+
+There are two possible output formats, `csv_summary` and `krona`.
+
+#### `csv_summary` output format
+
+`csv_summary` is the default output format. This outputs a `csv` with taxonomic
+ classification for each query genome. This output currently consists of six
+ columns, `query_name,rank,fraction,lineage,query_md5,query_filename`, where
+ `fraction` is the  fraction of the query matched to the reported rank and lineage.
+ The `status` column provides additional information on the classification:
+
+  - `match` - this query was classified
+  - `nomatch`- this query could not be classified
+  - `below_threshold` - this query was classified at the specified rank,
+     but the query fraction matched was below the containment threshold
+
+Here is the `csv_summary` output from classifying this mixed-strain Shewanella query to
+species level:
+
+```
+query_name,status,rank,fraction,lineage
+"Sb47+63",match,species,1.000,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Shewanellaceae;g__Shewanella;s__Shewanella baltica
+```
+>Here, we see that the match percentages to both strains have been aggregated,
+and we have 100% species-level `Shewanella baltica` annotation. We have omitted
+the `query_md5` and `query_filename` columns for brevity.
+
+#### `krona` output format
+
+`krona` format is a tab-separated list of these results at a specific rank.
+  The first column, `fraction` is the fraction of the query matched to the
+  reported rank and lineage. The remaining columns are `superkingdom`, `phylum`,
+  ... etc down to the rank used for summarization. This output can be used
+  directly for `krona` visualization.
+
+To generate `krona`, we must classify by `--rank` instead of using the
+ classification threshold. For the command, we add `--output-format krona`
+  and `--rank <RANK>` to the command above. Here's the command for producing
+  `krona` output for `species`-level classifications:
+
+```
+sourmash tax genome
+    --gather-csv Sb47+63_gather_x_gtdbrs202_k31.csv \
+    --taxonomy gtdb-rs202.taxonomy.v2.csv \
+    --output-format krona --rank species
+```
+> Note that specifying `--rank` forces classification by rank rather than
+by the containment threshold.
+
+Here is the `krona`-formatted output for this command:
+
+```
+fraction        superkingdom    phylum  class   order   family  genus   species
+1.0     d__Bacteria     p__Proteobacteria       c__Gammaproteobacteria  o__Enterobacterales     f__Shewanellaceae       g__Shewanella   s__Shewanella baltica
+```
+
+To produce multiple output types from the same command, add the types into the
+ `--output-format` argument, e.g. `--output-format csv_summary krona`.
+ **Note that specifying the classification rank with `--rank`,
+ (e.g. `--rank species`), as needed for `krona` output, forces classification
+ by `rank` rather than by containment threshold.** If the query
+ classification at this rank does not meet the containment threshold
+ (default=0.1), the `status` column will contain `below_threshold`.
+
+
+### `sourmash tax annotate` - annotates gather output with taxonomy
+
+`sourmash tax annotate` adds a column with taxonomic lineage information
+ for each database match to gather output. Do not summarize or classify.
+ Note that this is not required for either `summarize` or `classify`.
+
+By default, `annotate` uses the name of each input gather csv to write an updated
+ version with lineages information. For example, annotating `sample1.gather.csv`
+ would produce `sample1.gather.with-lineages.csv`
+
+```
+sourmash tax annotate
+    --gather-csv Sb47+63_gather_x_gtdbrs202_k31.csv \
+    --taxonomy gtdb-rs202.taxonomy.v2.csv
+```
+> This will produce an annotated gather CSV, `Sb47+63_gather_x_gtdbrs202_k31.with-lineages.csv`
+
+### `sourmash tax prepare` - prepare and/or combine taxonomy files
+
+All `sourmash tax` commands must be given one or more taxonomy files as
+parameters to the `--taxonomy` argument. These files can be either CSV
+files or (as of sourmash 4.2.1) sqlite3 databases. sqlite3 databases
+are much faster for large taxonomies, while CSV files are easier to view
+and modify using spreadsheet software.
+
+`sourmash tax prepare` is a utility function that can ingest and validate
+multiple CSV files or sqlite3 databases, and output a CSV file or a sqlite3
+database. It can be used to combine multiple taxonomies into a single file,
+as well as change formats between CSV and sqlite3.
+
+The following command will take in two taxonomy files and combine them into
+a single taxonomy sqlite database.
+
+```
+sourmash tax prepare --taxonomy file1.csv file2.csv -o tax.db
+```
+
+Input databases formats can be mixed and matched, and the output format
+can be set to CSV like so:
+```
+sourmash tax prepare --taxonomy file1.csv file2.db -o tax.csv -F csv
+```
+
+## `sourmash lca` subcommands for in-memory taxonomy integration
 
 These commands use LCA databases (created with `lca index`, below, or
 prepared databases such as
@@ -517,6 +911,11 @@ see
 You can use `--from-file` to pass `lca index` a text file containing a
 list of file names to index.
 
+As of sourmash 4.2.0, `lca index` supports `--picklist`, to
+[select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
+can be used to index a subset of a large collection, or to
+exclude a few signatures from an index being built from a large collection.
+
 ### `sourmash lca rankinfo` - examine an LCA database
 
 The `sourmash lca rankinfo` command displays k-mer specificity
@@ -597,9 +996,7 @@ signature license: CC0
 ### `sourmash signature split` - split signatures into individual files
 
 Split each signature in the input file(s) into individual files, with
-standardized names.  **Note:** unlike the rest of the sourmash sig
-commands, `split` can load signatures from LCA and SBT databases as
-well.
+standardized names.
 
 For example,
 ```
@@ -626,6 +1023,8 @@ with fields:
 
 If `--outdir` is specified, all of the signatures are placed in outdir.
 
+Note: `split` only saves files in the JSON `.sig` format.
+
 ### `sourmash signature merge` - merge two or more signatures into one
 
 Merge two (or more) signatures.
@@ -642,6 +1041,9 @@ with `-p abund`, or not.  If they have `track_abundance` on,
 then the merged signature will have the sum of all abundances across
 the individual signatures.  The `--flatten` flag will override this
 behavior and allow merging of mixtures by removing all abundances.
+
+Note: `merge` only creates one output file, with one signature in it,
+in the JSON `.sig` format.
 
 ### `sourmash signature rename` - rename a signature
 
@@ -672,6 +1074,9 @@ will subtract all of the hashes in `file2.sig` and `file3.sig` from
 To use `subtract` on signatures calculated with
 `-p abund`, you must specify `--flatten`.
 
+Note: `subtract` only creates one output file, with one signature in it,
+in the JSON `.sig` format.
+
 ### `sourmash signature intersect` - intersect two (or more) signatures
 
 Output the intersection of the hash values in multiple signature files.
@@ -687,6 +1092,9 @@ will output the intersection of all the hashes in those three files to
 The `intersect` command flattens all signatures, i.e. the abundances
 in any signatures will be ignored and the output signature will have
 `track_abundance` turned off.
+
+Note: `intersect` only creates one output file, with one signature in it,
+in the JSON `.sig` format.
 
 ### `sourmash signature downsample` - decrease the size of a signature
 
@@ -737,6 +1145,12 @@ sourmash signature extract tests/test-data/*.fa.sig --name NC_009665
 will extract the same signature, which has an accession number of
 `NC_009665.1`.
 
+#### Using picklists with `sourmash sig extract`
+
+As of sourmash 4.2.0, `extract` also supports picklists, a feature by
+which you can select signatures based on values in a CSV file. See
+[Using picklists to subset large collections of signatures](#using-picklists-to-subset-large-collections-of-signatures), below.
+
 ### `sourmash signature flatten` - remove abundance information from signatures
 
 Flatten the specified signature(s), removing abundances and setting
@@ -779,6 +1193,9 @@ sourmash signature import filename.msh.json -o imported.sig
 ```
 will import the contents of `filename.msh.json` into `imported.sig`.
 
+Note: `import` only creates one output file, with one signature in it,
+in the JSON `.sig` format.
+
 ### `sourmash signature export` - export signatures to mash.
 
 Export signatures from sourmash format. Currently only supports
@@ -809,6 +1226,51 @@ sourmash signature overlap file1.sig file2.sig
 ```
 will display the detailed comparison of `file1.sig` and `file2.sig`.
 
+
+### `sourmash signature kmers` - extract k-mers and/or sequences that match to signatures
+
+Given one or more compatible sketches and some sequence files, extract
+the k-mers and/or sequences corresponding to the hash values in the
+sketch. Because the sourmash hash function is one-way, this requires
+FASTA or FASTQ sequence files in addition to the sketch.
+
+For example,
+```
+sourmash sig kmers --signatures sig1.sig --sequences seqfile.fasta \
+    --save-sequences matches.fasta --save-kmers kmer-matches.csv
+```
+will search `seqfile.fasta` for matching sequences and k-mers,
+and produce two files. The file `matches.fasta` will contain FASTA
+sequences that match the hashes in the input signature, while the
+file `kmer-matches.csv` provides the matching k-mers and hash values,
+together with their originating filename and sequence name.
+
+If the sketch is a protein sketch (protein, dayhoff, or hp), then
+the input sequences are assumed to be protein. To search DNA sequences
+for translated protein hashes, provide the `--translate` flag to `sig kmers`.
+
+`--save-sequences` and `--save-kmers` are both optional.  If neither are
+given, basic statistics on k-mer matching are given.
+
+Please note that `--save-kmers` can be very slow on large files!
+
+The input sketches are the source of the input hashes.  So, for example,
+If `--scaled=1` sketches are provided, `sig kmers` can be used to
+yield all the k-mers and their matching hashes.  Likewise, if the
+sketch is built from the intersection of two other sketches, only
+the k-mers and hash values present in both sketches will be used.
+
+Likewise, the input sequences are used for matching; they do not need
+to be the same sequences that were used to create the sketches.
+Input sequences can be in FASTA or FASTQ format, and either flat text
+or compressed with gzip or bzip2; formats are auto-detected.
+
+By default, `sig kmers` ignores bad k-mers (e.g. non-ACGT characters
+in DNA). If `--check-sequence` is provided, `sig kmers` will error
+exit on the first bad k-mer.  If `--check-sequence --force` is provided,
+`sig kmers` will provide error messages (and skip bad sequences), but
+will continue processing input sequences.
+
 ## Advanced command-line usage
 
 ### Loading signatures and databases
@@ -836,19 +1298,85 @@ Briefly,
   signature files using `--query-from-file` (see below).
   
 * `index` and `lca index` take a few fixed parameters (database name,
-  taxonomy spreadsheet) and then an arbitrary number of other files
-  that contain signatures, including files, directories, and indexed
-  databases. These commands will also take `--from-file` (see below).
+  and for `lca index`, a taxonomy file) and then an arbitrary number of
+  other files that contain signatures, including files, directories,
+  and indexed databases. These commands will also take `--from-file`
+  (see below).
 
 None of these commands currently support searching, comparing, or indexing
 signatures with multiple ksizes or moltypes at the same time; you need
 to pick the ksize and moltype to use for your search. Where possible,
 scaled values will be made compatible.
 
+### Using picklists to subset large collections of signatures
+
+As of sourmash 4.2.0, many commands support *picklists*, a feature by
+which you can select or "pick out" signatures based on values in a CSV
+file. This is typically used to index, extract, or search a subset of
+a large collection where modifying the collection itself isn't desired.
+
+For example,
+```
+sourmash sig extract --picklist list.csv:md5:md5sum <signatures>
+```
+will extract only the signatures that have md5sums matching the
+column `md5sum` in the CSV file `list.csv`. The command
+```
+sourmash sig extract --picklist list.csv::prefetch <signatures>
+```
+will extract only the signatures found in the output
+of `sourmash prefetch ... -o list.csv`.
+
+The `--picklist` argument string must be of the format
+`pickfile:colname:coltype[:pickstyle]`, where `pickfile` is the path
+to a CSV file, `colname` is the name of the column to select from the
+CSV file (based on the headers in the first line of the CSV file), and
+`coltype` is the type of match.  An optional pickstyle argument,
+`:include` or `:exclude`, can be added as a fourth parameter; if
+omitted, the default is `:include`.
+
+The following `coltype`s are currently supported by `sourmash sig extract`:
+
+* `name` - exact match to signature's name
+* `md5` - exact match to signature's md5sum
+* `md5prefix8` - match to 8-character prefix of signature's md5sum
+* `md5short` - same as `md5prefix8`
+* `ident` - exact match to signature's identifier
+* `identprefix` - match to signature's identifier, before '.'
+* `gather` - use the CSV output of `sourmash gather` as a picklist
+* `prefetch` - use the CSV output of `sourmash prefetch` as a picklist
+* `search` - use the CSV output of `sourmash prefetch` as a picklist
+* `manifest` - use the CSV output of `sourmash sig manifest` as a picklist
+
+Identifiers are constructed by using the first space delimited word in
+the signature name.
+
+One way to build a picklist is to use `sourmash sig describe --csv
+out.csv <signatures>` to construct an initial CSV file that you can
+then edit further.
+
+The picklist functionality also supports excluding (rather than
+including) signatures matching the picklist arguments. To specify a
+picklist for exclusion, add `:exclude` to the `--picklist` argument
+string, e.g. `pickfile:colname:coltype:exclude`.
+
+For example,
+```
+sourmash sig extract --picklist list.csv:md5:md5sum:exclude <signatures>
+```
+will extract only the signatures that have md5sums that **do not** match
+entries in the column `md5sum` in the CSV file `list.csv`.
+
+In addition to `sig extract`, the following commands support
+`--picklist` selection: `index`, `search`, `gather`, `prefetch`,
+`compare`, `index`, and `lca index`.
+
 ### Storing (and searching) signatures
   
 Backing up a little, there are many ways to store and search
-signatures.
+signatures. `sourmash` supports storing and loading signatures from JSON
+files, directories, lists of files, Zip files, and indexed databases.
+These can all be used interchangeably for sourmash operations.
 
 The simplest is one signature in a single JSON file. You can also put
 many signatures in a single JSON file, either by building them that
@@ -857,7 +1385,48 @@ commands. Searching or comparing these files involves loading them
 sequentially and iterating across all of the signatures - which can be
 slow, especially for many (100s or 1000s) of signatures.
 
-Indexed databases can make searching signatures a lot faster. SBT
+### Zip files
+
+All of the `sourmash` commands support loading collections of
+signatures from zip files.  You can create a compressed collection of
+signatures using `zip -r collection.zip *.sig` and then specify
+`collections.zip` on the command line.
+
+### Saving signatures, more generally
+
+As of sourmash 4.1, most signature saving arguments (`--save-matches`
+for `search` and `gather`, `-o` for `sourmash sketch`, and most of the
+`sourmash signature` commands) support flexible saving of collections of
+signatures into JSON text, Zip files, and/or directories.
+
+This behavior is triggered by the requested output filename --
+
+* to save to JSON signature files, use `.sig`; `-` will send JSON to stdout.
+* to save to gzipped JSON signature files, use `.sig.gz`;
+* to save to a Zip file collection, use `.zip`;
+* to save signature files to a directory, use a name ending in `/`; the directory will be created if it doesn't exist;
+
+If none of these file extensions is detected, output will be written in the JSON `.sig` format, either to the provided output filename or to stdout.
+
+All of these save formats can be loaded by sourmash commands, too.
+
+
+### Loading all signatures under a directory
+
+All of the `sourmash` commands support loading signatures from
+beneath directories; provide the paths on the command line.
+
+#### Passing in lists of files
+
+Most sourmash commands will also take `--from-file` or
+`--query-from-file`, which will take a path to a text file containing
+a list of file paths. This can be useful for situations where you want
+to specify thousands of queries, or a subset of signatures produced by
+some other command.
+
+#### Indexed databases
+
+Indexed databases can make searching signatures much faster. SBT
 databases are low memory and disk-intensive databases that allow for
 fast searches using a tree structure, while LCA databases are higher
 memory and (after a potentially significant load time) are quite fast.
@@ -874,19 +1443,6 @@ signature type is incompatible with the other signatures, sourmash
 will complain. In contrast, signature files can
 contain many different types of signatures, and compatible ones will
 be discovered automatically.
-
-### Passing in lists of files
-
-Various sourmash commands will also take `--from-file` or
-`--query-from-file`, which will take a path to a text file containing
-a list of file paths. This can be useful for situations where you want
-to specify thousands of queries, or a subset of signatures produced by
-some other command.
-
-### Loading all signatures under a directory
-
-All of the `sourmash` commands support loading signatures from
-beneath directories; provide the paths on the command line.
 
 ### Combining search databases on the command line
 
@@ -908,14 +1464,14 @@ been useful. :)
 
 ### Using stdin
 
-Most commands will take stdin via the usual UNIX convention, `-`.
-Moreover, `sourmash sketch` and the `sourmash sig` commands will
-output to stdout.  So, for example,
+Most commands will take signature JSON data via stdin using the usual
+UNIX convention, `-`.  Moreover, `sourmash sketch` and the `sourmash
+sig` commands will output to stdout.  So, for example,
 
 `sourmash sketch ... -o - | sourmash sig describe -` will describe the
 signatures that were just created.
 
 (This is a relatively new feature as of 3.4 and our testing may need
 some work, so please
-[let us know](https://github.com/dib-lab/sourmash/issues) if there's
+[let us know](https://github.com/sourmash-bio/sourmash/issues) if there's
 something that doesn't work and we will fix it :).

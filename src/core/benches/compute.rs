@@ -25,7 +25,7 @@ fn add_sequence(c: &mut Criterion) {
     let data_errors: Vec<u8> = data
         .iter()
         .enumerate()
-        .map(|(i, x)| if i % 89 == 1 { 'N' as u8 } else { *x })
+        .map(|(i, x)| if i % 89 == 1 { b'N' } else { *x })
         .collect();
 
     let mut group = c.benchmark_group("add_sequence");
