@@ -4,8 +4,8 @@
 //! Some indices also support containment searches.
 
 pub mod bigsi;
-pub mod greyhound;
 pub mod linear;
+pub mod revindex;
 pub mod sbt;
 
 pub mod search;

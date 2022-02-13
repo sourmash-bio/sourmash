@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::slice;
 
-use crate::index::greyhound::RevIndex;
+use crate::index::revindex::RevIndex;
 use crate::index::Index;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;

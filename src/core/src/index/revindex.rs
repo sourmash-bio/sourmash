@@ -737,7 +737,7 @@ mod test {
     use crate::sketch::minhash::max_hash_for_scaled;
 
     #[test]
-    fn greyhound_new() {
+    fn revindex_new() {
         let max_hash = max_hash_for_scaled(10000);
         let template = Sketch::MinHash(
             KmerMinHash::builder()
@@ -755,7 +755,7 @@ mod test {
     }
 
     #[test]
-    fn greyhound_many() {
+    fn revindex_many() {
         let max_hash = max_hash_for_scaled(10000);
         let template = Sketch::MinHash(
             KmerMinHash::builder()
