@@ -2,7 +2,7 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::slice;
 
-use crate::index::sbt::Update;
+use crate::prelude::*;
 use crate::sketch::nodegraph::Nodegraph;
 
 use crate::ffi::minhash::SourmashKmerMinHash;

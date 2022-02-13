@@ -43,10 +43,10 @@ pub enum SourmashError {
     HLLPrecisionBounds,
 
     #[error(transparent)]
-    ReadDataError(#[from] crate::index::storage::ReadDataError),
+    ReadDataError(#[from] ReadDataError),
 
     #[error(transparent)]
-    StorageError(#[from] crate::index::storage::StorageError),
+    StorageError(#[from] crate::storage::StorageError),
 
     #[error(transparent)]
     SerdeError(#[from] serde_json::error::Error),
@@ -63,6 +63,12 @@ pub enum SourmashError {
     #[cfg(not(all(target_arch = "wasm32", target_vendor = "unknown")))]
     #[error(transparent)]
     Panic(#[from] crate::ffi::utils::Panic),
+}
+
+#[derive(Debug, Error)]
+pub enum ReadDataError {
+    #[error("Could not load data")]
+    LoadError,
 }
 
 #[repr(u32)]
