@@ -862,9 +862,10 @@ class SaveSignatures_SqliteIndex(_BaseSaveSignaturesToLocation):
         self.idx = SqliteIndex(self.location)
         self.cursor = self.idx.cursor()
 
-    def add(self, ss):
-        super().add(ss)
-        self.idx.insert(ss, cursor=self.cursor, commit=False)
+    def add(self, add_sig):
+        for ss in _get_signatures_from_rust([add_sig]):
+            super().add(ss)
+            self.idx.insert(ss, cursor=self.cursor, commit=False)
 
 
 class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
