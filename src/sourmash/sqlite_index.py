@@ -19,11 +19,6 @@ Features and limitations:
 * Likewise, SqliteIndex does not support 'abund' signatures because it cannot
   search them (just like SBTs cannot).
 
-Questions:
-
-* do we want to enforce a single 'scaled' for this database? 'find'
-  may require it...
-
 """
 import time
 import sqlite3
@@ -39,13 +34,8 @@ from sourmash import MinHash, SourmashSignature
 from sourmash.index import IndexSearchResult
 from .picklist import PickStyle
 
-# register converters for unsigned 64-bit ints: if over MAX_SQLITE_INT,
-# convert to hex string.
-#
-# see: https://stackoverflow.com/questions/57464671/peewee-python-int-too-large-to-convert-to-sqlite-integer
-# and
-# https://wellsr.com/python/adapting-and-converting-sqlite-data-types-for-python/
-# for more information.
+# converters for unsigned 64-bit ints: if over MAX_SQLITE_INT,
+# convert to signed int.
 
 MAX_SQLITE_INT = 2 ** 63 - 1
 convert_hash_to = lambda x: BitArray(uint=x, length=64).int if x > MAX_SQLITE_INT else x
@@ -107,14 +97,14 @@ class SqliteIndex(Index):
                 )
                 """)
                 c.execute("""
-                CREATE TABLE IF NOT EXISTS hashes_to_sketch (
+                CREATE TABLE IF NOT EXISTS hashes (
                    hashval INTEGER NOT NULL,
                    sketch_id INTEGER NOT NULL,
                    FOREIGN KEY (sketch_id) REFERENCES sketches (id)
                 )
                 """)
                 c.execute("""
-                CREATE INDEX IF NOT EXISTS hashval_idx ON hashes_to_sketch (
+                CREATE INDEX IF NOT EXISTS hashval_idx ON hashes (
                    hashval,
                    sketch_id
                 )
@@ -186,7 +176,7 @@ class SqliteIndex(Index):
             hh = convert_hash_to(h)
             hashes_to_sketch.append((hh, sketch_id))
 
-        c.executemany("INSERT INTO hashes_to_sketch (hashval, sketch_id) VALUES (?, ?)", hashes_to_sketch)
+        c.executemany("INSERT INTO hashes (hashval, sketch_id) VALUES (?, ?)", hashes_to_sketch)
 
         if commit:
             self.conn.commit()
@@ -290,10 +280,10 @@ class SqliteIndex(Index):
 
     def _load_sketch_size(self, c1, sketch_id, max_hash):
         if max_hash <= MAX_SQLITE_INT:
-            c1.execute("SELECT COUNT(hashval) FROM hashes_to_sketch WHERE sketch_id=? AND hashval >= 0 AND hashval <= ?",
+            c1.execute("SELECT COUNT(hashval) FROM hashes WHERE sketch_id=? AND hashval >= 0 AND hashval <= ?",
                        (sketch_id, max_hash))
         else:
-            c1.execute('SELECT COUNT(hashval) FROM hashes_to_sketch WHERE sketch_id=?', (sketch_id,))
+            c1.execute('SELECT COUNT(hashval) FROM hashes WHERE sketch_id=?', (sketch_id,))
 
         n_hashes, = c1.fetchone()
         return n_hashes
@@ -321,12 +311,12 @@ class SqliteIndex(Index):
         hash_constraint_str = ""
         max_hash = mh._max_hash
         if max_hash <= MAX_SQLITE_INT:
-            hash_constraint_str = "hashes_to_sketch.hashval >= 0 AND hashes_to_sketch.hashval <= ? AND"
+            hash_constraint_str = "hashes.hashval >= 0 AND hashes.hashval <= ? AND"
             template_values.insert(0, max_hash)
         else:
             print('NOT EMPLOYING hash_constraint_str')
 
-        c1.execute(f"SELECT hashval FROM hashes_to_sketch WHERE {hash_constraint_str} hashes_to_sketch.sketch_id=?", template_values)
+        c1.execute(f"SELECT hashval FROM hashes WHERE {hash_constraint_str} hashes.sketch_id=?", template_values)
 
         for hashval, in c1:
             hh = convert_hash_from(hashval)
@@ -342,7 +332,7 @@ class SqliteIndex(Index):
              is_dayhoff, is_hp, seed) in c1:
             mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
                          is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp)
-            c2.execute("SELECT hashval FROM hashes_to_sketch WHERE sketch_id=?",
+            c2.execute("SELECT hashval FROM hashes WHERE sketch_id=?",
                        (sketch_id,))
 
             hashvals = c2.fetchall()
@@ -365,13 +355,13 @@ class SqliteIndex(Index):
         max_hash = min(max_hash, max(hashes))
         hash_constraint_str = ""
         if max_hash <= MAX_SQLITE_INT:
-            hash_constraint_str = "hashes_to_sketch.hashval >= 0 AND hashes_to_sketch.hashval <= ? AND"
+            hash_constraint_str = "hashes.hashval >= 0 AND hashes.hashval <= ? AND"
             template_values.append(max_hash)
 
         # @CTB do we want to add select stuff on here?
         c.execute(f"""
-        SELECT DISTINCT hashes_to_sketch.sketch_id,COUNT(hashes_to_sketch.hashval) FROM hashes_to_sketch,hash_query,sketches
-        WHERE {hash_constraint_str} hashes_to_sketch.hashval=hash_query.hashval AND hashes_to_sketch.sketch_id=sketches.id GROUP BY hashes_to_sketch.sketch_id""", template_values)
+        SELECT DISTINCT hashes.sketch_id,COUNT(hashes.hashval) FROM hashes,hash_query
+        WHERE {hash_constraint_str} hashes.hashval=hash_query.hashval GROUP BY hashes.sketch_id""", template_values)
 
         return c
 
@@ -439,7 +429,6 @@ class SqliteIndex(Index):
                         actual_subj = self._load_sketch(c2, sketch_id)
                         yield IndexSearchResult(score, actual_subj,
                                                 self.location)
-            # could truncate based on shared hashes here? @CTB
 
     def select(self, *, num=0, track_abundance=False, **kwargs):
         if num:
