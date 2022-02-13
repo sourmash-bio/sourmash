@@ -104,6 +104,10 @@ pub trait Index<'a> {
         self.signature_refs().len()
     }
 
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /*
     fn iter_signatures(&self) -> Self::SignatureIterator;
     */

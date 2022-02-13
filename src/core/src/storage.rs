@@ -190,7 +190,7 @@ impl<'a> Storage for ZipStorage<'a> {
 
     fn load(&self, path: &str) -> Result<Vec<u8>, Error> {
         if let Some(archive) = &self.archive {
-            load_from_archive(&archive, path)
+            load_from_archive(archive, path)
         } else {
             //FIXME
             let archive = piz::ZipArchive::new((&self.mapping.as_ref()).unwrap())
