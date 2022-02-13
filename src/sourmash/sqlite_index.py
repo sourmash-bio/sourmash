@@ -419,6 +419,8 @@ class SqliteIndex(Index):
                 print('FAIL')
                 continue
 
+            save_score = score
+
             #
             # if pass, load sketch for realz - this is the slow bit.
             #
@@ -441,6 +443,9 @@ class SqliteIndex(Index):
                                        total_size)
             print('ACTUAL RESULT:', score, query_size, subj_size,
                   total_size, shared_size)
+
+            if score != save_score:
+                print('*** DIFFERENT SCORES', save_score, score)
 
             if search_fn.passes(score):
                 if search_fn.collect(score, subj):
