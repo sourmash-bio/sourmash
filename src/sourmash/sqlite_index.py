@@ -27,6 +27,7 @@ from collections import Counter
 from bitstring import BitArray
 
 # @CTB add DISTINCT to sketch and hash select
+# manifest stuff?
 
 from .index import Index
 import sourmash
@@ -109,6 +110,12 @@ class SqliteIndex(Index):
                    sketch_id
                 )
                 """)
+                c.execute("""
+                CREATE INDEX IF NOT EXISTS sketch_idx ON hashes (
+                   sketch_id
+                )
+                """
+                )
             except (sqlite3.OperationalError, sqlite3.DatabaseError):
                 raise
                 raise ValueError(f"cannot open '{dbfile}' as sqlite3 database")
@@ -292,10 +299,13 @@ class SqliteIndex(Index):
 
     def _load_sketch(self, c1, sketch_id, *, match_scaled=None):
         "Load an individual sketch. If match_scaled is set, downsample."
+
+        start = time.time()
         c1.execute("""
         SELECT id, name, scaled, ksize, filename, is_dna, is_protein,
         is_dayhoff, is_hp, seed FROM sketches WHERE id=?""",
                    (sketch_id,))
+        print(f'load sketch {sketch_id}: got sketch info', time.time() - start)
 
         (sketch_id, name, scaled, ksize, filename, is_dna,
          is_protein, is_dayhoff, is_hp, seed) = c1.fetchone()
@@ -316,11 +326,17 @@ class SqliteIndex(Index):
         else:
             print('NOT EMPLOYING hash_constraint_str')
 
+        print(f'finding hashes for sketch {sketch_id}', time.time() - start)
         c1.execute(f"SELECT hashval FROM hashes WHERE {hash_constraint_str} hashes.sketch_id=?", template_values)
 
-        for hashval, in c1:
+        print(f'loading hashes for sketch {sketch_id}', time.time() - start)
+        xy = c1.fetchall()
+        print(f'adding hashes for sketch {sketch_id}', time.time() - start)
+        for hashval, in xy:
             hh = convert_hash_from(hashval)
             mh.add_hash(hh)
+
+        print(f'done loading sketch {sketch_id}', time.time() - start)
 
         ss = SourmashSignature(mh, name=name, filename=filename)
         return ss
@@ -367,10 +383,10 @@ class SqliteIndex(Index):
 
         # @CTB do we want to add sketch 'select' stuff on here?
         c.execute(f"""
-        SELECT DISTINCT hashes.sketch_id,COUNT(hashes.hashval)
+        SELECT DISTINCT hashes.sketch_id,COUNT(hashes.hashval) as CNT
         FROM hashes,hash_query
         WHERE {hash_constraint_str}
-           hashes.hashval=hash_query.hashval GROUP BY hashes.sketch_id
+           hashes.hashval=hash_query.hashval GROUP BY hashes.sketch_id ORDER BY CNT DESC
         """, template_values)
 
         return c
@@ -397,9 +413,11 @@ class SqliteIndex(Index):
         c1 = self.conn.cursor()
         c2 = self.conn.cursor()
 
+        print('running _get_matching_sketches...')
         xx = self._get_matching_sketches(c1, query_mh.hashes,
                                          query_mh._max_hash)
         for sketch_id, n_matching_hashes in xx:
+            print(f'...got sketch {sketch_id}, with {n_matching_hashes} matching hashes')
             #
             # first, estimate sketch size using sql results.
             #
@@ -417,7 +435,8 @@ class SqliteIndex(Index):
             # do we pass?
             if not search_fn.passes(score):
                 print('FAIL')
-                continue
+                # break out...
+                break
 
             save_score = score
 
@@ -427,32 +446,33 @@ class SqliteIndex(Index):
             # @CTB do we need to do this second one where we load the sketch?
             #
 
-            start = time.time()
-            subj = self._load_sketch(c2, sketch_id,
-                                     match_scaled=query_mh.scaled)
-            print(f'LOAD SKETCH s={time.time() - start}')
+            if 0:
+                start = time.time()
+                subj = self._load_sketch(c2, sketch_id,
+                                         match_scaled=query_mh.scaled)
+                print(f'LOAD SKETCH s={time.time() - start}')
 
-            subj_mh = subj.minhash
-            assert subj_mh.scaled == query_mh.scaled
+                subj_mh = subj.minhash
+                assert subj_mh.scaled == query_mh.scaled
 
-            # all numbers calculated after downsampling --
-            subj_size = len(subj_mh)
-            shared_size, total_size = query_mh.intersection_and_union_size(subj_mh)
+                # all numbers calculated after downsampling --
+                subj_size = len(subj_mh)
+                shared_size, total_size = query_mh.intersection_and_union_size(subj_mh)
 
-            score = search_fn.score_fn(query_size, shared_size, subj_size,
-                                       total_size)
-            print('ACTUAL RESULT:', score, query_size, subj_size,
-                  total_size, shared_size)
+                score = search_fn.score_fn(query_size, shared_size, subj_size,
+                                           total_size)
+                print('ACTUAL RESULT:', score, query_size, subj_size,
+                      total_size, shared_size)
 
-            if score != save_score:
-                print('*** DIFFERENT SCORES', save_score, score)
+                if score != save_score:
+                    print('*** DIFFERENT SCORES', save_score, score)
 
             if search_fn.passes(score):
+                subj = self._load_sketch(c2, sketch_id)
+                # check actual against approx result here w/assert.
                 if search_fn.collect(score, subj):
                     if picklist is None or subj in picklist:
-                        actual_subj = self._load_sketch(c2, sketch_id)
-                        yield IndexSearchResult(score, actual_subj,
-                                                self.location)
+                        yield IndexSearchResult(score, subj, self.location)
 
     def select(self, *, num=0, track_abundance=False, **kwargs):
         if num:
