@@ -315,6 +315,8 @@ const SourmashSearchResult *const *revindex_gather(const SourmashRevIndex *ptr,
                                                    bool _ignore_abundance,
                                                    uintptr_t *size);
 
+uint64_t revindex_len(const SourmashRevIndex *ptr);
+
 SourmashRevIndex *revindex_new_with_paths(const SourmashStr *const *search_sigs_ptr,
                                           uintptr_t insigs,
                                           const SourmashKmerMinHash *template_ptr,

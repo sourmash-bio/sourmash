@@ -2424,7 +2424,7 @@ def test_revindex_gather_ignore():
     search_fn = JaccardSearchBestOnly_ButIgnore([ss47])
 
     results = list(lidx.find(search_fn, ss47))
-    results = [ ss for (ss, score) in results ]
+    results = [ ss.signature for ss in results ]
 
     def is_found(ss, xx):
         for q in xx:

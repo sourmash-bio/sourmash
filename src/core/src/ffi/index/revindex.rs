@@ -221,6 +221,12 @@ pub unsafe extern "C" fn revindex_scaled(ptr: *const SourmashRevIndex) -> u64 {
     }
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn revindex_len(ptr: *const SourmashRevIndex) -> u64 {
+    let revindex = SourmashRevIndex::as_rust(ptr);
+    revindex.len() as u64
+}
+
 ffi_fn! {
 unsafe fn revindex_signatures(
     ptr: *const SourmashRevIndex,

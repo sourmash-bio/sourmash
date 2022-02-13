@@ -709,6 +709,14 @@ impl<'a> Index<'a> for RevIndex {
         unimplemented!()
     }
 
+    fn len(&self) -> usize {
+        if let Some(refs) = &self.ref_sigs {
+            refs.len()
+        } else {
+            self.sig_files.len()
+        }
+    }
+
     fn signatures(&self) -> Vec<Self::Item> {
         if let Some(ref sigs) = self.ref_sigs {
             sigs.to_vec()

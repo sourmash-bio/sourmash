@@ -125,7 +125,10 @@ class RevIndex(RustObject, Index):
         #    raise NotImplementedError("Call into Rust and retrieve sigs")
 
     def __len__(self):
-        pass
+        if self._objptr:
+            return self._methodcall(lib.revindex_len)
+        else:
+            return len(self._signatures)
 
     def insert(self, node):
         if self._signatures is None:

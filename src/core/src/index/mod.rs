@@ -100,6 +100,10 @@ pub trait Index<'a> {
 
     fn signature_refs(&self) -> Vec<&Self::Item>;
 
+    fn len(&self) -> usize {
+        self.signature_refs().len()
+    }
+
     /*
     fn iter_signatures(&self) -> Self::SignatureIterator;
     */
