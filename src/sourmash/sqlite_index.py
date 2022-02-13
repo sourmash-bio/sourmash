@@ -28,6 +28,8 @@ Questions:
 import sqlite3
 from collections import Counter
 
+from bitstring import BitArray
+
 # @CTB add DISTINCT to sketch and hash select
 
 from .index import Index
@@ -45,11 +47,8 @@ from .picklist import PickStyle
 # for more information.
 
 MAX_SQLITE_INT = 2 ** 63 - 1
-sqlite3.register_adapter(
-    int, lambda x: hex(x) if x > MAX_SQLITE_INT else x)
-sqlite3.register_converter(
-    'integer', lambda b: int(b, 16 if b[:2] == b'0x' else 10))
-
+convert_hash_to = lambda x: BitArray(uint=x, length=64).int if x > MAX_SQLITE_INT else x
+convert_hash_from = lambda x: BitArray(int=x, length=64).uint if x < 0 else x
 
 picklist_transforms = dict(
     name=lambda x: x,
@@ -107,15 +106,18 @@ class SqliteIndex(Index):
                 """)
                 c.execute("""
                 CREATE TABLE IF NOT EXISTS hashes
-                  (hashval INTEGER NOT NULL,
-                   sketch_id INTEGER NOT NULL,
-                   FOREIGN KEY (sketch_id) REFERENCES sketches (id))
+                  (hashval INTEGER PRIMARY KEY)
                 """)
                 c.execute("""
-                CREATE INDEX IF NOT EXISTS hashval_idx ON hashes (sketch_id, hashval)
+                CREATE TABLE IF NOT EXISTS hashes_to_sketch (
+                   hashval INTEGER NOT NULL,
+                   sketch_id INTEGER NOT NULL,
+                   FOREIGN KEY (hashval) REFERENCES hashes (hashval)
+                   FOREIGN KEY (sketch_id) REFERENCES sketches (id))
                 """)
 
             except (sqlite3.OperationalError, sqlite3.DatabaseError):
+                raise
                 raise ValueError(f"cannot open '{dbfile}' as sqlite3 database")
 
         c = self.conn.cursor()
@@ -176,11 +178,14 @@ class SqliteIndex(Index):
         sketch_id, = c.fetchone()
 
         hashes = []
+        hashes_to_sketch = []
         for h in ss.minhash.hashes:
-            hashes.append((h, sketch_id))
+            hh = convert_hash_to(h)
+            hashes.append((hh,))
+            hashes_to_sketch.append((hh, sketch_id))
 
-        c.executemany("INSERT INTO hashes (hashval, sketch_id) VALUES (?, ?)",
-                      hashes)
+        c.executemany("INSERT OR IGNORE INTO hashes (hashval) VALUES (?)", hashes)
+        c.executemany("INSERT INTO hashes_to_sketch (hashval, sketch_id) VALUES (?, ?)", hashes_to_sketch)
 
         if commit:
             self.conn.commit()
@@ -295,10 +300,10 @@ class SqliteIndex(Index):
         mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
                      is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp)
 
-        c1.execute("SELECT hashval FROM hashes WHERE sketch_id=?", (sketch_id,))
+        c1.execute("SELECT hashval FROM hashes_to_sketch WHERE hashes_to_sketch.sketch_id=?", (sketch_id,))
 
         for hashval, in c1:
-            mh.add_hash(hashval)
+            mh.add_hash(convert_hash_from(hashval))
 
         ss = SourmashSignature(mh, name=name, filename=filename)
         return ss
@@ -310,42 +315,27 @@ class SqliteIndex(Index):
              is_dayhoff, is_hp, seed) in c1:
             mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
                          is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp)
-            c2.execute("SELECT hashval FROM hashes WHERE sketch_id=?",
+            c2.execute("SELECT hashval FROM hashes_to_sketch WHERE sketch_id=?",
                        (sketch_id,))
 
             hashvals = c2.fetchall()
             for hashval, in hashvals:
-                mh.add_hash(hashval)
+                mh.add_hash(convert_hash_from(hashval))
 
             ss = SourmashSignature(mh, name=name, filename=filename)
             yield ss, self.dbfile, sketch_id
 
-    def _get_matching_hashes(self, c, hashes):
-        assert 0
-        c.execute("DROP TABLE IF EXISTS hash_query")
-        c.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER)")
-
-        hashvals = [ (h,) for h in hashes ]
-        c.executemany("INSERT INTO hash_query (hashval) VALUES (?)", hashvals)
-
-        # @CTB do we want to add select stuff on here?
-        c.execute("""
-        SELECT DISTINCT hashes.sketch_id,hashes.hashval FROM
-        hashes,hash_query WHERE hashes.hashval=hash_query.hashval""")
-
-        return c.fetchall()
-
     def _get_matching_sketches(self, c, hashes):
         c.execute("DROP TABLE IF EXISTS hash_query")
-        c.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER)")
+        c.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER PRIMARY KEY)")
 
         hashvals = [ (h,) for h in hashes ]
         c.executemany("INSERT INTO hash_query (hashval) VALUES (?)", hashvals)
 
         # @CTB do we want to add select stuff on here?
         c.execute("""
-        SELECT DISTINCT hashes.sketch_id,COUNT(hashes.hashval) FROM hashes,hash_query
-        WHERE hashes.hashval=hash_query.hashval GROUP BY hashes.sketch_id""")
+        SELECT DISTINCT hashes_to_sketch.sketch_id,COUNT(hashes_to_sketch.hashval) FROM hashes_to_sketch,hash_query
+        WHERE hashes_to_sketch.hashval=hash_query.hashval GROUP BY hashes_to_sketch.sketch_id""")
 
         return c.fetchall()
 
