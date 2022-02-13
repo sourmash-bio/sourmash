@@ -8,7 +8,7 @@ clean = true
 
 [parse.expand]
 crates = ["sourmash"]
-features = ["experimental"]
+features = []
 
 [enum]
 rename_variants = "QualifiedScreamingSnakeCase"

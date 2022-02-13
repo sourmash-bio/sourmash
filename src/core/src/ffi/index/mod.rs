@@ -1,4 +1,3 @@
-#[cfg(feature = "experimental")]
 pub mod revindex;
 
 use crate::signature::Signature;

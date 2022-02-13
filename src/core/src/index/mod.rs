@@ -4,11 +4,9 @@
 //! Some indices also support containment searches.
 
 pub mod bigsi;
+pub mod greyhound;
 pub mod linear;
 pub mod sbt;
-
-#[cfg(feature = "experimental")]
-pub mod greyhound;
 
 pub mod search;
 
