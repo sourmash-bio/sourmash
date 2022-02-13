@@ -25,8 +25,11 @@ Questions:
   may require it...
 
 """
+import time
 import sqlite3
 from collections import Counter
+
+from bitstring import BitArray
 
 # @CTB add DISTINCT to sketch and hash select
 
@@ -45,11 +48,8 @@ from .picklist import PickStyle
 # for more information.
 
 MAX_SQLITE_INT = 2 ** 63 - 1
-sqlite3.register_adapter(
-    int, lambda x: hex(x) if x > MAX_SQLITE_INT else x)
-sqlite3.register_converter(
-    'integer', lambda b: int(b, 16 if b[:2] == b'0x' else 10))
-
+convert_hash_to = lambda x: BitArray(uint=x, length=64).int if x > MAX_SQLITE_INT else x
+convert_hash_from = lambda x: BitArray(int=x, length=64).uint if x < 0 else x
 
 picklist_transforms = dict(
     name=lambda x: x,
@@ -103,19 +103,24 @@ class SqliteIndex(Index):
                    is_dayhoff BOOLEAN NOT NULL,
                    is_hp BOOLEAN NOT NULL,
                    md5sum TEXT NOT NULL, 
-                   seed INTEGER NOT NULL)
+                   seed INTEGER NOT NULL
+                )
                 """)
                 c.execute("""
-                CREATE TABLE IF NOT EXISTS hashes
-                  (hashval INTEGER NOT NULL,
+                CREATE TABLE IF NOT EXISTS hashes_to_sketch (
+                   hashval INTEGER NOT NULL,
                    sketch_id INTEGER NOT NULL,
-                   FOREIGN KEY (sketch_id) REFERENCES sketches (id))
+                   FOREIGN KEY (sketch_id) REFERENCES sketches (id)
+                )
                 """)
                 c.execute("""
-                CREATE INDEX IF NOT EXISTS hashval_idx ON hashes (sketch_id, hashval)
+                CREATE INDEX IF NOT EXISTS hashval_idx ON hashes_to_sketch (
+                   hashval,
+                   sketch_id
+                )
                 """)
-
             except (sqlite3.OperationalError, sqlite3.DatabaseError):
+                raise
                 raise ValueError(f"cannot open '{dbfile}' as sqlite3 database")
 
         c = self.conn.cursor()
@@ -176,11 +181,12 @@ class SqliteIndex(Index):
         sketch_id, = c.fetchone()
 
         hashes = []
+        hashes_to_sketch = []
         for h in ss.minhash.hashes:
-            hashes.append((h, sketch_id))
+            hh = convert_hash_to(h)
+            hashes_to_sketch.append((hh, sketch_id))
 
-        c.executemany("INSERT INTO hashes (hashval, sketch_id) VALUES (?, ?)",
-                      hashes)
+        c.executemany("INSERT INTO hashes_to_sketch (hashval, sketch_id) VALUES (?, ?)", hashes_to_sketch)
 
         if commit:
             self.conn.commit()
@@ -282,7 +288,18 @@ class SqliteIndex(Index):
         for ss, loc, iloc in self._load_sketches(c, c2):
             yield ss, loc, iloc
 
-    def _load_sketch(self, c1, sketch_id):
+    def _load_sketch_size(self, c1, sketch_id, max_hash):
+        if max_hash <= MAX_SQLITE_INT:
+            c1.execute("SELECT COUNT(hashval) FROM hashes_to_sketch WHERE sketch_id=? AND hashval >= 0 AND hashval <= ?",
+                       (sketch_id, max_hash))
+        else:
+            c1.execute('SELECT COUNT(hashval) FROM hashes_to_sketch WHERE sketch_id=?', (sketch_id,))
+
+        n_hashes, = c1.fetchone()
+        return n_hashes
+
+
+    def _load_sketch(self, c1, sketch_id, *, match_scaled=None):
         # here, c1 should already have run an appropriate 'select' on 'sketches'
         # c2 will be used to load the hash values.
         c1.execute("""
@@ -292,13 +309,28 @@ class SqliteIndex(Index):
 
         (sketch_id, name, scaled, ksize, filename, is_dna,
          is_protein, is_dayhoff, is_hp, seed) = c1.fetchone()
+        if match_scaled is not None:
+            scaled = max(scaled, match_scaled)
+
         mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
                      is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp)
 
-        c1.execute("SELECT hashval FROM hashes WHERE sketch_id=?", (sketch_id,))
+
+        template_values = [sketch_id]
+
+        hash_constraint_str = ""
+        max_hash = mh._max_hash
+        if max_hash <= MAX_SQLITE_INT:
+            hash_constraint_str = "hashes_to_sketch.hashval >= 0 AND hashes_to_sketch.hashval <= ? AND"
+            template_values.insert(0, max_hash)
+        else:
+            print('NOT EMPLOYING hash_constraint_str')
+
+        c1.execute(f"SELECT hashval FROM hashes_to_sketch WHERE {hash_constraint_str} hashes_to_sketch.sketch_id=?", template_values)
 
         for hashval, in c1:
-            mh.add_hash(hashval)
+            hh = convert_hash_from(hashval)
+            mh.add_hash(hh)
 
         ss = SourmashSignature(mh, name=name, filename=filename)
         return ss
@@ -310,44 +342,38 @@ class SqliteIndex(Index):
              is_dayhoff, is_hp, seed) in c1:
             mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
                          is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp)
-            c2.execute("SELECT hashval FROM hashes WHERE sketch_id=?",
+            c2.execute("SELECT hashval FROM hashes_to_sketch WHERE sketch_id=?",
                        (sketch_id,))
 
             hashvals = c2.fetchall()
             for hashval, in hashvals:
-                mh.add_hash(hashval)
+                mh.add_hash(convert_hash_from(hashval))
 
             ss = SourmashSignature(mh, name=name, filename=filename)
             yield ss, self.dbfile, sketch_id
 
-    def _get_matching_hashes(self, c, hashes):
-        assert 0
+    def _get_matching_sketches(self, c, hashes, max_hash):
         c.execute("DROP TABLE IF EXISTS hash_query")
-        c.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER)")
+        c.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER PRIMARY KEY)")
 
-        hashvals = [ (h,) for h in hashes ]
-        c.executemany("INSERT INTO hash_query (hashval) VALUES (?)", hashvals)
+        hashvals = [ (convert_hash_to(h),) for h in hashes ]
+        c.executemany("INSERT OR IGNORE INTO hash_query (hashval) VALUES (?)", hashvals)
+
+        template_values = []
+
+        # optimize select?
+        max_hash = min(max_hash, max(hashes))
+        hash_constraint_str = ""
+        if max_hash <= MAX_SQLITE_INT:
+            hash_constraint_str = "hashes_to_sketch.hashval >= 0 AND hashes_to_sketch.hashval <= ? AND"
+            template_values.append(max_hash)
 
         # @CTB do we want to add select stuff on here?
-        c.execute("""
-        SELECT DISTINCT hashes.sketch_id,hashes.hashval FROM
-        hashes,hash_query WHERE hashes.hashval=hash_query.hashval""")
+        c.execute(f"""
+        SELECT DISTINCT hashes_to_sketch.sketch_id,COUNT(hashes_to_sketch.hashval) FROM hashes_to_sketch,hash_query,sketches
+        WHERE {hash_constraint_str} hashes_to_sketch.hashval=hash_query.hashval AND hashes_to_sketch.sketch_id=sketches.id GROUP BY hashes_to_sketch.sketch_id""", template_values)
 
-        return c.fetchall()
-
-    def _get_matching_sketches(self, c, hashes):
-        c.execute("DROP TABLE IF EXISTS hash_query")
-        c.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER)")
-
-        hashvals = [ (h,) for h in hashes ]
-        c.executemany("INSERT INTO hash_query (hashval) VALUES (?)", hashvals)
-
-        # @CTB do we want to add select stuff on here?
-        c.execute("""
-        SELECT DISTINCT hashes.sketch_id,COUNT(hashes.hashval) FROM hashes,hash_query
-        WHERE hashes.hashval=hash_query.hashval GROUP BY hashes.sketch_id""")
-
-        return c.fetchall()
+        return c
 
     def save(self, *args, **kwargs):
         raise NotImplementedError
@@ -359,40 +385,60 @@ class SqliteIndex(Index):
     def find(self, search_fn, query, **kwargs):
         search_fn.check_is_compatible(query)
 
-        # check compatibility, etc. @CTB
+        # check compatibility, etc.
         query_mh = query.minhash
-        query_mh = query_mh.downsample(scaled=self.scaled)
+        if self.scaled > query_mh.scaled:
+            query_mh = query_mh.downsample(scaled=self.scaled)
 
         picklist = None
         if self.selection_dict:
             picklist = self.selection_dict.get('picklist')
 
-        cursor = self.conn.cursor()
-        # @CTB do select here
-        for sketch_id, cnt in self._get_matching_sketches(cursor, query_mh.hashes):
-            #print('XXX', sketch_id, cnt)
-            subj = self._load_sketch(cursor, sketch_id)
+        c1 = self.conn.cursor()
+        c2 = self.conn.cursor()
 
-            # @CTB more goes here? evaluate downsampling/upsampling.
+        xx = self._get_matching_sketches(c1, query_mh.hashes,
+                                         query_mh._max_hash)
+        for sketch_id, n_matching_hashes in xx:
+            query_size = len(query_mh)
+            subj_size = self._load_sketch_size(c2, sketch_id,
+                                               query_mh._max_hash)
+            total_size = query_size + subj_size - n_matching_hashes
+            shared_size = n_matching_hashes
+
+            score = search_fn.score_fn(query_size, shared_size, subj_size,
+                                       total_size)
+            print('APPROX RESULT:', score, query_size, subj_size,
+                  total_size, shared_size)
+
+            if not search_fn.passes(score):
+                print('FAIL')
+                continue
+
+            start = time.time()
+            subj = self._load_sketch(c2, sketch_id,
+                                     match_scaled=query_mh.scaled)
+            print(f'LOAD SKETCH s={time.time() - start}')
+
             subj_mh = subj.minhash
-            if subj_mh.scaled < query_mh.scaled:
-                subj_mh = subj_mh.downsample(scaled=query_mh.scaled)
+            assert subj_mh.scaled == query_mh.scaled
 
             # all numbers calculated after downsampling --
             query_size = len(query_mh)
             subj_size = len(subj_mh)
-            #shared_size = query_mh.count_common(subj_mh)
-            #assert shared_size == cnt #  @CTB could be used...?
-            total_size = len(query_mh + subj_mh)
-            shared_size = cnt
+            shared_size, total_size = query_mh.intersection_and_union_size(subj_mh)
 
             score = search_fn.score_fn(query_size, shared_size, subj_size,
                                        total_size)
+            print('ACTUAL RESULT:', score, query_size, subj_size,
+                  total_size, shared_size)
 
             if search_fn.passes(score):
                 if search_fn.collect(score, subj):
                     if picklist is None or subj in picklist:
-                        yield IndexSearchResult(score, subj, self.location)
+                        actual_subj = self._load_sketch(c2, sketch_id)
+                        yield IndexSearchResult(score, actual_subj,
+                                                self.location)
             # could truncate based on shared hashes here? @CTB
 
     def select(self, *, num=0, track_abundance=False, **kwargs):

@@ -269,43 +269,27 @@ def manifest(args):
     """
     build a signature manifest
     """
-    from sourmash.index import CollectionManifest
-
     set_quiet(args.quiet)
-
-    # CTB: might want to switch to sourmash_args.FileOutputCSV here?
-    csv_fp = open(args.output, 'w', newline='')
-
-    CollectionManifest.write_csv_header(csv_fp)
-    w = csv.DictWriter(csv_fp, fieldnames=CollectionManifest.required_keys)
 
     try:
         loader = sourmash_args.load_file_as_index(args.location,
                                                   yield_all_files=args.force)
-    except Exception as exc:
-        error('\nError while reading signatures from {}:'.format(args.location))
+    except ValueError as exc:
+        error("\nError while reading signatures from '{}':".format(args.location))
         error(str(exc))
-        error('(continuing)')
-        raise
-
-    n = 0
-    # Need to ignore existing manifests here! otherwise circularity...
-    try:
-        manifest_iter = loader._signatures_with_internal()
-    except NotImplementedError:
-        error("ERROR: manifests cannot be generated for this file.")
         sys.exit(-1)
 
-    for n, (sig, parent, loc) in enumerate(manifest_iter):
-        # extract info, write as appropriate.
-        row = CollectionManifest.make_manifest_row(sig, loc,
-                                                   include_signature=False)
-        w.writerow(row)
+    rebuild = True
+    if args.no_rebuild_manifest:
+        rebuild = False
+    manifest = sourmash_args.get_manifest(loader, require=True,
+                                          rebuild=rebuild)
 
-    notify(f'built manifest for {n} signatures total.')
+    with open(args.output, "w", newline='') as csv_fp:
+        manifest.write_to_csv(csv_fp, write_header=True)
 
-    if csv_fp:
-        csv_fp.close()
+    notify(f"built manifest for {len(manifest)} signatures total.")
+    notify(f"wrote manifest to '{args.output}'")
 
 
 def overlap(args):
@@ -1113,6 +1097,77 @@ def kmers(args):
 
     if not kmer_w and not save_seqs:
         notify("NOTE: see --save-kmers or --save-sequences for output options.")
+
+
+def fileinfo(args):
+    """
+    provide summary information on the given path (collection, index, etc.)
+    """
+    # load as index!
+    try:
+        notify(f"** loading from '{args.path}'")
+        idx = sourmash_args.load_file_as_index(args.path,
+                                               yield_all_files=args.force)
+    except ValueError:
+        error("Cannot open '{args.path}'.")
+        sys.exit(-1)
+
+    print_bool = lambda x: "yes" if x else "no"
+    print_none = lambda x: "n/a" if x is None else x
+
+    print_results(f"path filetype: {type(idx).__name__}")
+    print_results(f"location: {print_none(idx.location)}")
+    print_results(f"is database? {print_bool(idx.is_database)}")
+    print_results(f"has manifest? {print_bool(idx.manifest)}")
+    print_results(f"is empty? {print_bool(idx)}")
+    print_results(f"num signatures: {len(idx)}")
+
+    # also have arg to fileinfo to force recalculation
+    manifest = sourmash_args.get_manifest(idx, rebuild=args.rebuild_manifest)
+    if manifest is None:
+        notify("** no manifest and cannot be generated; exiting.")
+        sys.exit(0)
+
+    notify("** examining manifest...")
+
+    ksizes = set()
+    moltypes = set()
+    scaled_vals = set()
+    num_vals = set()
+    total_size = 0
+    has_abundance = False
+
+    # @CTB: track _number_ of sketches with those values?
+    for row in manifest.rows:
+        ksizes.add(row['ksize'])
+        moltypes.add(row['moltype'])
+        scaled_vals.add(row['scaled'])
+        num_vals.add(row['num'])
+        total_size += row['n_hashes']
+        has_abundance = has_abundance or row['with_abundance']
+
+    print_results(f"{total_size} total hashes")
+    print_results(f"abundance information available: {print_bool(has_abundance)}")
+
+    ksizes = ", ".join([str(x) for x in sorted(ksizes)])
+    print_results(f"ksizes present: {ksizes}")
+
+    moltypes = ", ".join(sorted(moltypes))
+    print_results(f"moltypes present: {moltypes}")
+
+    if 0 in scaled_vals: scaled_vals.remove(0)
+    scaled_vals = ", ".join([str(x) for x in sorted(scaled_vals)])
+    if scaled_vals:
+        print_results(f"scaled vals present: {scaled_vals}")
+    else:
+        print_results("no scaled sketches present")
+
+    if 0 in num_vals: num_vals.remove(0)
+    num_vals = ", ".join([str(x) for x in sorted(num_vals)])
+    if num_vals:
+        print_results(f"num vals present: {num_vals}")
+    else:
+        print_results("no num sketches present")
 
 
 def main(arglist=None):

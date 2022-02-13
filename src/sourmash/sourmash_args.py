@@ -1,5 +1,32 @@
 """
 Utility functions for sourmash CLI commands.
+
+argparse functionality:
+
+* check_scaled_bounds(args)
+* check_num_bounds(args)
+* get_moltype(args)
+* calculate_moltype(args)
+* load_picklist(args)
+* report_picklist(args, picklist)
+
+signature/database loading functionality:
+
+* load_query_signature(filename, ...)
+* traverse_find_sigs(filenames, ...)
+* load_dbs_and_sigs(filenames, query, ...)
+* load_file_as_index(filename, ...)
+* load_file_as_signatures(filename, ...)
+* load_pathlist_from_file(filename)
+* load_many_signatures(locations)
+* get_manifest(idx)
+* class SignatureLoadingProgress
+
+signature and file output functionality:
+
+* SaveSignaturesToLocation(filename)
+* class FileOutput
+* class FileOutputCSV
 """
 import sys
 import os
@@ -530,6 +557,7 @@ class FileOutput(object):
 
         return False
 
+
 class FileOutputCSV(FileOutput):
     """A context manager for CSV file outputs.
 
@@ -672,6 +700,48 @@ def load_many_signatures(locations, progress, *, yield_all_files=False,
     n_files = len(locations)
     notify(f"loaded {len(progress)} signatures total, from {n_files} files")
 
+
+def get_manifest(idx, *, require=True, rebuild=False):
+    """
+    Retrieve a manifest for this idx, loaded with `load_file_as_index`.
+
+    If a manifest exists and `rebuild` is False, return.
+    If a manifest does not exist or `rebuild` is True, try to build one.
+    If a manifest cannot be built and `require` is True, error exit.
+
+    In the case where `require=False` and a manifest cannot be built,
+    may return None. Otherwise always returns a manifest.
+    """
+    from sourmash.index import CollectionManifest
+
+    m = idx.manifest
+
+    # has one, and don't want to rebuild? easy! return!
+    if m and not rebuild:
+        debug_literal("get_manifest: found manifest")
+        return m
+
+    # CTB: CollectionManifest.create_manifest wants (ss, iloc).
+    # so this is an adaptor function! Might want to just change
+    # what `create_manifest` takes.
+    def manifest_iloc_iter(idx):
+        for (ss, loc, iloc) in idx._signatures_with_internal():
+            yield ss, iloc
+
+    # need to build one...
+    try:
+        notify("Generating a manifest...")
+        m = CollectionManifest.create_manifest(manifest_iloc_iter(idx),
+                                               include_signature=False)
+    except NotImplementedError:
+        if require:
+            error(f"ERROR: manifests cannot be generated for {idx.location}")
+            sys.exit(-1)
+        else:
+            debug_literal("get_manifest: cannot build manifest, not req'd")
+            return None
+
+    return m
 
 #
 # enum and classes for saving signatures progressively
