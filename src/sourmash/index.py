@@ -853,6 +853,10 @@ class MultiIndex(Index):
         self.manifest = manifest
         self.parent = parent
 
+    @property
+    def location(self):
+        return self.parent
+
     def signatures(self):
         for row in self.manifest.rows:
             yield row['signature']
@@ -904,6 +908,7 @@ class MultiIndex(Index):
                     yield ss, iloc
 
         # build manifest; note, signatures are stored in memory.
+        # CTB: could do this on demand?
         manifest = CollectionManifest.create_manifest(sigloc_iter())
 
         # create!

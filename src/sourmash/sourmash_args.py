@@ -1,5 +1,32 @@
 """
 Utility functions for sourmash CLI commands.
+
+argparse functionality:
+
+* check_scaled_bounds(args)
+* check_num_bounds(args)
+* get_moltype(args)
+* calculate_moltype(args)
+* load_picklist(args)
+* report_picklist(args, picklist)
+
+signature/database loading functionality:
+
+* load_query_signature(filename, ...)
+* traverse_find_sigs(filenames, ...)
+* load_dbs_and_sigs(filenames, query, ...)
+* load_file_as_index(filename, ...)
+* load_file_as_signatures(filename, ...)
+* load_pathlist_from_file(filename)
+* load_many_signatures(locations)
+* get_manifest(idx)
+* class SignatureLoadingProgress
+
+signature and file output functionality:
+
+* SaveSignaturesToLocation(filename)
+* class FileOutput
+* class FileOutputCSV
 """
 import sys
 import os
@@ -530,6 +557,7 @@ class FileOutput(object):
 
         return False
 
+
 class FileOutputCSV(FileOutput):
     """A context manager for CSV file outputs.
 
@@ -673,9 +701,67 @@ def load_many_signatures(locations, progress, *, yield_all_files=False,
     notify(f"loaded {len(progress)} signatures total, from {n_files} files")
 
 
+def get_manifest(idx, *, require=True, rebuild=False):
+    """
+    Retrieve a manifest for this idx, loaded with `load_file_as_index`.
+
+    If a manifest exists and `rebuild` is False, return.
+    If a manifest does not exist or `rebuild` is True, try to build one.
+    If a manifest cannot be built and `require` is True, error exit.
+
+    In the case where `require=False` and a manifest cannot be built,
+    may return None. Otherwise always returns a manifest.
+    """
+    from sourmash.index import CollectionManifest
+
+    m = idx.manifest
+
+    # has one, and don't want to rebuild? easy! return!
+    if m and not rebuild:
+        debug_literal("get_manifest: found manifest")
+        return m
+
+    # CTB: CollectionManifest.create_manifest wants (ss, iloc).
+    # so this is an adaptor function! Might want to just change
+    # what `create_manifest` takes.
+    def manifest_iloc_iter(idx):
+        for (ss, loc, iloc) in idx._signatures_with_internal():
+            yield ss, iloc
+
+    # need to build one...
+    try:
+        notify("Generating a manifest...")
+        m = CollectionManifest.create_manifest(manifest_iloc_iter(idx),
+                                               include_signature=False)
+    except NotImplementedError:
+        if require:
+            error(f"ERROR: manifests cannot be generated for {idx.location}")
+            sys.exit(-1)
+        else:
+            debug_literal("get_manifest: cannot build manifest, not req'd")
+            return None
+
+    return m
+
 #
 # enum and classes for saving signatures progressively
 #
+
+def _get_signatures_from_rust(siglist):
+    for ss in siglist:
+        try:
+            ss.md5sum()
+            yield ss
+        except sourmash.exceptions.Panic:
+            # this deals with a disconnect between the way Rust
+            # and Python handle signatures; Python expects one
+            # minhash (and hence one md5sum) per signature, while
+            # Rust supports multiple. For now, go through serializing
+            # and deserializing the signature! See issue #1167 for more.
+            json_str = sourmash.save_signatures([ss])
+            for ss in sourmash.load_signatures(json_str):
+                yield ss
+
 
 class _BaseSaveSignaturesToLocation:
     "Base signature saving class. Track location (if any) and count."
@@ -872,23 +958,23 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         except KeyError:
             return False
 
-    def add(self, ss):
+    def add(self, add_sig):
         if not self.storage:
             raise ValueError("this output is not open")
 
-        super().add(ss)
+        for ss in _get_signatures_from_rust([add_sig]):
+            buf = sigmod.save_signatures([ss], compression=1)
+            md5 = ss.md5sum()
 
-        buf = sigmod.save_signatures([ss], compression=1)
-        md5 = ss.md5sum()
+            storage = self.storage
+            path = f'{storage.subdir}/{md5}.sig.gz'
+            location = storage.save(path, buf)
 
-        storage = self.storage
-        path = f'{storage.subdir}/{md5}.sig.gz'
-        location = storage.save(path, buf)
-
-        # update manifest
-        row = CollectionManifest.make_manifest_row(ss, location,
-                                                   include_signature=False)
-        self.manifest_rows.append(row)
+            # update manifest
+            row = CollectionManifest.make_manifest_row(ss, location,
+                                                       include_signature=False)
+            self.manifest_rows.append(row)
+            super().add(ss)
 
 
 class SigFileSaveType(Enum):
