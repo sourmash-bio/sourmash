@@ -279,6 +279,7 @@ class SqliteIndex(Index):
             yield ss, loc, iloc
 
     def _load_sketch_size(self, c1, sketch_id, max_hash):
+        "Get sketch size for given sketch, downsampled by max_hash."
         if max_hash <= MAX_SQLITE_INT:
             c1.execute("SELECT COUNT(hashval) FROM hashes WHERE sketch_id=? AND hashval >= 0 AND hashval <= ?",
                        (sketch_id, max_hash))
@@ -290,8 +291,7 @@ class SqliteIndex(Index):
 
 
     def _load_sketch(self, c1, sketch_id, *, match_scaled=None):
-        # here, c1 should already have run an appropriate 'select' on 'sketches'
-        # c2 will be used to load the hash values.
+        "Load an individual sketch. If match_scaled is set, downsample."
         c1.execute("""
         SELECT id, name, scaled, ksize, filename, is_dna, is_protein,
         is_dayhoff, is_hp, seed FROM sketches WHERE id=?""",
@@ -326,8 +326,11 @@ class SqliteIndex(Index):
         return ss
 
     def _load_sketches(self, c1, c2):
-        # here, c1 should already have run an appropriate 'select' on 'sketches'
-        # c2 will be used to load the hash values.
+        """Load sketches based on results from 'c1', using 'c2'.
+
+        Here, 'c1' should already have run an appropriate 'select' on
+        'sketches'. 'c2' will be used to load the hash values.
+        """
         for (sketch_id, name, scaled, ksize, filename, is_dna, is_protein,
              is_dayhoff, is_hp, seed) in c1:
             mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
@@ -343,6 +346,10 @@ class SqliteIndex(Index):
             yield ss, self.dbfile, sketch_id
 
     def _get_matching_sketches(self, c, hashes, max_hash):
+        """
+        For hashvals in 'hashes', retrieve all matching sketches,
+        together with the number of overlapping hashes for each sketh.
+        """
         c.execute("DROP TABLE IF EXISTS hash_query")
         c.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER PRIMARY KEY)")
 
@@ -358,10 +365,13 @@ class SqliteIndex(Index):
             hash_constraint_str = "hashes.hashval >= 0 AND hashes.hashval <= ? AND"
             template_values.append(max_hash)
 
-        # @CTB do we want to add select stuff on here?
+        # @CTB do we want to add sketch 'select' stuff on here?
         c.execute(f"""
-        SELECT DISTINCT hashes.sketch_id,COUNT(hashes.hashval) FROM hashes,hash_query
-        WHERE {hash_constraint_str} hashes.hashval=hash_query.hashval GROUP BY hashes.sketch_id""", template_values)
+        SELECT DISTINCT hashes.sketch_id,COUNT(hashes.hashval)
+        FROM hashes,hash_query
+        WHERE {hash_constraint_str}
+           hashes.hashval=hash_query.hashval GROUP BY hashes.sketch_id
+        """, template_values)
 
         return c
 
@@ -390,6 +400,9 @@ class SqliteIndex(Index):
         xx = self._get_matching_sketches(c1, query_mh.hashes,
                                          query_mh._max_hash)
         for sketch_id, n_matching_hashes in xx:
+            #
+            # first, estimate sketch size using sql results.
+            #
             query_size = len(query_mh)
             subj_size = self._load_sketch_size(c2, sketch_id,
                                                query_mh._max_hash)
@@ -401,9 +414,16 @@ class SqliteIndex(Index):
             print('APPROX RESULT:', score, query_size, subj_size,
                   total_size, shared_size)
 
+            # do we pass?
             if not search_fn.passes(score):
                 print('FAIL')
                 continue
+
+            #
+            # if pass, load sketch for realz - this is the slow bit.
+            #
+            # @CTB do we need to do this second one where we load the sketch?
+            #
 
             start = time.time()
             subj = self._load_sketch(c2, sketch_id,
@@ -414,7 +434,6 @@ class SqliteIndex(Index):
             assert subj_mh.scaled == query_mh.scaled
 
             # all numbers calculated after downsampling --
-            query_size = len(query_mh)
             subj_size = len(subj_mh)
             shared_size, total_size = query_mh.intersection_and_union_size(subj_mh)
 
