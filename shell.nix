@@ -17,9 +17,9 @@ in
 
       git
       stdenv.cc.cc.lib
-      (python38.withPackages(ps: with ps; [ virtualenv tox setuptools ]))
+      (python310.withPackages(ps: with ps; [ virtualenv tox setuptools ]))
       (python39.withPackages(ps: with ps; [ virtualenv setuptools ]))
-      (python37.withPackages(ps: with ps; [ virtualenv setuptools ]))
+      (python38.withPackages(ps: with ps; [ virtualenv setuptools ]))
 
       rust-cbindgen
 
