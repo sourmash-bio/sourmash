@@ -113,9 +113,15 @@ class SqliteIndex(Index):
                    hashval INTEGER NOT NULL,
                    sketch_id INTEGER NOT NULL,
                    FOREIGN KEY (hashval) REFERENCES hashes (hashval)
-                   FOREIGN KEY (sketch_id) REFERENCES sketches (id))
+                   FOREIGN KEY (sketch_id) REFERENCES sketches (id)
+                )
                 """)
-
+                c.execute("""
+                CREATE INDEX IF NOT EXISTS hashval_idx ON hashes_to_sketch (
+                   hashval,
+                   sketch_id
+                )
+                """)
             except (sqlite3.OperationalError, sqlite3.DatabaseError):
                 raise
                 raise ValueError(f"cannot open '{dbfile}' as sqlite3 database")
@@ -329,8 +335,8 @@ class SqliteIndex(Index):
         c.execute("DROP TABLE IF EXISTS hash_query")
         c.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER PRIMARY KEY)")
 
-        hashvals = [ (h,) for h in hashes ]
-        c.executemany("INSERT INTO hash_query (hashval) VALUES (?)", hashvals)
+        hashvals = [ (convert_hash_to(h),) for h in hashes ]
+        c.executemany("INSERT OR IGNORE INTO hash_query (hashval) VALUES (?)", hashvals)
 
         # @CTB do we want to add select stuff on here?
         c.execute("""
@@ -351,7 +357,8 @@ class SqliteIndex(Index):
 
         # check compatibility, etc. @CTB
         query_mh = query.minhash
-        query_mh = query_mh.downsample(scaled=self.scaled)
+        if self.scaled > query_mh.scaled:
+            query_mh = query_mh.downsample(scaled=self.scaled)
 
         picklist = None
         if self.selection_dict:
