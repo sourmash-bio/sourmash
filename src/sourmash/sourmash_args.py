@@ -717,7 +717,7 @@ def get_manifest(idx, *, require=True, rebuild=False):
     m = idx.manifest
 
     # has one, and don't want to rebuild? easy! return!
-    if m and not rebuild:
+    if m is not None and not rebuild:
         debug_literal("get_manifest: found manifest")
         return m
 
