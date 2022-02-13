@@ -557,6 +557,10 @@ class ZipFileLinearIndex(Index):
         return True
 
     def __len__(self):
+        m = self.manifest
+        if self.manifest is not None:
+            return len(m)
+
         n = 0
         for _ in self.signatures():
             n += 1

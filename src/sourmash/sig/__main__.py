@@ -1119,16 +1119,16 @@ def fileinfo(args):
     print_results(f"location: {print_none(idx.location)}")
     print_results(f"is database? {print_bool(idx.is_database)}")
     print_results(f"has manifest? {print_bool(idx.manifest)}")
-    print_results(f"is empty? {print_bool(idx)}")
+    print_results(f"is nonempty? {print_bool(idx)}")
     print_results(f"num signatures: {len(idx)}")
 
     # also have arg to fileinfo to force recalculation
+    notify("** examining manifest...")
+
     manifest = sourmash_args.get_manifest(idx, rebuild=args.rebuild_manifest)
     if manifest is None:
         notify("** no manifest and cannot be generated; exiting.")
         sys.exit(0)
-
-    notify("** examining manifest...")
 
     ksizes = set()
     moltypes = set()
