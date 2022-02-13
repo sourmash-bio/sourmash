@@ -848,19 +848,23 @@ class SaveSignatures_SqliteIndex(_BaseSaveSignaturesToLocation):
         super().__init__(location)
         self.location = location
         self.idx = None
+        self.cursor = None
 
     def __repr__(self):
         return f"SaveSignatures_SqliteIndex('{self.location}')"
 
     def close(self):
+        self.idx.commit()
+        self.cursor.execute('VACUUM')
         self.idx.close()
 
     def open(self):
         self.idx = SqliteIndex(self.location)
+        self.cursor = self.idx.cursor()
 
     def add(self, ss):
         super().add(ss)
-        self.idx.insert(ss)
+        self.idx.insert(ss, cursor=self.cursor, commit=False)
 
 
 class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):

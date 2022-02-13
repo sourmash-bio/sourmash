@@ -28,6 +28,7 @@ from bitstring import BitArray
 
 # @CTB add DISTINCT to sketch and hash select
 # manifest stuff?
+# @CTB don't do constraints if scaleds are equal?
 
 from .index import Index
 import sourmash
@@ -111,6 +112,11 @@ class SqliteIndex(Index):
                 )
                 """)
                 c.execute("""
+                CREATE INDEX IF NOT EXISTS hashval_idx2 ON hashes (
+                   hashval
+                )
+                """)
+                c.execute("""
                 CREATE INDEX IF NOT EXISTS sketch_idx ON hashes (
                    sketch_id
                 )
@@ -148,7 +154,7 @@ class SqliteIndex(Index):
         count, = c.fetchone()
         return count
 
-    def insert(self, ss, cursor=None, commit=True):
+    def insert(self, ss, *, cursor=None, commit=True):
         if cursor:
             c = cursor
         else:
@@ -414,10 +420,11 @@ class SqliteIndex(Index):
         c2 = self.conn.cursor()
 
         print('running _get_matching_sketches...')
+        t0 = time.time()
         xx = self._get_matching_sketches(c1, query_mh.hashes,
                                          query_mh._max_hash)
         for sketch_id, n_matching_hashes in xx:
-            print(f'...got sketch {sketch_id}, with {n_matching_hashes} matching hashes')
+            print(f'...got sketch {sketch_id}, with {n_matching_hashes} matching hashes', time.time() - t0)
             #
             # first, estimate sketch size using sql results.
             #
