@@ -5,13 +5,13 @@
 
 pub mod bigsi;
 pub mod linear;
+pub mod revindex;
 pub mod sbt;
 
 pub mod search;
 
 use std::ops::Deref;
 use std::path::Path;
-use std::rc::Rc;
 
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
@@ -24,7 +24,7 @@ use crate::prelude::*;
 use crate::signature::SigsTrait;
 use crate::sketch::nodegraph::Nodegraph;
 use crate::sketch::Sketch;
-use crate::storage::Storage;
+use crate::storage::{InnerStorage, Storage};
 use crate::Error;
 
 pub type MHBT = SBT<Node<Nodegraph>, Signature>;
@@ -98,6 +98,14 @@ pub trait Index<'a> {
 
     fn signature_refs(&self) -> Vec<&Self::Item>;
 
+    fn len(&self) -> usize {
+        self.signature_refs().len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /*
     fn iter_signatures(&self) -> Self::SignatureIterator;
     */
@@ -134,7 +142,7 @@ pub struct SigStore<T> {
     #[builder(setter(into))]
     metadata: String,
 
-    storage: Option<Rc<dyn Storage>>,
+    storage: Option<InnerStorage>,
 
     #[builder(setter(into), default)]
     data: OnceCell<T>,

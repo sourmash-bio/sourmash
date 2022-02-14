@@ -14,6 +14,7 @@ from sourmash import load_one_signature, SourmashSignature
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             make_jaccard_search_query, CounterGather,
                             LazyLinearIndex, MultiIndex)
+from sourmash.index.revindex import RevIndex
 from sourmash.sbt import SBT, GraphFactory, Leaf
 from sourmash.sbtmh import SigLeaf
 from sourmash import sourmash_args
@@ -2260,7 +2261,6 @@ def test_lazy_index_wraps_multi_index_location():
                                      lazy2.signatures_with_location()):
         assert ss_tup == ss_lazy_tup
 
-
 def test_lazy_loaded_index_1(runtmp):
     # some basic tests for LazyLoadedIndex
     lcafile = utils.get_test_data('prot/protein.lca.json.gz')
@@ -2338,3 +2338,101 @@ def test_lazy_loaded_index_3_find(runtmp):
     x = db.search(query, threshold=0.0)
     x = list(x)
     assert len(x) == 0
+
+def test_revindex_index_search():
+    sig2 = utils.get_test_data("2.fa.sig")
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = RevIndex(template=ss2.minhash)
+    lidx.insert(ss2)
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    # now, search for sig2
+    sr = lidx.search(ss2, threshold=1.0)
+    print([s[1].name for s in sr])
+    assert len(sr) == 1
+    assert sr[0][1] == ss2
+
+    # search for sig47 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss47, threshold=0.1)
+    print([s[1].name for s in sr])
+    assert len(sr) == 2
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss47
+    assert sr[1][1] == ss63
+
+    # search for sig63 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss63, threshold=0.1)
+    print([s[1].name for s in sr])
+    assert len(sr) == 2
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss63
+    assert sr[1][1] == ss47
+
+    # search for sig63 with high threshold => 1 match
+    sr = lidx.search(ss63, threshold=0.8)
+    print([s[1].name for s in sr])
+    assert len(sr) == 1
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss63
+
+
+def test_revindex_gather():
+    sig2 = utils.get_test_data("2.fa.sig")
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = RevIndex(template=ss2.minhash)
+    lidx.insert(ss2)
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    matches = lidx.gather(ss2)
+    assert len(matches) == 1
+    assert matches[0][0] == 1.0
+    assert matches[0][1] == ss2
+
+    matches = lidx.gather(ss47)
+    assert len(matches) == 1
+    assert matches[0][0] == 1.0
+    assert matches[0][1] == ss47
+
+
+def test_revindex_gather_ignore():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss63 = sourmash.load_one_signature(sig63, ksize=31)
+
+    # construct an index...
+    lidx = RevIndex(template=ss2.minhash, signatures=[ss2, ss47, ss63])
+
+    # ...now search with something that should ignore sig47, the exact match.
+    search_fn = JaccardSearchBestOnly_ButIgnore([ss47])
+
+    results = list(lidx.find(search_fn, ss47))
+    results = [ ss.signature for ss in results ]
+
+    def is_found(ss, xx):
+        for q in xx:
+            print(ss, ss.similarity(q))
+            if ss.similarity(q) == 1.0:
+                return True
+        return False
+
+    assert not is_found(ss47, results)
+    assert not is_found(ss2, results)
+    assert is_found(ss63, results)

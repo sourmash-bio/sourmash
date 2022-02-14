@@ -608,9 +608,9 @@ impl Signature {
         if #[cfg(feature = "parallel")] {
             self.signatures
                 .par_iter_mut()
-                .for_each(|sketch| {
-                    sketch.add_sequence(seq, force).unwrap(); }
-                );
+                .try_for_each(|sketch| {
+                    sketch.add_sequence(seq, force) }
+                )?;
         } else {
             for sketch in self.signatures.iter_mut(){
                 sketch.add_sequence(seq, force)?;
