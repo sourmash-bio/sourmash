@@ -7,6 +7,7 @@ use crate::prelude::*;
 use crate::signature::SigsTrait;
 use crate::sketch::nodegraph::Nodegraph;
 use crate::sketch::Sketch;
+use crate::storage::Storage;
 use crate::Error;
 
 impl ToWriter for Nodegraph {
