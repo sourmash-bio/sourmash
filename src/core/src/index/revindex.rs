@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use cfg_if::cfg_if;
 use getset::{CopyGetters, Getters, Setters};
 use log::{debug, info};
 use nohash_hasher::BuildNoHashHasher;
@@ -163,107 +162,65 @@ impl RevIndex {
         keep_sigs: bool,
     ) -> RevIndex {
         // If threshold is zero, let's merge all queries and save time later
-        let merged_query = if let Some(qs) = queries {
-            if threshold == 0 {
-                let mut merged = qs[0].clone();
-                for query in &qs[1..] {
-                    merged.merge(query).unwrap();
-                }
-                Some(merged)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+        let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
         let processed_sigs = AtomicUsize::new(0);
 
-        cfg_if! {
-          if #[cfg(feature = "parallel")] {
-            let (hash_to_color, colors) = search_sigs
-                .par_iter()
-                .enumerate()
-                .filter_map(|(dataset_id, filename)| {
-                    let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-                    if i % 1000 == 0 {
-                        info!("Processed {} reference sigs", i);
-                    }
+        #[cfg(feature = "parallel")]
+        let sig_iter = search_sigs.par_iter();
 
-                    RevIndex::map_hashes_colors(
-                        dataset_id,
-                        filename,
-                        queries,
-                        &merged_query,
-                        threshold,
-                        template,
-                    )
-                })
-                .reduce(
-                    || {
-                        (
-                            HashToColor::new(),
-                            Colors::default(),
-                        )
-                    },
-                    HashToColor::reduce_hashes_colors,
-                );
-          } else {
-            let (hash_to_color, colors) = search_sigs
-                .iter()
-                .enumerate()
-                .filter_map(|(dataset_id, filename)| {
-                    let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-                    if i % 1000 == 0 {
-                        info!("Processed {} reference sigs", i);
-                    }
-                    RevIndex::map_hashes_colors(
-                        dataset_id,
-                        filename,
-                        queries,
-                        &merged_query,
-                        threshold,
-                        template,
-                    )
-                })
-                .fold(
-                    (
-                        HashToColor::new(),
-                        Colors::default(),
-                    ),
-                    HashToColor::reduce_hashes_colors,
-                );
-          }
-        }
+        #[cfg(not(feature = "parallel"))]
+        let sig_iter = search_sigs.iter();
+
+        let filtered_sigs = sig_iter.enumerate().filter_map(|(dataset_id, filename)| {
+            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+            if i % 1000 == 0 {
+                info!("Processed {} reference sigs", i);
+            }
+
+            let search_sig = Signature::from_path(&filename)
+                .unwrap_or_else(|_| panic!("Error processing {:?}", filename))
+                .swap_remove(0);
+
+            RevIndex::map_hashes_colors(
+                dataset_id,
+                &search_sig,
+                queries,
+                &merged_query,
+                threshold,
+                template,
+            )
+        });
+
+        #[cfg(feature = "parallel")]
+        let (hash_to_color, colors) = filtered_sigs.reduce(
+            || (HashToColor::new(), Colors::default()),
+            HashToColor::reduce_hashes_colors,
+        );
+
+        #[cfg(not(feature = "parallel"))]
+        let (hash_to_color, colors) = filtered_sigs.fold(
+            (HashToColor::new(), Colors::default()),
+            HashToColor::reduce_hashes_colors,
+        );
 
         // TODO: build this together with hash_to_idx?
-        // TODO: do a parallel (par_iter) and sequential (iter) version
         let ref_sigs = if keep_sigs {
-            cfg_if! {
-              if #[cfg(feature = "parallel")] {
-                Some(
-                    search_sigs
-                        .par_iter()
-                        .map(|ref_path| {
-                            Signature::from_path(&ref_path)
-                                .unwrap_or_else(|_| panic!("Error processing {:?}", ref_path))
-                                .swap_remove(0)
-                        })
-                        .collect(),
-                )
-              } else {
-                Some(
-                    search_sigs
-                        .iter()
-                        .map(|ref_path| {
-                            Signature::from_path(&ref_path)
-                                .unwrap_or_else(|_| panic!("Error processing {:?}", ref_path))
-                                .swap_remove(0)
-                        })
-                        .collect(),
-                )
-              }
-            }
+            #[cfg(feature = "parallel")]
+            let sigs_iter = search_sigs.par_iter();
+
+            #[cfg(not(feature = "parallel"))]
+            let sigs_iter = search_sigs.iter();
+
+            Some(
+                sigs_iter
+                    .map(|ref_path| {
+                        Signature::from_path(&ref_path)
+                            .unwrap_or_else(|_| panic!("Error processing {:?}", ref_path))
+                            .swap_remove(0)
+                    })
+                    .collect(),
+            )
         } else {
             None
         };
@@ -278,6 +235,18 @@ impl RevIndex {
         }
     }
 
+    fn merge_queries(qs: &[KmerMinHash], threshold: usize) -> Option<KmerMinHash> {
+        if threshold == 0 {
+            let mut merged = qs[0].clone();
+            for query in &qs[1..] {
+                merged.merge(query).unwrap();
+            }
+            Some(merged)
+        } else {
+            None
+        }
+    }
+
     pub fn new_with_sigs(
         search_sigs: Vec<Signature>,
         template: &Sketch,
@@ -285,78 +254,42 @@ impl RevIndex {
         queries: Option<&[KmerMinHash]>,
     ) -> RevIndex {
         // If threshold is zero, let's merge all queries and save time later
-        let merged_query = if let Some(qs) = queries {
-            if threshold == 0 {
-                let mut merged = qs[0].clone();
-                for query in &qs[1..] {
-                    merged.merge(query).unwrap();
-                }
-                Some(merged)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+        let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
         let processed_sigs = AtomicUsize::new(0);
 
-        cfg_if! {
-          if #[cfg(feature = "parallel")] {
-            let (hash_to_color, colors) = search_sigs
-                .par_iter()
-                .enumerate()
-                .filter_map(|(dataset_id, sig)| {
-                    let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-                    if i % 1000 == 0 {
-                        info!("Processed {} reference sigs", i);
-                    }
+        #[cfg(feature = "parallel")]
+        let sigs_iter = search_sigs.par_iter();
+        #[cfg(not(feature = "parallel"))]
+        let sigs_iter = search_sigs.iter();
 
-                    RevIndex::map_hashes_colors_sigs(
-                        dataset_id,
-                        sig,
-                        queries,
-                        &merged_query,
-                        threshold,
-                        template,
-                    )
-                })
-                .reduce(
-                    || {
-                        (
-                            HashToColor::new(),
-                            Colors::default(),
-                        )
-                    },
-                    HashToColor::reduce_hashes_colors,
-                );
-          } else {
-            let (hash_to_color, colors) = search_sigs
-                .iter()
-                .enumerate()
-                .filter_map(|(dataset_id, filename)| {
-                    let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-                    if i % 1000 == 0 {
-                        info!("Processed {} reference sigs", i);
-                    }
-                    RevIndex::map_hashes_colors_sigs(
-                        dataset_id,
-                        filename,
-                        queries,
-                        &merged_query,
-                        threshold,
-                        template,
-                    )
-                })
-                .fold(
-                    (
-                        HashToColor::new(),
-                        Colors::default(),
-                    ),
-                    HashToColor::reduce_hashes_colors,
-                );
-          }
-        }
+        let filtered_sigs = sigs_iter.enumerate().filter_map(|(dataset_id, sig)| {
+            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+            if i % 1000 == 0 {
+                info!("Processed {} reference sigs", i);
+            }
+
+            RevIndex::map_hashes_colors(
+                dataset_id,
+                sig,
+                queries,
+                &merged_query,
+                threshold,
+                template,
+            )
+        });
+
+        #[cfg(feature = "parallel")]
+        let (hash_to_color, colors) = filtered_sigs.reduce(
+            || (HashToColor::new(), Colors::default()),
+            HashToColor::reduce_hashes_colors,
+        );
+
+        #[cfg(not(feature = "parallel"))]
+        let (hash_to_color, colors) = filtered_sigs.fold(
+            (HashToColor::new(), Colors::default()),
+            HashToColor::reduce_hashes_colors,
+        );
 
         RevIndex {
             hash_to_color,
@@ -368,7 +301,7 @@ impl RevIndex {
         }
     }
 
-    fn map_hashes_colors_sigs(
+    fn map_hashes_colors(
         dataset_id: usize,
         search_sig: &Signature,
         queries: Option<&[KmerMinHash]>,
@@ -412,28 +345,6 @@ impl RevIndex {
         } else {
             Some((hash_to_color, colors))
         }
-    }
-
-    fn map_hashes_colors(
-        dataset_id: usize,
-        filename: &Path,
-        queries: Option<&[KmerMinHash]>,
-        merged_query: &Option<KmerMinHash>,
-        threshold: usize,
-        template: &Sketch,
-    ) -> Option<(HashToColor, Colors)> {
-        let search_sig = Signature::from_path(&filename)
-            .unwrap_or_else(|_| panic!("Error processing {:?}", filename))
-            .swap_remove(0);
-
-        RevIndex::map_hashes_colors_sigs(
-            dataset_id,
-            &search_sig,
-            queries,
-            merged_query,
-            threshold,
-            template,
-        )
     }
 
     pub fn search(
