@@ -35,6 +35,7 @@ import sourmash
 from sourmash import MinHash, SourmashSignature
 from sourmash.index import IndexSearchResult
 from .picklist import PickStyle
+from .manifest import CollectionManifest
 
 # converters for unsigned 64-bit ints: if over MAX_SQLITE_INT,
 # convert to signed int.
@@ -290,6 +291,53 @@ class SqliteIndex(Index):
         
         for ss, loc, iloc in self._load_sketches(c, c2):
             yield ss, loc, iloc
+
+    @property
+    def manifest(self):
+        """
+        Generate manifests dynamically, for now.
+
+        CTB: do sketch size calculation inline!
+        """
+        c1 = self.conn.cursor()
+        c2 = self.conn.cursor()
+
+        conditions, values, picklist = self._select_signatures(c1)
+
+        c1.execute(f"""
+        SELECT id, name, md5sum, scaled, ksize, filename, is_dna, is_protein,
+        is_dayhoff, is_hp, seed FROM sketches {conditions}""",
+                  values)
+
+        manifest_list = []
+        for (iloc, name, md5sum, scaled, ksize, filename, is_dna, is_protein,
+             is_dayhoff, is_hp, seed) in c1:
+            row = {}
+            row['md5'] = md5sum
+            row['md5short'] = md5sum[:8]
+            row['ksize'] = ksize
+
+            if is_dna:
+                moltype = 'DNA'
+            elif is_dayhoff:
+                moltype = 'dayhoff'
+            elif is_hp:
+                moltype = 'hp'
+            else:
+                assert is_protein
+                moltype = 'protein'
+            row['moltype'] = moltype
+            row['num'] = 0
+            row['scaled'] = scaled
+            row['n_hashes'] = 0 # @CTB
+            row['with_abundance'] = 0
+            row['name'] = name
+            row['filename'] = filename
+            row['internal_location'] = iloc
+
+            manifest_list.append(row)
+        m = CollectionManifest(manifest_list)
+        return m
 
     def _load_sketch_size(self, c1, sketch_id, max_hash):
         "Get sketch size for given sketch, downsampled by max_hash."
