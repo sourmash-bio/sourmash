@@ -867,6 +867,10 @@ class SaveSignatures_SqliteIndex(_BaseSaveSignaturesToLocation):
             super().add(ss)
             self.idx.insert(ss, cursor=self.cursor, commit=False)
 
+            if self.count % 100 == 0:
+                print('XXX committing.', self.count)
+                self.idx.commit()
+
 
 class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
     "Save signatures to a .sig JSON file."
