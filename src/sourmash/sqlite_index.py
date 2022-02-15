@@ -153,9 +153,21 @@ class SqliteIndex(Index):
 
         c.execute(f"SELECT COUNT(*) FROM sketches {conditions}", values)
         count, = c.fetchone()
+
+        # @CTB do we need to pay attention to picklist here?
+        # we can geneate manifest and use 'picklist.matches_manifest_row'
+        # on rows.
         return count
 
     def insert(self, ss, *, cursor=None, commit=True):
+        """
+        Insert a signature into the sqlite database.
+
+        If a cursor object is supplied, use that cursor instead of
+        generating a new one.
+
+        If 'commit' is True, commit after add; otherwise, do not.
+        """
         if cursor:
             c = cursor
         else:
@@ -200,6 +212,14 @@ class SqliteIndex(Index):
         return self.dbfile
 
     def _select_signatures(self, c):
+        """
+        Given cursor 'c', build a set of SQL SELECT conditions
+        and matching value tuple that can be used to select the
+        right sketches from the database.
+
+        Returns a triple 'conditions', 'values', and 'picklist'.
+        The picklist is simply retrieved from the selection dictionary.
+        """
         conditions = []
         values = []
         picklist = None
@@ -273,29 +293,12 @@ class SqliteIndex(Index):
             if picklist is None or ss in picklist:
                 yield ss, loc
 
-    def _signatures_with_internal(self):
-        """Return an iterator of tuples (ss, location, internal_location).
-
-        This is an internal API for use in generating manifests, and may
-        change without warning.
-
-        This method should be implemented separately for each Index object.
-        """
-        c = self.conn.cursor()
-        c2 = self.conn.cursor()
-
-        c.execute("""
-        SELECT id, name, scaled, ksize, filename, is_dna, is_protein,
-        is_dayhoff, is_hp, seed FROM sketches
-        """)
-        
-        for ss, loc, iloc in self._load_sketches(c, c2):
-            yield ss, loc, iloc
-
+    # NOTE: we do not need _signatures_with_internal for this class
+    # because it supplies a manifest directly :tada:.
     @property
     def manifest(self):
         """
-        Generate manifests dynamically, for now.
+        Generate manifests dynamically from the SQL database.
         """
         c1 = self.conn.cursor()
         c2 = self.conn.cursor()
@@ -331,17 +334,100 @@ class SqliteIndex(Index):
         m = CollectionManifest(manifest_list)
         return m
 
+    def save(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @classmethod
+    def load(self, dbfile):
+        return SqliteIndex(dbfile)
+
+    def find(self, search_fn, query, **kwargs):
+        search_fn.check_is_compatible(query)
+
+        # check compatibility, etc.
+        query_mh = query.minhash
+        if self.scaled > query_mh.scaled:
+            query_mh = query_mh.downsample(scaled=self.scaled)
+
+        picklist = None
+        if self.selection_dict:
+            picklist = self.selection_dict.get('picklist')
+
+        c1 = self.conn.cursor()
+        c2 = self.conn.cursor()
+
+        print('running _get_matching_sketches...')
+        t0 = time.time()
+        xx = self._get_matching_sketches(c1, query_mh.hashes,
+                                         query_mh._max_hash)
+        for sketch_id, n_matching_hashes in xx:
+            print(f'...got sketch {sketch_id}, with {n_matching_hashes} matching hashes', time.time() - t0)
+            #
+            # first, estimate sketch size using sql results.
+            #
+            query_size = len(query_mh)
+            subj_size = self._load_sketch_size(c2, sketch_id,
+                                               query_mh._max_hash)
+            total_size = query_size + subj_size - n_matching_hashes
+            shared_size = n_matching_hashes
+
+            score = search_fn.score_fn(query_size, shared_size, subj_size,
+                                       total_size)
+            print('APPROX RESULT:', score, query_size, subj_size,
+                  total_size, shared_size)
+
+            # do we pass?
+            if not search_fn.passes(score):
+                print('FAIL')
+                # break out, because we've ordered the results by
+                # overlap. @CTB does this work for jaccard? Probably not...
+                break
+
+            if search_fn.passes(score):
+                subj = self._load_sketch(c2, sketch_id)
+                # check actual against approx result here w/assert. @CTB
+                if search_fn.collect(score, subj):
+                    if picklist is None or subj in picklist:
+                        yield IndexSearchResult(score, subj, self.location)
+
+    def select(self, *, num=0, track_abundance=False, **kwargs):
+        if num:
+            # @CTB testme
+            raise ValueError("cannot select on 'num' in SqliteIndex")
+        if track_abundance:
+            # @CTB testme
+            raise ValueError("cannot store or search signatures with abundance")
+
+        # Pass along all the selection kwargs to a new instance
+        if self.selection_dict:
+            # combine selects...
+            d = dict(self.selection_dict)
+            for k, v in kwargs.items():
+                if k in d:
+                    if d[k] is not None and d[k] != v:
+                        raise ValueError(f"incompatible select on '{k}'")
+                d[k] = v
+            kwargs = d
+
+        return SqliteIndex(self.dbfile, selection_dict=kwargs, conn=self.conn)
+
+    #
+    # Actual SQL queries, etc.
+    #
+
     def _load_sketch_size(self, c1, sketch_id, max_hash):
         "Get sketch size for given sketch, downsampled by max_hash."
         if max_hash <= MAX_SQLITE_INT:
-            c1.execute("SELECT COUNT(hashval) FROM hashes WHERE sketch_id=? AND hashval >= 0 AND hashval <= ?",
+            c1.execute("""
+            SELECT COUNT(hashval) FROM hashes
+            WHERE sketch_id=? AND hashval >= 0 AND hashval <= ?""",
                        (sketch_id, max_hash))
         else:
-            c1.execute('SELECT COUNT(hashval) FROM hashes WHERE sketch_id=?', (sketch_id,))
+            c1.execute('SELECT COUNT(hashval) FROM hashes WHERE sketch_id=?',
+                       (sketch_id,))
 
         n_hashes, = c1.fetchone()
         return n_hashes
-
 
     def _load_sketch(self, c1, sketch_id, *, match_scaled=None):
         "Load an individual sketch. If match_scaled is set, downsample."
@@ -427,7 +513,7 @@ class SqliteIndex(Index):
             hash_constraint_str = "hashes.hashval >= 0 AND hashes.hashval <= ? AND"
             template_values.append(max_hash)
 
-        # @CTB do we want to add sketch 'select' stuff on here?
+        # @CTB do we want to add sketch 'select' limitations on here?
         c.execute(f"""
         SELECT DISTINCT hashes.sketch_id,COUNT(hashes.hashval) as CNT
         FROM hashes,hash_query
@@ -436,108 +522,3 @@ class SqliteIndex(Index):
         """, template_values)
 
         return c
-
-    def save(self, *args, **kwargs):
-        raise NotImplementedError
-
-    @classmethod
-    def load(self, dbfile):
-        return SqliteIndex(dbfile)
-
-    def find(self, search_fn, query, **kwargs):
-        search_fn.check_is_compatible(query)
-
-        # check compatibility, etc.
-        query_mh = query.minhash
-        if self.scaled > query_mh.scaled:
-            query_mh = query_mh.downsample(scaled=self.scaled)
-
-        picklist = None
-        if self.selection_dict:
-            picklist = self.selection_dict.get('picklist')
-
-        c1 = self.conn.cursor()
-        c2 = self.conn.cursor()
-
-        print('running _get_matching_sketches...')
-        t0 = time.time()
-        xx = self._get_matching_sketches(c1, query_mh.hashes,
-                                         query_mh._max_hash)
-        for sketch_id, n_matching_hashes in xx:
-            print(f'...got sketch {sketch_id}, with {n_matching_hashes} matching hashes', time.time() - t0)
-            #
-            # first, estimate sketch size using sql results.
-            #
-            query_size = len(query_mh)
-            subj_size = self._load_sketch_size(c2, sketch_id,
-                                               query_mh._max_hash)
-            total_size = query_size + subj_size - n_matching_hashes
-            shared_size = n_matching_hashes
-
-            score = search_fn.score_fn(query_size, shared_size, subj_size,
-                                       total_size)
-            print('APPROX RESULT:', score, query_size, subj_size,
-                  total_size, shared_size)
-
-            # do we pass?
-            if not search_fn.passes(score):
-                print('FAIL')
-                # break out...
-                break
-
-            save_score = score
-
-            #
-            # if pass, load sketch for realz - this is the slow bit.
-            #
-            # @CTB do we need to do this second one where we load the sketch?
-            #
-
-            if 0:
-                start = time.time()
-                subj = self._load_sketch(c2, sketch_id,
-                                         match_scaled=query_mh.scaled)
-                print(f'LOAD SKETCH s={time.time() - start}')
-
-                subj_mh = subj.minhash
-                assert subj_mh.scaled == query_mh.scaled
-
-                # all numbers calculated after downsampling --
-                subj_size = len(subj_mh)
-                shared_size, total_size = query_mh.intersection_and_union_size(subj_mh)
-
-                score = search_fn.score_fn(query_size, shared_size, subj_size,
-                                           total_size)
-                print('ACTUAL RESULT:', score, query_size, subj_size,
-                      total_size, shared_size)
-
-                if score != save_score:
-                    print('*** DIFFERENT SCORES', save_score, score)
-
-            if search_fn.passes(score):
-                subj = self._load_sketch(c2, sketch_id)
-                # check actual against approx result here w/assert.
-                if search_fn.collect(score, subj):
-                    if picklist is None or subj in picklist:
-                        yield IndexSearchResult(score, subj, self.location)
-
-    def select(self, *, num=0, track_abundance=False, **kwargs):
-        if num:
-            # @CTB testme
-            raise ValueError("cannot select on 'num' in SqliteIndex")
-        if track_abundance:
-            # @CTB testme
-            raise ValueError("cannot store or search signatures with abundance")
-
-        # Pass along all the selection kwargs to a new instance
-        if self.selection_dict:
-            # combine selects...
-            d = dict(self.selection_dict)
-            for k, v in kwargs.items():
-                if k in d:
-                    if d[k] is not None and d[k] != v:
-                        raise ValueError(f"incompatible select on '{k}'")
-                d[k] = v
-            kwargs = d
-
-        return SqliteIndex(self.dbfile, selection_dict=kwargs, conn=self.conn)
