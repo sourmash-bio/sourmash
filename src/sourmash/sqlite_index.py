@@ -167,6 +167,8 @@ class SqliteIndex(Index):
         generating a new one.
 
         If 'commit' is True, commit after add; otherwise, do not.
+
+        # @CTB do we want to limit to one moltype/ksize, too, like LCA index?
         """
         if cursor:
             c = cursor
@@ -392,10 +394,8 @@ class SqliteIndex(Index):
 
     def select(self, *, num=0, track_abundance=False, **kwargs):
         if num:
-            # @CTB testme
             raise ValueError("cannot select on 'num' in SqliteIndex")
         if track_abundance:
-            # @CTB testme
             raise ValueError("cannot store or search signatures with abundance")
 
         # Pass along all the selection kwargs to a new instance
