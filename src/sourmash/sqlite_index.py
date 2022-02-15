@@ -150,6 +150,10 @@ class SqliteIndex(Index):
     def __len__(self):
         c = self.cursor()
         conditions, values, picklist = self._select_signatures(c)
+        if conditions:
+            conditions = conditions = "WHERE " + " AND ".join(conditions)
+        else:
+            conditions = ""
 
         c.execute(f"SELECT COUNT(*) FROM sketches {conditions}", values)
         count, = c.fetchone()
@@ -220,6 +224,7 @@ class SqliteIndex(Index):
         right sketches from the database.
 
         Returns a triple 'conditions', 'values', and 'picklist'.
+        'conditions' is a list that should be joined with 'AND'.
         The picklist is simply retrieved from the selection dictionary.
         """
         conditions = []
@@ -267,11 +272,6 @@ class SqliteIndex(Index):
                     sketches.id NOT IN (SELECT sketch_id FROM pickset)
                     """)
 
-        if conditions:
-            conditions = "WHERE " + " AND ".join(conditions)
-        else:
-            conditions = ""
-
         return conditions, values, picklist
 
     def signatures(self):
@@ -285,6 +285,10 @@ class SqliteIndex(Index):
         c2 = self.conn.cursor()
 
         conditions, values, picklist = self._select_signatures(c)
+        if conditions:
+            conditions = conditions = "WHERE " + " AND ".join(conditions)
+        else:
+            conditions = ""
 
         c.execute(f"""
         SELECT id, name, scaled, ksize, filename, is_dna, is_protein,
@@ -306,6 +310,10 @@ class SqliteIndex(Index):
         c2 = self.conn.cursor()
 
         conditions, values, picklist = self._select_signatures(c1)
+        if conditions:
+            conditions = conditions = "WHERE " + " AND ".join(conditions)
+        else:
+            conditions = ""
 
         c1.execute(f"""
         SELECT id, name, md5sum, scaled, ksize, filename, is_dna, is_protein,
@@ -504,21 +512,29 @@ class SqliteIndex(Index):
         hashvals = [ (convert_hash_to(h),) for h in hashes ]
         c.executemany("INSERT OR IGNORE INTO hash_query (hashval) VALUES (?)", hashvals)
 
-        template_values = []
+        #
+        # set up SELECT conditions
+        #
+        # @CTB test these combinations...
 
-        # optimize select?
+        conditions, template_values, picklist = self._select_signatures(c)
+
+        # downsample? => add to conditions
         max_hash = min(max_hash, max(hashes))
-        hash_constraint_str = ""
         if max_hash <= MAX_SQLITE_INT:
-            hash_constraint_str = "hashes.hashval >= 0 AND hashes.hashval <= ? AND"
+            select_str = "hashes.hashval >= 0 AND hashes.hashval <= ?"
+            conditions.append(select_str)
             template_values.append(max_hash)
 
-        # @CTB do we want to add sketch 'select' limitations on here?
+        # format conditions
+        conditions.append('hashes.hashval=hash_query.hashval')
+        conditions = " AND ".join(conditions)
+
         c.execute(f"""
         SELECT DISTINCT hashes.sketch_id,COUNT(hashes.hashval) as CNT
         FROM hashes,hash_query
-        WHERE {hash_constraint_str}
-           hashes.hashval=hash_query.hashval GROUP BY hashes.sketch_id ORDER BY CNT DESC
+        WHERE {conditions}
+        GROUP BY hashes.sketch_id ORDER BY CNT DESC
         """, template_values)
 
         return c
