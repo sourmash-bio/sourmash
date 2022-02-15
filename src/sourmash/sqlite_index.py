@@ -27,7 +27,6 @@ from collections import Counter
 from bitstring import BitArray
 
 # @CTB add DISTINCT to sketch and hash select
-# manifest stuff?
 # @CTB don't do constraints if scaleds are equal?
 
 from .index import Index
@@ -96,7 +95,8 @@ class SqliteIndex(Index):
                    is_dayhoff BOOLEAN NOT NULL,
                    is_hp BOOLEAN NOT NULL,
                    md5sum TEXT NOT NULL, 
-                   seed INTEGER NOT NULL
+                   seed INTEGER NOT NULL,
+                   n_hashes INTEGER NOT NULL
                 )
                 """)
                 c.execute("""
@@ -174,12 +174,12 @@ class SqliteIndex(Index):
         c.execute("""
         INSERT INTO sketches
           (name, scaled, ksize, filename, md5sum,
-           is_dna, is_protein, is_dayhoff, is_hp, seed)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           is_dna, is_protein, is_dayhoff, is_hp, seed, n_hashes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (ss.name, ss.minhash.scaled, ss.minhash.ksize,
          ss.filename, ss.md5sum(),
          ss.minhash.is_dna, ss.minhash.is_protein, ss.minhash.dayhoff,
-         ss.minhash.hp, ss.minhash.seed))
+         ss.minhash.hp, ss.minhash.seed, len(ss.minhash)))
 
         c.execute("SELECT last_insert_rowid()")
         sketch_id, = c.fetchone()
@@ -296,8 +296,6 @@ class SqliteIndex(Index):
     def manifest(self):
         """
         Generate manifests dynamically, for now.
-
-        CTB: do sketch size calculation inline!
         """
         c1 = self.conn.cursor()
         c2 = self.conn.cursor()
@@ -306,16 +304,16 @@ class SqliteIndex(Index):
 
         c1.execute(f"""
         SELECT id, name, md5sum, scaled, ksize, filename, is_dna, is_protein,
-        is_dayhoff, is_hp, seed FROM sketches {conditions}""",
+        is_dayhoff, is_hp, seed, n_hashes FROM sketches {conditions}""",
                   values)
 
         manifest_list = []
         for (iloc, name, md5sum, scaled, ksize, filename, is_dna, is_protein,
-             is_dayhoff, is_hp, seed) in c1:
-            row = {}
-            row['md5'] = md5sum
+             is_dayhoff, is_hp, seed, n_hashes) in c1:
+            row = dict(num=0, scaled=scaled, name=name, filename=filename,
+                       n_hashes=n_hashes, with_abundance=0, ksize=ksize,
+                       md5=md5sum)
             row['md5short'] = md5sum[:8]
-            row['ksize'] = ksize
 
             if is_dna:
                 moltype = 'DNA'
@@ -327,12 +325,6 @@ class SqliteIndex(Index):
                 assert is_protein
                 moltype = 'protein'
             row['moltype'] = moltype
-            row['num'] = 0
-            row['scaled'] = scaled
-            row['n_hashes'] = 0 # @CTB
-            row['with_abundance'] = 0
-            row['name'] = name
-            row['filename'] = filename
             row['internal_location'] = iloc
 
             manifest_list.append(row)
