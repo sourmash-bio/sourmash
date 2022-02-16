@@ -1109,7 +1109,7 @@ def fileinfo(args):
         idx = sourmash_args.load_file_as_index(args.path,
                                                yield_all_files=args.force)
     except ValueError:
-        error("Cannot open '{args.path}'.")
+        error(f"Cannot open '{args.path}'.")
         sys.exit(-1)
 
     print_bool = lambda x: "yes" if x else "no"
