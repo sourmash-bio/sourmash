@@ -517,7 +517,9 @@ class SqliteIndex(Index):
         #
         # @CTB test these combinations...
 
-        conditions, template_values, picklist = self._select_signatures(c)
+        #conditions, template_values, picklist = self._select_signatures(c)
+        conditions = []
+        template_values = []
 
         # downsample? => add to conditions
         max_hash = min(max_hash, max(hashes))
@@ -528,6 +530,7 @@ class SqliteIndex(Index):
 
         # format conditions
         conditions.append('hashes.hashval=hash_query.hashval')
+        #conditions.append('hashes.sketch_id = sketches.id')
         conditions = " AND ".join(conditions)
 
         c.execute(f"""
