@@ -854,7 +854,7 @@ class MultiIndex(Index):
 
     Concrete class; signatures held in memory; builds and uses manifests.
     """
-    def __init__(self, manifest, parent=""):
+    def __init__(self, manifest, *, parent=""):
         """Constructor; takes manifest containing signatures, together with
         optional top-level location to prepend to internal locations.
         """
@@ -983,7 +983,7 @@ class MultiIndex(Index):
                     raise ValueError(f"no signatures to load from '{pathname}'")
                 return None
 
-            return cls.load(index_list, source_list)
+            return cls.load(index_list, source_list, parent=pathname)
 
     @classmethod
     def load_from_pathlist(cls, filename):
