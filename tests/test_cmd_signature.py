@@ -2971,16 +2971,17 @@ def test_sig_manifest_3_sbt(runtmp):
 def test_sig_manifest_4_lca(runtmp):
     # make a manifest from a .lca.json file
     sigfile = utils.get_test_data('prot/protein.lca.json.gz')
-    with pytest.raises(SourmashCommandFailed):
-        runtmp.sourmash('sig', 'manifest', sigfile, '-o',
-                        'SOURMASH-MANIFEST.csv')
+    runtmp.sourmash('sig', 'manifest', sigfile, '-o',
+                    'SOURMASH-MANIFEST.csv')
 
-    status = runtmp.last_result.status
-    out = runtmp.last_result.out
-    err = runtmp.last_result.err
+    manifest_fn = runtmp.output('SOURMASH-MANIFEST.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
 
-    assert status != 0
-    assert "ERROR: manifests cannot be generated for this file." in err
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
 
 
 def test_sig_manifest_5_dir(runtmp):
