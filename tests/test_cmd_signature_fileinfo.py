@@ -46,3 +46,93 @@ no num sketches present
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
+
+
+def test_fileinfo_2_lca(runtmp):
+    c = runtmp
+
+    # get basic info on a signature
+    sig47 = utils.get_test_data('prot/protein.lca.json.gz')
+
+    shutil.copyfile(sig47, runtmp.output('protein.lca.json.gz'))
+    c.run_sourmash('sig', 'fileinfo', 'protein.lca.json.gz')
+
+    out = c.last_result.out
+    print(c.last_result.out)
+
+    expected_output = """\
+path filetype: LCA_Database
+location: protein.lca.json.gz
+is database? yes
+has manifest? no
+is nonempty? yes
+num signatures: 2
+8214 total hashes
+abundance information available: no
+ksizes present: 19
+moltypes present: protein
+scaled vals present: 100
+no num sketches present
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+def test_fileinfo_3_sbt_zip(runtmp):
+    c = runtmp
+
+    # get basic info on a signature
+    sig47 = utils.get_test_data('prot/protein.sbt.zip')
+
+    shutil.copyfile(sig47, runtmp.output('protein.sbt.zip'))
+    c.run_sourmash('sig', 'fileinfo', 'protein.sbt.zip')
+
+    out = c.last_result.out
+    print(c.last_result.out)
+
+    # @CTB add a manifest here!
+    expected_output = """\
+path filetype: SBT
+location: protein.sbt.zip
+is database? yes
+has manifest? no
+is nonempty? yes
+num signatures: 3
+8214 total hashes
+abundance information available: no
+ksizes present: 19
+moltypes present: protein
+scaled vals present: 100
+no num sketches present
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+def test_fileinfo_4_zip(runtmp):
+    c = runtmp
+
+    # get basic info on a signature
+    sig47 = utils.get_test_data('prot/all.zip')
+
+    shutil.copyfile(sig47, runtmp.output('all.zip'))
+    c.run_sourmash('sig', 'fileinfo', 'all.zip')
+
+    out = c.last_result.out
+    print(c.last_result.out)
+
+    # @CTB why is location fully resolved!?
+    expected_output = """\
+is database? yes
+has manifest? yes
+is nonempty? yes
+num signatures: 8
+31758 total hashes
+abundance information available: yes
+ksizes present: 19, 31
+moltypes present: DNA, dayhoff, hp, protein
+scaled vals present: 100, 1000
+no num sketches present
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
