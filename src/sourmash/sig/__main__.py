@@ -14,6 +14,7 @@ from sourmash.sourmash_args import FileOutput
 from sourmash.logging import set_quiet, error, notify, print_results, debug
 from sourmash import sourmash_args
 from sourmash.minhash import _get_max_hash_for_scaled
+from sourmash.manifest import CollectionManifest
 
 
 usage='''
@@ -599,12 +600,14 @@ def extract(args):
 
     # further filtering on md5 or name?
     if args.md5 is not None or args.name is not None:
-        def filter_fn(ss):
+        def filter_fn(row):
             # match?
             keep = False
-            if args.name and args.name in str(ss):
-                keep = True
-            if args.md5 and args.md5 in ss.md5sum():
+            if args.name:
+                name = row['name'] or row['filename']
+                if args.name in name:
+                    keep = True
+            if args.md5 and args.md5 in row['md5']:
                 keep = True
 
             return keep
@@ -617,19 +620,33 @@ def extract(args):
     save_sigs.open()
 
     # start loading!
-    progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.load_many_signatures(args.signatures,
-                                                ksize=args.ksize,
-                                                moltype=moltype,
-                                                picklist=picklist,
-                                                progress=progress,
-                                                yield_all_files=args.force,
-                                                force=args.force)
-    for ss, sigloc in loader:
-        if filter_fn(ss):
+    total_rows_examined = 0
+    for filename in args.signatures:
+        idx = sourmash_args.load_file_as_index(filename,
+                                               yield_all_files=args.force)
+
+        idx = idx.select(ksize=args.ksize,
+                         moltype=moltype,
+                         picklist=picklist)
+
+        manifest = sourmash_args.get_manifest(idx)
+
+        sub_rows = []
+        for row in manifest.rows:
+            if filter_fn(row):
+                sub_rows.append(row)
+            total_rows_examined += 1
+
+        sub_manifest = CollectionManifest(sub_rows)
+        picklist = sub_manifest.to_picklist()
+
+        # @CTB check about things that don't support 2 rounds of select
+        # with picklist.
+        idx = idx.select(picklist=picklist)
+        for ss in idx.signatures():
             save_sigs.add(ss)
 
-    notify(f"loaded {len(progress)} total that matched ksize & molecule type")
+    notify(f"loaded {total_rows_examined} total that matched ksize & molecule type")
     if not save_sigs:
         error("no matching signatures to save!")
         sys.exit(-1)
