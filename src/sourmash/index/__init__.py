@@ -40,10 +40,10 @@ from collections import namedtuple, Counter
 import csv
 from io import TextIOWrapper
 
-from .search import make_jaccard_search_query, make_gather_query
-from .manifest import CollectionManifest
-from .logging import debug_literal
-from .signature import load_signatures, save_signatures
+from ..search import make_jaccard_search_query, make_gather_query
+from ..manifest import CollectionManifest
+from ..logging import debug_literal
+from ..signature import load_signatures, save_signatures
 
 # generic return tuple for Index.search and Index.gather
 IndexSearchResult = namedtuple('Result', 'score, signature, location')
@@ -588,7 +588,7 @@ class ZipFileLinearIndex(Index):
     @classmethod
     def load(cls, location, traverse_yield_all=False, use_manifest=True):
         "Class method to load a zipfile."
-        from .sbt_storage import ZipStorage
+        from ..sbt_storage import ZipStorage
 
         # we can only load from existing zipfiles in this method.
         if not os.path.exists(location):
@@ -934,7 +934,7 @@ class MultiIndex(Index):
         load all files ending in .sig or .sig.gz, by default; if 'force' is
         True, will attempt to load _all_ files, ignoring errors.
         """
-        from .sourmash_args import traverse_find_sigs
+        from ..sourmash_args import traverse_find_sigs
 
         if not os.path.isdir(pathname):
             raise ValueError(f"'{pathname}' must be a directory.")
@@ -997,7 +997,7 @@ class MultiIndex(Index):
         if they are listed in the text file; it uses 'load_file_as_index'
         underneath.
         """
-        from .sourmash_args import (load_pathlist_from_file,
+        from ..sourmash_args import (load_pathlist_from_file,
                                     load_file_as_index)
         idx_list = []
         src_list = []
