@@ -52,6 +52,10 @@ class Index(ABC):
     is_database = False
     manifest = None
 
+    @abstractmethod
+    def __len__(self):
+        "Return the number of signatures in this Index object."
+
     @property
     def location(self):
         "Return a resolvable location for this index, if possible."
