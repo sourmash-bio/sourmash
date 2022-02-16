@@ -17,6 +17,10 @@ def subparser(subparsers):
         '-f', '--force', action='store_true',
         help='try to load all files as signatures'
     )
+    subparser.add_argument(
+        '--no-rebuild-manifest', help='use existing manifest if available',
+        action='store_true'
+    )
 
 
 def main(args):

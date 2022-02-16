@@ -19,37 +19,29 @@ Features and limitations:
 * Likewise, SqliteIndex does not support 'abund' signatures because it cannot
   search them (just like SBTs cannot).
 
-Questions:
-
-* do we want to enforce a single 'scaled' for this database? 'find'
-  may require it...
-
 """
+import time
 import sqlite3
 from collections import Counter
 
+from bitstring import BitArray
+
 # @CTB add DISTINCT to sketch and hash select
+# @CTB don't do constraints if scaleds are equal?
 
 from .index import Index
 import sourmash
 from sourmash import MinHash, SourmashSignature
 from sourmash.index import IndexSearchResult
 from .picklist import PickStyle
+from .manifest import CollectionManifest
 
-# register converters for unsigned 64-bit ints: if over MAX_SQLITE_INT,
-# convert to hex string.
-#
-# see: https://stackoverflow.com/questions/57464671/peewee-python-int-too-large-to-convert-to-sqlite-integer
-# and
-# https://wellsr.com/python/adapting-and-converting-sqlite-data-types-for-python/
-# for more information.
+# converters for unsigned 64-bit ints: if over MAX_SQLITE_INT,
+# convert to signed int.
 
 MAX_SQLITE_INT = 2 ** 63 - 1
-sqlite3.register_adapter(
-    int, lambda x: hex(x) if x > MAX_SQLITE_INT else x)
-sqlite3.register_converter(
-    'integer', lambda b: int(b, 16 if b[:2] == b'0x' else 10))
-
+convert_hash_to = lambda x: BitArray(uint=x, length=64).int if x > MAX_SQLITE_INT else x
+convert_hash_from = lambda x: BitArray(int=x, length=64).uint if x < 0 else x
 
 picklist_transforms = dict(
     name=lambda x: x,
@@ -86,7 +78,7 @@ class SqliteIndex(Index):
 
                 c = self.conn.cursor()
 
-                c.execute("PRAGMA cache_size=1000000")
+                c.execute("PRAGMA cache_size=10000000")
                 c.execute("PRAGMA synchronous = OFF")
                 c.execute("PRAGMA journal_mode = MEMORY")
                 c.execute("PRAGMA temp_store = MEMORY")
@@ -103,20 +95,48 @@ class SqliteIndex(Index):
                    is_dayhoff BOOLEAN NOT NULL,
                    is_hp BOOLEAN NOT NULL,
                    md5sum TEXT NOT NULL, 
-                   seed INTEGER NOT NULL)
+                   seed INTEGER NOT NULL,
+                   n_hashes INTEGER NOT NULL
+                )
                 """)
                 c.execute("""
-                CREATE TABLE IF NOT EXISTS hashes
-                  (hashval INTEGER NOT NULL,
+                CREATE TABLE IF NOT EXISTS hashes (
+                   hashval INTEGER NOT NULL,
                    sketch_id INTEGER NOT NULL,
-                   FOREIGN KEY (sketch_id) REFERENCES sketches (id))
+                   FOREIGN KEY (sketch_id) REFERENCES sketches (id)
+                )
                 """)
                 c.execute("""
-                CREATE INDEX IF NOT EXISTS hashval_idx ON hashes (hashval)
+                CREATE INDEX IF NOT EXISTS hashval_idx ON hashes (
+                   hashval,
+                   sketch_id
+                )
                 """)
-
+                c.execute("""
+                CREATE INDEX IF NOT EXISTS hashval_idx2 ON hashes (
+                   hashval
+                )
+                """)
+                c.execute("""
+                CREATE INDEX IF NOT EXISTS sketch_idx ON hashes (
+                   sketch_id
+                )
+                """
+                )
             except (sqlite3.OperationalError, sqlite3.DatabaseError):
+                raise
                 raise ValueError(f"cannot open '{dbfile}' as sqlite3 database")
+
+        c = self.conn.cursor()
+        c.execute("SELECT DISTINCT scaled FROM sketches")
+        scaled_vals = c.fetchall()
+        if len(scaled_vals) > 1:
+            raise ValueError("this database has multiple scaled values, which is not currently allowed")
+
+        if scaled_vals:
+            self.scaled = scaled_vals[0][0]
+        else:
+            self.scaled = None
 
     def cursor(self):
         return self.conn.cursor()
@@ -130,12 +150,30 @@ class SqliteIndex(Index):
     def __len__(self):
         c = self.cursor()
         conditions, values, picklist = self._select_signatures(c)
+        if conditions:
+            conditions = conditions = "WHERE " + " AND ".join(conditions)
+        else:
+            conditions = ""
 
         c.execute(f"SELECT COUNT(*) FROM sketches {conditions}", values)
         count, = c.fetchone()
+
+        # @CTB do we need to pay attention to picklist here?
+        # we can geneate manifest and use 'picklist.matches_manifest_row'
+        # on rows.
         return count
 
-    def insert(self, ss, cursor=None, commit=True):
+    def insert(self, ss, *, cursor=None, commit=True):
+        """
+        Insert a signature into the sqlite database.
+
+        If a cursor object is supplied, use that cursor instead of
+        generating a new one.
+
+        If 'commit' is True, commit after add; otherwise, do not.
+
+        # @CTB do we want to limit to one moltype/ksize, too, like LCA index?
+        """
         if cursor:
             c = cursor
         else:
@@ -146,25 +184,31 @@ class SqliteIndex(Index):
         if ss.minhash.track_abundance:
             raise ValueError("cannot store signatures with abundance in SqliteIndex")
 
+        if self.scaled is not None and self.scaled != ss.minhash.scaled:
+            raise ValueError("this database can only store scaled values = {self.scaled}")
+        elif self.scaled is None:
+            self.scaled = ss.minhash.scaled
+
         c.execute("""
         INSERT INTO sketches
           (name, scaled, ksize, filename, md5sum,
-           is_dna, is_protein, is_dayhoff, is_hp, seed)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           is_dna, is_protein, is_dayhoff, is_hp, seed, n_hashes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (ss.name, ss.minhash.scaled, ss.minhash.ksize,
          ss.filename, ss.md5sum(),
          ss.minhash.is_dna, ss.minhash.is_protein, ss.minhash.dayhoff,
-         ss.minhash.hp, ss.minhash.seed))
+         ss.minhash.hp, ss.minhash.seed, len(ss.minhash)))
 
         c.execute("SELECT last_insert_rowid()")
         sketch_id, = c.fetchone()
 
         hashes = []
+        hashes_to_sketch = []
         for h in ss.minhash.hashes:
-            hashes.append((h, sketch_id))
+            hh = convert_hash_to(h)
+            hashes_to_sketch.append((hh, sketch_id))
 
-        c.executemany("INSERT INTO hashes (hashval, sketch_id) VALUES (?, ?)",
-                      hashes)
+        c.executemany("INSERT INTO hashes (hashval, sketch_id) VALUES (?, ?)", hashes_to_sketch)
 
         if commit:
             self.conn.commit()
@@ -174,6 +218,15 @@ class SqliteIndex(Index):
         return self.dbfile
 
     def _select_signatures(self, c):
+        """
+        Given cursor 'c', build a set of SQL SELECT conditions
+        and matching value tuple that can be used to select the
+        right sketches from the database.
+
+        Returns a triple 'conditions', 'values', and 'picklist'.
+        'conditions' is a list that should be joined with 'AND'.
+        The picklist is simply retrieved from the selection dictionary.
+        """
         conditions = []
         values = []
         picklist = None
@@ -219,11 +272,6 @@ class SqliteIndex(Index):
                     sketches.id NOT IN (SELECT sketch_id FROM pickset)
                     """)
 
-        if conditions:
-            conditions = "WHERE " + " AND ".join(conditions)
-        else:
-            conditions = ""
-
         return conditions, values, picklist
 
     def signatures(self):
@@ -237,6 +285,10 @@ class SqliteIndex(Index):
         c2 = self.conn.cursor()
 
         conditions, values, picklist = self._select_signatures(c)
+        if conditions:
+            conditions = conditions = "WHERE " + " AND ".join(conditions)
+        else:
+            conditions = ""
 
         c.execute(f"""
         SELECT id, name, scaled, ksize, filename, is_dna, is_protein,
@@ -247,76 +299,50 @@ class SqliteIndex(Index):
             if picklist is None or ss in picklist:
                 yield ss, loc
 
-    def _signatures_with_internal(self):
-        """Return an iterator of tuples (ss, location, internal_location).
-
-        This is an internal API for use in generating manifests, and may
-        change without warning.
-
-        This method should be implemented separately for each Index object.
+    # NOTE: we do not need _signatures_with_internal for this class
+    # because it supplies a manifest directly :tada:.
+    @property
+    def manifest(self):
         """
-        c = self.conn.cursor()
+        Generate manifests dynamically from the SQL database.
+        """
+        c1 = self.conn.cursor()
         c2 = self.conn.cursor()
 
-        c.execute("""
-        SELECT id, name, scaled, ksize, filename, is_dna, is_protein,
-        is_dayhoff, is_hp, seed FROM sketches
-        """)
-        
-        for ss, loc, iloc in self._load_sketches(c, c2):
-            yield ss, loc, iloc
+        conditions, values, picklist = self._select_signatures(c1)
+        if conditions:
+            conditions = conditions = "WHERE " + " AND ".join(conditions)
+        else:
+            conditions = ""
 
-    def _load_sketch(self, c1, sketch_id):
-        # here, c1 should already have run an appropriate 'select' on 'sketches'
-        # c2 will be used to load the hash values.
-        c1.execute("""
-        SELECT id, name, scaled, ksize, filename, is_dna, is_protein,
-        is_dayhoff, is_hp, seed FROM sketches WHERE id=?""",
-                   (sketch_id,))
+        c1.execute(f"""
+        SELECT id, name, md5sum, scaled, ksize, filename, is_dna, is_protein,
+        is_dayhoff, is_hp, seed, n_hashes FROM sketches {conditions}""",
+                  values)
 
-        (sketch_id, name, scaled, ksize, filename, is_dna,
-         is_protein, is_dayhoff, is_hp, seed) = c1.fetchone()
-        mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
-                     is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp)
+        manifest_list = []
+        for (iloc, name, md5sum, scaled, ksize, filename, is_dna, is_protein,
+             is_dayhoff, is_hp, seed, n_hashes) in c1:
+            row = dict(num=0, scaled=scaled, name=name, filename=filename,
+                       n_hashes=n_hashes, with_abundance=0, ksize=ksize,
+                       md5=md5sum)
+            row['md5short'] = md5sum[:8]
 
-        c1.execute("SELECT hashval FROM hashes WHERE sketch_id=?", (sketch_id,))
+            if is_dna:
+                moltype = 'DNA'
+            elif is_dayhoff:
+                moltype = 'dayhoff'
+            elif is_hp:
+                moltype = 'hp'
+            else:
+                assert is_protein
+                moltype = 'protein'
+            row['moltype'] = moltype
+            row['internal_location'] = iloc
 
-        for hashval, in c1:
-            mh.add_hash(hashval)
-
-        ss = SourmashSignature(mh, name=name, filename=filename)
-        return ss
-
-    def _load_sketches(self, c1, c2):
-        # here, c1 should already have run an appropriate 'select' on 'sketches'
-        # c2 will be used to load the hash values.
-        for (sketch_id, name, scaled, ksize, filename, is_dna, is_protein,
-             is_dayhoff, is_hp, seed) in c1:
-            mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
-                         is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp)
-            c2.execute("SELECT hashval FROM hashes WHERE sketch_id=?",
-                       (sketch_id,))
-
-            hashvals = c2.fetchall()
-            for hashval, in hashvals:
-                mh.add_hash(hashval)
-
-            ss = SourmashSignature(mh, name=name, filename=filename)
-            yield ss, self.dbfile, sketch_id
-
-    def _get_matching_hashes(self, c, hashes):
-        c.execute("DROP TABLE IF EXISTS hash_query")
-        c.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER)")
-
-        hashvals = [ (h,) for h in hashes ]
-        c.executemany("INSERT INTO hash_query (hashval) VALUES (?)", hashvals)
-
-        # @CTB do we want to add select stuff on here?
-        c.execute("""
-        SELECT DISTINCT hashes.sketch_id,hashes.hashval FROM
-        hashes,hash_query WHERE hashes.hashval=hash_query.hashval""")
-
-        return c.fetchall()
+            manifest_list.append(row)
+        m = CollectionManifest(manifest_list)
+        return m
 
     def save(self, *args, **kwargs):
         raise NotImplementedError
@@ -328,47 +354,56 @@ class SqliteIndex(Index):
     def find(self, search_fn, query, **kwargs):
         search_fn.check_is_compatible(query)
 
-        # check compatibility, etc. @CTB
+        # check compatibility, etc.
         query_mh = query.minhash
+        if self.scaled > query_mh.scaled:
+            query_mh = query_mh.downsample(scaled=self.scaled)
 
         picklist = None
         if self.selection_dict:
             picklist = self.selection_dict.get('picklist')
 
-        cursor = self.conn.cursor()
-        c = Counter()
-        # @CTB do select here
-        for sketch_id, hashval in self._get_matching_hashes(cursor, query_mh.hashes):
-            c[sketch_id] += 1
+        c1 = self.conn.cursor()
+        c2 = self.conn.cursor()
 
-        for sketch_id, count in c.most_common():
-            subj = self._load_sketch(cursor, sketch_id)
-
-            # @CTB more goes here? evaluate downsampling/upsampling.
-            subj_mh = subj.minhash
-            if subj_mh.scaled < query_mh.scaled:
-                subj_mh = subj_mh.downsample(scaled=query_mh.scaled)
-
-            # all numbers calculated after downsampling --
+        print('running _get_matching_sketches...')
+        t0 = time.time()
+        xx = self._get_matching_sketches(c1, query_mh.hashes,
+                                         query_mh._max_hash)
+        for sketch_id, n_matching_hashes in xx:
+            print(f'...got sketch {sketch_id}, with {n_matching_hashes} matching hashes', time.time() - t0)
+            #
+            # first, estimate sketch size using sql results.
+            #
             query_size = len(query_mh)
-            subj_size = len(subj_mh)
-            shared_size = query_mh.count_common(subj_mh)
-            total_size = len(query_mh + subj_mh)
+            subj_size = self._load_sketch_size(c2, sketch_id,
+                                               query_mh._max_hash)
+            total_size = query_size + subj_size - n_matching_hashes
+            shared_size = n_matching_hashes
 
             score = search_fn.score_fn(query_size, shared_size, subj_size,
                                        total_size)
+            print('APPROX RESULT:', score, query_size, subj_size,
+                  total_size, shared_size)
+
+            # do we pass?
+            if not search_fn.passes(score):
+                print('FAIL')
+                # break out, because we've ordered the results by
+                # overlap. @CTB does this work for jaccard? Probably not...
+                break
 
             if search_fn.passes(score):
+                subj = self._load_sketch(c2, sketch_id)
+                # check actual against approx result here w/assert. @CTB
                 if search_fn.collect(score, subj):
                     if picklist is None or subj in picklist:
                         yield IndexSearchResult(score, subj, self.location)
 
     def select(self, *, num=0, track_abundance=False, **kwargs):
         if num:
-            # @CTB testme
             raise ValueError("cannot select on 'num' in SqliteIndex")
         if track_abundance:
-            # @CTB testme
             raise ValueError("cannot store or search signatures with abundance")
 
         # Pass along all the selection kwargs to a new instance
@@ -383,3 +418,123 @@ class SqliteIndex(Index):
             kwargs = d
 
         return SqliteIndex(self.dbfile, selection_dict=kwargs, conn=self.conn)
+
+    #
+    # Actual SQL queries, etc.
+    #
+
+    def _load_sketch_size(self, c1, sketch_id, max_hash):
+        "Get sketch size for given sketch, downsampled by max_hash."
+        if max_hash <= MAX_SQLITE_INT:
+            c1.execute("""
+            SELECT COUNT(hashval) FROM hashes
+            WHERE sketch_id=? AND hashval >= 0 AND hashval <= ?""",
+                       (sketch_id, max_hash))
+        else:
+            c1.execute('SELECT COUNT(hashval) FROM hashes WHERE sketch_id=?',
+                       (sketch_id,))
+
+        n_hashes, = c1.fetchone()
+        return n_hashes
+
+    def _load_sketch(self, c1, sketch_id, *, match_scaled=None):
+        "Load an individual sketch. If match_scaled is set, downsample."
+
+        start = time.time()
+        c1.execute("""
+        SELECT id, name, scaled, ksize, filename, is_dna, is_protein,
+        is_dayhoff, is_hp, seed FROM sketches WHERE id=?""",
+                   (sketch_id,))
+        print(f'load sketch {sketch_id}: got sketch info', time.time() - start)
+
+        (sketch_id, name, scaled, ksize, filename, is_dna,
+         is_protein, is_dayhoff, is_hp, seed) = c1.fetchone()
+        if match_scaled is not None:
+            scaled = max(scaled, match_scaled)
+
+        mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
+                     is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp)
+
+
+        template_values = [sketch_id]
+
+        hash_constraint_str = ""
+        max_hash = mh._max_hash
+        if max_hash <= MAX_SQLITE_INT:
+            hash_constraint_str = "hashes.hashval >= 0 AND hashes.hashval <= ? AND"
+            template_values.insert(0, max_hash)
+        else:
+            print('NOT EMPLOYING hash_constraint_str')
+
+        print(f'finding hashes for sketch {sketch_id}', time.time() - start)
+        c1.execute(f"SELECT hashval FROM hashes WHERE {hash_constraint_str} hashes.sketch_id=?", template_values)
+
+        print(f'loading hashes for sketch {sketch_id}', time.time() - start)
+        xy = c1.fetchall()
+        print(f'adding hashes for sketch {sketch_id}', time.time() - start)
+        for hashval, in xy:
+            hh = convert_hash_from(hashval)
+            mh.add_hash(hh)
+
+        print(f'done loading sketch {sketch_id}', time.time() - start)
+
+        ss = SourmashSignature(mh, name=name, filename=filename)
+        return ss
+
+    def _load_sketches(self, c1, c2):
+        """Load sketches based on results from 'c1', using 'c2'.
+
+        Here, 'c1' should already have run an appropriate 'select' on
+        'sketches'. 'c2' will be used to load the hash values.
+        """
+        for (sketch_id, name, scaled, ksize, filename, is_dna, is_protein,
+             is_dayhoff, is_hp, seed) in c1:
+            mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
+                         is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp)
+            c2.execute("SELECT hashval FROM hashes WHERE sketch_id=?",
+                       (sketch_id,))
+
+            hashvals = c2.fetchall()
+            for hashval, in hashvals:
+                mh.add_hash(convert_hash_from(hashval))
+
+            ss = SourmashSignature(mh, name=name, filename=filename)
+            yield ss, self.dbfile, sketch_id
+
+    def _get_matching_sketches(self, c, hashes, max_hash):
+        """
+        For hashvals in 'hashes', retrieve all matching sketches,
+        together with the number of overlapping hashes for each sketh.
+        """
+        c.execute("DROP TABLE IF EXISTS hash_query")
+        c.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER PRIMARY KEY)")
+
+        hashvals = [ (convert_hash_to(h),) for h in hashes ]
+        c.executemany("INSERT OR IGNORE INTO hash_query (hashval) VALUES (?)", hashvals)
+
+        #
+        # set up SELECT conditions
+        #
+        # @CTB test these combinations...
+
+        conditions, template_values, picklist = self._select_signatures(c)
+
+        # downsample? => add to conditions
+        max_hash = min(max_hash, max(hashes))
+        if max_hash <= MAX_SQLITE_INT:
+            select_str = "hashes.hashval >= 0 AND hashes.hashval <= ?"
+            conditions.append(select_str)
+            template_values.append(max_hash)
+
+        # format conditions
+        conditions.append('hashes.hashval=hash_query.hashval')
+        conditions = " AND ".join(conditions)
+
+        c.execute(f"""
+        SELECT DISTINCT hashes.sketch_id,COUNT(hashes.hashval) as CNT
+        FROM hashes,hash_query
+        WHERE {conditions}
+        GROUP BY hashes.sketch_id ORDER BY CNT DESC
+        """, template_values)
+
+        return c

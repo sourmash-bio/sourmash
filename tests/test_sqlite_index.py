@@ -293,7 +293,24 @@ def test_sqlite_index_multik_select():
     assert len(sqlidx2) == 3
 
 
+def test_sqlite_index_num_select():
+    # this will fail on 'num' select, which is not allowed
+    sqlidx = SqliteIndex(":memory:")
+    with pytest.raises(ValueError):
+        sqlidx.select(num=100)
+
+
+def test_sqlite_index_abund_select():
+    # this will fail on 'track_abundance' select, which is not allowed
+    sqlidx = SqliteIndex(":memory:")
+    with pytest.raises(ValueError):
+        sqlidx.select(track_abundance=True)
+
+
 def test_sqlite_index_moltype_select():
+    # @CTB
+    return
+
     # this loads multiple ksizes (19, 31) and moltypes (DNA, protein, hp, etc)
     filename = utils.get_test_data('prot/all.zip')
     siglist = sourmash.load_file_as_signatures(filename)

@@ -557,6 +557,15 @@ class ZipFileLinearIndex(Index):
         return True
 
     def __len__(self):
+        "calculate number of signatures."
+
+        # use manifest, if available. @CTB: test that it properly deals
+        # with select!
+        m = self.manifest
+        if self.manifest is not None:
+            return len(m)
+
+        # otherwise, iterate across all signatures.
         n = 0
         for _ in self.signatures():
             n += 1
@@ -853,6 +862,10 @@ class MultiIndex(Index):
         self.manifest = manifest
         self.parent = parent
 
+    @property
+    def location(self):
+        return self.parent
+
     def signatures(self):
         for row in self.manifest.rows:
             yield row['signature']
@@ -904,6 +917,7 @@ class MultiIndex(Index):
                     yield ss, iloc
 
         # build manifest; note, signatures are stored in memory.
+        # CTB: could do this on demand?
         manifest = CollectionManifest.create_manifest(sigloc_iter())
 
         # create!
