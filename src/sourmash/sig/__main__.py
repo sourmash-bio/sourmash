@@ -638,11 +638,11 @@ def extract(args):
             total_rows_examined += 1
 
         sub_manifest = CollectionManifest(sub_rows)
-        picklist = sub_manifest.to_picklist()
+        sub_picklist = sub_manifest.to_picklist()
 
         # @CTB check about things that don't support 2 rounds of select
         # with picklist.
-        idx = idx.select(picklist=picklist)
+        idx = idx.select(picklist=sub_picklist)
         for ss in idx.signatures():
             save_sigs.add(ss)
 
