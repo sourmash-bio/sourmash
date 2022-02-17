@@ -1010,7 +1010,7 @@ class MultiIndex(Index):
             idx_list.append(idx)
             src_list.append(src)
 
-        return cls.load(idx_list, src_list)
+        return cls.load(idx_list, src_list, parent=filename)
 
     def save(self, *args):
         raise NotImplementedError

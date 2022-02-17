@@ -136,3 +136,68 @@ no num sketches present
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
+
+
+def test_fileinfo_5_dir(runtmp):
+    c = runtmp
+
+    # get basic info on a signature
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    os.mkdir(runtmp.output('subdir'))
+
+    shutil.copyfile(sig47, runtmp.output('subdir/sig47.sig'))
+    c.run_sourmash('sig', 'fileinfo', 'subdir/')
+
+    out = c.last_result.out
+    print(c.last_result.out)
+
+    expected_output = """\
+path filetype: MultiIndex
+location: subdir/
+is database? no
+has manifest? yes
+is nonempty? yes
+num signatures: 1
+5177 total hashes
+abundance information available: no
+ksizes present: 31
+moltypes present: DNA
+scaled vals present: 1000
+no num sketches present
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+def test_fileinfo_6_pathlist(runtmp):
+    c = runtmp
+
+    # get basic info on a signature
+    sig47 = utils.get_test_data('47.fa.sig')
+    shutil.copyfile(sig47, runtmp.output("47.fa.sig"))
+
+    with open(runtmp.output('pathlist.txt'), 'wt') as fp:
+        fp.write("47.fa.sig\n")
+
+    c.run_sourmash('sig', 'fileinfo', 'pathlist.txt')
+
+    out = c.last_result.out
+    print(c.last_result.out)
+
+    expected_output = """\
+path filetype: MultiIndex
+location: pathlist.txt
+is database? no
+has manifest? yes
+is nonempty? yes
+num signatures: 1
+5177 total hashes
+abundance information available: no
+ksizes present: 31
+moltypes present: DNA
+scaled vals present: 1000
+no num sketches present
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
