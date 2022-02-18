@@ -858,12 +858,13 @@ class MultiIndex(Index):
 
     Concrete class; signatures held in memory; builds and uses manifests.
     """
-    def __init__(self, manifest, *, parent=""):
+    def __init__(self, manifest, parent, *, prepend_location=False):
         """Constructor; takes manifest containing signatures, together with
-        optional top-level location to prepend to internal locations.
+        the top-level location.
         """
         self.manifest = manifest
         self.parent = parent
+        self.prepend_location = prepend_location
 
     @property
     def location(self):
@@ -878,7 +879,7 @@ class MultiIndex(Index):
             loc = row['internal_location']
             # here, 'parent' may have been removed from internal_location
             # for directories; if so, add it back in.
-            if self.parent:
+            if self.prepend_location:
                 loc = os.path.join(self.parent, loc)
             yield row['signature'], loc
 
@@ -900,7 +901,7 @@ class MultiIndex(Index):
         raise NotImplementedError
 
     @classmethod
-    def load(cls, index_list, source_list, parent=""):
+    def load(cls, index_list, source_list, parent, *, prepend_location=False):
         """Create a MultiIndex from already-loaded indices.
 
         Takes two arguments: a list of Index objects, and a matching list
@@ -909,6 +910,9 @@ class MultiIndex(Index):
         matching Index object.
         """
         assert len(index_list) == len(source_list)
+
+        if not prepend_location:
+            raise Exception
 
         # yield all signatures + locations
         def sigloc_iter():
@@ -924,7 +928,7 @@ class MultiIndex(Index):
         manifest = CollectionManifest.create_manifest(sigloc_iter())
 
         # create!
-        return cls(manifest, parent=parent)
+        return cls(manifest, parent, prepend_location=prepend_location)
 
     @classmethod
     def load_from_directory(cls, pathname, *, force=False):
@@ -960,7 +964,8 @@ class MultiIndex(Index):
         if not index_list:
             raise ValueError(f"no signatures to load under directory '{pathname}'")
 
-        return cls.load(index_list, source_list, parent=pathname)
+        return cls.load(index_list, source_list, pathname,
+                        prepend_location=True)
 
     @classmethod
     def load_from_path(cls, pathname, force=False):
@@ -987,7 +992,8 @@ class MultiIndex(Index):
                     raise ValueError(f"no signatures to load from '{pathname}'")
                 return None
 
-            return cls.load(index_list, source_list, parent=pathname)
+            return cls.load(index_list, source_list, pathname,
+                            prepend_location=True)
 
     @classmethod
     def load_from_pathlist(cls, filename):
@@ -1010,7 +1016,7 @@ class MultiIndex(Index):
             idx_list.append(idx)
             src_list.append(src)
 
-        return cls.load(idx_list, src_list, parent=filename)
+        return cls.load(idx_list, src_list, filename)
 
     def save(self, *args):
         raise NotImplementedError
@@ -1018,7 +1024,7 @@ class MultiIndex(Index):
     def select(self, **kwargs):
         "Run 'select' on the manifest."
         new_manifest = self.manifest.select_to_manifest(**kwargs)
-        return MultiIndex(new_manifest, parent=self.parent)
+        return MultiIndex(new_manifest, self.parent)
 
 
 class LazyLoadedIndex(Index):
