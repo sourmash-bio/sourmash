@@ -980,19 +980,20 @@ class MultiIndex(Index):
 
         if os.path.isdir(pathname): # traverse
             return cls.load_from_directory(pathname, force=force)
-        else:                   # load as a .sig/JSON file
-            index_list = []
-            source_list = []
-            try:
-                idx = LinearIndex.load(pathname)
-                index_list = [idx]
-                source_list = [pathname]
-            except (IOError, sourmash.exceptions.SourmashError):
-                if not force:
-                    raise ValueError(f"no signatures to load from '{pathname}'")
-                return None
 
-            return cls.load(index_list, source_list, pathname)
+        # load as a .sig/JSON file
+            index_list = []
+        source_list = []
+        try:
+            idx = LinearIndex.load(pathname)
+            index_list = [idx]
+            source_list = [pathname]
+        except (IOError, sourmash.exceptions.SourmashError):
+            if not force:
+                raise ValueError(f"no signatures to load from '{pathname}'")
+            return None
+
+        return cls.load(index_list, source_list, pathname)
 
     @classmethod
     def load_from_pathlist(cls, filename):
