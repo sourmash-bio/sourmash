@@ -992,8 +992,7 @@ class MultiIndex(Index):
                     raise ValueError(f"no signatures to load from '{pathname}'")
                 return None
 
-            return cls.load(index_list, source_list, pathname,
-                            prepend_location=True)
+            return cls.load(index_list, source_list, pathname)
 
     @classmethod
     def load_from_pathlist(cls, filename):
