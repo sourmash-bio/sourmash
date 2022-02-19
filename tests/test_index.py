@@ -944,6 +944,22 @@ def test_zipfile_API_signatures_traverse_yield_all_select(use_manifest):
     assert len(zipidx) == 2
 
 
+def test_zipfile_API_signatures_traverse_yield_all_manifest():
+    # check that manifest len is correct
+    zipfile_db = utils.get_test_data('prot/all.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, traverse_yield_all=True,
+                                     use_manifest=True)
+    assert len(zipidx) == 8, len(zipidx)
+    assert len(zipidx.manifest) == 8, len(zipidx.manifest)
+
+    zipidx = zipidx.select(moltype='DNA')
+    siglist = list(zipidx.signatures())
+    assert len(siglist) == 2
+    assert len(zipidx) == 2
+    assert len(zipidx.manifest) == 2
+
+
 def test_zipfile_API_signatures_select(use_manifest):
     # include dna-sig.noext
     zipfile_db = utils.get_test_data('prot/all.zip')
