@@ -1124,7 +1124,8 @@ def test_multi_index_search():
     lidx3 = LinearIndex.load(sig63)
 
     # create MultiIndex with source location override
-    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'],
+                           None)
     lidx = lidx.select(ksize=31)
 
     # now, search for sig2
@@ -1177,7 +1178,8 @@ def test_multi_index_gather():
     lidx3 = LinearIndex.load(sig63)
 
     # create MultiIndex with source location override
-    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'],
+                           None)
     lidx = lidx.select(ksize=31)
 
     matches = lidx.gather(ss2)
@@ -1206,7 +1208,8 @@ def test_multi_index_signatures():
     lidx3 = LinearIndex.load(sig63)
 
     # create MultiIndex with source location override
-    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'],
+                           None)
     lidx = lidx.select(ksize=31)
 
     siglist = list(lidx.signatures())
@@ -2251,7 +2254,7 @@ def test_lazy_index_wraps_multi_index_location():
     db_paths = (sigdir, sigzip, siglca, sigsbt)
     dbs = [ sourmash.load_file_as_index(db_path) for db_path in db_paths ]
 
-    mi = MultiIndex.load(dbs, db_paths)
+    mi = MultiIndex.load(dbs, db_paths, None)
     lazy = LazyLinearIndex(mi)
 
     mi2 = mi.select(moltype='protein')

@@ -866,6 +866,9 @@ class MultiIndex(Index):
         self.parent = parent
         self.prepend_location = prepend_location
 
+        if prepend_location and self.parent is None:
+            raise ValueError("must set 'parent' if 'prepend_location' is set")
+
     @property
     def location(self):
         return self.parent
@@ -910,9 +913,6 @@ class MultiIndex(Index):
         matching Index object.
         """
         assert len(index_list) == len(source_list)
-
-        if not prepend_location:
-            raise Exception
 
         # yield all signatures + locations
         def sigloc_iter():
@@ -1024,7 +1024,8 @@ class MultiIndex(Index):
     def select(self, **kwargs):
         "Run 'select' on the manifest."
         new_manifest = self.manifest.select_to_manifest(**kwargs)
-        return MultiIndex(new_manifest, self.parent)
+        return MultiIndex(new_manifest, self.parent,
+                          prepend_location=self.prepend_location)
 
 
 class LazyLoadedIndex(Index):
