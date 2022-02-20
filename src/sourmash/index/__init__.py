@@ -898,6 +898,9 @@ class MultiIndex(Index):
 
 
     def __len__(self):
+        if self.manifest is None:
+            return 0
+
         return len(self.manifest)
 
     def insert(self, *args):

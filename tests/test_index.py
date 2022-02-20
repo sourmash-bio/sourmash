@@ -1235,6 +1235,16 @@ def test_multi_index_signatures():
     assert ss63 in siglist
 
 
+def test_multi_index_create():
+    mi = MultiIndex(None, None, prepend_location=False)
+    assert len(mi) == 0
+
+
+def test_multi_index_create_prepend():
+    with pytest.raises(ValueError):
+        mi = MultiIndex(None, None, prepend_location=True)
+
+
 def test_multi_index_load_from_directory():
     # test MultiIndex loading from a directory. The full paths to the
     # signature files should be available via 'signatures_with_location()'
