@@ -3121,7 +3121,8 @@ def test_sig_manifest_6_pathlist(runtmp):
 
 def test_sig_manifest_does_not_exit(runtmp):
     with pytest.raises(SourmashCommandFailed):
-        runtmp.run_sourmash('sig', 'fileinfo', 'does-not-exist')
+        runtmp.run_sourmash('sig', 'manifest', 'does-not-exist',
+                            '-o', 'out.csv')
 
     assert "Cannot open 'does-not-exist'." in runtmp.last_result.err
 

@@ -276,8 +276,7 @@ def manifest(args):
         loader = sourmash_args.load_file_as_index(args.location,
                                                   yield_all_files=args.force)
     except ValueError as exc:
-        error("\nError while reading signatures from '{}':".format(args.location))
-        error(str(exc))
+        error(f"Cannot open '{args.location}'.")
         sys.exit(-1)
 
     rebuild = True
