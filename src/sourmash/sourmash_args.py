@@ -1,32 +1,37 @@
 """
 Utility functions for sourmash CLI commands.
 
+The sourmash_args submodule contains functions that help with various
+command-line functions. Library functions in this module often directly
+send output to stdout/stderr in support of the CLI, and/or call
+sys.exit to exit.
+
 argparse functionality:
 
-* check_scaled_bounds(args)
-* check_num_bounds(args)
-* get_moltype(args)
-* calculate_moltype(args)
-* load_picklist(args)
-* report_picklist(args, picklist)
+* check_scaled_bounds(args) -- check that --scaled is reasonable
+* check_num_bounds(args) -- check that --num is reasonable
+* get_moltype(args) -- verify that moltype selected is legit
+* calculate_moltype(args) -- confirm that only one moltype was selected
+* load_picklist(args) -- create a SignaturePicklist from --picklist args
+* report_picklist(args, picklist) -- report on picklist value usage/matches
 
 signature/database loading functionality:
 
-* load_query_signature(filename, ...)
-* traverse_find_sigs(filenames, ...)
-* load_dbs_and_sigs(filenames, query, ...)
-* load_file_as_index(filename, ...)
-* load_file_as_signatures(filename, ...)
-* load_pathlist_from_file(filename)
-* load_many_signatures(locations)
-* get_manifest(idx)
-* class SignatureLoadingProgress
+* load_query_signature(filename, ...) -- load a single signature for query
+* traverse_find_sigs(filenames, ...) -- find all .sig and .sig.gz files
+* load_dbs_and_sigs(filenames, query, ...) -- load databases & signatures
+* load_file_as_index(filename, ...) -- load a sourmash.Index class
+* load_file_as_signatures(filename, ...) -- load a list of signatures
+* load_pathlist_from_file(filename) -- load a list of paths from a file
+* load_many_signatures(locations) -- load many signatures from many files
+* get_manifest(idx) -- retrieve or build a manifest from an Index
+* class SignatureLoadingProgress - signature loading progress bar
 
 signature and file output functionality:
 
-* SaveSignaturesToLocation(filename)
-* class FileOutput
-* class FileOutputCSV
+* SaveSignaturesToLocation(filename) - bulk signature output
+* class FileOutput - file output context manager that deals w/stdout well
+* class FileOutputCSV - file output context manager for CSV files
 """
 import sys
 import os
