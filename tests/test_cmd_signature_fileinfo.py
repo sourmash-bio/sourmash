@@ -90,39 +90,39 @@ def test_fileinfo_3_sbt_zip(runtmp):
     out = c.last_result.out
     print(c.last_result.out)
 
-    # @CTB add a manifest here!
+    #abundance information available: no @CTB
     expected_output = """\
 path filetype: SBT
 location: protein.sbt.zip
 is database? yes
-has manifest? no
+has manifest? yes
 is nonempty? yes
 num signatures: 3
 8214 total hashes
-abundance information available: no
 ksizes present: 19
 moltypes present: protein
 scaled vals present: 100
 no num sketches present
 """.splitlines()
     for line in expected_output:
-        assert line.strip() in out
+        assert line.strip() in out, line.strip()
 
 
 def test_fileinfo_4_zip(runtmp):
     c = runtmp
 
     # get basic info on a signature
-    sig47 = utils.get_test_data('prot/all.zip')
+    prot = utils.get_test_data('prot/all.zip')
 
-    shutil.copyfile(sig47, runtmp.output('all.zip'))
+    shutil.copyfile(prot, runtmp.output('all.zip'))
     c.run_sourmash('sig', 'fileinfo', 'all.zip')
 
     out = c.last_result.out
     print(c.last_result.out)
 
-    # @CTB why is location fully resolved!?
-    expected_output = """\
+    # 'location' will be fully resolved, ignore it for now
+    expected_output = f"""\
+path filetype: ZipFileLinearIndex
 is database? yes
 has manifest? yes
 is nonempty? yes
