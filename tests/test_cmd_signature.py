@@ -3119,6 +3119,13 @@ def test_sig_manifest_6_pathlist(runtmp):
     assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
 
 
+def test_sig_manifest_does_not_exit(runtmp):
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.run_sourmash('sig', 'fileinfo', 'does-not-exist')
+
+    assert "Cannot open 'does-not-exist'." in runtmp.last_result.err
+
+
 def test_sig_kmers_1_dna(runtmp):
     # test sig kmers on dna
     seqfile = utils.get_test_data('short.fa')

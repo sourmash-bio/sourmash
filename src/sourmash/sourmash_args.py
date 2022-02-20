@@ -713,6 +713,7 @@ def get_manifest(idx, *, require=True, rebuild=False):
     In the case where `require=False` and a manifest cannot be built,
     may return None. Otherwise always returns a manifest.
     """
+    # @CTB test basic function
     from sourmash.index import CollectionManifest
 
     m = idx.manifest
@@ -734,6 +735,7 @@ def get_manifest(idx, *, require=True, rebuild=False):
         m = CollectionManifest.create_manifest(manifest_iloc_iter(idx),
                                                include_signature=False)
     except NotImplementedError:
+        # @CTB testme
         if require:
             error(f"ERROR: manifests cannot be generated for {idx.location}")
             sys.exit(-1)

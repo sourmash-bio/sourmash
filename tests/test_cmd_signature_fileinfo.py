@@ -219,13 +219,13 @@ summary of sketches:
         assert line.strip() in out, line.strip()
 
 
-def test_sig_describe_stdin(runtmp):
+def test_sig_fileinfo_stdin(runtmp):
     c = runtmp
     sig = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     with open(sig, 'rt') as fp:
         data = fp.read()
 
-    c.run_sourmash('sig', 'fileinfo', '-', stdin_data=data, fail_ok=True)
+    c.run_sourmash('sig', 'fileinfo', '-', stdin_data=data)
 
     out = c.last_result.out
     print(out)
@@ -243,3 +243,10 @@ summary of sketches:
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out, line.strip()
+
+
+def test_sig_fileinfo_does_not_exit(runtmp):
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.run_sourmash('sig', 'fileinfo', 'does-not-exist')
+
+    assert "Cannot open 'does-not-exist'." in runtmp.last_result.err

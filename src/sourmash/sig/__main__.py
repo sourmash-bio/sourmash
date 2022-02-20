@@ -282,6 +282,7 @@ def manifest(args):
 
     rebuild = True
     if args.no_rebuild_manifest:
+        # @CTB testme
         rebuild = False
     manifest = sourmash_args.get_manifest(loader, require=True,
                                           rebuild=rebuild)
@@ -1152,10 +1153,13 @@ def fileinfo(args):
     # also have arg to fileinfo to force recalculation
     notify("** examining manifest...")
 
+    # @CTB test rebuild. some dbs can't rebuild, I think.
     manifest = sourmash_args.get_manifest(idx, rebuild=args.rebuild_manifest,
                                           require=False)
 
     if manifest is None:
+        # actually can't find any file type to trigger this, but leaving it
+        # in for future eventualities, I guess?
         notify("** no manifest and cannot be generated; exiting.")
         sys.exit(0)
 
