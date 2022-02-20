@@ -52,9 +52,9 @@ def test_fileinfo_2_lca(runtmp):
     c = runtmp
 
     # get basic info on a signature
-    sig47 = utils.get_test_data('prot/protein.lca.json.gz')
+    prot = utils.get_test_data('prot/protein.lca.json.gz')
 
-    shutil.copyfile(sig47, runtmp.output('protein.lca.json.gz'))
+    shutil.copyfile(prot, runtmp.output('protein.lca.json.gz'))
     c.run_sourmash('sig', 'fileinfo', 'protein.lca.json.gz')
 
     out = c.last_result.out
@@ -82,9 +82,9 @@ def test_fileinfo_3_sbt_zip(runtmp):
     c = runtmp
 
     # get basic info on a signature
-    sig47 = utils.get_test_data('prot/protein.sbt.zip')
+    prot = utils.get_test_data('prot/protein.sbt.zip')
 
-    shutil.copyfile(sig47, runtmp.output('protein.sbt.zip'))
+    shutil.copyfile(prot, runtmp.output('protein.sbt.zip'))
     c.run_sourmash('sig', 'fileinfo', 'protein.sbt.zip')
 
     out = c.last_result.out
