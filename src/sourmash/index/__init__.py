@@ -565,8 +565,7 @@ class ZipFileLinearIndex(Index):
     def __len__(self):
         "calculate number of signatures."
 
-        # use manifest, if available. @CTB: test that it properly deals
-        # with select!
+        # use manifest, if available.
         m = self.manifest
         if self.manifest is not None:
             return len(m)

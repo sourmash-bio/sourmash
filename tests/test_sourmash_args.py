@@ -12,6 +12,7 @@ import contextlib
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash import sourmash_args, manifest
+from sourmash.index import LinearIndex
 
 
 def test_save_signatures_api_none():
@@ -404,3 +405,90 @@ def test_load_many_sigs_empty_file_force(runtmp):
     print(err)
     assert f"ERROR: Error while reading signatures from '{outloc}'." in err
     assert "(continuing)" in err
+
+
+def test_get_manifest_1():
+    # basic get_manifest retrieves a manifest
+    sig47 = utils.get_test_data('47.fa.sig')
+    idx = sourmash.load_file_as_index(sig47)
+
+    manifest = sourmash_args.get_manifest(idx)
+    assert len(manifest) == 1
+
+
+def test_get_manifest_2_cannot_build():
+    # test what happens when get_manifest cannot build manifest
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47)
+
+    idx = LinearIndex([ss47])
+
+    with pytest.raises(SystemExit) as exc:
+        m = sourmash_args.get_manifest(idx)
+
+
+def test_get_manifest_2_cannot_buildno_require():
+    # test what happens when get_manifest cannot build manifest
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47)
+
+    idx = LinearIndex([ss47])
+
+    m = sourmash_args.get_manifest(idx, require=False)
+
+    assert m is None
+
+
+def test_get_manifest_3_build():
+    # check that manifest is building
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47)
+
+    class FakeIndex(LinearIndex):
+        was_called = 0
+        def _signatures_with_internal(self):
+            self.was_called = 1
+            return [(ss47, "fakeloc", "fakeiloc")]
+
+    idx = FakeIndex([sig47])
+
+    assert not idx.was_called
+    m = sourmash_args.get_manifest(idx)
+    assert idx.was_called
+
+    print(m)
+    assert len(m) == 1
+    assert m.rows[0]['internal_location'] == "fakeiloc"
+
+
+def test_get_manifest_3_build():
+    # check that manifest is building
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47)
+
+    class FakeIndex(LinearIndex):
+        manifest = None
+        was_called = 0
+
+        def _signatures_with_internal(self):
+            self.was_called = 1
+            return [(ss47, "fakeloc", "fakeiloc")]
+
+    idx = FakeIndex([sig47])
+
+    assert not idx.was_called
+    m = sourmash_args.get_manifest(idx)
+    assert idx.was_called
+
+    # now set and ask again, should not be called
+    idx.manifest = m
+    idx.was_called = 0
+
+    m2 = sourmash_args.get_manifest(idx)
+    assert not idx.was_called
+    assert m == m2
+
+    # now, force rebuild
+    m3 = sourmash_args.get_manifest(idx, rebuild=True)
+    assert idx.was_called
+    assert m == m3

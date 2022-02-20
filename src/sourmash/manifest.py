@@ -40,6 +40,9 @@ class CollectionManifest:
     def __len__(self):
         return len(self.rows)
 
+    def __eq__(self, other):
+        return self.rows == other.rows
+
     @classmethod
     def load_from_csv(cls, fp):
         "load a manifest from a CSV file."
