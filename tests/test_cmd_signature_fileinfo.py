@@ -229,25 +229,17 @@ def test_sig_describe_stdin(runtmp):
 
     out = c.last_result.out
     print(out)
-    err = c.last_result.err
 
     expected_output = """\
-path filetype: LinearIndex
+path filetype: MultiIndex
 location: -
 is database? no
-has manifest? no
+has manifest? yes
 is nonempty? yes
 num signatures: 1
+3409 total hashes
+summary of sketches:
+   1 sketches with protein, k=19, scaled=100
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out, line.strip()
-
-    print(err)
-
-    expected_err = """\
-** loading from '-'
-** examining manifest...
-** no manifest and cannot be generated; exiting.
-""".splitlines()
-    for line in expected_err:
-        assert line.strip() in err, line.strip()

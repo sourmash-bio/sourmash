@@ -314,7 +314,10 @@ def _load_stdin(filename, **kwargs):
     "Load collection from .sig file streamed in via stdin"
     db = None
     if filename == '-':
-        db = LinearIndex.load(sys.stdin, filename='-')
+        # load as LinearIndex, then pass into MultiIndex to generate a
+        # manifest.
+        lidx = LinearIndex.load(sys.stdin, filename='-')
+        db = MultiIndex.load((lidx,), (None,), parent="-")
 
     return db
 

@@ -1210,6 +1210,7 @@ def test_sig_extract_1(runtmp):
 
 
 def test_sig_extract_1(runtmp):
+    # run sig extract with --from-file
     c = runtmp
 
     # extract 47 from 47... :)
@@ -1232,6 +1233,26 @@ def test_sig_extract_2(c):
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
     c.run_sourmash('sig', 'extract', sig47, sig63, '--md5', '09a0869')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig47)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    print(test_extract_sig.minhash)
+    print(actual_extract_sig.minhash)
+
+    assert actual_extract_sig == test_extract_sig
+
+
+@utils.in_tempdir
+def test_sig_extract_2_zipfile(c):
+    # extract matches to 47's md5sum from among several in a zipfile
+    all_zip = utils.get_test_data('prot/all.zip')
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    c.run_sourmash('sig', 'extract', all_zip, '--md5', '09a0869')
 
     # stdout should be new signature
     out = c.last_result.out
@@ -1363,6 +1384,76 @@ def test_sig_extract_8_picklist_md5(runtmp):
     assert "loaded 1 total that matched ksize & molecule type" in err
     assert "extracted 1 signatures from 2 file(s)" in err
     assert "for given picklist, found 1 matches to 1 distinct values" in err
+
+
+def test_sig_extract_8_picklist_md5_zipfile(runtmp):
+    # extract 47 from a zipfile,  using a picklist w/full md5
+    allzip = utils.get_test_data('prot/all.zip')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='09a08691ce52952152f0e866a59f6261',
+               md5short='09a08691ce5295215',
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:md5full:md5"
+    runtmp.sourmash('sig', 'extract', allzip, '--picklist', picklist_arg)
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig47)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    assert actual_extract_sig == test_extract_sig
+
+    err = runtmp.last_result.err
+
+    print(err)
+    assert "loaded 1 distinct values into picklist." in err
+    assert "loaded 1 total that matched ksize & molecule type" in err
+    assert "extracted 1 signatures from 1 file(s)" in err
+    assert "for given picklist, found 1 matches to 1 distinct values" in err
+
+
+def test_sig_extract_8_picklist_md5_lca(runtmp):
+    # extract 47 from an LCA database,  using a picklist w/full md5
+    allzip = utils.get_test_data('lca/47+63.lca.json')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='50a9274021e43eda8b2e77f8fa60ae8e',
+               md5short='50a9274021e43eda8b2e77f8fa60ae8e'[:8],
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:md5full:md5"
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sig', 'extract', allzip, '--picklist', picklist_arg)
+
+    # this happens b/c the implementation of 'extract' uses picklists.
+    print(runtmp.last_result.err)
+    assert "This input collection doesn't support 'extract' with picklists." in runtmp.last_result.err
+
 
 def test_sig_extract_8_picklist_md5_include(runtmp):
     # extract 47 from 47, using a picklist w/full md5:: explicit include

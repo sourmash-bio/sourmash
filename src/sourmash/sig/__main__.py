@@ -640,9 +640,16 @@ def extract(args):
         sub_manifest = CollectionManifest(sub_rows)
         sub_picklist = sub_manifest.to_picklist()
 
-        # @CTB check about things that don't support 2 rounds of select
-        # with picklist.
-        idx = idx.select(picklist=sub_picklist)
+        try:
+            idx = idx.select(picklist=sub_picklist)
+        except ValueError:
+            error("** This input collection doesn't support 'extract' with picklists.")
+            error("** EXITING.")
+            error("**")
+            error("** You can use 'sourmash sig cat' with a picklist,")
+            error("** and then pipe the output to 'sourmash sig extract")
+            sys.exit(-1)
+
         for ss in idx.signatures():
             save_sigs.add(ss)
 
