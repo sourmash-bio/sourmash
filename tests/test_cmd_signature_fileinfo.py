@@ -201,3 +201,35 @@ no num sketches present
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
+
+
+@pytest.mark.parametrize("db", ['v6.sbt.json', 'v5.sbt.json', 'v4.sbt.json',
+                                'v3.sbt.json', 'v2.sbt.json', 'v1.sbt.json'])
+def test_fileinfo_7_sbt_json(runtmp, db):
+    c = runtmp
+
+    # get basic info on an SBT json file
+    dbfile = utils.get_test_data(db)
+
+    c.run_sourmash('sig', 'fileinfo', dbfile)
+
+    out = c.last_result.out
+    print(c.last_result.out)
+
+    #abundance information available: no @CTB
+    expected_output = f"""\
+path filetype: SBT
+location: {dbfile}
+is database? yes
+has manifest? no
+is nonempty? yes
+num signatures: 13
+3500 total hashes
+abundance information available: no
+ksizes present: 31
+moltypes present: DNA
+no scaled sketches present
+num vals present: 500
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out, line.strip()
