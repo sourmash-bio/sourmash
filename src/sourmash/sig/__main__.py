@@ -5,7 +5,7 @@ import sys
 import csv
 import json
 import os
-from collections import defaultdict
+from collections import defaultdict, namedtuple, Counter
 
 import screed
 import sourmash
@@ -1116,6 +1116,9 @@ def kmers(args):
         notify("NOTE: see --save-kmers or --save-sequences for output options.")
 
 
+_SketchInfo = namedtuple('_SketchInfo', 'ksize, moltype, scaled, num, abund')
+
+
 def fileinfo(args):
     """
     provide summary information on the given path (collection, index, etc.)
@@ -1147,44 +1150,22 @@ def fileinfo(args):
         notify("** no manifest and cannot be generated; exiting.")
         sys.exit(0)
 
-    ksizes = set()
-    moltypes = set()
-    scaled_vals = set()
-    num_vals = set()
     total_size = 0
-    has_abundance = False
-
-    # @CTB: track _number_ of sketches with those values?
+    counter = Counter()
     for row in manifest.rows:
-        ksizes.add(row['ksize'])
-        moltypes.add(row['moltype'])
-        scaled_vals.add(row['scaled'])
-        num_vals.add(row['num'])
+        ski = _SketchInfo(ksize=row['ksize'], moltype=row['moltype'],
+                          scaled=row['scaled'], num=row['num'],
+                          abund=row['with_abundance'])
+        counter[ski] += 1
         total_size += row['n_hashes']
-        has_abundance = has_abundance or row['with_abundance']
 
     print_results(f"{total_size} total hashes")
-    print_results(f"abundance information available: {print_bool(has_abundance)}")
+    print_results("summary of sketches:")
+    for ski, count in counter.items():
+        mh_type = f"num={ski.num}" if ski.num else f"scaled={ski.scaled}"
+        mh_abund = ", abund" if ski.abund else ""
 
-    ksizes = ", ".join([str(x) for x in sorted(ksizes)])
-    print_results(f"ksizes present: {ksizes}")
-
-    moltypes = ", ".join(sorted(moltypes))
-    print_results(f"moltypes present: {moltypes}")
-
-    if 0 in scaled_vals: scaled_vals.remove(0)
-    scaled_vals = ", ".join([str(x) for x in sorted(scaled_vals)])
-    if scaled_vals:
-        print_results(f"scaled vals present: {scaled_vals}")
-    else:
-        print_results("no scaled sketches present")
-
-    if 0 in num_vals: num_vals.remove(0)
-    num_vals = ", ".join([str(x) for x in sorted(num_vals)])
-    if num_vals:
-        print_results(f"num vals present: {num_vals}")
-    else:
-        print_results("no num sketches present")
+        print_results(f"   {count} sketches with {ski.moltype}, k={ski.ksize}, {mh_type}{mh_abund}")
 
 
 def main(arglist=None):

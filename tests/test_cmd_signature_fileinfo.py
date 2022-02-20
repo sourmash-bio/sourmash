@@ -38,11 +38,9 @@ has manifest? yes
 is nonempty? yes
 num signatures: 1
 5177 total hashes
-abundance information available: no
-ksizes present: 31
-moltypes present: DNA
-scaled vals present: 1000
-no num sketches present
+5177 total hashes
+summary of sketches:
+   1 sketches with DNA, k=31, scaled=1000
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -68,11 +66,8 @@ has manifest? no
 is nonempty? yes
 num signatures: 2
 8214 total hashes
-abundance information available: no
-ksizes present: 19
-moltypes present: protein
-scaled vals present: 100
-no num sketches present
+summary of sketches:
+   2 sketches with protein, k=19, scaled=100
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -99,10 +94,8 @@ has manifest? yes
 is nonempty? yes
 num signatures: 3
 8214 total hashes
-ksizes present: 19
-moltypes present: protein
-scaled vals present: 100
-no num sketches present
+summary of sketches:
+   2 sketches with protein, k=19, scaled=100, abund
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out, line.strip()
@@ -128,11 +121,11 @@ has manifest? yes
 is nonempty? yes
 num signatures: 8
 31758 total hashes
-abundance information available: yes
-ksizes present: 19, 31
-moltypes present: DNA, dayhoff, hp, protein
-scaled vals present: 100, 1000
-no num sketches present
+summary of sketches:
+   2 sketches with dayhoff, k=19, scaled=100, abund
+   2 sketches with hp, k=19, scaled=100, abund
+   2 sketches with protein, k=19, scaled=100, abund
+   2 sketches with DNA, k=31, scaled=1000, abund
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -160,11 +153,8 @@ has manifest? yes
 is nonempty? yes
 num signatures: 1
 5177 total hashes
-abundance information available: no
-ksizes present: 31
-moltypes present: DNA
-scaled vals present: 1000
-no num sketches present
+summary of sketches:
+   1 sketches with DNA, k=31, scaled=1000
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -193,11 +183,8 @@ has manifest? yes
 is nonempty? yes
 num signatures: 1
 5177 total hashes
-abundance information available: no
-ksizes present: 31
-moltypes present: DNA
-scaled vals present: 1000
-no num sketches present
+summary of sketches:
+   1 sketches with DNA, k=31, scaled=1000
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -225,11 +212,8 @@ has manifest? no
 is nonempty? yes
 num signatures: 13
 3500 total hashes
-abundance information available: no
-ksizes present: 31
-moltypes present: DNA
-no scaled sketches present
-num vals present: 500
+summary of sketches:
+   7 sketches with DNA, k=31, num=500
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out, line.strip()
