@@ -217,3 +217,37 @@ summary of sketches:
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out, line.strip()
+
+
+def test_sig_describe_stdin(runtmp):
+    c = runtmp
+    sig = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    with open(sig, 'rt') as fp:
+        data = fp.read()
+
+    c.run_sourmash('sig', 'fileinfo', '-', stdin_data=data, fail_ok=True)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+
+    expected_output = """\
+path filetype: LinearIndex
+location: -
+is database? no
+has manifest? no
+is nonempty? yes
+num signatures: 1
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out, line.strip()
+
+    print(err)
+
+    expected_err = """\
+** loading from '-'
+** examining manifest...
+** no manifest and cannot be generated; exiting.
+""".splitlines()
+    for line in expected_err:
+        assert line.strip() in err, line.strip()

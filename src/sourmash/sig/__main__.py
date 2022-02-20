@@ -1145,7 +1145,9 @@ def fileinfo(args):
     # also have arg to fileinfo to force recalculation
     notify("** examining manifest...")
 
-    manifest = sourmash_args.get_manifest(idx, rebuild=args.rebuild_manifest)
+    manifest = sourmash_args.get_manifest(idx, rebuild=args.rebuild_manifest,
+                                          require=False)
+
     if manifest is None:
         notify("** no manifest and cannot be generated; exiting.")
         sys.exit(0)

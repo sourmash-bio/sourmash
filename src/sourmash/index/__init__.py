@@ -412,11 +412,13 @@ class LinearIndex(Index):
             save_signatures(self.signatures(), fp)
 
     @classmethod
-    def load(cls, location):
+    def load(cls, location, filename=None):
         "Load signatures from a JSON signature file."
         si = load_signatures(location, do_raise=True)
 
-        lidx = LinearIndex(si, filename=location)
+        if filename is None:
+            filename=location
+        lidx = LinearIndex(si, filename=filename)
         return lidx
 
     def select(self, **kwargs):
@@ -985,7 +987,7 @@ class MultiIndex(Index):
             return cls.load_from_directory(pathname, force=force)
 
         # load as a .sig/JSON file
-            index_list = []
+        index_list = []
         source_list = []
         try:
             idx = LinearIndex.load(pathname)

@@ -314,7 +314,7 @@ def _load_stdin(filename, **kwargs):
     "Load collection from .sig file streamed in via stdin"
     db = None
     if filename == '-':
-        db = LinearIndex.load(sys.stdin)
+        db = LinearIndex.load(sys.stdin, filename='-')
 
     return db
 
@@ -728,7 +728,6 @@ def get_manifest(idx, *, require=True, rebuild=False):
 
     # need to build one...
     try:
-        notify("Generating a manifest...")
         m = CollectionManifest.create_manifest(manifest_iloc_iter(idx),
                                                include_signature=False)
     except NotImplementedError:
