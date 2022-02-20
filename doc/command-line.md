@@ -1011,11 +1011,11 @@ is nonempty? yes
 num signatures: 8
 ** examining manifest...
 31758 total hashes
-abundance information available: yes
-ksizes present: 19, 31
-moltypes present: DNA, dayhoff, hp, protein
-scaled vals present: 100, 1000
-no num sketches present
+summary of sketches:
+   2 sketches with dayhoff, k=19, scaled=100, abund
+   2 sketches with hp, k=19, scaled=100, abund
+   2 sketches with protein, k=19, scaled=100, abund
+   2 sketches with DNA, k=31, scaled=1000, abund
 ```
 
 `sig fileinfo` will recognize
@@ -1025,9 +1025,6 @@ databases, LCA databases, and directory hierarchies.
 
 `sourmash sig fileinfo` provides optional JSON and YAML output, and
 those formats are under semantic versioning.
-
-
-<!-- @CTB update for final merge -->
 
 ### `sourmash signature split` - split signatures into individual files
 
