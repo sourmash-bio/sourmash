@@ -95,7 +95,7 @@ is nonempty? yes
 num signatures: 3
 8214 total hashes
 summary of sketches:
-   2 sketches with protein, k=19, scaled=100, abund
+   2 sketches with protein, k=19, scaled=100
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out, line.strip()
@@ -122,10 +122,10 @@ is nonempty? yes
 num signatures: 8
 31758 total hashes
 summary of sketches:
-   2 sketches with dayhoff, k=19, scaled=100, abund
-   2 sketches with hp, k=19, scaled=100, abund
-   2 sketches with protein, k=19, scaled=100, abund
-   2 sketches with DNA, k=31, scaled=1000, abund
+   2 sketches with dayhoff, k=19, scaled=100
+   2 sketches with hp, k=19, scaled=100
+   2 sketches with protein, k=19, scaled=100
+   2 sketches with DNA, k=31, scaled=1000
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
