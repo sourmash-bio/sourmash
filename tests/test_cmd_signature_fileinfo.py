@@ -131,6 +131,38 @@ summary of sketches:
         assert line.strip() in out
 
 
+def test_fileinfo_4_zip_rebuild(runtmp):
+    c = runtmp
+
+    # get basic info on a signature
+    prot = utils.get_test_data('prot/all.zip')
+
+    shutil.copyfile(prot, runtmp.output('all.zip'))
+    c.run_sourmash('sig', 'fileinfo', 'all.zip', '--rebuild')
+
+    out = c.last_result.out
+    print(c.last_result.out)
+
+    # 'location' will be fully resolved, ignore it for now
+    # @CTB note we're missing one of the 8 in the rebuilt.
+    # @CTB and why no abund!?
+    expected_output = f"""\
+path filetype: ZipFileLinearIndex
+is database? yes
+has manifest? yes
+is nonempty? yes
+num signatures: 8
+26581 total hashes
+summary of sketches:
+   2 sketches with dayhoff, k=19, scaled=100
+   2 sketches with hp, k=19, scaled=100
+   2 sketches with protein, k=19, scaled=100
+   1 sketches with DNA, k=31, scaled=1000
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
 def test_fileinfo_5_dir(runtmp):
     c = runtmp
 

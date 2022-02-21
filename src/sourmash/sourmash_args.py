@@ -395,7 +395,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     # but nothing else.
     for n, (desc, load_fn) in enumerate(_loader_functions):
         try:
-            debug_literal(f"_load_databases: trying loader fn {n} {desc}")
+            debug_literal(f"_load_databases: trying loader fn {n} '{desc}'")
             db = load_fn(filename,
                          traverse_yield_all=traverse_yield_all,
                          cache_size=cache_size)
@@ -405,6 +405,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
 
         if db is not None:
             loaded = True
+            debug_literal("_load_databases: success!")
             break
 
     # check to see if it's a FASTA/FASTQ record (i.e. screed loadable)
@@ -706,7 +707,7 @@ def get_manifest(idx, *, require=True, rebuild=False):
     """
     Retrieve a manifest for this idx, loaded with `load_file_as_index`.
 
-    If a manifest exists and `rebuild` is False, return.
+    If a manifest exists and `rebuild` is False, return the manifest..
     If a manifest does not exist or `rebuild` is True, try to build one.
     If a manifest cannot be built and `require` is True, error exit.
 
@@ -722,6 +723,8 @@ def get_manifest(idx, *, require=True, rebuild=False):
         debug_literal("get_manifest: found manifest")
         return m
 
+    debug_literal(f"get_manifest: no manifest found / rebuild={rebuild}")
+
     # CTB: CollectionManifest.create_manifest wants (ss, iloc).
     # so this is an adaptor function! Might want to just change
     # what `create_manifest` takes.
@@ -733,6 +736,7 @@ def get_manifest(idx, *, require=True, rebuild=False):
     try:
         m = CollectionManifest.create_manifest(manifest_iloc_iter(idx),
                                                include_signature=False)
+        debug_literal("get_manifest: rebuilt manifest.")
     except NotImplementedError:
         if require:
             error(f"ERROR: manifests cannot be generated for {idx.location}")

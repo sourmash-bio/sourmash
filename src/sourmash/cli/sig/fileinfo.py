@@ -9,6 +9,10 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
+        '-d', '--debug', action='store_true',
+        help='output debug information'
+    )
+    subparser.add_argument(
         '-f', '--force', action='store_true',
         help='try to load all files as signatures'
     )

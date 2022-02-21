@@ -3119,12 +3119,56 @@ def test_sig_manifest_6_pathlist(runtmp):
     assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
 
 
-def test_sig_manifest_does_not_exit(runtmp):
+def test_sig_manifest_does_not_exist(runtmp):
     with pytest.raises(SourmashCommandFailed):
         runtmp.run_sourmash('sig', 'manifest', 'does-not-exist',
                             '-o', 'out.csv')
 
     assert "Cannot open 'does-not-exist'." in runtmp.last_result.err
+
+
+def test_sig_manifest_7_allzip_1(runtmp):
+    # the rebuilt manifest w/o '-f' will miss dna-sig.noext
+    allzip = utils.get_test_data('prot/all.zip')
+    runtmp.sourmash('sig', 'manifest', allzip, '-o', 'xyz.csv')
+
+    manifest_fn = runtmp.output('xyz.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 7
+    filenames = set( row['internal_location'] for row in manifest.rows )
+    assert 'dna-sig.noext' not in filenames
+
+
+def test_sig_manifest_7_allzip_2(runtmp):
+    # the rebuilt manifest w/ '-f' will contain dna-sig.noext
+    allzip = utils.get_test_data('prot/all.zip')
+    runtmp.sourmash('sig', 'manifest', allzip, '-o', 'xyz.csv', '-f')
+
+    manifest_fn = runtmp.output('xyz.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 8
+    filenames = set( row['internal_location'] for row in manifest.rows )
+    assert 'dna-sig.noext' in filenames
+
+
+def test_sig_manifest_7_allzip_3(runtmp):
+    # the existing manifest contains 'dna-sig.noext' whther or not -f is
+    # used.
+    allzip = utils.get_test_data('prot/all.zip')
+    runtmp.sourmash('sig', 'manifest', allzip, '-o', 'xyz.csv',
+                    '--no-rebuild')
+
+    manifest_fn = runtmp.output('xyz.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 8
+    filenames = set( row['internal_location'] for row in manifest.rows )
+    assert 'dna-sig.noext' in filenames
 
 
 def test_sig_kmers_1_dna(runtmp):

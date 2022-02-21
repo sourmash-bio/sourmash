@@ -270,7 +270,7 @@ def manifest(args):
     """
     build a signature manifest
     """
-    set_quiet(args.quiet)
+    set_quiet(args.quiet, args.debug)
 
     try:
         loader = sourmash_args.load_file_as_index(args.location,
@@ -281,8 +281,9 @@ def manifest(args):
 
     rebuild = True
     if args.no_rebuild_manifest:
-        # @CTB testme
         rebuild = False
+
+    print(f'XXX require={True} rebuild={rebuild}')
     manifest = sourmash_args.get_manifest(loader, require=True,
                                           rebuild=rebuild)
 
@@ -1130,6 +1131,8 @@ def fileinfo(args):
     """
     provide summary information on the given path (collection, index, etc.)
     """
+    set_quiet(args.quiet, args.debug)
+
     # load as index!
     try:
         notify(f"** loading from '{args.path}'")
