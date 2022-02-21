@@ -1155,7 +1155,6 @@ def fileinfo(args):
     # also have arg to fileinfo to force recalculation
     notify("** examining manifest...")
 
-    # @CTB test rebuild. some dbs can't rebuild, I think.
     manifest = sourmash_args.get_manifest(idx, rebuild=args.rebuild_manifest,
                                           require=False)
 

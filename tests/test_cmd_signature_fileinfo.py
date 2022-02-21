@@ -113,7 +113,6 @@ def test_fileinfo_3_sbt_zip(runtmp):
     out = c.last_result.out
     print(c.last_result.out)
 
-    #abundance information available: no @CTB
     expected_output = """\
 path filetype: SBT
 location: protein.sbt.zip
@@ -172,8 +171,9 @@ def test_fileinfo_4_zip_rebuild(runtmp):
     print(c.last_result.out)
 
     # 'location' will be fully resolved, ignore it for now
-    # @CTB note we're missing one of the 8 in the rebuilt.
-    # @CTB and why no abund!?
+    # CTB: note we're missing one of the 8 in the rebuilt, dna-sig.noext,
+    # because it is not automatically included unless you load the zipfile
+    # with traverse. This is intentional.
     expected_output = f"""\
 path filetype: ZipFileLinearIndex
 is database? yes
@@ -263,7 +263,6 @@ def test_fileinfo_7_sbt_json(runtmp, db):
     out = c.last_result.out
     print(c.last_result.out)
 
-    #abundance information available: no @CTB
     expected_output = f"""\
 path filetype: SBT
 location: {dbfile}
