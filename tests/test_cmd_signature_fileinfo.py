@@ -35,12 +35,10 @@ path filetype: MultiIndex
 location: sig47.sig
 is database? no
 has manifest? yes
-is nonempty? yes
 num signatures: 1
 5177 total hashes
-5177 total hashes
 summary of sketches:
-   1 sketches with DNA, k=31, scaled=1000
+   1 sketches with DNA, k=31, scaled=1000             5177 total hashes
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -63,12 +61,11 @@ path filetype: MultiIndex
 location: sig47.sig
 is database? no
 has manifest? yes
-is nonempty? yes
 num signatures: 1
 5177 total hashes
 5177 total hashes
 summary of sketches:
-   1 sketches with DNA, k=31, scaled=1000, abund
+   1 sketches with DNA, k=31, scaled=1000, abund      5177 total hashes
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -91,11 +88,10 @@ path filetype: LCA_Database
 location: protein.lca.json.gz
 is database? yes
 has manifest? no
-is nonempty? yes
 num signatures: 2
 8214 total hashes
 summary of sketches:
-   2 sketches with protein, k=19, scaled=100
+   2 sketches with protein, k=19, scaled=100          8214 total hashes
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -118,11 +114,10 @@ path filetype: SBT
 location: protein.sbt.zip
 is database? yes
 has manifest? yes
-is nonempty? yes
 num signatures: 3
 8214 total hashes
 summary of sketches:
-   2 sketches with protein, k=19, scaled=100
+   2 sketches with protein, k=19, scaled=100          8214 total hashes
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out, line.strip()
@@ -145,14 +140,13 @@ def test_fileinfo_4_zip(runtmp):
 path filetype: ZipFileLinearIndex
 is database? yes
 has manifest? yes
-is nonempty? yes
 num signatures: 8
 31758 total hashes
 summary of sketches:
-   2 sketches with dayhoff, k=19, scaled=100
-   2 sketches with hp, k=19, scaled=100
-   2 sketches with protein, k=19, scaled=100
-   2 sketches with DNA, k=31, scaled=1000
+   2 sketches with dayhoff, k=19, scaled=100          7945 total hashes
+   2 sketches with hp, k=19, scaled=100               5184 total hashes
+   2 sketches with protein, k=19, scaled=100          8214 total hashes
+   2 sketches with DNA, k=31, scaled=1000             10415 total hashes
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -178,14 +172,13 @@ def test_fileinfo_4_zip_rebuild(runtmp):
 path filetype: ZipFileLinearIndex
 is database? yes
 has manifest? yes
-is nonempty? yes
 num signatures: 8
 26581 total hashes
 summary of sketches:
-   2 sketches with dayhoff, k=19, scaled=100
-   2 sketches with hp, k=19, scaled=100
-   2 sketches with protein, k=19, scaled=100
-   1 sketches with DNA, k=31, scaled=1000
+   2 sketches with dayhoff, k=19, scaled=100          7945 total hashes
+   2 sketches with hp, k=19, scaled=100               5184 total hashes
+   2 sketches with protein, k=19, scaled=100          8214 total hashes
+   1 sketches with DNA, k=31, scaled=1000             5238 total hashes
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -210,11 +203,10 @@ path filetype: MultiIndex
 location: subdir/
 is database? no
 has manifest? yes
-is nonempty? yes
 num signatures: 1
 5177 total hashes
 summary of sketches:
-   1 sketches with DNA, k=31, scaled=1000
+   1 sketches with DNA, k=31, scaled=1000             5177 total hashes
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -240,11 +232,10 @@ path filetype: MultiIndex
 location: pathlist.txt
 is database? no
 has manifest? yes
-is nonempty? yes
 num signatures: 1
 5177 total hashes
 summary of sketches:
-   1 sketches with DNA, k=31, scaled=1000
+   1 sketches with DNA, k=31, scaled=1000             5177 total hashes
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -268,11 +259,10 @@ path filetype: SBT
 location: {dbfile}
 is database? yes
 has manifest? no
-is nonempty? yes
 num signatures: 13
 3500 total hashes
 summary of sketches:
-   7 sketches with DNA, k=31, num=500
+   7 sketches with DNA, k=31, num=500                 3500 total hashes
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out, line.strip()
@@ -294,11 +284,10 @@ path filetype: MultiIndex
 location: -
 is database? no
 has manifest? yes
-is nonempty? yes
 num signatures: 1
 3409 total hashes
 summary of sketches:
-   1 sketches with protein, k=19, scaled=100
+   1 sketches with protein, k=19, scaled=100          3409 total hashes
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out, line.strip()

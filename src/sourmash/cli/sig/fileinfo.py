@@ -20,6 +20,14 @@ def subparser(subparsers):
         '--rebuild-manifest', help='forcibly rebuild the manifest',
         action='store_true'
     )
+    subparser.add_argument(
+        '--json-out', help='output information in JSON format only',
+        action='store_true'
+    )
+    subparser.add_argument(
+        '--yaml-out', help='output information in YAML format only',
+        action='store_true'
+    )
 
 
 def main(args):

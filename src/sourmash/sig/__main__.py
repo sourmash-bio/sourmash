@@ -1133,6 +1133,14 @@ def fileinfo(args):
     """
     set_quiet(args.quiet, args.debug)
 
+    if args.json_out and args.yaml_out:
+        error("Can only specify at most one of --json-out and --yaml-out")
+        sys.exit(-1)
+
+    text_out = False
+    if not args.json_out and not args.yaml_out:
+        text_out = True
+
     # load as index!
     try:
         notify(f"** loading from '{args.path}'")
@@ -1145,12 +1153,19 @@ def fileinfo(args):
     print_bool = lambda x: "yes" if x else "no"
     print_none = lambda x: "n/a" if x is None else x
 
-    print_results(f"path filetype: {type(idx).__name__}")
-    print_results(f"location: {print_none(idx.location)}")
-    print_results(f"is database? {print_bool(idx.is_database)}")
-    print_results(f"has manifest? {print_bool(idx.manifest)}")
-    print_results(f"is nonempty? {print_bool(idx)}")
-    print_results(f"num signatures: {len(idx)}")
+    info_d = {}
+    info_d['path_filetype'] = type(idx).__name__
+    info_d['location'] = "" if not idx.location else idx.location
+    info_d['is_database'] = bool(idx.is_database)
+    info_d['has_manifest'] = bool(idx.manifest)
+    info_d['num_sketches'] = len(idx)
+
+    if text_out:
+        print_results(f"path filetype: {info_d['path_filetype']}")
+        print_results(f"location: {info_d['location']}")
+        print_results(f"is database? {print_bool(info_d['is_database'])}")
+        print_results(f"has manifest? {print_bool(info_d['has_manifest'])}")
+        print_results(f"num signatures: {info_d['num_sketches']}")
 
     # also have arg to fileinfo to force recalculation
     notify("** examining manifest...")
@@ -1164,22 +1179,46 @@ def fileinfo(args):
         notify("** no manifest and cannot be generated; exiting.")
         sys.exit(0)
 
+    # use a namedtuple to track counts of distinct sketch types and n hashes
     total_size = 0
     counter = Counter()
+    hashcounts = Counter()
     for row in manifest.rows:
         ski = _SketchInfo(ksize=row['ksize'], moltype=row['moltype'],
                           scaled=row['scaled'], num=row['num'],
                           abund=row['with_abundance'])
         counter[ski] += 1
+        hashcounts[ski] += row['n_hashes']
         total_size += row['n_hashes']
 
-    print_results(f"{total_size} total hashes")
-    print_results("summary of sketches:")
+    # store in info_d
+    info_d['total_hashes'] = total_size
+    sketch_info = []
     for ski, count in counter.items():
-        mh_type = f"num={ski.num}" if ski.num else f"scaled={ski.scaled}"
-        mh_abund = ", abund" if ski.abund else ""
+        sketch_d = dict(ski._asdict())
+        sketch_d['count'] = count
+        sketch_d['n_hashes'] = hashcounts[ski]
+        sketch_info.append(sketch_d)
+    info_d['sketch_info'] = sketch_info
 
-        print_results(f"   {count} sketches with {ski.moltype}, k={ski.ksize}, {mh_type}{mh_abund}")
+    if text_out:
+        print_results(f"{info_d['total_hashes']} total hashes")
+        print_results("summary of sketches:")
+
+        for ski in info_d['sketch_info']:
+            mh_type = f"num={ski['num']}" if ski['num'] else f"scaled={ski['scaled']}"
+            mh_abund = ", abund" if ski['abund'] else ""
+
+            sketch_str = f"{ski['count']} sketches with {ski['moltype']}, k={ski['ksize']}, {mh_type}{mh_abund}"
+
+            print_results(f"   {sketch_str: <50} {ski['n_hashes']} total hashes")
+
+    elif args.json_out:
+        import json
+        print(json.dumps(info_d))
+    elif args.yaml_out:
+        import yaml
+        print(yaml.safe_dump(info_d))
 
 
 def main(arglist=None):
