@@ -283,7 +283,6 @@ def manifest(args):
     if args.no_rebuild_manifest:
         rebuild = False
 
-    print(f'XXX require={True} rebuild={rebuild}')
     manifest = sourmash_args.get_manifest(loader, require=True,
                                           rebuild=rebuild)
 
