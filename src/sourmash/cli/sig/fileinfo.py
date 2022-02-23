@@ -24,10 +24,6 @@ def subparser(subparsers):
         '--json-out', help='output information in JSON format only',
         action='store_true'
     )
-    subparser.add_argument(
-        '--yaml-out', help='output information in YAML format only',
-        action='store_true'
-    )
 
 
 def main(args):

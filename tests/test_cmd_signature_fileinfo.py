@@ -8,7 +8,7 @@ import glob
 
 import pytest
 import screed
-import yaml, json
+import json
 
 import sourmash_tst_utils as utils
 import sourmash
@@ -141,77 +141,6 @@ summary of sketches:
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
-
-
-def test_fileinfo_4_zip_yaml_out(runtmp):
-    # check --yaml-out
-    prot = utils.get_test_data('prot/all.zip')
-
-    shutil.copyfile(prot, runtmp.output('all.zip'))
-    runtmp.run_sourmash('sig', 'fileinfo', 'all.zip', '--yaml-out')
-
-    out = runtmp.last_result.out
-    print(runtmp.last_result.out)
-
-    # 'location' will be fully resolved, ignore it for now
-    expected_output = f"""\
-has_manifest: true
-is_database: true
-num_sketches: 8
-path_filetype: ZipFileLinearIndex
-sketch_info:
-- abund: false
-  count: 2
-  ksize: 19
-  moltype: dayhoff
-  n_hashes: 7945
-  num: 0
-  scaled: 100
-- abund: false
-  count: 2
-  ksize: 19
-  moltype: hp
-  n_hashes: 5184
-  num: 0
-  scaled: 100
-- abund: false
-  count: 2
-  ksize: 19
-  moltype: protein
-  n_hashes: 8214
-  num: 0
-  scaled: 100
-- abund: false
-  count: 2
-  ksize: 31
-  moltype: DNA
-  n_hashes: 10415
-  num: 0
-  scaled: 1000
-total_hashes: 31758
-""".splitlines()
-    for line in expected_output:
-        assert line.strip() in out
-
-    # should succeed as loading as valid YAML, too
-    vals = yaml.safe_load(out)
-
-    assert vals['has_manifest']
-    assert vals['is_database']
-    assert vals['num_sketches'] == 8
-    assert vals['path_filetype'] == 'ZipFileLinearIndex'
-    assert vals['total_hashes'] == 31758
-
-    d1 = {'ksize': 19, 'moltype': 'dayhoff', 'scaled': 100, 'num': 0, 'abund': False, 'count': 2, 'n_hashes': 7945}
-    d2 = {'ksize': 19, 'moltype': 'hp', 'scaled': 100, 'num': 0, 'abund': False, 'count': 2, 'n_hashes': 5184}
-    d3 = {'ksize': 19, 'moltype': 'protein', 'scaled': 100, 'num': 0, 'abund': False, 'count': 2, 'n_hashes': 8214}
-    d4 = {'ksize': 31, 'moltype': 'DNA', 'scaled': 1000, 'num': 0, 'abund': False, 'count': 2, 'n_hashes': 10415}
-
-    assert d1 in vals['sketch_info']
-    assert d2 in vals['sketch_info']
-    assert d3 in vals['sketch_info']
-    assert d4 in vals['sketch_info']
-    assert len(vals['sketch_info']) == 4
 
 
 def test_fileinfo_4_zip_json_out(runtmp):

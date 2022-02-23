@@ -6,6 +6,7 @@ import csv
 import json
 import os
 from collections import defaultdict, namedtuple, Counter
+import json
 
 import screed
 import sourmash
@@ -1132,12 +1133,8 @@ def fileinfo(args):
     """
     set_quiet(args.quiet, args.debug)
 
-    if args.json_out and args.yaml_out:
-        error("Can only specify at most one of --json-out and --yaml-out")
-        sys.exit(-1)
-
     text_out = False
-    if not args.json_out and not args.yaml_out:
+    if not args.json_out:
         text_out = True
 
     # load as index!
@@ -1212,12 +1209,9 @@ def fileinfo(args):
 
             print_results(f"   {sketch_str: <50} {ski['n_hashes']} total hashes")
 
-    elif args.json_out:
-        import json
+    else:
+        assert args.json_out
         print(json.dumps(info_d))
-    elif args.yaml_out:
-        import yaml
-        print(yaml.safe_dump(info_d))
 
 
 def main(arglist=None):
