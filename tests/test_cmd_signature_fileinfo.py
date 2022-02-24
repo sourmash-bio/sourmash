@@ -307,7 +307,7 @@ summary of sketches:
         assert line.strip() in out, line.strip()
 
 
-def test_sig_fileinfo_does_not_exit(runtmp):
+def test_sig_fileinfo_does_not_exist(runtmp):
     # test on file that does not exist
     with pytest.raises(SourmashCommandFailed):
         runtmp.run_sourmash('sig', 'fileinfo', 'does-not-exist')

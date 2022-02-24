@@ -707,7 +707,7 @@ def get_manifest(idx, *, require=True, rebuild=False):
     """
     Retrieve a manifest for this idx, loaded with `load_file_as_index`.
 
-    If a manifest exists and `rebuild` is False, return the manifest..
+    If a manifest exists and `rebuild` is False, return the manifest.
     If a manifest does not exist or `rebuild` is True, try to build one.
     If a manifest cannot be built and `require` is True, error exit.
 
