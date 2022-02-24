@@ -1012,10 +1012,10 @@ num signatures: 8
 ** examining manifest...
 31758 total hashes
 summary of sketches:
-   2 sketches with dayhoff, k=19, scaled=100, abund
-   2 sketches with hp, k=19, scaled=100, abund
-   2 sketches with protein, k=19, scaled=100, abund
-   2 sketches with DNA, k=31, scaled=1000, abund
+   2 sketches with dayhoff, k=19, scaled=100          7945 total hashes
+   2 sketches with hp, k=19, scaled=100               5184 total hashes
+   2 sketches with protein, k=19, scaled=100          8214 total hashes
+   2 sketches with DNA, k=31, scaled=1000             10415 total hashes
 ```
 
 `sig fileinfo` will recognize
