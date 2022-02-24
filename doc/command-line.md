@@ -993,6 +993,39 @@ size: 5177
 signature license: CC0
 ```
 
+### `sourmash signature fileinfo` - display a summary of the contents of a sourmash collection
+
+Display signature file, database, or collection.
+
+For example,
+```
+sourmash sig fileinfo tests/test-data/prot/all.zip
+```
+will display:
+```
+path filetype: ZipFileLinearIndex
+location: /Users/t/dev/sourmash/tests/test-data/prot/all.zip
+is database? yes
+has manifest? yes
+is nonempty? yes
+num signatures: 8
+** examining manifest...
+31758 total hashes
+summary of sketches:
+   2 sketches with dayhoff, k=19, scaled=100          7945 total hashes
+   2 sketches with hp, k=19, scaled=100               5184 total hashes
+   2 sketches with protein, k=19, scaled=100          8214 total hashes
+   2 sketches with DNA, k=31, scaled=1000             10415 total hashes
+```
+
+`sig fileinfo` will recognize
+[all accepted sourmash input files](#loading-signatures-and-databases),
+including individual .sig and .sig.gz files, Zip file collections, SBT
+databases, LCA databases, and directory hierarchies.
+
+`sourmash sig fileinfo` provides optional JSON and YAML output, and
+those formats are under semantic versioning.
+
 ### `sourmash signature split` - split signatures into individual files
 
 Split each signature in the input file(s) into individual files, with
@@ -1270,6 +1303,20 @@ in DNA). If `--check-sequence` is provided, `sig kmers` will error
 exit on the first bad k-mer.  If `--check-sequence --force` is provided,
 `sig kmers` will provide error messages (and skip bad sequences), but
 will continue processing input sequences.
+
+### `sourmash signature manifest` - output a manifest for a file
+
+Output a manifest for a file, database, or collection.
+
+For example,
+```
+sourmash sig manifest tests/test-data/prot/all.zip -o manifest.csv
+```
+will create a CSV file, `manifest.csv`, in the internal sourmash
+manifest format.  The manifest will contain an entry for every
+signature in the file, database, or collection. This format is largely
+meant for internal use, but it can serve as a picklist pickfile for
+subsetting large collections.
 
 ## Advanced command-line usage
 

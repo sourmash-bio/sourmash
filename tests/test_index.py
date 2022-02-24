@@ -944,6 +944,22 @@ def test_zipfile_API_signatures_traverse_yield_all_select(use_manifest):
     assert len(zipidx) == 2
 
 
+def test_zipfile_API_signatures_traverse_yield_all_manifest():
+    # check that manifest len is correct
+    zipfile_db = utils.get_test_data('prot/all.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, traverse_yield_all=True,
+                                     use_manifest=True)
+    assert len(zipidx) == 8, len(zipidx)
+    assert len(zipidx.manifest) == 8, len(zipidx.manifest)
+
+    zipidx = zipidx.select(moltype='DNA')
+    siglist = list(zipidx.signatures())
+    assert len(siglist) == 2
+    assert len(zipidx) == 2
+    assert len(zipidx.manifest) == 2
+
+
 def test_zipfile_API_signatures_select(use_manifest):
     # include dna-sig.noext
     zipfile_db = utils.get_test_data('prot/all.zip')
@@ -1124,7 +1140,8 @@ def test_multi_index_search():
     lidx3 = LinearIndex.load(sig63)
 
     # create MultiIndex with source location override
-    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'],
+                           None)
     lidx = lidx.select(ksize=31)
 
     # now, search for sig2
@@ -1177,7 +1194,8 @@ def test_multi_index_gather():
     lidx3 = LinearIndex.load(sig63)
 
     # create MultiIndex with source location override
-    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'],
+                           None)
     lidx = lidx.select(ksize=31)
 
     matches = lidx.gather(ss2)
@@ -1206,7 +1224,8 @@ def test_multi_index_signatures():
     lidx3 = LinearIndex.load(sig63)
 
     # create MultiIndex with source location override
-    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'],
+                           None)
     lidx = lidx.select(ksize=31)
 
     siglist = list(lidx.signatures())
@@ -1216,11 +1235,23 @@ def test_multi_index_signatures():
     assert ss63 in siglist
 
 
-def test_multi_index_load_from_path():
+def test_multi_index_create():
+    mi = MultiIndex(None, None, prepend_location=False)
+    assert len(mi) == 0
+
+
+def test_multi_index_create_prepend():
+    with pytest.raises(ValueError):
+        mi = MultiIndex(None, None, prepend_location=True)
+
+
+def test_multi_index_load_from_directory():
     # test MultiIndex loading from a directory. The full paths to the
     # signature files should be available via 'signatures_with_location()'
     dirname = utils.get_test_data('prot/protein')
-    mi = MultiIndex.load_from_path(dirname, force=False)
+    mi = MultiIndex.load_from_directory(dirname, force=False)
+
+    assert mi.location == dirname
 
     sigs = list(mi.signatures())
     assert len(sigs) == 2
@@ -1245,17 +1276,17 @@ def test_multi_index_load_from_path():
     assert endings[1] in ilocs, ilocs
 
 
-def test_multi_index_load_from_path_2():
+def test_multi_index_load_from_directory_2():
     # only load .sig files, currently; not the databases under that directory.
     dirname = utils.get_test_data('prot')
-    mi = MultiIndex.load_from_path(dirname, force=False)
+    mi = MultiIndex.load_from_directory(dirname, force=False)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 7
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_path_3(c):
+def test_multi_index_load_from_directory_3(c):
     # check that force works ok on a directory
     dirname = utils.get_test_data('prot')
 
@@ -1269,11 +1300,11 @@ def test_multi_index_load_from_path_3(c):
             count += 1
 
     with pytest.raises(sourmash.exceptions.SourmashError):
-        mi = MultiIndex.load_from_path(c.location, force=False)
+        mi = MultiIndex.load_from_directory(c.location, force=False)
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_path_3_yield_all_true(c):
+def test_multi_index_load_from_directory_3_yield_all_true(c):
     # check that force works ok on a directory w/force=True
     dirname = utils.get_test_data('prot')
 
@@ -1286,14 +1317,14 @@ def test_multi_index_load_from_path_3_yield_all_true(c):
             shutil.copyfile(fullname, copyto)
             count += 1
 
-    mi = MultiIndex.load_from_path(c.location, force=True)
+    mi = MultiIndex.load_from_directory(c.location, force=True)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 8
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_path_3_yield_all_true_subdir(c):
+def test_multi_index_load_from_directory_3_yield_all_true_subdir(c):
     # check that force works ok on subdirectories
     dirname = utils.get_test_data('prot')
 
@@ -1309,14 +1340,14 @@ def test_multi_index_load_from_path_3_yield_all_true_subdir(c):
             shutil.copyfile(fullname, copyto)
             count += 1
 
-    mi = MultiIndex.load_from_path(c.location, force=True)
+    mi = MultiIndex.load_from_directory(c.location, force=True)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 8
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_path_3_sig_gz(c):
+def test_multi_index_load_from_directory_3_sig_gz(c):
     # check that we find .sig.gz files, too
     dirname = utils.get_test_data('prot')
 
@@ -1331,14 +1362,16 @@ def test_multi_index_load_from_path_3_sig_gz(c):
             shutil.copyfile(fullname, copyto)
             count += 1
 
-    mi = MultiIndex.load_from_path(c.location, force=False)
+    mi = MultiIndex.load_from_directory(c.location, force=False)
+
+    assert mi.location == c.location
 
     sigs = list(mi.signatures())
     assert len(sigs) == 6
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_path_3_check_traverse_fn(c):
+def test_multi_index_load_from_directory_3_check_traverse_fn(c):
     # test the actual traverse function... eventually this test can be
     # removed, probably, as we consolidate functionality and test MultiIndex
     # better.
@@ -1350,10 +1383,24 @@ def test_multi_index_load_from_path_3_check_traverse_fn(c):
     assert len(files) == 20, files # if this fails, check for extra files!
 
 
-def test_multi_index_load_from_path_no_exist():
+def test_multi_index_load_from_directory_no_exist():
     dirname = utils.get_test_data('does-not-exist')
     with pytest.raises(ValueError):
-        mi = MultiIndex.load_from_path(dirname, force=True)
+        mi = MultiIndex.load_from_directory(dirname, force=True)
+
+
+def test_multi_index_load_from_file_path():
+    sig2 = utils.get_test_data('2.fa.sig')
+
+    mi = MultiIndex.load_from_path(sig2)
+    assert len(mi) == 3
+    assert mi.location == sig2
+
+
+def test_multi_index_load_from_file_path_no_exist():
+    filename = utils.get_test_data('does-not-exist')
+    with pytest.raises(ValueError):
+        mi = MultiIndex.load_from_directory(filename, force=True)
 
 
 def test_multi_index_load_from_pathlist_no_exist():
@@ -1376,6 +1423,8 @@ def test_multi_index_load_from_pathlist_1(c):
 
     sigs = list(mi.signatures())
     assert len(sigs) == 7
+
+    assert mi.location == file_list
 
 
 @utils.in_tempdir
@@ -2251,7 +2300,7 @@ def test_lazy_index_wraps_multi_index_location():
     db_paths = (sigdir, sigzip, siglca, sigsbt)
     dbs = [ sourmash.load_file_as_index(db_path) for db_path in db_paths ]
 
-    mi = MultiIndex.load(dbs, db_paths)
+    mi = MultiIndex.load(dbs, db_paths, None)
     lazy = LazyLinearIndex(mi)
 
     mi2 = mi.select(moltype='protein')

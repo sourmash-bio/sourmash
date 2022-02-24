@@ -3576,7 +3576,7 @@ def test_gather_metagenome_traverse_check_csv(runtmp, linear_gather, prefetch_ga
         r = csv.DictReader(fp)
         for row in r:
             filename = row['filename']
-            assert filename.startswith(copy_testdata)
+            assert filename.startswith(copy_testdata), filename
             # should have full path to file sig was loaded from
             assert len(filename) > prefix_len
 
@@ -4245,7 +4245,7 @@ def test_sbt_categorize(runtmp):
 
     out_csv = open(runtmp.output('out.csv')).read()
     print(out_csv)
-    assert './4.sig,genome-s10+s11,genome-s10,0.504' in out_csv
+    assert '4.sig,genome-s10+s11,genome-s10,0.504' in out_csv
 
 
 def test_sbt_categorize_ignore_abundance_1(runtmp):
