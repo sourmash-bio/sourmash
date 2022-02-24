@@ -1198,7 +1198,7 @@ def fileinfo(args):
     info_d['sketch_info'] = sketch_info
 
     if text_out:
-        print_results(f"{info_d['total_hashes']} total hashes")
+        print_results(f"total hashes: {info_d['total_hashes']}")
         print_results("summary of sketches:")
 
         for ski in info_d['sketch_info']:

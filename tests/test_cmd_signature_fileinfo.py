@@ -35,9 +35,9 @@ location: sig47.sig
 is database? no
 has manifest? yes
 num signatures: 1
-5177 total hashes
+total hashes: 5177
 summary of sketches:
-   1 sketches with DNA, k=31, scaled=1000             5177 total hashes
+   1 sketches with DNA, k=31, scaled=1000             5177
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -59,7 +59,6 @@ location: sig47.sig
 is database? no
 has manifest? yes
 num signatures: 1
-5177 total hashes
 5177 total hashes
 summary of sketches:
    1 sketches with DNA, k=31, scaled=1000, abund      5177 total hashes
@@ -84,9 +83,9 @@ location: protein.lca.json.gz
 is database? yes
 has manifest? no
 num signatures: 2
-8214 total hashes
+total hashes: 8214
 summary of sketches:
-   2 sketches with protein, k=19, scaled=100          8214 total hashes
+   2 sketches with protein, k=19, scaled=100          8214
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -108,7 +107,7 @@ location: protein.sbt.zip
 is database? yes
 has manifest? yes
 num signatures: 3
-8214 total hashes
+total hashes: 8214
 summary of sketches:
    2 sketches with protein, k=19, scaled=100          8214 total hashes
 """.splitlines()
@@ -132,7 +131,7 @@ path filetype: ZipFileLinearIndex
 is database? yes
 has manifest? yes
 num signatures: 8
-31758 total hashes
+total hashes: 31758
 summary of sketches:
    2 sketches with dayhoff, k=19, scaled=100          7945 total hashes
    2 sketches with hp, k=19, scaled=100               5184 total hashes
@@ -193,7 +192,7 @@ path filetype: ZipFileLinearIndex
 is database? yes
 has manifest? yes
 num signatures: 8
-26581 total hashes
+total hashes: 26581
 summary of sketches:
    2 sketches with dayhoff, k=19, scaled=100          7945 total hashes
    2 sketches with hp, k=19, scaled=100               5184 total hashes
@@ -222,7 +221,7 @@ location: subdir/
 is database? no
 has manifest? yes
 num signatures: 1
-5177 total hashes
+total hashes: 5177
 summary of sketches:
    1 sketches with DNA, k=31, scaled=1000             5177 total hashes
 """.splitlines()
@@ -249,7 +248,7 @@ location: pathlist.txt
 is database? no
 has manifest? yes
 num signatures: 1
-5177 total hashes
+total hashes: 5177
 summary of sketches:
    1 sketches with DNA, k=31, scaled=1000             5177 total hashes
 """.splitlines()
@@ -274,7 +273,7 @@ location: {dbfile}
 is database? yes
 has manifest? no
 num signatures: 13
-3500 total hashes
+total hashes: 3500
 summary of sketches:
    7 sketches with DNA, k=31, num=500                 3500 total hashes
 """.splitlines()
@@ -299,7 +298,7 @@ location: -
 is database? no
 has manifest? yes
 num signatures: 1
-3409 total hashes
+total hashes: 3409
 summary of sketches:
    1 sketches with protein, k=19, scaled=100          3409 total hashes
 """.splitlines()
