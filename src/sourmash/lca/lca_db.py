@@ -78,6 +78,9 @@ class LCA_Database(Index):
     def location(self):
         return self.filename
 
+    def __len__(self):
+        return self._next_index
+
     def _invalidate_cache(self):
         if hasattr(self, '_cache'):
             del self._cache
@@ -176,6 +179,10 @@ class LCA_Database(Index):
         from sourmash import SourmashSignature
         for v in self._signatures.values():
             yield v
+
+    def _signatures_with_internal(self):
+        for idx, ss in self._signatures.items():
+            yield ss, self.location, idx
 
     def select(self, ksize=None, moltype=None, num=0, scaled=0, abund=None,
                containment=False, picklist=None):
@@ -296,6 +303,15 @@ class LCA_Database(Index):
             db.idx_to_lid = {}
             for k, v in load_d['idx_to_lid'].items():
                 db.idx_to_lid[int(k)] = v
+
+        if db.ident_to_idx:
+            db._next_index = max(db.ident_to_idx.values()) + 1
+        else:
+            db._next_index = 0
+        if db.idx_to_lid:
+            db._next_lid = max(db.idx_to_lid.values()) + 1
+        else:
+            db._next_lid = 0
 
         db.filename = db_name
 

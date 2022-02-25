@@ -52,6 +52,10 @@ class Index(ABC):
     is_database = False
     manifest = None
 
+    @abstractmethod
+    def __len__(self):
+        "Return the number of signatures in this Index object."
+
     @property
     def location(self):
         "Return a resolvable location for this index, if possible."
@@ -408,11 +412,13 @@ class LinearIndex(Index):
             save_signatures(self.signatures(), fp)
 
     @classmethod
-    def load(cls, location):
+    def load(cls, location, filename=None):
         "Load signatures from a JSON signature file."
         si = load_signatures(location, do_raise=True)
 
-        lidx = LinearIndex(si, filename=location)
+        if filename is None:
+            filename=location
+        lidx = LinearIndex(si, filename=filename)
         return lidx
 
     def select(self, **kwargs):
@@ -557,6 +563,14 @@ class ZipFileLinearIndex(Index):
         return True
 
     def __len__(self):
+        "calculate number of signatures."
+
+        # use manifest, if available.
+        m = self.manifest
+        if self.manifest is not None:
+            return len(m)
+
+        # otherwise, iterate across all signatures.
         n = 0
         for _ in self.signatures():
             n += 1
@@ -845,12 +859,20 @@ class MultiIndex(Index):
 
     Concrete class; signatures held in memory; builds and uses manifests.
     """
-    def __init__(self, manifest, parent=""):
+    def __init__(self, manifest, parent, *, prepend_location=False):
         """Constructor; takes manifest containing signatures, together with
-        optional top-level location to prepend to internal locations.
+        the top-level location.
         """
         self.manifest = manifest
         self.parent = parent
+        self.prepend_location = prepend_location
+
+        if prepend_location and self.parent is None:
+            raise ValueError("must set 'parent' if 'prepend_location' is set")
+
+    @property
+    def location(self):
+        return self.parent
 
     def signatures(self):
         for row in self.manifest.rows:
@@ -861,7 +883,7 @@ class MultiIndex(Index):
             loc = row['internal_location']
             # here, 'parent' may have been removed from internal_location
             # for directories; if so, add it back in.
-            if self.parent:
+            if self.prepend_location:
                 loc = os.path.join(self.parent, loc)
             yield row['signature'], loc
 
@@ -877,13 +899,16 @@ class MultiIndex(Index):
 
 
     def __len__(self):
+        if self.manifest is None:
+            return 0
+
         return len(self.manifest)
 
     def insert(self, *args):
         raise NotImplementedError
 
     @classmethod
-    def load(cls, index_list, source_list, parent=""):
+    def load(cls, index_list, source_list, parent, *, prepend_location=False):
         """Create a MultiIndex from already-loaded indices.
 
         Takes two arguments: a list of Index objects, and a matching list
@@ -903,10 +928,11 @@ class MultiIndex(Index):
                     yield ss, iloc
 
         # build manifest; note, signatures are stored in memory.
+        # CTB: could do this on demand?
         manifest = CollectionManifest.create_manifest(sigloc_iter())
 
         # create!
-        return cls(manifest, parent=parent)
+        return cls(manifest, parent, prepend_location=prepend_location)
 
     @classmethod
     def load_from_directory(cls, pathname, *, force=False):
@@ -942,7 +968,8 @@ class MultiIndex(Index):
         if not index_list:
             raise ValueError(f"no signatures to load under directory '{pathname}'")
 
-        return cls.load(index_list, source_list, parent=pathname)
+        return cls.load(index_list, source_list, pathname,
+                        prepend_location=True)
 
     @classmethod
     def load_from_path(cls, pathname, force=False):
@@ -957,19 +984,20 @@ class MultiIndex(Index):
 
         if os.path.isdir(pathname): # traverse
             return cls.load_from_directory(pathname, force=force)
-        else:                   # load as a .sig/JSON file
-            index_list = []
-            source_list = []
-            try:
-                idx = LinearIndex.load(pathname)
-                index_list = [idx]
-                source_list = [pathname]
-            except (IOError, sourmash.exceptions.SourmashError):
-                if not force:
-                    raise ValueError(f"no signatures to load from '{pathname}'")
-                return None
 
-            return cls.load(index_list, source_list)
+        # load as a .sig/JSON file
+        index_list = []
+        source_list = []
+        try:
+            idx = LinearIndex.load(pathname)
+            index_list = [idx]
+            source_list = [pathname]
+        except (IOError, sourmash.exceptions.SourmashError):
+            if not force:
+                raise ValueError(f"no signatures to load from '{pathname}'")
+            return None
+
+        return cls.load(index_list, source_list, pathname)
 
     @classmethod
     def load_from_pathlist(cls, filename):
@@ -992,7 +1020,7 @@ class MultiIndex(Index):
             idx_list.append(idx)
             src_list.append(src)
 
-        return cls.load(idx_list, src_list)
+        return cls.load(idx_list, src_list, filename)
 
     def save(self, *args):
         raise NotImplementedError
@@ -1000,7 +1028,8 @@ class MultiIndex(Index):
     def select(self, **kwargs):
         "Run 'select' on the manifest."
         new_manifest = self.manifest.select_to_manifest(**kwargs)
-        return MultiIndex(new_manifest, parent=self.parent)
+        return MultiIndex(new_manifest, self.parent,
+                          prepend_location=self.prepend_location)
 
 
 class LazyLoadedIndex(Index):

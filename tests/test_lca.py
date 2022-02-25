@@ -24,8 +24,14 @@ def test_api_create_search():
                                      ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    assert len(lca_db) == 0
+    assert not lca_db
+
     count = lca_db.insert(ss)
     assert count == len(ss.minhash)
+
+    assert len(lca_db) == 1
+    assert lca_db
 
     results = lca_db.search(ss, threshold=0.0)
     print(results)
