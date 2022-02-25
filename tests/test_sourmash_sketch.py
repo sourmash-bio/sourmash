@@ -967,6 +967,43 @@ def test_do_sourmash_check_knowngood_protein_comparisons(runtmp):
     assert sig2_trans.similarity(good_trans) == 1.0
 
 
+def test_do_sourmash_singleton_multiple_files_no_out_specified(runtmp):
+    # this test checks that --singleton -o works
+    testdata1 = utils.get_test_data('ecoli.faa')
+    testdata2 = utils.get_test_data('shewanella.faa')
+
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7', '--singleton',
+                    testdata1, testdata2)
+
+    print(runtmp.last_result.err)
+    assert "saved 2 signature(s) to 'ecoli.faa.sig'. Note: signature license is CC0." in runtmp.last_result.err
+    assert "saved 2 signature(s) to 'shewanella.faa.sig'. Note: signature license is CC0." in runtmp.last_result.err
+
+    sig1 = runtmp.output('ecoli.faa.sig')
+    assert os.path.exists(sig1)
+    sig2 = runtmp.output('shewanella.faa.sig')
+    assert os.path.exists(sig2)
+
+    x = list(signature.load_signatures(sig1))
+    for ss in x:
+        print(ss.name)
+
+    y = list(signature.load_signatures(sig2))
+    for ss in y:
+        print(ss.name)
+
+    assert len(x) == 2
+    assert len(y) == 2
+
+    idents = [ ss.name.split()[0] for ss in x ]
+    print(idents)
+    assert set(['NP_414543.1', 'NP_414544.1' ]) == set(idents)
+
+    idents = [ ss.name.split()[0] for ss in y ]
+    print(idents)
+    assert set(['WP_006079348.1', 'WP_006079351.1']) == set(idents)
+
+
 def test_do_sourmash_singleton_multiple_files_output(runtmp):
     # this test checks that --singleton -o works
     testdata1 = utils.get_test_data('ecoli.faa')
@@ -975,10 +1012,38 @@ def test_do_sourmash_singleton_multiple_files_output(runtmp):
     runtmp.sourmash('sketch', 'protein', '-p', 'k=7', '--singleton',
                     testdata1, testdata2, '-o', 'output.sig')
 
+    print(runtmp.last_result.err)
+    assert "saved 4 signature(s) to 'output.sig'. Note: signature license is CC0." in runtmp.last_result.err
+
     sig1 = runtmp.output('output.sig')
     assert os.path.exists(sig1)
 
     x = list(signature.load_signatures(sig1))
+    for ss in x:
+        print(ss.name)
+
+    assert len(x) == 4
+
+    idents = [ ss.name.split()[0] for ss in x ]
+    print(idents)
+    assert set(['NP_414543.1', 'NP_414544.1', 'WP_006079348.1', 'WP_006079351.1']) == set(idents)
+
+
+def test_do_sourmash_singleton_multiple_files_output_zip(runtmp):
+    # this test checks that --singleton -o works
+    testdata1 = utils.get_test_data('ecoli.faa')
+    testdata2 = utils.get_test_data('shewanella.faa')
+
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7', '--singleton',
+                    testdata1, testdata2, '-o', 'output.zip')
+
+    print(runtmp.last_result.err)
+    assert "saved 4 signature(s) to 'output.zip'. Note: signature license is CC0." in runtmp.last_result.err
+
+    sig1 = runtmp.output('output.zip')
+    assert os.path.exists(sig1)
+
+    x = list(sourmash.load_file_as_signatures(sig1))
     for ss in x:
         print(ss.name)
 

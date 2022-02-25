@@ -535,3 +535,23 @@ def test_prefetch_with_picklist_exclude(runtmp):
     assert "total of 9 matching signatures." in err
     assert "of 1466 distinct query hashes, 1013 were found in matches above threshold." in err
     assert "a total of 453 query hashes remain unmatched." in err
+
+
+def test_prefetch_output_with_abundance(runtmp, prefetch_gather, linear_gather):
+    c = runtmp
+    query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+    against = utils.get_test_data('gather-abund/genome-s10.fa.gz.sig')
+
+    c.run_sourmash('prefetch', linear_gather, query, against,
+                   '--save-matching-hashes', c.output('match-hash.sig'),
+                   '--save-unmatched-hashes', c.output('nomatch-hash.sig'))
+
+    print(c.last_result.out)
+
+    assert os.path.exists(c.output('match-hash.sig'))
+    ss = list(sourmash.load_file_as_signatures(c.output('match-hash.sig')))[0]
+    assert ss.minhash.track_abundance
+
+    assert os.path.exists(c.output('nomatch-hash.sig'))
+    ss = list(sourmash.load_file_as_signatures(c.output('nomatch-hash.sig')))[0]
+    assert ss.minhash.track_abundance

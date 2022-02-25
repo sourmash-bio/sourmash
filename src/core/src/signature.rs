@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::encodings::{aa_to_dayhoff, aa_to_hp, revcomp, to_aa, HashFunctions, VALID};
-use crate::index::storage::ToWriter;
+use crate::prelude::*;
 use crate::sketch::Sketch;
 use crate::Error;
 use crate::HashIntoType;
@@ -608,9 +608,9 @@ impl Signature {
         if #[cfg(feature = "parallel")] {
             self.signatures
                 .par_iter_mut()
-                .for_each(|sketch| {
-                    sketch.add_sequence(seq, force).unwrap(); }
-                );
+                .try_for_each(|sketch| {
+                    sketch.add_sequence(seq, force) }
+                )?;
         } else {
             for sketch in self.signatures.iter_mut(){
                 sketch.add_sequence(seq, force)?;
