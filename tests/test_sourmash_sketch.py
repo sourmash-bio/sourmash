@@ -393,6 +393,21 @@ def test_do_sourmash_sketchdna_outdir(c):
     assert str(sig).endswith('short.fa')
 
 
+@utils.in_tempdir
+def test_do_sourmash_sketchdna_output_dir(c):
+    # test via --output-dir not --outdir
+    testdata1 = utils.get_test_data('short.fa')
+    status, out, err = utils.runscript('sourmash',
+                                       ['sketch', 'dna', testdata1,
+                                        '--output-dir', c.location])
+
+    sigfile = os.path.join(c.location, 'short.fa.sig')
+    assert os.path.exists(sigfile)
+
+    sig = next(signature.load_signatures(sigfile))
+    assert str(sig).endswith('short.fa')
+
+
 def test_do_sourmash_sketchdna_output_valid_file(runtmp):
     """ Trigger bug #123 """
     testdata1 = utils.get_test_data('short.fa')

@@ -1113,6 +1113,28 @@ def test_sig_split_2_outdir(c):
 
 
 @utils.in_tempdir
+def test_sig_split_2_output_dir(c):
+    # split 47 twice, put in outdir via --output-dir instead of --outdir
+    sig47 = utils.get_test_data('47.fa.sig')
+    outdir = c.output('sigout/')
+    c.run_sourmash('sig', 'split', sig47, sig47, '--output-dir', outdir)
+
+    outname1 = 'sigout/09a08691.k=31.scaled=1000.DNA.dup=0.47.fa.sig'
+    outname2 = 'sigout/09a08691.k=31.scaled=1000.DNA.dup=1.47.fa.sig'
+
+    assert os.path.exists(c.output(outname1))
+    assert os.path.exists(c.output(outname2))
+
+    test_split_sig = sourmash.load_one_signature(sig47)
+
+    actual_split_sig = sourmash.load_one_signature(c.output(outname1))
+    assert actual_split_sig == test_split_sig
+
+    actual_split_sig = sourmash.load_one_signature(c.output(outname2))
+    assert actual_split_sig == test_split_sig
+
+
+@utils.in_tempdir
 def test_sig_split_3_multisig(c):
     # split 47 and 47+63-multisig.sig
     sig47 = utils.get_test_data('47.fa.sig')
