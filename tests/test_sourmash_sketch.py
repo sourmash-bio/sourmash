@@ -504,7 +504,7 @@ def test_do_sourmash_sketchdna_output_and_name_valid_file_outdir(c):
                        '--outdir', c.location)
 
     errmsg = c.last_result.err
-    assert "ERROR: --outdir doesn't make sense with -o/--output" in errmsg
+    assert "ERROR: --output-dir doesn't make sense with -o/--output" in errmsg
 
 
 def test_do_sourmash_sketchdna_singleton(runtmp):
