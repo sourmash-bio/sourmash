@@ -133,10 +133,10 @@ def split(args):
     output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}.sig'
     output_num_template = '{md5sum}.k={ksize}.num={num}.{moltype}.dup={dup}.{basename}.sig'
 
-    if args.outdir:
-        if not os.path.exists(args.outdir):
-            notify(f'Creating --outdir {args.outdir}')
-            os.mkdir(args.outdir)
+    if args.output_dir:
+        if not os.path.exists(args.output_dir):
+            notify(f'Creating --output-dir {args.output_dir}')
+            os.mkdir(args.output_dir)
 
     progress = sourmash_args.SignatureLoadingProgress()
     loader = sourmash_args.load_many_signatures(args.signatures,
@@ -179,8 +179,8 @@ def split(args):
 
         output_names.add(output_name)
 
-        if args.outdir:
-            output_name = os.path.join(args.outdir, output_name)
+        if args.output_dir:
+            output_name = os.path.join(args.output_dir, output_name)
 
         if os.path.exists(output_name):
             notify(f"** overwriting existing file {format(output_name)}")
