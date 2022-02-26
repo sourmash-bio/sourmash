@@ -717,13 +717,27 @@ class CounterGather:
         # cannot add matches once query has started.
         self.query_started = 0
 
+        self.seen = set()
+
     def add(self, ss, location=None, require_overlap=True):
         "Add this signature in as a potential match."
         if self.query_started:
             raise ValueError("cannot add more signatures to counter after peek/consume")
 
+        # @CTB
+        cmp_mh = ss.minhash.downsample(scaled=self.orig_query_mh.scaled)
+        if 1:
+            hashes = set(ss.minhash.hashes)
+            hashes = hashes - self.seen
+            self.seen.update(hashes)
+            if len(hashes) != len(ss.minhash):
+                print('DIFF', len(self.seen))
+                new_mh = ss.minhash.copy_and_clear()
+                new_mh.add_many(hashes)
+                cmp_mh = new_mh
+
         # upon insertion, count & track overlap with the specific query.
-        overlap = self.orig_query_mh.count_common(ss.minhash, True)
+        overlap = self.orig_query_mh.count_common(cmp_mh, True)
         if overlap:
             i = len(self.siglist)
 
