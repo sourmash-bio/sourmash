@@ -5,7 +5,8 @@ import sys
 import csv
 import json
 import os
-from collections import defaultdict
+from collections import defaultdict, namedtuple, Counter
+import json
 
 import screed
 import sourmash
@@ -14,6 +15,7 @@ from sourmash.sourmash_args import FileOutput
 from sourmash.logging import set_quiet, error, notify, print_results, debug
 from sourmash import sourmash_args
 from sourmash.minhash import _get_max_hash_for_scaled
+from sourmash.manifest import CollectionManifest
 
 
 usage='''
@@ -269,19 +271,19 @@ def manifest(args):
     """
     build a signature manifest
     """
-    set_quiet(args.quiet)
+    set_quiet(args.quiet, args.debug)
 
     try:
         loader = sourmash_args.load_file_as_index(args.location,
                                                   yield_all_files=args.force)
     except ValueError as exc:
-        error("\nError while reading signatures from '{}':".format(args.location))
-        error(str(exc))
+        error(f"Cannot open '{args.location}'.")
         sys.exit(-1)
 
     rebuild = True
     if args.no_rebuild_manifest:
         rebuild = False
+
     manifest = sourmash_args.get_manifest(loader, require=True,
                                           rebuild=rebuild)
 
@@ -599,12 +601,14 @@ def extract(args):
 
     # further filtering on md5 or name?
     if args.md5 is not None or args.name is not None:
-        def filter_fn(ss):
+        def filter_fn(row):
             # match?
             keep = False
-            if args.name and args.name in str(ss):
-                keep = True
-            if args.md5 and args.md5 in ss.md5sum():
+            if args.name:
+                name = row['name'] or row['filename']
+                if args.name in name:
+                    keep = True
+            if args.md5 and args.md5 in row['md5']:
                 keep = True
 
             return keep
@@ -617,19 +621,40 @@ def extract(args):
     save_sigs.open()
 
     # start loading!
-    progress = sourmash_args.SignatureLoadingProgress()
-    loader = sourmash_args.load_many_signatures(args.signatures,
-                                                ksize=args.ksize,
-                                                moltype=moltype,
-                                                picklist=picklist,
-                                                progress=progress,
-                                                yield_all_files=args.force,
-                                                force=args.force)
-    for ss, sigloc in loader:
-        if filter_fn(ss):
+    total_rows_examined = 0
+    for filename in args.signatures:
+        idx = sourmash_args.load_file_as_index(filename,
+                                               yield_all_files=args.force)
+
+        idx = idx.select(ksize=args.ksize,
+                         moltype=moltype,
+                         picklist=picklist)
+
+        manifest = sourmash_args.get_manifest(idx)
+
+        sub_rows = []
+        for row in manifest.rows:
+            if filter_fn(row):
+                sub_rows.append(row)
+            total_rows_examined += 1
+
+        sub_manifest = CollectionManifest(sub_rows)
+        sub_picklist = sub_manifest.to_picklist()
+
+        try:
+            idx = idx.select(picklist=sub_picklist)
+        except ValueError:
+            error("** This input collection doesn't support 'extract' with picklists.")
+            error("** EXITING.")
+            error("**")
+            error("** You can use 'sourmash sig cat' with a picklist,")
+            error("** and then pipe the output to 'sourmash sig extract")
+            sys.exit(-1)
+
+        for ss in idx.signatures():
             save_sigs.add(ss)
 
-    notify(f"loaded {len(progress)} total that matched ksize & molecule type")
+    notify(f"loaded {total_rows_examined} total that matched ksize & molecule type")
     if not save_sigs:
         error("no matching signatures to save!")
         sys.exit(-1)
@@ -1099,75 +1124,94 @@ def kmers(args):
         notify("NOTE: see --save-kmers or --save-sequences for output options.")
 
 
+_SketchInfo = namedtuple('_SketchInfo', 'ksize, moltype, scaled, num, abund')
+
+
 def fileinfo(args):
     """
     provide summary information on the given path (collection, index, etc.)
     """
+    set_quiet(args.quiet, args.debug)
+
+    text_out = False
+    if not args.json_out:
+        text_out = True
+
     # load as index!
     try:
         notify(f"** loading from '{args.path}'")
         idx = sourmash_args.load_file_as_index(args.path,
                                                yield_all_files=args.force)
     except ValueError:
-        error("Cannot open '{args.path}'.")
+        error(f"Cannot open '{args.path}'.")
         sys.exit(-1)
 
     print_bool = lambda x: "yes" if x else "no"
     print_none = lambda x: "n/a" if x is None else x
 
-    print_results(f"path filetype: {type(idx).__name__}")
-    print_results(f"location: {print_none(idx.location)}")
-    print_results(f"is database? {print_bool(idx.is_database)}")
-    print_results(f"has manifest? {print_bool(idx.manifest)}")
-    print_results(f"is nonempty? {print_bool(idx)}")
-    print_results(f"num signatures: {len(idx)}")
+    info_d = {}
+    info_d['path_filetype'] = type(idx).__name__
+    info_d['location'] = "" if not idx.location else idx.location
+    info_d['is_database'] = bool(idx.is_database)
+    info_d['has_manifest'] = bool(idx.manifest)
+    info_d['num_sketches'] = len(idx)
+
+    if text_out:
+        print_results(f"path filetype: {info_d['path_filetype']}")
+        print_results(f"location: {info_d['location']}")
+        print_results(f"is database? {print_bool(info_d['is_database'])}")
+        print_results(f"has manifest? {print_bool(info_d['has_manifest'])}")
+        print_results(f"num signatures: {info_d['num_sketches']}")
 
     # also have arg to fileinfo to force recalculation
     notify("** examining manifest...")
 
-    manifest = sourmash_args.get_manifest(idx, rebuild=args.rebuild_manifest)
+    manifest = sourmash_args.get_manifest(idx, rebuild=args.rebuild_manifest,
+                                          require=False)
+
     if manifest is None:
+        # actually can't find any file type to trigger this, but leaving it
+        # in for future eventualities, I guess?
         notify("** no manifest and cannot be generated; exiting.")
         sys.exit(0)
 
-    ksizes = set()
-    moltypes = set()
-    scaled_vals = set()
-    num_vals = set()
+    # use a namedtuple to track counts of distinct sketch types and n hashes
     total_size = 0
-    has_abundance = False
-
-    # @CTB: track _number_ of sketches with those values?
+    counter = Counter()
+    hashcounts = Counter()
     for row in manifest.rows:
-        ksizes.add(row['ksize'])
-        moltypes.add(row['moltype'])
-        scaled_vals.add(row['scaled'])
-        num_vals.add(row['num'])
+        ski = _SketchInfo(ksize=row['ksize'], moltype=row['moltype'],
+                          scaled=row['scaled'], num=row['num'],
+                          abund=row['with_abundance'])
+        counter[ski] += 1
+        hashcounts[ski] += row['n_hashes']
         total_size += row['n_hashes']
-        has_abundance = has_abundance or row['with_abundance']
 
-    print_results(f"{total_size} total hashes")
-    print_results(f"abundance information available: {print_bool(has_abundance)}")
+    # store in info_d
+    info_d['total_hashes'] = total_size
+    sketch_info = []
+    for ski, count in counter.items():
+        sketch_d = dict(ski._asdict())
+        sketch_d['count'] = count
+        sketch_d['n_hashes'] = hashcounts[ski]
+        sketch_info.append(sketch_d)
+    info_d['sketch_info'] = sketch_info
 
-    ksizes = ", ".join([str(x) for x in sorted(ksizes)])
-    print_results(f"ksizes present: {ksizes}")
+    if text_out:
+        print_results(f"total hashes: {info_d['total_hashes']}")
+        print_results("summary of sketches:")
 
-    moltypes = ", ".join(sorted(moltypes))
-    print_results(f"moltypes present: {moltypes}")
+        for ski in info_d['sketch_info']:
+            mh_type = f"num={ski['num']}" if ski['num'] else f"scaled={ski['scaled']}"
+            mh_abund = ", abund" if ski['abund'] else ""
 
-    if 0 in scaled_vals: scaled_vals.remove(0)
-    scaled_vals = ", ".join([str(x) for x in sorted(scaled_vals)])
-    if scaled_vals:
-        print_results(f"scaled vals present: {scaled_vals}")
+            sketch_str = f"{ski['count']} sketches with {ski['moltype']}, k={ski['ksize']}, {mh_type}{mh_abund}"
+
+            print_results(f"   {sketch_str: <50} {ski['n_hashes']} total hashes")
+
     else:
-        print_results("no scaled sketches present")
-
-    if 0 in num_vals: num_vals.remove(0)
-    num_vals = ", ".join([str(x) for x in sorted(num_vals)])
-    if num_vals:
-        print_results(f"num vals present: {num_vals}")
-    else:
-        print_results("no num sketches present")
+        assert args.json_out
+        print(json.dumps(info_d))
 
 
 def main(arglist=None):
