@@ -50,7 +50,7 @@ import sourmash.exceptions
 from .logging import notify, error, debug_literal
 
 from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
-from .sqlite_index import SqliteIndex
+from .index.sqlite_index import SqliteIndex
 from . import signature as sigmod
 from .picklist import SignaturePicklist, PickStyle
 from .manifest import CollectionManifest

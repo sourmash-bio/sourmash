@@ -29,12 +29,12 @@ from bitstring import BitArray
 # @CTB add DISTINCT to sketch and hash select
 # @CTB don't do constraints if scaleds are equal?
 
-from .index import Index
+from sourmash.index import Index
 import sourmash
 from sourmash import MinHash, SourmashSignature
 from sourmash.index import IndexSearchResult
-from .picklist import PickStyle
-from .manifest import CollectionManifest
+from sourmash.picklist import PickStyle
+from sourmash.manifest import CollectionManifest
 
 # converters for unsigned 64-bit ints: if over MAX_SQLITE_INT,
 # convert to signed int.

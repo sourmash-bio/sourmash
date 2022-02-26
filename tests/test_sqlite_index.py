@@ -3,7 +3,7 @@
 import pytest
 
 import sourmash
-from sourmash.sqlite_index import SqliteIndex
+from sourmash.index.sqlite_index import SqliteIndex
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.picklist import SignaturePicklist, PickStyle
 
