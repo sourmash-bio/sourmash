@@ -124,7 +124,6 @@ class SqliteIndex(Index):
                 """
                 )
             except (sqlite3.OperationalError, sqlite3.DatabaseError):
-                raise
                 raise ValueError(f"cannot open '{dbfile}' as sqlite3 database")
 
         c = self.conn.cursor()
