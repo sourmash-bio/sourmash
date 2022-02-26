@@ -1506,6 +1506,37 @@ def test_tax_prepare_1_csv_to_csv(runtmp, keep_identifiers, keep_versions):
     assert set(db1) == set(db2)
 
 
+def test_tax_prepare_1_csv_to_csv_empty_ranks(runtmp, keep_identifiers, keep_versions):
+    # CSV -> CSV; same assignments
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    taxout = runtmp.output('out.csv')
+
+    args = []
+    if keep_identifiers:
+        args.append('--keep-full-identifiers')
+    if keep_versions:
+        args.append('--keep-identifier-versions')
+
+    # this is an error - can't strip versions if not splitting identifiers
+    if keep_identifiers and not keep_versions:
+        with pytest.raises(SourmashCommandFailed):
+            runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o',
+                                taxout, '-F', 'csv', *args)
+        return
+
+    runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o',
+                        taxout, '-F', 'csv', *args)
+    assert os.path.exists(taxout)
+
+    db1 = tax_utils.MultiLineageDB.load([tax],
+                                        keep_full_identifiers=keep_identifiers,
+                                        keep_identifier_versions=keep_versions)
+
+    db2 = tax_utils.MultiLineageDB.load([taxout])
+
+    assert set(db1) == set(db2)
+
+
 def test_tax_prepare_2_csv_to_sql(runtmp, keep_identifiers, keep_versions):
     # CSV -> SQL; same assignments?
     tax = utils.get_test_data('tax/test.taxonomy.csv')
@@ -1542,10 +1573,64 @@ def test_tax_prepare_2_csv_to_sql(runtmp, keep_identifiers, keep_versions):
     assert 'taxonomy table already exists' in str(exc.value)
 
 
+def test_tax_prepare_2_csv_to_sql_empty_ranks(runtmp, keep_identifiers, keep_versions):
+    # CSV -> SQL with some empty ranks in the taxonomy file
+    tax = utils.get_test_data('tax/test-empty-ranks.taxonomy.csv')
+    taxout = runtmp.output('out.db')
+
+    args = []
+    if keep_identifiers:
+        args.append('--keep-full-identifiers')
+    if keep_versions:
+        args.append('--keep-identifier-versions')
+
+    # this is an error - can't strip versions if not splitting identifiers
+    if keep_identifiers and not keep_versions:
+        with pytest.raises(SourmashCommandFailed):
+            runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o', taxout,
+                                '-F', 'sql', *args)
+        return
+
+    runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o', taxout,
+                        '-F', 'sql', *args)
+    assert os.path.exists(taxout)
+
+    db1 = tax_utils.MultiLineageDB.load([tax],
+                                        keep_full_identifiers=keep_identifiers,
+                                        keep_identifier_versions=keep_versions)
+    db2 = tax_utils.MultiLineageDB.load([taxout])
+
+    assert set(db1) == set(db2)
+
+
 def test_tax_prepare_3_db_to_csv(runtmp):
-    # CSV -> CSV; same assignments
+    # SQL -> CSV; same assignments
     taxcsv = utils.get_test_data('tax/test.taxonomy.csv')
     taxdb = utils.get_test_data('tax/test.taxonomy.db')
+    taxout = runtmp.output('out.csv')
+
+    runtmp.run_sourmash('tax', 'prepare', '-t', taxdb,
+                        '-o', taxout, '-F', 'csv')
+    assert os.path.exists(taxout)
+    with open(taxout) as fp:
+        print(fp.read())
+
+    db1 = tax_utils.MultiLineageDB.load([taxcsv],
+                                        keep_full_identifiers=False,
+                                        keep_identifier_versions=False)
+
+    db2 = tax_utils.MultiLineageDB.load([taxout])
+    db3 = tax_utils.MultiLineageDB.load([taxdb],
+                                        keep_full_identifiers=False,
+                                        keep_identifier_versions=False)
+    assert set(db1) == set(db2)
+    assert set(db1) == set(db3)
+
+
+def test_tax_prepare_3_db_to_csv_empty_ranks(runtmp):
+    # SQL -> CSV; same assignments, with empty ranks
+    taxcsv = utils.get_test_data('tax/test-empty-ranks.taxonomy.csv')
+    taxdb = utils.get_test_data('tax/test-empty-ranks.taxonomy.db')
     taxout = runtmp.output('out.csv')
 
     runtmp.run_sourmash('tax', 'prepare', '-t', taxdb,

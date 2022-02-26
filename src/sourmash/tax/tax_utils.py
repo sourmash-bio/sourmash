@@ -835,8 +835,11 @@ class MultiLineageDB(abc.Mapping):
         for ident, tax in self.items():
             x = [ident, *[ t.name for t in tax ]]
 
+            # fill the taxonomy tuple with empty values until it's the
+            # right length for the SQL statement -
             while len(x) < 9:
                 x.append('')
+
             cursor.execute('INSERT INTO taxonomy (ident, superkingdom, phylum, class, order_, family, genus, species, strain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', x)
 
         db.commit()
