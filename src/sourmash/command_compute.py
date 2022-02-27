@@ -114,8 +114,8 @@ def compute(args):
         error("ERROR: must specify -o with --merge")
         sys.exit(-1)
 
-    if args.output and args.outdir:
-        error("ERROR: --outdir doesn't make sense with -o/--output")
+    if args.output and args.output_dir:
+        error("ERROR: --output-dir doesn't make sense with -o/--output")
         sys.exit(-1)
 
     if args.track_abundance:
@@ -162,8 +162,8 @@ def _compute_individual(args, signatures_factory):
         if open_output_each_time:
             # for each input file, construct output filename
             sigfile = os.path.basename(filename) + '.sig'
-            if args.outdir:
-                sigfile = os.path.join(args.outdir, sigfile)
+            if args.output_dir:
+                sigfile = os.path.join(args.output_dir, sigfile)
 
             # does it already exist? skip if so.
             if os.path.exists(sigfile) and not args.force:
@@ -237,7 +237,7 @@ def _compute_individual(args, signatures_factory):
             save_sigs = None
 
 
-    # if --output specified, all collected signatures => args.output,
+    # if --output-dir specified, all collected signatures => args.output,
     # and we need to close here.
     if args.output and save_sigs is not None:
         save_sigs.close()
