@@ -188,7 +188,11 @@ def jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers):
     derived mathematically to compute the point estimate. The formula uses approximations,
     therefore a tiny error is associated with it. A lower bound of that error is also returned.
     A high error indicates that the point estimate cannot be trusted. Threshold of the error
-    is open to interpretation, but suggested that > 10^-5 should be handled with caution.
+    is open to interpretation, but suggested that > 10^-4 should be handled with caution.
+
+    Note that the error is NOT a mutation rate, and therefore cannot be considered in
+    something like mut.rate +/- error.
+
     Arguments: jaccard, ksize, scaled, n_unique_kmers
     Returns: tuple (point_estimate_of_mutation_rate, lower_bound_of_error)
     """
@@ -202,10 +206,17 @@ def jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers):
 
     return point_estimate, error_lower_bound
 
-if __name__ == '__main__':
-    jaccard = 0.8
-    ksize = 1
-    scaled = 1000
-    n_unique_kmers = 100000
 
-    print(jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers))
+
+
+
+if __name__ == '__main__':
+    jaccard = 0.9
+    ksize = 51
+    scaled = 1000
+    n_unique_kmers = 100000000
+
+    mut_rate, err = jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers)
+    print('Point estimate is: ' + str(mut_rate))
+    if err > 10.0**(-4.0):
+        print('Cannot trust this point estimate!')
