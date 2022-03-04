@@ -206,14 +206,16 @@ def describe(args):
 
     # write CSV?
     w = None
-    csv_fp = None
+    csv_obj = None
     if args.csv:
+        csv_obj = sourmash_args.FileOutputCSV(args.csv)
+        csv_fp = csv_obj.open()
+
         # CTB: might want to switch to sourmash_args.FileOutputCSV here?
-        csv_fp = open(args.csv, 'w', newline='')
         w = csv.DictWriter(csv_fp,
-                           ['signature_file', 'md5', 'ksize', 'moltype', 'num',
-                            'scaled', 'n_hashes', 'seed', 'with_abundance',
-                            'name', 'filename', 'license'],
+                           ['signature_file', 'md5', 'ksize', 'moltype',
+                            'num', 'scaled', 'n_hashes', 'seed',
+                            'with_abundance', 'name', 'filename', 'license'],
                            extrasaction='ignore')
         w.writeheader()
 
@@ -260,8 +262,8 @@ size: {n_hashes}
 signature license: {license}
 ''', **locals())
 
-    if csv_fp:
-        csv_fp.close()
+    if csv_obj:
+        csv_obj.close()
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
