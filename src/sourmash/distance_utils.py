@@ -183,7 +183,17 @@ def distance_to_identity(dist,d_low=None,d_high=None):
 
 
 def jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers):
+    """Given parameters, calculate point estimate for mutation rate from jaccard index.
+    First checks if parameters are valid (checks are not exhaustive). Then uses formulas
+    derived mathematically to compute the point estimate. The formula uses approximations,
+    therefore a tiny error is associated with it. A lower bound of that error is also returned.
+    A high error indicates that the point estimate cannot be trusted. Threshold of the error
+    is open to interpretation, but suggested that > 10^-5 should be handled with caution.
+    Arguments: jaccard, ksize, scaled, n_unique_kmers
+    Returns: tuple (point_estimate_of_mutation_rate, lower_bound_of_error)
+    """
     assert jaccard >= 0.0 and jaccard <= 1.0 and ksize >= 1
+
     point_estimate = 1.0 - ( 2.0 * jaccard / float(1+jaccard) ) ** (1.0/float(ksize))
 
     exp_n_mut = exp_n_mutated(n_unique_kmers, ksize, point_estimate)
