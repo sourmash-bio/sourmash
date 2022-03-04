@@ -1399,8 +1399,10 @@ Identifiers are constructed by using the first space delimited word in
 the signature name.
 
 One way to build a picklist is to use `sourmash sig describe --csv
-out.csv <signatures>` to construct an initial CSV file that you can
-then edit further.
+out.csv <signatures>` or `sourmash sig manifest -o out.csv
+<filename_or_db>` to construct an initial CSV file that you can then
+edit further; after editing, these can be passed in via the picklist
+argument `--picklist out.csv::manifest`.
 
 The picklist functionality also supports excluding (rather than
 including) signatures matching the picklist arguments. To specify a
