@@ -182,13 +182,20 @@ def distance_to_identity(dist,d_low=None,d_high=None):
     return id,id_low,id_high
 
 
-def jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None):
-    print (jaccard, ksize, scaled, n_unique_kmers)
+def jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers):
+    assert jaccard >= 0.0 and jaccard <= 1.0 and ksize >= 1
+    point_estimate = 1.0 - ( 2.0 * jaccard / float(1+jaccard) ) ** (1.0/float(ksize))
+
+    exp_n_mut = exp_n_mutated(n_unique_kmers, ksize, point_estimate)
+    var_n_mut = var_n_mutated(n_unique_kmers, ksize, point_estimate)
+    error_lower_bound = 1.0 * n_unique_kmers * var_n_mut / (n_unique_kmers + exp_n_mut)**3
+
+    return point_estimate, error_lower_bound
 
 if __name__ == '__main__':
-    jaccard = 0.01
-    ksize = 21
+    jaccard = 0.8
+    ksize = 1
     scaled = 1000
     n_unique_kmers = 100000
 
-    jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers)
+    print(jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers))
