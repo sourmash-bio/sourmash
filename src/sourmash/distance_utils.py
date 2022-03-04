@@ -8,7 +8,13 @@ from scipy.stats import norm as scipy_norm
 from scipy.special import hyp2f1
 from numpy import sqrt
 
-from .logging import notify
+def show_error(msg):
+    print(msg)
+
+try:
+    from .logging import notify
+except:
+    notify = show_error
 
 #FROM  mrcc.kmer_mutation_formulas_thm5
 def r1_to_q(k,r1):
@@ -22,7 +28,7 @@ def var_n_mutated(L,k,r1,q=None):
 	# by the use of higher-precision arithmetic; the problem occurs when r is
 	# very small; for example, with L=10,k=2,r1=1e-6 standard precision
 	# gives varN<0 which is nonsense; by using the mpf type, we get the correct
-	# answer which is about 0.000038. 
+	# answer which is about 0.000038.
 	if (r1 == 0): return 0.0
 	r1 = float(r1)
 	if (q == None): # we assume that if q is provided, it is correct for r1
@@ -166,7 +172,7 @@ def distance_to_identity(dist,d_low=None,d_high=None):
     """
     for d in [dist,d_low,d_high]:
         if not 0 <= d <= 1:
-            raise ValueError(f"Error: distance value {d} is not between 0 and 1!")
+            raise ValueError("Error: distance value {d} is not between 0 and 1!")
     id = 1-dist
     id_low,id_high=None,None
     if d_low is not None: # need to be explicit so will work on 0 value
@@ -174,3 +180,15 @@ def distance_to_identity(dist,d_low=None,d_high=None):
     if d_high is not None: # need to be explicit so will work on 0 value
         id_low = 1-d_high
     return id,id_low,id_high
+
+
+def jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None):
+    print (jaccard, ksize, scaled, n_unique_kmers)
+
+if __name__ == '__main__':
+    jaccard = 0.01
+    ksize = 21
+    scaled = 1000
+    n_unique_kmers = 100000
+
+    jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers)
