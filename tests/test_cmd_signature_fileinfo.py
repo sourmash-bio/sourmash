@@ -1,19 +1,13 @@
 """
 Tests for the 'sourmash signature fileinfo' command line.
 """
-import csv
 import shutil
 import os
-import glob
 
 import pytest
-import screed
 import json
 
 import sourmash_tst_utils as utils
-import sourmash
-from sourmash.signature import load_signatures
-from sourmash.manifest import CollectionManifest
 from sourmash_tst_utils import SourmashCommandFailed
 
 ## command line tests
@@ -150,7 +144,7 @@ def test_fileinfo_4_zip(runtmp):
     print(runtmp.last_result.out)
 
     # 'location' will be fully resolved, ignore it for now
-    expected_output = f"""\
+    expected_output = """\
 path filetype: ZipFileLinearIndex
 is database? yes
 has manifest? yes
@@ -211,7 +205,7 @@ def test_fileinfo_4_zip_rebuild(runtmp):
     # CTB: note we're missing one of the 8 in the rebuilt, dna-sig.noext,
     # because it is not automatically included unless you load the zipfile
     # with traverse. This is intentional.
-    expected_output = f"""\
+    expected_output = """\
 path filetype: ZipFileLinearIndex
 is database? yes
 has manifest? yes
