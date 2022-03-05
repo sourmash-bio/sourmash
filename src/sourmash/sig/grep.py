@@ -6,7 +6,7 @@ import re
 
 import sourmash
 from sourmash import logging, sourmash_args
-from sourmash.logging import notify, error
+from sourmash.logging import notify, error, debug
 from sourmash.manifest import CollectionManifest
 from .__main__ import _extend_signatures_with_from_file
 
@@ -29,6 +29,9 @@ def main(args):
     require_manifest = True
     if args.no_require_manifest:
         require_manifest = False
+        debug("sig grep: manifest will not be required")
+    else:
+        debug("sig grep: manifest required")
 
     # define output
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
@@ -59,7 +62,14 @@ def main(args):
                          moltype=moltype,
                          picklist=picklist)
 
-        manifest = sourmash_args.get_manifest(idx, require=require_manifest)
+        manifest = idx.manifest
+        if manifest is None:
+            if require_manifest:
+                error(f"sig grep requires a manifest by default, but no manifest in {filename}.")
+                sys.exit(-1)
+            else:
+                manifest = sourmash_args.get_manifest(idx,
+                                                      require=False)
 
         sub_rows = []
         for row in manifest.rows:
