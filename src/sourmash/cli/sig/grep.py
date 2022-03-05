@@ -67,7 +67,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '--no-require-manifest',
-        help='do not require a manifest',
+        help='do not require a manifest; generate dynamically if needed',
         action='store_true'
     )
     add_ksize_arg(subparser, 31)

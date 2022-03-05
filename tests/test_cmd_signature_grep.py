@@ -115,3 +115,28 @@ def test_grep_3_filename_regexp(runtmp):
     ss = ss[0]
     assert '7.fa' in ss.filename
     assert ss.md5sum() == '09a08691ce52952152f0e866a59f6261'
+
+
+def test_grep_4_no_manifest(runtmp):
+    # fail search when no manifest, by default
+    sbt = utils.get_test_data('v6.sbt.zip')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('sig', 'grep', 'e60265', sbt)
+
+    print(runtmp.last_result.err)
+    assert 'ERROR on filename' in runtmp.last_result.err
+    assert 'sig grep requires a manifest by default, but no manifest present.' in runtmp.last_result.err
+
+
+def test_grep_4_no_manifest_ok(runtmp):
+    # generate manifest if --no-require-manifest
+    sbt = utils.get_test_data('v6.sbt.zip')
+
+    runtmp.run_sourmash('sig', 'grep', 'e60265', sbt, '--no-require-manifest')
+
+    ss = sourmash.load_signatures(runtmp.last_result.out)
+    ss = list(ss)
+    assert len(ss) == 1
+    ss = ss[0]
+    assert 'e60265' in ss.md5sum()

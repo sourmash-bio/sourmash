@@ -67,6 +67,7 @@ def main(args):
             if require_manifest:
                 error(f"ERROR on filename '{filename}'.")
                 error("sig grep requires a manifest by default, but no manifest present.")
+                error("specify --no-require-manifest to dynamically generate one.")
                 sys.exit(-1)
             else:
                 manifest = sourmash_args.get_manifest(idx,
