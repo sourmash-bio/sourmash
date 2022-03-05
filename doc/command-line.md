@@ -1315,8 +1315,14 @@ sourmash sig manifest tests/test-data/prot/all.zip -o manifest.csv
 will create a CSV file, `manifest.csv`, in the internal sourmash
 manifest format.  The manifest will contain an entry for every
 signature in the file, database, or collection. This format is largely
-meant for internal use, but it can serve as a picklist pickfile for
-subsetting large collections.
+meant for internal use, but it can serve as a
+[picklist pickfile](#using-picklists-to-subset-large-collections-of-signatures)
+for subsetting large collections.
+
+By default, `sourmash sig manifest` will rebuild the manifest by
+iterating over the signatures in the input file. This can be slow for
+large collections. Use `--no-rebuild-manifest` to load an existing
+manifest if it is available.
 
 ## Advanced command-line usage
 

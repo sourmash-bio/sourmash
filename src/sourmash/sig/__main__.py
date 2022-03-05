@@ -284,7 +284,10 @@ def manifest(args):
 
     rebuild = True
     if args.no_rebuild_manifest:
+        debug("sig manifest: not forcing rebuild.")
         rebuild = False
+    else:
+        debug("sig manifest: forcing rebuild.")
 
     manifest = sourmash_args.get_manifest(loader, require=True,
                                           rebuild=rebuild)
@@ -292,7 +295,7 @@ def manifest(args):
     with open(args.output, "w", newline='') as csv_fp:
         manifest.write_to_csv(csv_fp, write_header=True)
 
-    notify(f"built manifest for {len(manifest)} signatures total.")
+    notify(f"manifest contains {len(manifest)} signatures total.")
     notify(f"wrote manifest to '{args.output}'")
 
 
