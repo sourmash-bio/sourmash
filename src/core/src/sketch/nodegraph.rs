@@ -436,6 +436,24 @@ mod test {
     }
 
     #[test]
+    fn containment() {
+        let mut ng1: Nodegraph = Nodegraph::new(&[31], 3);
+        let mut ng2: Nodegraph = Nodegraph::new(&[31], 3);
+
+        (0..20).for_each(|i| {
+            if i % 2 == 0 {
+                ng1.count(i);
+            };
+            ng2.count(i);
+        });
+
+        assert_eq!(ng1.containment(&ng2), 1.0);
+        assert_eq!(ng1.similarity(&ng2), 0.5);
+        assert_eq!(ng1.unique_kmers(), 10);
+        assert_eq!(ng2.unique_kmers(), 20);
+    }
+
+    #[test]
     fn load_save_nodegraph() {
         let mut datadir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         datadir.push("../../tests/test-data/.sbt.v3/");
