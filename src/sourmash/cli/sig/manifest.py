@@ -1,8 +1,23 @@
 """create a manifest for a collection of signatures"""
 
+usage="""
+
+    sourmash sig manifest <filename> -o manifest.csv
+
+This will output a sourmash manifest in CSV format. This manifest
+can be used as a picklist with --picklist manifest.csv::manifest.
+
+The manifest will be rebuilt by iterating over the signatures in the
+file unless --no-rebuild-manifest is specified; for large
+collections, rebuilding the manifest can take a long time!
+
+See also the 'describe' and 'fileinfo' commands under 'sourmash sig'.
+
+"""
+
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('manifest')
+    subparser = subparsers.add_parser('manifest', usage=usage)
     subparser.add_argument('location')
     subparser.add_argument(
         '-q', '--quiet', action='store_true',

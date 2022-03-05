@@ -1,8 +1,23 @@
 """provide summary information on the given file"""
 
+usage="""
+
+    sourmash sig fileinfo <filename>
+
+This will provide a summary of the sketch contents in the given file.
+
+JSON output can be generated in place of the normal human-readable output
+with '--json-out'.
+
+'sig summarize' and 'sig fileinfo' are aliases for the same command.
+
+"""
+
+
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('fileinfo')
+    subparser = subparsers.add_parser('fileinfo', aliases=['summarize'],
+                                      usage=usage)
     subparser.add_argument('path')
     subparser.add_argument(
         '-q', '--quiet', action='store_true',

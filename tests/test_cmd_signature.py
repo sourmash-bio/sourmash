@@ -1231,7 +1231,7 @@ def test_sig_extract_1(runtmp):
     assert actual_extract_sig == test_extract_sig
 
 
-def test_sig_extract_1(runtmp):
+def test_sig_extract_1_from_file(runtmp):
     # run sig extract with --from-file
     c = runtmp
 
@@ -2366,7 +2366,7 @@ def test_sig_flatten_1(runtmp):
     assert test_flattened.minhash == siglist[0].minhash
 
 
-def test_sig_flatten_1(runtmp):
+def test_sig_flatten_1_from_file(runtmp):
     c = runtmp
 
     # extract matches to several names from among several signatures & flatten
