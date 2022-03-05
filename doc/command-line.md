@@ -1026,6 +1026,9 @@ databases, LCA databases, and directory hierarchies.
 `sourmash sig fileinfo` provides optional JSON and YAML output, and
 those formats are under semantic versioning.
 
+Note: `sourmash signature summarize` is an alias for `fileinfo`; they are
+the same command.
+
 ### `sourmash signature split` - split signatures into individual files
 
 Split each signature in the input file(s) into individual files, with

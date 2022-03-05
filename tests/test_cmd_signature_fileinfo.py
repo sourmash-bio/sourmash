@@ -43,6 +43,30 @@ summary of sketches:
         assert line.strip() in out
 
 
+def test_fileinfo_1_sig_summarize(runtmp):
+    # get basic info on a signature with 'summarize' as alias for fileinfo
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    shutil.copyfile(sig47, runtmp.output('sig47.sig'))
+    runtmp.run_sourmash('sig', 'summarize', 'sig47.sig')
+
+    out = runtmp.last_result.out
+    print(runtmp.last_result.out)
+
+    expected_output = """\
+path filetype: MultiIndex
+location: sig47.sig
+is database? no
+has manifest? yes
+num signatures: 1
+total hashes: 5177
+summary of sketches:
+   1 sketches with DNA, k=31, scaled=1000             5177
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
 def test_fileinfo_1_sig_abund(runtmp):
     # get basic info on a signature with abundance
     sig47 = utils.get_test_data('47.abunds.fa.sig')
