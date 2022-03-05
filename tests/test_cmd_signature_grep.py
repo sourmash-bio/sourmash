@@ -51,6 +51,15 @@ def test_grep_1_sig_name_case_insensitive(runtmp):
     assert ss.md5sum() == '09a08691ce52952152f0e866a59f6261'
 
 
+def test_grep_1_sig_name_exclude(runtmp):
+    # search on substring in name, case insensitive
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    # no matches!
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.run_sourmash('sig', 'grep', '-v', 'Shewanella', sig47)
+
+
 def test_grep_2_sig_md5(runtmp):
     # search on substring in md5
     sig47 = utils.get_test_data('47.fa.sig')
@@ -140,3 +149,63 @@ def test_grep_4_no_manifest_ok(runtmp):
     assert len(ss) == 1
     ss = ss[0]
     assert 'e60265' in ss.md5sum()
+
+
+def test_grep_5_zip_include(runtmp):
+    # search zip, include on case sensitive match to name
+    allzip = utils.get_test_data('prot/all.zip')
+
+    runtmp.run_sourmash('sig', 'grep', '--dna', 'OS223', allzip)
+
+    out = runtmp.last_result.out
+    ss = sourmash.load_signatures(out)
+    ss = list(ss)
+    assert len(ss) == 1
+    ss = ss[0]
+    assert 'Shewanella baltica OS223' in ss.name
+    assert ss.md5sum() == '38729c6374925585db28916b82a6f513'
+
+
+def test_grep_5_zip_include_case_insensitive(runtmp):
+    # search zip, include on case insensitive match to name
+    allzip = utils.get_test_data('prot/all.zip')
+
+    runtmp.run_sourmash('sig', 'grep', '--dna', '-i', 'os223', allzip)
+
+    out = runtmp.last_result.out
+    ss = sourmash.load_signatures(out)
+    ss = list(ss)
+    assert len(ss) == 1
+    ss = ss[0]
+    assert 'Shewanella baltica OS223' in ss.name
+    assert ss.md5sum() == '38729c6374925585db28916b82a6f513'
+
+
+def test_grep_5_zip_exclude(runtmp):
+    # search zip, exclude on case-sensitive match
+    allzip = utils.get_test_data('prot/all.zip')
+
+    runtmp.run_sourmash('sig', 'grep', '--dna', '-v', 'OS185', allzip)
+
+    out = runtmp.last_result.out
+    ss = sourmash.load_signatures(out)
+    ss = list(ss)
+    assert len(ss) == 1
+    ss = ss[0]
+    assert 'Shewanella baltica OS223' in ss.name
+    assert ss.md5sum() == '38729c6374925585db28916b82a6f513'
+
+
+def test_grep_5_zip_exclude_case_insensitive(runtmp):
+    # search zip, exclude on case-insensitive match
+    allzip = utils.get_test_data('prot/all.zip')
+
+    runtmp.run_sourmash('sig', 'grep', '--dna', '-vi', 'os185', allzip)
+
+    out = runtmp.last_result.out
+    ss = sourmash.load_signatures(out)
+    ss = list(ss)
+    assert len(ss) == 1
+    ss = ss[0]
+    assert 'Shewanella baltica OS223' in ss.name
+    assert ss.md5sum() == '38729c6374925585db28916b82a6f513'

@@ -62,6 +62,7 @@ def main(args):
                          moltype=moltype,
                          picklist=picklist)
 
+        # get (and maybe generate) the manifest.
         manifest = idx.manifest
         if manifest is None:
             if require_manifest:
@@ -73,6 +74,7 @@ def main(args):
                 manifest = sourmash_args.get_manifest(idx,
                                                       require=False)
 
+        # find all matching rows. CTB: could move this to manifest.py?
         sub_rows = []
         for row in manifest.rows:
             match = filter_fn(row)
@@ -84,6 +86,7 @@ def main(args):
 
             total_rows_examined += 1
 
+        # convert to picklist, grabme.
         sub_manifest = CollectionManifest(sub_rows)
         sub_picklist = sub_manifest.to_picklist()
 
@@ -97,6 +100,7 @@ def main(args):
             error("** and then pipe the output to 'sourmash sig extract")
             sys.exit(-1)
 
+        # save!
         for ss in idx.signatures():
             save_sigs.add(ss)
 
