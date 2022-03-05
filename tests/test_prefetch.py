@@ -38,9 +38,9 @@ def test_prefetch_basic(runtmp, linear_gather):
 
 
 def test_prefetch_select_query_ksize(runtmp, linear_gather):
+    # test prefetch where query and subject db both have multiple ksizes
     c = runtmp
 
-    # test a basic prefetch
     ss = utils.get_test_data('GCF_000005845.2_ASM584v2_genomic.fna.gz.sig')
 
     c.run_sourmash('prefetch', ss, ss, linear_gather)
