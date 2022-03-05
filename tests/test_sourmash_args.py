@@ -285,7 +285,7 @@ def test_save_signatures_to_location_3_zip_add_with_manifest(runtmp):
 
         # construct & save manifest
         mf = manifest.CollectionManifest([row])
-        mf_name = f"SOURMASH-MANIFEST.csv"
+        mf_name = "SOURMASH-MANIFEST.csv"
 
         manifest_fp = io.StringIO()
         mf.write_to_csv(manifest_fp, write_header=True)
@@ -461,7 +461,7 @@ def test_get_manifest_3_build():
     assert m.rows[0]['internal_location'] == "fakeiloc"
 
 
-def test_get_manifest_3_build():
+def test_get_manifest_3_build_2():
     # check that manifest is building
     sig47 = utils.get_test_data('47.fa.sig')
     ss47 = sourmash.load_one_signature(sig47)
