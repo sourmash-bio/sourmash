@@ -37,6 +37,21 @@ def test_prefetch_basic(runtmp, linear_gather):
     assert "a total of 0 query hashes remain unmatched." in c.last_result.err
 
 
+def test_prefetch_select_query_ksize(runtmp, linear_gather):
+    c = runtmp
+
+    # test a basic prefetch
+    ss = utils.get_test_data('GCF_000005845.2_ASM584v2_genomic.fna.gz.sig')
+
+    c.run_sourmash('prefetch', ss, ss, linear_gather)
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert 'of 4476 distinct query hashes, 4476 were found in matches above threshold.' in c.last_result.err
+
+
 def test_prefetch_query_abund(runtmp, linear_gather):
     c = runtmp
 
