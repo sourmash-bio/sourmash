@@ -462,7 +462,7 @@ def test_get_manifest_3_build():
 
 
 def test_get_manifest_3_build_2():
-    # check that manifest is building
+    # check that manifest is building, but only when asked
     sig47 = utils.get_test_data('47.fa.sig')
     ss47 = sourmash.load_one_signature(sig47)
 
