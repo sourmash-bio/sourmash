@@ -37,6 +37,12 @@ def main(args):
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
     save_sigs.open()
 
+    csv_obj = None
+    if args.csv:
+        csv_obj = sourmash_args.FileOutputCSV(args.csv)
+        csv_fp = csv_obj.open()
+        CollectionManifest.write_csv_header(csv_fp)
+
     # field retrieval from manifest row
     def get_fields(row):
         if row['name'] is not None:
@@ -90,6 +96,9 @@ def main(args):
         sub_manifest = CollectionManifest(sub_rows)
         sub_picklist = sub_manifest.to_picklist()
 
+        if args.csv:
+            sub_manifest.write_to_csv(csv_fp)
+
         try:
             idx = idx.select(picklist=sub_picklist)
         except ValueError:
@@ -110,6 +119,9 @@ def main(args):
         sys.exit(-1)
 
     save_sigs.close()
+    if args.csv:
+        notify(f"wrote manifest containing matches to CSV file '{args.csv}'")
+        csv_obj.close()
 
     notify(f"extracted {len(save_sigs)} signatures from {len(args.signatures)} file(s)")
 

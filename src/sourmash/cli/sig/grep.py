@@ -70,6 +70,10 @@ def subparser(subparsers):
         help='do not require a manifest; generate dynamically if needed',
         action='store_true'
     )
+    subparser.add_argument(
+        '--csv',
+        help='save CSV file containing signature data in manifest format'
+    )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
