@@ -65,7 +65,8 @@ def main(args):
         manifest = idx.manifest
         if manifest is None:
             if require_manifest:
-                error(f"sig grep requires a manifest by default, but no manifest in {filename}.")
+                error(f"ERROR on filename '{filename}'.")
+                error("sig grep requires a manifest by default, but no manifest present.")
                 sys.exit(-1)
             else:
                 manifest = sourmash_args.get_manifest(idx,
