@@ -1113,6 +1113,28 @@ def test_sig_split_2_outdir(c):
 
 
 @utils.in_tempdir
+def test_sig_split_2_output_dir(c):
+    # split 47 twice, put in outdir via --output-dir instead of --outdir
+    sig47 = utils.get_test_data('47.fa.sig')
+    outdir = c.output('sigout/')
+    c.run_sourmash('sig', 'split', sig47, sig47, '--output-dir', outdir)
+
+    outname1 = 'sigout/09a08691.k=31.scaled=1000.DNA.dup=0.47.fa.sig'
+    outname2 = 'sigout/09a08691.k=31.scaled=1000.DNA.dup=1.47.fa.sig'
+
+    assert os.path.exists(c.output(outname1))
+    assert os.path.exists(c.output(outname2))
+
+    test_split_sig = sourmash.load_one_signature(sig47)
+
+    actual_split_sig = sourmash.load_one_signature(c.output(outname1))
+    assert actual_split_sig == test_split_sig
+
+    actual_split_sig = sourmash.load_one_signature(c.output(outname2))
+    assert actual_split_sig == test_split_sig
+
+
+@utils.in_tempdir
 def test_sig_split_3_multisig(c):
     # split 47 and 47+63-multisig.sig
     sig47 = utils.get_test_data('47.fa.sig')
@@ -2906,9 +2928,10 @@ def test_sig_describe_empty(c):
     assert 'source file: ** no name **' in c.last_result.out
 
 
-@utils.in_tempdir
-def test_sig_describe_2(c):
-    # get info in CSV spreadsheet
+def test_sig_describe_2_csv(runtmp):
+    # output info in CSV spreadsheet
+    c = runtmp
+
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
     c.run_sourmash('sig', 'describe', sig47, sig63, '--csv', 'out.csv')
@@ -2926,6 +2949,35 @@ def test_sig_describe_2(c):
             n += 1
 
         assert n == 2
+
+
+def test_sig_describe_2_csv_as_picklist(runtmp):
+    # generate an output CSV from describe and then use it as a manifest
+    # pickfile
+    c = runtmp
+
+    sig47 = utils.get_test_data('47.fa.sig')
+    outcsv = runtmp.output('out.csv')
+
+    c.run_sourmash('sig', 'describe', sig47,
+                   '--csv', outcsv)
+
+    c.run_sourmash('sig', 'describe', sig47,
+                   '--picklist', f'{outcsv}::manifest')
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: NC_009665.1 Shewanella baltica OS185, complete genome
+source file: 47.fa
+md5: 09a08691ce52952152f0e866a59f6261
+k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=0
+size: 5177
+signature license: CC0
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
 
 
 @utils.in_tempdir

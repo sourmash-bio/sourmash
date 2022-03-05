@@ -186,8 +186,8 @@ def _execute_sketch(args, signatures_factory):
         error("ERROR: must specify -o with --merge")
         sys.exit(-1)
 
-    if args.output and args.outdir:
-        error("ERROR: --outdir doesn't make sense with -o/--output")
+    if args.output and args.output_dir:
+        error("ERROR: --output-dir doesn't make sense with -o/--output")
         sys.exit(-1)
 
     # get number of output sigs:
