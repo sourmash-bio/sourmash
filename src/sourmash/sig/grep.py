@@ -90,7 +90,7 @@ def main(args):
 
     notify(f"loaded {total_rows_examined} total that matched ksize & molecule type")
     if not save_sigs:
-        error("no matching signatures to save!")
+        error("no matching signatures found!")
         sys.exit(-1)
 
     save_sigs.close()
