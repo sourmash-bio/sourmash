@@ -6,7 +6,7 @@ import re
 
 import sourmash
 from sourmash import logging, sourmash_args
-from sourmash.logging import notify, error, debug
+from sourmash.logging import notify, error, debug, print_results
 from sourmash.manifest import CollectionManifest
 from .__main__ import _extend_signatures_with_from_file
 
@@ -33,9 +33,17 @@ def main(args):
     else:
         debug("sig grep: manifest required")
 
+    if args.count:
+        args.silent = True
+
     # define output
-    save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
-    save_sigs.open()
+    if args.silent:
+        notify("no signatures will be output.")
+        save_sigs = sourmash_args.SaveSignaturesToLocation(None)
+    else:
+        notify(f"saving matching signatures to '{args.output}'")
+        save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
+        save_sigs.open()
 
     csv_obj = None
     if args.csv:
@@ -99,31 +107,35 @@ def main(args):
         if args.csv:
             sub_manifest.write_to_csv(csv_fp)
 
-        try:
-            idx = idx.select(picklist=sub_picklist)
-        except ValueError:
-            error("** This input collection doesn't support 'extract' with picklists.")
-            error("** EXITING.")
-            error("**")
-            error("** You can use 'sourmash sig cat' with a picklist,")
-            error("** and then pipe the output to 'sourmash sig extract")
-            sys.exit(-1)
+        if args.count:
+            print_results(f"{filename}: {len(sub_rows)} matches")
+        elif not args.silent:
+            try:
+                idx = idx.select(picklist=sub_picklist)
+            except ValueError:
+                error("** This input collection doesn't support 'grep' with picklists.")
+                error("** EXITING.")
+                error("**")
+                error("** You can use 'sourmash sig cat' with a picklist,")
+                error("** and then pipe the output to 'sourmash sig grep -")
+                sys.exit(-1)
 
-        # save!
-        for ss in idx.signatures():
-            save_sigs.add(ss)
+            # save!
+            for ss in idx.signatures():
+                save_sigs.add(ss)
 
     notify(f"loaded {total_rows_examined} total that matched ksize & molecule type")
-    if not save_sigs:
+    if not save_sigs and not args.silent:
         error("no matching signatures found!")
         sys.exit(-1)
 
+    if not args.silent:
+        notify(f"extracted {len(save_sigs)} signatures from {len(args.signatures)} file(s)")
     save_sigs.close()
+
     if args.csv:
         notify(f"wrote manifest containing matches to CSV file '{args.csv}'")
         csv_obj.close()
-
-    notify(f"extracted {len(save_sigs)} signatures from {len(args.signatures)} file(s)")
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)

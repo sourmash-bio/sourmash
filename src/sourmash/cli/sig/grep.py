@@ -74,6 +74,16 @@ def subparser(subparsers):
         '--csv',
         help='save CSV file containing signature data in manifest format'
     )
+    subparser.add_argument(
+        '--silent', '--no-signatures-output',
+        help="do not output signatures",
+        action='store_true',
+    )
+    subparser.add_argument(
+        '-c', '--count',
+        help="only output a count of discovered signatures; implies --silent",
+        action='store_true'
+    )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
