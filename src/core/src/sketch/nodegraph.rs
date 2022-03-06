@@ -7,7 +7,7 @@ use bitmagic::BVector;
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::prelude::*;
-use crate::sketch::minhash::KmerMinHash;
+use crate::sketch::minhash::{max_hash_for_scaled, KmerMinHash};
 use crate::Error;
 use crate::HashIntoType;
 
@@ -90,6 +90,13 @@ impl Nodegraph {
             }
             i -= 2;
         }
+
+        Nodegraph::new(tablesizes.as_slice(), ksize)
+    }
+
+    pub fn with_scaled(scaled: u64, ksize: usize) -> Nodegraph {
+        let max_hash = max_hash_for_scaled(scaled);
+        let tablesizes = vec![max_hash as usize];
 
         Nodegraph::new(tablesizes.as_slice(), ksize)
     }
@@ -673,6 +680,15 @@ mod test {
         assert_eq!(leaf4.get(h), 0);
 
         Ok(())
+    }
+
+    fn is_sync<T: Sync>() {}
+    fn is_send<T: Send>() {}
+
+    #[test]
+    fn assert_parallel() {
+        is_sync::<Nodegraph>();
+        is_send::<Nodegraph>();
     }
 
     #[test]
