@@ -38,7 +38,7 @@ def main(args):
 
     # define output
     if args.silent:
-        notify("(no signatures will be output because of --silent/--count).")
+        notify("(no signatures will be saved because of --silent/--count).")
         save_sigs = sourmash_args.SaveSignaturesToLocation(None)
     else:
         notify(f"saving matching signatures to '{args.output}'")
@@ -136,7 +136,7 @@ def main(args):
     save_sigs.close()
 
     if args.csv:
-        notify(f"wrote manifest containing matches to CSV file '{args.csv}'")
+        notify(f"wrote manifest containing all matches to CSV file '{args.csv}'")
         csv_obj.close()
 
     if picklist:

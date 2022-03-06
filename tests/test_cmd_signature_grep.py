@@ -3,6 +3,7 @@ Tests for the 'sourmash signature grep' command line.
 """
 import shutil
 import os
+import csv
 
 import pytest
 
@@ -237,3 +238,50 @@ def test_grep_6_zip_manifest_csv(runtmp):
     ss = ss[0]
     assert 'Shewanella baltica OS223' in ss.name
     assert ss.md5sum() == '38729c6374925585db28916b82a6f513'
+
+
+def test_sig_grep_7_lca(runtmp):
+    # extract 47 from an LCA database, with --no-require-manifest
+    allzip = utils.get_test_data('lca/47+63.lca.json')
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    runtmp.sourmash('sig', 'grep', "50a9274021e4", allzip,
+                    '--no-require-manifest', '-o', 'matches.sig')
+
+    match = sourmash.load_file_as_signatures(runtmp.output('matches.sig'))
+    match = list(match)[0]
+
+    ss47 = sourmash.load_file_as_signatures(sig47)
+    ss47 = list(ss47)[0]
+    ss47.minhash = ss47.minhash.downsample(scaled=10000)
+
+    assert ss47.minhash == match.minhash
+
+
+def test_sig_grep_7_picklist_md5_lca_fail(runtmp):
+    # extract 47 from an LCA database, using a picklist w/full md5 => fail
+    allzip = utils.get_test_data('lca/47+63.lca.json')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='50a9274021e43eda8b2e77f8fa60ae8e',
+               md5short='50a9274021e43eda8b2e77f8fa60ae8e'[:8],
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:md5full:md5"
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sig', 'grep', '50a92740', allzip,
+                        '--picklist', picklist_arg,
+                        '--no-require-manifest')
+
+    # this happens b/c the implementation of 'grep' uses picklists.
+    print(runtmp.last_result.err)
+    assert "This input collection doesn't support 'grep' with picklists." in runtmp.last_result.err
