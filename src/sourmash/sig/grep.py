@@ -38,7 +38,7 @@ def main(args):
 
     # define output
     if args.silent:
-        notify("no signatures will be output.")
+        notify("(no signatures will be output because of --silent/--count).")
         save_sigs = sourmash_args.SaveSignaturesToLocation(None)
     else:
         notify(f"saving matching signatures to '{args.output}'")
@@ -108,7 +108,7 @@ def main(args):
             sub_manifest.write_to_csv(csv_fp)
 
         if args.count:
-            print_results(f"{filename}: {len(sub_rows)} matches")
+            print_results(f"{len(sub_rows)} matches: {filename}")
         elif not args.silent:
             try:
                 idx = idx.select(picklist=sub_picklist)
@@ -124,7 +124,9 @@ def main(args):
             for ss in idx.signatures():
                 save_sigs.add(ss)
 
-    notify(f"loaded {total_rows_examined} total that matched ksize & molecule type")
+    if not args.silent:
+        notify(f"loaded {total_rows_examined} total that matched ksize & molecule type")
+
     if not save_sigs and not args.silent:
         error("no matching signatures found!")
         sys.exit(-1)
