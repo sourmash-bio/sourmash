@@ -962,16 +962,16 @@ Most commands will load signatures automatically from indexed databases
 (SBT and LCA formats) as well as from signature files, and you can load
 signatures from stdin using `-` on the command line.
 
-### `sourmash signature cat` - concatenate multiple signatures together
+### `sourmash signature cat` - combine signatures into one file
 
 Concatenate signature files.
 
 For example,
 ```
-sourmash signature cat file1.sig file2.sig -o all.sig
+sourmash signature cat file1.sig file2.sig -o all.zip
 ```
 will combine all signatures in `file1.sig` and `file2.sig` and put them
-in the file `all.sig`.
+in the file `all.zip`.
 
 ### `sourmash signature describe` - display detailed information about signatures
 
@@ -1028,6 +1028,48 @@ those formats are under semantic versioning.
 
 Note: `sourmash signature summarize` is an alias for `fileinfo`; they are
 the same command.
+
+### `sourmash signature grep` - extract matching signatures using pattern matching
+
+Extract matching signatures with substring and regular expression matching
+on the name, filename, and md5 fields.
+
+For example,
+```
+sourmash signature grep -i shewanella tests/test-data/prot/all.zip -o shew.zip
+```
+will extract the two signatures in `all.zip` with 'Shewanella baltica'
+in their name and save them to `shew.zip`.
+
+`grep` will search for substring matches or regular expressions;
+e.g. `sourmash sig grep 'os185|os223' ...` will find matches to either
+of those expressions.
+
+Command line options include `-i` for case-insensitive matching, and `-v`
+for exclusion rather than inclusion.
+
+A CSV file of the matching sketch information can be saved using
+`--csv <outfile>`; this file is in the sourmash manifest format and can be used as a picklist with `--pickfile <outfile>::manifest`.
+
+If `--silent` is specified, `sourmash sig grep` will not output matching
+signatures.
+
+`sourmash sig grep` also supports a counting mode, `-c/--count`, in which
+only the number of matching sketches in files will be displayed; for example,
+
+```
+% sourmash signature grep -ci 'os185|os223' tests/test-data/prot/*.zip 
+```
+will produce the following output:
+```
+2 matches: tests/test-data/prot/all.zip
+0 matches: tests/test-data/prot/dayhoff.sbt.zip
+0 matches: tests/test-data/prot/dayhoff.zip
+0 matches: tests/test-data/prot/hp.sbt.zip
+0 matches: tests/test-data/prot/hp.zip
+0 matches: tests/test-data/prot/protein.sbt.zip
+0 matches: tests/test-data/prot/protein.zip
+```
 
 ### `sourmash signature split` - split signatures into individual files
 

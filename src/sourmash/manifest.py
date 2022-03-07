@@ -179,6 +179,27 @@ class CollectionManifest:
         new_rows = self._select(**kwargs)
         return CollectionManifest(new_rows)
 
+    def filter_rows(self, row_filter_fn, *, invert=False):
+        "Create a new manifest filtered through row_filter_fn."
+        if invert:
+            orig_row_filter_fn = row_filter_fn
+            row_filter_fn = lambda x: not orig_row_filter_fn(x)
+
+        new_rows = [ row for row in self.rows if row_filter_fn(row) ]
+
+        return CollectionManifest(new_rows)
+
+    def filter_on_columns(self, col_filter_fn, col_names, *, invert=False):
+        "Create a new manifest based on column matches."
+        def row_filter_fn(row):
+            for col in col_names:
+                val = row[col]
+                if val is not None:
+                    if col_filter_fn(val):
+                        return True
+            return False
+        return self.filter_rows(row_filter_fn, invert=invert)
+
     def locations(self):
         "Return all distinct locations."
         seen = set()

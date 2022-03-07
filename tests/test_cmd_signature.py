@@ -1448,11 +1448,10 @@ def test_sig_extract_8_picklist_md5_zipfile(runtmp):
     assert "for given picklist, found 1 matches to 1 distinct values" in err
 
 
-def test_sig_extract_8_picklist_md5_lca(runtmp):
-    # extract 47 from an LCA database,  using a picklist w/full md5
+def test_sig_extract_8_picklist_md5_lca_fail(runtmp):
+    # try to extract 47 from an LCA database, using a picklist w/full md5; will
+    # fail.
     allzip = utils.get_test_data('lca/47+63.lca.json')
-    sig47 = utils.get_test_data('47.fa.sig')
-    sig63 = utils.get_test_data('63.fa.sig')
 
     # select on any of these attributes
     row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
@@ -1472,7 +1471,8 @@ def test_sig_extract_8_picklist_md5_lca(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.sourmash('sig', 'extract', allzip, '--picklist', picklist_arg)
 
-    # this happens b/c the implementation of 'extract' uses picklists.
+    # this happens b/c the implementation of 'extract' uses picklists, and
+    # LCA databases don't support multiple picklists.
     print(runtmp.last_result.err)
     assert "This input collection doesn't support 'extract' with picklists." in runtmp.last_result.err
 
