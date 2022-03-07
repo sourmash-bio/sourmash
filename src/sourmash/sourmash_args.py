@@ -237,7 +237,8 @@ def traverse_find_sigs(filenames, yield_all_files=False):
 
 
 def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
-                      cache_size=None, picklist=None):
+                      cache_size=None, picklist=None, pattern=None,
+                      invert=None):
     """
     Load one or more SBTs, LCAs, and/or collections of signatures.
 
@@ -279,7 +280,15 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
             notify(f"no compatible signatures found in '{filename}'")
             sys.exit(-1)
 
+        assert not (picklist and pattern)
         if picklist:
+            db = db.select(picklist=picklist)
+        elif pattern:
+            manifest = db.manifest
+            manifest = manifest.filter_on_columns(pattern.search,
+                                                  ["name", "filename", "md5"],
+                                                  invert=invert)
+            picklist = manifest.to_picklist()
             db = db.select(picklist=picklist)
 
         databases.append(db)
