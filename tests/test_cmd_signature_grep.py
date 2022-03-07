@@ -168,6 +168,34 @@ def test_grep_5_zip_include(runtmp):
     assert ss.md5sum() == '38729c6374925585db28916b82a6f513'
 
 
+def test_grep_5_zip_include_picklist(runtmp):
+    # search zip, include on case sensitive match to name
+    allzip = utils.get_test_data('prot/all.zip')
+
+    pickfile = runtmp.output('pick.csv')
+    with open(pickfile, 'w', newline="") as fp:
+        w = csv.DictWriter(fp, fieldnames=['md5'])
+        w.writeheader()
+        w.writerow(dict(md5='09a08691ce52952152f0e866a59f6261'))
+        w.writerow(dict(md5='38729c6374925585db28916b82a6f513'))
+
+    runtmp.run_sourmash('sig', 'grep', '--dna', 'OS223', allzip,
+                        '--picklist', f"{pickfile}:md5:md5")
+
+    out = runtmp.last_result.out
+    print(out)
+    err = runtmp.last_result.err
+    print(err)
+    assert 'for given picklist, found 2 matches to 2 distinct values' in err
+
+    ss = load_signatures(out)
+    ss = list(ss)
+    assert len(ss) == 1
+    ss = ss[0]
+    assert 'Shewanella baltica OS223' in ss.name
+    assert ss.md5sum() == '38729c6374925585db28916b82a6f513'
+
+
 def test_grep_5_zip_include_case_insensitive(runtmp):
     # search zip, include on case insensitive match to name
     allzip = utils.get_test_data('prot/all.zip')

@@ -14,8 +14,8 @@ displayed by `sig describe`.
 regexp searching. See https://docs.python.org/3/howto/regex.html and
 https://docs.python.org/3/library/re.html for details.
 
-The '-v' (exclude) and '-i' (case-insensitive) options of 'grep' are
-supported.
+The '-v' (exclude), '-i' (case-insensitive), and `-c` (count) options
+of 'grep' are supported.
 
 '-o/--output' can be used to output matching signatures to a specific
 location.
