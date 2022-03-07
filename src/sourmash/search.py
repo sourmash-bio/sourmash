@@ -475,11 +475,14 @@ def calculate_prefetch_info(query, match, scaled, threshold):
     """
     # base intersections on downsampled minhashes
     query_mh = query.minhash
+
+    scaled = max(scaled, match.minhash.scaled)
+    query_mh = query_mh.downsample(scaled=scaled)
     db_mh = match.minhash.flatten().downsample(scaled=scaled)
 
     # calculate db match intersection with query hashes:
     intersect_mh = query_mh & db_mh
-    assert len(intersect_mh) >= threshold
+    #assert len(intersect_mh) >= threshold
 
     f_query_match = db_mh.contained_by(query_mh)
     f_match_query = query_mh.contained_by(db_mh)

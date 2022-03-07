@@ -1224,8 +1224,11 @@ def prefetch(args):
             match = result.match
 
             # track found & "untouched" hashes.
-            match_mh = match.minhash.downsample(scaled=query.minhash.scaled)
-            ident_mh += query.minhash & match_mh.flatten()
+            scaled = max(match.minhash.scaled, query.minhash.scaled)
+            query_mh = query.minhash.downsample(scaled=scaled)
+            match_mh = match.minhash.downsample(scaled=scaled)
+            print('XXX', query_mh.scaled, match_mh.scaled)
+            ident_mh += query_mh & match_mh.flatten()
             noident_mh.remove_many(match.minhash)
 
             # output match info as we go

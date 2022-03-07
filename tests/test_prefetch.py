@@ -52,6 +52,27 @@ def test_prefetch_select_query_ksize(runtmp, linear_gather):
     assert 'of 4476 distinct query hashes, 4476 were found in matches above threshold.' in c.last_result.err
 
 
+def test_prefetch_subject_scaled_is_larger(runtmp, linear_gather):
+    # test prefetch where query and subject db both have multiple ksizes
+    c = runtmp
+
+    # make a query sketch with scaled=1000
+    fa = utils.get_test_data('genome-s10.fa.gz')
+    c.run_sourmash('sketch', 'dna', fa, '-o', 'query.sig')
+    assert os.path.exists(runtmp.output('query.sig'))
+
+    # this has a scaled of 10000, from same genome:
+    against = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+
+    c.run_sourmash('prefetch', 'query.sig', against, linear_gather)
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert 'of 503 distinct query hashes, 503 were found in matches above threshold.' in c.last_result.err
+
+
 def test_prefetch_query_abund(runtmp, linear_gather):
     c = runtmp
 
