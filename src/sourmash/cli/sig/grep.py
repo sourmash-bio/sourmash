@@ -49,7 +49,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-f', '--force', action='store_true',
-        help='try to load all files as signatures'
+        help='try to load all files as signatures, independent of filename'
     )
     subparser.add_argument(
         '--from-file',

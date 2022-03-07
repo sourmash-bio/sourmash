@@ -1038,8 +1038,8 @@ For example,
 ```
 sourmash signature grep -i shewanella tests/test-data/prot/all.zip -o shew.zip
 ```
-will extract the two signatures from 'Shewanella baltica' in `all.zip` and
-save them to `shew.zip`.
+will extract the two signatures in `all.zip` with 'Shewanella baltica'
+in their name and save them to `shew.zip`.
 
 `grep` will search for substring matches or regular expressions;
 e.g. `sourmash sig grep 'os185|os223' ...` will find matches to either
