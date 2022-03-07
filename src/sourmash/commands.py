@@ -5,6 +5,7 @@ import csv
 import os
 import os.path
 import sys
+import re
 
 import screed
 from .compare import (compare_all_pairs, compare_serial_containment,
@@ -436,7 +437,6 @@ def index(args):
 
 
 def search(args):
-    import re
     from .search import (search_databases_with_flat_query,
                          search_databases_with_abund_query)
 
@@ -650,6 +650,21 @@ def gather(args):
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
 
+    if picklist and (args.include_db_pattern or args.exclude_db_pattern):
+        assert 0, "--picklist and --include/--exclude not yet supported"
+
+    if args.include_db_pattern and args.exclude_db_pattern:
+        assert 0, "--include and --exclude together not yet supported"
+
+    invert=None
+    pattern=None
+    if args.include_db_pattern:
+        pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
+        invert = False
+    elif args.exclude_db_pattern:
+        pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
+        invert = True
+
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
                                                ksize=args.ksize,
@@ -677,7 +692,9 @@ def gather(args):
         cache_size = None
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
                                                 cache_size=cache_size,
-                                                picklist=picklist)
+                                                picklist=picklist,
+                                                pattern=pattern,
+                                                invert=invert)
 
     if not len(databases):
         error('Nothing found to search!')
