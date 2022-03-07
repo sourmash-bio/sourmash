@@ -4,21 +4,23 @@ Command-line entry point for 'python -m sourmash.sig grep'
 import sys
 import re
 
-import sourmash
 from sourmash import logging, sourmash_args
 from sourmash.logging import notify, error, debug, print_results
 from sourmash.manifest import CollectionManifest
 from .__main__ import _extend_signatures_with_from_file
 
+
 def main(args):
     """
     extract signatures by pattern match.
     """
+    # basic argument parsing
     logging.set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
     _extend_signatures_with_from_file(args)
 
+    # build the search pattern
     pattern = args.pattern
     if args.ignore_case:
         pattern = re.compile(pattern, re.IGNORECASE)
@@ -33,10 +35,11 @@ def main(args):
     else:
         debug("sig grep: manifest required")
 
+    # are we doing --count? if so, enforce --silent so no sigs are printed.
     if args.count:
         args.silent = True
 
-    # define output
+    # define output type: signatures, or no?
     if args.silent:
         notify("(no signatures will be saved because of --silent/--count).")
         save_sigs = sourmash_args.SaveSignaturesToLocation(None)
@@ -45,6 +48,7 @@ def main(args):
         save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
         save_sigs.open()
 
+    # are we outputting a CSV? if so, initialize that, too.
     csv_obj = None
     if args.csv:
         csv_obj = sourmash_args.FileOutputCSV(args.csv)
@@ -88,28 +92,22 @@ def main(args):
                 manifest = sourmash_args.get_manifest(idx,
                                                       require=False)
 
-        # find all matching rows. CTB: could move this to manifest.py?
-        sub_rows = []
-        for row in manifest.rows:
-            match = filter_fn(row)
+        # find all matching rows.
+        sub_manifest = manifest.filter_rows(filter_fn,
+                                            invert=args.invert_match)
+        total_rows_examined += len(manifest)
 
-            if match and not args.invert_match:
-                sub_rows.append(row)
-            elif not match and args.invert_match:
-                sub_rows.append(row)
-
-            total_rows_examined += 1
-
-        # convert to picklist, grabme.
-        sub_manifest = CollectionManifest(sub_rows)
-        sub_picklist = sub_manifest.to_picklist()
-
+        # write out to CSV, if desired.
         if args.csv:
             sub_manifest.write_to_csv(csv_fp)
 
+        # just print out number of matches?
         if args.count:
-            print_results(f"{len(sub_rows)} matches: {filename}")
+            print_results(f"{len(sub_manifest)} matches: {filename}")
         elif not args.silent:
+            # nope - do output signatures. convert manifest to picklist, apply.
+            sub_picklist = sub_manifest.to_picklist()
+
             try:
                 idx = idx.select(picklist=sub_picklist)
             except ValueError:
@@ -123,17 +121,19 @@ def main(args):
             # save!
             for ss in idx.signatures():
                 save_sigs.add(ss)
+    # done with the big loop over all indexes!
 
-    if not args.silent:
+    if args.silent:
+        pass
+    else:
         notify(f"loaded {total_rows_examined} total that matched ksize & molecule type")
 
-    if not save_sigs and not args.silent:
-        error("no matching signatures found!")
-        sys.exit(-1)
-
-    if not args.silent:
-        notify(f"extracted {len(save_sigs)} signatures from {len(args.signatures)} file(s)")
-    save_sigs.close()
+        if save_sigs:
+            notify(f"extracted {len(save_sigs)} signatures from {len(args.signatures)} file(s)")
+            save_sigs.close()
+        else:
+            error("no matching signatures found!")
+            sys.exit(-1)
 
     if args.csv:
         notify(f"wrote manifest containing all matches to CSV file '{args.csv}'")
