@@ -53,7 +53,7 @@ def test_prefetch_select_query_ksize(runtmp, linear_gather):
 
 
 def test_prefetch_subject_scaled_is_larger(runtmp, linear_gather):
-    # test prefetch where query and subject db both have multiple ksizes
+    # test prefetch where subject scaled is larger
     c = runtmp
 
     # make a query sketch with scaled=1000
@@ -80,7 +80,7 @@ def test_prefetch_subject_scaled_is_larger(runtmp, linear_gather):
 
 
 def test_prefetch_subject_scaled_is_larger_outsigs(runtmp, linear_gather):
-    # test prefetch output sigs
+    # test prefetch where subject scaled is larger -- output sigs
     c = runtmp
 
     # make a query sketch with scaled=1000
