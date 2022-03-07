@@ -79,6 +79,40 @@ def test_prefetch_subject_scaled_is_larger(runtmp, linear_gather):
     assert 'final scaled value (max across query and all matches) is 10000' in c.last_result.err
 
 
+def test_prefetch_subject_scaled_is_larger_outsigs(runtmp, linear_gather):
+    # test prefetch output sigs
+    c = runtmp
+
+    # make a query sketch with scaled=1000
+    fa = utils.get_test_data('genome-s10.fa.gz')
+    c.run_sourmash('sketch', 'dna', fa, '-o', 'query.sig')
+    assert os.path.exists(runtmp.output('query.sig'))
+
+    # this has a scaled of 10000, from same genome:
+    against1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+    against2 = utils.get_test_data('scaled/all.sbt.zip')
+    against3 = utils.get_test_data('scaled/all.lca.json')
+
+    # run against large scaled, then small (self)
+    c.run_sourmash('prefetch', 'query.sig', against1, against2, against3,
+                   'query.sig', linear_gather, '--save-matches', 'matches.sig')
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert 'total of 8 matching signatures.' in c.last_result.err
+    assert 'of 48 distinct query hashes, 48 were found in matches above threshold.' in c.last_result.err
+    assert 'final scaled value (max across query and all matches) is 10000' in c.last_result.err
+
+    # make sure non-downsampled sketches were saved.
+    matches = sourmash.load_file_as_signatures(runtmp.output('matches.sig'))
+    scaled_vals = set([ match.minhash.scaled for match in matches ])
+    assert 1000 in scaled_vals
+    assert 10000 in scaled_vals
+    assert len(scaled_vals) == 2
+
+
 def test_prefetch_query_abund(runtmp, linear_gather):
     c = runtmp
 
