@@ -469,16 +469,20 @@ PrefetchResult = namedtuple('PrefetchResult',
                             'intersect_bp, jaccard, max_containment, f_query_match, f_match_query, match, match_filename, match_name, match_md5, match_bp, query, query_filename, query_name, query_md5, query_bp')
 
 
-def calculate_prefetch_info(query, match, scaled, threshold):
+def calculate_prefetch_info(query, match, scaled, threshold_bp):
     """
     For a single query and match, calculate all search info and return a PrefetchResult.
     """
     # base intersections on downsampled minhashes
     query_mh = query.minhash
+
+    scaled = max(scaled, match.minhash.scaled)
+    query_mh = query_mh.downsample(scaled=scaled)
     db_mh = match.minhash.flatten().downsample(scaled=scaled)
 
     # calculate db match intersection with query hashes:
     intersect_mh = query_mh & db_mh
+    threshold = threshold_bp / scaled
     assert len(intersect_mh) >= threshold
 
     f_query_match = db_mh.contained_by(query_mh)
@@ -515,12 +519,8 @@ def prefetch_database(query, database, threshold_bp):
     scaled = query_mh.scaled
     assert scaled
 
-    # for testing/double-checking purposes, calculate expected threshold -
-    threshold = threshold_bp / scaled
-
     # iterate over all signatures in database, find matches
-
     for result in database.prefetch(query, threshold_bp):
         match = result.signature
-        result = calculate_prefetch_info(query, match, scaled, threshold)
+        result = calculate_prefetch_info(query, match, scaled, threshold_bp)
         yield result
