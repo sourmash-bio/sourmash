@@ -282,6 +282,7 @@ def test_sig_grep_7_picklist_md5_lca_fail(runtmp):
                         '--picklist', picklist_arg,
                         '--no-require-manifest')
 
-    # this happens b/c the implementation of 'grep' uses picklists.
+    # this happens b/c the implementation of 'grep' uses picklists, and
+    # LCA databases don't support multiple picklists.
     print(runtmp.last_result.err)
     assert "This input collection doesn't support 'grep' with picklists." in runtmp.last_result.err
