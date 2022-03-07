@@ -286,3 +286,40 @@ def test_sig_grep_7_picklist_md5_lca_fail(runtmp):
     # LCA databases don't support multiple picklists.
     print(runtmp.last_result.err)
     assert "This input collection doesn't support 'grep' with picklists." in runtmp.last_result.err
+
+
+def test_sig_grep_8_count(runtmp):
+    zips = ['prot/all.zip',
+            'prot/dayhoff.sbt.zip',
+            'prot/dayhoff.zip',
+            'prot/hp.sbt.zip',
+            'prot/hp.zip',
+            'prot/protein.sbt.zip',
+            'prot/protein.zip']
+
+    zip_src = [ utils.get_test_data(x) for x in zips ]
+
+    os.mkdir(runtmp.output('prot'))
+    for src, dest in zip(zip_src, zips):
+        shutil.copyfile(src, runtmp.output(dest))
+    
+    runtmp.sourmash('sig', 'grep', '-c', '0015939', *zips)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(out)
+    print(err)
+
+    assert "(no signatures will be saved because of --silent/--count)." in err
+
+    for line in """\
+6 matches: prot/all.zip
+2 matches: prot/dayhoff.sbt.zip
+2 matches: prot/dayhoff.zip
+2 matches: prot/hp.sbt.zip
+2 matches: prot/hp.zip
+2 matches: prot/protein.sbt.zip
+2 matches: prot/protein.zip
+""".splitlines():
+        assert line.strip() in out
