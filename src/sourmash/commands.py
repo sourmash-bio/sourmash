@@ -1236,7 +1236,7 @@ def prefetch(args):
 
             # track found & "untouched" hashes.
             ident_mh += query_mh & match_mh.flatten()
-            noident_mh.remove_many(match.minhash)
+            noident_mh.remove_many(match_mh)
 
             # output match info as we go
             if csvout_fp:
