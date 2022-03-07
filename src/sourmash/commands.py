@@ -1182,6 +1182,21 @@ def prefetch(args):
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
 
+    if picklist and (args.include_db_pattern or args.exclude_db_pattern):
+        assert 0, "--picklist and --include/--exclude not yet supported"
+
+    if args.include_db_pattern and args.exclude_db_pattern:
+        assert 0, "--include and --exclude together not yet supported"
+
+    invert=None
+    pattern=None
+    if args.include_db_pattern:
+        pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
+        invert = False
+    elif args.exclude_db_pattern:
+        pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
+        invert = True
+
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
                                                ksize=args.ksize,
@@ -1249,6 +1264,14 @@ def prefetch(args):
         db = db.select(ksize=ksize, moltype=moltype,
                        containment=True, scaled=True,
                        picklist=picklist)
+
+        if pattern:
+            manifest = db.manifest
+            manifest = manifest.filter_on_columns(pattern.search,
+                                                  ["name", "filename", "md5"],
+                                                  invert=invert)
+            picklist = manifest.to_picklist()
+            db = db.select(picklist=picklist)
 
         if not db:
             notify(f"...no compatible signatures in '{dbfilename}'; skipping")
