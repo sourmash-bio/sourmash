@@ -1168,7 +1168,9 @@ def prefetch(args):
     if args.scaled:
         notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
         query_mh = query_mh.downsample(scaled=args.scaled)
+
     notify(f"all sketches will be downsampled to scaled={query_mh.scaled}")
+    common_scaled = query_mh.scaled
 
     # empty?
     if not len(query_mh):
@@ -1223,14 +1225,19 @@ def prefetch(args):
         for result in prefetch_database(query, db, args.threshold_bp):
             match = result.match
 
+            # ensure we're all on the same page wrt scaled resolution:
+            common_scaled = max(match.minhash.scaled, query.minhash.scaled,
+                                common_scaled)
+
+            query_mh = query.minhash.downsample(scaled=common_scaled)
+            match_mh = match.minhash.downsample(scaled=common_scaled)
+
+            if ident_mh.scaled != common_scaled:
+                ident_mh = ident_mh.downsample(scaled=common_scaled)
+            if noident_mh.scaled != common_scaled:
+                noident_mh = noident_mh.downsample(scaled=common_scaled)
+
             # track found & "untouched" hashes.
-            scaled = max(match.minhash.scaled, query.minhash.scaled)
-            query_mh = query.minhash.downsample(scaled=scaled)
-            match_mh = match.minhash.downsample(scaled=scaled)
-
-            ident_mh = ident_mh.downsample(scaled=scaled)
-            noident_mh = noident_mh.downsample(scaled=scaled)
-
             ident_mh += query_mh & match_mh.flatten()
             noident_mh.remove_many(match.minhash)
 
@@ -1271,6 +1278,7 @@ def prefetch(args):
     assert len(query_mh) == len(ident_mh) + len(noident_mh)
     notify(f"of {len(query_mh)} distinct query hashes, {len(ident_mh)} were found in matches above threshold.")
     notify(f"a total of {len(noident_mh)} query hashes remain unmatched.")
+    notify(f"final scaled value (max across query and all matches) is {common_scaled}")
 
     if args.save_matching_hashes:
         filename = args.save_matching_hashes
