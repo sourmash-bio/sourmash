@@ -70,7 +70,7 @@ def test_prefetch_subject_scaled_is_larger(runtmp, linear_gather):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert 'of 503 distinct query hashes, 503 were found in matches above threshold.' in c.last_result.err
+    assert 'of 48 distinct query hashes, 48 were found in matches above threshold.' in c.last_result.err
 
 
 def test_prefetch_query_abund(runtmp, linear_gather):

@@ -1227,7 +1227,10 @@ def prefetch(args):
             scaled = max(match.minhash.scaled, query.minhash.scaled)
             query_mh = query.minhash.downsample(scaled=scaled)
             match_mh = match.minhash.downsample(scaled=scaled)
-            print('XXX', query_mh.scaled, match_mh.scaled)
+
+            ident_mh = ident_mh.downsample(scaled=scaled)
+            noident_mh = noident_mh.downsample(scaled=scaled)
+
             ident_mh += query_mh & match_mh.flatten()
             noident_mh.remove_many(match.minhash)
 
