@@ -55,21 +55,6 @@ def main(args):
         csv_fp = csv_obj.open()
         CollectionManifest.write_csv_header(csv_fp)
 
-    # field retrieval from manifest row
-    def get_fields(row):
-        if row['name'] is not None:
-            yield row['name']
-        if row['filename'] is not None:
-            yield row['filename']
-        yield row['md5']
-
-    # define filter function.
-    def filter_fn(row):
-        for field in get_fields(row):
-            if pattern.search(field):
-                return True
-        return False
-
     # start loading!
     total_rows_examined = 0
     for filename in args.signatures:
@@ -93,8 +78,9 @@ def main(args):
                                                       require=False)
 
         # find all matching rows.
-        sub_manifest = manifest.filter_rows(filter_fn,
-                                            invert=args.invert_match)
+        sub_manifest = manifest.filter_on_columns(pattern.search,
+                                                  ["name", "filename", "md5"],
+                                                  invert=args.invert_match)
         total_rows_examined += len(manifest)
 
         # write out to CSV, if desired.

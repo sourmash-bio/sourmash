@@ -189,6 +189,17 @@ class CollectionManifest:
 
         return CollectionManifest(new_rows)
 
+    def filter_on_columns(self, col_filter_fn, col_names, *, invert=False):
+        "Create a new manifest based on column matches."
+        def row_filter_fn(row):
+            for col in col_names:
+                val = row[col]
+                if val is not None:
+                    if col_filter_fn(val):
+                        return True
+            return False
+        return self.filter_rows(row_filter_fn, invert=invert)
+
     def locations(self):
         "Return all distinct locations."
         seen = set()
