@@ -10,6 +10,7 @@ import pytest
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash_tst_utils import SourmashCommandFailed
+from sourmash.signature import load_signatures
 
 ## command line tests
 
@@ -21,7 +22,7 @@ def test_grep_1_sig_name(runtmp):
     runtmp.run_sourmash('sig', 'grep', 'Shewanella', sig47)
 
     out = runtmp.last_result.out
-    ss = sourmash.load_signatures(out)
+    ss = load_signatures(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -44,7 +45,7 @@ def test_grep_1_sig_name_case_insensitive(runtmp):
     runtmp.run_sourmash('sig', 'grep', '-i', 'shewanella', sig47)
 
     out = runtmp.last_result.out
-    ss = sourmash.load_signatures(out)
+    ss = load_signatures(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -68,7 +69,7 @@ def test_grep_2_sig_md5(runtmp):
     runtmp.run_sourmash('sig', 'grep', 'ce52952152f0', sig47)
 
     out = runtmp.last_result.out
-    ss = sourmash.load_signatures(out)
+    ss = load_signatures(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -90,7 +91,7 @@ def test_grep_2_sig_md5_case_insensitive(runtmp):
     runtmp.run_sourmash('sig', 'grep', '-i', 'CE52952152f0', sig47)
 
     out = runtmp.last_result.out
-    ss = sourmash.load_signatures(out)
+    ss = load_signatures(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -104,7 +105,7 @@ def test_grep_3_filename(runtmp):
     runtmp.run_sourmash('sig', 'grep', '47.fa', sig47)
 
     out = runtmp.last_result.out
-    ss = sourmash.load_signatures(out)
+    ss = load_signatures(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -119,7 +120,7 @@ def test_grep_3_filename_regexp(runtmp):
     runtmp.run_sourmash('sig', 'grep', '^47.fa', sig47)
 
     out = runtmp.last_result.out
-    ss = sourmash.load_signatures(out)
+    ss = load_signatures(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -145,7 +146,7 @@ def test_grep_4_no_manifest_ok(runtmp):
 
     runtmp.run_sourmash('sig', 'grep', 'e60265', sbt, '--no-require-manifest')
 
-    ss = sourmash.load_signatures(runtmp.last_result.out)
+    ss = load_signatures(runtmp.last_result.out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -159,7 +160,7 @@ def test_grep_5_zip_include(runtmp):
     runtmp.run_sourmash('sig', 'grep', '--dna', 'OS223', allzip)
 
     out = runtmp.last_result.out
-    ss = sourmash.load_signatures(out)
+    ss = load_signatures(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -174,7 +175,7 @@ def test_grep_5_zip_include_case_insensitive(runtmp):
     runtmp.run_sourmash('sig', 'grep', '--dna', '-i', 'os223', allzip)
 
     out = runtmp.last_result.out
-    ss = sourmash.load_signatures(out)
+    ss = load_signatures(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -189,7 +190,7 @@ def test_grep_5_zip_exclude(runtmp):
     runtmp.run_sourmash('sig', 'grep', '--dna', '-v', 'OS185', allzip)
 
     out = runtmp.last_result.out
-    ss = sourmash.load_signatures(out)
+    ss = load_signatures(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -204,7 +205,7 @@ def test_grep_5_zip_exclude_case_insensitive(runtmp):
     runtmp.run_sourmash('sig', 'grep', '--dna', '-vi', 'os185', allzip)
 
     out = runtmp.last_result.out
-    ss = sourmash.load_signatures(out)
+    ss = load_signatures(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -220,7 +221,7 @@ def test_grep_6_zip_manifest_csv(runtmp):
                         '--csv', 'match.csv')
 
     out = runtmp.last_result.out
-    ss = sourmash.load_signatures(out)
+    ss = load_signatures(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
@@ -232,7 +233,7 @@ def test_grep_6_zip_manifest_csv(runtmp):
                         '--picklist', 'match.csv::manifest')
 
     out = runtmp.last_result.out
-    ss = sourmash.load_signatures(out)
+    ss = load_signatures(out)
     ss = list(ss)
     assert len(ss) == 1
     ss = ss[0]
