@@ -711,11 +711,8 @@ def gather(args):
                 # optionally calculate and save prefetch csv
                 if prefetch_csvout_fp:
                     assert scaled
-                    # calculate expected threshold
-                    threshold = args.threshold_bp / scaled
-
                     # calculate intersection stats and info
-                    prefetch_result = calculate_prefetch_info(prefetch_query, found_sig, scaled, threshold)
+                    prefetch_result = calculate_prefetch_info(prefetch_query, found_sig, scaled, args.threshold_bp)
                     # remove match and query signatures; write result to prefetch csv
                     d = dict(prefetch_result._asdict())
                     del d['match']
