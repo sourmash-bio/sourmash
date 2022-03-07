@@ -1176,6 +1176,7 @@ def prefetch(args):
         sys.exit(-1)
 
     query.minhash = query_mh
+    ksize = query_mh.ksize
 
     # set up CSV output, write headers, etc.
     csvout_fp = None
