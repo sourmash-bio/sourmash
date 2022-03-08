@@ -465,6 +465,7 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
                             picklist=None,
                             yield_all_files=False,
                             progress=None,
+                            pattern=None, invert_pattern=None,
                             _use_manifest=True):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
@@ -481,6 +482,9 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
     yield_all_files=True, will attempt to load all files.
 
     Applies selector function if select_moltype, ksize or picklist are given.
+
+    'pattern' is a regexp object that will be applied if not None. Pattern
+    will be used as inclusive unless 'invert_pattern' is true.
     """
     if progress:
         progress.notify(filename)
@@ -491,7 +495,19 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
     if not _use_manifest and db.manifest:
         db.manifest = None
 
+    # apply pattern search
+    assert not (picklist and pattern)
+    if pattern:
+        assert not picklist
+
+        manifest = db.manifest
+        manifest = manifest.filter_on_columns(pattern.search,
+                                              ["nane", "filename", "md5"],
+                                              invert=invert_pattern)
+        picklist = manifest.to_picklist()
+
     db = db.select(moltype=select_moltype, ksize=ksize, picklist=picklist)
+
     loader = db.signatures()
 
     if progress is not None:
@@ -665,7 +681,8 @@ class SignatureLoadingProgress(object):
 
 
 def load_many_signatures(locations, progress, *, yield_all_files=False,
-                         ksize=None, moltype=None, picklist=None, force=False):
+                         ksize=None, moltype=None, picklist=None, force=False,
+                         pattern=None, invert_pattern=None):
     """
     Load many signatures from multiple files, with progress indicators.
 
@@ -682,6 +699,14 @@ def load_many_signatures(locations, progress, *, yield_all_files=False,
         try:
             # open index,
             idx = load_file_as_index(loc, yield_all_files=yield_all_files)
+
+            assert not (picklist and pattern)
+            if pattern:
+                manifest = idx.manifest
+                manifest = manifest.filter_on_columns(pattern.search,
+                                                      ["name", "filename", "md5"],
+                                                      invert=invert_pattern)
+                picklist = manifest.to_picklist()
 
             # select on parameters as desired,
             idx = idx.select(ksize=ksize, moltype=moltype, picklist=picklist)

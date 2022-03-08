@@ -7,6 +7,7 @@ import json
 import os
 from collections import defaultdict, namedtuple, Counter
 import json
+import re
 
 import screed
 import sourmash
@@ -80,6 +81,21 @@ def cat(args):
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
 
+    if picklist and (args.include_db_pattern or args.exclude_db_pattern):
+        assert 0, "--picklist and --include/--exclude not yet supported"
+
+    if args.include_db_pattern and args.exclude_db_pattern:
+        assert 0, "--include and --exclude together not yet supported"
+
+    invert=None
+    pattern=None
+    if args.include_db_pattern:
+        pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
+        invert = False
+    elif args.exclude_db_pattern:
+        pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
+        invert = True
+
     encountered_md5sums = defaultdict(int)   # used by --unique
 
     # open output for saving sigs
@@ -96,7 +112,9 @@ def cat(args):
                                                 picklist=picklist,
                                                 progress=progress,
                                                 yield_all_files=args.force,
-                                                force=args.force)
+                                                force=args.force,
+                                                pattern=pattern,
+                                                invert_pattern=invert)
     for ss, sigloc in loader:
         md5 = ss.md5sum()
         encountered_md5sums[md5] += 1
@@ -603,6 +621,21 @@ def extract(args):
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
     _extend_signatures_with_from_file(args)
+
+    if picklist and (args.include_db_pattern or args.exclude_db_pattern):
+        assert 0, "--picklist and --include/--exclude not yet supported"
+
+    if args.include_db_pattern and args.exclude_db_pattern:
+        assert 0, "--include and --exclude together not yet supported"
+
+    invert=None
+    pattern=None
+    if args.include_db_pattern:
+        pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
+        invert = False
+    elif args.exclude_db_pattern:
+        pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
+        invert = True
 
     # further filtering on md5 or name?
     if args.md5 is not None or args.name is not None:
