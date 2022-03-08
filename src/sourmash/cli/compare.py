@@ -74,6 +74,16 @@ def subparser(subparsers):
     subparser.add_argument(
         '-p', '--processes', metavar='N', type=int, default=None,
         help='Number of processes to use to calculate similarity')
+    subparser.add_argument(
+        '--include-db-pattern',
+        default=None,
+        help='search only signatures that match this pattern in name, filename, or md5'
+    )
+    subparser.add_argument(
+        '--exclude-db-pattern',
+        default=None,
+        help='search only signatures that do not match this pattern in name, filename, or md5'
+    )
     add_picklist_args(subparser)
 
 

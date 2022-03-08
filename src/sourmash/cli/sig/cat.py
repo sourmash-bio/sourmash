@@ -27,6 +27,16 @@ def subparser(subparsers):
         '-f', '--force', action='store_true',
         help='try to load all files as signatures'
     )
+    subparser.add_argument(
+        '--include-db-pattern',
+        default=None,
+        help='search only signatures that match this pattern in name, filename, or md5'
+    )
+    subparser.add_argument(
+        '--exclude-db-pattern',
+        default=None,
+        help='search only signatures that do not match this pattern in name, filename, or md5'
+    )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
