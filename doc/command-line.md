@@ -57,6 +57,13 @@ species, while the third is from a completely different genus.
 
 To get a list of subcommands, run `sourmash` without any arguments.
 
+Please use the command line option `--help` to get more detailed usage
+information for each command.
+
+All signature saving commands can save to a variety of formats (we
+suggest `.zip` files) and all signature loading commands can load
+signatures from any of these formats.
+
 There are seven main subcommands: `sketch`, `compare`, `plot`,
 `search`, `gather`, `index`, and `prefetch`.  See
 [the tutorial](tutorials.md) for a walkthrough of these commands.
@@ -98,12 +105,6 @@ Finally, there are a number of utility and information commands:
 * `categorize` is an experimental command to categorize many signatures.
 * `watch` is an experimental command to classify a stream of sequencing data.
 * `multigather` is an experimental command to run multiple gathers against the same collection of databases.
-
-Please use the command line option `--help` to get more detailed usage
-information for each command.
-
-Note that as of sourmash v3.4, all commands should load signatures from
-indexed databases (the SBT and LCA formats) as well as from signature files.
 
 ### `sourmash sketch` - make sourmash signatures from sequence data
 
@@ -1522,32 +1523,39 @@ signatures using `zip -r collection.zip *.sig` and then specify
 
 ### Saving signatures, more generally
 
-As of sourmash 4.1, most signature saving arguments (`--save-matches`
-for `search` and `gather`, `-o` for `sourmash sketch`, and most of the
-`sourmash signature` commands) support flexible saving of collections of
+(sourmash v4.1 and later)
+
+All signature saving arguments (`--save-matches` for `search` and
+`gather`, `-o` for `sourmash sketch`, and `-o` for the `sourmash
+signature` commands) support flexible saving of collections of
 signatures into JSON text, Zip files, and/or directories.
 
 This behavior is triggered by the requested output filename --
 
-* to save to JSON signature files, use `.sig`; `-` will send JSON to stdout.
+* to save to JSON signature files, use `.sig`; using a filename `-` will send JSON to stdout.
 * to save to gzipped JSON signature files, use `.sig.gz`;
 * to save to a Zip file collection, use `.zip`;
 * to save signature files to a directory, use a name ending in `/`; the directory will be created if it doesn't exist;
 
-If none of these file extensions is detected, output will be written in the JSON `.sig` format, either to the provided output filename or to stdout.
+If none of these file extensions is detected, output will be written
+in the JSON `.sig` format, either to the provided output filename or
+to stdout.
 
-All of these save formats can be loaded by sourmash commands, too.
+All of these save formats can be loaded by sourmash commands.
 
+### Loading many signatures
 
-### Loading all signatures under a directory
+#### Loading signatures within a directory hierarchy
 
 All of the `sourmash` commands support loading signatures from
 beneath directories; provide the paths on the command line.
 
+@CTB mention -f; does it find .zip files etc?
+
 #### Passing in lists of files
 
-Most sourmash commands will also take `--from-file` or
-`--query-from-file`, which will take a path to a text file containing
+Most sourmash commands will also take a `--from-file` or
+`--query-from-file`, which will take the location of a text file containing
 a list of file paths. This can be useful for situations where you want
 to specify thousands of queries, or a subset of signatures produced by
 some other command.
@@ -1559,18 +1567,21 @@ databases are low memory and disk-intensive databases that allow for
 fast searches using a tree structure, while LCA databases are higher
 memory and (after a potentially significant load time) are quite fast.
 
-(LCA databases also permit taxonomic searches using `sourmash lca` functions.)
+(LCA databases also directly permit taxonomic searches using `sourmash lca`
+functions.)
 
-The main point is that since all of these databases contain signatures,
-as of sourmash 3.4, any command that takes more than one signature will
-also automatically load all of the signatures in the database.
+Since all of these databases contain signatures any command that takes
+more than one signature will also automatically load all of the
+signatures in the database.
 
-Note that, for now, both SBT and LCA database can only contain one
-"type" of signature (one ksize, one moltype, etc.) If the database
-signature type is incompatible with the other signatures, sourmash
-will complain. In contrast, signature files can
-contain many different types of signatures, and compatible ones will
-be discovered automatically.
+One limitation of indexed databases is that both SBT and LCA database
+can only contain one "type" of signature (one ksize/one moltype at one
+scaled value). If the database signature type is incompatible with the
+other signatures, sourmash will complain appropriately.
+
+In contrast, signature files, zip collections, and directory
+hierarchies can contain many different types of signatures, and
+compatible ones will be selected automatically.
 
 ### Combining search databases on the command line
 
@@ -1578,17 +1589,9 @@ All of the commands in sourmash operate in "online" mode, so you can
 combine multiple databases and signatures on the command line and get
 the same answer as if you built a single large database from all of
 them.  The only caveat to this rule is that if you have multiple
-identical matches, the first one to be found will differ depending on
-the order that the files are passed in on the command line.
-
-This can actually be pretty convenient for speeding up searches - for
-example, if you're using `sourmash gather` and you want to find any
-new results after a database update, you can provide a file containing
-the previously found matches on the command line before the updated
-database. Then `gather` will automatically "find" the previously found
-matches before anything else, but only if there are no better matches to
-be found in the updated database. (OK, it's a bit of a niche case, but it's
-been useful. :)
+identical matches present across the databases, the first one to be
+found will differ depending on the order that the files are passed in
+on the command line.
 
 ### Using stdin
 
@@ -1598,8 +1601,3 @@ sig` commands will output to stdout.  So, for example,
 
 `sourmash sketch ... -o - | sourmash sig describe -` will describe the
 signatures that were just created.
-
-(This is a relatively new feature as of 3.4 and our testing may need
-some work, so please
-[let us know](https://github.com/sourmash-bio/sourmash/issues) if there's
-something that doesn't work and we will fix it :).
