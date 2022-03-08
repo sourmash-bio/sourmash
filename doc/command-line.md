@@ -404,7 +404,7 @@ Other options include:
 * `--force` to continue past survivable errors;
 * `--picklist` will select a subset of signatures to search, using [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
 
-### Alternative search mode for low-memory (but slow) search: `--linear`
+#### Alternative search mode for low-memory (but slow) search: `--linear`
 
 By default, `sourmash prefetch` uses all information available for
 faster search. In particular, for SBTs, `prefetch` will prune the search
@@ -412,7 +412,7 @@ tree.  This can be slow and/or memory intensive for very large databases,
 and `--linear` asks `sourmash prefetch` to instead use a linear search
 across all leaf nodes in the tree.
 
-### Caveats and comments
+#### Caveats and comments
 
 `sourmash prefetch` provides no guarantees on output order. It runs in
 "streaming mode" on its inputs, in that each input file is loaded,
