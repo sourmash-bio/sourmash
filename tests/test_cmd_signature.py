@@ -1113,6 +1113,28 @@ def test_sig_split_2_outdir(c):
 
 
 @utils.in_tempdir
+def test_sig_split_2_output_dir(c):
+    # split 47 twice, put in outdir via --output-dir instead of --outdir
+    sig47 = utils.get_test_data('47.fa.sig')
+    outdir = c.output('sigout/')
+    c.run_sourmash('sig', 'split', sig47, sig47, '--output-dir', outdir)
+
+    outname1 = 'sigout/09a08691.k=31.scaled=1000.DNA.dup=0.47.fa.sig'
+    outname2 = 'sigout/09a08691.k=31.scaled=1000.DNA.dup=1.47.fa.sig'
+
+    assert os.path.exists(c.output(outname1))
+    assert os.path.exists(c.output(outname2))
+
+    test_split_sig = sourmash.load_one_signature(sig47)
+
+    actual_split_sig = sourmash.load_one_signature(c.output(outname1))
+    assert actual_split_sig == test_split_sig
+
+    actual_split_sig = sourmash.load_one_signature(c.output(outname2))
+    assert actual_split_sig == test_split_sig
+
+
+@utils.in_tempdir
 def test_sig_split_3_multisig(c):
     # split 47 and 47+63-multisig.sig
     sig47 = utils.get_test_data('47.fa.sig')
@@ -1209,7 +1231,8 @@ def test_sig_extract_1(runtmp):
     assert actual_extract_sig == test_extract_sig
 
 
-def test_sig_extract_1(runtmp):
+def test_sig_extract_1_from_file(runtmp):
+    # run sig extract with --from-file
     c = runtmp
 
     # extract 47 from 47... :)
@@ -1232,6 +1255,26 @@ def test_sig_extract_2(c):
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
     c.run_sourmash('sig', 'extract', sig47, sig63, '--md5', '09a0869')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig47)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    print(test_extract_sig.minhash)
+    print(actual_extract_sig.minhash)
+
+    assert actual_extract_sig == test_extract_sig
+
+
+@utils.in_tempdir
+def test_sig_extract_2_zipfile(c):
+    # extract matches to 47's md5sum from among several in a zipfile
+    all_zip = utils.get_test_data('prot/all.zip')
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    c.run_sourmash('sig', 'extract', all_zip, '--md5', '09a0869')
 
     # stdout should be new signature
     out = c.last_result.out
@@ -1363,6 +1406,76 @@ def test_sig_extract_8_picklist_md5(runtmp):
     assert "loaded 1 total that matched ksize & molecule type" in err
     assert "extracted 1 signatures from 2 file(s)" in err
     assert "for given picklist, found 1 matches to 1 distinct values" in err
+
+
+def test_sig_extract_8_picklist_md5_zipfile(runtmp):
+    # extract 47 from a zipfile,  using a picklist w/full md5
+    allzip = utils.get_test_data('prot/all.zip')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='09a08691ce52952152f0e866a59f6261',
+               md5short='09a08691ce5295215',
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:md5full:md5"
+    runtmp.sourmash('sig', 'extract', allzip, '--picklist', picklist_arg)
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig47)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    assert actual_extract_sig == test_extract_sig
+
+    err = runtmp.last_result.err
+
+    print(err)
+    assert "loaded 1 distinct values into picklist." in err
+    assert "loaded 1 total that matched ksize & molecule type" in err
+    assert "extracted 1 signatures from 1 file(s)" in err
+    assert "for given picklist, found 1 matches to 1 distinct values" in err
+
+
+def test_sig_extract_8_picklist_md5_lca_fail(runtmp):
+    # try to extract 47 from an LCA database, using a picklist w/full md5; will
+    # fail.
+    allzip = utils.get_test_data('lca/47+63.lca.json')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='50a9274021e43eda8b2e77f8fa60ae8e',
+               md5short='50a9274021e43eda8b2e77f8fa60ae8e'[:8],
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:md5full:md5"
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sig', 'extract', allzip, '--picklist', picklist_arg)
+
+    # this happens b/c the implementation of 'extract' uses picklists, and
+    # LCA databases don't support multiple picklists.
+    print(runtmp.last_result.err)
+    assert "This input collection doesn't support 'extract' with picklists." in runtmp.last_result.err
+
 
 def test_sig_extract_8_picklist_md5_include(runtmp):
     # extract 47 from 47, using a picklist w/full md5:: explicit include
@@ -2253,7 +2366,7 @@ def test_sig_flatten_1(runtmp):
     assert test_flattened.minhash == siglist[0].minhash
 
 
-def test_sig_flatten_1(runtmp):
+def test_sig_flatten_1_from_file(runtmp):
     c = runtmp
 
     # extract matches to several names from among several signatures & flatten
@@ -2815,9 +2928,10 @@ def test_sig_describe_empty(c):
     assert 'source file: ** no name **' in c.last_result.out
 
 
-@utils.in_tempdir
-def test_sig_describe_2(c):
-    # get info in CSV spreadsheet
+def test_sig_describe_2_csv(runtmp):
+    # output info in CSV spreadsheet
+    c = runtmp
+
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
     c.run_sourmash('sig', 'describe', sig47, sig63, '--csv', 'out.csv')
@@ -2835,6 +2949,35 @@ def test_sig_describe_2(c):
             n += 1
 
         assert n == 2
+
+
+def test_sig_describe_2_csv_as_picklist(runtmp):
+    # generate an output CSV from describe and then use it as a manifest
+    # pickfile
+    c = runtmp
+
+    sig47 = utils.get_test_data('47.fa.sig')
+    outcsv = runtmp.output('out.csv')
+
+    c.run_sourmash('sig', 'describe', sig47,
+                   '--csv', outcsv)
+
+    c.run_sourmash('sig', 'describe', sig47,
+                   '--picklist', f'{outcsv}::manifest')
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: NC_009665.1 Shewanella baltica OS185, complete genome
+source file: 47.fa
+md5: 09a08691ce52952152f0e866a59f6261
+k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=0
+size: 5177
+signature license: CC0
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
 
 
 @utils.in_tempdir
@@ -2971,16 +3114,17 @@ def test_sig_manifest_3_sbt(runtmp):
 def test_sig_manifest_4_lca(runtmp):
     # make a manifest from a .lca.json file
     sigfile = utils.get_test_data('prot/protein.lca.json.gz')
-    with pytest.raises(SourmashCommandFailed):
-        runtmp.sourmash('sig', 'manifest', sigfile, '-o',
-                        'SOURMASH-MANIFEST.csv')
+    runtmp.sourmash('sig', 'manifest', sigfile, '-o',
+                    'SOURMASH-MANIFEST.csv')
 
-    status = runtmp.last_result.status
-    out = runtmp.last_result.out
-    err = runtmp.last_result.err
+    manifest_fn = runtmp.output('SOURMASH-MANIFEST.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
 
-    assert status != 0
-    assert "ERROR: manifests cannot be generated for this file." in err
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
 
 
 def test_sig_manifest_5_dir(runtmp):
@@ -3025,6 +3169,58 @@ def test_sig_manifest_6_pathlist(runtmp):
     md5_list = [ row['md5'] for row in manifest.rows ]
     assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
     assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+
+def test_sig_manifest_does_not_exist(runtmp):
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.run_sourmash('sig', 'manifest', 'does-not-exist',
+                            '-o', 'out.csv')
+
+    assert "Cannot open 'does-not-exist'." in runtmp.last_result.err
+
+
+def test_sig_manifest_7_allzip_1(runtmp):
+    # the rebuilt manifest w/o '-f' will miss dna-sig.noext
+    allzip = utils.get_test_data('prot/all.zip')
+    runtmp.sourmash('sig', 'manifest', allzip, '-o', 'xyz.csv')
+
+    manifest_fn = runtmp.output('xyz.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 7
+    filenames = set( row['internal_location'] for row in manifest.rows )
+    assert 'dna-sig.noext' not in filenames
+
+
+def test_sig_manifest_7_allzip_2(runtmp):
+    # the rebuilt manifest w/ '-f' will contain dna-sig.noext
+    allzip = utils.get_test_data('prot/all.zip')
+    runtmp.sourmash('sig', 'manifest', allzip, '-o', 'xyz.csv', '-f')
+
+    manifest_fn = runtmp.output('xyz.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 8
+    filenames = set( row['internal_location'] for row in manifest.rows )
+    assert 'dna-sig.noext' in filenames
+
+
+def test_sig_manifest_7_allzip_3(runtmp):
+    # the existing manifest contains 'dna-sig.noext' whther or not -f is
+    # used.
+    allzip = utils.get_test_data('prot/all.zip')
+    runtmp.sourmash('sig', 'manifest', allzip, '-o', 'xyz.csv',
+                    '--no-rebuild')
+
+    manifest_fn = runtmp.output('xyz.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 8
+    filenames = set( row['internal_location'] for row in manifest.rows )
+    assert 'dna-sig.noext' in filenames
 
 
 def test_sig_kmers_1_dna(runtmp):

@@ -6,7 +6,7 @@ You can get the latest development branch with:
 ```
 git clone https://github.com/sourmash-bio/sourmash.git
 ```
-sourmash runs under Python 3.7 and later.
+sourmash runs under Python 3.8 and later.
 
 We recommend using `conda` or `Nix` for setting up an environment for developing
 new features, running tests and code quality checks.

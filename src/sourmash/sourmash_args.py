@@ -1,5 +1,37 @@
 """
 Utility functions for sourmash CLI commands.
+
+The sourmash_args submodule contains functions that help with various
+command-line functions. Library functions in this module often directly
+send output to stdout/stderr in support of the CLI, and/or call
+sys.exit to exit.
+
+argparse functionality:
+
+* check_scaled_bounds(args) -- check that --scaled is reasonable
+* check_num_bounds(args) -- check that --num is reasonable
+* get_moltype(args) -- verify that moltype selected is legit
+* calculate_moltype(args) -- confirm that only one moltype was selected
+* load_picklist(args) -- create a SignaturePicklist from --picklist args
+* report_picklist(args, picklist) -- report on picklist value usage/matches
+
+signature/database loading functionality:
+
+* load_query_signature(filename, ...) -- load a single signature for query
+* traverse_find_sigs(filenames, ...) -- find all .sig and .sig.gz files
+* load_dbs_and_sigs(filenames, query, ...) -- load databases & signatures
+* load_file_as_index(filename, ...) -- load a sourmash.Index class
+* load_file_as_signatures(filename, ...) -- load a list of signatures
+* load_pathlist_from_file(filename) -- load a list of paths from a file
+* load_many_signatures(locations) -- load many signatures from many files
+* get_manifest(idx) -- retrieve or build a manifest from an Index
+* class SignatureLoadingProgress - signature loading progress bar
+
+signature and file output functionality:
+
+* SaveSignaturesToLocation(filename) - bulk signature output
+* class FileOutput - file output context manager that deals w/stdout well
+* class FileOutputCSV - file output context manager for CSV files
 """
 import sys
 import os
@@ -282,7 +314,10 @@ def _load_stdin(filename, **kwargs):
     "Load collection from .sig file streamed in via stdin"
     db = None
     if filename == '-':
-        db = LinearIndex.load(sys.stdin)
+        # load as LinearIndex, then pass into MultiIndex to generate a
+        # manifest.
+        lidx = LinearIndex.load(sys.stdin, filename='-')
+        db = MultiIndex.load((lidx,), (None,), parent="-")
 
     return db
 
@@ -360,7 +395,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     # but nothing else.
     for n, (desc, load_fn) in enumerate(_loader_functions):
         try:
-            debug_literal(f"_load_databases: trying loader fn {n} {desc}")
+            debug_literal(f"_load_databases: trying loader fn {n} '{desc}'")
             db = load_fn(filename,
                          traverse_yield_all=traverse_yield_all,
                          cache_size=cache_size)
@@ -370,6 +405,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
 
         if db is not None:
             loaded = True
+            debug_literal("_load_databases: success!")
             break
 
     # check to see if it's a FASTA/FASTQ record (i.e. screed loadable)
@@ -523,6 +559,7 @@ class FileOutput(object):
 
         return False
 
+
 class FileOutputCSV(FileOutput):
     """A context manager for CSV file outputs.
 
@@ -665,6 +702,50 @@ def load_many_signatures(locations, progress, *, yield_all_files=False,
     n_files = len(locations)
     notify(f"loaded {len(progress)} signatures total, from {n_files} files")
 
+
+def get_manifest(idx, *, require=True, rebuild=False):
+    """
+    Retrieve a manifest for this idx, loaded with `load_file_as_index`.
+
+    If a manifest exists and `rebuild` is False, return the manifest.
+    If a manifest does not exist or `rebuild` is True, try to build one.
+    If a manifest cannot be built and `require` is True, error exit.
+
+    In the case where `require=False` and a manifest cannot be built,
+    may return None. Otherwise always returns a manifest.
+    """
+    from sourmash.index import CollectionManifest
+
+    m = idx.manifest
+
+    # has one, and don't want to rebuild? easy! return!
+    if m is not None and not rebuild:
+        debug_literal("get_manifest: found manifest")
+        return m
+
+    debug_literal(f"get_manifest: no manifest found / rebuild={rebuild}")
+
+    # CTB: CollectionManifest.create_manifest wants (ss, iloc).
+    # so this is an adaptor function! Might want to just change
+    # what `create_manifest` takes.
+    def manifest_iloc_iter(idx):
+        for (ss, loc, iloc) in idx._signatures_with_internal():
+            yield ss, iloc
+
+    # need to build one...
+    try:
+        m = CollectionManifest.create_manifest(manifest_iloc_iter(idx),
+                                               include_signature=False)
+        debug_literal("get_manifest: rebuilt manifest.")
+    except NotImplementedError:
+        if require:
+            error(f"ERROR: manifests cannot be generated for {idx.location}")
+            sys.exit(-1)
+        else:
+            debug_literal("get_manifest: cannot build manifest, not req'd")
+            return None
+
+    return m
 
 #
 # enum and classes for saving signatures progressively

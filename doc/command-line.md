@@ -962,16 +962,16 @@ Most commands will load signatures automatically from indexed databases
 (SBT and LCA formats) as well as from signature files, and you can load
 signatures from stdin using `-` on the command line.
 
-### `sourmash signature cat` - concatenate multiple signatures together
+### `sourmash signature cat` - combine signatures into one file
 
 Concatenate signature files.
 
 For example,
 ```
-sourmash signature cat file1.sig file2.sig -o all.sig
+sourmash signature cat file1.sig file2.sig -o all.zip
 ```
 will combine all signatures in `file1.sig` and `file2.sig` and put them
-in the file `all.sig`.
+in the file `all.zip`.
 
 ### `sourmash signature describe` - display detailed information about signatures
 
@@ -991,6 +991,84 @@ md5: 09a08691ce52952152f0e866a59f6261
 k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=0
 size: 5177
 signature license: CC0
+```
+
+### `sourmash signature fileinfo` - display a summary of the contents of a sourmash collection
+
+Display signature file, database, or collection.
+
+For example,
+```
+sourmash sig fileinfo tests/test-data/prot/all.zip
+```
+will display:
+```
+path filetype: ZipFileLinearIndex
+location: /Users/t/dev/sourmash/tests/test-data/prot/all.zip
+is database? yes
+has manifest? yes
+is nonempty? yes
+num signatures: 8
+** examining manifest...
+31758 total hashes
+summary of sketches:
+   2 sketches with dayhoff, k=19, scaled=100          7945 total hashes
+   2 sketches with hp, k=19, scaled=100               5184 total hashes
+   2 sketches with protein, k=19, scaled=100          8214 total hashes
+   2 sketches with DNA, k=31, scaled=1000             10415 total hashes
+```
+
+`sig fileinfo` will recognize
+[all accepted sourmash input files](#loading-signatures-and-databases),
+including individual .sig and .sig.gz files, Zip file collections, SBT
+databases, LCA databases, and directory hierarchies.
+
+`sourmash sig fileinfo` provides optional JSON and YAML output, and
+those formats are under semantic versioning.
+
+Note: `sourmash signature summarize` is an alias for `fileinfo`; they are
+the same command.
+
+### `sourmash signature grep` - extract matching signatures using pattern matching
+
+Extract matching signatures with substring and regular expression matching
+on the name, filename, and md5 fields.
+
+For example,
+```
+sourmash signature grep -i shewanella tests/test-data/prot/all.zip -o shew.zip
+```
+will extract the two signatures in `all.zip` with 'Shewanella baltica'
+in their name and save them to `shew.zip`.
+
+`grep` will search for substring matches or regular expressions;
+e.g. `sourmash sig grep 'os185|os223' ...` will find matches to either
+of those expressions.
+
+Command line options include `-i` for case-insensitive matching, and `-v`
+for exclusion rather than inclusion.
+
+A CSV file of the matching sketch information can be saved using
+`--csv <outfile>`; this file is in the sourmash manifest format and can be used as a picklist with `--pickfile <outfile>::manifest`.
+
+If `--silent` is specified, `sourmash sig grep` will not output matching
+signatures.
+
+`sourmash sig grep` also supports a counting mode, `-c/--count`, in which
+only the number of matching sketches in files will be displayed; for example,
+
+```
+% sourmash signature grep -ci 'os185|os223' tests/test-data/prot/*.zip 
+```
+will produce the following output:
+```
+2 matches: tests/test-data/prot/all.zip
+0 matches: tests/test-data/prot/dayhoff.sbt.zip
+0 matches: tests/test-data/prot/dayhoff.zip
+0 matches: tests/test-data/prot/hp.sbt.zip
+0 matches: tests/test-data/prot/hp.zip
+0 matches: tests/test-data/prot/protein.sbt.zip
+0 matches: tests/test-data/prot/protein.zip
 ```
 
 ### `sourmash signature split` - split signatures into individual files
@@ -1271,6 +1349,26 @@ exit on the first bad k-mer.  If `--check-sequence --force` is provided,
 `sig kmers` will provide error messages (and skip bad sequences), but
 will continue processing input sequences.
 
+### `sourmash signature manifest` - output a manifest for a file
+
+Output a manifest for a file, database, or collection.
+
+For example,
+```
+sourmash sig manifest tests/test-data/prot/all.zip -o manifest.csv
+```
+will create a CSV file, `manifest.csv`, in the internal sourmash
+manifest format.  The manifest will contain an entry for every
+signature in the file, database, or collection. This format is largely
+meant for internal use, but it can serve as a
+[picklist pickfile](#using-picklists-to-subset-large-collections-of-signatures)
+for subsetting large collections.
+
+By default, `sourmash sig manifest` will rebuild the manifest by
+iterating over the signatures in the input file. This can be slow for
+large collections. Use `--no-rebuild-manifest` to load an existing
+manifest if it is available.
+
 ## Advanced command-line usage
 
 ### Loading signatures and databases
@@ -1352,8 +1450,10 @@ Identifiers are constructed by using the first space delimited word in
 the signature name.
 
 One way to build a picklist is to use `sourmash sig describe --csv
-out.csv <signatures>` to construct an initial CSV file that you can
-then edit further.
+out.csv <signatures>` or `sourmash sig manifest -o out.csv
+<filename_or_db>` to construct an initial CSV file that you can then
+edit further; after editing, these can be passed in via the picklist
+argument `--picklist out.csv::manifest`.
 
 The picklist functionality also supports excluding (rather than
 including) signatures matching the picklist arguments. To specify a

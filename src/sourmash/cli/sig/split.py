@@ -12,7 +12,7 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
-        '--outdir', '--output-dir',
+        '--output-dir', '--outdir',
         help='output signatures to this directory',
     )
     subparser.add_argument(

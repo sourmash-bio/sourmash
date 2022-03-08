@@ -11,7 +11,7 @@ in a second or so on a rather slow 2016 Mac laptop.
 MinHash sketches and signatures are quite small on disk.
 
 sourmash should run with no modification on Linux and Mac OS X,
-under Python 3.7 and later.  Please see [the development repository README][0]
+under Python 3.8 and later.  Please see [the development repository README][0]
 for
 information on source code, tests, and continuous integration.
 

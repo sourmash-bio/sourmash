@@ -715,11 +715,8 @@ def gather(args):
                 # optionally calculate and save prefetch csv
                 if prefetch_csvout_fp:
                     assert scaled
-                    # calculate expected threshold
-                    threshold = args.threshold_bp / scaled
-
                     # calculate intersection stats and info
-                    prefetch_result = calculate_prefetch_info(prefetch_query, found_sig, scaled, threshold)
+                    prefetch_result = calculate_prefetch_info(prefetch_query, found_sig, scaled, args.threshold_bp)
                     # remove match and query signatures; write result to prefetch csv
                     d = dict(prefetch_result._asdict())
                     del d['match']
@@ -1159,7 +1156,9 @@ def prefetch(args):
     if args.scaled:
         notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
         query_mh = query_mh.downsample(scaled=args.scaled)
+
     notify(f"all sketches will be downsampled to scaled={query_mh.scaled}")
+    common_scaled = query_mh.scaled
 
     # empty?
     if not len(query_mh):
@@ -1167,6 +1166,7 @@ def prefetch(args):
         sys.exit(-1)
 
     query.minhash = query_mh
+    ksize = query_mh.ksize
 
     # set up CSV output, write headers, etc.
     csvout_fp = None
@@ -1209,10 +1209,21 @@ def prefetch(args):
         for result in prefetch_database(query, db, args.threshold_bp):
             match = result.match
 
+            # ensure we're all on the same page wrt scaled resolution:
+            common_scaled = max(match.minhash.scaled, query.minhash.scaled,
+                                common_scaled)
+
+            query_mh = query.minhash.downsample(scaled=common_scaled)
+            match_mh = match.minhash.downsample(scaled=common_scaled)
+
+            if ident_mh.scaled != common_scaled:
+                ident_mh = ident_mh.downsample(scaled=common_scaled)
+            if noident_mh.scaled != common_scaled:
+                noident_mh = noident_mh.downsample(scaled=common_scaled)
+
             # track found & "untouched" hashes.
-            match_mh = match.minhash.downsample(scaled=query.minhash.scaled)
-            ident_mh += query.minhash & match_mh.flatten()
-            noident_mh.remove_many(match.minhash)
+            ident_mh += query_mh & match_mh.flatten()
+            noident_mh.remove_many(match_mh)
 
             # output match info as we go
             if csvout_fp:
@@ -1251,6 +1262,7 @@ def prefetch(args):
     assert len(query_mh) == len(ident_mh) + len(noident_mh)
     notify(f"of {len(query_mh)} distinct query hashes, {len(ident_mh)} were found in matches above threshold.")
     notify(f"a total of {len(noident_mh)} query hashes remain unmatched.")
+    notify(f"final scaled value (max across query and all matches) is {common_scaled}")
 
     if args.save_matching_hashes:
         filename = args.save_matching_hashes
