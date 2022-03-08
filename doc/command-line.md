@@ -1406,12 +1406,35 @@ signatures with multiple ksizes or moltypes at the same time; you need
 to pick the ksize and moltype to use for your search. Where possible,
 scaled values will be made compatible.
 
+### Selecting signatures 
+
+(sourmash v4.3.0 and later)
+
+sourmash is built to work with very large collections of signatures,
+and you may want to select (or exclude) specific signatures from
+search or other operations, based on their name. This can be done
+without modifying the collections themselves via the
+`--include-db-pattern` and `--exclude-db-pattern` arguments to many
+sourmash commands, including `search`, `gather`, `compare`, `prefetch`,
+and `sig extract`.
+
+In brief, `sourmash search ... --include <pattern>` will search only
+those database signatures that match `<pattern>` in their `name`,
+`filename`, or `md5` strings.  Here, `<pattern>` can be either a
+substring or a regular expression.
+
+Note that `--include-db-pattern` and `--exclude-db-pattern` rely on
+collection manifests, which are automatically generated for
+most collection types.
+
 ### Using picklists to subset large collections of signatures
 
-As of sourmash 4.2.0, many commands support *picklists*, a feature by
-which you can select or "pick out" signatures based on values in a CSV
-file. This is typically used to index, extract, or search a subset of
-a large collection where modifying the collection itself isn't desired.
+(sourmash v4.2.0 and later)
+
+Many commands support *picklists*, a feature by which you can select
+or "pick out" signatures based on values in a CSV file. This is
+typically used to index, extract, or search a subset of a large
+collection where modifying the collection itself isn't desired.
 
 For example,
 ```
@@ -1449,11 +1472,16 @@ The following `coltype`s are currently supported by `sourmash sig extract`:
 Identifiers are constructed by using the first space delimited word in
 the signature name.
 
-One way to build a picklist is to use `sourmash sig describe --csv
-out.csv <signatures>` or `sourmash sig manifest -o out.csv
-<filename_or_db>` to construct an initial CSV file that you can then
-edit further; after editing, these can be passed in via the picklist
-argument `--picklist out.csv::manifest`.
+One way to build a picklist is to use `sourmash sig grep <pattern>
+<collection> --csv out.csv` to construct a CSV file containing a list
+of all sketches that match the pattern (which can be a string or
+regexp). The `out.csv` file can be used as a picklist via the picklist
+manifest format with `--picklist out.csv::manifest`.
+
+You can also use `sourmash sig describe --csv out.csv <signatures>` or
+`sourmash sig manifest -o out.csv <filename_or_db>` to construct an
+initial CSV file that you can then edit further and use as a picklist
+as above.
 
 The picklist functionality also supports excluding (rather than
 including) signatures matching the picklist arguments. To specify a
