@@ -628,14 +628,14 @@ def extract(args):
     if args.include_db_pattern and args.exclude_db_pattern:
         assert 0, "--include and --exclude together not yet supported"
 
-    invert=None
+    invert_pattern=None
     pattern=None
     if args.include_db_pattern:
         pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
-        invert = False
+        invert_pattern = False
     elif args.exclude_db_pattern:
         pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
-        invert = True
+        invert_pattern = True
 
     # further filtering on md5 or name?
     if args.md5 is not None or args.name is not None:
@@ -665,29 +665,36 @@ def extract(args):
                                                yield_all_files=args.force)
 
         idx = idx.select(ksize=args.ksize,
-                         moltype=moltype,
-                         picklist=picklist)
+                         moltype=moltype)
 
-        manifest = sourmash_args.get_manifest(idx)
+        assert not (picklist and pattern)
+        if picklist:
+            idx = idx.select(picklist=picklist)
+        elif pattern:
+            manifest = idx.manifest
+            manifest = manifest.filter_on_columns(pattern.search,
+                                                  ["name", "filename", "md5"],
+                                                  invert=invert_pattern)
+            manifest = manifest.filter_rows(filter_fn)
+            pattern_picklist = manifest.to_picklist()
+            idx = idx.select(picklist=pattern_picklist)
 
-        sub_rows = []
-        for row in manifest.rows:
-            if filter_fn(row):
-                sub_rows.append(row)
-            total_rows_examined += 1
+        if not pattern:
+            manifest = sourmash_args.get_manifest(idx)
+            total_rows_examined += len(manifest)
 
-        sub_manifest = CollectionManifest(sub_rows)
-        sub_picklist = sub_manifest.to_picklist()
+            sub_manifest = manifest.filter_rows(filter_fn)
+            sub_picklist = sub_manifest.to_picklist()
 
-        try:
-            idx = idx.select(picklist=sub_picklist)
-        except ValueError:
-            error("** This input collection doesn't support 'extract' with picklists.")
-            error("** EXITING.")
-            error("**")
-            error("** You can use 'sourmash sig cat' with a picklist,")
-            error("** and then pipe the output to 'sourmash sig extract")
-            sys.exit(-1)
+            try:
+                idx = idx.select(picklist=sub_picklist)
+            except ValueError:
+                error("** This input collection doesn't support 'extract' with picklists or patterns.")
+                error("** EXITING.")
+                error("**")
+                error("** You can use 'sourmash sig cat' with a picklist or pattern,")
+                error("** and then pipe the output to 'sourmash sig extract")
+                sys.exit(-1)
 
         for ss in idx.signatures():
             save_sigs.add(ss)

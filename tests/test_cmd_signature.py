@@ -1016,6 +1016,34 @@ def test_sig_cat_5_from_file_picklist(runtmp):
     assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691)]"""
 
 
+def test_sig_cat_6_pattern_include(runtmp):
+    # test --include-db-pattern
+    sigfiles = glob.glob(utils.get_test_data('prot/*.zip'))
+
+    runtmp.sourmash('sig', 'cat', '--include', 'shewanella', *sigfiles,
+                    '-o', 'out.zip')
+
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    assert len(idx) == 2
+    names = [ ss.name for ss in idx.signatures() ]
+    for n in names:
+        assert 'shewanella' in n.lower(), n
+
+
+def test_sig_cat_6_pattern_exclude(runtmp):
+    # test --exclude-db-pattern
+    sigfiles = glob.glob(utils.get_test_data('prot/*.zip'))
+
+    runtmp.sourmash('sig', 'cat', '--exclude', 'shewanella', *sigfiles,
+                    '-o', 'out.zip')
+
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    assert len(idx) == 18
+    names = [ ss.name for ss in idx.signatures() ]
+    for n in names:
+        assert 'shewanella' not in n.lower(), n
+
+
 def test_sig_split_1(runtmp):
     c = runtmp
     # split 47 into 1 sig :)
@@ -1474,7 +1502,7 @@ def test_sig_extract_8_picklist_md5_lca_fail(runtmp):
     # this happens b/c the implementation of 'extract' uses picklists, and
     # LCA databases don't support multiple picklists.
     print(runtmp.last_result.err)
-    assert "This input collection doesn't support 'extract' with picklists." in runtmp.last_result.err
+    assert "This input collection doesn't support 'extract' with picklists or patterns." in runtmp.last_result.err
 
 
 def test_sig_extract_8_picklist_md5_include(runtmp):
@@ -2344,6 +2372,34 @@ def test_sig_extract_12_picklist_bad_colname_exclude(runtmp):
     err = runtmp.last_result.err
     print(err)
     assert "column 'BADCOLNAME' not in pickfile" in err
+
+
+def test_sig_extract_11_pattern_include(runtmp):
+    # test --include-db-pattern
+    sigfiles = glob.glob(utils.get_test_data('prot/*.zip'))
+
+    runtmp.sourmash('sig', 'extract', '--include', 'shewanella', *sigfiles,
+                    '-o', 'out.zip')
+
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    assert len(idx) == 2
+    names = [ ss.name for ss in idx.signatures() ]
+    for n in names:
+        assert 'shewanella' in n.lower(), n
+
+
+def test_sig_extract_11_pattern_exclude(runtmp):
+    # test --exclude-db-pattern
+    sigfiles = glob.glob(utils.get_test_data('prot/*.zip'))
+
+    runtmp.sourmash('sig', 'extract', '--exclude', 'shewanella', *sigfiles,
+                    '-o', 'out.zip')
+
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    assert len(idx) == 18
+    names = [ ss.name for ss in idx.signatures() ]
+    for n in names:
+        assert 'shewanella' not in n.lower(), n
 
 
 def test_sig_flatten_1(runtmp):

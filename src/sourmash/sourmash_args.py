@@ -699,18 +699,19 @@ def load_many_signatures(locations, progress, *, yield_all_files=False,
         try:
             # open index,
             idx = load_file_as_index(loc, yield_all_files=yield_all_files)
+            idx = idx.select(ksize=ksize, moltype=moltype)
 
             assert not (picklist and pattern)
-            if pattern:
+            if picklist:
+                idx = idx.select(picklist=picklist)
+            elif pattern:
                 manifest = idx.manifest
                 manifest = manifest.filter_on_columns(pattern.search,
                                                       ["name", "filename", "md5"],
                                                       invert=invert_pattern)
-                picklist = manifest.to_picklist()
-
-            # select on parameters as desired,
-            idx = idx.select(ksize=ksize, moltype=moltype, picklist=picklist)
-
+                pattern_picklist = manifest.to_picklist()
+                idx = idx.select(picklist=pattern_picklist)
+                
             # start up iterator,
             loader = idx.signatures_with_location()
 
