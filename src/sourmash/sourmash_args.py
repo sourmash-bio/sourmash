@@ -502,7 +502,7 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
 
         manifest = db.manifest
         manifest = manifest.filter_on_columns(pattern.search,
-                                              ["nane", "filename", "md5"],
+                                              ["name", "filename", "md5"],
                                               invert=invert_pattern)
         picklist = manifest.to_picklist()
 

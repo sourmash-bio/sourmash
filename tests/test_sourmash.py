@@ -2766,6 +2766,42 @@ def test_compare_with_picklist_exclude(runtmp):
     assert "NC_011294.1 Sal..." in out
 
 
+def test_compare_with_pattern_include(runtmp):
+    # test 'sourmash compare' with --include-db-pattern
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+
+    runtmp.sourmash('compare', *gcf_sigs,
+                    '-k', '21', '--include', "thermotoga")
+
+    err = runtmp.last_result.err
+    out = runtmp.last_result.out
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "NC_009486.1 The..." in out
+    assert "NC_000853.1 The..." in out
+    assert "NC_011978.1 The..." in out
+
+
+def test_compare_with_pattern_exclude(runtmp):
+    # test 'sourmash compare' with picklists - exclude
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+
+    runtmp.sourmash('compare', *gcf_sigs,
+                    '-k', '21', '--exclude', "thermotoga")
+
+    err = runtmp.last_result.err
+    out = runtmp.last_result.out
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "NC_004631.1 Sal..." in out
+    assert "NC_006905.1 Sal..." in out
+    assert "NC_003198.1 Sal..." in out
+    assert "NC_002163.1 Cam..." in out
+    assert "NC_011294.1 Sal..." in out
+
+
 def test_gather(runtmp, linear_gather, prefetch_gather):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
