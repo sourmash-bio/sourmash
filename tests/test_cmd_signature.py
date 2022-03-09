@@ -754,6 +754,32 @@ def test_sig_rename_3_file_dne_force(c):
     assert "Error while reading signatures from 'no-such-sig'" in c.last_result.err
 
 
+def test_sig_rename_4_pattern_include(runtmp):
+    # test sig rename --include-db-pattern
+    sigfiles = glob.glob(utils.get_test_data('prot/*.zip'))
+    runtmp.sourmash('sig', 'rename', '--include', 'shewanella',
+                    *sigfiles, 'SHEWME', '-o', 'out.zip')
+
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    names = [ ss.name for ss in idx.signatures() ]
+    for n in names:
+        assert n == 'SHEWME'
+    assert len(names) == 2
+
+
+def test_sig_rename_4_pattern_exclude(runtmp):
+    # test sig rename --exclude-db-pattern
+    sigfiles = glob.glob(utils.get_test_data('prot/*.zip'))
+    runtmp.sourmash('sig', 'rename', '--exclude', 'shewanella',
+                    *sigfiles, 'NOSHEW', '-o', 'out.zip')
+
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    names = [ ss.name for ss in idx.signatures() ]
+    for n in names:
+        assert n == 'NOSHEW'
+    assert len(names) == 6
+
+
 @utils.in_thisdir
 def test_sig_cat_1(c):
     # cat 47 to 47...

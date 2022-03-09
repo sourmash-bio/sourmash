@@ -87,8 +87,8 @@ def cat(args):
     if args.include_db_pattern and args.exclude_db_pattern:
         assert 0, "--include and --exclude together not yet supported"
 
-    invert=None
-    pattern=None
+    invert = None
+    pattern = None
     if args.include_db_pattern:
         pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
         invert = False
@@ -588,6 +588,20 @@ def rename(args):
     picklist = sourmash_args.load_picklist(args)
     _extend_signatures_with_from_file(args)
 
+    if picklist and (args.include_db_pattern or args.exclude_db_pattern):
+        assert 0, "--picklist and --include/--exclude not yet supported"
+
+    if args.include_db_pattern and args.exclude_db_pattern:
+        assert 0, "--include and --exclude together not yet supported"
+
+    invert = None
+    pattern = None
+    if args.include_db_pattern:
+        pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
+        invert = False
+    elif args.exclude_db_pattern:
+        pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
+        invert = True
 
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
     save_sigs.open()
@@ -600,7 +614,9 @@ def rename(args):
                                                 picklist=picklist,
                                                 progress=progress,
                                                 yield_all_files=args.force,
-                                                force=args.force)
+                                                force=args.force,
+                                                pattern=pattern,
+                                                invert_pattern=invert)
 
     for sigobj, sigloc in loader:
         sigobj._name = args.name
