@@ -1262,16 +1262,18 @@ def prefetch(args):
             db = LazyLinearIndex(db)
 
         db = db.select(ksize=ksize, moltype=moltype,
-                       containment=True, scaled=True,
-                       picklist=picklist)
+                       containment=True, scaled=True)
 
-        if pattern:
+        assert not (picklist and pattern)
+        if picklist:
+            db = db.select(picklist=picklist)
+        elif pattern:
             manifest = db.manifest
             manifest = manifest.filter_on_columns(pattern.search,
                                                   ["name", "filename", "md5"],
                                                   invert=invert)
-            picklist = manifest.to_picklist()
-            db = db.select(picklist=picklist)
+            pattern_picklist = manifest.to_picklist()
+            db = db.select(picklist=pattern_picklist)
 
         if not db:
             notify(f"...no compatible signatures in '{dbfilename}'; skipping")
