@@ -288,8 +288,8 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
             manifest = manifest.filter_on_columns(pattern.search,
                                                   ["name", "filename", "md5"],
                                                   invert=invert)
-            picklist = manifest.to_picklist()
-            db = db.select(picklist=picklist)
+            pattern_picklist = manifest.to_picklist()
+            db = db.select(picklist=pattern_picklist)
 
         databases.append(db)
 

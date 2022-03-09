@@ -732,8 +732,8 @@ def gather(args):
             try:
                 counter = db.counter_gather(prefetch_query, args.threshold_bp)
             except ValueError:
-                if picklist:
-                    # catch "no signatures to search" ValueError...
+                if picklist or pattern:
+                    # catch "no signatures to search" ValueError from filtering
                     continue
                 else:
                     raise       # re-raise other errors, if no picklist.
