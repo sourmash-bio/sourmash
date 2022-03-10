@@ -80,7 +80,7 @@ def cat(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
-    pattern_search = sourmash_args.load_include_pattern(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
 
     encountered_md5sums = defaultdict(int)   # used by --unique
 
@@ -571,7 +571,7 @@ def rename(args):
     set_quiet(args.quiet, args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
-    pattern_search = sourmash_args.load_include_pattern(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
     _extend_signatures_with_from_file(args)
 
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
@@ -606,7 +606,7 @@ def extract(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
-    pattern_search = sourmash_args.load_include_pattern(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
     _extend_signatures_with_from_file(args)
 
     # further filtering on md5 or name?

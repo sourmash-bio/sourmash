@@ -14,7 +14,7 @@ argparse functionality:
 * calculate_moltype(args) -- confirm that only one moltype was selected
 * load_picklist(args) -- create a SignaturePicklist from --picklist args
 * report_picklist(args, picklist) -- report on picklist value usage/matches
-* load_include_pattern(args) -- load --include-db-pattern / --exclude-db-pattern
+* load_include_exclude_db_patterns(args) -- load --include-db-pattern / --exclude-db-pattern
 * apply_picklist_and_pattern(db, ...) -- subselect db on picklist and pattern
 
 signature/database loading functionality:
@@ -159,7 +159,7 @@ def report_picklist(args, picklist):
             sys.exit(-1)
 
 
-def load_include_pattern(args):
+def load_include_exclude_db_patterns(args):
     if args.picklist and (args.include_db_pattern or args.exclude_db_pattern):
         error("ERROR: --picklist and --include/--exclude cannot be used together.")
         sys.exit(-1)

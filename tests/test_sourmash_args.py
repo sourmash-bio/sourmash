@@ -506,7 +506,7 @@ def test_pattern_0():
     args.include_db_pattern = None
     args.exclude_db_pattern = None
 
-    pattern_search = sourmash_args.load_include_pattern(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
     assert pattern_search is None
 
 
@@ -517,7 +517,7 @@ def test_pattern_1():
     args.include_db_pattern = 'foo'
     args.exclude_db_pattern = None
 
-    pattern_search = sourmash_args.load_include_pattern(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
     assert pattern_search(['foo', 'bar', 'baz'])
     assert not pattern_search(['bar', 'bif'])
 
@@ -529,7 +529,7 @@ def test_pattern_2():
     args.exclude_db_pattern = 'foo'
     args.include_db_pattern = None
 
-    pattern_search = sourmash_args.load_include_pattern(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
     assert not pattern_search(['foo', 'bar', 'baz'])
     assert pattern_search(['bar', 'baz', 'bif'])
 
@@ -542,7 +542,7 @@ def test_pattern_3():
     args.include_db_pattern = None
 
     with pytest.raises(SystemExit):
-        pattern_search = sourmash_args.load_include_pattern(args)
+        pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
 
 
 def test_pattern_4():
@@ -553,7 +553,7 @@ def test_pattern_4():
     args.exclude_db_pattern = None
 
     with pytest.raises(SystemExit):
-        pattern_search = sourmash_args.load_include_pattern(args)
+        pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
 
 
 def test_pattern_5():
@@ -564,4 +564,4 @@ def test_pattern_5():
     args.include_db_pattern = 'bar'
 
     with pytest.raises(SystemExit):
-        pattern_search = sourmash_args.load_include_pattern(args)
+        pattern_search = sourmash_args.load_include_exclude_db_patterns(args)

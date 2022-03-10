@@ -29,7 +29,7 @@ def compare(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
-    pattern_search = sourmash_args.load_include_pattern(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
 
     inp_files = list(args.signatures)
     if args.from_file:
@@ -444,7 +444,7 @@ def search(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
-    pattern_search = sourmash_args.load_include_pattern(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
 
     # set up the query.
     query = sourmash_args.load_query_signature(args.query,
@@ -635,7 +635,7 @@ def gather(args):
     set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
-    pattern_search = sourmash_args.load_include_pattern(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
 
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
@@ -1149,7 +1149,7 @@ def prefetch(args):
     ksize = args.ksize
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
-    pattern_search = sourmash_args.load_include_pattern(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
 
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
