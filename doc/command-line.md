@@ -20,7 +20,7 @@ Please see the [mash software][1] and the
 [mash paper (Ondov et al., 2016)][2] for background information on
 how and why MinHash sketches work. The [FracMinHash preprint (Irber et al,
 2022)](https://www.biorxiv.org/content/10.1101/2022.01.11.475838) describes
-the metagenome-focused features of sourmash.
+FracMinHash sketches as well as the metagenome-focused features of sourmash.
 
 sourmash uses a subcommand syntax, so all commands start with
 `sourmash` followed by a subcommand specifying the action to be
