@@ -27,6 +27,11 @@ def main(args):
     else:
         pattern = re.compile(pattern)
 
+    if args.invert_match:
+        search_pattern = lambda vals: all(not pattern.search(val) for val in vals)
+    else:
+        search_pattern = lambda vals: any(pattern.search(val) for val in vals)
+
     # require manifests?
     require_manifest = True
     if args.no_require_manifest:
@@ -78,9 +83,8 @@ def main(args):
                                                       require=False)
 
         # find all matching rows.
-        sub_manifest = manifest.filter_on_columns(pattern.search,
-                                                  ["name", "filename", "md5"],
-                                                  invert=args.invert_match)
+        sub_manifest = manifest.filter_on_columns(search_pattern,
+                                                  ["name", "filename", "md5"])
         total_rows_examined += len(manifest)
 
         # write out to CSV, if desired.
