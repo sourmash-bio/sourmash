@@ -680,21 +680,13 @@ def extract(args):
         idx = sourmash_args.load_file_as_index(filename,
                                                yield_all_files=args.force)
 
-        idx = idx.select(ksize=args.ksize,
-                         moltype=moltype)
+        idx = idx.select(ksize=args.ksize, moltype=moltype)
 
-        assert not (picklist and pattern)
-        if picklist:
-            idx = idx.select(picklist=picklist)
-        elif pattern:
-            manifest = idx.manifest
-            manifest = manifest.filter_on_columns(pattern.search,
-                                                  ["name", "filename", "md5"],
-                                                  invert=invert_pattern)
-            manifest = manifest.filter_rows(filter_fn)
-            pattern_picklist = manifest.to_picklist()
-            idx = idx.select(picklist=pattern_picklist)
+        idx = sourmash_args.apply_picklist_and_pattern(idx, picklist, pattern,
+                                                       invert_pattern)
 
+        # do the extra pattern matching on name/md5 that is part of 'extract'.
+        # CTB: This should be deprecated and removed at some point ;).
         if not pattern:
             manifest = sourmash_args.get_manifest(idx)
             total_rows_examined += len(manifest)

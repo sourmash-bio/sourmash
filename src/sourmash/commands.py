@@ -1281,16 +1281,8 @@ def prefetch(args):
         db = db.select(ksize=ksize, moltype=moltype,
                        containment=True, scaled=True)
 
-        assert not (picklist and pattern)
-        if picklist:
-            db = db.select(picklist=picklist)
-        elif pattern:
-            manifest = db.manifest
-            manifest = manifest.filter_on_columns(pattern.search,
-                                                  ["name", "filename", "md5"],
-                                                  invert=invert)
-            pattern_picklist = manifest.to_picklist()
-            db = db.select(picklist=pattern_picklist)
+        db = sourmash_args.apply_picklist_and_pattern(db, picklist, pattern,
+                                                      invert)
 
         if not db:
             notify(f"...no compatible signatures in '{dbfilename}'; skipping")

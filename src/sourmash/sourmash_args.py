@@ -14,6 +14,7 @@ argparse functionality:
 * calculate_moltype(args) -- confirm that only one moltype was selected
 * load_picklist(args) -- create a SignaturePicklist from --picklist args
 * report_picklist(args, picklist) -- report on picklist value usage/matches
+* @CTB update
 
 signature/database loading functionality:
 
@@ -156,6 +157,21 @@ def report_picklist(args, picklist):
             sys.exit(-1)
 
 
+def apply_picklist_and_pattern(db, picklist, pattern, invert_pattern):
+    assert not (picklist and pattern)
+    if picklist:
+        db = db.select(picklist=picklist)
+    elif pattern:
+        manifest = db.manifest
+        manifest = manifest.filter_on_columns(pattern.search,
+                                              ["name", "filename", "md5"],
+                                              invert=invert_pattern)
+        pattern_picklist = manifest.to_picklist()
+        db = db.select(picklist=pattern_picklist)
+
+    return db
+
+
 def load_query_signature(filename, ksize, select_moltype, select_md5=None):
     """Load a single signature to use as a query.
 
@@ -280,16 +296,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
             notify(f"no compatible signatures found in '{filename}'")
             sys.exit(-1)
 
-        assert not (picklist and pattern)
-        if picklist:
-            db = db.select(picklist=picklist)
-        elif pattern:
-            manifest = db.manifest
-            manifest = manifest.filter_on_columns(pattern.search,
-                                                  ["name", "filename", "md5"],
-                                                  invert=invert)
-            pattern_picklist = manifest.to_picklist()
-            db = db.select(picklist=pattern_picklist)
+        db = apply_picklist_and_pattern(db, picklist, pattern, invert)
 
         databases.append(db)
 
@@ -495,18 +502,10 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
     if not _use_manifest and db.manifest:
         db.manifest = None
 
-    # apply pattern search
-    assert not (picklist and pattern)
-    if pattern:
-        assert not picklist
+    db = db.select(moltype=select_moltype, ksize=ksize)
 
-        manifest = db.manifest
-        manifest = manifest.filter_on_columns(pattern.search,
-                                              ["name", "filename", "md5"],
-                                              invert=invert_pattern)
-        picklist = manifest.to_picklist()
-
-    db = db.select(moltype=select_moltype, ksize=ksize, picklist=picklist)
+    # apply pattern search & picklist
+    db = apply_picklist_and_pattern(db, picklist, pattern, invert_pattern)
 
     loader = db.signatures()
 
@@ -701,17 +700,9 @@ def load_many_signatures(locations, progress, *, yield_all_files=False,
             idx = load_file_as_index(loc, yield_all_files=yield_all_files)
             idx = idx.select(ksize=ksize, moltype=moltype)
 
-            assert not (picklist and pattern)
-            if picklist:
-                idx = idx.select(picklist=picklist)
-            elif pattern:
-                manifest = idx.manifest
-                manifest = manifest.filter_on_columns(pattern.search,
-                                                      ["name", "filename", "md5"],
-                                                      invert=invert_pattern)
-                pattern_picklist = manifest.to_picklist()
-                idx = idx.select(picklist=pattern_picklist)
-                
+            idx = apply_picklist_and_pattern(idx, picklist, pattern,
+                                             invert_pattern)
+
             # start up iterator,
             loader = idx.signatures_with_location()
 
