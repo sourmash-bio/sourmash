@@ -80,21 +80,7 @@ def cat(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
-
-    if picklist and (args.include_db_pattern or args.exclude_db_pattern):
-        assert 0, "--picklist and --include/--exclude not yet supported"
-
-    if args.include_db_pattern and args.exclude_db_pattern:
-        assert 0, "--include and --exclude together not yet supported"
-
-    invert = None
-    pattern = None
-    if args.include_db_pattern:
-        pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
-        invert = False
-    elif args.exclude_db_pattern:
-        pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
-        invert = True
+    pattern, invert = sourmash_args.load_include_pattern(args)
 
     encountered_md5sums = defaultdict(int)   # used by --unique
 
@@ -586,22 +572,8 @@ def rename(args):
     set_quiet(args.quiet, args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    pattern, invert = sourmash_args.load_include_pattern(args)
     _extend_signatures_with_from_file(args)
-
-    if picklist and (args.include_db_pattern or args.exclude_db_pattern):
-        assert 0, "--picklist and --include/--exclude not yet supported"
-
-    if args.include_db_pattern and args.exclude_db_pattern:
-        assert 0, "--include and --exclude together not yet supported"
-
-    invert = None
-    pattern = None
-    if args.include_db_pattern:
-        pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
-        invert = False
-    elif args.exclude_db_pattern:
-        pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
-        invert = True
 
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
     save_sigs.open()
@@ -636,22 +608,8 @@ def extract(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    pattern, invert_pattern = sourmash_args.load_include_pattern(args)
     _extend_signatures_with_from_file(args)
-
-    if picklist and (args.include_db_pattern or args.exclude_db_pattern):
-        assert 0, "--picklist and --include/--exclude not yet supported"
-
-    if args.include_db_pattern and args.exclude_db_pattern:
-        assert 0, "--include and --exclude together not yet supported"
-
-    invert_pattern=None
-    pattern=None
-    if args.include_db_pattern:
-        pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
-        invert_pattern = False
-    elif args.exclude_db_pattern:
-        pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
-        invert_pattern = True
 
     # further filtering on md5 or name?
     if args.md5 is not None or args.name is not None:

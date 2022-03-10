@@ -14,7 +14,8 @@ argparse functionality:
 * calculate_moltype(args) -- confirm that only one moltype was selected
 * load_picklist(args) -- create a SignaturePicklist from --picklist args
 * report_picklist(args, picklist) -- report on picklist value usage/matches
-* @CTB update
+* load_include_pattern(args) -- load --include-db-pattern / --exclude-db-pattern
+* apply_picklist_and_pattern(db, ...) -- subselect db on picklist and pattern
 
 signature/database loading functionality:
 
@@ -40,6 +41,7 @@ from enum import Enum
 import traceback
 import gzip
 from io import StringIO
+import re
 
 import screed
 import sourmash
@@ -155,6 +157,25 @@ def report_picklist(args, picklist):
         if args.picklist_require_all:
             error("ERROR: failing because --picklist-require-all was set")
             sys.exit(-1)
+
+
+def load_include_pattern(args):
+    if args.picklist and (args.include_db_pattern or args.exclude_db_pattern):
+        assert 0, "--picklist and --include/--exclude not yet supported"
+
+    if args.include_db_pattern and args.exclude_db_pattern:
+        assert 0, "--include and --exclude together not yet supported"
+
+    invert = None
+    pattern = None
+    if args.include_db_pattern:
+        pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
+        invert = False
+    elif args.exclude_db_pattern:
+        pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
+        invert = True
+
+    return pattern, invert
 
 
 def apply_picklist_and_pattern(db, picklist, pattern, invert_pattern):

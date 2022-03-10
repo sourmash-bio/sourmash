@@ -30,21 +30,7 @@ def compare(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
-
-    if picklist and (args.include_db_pattern or args.exclude_db_pattern):
-        assert 0, "--picklist and --include/--exclude not yet supported"
-
-    if args.include_db_pattern and args.exclude_db_pattern:
-        assert 0, "--include and --exclude together not yet supported"
-
-    invert = None
-    pattern = None
-    if args.include_db_pattern:
-        pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
-        invert = False
-    elif args.exclude_db_pattern:
-        pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
-        invert = True
+    pattern, invert = sourmash_args.load_include_pattern(args)
 
     inp_files = list(args.signatures)
     if args.from_file:
@@ -460,21 +446,7 @@ def search(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
-
-    if picklist and (args.include_db_pattern or args.exclude_db_pattern):
-        assert 0, "--picklist and --include/--exclude not yet supported"
-
-    if args.include_db_pattern and args.exclude_db_pattern:
-        assert 0, "--include and --exclude together not yet supported"
-
-    invert=None
-    pattern=None
-    if args.include_db_pattern:
-        pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
-        invert = False
-    elif args.exclude_db_pattern:
-        pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
-        invert = True
+    pattern, invert = sourmash_args.load_include_pattern(args)
 
     # set up the query.
     query = sourmash_args.load_query_signature(args.query,
@@ -666,21 +638,7 @@ def gather(args):
     set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
-
-    if picklist and (args.include_db_pattern or args.exclude_db_pattern):
-        assert 0, "--picklist and --include/--exclude not yet supported"
-
-    if args.include_db_pattern and args.exclude_db_pattern:
-        assert 0, "--include and --exclude together not yet supported"
-
-    invert=None
-    pattern=None
-    if args.include_db_pattern:
-        pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
-        invert = False
-    elif args.exclude_db_pattern:
-        pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
-        invert = True
+    pattern, invert = sourmash_args.load_include_pattern(args)
 
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
@@ -1195,21 +1153,7 @@ def prefetch(args):
     ksize = args.ksize
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
-
-    if picklist and (args.include_db_pattern or args.exclude_db_pattern):
-        assert 0, "--picklist and --include/--exclude not yet supported"
-
-    if args.include_db_pattern and args.exclude_db_pattern:
-        assert 0, "--include and --exclude together not yet supported"
-
-    invert=None
-    pattern=None
-    if args.include_db_pattern:
-        pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
-        invert = False
-    elif args.exclude_db_pattern:
-        pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
-        invert = True
+    pattern, invert = sourmash_args.load_include_pattern(args)
 
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
