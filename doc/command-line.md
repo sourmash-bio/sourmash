@@ -1422,11 +1422,9 @@ and `sig extract`.
 In brief, `sourmash search ... --include <pattern>` will search only
 those database signatures that match `<pattern>` in their `name`,
 `filename`, or `md5` strings.  Here, `<pattern>` can be either a
-substring or a regular expression.
-
-Note that `--include-db-pattern` and `--exclude-db-pattern` rely on
-collection manifests, which are automatically generated for
-most collection types.
+substring or a regular expression.  Likewise, `sourmash search
+... --exclude <pattern>` will search only those database signatures
+that _don't_ match pattern in their `name`, `filename`, or `md5` strings.
 
 ### Using picklists to subset large collections of signatures
 
@@ -1532,7 +1530,8 @@ signatures into JSON text, Zip files, and/or directories.
 
 This behavior is triggered by the requested output filename --
 
-* to save to JSON signature files, use `.sig`; using a filename `-` will send JSON to stdout.
+* to save to JSON signature files, use `.sig`; using the filename `-`
+  will send JSON to stdout.
 * to save to gzipped JSON signature files, use `.sig.gz`;
 * to save to a Zip file collection, use `.zip`;
 * to save signature files to a directory, use a name ending in `/`; the directory will be created if it doesn't exist;
@@ -1570,9 +1569,8 @@ memory and (after a potentially significant load time) are quite fast.
 (LCA databases also directly permit taxonomic searches using `sourmash lca`
 functions.)
 
-Since all of these databases contain signatures any command that takes
-more than one signature will also automatically load all of the
-signatures in the database.
+Commands that take multiple signatures or collections of signatures
+will also work with databases.
 
 One limitation of indexed databases is that both SBT and LCA database
 can only contain one "type" of signature (one ksize/one moltype at one
@@ -1589,9 +1587,9 @@ All of the commands in sourmash operate in "online" mode, so you can
 combine multiple databases and signatures on the command line and get
 the same answer as if you built a single large database from all of
 them.  The only caveat to this rule is that if you have multiple
-identical matches present across the databases, the first one to be
-found will differ depending on the order that the files are passed in
-on the command line.
+identical matches present across the databases, the order in which
+they are found will differ depending on the order that the files are
+passed in on the command line.
 
 ### Using stdin
 
