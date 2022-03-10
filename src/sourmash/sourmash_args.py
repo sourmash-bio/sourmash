@@ -161,10 +161,12 @@ def report_picklist(args, picklist):
 
 def load_include_pattern(args):
     if args.picklist and (args.include_db_pattern or args.exclude_db_pattern):
-        assert 0, "--picklist and --include/--exclude not yet supported"
+        error("ERROR: --picklist and --include/--exclude cannot be used together.")
+        sys.exit(-1)
 
     if args.include_db_pattern and args.exclude_db_pattern:
-        assert 0, "--include and --exclude together not yet supported"
+        error("ERROR: --include-db-pattern and --exclude-db-pattern cannot be used together.")
+        sys.exit(-1)
 
     if args.include_db_pattern:
         pattern = re.compile(args.include_db_pattern, re.IGNORECASE)

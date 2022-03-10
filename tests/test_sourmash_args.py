@@ -2,7 +2,6 @@
 Tests for functions in sourmash_args module.
 """
 import os
-import csv
 import pytest
 import gzip
 import zipfile
@@ -533,3 +532,36 @@ def test_pattern_2():
     pattern_search = sourmash_args.load_include_pattern(args)
     assert not pattern_search(['foo', 'bar', 'baz'])
     assert pattern_search(['bar', 'baz', 'bif'])
+
+
+def test_pattern_3():
+    # test with --picklist and --exclude: should fail
+    args = FakeArgs()
+    args.picklist = True
+    args.exclude_db_pattern = 'foo'
+    args.include_db_pattern = None
+
+    with pytest.raises(SystemExit):
+        pattern_search = sourmash_args.load_include_pattern(args)
+
+
+def test_pattern_4():
+    # test with --picklist and --include: should fail
+    args = FakeArgs()
+    args.picklist = True
+    args.include_db_pattern = 'foo'
+    args.exclude_db_pattern = None
+
+    with pytest.raises(SystemExit):
+        pattern_search = sourmash_args.load_include_pattern(args)
+
+
+def test_pattern_5():
+    # test with --include and --exclude: should fail
+    args = FakeArgs()
+    args.picklist = None
+    args.exclude_db_pattern = 'foo'
+    args.include_db_pattern = 'bar'
+
+    with pytest.raises(SystemExit):
+        pattern_search = sourmash_args.load_include_pattern(args)
