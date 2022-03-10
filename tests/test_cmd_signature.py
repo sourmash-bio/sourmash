@@ -1534,7 +1534,8 @@ def test_sig_extract_8_picklist_md5_lca_fail(runtmp):
 
     picklist_arg = f"{picklist_csv}:md5full:md5"
     with pytest.raises(SourmashCommandFailed) as exc:
-        runtmp.sourmash('sig', 'extract', allzip, '--picklist', picklist_arg)
+        runtmp.sourmash('sig', 'extract', allzip, '--picklist', picklist_arg,
+                        '--md5', '50a9274021e4')
 
     # this happens b/c the implementation of 'extract' uses picklists, and
     # LCA databases don't support multiple picklists.

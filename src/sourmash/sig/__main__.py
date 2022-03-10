@@ -610,6 +610,7 @@ def extract(args):
     _extend_signatures_with_from_file(args)
 
     # further filtering on md5 or name?
+    filter_fn = None
     if args.md5 is not None or args.name is not None:
         def filter_fn(row):
             # match?
@@ -622,9 +623,6 @@ def extract(args):
                 keep = True
 
             return keep
-    else:
-        # whatever comes out of the database is fine
-        filter_fn = lambda x: True
 
     # ok! filtering defined, let's go forward
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
@@ -641,12 +639,13 @@ def extract(args):
         idx = sourmash_args.apply_picklist_and_pattern(idx, picklist,
                                                        pattern_search)
 
-        # do the extra pattern matching on name/md5 that is part of 'extract'.
-        # CTB: This should be deprecated and removed at some point ;).
-        if not pattern_search:
-            manifest = sourmash_args.get_manifest(idx)
-            total_rows_examined += len(manifest)
+        manifest = sourmash_args.get_manifest(idx)
+        total_rows_examined += len(manifest)
 
+        # do the extra pattern matching on name/md5 that is part of 'extract'.
+        # CTB: This should be deprecated and removed at some point, since
+        # --include/--exclude now do the same thing.
+        if filter_fn and not pattern_search:
             sub_manifest = manifest.filter_rows(filter_fn)
             sub_picklist = sub_manifest.to_picklist()
 

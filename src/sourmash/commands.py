@@ -5,7 +5,6 @@ import csv
 import os
 import os.path
 import sys
-import re
 
 import screed
 from .compare import (compare_all_pairs, compare_serial_containment,
