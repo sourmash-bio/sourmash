@@ -27,7 +27,7 @@ sourmash compare file1.sig [ file2.sig ... ]
 """
 
 from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
-                                add_picklist_args)
+                                add_picklist_args, add_pattern_args)
 
 
 def subparser(subparsers):
@@ -74,17 +74,8 @@ def subparser(subparsers):
     subparser.add_argument(
         '-p', '--processes', metavar='N', type=int, default=None,
         help='Number of processes to use to calculate similarity')
-    subparser.add_argument(
-        '--include-db-pattern',
-        default=None,
-        help='compare only signatures that match this pattern in name, filename, or md5'
-    )
-    subparser.add_argument(
-        '--exclude-db-pattern',
-        default=None,
-        help='compare only signatures that do not match this pattern in name, filename, or md5'
-    )
     add_picklist_args(subparser)
+    add_pattern_args(subparser)
 
 
 def main(args):

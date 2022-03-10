@@ -166,27 +166,26 @@ def load_include_pattern(args):
     if args.include_db_pattern and args.exclude_db_pattern:
         assert 0, "--include and --exclude together not yet supported"
 
-    invert = None
-    pattern = None
     if args.include_db_pattern:
         pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
-        invert = False
+        search_pattern = lambda vals: any(pattern.search(val) for val in vals)
     elif args.exclude_db_pattern:
         pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
-        invert = True
+        search_pattern = lambda vals: all(not pattern.search(val) for val in vals)
+    else:
+        search_pattern = None
 
-    return pattern, invert
+    return search_pattern
 
 
-def apply_picklist_and_pattern(db, picklist, pattern, invert_pattern):
+def apply_picklist_and_pattern(db, picklist, pattern):
     assert not (picklist and pattern)
     if picklist:
         db = db.select(picklist=picklist)
     elif pattern:
         manifest = db.manifest
-        manifest = manifest.filter_on_columns(pattern.search,
-                                              ["name", "filename", "md5"],
-                                              invert=invert_pattern)
+        manifest = manifest.filter_on_columns(pattern,
+                                              ["name", "filename", "md5"])
         pattern_picklist = manifest.to_picklist()
         db = db.select(picklist=pattern_picklist)
 
@@ -274,8 +273,7 @@ def traverse_find_sigs(filenames, yield_all_files=False):
 
 
 def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
-                      cache_size=None, picklist=None, pattern=None,
-                      invert=None):
+                      cache_size=None, picklist=None, pattern=None):
     """
     Load one or more SBTs, LCAs, and/or collections of signatures.
 
@@ -317,7 +315,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
             notify(f"no compatible signatures found in '{filename}'")
             sys.exit(-1)
 
-        db = apply_picklist_and_pattern(db, picklist, pattern, invert)
+        db = apply_picklist_and_pattern(db, picklist, pattern)
 
         databases.append(db)
 
@@ -493,7 +491,7 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
                             picklist=None,
                             yield_all_files=False,
                             progress=None,
-                            pattern=None, invert_pattern=None,
+                            pattern=None,
                             _use_manifest=True):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
@@ -511,8 +509,7 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
 
     Applies selector function if select_moltype, ksize or picklist are given.
 
-    'pattern' is a regexp object that will be applied if not None. Pattern
-    will be used as inclusive unless 'invert_pattern' is true.
+    'pattern' is a function that returns True on matching values.
     """
     if progress:
         progress.notify(filename)
@@ -526,7 +523,7 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
     db = db.select(moltype=select_moltype, ksize=ksize)
 
     # apply pattern search & picklist
-    db = apply_picklist_and_pattern(db, picklist, pattern, invert_pattern)
+    db = apply_picklist_and_pattern(db, picklist, pattern)
 
     loader = db.signatures()
 
@@ -702,7 +699,7 @@ class SignatureLoadingProgress(object):
 
 def load_many_signatures(locations, progress, *, yield_all_files=False,
                          ksize=None, moltype=None, picklist=None, force=False,
-                         pattern=None, invert_pattern=None):
+                         pattern=None):
     """
     Load many signatures from multiple files, with progress indicators.
 
@@ -721,8 +718,7 @@ def load_many_signatures(locations, progress, *, yield_all_files=False,
             idx = load_file_as_index(loc, yield_all_files=yield_all_files)
             idx = idx.select(ksize=ksize, moltype=moltype)
 
-            idx = apply_picklist_and_pattern(idx, picklist, pattern,
-                                             invert_pattern)
+            idx = apply_picklist_and_pattern(idx, picklist, pattern)
 
             # start up iterator,
             loader = idx.signatures_with_location()

@@ -1,7 +1,7 @@
 """extract one or more signatures"""
 
 from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
-                                add_picklist_args)
+                                add_picklist_args, add_pattern_args)
 
 
 def subparser(subparsers):
@@ -32,18 +32,9 @@ def subparser(subparsers):
         '--from-file',
         help='a text file containing a list of files to load signatures from'
     )
-    subparser.add_argument(
-        '--include-db-pattern',
-        default=None,
-        help='search only signatures that match this pattern in name, filename, or md5'
-    )
-    subparser.add_argument(
-        '--exclude-db-pattern',
-        default=None,
-        help='search only signatures that do not match this pattern in name, filename, or md5'
-    )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
+    add_pattern_args(subparser)
     add_picklist_args(subparser)
 
 

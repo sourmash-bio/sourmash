@@ -80,7 +80,7 @@ def cat(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
-    pattern, invert = sourmash_args.load_include_pattern(args)
+    pattern_search = sourmash_args.load_include_pattern(args)
 
     encountered_md5sums = defaultdict(int)   # used by --unique
 
@@ -99,8 +99,7 @@ def cat(args):
                                                 progress=progress,
                                                 yield_all_files=args.force,
                                                 force=args.force,
-                                                pattern=pattern,
-                                                invert_pattern=invert)
+                                                pattern=pattern_search)
     for ss, sigloc in loader:
         md5 = ss.md5sum()
         encountered_md5sums[md5] += 1
@@ -572,7 +571,7 @@ def rename(args):
     set_quiet(args.quiet, args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
-    pattern, invert = sourmash_args.load_include_pattern(args)
+    pattern_search = sourmash_args.load_include_pattern(args)
     _extend_signatures_with_from_file(args)
 
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
@@ -587,8 +586,7 @@ def rename(args):
                                                 progress=progress,
                                                 yield_all_files=args.force,
                                                 force=args.force,
-                                                pattern=pattern,
-                                                invert_pattern=invert)
+                                                pattern=pattern_search)
 
     for sigobj, sigloc in loader:
         sigobj._name = args.name
@@ -608,7 +606,7 @@ def extract(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
-    pattern, invert_pattern = sourmash_args.load_include_pattern(args)
+    pattern_search = sourmash_args.load_include_pattern(args)
     _extend_signatures_with_from_file(args)
 
     # further filtering on md5 or name?
@@ -640,12 +638,12 @@ def extract(args):
 
         idx = idx.select(ksize=args.ksize, moltype=moltype)
 
-        idx = sourmash_args.apply_picklist_and_pattern(idx, picklist, pattern,
-                                                       invert_pattern)
+        idx = sourmash_args.apply_picklist_and_pattern(idx, picklist,
+                                                       pattern_search)
 
         # do the extra pattern matching on name/md5 that is part of 'extract'.
         # CTB: This should be deprecated and removed at some point ;).
-        if not pattern:
+        if not pattern_search:
             manifest = sourmash_args.get_manifest(idx)
             total_rows_examined += len(manifest)
 
