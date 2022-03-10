@@ -1558,8 +1558,6 @@ All of these save formats can be loaded by sourmash commands.
 All of the `sourmash` commands support loading signatures from
 beneath directories; provide the paths on the command line.
 
-@CTB mention -f; does it find .zip files etc?
-
 #### Passing in lists of files
 
 Most sourmash commands will also take a `--from-file` or
