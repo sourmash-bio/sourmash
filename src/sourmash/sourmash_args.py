@@ -186,6 +186,11 @@ def apply_picklist_and_pattern(db, picklist, pattern):
         db = db.select(picklist=picklist)
     elif pattern:
         manifest = db.manifest
+        if manifest is None:
+            error(f"ERROR on filename '{db.location}'.")
+            error("--include-db-pattern/--exclude-db-pattern require a manifest.")
+            sys.exit(-1)
+
         manifest = manifest.filter_on_columns(pattern,
                                               ["name", "filename", "md5"])
         pattern_picklist = manifest.to_picklist()

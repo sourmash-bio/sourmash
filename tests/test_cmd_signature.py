@@ -1070,6 +1070,17 @@ def test_sig_cat_6_pattern_exclude(runtmp):
         assert 'shewanella' not in n.lower(), n
 
 
+def test_sig_cat_6_pattern_exclude_no_manifest(runtmp):
+    # test --exclude-db-pattern
+    db = utils.get_test_data('v6.sbt.zip')
+
+    with pytest.raises(SourmashCommandFailed) as e:
+        runtmp.sourmash('sig', 'cat', '--exclude', 'shewanella', db,
+                        '-o', 'out.zip')
+
+    assert "require a manifest" in str(e)
+
+
 def test_sig_split_1(runtmp):
     c = runtmp
     # split 47 into 1 sig :)
