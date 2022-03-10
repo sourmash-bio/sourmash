@@ -8,13 +8,19 @@ From the command line, sourmash can be used to create
 [MinHash sketches][0] from DNA and protein sequences, compare them to
 each other, and plot the results; these sketches are saved into
 "signature files".  These signatures allow you to estimate sequence
-similarity quickly and accurately in large collections, among other
-capabilities.
+similarity and containment quickly and accurately in large
+collections, among other capabilities.
+
+sourmash also provides a suite of metagenome functionality.  This
+includes genome search in metagenomes, metagenome decomposition into a
+list of genomes from a database, and taxonomic classification
+functionality.
 
 Please see the [mash software][1] and the
 [mash paper (Ondov et al., 2016)][2] for background information on
-how and why MinHash sketches work.
-
+how and why MinHash sketches work. The [FracMinHash preprint (Irber et al,
+2022)](https://www.biorxiv.org/content/10.1101/2022.01.11.475838) describes
+FracMinHash sketches as well as the metagenome-focused features of sourmash.
 
 sourmash uses a subcommand syntax, so all commands start with
 `sourmash` followed by a subcommand specifying the action to be
@@ -101,9 +107,6 @@ Finally, there are a number of utility and information commands:
 
 Please use the command line option `--help` to get more detailed usage
 information for each command.
-
-Note that as of sourmash v3.4, all commands should load signatures from
-indexed databases (the SBT and LCA formats) as well as from signature files.
 
 ### `sourmash sketch` - make sourmash signatures from sequence data
 
@@ -404,7 +407,7 @@ Other options include:
 * `--force` to continue past survivable errors;
 * `--picklist` will select a subset of signatures to search, using [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
 
-### Alternative search mode for low-memory (but slow) search: `--linear`
+#### Alternative search mode for low-memory (but slow) search: `--linear`
 
 By default, `sourmash prefetch` uses all information available for
 faster search. In particular, for SBTs, `prefetch` will prune the search
@@ -412,7 +415,7 @@ tree.  This can be slow and/or memory intensive for very large databases,
 and `--linear` asks `sourmash prefetch` to instead use a linear search
 across all leaf nodes in the tree.
 
-### Caveats and comments
+#### Caveats and comments
 
 `sourmash prefetch` provides no guarantees on output order. It runs in
 "streaming mode" on its inputs, in that each input file is loaded,
