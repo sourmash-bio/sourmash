@@ -75,6 +75,7 @@ make test
 cd ../../testenv2
 deactivate
 source bin/activate
+python -m pip install setuptools_scm
 python -m pip install -e git+https://github.com/sourmash-bio/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
 cd src/sourmash
 make test
