@@ -53,7 +53,7 @@ git push --tags origin
 
 3\. Test the release candidate. Bonus: repeat on macOS:
 ```
-python -m pip install -U virtualenv wheel
+python -m pip install -U virtualenv wheel tox-setuptools-version
 
 cd ..
 python -m venv testenv1
