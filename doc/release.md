@@ -8,7 +8,7 @@ Michael Crusoe.
 The basic build environment needed below can be created as follows:
 
 ```
-conda create -y -n sourmash-rc python=3.8 pip cxx-compiler make twine tox tox-conda setuptools_scm
+conda create -y -n sourmash-rc python=3.8 pip cxx-compiler make twine tox tox-conda "setuptools<60" setuptools_scm
 ```
 
 Then activate it with `conda activate sourmash-rc`.
@@ -53,7 +53,7 @@ git push --tags origin
 
 3\. Test the release candidate. Bonus: repeat on macOS:
 ```
-python -m pip install -U setuptools pip virtualenv wheel
+python -m pip install -U virtualenv wheel
 
 cd ..
 python -m venv testenv1
@@ -67,7 +67,6 @@ cd testenv1
 source bin/activate
 git clone --depth 1 --branch v${new_version}${rc} https://github.com/sourmash-bio/sourmash.git
 cd sourmash
-python -m pip install -U setuptools pip wheel setuptools_scm
 python -m pip install -r requirements.txt
 make test
 
@@ -76,7 +75,6 @@ make test
 cd ../../testenv2
 deactivate
 source bin/activate
-python -m pip install -U setuptools pip wheel setuptools_scm
 python -m pip install -e git+https://github.com/sourmash-bio/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
 cd src/sourmash
 make test
@@ -89,7 +87,6 @@ cp dist/sourmash*tar.gz ../../../testenv3/
 cd ../../../testenv3/
 deactivate
 source bin/activate
-python -m pip install -U setuptools pip wheel setuptools_scm
 python -m pip install sourmash*tar.gz
 python -m pip install pytest
 tar xzf sourmash-${new_version}${rc}.tar.gz
@@ -113,7 +110,6 @@ Test the PyPI release in a new virtualenv:
 cd ../../testenv4
 deactivate
 source bin/activate
-python -m pip install -U setuptools pip wheel
 # install as much as possible from non-test server!
 python -m pip install screed pytest numpy matplotlib scipy bam2fasta deprecation cffi
 python -m pip install -i https://test.pypi.org/simple --pre sourmash
