@@ -7,6 +7,7 @@ import json
 import os
 from collections import defaultdict, namedtuple, Counter
 import json
+import re
 
 import screed
 import sourmash
@@ -79,6 +80,7 @@ def cat(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
 
     encountered_md5sums = defaultdict(int)   # used by --unique
 
@@ -96,7 +98,8 @@ def cat(args):
                                                 picklist=picklist,
                                                 progress=progress,
                                                 yield_all_files=args.force,
-                                                force=args.force)
+                                                force=args.force,
+                                                pattern=pattern_search)
     for ss, sigloc in loader:
         md5 = ss.md5sum()
         encountered_md5sums[md5] += 1
@@ -568,8 +571,8 @@ def rename(args):
     set_quiet(args.quiet, args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
     _extend_signatures_with_from_file(args)
-
 
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
     save_sigs.open()
@@ -582,7 +585,8 @@ def rename(args):
                                                 picklist=picklist,
                                                 progress=progress,
                                                 yield_all_files=args.force,
-                                                force=args.force)
+                                                force=args.force,
+                                                pattern=pattern_search)
 
     for sigobj, sigloc in loader:
         sigobj._name = args.name
@@ -602,9 +606,11 @@ def extract(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
     _extend_signatures_with_from_file(args)
 
     # further filtering on md5 or name?
+    filter_fn = None
     if args.md5 is not None or args.name is not None:
         def filter_fn(row):
             # match?
@@ -617,9 +623,6 @@ def extract(args):
                 keep = True
 
             return keep
-    else:
-        # whatever comes out of the database is fine
-        filter_fn = lambda x: True
 
     # ok! filtering defined, let's go forward
     save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
@@ -631,30 +634,30 @@ def extract(args):
         idx = sourmash_args.load_file_as_index(filename,
                                                yield_all_files=args.force)
 
-        idx = idx.select(ksize=args.ksize,
-                         moltype=moltype,
-                         picklist=picklist)
+        idx = idx.select(ksize=args.ksize, moltype=moltype)
+
+        idx = sourmash_args.apply_picklist_and_pattern(idx, picklist,
+                                                       pattern_search)
 
         manifest = sourmash_args.get_manifest(idx)
+        total_rows_examined += len(manifest)
 
-        sub_rows = []
-        for row in manifest.rows:
-            if filter_fn(row):
-                sub_rows.append(row)
-            total_rows_examined += 1
+        # do the extra pattern matching on name/md5 that is part of 'extract'.
+        # CTB: This should be deprecated and removed at some point, since
+        # --include/--exclude now do the same thing.
+        if filter_fn and not pattern_search:
+            sub_manifest = manifest.filter_rows(filter_fn)
+            sub_picklist = sub_manifest.to_picklist()
 
-        sub_manifest = CollectionManifest(sub_rows)
-        sub_picklist = sub_manifest.to_picklist()
-
-        try:
-            idx = idx.select(picklist=sub_picklist)
-        except ValueError:
-            error("** This input collection doesn't support 'extract' with picklists.")
-            error("** EXITING.")
-            error("**")
-            error("** You can use 'sourmash sig cat' with a picklist,")
-            error("** and then pipe the output to 'sourmash sig extract")
-            sys.exit(-1)
+            try:
+                idx = idx.select(picklist=sub_picklist)
+            except ValueError:
+                error("** This input collection doesn't support 'extract' with picklists or patterns.")
+                error("** EXITING.")
+                error("**")
+                error("** You can use 'sourmash sig cat' with a picklist or pattern,")
+                error("** and then pipe the output to 'sourmash sig extract")
+                sys.exit(-1)
 
         for ss in idx.signatures():
             save_sigs.add(ss)

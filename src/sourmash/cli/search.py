@@ -39,7 +39,8 @@ similarity   match
 """
 
 from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
-                                add_picklist_args, add_scaled_arg)
+                                add_picklist_args, add_scaled_arg,
+                                add_pattern_args)
 
 
 def subparser(subparsers):
@@ -95,6 +96,7 @@ def subparser(subparsers):
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
+    add_pattern_args(subparser)
     add_scaled_arg(subparser, 0)
 
 

@@ -575,7 +575,7 @@ def test_prefetch_with_picklist(runtmp):
     picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
 
     runtmp.sourmash('prefetch', metag_sig, *gcf_sigs,
-                    '-k', '21', '--picklist', f"{picklist}:md5:md5")
+                    '--picklist', f"{picklist}:md5:md5")
 
     err = runtmp.last_result.err
     print(err)
@@ -598,12 +598,50 @@ def test_prefetch_with_picklist_exclude(runtmp):
     picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
 
     runtmp.sourmash('prefetch', metag_sig, *gcf_sigs,
-                    '-k', '21', '--picklist', f"{picklist}:md5:md5:exclude")
+                    '--picklist', f"{picklist}:md5:md5:exclude")
 
     err = runtmp.last_result.err
     print(err)
     assert "for given picklist, found 9 matches by excluding 9 distinct values" in err
     # these are the different ksizes
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "total of 9 matching signatures." in err
+    assert "of 1466 distinct query hashes, 1013 were found in matches above threshold." in err
+    assert "a total of 453 query hashes remain unmatched." in err
+
+
+def test_prefetch_with_pattern_include(runtmp):
+    # test 'sourmash prefetch' with --include-db-pattern
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+
+    runtmp.sourmash('prefetch', metag_sig, *gcf_sigs,
+                    '--include', 'thermotoga')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "total of 3 matching signatures." in err
+    assert "of 1466 distinct query hashes, 453 were found in matches above threshold." in err
+    assert "a total of 1013 query hashes remain unmatched." in err
+
+
+def test_prefetch_with_pattern_exclude(runtmp):
+    # test 'sourmash prefetch' with --exclude-db-pattern
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+
+    runtmp.sourmash('prefetch', metag_sig, *gcf_sigs,
+                    '--exclude', 'thermotoga')
+
+    err = runtmp.last_result.err
+    print(err)
 
     out = runtmp.last_result.out
     print(out)

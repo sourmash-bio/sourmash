@@ -2,7 +2,6 @@
 Tests for functions in sourmash_args module.
 """
 import os
-import csv
 import pytest
 import gzip
 import zipfile
@@ -492,3 +491,77 @@ def test_get_manifest_3_build_2():
     m3 = sourmash_args.get_manifest(idx, rebuild=True)
     assert idx.was_called
     assert m == m3
+
+
+class FakeArgs(object):
+    picklist = None
+    include_db_pattern = None
+    exclude_db_pattern = None
+
+
+def test_pattern_0():
+    # test neither --include nor --exclude
+    args = FakeArgs()
+    args.picklist = None
+    args.include_db_pattern = None
+    args.exclude_db_pattern = None
+
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
+    assert pattern_search is None
+
+
+def test_pattern_1():
+    # test just --include-pattern handling
+    args = FakeArgs()
+    args.picklist = None
+    args.include_db_pattern = 'foo'
+    args.exclude_db_pattern = None
+
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
+    assert pattern_search(['foo', 'bar', 'baz'])
+    assert not pattern_search(['bar', 'bif'])
+
+
+def test_pattern_2():
+    # test just --exclude-pattern handling
+    args = FakeArgs()
+    args.picklist = None
+    args.exclude_db_pattern = 'foo'
+    args.include_db_pattern = None
+
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
+    assert not pattern_search(['foo', 'bar', 'baz'])
+    assert pattern_search(['bar', 'baz', 'bif'])
+
+
+def test_pattern_3():
+    # test with --picklist and --exclude: should fail
+    args = FakeArgs()
+    args.picklist = True
+    args.exclude_db_pattern = 'foo'
+    args.include_db_pattern = None
+
+    with pytest.raises(SystemExit):
+        pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
+
+
+def test_pattern_4():
+    # test with --picklist and --include: should fail
+    args = FakeArgs()
+    args.picklist = True
+    args.include_db_pattern = 'foo'
+    args.exclude_db_pattern = None
+
+    with pytest.raises(SystemExit):
+        pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
+
+
+def test_pattern_5():
+    # test with --include and --exclude: should fail
+    args = FakeArgs()
+    args.picklist = None
+    args.exclude_db_pattern = 'foo'
+    args.include_db_pattern = 'bar'
+
+    with pytest.raises(SystemExit):
+        pattern_search = sourmash_args.load_include_exclude_db_patterns(args)

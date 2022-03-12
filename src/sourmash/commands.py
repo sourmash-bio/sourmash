@@ -29,6 +29,7 @@ def compare(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
 
     inp_files = list(args.signatures)
     if args.from_file:
@@ -48,7 +49,8 @@ def compare(args):
                                                        select_moltype=moltype,
                                                        picklist=picklist,
                                                        yield_all_files=args.force,
-                                                       progress=progress)
+                                                       progress=progress,
+                                                       pattern=pattern_search)
         loaded = list(loaded)
         if not loaded:
             notify(f'\nwarning: no signatures loaded at given ksize/molecule type/picklist from {filename}')
@@ -451,6 +453,7 @@ def search(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
 
     # set up the query.
     query = sourmash_args.load_query_signature(args.query,
@@ -476,7 +479,8 @@ def search(args):
 
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
                                                 not is_containment,
-                                                picklist=picklist)
+                                                picklist=picklist,
+                                                pattern=pattern_search)
 
     if not len(databases):
         error('Nothing found to search!')
@@ -639,6 +643,7 @@ def gather(args):
     set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
 
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
@@ -667,7 +672,8 @@ def gather(args):
         cache_size = None
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
                                                 cache_size=cache_size,
-                                                picklist=picklist)
+                                                picklist=picklist,
+                                                pattern=pattern_search)
 
     if not len(databases):
         error('Nothing found to search!')
@@ -701,8 +707,8 @@ def gather(args):
             try:
                 counter = db.counter_gather(prefetch_query, args.threshold_bp)
             except ValueError:
-                if picklist:
-                    # catch "no signatures to search" ValueError...
+                if picklist or pattern_search:
+                    # catch "no signatures to search" ValueError from filtering
                     continue
                 else:
                     raise       # re-raise other errors, if no picklist.
@@ -1134,6 +1140,7 @@ def prefetch(args):
     ksize = args.ksize
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
 
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
@@ -1199,8 +1206,10 @@ def prefetch(args):
             db = LazyLinearIndex(db)
 
         db = db.select(ksize=ksize, moltype=moltype,
-                       containment=True, scaled=True,
-                       picklist=picklist)
+                       containment=True, scaled=True)
+
+        db = sourmash_args.apply_picklist_and_pattern(db, picklist,
+                                                      pattern_search)
 
         if not db:
             notify(f"...no compatible signatures in '{dbfilename}'; skipping")
