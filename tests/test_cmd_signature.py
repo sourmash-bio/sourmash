@@ -3134,6 +3134,54 @@ signature license: CC0
         assert line.strip() in out
 
 
+def test_sig_describe_2_include_db_pattern(runtmp):
+    # test sig describe --include-db-pattern
+    c = runtmp
+
+    allzip = utils.get_test_data('prot/all.zip')
+
+    c.run_sourmash('sig', 'describe', allzip,
+                   '--include-db-pattern', 'os185')
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: NC_009665.1 Shewanella baltica OS185, complete genome
+source file: 47.fa
+md5: 09a08691ce52952152f0e866a59f6261
+k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=0
+size: 5177
+signature license: CC0
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+def test_sig_describe_2_exclude_db_pattern(runtmp):
+    # test sig describe --exclude-db-pattern
+    c = runtmp
+
+    allzip = utils.get_test_data('prot/all.zip')
+
+    c.run_sourmash('sig', 'describe', allzip, '--dna', '-k', '31',
+                   '--exclude-db-pattern', 'os223')
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: NC_009665.1 Shewanella baltica OS185, complete genome
+source file: 47.fa
+md5: 09a08691ce52952152f0e866a59f6261
+k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=0
+size: 5177
+signature license: CC0
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
 @utils.in_tempdir
 def test_sig_overlap(c):
     # get overlap details
