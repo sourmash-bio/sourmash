@@ -9,13 +9,8 @@ from scipy.special import hyp2f1
 from numpy import sqrt
 from math import log, exp
 
-def show_error(msg):
-    print(msg)
+from .logging import notify
 
-try:
-    from .logging import notify
-except:
-    notify = show_error
 
 #FROM  mrcc.kmer_mutation_formulas_thm5
 def r1_to_q(k,r1):
@@ -171,19 +166,20 @@ def distance_to_identity(dist,d_low=None,d_high=None):
     """
     ANI = 1-distance
     """
-    for d in [dist,d_low,d_high]:
-        if not 0 <= d <= 1:
-            raise ValueError("Error: distance value {d} is not between 0 and 1!")
-    id = 1-dist
+    if not 0 <= dist <= 1:
+        raise ValueError(f"Error: distance value {dist} is not between 0 and 1!")
+    ident = 1-dist
+    result = ident
     id_low,id_high=None,None
-    if d_low is not None: # need to be explicit so will work on 0 value
-        id_high = 1-d_low
-    if d_high is not None: # need to be explicit so will work on 0 value
-        id_low = 1-d_high
-    return id,id_low,id_high
+    if d_low is not None and d_high is not None:
+        if (0<=d_low<=1) and (0<=d_high<=1):
+            id_high = 1-d_low
+            id_low = 1-d_high
+            result = [ident, id_low, id_high]
+    return result
 
 
-def jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers):
+def jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None, return_identity=False):
     """Given parameters, calculate point estimate for mutation rate from jaccard index.
     First checks if parameters are valid (checks are not exhaustive). Then uses formulas
     derived mathematically to compute the point estimate. The formula uses approximations,
@@ -197,13 +193,21 @@ def jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers):
     Arguments: jaccard, ksize, scaled, n_unique_kmers
     Returns: tuple (point_estimate_of_mutation_rate, lower_bound_of_error)
     """
-    assert jaccard >= 0.0 and jaccard <= 1.0 and ksize >= 1
+    if sequence_len_bp and not n_unique_kmers:
+        n_unique_kmers = sequence_len_to_n_kmers(sequence_len_bp, ksize)
+    if jaccard <= 0.0001:
+        point_estimate = 1.0
+    elif jaccard >= 0.9999:
+        point_estimate = 0.0
+    else:
+        point_estimate = 1.0 - ( 2.0 * jaccard / float(1+jaccard) ) ** (1.0/float(ksize))
 
-    point_estimate = 1.0 - ( 2.0 * jaccard / float(1+jaccard) ) ** (1.0/float(ksize))
+        exp_n_mut = exp_n_mutated(n_unique_kmers, ksize, point_estimate)
+        var_n_mut = var_n_mutated(n_unique_kmers, ksize, point_estimate)
+        error_lower_bound = 1.0 * n_unique_kmers * var_n_mut / (n_unique_kmers + exp_n_mut)**3
 
-    exp_n_mut = exp_n_mutated(n_unique_kmers, ksize, point_estimate)
-    var_n_mut = var_n_mutated(n_unique_kmers, ksize, point_estimate)
-    error_lower_bound = 1.0 * n_unique_kmers * var_n_mut / (n_unique_kmers + exp_n_mut)**3
+    if return_identity:
+        point_estimate = distance_to_identity(point_estimate)
 
     return point_estimate, error_lower_bound
 

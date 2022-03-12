@@ -12,6 +12,11 @@ def test_distance_to_identity():
     assert id_high ==0.6
 
 
+def test_distance_to_identity_just_point_estimate():
+    id = distance_to_identity(0.4)
+    assert id == 0.6
+    
+
 def test_distance_to_identity_fail():
     with pytest.raises(Exception) as exc:
         id,id_low,id_high = distance_to_identity(1.1,0.4,0.6)
