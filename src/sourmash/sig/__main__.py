@@ -215,11 +215,11 @@ def describe(args):
         csv_obj = sourmash_args.FileOutputCSV(args.csv)
         csv_fp = csv_obj.open()
 
-        # CTB: might want to switch to sourmash_args.FileOutputCSV here?
         w = csv.DictWriter(csv_fp,
                            ['signature_file', 'md5', 'ksize', 'moltype',
                             'num', 'scaled', 'n_hashes', 'seed',
-                            'with_abundance', 'name', 'filename', 'license'],
+                            'with_abundance', 'name', 'filename', 'license',
+                            'sum_hashes'],
                            extrasaction='ignore')
         w.writeheader()
 
@@ -236,6 +236,7 @@ def describe(args):
 
     for sig, location in loader:
         # extract info, write as appropriate.
+        signature_file = location
         mh = sig.minhash
         ksize = mh.ksize
         moltype = mh.moltype

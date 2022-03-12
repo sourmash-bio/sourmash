@@ -3074,6 +3074,37 @@ def test_sig_describe_2_csv(runtmp):
         assert n == 2
 
 
+def test_sig_describe_2_csv_abund(runtmp):
+    # output info in CSV spreadsheet, for abund sig
+    c = runtmp
+
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    c.run_sourmash('sig', 'describe', sig47, '--csv', 'out.csv')
+
+    with open(c.output('out.csv'), 'rt') as fp:
+        r = csv.DictReader(fp)
+
+        n = 0
+
+        rows = list(r)
+        assert len(rows) == 1
+        row = rows[0]
+
+        assert row['signature_file'] == sig47
+        assert row['md5'] == "09a08691ce52952152f0e866a59f6261"
+        assert row['ksize'] == "31"
+        assert row['moltype'] == "DNA"
+        assert row['num'] == "0"
+        assert row['scaled'] == "1000"
+        assert row['n_hashes'] == "5177"
+        assert row['seed'] == "42"
+        assert row['with_abundance'] == "1"
+        assert row['name'] == "NC_009665.1 Shewanella baltica OS185, complete genome"
+        assert row['filename'] == "podar-ref/47.fa"
+        assert row['license'] == "CC0"
+        assert row['sum_hashes'] == "5292"
+
+
 def test_sig_describe_2_csv_as_picklist(runtmp):
     # generate an output CSV from describe and then use it as a manifest
     # pickfile
