@@ -2989,9 +2989,10 @@ k=19 molecule=protein num=0 scaled=100 seed=42 track_abundance=0
         assert line.strip() in out
 
 
-@utils.in_tempdir
-def test_sig_describe_1_sig_abund(c):
+def test_sig_describe_1_sig_abund(runtmp):
     # check output of sig describe on a sketch with abundances
+    c = runtmp
+
     sigfile = utils.get_test_data('track_abund/47.fa.sig')
     c.run_sourmash('sig', 'describe', sigfile)
 
