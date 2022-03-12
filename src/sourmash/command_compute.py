@@ -326,7 +326,16 @@ def save_sigs_to_location(siglist, save_sig):
 class ComputeParameters(RustObject):
     __dealloc_func__ = lib.computeparams_free
 
-    def __init__(self, ksizes, seed, protein, dayhoff, hp, dna, num_hashes, track_abundance, scaled):
+    def __init__(self,
+                 ksizes=(21, 31, 51),
+                 seed=42,
+                 protein=False,
+                 dayhoff=False,
+                 hp=False,
+                 dna=True,
+                 num_hashes=500,
+                 track_abundance=False,
+                 scaled=0):
         self._objptr = lib.computeparams_new()
 
         self.seed = seed
@@ -405,7 +414,7 @@ class ComputeParameters(RustObject):
         return ",".join(pi)
 
     def __repr__(self):
-        return f"ComputeParameters({self.ksizes}, {self.seed}, {self.protein}, {self.dayhoff}, {self.hp}, {self.dna}, {self.num_hashes}, {self.track_abundance}, {self.scaled})"
+        return f"ComputeParameters(ksizes={self.ksizes}, seed={self.seed}, protein={self.protein}, dayhoff={self.dayhoff}, hp={self.hp}, dna={self.dna}, num_hashes={self.num_hashes}, track_abundance={self.track_abundance}, scaled={self.scaled})"
 
     def __eq__(self, other):
         return (self.ksizes == other.ksizes and
