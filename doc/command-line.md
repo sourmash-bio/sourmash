@@ -1006,7 +1006,7 @@ signature license: CC0
 
 Here, the `size` is the number of distinct hashes in the sketch, and
 `sum_hashes` is the total number of hashes in the sketch, with abundances.
-When `track_abundance` is 0, `size` is always the same as `sum_hashes.
+When `track_abundance` is 0, `size` is always the same as `sum_hashes`.
 
 ### `sourmash signature fileinfo` - display a summary of the contents of a sourmash collection
 
