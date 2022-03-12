@@ -989,19 +989,24 @@ Display signature details.
 
 For example,
 ```
-sourmash sig describe tests/test-data/47.fa.sig
+sourmash sig describe tests/test-data/track_abund/47.fa.sig
 ```
 will display:
 
 ```
-signature filename: tests/test-data/47.fa.sig
+signature filename: tests/test-data/track_abund/47.fa.sig
 signature: NC_009665.1 Shewanella baltica OS185, complete genome
-source file: 47.fa
+source file: podar-ref/47.fa
 md5: 09a08691ce52952152f0e866a59f6261
-k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=0
+k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=1
 size: 5177
+sum hashes: 5292
 signature license: CC0
 ```
+
+Here, the `size` is the number of distinct hashes in the sketch, and
+`sum_hashes` is the total number of hashes in the sketch, with abundances.
+When `track_abundance` is 0, `size` is always the same as `sum_hashes.
 
 ### `sourmash signature fileinfo` - display a summary of the contents of a sourmash collection
 
