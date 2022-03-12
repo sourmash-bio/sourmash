@@ -7,8 +7,15 @@ from scipy.optimize import brentq
 from scipy.stats import norm as scipy_norm
 from scipy.special import hyp2f1
 from numpy import sqrt
+from math import log, exp
 
-from .logging import notify
+def show_error(msg):
+    print(msg)
+
+try:
+    from .logging import notify
+except:
+    notify = show_error
 
 #FROM  mrcc.kmer_mutation_formulas_thm5
 def r1_to_q(k,r1):
@@ -22,7 +29,7 @@ def var_n_mutated(L,k,r1,q=None):
 	# by the use of higher-precision arithmetic; the problem occurs when r is
 	# very small; for example, with L=10,k=2,r1=1e-6 standard precision
 	# gives varN<0 which is nonsense; by using the mpf type, we get the correct
-	# answer which is about 0.000038. 
+	# answer which is about 0.000038.
 	if (r1 == 0): return 0.0
 	r1 = float(r1)
 	if (q == None): # we assume that if q is provided, it is correct for r1
@@ -166,7 +173,7 @@ def distance_to_identity(dist,d_low=None,d_high=None):
     """
     for d in [dist,d_low,d_high]:
         if not 0 <= d <= 1:
-            raise ValueError(f"Error: distance value {d} is not between 0 and 1!")
+            raise ValueError("Error: distance value {d} is not between 0 and 1!")
     id = 1-dist
     id_low,id_high=None,None
     if d_low is not None: # need to be explicit so will work on 0 value
@@ -174,3 +181,82 @@ def distance_to_identity(dist,d_low=None,d_high=None):
     if d_high is not None: # need to be explicit so will work on 0 value
         id_low = 1-d_high
     return id,id_low,id_high
+
+
+def jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers):
+    """Given parameters, calculate point estimate for mutation rate from jaccard index.
+    First checks if parameters are valid (checks are not exhaustive). Then uses formulas
+    derived mathematically to compute the point estimate. The formula uses approximations,
+    therefore a tiny error is associated with it. A lower bound of that error is also returned.
+    A high error indicates that the point estimate cannot be trusted. Threshold of the error
+    is open to interpretation, but suggested that > 10^-4 should be handled with caution.
+
+    Note that the error is NOT a mutation rate, and therefore cannot be considered in
+    something like mut.rate +/- error.
+
+    Arguments: jaccard, ksize, scaled, n_unique_kmers
+    Returns: tuple (point_estimate_of_mutation_rate, lower_bound_of_error)
+    """
+    assert jaccard >= 0.0 and jaccard <= 1.0 and ksize >= 1
+
+    point_estimate = 1.0 - ( 2.0 * jaccard / float(1+jaccard) ) ** (1.0/float(ksize))
+
+    exp_n_mut = exp_n_mutated(n_unique_kmers, ksize, point_estimate)
+    var_n_mut = var_n_mutated(n_unique_kmers, ksize, point_estimate)
+    error_lower_bound = 1.0 * n_unique_kmers * var_n_mut / (n_unique_kmers + exp_n_mut)**3
+
+    return point_estimate, error_lower_bound
+
+
+def get_expected_log_probability(L, k, p, s):
+    '''helper function
+    '''
+    exp_nmut = exp_n_mutated(L, k, p)
+    try:
+        return (L - exp_nmut) * log(1.0 - s)
+    except:
+        return float('-inf')
+
+def get_exp_probability_nothing_common(n_unique_kmers, ksize, mutation_rate, scaled):
+    '''Given parameters, calculate the expected probability that nothing will be common
+    between a fracminhash sketch of a original sequence and a fracminhash sketch of a mutated
+    sequence. If this is above a threshold, we should suspect that the two sketches may have
+    nothing in common. The threshold needs to be set with proper insights.
+
+    Arguments: n_unique_kmers, ksize, mutation_rate, scaled
+    Returns: float - expected likelihood that nothing is common between sketches
+    '''
+    assert 0.0 <= mutation_rate <= 1.0 and ksize >= 1 and scaled >= 1
+    L = n_unique_kmers
+    k = ksize
+    p = mutation_rate
+    s = 1.0 / float(scaled)
+    if p == 1.0:
+        return 1.0
+    return exp( get_expected_log_probability(L, k, p, s) )
+
+
+if __name__ == '__main__':
+    jaccard = 0.9
+    ksize = 21
+    scaled = 10
+    n_unique_kmers = 100000
+
+    # jaccard_to_distance_point_estimate usage
+    mut_rate, err = jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers)
+    print('Point estimate is: ' + str(mut_rate))
+    if err > 10.0**(-4.0):
+        print('Cannot trust this point estimate!')
+
+    # get_exp_probability_nothing_common usage
+    ksize = 21
+    scaled = 1000
+    n_unique_kmers = 10000000
+    mutation_rate = 0.3
+    threshold = 10.0**(-3)
+
+    exp_probability_no_common = get_exp_probability_nothing_common(n_unique_kmers,
+                                            ksize, mutation_rate, scaled)
+    print(exp_probability_no_common)
+    if (exp_probability_no_common >= threshold):
+        print('There could be cases where nothing common between sketches may happen!')
