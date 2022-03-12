@@ -63,7 +63,7 @@ summary of sketches:
 
 def test_fileinfo_1_sig_abund(runtmp):
     # get basic info on a signature with abundance
-    sig47 = utils.get_test_data('track-abund/47.fa.sig')
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
 
     shutil.copyfile(sig47, runtmp.output('sig47.sig'))
     runtmp.run_sourmash('sig', 'fileinfo', 'sig47.sig')
