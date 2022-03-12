@@ -2800,7 +2800,7 @@ def test_sig_describe_1_hp(c):
     c.run_sourmash('sig', 'describe', computed_sig)
 
     out = c.last_result.out
-    print(c.last_result)
+    print(c.last_result.out)
 
     # Add final trailing slash for this OS
     testdata_dirname = os.path.dirname(testdata) + os.sep
@@ -2814,6 +2814,7 @@ source file: short.fa
 md5: e45a080101751e044d6df861d3d0f3fd
 k=7 molecule=protein num=500 scaled=0 seed=42 track_abundance=0
 size: 500
+sum hashes: 500
 signature license: CC0
 
 ---
@@ -2823,6 +2824,7 @@ source file: short.fa
 md5: c027e96c3379d38942639219daa24fdc
 k=7 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
 size: 500
+sum hashes: 500
 signature license: CC0
 
 ---
@@ -2841,6 +2843,7 @@ source file: short.fa
 md5: 1136a8a68420bd93683e45cdaf109b80
 k=21 molecule=DNA num=500 scaled=0 seed=42 track_abundance=0
 size: 500
+sum hashes: 500
 signature license: CC0
 
 ---
@@ -2850,6 +2853,7 @@ source file: short.fa
 md5: 4244d1612598af044e799587132f007e
 k=10 molecule=protein num=500 scaled=0 seed=42 track_abundance=0
 size: 500
+sum hashes: 500
 signature license: CC0
 
 ---
@@ -2859,6 +2863,7 @@ source file: short.fa
 md5: 396dcb7c1875f48ca31e0759bec72ee1
 k=10 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
 size: 500
+sum hashes: 500
 signature license: CC0
 
 ---
@@ -2868,6 +2873,7 @@ source file: short.fa
 md5: 4c43878296459783dbd6a4a071ab7e9d
 k=10 molecule=hp num=500 scaled=0 seed=42 track_abundance=0
 size: 500
+sum hashes: 500
 signature license: CC0
 
 ---
@@ -2877,6 +2883,7 @@ source file: short.fa
 md5: 71f7c111c01785e5f38efad45b00a0e1
 k=30 molecule=DNA num=500 scaled=0 seed=42 track_abundance=0
 size: 500
+sum hashes: 500
 signature license: CC0
 
 """.splitlines()
@@ -2977,6 +2984,28 @@ k=19 molecule=hp num=0 scaled=100 seed=42 track_abundance=0
 k=19 molecule=hp num=0 scaled=100 seed=42 track_abundance=0
 k=19 molecule=protein num=0 scaled=100 seed=42 track_abundance=0
 k=19 molecule=protein num=0 scaled=100 seed=42 track_abundance=0
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+@utils.in_tempdir
+def test_sig_describe_1_sig_abund(c):
+    # check output of sig describe on a sketch with abundances
+    sigfile = utils.get_test_data('track_abund/47.fa.sig')
+    c.run_sourmash('sig', 'describe', sigfile)
+
+    out = c.last_result.out
+    print(c.last_result.out)
+
+    expected_output = """\
+signature: NC_009665.1 Shewanella baltica OS185, complete genome
+source file: podar-ref/47.fa
+md5: 09a08691ce52952152f0e866a59f6261
+k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=1
+size: 5177
+sum hashes: 5292
+signature license: CC0
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out

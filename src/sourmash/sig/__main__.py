@@ -205,6 +205,7 @@ def describe(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
     _extend_signatures_with_from_file(args)
 
     # write CSV?
@@ -230,7 +231,8 @@ def describe(args):
                                                 picklist=picklist,
                                                 progress=progress,
                                                 yield_all_files=args.force,
-                                                force=args.force)
+                                                force=args.force,
+                                                pattern=pattern_search)
 
     for sig, location in loader:
         # extract info, write as appropriate.
@@ -241,6 +243,7 @@ def describe(args):
         num = mh.num
         seed = mh.seed
         n_hashes = len(mh)
+        sum_hashes = sum(mh.hashes.values())
         with_abundance = 0
         if mh.track_abundance:
             with_abundance = 1
@@ -262,6 +265,7 @@ source file: {p_filename}
 md5: {md5}
 k={ksize} molecule={moltype} num={num} scaled={scaled} seed={seed} track_abundance={with_abundance}
 size: {n_hashes}
+sum hashes: {sum_hashes}
 signature license: {license}
 ''', **locals())
 
