@@ -328,6 +328,20 @@ class ComputeParameters(RustObject):
         self.track_abundance = track_abundance
         self.scaled = scaled
 
+    def __repr__(self):
+        return f"ComputeParameters({self.ksizes}, {self.seed}, {self.protein}, {self.dayhoff}, {self.hp}, {self.dna}, {self.num_hashes}, {self.track_abundance}, {self.scaled})"
+
+    def __eq__(self, other):
+        return (self.ksizes == other.ksizes and
+                self.seed == other.seed and
+                self.protein == other.protein and
+                self.dayhoff == other.dayhoff and
+                self.hp == other.hp and
+                self.dna == other.dna and
+                self.num_hashes == other.num_hashes and
+                self.track_abundance == other.track_abundance and
+                self.scaled == other.scaled)
+
     @staticmethod
     def from_args(args):
         ptr = lib.computeparams_new()
