@@ -72,6 +72,11 @@ def test_empty_factory():
         factory = _signatures_for_sketch_factory([], None)
 
 
+def test_no_default_moltype_factory_nonempty():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory(["k=31"], None)
+
+
 def test_factory_no_default_moltype_dna():
     factory = _signatures_for_sketch_factory(['dna'], None)
     params_list = list(factory.get_compute_params())
@@ -128,6 +133,66 @@ def test_factory_protein_split():
     assert params.ksizes == [30]
     params = params_list[1]
     assert params.ksizes == [27]
+
+
+def test_factory_dna_equal():
+    factory1 = _signatures_for_sketch_factory(['dna'], None)
+    params_list1 = list(factory1.get_compute_params())
+    assert len(params_list1) == 1
+    params1 = params_list1[0]
+
+    factory2 = _signatures_for_sketch_factory([], 'dna')
+    params_list2 = list(factory2.get_compute_params())
+    assert len(params_list2) == 1
+    params2 = params_list2[0]
+
+    assert params1 == params2
+    assert repr(params1) == repr(params2)
+
+
+def test_factory_protein_equal():
+    factory1 = _signatures_for_sketch_factory(['protein'], None)
+    params_list1 = list(factory1.get_compute_params())
+    assert len(params_list1) == 1
+    params1 = params_list1[0]
+
+    factory2 = _signatures_for_sketch_factory([], 'protein')
+    params_list2 = list(factory2.get_compute_params())
+    assert len(params_list2) == 1
+    params2 = params_list2[0]
+
+    assert params1 == params2
+    assert repr(params1) == repr(params2)
+
+
+def test_factory_dna_multi_ksize_eq():
+    factory1 = _signatures_for_sketch_factory(['k=21,k=31,dna'], None)
+    params_list1 = list(factory1.get_compute_params())
+    assert len(params_list1) == 1
+    params1 = params_list1[0]
+
+    factory2 = _signatures_for_sketch_factory(['k=21,k=31'], 'dna')
+    params_list2 = list(factory2.get_compute_params())
+    assert len(params_list2) == 1
+    params2 = params_list2[0]
+
+    assert params1 == params2
+    assert repr(params1) == repr(params2)
+
+
+def test_factory_protein_multi_ksize_eq():
+    factory1 = _signatures_for_sketch_factory(['k=10,k=11,protein'], None)
+    params_list1 = list(factory1.get_compute_params())
+    assert len(params_list1) == 1
+    params1 = params_list1[0]
+
+    factory2 = _signatures_for_sketch_factory(['k=10,k=11'], 'protein')
+    params_list2 = list(factory2.get_compute_params())
+    assert len(params_list2) == 1
+    params2 = params_list2[0]
+
+    assert params1 == params2
+    assert repr(params1) == repr(params2)
 
 
 def test_dna_defaults():
