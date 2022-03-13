@@ -68,7 +68,7 @@ def test_do_sourmash_sketch_check_num_bounds_more_than_maximum(runtmp):
 
 
 def test_dna_defaults():
-    factory = _signatures_for_sketch_factory([], 'dna', False)
+    factory = _signatures_for_sketch_factory([], 'dna')
     params_list = list(factory.get_compute_params())
 
     assert len(params_list) == 1
@@ -87,7 +87,7 @@ def test_dna_defaults():
 
 def test_dna_override_1():
     factory = _signatures_for_sketch_factory(['k=21,scaled=2000,abund'],
-                                             'dna', False)
+                                             'dna')
     params_list = list(factory.get_compute_params())
 
     assert len(params_list) == 1
@@ -106,44 +106,41 @@ def test_dna_override_1():
 
 def test_scaled_param_requires_equal():
     with pytest.raises(ValueError):
-        factory = _signatures_for_sketch_factory(['k=21,scaled'],
-                                                 'dna', False)
+        factory = _signatures_for_sketch_factory(['k=21,scaled'], 'dna')
 
 
 def test_k_param_requires_equal():
     with pytest.raises(ValueError):
-        factory = _signatures_for_sketch_factory(['k'],
-                                                 'dna', False)
+        factory = _signatures_for_sketch_factory(['k'], 'dna')
 
 
 def test_k_param_requires_equal_2():
     with pytest.raises(ValueError) as exc:
-        factory = _signatures_for_sketch_factory(['k='],
-                                                 'dna', False)
+        factory = _signatures_for_sketch_factory(['k='], 'dna')
+
 
 def test_seed_param_requires_equal():
     with pytest.raises(ValueError) as exc:
-        factory = _signatures_for_sketch_factory(['seed='],
-                                                 'dna', False)
+        factory = _signatures_for_sketch_factory(['seed='], 'dna')
+
 
 def test_num_param_requires_equal():
     with pytest.raises(ValueError) as exc:
-        factory = _signatures_for_sketch_factory(['num='],
-                                                 'dna', False)
+        factory = _signatures_for_sketch_factory(['num='], 'dna')
+
 
 def test_dna_override_bad_1():
     with pytest.raises(ValueError):
         factory = _signatures_for_sketch_factory(['k=21,scaledFOO=2000,abund'],
-                                                 'dna', False)
+                                                 'dna')
 
 
 def test_dna_override_bad_2():
     with pytest.raises(ValueError):
-        factory = _signatures_for_sketch_factory(['k=21,protein'],
-                                                 'dna', False)
+        factory = _signatures_for_sketch_factory(['k=21,protein'], 'dna')
 
 def test_protein_defaults():
-    factory = _signatures_for_sketch_factory([], 'protein', True)
+    factory = _signatures_for_sketch_factory([], 'protein')
     params_list = list(factory.get_compute_params())
 
     assert len(params_list) == 1
@@ -162,12 +159,11 @@ def test_protein_defaults():
 
 def test_protein_override_bad_2():
     with pytest.raises(ValueError):
-        factory = _signatures_for_sketch_factory(['k=21,dna'],
-                                                 'protein', False)
+        factory = _signatures_for_sketch_factory(['k=21,dna'], 'protein')
 
 def test_protein_override_bad_rust_foo():
     # mimic 'sourmash sketch protein -p dna'
-    factory = _signatures_for_sketch_factory([], 'protein', False)
+    factory = _signatures_for_sketch_factory([], 'protein')
 
     # reach in and avoid error checking to construct a bad params_list.
     factory.params_list = [('dna', {})]
@@ -188,7 +184,7 @@ def test_protein_override_bad_rust_foo():
 
 
 def test_dayhoff_defaults():
-    factory = _signatures_for_sketch_factory([], 'dayhoff', True)
+    factory = _signatures_for_sketch_factory([], 'dayhoff')
     params_list = list(factory.get_compute_params())
 
     assert len(params_list) == 1
@@ -207,11 +203,10 @@ def test_dayhoff_defaults():
 
 def test_dayhoff_override_bad_2():
     with pytest.raises(ValueError):
-        factory = _signatures_for_sketch_factory(['k=21,dna'],
-                                                 'dayhoff', False)
+        factory = _signatures_for_sketch_factory(['k=21,dna'], 'dayhoff')
 
 def test_hp_defaults():
-    factory = _signatures_for_sketch_factory([], 'hp', True)
+    factory = _signatures_for_sketch_factory([], 'hp')
     params_list = list(factory.get_compute_params())
 
     assert len(params_list) == 1
@@ -230,8 +225,7 @@ def test_hp_defaults():
 
 def test_hp_override_bad_2():
     with pytest.raises(ValueError):
-        factory = _signatures_for_sketch_factory(['k=21,dna'],
-                                                 'hp', False)
+        factory = _signatures_for_sketch_factory(['k=21,dna'], 'hp')
 
 
 def test_multiple_moltypes():
@@ -239,7 +233,7 @@ def test_multiple_moltypes():
                   'k=19,num=400,dayhoff,abund',
                   'k=30,scaled=200,hp',
                   'k=30,scaled=200,seed=58']
-    factory = _signatures_for_sketch_factory(params_foo, 'protein', True)
+    factory = _signatures_for_sketch_factory(params_foo, 'protein')
     params_list = list(factory.get_compute_params())
 
     assert len(params_list) == 4
