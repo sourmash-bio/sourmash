@@ -67,6 +67,69 @@ def test_do_sourmash_sketch_check_num_bounds_more_than_maximum(runtmp):
     assert "WARNING: num value should be <= 50000. Continuing anyway." in runtmp.last_result.err
 
 
+def test_empty_factory():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory([], None)
+
+
+def test_factory_no_default_moltype_dna():
+    factory = _signatures_for_sketch_factory(['dna'], None)
+    params_list = list(factory.get_compute_params())
+    assert len(params_list) == 1
+
+    params = params_list[0]
+    assert params.dna
+
+
+def test_factory_no_default_moltype_protein():
+    factory = _signatures_for_sketch_factory(['protein'], None)
+    params_list = list(factory.get_compute_params())
+    assert len(params_list) == 1
+
+    params = params_list[0]
+    assert params.protein
+
+
+def test_factory_dna_nosplit():
+    factory = _signatures_for_sketch_factory(['k=31,k=51'], 'dna')
+    params_list = list(factory.get_compute_params(split_ksizes=False))
+    assert len(params_list) == 1
+
+    params = params_list[0]
+    assert params.ksizes == [31,51]
+
+
+def test_factory_dna_split():
+    factory = _signatures_for_sketch_factory(['k=31,k=51'], 'dna')
+    params_list = list(factory.get_compute_params(split_ksizes=True))
+    assert len(params_list) == 2
+
+    params = params_list[0]
+    assert params.ksizes == [31]
+    params = params_list[1]
+    assert params.ksizes == [51]
+
+
+def test_factory_protein_nosplit():
+    factory = _signatures_for_sketch_factory(['k=10,k=9'], 'protein')
+    params_list = list(factory.get_compute_params(split_ksizes=False))
+    assert len(params_list) == 1
+
+    params = params_list[0]
+    assert params.ksizes == [30, 27]
+
+
+def test_factory_protein_split():
+    factory = _signatures_for_sketch_factory(['k=10,k=9'], 'protein')
+    params_list = list(factory.get_compute_params(split_ksizes=True))
+    assert len(params_list) == 2
+
+    params = params_list[0]
+    assert params.ksizes == [30]
+    params = params_list[1]
+    assert params.ksizes == [27]
+
+
 def test_dna_defaults():
     factory = _signatures_for_sketch_factory([], 'dna')
     params_list = list(factory.get_compute_params())
