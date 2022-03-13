@@ -69,7 +69,54 @@ def sequence_len_to_n_kmers(sequence_len_bp, ksize):
     return n_kmers
 
 
-def containment_to_distance(containment, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None, confidence=0.95, return_identity=False):
+def distance_to_identity(dist,d_low=None,d_high=None):
+    """
+    ANI = 1-distance
+    """
+    if not 0 <= dist <= 1:
+        raise ValueError(f"Error: distance value {dist} is not between 0 and 1!")
+    ident = 1-dist
+    result = ident
+    id_low,id_high=None,None
+    if d_low is not None and d_high is not None:
+        if (0<=d_low<=1) and (0<=d_high<=1):
+            id_high = 1-d_low
+            id_low = 1-d_high
+            result = [ident, id_low, id_high]
+    return result
+
+
+def get_expected_log_probability(n_unique_kmers, ksize, mutation_rate, scaled_fraction):
+    '''helper function
+    '''
+    exp_nmut = exp_n_mutated(n_unique_kmers, ksize, mutation_rate)
+    try:
+        return (n_unique_kmers - exp_nmut) * log(1.0 - scaled_fraction)
+    except:
+        return float('-inf')
+
+
+def get_exp_probability_nothing_common(mutation_rate, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None):
+    """
+    Given parameters, calculate the expected probability that nothing will be common
+    between a fracminhash sketch of a original sequence and a fracminhash sketch of a mutated
+    sequence. If this is above a threshold, we should suspect that the two sketches may have
+    nothing in common. The threshold needs to be set with proper insights.
+
+    Arguments: n_unique_kmers, ksize, mutation_rate, scaled
+    Returns: float - expected likelihood that nothing is common between sketches
+    """
+    # NTP note: do we have any checks for ksize >=1 in sourmash_args? The rest should be taken care of.
+    # assert 0.0 <= mutation_rate <= 1.0 and ksize >= 1 and scaled >= 1
+    if sequence_len_bp and not n_unique_kmers:
+        n_unique_kmers = sequence_len_to_n_kmers(sequence_len_bp, ksize)
+    sc = 1.0 / float(scaled)
+    if mutation_rate == 1.0:
+        return 1.0
+    return exp( get_expected_log_probability(n_unique_kmers, ksize, mutation_rate, sc) )
+
+
+def containment_to_distance(containment, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None, confidence=0.95, return_identity=False, prob_threshold = 10.0**(-3)):
     """
     Containment --> distance CI (one step)
     """
@@ -105,8 +152,16 @@ def containment_to_distance(containment, ksize, scaled, n_unique_kmers=None, seq
             notify("WARNING: Cannot estimate ANI. Are your minhashes big enough?")
             notify(str(exc))
             return None, None, None
+
+     # get probability nothing in common
+    prob_nothing_in_common = get_exp_probability_nothing_common(point_estimate, ksize, scaled, n_unique_kmers=n_unique_kmers)
+    if prob_nothing_in_common >= prob_threshold:
+        # how to store /report this information? Do we want a column for search/prefetch/gather? or throw ValueError?
+        notify('WARNING: These sketches may have no hashes in common based on chance alone.')
+       
     if return_identity:
         point_estimate,sol2,sol1 = distance_to_identity(point_estimate,sol2,sol1)
+
     return point_estimate,sol2,sol1
 
 
@@ -162,25 +217,9 @@ def jaccard_to_distance(jaccard, ksize, scaled, n_unique_kmers=None, sequence_le
     return point_estimate,sol2,sol1
 
 
-def distance_to_identity(dist,d_low=None,d_high=None):
+def jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None, return_identity=False, prob_threshold = 10.0**(-3)):
     """
-    ANI = 1-distance
-    """
-    if not 0 <= dist <= 1:
-        raise ValueError(f"Error: distance value {dist} is not between 0 and 1!")
-    ident = 1-dist
-    result = ident
-    id_low,id_high=None,None
-    if d_low is not None and d_high is not None:
-        if (0<=d_low<=1) and (0<=d_high<=1):
-            id_high = 1-d_low
-            id_low = 1-d_high
-            result = [ident, id_low, id_high]
-    return result
-
-
-def jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None, return_identity=False):
-    """Given parameters, calculate point estimate for mutation rate from jaccard index.
+    Given parameters, calculate point estimate for mutation rate from jaccard index.
     First checks if parameters are valid (checks are not exhaustive). Then uses formulas
     derived mathematically to compute the point estimate. The formula uses approximations,
     therefore a tiny error is associated with it. A lower bound of that error is also returned.
@@ -191,8 +230,13 @@ def jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers=No
     something like mut.rate +/- error.
 
     Arguments: jaccard, ksize, scaled, n_unique_kmers
-    Returns: tuple (point_estimate_of_mutation_rate, lower_bound_of_error)
+    # Returns: tuple (point_estimate_of_mutation_rate, lower_bound_of_error)
+
+    # Returns: point_estimate_of_mutation_rate
     """
+    # NTP question: does this equation consider variance of jaccard due to scaled? 
+    #Or was that only used for estimating the CI around the pt estimate?
+    error_lower_bound = None
     if sequence_len_bp and not n_unique_kmers:
         n_unique_kmers = sequence_len_to_n_kmers(sequence_len_bp, ksize)
     if jaccard <= 0.0001:
@@ -205,62 +249,21 @@ def jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers=No
         exp_n_mut = exp_n_mutated(n_unique_kmers, ksize, point_estimate)
         var_n_mut = var_n_mutated(n_unique_kmers, ksize, point_estimate)
         error_lower_bound = 1.0 * n_unique_kmers * var_n_mut / (n_unique_kmers + exp_n_mut)**3
+    
+    if error_lower_bound is not None and error_lower_bound > 10.0**(-4.0):
+        print(f"err: ({error_lower_bound})")
+        notify(f"WARNING: Error on Jaccard distance point estimate is too high ({error_lower_bound}).")
+        notify(f"Returning 'NA' for this comparison and continuing.")
+        point_estimate = "NA"
+    
+    # get probability nothing in common
+    prob_nothing_in_common = get_exp_probability_nothing_common(point_estimate, ksize, scaled, n_unique_kmers=n_unique_kmers)
+    if prob_nothing_in_common >= prob_threshold:
+        # how to store this information? Do we want a col in search/prefetch/gather?
+        notify('WARNING: These sketches may have no hashes in common based on chance alone.')
 
     if return_identity:
         point_estimate = distance_to_identity(point_estimate)
 
     return point_estimate, error_lower_bound
 
-
-def get_expected_log_probability(L, k, p, s):
-    '''helper function
-    '''
-    exp_nmut = exp_n_mutated(L, k, p)
-    try:
-        return (L - exp_nmut) * log(1.0 - s)
-    except:
-        return float('-inf')
-
-def get_exp_probability_nothing_common(n_unique_kmers, ksize, mutation_rate, scaled):
-    '''Given parameters, calculate the expected probability that nothing will be common
-    between a fracminhash sketch of a original sequence and a fracminhash sketch of a mutated
-    sequence. If this is above a threshold, we should suspect that the two sketches may have
-    nothing in common. The threshold needs to be set with proper insights.
-
-    Arguments: n_unique_kmers, ksize, mutation_rate, scaled
-    Returns: float - expected likelihood that nothing is common between sketches
-    '''
-    assert 0.0 <= mutation_rate <= 1.0 and ksize >= 1 and scaled >= 1
-    L = n_unique_kmers
-    k = ksize
-    p = mutation_rate
-    s = 1.0 / float(scaled)
-    if p == 1.0:
-        return 1.0
-    return exp( get_expected_log_probability(L, k, p, s) )
-
-
-if __name__ == '__main__':
-    jaccard = 0.9
-    ksize = 21
-    scaled = 10
-    n_unique_kmers = 100000
-
-    # jaccard_to_distance_point_estimate usage
-    mut_rate, err = jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers)
-    print('Point estimate is: ' + str(mut_rate))
-    if err > 10.0**(-4.0):
-        print('Cannot trust this point estimate!')
-
-    # get_exp_probability_nothing_common usage
-    ksize = 21
-    scaled = 1000
-    n_unique_kmers = 10000000
-    mutation_rate = 0.3
-    threshold = 10.0**(-3)
-
-    exp_probability_no_common = get_exp_probability_nothing_common(n_unique_kmers,
-                                            ksize, mutation_rate, scaled)
-    print(exp_probability_no_common)
-    if (exp_probability_no_common >= threshold):
-        print('There could be cases where nothing common between sketches may happen!')

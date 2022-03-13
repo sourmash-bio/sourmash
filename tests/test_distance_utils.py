@@ -3,26 +3,34 @@ Tests for distance utils.
 """
 
 import pytest
-from sourmash.distance_utils import containment_to_distance, jaccard_to_distance, distance_to_identity, sequence_len_to_n_kmers
+from sourmash.distance_utils import containment_to_distance, jaccard_to_distance, distance_to_identity, sequence_len_to_n_kmers, jaccard_to_distance_point_estimate
 
 def test_distance_to_identity():
-    id,id_low,id_high = distance_to_identity(0.5,0.4,0.6)
-    assert id == 0.5
+    ident,id_low,id_high = distance_to_identity(0.5,0.4,0.6)
+    assert ident == 0.5
     assert id_low == 0.4
     assert id_high ==0.6
 
 
 def test_distance_to_identity_just_point_estimate():
-    id = distance_to_identity(0.4)
-    assert id == 0.6
+    ident = distance_to_identity(0.4)
+    assert ident == 0.6
+
+
+def test_distance_to_identity_just_point_estimate_extra_input():
+    """
+    Ignore 2nd input, unless put both dist_low and dist_high
+    """
+    ident = distance_to_identity(0.4,0.5)
+    assert ident == 0.6
     
 
 def test_distance_to_identity_fail():
     with pytest.raises(Exception) as exc:
-        id,id_low,id_high = distance_to_identity(1.1,0.4,0.6)
+        ident,id_low,id_high = distance_to_identity(1.1,0.4,0.6)
     assert "distance value 1.1 is not between 0 and 1!" in str(exc.value)
     with pytest.raises(Exception) as exc:
-        id,id_low,id_high = distance_to_identity(-0.1,0.4,0.6)
+        ident,id_low,id_high = distance_to_identity(-0.1,0.4,0.6)
     assert "distance value -0.1 is not between 0 and 1!" in str(exc.value)
 
 
@@ -333,3 +341,30 @@ def test_nkmers_to_bp():
     assert kmer_cdist == (0.07158545548052564, 0.04802880300938562, 0.09619930040790341)
     assert bp_cdist == (0.07158545548052564, 0.04802880300938562, 0.09619930040790341)
     assert kmer_cdist==bp_cdist
+
+
+def test_jaccard_to_distance_point_estimate():
+    jaccard = 0.9
+    ksize = 21
+    scaled = 10
+    n_unique_kmers = 100000
+    # jaccard_to_distance_point_estimate usage
+    print(n_unique_kmers)
+    mut_rate, err = jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers)
+    print('Point estimate is: ' + str(mut_rate))
+    print('Error is: ' + str(err))
+#    if err > 10.0**(-4.0):
+#        print('Cannot trust this point estimate!')
+
+#    # get_exp_probability_nothing_common usage
+#    ksize = 21
+#    scaled = 1000
+#    n_unique_kmers = 10000000
+#    mutation_rate = 0.3
+#    threshold = 10.0**(-3)
+
+#    exp_probability_no_common = get_exp_probability_nothing_common(n_unique_kmers,
+#                                            ksize, mutation_rate, scaled)
+#    print(exp_probability_no_common)
+#    if (exp_probability_no_common >= threshold):
+#        print('There could be cases where nothing common between sketches may happen!')
