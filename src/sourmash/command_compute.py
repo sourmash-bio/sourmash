@@ -328,6 +328,30 @@ class ComputeParameters(RustObject):
         self.track_abundance = track_abundance
         self.scaled = scaled
 
+    def to_param_str(self):
+        x = []
+        kstr = [f"k={k}" for k in self.ksizes]
+        x.extend(kstr)
+
+        if self.seed != 42:
+            x.append(f"seed={self.seed}")
+        if self.num_hashes != 0:
+            x.append(f"num={self.num_hashes}")
+        if self.scaled != 0:
+            x.append(f"scaled={self.scaled}")
+        if self.track_abundance:
+            x.append("abund")
+        if self.dna:
+            x.append("dna")
+        if self.protein:
+            x.append("protein")
+        if self.hp:
+            x.append("hp")
+        if self.dayhoff:
+            x.append("dayhoff")
+
+        return ",".join(x)
+
     def __repr__(self):
         return f"ComputeParameters({self.ksizes}, {self.seed}, {self.protein}, {self.dayhoff}, {self.hp}, {self.dna}, {self.num_hashes}, {self.track_abundance}, {self.scaled})"
 
