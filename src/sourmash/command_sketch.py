@@ -457,7 +457,7 @@ def fromfile(args):
 
                 assert is_dna is not None
                 sketchtype = "dna" if is_dna else "protein"
-                print(f"sourmash sketch {sketchtype} {filename} --name {shlex.quote(name)} -o XXX_{output_n}.zip")
+                print(f"sourmash sketch {sketchtype} {filename} --name {shlex.quote(name)} -o XXX_{output_n}.zip -p {'-p '.join(param_strs)}")
                 output_n += 1
 
 
