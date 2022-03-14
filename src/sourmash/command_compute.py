@@ -339,7 +339,7 @@ class ComputeParameters(RustObject):
         elif row['moltype'] == 'hp':
             is_hp = True
         elif row['moltype'] == 'dayhoff':
-            is_hp = True
+            is_dayhoff = True
         else:
             assert 0
 
