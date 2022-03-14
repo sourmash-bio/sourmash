@@ -5,6 +5,7 @@ import sys
 import os
 from collections import defaultdict
 import csv
+import shlex
 
 import screed
 
@@ -457,7 +458,31 @@ def fromfile(args):
                     n_skipped += 1
 
     if to_build:
-        notify(f"** Building {total - n_skipped} sketches for {len(to_build)} files")
-        _compute_sigs(to_build, args.output)
+        if 0:                   # actually compute
+            notify(f"** Building {total - n_skipped} sketches for {len(to_build)} files")
+            _compute_sigs(to_build, args.output)
+        elif 1:                 # output sourmash commands
+            output_n = 0
+            for (name, filename), param_objs in to_build.items():
+                param_strs = []
+                is_dna = None
+                for p in param_objs:
+                    # support straight up sourmash command output,
+                    # and also CSV output
+                    if p.dna:
+                        assert is_dna != False
+                        is_dna = True
+                        #print('DNA', name, filename, p.to_param_str())
+                    else:
+                        is_dna = False
+                        assert is_dna != True
+                        #print('protein', name, filename, p.to_param_str())
+                    param_strs.append(p.to_param_str())
+
+                assert is_dna is not None
+                sketchtype = "dna" if is_dna else "protein"
+                print(f"sourmash sketch {sketchtype} {filename} --name {shlex.quote(name)} -o XXX_{output_n}.zip")
+                output_n += 1
+
 
     notify(f"** Of {total} total requested in cross-product, skipped {n_skipped}, built {total - n_skipped})")
