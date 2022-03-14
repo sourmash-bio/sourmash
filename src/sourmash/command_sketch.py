@@ -9,6 +9,7 @@ import shlex
 
 import screed
 
+import sourmash
 from .signature import SourmashSignature
 from .logging import notify, error, set_quiet
 from .command_compute import (_compute_individual, _compute_merged,
@@ -298,31 +299,6 @@ def translate(args):
     _execute_sketch(args, signatures_factory)
 
 
-def _manifest_row_to_compute_param_obj(row):
-    "convert a row from a manifest into a ComputeParameters object"
-    is_dna = is_protein = is_dayhoff = is_hp = False
-    if row['moltype'] == 'DNA':
-        is_dna = True
-    elif row['moltype'] == 'protein':
-        is_protein = True
-    elif row['moltype'] == 'hp':
-        is_hp = True
-    elif row['moltype'] == 'dayhoff':
-        is_hp = True
-    else:
-        assert 0
-
-    if is_dna:
-        ksize = row['ksize']
-    else:
-        ksize = row['ksize'] * 3
-
-    p = ComputeParameters([ksize], 42, is_protein, is_dayhoff, is_hp, is_dna,
-                          row['num'], row['with_abundance'], row['scaled'])
-
-    return p
-
-
 def _compute_sigs(to_build, output, *, check_sequence=False):
     "actually build the signatures in 'to_build' and output them to 'output'"
     save_sigs = sourmash_args.SaveSignaturesToLocation(output)
@@ -401,7 +377,7 @@ def fromfile(args):
                 continue
 
             # build a ComputeParameters object for later comparison
-            p = _manifest_row_to_compute_param_obj(row)
+            p = ComputeParameters.from_manifest_row(row)
 
             # add to list for this name
             already_done[name].append(p)
