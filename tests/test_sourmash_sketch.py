@@ -411,6 +411,28 @@ def test_multiple_moltypes():
     assert params.protein
 
 
+@pytest.mark.parametrize("input_param_str, expected_output",
+                         [('protein', 'protein,k=10,scaled=200'),
+                          ('dna', 'dna,k=31,scaled=1000'),
+                          ('hp', 'hp,k=42,scaled=200'),
+                          ('dayhoff', 'dayhoff,k=16,scaled=200'),
+                          ('dna,seed=52', 'dna,k=31,scaled=1000,seed=52'),
+                          ('dna,num=500', 'dna,k=31,num=500'),
+                          ('scaled=1100,dna', 'dna,k=31,scaled=1100'),
+                          ('dna,abund', 'dna,k=31,scaled=1000,abund')
+                         ])
+def test_compute_parameters_to_param_str(input_param_str, expected_output):
+    factory = _signatures_for_sketch_factory([input_param_str], None)
+    params_list = list(factory.get_compute_params())
+    assert len(params_list) == 1
+    params = params_list[0]
+
+    actual_output_str = params.to_param_str()
+
+    assert actual_output_str == expected_output, (actual_output_str,
+                                                  expected_output)
+
+
 ### command line tests
 
 

@@ -329,28 +329,44 @@ class ComputeParameters(RustObject):
         self.scaled = scaled
 
     def to_param_str(self):
-        x = []
-        kstr = [f"k={k}" for k in self.ksizes]
-        x.extend(kstr)
+        "Convert object to equivalent params str."
+        pi = []
+
+        if self.dna:
+            pi.append("dna")
+        elif self.protein:
+            pi.append("protein")
+        elif self.hp:
+            pi.append("hp")
+        elif self.dayhoff:
+            pi.append("dayhoff")
+        else:
+            assert 0            # must be one of the previous
+
+        if self.dna:
+            kstr = [f"k={k}" for k in self.ksizes]
+        else:
+            # for protein, divide ksize by three.
+            kstr = [f"k={k//3}" for k in self.ksizes]
+        assert kstr
+        pi.extend(kstr)
+
+        if self.num_hashes != 0:
+            pi.append(f"num={self.num_hashes}")
+        elif self.scaled != 0:
+            pi.append(f"scaled={self.scaled}")
+        else:
+            assert 0
+
+        if self.track_abundance:
+            pi.append("abund")
+        # noabund is default
 
         if self.seed != 42:
-            x.append(f"seed={self.seed}")
-        if self.num_hashes != 0:
-            x.append(f"num={self.num_hashes}")
-        if self.scaled != 0:
-            x.append(f"scaled={self.scaled}")
-        if self.track_abundance:
-            x.append("abund")
-        if self.dna:
-            x.append("dna")
-        if self.protein:
-            x.append("protein")
-        if self.hp:
-            x.append("hp")
-        if self.dayhoff:
-            x.append("dayhoff")
+            pi.append(f"seed={self.seed}")
+        # self.seed
 
-        return ",".join(x)
+        return ",".join(pi)
 
     def __repr__(self):
         return f"ComputeParameters({self.ksizes}, {self.seed}, {self.protein}, {self.dayhoff}, {self.hp}, {self.dna}, {self.num_hashes}, {self.track_abundance}, {self.scaled})"
