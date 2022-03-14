@@ -411,6 +411,36 @@ def test_multiple_moltypes():
     assert params.protein
 
 
+def test_compute_parameters_to_param_str_1():
+    input_param_str = 'protein'
+    expected_output_str = 'k=10,scaled=200,protein'
+
+    factory = _signatures_for_sketch_factory([input_param_str], None)
+    params_list = list(factory.get_compute_params())
+    assert len(params_list) == 1
+    params = params_list[0]
+
+    actual_output_str = params.to_param_str()
+
+    assert actual_output_str == expected_output_str, (actual_output_str,
+                                                      expected_output_str)
+
+
+def test_compute_parameters_to_param_str_2():
+    input_param_str = 'dna'
+    expected_output_str = 'k=31,scaled=1000,dna'
+
+    factory = _signatures_for_sketch_factory([input_param_str], None)
+    params_list = list(factory.get_compute_params())
+    assert len(params_list) == 1
+    params = params_list[0]
+
+    actual_output_str = params.to_param_str()
+
+    assert actual_output_str == expected_output_str, (actual_output_str,
+                                                      expected_output_str)
+
+
 ### command line tests
 
 

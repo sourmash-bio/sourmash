@@ -330,7 +330,10 @@ class ComputeParameters(RustObject):
 
     def to_param_str(self):
         x = []
-        kstr = [f"k={k}" for k in self.ksizes]
+        if self.dna:
+            kstr = [f"k={k}" for k in self.ksizes]
+        else:
+            kstr = [f"k={k//3}" for k in self.ksizes]
         x.extend(kstr)
 
         if self.seed != 42:
