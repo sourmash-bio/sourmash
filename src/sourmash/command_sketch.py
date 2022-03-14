@@ -66,14 +66,8 @@ def _parse_params_str(params_str):
             if len(item) < 6 or item[4] != '=':
                 raise ValueError("seed takes a parameter, e.g. 'seed=42'")
             params['seed'] = int(item[5:])
-        elif item == 'protein':
-            moltype = 'protein'
-        elif item == 'dayhoff':
-            moltype = 'dayhoff'
-        elif item == 'hp':
-            moltype = 'hp'
-        elif item == 'dna':
-            moltype = 'dna'
+        elif item in ('protein', 'dayhoff', 'hp', 'dna'):
+            moltype = item
         else:
             raise ValueError(f"unknown component '{item}' in params string")
 
