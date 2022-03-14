@@ -341,7 +341,7 @@ class Index(ABC):
 
 def select_signature(ss, *, ksize=None, moltype=None, scaled=0, num=0,
                      containment=False, abund=None, picklist=None):
-    "Check that the given signature matches the specificed requirements."
+    "Check that the given signature matches the specified requirements."
     # ksize match?
     if ksize and ksize != ss.minhash.ksize:
         return False

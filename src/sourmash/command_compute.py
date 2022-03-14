@@ -328,6 +328,60 @@ class ComputeParameters(RustObject):
         self.track_abundance = track_abundance
         self.scaled = scaled
 
+    def to_param_str(self):
+        "Convert object to equivalent params str."
+        pi = []
+
+        if self.dna:
+            pi.append("dna")
+        elif self.protein:
+            pi.append("protein")
+        elif self.hp:
+            pi.append("hp")
+        elif self.dayhoff:
+            pi.append("dayhoff")
+        else:
+            assert 0            # must be one of the previous
+
+        if self.dna:
+            kstr = [f"k={k}" for k in self.ksizes]
+        else:
+            # for protein, divide ksize by three.
+            kstr = [f"k={k//3}" for k in self.ksizes]
+        assert kstr
+        pi.extend(kstr)
+
+        if self.num_hashes != 0:
+            pi.append(f"num={self.num_hashes}")
+        elif self.scaled != 0:
+            pi.append(f"scaled={self.scaled}")
+        else:
+            assert 0
+
+        if self.track_abundance:
+            pi.append("abund")
+        # noabund is default
+
+        if self.seed != 42:
+            pi.append(f"seed={self.seed}")
+        # self.seed
+
+        return ",".join(pi)
+
+    def __repr__(self):
+        return f"ComputeParameters({self.ksizes}, {self.seed}, {self.protein}, {self.dayhoff}, {self.hp}, {self.dna}, {self.num_hashes}, {self.track_abundance}, {self.scaled})"
+
+    def __eq__(self, other):
+        return (self.ksizes == other.ksizes and
+                self.seed == other.seed and
+                self.protein == other.protein and
+                self.dayhoff == other.dayhoff and
+                self.hp == other.hp and
+                self.dna == other.dna and
+                self.num_hashes == other.num_hashes and
+                self.track_abundance == other.track_abundance and
+                self.scaled == other.scaled)
+
     @staticmethod
     def from_args(args):
         ptr = lib.computeparams_new()
