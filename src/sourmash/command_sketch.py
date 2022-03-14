@@ -106,13 +106,13 @@ class _signatures_for_sketch_factory(object):
                     raise ValueError(f"Incompatible sketch type ({default_moltype}) and parameter override ({moltype}) in '{params_str}'")
                 elif moltype is None:
                     if default_moltype is None:
-                        raise ValueError(f"No default moltype and none specificed in param string")
+                        raise ValueError(f"No default moltype and none specified in param string")
                     moltype = default_moltype
 
                 self.params_list.append((moltype, params))
         else:
             if default_moltype is None:
-                raise ValueError(f"No default moltype and none specificed in param string")
+                raise ValueError(f"No default moltype and none specified in param string")
             # no params str? default to a single sig, using default_moltype.
             self.params_list.append((default_moltype, {}))
 
