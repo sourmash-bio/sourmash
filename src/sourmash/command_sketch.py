@@ -345,9 +345,9 @@ def fromfile(args):
     # TODO:
     # check license
     # check-sequence
-    if os.path.exists(args.output):
+    if args.output_signatures and os.path.exists(args.output_signatures):
         if not args.force_output_already_exists:
-            error(f"** ERROR: output location '{args.output}' already exists!")
+            error(f"** ERROR: output location '{args.output_signatures}' already exists!")
             error(f"** Not overwriting/appending.")
             error(f"** Use --force-output-already-exists if you want to overwrite/append.")
             sys.exit(-1)
@@ -428,10 +428,12 @@ def fromfile(args):
                     n_skipped += 1
 
     if to_build:
-        if 0:                   # actually compute
+        if args.output_signatures:                   # actually compute
             notify(f"** Building {total - n_skipped} sketches for {len(to_build)} files")
-            _compute_sigs(to_build, args.output)
-        elif 1:                 # output sourmash commands
+            _compute_sigs(to_build, args.output_signatures)
+
+
+        elif 0:                 # output sourmash commands
             output_n = 0
             for (name, filename), param_objs in to_build.items():
                 param_strs = []
@@ -455,4 +457,4 @@ def fromfile(args):
                 output_n += 1
 
 
-    notify(f"** Of {total} total requested in cross-product, skipped {n_skipped}, built {total - n_skipped})")
+    notify(f"** {total} total requested; built {total - n_skipped}), skipped {n_skipped}")

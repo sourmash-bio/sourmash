@@ -42,9 +42,8 @@ def subparser(subparsers):
     )
     file_args = subparser.add_argument_group('File handling options')
     file_args.add_argument(
-        '-o', '--output',
+        '-o', '--output-signatures',
         help='output computed signatures to this file',
-        required=True
     )
 
 

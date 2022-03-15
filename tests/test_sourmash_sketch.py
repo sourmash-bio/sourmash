@@ -1479,13 +1479,60 @@ def test_dayhoff_with_stop_codons(runtmp):
     assert h_mh2.contained_by(h_mh1) < 1
 
 
-def test_fromfile(runtmp):
+def test_fromfile_dna(runtmp):
+    # does it run? yes, hopefully.
     test_inp = utils.get_test_data('sketch_fromfile')
     shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
 
-    runtmp.sourmash('sketch', 'fromfile',
-                    'sketch_fromfile/salmonella.csv', '-o', 'out.zip',
-                    '-p', 'dna')
+    runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                    '-o', 'out.zip', '-p', 'dna')
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
+
+    assert os.path.exists(runtmp.output('out.zip'))
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    siglist = list(idx.signatures())
+
+    assert len(siglist) == 1
+    ss = siglist[0]
+    assert ss.name == 'GCA_903797575 Salmonella enterica'
+    assert ss.minhash.moltype == 'DNA'
+
+
+def test_fromfile_dna_and_protein(runtmp):
+    # does it run and produce DNA _and_ protein signatures?
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                    '-o', 'out.zip', '-p', 'dna', '-p', 'protein')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(runtmp.output('out.zip'))
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    siglist = list(idx.signatures())
+
+    assert len(siglist) == 2
+
+    prot_sig = [ ss for ss in siglist if ss.minhash.moltype == 'protein' ]
+    assert len(prot_sig) == 1
+    prot_sig = prot_sig[0]
+    assert prot_sig.name == 'GCA_903797575 Salmonella enterica'
+
+    dna_sig = [ ss for ss in siglist if ss.minhash.moltype == 'DNA' ]
+    assert len(dna_sig) == 1
+    dna_sig = dna_sig[0]
+    assert dna_sig.name == 'GCA_903797575 Salmonella enterica'
+
+
+def test_fromfile_need_params(runtmp):
+    # check that we need a -p
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                        '-o', 'out.zip')
