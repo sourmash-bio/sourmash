@@ -56,13 +56,17 @@ def subparser(subparsers):
         '-o', '--output-signatures',
         help='output computed signatures to this file',
     )
-    subparser.add_argument(
+    file_args.add_argument(
         '--force-output-already-exists', action='store_true',
         help='overwrite/append to --output-signatures location'
     )
     file_args.add_argument(
         '--output-commands',
         help='output sourmash commands that can be used to generate signatures'
+    )
+    file_args.add_argument(
+        '--output-csv-info',
+        help='output information about what signatures need to be generated'
     )
 
 

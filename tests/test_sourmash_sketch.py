@@ -1557,3 +1557,41 @@ def test_fromfile_dna_output_commands(runtmp):
 
     assert "sourmash sketch dna sketch_fromfile/GCA_903797575.1_PARATYPHIC668_genomic.fna.gz --name 'GCA_903797575 Salmonella enterica' -o XXX_0.zip -p dna,k=31,scaled=1000" in runtmp.last_result.out
     assert "** 1 total requested; built 1, skipped 0" in runtmp.last_result.err
+
+
+def test_fromfile_dna_and_protein_csv_output(runtmp):
+    # does it run and produce DNA _and_ protein signatures?
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                    '--output-csv', 'out.csv', '-p', 'dna', '-p', 'protein')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(runtmp.output('out.csv'))
+
+    with open(runtmp.output('out.csv'), newline='') as fp:
+        r = csv.DictReader(fp)
+        # filename,sketchtype,output_index,name,param_strs
+
+        x = []
+        for row in r:
+            x.append(row)
+
+        x.sort(key=lambda x: x['filename'])
+
+        assert len(x) == 2
+        assert x[0]['sketchtype'] == 'dna'
+        assert x[0]['param_strs'] == '-p dna,k=31,scaled=1000'
+        assert x[0]['filename'] == 'sketch_fromfile/GCA_903797575.1_PARATYPHIC668_genomic.fna.gz'
+
+        assert x[1]['sketchtype'] == 'protein'
+        assert x[1]['param_strs'] == '-p protein,k=10,scaled=200'
+        assert x[1]['filename'] == 'sketch_fromfile/GCA_903797575.1_PARATYPHIC668_protein.faa.gz'
+
+        # same name...
+        assert x[0]['name'] == x[1]['name'] == "GCA_903797575 Salmonella enterica"
+        # ...different output index.
+        assert x[1]['output_index'] != x[0]['output_index']
