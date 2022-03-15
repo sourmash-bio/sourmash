@@ -1479,6 +1479,9 @@ def test_dayhoff_with_stop_codons(runtmp):
     assert h_mh2.contained_by(h_mh1) < 1
 
 
+### test sourmash sketch fromfile
+
+
 def test_fromfile_dna(runtmp):
     # does it run? yes, hopefully.
     test_inp = utils.get_test_data('sketch_fromfile')
@@ -1498,6 +1501,7 @@ def test_fromfile_dna(runtmp):
     ss = siglist[0]
     assert ss.name == 'GCA_903797575 Salmonella enterica'
     assert ss.minhash.moltype == 'DNA'
+    assert "** 1 total requested; built 1, skipped 0" in runtmp.last_result.err
 
 
 def test_fromfile_dna_and_protein(runtmp):
@@ -1527,6 +1531,8 @@ def test_fromfile_dna_and_protein(runtmp):
     dna_sig = dna_sig[0]
     assert dna_sig.name == 'GCA_903797575 Salmonella enterica'
 
+    assert "** 2 total requested; built 2, skipped 0" in runtmp.last_result.err
+
 
 def test_fromfile_need_params(runtmp):
     # check that we need a -p
@@ -1536,3 +1542,18 @@ def test_fromfile_need_params(runtmp):
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
                         '-o', 'out.zip')
+
+
+def test_fromfile_dna_output_commands(runtmp):
+    # does it run? yes, hopefully.
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                    '--output-commands', '-', '-p', 'dna')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "sourmash sketch dna sketch_fromfile/GCA_903797575.1_PARATYPHIC668_genomic.fna.gz --name 'GCA_903797575 Salmonella enterica' -o XXX_0.zip -p dna,k=31,scaled=1000" in runtmp.last_result.out
+    assert "** 1 total requested; built 1, skipped 0" in runtmp.last_result.err

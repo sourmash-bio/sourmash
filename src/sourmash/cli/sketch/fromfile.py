@@ -60,6 +60,10 @@ def subparser(subparsers):
         '--force-output-already-exists', action='store_true',
         help='overwrite/append to --output-signatures location'
     )
+    file_args.add_argument(
+        '--output-commands',
+        help='output sourmash commands that can be used to generate signatures'
+    )
 
 
 def main(args):

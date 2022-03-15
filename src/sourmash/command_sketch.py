@@ -345,6 +345,10 @@ def fromfile(args):
     # TODO:
     # check license
     # check-sequence
+    if args.output_signatures and args.output_commands:
+        error(f"** ERROR: --output-signatures and --output-commands cannot both be specified")
+        sys.exit(-1)
+
     if args.output_signatures and os.path.exists(args.output_signatures):
         if not args.force_output_already_exists:
             error(f"** ERROR: output location '{args.output_signatures}' already exists!")
@@ -376,7 +380,8 @@ def fromfile(args):
             # add to list for this name
             already_done[name].append(p)
 
-    notify(f"Loaded {len(already_done)} pre-existing names from manifest(s)")
+    if args.already_done:
+        notify(f"Loaded {len(already_done)} pre-existing names from manifest(s)")
 
     # now, create the set of desired sketch specs.
     try:
@@ -432,29 +437,37 @@ def fromfile(args):
             notify(f"** Building {total - n_skipped} sketches for {len(to_build)} files")
             _compute_sigs(to_build, args.output_signatures)
 
+        elif args.output_commands: # output sourmash commands
+            out_obj = sourmash_args.FileOutput(args.output_commands)
+            out_fp = out_obj.open()
 
-        elif 0:                 # output sourmash commands
             output_n = 0
             for (name, filename), param_objs in to_build.items():
                 param_strs = []
                 is_dna = None
+
                 for p in param_objs:
                     # support straight up sourmash command output,
                     # and also CSV output
                     if p.dna:
                         assert is_dna != False
                         is_dna = True
-                        #print('DNA', name, filename, p.to_param_str())
                     else:
                         is_dna = False
                         assert is_dna != True
-                        #print('protein', name, filename, p.to_param_str())
                     param_strs.append(p.to_param_str())
 
                 assert is_dna is not None
                 sketchtype = "dna" if is_dna else "protein"
-                print(f"sourmash sketch {sketchtype} {filename} --name {shlex.quote(name)} -o XXX_{output_n}.zip -p {'-p '.join(param_strs)}")
+
+                param_strs = "-p " + "-p ".join(param_strs)
+                name = shlex.quote(name)
+                output_loc = f"XXX_{output_n}.zip"
+
+                print(f"sourmash sketch {sketchtype} {filename} --name {name} -o {output_loc} {param_strs}", file=out_fp)
                 output_n += 1
 
+            out_obj.close()
 
-    notify(f"** {total} total requested; built {total - n_skipped}), skipped {n_skipped}")
+
+    notify(f"** {total} total requested; built {total - n_skipped}, skipped {n_skipped}")
