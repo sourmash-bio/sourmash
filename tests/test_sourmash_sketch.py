@@ -1477,3 +1477,15 @@ def test_dayhoff_with_stop_codons(runtmp):
     assert cli_mh2.contained_by(cli_mh1) < 1
     assert py_mh2.contained_by(cli_mh1) < 1
     assert h_mh2.contained_by(h_mh1) < 1
+
+
+def test_fromfile(runtmp):
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    runtmp.sourmash('sketch', 'fromfile',
+                    'sketch_fromfile/salmonella.csv', '-o', 'out.zip',
+                    '-p', 'dna')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
