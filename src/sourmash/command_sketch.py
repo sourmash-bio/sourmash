@@ -460,7 +460,7 @@ def fromfile(args):
                 assert is_dna is not None
                 sketchtype = "dna" if is_dna else "protein"
 
-                param_strs = "-p " + "-p ".join(param_strs)
+                param_strs = "-p " + " -p ".join(param_strs)
                 name = shlex.quote(name)
                 output_loc = f"XXX_{output_n}.zip"
 
@@ -499,7 +499,7 @@ def fromfile(args):
 
                 row = dict(filename=filename,
                            sketchtype=sketchtype,
-                           param_strs="-p " + "-p ".join(param_strs),
+                           param_strs="-p " + " -p ".join(param_strs),
                            name=name,
                            output_index=output_n)
 
