@@ -554,11 +554,11 @@ def subtract(args):
         error("no signatures to subtract!?")
         sys.exit(-1)
 
-    # @CTB did signatures get flattened before?
+    # build new minhash with new mins
     subtract_mh = from_sigobj.minhash.copy_and_clear().flatten()
     subtract_mh.add_many(subtract_mins)
 
-    # borrow abundances from a signature?
+    # borrow abundances from somewhere?
     if args.abundances_from:
         notify(f'loading signature from {args.abundances_from}, keeping abundances')
         abund_sig = sourmash.load_one_signature(args.abundances_from,
