@@ -1713,7 +1713,7 @@ def test_inflate():
 
 
 def test_inflate_error():
-    # test behavior of inflate function
+    # test behavior of inflate function with 'self' as an abund sketch
     scaled = _get_scaled_for_max_hash(35)
     mh = MinHash(0, 4, track_abundance=True, scaled=scaled)
     mh2 = MinHash(0, 4, track_abundance=True, scaled=scaled)
@@ -1744,6 +1744,39 @@ def test_inflate_error():
         mh = mh.inflate(mh2)
 
     assert "inflate operates on a flat MinHash and takes a MinHash object with track_abundance=True" in str(exc.value)
+
+
+def test_inflate_not_a_subset():
+    # test behavior of inflate function when 'from_mh' is not a subset.
+    scaled = _get_scaled_for_max_hash(35)
+    mh = MinHash(0, 4, track_abundance=False, scaled=scaled)
+    mh2 = MinHash(0, 4, track_abundance=True, scaled=scaled)
+    assert mh._max_hash == 35
+
+    mh.add_hash(10)
+    mh.add_hash(20)
+    mh.add_hash(30)
+
+    assert mh.hashes[10] == 1
+    assert mh.hashes[20] == 1
+    assert mh.hashes[30] == 1
+
+    mh2.add_hash(10)
+    mh2.add_hash(10)
+    mh2.add_hash(10)
+    mh2.add_hash(30)
+    mh2.add_hash(30)
+    mh2.add_hash(30)
+
+    assert mh2.hashes[10] == 3
+    assert 20 not in mh2.hashes
+    assert mh2.hashes[30] == 3
+
+    mh3 = mh.inflate(mh2)
+
+    assert mh3.hashes[10] == 3
+    assert 20 not in mh3.hashes
+    assert mh3.hashes[30] == 3
 
 
 def test_add_kmer(track_abundance):
