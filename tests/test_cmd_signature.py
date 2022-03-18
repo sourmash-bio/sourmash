@@ -604,6 +604,17 @@ def test_sig_subtract_1_abund(runtmp):
 
     assert set(actual_subtract_sig.minhash.hashes.keys()) == set(mins)
 
+    distinct_abunds = set()
+    actual_sub_hashes = actual_subtract_sig.minhash.hashes
+    sig47_hashes = test1_sig.minhash.hashes
+    for h in mins:
+        assert actual_sub_hashes[h] == sig47_hashes[h]
+        distinct_abunds.add(sig47_hashes[h])
+
+    # this is really just to make sure that we have a sketch with some
+    # abundances in it...
+    assert max(distinct_abunds) > 1
+
 
 def test_sig_subtract_1_flatten(runtmp):
     # subtract 63 from 47, with abund signatures originally and --flatten
