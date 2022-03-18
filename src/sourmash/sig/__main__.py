@@ -461,7 +461,7 @@ def intersect(args):
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
     loader = sourmash_args.load_many_signatures(args.signatures,
-                                                ksize=ksize,
+                                                ksize=args.ksize,
                                                 moltype=moltype,
                                                 picklist=picklist,
                                                 progress=progress,
@@ -480,10 +480,6 @@ def intersect(args):
                 sys.exit(-1)
 
         mins.intersection_update(sigobj.minhash.hashes)
-
-    if len(progress) < 2:
-        error("no signatures to intersect!?")
-        sys.exit(-1)
 
     # forcibly turn off track_abundance, unless --abundances-from set.
     intersect_mh = first_sig.minhash.copy_and_clear().flatten()
