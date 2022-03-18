@@ -525,6 +525,11 @@ def inflate(args):
     ksize = inflate_from_mh.ksize
     moltype = inflate_from_mh.moltype
 
+    if not inflate_from_mh.track_abundance:
+        error(f"ERROR: signature '{inflate_sig.name}' from ")
+        error(f"file '{args.signature_from}' has no abundances.")
+        sys.exit(-1)
+
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
     loader = sourmash_args.load_many_signatures(args.other_sigs,
@@ -543,7 +548,7 @@ def inflate(args):
 
             save_sigs.add(inflated_sigobj)
 
-    if len(progress) == 0:
+    if len(save_sigs) == 0:
         error("no signatures to inflate!?")
         sys.exit(-1)
 
