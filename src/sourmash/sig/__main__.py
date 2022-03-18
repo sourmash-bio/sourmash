@@ -448,7 +448,7 @@ def intersect(args):
     """
     intersect one or more signatures by taking the intersection of hashes.
 
-    This function always removes abundances.
+    This function always removes abundances unless -A specified.
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
@@ -473,7 +473,8 @@ def intersect(args):
             first_sig = sigobj
             mins = set(sigobj.minhash.hashes)
         else:
-            # check signature compatibility --
+            # check signature compatibility -- if no ksize/moltype specified
+            # 'first_sig' may be incompatible with later sigs.
             if not sigobj.minhash.is_compatible(first_sig.minhash):
                 error("incompatible minhashes; specify -k and/or molecule type.")
                 sys.exit(-1)
@@ -481,7 +482,7 @@ def intersect(args):
         mins.intersection_update(sigobj.minhash.hashes)
 
     if len(progress) == 0:
-        error("no signatures to merge!?")
+        error("no signatures to intersect!?")
         sys.exit(-1)
 
     # forcibly turn off track_abundance, unless --abundances-from set.
@@ -505,6 +506,48 @@ def intersect(args):
         sourmash.save_signatures([intersect_sigobj], fp=fp)
 
     notify(f'loaded and intersected {len(progress)} signatures')
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
+
+
+def inflate(args):
+    """
+    inflate one or more other signatures from the first.
+    """
+    set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
+
+    inflate_sig = sourmash_args.load_query_signature(args.signature_from,
+                                                     ksize=args.ksize,
+                                                     select_moltype=moltype)
+    inflate_from_mh = inflate_sig.minhash
+    ksize = inflate_from_mh.ksize
+    moltype = inflate_from_mh.moltype
+
+    # start loading!
+    progress = sourmash_args.SignatureLoadingProgress()
+    loader = sourmash_args.load_many_signatures(args.other_sigs,
+                                                ksize=ksize,
+                                                moltype=moltype,
+                                                picklist=picklist,
+                                                progress=progress,
+                                                yield_all_files=args.force,
+                                                force=args.force)
+
+    with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
+        for sigobj, sigloc in loader:
+            inflated_mh = sigobj.minhash.inflate(inflate_from_mh)
+            inflated_sigobj = sourmash.SourmashSignature(inflated_mh,
+                                                         name=sigobj.name)
+
+            save_sigs.add(inflated_sigobj)
+
+    if len(progress) == 0:
+        error("no signatures to inflate!?")
+        sys.exit(-1)
+
+    notify(f'loaded and intersected {len(save_sigs)} signatures')
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 

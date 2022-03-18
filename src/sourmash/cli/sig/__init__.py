@@ -16,6 +16,7 @@ from . import fileinfo as summarize
 from . import grep
 from . import kmers
 from . import intersect
+from . import inflate
 from . import manifest
 from . import merge
 from . import rename
