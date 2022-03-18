@@ -461,7 +461,7 @@ def intersect(args):
     # start loading!
     progress = sourmash_args.SignatureLoadingProgress()
     loader = sourmash_args.load_many_signatures(args.signatures,
-                                                ksize=args.ksize,
+                                                ksize=ksize,
                                                 moltype=moltype,
                                                 picklist=picklist,
                                                 progress=progress,
@@ -481,7 +481,7 @@ def intersect(args):
 
         mins.intersection_update(sigobj.minhash.hashes)
 
-    if len(progress) == 0:
+    if len(progress) < 2:
         error("no signatures to intersect!?")
         sys.exit(-1)
 
@@ -548,7 +548,7 @@ def inflate(args):
 
             save_sigs.add(inflated_sigobj)
 
-    if len(save_sigs) == 0:
+    if len(progress) == 0:
         error("no signatures to inflate!?")
         sys.exit(-1)
 

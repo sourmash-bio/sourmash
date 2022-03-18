@@ -667,6 +667,17 @@ def test_sig_inflate_4_picklist(runtmp):
     assert actual_inflate_sig.minhash == test_mh
 
 
+def test_sig_inflate_5_bad_moltype(runtmp):
+    # should fail when no signatures match moltype
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    prot = utils.get_test_data('prot/protein.zip')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('sig', 'inflate', sig47, prot)
+
+    assert 'no signatures to inflate' in runtmp.last_result.err
+
+
 @utils.in_tempdir
 def test_sig_subtract_1(c):
     # subtract of 63 from 47
@@ -718,6 +729,18 @@ def test_sig_subtract_1_abund(runtmp):
     # this is really just to make sure that we have a sketch with some
     # abundances in it...
     assert max(distinct_abunds) > 1
+
+
+def test_sig_subtract_1_abund_is_flat(runtmp):
+    # subtract 63 from 47, with abundances borrowed from 47
+
+    c = runtmp
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+    sig47_flat = utils.get_test_data('47.fa.sig')
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('sig', 'subtract', sig47, sig63, '-A', sig47_flat)
 
 
 def test_sig_subtract_1_flatten(runtmp):
@@ -795,6 +818,17 @@ def test_sig_subtract_4_ksize_succeed(c):
 
     c.run_sourmash('sig', 'subtract', sig47, sig2, '-k', '31')
     assert 'loaded and subtracted 1 signatures' in c.last_result.err
+
+
+def test_sig_subtract_5_bad_moltype(runtmp):
+    # should fail when no matching sigs
+    sig47 = utils.get_test_data('47.fa.sig')
+    prot = utils.get_test_data('prot/protein.zip')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('sig', 'subtract', '-k', '31', sig47, prot)
+
+    assert 'no signatures to subtract' in runtmp.last_result.err
 
 
 def test_sig_rename_1(runtmp):
