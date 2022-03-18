@@ -1775,7 +1775,7 @@ def test_inflate_not_a_subset():
     mh3 = mh.inflate(mh2)
 
     assert mh3.hashes[10] == 3
-    assert 20 not in mh3.hashes
+    assert 20 not in mh3.hashes # should intersect, in this case.
     assert mh3.hashes[30] == 3
 
 
