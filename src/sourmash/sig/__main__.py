@@ -484,7 +484,7 @@ def intersect(args):
         error("no signatures to merge!?")
         sys.exit(-1)
 
-    # @CTB did signatures get flattened before?
+    # forcibly turn off track_abundance, unless --abundances-from set.
     intersect_mh = first_sig.minhash.copy_and_clear().flatten()
     intersect_mh.add_many(mins)
 
