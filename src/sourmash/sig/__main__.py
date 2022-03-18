@@ -484,13 +484,12 @@ def intersect(args):
         error("no signatures to merge!?")
         sys.exit(-1)
 
-    # forcibly turn off track_abundance, unless --abundances-from set.
-    if not args.abundances_from:
-        intersect_mh = first_sig.minhash.copy_and_clear()
-        intersect_mh.track_abundance = False
-        intersect_mh.add_many(mins)
-        intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
-    else:
+    # @CTB did signatures get flattened before?
+    intersect_mh = first_sig.minhash.copy_and_clear().flatten()
+    intersect_mh.add_many(mins)
+
+    # borrow abundances from a signature?
+    if args.abundances_from:
         notify(f'loading signature from {args.abundances_from}, keeping abundances')
         abund_sig = sourmash.load_one_signature(args.abundances_from,
                                                 ksize=args.ksize,
@@ -498,16 +497,10 @@ def intersect(args):
         if not abund_sig.minhash.track_abundance:
             error("--track-abundance not set on loaded signature?! exiting.")
             sys.exit(-1)
-        intersect_mh = abund_sig.minhash.copy_and_clear()
-        abund_mins = abund_sig.minhash.hashes
 
-        # do one last intersection
-        mins.intersection_update(abund_mins)
-        abund_mins = { k: abund_mins[k] for k in mins }
+        intersect_mh = intersect_mh.inflate(abund_sig.minhash)
 
-        intersect_mh.set_abundances(abund_mins)
-        intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
-
+    intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
     with FileOutput(args.output, 'wt') as fp:
         sourmash.save_signatures([intersect_sigobj], fp=fp)
 
@@ -525,6 +518,9 @@ def subtract(args):
 
     from_sigfile = args.signature_from
     from_sigobj = sourmash.load_one_signature(from_sigfile, ksize=args.ksize, select_moltype=moltype)
+
+    if args.abundances_from:    # it's ok to work with abund signatures if -A.
+        args.flatten = True
 
     from_mh = from_sigobj.minhash
     if from_mh.track_abundance and not args.flatten:
@@ -558,8 +554,21 @@ def subtract(args):
         error("no signatures to subtract!?")
         sys.exit(-1)
 
-    subtract_mh = from_sigobj.minhash.copy_and_clear()
+    # @CTB did signatures get flattened before?
+    subtract_mh = from_sigobj.minhash.copy_and_clear().flatten()
     subtract_mh.add_many(subtract_mins)
+
+    # borrow abundances from a signature?
+    if args.abundances_from:
+        notify(f'loading signature from {args.abundances_from}, keeping abundances')
+        abund_sig = sourmash.load_one_signature(args.abundances_from,
+                                                ksize=args.ksize,
+                                                select_moltype=moltype)
+        if not abund_sig.minhash.track_abundance:
+            error("--track-abundance not set on loaded signature?! exiting.")
+            sys.exit(-1)
+
+        subtract_mh = subtract_mh.inflate(abund_sig.minhash)
 
     subtract_sigobj = sourmash.SourmashSignature(subtract_mh)
 

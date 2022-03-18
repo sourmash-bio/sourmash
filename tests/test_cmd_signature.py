@@ -583,6 +583,50 @@ def test_sig_subtract_1(c):
     assert set(actual_subtract_sig.minhash.hashes.keys()) == set(mins)
 
 
+def test_sig_subtract_1_abund(runtmp):
+    # subtract 63 from 47, with abundances borrowed from 47
+
+    c = runtmp
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+    c.run_sourmash('sig', 'subtract', sig47, sig63, '-A', sig47)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test1_sig = sourmash.load_one_signature(sig47)
+    test2_sig = sourmash.load_one_signature(sig63)
+    actual_subtract_sig = sourmash.load_one_signature(out)
+    assert actual_subtract_sig.minhash.track_abundance
+
+    mins = set(test1_sig.minhash.hashes.keys())
+    mins -= set(test2_sig.minhash.hashes.keys())
+
+    assert set(actual_subtract_sig.minhash.hashes.keys()) == set(mins)
+
+
+def test_sig_subtract_1_flatten(runtmp):
+    # subtract 63 from 47, with abund signatures originally and --flatten
+
+    c = runtmp
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+    c.run_sourmash('sig', 'subtract', sig47, sig63, '--flatten')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test1_sig = sourmash.load_one_signature(sig47)
+    test2_sig = sourmash.load_one_signature(sig63)
+    actual_subtract_sig = sourmash.load_one_signature(out)
+    assert not actual_subtract_sig.minhash.track_abundance
+
+    mins = set(test1_sig.minhash.hashes.keys())
+    mins -= set(test2_sig.minhash.hashes.keys())
+
+    assert set(actual_subtract_sig.minhash.hashes.keys()) == set(mins)
+
+
 @utils.in_tempdir
 def test_sig_subtract_1_multisig(c):
     # subtract of everything from 47
