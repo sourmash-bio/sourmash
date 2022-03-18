@@ -948,10 +948,7 @@ for an example use case.
 
 ## `sourmash signature` subcommands for signature manipulation
 
-These commands manipulate signatures from the command line. Currently
-supported subcommands are `merge`, `rename`, `intersect`,
-`extract`, `downsample`, `subtract`, `import`, `export`, `info`,
-`flatten`, `filter`, `cat`, and `split`.
+These commands manipulate signatures from the command line.
 
 The signature commands that combine or otherwise have multiple
 signatures interacting (`merge`, `intersect`, `subtract`) work only on
@@ -1184,10 +1181,23 @@ will output the intersection of all the hashes in those three files to
 
 The `intersect` command flattens all signatures, i.e. the abundances
 in any signatures will be ignored and the output signature will have
-`track_abundance` turned off.
+`track_abundance` turned off.  The `-A/--abundance-from` argument will
+borrow abundances from the specified signature (which will also be added
+to the intersection).
 
-Note: `intersect` only creates one output file, with one signature in it,
-in the JSON `.sig` format.
+### `sourmash signature inflate` - transfer abundances from one signature to others
+
+Use abundances from one signature to provide abundances on other signatures.
+
+For example,
+
+```
+sourmash signature inflate file1.sig file2.sig file3.sig -o inflated.sig
+```
+will take the abundances from hashes `file1.sig` and use them to set
+the abundances on matching hashes in `file2.sig` and `file3.sig`.
+Any hashes that are not present in `file1.sig` will be removed from
+`file2.sig` and `file3.sig` as they will now have zero abundance.
 
 ### `sourmash signature downsample` - decrease the size of a signature
 
