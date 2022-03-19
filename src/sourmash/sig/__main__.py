@@ -448,7 +448,7 @@ def intersect(args):
     """
     intersect one or more signatures by taking the intersection of hashes.
 
-    This function always removes abundances.
+    This function always removes abundances unless -A specified.
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
@@ -473,24 +473,20 @@ def intersect(args):
             first_sig = sigobj
             mins = set(sigobj.minhash.hashes)
         else:
-            # check signature compatibility --
+            # check signature compatibility -- if no ksize/moltype specified
+            # 'first_sig' may be incompatible with later sigs.
             if not sigobj.minhash.is_compatible(first_sig.minhash):
                 error("incompatible minhashes; specify -k and/or molecule type.")
                 sys.exit(-1)
 
         mins.intersection_update(sigobj.minhash.hashes)
 
-    if len(progress) == 0:
-        error("no signatures to merge!?")
-        sys.exit(-1)
-
     # forcibly turn off track_abundance, unless --abundances-from set.
-    if not args.abundances_from:
-        intersect_mh = first_sig.minhash.copy_and_clear()
-        intersect_mh.track_abundance = False
-        intersect_mh.add_many(mins)
-        intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
-    else:
+    intersect_mh = first_sig.minhash.copy_and_clear().flatten()
+    intersect_mh.add_many(mins)
+
+    # borrow abundances from a signature?
+    if args.abundances_from:
         notify(f'loading signature from {args.abundances_from}, keeping abundances')
         abund_sig = sourmash.load_one_signature(args.abundances_from,
                                                 ksize=args.ksize,
@@ -498,20 +494,61 @@ def intersect(args):
         if not abund_sig.minhash.track_abundance:
             error("--track-abundance not set on loaded signature?! exiting.")
             sys.exit(-1)
-        intersect_mh = abund_sig.minhash.copy_and_clear()
-        abund_mins = abund_sig.minhash.hashes
 
-        # do one last intersection
-        mins.intersection_update(abund_mins)
-        abund_mins = { k: abund_mins[k] for k in mins }
+        intersect_mh = intersect_mh.inflate(abund_sig.minhash)
 
-        intersect_mh.set_abundances(abund_mins)
-        intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
-
+    intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
     with FileOutput(args.output, 'wt') as fp:
         sourmash.save_signatures([intersect_sigobj], fp=fp)
 
     notify(f'loaded and intersected {len(progress)} signatures')
+    if picklist:
+        sourmash_args.report_picklist(args, picklist)
+
+
+def inflate(args):
+    """
+    inflate one or more other signatures from the first.
+    """
+    set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
+
+    inflate_sig = sourmash_args.load_query_signature(args.signature_from,
+                                                     ksize=args.ksize,
+                                                     select_moltype=moltype)
+    inflate_from_mh = inflate_sig.minhash
+    ksize = inflate_from_mh.ksize
+    moltype = inflate_from_mh.moltype
+
+    if not inflate_from_mh.track_abundance:
+        error(f"ERROR: signature '{inflate_sig.name}' from ")
+        error(f"file '{args.signature_from}' has no abundances.")
+        sys.exit(-1)
+
+    # start loading!
+    progress = sourmash_args.SignatureLoadingProgress()
+    loader = sourmash_args.load_many_signatures(args.other_sigs,
+                                                ksize=ksize,
+                                                moltype=moltype,
+                                                picklist=picklist,
+                                                progress=progress,
+                                                yield_all_files=args.force,
+                                                force=args.force)
+
+    with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
+        for sigobj, sigloc in loader:
+            inflated_mh = sigobj.minhash.inflate(inflate_from_mh)
+            inflated_sigobj = sourmash.SourmashSignature(inflated_mh,
+                                                         name=sigobj.name)
+
+            save_sigs.add(inflated_sigobj)
+
+    if len(progress) == 0:
+        error("no signatures to inflate!?")
+        sys.exit(-1)
+
+    notify(f'loaded and intersected {len(save_sigs)} signatures')
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
@@ -525,6 +562,9 @@ def subtract(args):
 
     from_sigfile = args.signature_from
     from_sigobj = sourmash.load_one_signature(from_sigfile, ksize=args.ksize, select_moltype=moltype)
+
+    if args.abundances_from:    # it's ok to work with abund signatures if -A.
+        args.flatten = True
 
     from_mh = from_sigobj.minhash
     if from_mh.track_abundance and not args.flatten:
@@ -558,8 +598,21 @@ def subtract(args):
         error("no signatures to subtract!?")
         sys.exit(-1)
 
-    subtract_mh = from_sigobj.minhash.copy_and_clear()
+    # build new minhash with new mins
+    subtract_mh = from_sigobj.minhash.copy_and_clear().flatten()
     subtract_mh.add_many(subtract_mins)
+
+    # borrow abundances from somewhere?
+    if args.abundances_from:
+        notify(f'loading signature from {args.abundances_from}, keeping abundances')
+        abund_sig = sourmash.load_one_signature(args.abundances_from,
+                                                ksize=args.ksize,
+                                                select_moltype=moltype)
+        if not abund_sig.minhash.track_abundance:
+            error("--track-abundance not set on loaded signature?! exiting.")
+            sys.exit(-1)
+
+        subtract_mh = subtract_mh.inflate(abund_sig.minhash)
 
     subtract_sigobj = sourmash.SourmashSignature(subtract_mh)
 
