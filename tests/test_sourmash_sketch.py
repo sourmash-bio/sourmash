@@ -433,6 +433,77 @@ def test_compute_parameters_to_param_str(input_param_str, expected_output):
                                                   expected_output)
 
 
+def test_manifest_row_to_compute_parameters_1():
+    # test ComputeParameters.from_manifest_row with moltype 'DNA'
+    row = dict(moltype='DNA',
+               ksize=21,
+               num=0, scaled=1000,
+               with_abundance=1)
+    p = ComputeParameters.from_manifest_row(row)
+    assert p.dna
+    assert not p.protein
+    assert not p.dayhoff
+    assert not p.hp
+    assert p.num_hashes == 0
+    assert p.scaled == 1000
+    assert p.ksizes == [21]
+    assert p.track_abundance
+    assert p.seed == 42
+
+
+def test_manifest_row_to_compute_parameters_2():
+    # test ComputeParameters.from_manifest_row with moltype 'protein'
+    row = dict(moltype='protein',
+               ksize=10,
+               num=0, scaled=200,
+               with_abundance=1)
+    p = ComputeParameters.from_manifest_row(row)
+    assert not p.dna
+    assert p.protein
+    assert not p.dayhoff
+    assert not p.hp
+    assert p.num_hashes == 0
+    assert p.scaled == 200
+    assert p.ksizes == [30]
+    assert p.track_abundance
+    assert p.seed == 42
+
+
+def test_manifest_row_to_compute_parameters_3():
+    # test ComputeParameters.from_manifest_row with moltype 'dayhoff'
+    row = dict(moltype='dayhoff',
+               ksize=12,
+               num=0, scaled=200,
+               with_abundance=0)
+    p = ComputeParameters.from_manifest_row(row)
+    assert not p.dna
+    assert not p.protein
+    assert p.dayhoff
+    assert not p.hp
+    assert p.num_hashes == 0
+    assert p.scaled == 200
+    assert p.ksizes == [36]
+    assert not p.track_abundance
+    assert p.seed == 42
+
+
+def test_manifest_row_to_compute_parameters_4():
+    # test ComputeParameters.from_manifest_row with moltype 'hp'
+    row = dict(moltype='hp',
+               ksize=32,
+               num=0, scaled=200,
+               with_abundance=0)
+    p = ComputeParameters.from_manifest_row(row)
+    assert not p.dna
+    assert not p.protein
+    assert not p.dayhoff
+    assert p.hp
+    assert p.num_hashes == 0
+    assert p.scaled == 200
+    assert p.ksizes == [96]
+    assert not p.track_abundance
+    assert p.seed == 42
+
 ### command line tests
 
 
