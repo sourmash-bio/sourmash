@@ -563,6 +563,121 @@ def test_sig_intersect_8_multisig(c):
     assert not len(actual_intersect_sig.minhash)
 
 
+def test_sig_inflate_1(runtmp):
+    # basic inflate test - inflate 47 flat with 47 abund
+    sig47_flat = utils.get_test_data('47.fa.sig')
+    sig47_abund = utils.get_test_data('track_abund/47.fa.sig')
+    runtmp.run_sourmash('sig', 'inflate', sig47_abund, sig47_flat)
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    actual_inflate_sig = sourmash.load_one_signature(out)
+    actual_inflate_mh = actual_inflate_sig.minhash
+
+    # should be identical to track_abund sig
+    sig47 = sourmash.load_one_signature(sig47_abund)
+    mh47 = sig47.minhash
+
+    assert actual_inflate_sig.name == sig47.name
+    assert actual_inflate_mh == mh47
+
+
+def test_sig_inflate_2(runtmp):
+    # use abundances from sig #47
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    runtmp.run_sourmash('sig', 'inflate', sig47, sig63)
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    actual_inflate_sig = sourmash.load_one_signature(out)
+
+    # actually do an inflation ourselves for the test
+    mh47 = sourmash.load_one_signature(sig47).minhash
+    mh63 = sourmash.load_one_signature(sig63).minhash
+    mh47_abunds = mh47.hashes
+    mh63_mins = set(mh63.hashes.keys())
+
+    # get the set of mins that are in common
+    mh63_mins.intersection_update(mh47_abunds)
+
+    # take abundances from mh47 & create new sig
+    mh47_abunds = { k: mh47_abunds[k] for k in mh63_mins }
+    test_mh = mh47.copy_and_clear()
+    test_mh.set_abundances(mh47_abunds)
+
+    print(actual_inflate_sig.minhash)
+    print(out)
+
+    assert actual_inflate_sig.minhash == test_mh
+
+
+def test_sig_inflate_3(runtmp):
+    # should fail on flat first sig
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('sig', 'inflate', sig63, sig47)
+
+    assert 'has no abundances' in runtmp.last_result.err
+
+
+def test_sig_inflate_4_picklist(runtmp):
+    # try out picklists
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    sig47_flat = utils.get_test_data('47.fa.sig')
+
+    ss63 = sourmash.load_one_signature(sig63, ksize=31)
+
+    picklist = _write_file(runtmp, 'pl.csv', ['md5', ss63.md5sum()])
+
+    print(ss63.md5sum())
+
+
+    runtmp.run_sourmash('sig', 'inflate', sig47, sig63, sig47_flat,
+                        '--picklist', f'pl.csv:md5:md5')
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    actual_inflate_sig = sourmash.load_one_signature(out)
+
+    # actually do an inflation ourselves for the test
+    mh47 = sourmash.load_one_signature(sig47).minhash
+    mh63 = sourmash.load_one_signature(sig63).minhash
+    mh47_abunds = mh47.hashes
+    mh63_mins = set(mh63.hashes.keys())
+
+    # get the set of mins that are in common
+    mh63_mins.intersection_update(mh47_abunds)
+
+    # take abundances from mh47 & create new sig
+    mh47_abunds = { k: mh47_abunds[k] for k in mh63_mins }
+    test_mh = mh47.copy_and_clear()
+    test_mh.set_abundances(mh47_abunds)
+
+    print(actual_inflate_sig.minhash)
+    print(out)
+
+    assert actual_inflate_sig.minhash == test_mh
+
+
+def test_sig_inflate_5_bad_moltype(runtmp):
+    # should fail when no signatures match moltype
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    prot = utils.get_test_data('prot/protein.zip')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('sig', 'inflate', sig47, prot)
+
+    assert 'no signatures to inflate' in runtmp.last_result.err
+
+
 @utils.in_tempdir
 def test_sig_subtract_1(c):
     # subtract of 63 from 47
@@ -576,6 +691,73 @@ def test_sig_subtract_1(c):
     test1_sig = sourmash.load_one_signature(sig47)
     test2_sig = sourmash.load_one_signature(sig63)
     actual_subtract_sig = sourmash.load_one_signature(out)
+
+    mins = set(test1_sig.minhash.hashes.keys())
+    mins -= set(test2_sig.minhash.hashes.keys())
+
+    assert set(actual_subtract_sig.minhash.hashes.keys()) == set(mins)
+
+
+def test_sig_subtract_1_abund(runtmp):
+    # subtract 63 from 47, with abundances borrowed from 47
+
+    c = runtmp
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+    c.run_sourmash('sig', 'subtract', sig47, sig63, '-A', sig47)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test1_sig = sourmash.load_one_signature(sig47)
+    test2_sig = sourmash.load_one_signature(sig63)
+    actual_subtract_sig = sourmash.load_one_signature(out)
+    assert actual_subtract_sig.minhash.track_abundance
+
+    mins = set(test1_sig.minhash.hashes.keys())
+    mins -= set(test2_sig.minhash.hashes.keys())
+
+    assert set(actual_subtract_sig.minhash.hashes.keys()) == set(mins)
+
+    distinct_abunds = set()
+    actual_sub_hashes = actual_subtract_sig.minhash.hashes
+    sig47_hashes = test1_sig.minhash.hashes
+    for h in mins:
+        assert actual_sub_hashes[h] == sig47_hashes[h]
+        distinct_abunds.add(sig47_hashes[h])
+
+    # this is really just to make sure that we have a sketch with some
+    # abundances in it...
+    assert max(distinct_abunds) > 1
+
+
+def test_sig_subtract_1_abund_is_flat(runtmp):
+    # subtract 63 from 47, with abundances borrowed from 47
+
+    c = runtmp
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+    sig47_flat = utils.get_test_data('47.fa.sig')
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('sig', 'subtract', sig47, sig63, '-A', sig47_flat)
+
+
+def test_sig_subtract_1_flatten(runtmp):
+    # subtract 63 from 47, with abund signatures originally and --flatten
+
+    c = runtmp
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+    c.run_sourmash('sig', 'subtract', sig47, sig63, '--flatten')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test1_sig = sourmash.load_one_signature(sig47)
+    test2_sig = sourmash.load_one_signature(sig63)
+    actual_subtract_sig = sourmash.load_one_signature(out)
+    assert not actual_subtract_sig.minhash.track_abundance
 
     mins = set(test1_sig.minhash.hashes.keys())
     mins -= set(test2_sig.minhash.hashes.keys())
@@ -636,6 +818,17 @@ def test_sig_subtract_4_ksize_succeed(c):
 
     c.run_sourmash('sig', 'subtract', sig47, sig2, '-k', '31')
     assert 'loaded and subtracted 1 signatures' in c.last_result.err
+
+
+def test_sig_subtract_5_bad_moltype(runtmp):
+    # should fail when no matching sigs
+    sig47 = utils.get_test_data('47.fa.sig')
+    prot = utils.get_test_data('prot/protein.zip')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('sig', 'subtract', '-k', '31', sig47, prot)
+
+    assert 'no signatures to subtract' in runtmp.last_result.err
 
 
 def test_sig_rename_1(runtmp):
