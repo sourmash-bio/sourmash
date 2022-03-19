@@ -328,6 +328,32 @@ class ComputeParameters(RustObject):
         self.track_abundance = track_abundance
         self.scaled = scaled
 
+    @classmethod
+    def from_manifest_row(cls, row):
+        "convert a CollectionManifest row into a ComputeParameters object"
+        is_dna = is_protein = is_dayhoff = is_hp = False
+        if row['moltype'] == 'DNA':
+            is_dna = True
+        elif row['moltype'] == 'protein':
+            is_protein = True
+        elif row['moltype'] == 'hp':
+            is_hp = True
+        elif row['moltype'] == 'dayhoff':
+            is_dayhoff = True
+        else:
+            assert 0
+
+        if is_dna:
+            ksize = row['ksize']
+        else:
+            ksize = row['ksize'] * 3
+
+        p = cls([ksize], 42, is_protein, is_dayhoff, is_hp, is_dna,
+                row['num'], row['with_abundance'], row['scaled'])
+
+        return p
+
+
     def to_param_str(self):
         "Convert object to equivalent params str."
         pi = []
