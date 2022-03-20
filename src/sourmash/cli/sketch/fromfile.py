@@ -61,6 +61,10 @@ def subparser(subparsers):
         help='overwrite/append to --output-signatures location'
     )
     file_args.add_argument(
+        '--ignore-missing', action='store_true',
+        help='proceed with building possible signatures, even if some input files are missing'
+    )
+    file_args.add_argument(
         '--output-commands',
         help='output sourmash commands that can be used to generate signatures'
     )

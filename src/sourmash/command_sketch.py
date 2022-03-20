@@ -402,6 +402,8 @@ def fromfile(args):
     #
 
     to_build = defaultdict(list)
+    missing = defaultdict(list)
+    missing_count = 0
     with open(args.csv, newline="") as fp:
         r = csv.DictReader(fp)
 
@@ -419,22 +421,36 @@ def fromfile(args):
                 # has this been done?
                 if p not in plist:
                     # nope - figure out genome/proteome needed
-                    filename = None
-                    if p.dna:
-                        filename = genome
-                    else:
-                        assert p.dayhoff or p.protein or p.hp
-                        filename = proteome
-                    assert filename
+                    filename = genome if p.dna else proteome
 
-                    # add to build list
-                    to_build[(name, filename)].append(p)
+                    if not filename:
+                        missing[name].append(p)
+                        missing_count += 1
+                    else:
+                        # add to build list
+                        to_build[(name, filename)].append(p)
                 else:
                     n_skipped += 1
 
+    ## done! we now have 'to_build' which contains the things we can build,
+    ## and 'missing', which contains anything we cannot build.
+
+    if missing:
+        error("** ERROR: we cannot build some of the requested signatures.")
+        error(f"** {missing_count} total signatures (for {len(missing)} names) cannot be built.")
+        if args.ignore_missing:
+            error("** (continuing past this error because --ignore-missing was set)")
+        else:
+            sys.exit(-1)
+
+    notify(f"** {total} signatures requested for {len(to_build)} files;")
+    if n_skipped:
+        notify(f"** {n_skipped} already exist, so skipping those.")
+    else:
+        notify(f"** we found no pre-existing signatures that match.")
+
     if to_build:
         if args.output_signatures:                   # actually compute
-            notify(f"** Building {total - n_skipped} sketches for {len(to_build)} files")
             _compute_sigs(to_build, args.output_signatures)
 
         elif args.output_commands: # output sourmash commands
