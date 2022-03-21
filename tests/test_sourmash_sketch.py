@@ -1595,3 +1595,23 @@ def test_fromfile_dna_and_protein_csv_output(runtmp):
         assert x[0]['name'] == x[1]['name'] == "GCA_903797575 Salmonella enterica"
         # ...different output index.
         assert x[1]['output_index'] != x[0]['output_index']
+
+
+def test_fromfile_dna_and_protein_already_exists(runtmp):
+    # does it properly ignore existing (--already-done) sigs?
+    test_inp = utils.get_test_data('sketch_fromfile')
+    already_done = utils.get_test_data('sketch_fromfile/salmonella-dna-protein.zip')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                    '-p', 'dna', '-p', 'protein',
+                    '--already-done', already_done)
+
+    print(runtmp.last_result.out)
+    err = runtmp.last_result.err
+    print(err)
+
+    assert 'Loaded 1 pre-existing names from manifest(s)' in err
+    assert 'Read 1 rows, requesting that 2 signatures be built.' in err
+    assert '** 0 signatures requested for 0 files;' in err
+    assert '** Nothing to build. Exiting!' in err

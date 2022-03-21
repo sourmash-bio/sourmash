@@ -404,36 +404,40 @@ def fromfile(args):
     to_build = defaultdict(list)
     missing = defaultdict(list)
     missing_count = 0
+    total_sigs = 0
+    total_rows = 0
+    skipped_sigs = 0
     with open(args.csv, newline="") as fp:
         r = csv.DictReader(fp)
 
-        n_skipped = 0
-        total = 0
         for row in r:
             name = row['name']
             genome = row['genome_filename']
             proteome = row['protein_filename']
+            total_rows += 1
 
             plist = already_done[name]
             for p in build_params:
-                total += 1
+                total_sigs += 1
 
-                # has this been done?
+                # does this signature already exist?
                 if p not in plist:
                     # nope - figure out genome/proteome needed
                     filename = genome if p.dna else proteome
 
-                    if not filename:
-                        missing[name].append(p)
-                        missing_count += 1
-                    else:
+                    if filename:
                         # add to build list
                         to_build[(name, filename)].append(p)
+                    else:
+                        missing[name].append(p)
+                        missing_count += 1
                 else:
-                    n_skipped += 1
+                    skipped_sigs += 1
 
     ## done! we now have 'to_build' which contains the things we can build,
-    ## and 'missing', which contains anything we cannot build.
+    ## and 'missing', which contains anything we cannot build. Report!
+
+    notify(f"Read {total_rows} rows, requesting that {total_sigs} signatures be built.")
 
     if missing:
         error("** ERROR: we cannot build some of the requested signatures.")
@@ -443,11 +447,17 @@ def fromfile(args):
         else:
             sys.exit(-1)
 
-    notify(f"** {total} signatures requested for {len(to_build)} files;")
-    if n_skipped:
-        notify(f"** {n_skipped} already exist, so skipping those.")
+    notify(f"** {total_sigs - skipped_sigs} signatures requested for {len(to_build)} files;")
+    if not to_build:
+        notify(f"** Nothing to build. Exiting!")
+        sys.exit(0)
+
+    if skipped_sigs:
+        notify(f"** {skipped_sigs} already exist, so skipping those.")
     else:
         notify(f"** we found no pre-existing signatures that match.")
+
+    ## now, onward ho - do we build anything, or output stuff, or ...?
 
     if to_build:
         if args.output_signatures:                   # actually compute
@@ -526,4 +536,4 @@ def fromfile(args):
             csv_obj.close()
 
 
-    notify(f"** {total} total requested; built {total - n_skipped}, skipped {n_skipped}")
+    notify(f"** {total_sigs} total requested; built {total_sigs - skipped_sigs}, skipped {skipped_sigs}")
