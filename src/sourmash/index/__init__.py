@@ -1138,10 +1138,11 @@ class LazyLoadedIndex(Index):
 
 
 class StandaloneManifestIndex(Index):
-    def __init__(self, manifest, location):
+    def __init__(self, manifest, location, prefix):
         assert manifest is not None
         self.manifest = manifest
         self._location = location
+        self.prefix = prefix
 
     @classmethod
     def load(cls, location):
@@ -1150,7 +1151,7 @@ class StandaloneManifestIndex(Index):
 
         with open(location, newline='') as fp:
             m = CollectionManifest.load_from_csv(fp)
-        return cls(m, location)
+        return cls(m, location, os.path.dirname(location))
 
     @property
     def location(self):
@@ -1159,6 +1160,9 @@ class StandaloneManifestIndex(Index):
     def signatures_with_location(self):
         for row in self.manifest.rows:
             iloc = row['internal_location']
+            if not iloc.startswith('/'):
+                iloc = os.path.join(self.prefix, iloc)
+
             idx = LinearIndex.load(iloc)
             for ss in idx.signatures():
                 if ss.md5sum() == row['md5']:
@@ -1180,4 +1184,4 @@ class StandaloneManifestIndex(Index):
     def select(self, **kwargs):
         "Run 'select' on the manifest."
         new_manifest = self.manifest.select_to_manifest(**kwargs)
-        return StandaloneManifestIndex(new_manifest, self._location)
+        return StandaloneManifestIndex(new_manifest, self._location, self.prefix)
