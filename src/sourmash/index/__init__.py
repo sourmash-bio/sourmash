@@ -1061,6 +1061,10 @@ class DirectoryIndex(Index):
         self.parent = parent
         self.manifest = manifest
 
+    @property
+    def location(self):
+        return self.parent
+
     @classmethod
     def load(cls, pathname):
         "Create a DirectoryIndex from a directory with an existing manifest."
@@ -1087,6 +1091,12 @@ class DirectoryIndex(Index):
             for ss in load_signatures(fullpath):
                 if ss in self.manifest:
                     yield ss, fullpath
+
+    def _signatures_with_internal(self):
+        "Traverse etc."
+        mi = MultiIndex.load_from_directory(self.parent)
+        for r in mi._signatures_with_internal():
+            yield r
 
     def select(self, **kwargs):
         "Run 'select' on the manifest."
