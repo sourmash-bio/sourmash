@@ -81,7 +81,8 @@ def subparser(subparsers):
         help='output computed signatures to this file'
     )
     file_args.add_argument(
-        '--outdir', help='output computed signatures to this directory'
+        '--output-dir', '--outdir',
+        help='output computed signatures to this directory',
     )
     file_args.add_argument(
         '--singleton', action='store_true',

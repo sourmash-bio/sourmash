@@ -28,9 +28,13 @@ def _parse_params_str(params_str):
             params['track_abundance'] = True
         elif item == 'noabund':
             params['track_abundance'] = False
-        elif item.startswith('k='):
+        elif item.startswith('k'):
+            if len(item) < 3 or item[1] != '=':
+                raise ValueError("k takes a parameter, e.g. 'k=31'")
             params['ksize'].append(int(item[2:]))
-        elif item.startswith('num='):
+        elif item.startswith('num'):
+            if len(item) < 5 or item[3] != '=':
+                raise ValueError("num takes a parameter, e.g. 'num=500'")
             if params.get('scaled'):
                 raise ValueError("cannot set both num and scaled in a single minhash")
             try:
@@ -43,7 +47,9 @@ def _parse_params_str(params_str):
 
             params['num'] = int(item[4:])
             params['scaled'] = 0
-        elif item.startswith('scaled='):
+        elif item.startswith('scaled'):
+            if len(item) < 8 or item[6] != '=':
+                raise ValueError("scaled takes a parameter, e.g. 'scaled=1000'")
             if params.get('num'):
                 raise ValueError("cannot set both num and scaled in a single minhash")
             try:
@@ -56,16 +62,12 @@ def _parse_params_str(params_str):
 
             params['scaled'] = scaled
             params['num'] = 0
-        elif item.startswith('seed='):
+        elif item.startswith('seed'):
+            if len(item) < 6 or item[4] != '=':
+                raise ValueError("seed takes a parameter, e.g. 'seed=42'")
             params['seed'] = int(item[5:])
-        elif item == 'protein':
-            moltype = 'protein'
-        elif item == 'dayhoff':
-            moltype = 'dayhoff'
-        elif item == 'hp':
-            moltype = 'hp'
-        elif item == 'dna':
-            moltype = 'dna'
+        elif item in ('protein', 'dayhoff', 'hp', 'dna'):
+            moltype = item
         else:
             raise ValueError(f"unknown component '{item}' in params string")
 
@@ -74,8 +76,7 @@ def _parse_params_str(params_str):
 
 class _signatures_for_sketch_factory(object):
     "Build sigs on demand, based on args input to 'sketch'."
-    def __init__(self, params_str_list, default_moltype, mult_ksize_by_3):
-
+    def __init__(self, params_str_list, default_moltype):
         # first, set up defaults per-moltype
         defaults = {}
         for moltype, pstr in DEFAULTS.items():
@@ -86,7 +87,7 @@ class _signatures_for_sketch_factory(object):
 
         # next, fill out params_list
         self.params_list = []
-        self.mult_ksize_by_3 = mult_ksize_by_3
+        self.mult_ksize_by_3 = True
 
         if params_str_list:
             # parse each params_str passed in, using default_moltype if none
@@ -95,17 +96,21 @@ class _signatures_for_sketch_factory(object):
                 moltype, params = _parse_params_str(params_str)
                 if moltype and moltype != 'dna' and default_moltype == 'dna':
                     raise ValueError(f"Incompatible sketch type ({default_moltype}) and parameter override ({moltype}) in '{params_str}'; maybe use 'sketch translate'?")
-                elif moltype == 'dna' and default_moltype != 'dna':
+                elif moltype == 'dna' and default_moltype and default_moltype != 'dna':
                     raise ValueError(f"Incompatible sketch type ({default_moltype}) and parameter override ({moltype}) in '{params_str}'")
                 elif moltype is None:
+                    if default_moltype is None:
+                        raise ValueError(f"No default moltype and none specified in param string")
                     moltype = default_moltype
 
                 self.params_list.append((moltype, params))
         else:
+            if default_moltype is None:
+                raise ValueError(f"No default moltype and none specified in param string")
             # no params str? default to a single sig, using default_moltype.
             self.params_list.append((default_moltype, {}))
 
-    def get_compute_params(self):
+    def get_compute_params(self, *, split_ksizes=False):
         for moltype, params_d in self.params_list:
             # get defaults for this moltype from self.defaults:
             default_params = self.defaults[moltype]
@@ -126,26 +131,33 @@ class _signatures_for_sketch_factory(object):
             if not ksizes:
                 ksizes = def_ksizes
 
-            if self.mult_ksize_by_3:
+            # 'command sketch' adjusts k-mer sizes by 3 if non-DNA sketch.
+            if self.mult_ksize_by_3 and not def_dna:
                 ksizes = [ k*3 for k in ksizes ]
 
-            params_obj = ComputeParameters(ksizes,
-                                           params_d.get('seed', def_seed),
-                                           def_protein,
-                                           def_dayhoff,
-                                           def_hp,
-                                           def_dna,
-                                           params_d.get('num', def_num),
-                                           params_d.get('track_abundance',
-                                                        def_abund),
-                                           params_d.get('scaled', def_scaled))
+            make_param = lambda ksizes: ComputeParameters(ksizes,
+                                            params_d.get('seed', def_seed),
+                                            def_protein,
+                                            def_dayhoff,
+                                            def_hp,
+                                            def_dna,
+                                            params_d.get('num', def_num),
+                                            params_d.get('track_abundance',
+                                                         def_abund),
+                                            params_d.get('scaled', def_scaled))
 
-            yield params_obj
+            if split_ksizes:
+                for ksize in ksizes:
+                    params_obj = make_param([ksize])
+                    yield params_obj
+            else:
+                params_obj = make_param(ksizes)
+                yield params_obj
 
-    def __call__(self):
+    def __call__(self, *, split_ksizes=False):
         "Produce a new set of signatures built to match the param strings."
         sigs = []
-        for params in self.get_compute_params():
+        for params in self.get_compute_params(split_ksizes=split_ksizes):
             sig = SourmashSignature.from_params(params)
             sigs.append(sig)
 
@@ -178,13 +190,13 @@ def _execute_sketch(args, signatures_factory):
         error("ERROR: must specify -o with --merge")
         sys.exit(-1)
 
-    if args.output and args.outdir:
-        error("ERROR: --outdir doesn't make sense with -o/--output")
+    if args.output and args.output_dir:
+        error("ERROR: --output-dir doesn't make sense with -o/--output")
         sys.exit(-1)
 
     # get number of output sigs:
     num_sigs = len(signatures_factory.params_list)
-    notify(f'Computing a total of {num_sigs} signature(s).')
+    notify(f'Computing a total of {num_sigs} signature(s) for each input.')
 
     if num_sigs == 0:
         error('...nothing to calculate!? Exiting!')
@@ -206,8 +218,7 @@ def dna(args):
 
     try:
         signatures_factory = _signatures_for_sketch_factory(args.param_string,
-                                                            'dna',
-                                                            mult_ksize_by_3=False)
+                                                            'dna')
     except ValueError as e:
         error(f"Error creating signatures: {str(e)}")
         sys.exit(-1)
@@ -236,8 +247,7 @@ def protein(args):
 
     try:
         signatures_factory = _signatures_for_sketch_factory(args.param_string,
-                                                            moltype,
-                                                            mult_ksize_by_3=True)
+                                                            moltype)
     except ValueError as e:
         error(f"Error creating signatures: {str(e)}")
         sys.exit(-1)
@@ -266,8 +276,7 @@ def translate(args):
 
     try:
         signatures_factory = _signatures_for_sketch_factory(args.param_string,
-                                                            moltype,
-                                                            mult_ksize_by_3=True)
+                                                            moltype)
     except ValueError as e:
         error(f"Error creating signatures: {str(e)}")
         sys.exit(-1)

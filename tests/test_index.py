@@ -15,6 +15,7 @@ from sourmash import index
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             make_jaccard_search_query, CounterGather,
                             LazyLinearIndex, MultiIndex, DirectoryIndex)
+from sourmash.index.revindex import RevIndex
 from sourmash.sbt import SBT, GraphFactory, Leaf
 from sourmash.sbtmh import SigLeaf
 from sourmash import sourmash_args
@@ -349,6 +350,50 @@ def test_linear_index_search_abund():
 
     ss47 = sourmash.load_one_signature(sig47)
     ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = LinearIndex()
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    results = list(lidx.search_abund(ss47, threshold=0))
+    assert len(results) == 2
+    assert results[0].signature == ss47
+    assert results[1].signature == ss63
+
+
+def test_linear_index_search_abund_downsample_query():
+    # test Index.search_abund with query with higher scaled
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    # forcibly downsample ss47 for the purpose of this test :)
+    ss47.minhash = ss63.minhash.downsample(scaled=2000)
+    assert ss63.minhash.scaled != ss47.minhash.scaled
+
+    lidx = LinearIndex()
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    results = list(lidx.search_abund(ss47, threshold=0))
+    assert len(results) == 2
+    assert results[0].signature == ss47
+    assert results[1].signature == ss63
+
+
+def test_linear_index_search_abund_downsample_subj():
+    # test Index.search_abund with subj with higher scaled
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    # forcibly downsample ss63 for the purpose of this test :)
+    ss63.minhash = ss63.minhash.downsample(scaled=2000)
+    assert ss63.minhash.scaled != ss47.minhash.scaled
 
     lidx = LinearIndex()
     lidx.insert(ss47)
@@ -718,6 +763,18 @@ def test_index_same_md5sum_sbt_zipstorage(c):
     assert len([f for f in zout.namelist() if f.startswith(".sbt.zzz/")]) == 5
 
 
+def test_zipfile_does_not_exist(runtmp):
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sig', 'describe', 'no-exist.zip')
+
+    # old behavior, pre PR #1777
+    assert 'FileNotFoundError: SOURMASH-MANIFEST.csv' not in str(exc)
+    assert not os.path.exists(runtmp.output('no-exist.zip'))
+
+    # correct behavior
+    assert "ERROR: Error while reading signatures from 'no-exist.zip'." in str(exc)
+
+
 @utils.in_thisdir
 def test_zipfile_protein_command_search(c):
     # test command-line search/gather of zipfile with protein sigs
@@ -886,6 +943,22 @@ def test_zipfile_API_signatures_traverse_yield_all_select(use_manifest):
     siglist = list(zipidx.signatures())
     assert len(siglist) == 2
     assert len(zipidx) == 2
+
+
+def test_zipfile_API_signatures_traverse_yield_all_manifest():
+    # check that manifest len is correct
+    zipfile_db = utils.get_test_data('prot/all.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, traverse_yield_all=True,
+                                     use_manifest=True)
+    assert len(zipidx) == 8, len(zipidx)
+    assert len(zipidx.manifest) == 8, len(zipidx.manifest)
+
+    zipidx = zipidx.select(moltype='DNA')
+    siglist = list(zipidx.signatures())
+    assert len(siglist) == 2
+    assert len(zipidx) == 2
+    assert len(zipidx.manifest) == 2
 
 
 def test_zipfile_API_signatures_select(use_manifest):
@@ -1068,7 +1141,8 @@ def test_multi_index_search():
     lidx3 = LinearIndex.load(sig63)
 
     # create MultiIndex with source location override
-    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'],
+                           None)
     lidx = lidx.select(ksize=31)
 
     # now, search for sig2
@@ -1121,7 +1195,8 @@ def test_multi_index_gather():
     lidx3 = LinearIndex.load(sig63)
 
     # create MultiIndex with source location override
-    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'],
+                           None)
     lidx = lidx.select(ksize=31)
 
     matches = lidx.gather(ss2)
@@ -1150,7 +1225,8 @@ def test_multi_index_signatures():
     lidx3 = LinearIndex.load(sig63)
 
     # create MultiIndex with source location override
-    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'],
+                           None)
     lidx = lidx.select(ksize=31)
 
     siglist = list(lidx.signatures())
@@ -1160,11 +1236,23 @@ def test_multi_index_signatures():
     assert ss63 in siglist
 
 
-def test_multi_index_load_from_path():
+def test_multi_index_create():
+    mi = MultiIndex(None, None, prepend_location=False)
+    assert len(mi) == 0
+
+
+def test_multi_index_create_prepend():
+    with pytest.raises(ValueError):
+        mi = MultiIndex(None, None, prepend_location=True)
+
+
+def test_multi_index_load_from_directory():
     # test MultiIndex loading from a directory. The full paths to the
     # signature files should be available via 'signatures_with_location()'
     dirname = utils.get_test_data('prot/protein')
-    mi = MultiIndex.load_from_path(dirname, force=False)
+    mi = MultiIndex.load_from_directory(dirname, force=False)
+
+    assert mi.location == dirname
 
     sigs = list(mi.signatures())
     assert len(sigs) == 2
@@ -1189,17 +1277,17 @@ def test_multi_index_load_from_path():
     assert endings[1] in ilocs, ilocs
 
 
-def test_multi_index_load_from_path_2():
+def test_multi_index_load_from_directory_2():
     # only load .sig files, currently; not the databases under that directory.
     dirname = utils.get_test_data('prot')
-    mi = MultiIndex.load_from_path(dirname, force=False)
+    mi = MultiIndex.load_from_directory(dirname, force=False)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 7
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_path_3(c):
+def test_multi_index_load_from_directory_3(c):
     # check that force works ok on a directory
     dirname = utils.get_test_data('prot')
 
@@ -1213,11 +1301,11 @@ def test_multi_index_load_from_path_3(c):
             count += 1
 
     with pytest.raises(sourmash.exceptions.SourmashError):
-        mi = MultiIndex.load_from_path(c.location, force=False)
+        mi = MultiIndex.load_from_directory(c.location, force=False)
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_path_3_yield_all_true(c):
+def test_multi_index_load_from_directory_3_yield_all_true(c):
     # check that force works ok on a directory w/force=True
     dirname = utils.get_test_data('prot')
 
@@ -1230,14 +1318,14 @@ def test_multi_index_load_from_path_3_yield_all_true(c):
             shutil.copyfile(fullname, copyto)
             count += 1
 
-    mi = MultiIndex.load_from_path(c.location, force=True)
+    mi = MultiIndex.load_from_directory(c.location, force=True)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 8
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_path_3_yield_all_true_subdir(c):
+def test_multi_index_load_from_directory_3_yield_all_true_subdir(c):
     # check that force works ok on subdirectories
     dirname = utils.get_test_data('prot')
 
@@ -1253,14 +1341,14 @@ def test_multi_index_load_from_path_3_yield_all_true_subdir(c):
             shutil.copyfile(fullname, copyto)
             count += 1
 
-    mi = MultiIndex.load_from_path(c.location, force=True)
+    mi = MultiIndex.load_from_directory(c.location, force=True)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 8
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_path_3_sig_gz(c):
+def test_multi_index_load_from_directory_3_sig_gz(c):
     # check that we find .sig.gz files, too
     dirname = utils.get_test_data('prot')
 
@@ -1275,14 +1363,16 @@ def test_multi_index_load_from_path_3_sig_gz(c):
             shutil.copyfile(fullname, copyto)
             count += 1
 
-    mi = MultiIndex.load_from_path(c.location, force=False)
+    mi = MultiIndex.load_from_directory(c.location, force=False)
+
+    assert mi.location == c.location
 
     sigs = list(mi.signatures())
     assert len(sigs) == 6
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_path_3_check_traverse_fn(c):
+def test_multi_index_load_from_directory_3_check_traverse_fn(c):
     # test the actual traverse function... eventually this test can be
     # removed, probably, as we consolidate functionality and test MultiIndex
     # better.
@@ -1294,10 +1384,24 @@ def test_multi_index_load_from_path_3_check_traverse_fn(c):
     assert len(files) == 20, files # if this fails, check for extra files!
 
 
-def test_multi_index_load_from_path_no_exist():
+def test_multi_index_load_from_directory_no_exist():
     dirname = utils.get_test_data('does-not-exist')
     with pytest.raises(ValueError):
-        mi = MultiIndex.load_from_path(dirname, force=True)
+        mi = MultiIndex.load_from_directory(dirname, force=True)
+
+
+def test_multi_index_load_from_file_path():
+    sig2 = utils.get_test_data('2.fa.sig')
+
+    mi = MultiIndex.load_from_path(sig2)
+    assert len(mi) == 3
+    assert mi.location == sig2
+
+
+def test_multi_index_load_from_file_path_no_exist():
+    filename = utils.get_test_data('does-not-exist')
+    with pytest.raises(ValueError):
+        mi = MultiIndex.load_from_directory(filename, force=True)
 
 
 def test_multi_index_load_from_pathlist_no_exist():
@@ -1320,6 +1424,8 @@ def test_multi_index_load_from_pathlist_1(c):
 
     sigs = list(mi.signatures())
     assert len(sigs) == 7
+
+    assert mi.location == file_list
 
 
 @utils.in_tempdir
@@ -2195,7 +2301,7 @@ def test_lazy_index_wraps_multi_index_location():
     db_paths = (sigdir, sigzip, siglca, sigsbt)
     dbs = [ sourmash.load_file_as_index(db_path) for db_path in db_paths ]
 
-    mi = MultiIndex.load(dbs, db_paths)
+    mi = MultiIndex.load(dbs, db_paths, None)
     lazy = LazyLinearIndex(mi)
 
     mi2 = mi.select(moltype='protein')
@@ -2204,7 +2310,6 @@ def test_lazy_index_wraps_multi_index_location():
     for (ss_tup, ss_lazy_tup) in zip(mi2.signatures_with_location(),
                                      lazy2.signatures_with_location()):
         assert ss_tup == ss_lazy_tup
-
 
 def test_lazy_loaded_index_1(runtmp):
     # some basic tests for LazyLoadedIndex
@@ -2230,7 +2335,7 @@ def test_lazy_loaded_index_1(runtmp):
     assert len(db) == 2
 
     # ...but we should get an error when we call signatures.
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(ValueError):
         list(db.signatures())
 
     # but put it back, and all is forgiven. yay!
@@ -2323,13 +2428,118 @@ def test_lazy_multi_index_1(runtmp):
     assert len(x) == 2
 
 
-def test_directory_index_1(runtmp):
-    new_dir = runtmp.output('somedir')
-    os.mkdir(new_dir)
+def test_revindex_index_search():
+    sig2 = utils.get_test_data("2.fa.sig")
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
 
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = RevIndex(template=ss2.minhash)
+    lidx.insert(ss2)
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    # now, search for sig2
+    sr = lidx.search(ss2, threshold=1.0)
+    print([s[1].name for s in sr])
+    assert len(sr) == 1
+    assert sr[0][1] == ss2
+
+    # search for sig47 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss47, threshold=0.1)
+    print([s[1].name for s in sr])
+    assert len(sr) == 2
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss47
+    assert sr[1][1] == ss63
+
+    # search for sig63 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss63, threshold=0.1)
+    print([s[1].name for s in sr])
+    assert len(sr) == 2
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss63
+    assert sr[1][1] == ss47
+
+    # search for sig63 with high threshold => 1 match
+    sr = lidx.search(ss63, threshold=0.8)
+    print([s[1].name for s in sr])
+    assert len(sr) == 1
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss63
+
+
+def test_revindex_gather():
+    sig2 = utils.get_test_data("2.fa.sig")
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = RevIndex(template=ss2.minhash)
+    lidx.insert(ss2)
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    matches = lidx.gather(ss2)
+    assert len(matches) == 1
+    assert matches[0][0] == 1.0
+    assert matches[0][1] == ss2
+
+    matches = lidx.gather(ss47)
+    assert len(matches) == 1
+    assert matches[0][0] == 1.0
+    assert matches[0][1] == ss47
+
+
+def test_revindex_gather_ignore():
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
+
+
+    new_dir = runtmp.output('somedir')
+    os.mkdir(new_dir)
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss63 = sourmash.load_one_signature(sig63, ksize=31)
+
+    # construct an index...
+    lidx = RevIndex(template=ss2.minhash, signatures=[ss2, ss47, ss63])
+
+    # ...now search with something that should ignore sig47, the exact match.
+    search_fn = JaccardSearchBestOnly_ButIgnore([ss47])
+
+    results = list(lidx.find(search_fn, ss47))
+    results = [ ss.signature for ss in results ]
+
+    def is_found(ss, xx):
+        for q in xx:
+            print(ss, ss.similarity(q))
+            if ss.similarity(q) == 1.0:
+                return True
+        return False
+
+    assert not is_found(ss47, results)
+    assert not is_found(ss2, results)
+    assert is_found(ss63, results)
+
+
+def test_directory_index_1(runtmp):
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    new_dir = runtmp.output('somedir')
+    os.mkdir(new_dir)
+
+
 
     shutil.copyfile(sig2, os.path.join(new_dir, "2.sig"))
     shutil.copyfile(sig47, os.path.join(new_dir, "47.sig"))

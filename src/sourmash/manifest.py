@@ -2,6 +2,7 @@
 Manifests for collections of signatures.
 """
 import csv
+import ast
 
 from sourmash.picklist import SignaturePicklist
 
@@ -40,6 +41,9 @@ class CollectionManifest:
     def __len__(self):
         return len(self.rows)
 
+    def __eq__(self, other):
+        return self.rows == other.rows
+
     @classmethod
     def load_from_csv(cls, fp):
         "load a manifest from a CSV file."
@@ -70,7 +74,7 @@ class CollectionManifest:
             for k in introws:
                 row[k] = int(row[k])
             for k in boolrows:
-                row[k] = bool(row[k])
+                row[k] = bool(ast.literal_eval(str(row[k])))
             row['signature'] = None
             manifest_list.append(row)
 
@@ -174,6 +178,19 @@ class CollectionManifest:
         "Do a 'select' and return a new CollectionManifest object."
         new_rows = self._select(**kwargs)
         return CollectionManifest(new_rows)
+
+    def filter_rows(self, row_filter_fn):
+        "Create a new manifest filtered through row_filter_fn."
+        new_rows = [ row for row in self.rows if row_filter_fn(row) ]
+
+        return CollectionManifest(new_rows)
+
+    def filter_on_columns(self, col_filter_fn, col_names):
+        "Create a new manifest based on column matches."
+        def row_filter_fn(row):
+            x = [ row[col] for col in col_names if row[col] is not None ]
+            return col_filter_fn(x)
+        return self.filter_rows(row_filter_fn)
 
     def locations(self):
         "Return all distinct locations."

@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::encodings::{aa_to_dayhoff, aa_to_hp, revcomp, to_aa, HashFunctions, VALID};
-use crate::index::storage::ToWriter;
+use crate::prelude::*;
 use crate::sketch::Sketch;
 use crate::Error;
 use crate::HashIntoType;
@@ -198,12 +198,11 @@ impl SeqToHashes {
         }
 
         // By setting _max_index to 0, the iterator will return None and exit
-        let _max_index: usize;
-        if seq.len() >= ksize {
-            _max_index = seq.len() - ksize + 1;
+        let _max_index = if seq.len() >= ksize {
+            seq.len() - ksize + 1
         } else {
-            _max_index = 0;
-        }
+            0
+        };
 
         SeqToHashes {
             // Here we convert the sequence to upper case
@@ -609,9 +608,9 @@ impl Signature {
         if #[cfg(feature = "parallel")] {
             self.signatures
                 .par_iter_mut()
-                .for_each(|sketch| {
-                    sketch.add_sequence(&seq, force).unwrap(); }
-                );
+                .try_for_each(|sketch| {
+                    sketch.add_sequence(seq, force) }
+                )?;
         } else {
             for sketch in self.signatures.iter_mut(){
                 sketch.add_sequence(seq, force)?;
@@ -628,7 +627,7 @@ impl Signature {
             self.signatures
                 .par_iter_mut()
                 .try_for_each(|sketch| {
-                    sketch.add_protein(&seq) }
+                    sketch.add_protein(seq) }
                 )?;
         } else {
             self.signatures

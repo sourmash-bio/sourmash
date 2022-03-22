@@ -67,8 +67,136 @@ def test_do_sourmash_sketch_check_num_bounds_more_than_maximum(runtmp):
     assert "WARNING: num value should be <= 50000. Continuing anyway." in runtmp.last_result.err
 
 
+def test_empty_factory():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory([], None)
+
+
+def test_no_default_moltype_factory_nonempty():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory(["k=31"], None)
+
+
+def test_factory_no_default_moltype_dna():
+    factory = _signatures_for_sketch_factory(['dna'], None)
+    params_list = list(factory.get_compute_params())
+    assert len(params_list) == 1
+
+    params = params_list[0]
+    assert params.dna
+
+
+def test_factory_no_default_moltype_protein():
+    factory = _signatures_for_sketch_factory(['protein'], None)
+    params_list = list(factory.get_compute_params())
+    assert len(params_list) == 1
+
+    params = params_list[0]
+    assert params.protein
+
+
+def test_factory_dna_nosplit():
+    factory = _signatures_for_sketch_factory(['k=31,k=51'], 'dna')
+    params_list = list(factory.get_compute_params(split_ksizes=False))
+    assert len(params_list) == 1
+
+    params = params_list[0]
+    assert params.ksizes == [31,51]
+
+
+def test_factory_dna_split():
+    factory = _signatures_for_sketch_factory(['k=31,k=51'], 'dna')
+    params_list = list(factory.get_compute_params(split_ksizes=True))
+    assert len(params_list) == 2
+
+    params = params_list[0]
+    assert params.ksizes == [31]
+    params = params_list[1]
+    assert params.ksizes == [51]
+
+
+def test_factory_protein_nosplit():
+    factory = _signatures_for_sketch_factory(['k=10,k=9'], 'protein')
+    params_list = list(factory.get_compute_params(split_ksizes=False))
+    assert len(params_list) == 1
+
+    params = params_list[0]
+    assert params.ksizes == [30, 27]
+
+
+def test_factory_protein_split():
+    factory = _signatures_for_sketch_factory(['k=10,k=9'], 'protein')
+    params_list = list(factory.get_compute_params(split_ksizes=True))
+    assert len(params_list) == 2
+
+    params = params_list[0]
+    assert params.ksizes == [30]
+    params = params_list[1]
+    assert params.ksizes == [27]
+
+
+def test_factory_dna_equal():
+    factory1 = _signatures_for_sketch_factory(['dna'], None)
+    params_list1 = list(factory1.get_compute_params())
+    assert len(params_list1) == 1
+    params1 = params_list1[0]
+
+    factory2 = _signatures_for_sketch_factory([], 'dna')
+    params_list2 = list(factory2.get_compute_params())
+    assert len(params_list2) == 1
+    params2 = params_list2[0]
+
+    assert params1 == params2
+    assert repr(params1) == repr(params2)
+
+
+def test_factory_protein_equal():
+    factory1 = _signatures_for_sketch_factory(['protein'], None)
+    params_list1 = list(factory1.get_compute_params())
+    assert len(params_list1) == 1
+    params1 = params_list1[0]
+
+    factory2 = _signatures_for_sketch_factory([], 'protein')
+    params_list2 = list(factory2.get_compute_params())
+    assert len(params_list2) == 1
+    params2 = params_list2[0]
+
+    assert params1 == params2
+    assert repr(params1) == repr(params2)
+
+
+def test_factory_dna_multi_ksize_eq():
+    factory1 = _signatures_for_sketch_factory(['k=21,k=31,dna'], None)
+    params_list1 = list(factory1.get_compute_params())
+    assert len(params_list1) == 1
+    params1 = params_list1[0]
+
+    factory2 = _signatures_for_sketch_factory(['k=21,k=31'], 'dna')
+    params_list2 = list(factory2.get_compute_params())
+    assert len(params_list2) == 1
+    params2 = params_list2[0]
+
+    assert params1 == params2
+    assert repr(params1) == repr(params2)
+
+
+def test_factory_protein_multi_ksize_eq():
+    factory1 = _signatures_for_sketch_factory(['k=10,k=11,protein'], None)
+    params_list1 = list(factory1.get_compute_params())
+    assert len(params_list1) == 1
+    params1 = params_list1[0]
+
+    factory2 = _signatures_for_sketch_factory(['k=10,k=11'], 'protein')
+    params_list2 = list(factory2.get_compute_params())
+    assert len(params_list2) == 1
+    params2 = params_list2[0]
+
+    assert params1 == params2
+    assert repr(params1) == repr(params2)
+
+
 def test_dna_defaults():
-    factory = _signatures_for_sketch_factory([], 'dna', False)
+    factory = _signatures_for_sketch_factory([], 'dna')
     params_list = list(factory.get_compute_params())
 
     assert len(params_list) == 1
@@ -87,7 +215,7 @@ def test_dna_defaults():
 
 def test_dna_override_1():
     factory = _signatures_for_sketch_factory(['k=21,scaled=2000,abund'],
-                                             'dna', False)
+                                             'dna')
     params_list = list(factory.get_compute_params())
 
     assert len(params_list) == 1
@@ -104,19 +232,43 @@ def test_dna_override_1():
     assert not params.protein
 
 
+def test_scaled_param_requires_equal():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory(['k=21,scaled'], 'dna')
+
+
+def test_k_param_requires_equal():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory(['k'], 'dna')
+
+
+def test_k_param_requires_equal_2():
+    with pytest.raises(ValueError) as exc:
+        factory = _signatures_for_sketch_factory(['k='], 'dna')
+
+
+def test_seed_param_requires_equal():
+    with pytest.raises(ValueError) as exc:
+        factory = _signatures_for_sketch_factory(['seed='], 'dna')
+
+
+def test_num_param_requires_equal():
+    with pytest.raises(ValueError) as exc:
+        factory = _signatures_for_sketch_factory(['num='], 'dna')
+
+
 def test_dna_override_bad_1():
     with pytest.raises(ValueError):
         factory = _signatures_for_sketch_factory(['k=21,scaledFOO=2000,abund'],
-                                                 'dna', False)
+                                                 'dna')
 
 
 def test_dna_override_bad_2():
     with pytest.raises(ValueError):
-        factory = _signatures_for_sketch_factory(['k=21,protein'],
-                                                 'dna', False)
+        factory = _signatures_for_sketch_factory(['k=21,protein'], 'dna')
 
 def test_protein_defaults():
-    factory = _signatures_for_sketch_factory([], 'protein', True)
+    factory = _signatures_for_sketch_factory([], 'protein')
     params_list = list(factory.get_compute_params())
 
     assert len(params_list) == 1
@@ -135,12 +287,11 @@ def test_protein_defaults():
 
 def test_protein_override_bad_2():
     with pytest.raises(ValueError):
-        factory = _signatures_for_sketch_factory(['k=21,dna'],
-                                                 'protein', False)
+        factory = _signatures_for_sketch_factory(['k=21,dna'], 'protein')
 
 def test_protein_override_bad_rust_foo():
     # mimic 'sourmash sketch protein -p dna'
-    factory = _signatures_for_sketch_factory([], 'protein', False)
+    factory = _signatures_for_sketch_factory([], 'protein')
 
     # reach in and avoid error checking to construct a bad params_list.
     factory.params_list = [('dna', {})]
@@ -161,7 +312,7 @@ def test_protein_override_bad_rust_foo():
 
 
 def test_dayhoff_defaults():
-    factory = _signatures_for_sketch_factory([], 'dayhoff', True)
+    factory = _signatures_for_sketch_factory([], 'dayhoff')
     params_list = list(factory.get_compute_params())
 
     assert len(params_list) == 1
@@ -180,11 +331,10 @@ def test_dayhoff_defaults():
 
 def test_dayhoff_override_bad_2():
     with pytest.raises(ValueError):
-        factory = _signatures_for_sketch_factory(['k=21,dna'],
-                                                 'dayhoff', False)
+        factory = _signatures_for_sketch_factory(['k=21,dna'], 'dayhoff')
 
 def test_hp_defaults():
-    factory = _signatures_for_sketch_factory([], 'hp', True)
+    factory = _signatures_for_sketch_factory([], 'hp')
     params_list = list(factory.get_compute_params())
 
     assert len(params_list) == 1
@@ -203,8 +353,7 @@ def test_hp_defaults():
 
 def test_hp_override_bad_2():
     with pytest.raises(ValueError):
-        factory = _signatures_for_sketch_factory(['k=21,dna'],
-                                                 'hp', False)
+        factory = _signatures_for_sketch_factory(['k=21,dna'], 'hp')
 
 
 def test_multiple_moltypes():
@@ -212,7 +361,7 @@ def test_multiple_moltypes():
                   'k=19,num=400,dayhoff,abund',
                   'k=30,scaled=200,hp',
                   'k=30,scaled=200,seed=58']
-    factory = _signatures_for_sketch_factory(params_foo, 'protein', True)
+    factory = _signatures_for_sketch_factory(params_foo, 'protein')
     params_list = list(factory.get_compute_params())
 
     assert len(params_list) == 4
@@ -262,6 +411,99 @@ def test_multiple_moltypes():
     assert params.protein
 
 
+@pytest.mark.parametrize("input_param_str, expected_output",
+                         [('protein', 'protein,k=10,scaled=200'),
+                          ('dna', 'dna,k=31,scaled=1000'),
+                          ('hp', 'hp,k=42,scaled=200'),
+                          ('dayhoff', 'dayhoff,k=16,scaled=200'),
+                          ('dna,seed=52', 'dna,k=31,scaled=1000,seed=52'),
+                          ('dna,num=500', 'dna,k=31,num=500'),
+                          ('scaled=1100,dna', 'dna,k=31,scaled=1100'),
+                          ('dna,abund', 'dna,k=31,scaled=1000,abund')
+                         ])
+def test_compute_parameters_to_param_str(input_param_str, expected_output):
+    factory = _signatures_for_sketch_factory([input_param_str], None)
+    params_list = list(factory.get_compute_params())
+    assert len(params_list) == 1
+    params = params_list[0]
+
+    actual_output_str = params.to_param_str()
+
+    assert actual_output_str == expected_output, (actual_output_str,
+                                                  expected_output)
+
+
+def test_manifest_row_to_compute_parameters_1():
+    # test ComputeParameters.from_manifest_row with moltype 'DNA'
+    row = dict(moltype='DNA',
+               ksize=21,
+               num=0, scaled=1000,
+               with_abundance=1)
+    p = ComputeParameters.from_manifest_row(row)
+    assert p.dna
+    assert not p.protein
+    assert not p.dayhoff
+    assert not p.hp
+    assert p.num_hashes == 0
+    assert p.scaled == 1000
+    assert p.ksizes == [21]
+    assert p.track_abundance
+    assert p.seed == 42
+
+
+def test_manifest_row_to_compute_parameters_2():
+    # test ComputeParameters.from_manifest_row with moltype 'protein'
+    row = dict(moltype='protein',
+               ksize=10,
+               num=0, scaled=200,
+               with_abundance=1)
+    p = ComputeParameters.from_manifest_row(row)
+    assert not p.dna
+    assert p.protein
+    assert not p.dayhoff
+    assert not p.hp
+    assert p.num_hashes == 0
+    assert p.scaled == 200
+    assert p.ksizes == [30]
+    assert p.track_abundance
+    assert p.seed == 42
+
+
+def test_manifest_row_to_compute_parameters_3():
+    # test ComputeParameters.from_manifest_row with moltype 'dayhoff'
+    row = dict(moltype='dayhoff',
+               ksize=12,
+               num=0, scaled=200,
+               with_abundance=0)
+    p = ComputeParameters.from_manifest_row(row)
+    assert not p.dna
+    assert not p.protein
+    assert p.dayhoff
+    assert not p.hp
+    assert p.num_hashes == 0
+    assert p.scaled == 200
+    assert p.ksizes == [36]
+    assert not p.track_abundance
+    assert p.seed == 42
+
+
+def test_manifest_row_to_compute_parameters_4():
+    # test ComputeParameters.from_manifest_row with moltype 'hp'
+    row = dict(moltype='hp',
+               ksize=32,
+               num=0, scaled=200,
+               with_abundance=0)
+    p = ComputeParameters.from_manifest_row(row)
+    assert not p.dna
+    assert not p.protein
+    assert not p.dayhoff
+    assert p.hp
+    assert p.num_hashes == 0
+    assert p.scaled == 200
+    assert p.ksizes == [96]
+    assert not p.track_abundance
+    assert p.seed == 42
+
 ### command line tests
 
 
@@ -286,38 +528,31 @@ def test_do_sourmash_sketchtranslate_empty(c):
     assert 'error: no input filenames provided! nothing to do - exiting.' in c.last_result.err
 
 
-def test_do_sourmash_sketchdna():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', testdata1],
-                                           in_directory=location)
+def test_do_sourmash_sketchdna(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'dna', testdata1)
 
-        sigfile = os.path.join(location, 'short.fa.sig')
-        assert os.path.exists(sigfile)
+    sigfile = runtmp.output('short.fa.sig')
+    assert os.path.exists(sigfile)
 
-        sig = next(signature.load_signatures(sigfile))
-        assert str(sig).endswith('short.fa')
+    sig = next(signature.load_signatures(sigfile))
+    assert str(sig).endswith('short.fa')
 
 
-def test_do_sourmash_sketchdna_from_file():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
+def test_do_sourmash_sketchdna_from_file(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
 
-        file_list = os.path.join(location, "filelist.txt")
-        with open(file_list, 'wt') as fp:
-            print(testdata1, file=fp)
+    file_list = runtmp.output("filelist.txt")
+    with open(file_list, 'wt') as fp:
+        print(testdata1, file=fp)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna',
-                                            '--from-file', file_list],
-                                           in_directory=location)
+    runtmp.sourmash('sketch', 'dna', '--from-file', file_list)
 
-        sigfile = os.path.join(location, 'short.fa.sig')
-        assert os.path.exists(sigfile)
+    sigfile = runtmp.output('short.fa.sig')
+    assert os.path.exists(sigfile)
 
-        sig = next(signature.load_signatures(sigfile))
-        assert str(sig).endswith('short.fa')
+    sig = next(signature.load_signatures(sigfile))
+    assert str(sig).endswith('short.fa')
 
 
 @utils.in_tempdir
@@ -326,6 +561,9 @@ def test_do_sourmash_sketchdna_noinput(c):
 
     cmd = ['sketch', 'dna', '-', '-o', c.output('xxx.sig')]
     c.run_sourmash(*cmd, stdin_data=data)
+
+    print(c.last_result.out)
+    print(c.last_result.err)
 
     sigfile = c.output('xxx.sig')
     assert not os.path.exists(sigfile)
@@ -370,71 +608,71 @@ def test_do_sourmash_sketchdna_outdir(c):
     assert str(sig).endswith('short.fa')
 
 
-def test_do_sourmash_sketchdna_output_valid_file():
+@utils.in_tempdir
+def test_do_sourmash_sketchdna_output_dir(c):
+    # test via --output-dir not --outdir
+    testdata1 = utils.get_test_data('short.fa')
+    status, out, err = utils.runscript('sourmash',
+                                       ['sketch', 'dna', testdata1,
+                                        '--output-dir', c.location])
+
+    sigfile = os.path.join(c.location, 'short.fa.sig')
+    assert os.path.exists(sigfile)
+
+    sig = next(signature.load_signatures(sigfile))
+    assert str(sig).endswith('short.fa')
+
+
+def test_do_sourmash_sketchdna_output_valid_file(runtmp):
     """ Trigger bug #123 """
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        testdata3 = utils.get_test_data('short3.fa')
-        sigfile = os.path.join(location, 'short.fa.sig')
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    testdata3 = utils.get_test_data('short3.fa')
+    sigfile = runtmp.output('short.fa.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-o', sigfile,
-                                            testdata1,
-                                            testdata2, testdata3],
-                                           in_directory=location)
+    runtmp.sourmash('sketch', 'dna', '-o', sigfile, testdata1, testdata2, testdata3)
 
-        assert os.path.exists(sigfile)
-        assert not out # stdout should be empty
+    assert os.path.exists(sigfile)
+    assert not runtmp.last_result.out # stdout should be empty
 
-        # is it valid json?
-        with open(sigfile, 'r') as f:
-            data = json.load(f)
+    # is it valid json?
+    with open(sigfile, 'r') as f:
+        data = json.load(f)
 
-        filesigs = [sig['filename'] for sig in data]
-        assert all(testdata in filesigs
-                   for testdata in (testdata1, testdata2, testdata3))
+    filesigs = [sig['filename'] for sig in data]
+    assert all(testdata in filesigs
+                for testdata in (testdata1, testdata2, testdata3))
 
 
-def test_do_sourmash_sketchdna_output_zipfile():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        testdata3 = utils.get_test_data('short3.fa')
+def test_do_sourmash_sketchdna_output_zipfile(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    testdata3 = utils.get_test_data('short3.fa')
 
-        outfile = os.path.join(location, 'shorts.zip')
+    outfile = runtmp.output('shorts.zip')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-o', outfile,
-                                            testdata1,
-                                            testdata2, testdata3],
-                                           in_directory=location)
+    runtmp.sourmash('sketch', 'dna', '-o', outfile, testdata1, testdata2, testdata3)
 
-        assert os.path.exists(outfile)
-        assert not out # stdout should be empty
+    assert os.path.exists(outfile)
+    assert not runtmp.last_result.out # stdout should be empty
 
-        sigs = list(sourmash.load_file_as_signatures(outfile))
-        assert len(sigs) == 3
+    sigs = list(sourmash.load_file_as_signatures(outfile))
+    assert len(sigs) == 3
 
 
-def test_do_sourmash_sketchdna_output_stdout_valid():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        testdata3 = utils.get_test_data('short3.fa')
+def test_do_sourmash_sketchdna_output_stdout_valid(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    testdata3 = utils.get_test_data('short3.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-o', '-',
-                                            testdata1,
-                                            testdata2, testdata3],
-                                           in_directory=location)
+    runtmp.sourmash('sketch', 'dna', '-o', '-',  testdata1, testdata2, testdata3)
 
-        # is it valid json?
-        data = json.loads(out)
+    # is it valid json?
+    data = json.loads(runtmp.last_result.out)
 
-        filesigs = [sig['filename'] for sig in data]
-        assert all(testdata in filesigs
-                   for testdata in (testdata1, testdata2, testdata3))
+    filesigs = [sig['filename'] for sig in data]
+    assert all(testdata in filesigs
+                for testdata in (testdata1, testdata2, testdata3))
 
 
 @utils.in_tempdir
@@ -481,227 +719,176 @@ def test_do_sourmash_sketchdna_output_and_name_valid_file_outdir(c):
                        '--outdir', c.location)
 
     errmsg = c.last_result.err
-    assert "ERROR: --outdir doesn't make sense with -o/--output" in errmsg
+    assert "ERROR: --output-dir doesn't make sense with -o/--output" in errmsg
 
 
-def test_do_sourmash_sketchdna_singleton():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '--singleton',
-                                            testdata1],
-                                           in_directory=location)
+def test_do_sourmash_sketchdna_singleton(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'dna', '--singleton', testdata1)
 
-        sigfile = os.path.join(location, 'short.fa.sig')
-        assert os.path.exists(sigfile)
+    sigfile = runtmp.output('short.fa.sig')
+    assert os.path.exists(sigfile)
 
-        sig = next(signature.load_signatures(sigfile))
-        assert str(sig).endswith('shortName')
+    sig = next(signature.load_signatures(sigfile))
+    assert str(sig).endswith('shortName')
 
 
-def test_do_sourmash_sketchdna_name():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '--merge', 'foo',
-                                            testdata1, '-o', 'foo.sig'],
-                                           in_directory=location)
+def test_do_sourmash_sketchdna_name(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'dna', '--merge', 'foo', testdata1, '-o', 'foo.sig')
 
-        sigfile = os.path.join(location, 'foo.sig')
-        assert os.path.exists(sigfile)
+    sigfile = runtmp.output('foo.sig')
+    assert os.path.exists(sigfile)
 
-        sig = next(signature.load_signatures(sigfile))
-        assert sig.name == 'foo'
+    sig = next(signature.load_signatures(sigfile))
+    assert sig.name == 'foo'
+    
+    runtmp.sourmash('sketch', 'dna', '--name', 'foo', testdata1, '-o', 'foo2.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '--name', 'foo',
-                                            testdata1, '-o', 'foo2.sig'],
-                                           in_directory=location)
+    sigfile2 = runtmp.output('foo2.sig')
+    assert os.path.exists(sigfile2)
 
-        sigfile2 = os.path.join(location, 'foo2.sig')
-        assert os.path.exists(sigfile2)
-
-        sig2 = next(signature.load_signatures(sigfile))
-        assert sig2.name == 'foo'
-        assert sig.name == sig2.name
+    sig2 = next(signature.load_signatures(sigfile))
+    assert sig2.name == 'foo'
+    assert sig.name == sig2.name
 
 
-def test_do_sourmash_sketchdna_name_fail_no_output():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '--merge', 'foo',
-                                            testdata1],
-                                           in_directory=location,
-                                           fail_ok=True)
-        assert status == -1
+def test_do_sourmash_sketchdna_name_fail_no_output(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'dna', '--merge', 'foo', testdata1)
+
+    assert runtmp.last_result.status == -1
 
 
-def test_do_sourmash_sketchdna_fail_no_output():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '--merge', 'foo',
-                                            testdata1],
-                                           in_directory=location,
-                                           fail_ok=True)
-        assert status == -1
+def test_do_sourmash_sketchdna_fail_no_output(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '--name', 'foo',
-                                            testdata1],
-                                           in_directory=location,
-                                           fail_ok=True)
-        assert status == -1
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'dna', '--merge', 'foo', testdata1)
+
+    assert runtmp.last_result.status == -1
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'dna', '--name', 'foo', testdata1)
+
+    assert runtmp.last_result.status == -1
 
 
-def test_do_sourmash_sketchdna_name_from_first():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short3.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '--name-from-first',
-                                            testdata1],
-                                           in_directory=location)
+def test_do_sourmash_sketchdna_name_from_first(runtmp):
+    testdata1 = utils.get_test_data('short3.fa')
+    runtmp.sourmash('sketch', 'dna', '--name-from-first', testdata1)
 
-        sigfile = os.path.join(location, 'short3.fa.sig')
-        assert os.path.exists(sigfile)
+    sigfile = runtmp.output('short3.fa.sig')
+    assert os.path.exists(sigfile)
 
-        sig = next(signature.load_signatures(sigfile))
-        assert sig.name == 'firstname'
+    sig = next(signature.load_signatures(sigfile))
+    assert sig.name == 'firstname'
 
 
-def test_do_sourmash_sketchdna_multik():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-p', 'k=31,k=21',
-                                            testdata1],
-                                           in_directory=location)
-        outfile = os.path.join(location, 'short.fa.sig')
-        assert os.path.exists(outfile)
+def test_do_sourmash_sketchdna_multik(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=31,k=21', testdata1)
 
-        siglist = list(signature.load_signatures(outfile))
+    outfile = runtmp.output('short.fa.sig')
+    assert os.path.exists(outfile)
+
+    siglist = list(signature.load_signatures(outfile))
+    assert len(siglist) == 2
+    ksizes = set([ x.minhash.ksize for x in siglist ])
+    assert 21 in ksizes
+    assert 31 in ksizes
+
+
+def test_do_sketch_dna_override_protein_fail(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'dna', '-p', 'k=7,num=500,protein', testdata1)
+
+    assert runtmp.last_result.status != 0
+    assert 'Error creating signatures: Incompatible sketch type' in runtmp.last_result.err
+
+
+def test_do_sketch_protein_override_dna_fail(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'protein', '-p', 'k=7,num=500,dna', testdata1)
+
+    assert runtmp.last_result.status != 0
+    assert 'Error creating signatures: Incompatible sketch type' in runtmp.last_result.err
+
+
+def test_do_sketch_translate_multik_with_protein(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'translate', '-p', 'k=7,k=10,num=500', testdata1)
+
+    outfile = runtmp.output('short.fa.sig')
+    assert os.path.exists(outfile)
+
+    with open(outfile, 'rt') as fp:
+        sigdata = fp.read()
+        siglist = list(signature.load_signatures(sigdata))
         assert len(siglist) == 2
         ksizes = set([ x.minhash.ksize for x in siglist ])
-        assert 21 in ksizes
-        assert 31 in ksizes
+        assert 7 in ksizes
+        assert 10 in ksizes
 
 
-def test_do_sketch_dna_override_protein_fail():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna',
-                                            '-p', 'k=7,num=500,protein',
-                                            testdata1],
-                                           in_directory=location,
-                                           fail_ok=True)
+def test_do_sketch_translate_multik_with_protein_from_file(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
 
-        assert status != 0
-        assert 'Error creating signatures: Incompatible sketch type' in err
+    file_list = runtmp.output("filelist.txt")
+    with open(file_list, 'wt') as fp:
+        print(testdata1, file=fp)
 
+    runtmp.sourmash('sketch', 'translate', '-p', 'k=7,k=10,num=500', '--from-file', file_list)
 
-def test_do_sketch_protein_override_dna_fail():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'protein',
-                                            '-p', 'k=7,num=500,dna',
-                                            testdata1],
-                                           in_directory=location,
-                                           fail_ok=True)
+    outfile = runtmp.output('short.fa.sig')
+    assert os.path.exists(outfile)
 
-        assert status != 0
-        assert 'Error creating signatures: Incompatible sketch type' in err
+    with open(outfile, 'rt') as fp:
+        sigdata = fp.read()
+        siglist = list(signature.load_signatures(sigdata))
+        assert len(siglist) == 2
+        ksizes = set([ x.minhash.ksize for x in siglist ])
+        assert 7 in ksizes
+        assert 10 in ksizes
 
 
-def test_do_sketch_translate_multik_with_protein():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate',
-                                            '-p', 'k=7,k=10,num=500',
-                                            testdata1],
-                                           in_directory=location)
-        outfile = os.path.join(location, 'short.fa.sig')
-        assert os.path.exists(outfile)
+def test_do_sketch_translate_multik_with_dayhoff(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'translate', '-p', 'k=7,k=10,num=500', '--dayhoff', testdata1)
 
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 2
-            ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 7 in ksizes
-            assert 10 in ksizes
+    outfile = runtmp.output('short.fa.sig')
+    assert os.path.exists(outfile)
+
+    with open(outfile, 'rt') as fp:
+        sigdata = fp.read()
+        siglist = list(signature.load_signatures(sigdata))
+        assert len(siglist) == 2
+        ksizes = set([ x.minhash.ksize for x in siglist ])
+        assert 7 in ksizes
+        assert 10 in ksizes
+        assert all(x.minhash.dayhoff for x in siglist)
 
 
-def test_do_sketch_translate_multik_with_protein_from_file():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
+def test_do_sketch_translate_multik_with_hp(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'translate', '-p', 'k=7,k=10,num=500', '--hp', testdata1)
 
-        file_list = os.path.join(location, "filelist.txt")
-        with open(file_list, 'wt') as fp:
-            print(testdata1, file=fp)
+    outfile = runtmp.output('short.fa.sig')
+    assert os.path.exists(outfile)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate',
-                                            '-p', 'k=7,k=10,num=500',
-                                            '--from-file', file_list],
-                                           in_directory=location)
-        outfile = os.path.join(location, 'short.fa.sig')
-        assert os.path.exists(outfile)
-
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 2
-            ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 7 in ksizes
-            assert 10 in ksizes
-
-
-def test_do_sketch_translate_multik_with_dayhoff():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate',
-                                            '-p', 'k=7,k=10,num=500',
-                                            '--dayhoff',
-                                            testdata1],
-                                           in_directory=location)
-        outfile = os.path.join(location, 'short.fa.sig')
-        assert os.path.exists(outfile)
-
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 2
-            ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 7 in ksizes
-            assert 10 in ksizes
-            assert all(x.minhash.dayhoff for x in siglist)
-
-
-def test_do_sketch_translate_multik_with_hp():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate',
-                                            '-p', 'k=7,k=10,num=500',
-                                            '--hp',
-                                            testdata1],
-                                           in_directory=location)
-        outfile = os.path.join(location, 'short.fa.sig')
-        assert os.path.exists(outfile)
-
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 2
-            ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 7 in ksizes
-            assert 10 in ksizes
-            assert all(x.minhash.hp for x in siglist)
+    with open(outfile, 'rt') as fp:
+        sigdata = fp.read()
+        siglist = list(signature.load_signatures(sigdata))
+        assert len(siglist) == 2
+        ksizes = set([ x.minhash.ksize for x in siglist ])
+        assert 7 in ksizes
+        assert 10 in ksizes
+        assert all(x.minhash.hp for x in siglist)
 
 
 @utils.in_tempdir
@@ -722,258 +909,214 @@ def test_do_sourmash_sketch_translate_multik_only_protein(c):
         assert 10 in ksizes
 
 
-def test_do_sourmash_sketch_translate_bad_sequences():
+def test_do_sourmash_sketch_translate_bad_sequences(runtmp):
     """Proper error handling when Ns in dna sequence"""
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.bad.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate',
-                                            '-p', 'k=7,k=10,num=500',
-                                            testdata1],
-                                           in_directory=location)
-        outfile = os.path.join(location, 'short.bad.fa.sig')
-        assert os.path.exists(outfile)
+    testdata1 = utils.get_test_data('short.bad.fa')
+    runtmp.sourmash('sketch', 'translate', '-p', 'k=7,k=10,num=500', testdata1)
 
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 2
-            ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 7 in ksizes
-            assert 10 in ksizes
+    outfile = runtmp.output('short.bad.fa.sig')
+    assert os.path.exists(outfile)
 
-
-def test_do_sketch_protein_multik_input():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('ecoli.faa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'protein',
-                                            '-p', 'k=7,k=10,num=500',
-                                            testdata1],
-                                           in_directory=location)
-        outfile = os.path.join(location, 'ecoli.faa.sig')
-        assert os.path.exists(outfile)
-
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 2
-            ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 7 in ksizes
-            assert 10 in ksizes
-
-            moltype = set([ x.minhash.moltype == 'protein'
-                            for x in siglist ])
-            assert len(moltype) == 1
-            assert True in moltype
-
-
-def test_do_sketch_protein_multik_input_from_file():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('ecoli.faa')
-
-        file_list = os.path.join(location, "filelist.txt")
-        with open(file_list, 'wt') as fp:
-            print(testdata1, file=fp)
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'protein',
-                                            '-p', 'k=7,k=10,num=500',
-                                            '--from-file', file_list],
-                                           in_directory=location)
-        outfile = os.path.join(location, 'ecoli.faa.sig')
-        assert os.path.exists(outfile)
-
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 2
-            ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 7 in ksizes
-            assert 10 in ksizes
-
-            moltype = set([ x.minhash.moltype == 'protein'
-                            for x in siglist ])
-            assert len(moltype) == 1
-            assert True in moltype
-
-
-def test_do_sourmash_sketchdna_multik_outfile():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        outfile = os.path.join(location, 'FOO.xxx')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna',
-                                            '-p', 'k=21,k=31',
-                                            testdata1, '-o', outfile],
-                                           in_directory=location)
-        assert os.path.exists(outfile)
-
-        siglist = list(signature.load_signatures(outfile))
+    with open(outfile, 'rt') as fp:
+        sigdata = fp.read()
+        siglist = list(signature.load_signatures(sigdata))
         assert len(siglist) == 2
         ksizes = set([ x.minhash.ksize for x in siglist ])
-        assert 21 in ksizes
-        assert 31 in ksizes
+        assert 7 in ksizes
+        assert 10 in ksizes
 
 
-def test_do_sourmash_sketchdna_with_scaled_1():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        outfile = os.path.join(location, 'FOO.xxx')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna',
-                                            '-p', 'k=21,k=31,scaled=1',
-                                            testdata1, '-o', outfile],
-                                            in_directory=location)
-        assert os.path.exists(outfile)
+def test_do_sketch_protein_multik_input(runtmp):
+    testdata1 = utils.get_test_data('ecoli.faa')
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7,k=10,num=500', testdata1)
 
-        siglist = list(signature.load_signatures(outfile))
+    outfile = runtmp.output('ecoli.faa.sig')
+    assert os.path.exists(outfile)
+
+    with open(outfile, 'rt') as fp:
+        sigdata = fp.read()
+        siglist = list(signature.load_signatures(sigdata))
         assert len(siglist) == 2
+        ksizes = set([ x.minhash.ksize for x in siglist ])
+        assert 7 in ksizes
+        assert 10 in ksizes
 
-        scaled_vals = [ x.minhash.scaled for x in siglist ]
-        assert len(scaled_vals) == 2
-        assert set(scaled_vals) == { 1 }
+        moltype = set([ x.minhash.moltype == 'protein'
+                        for x in siglist ])
+        assert len(moltype) == 1
+        assert True in moltype
 
 
-def test_do_sourmash_sketchdna_with_scaled_2():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        outfile = os.path.join(location, 'FOO.xxx')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna',
-                                            '-p', 'k=21,k=31,scaled=2',
-                                            testdata1, '-o', outfile],
-                                            in_directory=location)
-        assert os.path.exists(outfile)
+def test_do_sketch_protein_multik_input_from_file(runtmp):
+    testdata1 = utils.get_test_data('ecoli.faa')
 
-        siglist = list(signature.load_signatures(outfile))
+    file_list = runtmp.output("filelist.txt")
+    with open(file_list, 'wt') as fp:
+        print(testdata1, file=fp)
+
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7,k=10,num=500', '--from-file', file_list)
+
+    outfile = runtmp.output('ecoli.faa.sig')
+    assert os.path.exists(outfile)
+
+    with open(outfile, 'rt') as fp:
+        sigdata = fp.read()
+        siglist = list(signature.load_signatures(sigdata))
         assert len(siglist) == 2
+        ksizes = set([ x.minhash.ksize for x in siglist ])
+        assert 7 in ksizes
+        assert 10 in ksizes
 
-        max_hashes = [ x.minhash._max_hash for x in siglist ]
-        assert len(max_hashes) == 2
-        assert set(max_hashes) == set([ int(2**64 /2.) ])
-
-
-def test_do_sourmash_sketchdna_with_scaled():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        outfile = os.path.join(location, 'FOO.xxx')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna',
-                                            '-p', 'k=21,k=31,scaled=100',
-                                            testdata1, '-o', outfile],
-                                            in_directory=location)
-        assert os.path.exists(outfile)
-
-        siglist = list(signature.load_signatures(outfile))
-        assert len(siglist) == 2
-
-        max_hashes = [ x.minhash._max_hash for x in siglist ]
-        assert len(max_hashes) == 2
-        assert set(max_hashes) == set([ int(2**64 /100.) ])
+        moltype = set([ x.minhash.moltype == 'protein'
+                        for x in siglist ])
+        assert len(moltype) == 1
+        assert True in moltype
 
 
-def test_do_sourmash_sketchdna_with_bad_scaled():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        outfile = os.path.join(location, 'FOO.xxx')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna',
-                                            '-p', 'k=21,k=31,scaled=-1',
-                                            testdata1, '-o', outfile],
-                                            in_directory=location,
-                                            fail_ok=True)
+def test_do_sourmash_sketchdna_multik_outfile(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    outfile = runtmp.output('FOO.xxx')
 
-        assert status != 0
-        assert 'ERROR: scaled value must be positive' in err
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=21,k=31', testdata1, '-o', outfile)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna',
-                                            '-p', 'k=21,k=31,scaled=1000.5',
-                                            testdata1, '-o', outfile],
-                                            in_directory=location,
-                                            fail_ok=True)
+    assert os.path.exists(outfile)
 
-        assert status != 0
-        assert "cannot parse scaled='1000.5' as an integer" in err
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna',
-                                            '-p', 'k=21,k=31,scaled=1000000000',
-                                            testdata1, '-o', outfile],
-                                            in_directory=location)
-
-        assert status == 0
-        assert 'WARNING: scaled value should be <= 1e6. Continuing anyway.' in err
+    siglist = list(signature.load_signatures(outfile))
+    assert len(siglist) == 2
+    ksizes = set([ x.minhash.ksize for x in siglist ])
+    assert 21 in ksizes
+    assert 31 in ksizes
 
 
-def test_do_sketch_with_seed():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        outfile = os.path.join(location, 'FOO.xxx')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna',
-                                            '-p', 'k=21,k=31,seed=43',
-                                            testdata1, '-o', outfile],
-                                            in_directory=location)
-        assert os.path.exists(outfile)
+def test_do_sourmash_sketchdna_with_scaled_1(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    outfile = runtmp.output('FOO.xxx')
 
-        siglist = list(signature.load_signatures(outfile))
-        assert len(siglist) == 2
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=21,k=31,scaled=1', testdata1, '-o', outfile)
 
-        seeds = [ x.minhash.seed for x in siglist ]
-        assert len(seeds) == 2
-        assert set(seeds) == set([ 43 ])
+    assert os.path.exists(outfile)
+
+    siglist = list(signature.load_signatures(outfile))
+    assert len(siglist) == 2
+
+    scaled_vals = [ x.minhash.scaled for x in siglist ]
+    assert len(scaled_vals) == 2
+    assert set(scaled_vals) == { 1 }
 
 
-def test_do_sourmash_check_protein_comparisons():
+def test_do_sourmash_sketchdna_with_scaled_2(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    outfile = runtmp.output('FOO.xxx')
+
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=21,k=31,scaled=2', testdata1, '-o', outfile)
+
+    assert os.path.exists(outfile)
+
+    siglist = list(signature.load_signatures(outfile))
+    assert len(siglist) == 2
+
+    max_hashes = [ x.minhash._max_hash for x in siglist ]
+    assert len(max_hashes) == 2
+    assert set(max_hashes) == set([ int(2**64 /2.) ])
+
+
+def test_do_sourmash_sketchdna_with_scaled(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    outfile = runtmp.output('FOO.xxx')
+
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=21,k=31,scaled=100', testdata1, '-o', outfile)
+
+    assert os.path.exists(outfile)
+
+    siglist = list(signature.load_signatures(outfile))
+    assert len(siglist) == 2
+
+    max_hashes = [ x.minhash._max_hash for x in siglist ]
+    assert len(max_hashes) == 2
+    assert set(max_hashes) == set([ int(2**64 /100.) ])
+
+
+def test_do_sourmash_sketchdna_with_bad_scaled(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    outfile = runtmp.output('FOO.xxx')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'dna', '-p', 'k=21,k=31,scaled=-1', testdata1, '-o', outfile)
+
+    assert runtmp.last_result.status != 0
+    print(runtmp.last_result.err)
+    assert 'ERROR: scaled value must be positive' in runtmp.last_result.err
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'dna', '-p', 'k=21,k=31,scaled=1000.5', testdata1, '-o', outfile)
+
+    assert runtmp.last_result.status != 0
+    assert "cannot parse scaled='1000.5' as an integer" in runtmp.last_result.err
+
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=21,k=31,scaled=1000000000', testdata1, '-o', outfile)
+
+    assert runtmp.last_result.status == 0
+    print('XXX')
+    print(runtmp.last_result.err)
+    assert 'WARNING: scaled value should be <= 1e6. Continuing anyway.' in runtmp.last_result.err
+
+
+def test_do_sketch_with_seed(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    outfile = runtmp.output('FOO.xxx')
+
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=21,k=31,seed=43', testdata1, '-o', outfile)
+
+    assert os.path.exists(outfile)
+
+    siglist = list(signature.load_signatures(outfile))
+    assert len(siglist) == 2
+
+    seeds = [ x.minhash.seed for x in siglist ]
+    assert len(seeds) == 2
+    assert set(seeds) == set([ 43 ])
+
+
+def test_do_sourmash_check_protein_comparisons(runtmp):
     # this test checks 2 x 2 protein comparisons with E. coli genes.
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('ecoli.faa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'protein',
-                                            '-p', 'k=7,num=500',
-                                            '--singleton',
-                                            testdata1],
-                                           in_directory=location)
-        sig1 = os.path.join(location, 'ecoli.faa.sig')
-        assert os.path.exists(sig1)
+    testdata1 = utils.get_test_data('ecoli.faa')
 
-        testdata2 = utils.get_test_data('ecoli.genes.fna')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate',
-                                            '-p', 'k=7,num=500',
-                                            '--singleton',
-                                            testdata2],
-                                           in_directory=location)
-        sig2 = os.path.join(location, 'ecoli.genes.fna.sig')
-        assert os.path.exists(sig2)
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7,num=500', '--singleton', testdata1)
 
-        # I'm not sure why load_signatures is randomizing order, but ok.
-        x = list(signature.load_signatures(sig1))
-        sig1_aa, sig2_aa = sorted(x, key=lambda x: x.name)
+    sig1 = runtmp.output('ecoli.faa.sig')
+    assert os.path.exists(sig1)
 
-        x = list(signature.load_signatures(sig2))
-        sig1_trans, sig2_trans = sorted(x, key=lambda x: x.name)
+    testdata2 = utils.get_test_data('ecoli.genes.fna')
+    runtmp.sourmash('sketch', 'translate', '-p', 'k=7,num=500', '--singleton', testdata2)
 
-        name1 = sig1_aa.name.split()[0]
-        assert name1 == 'NP_414543.1'
-        name2 = sig2_aa.name.split()[0]
-        assert name2 == 'NP_414544.1'
-        name3 = sig1_trans.name.split()[0]
-        assert name3 == 'gi|556503834:2801-3733'
-        name4 = sig2_trans.name.split()[0]
-        assert name4 == 'gi|556503834:337-2799'
+    sig2 = runtmp.output('ecoli.genes.fna.sig')
+    assert os.path.exists(sig2)
 
-        print(name1, name3, round(sig1_aa.similarity(sig1_trans), 3))
-        print(name2, name3, round(sig2_aa.similarity(sig1_trans), 3))
-        print(name1, name4, round(sig1_aa.similarity(sig2_trans), 3))
-        print(name2, name4, round(sig2_aa.similarity(sig2_trans), 3))
+    # I'm not sure why load_signatures is randomizing order, but ok.
+    x = list(signature.load_signatures(sig1))
+    sig1_aa, sig2_aa = sorted(x, key=lambda x: x.name)
 
-        assert round(sig1_aa.similarity(sig1_trans), 3) == 0.0
-        assert round(sig2_aa.similarity(sig1_trans), 3) == 0.166
-        assert round(sig1_aa.similarity(sig2_trans), 3) == 0.174
-        assert round(sig2_aa.similarity(sig2_trans), 3) == 0.0
+    x = list(signature.load_signatures(sig2))
+    sig1_trans, sig2_trans = sorted(x, key=lambda x: x.name)
+
+    name1 = sig1_aa.name.split()[0]
+    assert name1 == 'NP_414543.1'
+    name2 = sig2_aa.name.split()[0]
+    assert name2 == 'NP_414544.1'
+    name3 = sig1_trans.name.split()[0]
+    assert name3 == 'gi|556503834:2801-3733'
+    name4 = sig2_trans.name.split()[0]
+    assert name4 == 'gi|556503834:337-2799'
+
+    print(name1, name3, round(sig1_aa.similarity(sig1_trans), 3))
+    print(name2, name3, round(sig2_aa.similarity(sig1_trans), 3))
+    print(name1, name4, round(sig1_aa.similarity(sig2_trans), 3))
+    print(name2, name4, round(sig2_aa.similarity(sig2_trans), 3))
+
+    assert round(sig1_aa.similarity(sig1_trans), 3) == 0.0
+    assert round(sig2_aa.similarity(sig1_trans), 3) == 0.166
+    assert round(sig1_aa.similarity(sig2_trans), 3) == 0.174
+    assert round(sig2_aa.similarity(sig2_trans), 3) == 0.0
 
 
 @utils.in_tempdir
@@ -1016,50 +1159,129 @@ def test_do_sourmash_check_knowngood_dna_comparisons_use_rna(c):
     assert sig2.similarity(good) == 1.0
 
 
-def test_do_sourmash_check_knowngood_input_protein_comparisons():
+def test_do_sourmash_check_knowngood_input_protein_comparisons(runtmp):
     # this test checks against a known good signature calculated
     # by utils/compute-input-prot-another-way.py
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('ecoli.faa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'protein',
-                                            '-p', 'k=7,num=500',
-                                            '--singleton',
-                                            testdata1],
-                                           in_directory=location)
-        sig1 = os.path.join(location, 'ecoli.faa.sig')
-        assert os.path.exists(sig1)
+    testdata1 = utils.get_test_data('ecoli.faa')
 
-        x = list(signature.load_signatures(sig1))
-        sig1_aa, sig2_aa = sorted(x, key=lambda x: x.name)
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7,num=500', '--singleton', testdata1)
 
-        knowngood = utils.get_test_data('benchmark.input_prot.sig')
-        good_aa = list(signature.load_signatures(knowngood))[0]
+    sig1 = runtmp.output('ecoli.faa.sig')
+    assert os.path.exists(sig1)
 
-        assert sig1_aa.similarity(good_aa) == 1.0
+    x = list(signature.load_signatures(sig1))
+    sig1_aa, sig2_aa = sorted(x, key=lambda x: x.name)
+
+    knowngood = utils.get_test_data('benchmark.input_prot.sig')
+    good_aa = list(signature.load_signatures(knowngood))[0]
+
+    assert sig1_aa.similarity(good_aa) == 1.0
 
 
-def test_do_sourmash_check_knowngood_protein_comparisons():
+def test_do_sourmash_check_knowngood_protein_comparisons(runtmp):
     # this test checks against a known good signature calculated
     # by utils/compute-prot-mh-another-way.py
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('ecoli.genes.fna')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'translate',
-                                            '-p', 'k=7,num=500',
-                                            '--singleton',
-                                            testdata1],
-                                           in_directory=location)
-        sig1 = os.path.join(location, 'ecoli.genes.fna.sig')
-        assert os.path.exists(sig1)
+    testdata1 = utils.get_test_data('ecoli.genes.fna')
 
-        x = list(signature.load_signatures(sig1))
-        sig1_trans, sig2_trans = sorted(x, key=lambda x: x.name)
+    runtmp.sourmash('sketch', 'translate', '-p', 'k=7,num=500', '--singleton', testdata1)
 
-        knowngood = utils.get_test_data('benchmark.prot.sig')
-        good_trans = list(signature.load_signatures(knowngood))[0]
+    sig1 = runtmp.output('ecoli.genes.fna.sig')
+    assert os.path.exists(sig1)
 
-        assert sig2_trans.similarity(good_trans) == 1.0
+    x = list(signature.load_signatures(sig1))
+    sig1_trans, sig2_trans = sorted(x, key=lambda x: x.name)
+
+    knowngood = utils.get_test_data('benchmark.prot.sig')
+    good_trans = list(signature.load_signatures(knowngood))[0]
+
+    assert sig2_trans.similarity(good_trans) == 1.0
+
+
+def test_do_sourmash_singleton_multiple_files_no_out_specified(runtmp):
+    # this test checks that --singleton -o works
+    testdata1 = utils.get_test_data('ecoli.faa')
+    testdata2 = utils.get_test_data('shewanella.faa')
+
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7', '--singleton',
+                    testdata1, testdata2)
+
+    print(runtmp.last_result.err)
+    assert "saved 2 signature(s) to 'ecoli.faa.sig'. Note: signature license is CC0." in runtmp.last_result.err
+    assert "saved 2 signature(s) to 'shewanella.faa.sig'. Note: signature license is CC0." in runtmp.last_result.err
+
+    sig1 = runtmp.output('ecoli.faa.sig')
+    assert os.path.exists(sig1)
+    sig2 = runtmp.output('shewanella.faa.sig')
+    assert os.path.exists(sig2)
+
+    x = list(signature.load_signatures(sig1))
+    for ss in x:
+        print(ss.name)
+
+    y = list(signature.load_signatures(sig2))
+    for ss in y:
+        print(ss.name)
+
+    assert len(x) == 2
+    assert len(y) == 2
+
+    idents = [ ss.name.split()[0] for ss in x ]
+    print(idents)
+    assert set(['NP_414543.1', 'NP_414544.1' ]) == set(idents)
+
+    idents = [ ss.name.split()[0] for ss in y ]
+    print(idents)
+    assert set(['WP_006079348.1', 'WP_006079351.1']) == set(idents)
+
+
+def test_do_sourmash_singleton_multiple_files_output(runtmp):
+    # this test checks that --singleton -o works
+    testdata1 = utils.get_test_data('ecoli.faa')
+    testdata2 = utils.get_test_data('shewanella.faa')
+
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7', '--singleton',
+                    testdata1, testdata2, '-o', 'output.sig')
+
+    print(runtmp.last_result.err)
+    assert "saved 4 signature(s) to 'output.sig'. Note: signature license is CC0." in runtmp.last_result.err
+
+    sig1 = runtmp.output('output.sig')
+    assert os.path.exists(sig1)
+
+    x = list(signature.load_signatures(sig1))
+    for ss in x:
+        print(ss.name)
+
+    assert len(x) == 4
+
+    idents = [ ss.name.split()[0] for ss in x ]
+    print(idents)
+    assert set(['NP_414543.1', 'NP_414544.1', 'WP_006079348.1', 'WP_006079351.1']) == set(idents)
+
+
+def test_do_sourmash_singleton_multiple_files_output_zip(runtmp):
+    # this test checks that --singleton -o works
+    testdata1 = utils.get_test_data('ecoli.faa')
+    testdata2 = utils.get_test_data('shewanella.faa')
+
+    runtmp.sourmash('sketch', 'protein', '-p', 'k=7', '--singleton',
+                    testdata1, testdata2, '-o', 'output.zip')
+
+    print(runtmp.last_result.err)
+    assert "saved 4 signature(s) to 'output.zip'. Note: signature license is CC0." in runtmp.last_result.err
+
+    sig1 = runtmp.output('output.zip')
+    assert os.path.exists(sig1)
+
+    x = list(sourmash.load_file_as_signatures(sig1))
+    for ss in x:
+        print(ss.name)
+
+    assert len(x) == 4
+
+    idents = [ ss.name.split()[0] for ss in x ]
+    print(idents)
+    assert set(['NP_414543.1', 'NP_414544.1', 'WP_006079348.1', 'WP_006079351.1']) == set(idents)
 
 
 def test_protein_with_stop_codons(runtmp):
