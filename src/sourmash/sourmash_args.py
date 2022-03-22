@@ -364,11 +364,19 @@ def _load_stdin(filename, **kwargs):
     return db
 
 
+def _load_standalone_manifest(filename, **kwargs):
+    from sourmash.index import StandaloneManifestIndex
+    idx = StandaloneManifestIndex.load(filename)
+    return idx
+
+
 def _multiindex_load_from_pathlist(filename, **kwargs):
     "Load collection from a list of signature/database files"
     db = MultiIndex.load_from_pathlist(filename)
 
     return db
+
+
 
 
 def _multiindex_load_from_path(filename, **kwargs):
@@ -416,6 +424,7 @@ def _load_zipfile(filename, **kwargs):
 # all loader functions, in order.
 _loader_functions = [
     ("load from stdin", _load_stdin),
+    ("load from standalone manifest", _load_standalone_manifest),
     ("load from path (file or directory)", _multiindex_load_from_path),
     ("load from file list", _multiindex_load_from_pathlist),
     ("load SBT", _load_sbt),
