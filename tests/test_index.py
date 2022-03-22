@@ -2419,7 +2419,7 @@ def test_lazy_multi_index_1(runtmp):
     assert len(db) == 2
 
     # ...but we should get an error when we call signatures.
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(ValueError):
         list(db.signatures())
 
     # but put it back, and all is forgiven. yay!
@@ -2497,11 +2497,10 @@ def test_revindex_gather():
     assert matches[0][1] == ss47
 
 
-def test_revindex_gather_ignore():
+def test_revindex_gather_ignore(runtmp):
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
-
 
     new_dir = runtmp.output('somedir')
     os.mkdir(new_dir)
