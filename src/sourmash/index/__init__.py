@@ -1138,7 +1138,26 @@ class LazyLoadedIndex(Index):
 
 
 class StandaloneManifestIndex(Index):
-    def __init__(self, manifest, location, prefix):
+    """Load a standalone manifest as an Index.
+
+    This class is useful for the situtation where you have a directory
+    with many signature collections underneath it, and you don't want to load
+    every collection each time you run sourmash.
+
+    Instead, you can run 'sourmash sig manifest <directory> -o mf.csv' to
+    output a manifest and then use this class to load 'mf.csv' directly.
+    Sketch type selection, picklists, and pattern matching will all work
+    directly on the manifest and will load signatures only upon demand.
+
+    One feature of this class is that absolute paths to sketches in
+    the 'internal_location' field of the manifests will be loaded properly.
+    This permits manifests to be constructed for various collections of
+    signatures that reside elsewhere, and not just below a single directory
+    prefix.
+    """
+    def __init__(self, manifest, location, *, prefix=None):
+        """Create object. 'location' is path of manifest file, 'prefix' is
+        prepended to signature paths when loading non-abspaths."""
         assert manifest is not None
         self.manifest = manifest
         self._location = location
@@ -1146,18 +1165,28 @@ class StandaloneManifestIndex(Index):
 
     @classmethod
     def load(cls, location):
+        "Load manifest file from given location."
         if not os.path.isfile(location):
-            raise ValueError("not a file")
+            raise ValueError(f"provided manifest location '{location}' is not a file")
 
         with open(location, newline='') as fp:
             m = CollectionManifest.load_from_csv(fp)
-        return cls(m, location, os.path.dirname(location))
+
+        return cls(m, location, prefix=os.path.dirname(location))
 
     @property
     def location(self):
         return self._location
 
     def signatures_with_location(self):
+        for ss, _, loc in self._signatures_with_internal():
+            yield ss, loc
+
+    def signatures(self):
+        for ss, _, loc in self._signatures_with_internal():
+            yield ss
+
+    def _signatures_with_internal(self):
         for row in self.manifest.rows:
             iloc = row['internal_location']
             if not iloc.startswith('/'):
@@ -1166,11 +1195,7 @@ class StandaloneManifestIndex(Index):
             idx = LinearIndex.load(iloc)
             for ss in idx.signatures():
                 if ss.md5sum() == row['md5']:
-                    yield ss, iloc
-
-    def signatures(self):
-        for ss, loc in self.signatures_with_location():
-            yield ss
+                    yield ss, '', iloc
 
     def __len__(self):
         return len(self.manifest)
@@ -1184,4 +1209,5 @@ class StandaloneManifestIndex(Index):
     def select(self, **kwargs):
         "Run 'select' on the manifest."
         new_manifest = self.manifest.select_to_manifest(**kwargs)
-        return StandaloneManifestIndex(new_manifest, self._location, self.prefix)
+        return StandaloneManifestIndex(new_manifest, self._location,
+                                       prefix=self.prefix)
