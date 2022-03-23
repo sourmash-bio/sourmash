@@ -39,6 +39,7 @@ from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
 import csv
 from io import TextIOWrapper
+from collections import defaultdict
 
 from ..search import make_jaccard_search_query, make_gather_query
 from ..manifest import CollectionManifest
@@ -1187,14 +1188,21 @@ class StandaloneManifestIndex(Index):
             yield ss
 
     def _signatures_with_internal(self):
+        # collect all internal locations
+        iloc_to_md5s = defaultdict(set)
         for row in self.manifest.rows:
             iloc = row['internal_location']
+            iloc_to_md5s[iloc].add(row['md5'])
+
+        # iterate over internal locations, selecting relevant sigs
+        for iloc, md5_set in iloc_to_md5s.items():
+            # prepend with prefix?
             if not iloc.startswith('/'):
                 iloc = os.path.join(self.prefix, iloc)
 
             idx = LinearIndex.load(iloc)
             for ss in idx.signatures():
-                if ss.md5sum() == row['md5']:
+                if ss.md5sum() in md5_set:
                     yield ss, '', iloc
 
     def __len__(self):
