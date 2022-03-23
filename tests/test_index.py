@@ -2513,7 +2513,7 @@ def test_standalone_manifest_signatures(runtmp):
 
 
 def test_standalone_manifest_signatures_prefix(runtmp):
-    # play with 'prefix' @CTB
+    # try out 'prefix' for StandaloneManifestIndex
 
     ## first, build a manifest in memory using MultiIndex
     sig47 = utils.get_test_data('47.fa.sig')
@@ -2524,22 +2524,47 @@ def test_standalone_manifest_signatures_prefix(runtmp):
 
     lidx1 = LinearIndex.load(sig47)
     lidx2 = LinearIndex.load(sig63)
-    lidx1.filename = '47.fa.sig'
-    lidx2.filename = '63.fa.sig'
+    mi = MultiIndex.load([lidx1, lidx2], [sig47, sig63], "")
+
+    # ok, now remove the abspath prefix from iloc
+    for row in mi.manifest.rows:
+        row['internal_location'] = os.path.basename(row['internal_location'])
+
+    ## this should succeed!
+    mm = StandaloneManifestIndex(mi.manifest, None,
+                                 prefix=utils.get_test_data(''))
+
+    assert len(list(mm.signatures())) == 2
+
+
+def test_standalone_manifest_signatures_prefix_fail(runtmp):
+    # give StandaloneManifest the wrong prefix
+
+    ## first, build a manifest in memory using MultiIndex
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx1 = LinearIndex.load(sig47)
+    lidx2 = LinearIndex.load(sig63)
     print('XXX', lidx1.location)
 
     mi = MultiIndex.load([lidx1, lidx2], [sig47, sig63], "")
 
+    # remove prefix from manifest
     for row in mi.manifest.rows:
         row['internal_location'] = os.path.basename(row['internal_location'])
 
     ## got a manifest! ok, now test out StandaloneManifestIndex
     mm = StandaloneManifestIndex(mi.manifest, None, prefix='foo')
 
-    try:
+    # should fail
+    with pytest.raises(ValueError) as exc:
         list(mm.signatures())
-    except ValueError as exc:
-        assert "Error while reading signatures from 'foo/47.fa.sig'" in str(exc)
+
+    assert "Error while reading signatures from 'foo/47.fa.sig'" in str(exc)
 
 
 def test_standalone_manifest_load_from_dir(runtmp):
