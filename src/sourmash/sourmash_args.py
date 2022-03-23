@@ -377,8 +377,6 @@ def _multiindex_load_from_pathlist(filename, **kwargs):
     return db
 
 
-
-
 def _multiindex_load_from_path(filename, **kwargs):
     "Load collection from a directory."
     traverse_yield_all = kwargs['traverse_yield_all']
