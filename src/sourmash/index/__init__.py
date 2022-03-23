@@ -1189,21 +1189,24 @@ class StandaloneManifestIndex(Index):
 
     def _signatures_with_internal(self):
         # collect all internal locations
-        iloc_to_md5s = defaultdict(set)
+        iloc_to_rows = defaultdict(list)
         for row in self.manifest.rows:
             iloc = row['internal_location']
-            iloc_to_md5s[iloc].add(row['md5'])
+            iloc_to_rows[iloc].append(row)
 
         # iterate over internal locations, selecting relevant sigs
-        for iloc, md5_set in iloc_to_md5s.items():
+        for iloc, iloc_rows in iloc_to_rows.items():
             # prepend with prefix?
             if not iloc.startswith('/'):
                 iloc = os.path.join(self.prefix, iloc)
 
+            sub_mf = CollectionManifest(iloc_rows)
+            picklist = sub_mf.to_picklist()
+
             idx = LinearIndex.load(iloc)
+            idx = idx.select(picklist=picklist)
             for ss in idx.signatures():
-                if ss.md5sum() in md5_set:
-                    yield ss, '', iloc
+                yield ss, '', iloc
 
     def __len__(self):
         return len(self.manifest)
