@@ -1203,7 +1203,7 @@ class StandaloneManifestIndex(Index):
             sub_mf = CollectionManifest(iloc_rows)
             picklist = sub_mf.to_picklist()
 
-            idx = LinearIndex.load(iloc)
+            idx = sourmash.load_file_as_index(iloc)
             idx = idx.select(picklist=picklist)
             for ss in idx.signatures():
                 yield ss, '', iloc
