@@ -13,7 +13,8 @@ from sourmash import index
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             make_jaccard_search_query, CounterGather,
-                            LazyLinearIndex, MultiIndex)
+                            LazyLinearIndex, MultiIndex,
+                            StandaloneManifestIndex)
 from sourmash.index.revindex import RevIndex
 from sourmash.sbt import SBT, GraphFactory, Leaf
 from sourmash.sbtmh import SigLeaf
@@ -2485,3 +2486,27 @@ def test_revindex_gather_ignore():
     assert not is_found(ss47, results)
     assert not is_found(ss2, results)
     assert is_found(ss63, results)
+
+
+def test_standalone_manifest_signatures(runtmp):
+    # build a StandaloneManifestIndex and test 'signatures' method.
+
+    ## first, build a manifest in memory using MultiIndex
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx1 = LinearIndex.load(sig47)
+    lidx2 = LinearIndex.load(sig63)
+
+    mi = MultiIndex.load([lidx1, lidx2], [sig47, sig63], "")
+
+    ## got a manifest! ok, now test out StandaloneManifestIndex
+    mm = StandaloneManifestIndex(mi.manifest, None)
+
+    siglist = [ ss for ss in mm.signatures() ]
+    assert len(siglist) == 2
+    assert ss47 in siglist
+    assert ss63 in siglist
