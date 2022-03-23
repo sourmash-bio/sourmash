@@ -1155,6 +1155,9 @@ class StandaloneManifestIndex(Index):
     This permits manifests to be constructed for various collections of
     signatures that reside elsewhere, and not just below a single directory
     prefix.
+
+    @CTB support manifests with signatures stored? hmm. seems redundant
+    with MultiIndex.
     """
     def __init__(self, manifest, location, *, prefix=None):
         """Create object. 'location' is path of manifest file, 'prefix' is

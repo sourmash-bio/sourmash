@@ -2510,3 +2510,43 @@ def test_standalone_manifest_signatures(runtmp):
     assert len(siglist) == 2
     assert ss47 in siglist
     assert ss63 in siglist
+
+
+def test_standalone_manifest_signatures_prefix(runtmp):
+    # play with 'prefix' @CTB
+
+    ## first, build a manifest in memory using MultiIndex
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx1 = LinearIndex.load(sig47)
+    lidx2 = LinearIndex.load(sig63)
+    lidx1.filename = '47.fa.sig'
+    lidx2.filename = '63.fa.sig'
+    print('XXX', lidx1.location)
+
+    mi = MultiIndex.load([lidx1, lidx2], [sig47, sig63], "")
+
+    for row in mi.manifest.rows:
+        row['internal_location'] = os.path.basename(row['internal_location'])
+
+    ## got a manifest! ok, now test out StandaloneManifestIndex
+    mm = StandaloneManifestIndex(mi.manifest, None, prefix='foo')
+
+    try:
+        list(mm.signatures())
+    except ValueError as exc:
+        assert "Error while reading signatures from 'foo/47.fa.sig'" in str(exc)
+
+
+def test_standalone_manifest_load_from_dir(runtmp):
+    # test loading a mf with relative directory paths from test-data
+    mf = utils.get_test_data('scaled/mf.csv')
+    idx = sourmash.load_file_as_index(mf)
+
+    siglist = list(idx.signatures())
+    assert len(siglist) == 15
+

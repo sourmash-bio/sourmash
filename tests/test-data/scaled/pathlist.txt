@@ -1,0 +1,7 @@
+all.lca.json
+all.sbt.zip
+genome-s10+s11.fa.gz.sig
+genome-s10-small.fa.gz.sig
+genome-s10.fa.gz.sig
+genome-s11.fa.gz.sig
+genome-s12.fa.gz.sig
