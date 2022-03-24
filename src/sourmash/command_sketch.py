@@ -463,6 +463,38 @@ def fromfile(args):
         if args.output_signatures:                   # actually compute
             _compute_sigs(to_build, args.output_signatures)
 
+        elif args.output_commands: # output sourmash commands
+            out_obj = sourmash_args.FileOutput(args.output_commands)
+            out_fp = out_obj.open()
+
+            output_n = 0
+            for (name, filename), param_objs in to_build.items():
+                param_strs = []
+                is_dna = None
+
+                for p in param_objs:
+                    # support straight up sourmash command output,
+                    # and also CSV output
+                    if p.dna:
+                        assert is_dna != False
+                        is_dna = True
+                    else:
+                        is_dna = False
+                        assert is_dna != True
+                    param_strs.append(p.to_param_str())
+
+                assert is_dna is not None
+                sketchtype = "dna" if is_dna else "protein"
+
+                param_strs = "-p " + " -p ".join(param_strs)
+                name = shlex.quote(name)
+                output_loc = f"XXX_{output_n}.zip"
+
+                print(f"sourmash sketch {sketchtype} {filename} --name {name} -o {output_loc} {param_strs}", file=out_fp)
+                output_n += 1
+
+            out_obj.close()
+
         if args.output_csv_info: # output info necessary to construct
             output_n = 0
             csv_obj = sourmash_args.FileOutputCSV(args.output_csv_info)
@@ -478,6 +510,8 @@ def fromfile(args):
                 is_dna = None
 
                 for p in param_objs:
+                    # support straight up sourmash command output,
+                    # and also CSV output
                     if p.dna:
                         assert is_dna != False
                         is_dna = True
