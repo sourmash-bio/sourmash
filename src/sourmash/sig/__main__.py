@@ -1193,6 +1193,34 @@ def kmers(args):
 _SketchInfo = namedtuple('_SketchInfo', 'ksize, moltype, scaled, num, abund')
 
 
+def _summarize_manifest(manifest):
+    info_d = {}
+
+    # use a namedtuple to track counts of distinct sketch types and n hashes
+    total_size = 0
+    counter = Counter()
+    hashcounts = Counter()
+    for row in manifest.rows:
+        ski = _SketchInfo(ksize=row['ksize'], moltype=row['moltype'],
+                          scaled=row['scaled'], num=row['num'],
+                          abund=row['with_abundance'])
+        counter[ski] += 1
+        hashcounts[ski] += row['n_hashes']
+        total_size += row['n_hashes']
+
+    # store in info_d
+    info_d['total_hashes'] = total_size
+    sketch_info = []
+    for ski, count in counter.items():
+        sketch_d = dict(ski._asdict())
+        sketch_d['count'] = count
+        sketch_d['n_hashes'] = hashcounts[ski]
+        sketch_info.append(sketch_d)
+    info_d['sketch_info'] = sketch_info
+
+    return info_d
+
+
 def fileinfo(args):
     """
     provide summary information on the given path (collection, index, etc.)
@@ -1241,27 +1269,7 @@ def fileinfo(args):
         notify("** no manifest and cannot be generated; exiting.")
         sys.exit(0)
 
-    # use a namedtuple to track counts of distinct sketch types and n hashes
-    total_size = 0
-    counter = Counter()
-    hashcounts = Counter()
-    for row in manifest.rows:
-        ski = _SketchInfo(ksize=row['ksize'], moltype=row['moltype'],
-                          scaled=row['scaled'], num=row['num'],
-                          abund=row['with_abundance'])
-        counter[ski] += 1
-        hashcounts[ski] += row['n_hashes']
-        total_size += row['n_hashes']
-
-    # store in info_d
-    info_d['total_hashes'] = total_size
-    sketch_info = []
-    for ski, count in counter.items():
-        sketch_d = dict(ski._asdict())
-        sketch_d['count'] = count
-        sketch_d['n_hashes'] = hashcounts[ski]
-        sketch_info.append(sketch_d)
-    info_d['sketch_info'] = sketch_info
+    info_d.update(_summarize_manifest(manifest))
 
     if text_out:
         print_results(f"total hashes: {info_d['total_hashes']}")
