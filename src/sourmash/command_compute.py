@@ -353,7 +353,6 @@ class ComputeParameters(RustObject):
 
         return p
 
-
     def to_param_str(self):
         "Convert object to equivalent params str."
         pi = []

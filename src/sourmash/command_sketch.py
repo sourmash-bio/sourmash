@@ -403,6 +403,7 @@ def fromfile(args):
 
     to_build = defaultdict(list)
     missing = defaultdict(list)
+    all_names = set()
     missing_count = 0
     total_sigs = 0
     total_rows = 0
@@ -415,6 +416,8 @@ def fromfile(args):
             genome = row['genome_filename']
             proteome = row['protein_filename']
             total_rows += 1
+
+            all_names.add(name)
 
             plist = already_done[name]
             for p in build_params:
@@ -439,6 +442,30 @@ def fromfile(args):
 
     notify(f"Read {total_rows} rows, requesting that {total_sigs} signatures be built.")
 
+    if args.output_manifest_of_existing:
+        from sourmash.manifest import CollectionManifest
+        already_done_rows = []
+
+        for filename in args.already_done:
+            idx = sourmash.load_file_as_index(filename)
+            manifest = idx.manifest
+            assert manifest
+
+            for row in manifest.rows:
+                name = row['name']
+                if name in all_names:
+                    p = ComputeParameters.from_manifest_row(row)
+                    if p in build_params:
+                        already_done_rows.append(row)
+
+        notify(f"collected {len(already_done_rows)} rows for already-done signatures.")
+        already_done_manifest = CollectionManifest(already_done_rows)
+
+        with open(args.output_manifest_of_existing, "w", newline='') as outfp:
+            already_done_manifest.write_to_csv(outfp, write_header=True)
+
+        notify(f"output {len(already_done_manifest)} rows to '{args.output_manifest_of_existing}' in manifest format.")
+
     if missing:
         error("** ERROR: we cannot build some of the requested signatures.")
         error(f"** {missing_count} total signatures (for {len(missing)} names) cannot be built.")
@@ -447,7 +474,7 @@ def fromfile(args):
         else:
             sys.exit(-1)
 
-    notify(f"** {total_sigs - skipped_sigs} signatures requested for {len(to_build)} files;")
+    notify(f"** {total_sigs - skipped_sigs} new signatures to build from {len(to_build)} files;")
     if not to_build:
         notify(f"** Nothing to build. Exiting!")
         sys.exit(0)
