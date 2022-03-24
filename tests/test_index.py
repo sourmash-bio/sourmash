@@ -2574,4 +2574,3 @@ def test_standalone_manifest_load_from_dir(runtmp):
 
     siglist = list(idx.signatures())
     assert len(siglist) == 15
-
