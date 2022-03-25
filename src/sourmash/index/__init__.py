@@ -25,10 +25,13 @@ LazyLinearIndex - lazy selection and linear search of signatures.
 
 ZipFileLinearIndex - simple on-disk storage of signatures.
 
-class MultiIndex - in-memory storage and selection of signatures from multiple
+MultiIndex - in-memory storage and selection of signatures from multiple
 index objects, using manifests.
 
 LazyLoadedIndex - selection on manifests with loading of index on demand.
+
+StandaloneManifestIndex - load manifests directly, and do lazy loading of
+signatures on demand. No signatures are kept in memory..
 
 CounterGather - an ancillary class returned by the 'counter_gather()' method.
 """
@@ -1156,8 +1159,13 @@ class StandaloneManifestIndex(Index):
     signatures that reside elsewhere, and not just below a single directory
     prefix.
 
-    @CTB support manifests with signatures stored? hmm. seems redundant
-    with MultiIndex.
+    StandaloneManifestIndex does _not_ store signatures in memory.
+
+    This class overlaps in concept with LazyLoadedIndex and behaves
+    identically when a manifest contains only rows from a single
+    on-disk Index object.  However, unlike LazyLoadedIndex, this class
+    can be used in situations where there are many signatures in many
+    on-disk Index objects.
     """
     def __init__(self, manifest, location, *, prefix=None):
         """Create object. 'location' is path of manifest file, 'prefix' is
@@ -1180,17 +1188,21 @@ class StandaloneManifestIndex(Index):
 
     @property
     def location(self):
+        "Return the path to this manifest."
         return self._location
 
     def signatures_with_location(self):
+        "Return an iterator over all signatures and their locations."
         for ss, _, loc in self._signatures_with_internal():
             yield ss, loc
 
     def signatures(self):
+        "Return an iterator over all signatures."
         for ss, _, loc in self._signatures_with_internal():
             yield ss
 
     def _signatures_with_internal(self):
+        "Return an iterator over all sigs of (sig, '', internal_location)"
         # collect all internal locations
         iloc_to_rows = defaultdict(list)
         for row in self.manifest.rows:
@@ -1212,7 +1224,12 @@ class StandaloneManifestIndex(Index):
                 yield ss, '', iloc
 
     def __len__(self):
+        "Number of signatures in this manifest (after any select)."
         return len(self.manifest)
+
+    def __bool__(self):
+        "Is this manifest empty?"
+        return bool(self.manifest)
 
     def save(self, *args):
         raise NotImplementedError
