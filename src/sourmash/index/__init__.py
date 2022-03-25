@@ -1171,6 +1171,8 @@ class StandaloneManifestIndex(Index):
     can be used in situations where there are many signatures in many
     on-disk Index objects.
     """
+    is_database = True
+
     def __init__(self, manifest, location, *, prefix=None):
         """Create object. 'location' is path of manifest file, 'prefix' is
         prepended to signature paths when loading non-abspaths."""
