@@ -288,6 +288,7 @@ def manifest(args):
                                                   yield_all_files=args.force)
     except ValueError as exc:
         error(f"Cannot open '{args.location}' as a sourmash signature collection.")
+        error("Use -d/--debug for details.")
         sys.exit(-1)
 
     rebuild = True
@@ -1211,6 +1212,7 @@ def fileinfo(args):
                                                yield_all_files=args.force)
     except ValueError:
         error(f"Cannot open '{args.path}' as a sourmash signature collection.")
+        error("Use -d/--debug for details.")
         sys.exit(-1)
 
     print_bool = lambda x: "yes" if x else "no"
