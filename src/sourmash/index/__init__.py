@@ -1196,15 +1196,22 @@ class StandaloneManifestIndex(Index):
         self.prefix = prefix
 
     @classmethod
-    def load(cls, location):
-        "Load manifest file from given location."
+    def load(cls, location, *, prefix=None):
+        """Load manifest file from given location.
+
+        If prefix is None (default), it is automatically set from dirname.
+        Set prefix='' to avoid this, or provide an explicit prefix.
+        """
         if not os.path.isfile(location):
             raise ValueError(f"provided manifest location '{location}' is not a file")
 
         with open(location, newline='') as fp:
             m = CollectionManifest.load_from_csv(fp)
 
-        return cls(m, location, prefix=os.path.dirname(location))
+        if prefix is None:
+            prefix = os.path.dirname(location)
+
+        return cls(m, location, prefix=prefix)
 
     @property
     def location(self):
@@ -1232,7 +1239,7 @@ class StandaloneManifestIndex(Index):
         # iterate over internal locations, selecting relevant sigs
         for iloc, iloc_rows in iloc_to_rows.items():
             # prepend with prefix?
-            if not iloc.startswith('/'):
+            if not iloc.startswith('/') and self.prefix:
                 iloc = os.path.join(self.prefix, iloc)
 
             sub_mf = CollectionManifest(iloc_rows)

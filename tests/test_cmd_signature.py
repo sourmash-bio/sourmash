@@ -3591,6 +3591,13 @@ def test_sig_manifest_6_pathlist(runtmp):
     assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
     assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
 
+    # note: the manifest output for pathlists will contain the locations
+    # used in the pathlist. This is required by StandaloneManifestIndex.
+    for row in manifest.rows:
+        iloc = row['internal_location']
+        print(iloc)
+        assert iloc.startswith('/'), iloc
+
 
 def test_sig_manifest_does_not_exist(runtmp):
     with pytest.raises(SourmashCommandFailed):

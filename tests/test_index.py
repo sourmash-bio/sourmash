@@ -2389,6 +2389,7 @@ def test_lazy_loaded_index_3_find(runtmp):
     x = list(x)
     assert len(x) == 0
 
+
 def test_revindex_index_search():
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
@@ -2574,3 +2575,71 @@ def test_standalone_manifest_load_from_dir(runtmp):
 
     siglist = list(idx.signatures())
     assert len(siglist) == 15
+
+
+def test_standalone_manifest_lazy_load(runtmp):
+    # check that it's actually doing lazy loading
+    orig_sig47 = utils.get_test_data('47.fa.sig')
+    sig47 = runtmp.output('47.fa.sig')
+
+    # build an external manifest
+    shutil.copyfile(orig_sig47, sig47)
+
+    # this is an abspath to sig47
+    runtmp.sourmash('sig', 'manifest', sig47, '-o', 'mf.csv')
+
+    # should work to get signatures:
+    idx = StandaloneManifestIndex.load(runtmp.output('mf.csv'))
+
+    siglist = list(idx.signatures())
+    assert len(siglist) == 1
+
+    # now remove!
+    os.unlink(sig47)
+
+    # can still access manifest...
+    assert len(idx) == 1
+
+    # ...but we should get an error when we call signatures.
+    with pytest.raises(ValueError):
+        list(idx.signatures())
+
+    # but put it back, and all is forgiven. yay!
+    shutil.copyfile(orig_sig47, sig47)
+    x = list(idx.signatures())
+    assert len(x) == 1
+
+
+def test_standalone_manifest_lazy_load_2_prefix(runtmp):
+    # check that it's actually doing lazy loading; supply explicit prefix
+    orig_sig47 = utils.get_test_data('47.fa.sig')
+    sig47 = runtmp.output('47.fa.sig')
+
+    # build an external manifest
+    shutil.copyfile(orig_sig47, sig47)
+
+    # note, here use a relative path to 47.fa.sig; the manifest will contain
+    # just '47.fa.sig' as the location
+    runtmp.sourmash('sig', 'manifest', '47.fa.sig', '-o', 'mf.csv')
+
+    # should work to get signatures:
+    idx = StandaloneManifestIndex.load(runtmp.output('mf.csv'),
+                                       prefix=runtmp.output(''))
+
+    siglist = list(idx.signatures())
+    assert len(siglist) == 1
+
+    # now remove!
+    os.unlink(sig47)
+
+    # can still access manifest...
+    assert len(idx) == 1
+
+    # ...but we should get an error when we call signatures.
+    with pytest.raises(ValueError):
+        list(idx.signatures())
+
+    # but put it back, and all is forgiven. yay!
+    shutil.copyfile(orig_sig47, sig47)
+    x = list(idx.signatures())
+    assert len(x) == 1
