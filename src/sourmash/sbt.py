@@ -189,7 +189,7 @@ class SBT(Index):
         """
         for k in self.leaves():
             ss = k.data
-            yield ss, self.location, k._path
+            yield ss, k._path
 
     def select(self, ksize=None, moltype=None, num=0, scaled=0,
                containment=False, abund=None, picklist=None):

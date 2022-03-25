@@ -1272,7 +1272,7 @@ def test_multi_index_load_from_directory():
     # also check internal locations and parent value --
     assert mi.parent.endswith('prot/protein')
 
-    ilocs = [ x[2] for x in mi._signatures_with_internal() ]
+    ilocs = [ x[1] for x in mi._signatures_with_internal() ]
     assert endings[0] in ilocs, ilocs
     assert endings[1] in ilocs, ilocs
 
