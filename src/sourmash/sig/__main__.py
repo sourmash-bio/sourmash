@@ -202,7 +202,7 @@ def describe(args):
     """
     provide basic info on signatures
     """
-    set_quiet(args.quiet)
+    set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
     pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
@@ -287,7 +287,8 @@ def manifest(args):
         loader = sourmash_args.load_file_as_index(args.location,
                                                   yield_all_files=args.force)
     except ValueError as exc:
-        error(f"Cannot open '{args.location}'.")
+        error(f"Cannot open '{args.location}' as a sourmash signature collection.")
+        error("Use -d/--debug for details.")
         sys.exit(-1)
 
     rebuild = True
@@ -1221,6 +1222,7 @@ def _summarize_manifest(manifest):
     return info_d
 
 
+# NOTE: also aliased as 'summarize'
 def fileinfo(args):
     """
     provide summary information on the given path (collection, index, etc.)
@@ -1237,7 +1239,8 @@ def fileinfo(args):
         idx = sourmash_args.load_file_as_index(args.path,
                                                yield_all_files=args.force)
     except ValueError:
-        error(f"Cannot open '{args.path}'.")
+        error(f"Cannot open '{args.path}' as a sourmash signature collection.")
+        error("Use -d/--debug for details.")
         sys.exit(-1)
 
     print_bool = lambda x: "yes" if x else "no"

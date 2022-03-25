@@ -329,4 +329,38 @@ def test_sig_fileinfo_does_not_exist(runtmp):
     with pytest.raises(SourmashCommandFailed):
         runtmp.run_sourmash('sig', 'fileinfo', 'does-not-exist')
 
-    assert "Cannot open 'does-not-exist'." in runtmp.last_result.err
+    assert "Cannot open 'does-not-exist' as a sourmash signature collection" in runtmp.last_result.err
+
+
+def test_sig_fileinfo_8_manifest_works(runtmp):
+    # test on a manifest with relative paths, in proper location
+    mf = utils.get_test_data('scaled/mf.csv')
+    runtmp.sourmash('sig', 'fileinfo', mf)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert '15 sketches with DNA, k=31, scaled=10000           717 total hashes' in out
+    assert 'num signatures: 15' in out
+    assert 'has manifest? yes' in out
+    assert 'is database? yes' in out
+    assert 'path filetype: StandaloneManifestIndex' in out
+
+
+def test_sig_fileinfo_8_manifest_works_when_moved(runtmp):
+    # test on a manifest with relative paths, when in wrong place
+    # note: this works, unlike 'describe', because all the necessary info
+    # for 'fileinfo' is in the manifest.
+    mf = utils.get_test_data('scaled/mf.csv')
+    shutil.copyfile(mf, runtmp.output('mf.csv'))
+
+    runtmp.sourmash('sig', 'fileinfo', 'mf.csv')
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert '15 sketches with DNA, k=31, scaled=10000           717 total hashes' in out
+    assert 'num signatures: 15' in out
+    assert 'has manifest? yes' in out
+    assert 'is database? yes' in out
+    assert 'path filetype: StandaloneManifestIndex' in out

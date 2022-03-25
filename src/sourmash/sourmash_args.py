@@ -364,6 +364,12 @@ def _load_stdin(filename, **kwargs):
     return db
 
 
+def _load_standalone_manifest(filename, **kwargs):
+    from sourmash.index import StandaloneManifestIndex
+    idx = StandaloneManifestIndex.load(filename)
+    return idx
+
+
 def _multiindex_load_from_pathlist(filename, **kwargs):
     "Load collection from a list of signature/database files"
     db = MultiIndex.load_from_pathlist(filename)
@@ -416,6 +422,7 @@ def _load_zipfile(filename, **kwargs):
 # all loader functions, in order.
 _loader_functions = [
     ("load from stdin", _load_stdin),
+    ("load from standalone manifest", _load_standalone_manifest),
     ("load from path (file or directory)", _multiindex_load_from_path),
     ("load from file list", _multiindex_load_from_pathlist),
     ("load SBT", _load_sbt),
@@ -776,16 +783,9 @@ def get_manifest(idx, *, require=True, rebuild=False):
 
     debug_literal(f"get_manifest: no manifest found / rebuild={rebuild}")
 
-    # CTB: CollectionManifest.create_manifest wants (ss, iloc).
-    # so this is an adaptor function! Might want to just change
-    # what `create_manifest` takes.
-    def manifest_iloc_iter(idx):
-        for (ss, loc, iloc) in idx._signatures_with_internal():
-            yield ss, iloc
-
     # need to build one...
     try:
-        m = CollectionManifest.create_manifest(manifest_iloc_iter(idx),
+        m = CollectionManifest.create_manifest(idx._signatures_with_internal(),
                                                include_signature=False)
         debug_literal("get_manifest: rebuilt manifest.")
     except NotImplementedError:

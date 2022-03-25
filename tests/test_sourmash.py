@@ -5196,3 +5196,58 @@ def test_gather_scaled_1(runtmp, linear_gather, prefetch_gather):
 
     assert "1.0 kbp      100.0%  100.0%" in runtmp.last_result.out
     assert "found 1 matches total;" in runtmp.last_result.out
+
+
+def test_standalone_manifest_search(runtmp):
+    # test loading/searching a manifest file from the command line.
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    dirname = runtmp.output('somedir')
+    os.mkdir(dirname)
+    subdir = runtmp.output('somedir/subdir')
+    os.mkdir(subdir)
+    shutil.copyfile(sig47, os.path.join(dirname, '47.fa.sig'))
+    shutil.copyfile(sig63, os.path.join(subdir, '63.fa.sig'))
+
+    # for now, the output manifest must be within top level dir for
+    # CLI stuff to work properly.
+    mf = os.path.join(dirname, 'mf.csv')
+
+    # build manifest...
+    runtmp.sourmash('sig', 'manifest', dirname, '-o', mf)
+
+    # ...and now use for a search!
+    runtmp.sourmash('search', sig47, mf)
+
+    out = runtmp.last_result.out
+    print(out)
+    print(runtmp.last_result.err)
+
+    assert "100.0%       NC_009665.1 Shewanella baltica OS185, complete genome" in out
+
+
+def test_standalone_manifest_search_fail(runtmp):
+    # test loading/searching a manifest file from the command line; should
+    # fail if manifest is not located within tld.
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    dirname = runtmp.output('somedir')
+    os.mkdir(dirname)
+    subdir = runtmp.output('somedir/subdir')
+    os.mkdir(subdir)
+    shutil.copyfile(sig47, os.path.join(dirname, '47.fa.sig'))
+    shutil.copyfile(sig63, os.path.join(subdir, '63.fa.sig'))
+
+    # for now, the output manifest must be within top level dir for
+    # CLI stuff to work properly. here we intentionally break this,
+    # for testing purposes.
+    mf = runtmp.output('mf.csv')
+
+    # build manifest...
+    runtmp.sourmash('sig', 'manifest', dirname, '-o', mf)
+
+    # ...and now use for a search!
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('search', sig47, mf)

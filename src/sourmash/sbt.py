@@ -189,7 +189,7 @@ class SBT(Index):
         """
         for k in self.leaves():
             ss = k.data
-            yield ss, self.location, k._path
+            yield ss, k._path
 
     def select(self, ksize=None, moltype=None, num=0, scaled=0,
                containment=False, abund=None, picklist=None):
@@ -831,8 +831,12 @@ class SBT(Index):
         sbt_fn = os.path.join(dirname, sbt_name)
         if not sbt_fn.endswith('.sbt.json') and tempfile is None:
             sbt_fn += '.sbt.json'
-        with open(sbt_fn) as fp:
-            jnodes = json.load(fp)
+
+        try:
+            with open(sbt_fn) as fp:
+                jnodes = json.load(fp)
+        except NotADirectoryError as exc:
+            raise ValueError(str(exc))
 
         if tempfile is not None:
             tempfile.close()
