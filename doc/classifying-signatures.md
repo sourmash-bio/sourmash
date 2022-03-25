@@ -57,7 +57,7 @@ genomes based on greedy partitioning. Essentially, it takes a query
 metagenome and searches the database for the most highly contained
 genome; it then subtracts that match from the metagenome, and repeats.
 At the end it reports how much of the metagenome remains unknown.  The
-[basic sourmash tutorial](tutorial-basic.md#what-s-in-my-metagenome)
+[basic sourmash tutorial](tutorial-basic.md#whats-in-my-metagenome)
 has some sample output from using gather with GenBank.  See Appendix A at
 the bottom of this page for more technical details.
 
