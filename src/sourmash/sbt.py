@@ -831,11 +831,12 @@ class SBT(Index):
         sbt_fn = os.path.join(dirname, sbt_name)
         if not sbt_fn.endswith('.sbt.json') and tempfile is None:
             sbt_fn += '.sbt.json'
+
         try:
             with open(sbt_fn) as fp:
                 jnodes = json.load(fp)
-        except NotADirectoryError:
-            raise ValueError
+        except NotADirectoryError as exc:
+            raise ValueError(str(exc))
 
         if tempfile is not None:
             tempfile.close()
