@@ -329,4 +329,4 @@ def test_sig_fileinfo_does_not_exist(runtmp):
     with pytest.raises(SourmashCommandFailed):
         runtmp.run_sourmash('sig', 'fileinfo', 'does-not-exist')
 
-    assert "Cannot open 'does-not-exist'." in runtmp.last_result.err
+    assert "Cannot open 'does-not-exist' as a sourmash signature collection" in runtmp.last_result.err
