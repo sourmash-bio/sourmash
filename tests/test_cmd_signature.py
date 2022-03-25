@@ -3376,6 +3376,31 @@ signature license: CC0
         assert line.strip() in out
 
 
+def test_sig_describe_3_manifest_works(runtmp):
+    # test on a manifest with relative paths, in proper location
+    mf = utils.get_test_data('scaled/mf.csv')
+    runtmp.sourmash('sig', 'describe', mf, '--csv', 'out.csv')
+
+    out = runtmp.last_result.out
+    print(out)
+
+    with open(runtmp.output('out.csv'), newline='') as fp:
+        r = csv.reader(fp)
+        rows = list(r)
+        assert len(rows) == 16  # 15 signatures, plus head
+
+
+def test_sig_describe_3_manifest_fails_when_moved(runtmp):
+    # test on a manifest with relative paths, when in wrong place;
+    # should fail, because actual signatures cannot be loaded now.
+    # note: this tests lazy loading.
+    mf = utils.get_test_data('scaled/mf.csv')
+    shutil.copyfile(mf, runtmp.output('mf.csv'))
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'describe', 'mf.csv')
+
+ 
 @utils.in_tempdir
 def test_sig_overlap(c):
     # get overlap details
@@ -3566,13 +3591,20 @@ def test_sig_manifest_6_pathlist(runtmp):
     assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
     assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
 
+    # note: the manifest output for pathlists will contain the locations
+    # used in the pathlist. This is required by StandaloneManifestIndex.
+    for row in manifest.rows:
+        iloc = row['internal_location']
+        print(iloc)
+        assert iloc.startswith('/'), iloc
+
 
 def test_sig_manifest_does_not_exist(runtmp):
     with pytest.raises(SourmashCommandFailed):
         runtmp.run_sourmash('sig', 'manifest', 'does-not-exist',
                             '-o', 'out.csv')
 
-    assert "Cannot open 'does-not-exist'." in runtmp.last_result.err
+    assert "Cannot open 'does-not-exist' as a sourmash signature collection." in runtmp.last_result.err
 
 
 def test_sig_manifest_7_allzip_1(runtmp):

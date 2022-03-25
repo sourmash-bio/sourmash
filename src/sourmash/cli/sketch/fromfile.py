@@ -72,6 +72,10 @@ def subparser(subparsers):
         '--output-csv-info',
         help='output information about what signatures need to be generated'
     )
+    file_args.add_argument(
+        '--output-manifest-of-existing',
+        help='output a manifest file of already-existing signatures'
+    )
 
 
 def main(args):

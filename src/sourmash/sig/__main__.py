@@ -202,7 +202,7 @@ def describe(args):
     """
     provide basic info on signatures
     """
-    set_quiet(args.quiet)
+    set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
     pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
@@ -287,7 +287,8 @@ def manifest(args):
         loader = sourmash_args.load_file_as_index(args.location,
                                                   yield_all_files=args.force)
     except ValueError as exc:
-        error(f"Cannot open '{args.location}'.")
+        error(f"Cannot open '{args.location}' as a sourmash signature collection.")
+        error("Use -d/--debug for details.")
         sys.exit(-1)
 
     rebuild = True
@@ -1193,6 +1194,35 @@ def kmers(args):
 _SketchInfo = namedtuple('_SketchInfo', 'ksize, moltype, scaled, num, abund')
 
 
+def _summarize_manifest(manifest):
+    info_d = {}
+
+    # use a namedtuple to track counts of distinct sketch types and n hashes
+    total_size = 0
+    counter = Counter()
+    hashcounts = Counter()
+    for row in manifest.rows:
+        ski = _SketchInfo(ksize=row['ksize'], moltype=row['moltype'],
+                          scaled=row['scaled'], num=row['num'],
+                          abund=row['with_abundance'])
+        counter[ski] += 1
+        hashcounts[ski] += row['n_hashes']
+        total_size += row['n_hashes']
+
+    # store in info_d
+    info_d['total_hashes'] = total_size
+    sketch_info = []
+    for ski, count in counter.items():
+        sketch_d = dict(ski._asdict())
+        sketch_d['count'] = count
+        sketch_d['n_hashes'] = hashcounts[ski]
+        sketch_info.append(sketch_d)
+    info_d['sketch_info'] = sketch_info
+
+    return info_d
+
+
+# NOTE: also aliased as 'summarize'
 def fileinfo(args):
     """
     provide summary information on the given path (collection, index, etc.)
@@ -1209,7 +1239,8 @@ def fileinfo(args):
         idx = sourmash_args.load_file_as_index(args.path,
                                                yield_all_files=args.force)
     except ValueError:
-        error(f"Cannot open '{args.path}'.")
+        error(f"Cannot open '{args.path}' as a sourmash signature collection.")
+        error("Use -d/--debug for details.")
         sys.exit(-1)
 
     print_bool = lambda x: "yes" if x else "no"
@@ -1241,27 +1272,7 @@ def fileinfo(args):
         notify("** no manifest and cannot be generated; exiting.")
         sys.exit(0)
 
-    # use a namedtuple to track counts of distinct sketch types and n hashes
-    total_size = 0
-    counter = Counter()
-    hashcounts = Counter()
-    for row in manifest.rows:
-        ski = _SketchInfo(ksize=row['ksize'], moltype=row['moltype'],
-                          scaled=row['scaled'], num=row['num'],
-                          abund=row['with_abundance'])
-        counter[ski] += 1
-        hashcounts[ski] += row['n_hashes']
-        total_size += row['n_hashes']
-
-    # store in info_d
-    info_d['total_hashes'] = total_size
-    sketch_info = []
-    for ski, count in counter.items():
-        sketch_d = dict(ski._asdict())
-        sketch_d['count'] = count
-        sketch_d['n_hashes'] = hashcounts[ski]
-        sketch_info.append(sketch_d)
-    info_d['sketch_info'] = sketch_info
+    info_d.update(_summarize_manifest(manifest))
 
     if text_out:
         print_results(f"total hashes: {info_d['total_hashes']}")

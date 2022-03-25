@@ -11,7 +11,7 @@ import screed
 
 import sourmash
 from .signature import SourmashSignature
-from .logging import notify, error, set_quiet
+from .logging import notify, error, set_quiet, print_results
 from .command_compute import (_compute_individual, _compute_merged,
                               ComputeParameters, add_seq, set_sig_name)
 from sourmash import sourmash_args
@@ -342,6 +342,7 @@ def _compute_sigs(to_build, output, *, check_sequence=False):
 
 
 def fromfile(args):
+    from sourmash.sig.__main__ import _summarize_manifest, _SketchInfo
     # TODO:
     # check license
     # check-sequence
@@ -403,6 +404,7 @@ def fromfile(args):
 
     to_build = defaultdict(list)
     missing = defaultdict(list)
+    all_names = set()
     missing_count = 0
     total_sigs = 0
     total_rows = 0
@@ -415,6 +417,8 @@ def fromfile(args):
             genome = row['genome_filename']
             proteome = row['protein_filename']
             total_rows += 1
+
+            all_names.add(name)
 
             plist = already_done[name]
             for p in build_params:
@@ -439,6 +443,45 @@ def fromfile(args):
 
     notify(f"Read {total_rows} rows, requesting that {total_sigs} signatures be built.")
 
+    from sourmash.manifest import CollectionManifest
+    already_done_rows = []
+
+    for filename in args.already_done:
+        idx = sourmash.load_file_as_index(filename)
+        manifest = idx.manifest
+        assert manifest
+
+        for row in manifest.rows:
+            name = row['name']
+            if name in all_names:
+                p = ComputeParameters.from_manifest_row(row)
+                if p in build_params:
+                    already_done_rows.append(row)
+
+    notify(f"collected {len(already_done_rows)} rows for already-done signatures.")
+    already_done_manifest = CollectionManifest(already_done_rows)
+
+    if already_done_manifest:
+        info_d = _summarize_manifest(already_done_manifest)
+        print_results('---')
+        print_results("summary of already-done sketches:")
+
+        for ski in info_d['sketch_info']:
+            mh_type = f"num={ski['num']}" if ski['num'] else f"scaled={ski['scaled']}"
+            mh_abund = ", abund" if ski['abund'] else ""
+
+            sketch_str = f"{ski['count']} sketches with {ski['moltype']}, k={ski['ksize']}, {mh_type}{mh_abund}"
+
+            print_results(f"   {sketch_str: <50} {ski['n_hashes']} total hashes")
+
+        print_results('---')
+
+    if args.output_manifest_of_existing:
+        with open(args.output_manifest_of_existing, "w", newline='') as outfp:
+            already_done_manifest.write_to_csv(outfp, write_header=True)
+
+        notify(f"output {len(already_done_manifest)} rows to '{args.output_manifest_of_existing}' in manifest format.")
+
     if missing:
         error("** ERROR: we cannot build some of the requested signatures.")
         error(f"** {missing_count} total signatures (for {len(missing)} names) cannot be built.")
@@ -447,7 +490,7 @@ def fromfile(args):
         else:
             sys.exit(-1)
 
-    notify(f"** {total_sigs - skipped_sigs} signatures requested for {len(to_build)} files;")
+    notify(f"** {total_sigs - skipped_sigs} new signatures to build from {len(to_build)} files;")
     if not to_build:
         notify(f"** Nothing to build. Exiting!")
         sys.exit(0)
@@ -459,81 +502,79 @@ def fromfile(args):
 
     ## now, onward ho - do we build anything, or output stuff, or ...?
 
-    if to_build:
-        if args.output_signatures:                   # actually compute
-            _compute_sigs(to_build, args.output_signatures)
+    print_results('---')
+    print_results("summary of sketches to build:")
 
-        elif args.output_commands: # output sourmash commands
-            out_obj = sourmash_args.FileOutput(args.output_commands)
-            out_fp = out_obj.open()
+    from collections import Counter
+    counter = Counter()
+    build_info_d = {}
+    for filename, param_objs in to_build.items():
+        for p in param_objs:
+            moltype = None
+            if p.dna: moltype = 'DNA'
+            elif p.protein: moltype = 'protein'
+            elif p.hp: moltype = 'hp'
+            elif p.dayhoff: moltype = 'dayhoff'
+            else: assert 0
 
-            output_n = 0
-            for (name, filename), param_objs in to_build.items():
-                param_strs = []
-                is_dna = None
+            assert len(p.ksizes) == 1
+            ksize = p.ksizes[0]
+            if not p.dna: ksize //= 3
 
-                for p in param_objs:
-                    # support straight up sourmash command output,
-                    # and also CSV output
-                    if p.dna:
-                        assert is_dna != False
-                        is_dna = True
-                    else:
-                        is_dna = False
-                        assert is_dna != True
-                    param_strs.append(p.to_param_str())
+            ski = _SketchInfo(ksize=ksize, moltype=moltype,
+                              scaled=p.scaled, num=p.num_hashes,
+                              abund=p.track_abundance)
+            counter[ski] += 1
 
-                assert is_dna is not None
-                sketchtype = "dna" if is_dna else "protein"
+    for ski, count in counter.items():
+        mh_type = f"num={ski.num}" if ski.num else f"scaled={ski.scaled}"
+        mh_abund = ", abund" if ski.abund else ""
 
-                param_strs = "-p " + " -p ".join(param_strs)
-                name = shlex.quote(name)
-                output_loc = f"XXX_{output_n}.zip"
+        sketch_str = f"{count} sketches with {ski.moltype}, k={ski.ksize}, {mh_type}{mh_abund}"
 
-                print(f"sourmash sketch {sketchtype} {filename} --name {name} -o {output_loc} {param_strs}", file=out_fp)
-                output_n += 1
+        print_results(f"   {sketch_str: <50}")
 
-            out_obj.close()
+    print_results('---')
 
-        if args.output_csv_info: # output info necessary to construct
-            output_n = 0
-            csv_obj = sourmash_args.FileOutputCSV(args.output_csv_info)
-            csv_fp = csv_obj.open()
-            w = csv.DictWriter(csv_fp, fieldnames=['filename', 'sketchtype',
-                                                   'output_index', 'name',
-                                                   'param_strs'])
-            w.writeheader()
+    if args.output_signatures:                   # actually compute
+        _compute_sigs(to_build, args.output_signatures)
 
-            output_n = 0
-            for (name, filename), param_objs in to_build.items():
-                param_strs = []
-                is_dna = None
+    if args.output_csv_info: # output info necessary to construct
+        output_n = 0
+        csv_obj = sourmash_args.FileOutputCSV(args.output_csv_info)
+        csv_fp = csv_obj.open()
+        w = csv.DictWriter(csv_fp, fieldnames=['filename', 'sketchtype',
+                                               'output_index', 'name',
+                                               'param_strs'])
+        w.writeheader()
 
-                for p in param_objs:
-                    # support straight up sourmash command output,
-                    # and also CSV output
-                    if p.dna:
-                        assert is_dna != False
-                        is_dna = True
-                    else:
-                        is_dna = False
-                        assert is_dna != True
-                    param_strs.append(p.to_param_str())
+        output_n = 0
+        for (name, filename), param_objs in to_build.items():
+            param_strs = []
+            is_dna = None
 
-                assert is_dna is not None
-                sketchtype = "dna" if is_dna else "protein"
+            for p in param_objs:
+                if p.dna:
+                    assert is_dna != False
+                    is_dna = True
+                else:
+                    is_dna = False
+                    assert is_dna != True
+                param_strs.append(p.to_param_str())
 
-                row = dict(filename=filename,
-                           sketchtype=sketchtype,
-                           param_strs="-p " + " -p ".join(param_strs),
-                           name=name,
-                           output_index=output_n)
+            assert is_dna is not None
+            sketchtype = "dna" if is_dna else "protein"
 
-                w.writerow(row)
+            row = dict(filename=filename,
+                       sketchtype=sketchtype,
+                       param_strs="-p " + " -p ".join(param_strs),
+                       name=name,
+                       output_index=output_n)
 
-                output_n += 1
+            w.writerow(row)
 
-            csv_obj.close()
+            output_n += 1
 
+        csv_obj.close()
 
     notify(f"** {total_sigs} total requested; built {total_sigs - skipped_sigs}, skipped {skipped_sigs}")
