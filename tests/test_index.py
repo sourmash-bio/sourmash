@@ -2576,6 +2576,17 @@ def test_standalone_manifest_load_from_dir(runtmp):
     siglist = list(idx.signatures())
     assert len(siglist) == 15
 
+    assert idx                  # should be 'True'
+    assert len(idx) == 15
+
+    with pytest.raises(NotImplementedError):
+        idx.insert()
+
+    with pytest.raises(NotImplementedError):
+        idx.save('foo')
+
+    assert idx.location == mf
+
 
 def test_standalone_manifest_lazy_load(runtmp):
     # check that it's actually doing lazy loading
@@ -2643,3 +2654,15 @@ def test_standalone_manifest_lazy_load_2_prefix(runtmp):
     shutil.copyfile(orig_sig47, sig47)
     x = list(idx.signatures())
     assert len(x) == 1
+
+
+def test_standalone_manifest_search(runtmp):
+    # test a straight up 'search'
+    query_sig = utils.get_test_data('scaled/genome-s12.fa.gz.sig')
+    mf = utils.get_test_data('scaled/mf.csv')
+
+    runtmp.sourmash('search', query_sig, mf)
+
+    out = runtmp.last_result.out
+    print(out)
+    assert '100.0%       d84ef28f' in out
