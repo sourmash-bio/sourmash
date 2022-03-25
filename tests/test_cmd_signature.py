@@ -3572,7 +3572,7 @@ def test_sig_manifest_does_not_exist(runtmp):
         runtmp.run_sourmash('sig', 'manifest', 'does-not-exist',
                             '-o', 'out.csv')
 
-    assert "Cannot open 'does-not-exist'." in runtmp.last_result.err
+    assert "Cannot open 'does-not-exist' as a sourmash signature collection." in runtmp.last_result.err
 
 
 def test_sig_manifest_7_allzip_1(runtmp):
