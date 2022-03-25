@@ -943,7 +943,10 @@ class MultiIndex(Index):
         # build manifest; note, signatures are stored in memory.
         # CTB: could do this on demand?
         # CTB: should we use get_manifest functionality?
-        # @CTB: if manifest already exists, do not create!!
+        # CTB: note here that the manifest is created by iteration
+        # *even if it already exists.* This could be changed to be more
+        # efficient... but for now, use StandaloneManifestIndex if you
+        # want to avoid this when loading from multiple files.
         manifest = CollectionManifest.create_manifest(sigloc_iter())
 
         # create!
