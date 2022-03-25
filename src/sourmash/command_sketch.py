@@ -342,6 +342,7 @@ def _compute_sigs(to_build, output, *, check_sequence=False):
 
 
 def fromfile(args):
+    from sourmash.sig.__main__ import _summarize_manifest, _SketchInfo
     # TODO:
     # check license
     # check-sequence
@@ -460,20 +461,20 @@ def fromfile(args):
     notify(f"collected {len(already_done_rows)} rows for already-done signatures.")
     already_done_manifest = CollectionManifest(already_done_rows)
 
-    from sourmash.sig.__main__ import _summarize_manifest, _SketchInfo
-    info_d = _summarize_manifest(already_done_manifest)
-    print_results('---')
-    print_results("summary of already-done sketches:")
+    if already_done_manifest:
+        info_d = _summarize_manifest(already_done_manifest)
+        print_results('---')
+        print_results("summary of already-done sketches:")
 
-    for ski in info_d['sketch_info']:
-        mh_type = f"num={ski['num']}" if ski['num'] else f"scaled={ski['scaled']}"
-        mh_abund = ", abund" if ski['abund'] else ""
+        for ski in info_d['sketch_info']:
+            mh_type = f"num={ski['num']}" if ski['num'] else f"scaled={ski['scaled']}"
+            mh_abund = ", abund" if ski['abund'] else ""
 
-        sketch_str = f"{ski['count']} sketches with {ski['moltype']}, k={ski['ksize']}, {mh_type}{mh_abund}"
+            sketch_str = f"{ski['count']} sketches with {ski['moltype']}, k={ski['ksize']}, {mh_type}{mh_abund}"
 
-        print_results(f"   {sketch_str: <50} {ski['n_hashes']} total hashes")
+            print_results(f"   {sketch_str: <50} {ski['n_hashes']} total hashes")
 
-    print_results('---')
+        print_results('---')
 
     if args.output_manifest_of_existing:
         with open(args.output_manifest_of_existing, "w", newline='') as outfp:
