@@ -1222,7 +1222,7 @@ class StandaloneManifestIndex(Index):
             yield ss
 
     def _signatures_with_internal(self):
-        "Return an iterator over all sigs of (sig, '', internal_location)"
+        "Return an iterator over all sigs of (sig, internal_location)"
         # collect all internal locations
         iloc_to_rows = defaultdict(list)
         for row in self.manifest.rows:
