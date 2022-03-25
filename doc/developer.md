@@ -6,7 +6,7 @@ You can get the latest development branch with:
 ```
 git clone https://github.com/sourmash-bio/sourmash.git
 ```
-sourmash runs under Python 3.7 and later.
+sourmash runs under Python 3.8 and later.
 
 We recommend using `conda` or `Nix` for setting up an environment for developing
 new features, running tests and code quality checks.
@@ -226,12 +226,14 @@ To regenerate the C header, run
 ```
 $ make include/sourmash.h
 ```
-This requires a nightly Rust compiler and `cbindgen`.
-They can be installed by running
+This requires `cbindgen` (and technically a nightly Rust compiler,
+but we cheat with `RUSTC_BOOTSTRAP=1`. For more info check [this post]).
+`cbindgen` can be installed by running
 ```
-$ rustup toolchain add nightly
 $ cargo install --force cbindgen
 ```
+
+[this post]: https://fasterthanli.me/articles/my-ideal-rust-workflow
 
 ### Changing code touching all layers: an example PR
 

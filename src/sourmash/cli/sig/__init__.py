@@ -11,8 +11,12 @@ from . import downsample
 from . import extract
 from . import filter
 from . import flatten
+from . import fileinfo
+from . import fileinfo as summarize
+from . import grep
 from . import kmers
 from . import intersect
+from . import inflate
 from . import manifest
 from . import merge
 from . import rename

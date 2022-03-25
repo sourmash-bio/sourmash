@@ -98,7 +98,7 @@ def display_lineage(lineage, include_strain=True, truncate_empty=True):
 
 
 # filter function toreplace blank/na/null with 'unassigned'
-filter_null = lambda x: 'unassigned' if x.strip() in \
+filter_null = lambda x: 'unassigned' if x is None or x.strip() in \
   ('[Blank]', 'na', 'null', '') else x
 null_names = set(['[Blank]', 'na', 'null'])
 

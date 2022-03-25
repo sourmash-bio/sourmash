@@ -16,7 +16,7 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use serde::{Deserialize, Serialize};
 
 use crate::encodings::HashFunctions;
-use crate::index::sbt::Update;
+use crate::prelude::*;
 use crate::signature::SigsTrait;
 use crate::sketch::KmerMinHash;
 use crate::Error;

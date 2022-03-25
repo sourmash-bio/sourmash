@@ -6,7 +6,6 @@ import os.path
 import sys
 import random
 import screed
-import time
 
 from . import sourmash_args
 from .signature import SourmashSignature
@@ -105,7 +104,7 @@ def compute(args):
             error('bad ksizes: {}', ", ".join(bad_ksizes))
             sys.exit(-1)
 
-    notify('Computing a total of {} signature(s).', num_sigs)
+    notify('Computing a total of {} signature(s) for each input.', num_sigs)
 
     if num_sigs == 0:
         error('...nothing to calculate!? Exiting!')
@@ -115,8 +114,8 @@ def compute(args):
         error("ERROR: must specify -o with --merge")
         sys.exit(-1)
 
-    if args.output and args.outdir:
-        error("ERROR: --outdir doesn't make sense with -o/--output")
+    if args.output and args.output_dir:
+        error("ERROR: --output-dir doesn't make sense with -o/--output")
         sys.exit(-1)
 
     if args.track_abundance:
@@ -146,75 +145,103 @@ class _signatures_for_compute_factory(object):
 
 
 def _compute_individual(args, signatures_factory):
-    siglist = []
+    # this is where output signatures will go.
+    save_sigs = None
+
+    # track: is this the first file? in cases where we have empty inputs,
+    # we don't want to open any outputs.
+    first_file_for_output = True
+
+    # if args.output is set, we are aggregating all output to a single file.
+    # do not open a new output file for each input.
+    open_output_each_time = True
+    if args.output:
+        open_output_each_time = False
 
     for filename in args.filenames:
-        sigfile = os.path.basename(filename) + '.sig'
-        if args.outdir:
-            sigfile = os.path.join(args.outdir, sigfile)
+        if open_output_each_time:
+            # for each input file, construct output filename
+            sigfile = os.path.basename(filename) + '.sig'
+            if args.output_dir:
+                sigfile = os.path.join(args.output_dir, sigfile)
 
-        if not args.output and os.path.exists(sigfile) and not \
-            args.force:
-            notify('skipping {} - already done', filename)
-            continue
+            # does it already exist? skip if so.
+            if os.path.exists(sigfile) and not args.force:
+                notify('skipping {} - already done', filename)
+                continue        # go on to next file.
 
-        if args.singleton:
-            siglist = []
-            n = None
-            for n, record in enumerate(screed.open(filename)):
-                # make a new signature for each sequence
-                sigs = signatures_factory()
-                add_seq(sigs, record.sequence,
-                        args.input_is_protein, args.check_sequence)
+            # nope? ok, let's save to it.
+            assert not save_sigs
+            save_sigs = sourmash_args.SaveSignaturesToLocation(sigfile)
 
-                set_sig_name(sigs, filename, name=record.name)
-                siglist.extend(sigs)
+        #
+        # calculate signatures!
+        #
 
-            if n is not None:
-                notify('calculated {} signatures for {} sequences in {}',
-                       len(siglist), n + 1, filename)
-            else:
+        # now, set up to iterate over sequences.
+        with screed.open(filename) as screed_iter:
+            if not screed_iter:
                 notify(f"no sequences found in '{filename}'?!")
-        else:
-            # make a single sig for the whole file
-            sigs = signatures_factory()
+                continue
 
-            # consume & calculate signatures
-            notify('... reading sequences from {}', filename)
-            name = None
-            n = None
-            for n, record in enumerate(screed.open(filename)):
-                if n % 10000 == 0:
-                    if n:
-                        notify('\r...{} {}', filename, n, end='')
-                    elif args.name_from_first:
-                        name = record.name
+            # open output for signatures
+            if open_output_each_time:
+                save_sigs.open()
+            # or... is this the first time to write something to args.output?
+            elif first_file_for_output:
+                save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
+                save_sigs.open()
+                first_file_for_output = False
 
-                add_seq(sigs, record.sequence,
-                        args.input_is_protein, args.check_sequence)
+            # make a new signature for each sequence?
+            if args.singleton:
+                for n, record in enumerate(screed_iter):
+                    sigs = signatures_factory()
+                    add_seq(sigs, record.sequence,
+                            args.input_is_protein, args.check_sequence)
 
-            if n is not None:       # don't write out signatures if no input
+                    set_sig_name(sigs, filename, name=record.name)
+                    save_sigs_to_location(sigs, save_sigs)
+
+                notify('calculated {} signatures for {} sequences in {}',
+                       len(save_sigs), n + 1, filename)
+
+            # nope; make a single sig for the whole file
+            else:
+                sigs = signatures_factory()
+
+                # consume & calculate signatures
+                notify('... reading sequences from {}', filename)
+                name = None
+                for n, record in enumerate(screed_iter):
+                    if n % 10000 == 0:
+                        if n:
+                            notify('\r...{} {}', filename, n, end='')
+                        elif args.name_from_first:
+                            name = record.name
+
+                    add_seq(sigs, record.sequence,
+                            args.input_is_protein, args.check_sequence)
+
                 notify('...{} {} sequences', filename, n, end='')
 
                 set_sig_name(sigs, filename, name)
-                siglist.extend(sigs)
+                save_sigs_to_location(sigs, save_sigs)
 
-                notify(f'calculated {len(siglist)} signatures for {n+1} sequences in {filename}')
-            else:
-                notify(f"no sequences found in '{filename}'?!")
+                notify(f'calculated {len(sigs)} signatures for {n+1} sequences in {filename}')
 
-        # if no --output specified, save to individual files w/in for loop
-        if not args.output:
-            save_siglist(siglist, sigfile)
-            siglist = []
+        # if not args.output, close output for every input filename.
+        if open_output_each_time:
+            save_sigs.close()
+            notify(f"saved {len(save_sigs)} signature(s) to '{save_sigs.location}'. Note: signature license is CC0.")
+            save_sigs = None
 
-    # if --output specified, all collected signatures => args.output
-    if args.output:
-        if siglist:
-            save_siglist(siglist, args.output)
-        siglist = []
 
-    assert not siglist                    # juuuust checking.
+    # if --output-dir specified, all collected signatures => args.output,
+    # and we need to close here.
+    if args.output and save_sigs is not None:
+        save_sigs.close()
+        notify(f"saved {len(save_sigs)} signature(s) to '{save_sigs.location}'. Note: signature license is CC0.")
 
 
 def _compute_merged(args, signatures_factory):
@@ -267,25 +294,22 @@ def set_sig_name(sigs, filename, name=None):
 
 
 def save_siglist(siglist, sigfile_name):
-    import sourmash
+    "Save multiple signatures to a filename."
 
     # save!
     with sourmash_args.SaveSignaturesToLocation(sigfile_name) as save_sig:
         for ss in siglist:
-            try:
-                save_sig.add(ss)
-            except sourmash.exceptions.Panic:
-                # this deals with a disconnect between the way Rust
-                # and Python handle signatures; Python expects one
-                # minhash (and hence one md5sum) per signature, while
-                # Rust supports multiple. For now, go through serializing
-                # and deserializing the signature! See issue #1167 for more.
-                json_str = sourmash.save_signatures([ss])
-                for ss in sourmash.load_signatures(json_str):
-                    save_sig.add(ss)
+            save_sig.add(ss)
 
-    notify('saved signature(s) to {}. Note: signature license is CC0.',
-           sigfile_name)
+        notify(f"saved {len(save_sig)} signature(s) to '{save_sig.location}'")
+
+
+def save_sigs_to_location(siglist, save_sig):
+    "Save multiple signatures to an already-open location."
+    import sourmash
+
+    for ss in siglist:
+        save_sig.add(ss)
 
 
 class ComputeParameters(RustObject):
@@ -303,6 +327,86 @@ class ComputeParameters(RustObject):
         self.num_hashes = num_hashes
         self.track_abundance = track_abundance
         self.scaled = scaled
+
+    @classmethod
+    def from_manifest_row(cls, row):
+        "convert a CollectionManifest row into a ComputeParameters object"
+        is_dna = is_protein = is_dayhoff = is_hp = False
+        if row['moltype'] == 'DNA':
+            is_dna = True
+        elif row['moltype'] == 'protein':
+            is_protein = True
+        elif row['moltype'] == 'hp':
+            is_hp = True
+        elif row['moltype'] == 'dayhoff':
+            is_dayhoff = True
+        else:
+            assert 0
+
+        if is_dna:
+            ksize = row['ksize']
+        else:
+            ksize = row['ksize'] * 3
+
+        p = cls([ksize], 42, is_protein, is_dayhoff, is_hp, is_dna,
+                row['num'], row['with_abundance'], row['scaled'])
+
+        return p
+
+
+    def to_param_str(self):
+        "Convert object to equivalent params str."
+        pi = []
+
+        if self.dna:
+            pi.append("dna")
+        elif self.protein:
+            pi.append("protein")
+        elif self.hp:
+            pi.append("hp")
+        elif self.dayhoff:
+            pi.append("dayhoff")
+        else:
+            assert 0            # must be one of the previous
+
+        if self.dna:
+            kstr = [f"k={k}" for k in self.ksizes]
+        else:
+            # for protein, divide ksize by three.
+            kstr = [f"k={k//3}" for k in self.ksizes]
+        assert kstr
+        pi.extend(kstr)
+
+        if self.num_hashes != 0:
+            pi.append(f"num={self.num_hashes}")
+        elif self.scaled != 0:
+            pi.append(f"scaled={self.scaled}")
+        else:
+            assert 0
+
+        if self.track_abundance:
+            pi.append("abund")
+        # noabund is default
+
+        if self.seed != 42:
+            pi.append(f"seed={self.seed}")
+        # self.seed
+
+        return ",".join(pi)
+
+    def __repr__(self):
+        return f"ComputeParameters({self.ksizes}, {self.seed}, {self.protein}, {self.dayhoff}, {self.hp}, {self.dna}, {self.num_hashes}, {self.track_abundance}, {self.scaled})"
+
+    def __eq__(self, other):
+        return (self.ksizes == other.ksizes and
+                self.seed == other.seed and
+                self.protein == other.protein and
+                self.dayhoff == other.dayhoff and
+                self.hp == other.hp and
+                self.dna == other.dna and
+                self.num_hashes == other.num_hashes and
+                self.track_abundance == other.track_abundance and
+                self.scaled == other.scaled)
 
     @staticmethod
     def from_args(args):

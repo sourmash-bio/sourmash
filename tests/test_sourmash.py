@@ -693,29 +693,23 @@ def test_plot_override_labeltext_fail(runtmp):
 
 @utils.in_tempdir
 def test_plot_reordered_labels_csv(c):
-    files = utils.get_test_data('demo/*.sig')
-    files = glob.glob(files)
-    files.sort()
-    assert len(files) == 7
+    ss2 = utils.get_test_data('2.fa.sig')
+    ss47 = utils.get_test_data('47.fa.sig')
+    ss63 = utils.get_test_data('63.fa.sig')
 
-    c.run_sourmash('compare', '-o', 'cmp', *files)
+    c.run_sourmash('compare', '-k', '31', '-o', 'cmp', ss2, ss47, ss63)
     c.run_sourmash('plot', 'cmp', '--csv', 'neworder.csv')
 
-    with open(c.output('neworder.csv'), 'rt') as fp:
-        out_mat = fp.readlines()
+    with open(c.output('neworder.csv'), newline="") as fp:
+        r = csv.DictReader(fp)
 
-    # turns out to be hard to guarantee output order, so... just make sure
-    # matrix labels are in different order than inputs!
+        akker_vals = set()
+        for row in r:
+            akker_vals.add(row['CP001071.1 Akkermansia muciniphila ATCC BAA-835, complete genome'])
 
-    header = out_mat[0].strip().split(',')
-
-    files = [ os.path.basename(x)[:-4] + '.fastq.gz' for x in files ]
-
-    print(files)
-    print(header)
-
-    assert set(files) == set(header) # same file names...
-    assert files != header           # ...different order.
+        assert '1.0' in akker_vals
+        assert '0.0' in akker_vals
+        assert len(akker_vals) == 2
 
 
 def test_plot_subsample_1(runtmp):
@@ -830,6 +824,34 @@ def test_search_ignore_abundance(runtmp):
 
     # Make sure results are different!
     assert out1 != out2
+
+
+def test_search_abund_csv(runtmp):
+    # test search with abundance signatures, look at CSV output
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    runtmp.sourmash('sketch', 'dna', '-p','k=31,scaled=1,abund', testdata1, testdata2)
+
+    runtmp.sourmash('search', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
+    out1 = runtmp.last_result.out
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '1 matches' in runtmp.last_result.out
+    assert '82.7%' in runtmp.last_result.out
+
+    with open(runtmp.output('xxx.csv'), newline="") as fp:
+        r = csv.DictReader(fp)
+        row = next(r)
+
+        print(row)
+
+        assert float(row['similarity']) == 0.8266277454288367
+        assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
+        assert row['filename'].endswith('short2.fa.sig')
+        assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
+        assert row['query_filename'].endswith('short.fa')
+        assert row['query_name'] == ''
+        assert row['query_md5'] == '9191284a'
+        assert row['filename'] == 'short2.fa.sig', row['filename']
 
 
 @utils.in_tempdir
@@ -1323,6 +1345,83 @@ def test_search_containment(runtmp):
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
     assert '1 matches' in runtmp.last_result.out
     assert '95.6%' in runtmp.last_result.out
+
+
+def test_search_containment_abund(runtmp):
+    "Construct some signatures with abund, make sure that containment complains"
+
+    # build minhashes
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=True)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=True)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    # build signatures
+    x = sourmash.SourmashSignature(mh1, name='a')
+    y = sourmash.SourmashSignature(mh2, name='b')
+
+    # save!
+    with open(runtmp.output('a.sig'), 'wt') as fp:
+        sourmash.save_signatures([x], fp)
+    with open(runtmp.output('b.sig'), 'wt') as fp:
+        sourmash.save_signatures([y], fp)
+
+    # run sourmash search --containment
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('search', 'a.sig', 'b.sig', '-o', 'xxx.csv',
+                        '--containment')
+
+    assert "ERROR: cannot do containment searches on an abund signature; maybe specify --ignore-abundance?" in str(exc)
+
+    # run sourmash search --max-containment
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('search', 'a.sig', 'b.sig', '-o', 'xxx.csv',
+                        '--max-containment')
+
+    assert "ERROR: cannot do containment searches on an abund signature; maybe specify --ignore-abundance?" in str(exc)
+
+
+def test_search_containment_abund_ignore(runtmp):
+    "Construct some signatures with abund, check containment + ignore abund"
+
+    # build minhashes
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=True)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=True)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    # build signatures
+    x = sourmash.SourmashSignature(mh1, name='a')
+    y = sourmash.SourmashSignature(mh2, name='b')
+
+    # save!
+    with open(runtmp.output('a.sig'), 'wt') as fp:
+        sourmash.save_signatures([x], fp)
+    with open(runtmp.output('b.sig'), 'wt') as fp:
+        sourmash.save_signatures([y], fp)
+
+    # run sourmash search
+    runtmp.sourmash('search', 'a.sig', 'b.sig', '-o', 'xxx.csv',
+                    '--containment', '--ignore-abundance')
+
+    # check results
+    with open(runtmp.output('xxx.csv'), 'rt') as fp:
+        r = csv.DictReader(fp)
+        row = next(r)
+        similarity = row['similarity']
+        print(f'search output: similarity is {similarity}')
+    print(mh1.contained_by(mh2))
+
+    assert float(similarity) == mh1.contained_by(mh2)
+    assert float(similarity) == 0.25
 
 
 def test_search_containment_sbt(runtmp):
@@ -1910,6 +2009,44 @@ def test_search_with_picklist_exclude(runtmp):
     print(err)
     assert "for given picklist, found 9 matches by excluding 9 distinct values" in err
     # these are the different ksizes
+
+    out = runtmp.last_result.out
+    print(out)
+    assert "9 matches; showing first 3:" in out
+    assert "33.2%       NC_003198.1 Salmonella" in out
+    assert "33.1%       NC_003197.2 Salmonella" in out
+    assert "32.2%       NC_006905.1 Salmonella" in out
+
+
+def test_search_with_pattern_include(runtmp):
+    # test 'sourmash search' with --include-db-pattern
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+
+    runtmp.sourmash('search', metag_sig, *gcf_sigs, '--containment',
+                    '-k', '21', '--include', "thermotoga")
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+    assert "3 matches:" in out
+    assert "13.1%       NC_000853.1 Thermotoga" in out
+    assert "13.0%       NC_009486.1 Thermotoga" in out
+    assert "12.8%       NC_011978.1 Thermotoga" in out
+
+
+def test_search_with_pattern_exclude(runtmp):
+    # test 'sourmash search' with --exclude-db-pattern
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+
+    runtmp.sourmash('search', metag_sig, *gcf_sigs, '--containment',
+                    '-k', '21', '--exclude', "thermotoga")
+
+    err = runtmp.last_result.err
+    print(err)
 
     out = runtmp.last_result.out
     print(out)
@@ -2621,6 +2758,42 @@ def test_compare_with_picklist_exclude(runtmp):
     print(runtmp.last_result.err)
 
     assert "for given picklist, found 9 matches by excluding 9 distinct values" in err
+
+    assert "NC_004631.1 Sal..." in out
+    assert "NC_006905.1 Sal..." in out
+    assert "NC_003198.1 Sal..." in out
+    assert "NC_002163.1 Cam..." in out
+    assert "NC_011294.1 Sal..." in out
+
+
+def test_compare_with_pattern_include(runtmp):
+    # test 'sourmash compare' with --include-db-pattern
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+
+    runtmp.sourmash('compare', *gcf_sigs,
+                    '-k', '21', '--include', "thermotoga")
+
+    err = runtmp.last_result.err
+    out = runtmp.last_result.out
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "NC_009486.1 The..." in out
+    assert "NC_000853.1 The..." in out
+    assert "NC_011978.1 The..." in out
+
+
+def test_compare_with_pattern_exclude(runtmp):
+    # test 'sourmash compare' with picklists - exclude
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+
+    runtmp.sourmash('compare', *gcf_sigs,
+                    '-k', '21', '--exclude', "thermotoga")
+
+    err = runtmp.last_result.err
+    out = runtmp.last_result.out
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
     assert "NC_004631.1 Sal..." in out
     assert "NC_006905.1 Sal..." in out
@@ -3477,7 +3650,7 @@ def test_gather_metagenome_traverse_check_csv(runtmp, linear_gather, prefetch_ga
         r = csv.DictReader(fp)
         for row in r:
             filename = row['filename']
-            assert filename.startswith(copy_testdata)
+            assert filename.startswith(copy_testdata), filename
             # should have full path to file sig was loaded from
             assert len(filename) > prefix_len
 
@@ -3754,6 +3927,52 @@ def test_gather_with_picklist_exclude(runtmp, linear_gather, prefetch_gather):
     assert "4.5 Mbp        0.1%    0.4%    NC_004631.1 Salmonella enterica subsp..." in out
 
 
+def test_gather_with_pattern_include(runtmp, linear_gather, prefetch_gather):
+    # test 'sourmash gather' with --include-db-pattern
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs, '--threshold-bp=0',
+                    '-k', '21', '--include', "thermotoga",
+                    linear_gather, prefetch_gather)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+    assert "found 3 matches total;" in out
+    assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 Thermotoga" in out
+    assert "1.9 Mbp       11.5%   89.9%    NC_011978.1 Thermotoga" in out
+    assert "1.9 Mbp        6.3%   48.4%    NC_009486.1 Thermotoga" in out
+
+
+def test_gather_with_pattern_exclude(runtmp, linear_gather, prefetch_gather):
+    # test 'sourmash gather' with --exclude
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs, '--threshold-bp=0',
+                    '-k', '21', '--exclude', "thermotoga",
+                    linear_gather, prefetch_gather)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+    assert "found 9 matches total;" in out
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 Salmonella enterica subsp..." in out
+    assert "1.6 Mbp       10.7%  100.0%    NC_002163.1 Campylobacter jejuni subs..." in out
+    assert "4.8 Mbp       10.4%   31.3%    NC_003197.2 Salmonella enterica subsp..." in out
+    assert "4.7 Mbp        5.2%   16.1%    NC_006905.1 Salmonella enterica subsp..." in out
+    assert "4.7 Mbp        4.0%   12.6%    NC_011080.1 Salmonella enterica subsp..." in out
+    assert "4.6 Mbp        2.9%    9.2%    NC_011274.1 Salmonella enterica subsp..." in out
+    assert "4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp..." in out
+    assert "4.7 Mbp        0.5%    1.5%    NC_011294.1 Salmonella enterica subsp..." in out
+    assert "4.5 Mbp        0.1%    0.4%    NC_004631.1 Salmonella enterica subsp..." in out
+
+
 def test_gather_save_matches(runtmp, linear_gather, prefetch_gather):
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
@@ -3929,6 +4148,8 @@ def test_gather_abund_1_1(runtmp, linear_gather, prefetch_gather):
     assert '50.4%   80.0%       1.9    tests/test-data/genome-s11.fa.gz' in out
     assert 'genome-s12.fa.gz' not in out
 
+    assert "the recovered matches hit 100.0% of the abundance-weighted query" in out
+
 
 def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
     c = runtmp
@@ -3964,6 +4185,7 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
     assert '91.0%  100.0%      14.5    tests/test-data/genome-s10.fa.gz' in out
     assert '9.0%   80.0%       1.9    tests/test-data/genome-s11.fa.gz' in out
     assert 'genome-s12.fa.gz' not in out
+    assert "the recovered matches hit 100.0% of the abundance-weighted query" in out
 
     # check the calculations behind the above output by looking into
     # the CSV.
@@ -4031,6 +4253,7 @@ def test_gather_abund_10_1_ignore_abundance(runtmp, linear_gather, prefetch_gath
 
     print(out)
     print(err)
+    assert "the recovered matches hit 100.0% of the query (unweighted)" in out
 
     # when we project s10x10-s11 (r2+r3), 10:1 abundance,
     # onto s10 and s11 genomes with gather --ignore-abundance, we get:
@@ -4081,6 +4304,36 @@ def test_gather_output_unassigned_with_abundance(runtmp, prefetch_gather, linear
             assert nomatch_mh.hashes[hashval] == abund
 
 
+def test_multigather_output_unassigned_with_abundance(runtmp):
+    c = runtmp
+    query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+    against = utils.get_test_data('gather-abund/genome-s10.fa.gz.sig')
+
+    cmd = 'multigather --query {} --db {}'.format(query, against).split()
+    c.run_sourmash(*cmd)
+
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert os.path.exists(c.output('r3.fa.unassigned.sig'))
+
+    nomatch = sourmash.load_one_signature(c.output('r3.fa.unassigned.sig'))
+    assert nomatch.minhash.track_abundance
+
+    query_ss = sourmash.load_one_signature(query)
+    against_ss = sourmash.load_one_signature(against)
+
+    # unassigned should have nothing that is in the database
+    nomatch_mh = nomatch.minhash
+    for hashval in against_ss.minhash.hashes:
+        assert hashval not in nomatch_mh.hashes
+
+    # unassigned should have abundances from original query, if not in database
+    for hashval, abund in query_ss.minhash.hashes.items():
+        if hashval not in against_ss.minhash.hashes:
+            assert nomatch_mh.hashes[hashval] == abund
+
+
 def test_sbt_categorize(runtmp):
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
@@ -4097,6 +4350,7 @@ def test_sbt_categorize(runtmp):
     args = ['index', '--dna', '-k', '21', 'zzz', '1.sig', '2.sig']
     runtmp.sourmash(*args)
 
+
     # categorize all of the ones that were copied to 'location'
     args = ['categorize', 'zzz', '.',
             '--ksize', '21', '--dna', '--csv', 'out.csv']
@@ -4111,7 +4365,7 @@ def test_sbt_categorize(runtmp):
 
     out_csv = open(runtmp.output('out.csv')).read()
     print(out_csv)
-    assert './4.sig,genome-s10+s11,genome-s10,0.504' in out_csv
+    assert '4.sig,genome-s10+s11,genome-s10,0.504' in out_csv
 
 
 def test_sbt_categorize_ignore_abundance_1(runtmp):

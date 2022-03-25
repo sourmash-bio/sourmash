@@ -563,6 +563,121 @@ def test_sig_intersect_8_multisig(c):
     assert not len(actual_intersect_sig.minhash)
 
 
+def test_sig_inflate_1(runtmp):
+    # basic inflate test - inflate 47 flat with 47 abund
+    sig47_flat = utils.get_test_data('47.fa.sig')
+    sig47_abund = utils.get_test_data('track_abund/47.fa.sig')
+    runtmp.run_sourmash('sig', 'inflate', sig47_abund, sig47_flat)
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    actual_inflate_sig = sourmash.load_one_signature(out)
+    actual_inflate_mh = actual_inflate_sig.minhash
+
+    # should be identical to track_abund sig
+    sig47 = sourmash.load_one_signature(sig47_abund)
+    mh47 = sig47.minhash
+
+    assert actual_inflate_sig.name == sig47.name
+    assert actual_inflate_mh == mh47
+
+
+def test_sig_inflate_2(runtmp):
+    # use abundances from sig #47
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    runtmp.run_sourmash('sig', 'inflate', sig47, sig63)
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    actual_inflate_sig = sourmash.load_one_signature(out)
+
+    # actually do an inflation ourselves for the test
+    mh47 = sourmash.load_one_signature(sig47).minhash
+    mh63 = sourmash.load_one_signature(sig63).minhash
+    mh47_abunds = mh47.hashes
+    mh63_mins = set(mh63.hashes.keys())
+
+    # get the set of mins that are in common
+    mh63_mins.intersection_update(mh47_abunds)
+
+    # take abundances from mh47 & create new sig
+    mh47_abunds = { k: mh47_abunds[k] for k in mh63_mins }
+    test_mh = mh47.copy_and_clear()
+    test_mh.set_abundances(mh47_abunds)
+
+    print(actual_inflate_sig.minhash)
+    print(out)
+
+    assert actual_inflate_sig.minhash == test_mh
+
+
+def test_sig_inflate_3(runtmp):
+    # should fail on flat first sig
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('sig', 'inflate', sig63, sig47)
+
+    assert 'has no abundances' in runtmp.last_result.err
+
+
+def test_sig_inflate_4_picklist(runtmp):
+    # try out picklists
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    sig47_flat = utils.get_test_data('47.fa.sig')
+
+    ss63 = sourmash.load_one_signature(sig63, ksize=31)
+
+    picklist = _write_file(runtmp, 'pl.csv', ['md5', ss63.md5sum()])
+
+    print(ss63.md5sum())
+
+
+    runtmp.run_sourmash('sig', 'inflate', sig47, sig63, sig47_flat,
+                        '--picklist', f'pl.csv:md5:md5')
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    actual_inflate_sig = sourmash.load_one_signature(out)
+
+    # actually do an inflation ourselves for the test
+    mh47 = sourmash.load_one_signature(sig47).minhash
+    mh63 = sourmash.load_one_signature(sig63).minhash
+    mh47_abunds = mh47.hashes
+    mh63_mins = set(mh63.hashes.keys())
+
+    # get the set of mins that are in common
+    mh63_mins.intersection_update(mh47_abunds)
+
+    # take abundances from mh47 & create new sig
+    mh47_abunds = { k: mh47_abunds[k] for k in mh63_mins }
+    test_mh = mh47.copy_and_clear()
+    test_mh.set_abundances(mh47_abunds)
+
+    print(actual_inflate_sig.minhash)
+    print(out)
+
+    assert actual_inflate_sig.minhash == test_mh
+
+
+def test_sig_inflate_5_bad_moltype(runtmp):
+    # should fail when no signatures match moltype
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    prot = utils.get_test_data('prot/protein.zip')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('sig', 'inflate', sig47, prot)
+
+    assert 'no signatures to inflate' in runtmp.last_result.err
+
+
 @utils.in_tempdir
 def test_sig_subtract_1(c):
     # subtract of 63 from 47
@@ -576,6 +691,73 @@ def test_sig_subtract_1(c):
     test1_sig = sourmash.load_one_signature(sig47)
     test2_sig = sourmash.load_one_signature(sig63)
     actual_subtract_sig = sourmash.load_one_signature(out)
+
+    mins = set(test1_sig.minhash.hashes.keys())
+    mins -= set(test2_sig.minhash.hashes.keys())
+
+    assert set(actual_subtract_sig.minhash.hashes.keys()) == set(mins)
+
+
+def test_sig_subtract_1_abund(runtmp):
+    # subtract 63 from 47, with abundances borrowed from 47
+
+    c = runtmp
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+    c.run_sourmash('sig', 'subtract', sig47, sig63, '-A', sig47)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test1_sig = sourmash.load_one_signature(sig47)
+    test2_sig = sourmash.load_one_signature(sig63)
+    actual_subtract_sig = sourmash.load_one_signature(out)
+    assert actual_subtract_sig.minhash.track_abundance
+
+    mins = set(test1_sig.minhash.hashes.keys())
+    mins -= set(test2_sig.minhash.hashes.keys())
+
+    assert set(actual_subtract_sig.minhash.hashes.keys()) == set(mins)
+
+    distinct_abunds = set()
+    actual_sub_hashes = actual_subtract_sig.minhash.hashes
+    sig47_hashes = test1_sig.minhash.hashes
+    for h in mins:
+        assert actual_sub_hashes[h] == sig47_hashes[h]
+        distinct_abunds.add(sig47_hashes[h])
+
+    # this is really just to make sure that we have a sketch with some
+    # abundances in it...
+    assert max(distinct_abunds) > 1
+
+
+def test_sig_subtract_1_abund_is_flat(runtmp):
+    # subtract 63 from 47, with abundances borrowed from 47
+
+    c = runtmp
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+    sig47_flat = utils.get_test_data('47.fa.sig')
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('sig', 'subtract', sig47, sig63, '-A', sig47_flat)
+
+
+def test_sig_subtract_1_flatten(runtmp):
+    # subtract 63 from 47, with abund signatures originally and --flatten
+
+    c = runtmp
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+    c.run_sourmash('sig', 'subtract', sig47, sig63, '--flatten')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test1_sig = sourmash.load_one_signature(sig47)
+    test2_sig = sourmash.load_one_signature(sig63)
+    actual_subtract_sig = sourmash.load_one_signature(out)
+    assert not actual_subtract_sig.minhash.track_abundance
 
     mins = set(test1_sig.minhash.hashes.keys())
     mins -= set(test2_sig.minhash.hashes.keys())
@@ -636,6 +818,17 @@ def test_sig_subtract_4_ksize_succeed(c):
 
     c.run_sourmash('sig', 'subtract', sig47, sig2, '-k', '31')
     assert 'loaded and subtracted 1 signatures' in c.last_result.err
+
+
+def test_sig_subtract_5_bad_moltype(runtmp):
+    # should fail when no matching sigs
+    sig47 = utils.get_test_data('47.fa.sig')
+    prot = utils.get_test_data('prot/protein.zip')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('sig', 'subtract', '-k', '31', sig47, prot)
+
+    assert 'no signatures to subtract' in runtmp.last_result.err
 
 
 def test_sig_rename_1(runtmp):
@@ -752,6 +945,32 @@ def test_sig_rename_3_file_dne_force(c):
     print(c.last_result.err)
 
     assert "Error while reading signatures from 'no-such-sig'" in c.last_result.err
+
+
+def test_sig_rename_4_pattern_include(runtmp):
+    # test sig rename --include-db-pattern
+    sigfiles = glob.glob(utils.get_test_data('prot/*.zip'))
+    runtmp.sourmash('sig', 'rename', '--include', 'shewanella',
+                    *sigfiles, 'SHEWME', '-o', 'out.zip')
+
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    names = [ ss.name for ss in idx.signatures() ]
+    for n in names:
+        assert n == 'SHEWME'
+    assert len(names) == 2
+
+
+def test_sig_rename_4_pattern_exclude(runtmp):
+    # test sig rename --exclude-db-pattern
+    sigfiles = glob.glob(utils.get_test_data('prot/*.zip'))
+    runtmp.sourmash('sig', 'rename', '--exclude', 'shewanella',
+                    *sigfiles, 'NOSHEW', '-o', 'out.zip')
+
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    names = [ ss.name for ss in idx.signatures() ]
+    for n in names:
+        assert n == 'NOSHEW'
+    assert len(names) == 6
 
 
 @utils.in_thisdir
@@ -1016,6 +1235,45 @@ def test_sig_cat_5_from_file_picklist(runtmp):
     assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691)]"""
 
 
+def test_sig_cat_6_pattern_include(runtmp):
+    # test --include-db-pattern
+    sigfiles = glob.glob(utils.get_test_data('prot/*.zip'))
+
+    runtmp.sourmash('sig', 'cat', '--include', 'shewanella', *sigfiles,
+                    '-o', 'out.zip')
+
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    assert len(idx) == 2
+    names = [ ss.name for ss in idx.signatures() ]
+    for n in names:
+        assert 'shewanella' in n.lower(), n
+
+
+def test_sig_cat_6_pattern_exclude(runtmp):
+    # test --exclude-db-pattern
+    sigfiles = glob.glob(utils.get_test_data('prot/*.zip'))
+
+    runtmp.sourmash('sig', 'cat', '--exclude', 'shewanella', *sigfiles,
+                    '-o', 'out.zip')
+
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    assert len(idx) == 18
+    names = [ ss.name for ss in idx.signatures() ]
+    for n in names:
+        assert 'shewanella' not in n.lower(), n
+
+
+def test_sig_cat_6_pattern_exclude_no_manifest(runtmp):
+    # test --exclude-db-pattern
+    db = utils.get_test_data('v6.sbt.zip')
+
+    with pytest.raises(SourmashCommandFailed) as e:
+        runtmp.sourmash('sig', 'cat', '--exclude', 'shewanella', db,
+                        '-o', 'out.zip')
+
+    assert "require a manifest" in str(e)
+
+
 def test_sig_split_1(runtmp):
     c = runtmp
     # split 47 into 1 sig :)
@@ -1096,6 +1354,28 @@ def test_sig_split_2_outdir(c):
     sig47 = utils.get_test_data('47.fa.sig')
     outdir = c.output('sigout/')
     c.run_sourmash('sig', 'split', sig47, sig47, '--outdir', outdir)
+
+    outname1 = 'sigout/09a08691.k=31.scaled=1000.DNA.dup=0.47.fa.sig'
+    outname2 = 'sigout/09a08691.k=31.scaled=1000.DNA.dup=1.47.fa.sig'
+
+    assert os.path.exists(c.output(outname1))
+    assert os.path.exists(c.output(outname2))
+
+    test_split_sig = sourmash.load_one_signature(sig47)
+
+    actual_split_sig = sourmash.load_one_signature(c.output(outname1))
+    assert actual_split_sig == test_split_sig
+
+    actual_split_sig = sourmash.load_one_signature(c.output(outname2))
+    assert actual_split_sig == test_split_sig
+
+
+@utils.in_tempdir
+def test_sig_split_2_output_dir(c):
+    # split 47 twice, put in outdir via --output-dir instead of --outdir
+    sig47 = utils.get_test_data('47.fa.sig')
+    outdir = c.output('sigout/')
+    c.run_sourmash('sig', 'split', sig47, sig47, '--output-dir', outdir)
 
     outname1 = 'sigout/09a08691.k=31.scaled=1000.DNA.dup=0.47.fa.sig'
     outname2 = 'sigout/09a08691.k=31.scaled=1000.DNA.dup=1.47.fa.sig'
@@ -1209,7 +1489,8 @@ def test_sig_extract_1(runtmp):
     assert actual_extract_sig == test_extract_sig
 
 
-def test_sig_extract_1(runtmp):
+def test_sig_extract_1_from_file(runtmp):
+    # run sig extract with --from-file
     c = runtmp
 
     # extract 47 from 47... :)
@@ -1232,6 +1513,26 @@ def test_sig_extract_2(c):
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
     c.run_sourmash('sig', 'extract', sig47, sig63, '--md5', '09a0869')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig47)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    print(test_extract_sig.minhash)
+    print(actual_extract_sig.minhash)
+
+    assert actual_extract_sig == test_extract_sig
+
+
+@utils.in_tempdir
+def test_sig_extract_2_zipfile(c):
+    # extract matches to 47's md5sum from among several in a zipfile
+    all_zip = utils.get_test_data('prot/all.zip')
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    c.run_sourmash('sig', 'extract', all_zip, '--md5', '09a0869')
 
     # stdout should be new signature
     out = c.last_result.out
@@ -1363,6 +1664,77 @@ def test_sig_extract_8_picklist_md5(runtmp):
     assert "loaded 1 total that matched ksize & molecule type" in err
     assert "extracted 1 signatures from 2 file(s)" in err
     assert "for given picklist, found 1 matches to 1 distinct values" in err
+
+
+def test_sig_extract_8_picklist_md5_zipfile(runtmp):
+    # extract 47 from a zipfile,  using a picklist w/full md5
+    allzip = utils.get_test_data('prot/all.zip')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='09a08691ce52952152f0e866a59f6261',
+               md5short='09a08691ce5295215',
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:md5full:md5"
+    runtmp.sourmash('sig', 'extract', allzip, '--picklist', picklist_arg)
+
+    # stdout should be new signature
+    out = runtmp.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig47)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    assert actual_extract_sig == test_extract_sig
+
+    err = runtmp.last_result.err
+
+    print(err)
+    assert "loaded 1 distinct values into picklist." in err
+    assert "loaded 1 total that matched ksize & molecule type" in err
+    assert "extracted 1 signatures from 1 file(s)" in err
+    assert "for given picklist, found 1 matches to 1 distinct values" in err
+
+
+def test_sig_extract_8_picklist_md5_lca_fail(runtmp):
+    # try to extract 47 from an LCA database, using a picklist w/full md5; will
+    # fail.
+    allzip = utils.get_test_data('lca/47+63.lca.json')
+
+    # select on any of these attributes
+    row = dict(exactName='NC_009665.1 Shewanella baltica OS185, complete genome',
+               md5full='50a9274021e43eda8b2e77f8fa60ae8e',
+               md5short='50a9274021e43eda8b2e77f8fa60ae8e'[:8],
+               fullIdent='NC_009665.1',
+               nodotIdent='NC_009665')
+
+    # make picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        w = csv.DictWriter(csvfp, fieldnames=row.keys())
+        w.writeheader()
+        w.writerow(row)
+
+    picklist_arg = f"{picklist_csv}:md5full:md5"
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sig', 'extract', allzip, '--picklist', picklist_arg,
+                        '--md5', '50a9274021e4')
+
+    # this happens b/c the implementation of 'extract' uses picklists, and
+    # LCA databases don't support multiple picklists.
+    print(runtmp.last_result.err)
+    assert "This input collection doesn't support 'extract' with picklists or patterns." in runtmp.last_result.err
+
 
 def test_sig_extract_8_picklist_md5_include(runtmp):
     # extract 47 from 47, using a picklist w/full md5:: explicit include
@@ -2233,6 +2605,34 @@ def test_sig_extract_12_picklist_bad_colname_exclude(runtmp):
     assert "column 'BADCOLNAME' not in pickfile" in err
 
 
+def test_sig_extract_11_pattern_include(runtmp):
+    # test --include-db-pattern
+    sigfiles = glob.glob(utils.get_test_data('prot/*.zip'))
+
+    runtmp.sourmash('sig', 'extract', '--include', 'shewanella', *sigfiles,
+                    '-o', 'out.zip')
+
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    assert len(idx) == 2
+    names = [ ss.name for ss in idx.signatures() ]
+    for n in names:
+        assert 'shewanella' in n.lower(), n
+
+
+def test_sig_extract_11_pattern_exclude(runtmp):
+    # test --exclude-db-pattern
+    sigfiles = glob.glob(utils.get_test_data('prot/*.zip'))
+
+    runtmp.sourmash('sig', 'extract', '--exclude', 'shewanella', *sigfiles,
+                    '-o', 'out.zip')
+
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    assert len(idx) == 18
+    names = [ ss.name for ss in idx.signatures() ]
+    for n in names:
+        assert 'shewanella' not in n.lower(), n
+
+
 def test_sig_flatten_1(runtmp):
     c = runtmp
 
@@ -2253,7 +2653,7 @@ def test_sig_flatten_1(runtmp):
     assert test_flattened.minhash == siglist[0].minhash
 
 
-def test_sig_flatten_1(runtmp):
+def test_sig_flatten_1_from_file(runtmp):
     c = runtmp
 
     # extract matches to several names from among several signatures & flatten
@@ -2593,7 +2993,7 @@ def test_sig_describe_1_hp(c):
     c.run_sourmash('sig', 'describe', computed_sig)
 
     out = c.last_result.out
-    print(c.last_result)
+    print(c.last_result.out)
 
     # Add final trailing slash for this OS
     testdata_dirname = os.path.dirname(testdata) + os.sep
@@ -2607,6 +3007,7 @@ source file: short.fa
 md5: e45a080101751e044d6df861d3d0f3fd
 k=7 molecule=protein num=500 scaled=0 seed=42 track_abundance=0
 size: 500
+sum hashes: 500
 signature license: CC0
 
 ---
@@ -2616,6 +3017,7 @@ source file: short.fa
 md5: c027e96c3379d38942639219daa24fdc
 k=7 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
 size: 500
+sum hashes: 500
 signature license: CC0
 
 ---
@@ -2634,6 +3036,7 @@ source file: short.fa
 md5: 1136a8a68420bd93683e45cdaf109b80
 k=21 molecule=DNA num=500 scaled=0 seed=42 track_abundance=0
 size: 500
+sum hashes: 500
 signature license: CC0
 
 ---
@@ -2643,6 +3046,7 @@ source file: short.fa
 md5: 4244d1612598af044e799587132f007e
 k=10 molecule=protein num=500 scaled=0 seed=42 track_abundance=0
 size: 500
+sum hashes: 500
 signature license: CC0
 
 ---
@@ -2652,6 +3056,7 @@ source file: short.fa
 md5: 396dcb7c1875f48ca31e0759bec72ee1
 k=10 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
 size: 500
+sum hashes: 500
 signature license: CC0
 
 ---
@@ -2661,6 +3066,7 @@ source file: short.fa
 md5: 4c43878296459783dbd6a4a071ab7e9d
 k=10 molecule=hp num=500 scaled=0 seed=42 track_abundance=0
 size: 500
+sum hashes: 500
 signature license: CC0
 
 ---
@@ -2670,6 +3076,7 @@ source file: short.fa
 md5: 71f7c111c01785e5f38efad45b00a0e1
 k=30 molecule=DNA num=500 scaled=0 seed=42 track_abundance=0
 size: 500
+sum hashes: 500
 signature license: CC0
 
 """.splitlines()
@@ -2775,6 +3182,29 @@ k=19 molecule=protein num=0 scaled=100 seed=42 track_abundance=0
         assert line.strip() in out
 
 
+def test_sig_describe_1_sig_abund(runtmp):
+    # check output of sig describe on a sketch with abundances
+    c = runtmp
+
+    sigfile = utils.get_test_data('track_abund/47.fa.sig')
+    c.run_sourmash('sig', 'describe', sigfile)
+
+    out = c.last_result.out
+    print(c.last_result.out)
+
+    expected_output = """\
+signature: NC_009665.1 Shewanella baltica OS185, complete genome
+source file: podar-ref/47.fa
+md5: 09a08691ce52952152f0e866a59f6261
+k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=1
+size: 5177
+sum hashes: 5292
+signature license: CC0
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
 @utils.in_thisdir
 def test_sig_describe_stdin(c):
     sig = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
@@ -2815,9 +3245,10 @@ def test_sig_describe_empty(c):
     assert 'source file: ** no name **' in c.last_result.out
 
 
-@utils.in_tempdir
-def test_sig_describe_2(c):
-    # get info in CSV spreadsheet
+def test_sig_describe_2_csv(runtmp):
+    # output info in CSV spreadsheet
+    c = runtmp
+
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
     c.run_sourmash('sig', 'describe', sig47, sig63, '--csv', 'out.csv')
@@ -2835,6 +3266,114 @@ def test_sig_describe_2(c):
             n += 1
 
         assert n == 2
+
+
+def test_sig_describe_2_csv_abund(runtmp):
+    # output info in CSV spreadsheet, for abund sig
+    c = runtmp
+
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    c.run_sourmash('sig', 'describe', sig47, '--csv', 'out.csv')
+
+    with open(c.output('out.csv'), 'rt') as fp:
+        r = csv.DictReader(fp)
+
+        n = 0
+
+        rows = list(r)
+        assert len(rows) == 1
+        row = rows[0]
+
+        assert row['signature_file'] == sig47
+        assert row['md5'] == "09a08691ce52952152f0e866a59f6261"
+        assert row['ksize'] == "31"
+        assert row['moltype'] == "DNA"
+        assert row['num'] == "0"
+        assert row['scaled'] == "1000"
+        assert row['n_hashes'] == "5177"
+        assert row['seed'] == "42"
+        assert row['with_abundance'] == "1"
+        assert row['name'] == "NC_009665.1 Shewanella baltica OS185, complete genome"
+        assert row['filename'] == "podar-ref/47.fa"
+        assert row['license'] == "CC0"
+        assert row['sum_hashes'] == "5292"
+
+
+def test_sig_describe_2_csv_as_picklist(runtmp):
+    # generate an output CSV from describe and then use it as a manifest
+    # pickfile
+    c = runtmp
+
+    sig47 = utils.get_test_data('47.fa.sig')
+    outcsv = runtmp.output('out.csv')
+
+    c.run_sourmash('sig', 'describe', sig47,
+                   '--csv', outcsv)
+
+    c.run_sourmash('sig', 'describe', sig47,
+                   '--picklist', f'{outcsv}::manifest')
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: NC_009665.1 Shewanella baltica OS185, complete genome
+source file: 47.fa
+md5: 09a08691ce52952152f0e866a59f6261
+k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=0
+size: 5177
+signature license: CC0
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+def test_sig_describe_2_include_db_pattern(runtmp):
+    # test sig describe --include-db-pattern
+    c = runtmp
+
+    allzip = utils.get_test_data('prot/all.zip')
+
+    c.run_sourmash('sig', 'describe', allzip,
+                   '--include-db-pattern', 'os185')
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: NC_009665.1 Shewanella baltica OS185, complete genome
+source file: 47.fa
+md5: 09a08691ce52952152f0e866a59f6261
+k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=0
+size: 5177
+signature license: CC0
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+def test_sig_describe_2_exclude_db_pattern(runtmp):
+    # test sig describe --exclude-db-pattern
+    c = runtmp
+
+    allzip = utils.get_test_data('prot/all.zip')
+
+    c.run_sourmash('sig', 'describe', allzip, '--dna', '-k', '31',
+                   '--exclude-db-pattern', 'os223')
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: NC_009665.1 Shewanella baltica OS185, complete genome
+source file: 47.fa
+md5: 09a08691ce52952152f0e866a59f6261
+k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=0
+size: 5177
+signature license: CC0
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
 
 
 @utils.in_tempdir
@@ -2971,16 +3510,17 @@ def test_sig_manifest_3_sbt(runtmp):
 def test_sig_manifest_4_lca(runtmp):
     # make a manifest from a .lca.json file
     sigfile = utils.get_test_data('prot/protein.lca.json.gz')
-    with pytest.raises(SourmashCommandFailed):
-        runtmp.sourmash('sig', 'manifest', sigfile, '-o',
-                        'SOURMASH-MANIFEST.csv')
+    runtmp.sourmash('sig', 'manifest', sigfile, '-o',
+                    'SOURMASH-MANIFEST.csv')
 
-    status = runtmp.last_result.status
-    out = runtmp.last_result.out
-    err = runtmp.last_result.err
+    manifest_fn = runtmp.output('SOURMASH-MANIFEST.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
 
-    assert status != 0
-    assert "ERROR: manifests cannot be generated for this file." in err
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
 
 
 def test_sig_manifest_5_dir(runtmp):
@@ -3025,6 +3565,58 @@ def test_sig_manifest_6_pathlist(runtmp):
     md5_list = [ row['md5'] for row in manifest.rows ]
     assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
     assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+
+def test_sig_manifest_does_not_exist(runtmp):
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.run_sourmash('sig', 'manifest', 'does-not-exist',
+                            '-o', 'out.csv')
+
+    assert "Cannot open 'does-not-exist'." in runtmp.last_result.err
+
+
+def test_sig_manifest_7_allzip_1(runtmp):
+    # the rebuilt manifest w/o '-f' will miss dna-sig.noext
+    allzip = utils.get_test_data('prot/all.zip')
+    runtmp.sourmash('sig', 'manifest', allzip, '-o', 'xyz.csv')
+
+    manifest_fn = runtmp.output('xyz.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 7
+    filenames = set( row['internal_location'] for row in manifest.rows )
+    assert 'dna-sig.noext' not in filenames
+
+
+def test_sig_manifest_7_allzip_2(runtmp):
+    # the rebuilt manifest w/ '-f' will contain dna-sig.noext
+    allzip = utils.get_test_data('prot/all.zip')
+    runtmp.sourmash('sig', 'manifest', allzip, '-o', 'xyz.csv', '-f')
+
+    manifest_fn = runtmp.output('xyz.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 8
+    filenames = set( row['internal_location'] for row in manifest.rows )
+    assert 'dna-sig.noext' in filenames
+
+
+def test_sig_manifest_7_allzip_3(runtmp):
+    # the existing manifest contains 'dna-sig.noext' whther or not -f is
+    # used.
+    allzip = utils.get_test_data('prot/all.zip')
+    runtmp.sourmash('sig', 'manifest', allzip, '-o', 'xyz.csv',
+                    '--no-rebuild')
+
+    manifest_fn = runtmp.output('xyz.csv')
+    with open(manifest_fn, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 8
+    filenames = set( row['internal_location'] for row in manifest.rows )
+    assert 'dna-sig.noext' in filenames
 
 
 def test_sig_kmers_1_dna(runtmp):

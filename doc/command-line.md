@@ -8,13 +8,19 @@ From the command line, sourmash can be used to create
 [MinHash sketches][0] from DNA and protein sequences, compare them to
 each other, and plot the results; these sketches are saved into
 "signature files".  These signatures allow you to estimate sequence
-similarity quickly and accurately in large collections, among other
-capabilities.
+similarity and containment quickly and accurately in large
+collections, among other capabilities.
+
+sourmash also provides a suite of metagenome functionality.  This
+includes genome search in metagenomes, metagenome decomposition into a
+list of genomes from a database, and taxonomic classification
+functionality.
 
 Please see the [mash software][1] and the
 [mash paper (Ondov et al., 2016)][2] for background information on
-how and why MinHash sketches work.
-
+how and why MinHash sketches work. The [FracMinHash preprint (Irber et al,
+2022)](https://www.biorxiv.org/content/10.1101/2022.01.11.475838) describes
+FracMinHash sketches as well as the metagenome-focused features of sourmash.
 
 sourmash uses a subcommand syntax, so all commands start with
 `sourmash` followed by a subcommand specifying the action to be
@@ -57,6 +63,13 @@ species, while the third is from a completely different genus.
 
 To get a list of subcommands, run `sourmash` without any arguments.
 
+Please use the command line option `--help` to get more detailed usage
+information for each command.
+
+All signature saving commands can save to a variety of formats (we
+suggest `.zip` files) and all signature loading commands can load
+signatures from any of these formats.
+
 There are seven main subcommands: `sketch`, `compare`, `plot`,
 `search`, `gather`, `index`, and `prefetch`.  See
 [the tutorial](tutorials.md) for a walkthrough of these commands.
@@ -97,12 +110,10 @@ Finally, there are a number of utility and information commands:
 * `sbt_combine` combines multiple SBTs.
 * `categorize` is an experimental command to categorize many signatures.
 * `watch` is an experimental command to classify a stream of sequencing data.
+* `multigather` is an experimental command to run multiple gathers against the same collection of databases.
 
 Please use the command line option `--help` to get more detailed usage
 information for each command.
-
-Note that as of sourmash v3.4, all commands should load signatures from
-indexed databases (the SBT and LCA formats) as well as from signature files.
 
 ### `sourmash sketch` - make sourmash signatures from sequence data
 
@@ -317,7 +328,7 @@ genomes with no (or incomplete) taxonomic information.  Use `sourmash
 lca summarize` to classify a metagenome using a collection of genomes
 with taxonomic information.
 
-### Alternative search mode for low-memory (but slow) search: `--linear`
+#### Alternative search mode for low-memory (but slow) search: `--linear`
 
 By default, `sourmash gather` uses all information available for
 faster search. In particular, for SBTs, `prefetch` will prune the search
@@ -328,7 +339,7 @@ across all leaf nodes in the tree.
 The results are the same whether `--no-linear` or `--linear` is
 used.
 
-### Alternative search mode: `--no-prefetch`
+#### Alternative search mode: `--no-prefetch`
 
 By default, `sourmash gather` does a "prefetch" to find *all* candidate
 signatures across all databases, before removing overlaps between the
@@ -403,7 +414,7 @@ Other options include:
 * `--force` to continue past survivable errors;
 * `--picklist` will select a subset of signatures to search, using [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
 
-### Alternative search mode for low-memory (but slow) search: `--linear`
+#### Alternative search mode for low-memory (but slow) search: `--linear`
 
 By default, `sourmash prefetch` uses all information available for
 faster search. In particular, for SBTs, `prefetch` will prune the search
@@ -411,7 +422,7 @@ tree.  This can be slow and/or memory intensive for very large databases,
 and `--linear` asks `sourmash prefetch` to instead use a linear search
 across all leaf nodes in the tree.
 
-### Caveats and comments
+#### Caveats and comments
 
 `sourmash prefetch` provides no guarantees on output order. It runs in
 "streaming mode" on its inputs, in that each input file is loaded,
@@ -937,10 +948,7 @@ for an example use case.
 
 ## `sourmash signature` subcommands for signature manipulation
 
-These commands manipulate signatures from the command line. Currently
-supported subcommands are `merge`, `rename`, `intersect`,
-`extract`, `downsample`, `subtract`, `import`, `export`, `info`,
-`flatten`, `filter`, `cat`, and `split`.
+These commands manipulate signatures from the command line.
 
 The signature commands that combine or otherwise have multiple
 signatures interacting (`merge`, `intersect`, `subtract`) work only on
@@ -961,16 +969,16 @@ Most commands will load signatures automatically from indexed databases
 (SBT and LCA formats) as well as from signature files, and you can load
 signatures from stdin using `-` on the command line.
 
-### `sourmash signature cat` - concatenate multiple signatures together
+### `sourmash signature cat` - combine signatures into one file
 
 Concatenate signature files.
 
 For example,
 ```
-sourmash signature cat file1.sig file2.sig -o all.sig
+sourmash signature cat file1.sig file2.sig -o all.zip
 ```
 will combine all signatures in `file1.sig` and `file2.sig` and put them
-in the file `all.sig`.
+in the file `all.zip`.
 
 ### `sourmash signature describe` - display detailed information about signatures
 
@@ -978,18 +986,101 @@ Display signature details.
 
 For example,
 ```
-sourmash sig describe tests/test-data/47.fa.sig
+sourmash sig describe tests/test-data/track_abund/47.fa.sig
 ```
 will display:
 
 ```
-signature filename: tests/test-data/47.fa.sig
+signature filename: tests/test-data/track_abund/47.fa.sig
 signature: NC_009665.1 Shewanella baltica OS185, complete genome
-source file: 47.fa
+source file: podar-ref/47.fa
 md5: 09a08691ce52952152f0e866a59f6261
-k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=0
+k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=1
 size: 5177
+sum hashes: 5292
 signature license: CC0
+```
+
+Here, the `size` is the number of distinct hashes in the sketch, and
+`sum_hashes` is the total number of hashes in the sketch, with abundances.
+When `track_abundance` is 0, `size` is always the same as `sum_hashes`.
+
+### `sourmash signature fileinfo` - display a summary of the contents of a sourmash collection
+
+Display signature file, database, or collection.
+
+For example,
+```
+sourmash sig fileinfo tests/test-data/prot/all.zip
+```
+will display:
+```
+path filetype: ZipFileLinearIndex
+location: /Users/t/dev/sourmash/tests/test-data/prot/all.zip
+is database? yes
+has manifest? yes
+is nonempty? yes
+num signatures: 8
+** examining manifest...
+31758 total hashes
+summary of sketches:
+   2 sketches with dayhoff, k=19, scaled=100          7945 total hashes
+   2 sketches with hp, k=19, scaled=100               5184 total hashes
+   2 sketches with protein, k=19, scaled=100          8214 total hashes
+   2 sketches with DNA, k=31, scaled=1000             10415 total hashes
+```
+
+`sig fileinfo` will recognize
+[all accepted sourmash input files](#loading-signatures-and-databases),
+including individual .sig and .sig.gz files, Zip file collections, SBT
+databases, LCA databases, and directory hierarchies.
+
+`sourmash sig fileinfo` provides optional JSON and YAML output, and
+those formats are under semantic versioning.
+
+Note: `sourmash signature summarize` is an alias for `fileinfo`; they are
+the same command.
+
+### `sourmash signature grep` - extract matching signatures using pattern matching
+
+Extract matching signatures with substring and regular expression matching
+on the name, filename, and md5 fields.
+
+For example,
+```
+sourmash signature grep -i shewanella tests/test-data/prot/all.zip -o shew.zip
+```
+will extract the two signatures in `all.zip` with 'Shewanella baltica'
+in their name and save them to `shew.zip`.
+
+`grep` will search for substring matches or regular expressions;
+e.g. `sourmash sig grep 'os185|os223' ...` will find matches to either
+of those expressions.
+
+Command line options include `-i` for case-insensitive matching, and `-v`
+for exclusion rather than inclusion.
+
+A CSV file of the matching sketch information can be saved using
+`--csv <outfile>`; this file is in the sourmash manifest format and can be used as a picklist with `--pickfile <outfile>::manifest`.
+
+If `--silent` is specified, `sourmash sig grep` will not output matching
+signatures.
+
+`sourmash sig grep` also supports a counting mode, `-c/--count`, in which
+only the number of matching sketches in files will be displayed; for example,
+
+```
+% sourmash signature grep -ci 'os185|os223' tests/test-data/prot/*.zip 
+```
+will produce the following output:
+```
+2 matches: tests/test-data/prot/all.zip
+0 matches: tests/test-data/prot/dayhoff.sbt.zip
+0 matches: tests/test-data/prot/dayhoff.zip
+0 matches: tests/test-data/prot/hp.sbt.zip
+0 matches: tests/test-data/prot/hp.zip
+0 matches: tests/test-data/prot/protein.sbt.zip
+0 matches: tests/test-data/prot/protein.zip
 ```
 
 ### `sourmash signature split` - split signatures into individual files
@@ -1090,10 +1181,23 @@ will output the intersection of all the hashes in those three files to
 
 The `intersect` command flattens all signatures, i.e. the abundances
 in any signatures will be ignored and the output signature will have
-`track_abundance` turned off.
+`track_abundance` turned off.  The `-A/--abundance-from` argument will
+borrow abundances from the specified signature (which will also be added
+to the intersection).
 
-Note: `intersect` only creates one output file, with one signature in it,
-in the JSON `.sig` format.
+### `sourmash signature inflate` - transfer abundances from one signature to others
+
+Use abundances from one signature to provide abundances on other signatures.
+
+For example,
+
+```
+sourmash signature inflate file1.sig file2.sig file3.sig -o inflated.sig
+```
+will take the abundances from hashes `file1.sig` and use them to set
+the abundances on matching hashes in `file2.sig` and `file3.sig`.
+Any hashes that are not present in `file1.sig` will be removed from
+`file2.sig` and `file3.sig` as they will now have zero abundance.
 
 ### `sourmash signature downsample` - decrease the size of a signature
 
@@ -1270,6 +1374,26 @@ exit on the first bad k-mer.  If `--check-sequence --force` is provided,
 `sig kmers` will provide error messages (and skip bad sequences), but
 will continue processing input sequences.
 
+### `sourmash signature manifest` - output a manifest for a file
+
+Output a manifest for a file, database, or collection.
+
+For example,
+```
+sourmash sig manifest tests/test-data/prot/all.zip -o manifest.csv
+```
+will create a CSV file, `manifest.csv`, in the internal sourmash
+manifest format.  The manifest will contain an entry for every
+signature in the file, database, or collection. This format is largely
+meant for internal use, but it can serve as a
+[picklist pickfile](#using-picklists-to-subset-large-collections-of-signatures)
+for subsetting large collections.
+
+By default, `sourmash sig manifest` will rebuild the manifest by
+iterating over the signatures in the input file. This can be slow for
+large collections. Use `--no-rebuild-manifest` to load an existing
+manifest if it is available.
+
 ## Advanced command-line usage
 
 ### Loading signatures and databases
@@ -1307,12 +1431,33 @@ signatures with multiple ksizes or moltypes at the same time; you need
 to pick the ksize and moltype to use for your search. Where possible,
 scaled values will be made compatible.
 
+### Selecting signatures 
+
+(sourmash v4.3.0 and later)
+
+sourmash is built to work with very large collections of signatures,
+and you may want to select (or exclude) specific signatures from
+search or other operations, based on their name. This can be done
+without modifying the collections themselves via the
+`--include-db-pattern` and `--exclude-db-pattern` arguments to many
+sourmash commands, including `search`, `gather`, `compare`, `prefetch`,
+and `sig extract`.
+
+In brief, `sourmash search ... --include <pattern>` will search only
+those database signatures that match `<pattern>` in their `name`,
+`filename`, or `md5` strings.  Here, `<pattern>` can be either a
+substring or a regular expression.  Likewise, `sourmash search
+... --exclude <pattern>` will search only those database signatures
+that _don't_ match pattern in their `name`, `filename`, or `md5` strings.
+
 ### Using picklists to subset large collections of signatures
 
-As of sourmash 4.2.0, many commands support *picklists*, a feature by
-which you can select or "pick out" signatures based on values in a CSV
-file. This is typically used to index, extract, or search a subset of
-a large collection where modifying the collection itself isn't desired.
+(sourmash v4.2.0 and later)
+
+Many commands support *picklists*, a feature by which you can select
+or "pick out" signatures based on values in a CSV file. This is
+typically used to index, extract, or search a subset of a large
+collection where modifying the collection itself isn't desired.
 
 For example,
 ```
@@ -1350,9 +1495,16 @@ The following `coltype`s are currently supported by `sourmash sig extract`:
 Identifiers are constructed by using the first space delimited word in
 the signature name.
 
-One way to build a picklist is to use `sourmash sig describe --csv
-out.csv <signatures>` to construct an initial CSV file that you can
-then edit further.
+One way to build a picklist is to use `sourmash sig grep <pattern>
+<collection> --csv out.csv` to construct a CSV file containing a list
+of all sketches that match the pattern (which can be a string or
+regexp). The `out.csv` file can be used as a picklist via the picklist
+manifest format with `--picklist out.csv::manifest`.
+
+You can also use `sourmash sig describe --csv out.csv <signatures>` or
+`sourmash sig manifest -o out.csv <filename_or_db>` to construct an
+initial CSV file that you can then edit further and use as a picklist
+as above.
 
 The picklist functionality also supports excluding (rather than
 including) signatures matching the picklist arguments. To specify a
@@ -1393,32 +1545,38 @@ signatures using `zip -r collection.zip *.sig` and then specify
 
 ### Saving signatures, more generally
 
-As of sourmash 4.1, most signature saving arguments (`--save-matches`
-for `search` and `gather`, `-o` for `sourmash sketch`, and most of the
-`sourmash signature` commands) support flexible saving of collections of
+(sourmash v4.1 and later)
+
+All signature saving arguments (`--save-matches` for `search` and
+`gather`, `-o` for `sourmash sketch`, and `-o` for the `sourmash
+signature` commands) support flexible saving of collections of
 signatures into JSON text, Zip files, and/or directories.
 
 This behavior is triggered by the requested output filename --
 
-* to save to JSON signature files, use `.sig`; `-` will send JSON to stdout.
+* to save to JSON signature files, use `.sig`; using the filename `-`
+  will send JSON to stdout.
 * to save to gzipped JSON signature files, use `.sig.gz`;
 * to save to a Zip file collection, use `.zip`;
 * to save signature files to a directory, use a name ending in `/`; the directory will be created if it doesn't exist;
 
-If none of these file extensions is detected, output will be written in the JSON `.sig` format, either to the provided output filename or to stdout.
+If none of these file extensions is detected, output will be written
+in the JSON `.sig` format, either to the provided output filename or
+to stdout.
 
-All of these save formats can be loaded by sourmash commands, too.
+All of these save formats can be loaded by sourmash commands.
 
+### Loading many signatures
 
-### Loading all signatures under a directory
+#### Loading signatures within a directory hierarchy
 
 All of the `sourmash` commands support loading signatures from
 beneath directories; provide the paths on the command line.
 
 #### Passing in lists of files
 
-Most sourmash commands will also take `--from-file` or
-`--query-from-file`, which will take a path to a text file containing
+Most sourmash commands will also take a `--from-file` or
+`--query-from-file`, which will take the location of a text file containing
 a list of file paths. This can be useful for situations where you want
 to specify thousands of queries, or a subset of signatures produced by
 some other command.
@@ -1430,18 +1588,20 @@ databases are low memory and disk-intensive databases that allow for
 fast searches using a tree structure, while LCA databases are higher
 memory and (after a potentially significant load time) are quite fast.
 
-(LCA databases also permit taxonomic searches using `sourmash lca` functions.)
+(LCA databases also directly permit taxonomic searches using `sourmash lca`
+functions.)
 
-The main point is that since all of these databases contain signatures,
-as of sourmash 3.4, any command that takes more than one signature will
-also automatically load all of the signatures in the database.
+Commands that take multiple signatures or collections of signatures
+will also work with databases.
 
-Note that, for now, both SBT and LCA database can only contain one
-"type" of signature (one ksize, one moltype, etc.) If the database
-signature type is incompatible with the other signatures, sourmash
-will complain. In contrast, signature files can
-contain many different types of signatures, and compatible ones will
-be discovered automatically.
+One limitation of indexed databases is that both SBT and LCA database
+can only contain one "type" of signature (one ksize/one moltype at one
+scaled value). If the database signature type is incompatible with the
+other signatures, sourmash will complain appropriately.
+
+In contrast, signature files, zip collections, and directory
+hierarchies can contain many different types of signatures, and
+compatible ones will be selected automatically.
 
 ### Combining search databases on the command line
 
@@ -1449,17 +1609,9 @@ All of the commands in sourmash operate in "online" mode, so you can
 combine multiple databases and signatures on the command line and get
 the same answer as if you built a single large database from all of
 them.  The only caveat to this rule is that if you have multiple
-identical matches, the first one to be found will differ depending on
-the order that the files are passed in on the command line.
-
-This can actually be pretty convenient for speeding up searches - for
-example, if you're using `sourmash gather` and you want to find any
-new results after a database update, you can provide a file containing
-the previously found matches on the command line before the updated
-database. Then `gather` will automatically "find" the previously found
-matches before anything else, but only if there are no better matches to
-be found in the updated database. (OK, it's a bit of a niche case, but it's
-been useful. :)
+identical matches present across the databases, the order in which
+they are found will differ depending on the order that the files are
+passed in on the command line.
 
 ### Using stdin
 
@@ -1469,8 +1621,3 @@ sig` commands will output to stdout.  So, for example,
 
 `sourmash sketch ... -o - | sourmash sig describe -` will describe the
 signatures that were just created.
-
-(This is a relatively new feature as of 3.4 and our testing may need
-some work, so please
-[let us know](https://github.com/sourmash-bio/sourmash/issues) if there's
-something that doesn't work and we will fix it :).

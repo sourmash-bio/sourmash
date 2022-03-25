@@ -2,7 +2,6 @@
 Tests for functions in sourmash_args module.
 """
 import os
-import csv
 import pytest
 import gzip
 import zipfile
@@ -12,6 +11,7 @@ import contextlib
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash import sourmash_args, manifest
+from sourmash.index import LinearIndex
 
 
 def test_save_signatures_api_none():
@@ -284,7 +284,7 @@ def test_save_signatures_to_location_3_zip_add_with_manifest(runtmp):
 
         # construct & save manifest
         mf = manifest.CollectionManifest([row])
-        mf_name = f"SOURMASH-MANIFEST.csv"
+        mf_name = "SOURMASH-MANIFEST.csv"
 
         manifest_fp = io.StringIO()
         mf.write_to_csv(manifest_fp, write_header=True)
@@ -404,3 +404,164 @@ def test_load_many_sigs_empty_file_force(runtmp):
     print(err)
     assert f"ERROR: Error while reading signatures from '{outloc}'." in err
     assert "(continuing)" in err
+
+
+def test_get_manifest_1():
+    # basic get_manifest retrieves a manifest
+    sig47 = utils.get_test_data('47.fa.sig')
+    idx = sourmash.load_file_as_index(sig47)
+
+    manifest = sourmash_args.get_manifest(idx)
+    assert len(manifest) == 1
+
+
+def test_get_manifest_2_cannot_build():
+    # test what happens when get_manifest cannot build manifest
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47)
+
+    idx = LinearIndex([ss47])
+
+    with pytest.raises(SystemExit) as exc:
+        m = sourmash_args.get_manifest(idx)
+
+
+def test_get_manifest_2_cannot_buildno_require():
+    # test what happens when get_manifest cannot build manifest
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47)
+
+    idx = LinearIndex([ss47])
+
+    m = sourmash_args.get_manifest(idx, require=False)
+
+    assert m is None
+
+
+def test_get_manifest_3_build():
+    # check that manifest is building
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47)
+
+    class FakeIndex(LinearIndex):
+        was_called = 0
+        def _signatures_with_internal(self):
+            self.was_called = 1
+            return [(ss47, "fakeloc", "fakeiloc")]
+
+    idx = FakeIndex([sig47])
+
+    assert not idx.was_called
+    m = sourmash_args.get_manifest(idx)
+    assert idx.was_called
+
+    print(m)
+    assert len(m) == 1
+    assert m.rows[0]['internal_location'] == "fakeiloc"
+
+
+def test_get_manifest_3_build_2():
+    # check that manifest is building, but only when asked
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47)
+
+    class FakeIndex(LinearIndex):
+        manifest = None
+        was_called = 0
+
+        def _signatures_with_internal(self):
+            self.was_called = 1
+            return [(ss47, "fakeloc", "fakeiloc")]
+
+    idx = FakeIndex([sig47])
+
+    assert not idx.was_called
+    m = sourmash_args.get_manifest(idx)
+    assert idx.was_called
+
+    # now set and ask again, should not be called
+    idx.manifest = m
+    idx.was_called = 0
+
+    m2 = sourmash_args.get_manifest(idx)
+    assert not idx.was_called
+    assert m == m2
+
+    # now, force rebuild
+    m3 = sourmash_args.get_manifest(idx, rebuild=True)
+    assert idx.was_called
+    assert m == m3
+
+
+class FakeArgs(object):
+    picklist = None
+    include_db_pattern = None
+    exclude_db_pattern = None
+
+
+def test_pattern_0():
+    # test neither --include nor --exclude
+    args = FakeArgs()
+    args.picklist = None
+    args.include_db_pattern = None
+    args.exclude_db_pattern = None
+
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
+    assert pattern_search is None
+
+
+def test_pattern_1():
+    # test just --include-pattern handling
+    args = FakeArgs()
+    args.picklist = None
+    args.include_db_pattern = 'foo'
+    args.exclude_db_pattern = None
+
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
+    assert pattern_search(['foo', 'bar', 'baz'])
+    assert not pattern_search(['bar', 'bif'])
+
+
+def test_pattern_2():
+    # test just --exclude-pattern handling
+    args = FakeArgs()
+    args.picklist = None
+    args.exclude_db_pattern = 'foo'
+    args.include_db_pattern = None
+
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
+    assert not pattern_search(['foo', 'bar', 'baz'])
+    assert pattern_search(['bar', 'baz', 'bif'])
+
+
+def test_pattern_3():
+    # test with --picklist and --exclude: should fail
+    args = FakeArgs()
+    args.picklist = True
+    args.exclude_db_pattern = 'foo'
+    args.include_db_pattern = None
+
+    with pytest.raises(SystemExit):
+        pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
+
+
+def test_pattern_4():
+    # test with --picklist and --include: should fail
+    args = FakeArgs()
+    args.picklist = True
+    args.include_db_pattern = 'foo'
+    args.exclude_db_pattern = None
+
+    with pytest.raises(SystemExit):
+        pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
+
+
+def test_pattern_5():
+    # test with --include and --exclude: should fail
+    args = FakeArgs()
+    args.picklist = None
+    args.exclude_db_pattern = 'foo'
+    args.include_db_pattern = 'bar'
+
+    with pytest.raises(SystemExit):
+        pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
