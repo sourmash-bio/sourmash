@@ -53,7 +53,12 @@ from ..signature import load_signatures, save_signatures
 IndexSearchResult = namedtuple('Result', 'score, signature, location')
 
 class Index(ABC):
+    # this will be removed soon; see sourmash#1894.
     is_database = False
+
+    # 'manifest', when set, implies efficient selection and direct
+    # access to signatures. Signatures may be stored in the manifest
+    # or loaded on demand from disk depending on the class, however.
     manifest = None
 
     @abstractmethod
@@ -937,6 +942,8 @@ class MultiIndex(Index):
 
         # build manifest; note, signatures are stored in memory.
         # CTB: could do this on demand?
+        # CTB: should we use get_manifest functionality?
+        # @CTB: if manifest already exists, do not create!!
         manifest = CollectionManifest.create_manifest(sigloc_iter())
 
         # create!
@@ -949,6 +956,8 @@ class MultiIndex(Index):
         Takes directory path plus optional boolean 'force'. Attempts to
         load all files ending in .sig or .sig.gz, by default; if 'force' is
         True, will attempt to load _all_ files, ignoring errors.
+
+        Will not load anything other than JSON signature files.
         """
         from ..sourmash_args import traverse_find_sigs
 
@@ -1011,8 +1020,8 @@ class MultiIndex(Index):
     def load_from_pathlist(cls, filename):
         """Create a MultiIndex from all files listed in a text file.
 
-        Note: this will load signatures from directories and databases, too,
-        if they are listed in the text file; it uses 'load_file_as_index'
+        Note: this will attempt to load signatures from each file,
+        including zip collections, etc; it uses 'load_file_as_index'
         underneath.
         """
         from ..sourmash_args import (load_pathlist_from_file,
@@ -1170,6 +1179,11 @@ class StandaloneManifestIndex(Index):
     on-disk Index object.  However, unlike LazyLoadedIndex, this class
     can be used in situations where there are many signatures in many
     on-disk Index objects.
+
+    This class also overlaps in concept with MultiIndex when
+    MultiIndex.load_from_pathlist is used to load other Index
+    objects. However, unlike MultiIndex, this class does not store
+    signatures in memory (as part of manifests).
     """
     is_database = True
 

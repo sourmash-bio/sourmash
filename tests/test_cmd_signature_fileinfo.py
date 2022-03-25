@@ -349,6 +349,8 @@ def test_sig_fileinfo_8_manifest_works(runtmp):
 
 def test_sig_fileinfo_8_manifest_works_when_moved(runtmp):
     # test on a manifest with relative paths, when in wrong place
+    # note: this works, unlike 'describe', because all the necessary info
+    # for 'fileinfo' is in the manifest.
     mf = utils.get_test_data('scaled/mf.csv')
     shutil.copyfile(mf, runtmp.output('mf.csv'))
 

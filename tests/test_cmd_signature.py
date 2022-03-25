@@ -3376,8 +3376,6 @@ signature license: CC0
         assert line.strip() in out
 
 
-
-
 def test_sig_describe_3_manifest_works(runtmp):
     # test on a manifest with relative paths, in proper location
     mf = utils.get_test_data('scaled/mf.csv')
@@ -3395,6 +3393,7 @@ def test_sig_describe_3_manifest_works(runtmp):
 def test_sig_describe_3_manifest_fails_when_moved(runtmp):
     # test on a manifest with relative paths, when in wrong place;
     # should fail, because actual signatures cannot be loaded now.
+    # note: this tests lazy loading.
     mf = utils.get_test_data('scaled/mf.csv')
     shutil.copyfile(mf, runtmp.output('mf.csv'))
 
