@@ -1645,7 +1645,11 @@ and then use the manifest directly for sourmash operations:
 sourmash sig fileinfo <dir>/manifest.csv
 ```
 Note that the manifest can be used as a database target for search,
-gather, etc. as well.
+gather, etc. as well.  When used as a manifest for a directory,
+the manifest must be placed beneath (and loaded from) the directory from
+which the manifest was generated.
+
+@CTB pathlist stuff... what to do?
 
 We suggest using zip file collections for most situations; we
 primarily recommend using manifests for situations where you have a
