@@ -1205,3 +1205,15 @@ def test_build_sbt_json_with_dups_exists(runtmp):
     assert len(sbt_sigs) == 4
 
     assert all_sigs == sbt_sigs
+
+
+def test_load_fail_on_file_not_dir(runtmp):
+    # make sure the load function raises a ValueError for {filename}/sbt,
+    # rather than a NotADirectoryError
+
+    filename = runtmp.output('foo')
+    with open(filename, 'wt') as fp:
+        fp.write('something')
+
+    with pytest.raises(ValueError) as exc:
+        x = SBT.load(runtmp.output('foo/bar.sbt.json'))
