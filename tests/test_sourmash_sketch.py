@@ -1544,6 +1544,21 @@ def test_fromfile_need_params(runtmp):
                         '-o', 'out.zip')
 
 
+def test_fromfile_dna_output_commands(runtmp):
+    # does it run? yes, hopefully.
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                    '--output-commands', '-', '-p', 'dna')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "sourmash sketch dna sketch_fromfile/GCA_903797575.1_PARATYPHIC668_genomic.fna.gz --name 'GCA_903797575 Salmonella enterica' -o XXX_0.zip -p dna,k=31,scaled=1000" in runtmp.last_result.out
+    assert "** 1 total requested; built 1, skipped 0" in runtmp.last_result.err
+
+
 def test_fromfile_dna_and_protein_csv_output(runtmp):
     # does it run and produce DNA _and_ protein signatures?
     test_inp = utils.get_test_data('sketch_fromfile')
