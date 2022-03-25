@@ -287,7 +287,7 @@ def manifest(args):
         loader = sourmash_args.load_file_as_index(args.location,
                                                   yield_all_files=args.force)
     except ValueError as exc:
-        error(f"Cannot open '{args.location}'.")
+        error(f"Cannot open '{args.location}' as a sourmash signature collection.")
         sys.exit(-1)
 
     rebuild = True
@@ -1193,6 +1193,7 @@ def kmers(args):
 _SketchInfo = namedtuple('_SketchInfo', 'ksize, moltype, scaled, num, abund')
 
 
+# NOTE: also aliased as 'summarize'
 def fileinfo(args):
     """
     provide summary information on the given path (collection, index, etc.)
@@ -1209,7 +1210,7 @@ def fileinfo(args):
         idx = sourmash_args.load_file_as_index(args.path,
                                                yield_all_files=args.force)
     except ValueError:
-        error(f"Cannot open '{args.path}'.")
+        error(f"Cannot open '{args.path}' as a sourmash signature collection.")
         sys.exit(-1)
 
     print_bool = lambda x: "yes" if x else "no"
