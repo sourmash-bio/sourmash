@@ -58,9 +58,9 @@ class LCA_Database(Index):
     """
     is_database = True
 
-    # we set manifest to False to avoid implication of fast on-disk access to
+    # we set manifest to None to avoid implication of fast on-disk access to
     # sketches. This may be revisited later.
-    manifest = False
+    manifest = None
 
     def __init__(self, ksize, scaled, moltype='DNA'):
         self.ksize = int(ksize)
