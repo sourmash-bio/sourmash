@@ -1330,14 +1330,7 @@ def check(args):
     # @CTB check include/exclude here
     n_missing = len(picklist.pickset - picklist.found)
     if args.output_missing and n_missing:
-        from sourmash.picklist import PickStyle
-
-        # @CTB these may be unnecessary now; remove after testing.
-        picklist_arg = args.picklist.split(':')
         pickfile = picklist.pickfile
-        orig_coltype = picklist.orig_coltype
-        pickstyle = picklist.pickstyle
-        column = picklist.column_name
 
         # go through the input file and pick out missing rows.
         with open(pickfile, newline='') as csvfp:
