@@ -13,7 +13,7 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 These next three tutorials are all notebooks that you can view, run
 yourself, or run interactively online via the
-[binder](http://mybinder.org) service.
+[binder](https://mybinder.org) service.
 
 * [An introduction to k-mers for genome comparison and analysis](kmers-and-minhash.md)
 
