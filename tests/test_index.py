@@ -20,6 +20,7 @@ from sourmash import sourmash_args
 from sourmash.search import JaccardSearch, SearchType
 from sourmash.picklist import SignaturePicklist, PickStyle
 from sourmash_tst_utils import SourmashCommandFailed
+from sourmash.manifest import CollectionManifest
 
 import sourmash_tst_utils as utils
 
@@ -2696,10 +2697,9 @@ def test_standalone_manifest_lazy_load_2_prefix(runtmp):
     sig47 = runtmp.output('47.fa.sig')
 
     # build an external manifest
-    shutil.copyfile(orig_sig47, sig47)
-
     # note, here use a relative path to 47.fa.sig; the manifest will contain
     # just '47.fa.sig' as the location
+    shutil.copyfile(orig_sig47, sig47)
     runtmp.sourmash('sig', 'manifest', '47.fa.sig', '-o', 'mf.csv')
 
     # should work to get signatures:
@@ -2735,3 +2735,80 @@ def test_standalone_manifest_search(runtmp):
     out = runtmp.last_result.out
     print(out)
     assert '100.0%       d84ef28f' in out
+
+
+def test_standalone_manifest_prefetch_lazy(runtmp):
+    # check that prefetch is actually doing lazy loading on manifest index.
+    orig_sig47 = utils.get_test_data('47.fa.sig')
+    sig47 = runtmp.output('47.fa.sig')
+    orig_sig2 = utils.get_test_data('2.fa.sig')
+    sig2 = runtmp.output('2.fa.sig')
+    orig_sig63 = utils.get_test_data('63.fa.sig')
+    sig63 = runtmp.output('63.fa.sig')
+
+    shutil.copyfile(orig_sig47, sig47)
+    runtmp.sourmash('sig', 'manifest', sig47, '-o', 'mf1.csv')
+    shutil.copyfile(orig_sig2, sig2)
+    runtmp.sourmash('sig', 'manifest', sig2, '-o', 'mf2.csv')
+    shutil.copyfile(orig_sig63, sig63)
+    runtmp.sourmash('sig', 'manifest', sig63, '-o', 'mf3.csv')
+
+    # combine the manifests, manually for now...
+    with open(runtmp.output('mf1.csv'), newline='') as fp:
+        mf1 = CollectionManifest.load_from_csv(fp)
+    assert len(mf1) == 1
+
+    with open(runtmp.output('mf2.csv'), newline='') as fp:
+        mf2 = CollectionManifest.load_from_csv(fp)
+    assert len(mf2) == 3
+
+    with open(runtmp.output('mf3.csv'), newline='') as fp:
+        mf3 = CollectionManifest.load_from_csv(fp)
+    assert len(mf3) == 1
+
+    all_rows = list(mf1.rows) + list(mf2.rows) + list(mf3.rows)
+    print(all_rows)
+    mf = CollectionManifest(all_rows)
+    assert len(mf) == 5
+    with open(runtmp.output('mf.csv'), 'w', newline='') as fp:
+        mf.write_to_csv(fp, write_header=True)
+
+    # ok! now, remove the last signature, 'sig63'.
+    os.unlink(sig63)
+
+    # ...but loading the manifest should still work.
+    idx = StandaloneManifestIndex.load(runtmp.output('mf.csv'))
+
+    # double check - third load will fail. this relies on load order :shrug:.
+    sig_iter = iter(idx.signatures())
+    ss = next(sig_iter)
+    print(ss)
+    assert '47.fa' in ss.filename
+
+    for i in range(3):
+        ss = next(sig_iter)
+        print(i, ss)
+        assert '2.fa' in ss.filename
+
+    with pytest.raises(ValueError) as exc:
+        ss = next(sig_iter)
+    assert 'Error while reading signatures from' in str(exc)
+    assert '63.fa.sig' in str(exc)
+
+    # ok! now test prefetch... should get one match legit, to 47,
+    # and then no matches to 2, and then error.
+
+    ss47 = sourmash.load_one_signature(sig47)
+    idx = idx.select(ksize=31)
+    g = idx.prefetch(ss47, threshold_bp=0)
+
+    # first value:
+    sr = next(g)
+    assert sr.signature == ss47
+
+    # second value should raise error.
+    with pytest.raises(ValueError) as exc:
+        sr = next(g)
+
+    assert 'Error while reading signatures from' in str(exc)
+    assert '63.fa.sig' in str(exc)
