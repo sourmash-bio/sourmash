@@ -2754,24 +2754,19 @@ def test_standalone_manifest_prefetch_lazy(runtmp):
     runtmp.sourmash('sig', 'manifest', sig63, '-o', 'mf3.csv')
 
     # combine the manifests, manually for now...
-    with open(runtmp.output('mf1.csv'), newline='') as fp:
-        mf1 = CollectionManifest.load_from_csv(fp)
+    mf1 = CollectionManifest.load_from_filename(runtmp.output('mf1.csv'))
     assert len(mf1) == 1
 
-    with open(runtmp.output('mf2.csv'), newline='') as fp:
-        mf2 = CollectionManifest.load_from_csv(fp)
+    mf2 = CollectionManifest.load_from_filename(runtmp.output('mf2.csv'))
     assert len(mf2) == 3
 
-    with open(runtmp.output('mf3.csv'), newline='') as fp:
-        mf3 = CollectionManifest.load_from_csv(fp)
+    mf3 = CollectionManifest.load_from_filename(runtmp.output('mf3.csv'))
     assert len(mf3) == 1
 
-    all_rows = list(mf1.rows) + list(mf2.rows) + list(mf3.rows)
-    print(all_rows)
-    mf = CollectionManifest(all_rows)
+    mf = mf1 + mf2 + mf3
     assert len(mf) == 5
-    with open(runtmp.output('mf.csv'), 'w', newline='') as fp:
-        mf.write_to_csv(fp, write_header=True)
+
+    mf.write_to_filename(runtmp.output('mf.csv'))
 
     # ok! now, remove the last signature, 'sig63'.
     os.unlink(sig63)
