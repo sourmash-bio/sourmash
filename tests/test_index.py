@@ -6,7 +6,6 @@ import glob
 import os
 import zipfile
 import shutil
-import copy
 
 import sourmash
 from sourmash import index
@@ -16,8 +15,7 @@ from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             LazyLinearIndex, MultiIndex,
                             StandaloneManifestIndex)
 from sourmash.index.revindex import RevIndex
-from sourmash.sbt import SBT, GraphFactory, Leaf
-from sourmash.sbtmh import SigLeaf
+from sourmash.sbt import SBT, GraphFactory
 from sourmash import sourmash_args
 from sourmash.search import JaccardSearch, SearchType
 from sourmash.picklist import SignaturePicklist, PickStyle
@@ -28,6 +26,7 @@ import sourmash_tst_utils as utils
 
 
 def test_simple_index(n_children):
+    # test basic SBT functionality
     factory = GraphFactory(5, 100, 3)
     root = SBT(factory, d=n_children)
 
@@ -91,6 +90,7 @@ def test_simple_index(n_children):
 
 
 def test_linear_index_search():
+    # test LinearIndex searching - all in memory
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -135,7 +135,7 @@ def test_linear_index_search():
 
 
 def test_linear_index_prefetch():
-    # prefetch does basic things right:
+    # check that prefetch does basic things right:
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -168,7 +168,7 @@ def test_linear_index_prefetch():
 
 
 def test_linear_index_prefetch_empty():
-    # check that an exception is raised upon for an empty database
+    # check that an exception is raised upon for an empty LinearIndex
     sig2 = utils.get_test_data('2.fa.sig')
     ss2 = sourmash.load_one_signature(sig2, ksize=31)
 
@@ -220,6 +220,7 @@ def test_linear_index_prefetch_lazy():
 
 
 def test_linear_index_gather():
+    # test LinearIndex gather
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -245,7 +246,7 @@ def test_linear_index_gather():
 
 
 def test_linear_index_search_subj_has_abundance():
-    # check that signatures in the index are flattened appropriately.
+    # check that search signatures in the index are flattened appropriately.
     queryfile = utils.get_test_data('47.fa.sig')
     subjfile = utils.get_test_data('track_abund/47.fa.sig')
 
@@ -262,7 +263,7 @@ def test_linear_index_search_subj_has_abundance():
 
 
 def test_linear_index_gather_subj_has_abundance():
-    # check that signatures in the index are flattened appropriately.
+    # check that target signatures in the index are flattened appropriately.
     queryfile = utils.get_test_data('47.fa.sig')
     subjfile = utils.get_test_data('track_abund/47.fa.sig')
 
@@ -280,7 +281,8 @@ def test_linear_index_gather_subj_has_abundance():
 
 
 def test_index_search_subj_scaled_is_lower():
-    # check that subject sketches are appropriately downsampled
+    # check that subject sketches are appropriately downsampled for scaled
+    # sketches.
     sigfile = utils.get_test_data('scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz')
     ss = sourmash.load_one_signature(sigfile)
 
@@ -302,7 +304,8 @@ def test_index_search_subj_scaled_is_lower():
 
 
 def test_index_search_subj_num_is_lower():
-    # check that subject sketches are appropriately downsampled
+    # check that subject sketches are appropriately downsampled for num
+    # sketches
     sigfile = utils.get_test_data('num/47.fa.sig')
     ss = sourmash.load_one_signature(sigfile, ksize=31)
 
@@ -324,7 +327,7 @@ def test_index_search_subj_num_is_lower():
 
 
 def test_index_search_query_num_is_lower():
-    # check that query sketches are appropriately downsampled
+    # check that query sketches are appropriately downsampled for num.
     sigfile = utils.get_test_data('num/47.fa.sig')
     qs = sourmash.load_one_signature(sigfile, ksize=31)
 
@@ -407,7 +410,7 @@ def test_linear_index_search_abund_downsample_subj():
 
 
 def test_linear_index_search_abund_requires_threshold():
-    # test Index.search_abund
+    # test that Index.search_abund requires a 'threshold'
     sig47 = utils.get_test_data('track_abund/47.fa.sig')
     sig63 = utils.get_test_data('track_abund/63.fa.sig')
 
@@ -425,7 +428,7 @@ def test_linear_index_search_abund_requires_threshold():
 
 
 def test_linear_index_search_abund_query_flat():
-    # test Index.search_abund
+    # test that Index.search_abund requires an abund query sig
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('track_abund/63.fa.sig')
 
@@ -443,7 +446,7 @@ def test_linear_index_search_abund_query_flat():
 
 
 def test_linear_index_search_abund_subj_flat():
-    # test Index.search_abund
+    # test Index.search_abund requires an abund subj
     sig47 = utils.get_test_data('track_abund/47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
 
@@ -461,6 +464,7 @@ def test_linear_index_search_abund_subj_flat():
 
 
 def test_linear_index_save(runtmp):
+    # test save output from LinearIndex => JSON
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -491,6 +495,7 @@ def test_linear_index_save(runtmp):
 
 
 def test_linear_index_load(runtmp):
+    # test .load class method of LinearIndex
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -498,8 +503,6 @@ def test_linear_index_load(runtmp):
     ss2 = sourmash.load_one_signature(sig2, ksize=31)
     ss47 = sourmash.load_one_signature(sig47)
     ss63 = sourmash.load_one_signature(sig63)
-
-    from sourmash import save_signatures
 
     filename = runtmp.output('foo')
     with open(filename, 'wt') as fp:
@@ -513,6 +516,7 @@ def test_linear_index_load(runtmp):
 
 
 def test_linear_index_save_load(runtmp):
+    # LinearIndex save/load round trip
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -637,7 +641,7 @@ def test_linear_gather_threshold_5():
 
 
 def test_linear_index_multik_select():
-    # this loads three ksizes, 21/31/51
+    # test that LinearIndx can load multiple (three) ksizes, 21/31/51
     sig2 = utils.get_test_data('2.fa.sig')
     siglist = sourmash.load_file_as_signatures(sig2)
 
@@ -685,7 +689,7 @@ def test_linear_index_moltype_select():
 
 
 def test_linear_index_picklist_select():
-    # test select with a picklist
+    # test LinearIndex.select with a picklist
 
     # this loads three ksizes, 21/31/51
     sig2 = utils.get_test_data('2.fa.sig')
@@ -734,8 +738,9 @@ def test_linear_index_picklist_select_exclude():
     assert ksizes == set([21,51])
 
 
-@utils.in_tempdir
-def test_index_same_md5sum_fsstorage(c):
+def test_index_same_md5sum_fsstorage(runtmp):
+    # check SBT directory 'save' with two signatures that have identical md5
+    c = runtmp
     testdata1 = utils.get_test_data('img/2706795855.sig')
     testdata2 = utils.get_test_data('img/638277004.sig')
 
@@ -748,8 +753,9 @@ def test_index_same_md5sum_fsstorage(c):
     assert len(glob.glob(storage + "/*")) == 4
 
 
-@utils.in_tempdir
-def test_index_same_md5sum_sbt_zipstorage(c):
+def test_index_same_md5sum_sbt_zipstorage(runtmp):
+    # check SBT zipfile 'save' with two signatures w/identical md5
+    c = runtmp
     testdata1 = utils.get_test_data('img/2706795855.sig')
     testdata2 = utils.get_test_data('img/638277004.sig')
 
@@ -776,9 +782,10 @@ def test_zipfile_does_not_exist(runtmp):
     assert "ERROR: Error while reading signatures from 'no-exist.zip'." in str(exc)
 
 
-@utils.in_thisdir
-def test_zipfile_protein_command_search(c):
+def test_zipfile_protein_command_search(runtmp):
     # test command-line search/gather of zipfile with protein sigs
+    c = runtmp
+
     sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/protein.zip')
 
@@ -790,9 +797,10 @@ def test_zipfile_protein_command_search(c):
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
 
 
-@utils.in_thisdir
-def test_zipfile_hp_command_search(c):
+def test_zipfile_hp_command_search(runtmp):
     # test command-line search/gather of zipfile with hp sigs
+    c = runtmp
+
     sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/hp.zip')
 
@@ -804,9 +812,10 @@ def test_zipfile_hp_command_search(c):
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
 
 
-@utils.in_thisdir
-def test_zipfile_dayhoff_command_search(c):
+def test_zipfile_dayhoff_command_search(runtmp):
     # test command-line search/gather of zipfile with dayhoff sigs
+    c = runtmp
+
     sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/dayhoff.zip')
 
@@ -818,9 +827,10 @@ def test_zipfile_dayhoff_command_search(c):
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
 
 
-@utils.in_thisdir
-def test_zipfile_protein_command_search_combined(c):
+def test_zipfile_protein_command_search_combined(runtmp):
     # test command-line search/gather of combined zipfile with protein sigs
+    c = runtmp
+
     sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/all.zip')
 
@@ -832,9 +842,10 @@ def test_zipfile_protein_command_search_combined(c):
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
 
 
-@utils.in_thisdir
-def test_zipfile_hp_command_search_combined(c):
+def test_zipfile_hp_command_search_combined(runtmp):
     # test command-line search/gather of combined zipfile with hp sigs
+    c = runtmp
+
     sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/all.zip')
 
@@ -846,9 +857,10 @@ def test_zipfile_hp_command_search_combined(c):
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
 
 
-@utils.in_thisdir
-def test_zipfile_dayhoff_command_search_combined(c):
+def test_zipfile_dayhoff_command_search_combined(runtmp):
     # test command-line search/gather of combined zipfile with dayhoff sigs
+    c = runtmp
+
     sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/all.zip')
 
@@ -860,9 +872,10 @@ def test_zipfile_dayhoff_command_search_combined(c):
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
 
 
-@utils.in_thisdir
-def test_zipfile_dayhoff_command_search_protein(c):
+def test_zipfile_dayhoff_command_search_protein(runtmp):
     # test command-line search/gather of protein sigs in zipfile
+    c = runtmp
+
     # with dayhoff query
     sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/protein.zip')
@@ -1055,6 +1068,7 @@ def test_zipfile_API_signatures_select_twice(use_manifest):
 
 
 def test_zipfile_API_save():
+    # ZipFileLinearIndex.save is not implemented.
     zipfile_db = utils.get_test_data('prot/all.zip')
 
     zipidx = ZipFileLinearIndex.load(zipfile_db)
@@ -1064,6 +1078,7 @@ def test_zipfile_API_save():
 
 
 def test_zipfile_API_insert():
+    # ZipFileLinearIndex.insert is not implemented.
     zipfile_db = utils.get_test_data('prot/all.zip')
 
     zipidx = ZipFileLinearIndex.load(zipfile_db)
@@ -1074,6 +1089,7 @@ def test_zipfile_API_insert():
 
 
 def test_zipfile_API_location(use_manifest):
+    # test ZipFileLinearIndex.location property
     zipfile_db = utils.get_test_data('prot/all.zip')
 
     zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
@@ -1082,6 +1098,7 @@ def test_zipfile_API_location(use_manifest):
 
 
 def test_zipfile_load_file_as_signatures(use_manifest):
+    # make sure that ZipFileLinearIndex.signatures works, and is generator
     from types import GeneratorType
 
     zipfile_db = utils.get_test_data('prot/all.zip')
@@ -1100,6 +1117,7 @@ def test_zipfile_load_file_as_signatures(use_manifest):
 
 
 def test_zipfile_load_file_as_signatures_traverse_yield_all(use_manifest):
+    # test with --force, which loads all files
     from types import GeneratorType
 
     zipfile_db = utils.get_test_data('prot/all.zip')
@@ -1115,9 +1133,10 @@ def test_zipfile_load_file_as_signatures_traverse_yield_all(use_manifest):
     assert len(sigs) == 8
 
 
-@utils.in_tempdir
-def test_zipfile_load_database_fail_if_not_zip(c):
+def test_zipfile_load_database_fail_if_not_zip(runtmp):
     # fail _load_database if not .zip
+    c = runtmp
+
     zipfile_db = utils.get_test_data('prot/all.zip')
     badname = c.output('xyz.nada')
     shutil.copyfile(zipfile_db, badname)
@@ -1129,6 +1148,7 @@ def test_zipfile_load_database_fail_if_not_zip(c):
 
 
 def test_multi_index_search():
+    # test MultiIndex.search
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -1183,6 +1203,7 @@ def test_multi_index_search():
 
 
 def test_multi_index_gather():
+    # test MultiIndex.gather
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -1213,6 +1234,7 @@ def test_multi_index_gather():
 
 
 def test_multi_index_signatures():
+    # test MultiIndex.signatures
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -1238,11 +1260,14 @@ def test_multi_index_signatures():
 
 
 def test_multi_index_create():
+    # test MultiIndex constructor
     mi = MultiIndex(None, None, prepend_location=False)
     assert len(mi) == 0
 
 
 def test_multi_index_create_prepend():
+    # test MultiIndex constructor - location must be specified if
+    # 'prepend_location is True
     with pytest.raises(ValueError):
         mi = MultiIndex(None, None, prepend_location=True)
 
@@ -1287,9 +1312,10 @@ def test_multi_index_load_from_directory_2():
     assert len(sigs) == 7
 
 
-@utils.in_tempdir
-def test_multi_index_load_from_directory_3(c):
+def test_multi_index_load_from_directory_3(runtmp):
     # check that force works ok on a directory
+    c = runtmp
+
     dirname = utils.get_test_data('prot')
 
     count = 0
@@ -1305,9 +1331,10 @@ def test_multi_index_load_from_directory_3(c):
         mi = MultiIndex.load_from_directory(c.location, force=False)
 
 
-@utils.in_tempdir
-def test_multi_index_load_from_directory_3_yield_all_true(c):
+def test_multi_index_load_from_directory_3_yield_all_true(runtmp):
     # check that force works ok on a directory w/force=True
+    c = runtmp
+
     dirname = utils.get_test_data('prot')
 
     count = 0
@@ -1325,9 +1352,9 @@ def test_multi_index_load_from_directory_3_yield_all_true(c):
     assert len(sigs) == 8
 
 
-@utils.in_tempdir
-def test_multi_index_load_from_directory_3_yield_all_true_subdir(c):
+def test_multi_index_load_from_directory_3_yield_all_true_subdir(runtmp):
     # check that force works ok on subdirectories
+    c = runtmp
     dirname = utils.get_test_data('prot')
 
     target_dir = c.output("some_subdir")
@@ -1348,9 +1375,10 @@ def test_multi_index_load_from_directory_3_yield_all_true_subdir(c):
     assert len(sigs) == 8
 
 
-@utils.in_tempdir
-def test_multi_index_load_from_directory_3_sig_gz(c):
+def test_multi_index_load_from_directory_3_sig_gz(runtmp):
     # check that we find .sig.gz files, too
+    c = runtmp
+
     dirname = utils.get_test_data('prot')
 
     count = 0
@@ -1372,11 +1400,12 @@ def test_multi_index_load_from_directory_3_sig_gz(c):
     assert len(sigs) == 6
 
 
-@utils.in_tempdir
-def test_multi_index_load_from_directory_3_check_traverse_fn(c):
+def test_multi_index_load_from_directory_3_check_traverse_fn(runtmp):
     # test the actual traverse function... eventually this test can be
     # removed, probably, as we consolidate functionality and test MultiIndex
     # better.
+    c = runtmp
+
     dirname = utils.get_test_data('prot')
     files = list(sourmash_args.traverse_find_sigs([dirname]))
     assert len(files) == 7, files
@@ -1386,12 +1415,14 @@ def test_multi_index_load_from_directory_3_check_traverse_fn(c):
 
 
 def test_multi_index_load_from_directory_no_exist():
+    # raise ValueError on files that don't exist in load_from_directory
     dirname = utils.get_test_data('does-not-exist')
     with pytest.raises(ValueError):
         mi = MultiIndex.load_from_directory(dirname, force=True)
 
 
 def test_multi_index_load_from_file_path():
+    # test that MultiIndex.load_from_path works fine
     sig2 = utils.get_test_data('2.fa.sig')
 
     mi = MultiIndex.load_from_path(sig2)
@@ -1400,19 +1431,23 @@ def test_multi_index_load_from_file_path():
 
 
 def test_multi_index_load_from_file_path_no_exist():
+    # test that load_from_path fails on non-existent files
     filename = utils.get_test_data('does-not-exist')
     with pytest.raises(ValueError):
         mi = MultiIndex.load_from_directory(filename, force=True)
 
 
 def test_multi_index_load_from_pathlist_no_exist():
+    # test that load_from_pathlist fails on non-existent files
     dirname = utils.get_test_data('does-not-exist')
     with pytest.raises(ValueError):
         mi = MultiIndex.load_from_pathlist(dirname)
 
 
-@utils.in_tempdir
-def test_multi_index_load_from_pathlist_1(c):
+def test_multi_index_load_from_pathlist_1(runtmp):
+    # test functionality of MultiIndex.load_from_pathlist with .sig files
+    c = runtmp
+
     dirname = utils.get_test_data('prot')
     files = list(sourmash_args.traverse_find_sigs([dirname]))
     assert len(files) == 7, files
@@ -1429,10 +1464,12 @@ def test_multi_index_load_from_pathlist_1(c):
     assert mi.location == file_list
 
 
-@utils.in_tempdir
-def test_multi_index_load_from_pathlist_2(c):
+def test_multi_index_load_from_pathlist_2(runtmp):
+    # create a pathlist file with _all_ files under dir, and try to load it.
+
     # CTB note: if you create extra files under this directory,
     # it will fail :)
+    c = runtmp
     dirname = utils.get_test_data('prot')
     files = list(sourmash_args.traverse_find_sigs([dirname], True))
     assert len(files) == 20, files # check there aren't extra files in here!
@@ -1446,9 +1483,10 @@ def test_multi_index_load_from_pathlist_2(c):
         mi = MultiIndex.load_from_pathlist(file_list)
 
 
-@utils.in_tempdir
-def test_multi_index_load_from_pathlist_3_zipfile(c):
+def test_multi_index_load_from_pathlist_3_zipfile(runtmp):
     # can we load zipfiles in a pathlist? yes please.
+    c = runtmp
+
     zipfile = utils.get_test_data('prot/all.zip')
 
     file_list = c.output('filelist.txt')
@@ -1485,6 +1523,7 @@ class JaccardSearchBestOnly_ButIgnore(JaccardSearch):
 
 
 def test_linear_index_gather_ignore():
+    # do we properly ignore exact matches in 'search' for LinearIndex?
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -1515,6 +1554,7 @@ def test_linear_index_gather_ignore():
 
 
 def test_lca_index_gather_ignore():
+    # do we properly ignore exact matches in gather on an LCA DB?
     from sourmash.lca import LCA_Database
 
     sig2 = utils.get_test_data('2.fa.sig')
@@ -1550,6 +1590,7 @@ def test_lca_index_gather_ignore():
 
 
 def test_sbt_index_gather_ignore():
+    # do we properly ignore exact matches in gather on an SBT?
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -1987,6 +2028,7 @@ def test_counter_gather_add_after_consume():
 
 
 def test_counter_gather_consume_empty_intersect():
+    # check that consume works fine when there is an empty signature.
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
     query_ss = SourmashSignature(query_mh, name='query')
@@ -2294,6 +2336,8 @@ def test_lazy_index_5_len():
 
 
 def test_lazy_index_wraps_multi_index_location():
+    # check that 'location' works fine when MultiIndex is wrapped by
+    # LazyLinearIndex.
     sigdir = utils.get_test_data('prot/protein/')
     sigzip = utils.get_test_data('prot/protein.zip')
     siglca = utils.get_test_data('prot/protein.lca.json.gz')
@@ -2392,6 +2436,7 @@ def test_lazy_loaded_index_3_find(runtmp):
 
 
 def test_revindex_index_search():
+    # confirm that RevIndex works
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
@@ -2436,6 +2481,7 @@ def test_revindex_index_search():
 
 
 def test_revindex_gather():
+    # check that RevIndex.gather works.
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
@@ -2461,6 +2507,7 @@ def test_revindex_gather():
 
 
 def test_revindex_gather_ignore():
+    # check that RevIndex gather ignores things properly.
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
