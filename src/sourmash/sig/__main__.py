@@ -108,13 +108,13 @@ def cat(args):
 
         save_sigs.add(ss)
 
-    notify(f'loaded {len(save_sigs)} signatures total.')
+    notify(f'loaded loaded {progress.n_sig} signatures total from {progress.n_files} files.')
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
     save_sigs.close()
 
-    notify(f'output {len(save_sigs)} signatures')
+    notify(f"saved {len(save_sigs)} signatures to '{args.output}'")
 
     multiple_md5 = [ 1 for cnt in encountered_md5sums.values() if cnt > 1 ]
     if multiple_md5:
