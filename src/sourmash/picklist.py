@@ -62,6 +62,8 @@ class SignaturePicklist:
         valid_coltypes.update(self.supported_coltypes)
         if coltype not in valid_coltypes:
             raise ValueError(f"invalid picklist column type '{coltype}'")
+        self.orig_coltype = coltype
+        self.orig_colname = column_name
 
         # if we're using gather or prefetch or manifest, set column_name
         # automatically (after checks).
@@ -201,7 +203,7 @@ class SignaturePicklist:
                 return True
         return False
 
-    def matches_manifest_row(self, row):
+    def matches_manifest_row(self, row, *, add_to_found=True):
         "does the given manifest row match this picklist?"
         if self.coltype == 'md5':
             colkey = 'md5'
@@ -218,11 +220,11 @@ class SignaturePicklist:
 
         if self.pickstyle == PickStyle.INCLUDE:
             if q in self.pickset:
-                self.found.add(q)
+                if add_to_found: self.found.add(q)
                 return True
         elif self.pickstyle == PickStyle.EXCLUDE:
             if q not in self.pickset:
-                self.found.add(q)
+                if add_to_found: self.found.add(q)
                 return True
         return False
 
