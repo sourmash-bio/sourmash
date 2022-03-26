@@ -1322,7 +1322,7 @@ def check(args):
         total_rows_examined += len(manifest)
         total_manifest_rows += manifest.rows
 
-    notify(f"loaded {total_rows_examined} total signatures that matched ksize & molecule type")
+    notify(f"loaded {total_rows_examined} total signatures that matched ksize & molecule type/")
 
     sourmash_args.report_picklist(args, picklist)
 
@@ -1333,6 +1333,8 @@ def check(args):
         pickfile = picklist.pickfile
 
         # go through the input file and pick out missing rows.
+        n_input = 0
+        n_output = 0
         with open(pickfile, newline='') as csvfp:
             r = csv.DictReader(csvfp)
 
@@ -1341,15 +1343,22 @@ def check(args):
                 w.writeheader()
 
                 for row in r:
+                    n_input += 1
                     if picklist.matches_manifest_row(row, add_to_found=False):
+                        n_output += 1
                         w.writerow(row)
+        notify(f"saved {n_output} matching rows of {n_input} picklist rows to '{args.output_missing}'")
+    elif args.output_missing:
+        notify(f"(no remaining picklist entries; not saving to '{args.output_missing}')")
 
     # save manifest of matching!
-    if args.save_manifest_matching:
+    if args.save_manifest_matching and total_manifest_rows:
         mf = CollectionManifest(total_manifest_rows)
         with open(args.save_manifest_matching, 'w', newline="") as fp:
             mf.write_to_csv(fp, write_header=True)
         notify(f"wrote {len(mf)} matching manifest rows to '{args.save_manifest_matching}'")
+    elif args.save_manifest_matching:
+        notify(f"(not saving matching manifest to '{args.save_manifest_matching}' because no matches)")
 
 
 def main(arglist=None):
