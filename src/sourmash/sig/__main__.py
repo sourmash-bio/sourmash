@@ -1326,9 +1326,53 @@ def check(args):
 
     sourmash_args.report_picklist(args, picklist)
 
-    if args.output:
-        pass
+    # output picklist of non-matching in same format as input picklist
+    # @CTB check include/exclude here
+    n_missing = len(picklist.pickset - picklist.found)
+    if args.output_missing and n_missing:
+        from sourmash.picklist import PickStyle
 
+        picklist_arg = args.picklist.split(':')
+        pickstyle = PickStyle.INCLUDE
+
+        # pickstyle specified?
+        if len(picklist_arg) == 4:
+            pickstyle_str = picklist_arg.pop()
+            if pickstyle_str == 'include':
+                pickstyle = PickStyle.INCLUDE
+            elif pickstyle_str == 'exclude':
+                pickstyle = PickStyle.EXCLUDE
+            else:
+                assert 0        # should already have been checked, above
+
+        assert len(picklist_arg) == 3
+        pickfile, column, coltype = picklist_arg
+        if column == '':
+            if coltype == 'gather':
+                # for now, override => md5short in column md5
+                coltype = 'md5prefix8'
+                column = 'md5'
+            elif coltype == 'prefetch':
+                # for now, override => md5short in column match_md5
+                coltype = 'md5prefix8'
+                column = 'match_md5'
+            elif coltype == 'manifest' or coltype == 'search':
+                # for now, override => md5
+                coltype = 'md5'
+                column = 'md5'
+
+        with open(pickfile, newline='') as csvfp:
+            r = csv.DictReader(csvfp)
+
+            with open(args.output_missing, "w", newline='') as outfp:
+                w = csv.DictWriter(outfp, fieldnames=r.fieldnames)
+                w.writeheader()
+
+                for row in r:
+                    if row[column] not in picklist.found:
+                        w.writerow(row)
+
+    # save manifest of matching!
     if args.save_manifest_matching:
         mf = CollectionManifest(total_manifest_rows)
         with open(args.save_manifest_matching, 'w', newline="") as fp:

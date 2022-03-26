@@ -4194,4 +4194,72 @@ def test_sig_kmers_2_hp(runtmp):
 
 def test_sig_check_1(runtmp):
     # basic check functionality
-    pass
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    runtmp.sourmash('sig', 'check', *sigfiles,
+                    "--picklist", f"{picklist}::manifest",
+                    "--save-manifest", "mf.csv")
+
+    out_mf = runtmp.output('mf.csv')
+    assert os.path.exists(out_mf)
+
+    # all should match.
+    with open(out_mf, newline='') as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 24
+
+    idx = sourmash.load_file_as_index(out_mf)
+    siglist = list(idx.signatures())
+    assert len(siglist) == 24
+    ksizes = set([ ss.minhash.ksize for ss in siglist ])
+    assert len(ksizes) == 3
+    assert 11 in ksizes
+    assert 21 in ksizes
+    assert 31 in ksizes
+
+
+def test_sig_check_1_ksize(runtmp):
+    # basic check functionality
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    runtmp.sourmash('sig', 'check', *sigfiles, '-k', '31',
+                    "--picklist", f"{picklist}::manifest",
+                    "--save-manifest", "mf.csv")
+
+    out_mf = runtmp.output('mf.csv')
+    assert os.path.exists(out_mf)
+
+    # 8 of the 24 should match.
+    with open(out_mf, newline='') as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 8
+
+    idx = sourmash.load_file_as_index(out_mf)
+    siglist = list(idx.signatures())
+    assert len(siglist) == 8
+    ksizes = set([ ss.minhash.ksize for ss in siglist ])
+    assert len(ksizes) == 1
+    assert 31 in ksizes
+
+
+
+def test_sig_check_2_output_missing(runtmp):
+    # output missing all as identical to input picklist
+    sigfiles = utils.get_test_data('gather/combined.sig')
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    runtmp.sourmash('sig', 'check', sigfiles,
+                    "--picklist", f"{picklist}::manifest",
+                    "-o", "missing.csv")
+
+    out_csv = runtmp.output('missing.csv')
+    assert os.path.exists(out_csv)
+
+    # all should match.
+    with open(out_csv, newline='') as fp:
+        r = csv.DictReader(fp)
+        rows = list(r)
+
+    assert len(rows) == 24

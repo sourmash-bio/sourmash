@@ -12,7 +12,7 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE',
+        '-o', '--output-missing', metavar='FILE',
         help='output picklist with remaining unmatched entries to this file',
         default='-',
     )
