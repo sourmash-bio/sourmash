@@ -40,8 +40,6 @@ import os
 import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
-import csv
-from io import TextIOWrapper
 from collections import defaultdict
 
 from ..search import make_jaccard_search_query, make_gather_query
@@ -906,7 +904,6 @@ class MultiIndex(Index):
         CTB note: here, 'internal_location' is the source file for the
         index. This is a special feature of this (in memory) class.
         """
-        parent = self.parent
         for row in self.manifest.rows:
             yield row['signature'], row['internal_location']
 
