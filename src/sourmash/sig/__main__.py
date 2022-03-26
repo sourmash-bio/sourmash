@@ -1291,6 +1291,51 @@ def fileinfo(args):
         print(json.dumps(info_d))
 
 
+def check(args):
+    """
+    check signature db(s) against a picklist.
+    """
+    set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
+    _extend_signatures_with_from_file(args)
+
+    if not picklist:
+        error("** No picklist provided?! Exiting.")
+        sys.exit(-1)
+
+    total_manifest_rows = []
+
+    # start loading!
+    total_rows_examined = 0
+    for filename in args.signatures:
+        idx = sourmash_args.load_file_as_index(filename,
+                                               yield_all_files=args.force)
+
+        idx = idx.select(ksize=args.ksize, moltype=moltype)
+
+        idx = sourmash_args.apply_picklist_and_pattern(idx, picklist,
+                                                       pattern_search)
+
+        manifest = sourmash_args.get_manifest(idx)
+        total_rows_examined += len(manifest)
+        total_manifest_rows += manifest.rows
+
+    notify(f"loaded {total_rows_examined} total signatures that matched ksize & molecule type")
+
+    sourmash_args.report_picklist(args, picklist)
+
+    if args.output:
+        pass
+
+    if args.save_manifest_matching:
+        mf = CollectionManifest(total_manifest_rows)
+        with open(args.save_manifest_matching, 'w', newline="") as fp:
+            mf.write_to_csv(fp, write_header=True)
+        notify(f"wrote {len(mf)} matching manifest rows to '{args.save_manifest_matching}'")
+
+
 def main(arglist=None):
     args = sourmash.cli.get_parser().parse_args(arglist)
     submod = getattr(sourmash.cli.sig, args.subcmd)

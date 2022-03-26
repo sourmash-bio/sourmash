@@ -4190,3 +4190,8 @@ def test_sig_kmers_2_hp(runtmp):
         check_mh2.add_hash(int(row['hashval']))
     assert check_mh.similarity(mh) == 1.0
     assert check_mh2.similarity(mh) == 1.0
+
+
+def test_sig_check_1(runtmp):
+    # basic check functionality
+    pass
