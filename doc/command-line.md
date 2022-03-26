@@ -1626,17 +1626,16 @@ signatures that were just created.
 
 (sourmash v4.4.0 and later)
 
-sourmash supports search and indexing of collections of files via
-_manifests_, which is an internal metadata catalog format used for
-signature selection and loading. Manifests do not directly improve the
-speed of signature loading, but they can significantly speed up
-the process of finding the signatures _to_ load - picklists and pattern
-matching both use them.
+Manifests are metadata catalogs of signatures that are used for
+signature selection and loading. They are used extensively by sourmash
+internals to speed up signature selection through picklists and
+pattern matching.
 
-Manifests are mostly used and stored internally (for example, in zip files)
-but they can be used externally, too.  For example, if you have a large
-collection of signature (`.sig` or `.sig.gz` files) under a directory,
-you can build a manifest for them like so:
+Manifests can _also_ be used externally (via the command-line), and
+may be useful for organizing large collections of signatures.
+
+Suppose you have a large collection of signature (`.sig` or `.sig.gz`
+files) under a directory. You can create a manifest file for them like so:
 ```
 sourmash sig manifest <dir> -o <dir>/manifest.csv
 ```
@@ -1644,24 +1643,41 @@ and then use the manifest directly for sourmash operations:
 ```
 sourmash sig fileinfo <dir>/manifest.csv
 ```
-Note that this manifest can be used as a database target for search,
-gather, etc. as well.  When used as a manifest for a directory,
-the manifest must be placed beneath (and loaded from) the directory from
-which the manifest was generated.
+This manifest can be used as a database target for most sourmash
+operations - search, gather, etc.  Note that manifests for directories
+must be placed beneath (and loaded from) the directory from which the
+manifest was generated; the specific manifest filename does not
+matter.
 
-A more advanced and slightly tricky way to use explicit manifest
-generation and loading is with lists of files.  If you create a file
-with a path list of locations of loadable sourmash collections, you
-can run `sourmash sig manifest pathlist.txt -o mf.csv` and then load
-`mf.csv` directly.  This can be very handy when you have extremely
-large collections of sourmash signatures and you want to avoid
-repeatedly opening and reading them because it is so slow.  The tricky
-part in doing this is that the manifest will store the same paths
-listed in the pathlist file - whether they are relative or absolute
-paths - and these paths must be resolvable by sourmash from the
-current working directory.  This makes explicit manifests built from
-pathlist files less portable within or across systems than the other
-sourmash collections, which are all relocatable.
+A more advanced and slightly tricky way to use explicit manifest files
+is with lists of files.  If you create a file with a path list
+containing the locations of loadable sourmash collections, you can run
+`sourmash sig manifest pathlist.txt -o mf.csv` to generate a manifest
+of all of the files.  The resulting manifest in `mf.csv` can then be
+loaded directly.  This is very handy when you have many sourmash
+signatures, or large signature files.  The tricky part in doing this
+is that the manifest will store the same paths listed in the pathlist
+file - whether they are relative or absolute paths - and these paths
+must be resolvable by sourmash from the current working directory.
+This makes explicit manifests built from pathlist files less portable
+within or across systems than the other sourmash collections, which
+are all relocatable.
+
+For example, if you create a pathlist file `paths.txt` containing the
+following:
+```
+/path/to/zipfile.zip
+local_directory/some_signature.sig.gz
+local_dir2/
+```
+and then run:
+```
+sourmash sig manifest paths.txt -o mf.csv
+```
+you will be able to use `mf.csv` as a database for `sourmash search`
+and `sourmash gather` commands.  But, because it contains two relative paths,
+you will only be able to use it _from the directory that contains those
+two relative paths_.
 
 **Our advice:** We suggest using zip file collections for most
 situations; we primarily recommend using explicit manifests for
