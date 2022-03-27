@@ -1295,6 +1295,7 @@ def check(args):
     """
     check signature db(s) against a picklist.
     """
+    from sourmash.picklist import PickStyle
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
@@ -1303,6 +1304,10 @@ def check(args):
 
     if not picklist:
         error("** No picklist provided?! Exiting.")
+        sys.exit(-1)
+
+    if picklist.pickstyle == PickStyle.EXCLUDE and args.output_missing:
+        error("** ERROR: Cannot use an 'exclude' picklist with '-o/--output-missing'")
         sys.exit(-1)
 
     total_manifest_rows = []
@@ -1322,12 +1327,11 @@ def check(args):
         total_rows_examined += len(manifest)
         total_manifest_rows += manifest.rows
 
-    notify(f"loaded {total_rows_examined} total signatures that matched ksize & molecule type/")
+    notify(f"loaded {total_rows_examined} signatures.")
 
     sourmash_args.report_picklist(args, picklist)
 
     # output picklist of non-matching in same format as input picklist
-    # @CTB check include/exclude here
     n_missing = len(picklist.pickset - picklist.found)
     if args.output_missing and n_missing:
         pickfile = picklist.pickfile

@@ -238,13 +238,8 @@ class SignaturePicklist:
         q = self.preprocess_fn(q)
         self.n_queries += 1
 
-        # @CTB test exclude
-        if self.pickstyle == PickStyle.INCLUDE:
-            if q in self.found:
-                return True
-        elif self.pickstyle == PickStyle.EXCLUDE:
-            if q not in self.found:
-                return True
+        if q in self.found:
+            return True
         return False
 
     def filter(self, it):

@@ -4249,11 +4249,38 @@ def test_sig_check_1_diff_col_name(runtmp):
     assert 21 in ksizes
     assert 31 in ksizes
 
-    # should be non-matching picklist row
+    # should be one non-matching picklist row
     with open(missing_csv, newline='') as fp:
         rows = list(csv.reader(fp))
-    assert len(rows) == 2
+    assert len(rows) == 2       # header row + data row
     assert rows[1][0] == 'NOT THERE'
+
+
+def test_sig_check_1_diff_col_name_exclude(runtmp):
+    # 'sig check' with 'name2' column
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist-diffcolumn.csv')
+
+    runtmp.sourmash('sig', 'check', *sigfiles,
+                    "--picklist", f"{picklist}:name2:name:exclude",
+                    '--save-manifest', 'mf.csv')
+
+    out_mf = runtmp.output('mf.csv')
+    assert os.path.exists(out_mf)
+
+    # should be 12 matching manifest rows
+    with open(out_mf, newline='') as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 12
+
+    idx = sourmash.load_file_as_index(out_mf)
+    siglist = list(idx.signatures())
+    assert len(siglist) == 12
+    ksizes = set([ ss.minhash.ksize for ss in siglist ])
+    assert len(ksizes) == 3
+    assert 11 in ksizes
+    assert 21 in ksizes
+    assert 31 in ksizes
 
 
 def test_sig_check_1_ksize(runtmp):
@@ -4299,3 +4326,16 @@ def test_sig_check_2_output_missing(runtmp):
         rows = list(r)
 
     assert len(rows) == 24
+
+
+def test_sig_check_2_output_missing_exclude(runtmp):
+    # output missing all as identical to input picklist
+    sigfiles = utils.get_test_data('gather/combined.sig')
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sig', 'check', sigfiles,
+                        "--picklist", f"{picklist}:name:name:exclude",
+                        "-o", "missing.csv")
+
+    assert "** ERROR: Cannot use an 'exclude' picklist with '-o/--output-missing'" in str(exc)

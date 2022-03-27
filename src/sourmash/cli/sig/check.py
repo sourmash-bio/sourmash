@@ -14,7 +14,6 @@ def subparser(subparsers):
     subparser.add_argument(
         '-o', '--output-missing', metavar='FILE',
         help='output picklist with remaining unmatched entries to this file',
-        default='-',
     )
     subparser.add_argument(
         '-f', '--force', action='store_true',
