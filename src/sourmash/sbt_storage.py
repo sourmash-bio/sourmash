@@ -9,6 +9,11 @@ import zipfile
 from abc import ABC
 from pathlib import Path
 
+from ._lowlevel import ffi, lib
+from .utils import RustObject, rustcall, decode_str
+from .minhash import to_bytes
+
+
 class Storage(ABC):
 
     @abc.abstractmethod
@@ -91,6 +96,85 @@ class FSStorage(Storage):
 
 class ZipStorage(Storage):
 
+    def __new__(self, path, *, read_only=True):
+        if read_only:
+            return RustZipStorage(path)
+        else:
+            return RwZipStorage(path)
+
+    @staticmethod
+    def can_open(location):
+        return zipfile.is_zipfile(location)
+
+
+class RustZipStorage(RustObject, Storage):
+
+    __dealloc_func__ = lib.zipstorage_free
+
+    def __init__(self, path):
+        path = os.path.abspath(path)
+        self._objptr = rustcall(lib.zipstorage_new, to_bytes(path), len(path))
+
+    @property
+    def path(self):
+        return decode_str(self._methodcall(lib.zipstorage_path))
+
+    @property
+    def subdir(self):
+        return decode_str(self._methodcall(lib.zipstorage_subdir))
+
+    @subdir.setter
+    def name(self, value):
+        self._methodcall(lib.zipstorage_set_subdir, to_bytes(value), len(value))
+
+    def _filenames(self):
+        size = ffi.new("uintptr_t *")
+        paths_ptr = self._methodcall(lib.zipstorage_filenames, size)
+        size = size[0]
+
+        paths = []
+        for i in range(size):
+            path = decode_str(paths_ptr[i][0])
+            paths.append(path)
+
+        return paths
+
+    def save(self, path, content, *, overwrite=False, compress=False):
+        raise NotImplementedError()
+
+    def load(self, path):
+        try:
+            size = ffi.new("uintptr_t *")
+            rawbuf = self._methodcall(lib.zipstorage_load, to_bytes(path), len(path), size)
+            size = size[0]
+
+            rawbuf = ffi.gc(rawbuf, lambda o: lib.nodegraph_buffer_free(o, size), size)
+            buf = ffi.buffer(rawbuf, size)
+
+            # TODO: maybe avoid the [:] here, it triggers a copy...
+            return buf[:]
+        except ValueError:
+            raise FileNotFoundError(path)
+
+    def list_sbts(self):
+        size = ffi.new("uintptr_t *")
+        paths_ptr = self._methodcall(lib.zipstorage_list_sbts, size)
+        size = size[0]
+
+        paths = []
+        for i in range(size):
+            path = decode_str(paths_ptr[i][0])
+            paths.append(path)
+
+        return paths
+
+    @staticmethod
+    def can_open(location):
+        return zipfile.is_zipfile(location)
+
+
+class RwZipStorage(Storage):
+
     def __init__(self, path):
         self.path = os.path.abspath(path)
 
@@ -118,6 +202,9 @@ class ZipStorage(Storage):
         subdirs = [f for f in self.zipfile.namelist() if f.endswith("/")]
         if len(subdirs) == 1:
             self.subdir = subdirs[0]
+
+    def _filenames(self):
+        return [info.filename for info in self.zipfile.infolist()]
 
     def _content_matches(self, zf, path, content):
         info = zf.getinfo(path)
@@ -285,15 +372,15 @@ class ZipStorage(Storage):
             self.bufferzip.close()
             self.bufferzip = None
 
-    @staticmethod
-    def can_open(location):
-        return zipfile.is_zipfile(location)
-
     def list_sbts(self):
         return [f for f in self.zipfile.namelist() if f.endswith(".sbt.json")]
 
     def __del__(self):
         self.close()
+
+    @staticmethod
+    def can_open(location):
+        return zipfile.is_zipfile(location)
 
 
 class IPFSStorage(Storage):

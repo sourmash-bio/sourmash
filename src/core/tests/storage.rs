@@ -35,3 +35,35 @@ fn zipstorage_load_slice() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+#[test]
+fn zipstorage_load_manifest() -> Result<(), Box<dyn std::error::Error>> {
+    let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    filename.push("../../tests/test-data/prot/protein.sbt.zip");
+
+    let zs = ZipStorage::new(filename.to_str().unwrap())?;
+
+    let data = zs.load("protein.manifest.csv").expect("error loading file");
+
+    //let description: serde_json::Value = serde_json::from_slice(&data[..])?;
+    //assert_eq!(description["version"], 6);
+
+    Ok(())
+}
+
+#[test]
+fn zipstorage_list_sbts() -> Result<(), Box<dyn std::error::Error>> {
+    let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    filename.push("../../tests/test-data/v6.sbt.zip");
+
+    let zip_file = File::open(filename)?;
+    let mapping = unsafe { memmap2::Mmap::map(&zip_file)? };
+
+    let zs = ZipStorage::from_slice(&mapping)?;
+
+    let sbts = zs.list_sbts()?;
+
+    assert_eq!(sbts.len(), 1);
+
+    Ok(())
+}
