@@ -4220,7 +4220,7 @@ def test_sig_check_1(runtmp):
 
 
 def test_sig_check_1_diff_col_name(runtmp):
-    # 'sig check' with 'name2' column
+    # 'sig check' with 'name2' column instead of default name
     sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
     picklist = utils.get_test_data('gather/salmonella-picklist-diffcolumn.csv')
 
@@ -4257,7 +4257,7 @@ def test_sig_check_1_diff_col_name(runtmp):
 
 
 def test_sig_check_1_diff_col_name_exclude(runtmp):
-    # 'sig check' with 'name2' column
+    # 'sig check' with 'name2' column, :exclude picklist
     sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
     picklist = utils.get_test_data('gather/salmonella-picklist-diffcolumn.csv')
 
@@ -4284,7 +4284,7 @@ def test_sig_check_1_diff_col_name_exclude(runtmp):
 
 
 def test_sig_check_1_ksize(runtmp):
-    # basic check functionality
+    # basic check functionality with selection for ksize
     sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
     picklist = utils.get_test_data('gather/salmonella-picklist.csv')
 
@@ -4329,7 +4329,7 @@ def test_sig_check_2_output_missing(runtmp):
 
 
 def test_sig_check_2_output_missing_exclude(runtmp):
-    # output missing all as identical to input picklist
+    # 'exclude' with '-o' shouldn't work
     sigfiles = utils.get_test_data('gather/combined.sig')
     picklist = utils.get_test_data('gather/salmonella-picklist.csv')
 
