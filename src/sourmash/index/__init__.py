@@ -26,12 +26,12 @@ LazyLinearIndex - lazy selection and linear search of signatures.
 ZipFileLinearIndex - simple on-disk storage of signatures.
 
 MultiIndex - in-memory storage and selection of signatures from multiple
-index objects, using manifests.
+index objects, using manifests. All signatures are kept in memory.
 
 LazyLoadedIndex - selection on manifests with loading of index on demand.
 
 StandaloneManifestIndex - load manifests directly, and do lazy loading of
-signatures on demand. No signatures are kept in memory..
+signatures on demand. No signatures are kept in memory.
 
 CounterGather - an ancillary class returned by the 'counter_gather()' method.
 """
@@ -1180,13 +1180,12 @@ class StandaloneManifestIndex(Index):
     This class overlaps in concept with LazyLoadedIndex and behaves
     identically when a manifest contains only rows from a single
     on-disk Index object.  However, unlike LazyLoadedIndex, this class
-    can be used in situations where there are many signatures in many
-    on-disk Index objects.
+    can be used to reference multiple on-disk Index objects.
 
     This class also overlaps in concept with MultiIndex when
     MultiIndex.load_from_pathlist is used to load other Index
-    objects. However, unlike MultiIndex, this class does not store
-    signatures in memory (as part of manifests).
+    objects. However, this class does not store any signatures in
+    memory, unlike MultiIndex.
     """
     is_database = True
 
@@ -1232,7 +1231,14 @@ class StandaloneManifestIndex(Index):
             yield ss
 
     def _signatures_with_internal(self):
-        "Return an iterator over all sigs of (sig, internal_location)"
+        """Return an iterator over all sigs of (sig, internal_location)
+
+        Note that this is implemented differently from most Index
+        objects in that it only lists subselected parts of the
+        manifest, and not the original manifest. This was done out of
+        convenience: we don't currently have access to the original
+        manifest in this class.
+        """
         # collect all internal locations
         iloc_to_rows = defaultdict(list)
         for row in self.manifest.rows:
