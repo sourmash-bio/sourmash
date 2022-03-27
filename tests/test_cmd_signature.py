@@ -4219,6 +4219,43 @@ def test_sig_check_1(runtmp):
     assert 31 in ksizes
 
 
+def test_sig_check_1_diff_col_name(runtmp):
+    # 'sig check' with 'name2' column
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist-diffcolumn.csv')
+
+    runtmp.sourmash('sig', 'check', *sigfiles,
+                    "--picklist", f"{picklist}:name2:name",
+                    "-o", "missing.csv",
+                    '--save-manifest', 'mf.csv')
+
+    out_mf = runtmp.output('mf.csv')
+    assert os.path.exists(out_mf)
+
+    missing_csv = runtmp.output('missing.csv')
+    assert os.path.exists(missing_csv)
+
+    # should be 24 matching manifest rows
+    with open(out_mf, newline='') as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 24
+
+    idx = sourmash.load_file_as_index(out_mf)
+    siglist = list(idx.signatures())
+    assert len(siglist) == 24
+    ksizes = set([ ss.minhash.ksize for ss in siglist ])
+    assert len(ksizes) == 3
+    assert 11 in ksizes
+    assert 21 in ksizes
+    assert 31 in ksizes
+
+    # should be non-matching picklist row
+    with open(missing_csv, newline='') as fp:
+        rows = list(csv.reader(fp))
+    assert len(rows) == 2
+    assert rows[1][0] == 'NOT THERE'
+
+
 def test_sig_check_1_ksize(runtmp):
     # basic check functionality
     sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
@@ -4242,7 +4279,6 @@ def test_sig_check_1_ksize(runtmp):
     ksizes = set([ ss.minhash.ksize for ss in siglist ])
     assert len(ksizes) == 1
     assert 31 in ksizes
-
 
 
 def test_sig_check_2_output_missing(runtmp):

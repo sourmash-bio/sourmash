@@ -205,6 +205,7 @@ class SignaturePicklist:
 
     def matches_manifest_row(self, row, *, add_to_found=True):
         "does the given manifest row match this picklist?"
+        # @CTB: may need to test 'add_to_found'
         if self.coltype == 'md5':
             colkey = 'md5'
         elif self.coltype in ('md5prefix8', 'md5short'):
@@ -225,6 +226,24 @@ class SignaturePicklist:
         elif self.pickstyle == PickStyle.EXCLUDE:
             if q not in self.pickset:
                 if add_to_found: self.found.add(q)
+                return True
+        return False
+
+    def matched_csv_row(self, row):
+        """did the given CSV row object match this picklist?
+
+        This is used for examining matches/nomatches to original picklist file.
+        """
+        q = row[self.column_name]
+        q = self.preprocess_fn(q)
+        self.n_queries += 1
+
+        # @CTB test exclude
+        if self.pickstyle == PickStyle.INCLUDE:
+            if q in self.found:
+                return True
+        elif self.pickstyle == PickStyle.EXCLUDE:
+            if q not in self.found:
                 return True
         return False
 

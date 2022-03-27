@@ -1344,10 +1344,10 @@ def check(args):
 
                 for row in r:
                     n_input += 1
-                    if picklist.matches_manifest_row(row, add_to_found=False):
+                    if not picklist.matched_csv_row(row):
                         n_output += 1
                         w.writerow(row)
-        notify(f"saved {n_output} matching rows of {n_input} picklist rows to '{args.output_missing}'")
+        notify(f"saved {n_output} non-matching rows of {n_input} picklist rows to '{args.output_missing}'")
     elif args.output_missing:
         notify(f"(no remaining picklist entries; not saving to '{args.output_missing}')")
 
