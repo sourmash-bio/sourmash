@@ -71,7 +71,11 @@ class Index(ABC):
             yield ss, self.location
 
     def _signatures_with_internal(self):
-        """Return an iterator of tuples (ss, location, internal_location).
+        """Return an iterator of tuples (ss, internal_location).
+
+        Unlike 'signatures_with_location()', this iterator should return
+        _all_ signatures in the object, not just those that remain after
+        selection/filtering.
 
         This is an internal API for use in generating manifests, and may
         change without warning.
@@ -600,7 +604,7 @@ class ZipFileLinearIndex(Index):
                    use_manifest=use_manifest)
 
     def _signatures_with_internal(self):
-        """Return an iterator of tuples (ss, location, internal_location).
+        """Return an iterator of tuples (ss, internal_location).
 
         Note: does not limit signatures to subsets.
         """
@@ -615,7 +619,7 @@ class ZipFileLinearIndex(Index):
                self.traverse_yield_all:
                 fp = zf.open(zipinfo)
                 for ss in load_signatures(fp):
-                    yield ss, zf.filename, zipinfo.filename
+                    yield ss, zipinfo.filename
 
     def signatures(self):
         "Load all signatures in the zip file."
@@ -888,14 +892,14 @@ class MultiIndex(Index):
             yield row['signature'], loc
 
     def _signatures_with_internal(self):
-        """Return an iterator of tuples (ss, parent, location)
+        """Return an iterator of tuples (ss, location)
 
         CTB note: here, 'internal_location' is the source file for the
         index. This is a special feature of this (in memory) class.
         """
         parent = self.parent
         for row in self.manifest.rows:
-            yield row['signature'], parent, row['internal_location']
+            yield row['signature'], row['internal_location']
 
 
     def __len__(self):

@@ -775,16 +775,9 @@ def get_manifest(idx, *, require=True, rebuild=False):
 
     debug_literal(f"get_manifest: no manifest found / rebuild={rebuild}")
 
-    # CTB: CollectionManifest.create_manifest wants (ss, iloc).
-    # so this is an adaptor function! Might want to just change
-    # what `create_manifest` takes.
-    def manifest_iloc_iter(idx):
-        for (ss, loc, iloc) in idx._signatures_with_internal():
-            yield ss, iloc
-
     # need to build one...
     try:
-        m = CollectionManifest.create_manifest(manifest_iloc_iter(idx),
+        m = CollectionManifest.create_manifest(idx._signatures_with_internal(),
                                                include_signature=False)
         debug_literal("get_manifest: rebuilt manifest.")
     except NotImplementedError:

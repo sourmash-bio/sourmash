@@ -181,8 +181,9 @@ class LCA_Database(Index):
             yield v
 
     def _signatures_with_internal(self):
+        "Return all of the signatures in this LCA database."
         for idx, ss in self._signatures.items():
-            yield ss, self.location, idx
+            yield ss, idx
 
     def select(self, ksize=None, moltype=None, num=0, scaled=0, abund=None,
                containment=False, picklist=None):
