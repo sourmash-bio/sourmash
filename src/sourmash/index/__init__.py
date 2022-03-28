@@ -25,10 +25,14 @@ LazyLinearIndex - lazy selection and linear search of signatures.
 
 ZipFileLinearIndex - simple on-disk storage of signatures.
 
-class MultiIndex - in-memory storage and selection of signatures from multiple
-index objects, using manifests.
+MultiIndex - in-memory storage and selection of signatures from multiple
+index objects, using manifests. All signatures are kept in memory.
+
+StandaloneManifestIndex - load manifests directly, and do lazy loading of
+signatures on demand. No signatures are kept in memory.
 
 LazyLoadedIndex - selection on manifests with loading of index on demand.
+(Consider using StandaloneManifestIndex instead.)
 
 CounterGather - an ancillary class returned by the 'counter_gather()' method.
 """
@@ -39,6 +43,7 @@ from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
 import csv
 from io import TextIOWrapper
+from collections import defaultdict
 
 from ..search import make_jaccard_search_query, make_gather_query
 from ..manifest import CollectionManifest
@@ -49,7 +54,12 @@ from ..signature import load_signatures, save_signatures
 IndexSearchResult = namedtuple('Result', 'score, signature, location')
 
 class Index(ABC):
+    # this will be removed soon; see sourmash#1894.
     is_database = False
+
+    # 'manifest', when set, implies efficient selection and direct
+    # access to signatures. Signatures may be stored in the manifest
+    # or loaded on demand from disk depending on the class, however.
     manifest = None
 
     @abstractmethod
@@ -933,6 +943,11 @@ class MultiIndex(Index):
 
         # build manifest; note, signatures are stored in memory.
         # CTB: could do this on demand?
+        # CTB: should we use get_manifest functionality?
+        # CTB: note here that the manifest is created by iteration
+        # *even if it already exists.* This could be changed to be more
+        # efficient... but for now, use StandaloneManifestIndex if you
+        # want to avoid this when loading from multiple files.
         manifest = CollectionManifest.create_manifest(sigloc_iter())
 
         # create!
@@ -945,6 +960,8 @@ class MultiIndex(Index):
         Takes directory path plus optional boolean 'force'. Attempts to
         load all files ending in .sig or .sig.gz, by default; if 'force' is
         True, will attempt to load _all_ files, ignoring errors.
+
+        Will not load anything other than JSON signature files.
         """
         from ..sourmash_args import traverse_find_sigs
 
@@ -1007,8 +1024,8 @@ class MultiIndex(Index):
     def load_from_pathlist(cls, filename):
         """Create a MultiIndex from all files listed in a text file.
 
-        Note: this will load signatures from directories and databases, too,
-        if they are listed in the text file; it uses 'load_file_as_index'
+        Note: this will attempt to load signatures from each file,
+        including zip collections, etc; it uses 'load_file_as_index'
         underneath.
         """
         from ..sourmash_args import (load_pathlist_from_file,
@@ -1047,6 +1064,8 @@ class LazyLoadedIndex(Index):
     from disk every time they are needed (e.g. 'find(...)', 'signatures()').
 
     Wrapper class; signatures dynamically loaded from disk; uses manifests.
+
+    CTB: This may be redundant with StandaloneManifestIndex.
     """
     def __init__(self, filename, manifest):
         "Create an Index with given filename and manifest."
@@ -1139,3 +1158,126 @@ class LazyLoadedIndex(Index):
         new_manifest = manifest.select_to_manifest(**kwargs)
 
         return LazyLoadedIndex(self.filename, new_manifest)
+
+
+class StandaloneManifestIndex(Index):
+    """Load a standalone manifest as an Index.
+
+    This class is useful for the situation where you have a directory
+    with many signature collections underneath it, and you don't want to load
+    every collection each time you run sourmash.
+
+    Instead, you can run 'sourmash sig manifest <directory> -o mf.csv' to
+    output a manifest and then use this class to load 'mf.csv' directly.
+    Sketch type selection, picklists, and pattern matching will all work
+    directly on the manifest and will load signatures only upon demand.
+
+    One feature of this class is that absolute paths to sketches in
+    the 'internal_location' field of the manifests will be loaded properly.
+    This permits manifests to be constructed for various collections of
+    signatures that reside elsewhere, and not just below a single directory
+    prefix.
+
+    StandaloneManifestIndex does _not_ store signatures in memory.
+
+    This class overlaps in concept with LazyLoadedIndex and behaves
+    identically when a manifest contains only rows from a single
+    on-disk Index object.  However, unlike LazyLoadedIndex, this class
+    can be used to reference multiple on-disk Index objects.
+
+    This class also overlaps in concept with MultiIndex when
+    MultiIndex.load_from_pathlist is used to load other Index
+    objects. However, this class does not store any signatures in
+    memory, unlike MultiIndex.
+    """
+    is_database = True
+
+    def __init__(self, manifest, location, *, prefix=None):
+        """Create object. 'location' is path of manifest file, 'prefix' is
+        prepended to signature paths when loading non-abspaths."""
+        assert manifest is not None
+        self.manifest = manifest
+        self._location = location
+        self.prefix = prefix
+
+    @classmethod
+    def load(cls, location, *, prefix=None):
+        """Load manifest file from given location.
+
+        If prefix is None (default), it is automatically set from dirname.
+        Set prefix='' to avoid this, or provide an explicit prefix.
+        """
+        if not os.path.isfile(location):
+            raise ValueError(f"provided manifest location '{location}' is not a file")
+
+        with open(location, newline='') as fp:
+            m = CollectionManifest.load_from_csv(fp)
+
+        if prefix is None:
+            prefix = os.path.dirname(location)
+
+        return cls(m, location, prefix=prefix)
+
+    @property
+    def location(self):
+        "Return the path to this manifest."
+        return self._location
+
+    def signatures_with_location(self):
+        "Return an iterator over all signatures and their locations."
+        for ss, loc in self._signatures_with_internal():
+            yield ss, loc
+
+    def signatures(self):
+        "Return an iterator over all signatures."
+        for ss, loc in self._signatures_with_internal():
+            yield ss
+
+    def _signatures_with_internal(self):
+        """Return an iterator over all sigs of (sig, internal_location)
+
+        Note that this is implemented differently from most Index
+        objects in that it only lists subselected parts of the
+        manifest, and not the original manifest. This was done out of
+        convenience: we don't currently have access to the original
+        manifest in this class.
+        """
+        # collect all internal locations
+        iloc_to_rows = defaultdict(list)
+        for row in self.manifest.rows:
+            iloc = row['internal_location']
+            iloc_to_rows[iloc].append(row)
+
+        # iterate over internal locations, selecting relevant sigs
+        for iloc, iloc_rows in iloc_to_rows.items():
+            # prepend with prefix?
+            if not iloc.startswith('/') and self.prefix:
+                iloc = os.path.join(self.prefix, iloc)
+
+            sub_mf = CollectionManifest(iloc_rows)
+            picklist = sub_mf.to_picklist()
+
+            idx = sourmash.load_file_as_index(iloc)
+            idx = idx.select(picklist=picklist)
+            for ss in idx.signatures():
+                yield ss, iloc
+
+    def __len__(self):
+        "Number of signatures in this manifest (after any select)."
+        return len(self.manifest)
+
+    def __bool__(self):
+        "Is this manifest empty?"
+        return bool(self.manifest)
+
+    def save(self, *args):
+        raise NotImplementedError
+
+    def insert(self, *args):
+        raise NotImplementedError
+
+    def select(self, **kwargs):
+        "Run 'select' on the manifest."
+        new_manifest = self.manifest.select_to_manifest(**kwargs)
+        return StandaloneManifestIndex(new_manifest, self._location,
+                                       prefix=self.prefix)

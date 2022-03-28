@@ -1621,3 +1621,68 @@ sig` commands will output to stdout.  So, for example,
 
 `sourmash sketch ... -o - | sourmash sig describe -` will describe the
 signatures that were just created.
+
+### Using manifests to explicitly refer to collections of files
+
+(sourmash v4.4.0 and later)
+
+Manifests are metadata catalogs of signatures that are used for
+signature selection and loading. They are used extensively by sourmash
+internals to speed up signature selection through picklists and
+pattern matching.
+
+Manifests can _also_ be used externally (via the command-line), and
+may be useful for organizing large collections of signatures.
+
+Suppose you have a large collection of signature (`.sig` or `.sig.gz`
+files) under a directory. You can create a manifest file for them like so:
+```
+sourmash sig manifest <dir> -o <dir>/manifest.csv
+```
+and then use the manifest directly for sourmash operations:
+```
+sourmash sig fileinfo <dir>/manifest.csv
+```
+This manifest can be used as a database target for most sourmash
+operations - search, gather, etc.  Note that manifests for directories
+must be placed within (and loaded from) the directory from which the
+manifest was generated; the specific manifest filename does not
+matter.
+
+A more advanced and slightly tricky way to use explicit manifest files
+is with lists of files.  If you create a file with a path list
+containing the locations of loadable sourmash collections, you can run
+`sourmash sig manifest pathlist.txt -o mf.csv` to generate a manifest
+of all of the files.  The resulting manifest in `mf.csv` can then be
+loaded directly.  This is very handy when you have many sourmash
+signatures, or large signature files.  The tricky part in doing this
+is that the manifest will store the same paths listed in the pathlist
+file - whether they are relative or absolute paths - and these paths
+must be resolvable by sourmash from the current working directory.
+This makes explicit manifests built from pathlist files less portable
+within or across systems than the other sourmash collections, which
+are all relocatable.
+
+For example, if you create a pathlist file `paths.txt` containing the
+following:
+```
+/path/to/zipfile.zip
+local_directory/some_signature.sig.gz
+local_dir2/
+```
+and then run:
+```
+sourmash sig manifest paths.txt -o mf.csv
+```
+you will be able to use `mf.csv` as a database for `sourmash search`
+and `sourmash gather` commands.  But, because it contains two relative paths,
+you will only be able to use it _from the directory that contains those
+two relative paths_.
+
+**Our advice:** We suggest using zip file collections for most
+situations; we primarily recommend using explicit manifests for
+situations where you have a **very large** collection of signatures
+(1000s or more), and don't want to make multiple copies of signatures
+in the collection (as you would have to, with a zipfile). This can be
+useful if you want to refer to different subsets of the collection
+without making multiple copies in a zip file.

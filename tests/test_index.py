@@ -13,7 +13,8 @@ from sourmash import index
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             make_jaccard_search_query, CounterGather,
-                            LazyLinearIndex, MultiIndex)
+                            LazyLinearIndex, MultiIndex,
+                            StandaloneManifestIndex)
 from sourmash.index.revindex import RevIndex
 from sourmash.sbt import SBT, GraphFactory, Leaf
 from sourmash.sbtmh import SigLeaf
@@ -21,6 +22,7 @@ from sourmash import sourmash_args
 from sourmash.search import JaccardSearch, SearchType
 from sourmash.picklist import SignaturePicklist, PickStyle
 from sourmash_tst_utils import SourmashCommandFailed
+from sourmash.manifest import CollectionManifest
 
 import sourmash_tst_utils as utils
 
@@ -2388,6 +2390,7 @@ def test_lazy_loaded_index_3_find(runtmp):
     x = list(x)
     assert len(x) == 0
 
+
 def test_revindex_index_search():
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
@@ -2485,3 +2488,258 @@ def test_revindex_gather_ignore():
     assert not is_found(ss47, results)
     assert not is_found(ss2, results)
     assert is_found(ss63, results)
+
+
+def test_standalone_manifest_signatures(runtmp):
+    # build a StandaloneManifestIndex and test 'signatures' method.
+
+    ## first, build a manifest in memory using MultiIndex
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx1 = LinearIndex.load(sig47)
+    lidx2 = LinearIndex.load(sig63)
+
+    mi = MultiIndex.load([lidx1, lidx2], [sig47, sig63], "")
+
+    ## got a manifest! ok, now test out StandaloneManifestIndex
+    mm = StandaloneManifestIndex(mi.manifest, None)
+
+    siglist = [ ss for ss in mm.signatures() ]
+    assert len(siglist) == 2
+    assert ss47 in siglist
+    assert ss63 in siglist
+
+
+def test_standalone_manifest_signatures_prefix(runtmp):
+    # try out 'prefix' for StandaloneManifestIndex
+
+    ## first, build a manifest in memory using MultiIndex
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx1 = LinearIndex.load(sig47)
+    lidx2 = LinearIndex.load(sig63)
+    mi = MultiIndex.load([lidx1, lidx2], [sig47, sig63], "")
+
+    # ok, now remove the abspath prefix from iloc
+    for row in mi.manifest.rows:
+        row['internal_location'] = os.path.basename(row['internal_location'])
+
+    ## this should succeed!
+    mm = StandaloneManifestIndex(mi.manifest, None,
+                                 prefix=utils.get_test_data(''))
+
+    assert len(list(mm.signatures())) == 2
+
+
+def test_standalone_manifest_signatures_prefix_fail(runtmp):
+    # give StandaloneManifest the wrong prefix
+
+    ## first, build a manifest in memory using MultiIndex
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx1 = LinearIndex.load(sig47)
+    lidx2 = LinearIndex.load(sig63)
+    print('XXX', lidx1.location)
+
+    mi = MultiIndex.load([lidx1, lidx2], [sig47, sig63], "")
+
+    # remove prefix from manifest
+    for row in mi.manifest.rows:
+        row['internal_location'] = os.path.basename(row['internal_location'])
+
+    ## got a manifest! ok, now test out StandaloneManifestIndex
+    mm = StandaloneManifestIndex(mi.manifest, None, prefix='foo')
+
+    # should fail
+    with pytest.raises(ValueError) as exc:
+        list(mm.signatures())
+
+    assert "Error while reading signatures from 'foo/47.fa.sig'" in str(exc)
+
+
+def test_standalone_manifest_load_from_dir(runtmp):
+    # test loading a mf with relative directory paths from test-data
+    mf = utils.get_test_data('scaled/mf.csv')
+    idx = sourmash.load_file_as_index(mf)
+
+    siglist = list(idx.signatures())
+    assert len(siglist) == 15
+
+    assert idx                  # should be 'True'
+    assert len(idx) == 15
+
+    with pytest.raises(NotImplementedError):
+        idx.insert()
+
+    with pytest.raises(NotImplementedError):
+        idx.save('foo')
+
+    assert idx.location == mf
+
+
+def test_standalone_manifest_lazy_load(runtmp):
+    # check that it's actually doing lazy loading
+    orig_sig47 = utils.get_test_data('47.fa.sig')
+    sig47 = runtmp.output('47.fa.sig')
+
+    # build an external manifest
+    shutil.copyfile(orig_sig47, sig47)
+
+    # this is an abspath to sig47
+    runtmp.sourmash('sig', 'manifest', sig47, '-o', 'mf.csv')
+
+    # should work to get signatures:
+    idx = StandaloneManifestIndex.load(runtmp.output('mf.csv'))
+
+    siglist = list(idx.signatures())
+    assert len(siglist) == 1
+
+    # now remove!
+    os.unlink(sig47)
+
+    # can still access manifest...
+    assert len(idx) == 1
+
+    # ...but we should get an error when we call signatures.
+    with pytest.raises(ValueError):
+        list(idx.signatures())
+
+    # but put it back, and all is forgiven. yay!
+    shutil.copyfile(orig_sig47, sig47)
+    x = list(idx.signatures())
+    assert len(x) == 1
+
+
+def test_standalone_manifest_lazy_load_2_prefix(runtmp):
+    # check that it's actually doing lazy loading; supply explicit prefix
+    orig_sig47 = utils.get_test_data('47.fa.sig')
+    sig47 = runtmp.output('47.fa.sig')
+
+    # build an external manifest
+    # note, here use a relative path to 47.fa.sig; the manifest will contain
+    # just '47.fa.sig' as the location
+    shutil.copyfile(orig_sig47, sig47)
+    runtmp.sourmash('sig', 'manifest', '47.fa.sig', '-o', 'mf.csv')
+
+    # should work to get signatures:
+    idx = StandaloneManifestIndex.load(runtmp.output('mf.csv'),
+                                       prefix=runtmp.output(''))
+
+    siglist = list(idx.signatures())
+    assert len(siglist) == 1
+
+    # now remove!
+    os.unlink(sig47)
+
+    # can still access manifest...
+    assert len(idx) == 1
+
+    # ...but we should get an error when we call signatures.
+    with pytest.raises(ValueError):
+        list(idx.signatures())
+
+    # but put it back, and all is forgiven. yay!
+    shutil.copyfile(orig_sig47, sig47)
+    x = list(idx.signatures())
+    assert len(x) == 1
+
+
+def test_standalone_manifest_search(runtmp):
+    # test a straight up 'search'
+    query_sig = utils.get_test_data('scaled/genome-s12.fa.gz.sig')
+    mf = utils.get_test_data('scaled/mf.csv')
+
+    runtmp.sourmash('search', query_sig, mf)
+
+    out = runtmp.last_result.out
+    print(out)
+    assert '100.0%       d84ef28f' in out
+
+
+def test_standalone_manifest_prefetch_lazy(runtmp):
+    # check that prefetch is actually doing lazy loading on manifest index.
+    orig_sig47 = utils.get_test_data('47.fa.sig')
+    sig47 = runtmp.output('47.fa.sig')
+    orig_sig2 = utils.get_test_data('2.fa.sig')
+    sig2 = runtmp.output('2.fa.sig')
+    orig_sig63 = utils.get_test_data('63.fa.sig')
+    sig63 = runtmp.output('63.fa.sig')
+
+    shutil.copyfile(orig_sig47, sig47)
+    runtmp.sourmash('sig', 'manifest', sig47, '-o', 'mf1.csv')
+    shutil.copyfile(orig_sig2, sig2)
+    runtmp.sourmash('sig', 'manifest', sig2, '-o', 'mf2.csv')
+    shutil.copyfile(orig_sig63, sig63)
+    runtmp.sourmash('sig', 'manifest', sig63, '-o', 'mf3.csv')
+
+    # combine the manifests, manually for now...
+    with open(runtmp.output('mf1.csv'), newline='') as fp:
+        mf1 = CollectionManifest.load_from_csv(fp)
+    assert len(mf1) == 1
+
+    with open(runtmp.output('mf2.csv'), newline='') as fp:
+        mf2 = CollectionManifest.load_from_csv(fp)
+    assert len(mf2) == 3
+
+    with open(runtmp.output('mf3.csv'), newline='') as fp:
+        mf3 = CollectionManifest.load_from_csv(fp)
+    assert len(mf3) == 1
+
+    all_rows = list(mf1.rows) + list(mf2.rows) + list(mf3.rows)
+    print(all_rows)
+    mf = CollectionManifest(all_rows)
+    assert len(mf) == 5
+    with open(runtmp.output('mf.csv'), 'w', newline='') as fp:
+        mf.write_to_csv(fp, write_header=True)
+
+    # ok! now, remove the last signature, 'sig63'.
+    os.unlink(sig63)
+
+    # ...but loading the manifest should still work.
+    idx = StandaloneManifestIndex.load(runtmp.output('mf.csv'))
+
+    # double check - third load will fail. this relies on load order :shrug:.
+    sig_iter = iter(idx.signatures())
+    ss = next(sig_iter)
+    print(ss)
+    assert '47.fa' in ss.filename
+
+    for i in range(3):
+        ss = next(sig_iter)
+        print(i, ss)
+        assert '2.fa' in ss.filename
+
+    with pytest.raises(ValueError) as exc:
+        ss = next(sig_iter)
+    assert 'Error while reading signatures from' in str(exc)
+    assert '63.fa.sig' in str(exc)
+
+    # ok! now test prefetch... should get one match legit, to 47,
+    # and then no matches to 2, and then error.
+
+    ss47 = sourmash.load_one_signature(sig47)
+    idx = idx.select(ksize=31)
+    g = idx.prefetch(ss47, threshold_bp=0)
+
+    # first value:
+    sr = next(g)
+    assert sr.signature == ss47
+
+    # second value should raise error.
+    with pytest.raises(ValueError) as exc:
+        sr = next(g)
+
+    assert 'Error while reading signatures from' in str(exc)
+    assert '63.fa.sig' in str(exc)
