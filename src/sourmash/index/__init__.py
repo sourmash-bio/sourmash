@@ -28,10 +28,11 @@ ZipFileLinearIndex - simple on-disk storage of signatures.
 MultiIndex - in-memory storage and selection of signatures from multiple
 index objects, using manifests. All signatures are kept in memory.
 
-LazyLoadedIndex - selection on manifests with loading of index on demand.
-
 StandaloneManifestIndex - load manifests directly, and do lazy loading of
 signatures on demand. No signatures are kept in memory.
+
+LazyLoadedIndex - selection on manifests with loading of index on demand.
+(Consider using StandaloneManifestIndex instead.)
 
 CounterGather - an ancillary class returned by the 'counter_gather()' method.
 """
@@ -1063,6 +1064,8 @@ class LazyLoadedIndex(Index):
     from disk every time they are needed (e.g. 'find(...)', 'signatures()').
 
     Wrapper class; signatures dynamically loaded from disk; uses manifests.
+
+    CTB: This may be redundant with StandaloneManifestIndex.
     """
     def __init__(self, filename, manifest):
         "Create an Index with given filename and manifest."
@@ -1160,7 +1163,7 @@ class LazyLoadedIndex(Index):
 class StandaloneManifestIndex(Index):
     """Load a standalone manifest as an Index.
 
-    This class is useful for the situtation where you have a directory
+    This class is useful for the situation where you have a directory
     with many signature collections underneath it, and you don't want to load
     every collection each time you run sourmash.
 
