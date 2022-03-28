@@ -1645,7 +1645,7 @@ sourmash sig fileinfo <dir>/manifest.csv
 ```
 This manifest can be used as a database target for most sourmash
 operations - search, gather, etc.  Note that manifests for directories
-must be placed beneath (and loaded from) the directory from which the
+must be placed within (and loaded from) the directory from which the
 manifest was generated; the specific manifest filename does not
 matter.
 
