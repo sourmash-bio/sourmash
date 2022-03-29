@@ -4363,6 +4363,32 @@ def test_sig_check_2_output_missing(runtmp):
     assert len(rows) == 24
 
 
+def test_sig_check_2_output_missing_error_exit(runtmp):
+    # output missing all as identical to input picklist
+    sigfiles = utils.get_test_data('gather/combined.sig')
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    # should error exit...
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'check', sigfiles,
+                        "--picklist", f"{picklist}::manifest",
+                        "-o", "missing.csv", '--fail')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    # ...and also output stuff!
+    out_csv = runtmp.output('missing.csv')
+    assert os.path.exists(out_csv)
+
+    # everything is missing with 'combined.sig'
+    with open(out_csv, newline='') as fp:
+        r = csv.DictReader(fp)
+        rows = list(r)
+
+    assert len(rows) == 24
+
+
 @pytest.mark.parametrize("column, coltype",
                          (('md5', 'md5'),
                           ('md5', 'md5prefix8'),

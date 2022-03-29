@@ -37,6 +37,10 @@ def subparser(subparsers):
         '-m', '--save-manifest-matching',
         help='save a manifest of the matching entries to this file.'
     )
+    subparser.add_argument(
+        '--fail-if-missing', action='store_true',
+        help='exit with an error code (-1) if there are any missing picklist values.'
+    )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
     add_pattern_args(subparser)

@@ -1364,6 +1364,10 @@ def check(args):
     elif args.save_manifest_matching:
         notify(f"(not saving matching manifest to '{args.save_manifest_matching}' because no matches)")
 
+    if args.fail_if_missing:
+        error("** ERROR: missing values, and --fail-if-missing requested. Exiting.")
+        sys.exit(-1)
+
 
 def main(arglist=None):
     args = sourmash.cli.get_parser().parse_args(arglist)
