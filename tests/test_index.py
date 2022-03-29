@@ -1313,7 +1313,7 @@ def test_multi_index_load_from_directory_2():
 
 
 def test_multi_index_load_from_directory_3_simple_bad_file(runtmp):
-    # check that force=False fails properly when confrunted with non-JSON
+    # check that force=False fails properly when confronted with non-JSON
     # files.
     c = runtmp
 
@@ -1325,7 +1325,7 @@ def test_multi_index_load_from_directory_3_simple_bad_file(runtmp):
 
 
 def test_multi_index_load_from_directory_3(runtmp):
-    # check that force=False fails properly when confrunted with non-JSON
+    # check that force=False fails properly when confronted with non-JSON
     # files that are legit sourmash files...
     c = runtmp
 
