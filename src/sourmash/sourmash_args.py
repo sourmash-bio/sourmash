@@ -603,7 +603,8 @@ class FileOutput(object):
         return self.fp
 
     def close(self):
-        self.fp.close()
+        if self.fp is not None: # in case of stdout
+            self.fp.close()
 
     def __enter__(self):
         return self.open()

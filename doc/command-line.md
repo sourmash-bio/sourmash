@@ -1394,6 +1394,25 @@ iterating over the signatures in the input file. This can be slow for
 large collections. Use `--no-rebuild-manifest` to load an existing
 manifest if it is available.
 
+### `sourmash signature check` - compare picklists and manifests
+
+Compare picklists and manifests across databases, and optionally output matches
+and missing items.
+
+For example,
+```
+sourmash sig check tests/test-data/gather/GCF*.sig \
+    --picklist tests/test-data/gather/salmonella-picklist.csv::manifest
+```
+will load all of the `GCF` signatures and compare them to the given picklist.
+With `-o/--output-missing`, `sig check` will save unmatched elements of the
+picklist CSV. With `--save-manifest-matching`, `sig check` will save all
+of the _matched_ elements to a manifest file, which can then be used as a
+sourmash database.
+
+`sourmash sig check` is particularly useful when working with large
+collections of signatures and identifiers.
+
 ## Advanced command-line usage
 
 ### Loading signatures and databases
@@ -1632,7 +1651,8 @@ internals to speed up signature selection through picklists and
 pattern matching.
 
 Manifests can _also_ be used externally (via the command-line), and
-may be useful for organizing large collections of signatures.
+may be useful for organizing large collections of signatures. They can
+be generated with `sourmash sig manifest` as well as `sourmash sig check`.
 
 Suppose you have a large collection of signature (`.sig` or `.sig.gz`
 files) under a directory. You can create a manifest file for them like so:
