@@ -1312,8 +1312,21 @@ def test_multi_index_load_from_directory_2():
     assert len(sigs) == 7
 
 
+def test_multi_index_load_from_directory_3_simple_bad_file(runtmp):
+    # check that force=False fails properly when confronted with non-JSON
+    # files.
+    c = runtmp
+
+    with open(runtmp.output('badsig.sig'), 'wt') as fp:
+        fp.write('bad content.')
+
+    with pytest.raises(ValueError):
+        mi = MultiIndex.load_from_directory(runtmp.location, force=False)
+
+
 def test_multi_index_load_from_directory_3(runtmp):
-    # check that force works ok on a directory
+    # check that force=False fails properly when confronted with non-JSON
+    # files that are legit sourmash files...
     c = runtmp
 
     dirname = utils.get_test_data('prot')
@@ -1327,12 +1340,13 @@ def test_multi_index_load_from_directory_3(runtmp):
             shutil.copyfile(fullname, copyto)
             count += 1
 
-    with pytest.raises(sourmash.exceptions.SourmashError):
+    with pytest.raises(ValueError):
         mi = MultiIndex.load_from_directory(c.location, force=False)
 
 
 def test_multi_index_load_from_directory_3_yield_all_true(runtmp):
     # check that force works ok on a directory w/force=True
+    # Note here that only .sig/.sig.gz files are loaded.
     c = runtmp
 
     dirname = utils.get_test_data('prot')
@@ -1353,7 +1367,8 @@ def test_multi_index_load_from_directory_3_yield_all_true(runtmp):
 
 
 def test_multi_index_load_from_directory_3_yield_all_true_subdir(runtmp):
-    # check that force works ok on subdirectories
+    # check that force works ok on subdirectories.
+    # Note here that only .sig/.sig.gz files are loaded.
     c = runtmp
     dirname = utils.get_test_data('prot')
 
@@ -1370,6 +1385,9 @@ def test_multi_index_load_from_directory_3_yield_all_true_subdir(runtmp):
             count += 1
 
     mi = MultiIndex.load_from_directory(c.location, force=True)
+
+    locations = set([ row['internal_location'] for row in mi.manifest.rows ])
+    print(locations)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 8
@@ -1466,6 +1484,7 @@ def test_multi_index_load_from_pathlist_1(runtmp):
 
 def test_multi_index_load_from_pathlist_2(runtmp):
     # create a pathlist file with _all_ files under dir, and try to load it.
+    # this will fail on one of several CSV or .sh files in there.
 
     # CTB note: if you create extra files under this directory,
     # it will fail :)
@@ -1479,8 +1498,11 @@ def test_multi_index_load_from_pathlist_2(runtmp):
     with open(file_list, 'wt') as fp:
         print("\n".join(files), file=fp)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as exc:
         mi = MultiIndex.load_from_pathlist(file_list)
+
+    print(str(exc))
+    assert 'Error while reading signatures from' in str(exc)
 
 
 def test_multi_index_load_from_pathlist_3_zipfile(runtmp):

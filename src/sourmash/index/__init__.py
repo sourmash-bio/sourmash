@@ -938,7 +938,7 @@ class MultiIndex(Index):
                 for ss in idx.signatures():
                     yield ss, iloc
 
-        # build manifest; note, signatures are stored in memory.
+        # build manifest; note, ALL signatures are stored in memory.
         # CTB: could do this on demand?
         # CTB: should we use get_manifest functionality?
         # CTB: note here that the manifest is created by iteration
@@ -976,11 +976,11 @@ class MultiIndex(Index):
 
                 rel = os.path.relpath(thisfile, pathname)
                 source_list.append(rel)
-            except (IOError, sourmash.exceptions.SourmashError):
+            except (IOError, sourmash.exceptions.SourmashError) as exc:
                 if force:
                     continue    # ignore error
                 else:
-                    raise       # stop loading!
+                    raise ValueError(exc)      # stop loading!
 
         # did we load anything? if not, error
         if not index_list:
