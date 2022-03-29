@@ -4219,6 +4219,17 @@ def test_sig_check_1(runtmp):
     assert 31 in ksizes
 
 
+def test_sig_check_1_no_picklist(runtmp):
+    # basic check functionality
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sig', 'check', *sigfiles)
+
+    assert "No picklist provided?! Exiting." in str(exc)
+
+
 @pytest.mark.parametrize("column, coltype",
                          (('md5', 'md5'),
                           ('md5', 'md5prefix8'),
