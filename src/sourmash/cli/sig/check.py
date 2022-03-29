@@ -8,6 +8,11 @@ This will check the signature contents of <filenames> against the given
 picklist, optionally outputting the unmatched picklist rows to 'miss.csv'
 and optionally outputting a manifest of the matched signatures to
 'manifest.csv'.
+
+By default, 'sig check' requires a pre-existing manifest for collections;
+this prevents potentially slow manifest rebuilding. You
+can turn this check off with '--no-require-manifest'.
+
 """
 
 from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
@@ -40,6 +45,11 @@ def subparser(subparsers):
     subparser.add_argument(
         '--fail-if-missing', action='store_true',
         help='exit with an error code (-1) if there are any missing picklist values.'
+    )
+    subparser.add_argument(
+        '--no-require-manifest',
+        help='do not require a manifest; generate dynamically if needed',
+        action='store_true'
     )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)

@@ -252,6 +252,10 @@ class SBT(Index):
             if len(self.picklists) > 1:
                 raise ValueError("we do not (yet) support multiple picklists for SBTs")
 
+            # @CTB test me.
+            if self.manifest is not None:
+                manifest = manifest.select_to_manifest(picklist=picklist)
+
         return self
 
     def new_node_pos(self, node):
