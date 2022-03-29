@@ -203,9 +203,8 @@ class SignaturePicklist:
                 return True
         return False
 
-    def matches_manifest_row(self, row, *, add_to_found=True):
+    def matches_manifest_row(self, row):
         "does the given manifest row match this picklist?"
-        # @CTB: may need to test 'add_to_found'
         if self.coltype == 'md5':
             colkey = 'md5'
         elif self.coltype in ('md5prefix8', 'md5short'):
@@ -221,11 +220,11 @@ class SignaturePicklist:
 
         if self.pickstyle == PickStyle.INCLUDE:
             if q in self.pickset:
-                if add_to_found: self.found.add(q)
+                self.found.add(q)
                 return True
         elif self.pickstyle == PickStyle.EXCLUDE:
             if q not in self.pickset:
-                if add_to_found: self.found.add(q)
+                self.found.add(q)
                 return True
         return False
 
