@@ -1,11 +1,21 @@
 """check signature collections against a picklist"""
 
+usage="""
+
+    sourmash sig check <filenames> --picklist ... -o miss.csv -m manifest.csv
+
+This will check the signature contents of <filenames> against the given
+picklist, optionally outputting the unmatched picklist rows to 'miss.csv'
+and optionally outputting a manifest of the matched signatures to
+'manifest.csv'.
+"""
+
 from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
                                 add_picklist_args, add_pattern_args)
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('check')
+    subparser = subparsers.add_parser('check', usage=usage)
     subparser.add_argument('signatures', nargs='*')
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
@@ -24,7 +34,7 @@ def subparser(subparsers):
         help='a text file containing a list of files to load signatures from'
     )
     subparser.add_argument(
-        '--save-manifest-matching',
+        '-m', '--save-manifest-matching',
         help='save a manifest of the matching entries to this file.'
     )
     add_ksize_arg(subparser, 31)

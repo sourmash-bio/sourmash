@@ -4199,7 +4199,7 @@ def test_sig_check_1(runtmp):
 
     runtmp.sourmash('sig', 'check', *sigfiles,
                     "--picklist", f"{picklist}::manifest",
-                    "--save-manifest", "mf.csv")
+                    "-m", "mf.csv")
 
     out_mf = runtmp.output('mf.csv')
     assert os.path.exists(out_mf)
@@ -4233,7 +4233,7 @@ def test_sig_check_1_column(runtmp, column, coltype):
 
     runtmp.sourmash('sig', 'check', *sigfiles,
                     "--picklist", f"{picklist}:{column}:{coltype}",
-                    "--save-manifest", "mf.csv",
+                    "-m", "mf.csv",
                     "-o", "missing.csv")
 
     out_mf = runtmp.output('mf.csv')
@@ -4262,7 +4262,7 @@ def test_sig_check_1_diff_col_name(runtmp):
     runtmp.sourmash('sig', 'check', *sigfiles,
                     "--picklist", f"{picklist}:name2:name",
                     "-o", "missing.csv",
-                    '--save-manifest', 'mf.csv')
+                    '-m', 'mf.csv')
 
     out_mf = runtmp.output('mf.csv')
     assert os.path.exists(out_mf)
@@ -4298,7 +4298,7 @@ def test_sig_check_1_diff_col_name_exclude(runtmp):
 
     runtmp.sourmash('sig', 'check', *sigfiles,
                     "--picklist", f"{picklist}:name2:name:exclude",
-                    '--save-manifest', 'mf.csv')
+                    '-m', 'mf.csv')
 
     out_mf = runtmp.output('mf.csv')
     assert os.path.exists(out_mf)
@@ -4325,7 +4325,7 @@ def test_sig_check_1_ksize(runtmp):
 
     runtmp.sourmash('sig', 'check', *sigfiles, '-k', '31',
                     "--picklist", f"{picklist}::manifest",
-                    "--save-manifest", "mf.csv")
+                    "-m", "mf.csv")
 
     out_mf = runtmp.output('mf.csv')
     assert os.path.exists(out_mf)
