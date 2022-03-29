@@ -4361,10 +4361,14 @@ def test_sig_check_2_output_missing(runtmp):
 
     runtmp.sourmash('sig', 'check', sigfiles,
                     "--picklist", f"{picklist}::manifest",
-                    "-o", "missing.csv")
+                    "-o", "missing.csv", "-m", "mf.csv")
 
     out_csv = runtmp.output('missing.csv')
     assert os.path.exists(out_csv)
+
+    mf_csv = runtmp.output('mf.csv')
+    assert not os.path.exists(mf_csv)
+    assert "not saving matching manifest" in runtmp.last_result.err
 
     # everything is missing with 'combined.sig'
     with open(out_csv, newline='') as fp:
