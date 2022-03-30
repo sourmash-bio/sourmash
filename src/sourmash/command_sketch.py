@@ -440,6 +440,10 @@ def fromfile(args):
                 else:
                     skipped_sigs += 1
 
+    if n_missing_name:
+        error(f"** ERROR: {n_missing_name} entries have blank 'name's? Exiting!")
+        sys.exit(-1)
+
     ## done! we now have 'to_build' which contains the things we can build,
     ## and 'missing', which contains anything we cannot build. Report!
 

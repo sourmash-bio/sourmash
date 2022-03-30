@@ -1540,17 +1540,17 @@ def test_fromfile_dna_and_protein_noname(runtmp):
     test_inp = utils.get_test_data('sketch_fromfile')
     shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
 
-    runtmp.sourmash('sketch', 'fromfile',
-                    'sketch_fromfile/salmonella-noname.csv',
-                    '-o', 'out.zip', '-p', 'dna', '-p', 'protein')
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'fromfile',
+                        'sketch_fromfile/salmonella-noname.csv',
+                        '-o', 'out.zip', '-p', 'dna', '-p', 'protein')
 
     out = runtmp.last_result.out
     err = runtmp.last_result.err
 
     print(out)
     print(err)
-
-    assert 0
+    assert "ERROR: 1 entries have blank 'name's? Exiting!" in err
 
 
 def test_fromfile_dna_and_protein_missing(runtmp):
