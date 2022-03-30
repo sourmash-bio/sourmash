@@ -1535,6 +1535,44 @@ def test_fromfile_dna_and_protein(runtmp):
     assert "** 2 total requested; built 2, skipped 0" in runtmp.last_result.err
 
 
+def test_fromfile_dna_and_protein_noname(runtmp):
+    # nothing in the name column
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    runtmp.sourmash('sketch', 'fromfile',
+                    'sketch_fromfile/salmonella-noname.csv',
+                    '-o', 'out.zip', '-p', 'dna', '-p', 'protein')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(out)
+    print(err)
+
+    assert 0
+
+
+def test_fromfile_dna_and_protein_missing(runtmp):
+    # test what happens when missing protein.
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'fromfile',
+                        'sketch_fromfile/salmonella-missing.csv',
+                        '-o', 'out.zip', '-p', 'protein')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(out)
+    print(err)
+
+    assert "** ERROR: we cannot build some of the requested signatures." in err
+    assert "** 1 total signatures (for 1 names) cannot be built." in err
+
+
 def test_fromfile_no_overwrite(runtmp):
     # test --force-output-already-exists
     test_inp = utils.get_test_data('sketch_fromfile')
@@ -1660,3 +1698,27 @@ def test_fromfile_dna_and_protein_already_exists(runtmp):
     assert "output 2 already-done signatures to 'matching.csv' in manifest format." in err
     mf = manifest.CollectionManifest.load_from_filename(runtmp.output('matching.csv'))
     assert len(mf) == 2
+
+
+def test_fromfile_dna_and_protein_already_exists_noname(runtmp):
+    # check that no name in already_exists is handled
+    test_inp = utils.get_test_data('sketch_fromfile')
+    already_done = utils.get_test_data('sketch_fromfile/salmonella-dna-protein.zip')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    # run rename to get rid of names
+    runtmp.sourmash('sig', 'rename', already_done, '',
+                    '-o', 'already-done.zip')
+
+    runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                    '-p', 'dna', '-p', 'protein',
+                    '--already-done', 'already-done.zip')
+
+    print(runtmp.last_result.out)
+    err = runtmp.last_result.err
+    print(err)
+
+    assert 'Loaded 0 pre-existing names from manifest(s)' in err
+    assert 'Read 1 rows, requesting that 2 signatures be built.' in err
+    assert '** 2 new signatures to build from 2 files;' in err
+    assert '** 2 total requested; built 2, skipped 0' in err

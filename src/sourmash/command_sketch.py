@@ -406,11 +406,16 @@ def fromfile(args):
     total_sigs = 0
     total_rows = 0
     skipped_sigs = 0
+    n_missing_name = 0
     with open(args.csv, newline="") as fp:
         r = csv.DictReader(fp)
 
         for row in r:
             name = row['name']
+            if not name:
+                n_missing_name += 1
+                continue
+
             genome = row['genome_filename']
             proteome = row['protein_filename']
             total_rows += 1
