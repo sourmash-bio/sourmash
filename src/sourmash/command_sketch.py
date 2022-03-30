@@ -473,11 +473,9 @@ def fromfile(args):
 
         print_results('---')
 
-    if args.output_manifest_of_existing:
-        with open(args.output_manifest_of_existing, "w", newline='') as outfp:
-            already_done_manifest.write_to_csv(outfp, write_header=True)
-
-        notify(f"output {len(already_done_manifest)} rows to '{args.output_manifest_of_existing}' in manifest format.")
+    if args.output_manifest_matching:
+        already_done_manifest.write_to_filename(args.output_manifest_matching)
+        notify(f"output {len(already_done_manifest)} already-done signatures to '{args.output_manifest_matching}' in manifest format.")
 
     if missing:
         error("** ERROR: we cannot build some of the requested signatures.")

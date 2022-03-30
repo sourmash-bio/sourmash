@@ -19,6 +19,7 @@ from sourmash.sbtmh import SigLeaf, load_sbt_index
 from sourmash.command_compute import ComputeParameters
 from sourmash.cli.compute import subparser
 from sourmash.cli import SourmashParser
+from sourmash import manifest
 
 from sourmash import signature
 from sourmash import VERSION
@@ -1644,7 +1645,8 @@ def test_fromfile_dna_and_protein_already_exists(runtmp):
 
     runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
                     '-p', 'dna', '-p', 'protein',
-                    '--already-done', already_done)
+                    '--already-done', already_done,
+                    '--output-manifest', 'matching.csv')
 
     print(runtmp.last_result.out)
     err = runtmp.last_result.err
@@ -1654,3 +1656,7 @@ def test_fromfile_dna_and_protein_already_exists(runtmp):
     assert 'Read 1 rows, requesting that 2 signatures be built.' in err
     assert '** 0 new signatures to build from 0 files;' in err
     assert '** Nothing to build. Exiting!' in err
+
+    assert "output 2 already-done signatures to 'matching.csv' in manifest format." in err
+    mf = manifest.CollectionManifest.load_from_filename(runtmp.output('matching.csv'))
+    assert len(mf) == 2
