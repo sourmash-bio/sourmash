@@ -198,12 +198,12 @@ impl<'a> Storage for ZipStorage<'a> {
     fn load(&self, path: &str) -> Result<Vec<u8>, Error> {
         let load_from_archive = |archive: &piz::ZipArchive<'_>, path: &str| {
             // FIXME error
-            let entry = match find_path(&archive, path) {
+            let entry = match find_path(archive, path) {
                 Some(entry) => Ok(entry),
                 None => {
                     if let Some(subdir) = &self.subdir {
-                        find_path(&archive, subdir.to_owned() + path)
-                            .ok_or_else(|| StorageError::EmptyPathError)
+                        find_path(archive, subdir.to_owned() + path)
+                            .ok_or(StorageError::EmptyPathError)
                     } else {
                         Err(StorageError::EmptyPathError)
                     }
@@ -255,9 +255,8 @@ impl<'a> ZipStorage<'a> {
         Ok(Self {
             mapping: Some(mapping),
             archive: None,
-            subdir: subdir,
             path: Some(location.to_string()),
-            //metadata: tree,
+            subdir, //metadata: tree,
         })
     }
 
@@ -274,11 +273,10 @@ impl<'a> ZipStorage<'a> {
         Ok(Self {
             archive: Some(archive),
             mapping: None,
-            subdir: subdir,
             path: None,
-            /*            metadata: archive
-            .as_tree()
-            .map_err(|_| StorageError::EmptyPathError)?, */
+            subdir, /*            metadata: archive
+                    .as_tree()
+                    .map_err(|_| StorageError::EmptyPathError)?, */
         })
     }
 
@@ -311,7 +309,7 @@ impl<'a> ZipStorage<'a> {
         };
 
         if let Some(archive) = &self.archive {
-            sbts_in_archive(&archive)
+            sbts_in_archive(archive)
         } else {
             //FIXME
             let archive = piz::ZipArchive::new((&self.mapping.as_ref()).unwrap())
@@ -330,7 +328,7 @@ impl<'a> ZipStorage<'a> {
         };
 
         if let Some(archive) = &self.archive {
-            filenames(&archive)
+            filenames(archive)
         } else {
             //FIXME
             let archive = piz::ZipArchive::new((&self.mapping.as_ref()).unwrap())
