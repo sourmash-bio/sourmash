@@ -625,7 +625,7 @@ class SBT(Index):
             kind = "Zip"
             if not path.endswith('.sbt.zip'):
                 path += '.sbt.zip'
-            storage = ZipStorage(path, read_only=False)
+            storage = ZipStorage(path, mode="w")
             backend = "FSStorage"
 
             assert path[-8:] == '.sbt.zip'
@@ -1435,11 +1435,12 @@ def filter_distance(filter_a, filter_b, n=1000):
 def convert_cmd(name, backend):
     "Convert an SBT to use a different back end."
     from .sbtmh import SigLeaf
-    from .sbt_storage import RwZipStorage
 
     options = backend.split('(')
     backend = options.pop(0)
     backend = backend.lower().strip("'")
+
+    kwargs = {}
 
     if options:
       print(options)
@@ -1454,7 +1455,8 @@ def convert_cmd(name, backend):
     elif backend.lower() in ('redis', 'redisstorage'):
         backend = RedisStorage
     elif backend.lower() in ('zip', 'zipstorage'):
-        backend = RwZipStorage
+        backend = ZipStorage
+        kwargs['mode'] = 'w'
     elif backend.lower() in ('fs', 'fsstorage'):
         backend = FSStorage
         if options:
@@ -1470,6 +1472,6 @@ def convert_cmd(name, backend):
     else:
         error('backend not recognized: {}'.format(backend))
 
-    with backend(*options) as storage:
+    with backend(*options, **kwargs) as storage:
         sbt = SBT.load(name, leaf_loader=SigLeaf.load)
         sbt.save(name, storage=storage)

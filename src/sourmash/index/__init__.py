@@ -607,7 +607,7 @@ class ZipFileLinearIndex(Index):
         if not os.path.exists(location):
             raise FileNotFoundError(location)
 
-        storage = ZipStorage(location, read_only=True)
+        storage = ZipStorage(location)
         return cls(storage, traverse_yield_all=traverse_yield_all,
                    use_manifest=use_manifest)
 
