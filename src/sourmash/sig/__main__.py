@@ -1296,7 +1296,7 @@ def check(args):
     check signature db(s) against a picklist.
     """
     from sourmash.picklist import PickStyle
-    set_quiet(args.quiet)
+    set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
     pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
@@ -1335,7 +1335,7 @@ def check(args):
             sys.exit(-1)
 
         # has manifest, or ok to build (require_manifest=False) - continue!
-        manifest = sourmash_args.get_manifest(idx, rebuild=True)
+        manifest = sourmash_args.get_manifest(idx, require=True)
         manifest_rows = manifest._select(picklist=picklist)
         total_rows_examined += len(manifest)
         total_manifest_rows += manifest_rows
