@@ -1328,14 +1328,13 @@ def check(args):
 
         idx = idx.select(ksize=args.ksize, moltype=moltype)
 
-        manifest = idx.manifest
-        if manifest is None:
-            if require_manifest:
-                error(f"ERROR on filename '{filename}'.")
-                error("sig check requires a manifest by default, but no manifest present.")
-                error("specify --no-require-manifest to dynamically generate one.")
-                sys.exit(-1)
+        if idx.manifest is None and require_manifest:
+            error(f"ERROR on filename '{filename}'.")
+            error("sig check requires a manifest by default, but no manifest present.")
+            error("specify --no-require-manifest to dynamically generate one.")
+            sys.exit(-1)
 
+        # has manifest, or ok to build (require_manifest=False) - continue!
         manifest = sourmash_args.get_manifest(idx, rebuild=True)
         manifest_rows = manifest._select(picklist=picklist)
         total_rows_examined += len(manifest)
