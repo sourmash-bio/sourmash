@@ -1194,6 +1194,34 @@ def kmers(args):
 _SketchInfo = namedtuple('_SketchInfo', 'ksize, moltype, scaled, num, abund')
 
 
+def _summarize_manifest(manifest):
+    info_d = {}
+
+    # use a namedtuple to track counts of distinct sketch types and n hashes
+    total_size = 0
+    counter = Counter()
+    hashcounts = Counter()
+    for row in manifest.rows:
+        ski = _SketchInfo(ksize=row['ksize'], moltype=row['moltype'],
+                          scaled=row['scaled'], num=row['num'],
+                          abund=row['with_abundance'])
+        counter[ski] += 1
+        hashcounts[ski] += row['n_hashes']
+        total_size += row['n_hashes']
+
+    # store in info_d
+    info_d['total_hashes'] = total_size
+    sketch_info = []
+    for ski, count in counter.items():
+        sketch_d = dict(ski._asdict())
+        sketch_d['count'] = count
+        sketch_d['n_hashes'] = hashcounts[ski]
+        sketch_info.append(sketch_d)
+    info_d['sketch_info'] = sketch_info
+
+    return info_d
+
+
 # NOTE: also aliased as 'summarize'
 def fileinfo(args):
     """
@@ -1244,27 +1272,7 @@ def fileinfo(args):
         notify("** no manifest and cannot be generated; exiting.")
         sys.exit(0)
 
-    # use a namedtuple to track counts of distinct sketch types and n hashes
-    total_size = 0
-    counter = Counter()
-    hashcounts = Counter()
-    for row in manifest.rows:
-        ski = _SketchInfo(ksize=row['ksize'], moltype=row['moltype'],
-                          scaled=row['scaled'], num=row['num'],
-                          abund=row['with_abundance'])
-        counter[ski] += 1
-        hashcounts[ski] += row['n_hashes']
-        total_size += row['n_hashes']
-
-    # store in info_d
-    info_d['total_hashes'] = total_size
-    sketch_info = []
-    for ski, count in counter.items():
-        sketch_d = dict(ski._asdict())
-        sketch_d['count'] = count
-        sketch_d['n_hashes'] = hashcounts[ski]
-        sketch_info.append(sketch_d)
-    info_d['sketch_info'] = sketch_info
+    info_d.update(_summarize_manifest(manifest))
 
     if text_out:
         print_results(f"total hashes: {info_d['total_hashes']}")
@@ -1281,6 +1289,97 @@ def fileinfo(args):
     else:
         assert args.json_out
         print(json.dumps(info_d))
+
+
+def check(args):
+    """
+    check signature db(s) against a picklist.
+    """
+    from sourmash.picklist import PickStyle
+    set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
+    picklist = sourmash_args.load_picklist(args)
+    pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
+    _extend_signatures_with_from_file(args)
+
+    if not picklist:
+        error("** No picklist provided?! Exiting.")
+        sys.exit(-1)
+
+    if picklist.pickstyle == PickStyle.EXCLUDE and args.output_missing:
+        error("** ERROR: Cannot use an 'exclude' picklist with '-o/--output-missing'")
+        sys.exit(-1)
+
+    # require manifests?
+    require_manifest = True
+    if args.no_require_manifest:
+        require_manifest = False
+        debug("sig check: manifest will not be required")
+    else:
+        debug("sig check: manifest required")
+
+    total_manifest_rows = []
+
+    # start loading!
+    total_rows_examined = 0
+    for filename in args.signatures:
+        idx = sourmash_args.load_file_as_index(filename,
+                                               yield_all_files=args.force)
+
+        idx = idx.select(ksize=args.ksize, moltype=moltype)
+
+        if idx.manifest is None and require_manifest:
+            error(f"ERROR on filename '{filename}'.")
+            error("sig check requires a manifest by default, but no manifest present.")
+            error("specify --no-require-manifest to dynamically generate one.")
+            sys.exit(-1)
+
+        # has manifest, or ok to build (require_manifest=False) - continue!
+        manifest = sourmash_args.get_manifest(idx, rebuild=True)
+        manifest_rows = manifest._select(picklist=picklist)
+        total_rows_examined += len(manifest)
+        total_manifest_rows += manifest_rows
+
+    notify(f"loaded {total_rows_examined} signatures.")
+
+    sourmash_args.report_picklist(args, picklist)
+
+    # output picklist of non-matching in same format as input picklist
+    n_missing = len(picklist.pickset - picklist.found)
+    if args.output_missing and n_missing:
+        pickfile = picklist.pickfile
+
+        # go through the input file and pick out missing rows.
+        n_input = 0
+        n_output = 0
+        with open(pickfile, newline='') as csvfp:
+            r = csv.DictReader(csvfp)
+
+            with open(args.output_missing, "w", newline='') as outfp:
+                w = csv.DictWriter(outfp, fieldnames=r.fieldnames)
+                w.writeheader()
+
+                for row in r:
+                    n_input += 1
+                    if not picklist.matched_csv_row(row):
+                        n_output += 1
+                        w.writerow(row)
+        notify(f"saved {n_output} non-matching rows of {n_input} picklist rows to '{args.output_missing}'")
+    elif args.output_missing:
+        notify(f"(no remaining picklist entries; not saving to '{args.output_missing}')")
+
+    # save manifest of matching!
+    if args.save_manifest_matching and total_manifest_rows:
+        mf = CollectionManifest(total_manifest_rows)
+        with open(args.save_manifest_matching, 'w', newline="") as fp:
+            mf.write_to_csv(fp, write_header=True)
+        notify(f"wrote {len(mf)} matching manifest rows to '{args.save_manifest_matching}'")
+    elif args.save_manifest_matching:
+        notify(f"(not saving matching manifest to '{args.save_manifest_matching}' because no matches)")
+
+    if args.fail_if_missing:
+        error("** ERROR: missing values, and --fail-if-missing requested. Exiting.")
+        sys.exit(-1)
 
 
 def main(arglist=None):

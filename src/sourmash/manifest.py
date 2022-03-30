@@ -27,13 +27,25 @@ class CollectionManifest:
 
     def __init__(self, rows):
         "Initialize from an iterable of metadata dictionaries."
-        self.rows = tuple(rows)
+        self.rows = ()
+        self._md5_set = set()
 
-        # build a fast lookup table for md5sums in particular
-        md5set = set()
+        self._add_rows(rows)
+
+    def _add_rows(self, rows):
+        self.rows += tuple(rows)
+
+        # maintain a fast lookup table for md5sums
+        md5set = self._md5_set
         for row in self.rows:
             md5set.add(row['md5'])
-        self._md5_set = md5set
+
+    def __iadd__(self, other):
+        self._add_rows(other.rows)
+        return self
+
+    def __add__(self, other):
+        return CollectionManifest(self.rows + other.rows)
 
     def __bool__(self):
         return bool(self.rows)
@@ -43,6 +55,11 @@ class CollectionManifest:
 
     def __eq__(self, other):
         return self.rows == other.rows
+
+    @classmethod
+    def load_from_filename(cls, filename):
+        with open(filename, newline="") as fp:
+            return cls.load_from_csv(fp)
 
     @classmethod
     def load_from_csv(cls, fp):
@@ -79,6 +96,10 @@ class CollectionManifest:
             manifest_list.append(row)
 
         return cls(manifest_list)
+
+    def write_to_filename(self, filename):
+        with open(filename, "w", newline="") as fp:
+            return self.write_to_csv(fp, write_header=True)
 
     @classmethod
     def write_csv_header(cls, fp):
