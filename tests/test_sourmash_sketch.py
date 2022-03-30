@@ -1534,6 +1534,60 @@ def test_fromfile_dna_and_protein(runtmp):
     assert "** 2 total requested; built 2, skipped 0" in runtmp.last_result.err
 
 
+def test_fromfile_no_overwrite(runtmp):
+    # test --force-output-already-exists
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                    '-o', 'out.zip', '-p', 'dna')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(runtmp.output('out.zip'))
+
+    # now run again; will fail since already exists
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                        '-o', 'out.zip', '-p', 'protein')
+
+    err = runtmp.last_result.err
+
+    assert "ERROR: output location 'out.zip' already exists!" in err
+    assert "Use --force-output-already-exists if you want to overwrite/append." in err
+
+
+def test_fromfile_force_overwrite(runtmp):
+    # test --force-output-already-exists
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                    '-o', 'out.zip', '-p', 'dna')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(runtmp.output('out.zip'))
+
+    # now run again, with --force
+    runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                    '-o', 'out.zip', '-p', 'protein', '--force-output')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(runtmp.output('out.zip'))
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    siglist = list(idx.signatures())
+
+    assert len(siglist) == 2
+    names = list(set([ ss.name for ss in siglist ]))
+    assert names[0] == 'GCA_903797575 Salmonella enterica'
+    assert "** 1 total requested; built 1, skipped 0" in runtmp.last_result.err
+
+
 def test_fromfile_need_params(runtmp):
     # check that we need a -p
     test_inp = utils.get_test_data('sketch_fromfile')

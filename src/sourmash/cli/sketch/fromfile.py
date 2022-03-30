@@ -65,10 +65,6 @@ def subparser(subparsers):
         help='proceed with building possible signatures, even if some input files are missing'
     )
     file_args.add_argument(
-        '--output-commands',
-        help='output sourmash commands that can be used to generate signatures'
-    )
-    file_args.add_argument(
         '--output-csv-info',
         help='output information about what signatures need to be generated'
     )

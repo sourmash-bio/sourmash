@@ -346,9 +346,6 @@ def fromfile(args):
     # TODO:
     # check license
     # check-sequence
-    if args.output_signatures and args.output_commands:
-        error(f"** ERROR: --output-signatures and --output-commands cannot both be specified")
-        sys.exit(-1)
 
     if args.output_signatures and os.path.exists(args.output_signatures):
         if not args.force_output_already_exists:
