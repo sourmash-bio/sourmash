@@ -4219,6 +4219,17 @@ def test_sig_check_1(runtmp):
     assert 31 in ksizes
 
 
+def test_sig_check_1_no_picklist(runtmp):
+    # basic check functionality
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sig', 'check', *sigfiles)
+
+    assert "No picklist provided?! Exiting." in str(exc)
+
+
 @pytest.mark.parametrize("column, coltype",
                          (('md5', 'md5'),
                           ('md5', 'md5prefix8'),
@@ -4350,8 +4361,38 @@ def test_sig_check_2_output_missing(runtmp):
 
     runtmp.sourmash('sig', 'check', sigfiles,
                     "--picklist", f"{picklist}::manifest",
-                    "-o", "missing.csv")
+                    "-o", "missing.csv", "-m", "mf.csv")
 
+    out_csv = runtmp.output('missing.csv')
+    assert os.path.exists(out_csv)
+
+    mf_csv = runtmp.output('mf.csv')
+    assert not os.path.exists(mf_csv)
+    assert "not saving matching manifest" in runtmp.last_result.err
+
+    # everything is missing with 'combined.sig'
+    with open(out_csv, newline='') as fp:
+        r = csv.DictReader(fp)
+        rows = list(r)
+
+    assert len(rows) == 24
+
+
+def test_sig_check_2_output_missing_error_exit(runtmp):
+    # output missing all as identical to input picklist
+    sigfiles = utils.get_test_data('gather/combined.sig')
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    # should error exit...
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'check', sigfiles,
+                        "--picklist", f"{picklist}::manifest",
+                        "-o", "missing.csv", '--fail')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    # ...and also output stuff!
     out_csv = runtmp.output('missing.csv')
     assert os.path.exists(out_csv)
 
@@ -4401,3 +4442,32 @@ def test_sig_check_2_output_missing_exclude(runtmp):
                         "-o", "missing.csv")
 
     assert "** ERROR: Cannot use an 'exclude' picklist with '-o/--output-missing'" in str(exc)
+
+
+def test_check_3_no_manifest(runtmp):
+    # fail check when no manifest, by default
+    sbt = utils.get_test_data('v6.sbt.zip')
+    picklist = utils.get_test_data('v6.sbt.zip.mf.csv')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('sig', 'check', sbt,
+                            '--picklist', f"{picklist}::manifest")
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    err = runtmp.last_result.err
+    assert "sig check requires a manifest by default, but no manifest present." in err
+
+
+def test_check_3_no_manifest_ok(runtmp):
+    # generate manifest if --no-require-manifest
+    sbt = utils.get_test_data('v6.sbt.zip')
+    picklist = utils.get_test_data('v6.sbt.zip.mf.csv')
+
+    runtmp.run_sourmash('sig', 'check', sbt, "--no-require-manifest",
+                        '--picklist', f"{picklist}::manifest")
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert "for given picklist, found 7 matches to 7 distinct values" in runtmp.last_result.err

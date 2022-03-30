@@ -1310,6 +1310,14 @@ def check(args):
         error("** ERROR: Cannot use an 'exclude' picklist with '-o/--output-missing'")
         sys.exit(-1)
 
+    # require manifests?
+    require_manifest = True
+    if args.no_require_manifest:
+        require_manifest = False
+        debug("sig check: manifest will not be required")
+    else:
+        debug("sig check: manifest required")
+
     total_manifest_rows = []
 
     # start loading!
@@ -1320,12 +1328,17 @@ def check(args):
 
         idx = idx.select(ksize=args.ksize, moltype=moltype)
 
-        idx = sourmash_args.apply_picklist_and_pattern(idx, picklist,
-                                                       pattern_search)
+        if idx.manifest is None and require_manifest:
+            error(f"ERROR on filename '{filename}'.")
+            error("sig check requires a manifest by default, but no manifest present.")
+            error("specify --no-require-manifest to dynamically generate one.")
+            sys.exit(-1)
 
-        manifest = sourmash_args.get_manifest(idx)
+        # has manifest, or ok to build (require_manifest=False) - continue!
+        manifest = sourmash_args.get_manifest(idx, rebuild=True)
+        manifest_rows = manifest._select(picklist=picklist)
         total_rows_examined += len(manifest)
-        total_manifest_rows += manifest.rows
+        total_manifest_rows += manifest_rows
 
     notify(f"loaded {total_rows_examined} signatures.")
 
@@ -1363,6 +1376,10 @@ def check(args):
         notify(f"wrote {len(mf)} matching manifest rows to '{args.save_manifest_matching}'")
     elif args.save_manifest_matching:
         notify(f"(not saving matching manifest to '{args.save_manifest_matching}' because no matches)")
+
+    if args.fail_if_missing:
+        error("** ERROR: missing values, and --fail-if-missing requested. Exiting.")
+        sys.exit(-1)
 
 
 def main(arglist=None):

@@ -41,7 +41,8 @@ class CollectionManifest:
             md5set.add(row['md5'])
 
     def __iadd__(self, other):
-        self._add_rows(other._rows)
+        self._add_rows(other.rows)
+        return self
 
     def __add__(self, other):
         return CollectionManifest(self.rows + other.rows)
