@@ -436,11 +436,11 @@ def fromfile(args):
 
                 if name in all_names:
                     n_duplicate_name += 1
-                    continue    # @CTB tortured logic...
+                    continue    # CTB tortured logic...
 
                 all_names.add(name)
 
-                # @CTB split off into a separate loop?
+                # CTB split off into a separate loop?
                 plist = already_done[name]
                 for p in build_params:
                     total_sigs += 1
