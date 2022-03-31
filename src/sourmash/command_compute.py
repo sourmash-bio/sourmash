@@ -14,6 +14,7 @@ from .utils import RustObject
 from ._lowlevel import ffi, lib
 
 DEFAULT_COMPUTE_K = '21,31,51'
+DEFAULT_MMHASH_SEED = 42
 DEFAULT_LINE_COUNT = 1500
 
 
@@ -348,7 +349,7 @@ class ComputeParameters(RustObject):
         else:
             ksize = row['ksize'] * 3
 
-        p = cls([ksize], 42, is_protein, is_dayhoff, is_hp, is_dna,
+        p = cls([ksize], DEFAULT_MMHASH_SEED, is_protein, is_dayhoff, is_hp, is_dna,
                 row['num'], row['with_abundance'], row['scaled'])
 
         return p
@@ -387,7 +388,7 @@ class ComputeParameters(RustObject):
             pi.append("abund")
         # noabund is default
 
-        if self.seed != 42:
+        if self.seed != DEFAULT_MMHASH_SEED:
             pi.append(f"seed={self.seed}")
         # self.seed
 

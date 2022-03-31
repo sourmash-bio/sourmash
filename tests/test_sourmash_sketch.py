@@ -1632,9 +1632,39 @@ def test_fromfile_need_params(runtmp):
     test_inp = utils.get_test_data('sketch_fromfile')
     shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
 
-    with pytest.raises(SourmashCommandFailed):
+    with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
                         '-o', 'out.zip')
+
+    print(str(exc))
+    assert "Error creating signatures: No default moltype and none specified in param string" in str(exc)
+
+
+def test_fromfile_seed_not_allowed(runtmp):
+    # check that we cannot adjust 'seed'
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                        '-o', 'out.zip', '-p', 'dna,seed=43')
+    print(str(exc))
+
+    assert "ERROR: cannot set 'seed' in 'sketch fromfile'" in str(exc)
+
+
+def test_fromfile_license_not_allowed(runtmp):
+    # check that we cannot adjust 'seed'
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                        '-o', 'out.zip', '-p', 'dna',
+                        '--license', 'BSD')
+
+    print(str(exc))
+    assert 'sourmash only supports CC0-licensed signatures' in str(exc)
 
 
 def test_fromfile_dna_and_protein_csv_output(runtmp):

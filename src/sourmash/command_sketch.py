@@ -13,7 +13,8 @@ import sourmash
 from .signature import SourmashSignature
 from .logging import notify, error, set_quiet, print_results
 from .command_compute import (_compute_individual, _compute_merged,
-                              ComputeParameters, add_seq, set_sig_name)
+                              ComputeParameters, add_seq, set_sig_name,
+                              DEFAULT_MMHASH_SEED)
 from sourmash import sourmash_args
 from sourmash.sourmash_args import check_scaled_bounds, check_num_bounds
 
@@ -122,7 +123,7 @@ class _signatures_for_sketch_factory(object):
         for moltype, params_d in self.params_list:
             # get defaults for this moltype from self.defaults:
             default_params = self.defaults[moltype]
-            def_seed = default_params.get('seed', 42)
+            def_seed = default_params.get('seed', DEFAULT_MMHASH_SEED)
             def_num = default_params.get('num', 0)
             def_abund = default_params['track_abundance']
             def_scaled = default_params.get('scaled', 0)
@@ -344,8 +345,11 @@ def _compute_sigs(to_build, output, *, check_sequence=False):
 def fromfile(args):
     from sourmash.sig.__main__ import _summarize_manifest, _SketchInfo
     # TODO:
-    # check license
     # check-sequence
+
+    if args.license != 'CC0':
+        error('error: sourmash only supports CC0-licensed signatures. sorry!')
+        sys.exit(-1)
 
     if args.output_signatures and os.path.exists(args.output_signatures):
         if not args.force_output_already_exists:
@@ -392,6 +396,13 @@ def fromfile(args):
     # take the signatures factory => convert into a bunch of ComputeParameters
     # objects.
     build_params = list(sig_factory.get_compute_params(split_ksizes=True))
+
+    # confirm that they do not adjust seed, which is not supported in
+    # 'fromfile' b/c we don't store that info in manifests. (see #1849)
+    for p in build_params:
+        if p.seed != DEFAULT_MMHASH_SEED:
+            error("** ERROR: cannot set 'seed' in 'sketch fromfile'")
+            sys.exit(-1)
 
     #
     # the big loop - cross-product all of the names in the input CSV file
