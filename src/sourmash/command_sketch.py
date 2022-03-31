@@ -243,6 +243,7 @@ def protein(args):
     """
     # for protein:
     args.input_is_protein = True
+    args.check_sequence = False
 
     # provide good defaults for dayhoff/hp/protein!
     if args.dayhoff and args.hp:

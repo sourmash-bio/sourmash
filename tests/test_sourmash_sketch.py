@@ -540,6 +540,28 @@ def test_do_sourmash_sketchdna(runtmp):
     assert str(sig).endswith('short.fa')
 
 
+def test_do_sourmash_sketchdna_check_sequence_succeed(runtmp):
+    testdata1 = utils.get_test_data('short.fa')
+    runtmp.sourmash('sketch', 'dna', testdata1, '--check-sequence')
+
+    sigfile = runtmp.output('short.fa.sig')
+    assert os.path.exists(sigfile)
+
+    sig = next(signature.load_signatures(sigfile))
+    assert str(sig).endswith('short.fa')
+
+
+def test_do_sourmash_sketchdna_check_sequence_fail(runtmp):
+    testdata1 = utils.get_test_data('shewanella.faa')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sketch', 'dna', testdata1, '--check-sequence')
+
+    err = runtmp.last_result.err
+    print(err)
+    assert 0
+
+
 def test_do_sourmash_sketchdna_from_file(runtmp):
     testdata1 = utils.get_test_data('short.fa')
 
