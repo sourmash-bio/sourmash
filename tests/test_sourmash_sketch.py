@@ -1668,6 +1668,28 @@ def test_fromfile_dna_and_protein_missing(runtmp):
     assert "** 1 total signatures (for 1 names) cannot be built." in err
 
 
+def test_fromfile_dna_and_protein_missing_ignore(runtmp):
+    # test what happens when missing protein + --ignore-missing
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    runtmp.sourmash('sketch', 'fromfile',
+                    'sketch_fromfile/salmonella-missing.csv',
+                    '-o', 'out.zip', '-p', 'protein', '--ignore-missing')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(out)
+    print(err)
+
+    assert "** ERROR: we cannot build some of the requested signatures." in err
+    assert "** 1 total signatures (for 1 names) cannot be built." in err
+
+    assert "** (continuing past this error because --ignore-missing was set)" in err
+    assert "** 1 new signatures to build from 0 files;" in err
+
+
 def test_fromfile_no_overwrite(runtmp):
     # test --force-output-already-exists
     test_inp = utils.get_test_data('sketch_fromfile')
