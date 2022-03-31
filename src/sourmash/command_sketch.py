@@ -321,14 +321,19 @@ def _compute_sigs(to_build, output, *, check_sequence=False):
             input_is_protein = not is_dna
 
             # read sequence records & sketch
-            notify('... reading sequences from {}', filename)
+            notify(f'... reading sequences from {filename}')
             for n, record in enumerate(screed_iter):
                 if n % 10000 == 0:
                     if n:
                         notify('\r...{} {}', filename, n, end='')
 
-                add_seq(sigs, record.sequence, input_is_protein,
-                        check_sequence)
+                try:
+                    add_seq(sigs, record.sequence, input_is_protein,
+                            check_sequence)
+                except ValueError as exc:
+                    error(f"ERROR when reading from '{filename}' - ")
+                    error(str(exc))
+                    sys.exit(-1)
 
             notify('...{} {} sequences', filename, n, end='')
 

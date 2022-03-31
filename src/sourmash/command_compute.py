@@ -198,8 +198,13 @@ def _compute_individual(args, signatures_factory):
             if args.singleton:
                 for n, record in enumerate(screed_iter):
                     sigs = signatures_factory()
-                    add_seq(sigs, record.sequence,
-                            args.input_is_protein, args.check_sequence)
+                    try:
+                        add_seq(sigs, record.sequence,
+                                args.input_is_protein, args.check_sequence)
+                    except ValueError as exc:
+                        error(f"ERROR when reading from '{filename}' - ")
+                        error(str(exc))
+                        sys.exit(-1)
 
                     set_sig_name(sigs, filename, name=record.name)
                     save_sigs_to_location(sigs, save_sigs)
@@ -212,7 +217,7 @@ def _compute_individual(args, signatures_factory):
                 sigs = signatures_factory()
 
                 # consume & calculate signatures
-                notify('... reading sequences from {}', filename)
+                notify(f'... reading sequences from {filename}')
                 name = None
                 for n, record in enumerate(screed_iter):
                     if n % 10000 == 0:
@@ -221,8 +226,13 @@ def _compute_individual(args, signatures_factory):
                         elif args.name_from_first:
                             name = record.name
 
-                    add_seq(sigs, record.sequence,
-                            args.input_is_protein, args.check_sequence)
+                    try:
+                        add_seq(sigs, record.sequence,
+                                args.input_is_protein, args.check_sequence)
+                    except ValueError as exc:
+                        error(f"ERROR when reading from '{filename}' - ")
+                        error(str(exc))
+                        sys.exit(-1)
 
                 notify('...{} {} sequences', filename, n, end='')
 

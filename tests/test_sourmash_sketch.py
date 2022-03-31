@@ -559,7 +559,21 @@ def test_do_sourmash_sketchdna_check_sequence_fail(runtmp):
 
     err = runtmp.last_result.err
     print(err)
-    assert 0
+    assert "ERROR when reading from " in err
+    assert "invalid DNA character in input k-mer: MCGIVGAVAQRDVAEILVEGLRRLEYRGYDS" in err
+
+
+def test_do_sourmash_sketchdna_check_sequence_fail_singleton(runtmp):
+    testdata1 = utils.get_test_data('shewanella.faa')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sketch', 'dna', testdata1, '--check-sequence',
+                        '--singleton')
+
+    err = runtmp.last_result.err
+    print(err)
+    assert "ERROR when reading from " in err
+    assert "invalid DNA character in input k-mer: MCGIVGAVAQRDVAEILVEGLRRLEYRGYDS" in err
 
 
 def test_do_sourmash_sketchdna_from_file(runtmp):
@@ -1554,15 +1568,17 @@ def test_fromfile_dna_check_sequence_fail(runtmp):
     test_inp = utils.get_test_data('sketch_fromfile')
     shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
 
-    with pytest.raises(SourmashCommandFailed) as exc:
+    with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('sketch', 'fromfile',
                         'sketch_fromfile/salmonella-badseq.csv',
                         '-o', 'out.zip', '-p', 'dna', '--check-sequence')
 
     print(runtmp.last_result.out)
-    print(runtmp.last_result.err)
+    err = runtmp.last_result.err
+    print(err)
 
-    assert 0
+    assert "ERROR when reading from " in err
+    assert "invalid DNA character in input k-mer: MTNILKLFSRKAGEPLDSLAVKSVRQHLSGD" in err
 
 
 def test_fromfile_dna_and_protein(runtmp):
