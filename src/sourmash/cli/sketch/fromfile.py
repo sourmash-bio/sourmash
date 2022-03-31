@@ -30,10 +30,9 @@ from sourmash import command_sketch
 def subparser(subparsers):
     subparser = subparsers.add_parser('fromfile',
                                       usage=usage)
-    # @CTB - allow one or more
     subparser.add_argument(
-        'csv',
-        help="input CSV providing 'name', 'genome_filename', and 'protein_filename'"
+        'csvs', action='append', default=[],
+        help="input CSVs providing 'name', 'genome_filename', and 'protein_filename'"
     )
     subparser.add_argument(
         '-p', '--param-string', default=[],

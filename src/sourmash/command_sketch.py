@@ -17,6 +17,7 @@ from .command_compute import (_compute_individual, _compute_merged,
                               DEFAULT_MMHASH_SEED)
 from sourmash import sourmash_args
 from sourmash.sourmash_args import check_scaled_bounds, check_num_bounds
+from sourmash.sig.__main__ import _summarize_manifest, _SketchInfo
 
 DEFAULTS = dict(
     dna='k=31,scaled=1000,noabund',
@@ -349,7 +350,6 @@ def _compute_sigs(to_build, output, *, check_sequence=False):
 
 
 def fromfile(args):
-    from sourmash.sig.__main__ import _summarize_manifest, _SketchInfo
     if args.license != 'CC0':
         error('error: sourmash only supports CC0-licensed signatures. sorry!')
         sys.exit(-1)
@@ -363,9 +363,6 @@ def fromfile(args):
 
     # load manifests from '--already-done' databases => turn into
     # ComputeParameters objects, indexed by name.
-    #
-    # CTB: note: 'seed' is not tracked by manifests currently. Oops.
-    # so we'll have to block 'seed' from being passed in by '-p'.
 
     already_done = defaultdict(list)
     for filename in args.already_done:
@@ -421,41 +418,56 @@ def fromfile(args):
     total_rows = 0
     skipped_sigs = 0
     n_missing_name = 0
-    with open(args.csv, newline="") as fp:
-        r = csv.DictReader(fp)
+    n_duplicate_name = 0
 
-        for row in r:
-            name = row['name']
-            if not name:
-                n_missing_name += 1
-                continue
+    for csvfile in args.csvs:
+        with open(csvfile, newline="") as fp:
+            r = csv.DictReader(fp)
 
-            genome = row['genome_filename']
-            proteome = row['protein_filename']
-            total_rows += 1
+            for row in r:
+                name = row['name']
+                if not name:
+                    n_missing_name += 1
+                    continue
 
-            all_names.add(name)
+                genome = row['genome_filename']
+                proteome = row['protein_filename']
+                total_rows += 1
 
-            plist = already_done[name]
-            for p in build_params:
-                total_sigs += 1
+                if name in all_names:
+                    n_duplicate_name += 1
+                    continue    # @CTB tortured logic...
 
-                # does this signature already exist?
-                if p not in plist:
-                    # nope - figure out genome/proteome needed
-                    filename = genome if p.dna else proteome
+                all_names.add(name)
 
-                    if filename:
-                        # add to build list
-                        to_build[(name, filename)].append(p)
+                plist = already_done[name]
+                for p in build_params:
+                    total_sigs += 1
+
+                    # does this signature already exist?
+                    if p not in plist:
+                        # nope - figure out genome/proteome needed
+                        filename = genome if p.dna else proteome
+
+                        if filename:
+                            # add to build list
+                            to_build[(name, filename)].append(p)
+                        else:
+                            missing[name].append(p)
+                            missing_count += 1
                     else:
-                        missing[name].append(p)
-                        missing_count += 1
-                else:
-                    skipped_sigs += 1
+                        skipped_sigs += 1
+
+    fail_exit = False
+    if n_duplicate_name:
+        error(f"** ERROR: {n_duplicate_name} entries have duplicate 'name' records. Exiting.")
+        fail_exit = True
 
     if n_missing_name:
         error(f"** ERROR: {n_missing_name} entries have blank 'name's? Exiting!")
+        fail_exit = True
+
+    if fail_exit:
         sys.exit(-1)
 
     ## done! we now have 'to_build' which contains the things we can build,
