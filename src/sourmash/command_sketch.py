@@ -528,7 +528,6 @@ def fromfile(args):
 
     if skipped_sigs:
         notify(f"** {skipped_sigs} already exist, so skipping those.")
-        assert 0 # @CTB
     else:
         notify(f"** we found no pre-existing signatures that match.")
 

@@ -1847,6 +1847,27 @@ def test_fromfile_dna_and_protein_already_exists(runtmp):
     assert len(mf) == 2
 
 
+def test_fromfile_dna_and_protein_partly_already_exists(runtmp):
+    # does it properly ignore existing (--already-done) sigs?
+    test_inp = utils.get_test_data('sketch_fromfile')
+    already_done = utils.get_test_data('sketch_fromfile/salmonella-dna-protein.zip')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella-mult.csv',
+                    '-p', 'dna', '-p', 'protein',
+                    '--already-done', already_done)
+
+    print(runtmp.last_result.out)
+    err = runtmp.last_result.err
+    print(err)
+
+    assert 'Loaded 1 pre-existing names from manifest(s)' in err
+    assert 'Read 2 rows, requesting that 4 signatures be built.' in err
+    assert '** 2 new signatures to build from 2 files;' in err
+    assert "** 2 already exist, so skipping those." in err
+    assert "** 4 total requested; built 2, skipped 2" in err
+
+
 def test_fromfile_dna_and_protein_already_exists_noname(runtmp):
     # check that no name in already_exists is handled
     test_inp = utils.get_test_data('sketch_fromfile')
