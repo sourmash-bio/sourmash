@@ -460,7 +460,7 @@ def fromfile(args):
 
     fail_exit = False
     if n_duplicate_name:
-        error(f"** ERROR: {n_duplicate_name} entries have duplicate 'name' records. Exiting.")
+        error(f"** ERROR: {n_duplicate_name} entries have duplicate 'name' records. Exiting!")
         fail_exit = True
 
     if n_missing_name:

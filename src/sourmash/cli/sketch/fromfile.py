@@ -31,7 +31,7 @@ def subparser(subparsers):
     subparser = subparsers.add_parser('fromfile',
                                       usage=usage)
     subparser.add_argument(
-        'csvs', action='append', default=[],
+        'csvs', nargs='+',
         help="input CSVs providing 'name', 'genome_filename', and 'protein_filename'"
     )
     subparser.add_argument(
