@@ -119,12 +119,13 @@ information for each command.
 
 Most of the commands in sourmash work with **signatures**, which contain information about genomic or proteomic sequences. Each signature contains one or more **sketches**, which are compressed versions of these sequences. Using sourmash, you can search, compare, and analyze these sequences in various ways.
 
-To create a signature with one or more sketches, you use the `sourmash sketch` command. There are three main commands:
+To create a signature with one or more sketches, you use the `sourmash sketch` command. There are four main commands:
 
 ```
 sourmash sketch dna
 sourmash sketch protein
 sourmash sketch translate
+sourmash sketch fromfile
 ```
 
 The `sketch dna` command reads in **DNA sequences** and outputs **DNA sketches**.
@@ -133,10 +134,14 @@ The `sketch protein` command reads in **protein sequences** and outputs **protei
 
 The `sketch translate` command reads in **DNA sequences**, translates them in all six frames, and outputs **protein sketches**.
 
-`sourmash sketch` takes FASTA or FASTQ sequences as input; input data can be
-uncompressed, compressed with gzip, or compressed with bzip2. The output
-will be one or more JSON signature files that can be used with the other
-sourmash commands.
+The `sketch fromfile` command takes in a CSV file containing the
+locations of genomes and proteomes, and outputs all of the requested
+sketches. It primarily intended for large-scale database construction.
+
+All of the `sourmash sketch` commands take FASTA or FASTQ sequences as
+input; input data can be uncompressed, compressed with gzip, or
+compressed with bzip2. The output will be one or more JSON signature
+files that can be used with the other sourmash commands.
 
 Please see
 [the `sourmash sketch` documentation page](sourmash-sketch.md) for
@@ -1394,6 +1399,25 @@ iterating over the signatures in the input file. This can be slow for
 large collections. Use `--no-rebuild-manifest` to load an existing
 manifest if it is available.
 
+### `sourmash signature check` - compare picklists and manifests
+
+Compare picklists and manifests across databases, and optionally output matches
+and missing items.
+
+For example,
+```
+sourmash sig check tests/test-data/gather/GCF*.sig \
+    --picklist tests/test-data/gather/salmonella-picklist.csv::manifest
+```
+will load all of the `GCF` signatures and compare them to the given picklist.
+With `-o/--output-missing`, `sig check` will save unmatched elements of the
+picklist CSV. With `--save-manifest-matching`, `sig check` will save all
+of the _matched_ elements to a manifest file, which can then be used as a
+sourmash database.
+
+`sourmash sig check` is particularly useful when working with large
+collections of signatures and identifiers.
+
 ## Advanced command-line usage
 
 ### Loading signatures and databases
@@ -1566,6 +1590,9 @@ to stdout.
 
 All of these save formats can be loaded by sourmash commands.
 
+**We strongly suggest using .zip files to store signatures: they are fast,
+small, and fully supported by all the sourmash commands.**
+
 ### Loading many signatures
 
 #### Loading signatures within a directory hierarchy
@@ -1626,17 +1653,17 @@ signatures that were just created.
 
 (sourmash v4.4.0 and later)
 
-sourmash supports search and indexing of collections of files via
-_manifests_, which is an internal metadata catalog format used for
-signature selection and loading. Manifests do not directly improve the
-speed of signature loading, but they can significantly speed up
-the process of finding the signatures _to_ load - picklists and pattern
-matching both use them.
+Manifests are metadata catalogs of signatures that are used for
+signature selection and loading. They are used extensively by sourmash
+internals to speed up signature selection through picklists and
+pattern matching.
 
-Manifests are mostly used and stored internally (for example, in zip files)
-but they can be used externally, too.  For example, if you have a large
-collection of signature (`.sig` or `.sig.gz` files) under a directory,
-you can build a manifest for them like so:
+Manifests can _also_ be used externally (via the command-line), and
+may be useful for organizing large collections of signatures. They can
+be generated with `sourmash sig manifest` as well as `sourmash sig check`.
+
+Suppose you have a large collection of signature (`.sig` or `.sig.gz`
+files) under a directory. You can create a manifest file for them like so:
 ```
 sourmash sig manifest <dir> -o <dir>/manifest.csv
 ```
@@ -1644,24 +1671,41 @@ and then use the manifest directly for sourmash operations:
 ```
 sourmash sig fileinfo <dir>/manifest.csv
 ```
-Note that this manifest can be used as a database target for search,
-gather, etc. as well.  When used as a manifest for a directory,
-the manifest must be placed beneath (and loaded from) the directory from
-which the manifest was generated.
+This manifest can be used as a database target for most sourmash
+operations - search, gather, etc.  Note that manifests for directories
+must be placed within (and loaded from) the directory from which the
+manifest was generated; the specific manifest filename does not
+matter.
 
-A more advanced and slightly tricky way to use explicit manifest
-generation and loading is with lists of files.  If you create a file
-with a path list of locations of loadable sourmash collections, you
-can run `sourmash sig manifest pathlist.txt -o mf.csv` and then load
-`mf.csv` directly.  This can be very handy when you have extremely
-large collections of sourmash signatures and you want to avoid
-repeatedly opening and reading them because it is so slow.  The tricky
-part in doing this is that the manifest will store the same paths
-listed in the pathlist file - whether they are relative or absolute
-paths - and these paths must be resolvable by sourmash from the
-current working directory.  This makes explicit manifests built from
-pathlist files less portable within or across systems than the other
-sourmash collections, which are all relocatable.
+A more advanced and slightly tricky way to use explicit manifest files
+is with lists of files.  If you create a file with a path list
+containing the locations of loadable sourmash collections, you can run
+`sourmash sig manifest pathlist.txt -o mf.csv` to generate a manifest
+of all of the files.  The resulting manifest in `mf.csv` can then be
+loaded directly.  This is very handy when you have many sourmash
+signatures, or large signature files.  The tricky part in doing this
+is that the manifest will store the same paths listed in the pathlist
+file - whether they are relative or absolute paths - and these paths
+must be resolvable by sourmash from the current working directory.
+This makes explicit manifests built from pathlist files less portable
+within or across systems than the other sourmash collections, which
+are all relocatable.
+
+For example, if you create a pathlist file `paths.txt` containing the
+following:
+```
+/path/to/zipfile.zip
+local_directory/some_signature.sig.gz
+local_dir2/
+```
+and then run:
+```
+sourmash sig manifest paths.txt -o mf.csv
+```
+you will be able to use `mf.csv` as a database for `sourmash search`
+and `sourmash gather` commands.  But, because it contains two relative paths,
+you will only be able to use it _from the directory that contains those
+two relative paths_.
 
 **Our advice:** We suggest using zip file collections for most
 situations; we primarily recommend using explicit manifests for

@@ -13,9 +13,11 @@ import sourmash
 from .signature import SourmashSignature
 from .logging import notify, error, set_quiet, print_results
 from .command_compute import (_compute_individual, _compute_merged,
-                              ComputeParameters, add_seq, set_sig_name)
+                              ComputeParameters, add_seq, set_sig_name,
+                              DEFAULT_MMHASH_SEED)
 from sourmash import sourmash_args
 from sourmash.sourmash_args import check_scaled_bounds, check_num_bounds
+from sourmash.sig.__main__ import _summarize_manifest, _SketchInfo
 
 DEFAULTS = dict(
     dna='k=31,scaled=1000,noabund',
@@ -122,7 +124,7 @@ class _signatures_for_sketch_factory(object):
         for moltype, params_d in self.params_list:
             # get defaults for this moltype from self.defaults:
             default_params = self.defaults[moltype]
-            def_seed = default_params.get('seed', 42)
+            def_seed = default_params.get('seed', DEFAULT_MMHASH_SEED)
             def_num = default_params.get('num', 0)
             def_abund = default_params['track_abundance']
             def_scaled = default_params.get('scaled', 0)
@@ -242,6 +244,7 @@ def protein(args):
     """
     # for protein:
     args.input_is_protein = True
+    args.check_sequence = False
 
     # provide good defaults for dayhoff/hp/protein!
     if args.dayhoff and args.hp:
@@ -304,8 +307,8 @@ def _compute_sigs(to_build, output, *, check_sequence=False):
         # now, set up to iterate over sequences.
         with screed.open(filename) as screed_iter:
             if not screed_iter:
-                notify(f"no sequences found in '{filename}'?!")
-                continue
+                error(f"ERROR: no sequences found in '{filename}'?!")
+                sys.exit(-1)
 
             # build the set of empty sigs
             sigs = []
@@ -319,14 +322,19 @@ def _compute_sigs(to_build, output, *, check_sequence=False):
             input_is_protein = not is_dna
 
             # read sequence records & sketch
-            notify('... reading sequences from {}', filename)
+            notify(f'... reading sequences from {filename}')
             for n, record in enumerate(screed_iter):
                 if n % 10000 == 0:
                     if n:
                         notify('\r...{} {}', filename, n, end='')
 
-                add_seq(sigs, record.sequence, input_is_protein,
-                        check_sequence)
+                try:
+                    add_seq(sigs, record.sequence, input_is_protein,
+                            check_sequence)
+                except ValueError as exc:
+                    error(f"ERROR when reading from '{filename}' - ")
+                    error(str(exc))
+                    sys.exit(-1)
 
             notify('...{} {} sequences', filename, n, end='')
 
@@ -342,12 +350,8 @@ def _compute_sigs(to_build, output, *, check_sequence=False):
 
 
 def fromfile(args):
-    from sourmash.sig.__main__ import _summarize_manifest, _SketchInfo
-    # TODO:
-    # check license
-    # check-sequence
-    if args.output_signatures and args.output_commands:
-        error(f"** ERROR: --output-signatures and --output-commands cannot both be specified")
+    if args.license != 'CC0':
+        error('error: sourmash only supports CC0-licensed signatures. sorry!')
         sys.exit(-1)
 
     if args.output_signatures and os.path.exists(args.output_signatures):
@@ -359,9 +363,6 @@ def fromfile(args):
 
     # load manifests from '--already-done' databases => turn into
     # ComputeParameters objects, indexed by name.
-    #
-    # CTB: note: 'seed' is not tracked by manifests currently. Oops.
-    # so we'll have to block 'seed' from being passed in by '-p'.
 
     already_done = defaultdict(list)
     for filename in args.already_done:
@@ -396,6 +397,13 @@ def fromfile(args):
     # objects.
     build_params = list(sig_factory.get_compute_params(split_ksizes=True))
 
+    # confirm that they do not adjust seed, which is not supported in
+    # 'fromfile' b/c we don't store that info in manifests. (see #1849)
+    for p in build_params:
+        if p.seed != DEFAULT_MMHASH_SEED:
+            error("** ERROR: cannot set 'seed' in 'sketch fromfile'")
+            sys.exit(-1)
+
     #
     # the big loop - cross-product all of the names in the input CSV file
     # with the sketch spec(s) provided on the command line, figure out
@@ -409,34 +417,59 @@ def fromfile(args):
     total_sigs = 0
     total_rows = 0
     skipped_sigs = 0
-    with open(args.csv, newline="") as fp:
-        r = csv.DictReader(fp)
+    n_missing_name = 0
+    n_duplicate_name = 0
 
-        for row in r:
-            name = row['name']
-            genome = row['genome_filename']
-            proteome = row['protein_filename']
-            total_rows += 1
+    for csvfile in args.csvs:
+        with open(csvfile, newline="") as fp:
+            r = csv.DictReader(fp)
 
-            all_names.add(name)
+            for row in r:
+                name = row['name']
+                if not name:
+                    n_missing_name += 1
+                    continue
 
-            plist = already_done[name]
-            for p in build_params:
-                total_sigs += 1
+                genome = row['genome_filename']
+                proteome = row['protein_filename']
+                total_rows += 1
 
-                # does this signature already exist?
-                if p not in plist:
-                    # nope - figure out genome/proteome needed
-                    filename = genome if p.dna else proteome
+                if name in all_names:
+                    n_duplicate_name += 1
+                    continue    # CTB tortured logic...
 
-                    if filename:
-                        # add to build list
-                        to_build[(name, filename)].append(p)
+                all_names.add(name)
+
+                # CTB split off into a separate loop?
+                plist = already_done[name]
+                for p in build_params:
+                    total_sigs += 1
+
+                    # does this signature already exist?
+                    if p not in plist:
+                        # nope - figure out genome/proteome needed
+                        filename = genome if p.dna else proteome
+
+                        if filename:
+                            # add to build list
+                            to_build[(name, filename)].append(p)
+                        else:
+                            missing[name].append(p)
+                            missing_count += 1
                     else:
-                        missing[name].append(p)
-                        missing_count += 1
-                else:
-                    skipped_sigs += 1
+                        skipped_sigs += 1
+
+    fail_exit = False
+    if n_duplicate_name:
+        error(f"** ERROR: {n_duplicate_name} entries have duplicate 'name' records. Exiting!")
+        fail_exit = True
+
+    if n_missing_name:
+        error(f"** ERROR: {n_missing_name} entries have blank 'name's? Exiting!")
+        fail_exit = True
+
+    if fail_exit:
+        sys.exit(-1)
 
     ## done! we now have 'to_build' which contains the things we can build,
     ## and 'missing', which contains anything we cannot build. Report!
@@ -476,11 +509,9 @@ def fromfile(args):
 
         print_results('---')
 
-    if args.output_manifest_of_existing:
-        with open(args.output_manifest_of_existing, "w", newline='') as outfp:
-            already_done_manifest.write_to_csv(outfp, write_header=True)
-
-        notify(f"output {len(already_done_manifest)} rows to '{args.output_manifest_of_existing}' in manifest format.")
+    if args.output_manifest_matching:
+        already_done_manifest.write_to_filename(args.output_manifest_matching)
+        notify(f"output {len(already_done_manifest)} already-done signatures to '{args.output_manifest_matching}' in manifest format.")
 
     if missing:
         error("** ERROR: we cannot build some of the requested signatures.")
@@ -537,7 +568,8 @@ def fromfile(args):
     print_results('---')
 
     if args.output_signatures:                   # actually compute
-        _compute_sigs(to_build, args.output_signatures)
+        _compute_sigs(to_build, args.output_signatures,
+                      check_sequence=args.check_sequence)
 
     if args.output_csv_info: # output info necessary to construct
         output_n = 0

@@ -766,6 +766,7 @@ def get_manifest(idx, *, require=True, rebuild=False):
     Retrieve a manifest for this idx, loaded with `load_file_as_index`.
 
     If a manifest exists and `rebuild` is False, return the manifest.
+    Even if a manifest exists and `rebuild` is True, rebuild the manifest.
     If a manifest does not exist or `rebuild` is True, try to build one.
     If a manifest cannot be built and `require` is True, error exit.
 
@@ -785,6 +786,7 @@ def get_manifest(idx, *, require=True, rebuild=False):
 
     # need to build one...
     try:
+        debug_literal("get_manifest: rebuilding manifest")
         m = CollectionManifest.create_manifest(idx._signatures_with_internal(),
                                                include_signature=False)
         debug_literal("get_manifest: rebuilt manifest.")

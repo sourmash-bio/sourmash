@@ -1,5 +1,9 @@
 # `sourmash sketch` documentation
 
+```{contents} Contents
+:depth: 3
+```
+
 Most of the commands in sourmash work with **signatures**, which contain information about genomic or proteomic sequences. Each signature contains one or more **sketches**, which are compressed versions of these sequences. Using sourmash, you can search, compare, and analyze these sequences in various ways.
 
 To create a signature with one or more sketches, you use the `sourmash sketch` command. There are three main commands:
@@ -8,6 +12,7 @@ To create a signature with one or more sketches, you use the `sourmash sketch` c
 sourmash sketch dna
 sourmash sketch protein
 sourmash sketch translate
+sourmash sketch fromfile
 ```
 
 The `sketch dna` command reads in **DNA sequences** and outputs **DNA sketches**.
@@ -15,6 +20,10 @@ The `sketch dna` command reads in **DNA sequences** and outputs **DNA sketches**
 The `sketch protein` command reads in **protein sequences** and outputs **protein sketches**.
 
 The `sketch translate` command reads in **DNA sequences**, translates them in all six frames, and outputs **protein sketches**.
+
+The `sketch fromfile` command takes in a CSV file containing the
+locations of genomes and proteomes, and outputs all of the requested
+sketches. It primarily intended for large-scale database construction.
 
 All `sourmash sketch` commands take FASTA or FASTQ sequences as input;
 input data can be uncompressed, compressed with gzip, or compressed
@@ -60,6 +69,53 @@ If you want to use different encodings, you can specify them in a few ways; here
 ```
 sourmash sketch protein -p k=25,scaled=500,dayhoff genome.faa
 ```
+
+### Translated DNA sketches for metagenomes
+
+The command
+```
+sourmash sketch translate metagenome.fq
+```
+will take each read in the FASTQ file and translate the read into
+amino acid sequence in all six possible coding frames. No attempt is
+made to determine the right frame (but we are working on ways to
+determine this; see [orpheum](https://github.com/czbiohub/orpheum)).
+
+We suggest using this primarily on unassembled metagenome data. For
+most microbial genomes, it is both higher quality and more efficient
+to first predict the coding sequences (using e.g. prodigal) and then
+use `sketch protein` to build signatures.
+
+### Bulk sketch construction from many files
+
+The `sourmash sketch fromfile` command is intended for use when
+building many signatures as part of a larger workflow. It supports a
+variety of options to only build new signatures, parallelize
+signature construction, and otherwise aid in tracking and managing
+database construction.
+
+The command
+```
+sourmash sketch fromfile datasets.csv -p dna -p protein -o database.zip
+```
+will ingest a CSV spreadsheet containing (at a minimum) the three columns
+`name`, `genome_filename`, and `protein_filename`, and build all of
+the signatures requested by the parameter strings.  Other columns in
+this file will be ignored.
+
+If no protein, hp, or dayhoff sketches are requested, `protein_filename`
+can be empty for a given row; likewise, if no DNA sketches are requested,
+`genome_filename` can be empty for a given row.
+
+Some of the key command-line options supported by `fromfile` are:
+* `-o/--output-signatures` will save generated signatures to any of the [standard supported output formats](command-line.md#saving-signatures-more-generally).
+* `-o/--output-csv-info` will save a CSV file of input filenames and parameter strings for use with the `sourmash sketch` command line; this can be used to construct signatures in parallel.
+* `--already-done` will take a list of existing signatures/databases to check against; signatures with matching names and parameter strings will not be rebuilt.
+* `--output-manifest-matching` will output a manifest of already-existing signatures, which can then be used with `sourmash sig cat` to collate signatures across databases; see [using manifests](command-line.md#using-manifests-to-explicitly-refer-to-collections-of-files). (This provides [`sourmash sig check` functionality](command-line.md#sourmash-signature-check---compare-picklists-and-manifests) in `sketch fromfile`.)
+
+If you would like help and advice on constructing large databases, or
+pointers to code for generating the `fromfile` CSV format, please ask
+[on the sourmash issue tracker](https://github.com/sourmash-bio/sourmash/issues).
 
 ## More detailed documentation
 
@@ -109,8 +165,8 @@ The `-p` argument to `sourmash sketch` provides parameter strings to sourmash, a
 
 A parameter string is a space-delimited collection that can contain one or more fields, comma-separated.
 * `k=<ksize>` - create a sketch at this k-mer size; can provide more than one time in a parameter string. Typically `ksize` is between 4 and 100.
-* `scaled=<int>` - create a scaled MinHash with k-mers sampled deterministically at 1 per `<scaled>` value. This controls sketch compression rates and resolution; for example, a 5 Mbp genome sketched with a scaled of 1000 would yield approximately 5,000 k-mers. `scaled` is incompatible with `num`. See [our guide to signature resolution](using-sourmash-a-guide.md#what-resolution-should-my-signatures-be-how-should-i-create-them) for more information.
-* `num=<int>` - create a standard MinHash with no more than `<num>` k-mers kept. This will produce sketches identical to [mash sketches](https://mash.readthedocs.io/en/latest/). `num` is incompatible with `scaled`. See [our guide to signature resolution](using-sourmash-a-guide.md#what-resolution-should-my-signatures-be-how-should-i-create-them) for more information.
+* `scaled=<int>` - create a scaled MinHash with k-mers sampled deterministically at 1 per `<scaled>` value. This controls sketch compression rates and resolution; for example, a 5 Mbp genome sketched with a scaled of 1000 would yield approximately 5,000 k-mers. `scaled` is incompatible with `num`. See [our guide to signature resolution](using-sourmash-a-guide.md#what-resolution-should-my-signatures-be--how-should-i-create-them) for more information.
+* `num=<int>` - create a standard MinHash with no more than `<num>` k-mers kept. This will produce sketches identical to [mash sketches](https://mash.readthedocs.io/en/latest/). `num` is incompatible with `scaled`. See [our guide to signature resolution](using-sourmash-a-guide.md#what-resolution-should-my-signatures-be--how-should-i-create-them) for more information.
 * `abund` / `noabund` - create abundance-weighted (or not) sketches. See [Classify signatures: Abundance Weighting](classifying-signatures.md#abundance-weighting) for details of how this works.
 * `dna`, `protein`, `dayhoff`, `hp` - create this kind of sketch. Note that `sourmash sketch dna -p protein` and `sourmash sketch protein -p dna` are invalid; please use `sourmash sketch translate` for the former.
 
@@ -189,7 +245,7 @@ Unfortunately, changing the k-mer size or using different DNA/protein encodings 
 
 ### Examining the output of `sourmash sketch`
 
-You can use `sourmash sig describe` to get detailed information about the contents of a signature file. This can help if you want to see exactly what a particular `sourmash sketch` command does!
+You can use `sourmash sig describe` to get detailed information about the contents of a signature file, and `sourmash sig fileinfo` to get a human-readable summary of the contents. This can help if you want to see exactly what a particular `sourmash sketch` command does!
 
 ### Filing issues and asking for help
 

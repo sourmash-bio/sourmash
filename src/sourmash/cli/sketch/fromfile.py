@@ -30,10 +30,9 @@ from sourmash import command_sketch
 def subparser(subparsers):
     subparser = subparsers.add_parser('fromfile',
                                       usage=usage)
-    # @CTB - allow one or more
     subparser.add_argument(
-        'csv',
-        help="input CSV providing 'name', 'genome_filename', and 'protein_filename'"
+        'csvs', nargs='+',
+        help="input CSVs providing 'name', 'genome_filename', and 'protein_filename'"
     )
     subparser.add_argument(
         '-p', '--param-string', default=[],
@@ -65,15 +64,11 @@ def subparser(subparsers):
         help='proceed with building possible signatures, even if some input files are missing'
     )
     file_args.add_argument(
-        '--output-commands',
-        help='output sourmash commands that can be used to generate signatures'
-    )
-    file_args.add_argument(
         '--output-csv-info',
         help='output information about what signatures need to be generated'
     )
     file_args.add_argument(
-        '--output-manifest-of-existing',
+        '--output-manifest-matching',
         help='output a manifest file of already-existing signatures'
     )
 

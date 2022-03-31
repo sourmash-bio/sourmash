@@ -26,12 +26,13 @@ LazyLinearIndex - lazy selection and linear search of signatures.
 ZipFileLinearIndex - simple on-disk storage of signatures.
 
 MultiIndex - in-memory storage and selection of signatures from multiple
-index objects, using manifests.
-
-LazyLoadedIndex - selection on manifests with loading of index on demand.
+index objects, using manifests. All signatures are kept in memory.
 
 StandaloneManifestIndex - load manifests directly, and do lazy loading of
-signatures on demand. No signatures are kept in memory..
+signatures on demand. No signatures are kept in memory.
+
+LazyLoadedIndex - selection on manifests with loading of index on demand.
+(Consider using StandaloneManifestIndex instead.)
 
 CounterGather - an ancillary class returned by the 'counter_gather()' method.
 """
@@ -40,8 +41,6 @@ import os
 import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
-import csv
-from io import TextIOWrapper
 from collections import defaultdict
 
 from ..search import make_jaccard_search_query, make_gather_query
@@ -906,7 +905,6 @@ class MultiIndex(Index):
         CTB note: here, 'internal_location' is the source file for the
         index. This is a special feature of this (in memory) class.
         """
-        parent = self.parent
         for row in self.manifest.rows:
             yield row['signature'], row['internal_location']
 
@@ -940,7 +938,7 @@ class MultiIndex(Index):
                 for ss in idx.signatures():
                     yield ss, iloc
 
-        # build manifest; note, signatures are stored in memory.
+        # build manifest; note, ALL signatures are stored in memory.
         # CTB: could do this on demand?
         # CTB: should we use get_manifest functionality?
         # CTB: note here that the manifest is created by iteration
@@ -978,11 +976,11 @@ class MultiIndex(Index):
 
                 rel = os.path.relpath(thisfile, pathname)
                 source_list.append(rel)
-            except (IOError, sourmash.exceptions.SourmashError):
+            except (IOError, sourmash.exceptions.SourmashError) as exc:
                 if force:
                     continue    # ignore error
                 else:
-                    raise       # stop loading!
+                    raise ValueError(exc)      # stop loading!
 
         # did we load anything? if not, error
         if not index_list:
@@ -1063,6 +1061,8 @@ class LazyLoadedIndex(Index):
     from disk every time they are needed (e.g. 'find(...)', 'signatures()').
 
     Wrapper class; signatures dynamically loaded from disk; uses manifests.
+
+    CTB: This may be redundant with StandaloneManifestIndex.
     """
     def __init__(self, filename, manifest):
         "Create an Index with given filename and manifest."
@@ -1160,7 +1160,7 @@ class LazyLoadedIndex(Index):
 class StandaloneManifestIndex(Index):
     """Load a standalone manifest as an Index.
 
-    This class is useful for the situtation where you have a directory
+    This class is useful for the situation where you have a directory
     with many signature collections underneath it, and you don't want to load
     every collection each time you run sourmash.
 
@@ -1180,13 +1180,12 @@ class StandaloneManifestIndex(Index):
     This class overlaps in concept with LazyLoadedIndex and behaves
     identically when a manifest contains only rows from a single
     on-disk Index object.  However, unlike LazyLoadedIndex, this class
-    can be used in situations where there are many signatures in many
-    on-disk Index objects.
+    can be used to reference multiple on-disk Index objects.
 
     This class also overlaps in concept with MultiIndex when
     MultiIndex.load_from_pathlist is used to load other Index
-    objects. However, unlike MultiIndex, this class does not store
-    signatures in memory (as part of manifests).
+    objects. However, this class does not store any signatures in
+    memory, unlike MultiIndex.
     """
     is_database = True
 
@@ -1232,7 +1231,14 @@ class StandaloneManifestIndex(Index):
             yield ss
 
     def _signatures_with_internal(self):
-        "Return an iterator over all sigs of (sig, internal_location)"
+        """Return an iterator over all sigs of (sig, internal_location)
+
+        Note that this is implemented differently from most Index
+        objects in that it only lists subselected parts of the
+        manifest, and not the original manifest. This was done out of
+        convenience: we don't currently have access to the original
+        manifest in this class.
+        """
         # collect all internal locations
         iloc_to_rows = defaultdict(list)
         for row in self.manifest.rows:

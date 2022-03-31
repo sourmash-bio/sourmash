@@ -4190,3 +4190,284 @@ def test_sig_kmers_2_hp(runtmp):
         check_mh2.add_hash(int(row['hashval']))
     assert check_mh.similarity(mh) == 1.0
     assert check_mh2.similarity(mh) == 1.0
+
+
+def test_sig_check_1(runtmp):
+    # basic check functionality
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    runtmp.sourmash('sig', 'check', *sigfiles,
+                    "--picklist", f"{picklist}::manifest",
+                    "-m", "mf.csv")
+
+    out_mf = runtmp.output('mf.csv')
+    assert os.path.exists(out_mf)
+
+    # all should match.
+    with open(out_mf, newline='') as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 24
+
+    idx = sourmash.load_file_as_index(out_mf)
+    siglist = list(idx.signatures())
+    assert len(siglist) == 24
+    ksizes = set([ ss.minhash.ksize for ss in siglist ])
+    assert len(ksizes) == 3
+    assert 11 in ksizes
+    assert 21 in ksizes
+    assert 31 in ksizes
+
+
+def test_sig_check_1_no_picklist(runtmp):
+    # basic check functionality
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sig', 'check', *sigfiles)
+
+    assert "No picklist provided?! Exiting." in str(exc)
+
+
+@pytest.mark.parametrize("column, coltype",
+                         (('md5', 'md5'),
+                          ('md5', 'md5prefix8'),
+                          ('name', 'name'),
+                          ('name', 'ident'),
+                          ('name', 'identprefix'),
+                          ))
+def test_sig_check_1_column(runtmp, column, coltype):
+    # basic check functionality for various columns/coltypes
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    runtmp.sourmash('sig', 'check', *sigfiles,
+                    "--picklist", f"{picklist}:{column}:{coltype}",
+                    "-m", "mf.csv",
+                    "-o", "missing.csv")
+
+    out_mf = runtmp.output('mf.csv')
+    assert os.path.exists(out_mf)
+
+    # all should match.
+    with open(out_mf, newline='') as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 24
+
+    idx = sourmash.load_file_as_index(out_mf)
+    siglist = list(idx.signatures())
+    assert len(siglist) == 24
+    ksizes = set([ ss.minhash.ksize for ss in siglist ])
+    assert len(ksizes) == 3
+    assert 11 in ksizes
+    assert 21 in ksizes
+    assert 31 in ksizes
+
+
+def test_sig_check_1_diff_col_name(runtmp):
+    # 'sig check' with 'name2' column instead of default name
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist-diffcolumn.csv')
+
+    runtmp.sourmash('sig', 'check', *sigfiles,
+                    "--picklist", f"{picklist}:name2:name",
+                    "-o", "missing.csv",
+                    '-m', 'mf.csv')
+
+    out_mf = runtmp.output('mf.csv')
+    assert os.path.exists(out_mf)
+
+    missing_csv = runtmp.output('missing.csv')
+    assert os.path.exists(missing_csv)
+
+    # should be 24 matching manifest rows
+    with open(out_mf, newline='') as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 24
+
+    idx = sourmash.load_file_as_index(out_mf)
+    siglist = list(idx.signatures())
+    assert len(siglist) == 24
+    ksizes = set([ ss.minhash.ksize for ss in siglist ])
+    assert len(ksizes) == 3
+    assert 11 in ksizes
+    assert 21 in ksizes
+    assert 31 in ksizes
+
+    # should be one non-matching picklist row
+    with open(missing_csv, newline='') as fp:
+        rows = list(csv.reader(fp))
+    assert len(rows) == 2       # header row + data row
+    assert rows[1][0] == 'NOT THERE'
+
+
+def test_sig_check_1_diff_col_name_exclude(runtmp):
+    # 'sig check' with 'name2' column, :exclude picklist
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist-diffcolumn.csv')
+
+    runtmp.sourmash('sig', 'check', *sigfiles,
+                    "--picklist", f"{picklist}:name2:name:exclude",
+                    '-m', 'mf.csv')
+
+    out_mf = runtmp.output('mf.csv')
+    assert os.path.exists(out_mf)
+
+    # should be 12 matching manifest rows
+    with open(out_mf, newline='') as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 12
+
+    idx = sourmash.load_file_as_index(out_mf)
+    siglist = list(idx.signatures())
+    assert len(siglist) == 12
+    ksizes = set([ ss.minhash.ksize for ss in siglist ])
+    assert len(ksizes) == 3
+    assert 11 in ksizes
+    assert 21 in ksizes
+    assert 31 in ksizes
+
+
+def test_sig_check_1_ksize(runtmp):
+    # basic check functionality with selection for ksize
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    runtmp.sourmash('sig', 'check', *sigfiles, '-k', '31',
+                    "--picklist", f"{picklist}::manifest",
+                    "-m", "mf.csv")
+
+    out_mf = runtmp.output('mf.csv')
+    assert os.path.exists(out_mf)
+
+    # 8 of the 24 should match.
+    with open(out_mf, newline='') as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 8
+
+    idx = sourmash.load_file_as_index(out_mf)
+    siglist = list(idx.signatures())
+    assert len(siglist) == 8
+    ksizes = set([ ss.minhash.ksize for ss in siglist ])
+    assert len(ksizes) == 1
+    assert 31 in ksizes
+
+
+def test_sig_check_2_output_missing(runtmp):
+    # output missing all as identical to input picklist
+    sigfiles = utils.get_test_data('gather/combined.sig')
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    runtmp.sourmash('sig', 'check', sigfiles,
+                    "--picklist", f"{picklist}::manifest",
+                    "-o", "missing.csv", "-m", "mf.csv")
+
+    out_csv = runtmp.output('missing.csv')
+    assert os.path.exists(out_csv)
+
+    mf_csv = runtmp.output('mf.csv')
+    assert not os.path.exists(mf_csv)
+    assert "not saving matching manifest" in runtmp.last_result.err
+
+    # everything is missing with 'combined.sig'
+    with open(out_csv, newline='') as fp:
+        r = csv.DictReader(fp)
+        rows = list(r)
+
+    assert len(rows) == 24
+
+
+def test_sig_check_2_output_missing_error_exit(runtmp):
+    # output missing all as identical to input picklist
+    sigfiles = utils.get_test_data('gather/combined.sig')
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    # should error exit...
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'check', sigfiles,
+                        "--picklist", f"{picklist}::manifest",
+                        "-o", "missing.csv", '--fail')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    # ...and also output stuff!
+    out_csv = runtmp.output('missing.csv')
+    assert os.path.exists(out_csv)
+
+    # everything is missing with 'combined.sig'
+    with open(out_csv, newline='') as fp:
+        r = csv.DictReader(fp)
+        rows = list(r)
+
+    assert len(rows) == 24
+
+
+@pytest.mark.parametrize("column, coltype",
+                         (('md5', 'md5'),
+                          ('md5', 'md5prefix8'),
+                          ('name', 'name'),
+                          ('name', 'ident'),
+                          ('name', 'identprefix'),
+                          ))
+def test_sig_check_2_output_missing_column(runtmp, column, coltype):
+    # output missing all as identical to input picklist
+    sigfiles = utils.get_test_data('gather/combined.sig')
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    runtmp.sourmash('sig', 'check', sigfiles,
+                    "--picklist", f"{picklist}::manifest",
+                    "-o", "missing.csv")
+
+    out_csv = runtmp.output('missing.csv')
+    assert os.path.exists(out_csv)
+
+    # everything is missing with 'combined.sig'
+    with open(out_csv, newline='') as fp:
+        r = csv.DictReader(fp)
+        rows = list(r)
+
+    assert len(rows) == 24
+
+
+def test_sig_check_2_output_missing_exclude(runtmp):
+    # 'exclude' with '-o' shouldn't work
+    sigfiles = utils.get_test_data('gather/combined.sig')
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sig', 'check', sigfiles,
+                        "--picklist", f"{picklist}:name:name:exclude",
+                        "-o", "missing.csv")
+
+    assert "** ERROR: Cannot use an 'exclude' picklist with '-o/--output-missing'" in str(exc)
+
+
+def test_check_3_no_manifest(runtmp):
+    # fail check when no manifest, by default
+    sbt = utils.get_test_data('v6.sbt.zip')
+    picklist = utils.get_test_data('v6.sbt.zip.mf.csv')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('sig', 'check', sbt,
+                            '--picklist', f"{picklist}::manifest")
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    err = runtmp.last_result.err
+    assert "sig check requires a manifest by default, but no manifest present." in err
+
+
+def test_check_3_no_manifest_ok(runtmp):
+    # generate manifest if --no-require-manifest
+    sbt = utils.get_test_data('v6.sbt.zip')
+    picklist = utils.get_test_data('v6.sbt.zip.mf.csv')
+
+    runtmp.run_sourmash('sig', 'check', sbt, "--no-require-manifest",
+                        '--picklist', f"{picklist}::manifest")
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert "for given picklist, found 7 matches to 7 distinct values" in runtmp.last_result.err
