@@ -345,9 +345,6 @@ def _compute_sigs(to_build, output, *, check_sequence=False):
 
 def fromfile(args):
     from sourmash.sig.__main__ import _summarize_manifest, _SketchInfo
-    # TODO:
-    # check-sequence
-
     if args.license != 'CC0':
         error('error: sourmash only supports CC0-licensed signatures. sorry!')
         sys.exit(-1)
@@ -553,7 +550,8 @@ def fromfile(args):
     print_results('---')
 
     if args.output_signatures:                   # actually compute
-        _compute_sigs(to_build, args.output_signatures)
+        _compute_sigs(to_build, args.output_signatures,
+                      check_sequence=args.check_sequence)
 
     if args.output_csv_info: # output info necessary to construct
         output_n = 0

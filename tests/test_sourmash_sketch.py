@@ -1527,6 +1527,44 @@ def test_fromfile_dna(runtmp):
     assert "** 1 total requested; built 1, skipped 0" in runtmp.last_result.err
 
 
+def test_fromfile_dna_check_sequence_succeed(runtmp):
+    # does it run? yes, hopefully.
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                    '-o', 'out.zip', '-p', 'dna', '--check-sequence')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(runtmp.output('out.zip'))
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    siglist = list(idx.signatures())
+
+    assert len(siglist) == 1
+    ss = siglist[0]
+    assert ss.name == 'GCA_903797575 Salmonella enterica'
+    assert ss.minhash.moltype == 'DNA'
+    assert "** 1 total requested; built 1, skipped 0" in runtmp.last_result.err
+
+
+def test_fromfile_dna_check_sequence_fail(runtmp):
+    # does it run? yes, hopefully.
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sketch', 'fromfile',
+                        'sketch_fromfile/salmonella-badseq.csv',
+                        '-o', 'out.zip', '-p', 'dna', '--check-sequence')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 0
+
+
 def test_fromfile_dna_and_protein(runtmp):
     # does it run and produce DNA _and_ protein signatures?
     test_inp = utils.get_test_data('sketch_fromfile')
