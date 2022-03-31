@@ -440,6 +440,7 @@ def fromfile(args):
 
                 all_names.add(name)
 
+                # @CTB split off into a separate loop?
                 plist = already_done[name]
                 for p in build_params:
                     total_sigs += 1
@@ -517,6 +518,7 @@ def fromfile(args):
         error(f"** {missing_count} total signatures (for {len(missing)} names) cannot be built.")
         if args.ignore_missing:
             error("** (continuing past this error because --ignore-missing was set)")
+            assert 0 # @CTB
         else:
             sys.exit(-1)
 
@@ -527,6 +529,7 @@ def fromfile(args):
 
     if skipped_sigs:
         notify(f"** {skipped_sigs} already exist, so skipping those.")
+        assert 0 # @CTB
     else:
         notify(f"** we found no pre-existing signatures that match.")
 
