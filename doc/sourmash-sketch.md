@@ -100,7 +100,8 @@ sourmash sketch fromfile datasets.csv -p dna -p protein -o database.zip
 ```
 will ingest a CSV spreadsheet containing (at a minimum) the three columns
 `name`, `genome_filename`, and `protein_filename`, and build all of
-the signatures requested by the parameter strings.
+the signatures requested by the parameter strings.  Other columns in
+this file will be ignored.
 
 If no protein, hp, or dayhoff sketches are requested, `protein_filename`
 can be empty for a given row; likewise, if no DNA sketches are requested,
