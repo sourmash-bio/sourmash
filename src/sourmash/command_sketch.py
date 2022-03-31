@@ -307,8 +307,8 @@ def _compute_sigs(to_build, output, *, check_sequence=False):
         # now, set up to iterate over sequences.
         with screed.open(filename) as screed_iter:
             if not screed_iter:
-                notify(f"no sequences found in '{filename}'?!")
-                continue
+                error(f"ERROR: no sequences found in '{filename}'?!")
+                sys.exit(-1)
 
             # build the set of empty sigs
             sigs = []

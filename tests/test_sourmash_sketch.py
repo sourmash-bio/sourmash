@@ -1541,6 +1541,27 @@ def test_fromfile_dna(runtmp):
     assert "** 1 total requested; built 1, skipped 0" in runtmp.last_result.err
 
 
+def test_fromfile_dna_empty(runtmp):
+    # test what happens on empty files.
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    # zero out the file
+    with gzip.open(runtmp.output('sketch_fromfile/GCA_903797575.1_PARATYPHIC668_genomic.fna.gz'), 'w') as fp:
+        pass
+
+    # now what happens?
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                        '-o', 'out.zip', '-p', 'dna')
+
+    print(runtmp.last_result.out)
+    err = runtmp.last_result.err
+    print(err)
+
+    assert "ERROR: no sequences found in " in err
+
+
 def test_fromfile_dna_check_sequence_succeed(runtmp):
     # does it run? yes, hopefully.
     test_inp = utils.get_test_data('sketch_fromfile')
