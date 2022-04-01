@@ -485,6 +485,16 @@ class ComputeParameters(RustObject):
         return self._methodcall(lib.computeparams_set_dna, v)
 
     @property
+    def moltype(self):
+        if self.dna: moltype = 'DNA'
+        elif self.protein: moltype = 'protein'
+        elif self.hp: moltype = 'hp'
+        elif self.dayhoff: moltype = 'dayhoff'
+        else: assert 0
+
+        return moltype
+
+    @property
     def num_hashes(self):
         return self._methodcall(lib.computeparams_num_hashes)
 

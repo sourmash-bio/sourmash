@@ -3,7 +3,7 @@ Functions implementing the 'sketch' subcommands and related functions.
 """
 import sys
 import os
-from collections import defaultdict
+from collections import defaultdict, Counter
 import csv
 import shlex
 
@@ -18,6 +18,7 @@ from .command_compute import (_compute_individual, _compute_merged,
 from sourmash import sourmash_args
 from sourmash.sourmash_args import check_scaled_bounds, check_num_bounds
 from sourmash.sig.__main__ import _summarize_manifest, _SketchInfo
+from sourmash.manifest import CollectionManifest
 
 DEFAULTS = dict(
     dna='k=31,scaled=1000,noabund',
@@ -476,7 +477,6 @@ def fromfile(args):
 
     notify(f"Read {total_rows} rows, requesting that {total_sigs} signatures be built.")
 
-    from sourmash.manifest import CollectionManifest
     already_done_rows = []
 
     for filename in args.already_done:
@@ -514,6 +514,8 @@ def fromfile(args):
         notify(f"output {len(already_done_manifest)} already-done signatures to '{args.output_manifest_matching}' in manifest format.")
 
     if missing:
+        # @CTB
+        print(missing)
         error("** ERROR: we cannot build some of the requested signatures.")
         error(f"** {missing_count} total signatures (for {len(missing)} names) cannot be built.")
         if args.ignore_missing:
@@ -536,23 +538,16 @@ def fromfile(args):
     print_results('---')
     print_results("summary of sketches to build:")
 
-    from collections import Counter
     counter = Counter()
     build_info_d = {}
     for filename, param_objs in to_build.items():
         for p in param_objs:
-            moltype = None
-            if p.dna: moltype = 'DNA'
-            elif p.protein: moltype = 'protein'
-            elif p.hp: moltype = 'hp'
-            elif p.dayhoff: moltype = 'dayhoff'
-            else: assert 0
-
+            moltype = p.moltype
             assert len(p.ksizes) == 1
             ksize = p.ksizes[0]
             if not p.dna: ksize //= 3
 
-            ski = _SketchInfo(ksize=ksize, moltype=moltype,
+            ski = _SketchInfo(ksize=ksize, moltype=p.moltype,
                               scaled=p.scaled, num=p.num_hashes,
                               abund=p.track_abundance)
             counter[ski] += 1
@@ -583,25 +578,21 @@ def fromfile(args):
         output_n = 0
         for (name, filename), param_objs in to_build.items():
             param_strs = []
-            is_dna = None
+
+            # should all be the same!
+            if param_objs[0].dna:
+                assert all( ( p.dna for p in param_objs ) )
+                sketchtype = "dna"
+            else:
+                assert not all( ( p.dna for p in param_objs ) )
+                sketchtype = "protein"
 
             for p in param_objs:
-                if p.dna:
-                    assert is_dna != False
-                    is_dna = True
-                else:
-                    is_dna = False
-                    assert is_dna != True
                 param_strs.append(p.to_param_str())
 
-            assert is_dna is not None
-            sketchtype = "dna" if is_dna else "protein"
-
-            row = dict(filename=filename,
-                       sketchtype=sketchtype,
+            row = dict(filename=filename, sketchtype=sketchtype,
                        param_strs="-p " + " -p ".join(param_strs),
-                       name=name,
-                       output_index=output_n)
+                       name=name, output_index=output_n)
 
             w.writerow(row)
 
