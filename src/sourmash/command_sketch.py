@@ -584,7 +584,7 @@ def fromfile(args):
                 assert all( ( p.dna for p in param_objs ) )
                 sketchtype = "dna"
             else:
-                assert not all( ( p.dna for p in param_objs ) )
+                assert not any( ( p.dna for p in param_objs ) )
                 sketchtype = "protein"
 
             for p in param_objs:

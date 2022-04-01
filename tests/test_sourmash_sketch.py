@@ -1632,6 +1632,48 @@ def test_fromfile_dna_and_protein(runtmp):
     assert "** 2 total requested; built 2, skipped 0" in runtmp.last_result.err
 
 
+def test_fromfile_dna_and_protein_and_hp_and_dayhoff(runtmp):
+    # does it run and produce DNA _and_ protein signatures?
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                    '-o', 'out.zip', '-p', 'dna', '-p', 'dna,k=25',
+                    '-p', 'protein',
+                    '-p', 'hp', '-p', 'dayhoff')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(runtmp.output('out.zip'))
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    siglist = list(idx.signatures())
+
+    assert len(siglist) == 5
+
+    prot_sig = [ ss for ss in siglist if ss.minhash.moltype == 'protein' ]
+    assert len(prot_sig) == 1
+    prot_sig = prot_sig[0]
+    assert prot_sig.name == 'GCA_903797575 Salmonella enterica'
+
+    prot_sig = [ ss for ss in siglist if ss.minhash.moltype == 'hp' ]
+    assert len(prot_sig) == 1
+    prot_sig = prot_sig[0]
+    assert prot_sig.name == 'GCA_903797575 Salmonella enterica'
+
+    prot_sig = [ ss for ss in siglist if ss.minhash.moltype == 'dayhoff' ]
+    assert len(prot_sig) == 1
+    prot_sig = prot_sig[0]
+    assert prot_sig.name == 'GCA_903797575 Salmonella enterica'
+
+    dna_sig = [ ss for ss in siglist if ss.minhash.moltype == 'DNA' ]
+    assert len(dna_sig) == 2
+    dna_sig = dna_sig[0]
+    assert dna_sig.name == 'GCA_903797575 Salmonella enterica'
+
+    assert "** 5 total requested; built 5, skipped 0" in runtmp.last_result.err
+
+
 def test_fromfile_dna_and_protein_noname(runtmp):
     # nothing in the name column
     test_inp = utils.get_test_data('sketch_fromfile')
