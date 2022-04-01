@@ -396,28 +396,6 @@ def fromfile(args):
             error(f"** Use --force-output-already-exists if you want to overwrite/append.")
             sys.exit(-1)
 
-    # load manifests from '--already-done' databases => turn into
-    # ComputeParameters objects, indexed by name.
-
-    already_done = defaultdict(list)
-    for filename in args.already_done:
-        idx = sourmash.load_file_as_index(filename)
-        manifest = idx.manifest
-        assert manifest
-
-        # for each manifest row,
-        for row in manifest.rows:
-            name = row['name']
-            if name:
-                # build a ComputeParameters object for later comparison
-                p = ComputeParameters.from_manifest_row(row)
-
-                # add to list for this name
-                already_done[name].append(p)
-
-    if args.already_done:
-        notify(f"Loaded {len(already_done)} pre-existing names from manifest(s)")
-
     # now, create the set of desired sketch specs.
     try:
         # omit a default moltype - must be provided in param string.
@@ -437,17 +415,11 @@ def fromfile(args):
             error("** ERROR: cannot set 'seed' in 'sketch fromfile'")
             sys.exit(-1)
 
-    #
-    # the big loop - cross-product all of the names in the input CSV file
-    # with the sketch spec(s) provided on the command line, figure out
-    # which ones do not yet exist, and record them to be calculated.
-    #
+    # cross-product all of the names in the input CSV file
+    # with the sketch spec(s) provided on the command line.
 
     to_build = defaultdict(list)
-    missing = defaultdict(list)
     all_names = {}
-    missing_count = 0
-    total_sigs = 0
     total_rows = 0
     skipped_sigs = 0
     n_missing_name = 0
@@ -472,7 +444,6 @@ def fromfile(args):
                 else:
                     all_names[name] = (genome, proteome)
 
-
     fail_exit = False
     if n_duplicate_name:
         error(f"** ERROR: {n_duplicate_name} entries have duplicate 'name' records. Exiting!")
@@ -485,11 +456,35 @@ def fromfile(args):
     if fail_exit:
         sys.exit(-1)
 
+    # load manifests from '--already-done' databases => turn into
+    # ComputeParameters objects, indexed by name.
+
+    already_done = defaultdict(list)
+    for filename in args.already_done:
+        idx = sourmash.load_file_as_index(filename)
+        manifest = idx.manifest
+        assert manifest
+
+        # for each manifest row,
+        for row in manifest.rows:
+            name = row['name']
+            if name:
+                # build a ComputeParameters object for later comparison
+                p = ComputeParameters.from_manifest_row(row)
+
+                # add to list for this name
+                already_done[name].append(p)
+
+    if args.already_done:
+        notify(f"Loaded {len(already_done)} pre-existing names from manifest(s)")
 
     ## now check/remove those that are already done.
 
+    total_sigs = 0
+    missing = defaultdict(list)
+    missing_count = 0
     for name, (genome, proteome) in all_names.items():
-        plist = already_done.get(name)
+        plist = already_done.get(name, [])
 
         # check list of already done against build parameters
         for p in build_params:
