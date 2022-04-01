@@ -486,7 +486,8 @@ def fromfile(args):
         notify(f"Loaded {len(already_done)} pre-existing names from manifest(s)")
         notify(f"collected {len(already_done_rows)} rows for already-done signatures.")
 
-    ## now check/remove those that are already done.
+    ## now check which are already done and track only those that are
+    ## need to be done.
 
     total_sigs = 0
     missing = defaultdict(list)
@@ -556,9 +557,8 @@ def fromfile(args):
     else:
         notify(f"** we found no pre-existing signatures that match.")
 
-    ## now, onward ho - do we build anything, or output stuff, or ...?
+    ## first, print out a summary of to_build:
 
-    ## print out summary of to_build:
     print_results('---')
     print_results("summary of sketches to build:")
 
@@ -585,6 +585,8 @@ def fromfile(args):
         print_results(f"   {sketch_str: <50}")
 
     print_results('---')
+
+    ## now, onward ho - do we build anything, or output stuff, or just exit?
 
     if args.output_signatures:                   # actually compute
         _compute_sigs(to_build, args.output_signatures,

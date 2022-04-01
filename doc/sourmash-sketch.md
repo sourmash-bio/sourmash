@@ -23,12 +23,12 @@ The `sketch translate` command reads in **DNA sequences**, translates them in al
 
 The `sketch fromfile` command takes in a CSV file containing the
 locations of genomes and proteomes, and outputs all of the requested
-sketches. It primarily intended for large-scale database construction.
+sketches. It is primarily intended for large-scale database construction.
 
 All `sourmash sketch` commands take FASTA or FASTQ sequences as input;
 input data can be uncompressed, compressed with gzip, or compressed
-with bzip2. The output will be one or more JSON signature files that
-can be used with the other sourmash commands.
+with bzip2. The output will be one or more signature files that
+can be used by other sourmash commands.
 
 ## Quickstart
 
