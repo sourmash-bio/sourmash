@@ -445,6 +445,7 @@ def test_manifest_row_to_compute_parameters_1():
     assert not p.protein
     assert not p.dayhoff
     assert not p.hp
+    assert p.moltype == 'DNA'
     assert p.num_hashes == 0
     assert p.scaled == 1000
     assert p.ksizes == [21]
@@ -461,6 +462,7 @@ def test_manifest_row_to_compute_parameters_2():
     p = ComputeParameters.from_manifest_row(row)
     assert not p.dna
     assert p.protein
+    assert p.moltype == 'protein'
     assert not p.dayhoff
     assert not p.hp
     assert p.num_hashes == 0
@@ -480,6 +482,7 @@ def test_manifest_row_to_compute_parameters_3():
     assert not p.dna
     assert not p.protein
     assert p.dayhoff
+    assert p.moltype == 'dayhoff'
     assert not p.hp
     assert p.num_hashes == 0
     assert p.scaled == 200
@@ -499,11 +502,19 @@ def test_manifest_row_to_compute_parameters_4():
     assert not p.protein
     assert not p.dayhoff
     assert p.hp
+    assert p.moltype == 'hp'
     assert p.num_hashes == 0
     assert p.scaled == 200
     assert p.ksizes == [96]
     assert not p.track_abundance
     assert p.seed == 42
+
+
+def test_bad_compute_parameters():
+    p = ComputeParameters([31], 42, 0, 0, 0, 0, 0, True, 1000)
+    with pytest.raises(AssertionError):
+        p.moltype
+
 
 ### command line tests
 
