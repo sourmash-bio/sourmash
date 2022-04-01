@@ -460,6 +460,7 @@ def fromfile(args):
     # ComputeParameters objects, indexed by name.
 
     already_done = defaultdict(list)
+    already_done_rows = []
     for filename in args.already_done:
         idx = sourmash.load_file_as_index(filename)
         manifest = idx.manifest
@@ -475,8 +476,15 @@ def fromfile(args):
                 # add to list for this name
                 already_done[name].append(p)
 
+                # matching name? check if we already have sig. if so, store!
+                if name in all_names:
+                    if p in build_params:
+                        already_done_rows.append(row)
+
+    already_done_manifest = CollectionManifest(already_done_rows)
     if args.already_done:
         notify(f"Loaded {len(already_done)} pre-existing names from manifest(s)")
+        notify(f"collected {len(already_done_rows)} rows for already-done signatures.")
 
     ## now check/remove those that are already done.
 
@@ -504,30 +512,10 @@ def fromfile(args):
             else:
                 skipped_sigs += 1
 
-    ## done! we now have 'to_build' which contains the things we can build,
+    ## we now have 'to_build' which contains the things we can build,
     ## and 'missing', which contains anything we cannot build. Report!
 
     notify(f"Read {total_rows} rows, requesting that {total_sigs} signatures be built.")
-
-
-    ## collect alrady done rows, if any, for manifest output.
-    ## @CTB: can we combine with first pass code??
-
-    already_done_rows = []
-    for filename in args.already_done:
-        idx = sourmash.load_file_as_index(filename)
-        manifest = idx.manifest
-        assert manifest
-
-        for row in manifest.rows:
-            name = row['name']
-            if name in all_names:
-                p = ComputeParameters.from_manifest_row(row)
-                if p in build_params:
-                    already_done_rows.append(row)
-
-    notify(f"collected {len(already_done_rows)} rows for already-done signatures.")
-    already_done_manifest = CollectionManifest(already_done_rows)
 
     if already_done_manifest:
         info_d = _summarize_manifest(already_done_manifest)
@@ -549,7 +537,7 @@ def fromfile(args):
         notify(f"output {len(already_done_manifest)} already-done signatures to '{args.output_manifest_matching}' in manifest format.")
 
     if missing:
-        # @CTB
+        # @CTB how do we figure out missing? print etc.
         print(missing)
         error("** ERROR: we cannot build some of the requested signatures.")
         error(f"** {missing_count} total signatures (for {len(missing)} names) cannot be built.")
@@ -570,6 +558,7 @@ def fromfile(args):
 
     ## now, onward ho - do we build anything, or output stuff, or ...?
 
+    ## print out summary of to_build:
     print_results('---')
     print_results("summary of sketches to build:")
 
