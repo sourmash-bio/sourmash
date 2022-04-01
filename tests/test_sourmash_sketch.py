@@ -1727,6 +1727,7 @@ def test_fromfile_dna_and_protein_missing(runtmp):
     print(out)
     print(err)
 
+    assert "WARNING: fromfile entry 'GCA_903797575 Salmonella enterica' is missing a proteome" in err
     assert "** ERROR: we cannot build some of the requested signatures." in err
     assert "** 1 total signatures (for 1 names) cannot be built." in err
 
@@ -1745,6 +1746,8 @@ def test_fromfile_dna_and_protein_missing_ignore(runtmp):
 
     print(out)
     print(err)
+
+    assert "WARNING: fromfile entry 'GCA_903797575 Salmonella enterica' is missing a proteome" in err
 
     assert "** ERROR: we cannot build some of the requested signatures." in err
     assert "** 1 total signatures (for 1 names) cannot be built." in err

@@ -502,11 +502,13 @@ def fromfile(args):
             if p not in plist:
                 # nope - figure out genome/proteome needed
                 filename = genome if p.dna else proteome
+                filetype = 'genome' if p.dna else 'proteome'
 
                 if filename:
                     # add to build list
                     to_build[(name, filename)].append(p)
                 else:
+                    notify(f"WARNING: fromfile entry '{name}' is missing a {filetype}")
                     missing[name].append(p)
                     missing_count += 1
             else:
@@ -537,8 +539,6 @@ def fromfile(args):
         notify(f"output {len(already_done_manifest)} already-done signatures to '{args.output_manifest_matching}' in manifest format.")
 
     if missing:
-        # @CTB how do we figure out missing? print etc.
-        print(missing)
         error("** ERROR: we cannot build some of the requested signatures.")
         error(f"** {missing_count} total signatures (for {len(missing)} names) cannot be built.")
         if args.ignore_missing:
