@@ -350,6 +350,40 @@ def _compute_sigs(to_build, output, *, check_sequence=False):
     notify(f"saved {len(save_sigs)} signature(s) to '{save_sigs.location}'. Note: signature license is CC0.")
 
 
+def _output_csv_info(filename, sigs_to_build):
+    "output information about what signatures to build, in CSV format"
+    # @CTB try/test actually using this info to build sigs :)
+    output_n = 0
+    with sourmash_args.FileOutputCSV(filename) as csv_fp:
+        w = csv.DictWriter(csv_fp, fieldnames=['filename', 'sketchtype',
+                                               'output_index', 'name',
+                                               'param_strs'])
+        w.writeheader()
+
+        output_n = 0
+        for (name, filename), param_objs in sigs_to_build.items():
+            param_strs = []
+
+            # should all be the same!
+            if param_objs[0].dna:
+                assert all( ( p.dna for p in param_objs ) )
+                sketchtype = "dna"
+            else:
+                assert not any( ( p.dna for p in param_objs ) )
+                sketchtype = "protein"
+
+            for p in param_objs:
+                param_strs.append(p.to_param_str())
+
+            row = dict(filename=filename, sketchtype=sketchtype,
+                       param_strs="-p " + " -p ".join(param_strs),
+                       name=name, output_index=output_n)
+
+            w.writerow(row)
+
+            output_n += 1
+
+
 def fromfile(args):
     if args.license != 'CC0':
         error('error: sourmash only supports CC0-licensed signatures. sorry!')
@@ -374,14 +408,12 @@ def fromfile(args):
         # for each manifest row,
         for row in manifest.rows:
             name = row['name']
-            if not name:
-                continue
+            if name:
+                # build a ComputeParameters object for later comparison
+                p = ComputeParameters.from_manifest_row(row)
 
-            # build a ComputeParameters object for later comparison
-            p = ComputeParameters.from_manifest_row(row)
-
-            # add to list for this name
-            already_done[name].append(p)
+                # add to list for this name
+                already_done[name].append(p)
 
     if args.already_done:
         notify(f"Loaded {len(already_done)} pre-existing names from manifest(s)")
@@ -413,7 +445,7 @@ def fromfile(args):
 
     to_build = defaultdict(list)
     missing = defaultdict(list)
-    all_names = set()
+    all_names = {}
     missing_count = 0
     total_sigs = 0
     total_rows = 0
@@ -437,28 +469,9 @@ def fromfile(args):
 
                 if name in all_names:
                     n_duplicate_name += 1
-                    continue    # CTB tortured logic...
+                else:
+                    all_names[name] = (genome, proteome)
 
-                all_names.add(name)
-
-                # CTB split off into a separate loop?
-                plist = already_done[name]
-                for p in build_params:
-                    total_sigs += 1
-
-                    # does this signature already exist?
-                    if p not in plist:
-                        # nope - figure out genome/proteome needed
-                        filename = genome if p.dna else proteome
-
-                        if filename:
-                            # add to build list
-                            to_build[(name, filename)].append(p)
-                        else:
-                            missing[name].append(p)
-                            missing_count += 1
-                    else:
-                        skipped_sigs += 1
 
     fail_exit = False
     if n_duplicate_name:
@@ -472,13 +485,40 @@ def fromfile(args):
     if fail_exit:
         sys.exit(-1)
 
+
+    ## now check/remove those that are already done.
+
+    for name, (genome, proteome) in all_names.items():
+        plist = already_done.get(name)
+
+        # check list of already done against build parameters
+        for p in build_params:
+            total_sigs += 1
+
+            # does this signature already exist?
+            if p not in plist:
+                # nope - figure out genome/proteome needed
+                filename = genome if p.dna else proteome
+
+                if filename:
+                    # add to build list
+                    to_build[(name, filename)].append(p)
+                else:
+                    missing[name].append(p)
+                    missing_count += 1
+            else:
+                skipped_sigs += 1
+
     ## done! we now have 'to_build' which contains the things we can build,
     ## and 'missing', which contains anything we cannot build. Report!
 
     notify(f"Read {total_rows} rows, requesting that {total_sigs} signatures be built.")
 
-    already_done_rows = []
 
+    ## collect alrady done rows, if any, for manifest output.
+    ## @CTB: can we combine with first pass code??
+
+    already_done_rows = []
     for filename in args.already_done:
         idx = sourmash.load_file_as_index(filename)
         manifest = idx.manifest
@@ -567,37 +607,6 @@ def fromfile(args):
                       check_sequence=args.check_sequence)
 
     if args.output_csv_info: # output info necessary to construct
-        output_n = 0
-        csv_obj = sourmash_args.FileOutputCSV(args.output_csv_info)
-        csv_fp = csv_obj.open()
-        w = csv.DictWriter(csv_fp, fieldnames=['filename', 'sketchtype',
-                                               'output_index', 'name',
-                                               'param_strs'])
-        w.writeheader()
+        _output_csv_info(args.output_csv_info, to_build)
 
-        output_n = 0
-        for (name, filename), param_objs in to_build.items():
-            param_strs = []
-
-            # should all be the same!
-            if param_objs[0].dna:
-                assert all( ( p.dna for p in param_objs ) )
-                sketchtype = "dna"
-            else:
-                assert not any( ( p.dna for p in param_objs ) )
-                sketchtype = "protein"
-
-            for p in param_objs:
-                param_strs.append(p.to_param_str())
-
-            row = dict(filename=filename, sketchtype=sketchtype,
-                       param_strs="-p " + " -p ".join(param_strs),
-                       name=name, output_index=output_n)
-
-            w.writerow(row)
-
-            output_n += 1
-
-        csv_obj.close()
-
-    notify(f"** {total_sigs} total requested; built {total_sigs - skipped_sigs}, skipped {skipped_sigs}")
+    notify(f"** {total_sigs} total requested; output {total_sigs - skipped_sigs}, skipped {skipped_sigs}")

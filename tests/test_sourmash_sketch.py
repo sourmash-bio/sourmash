@@ -1538,7 +1538,7 @@ def test_fromfile_dna(runtmp):
     ss = siglist[0]
     assert ss.name == 'GCA_903797575 Salmonella enterica'
     assert ss.minhash.moltype == 'DNA'
-    assert "** 1 total requested; built 1, skipped 0" in runtmp.last_result.err
+    assert "** 1 total requested; output 1, skipped 0" in runtmp.last_result.err
 
 
 def test_fromfile_dna_empty(runtmp):
@@ -1581,7 +1581,7 @@ def test_fromfile_dna_check_sequence_succeed(runtmp):
     ss = siglist[0]
     assert ss.name == 'GCA_903797575 Salmonella enterica'
     assert ss.minhash.moltype == 'DNA'
-    assert "** 1 total requested; built 1, skipped 0" in runtmp.last_result.err
+    assert "** 1 total requested; output 1, skipped 0" in runtmp.last_result.err
 
 
 def test_fromfile_dna_check_sequence_fail(runtmp):
@@ -1629,7 +1629,7 @@ def test_fromfile_dna_and_protein(runtmp):
     dna_sig = dna_sig[0]
     assert dna_sig.name == 'GCA_903797575 Salmonella enterica'
 
-    assert "** 2 total requested; built 2, skipped 0" in runtmp.last_result.err
+    assert "** 2 total requested; output 2, skipped 0" in runtmp.last_result.err
 
 
 def test_fromfile_dna_and_protein_and_hp_and_dayhoff(runtmp):
@@ -1671,7 +1671,7 @@ def test_fromfile_dna_and_protein_and_hp_and_dayhoff(runtmp):
     dna_sig = dna_sig[0]
     assert dna_sig.name == 'GCA_903797575 Salmonella enterica'
 
-    assert "** 5 total requested; built 5, skipped 0" in runtmp.last_result.err
+    assert "** 5 total requested; output 5, skipped 0" in runtmp.last_result.err
 
 
 def test_fromfile_dna_and_protein_noname(runtmp):
@@ -1804,7 +1804,7 @@ def test_fromfile_force_overwrite(runtmp):
     assert len(siglist) == 2
     names = list(set([ ss.name for ss in siglist ]))
     assert names[0] == 'GCA_903797575 Salmonella enterica'
-    assert "** 1 total requested; built 1, skipped 0" in runtmp.last_result.err
+    assert "** 1 total requested; output 1, skipped 0" in runtmp.last_result.err
 
 
 def test_fromfile_need_params(runtmp):
@@ -1928,7 +1928,7 @@ def test_fromfile_dna_and_protein_partly_already_exists(runtmp):
     assert 'Read 2 rows, requesting that 4 signatures be built.' in err
     assert '** 2 new signatures to build from 2 files;' in err
     assert "** 2 already exist, so skipping those." in err
-    assert "** 4 total requested; built 2, skipped 2" in err
+    assert "** 4 total requested; output 2, skipped 2" in err
 
 
 def test_fromfile_dna_and_protein_already_exists_noname(runtmp):
@@ -1952,4 +1952,4 @@ def test_fromfile_dna_and_protein_already_exists_noname(runtmp):
     assert 'Loaded 0 pre-existing names from manifest(s)' in err
     assert 'Read 1 rows, requesting that 2 signatures be built.' in err
     assert '** 2 new signatures to build from 2 files;' in err
-    assert '** 2 total requested; built 2, skipped 0' in err
+    assert '** 2 total requested; output 2, skipped 0' in err
