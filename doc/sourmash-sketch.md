@@ -90,7 +90,7 @@ use `sketch protein` to build signatures.
 
 The `sourmash sketch fromfile` command is intended for use when
 building many signatures as part of a larger workflow. It supports a
-variety of options to only build new signatures, parallelize
+variety of options to build new signatures, parallelize
 signature construction, and otherwise aid in tracking and managing
 database construction.
 
@@ -115,7 +115,7 @@ Some of the key command-line options supported by `fromfile` are:
 
 If you would like help and advice on constructing large databases, or
 pointers to code for generating the `fromfile` CSV format, please ask
-[on the sourmash issue tracker](https://github.com/sourmash-bio/sourmash/issues).
+[on the sourmash issue tracker](https://github.com/sourmash-bio/sourmash/issues) or [gitter support channel](https://gitter.im/sourmash-bio/community).
 
 ## More detailed documentation
 

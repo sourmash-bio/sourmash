@@ -1693,7 +1693,7 @@ def test_fromfile_dna_and_protein_noname(runtmp):
 
 
 def test_fromfile_dna_and_protein_dup_name(runtmp):
-    # nothing in the name column
+    # duplicate names
     test_inp = utils.get_test_data('sketch_fromfile')
     shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
 
@@ -1837,7 +1837,7 @@ def test_fromfile_seed_not_allowed(runtmp):
 
 
 def test_fromfile_license_not_allowed(runtmp):
-    # check that we cannot adjust 'seed'
+    # check that license is CC0
     test_inp = utils.get_test_data('sketch_fromfile')
     shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
 

@@ -352,7 +352,6 @@ def _compute_sigs(to_build, output, *, check_sequence=False):
 
 def _output_csv_info(filename, sigs_to_build):
     "output information about what signatures to build, in CSV format"
-    # @CTB try/test actually using this info to build sigs :)
     output_n = 0
     with sourmash_args.FileOutputCSV(filename) as csv_fp:
         w = csv.DictWriter(csv_fp, fieldnames=['filename', 'sketchtype',
