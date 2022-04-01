@@ -143,7 +143,7 @@ class SourmashSignature(RustObject):
         return self.minhash.similarity(other.minhash, ignore_abundance=True,
                                        downsample=False)
 
-    def jaccard_ani(self, other, downsample=False, jaccard=None, confidence=0.95):
+    def jaccard_ani(self, other, downsample=False, jaccard=None, return_err_and_p_nothing_in_common=False)#, return_ci=False, confidence=0.95):
         "Compute Jaccard similarity with the other MinHash signature."
         self_mh = self.minhash
         other_mh = other.minhash
@@ -156,10 +156,15 @@ class SourmashSignature(RustObject):
             jaccard = self_mh.similarity(other_mh, ignore_abundance=True)
         avg_scaled_kmers = round((len(self_mh) + len(other_mh))/2)
         avg_n_kmers = avg_scaled_kmers * scaled # would be better if hll estimate
-        j_ani,ani_low,ani_high = jaccard_to_distance(jaccard, self_mh.ksize,
+        #j_ani,ani_low,ani_high = jaccard_to_distance_orig(jaccard, self_mh.ksize,
+        #                                            scaled, n_unique_kmers=avg_n_kmers,
+        #                                            confidence=confidence, return_identity=True)
+        j_ani,err,prob_nothing_in_common = jaccard_to_distance(jaccard, self_mh.ksize,
                                                     scaled, n_unique_kmers=avg_n_kmers,
-                                                    confidence=confidence, return_identity=True)
-        return j_ani, ani_low, ani_high
+                                                    return_identity=True) #confidence=confidence,
+        if return_err_and_p_nothing_in_common:
+            return j_ani,err,prob_nothing_in_common
+        return j_ani
 
     def contained_by(self, other, downsample=False):
         "Compute containment by the other signature. Note: ignores abundance."

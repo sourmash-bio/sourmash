@@ -88,6 +88,8 @@ def distance_to_identity(dist,d_low=None,d_high=None):
 
 def get_expected_log_probability(n_unique_kmers, ksize, mutation_rate, scaled_fraction):
     '''helper function
+       Note that scaled here needs to be between 0 and 1
+       (e.g. scaled 1000 --> scaled_fraction 0.001)
     '''
     exp_nmut = exp_n_mutated(n_unique_kmers, ksize, mutation_rate)
     try:
@@ -110,16 +112,17 @@ def get_exp_probability_nothing_common(mutation_rate, ksize, scaled, n_unique_km
     # assert 0.0 <= mutation_rate <= 1.0 and ksize >= 1 and scaled >= 1
     if sequence_len_bp and not n_unique_kmers:
         n_unique_kmers = sequence_len_to_n_kmers(sequence_len_bp, ksize)
-    sc = 1.0 / float(scaled)
+    f_scaled = 1.0 / float(scaled)
     if mutation_rate == 1.0:
         return 1.0
-    return exp( get_expected_log_probability(n_unique_kmers, ksize, mutation_rate, sc) )
+    return exp( get_expected_log_probability(n_unique_kmers, ksize, mutation_rate, f_scaled) )
 
 
-def containment_to_distance(containment, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None, confidence=0.95, return_identity=False, prob_threshold = 10.0**(-3)):
+def containment_to_distance(containment, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None, confidence=0.95, return_identity=False, return_ci = False, prob_threshold = 10.0**(-3)):
     """
     Containment --> distance CI (one step)
     """
+    sol1,sol2,point_estimate=None,None,None
     if sequence_len_bp and not n_unique_kmers:
         n_unique_kmers = sequence_len_to_n_kmers(sequence_len_bp, ksize)
     if containment <= 0.0001: # changed from 0.0, to mirror jaccard_to_distance_CI_one_step
@@ -127,42 +130,46 @@ def containment_to_distance(containment, ksize, scaled, n_unique_kmers=None, seq
     elif containment >= 0.9999:  # changed from 1.0, to mirror jaccard_to_distance_CI_one_step
         sol1 = sol2 = point_estimate = 0.0
     else:
-        try:
-            alpha = 1 - confidence
-            z_alpha = probit(1-alpha/2)
-            f_scaled = 1.0/scaled # these use scaled as a fraction between 0 and 1
+        point_estimate = 1.0-containment**(1.0/ksize)
+        if return_ci:
+            try:
+                alpha = 1 - confidence
+                z_alpha = probit(1-alpha/2)
+                f_scaled = 1.0/scaled # these use scaled as a fraction between 0 and 1
 
-            bias_factor = 1 - (1 - f_scaled) ** n_unique_kmers
+                bias_factor = 1 - (1 - f_scaled) ** n_unique_kmers
 
-            term_1 = (1.0-f_scaled) / (f_scaled * n_unique_kmers**3 * bias_factor**2)
-            term_2 = lambda pest: n_unique_kmers * exp_n_mutated(n_unique_kmers, ksize, pest) - exp_n_mutated_squared(n_unique_kmers, ksize, pest)
-            term_3 = lambda pest: var_n_mutated(n_unique_kmers, ksize, pest) / (n_unique_kmers**2)
+                term_1 = (1.0-f_scaled) / (f_scaled * n_unique_kmers**3 * bias_factor**2)
+                term_2 = lambda pest: n_unique_kmers * exp_n_mutated(n_unique_kmers, ksize, pest) - exp_n_mutated_squared(n_unique_kmers, ksize, pest)
+                term_3 = lambda pest: var_n_mutated(n_unique_kmers, ksize, pest) / (n_unique_kmers**2)
 
-            var_direct = lambda pest: term_1 * term_2(pest) + term_3(pest)
+                var_direct = lambda pest: term_1 * term_2(pest) + term_3(pest)
 
-            f1 = lambda pest: (1-pest)**ksize + z_alpha * sqrt(var_direct(pest)) - containment
-            f2 = lambda pest: (1-pest)**ksize - z_alpha * sqrt(var_direct(pest)) - containment
+                f1 = lambda pest: (1-pest)**ksize + z_alpha * sqrt(var_direct(pest)) - containment
+                f2 = lambda pest: (1-pest)**ksize - z_alpha * sqrt(var_direct(pest)) - containment
 
-            sol1 = brentq(f1, 0.0000001, 0.9999999)
-            sol2 = brentq(f2, 0.0000001, 0.9999999)
+                sol1 = brentq(f1, 0.0000001, 0.9999999)
+                sol2 = brentq(f2, 0.0000001, 0.9999999)
 
-            point_estimate = 1.0-containment**(1.0/ksize)
+            except ValueError as exc:
+                # afaict, this only happens with extremely small test data
+                notify("WARNING: Cannot estimate ANI from containment. Do your sketches contain enough hashes?")
+                notify(str(exc))
+                return None, None, None
 
-        except ValueError as exc:
-            notify("WARNING: Cannot estimate ANI. Are your minhashes big enough?")
-            notify(str(exc))
-            return None, None, None
-
-     # get probability nothing in common
+    # Do this here, so that we don't need to reconvert distance <--> identity later.
     prob_nothing_in_common = get_exp_probability_nothing_common(point_estimate, ksize, scaled, n_unique_kmers=n_unique_kmers)
     if prob_nothing_in_common >= prob_threshold:
-        # how to store /report this information? Do we want a column for search/prefetch/gather? or throw ValueError?
+        #  keep count, suggest mod decrease scaled, maybe decrease ksize
         notify('WARNING: These sketches may have no hashes in common based on chance alone.')
        
     if return_identity:
         point_estimate,sol2,sol1 = distance_to_identity(point_estimate,sol2,sol1)
 
-    return point_estimate,sol2,sol1
+    if return_ci:
+        return point_estimate, sol2, sol1, prob_nothing_in_common
+
+    return point_estimate, prob_nothing_in_common
 
 
 #from from mrcc.p_from_scaled_jaccard
@@ -181,7 +188,7 @@ def variance_scaled_jaccard(L, p, k, s):
     return term1 + term2 - term3
 
 
-def jaccard_to_distance(jaccard, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None, confidence=0.95, return_identity=False):
+def jaccard_to_distance_orig(jaccard, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None, confidence=0.95, return_identity=False, return_ci=False):
     """
     Scaled Jaccard to distance estimate and CI (one step)
     """
@@ -192,32 +199,42 @@ def jaccard_to_distance(jaccard, ksize, scaled, n_unique_kmers=None, sequence_le
     elif jaccard >= 0.9999:
         sol1 = sol2 = point_estimate = 0.0
     else:
-        try:
-            alpha = 1 - confidence
-            z_alpha = probit(1-alpha/2)
-            f_scaled = 1.0/scaled # these use scaled as a fraction between 0 and 1
+        point_estimate = 1.0 - (2.0 - 2.0/(jaccard + 1))**(1.0/ksize)
+        if return_ci:
+            try:
+                alpha = 1 - confidence
+                z_alpha = probit(1-alpha/2)
+                f_scaled = 1.0/scaled # these use scaled as a fraction between 0 and 1
 
-            var_direct = lambda pest: variance_scaled_jaccard(n_unique_kmers, pest, ksize, f_scaled)
+                var_direct = lambda pest: variance_scaled_jaccard(n_unique_kmers, pest, ksize, f_scaled)
 
-            f1 = lambda pest: 2.0/(2- (1-pest)**ksize ) - 1 + z_alpha * sqrt(var_direct(pest)) - jaccard
-            f2 = lambda pest: 2.0/(2- (1-pest)**ksize ) - 1 - z_alpha * sqrt(var_direct(pest)) - jaccard
+                f1 = lambda pest: 2.0/(2- (1-pest)**ksize ) - 1 + z_alpha * sqrt(var_direct(pest)) - jaccard
+                f2 = lambda pest: 2.0/(2- (1-pest)**ksize ) - 1 - z_alpha * sqrt(var_direct(pest)) - jaccard
 
-            sol1 = brentq(f1, 0.0000001, 0.9999999)
-            sol2 = brentq(f2, 0.0000001, 0.9999999)
-            point_estimate = 1.0 - (2.0 - 2.0/(jaccard + 1))**(1.0/ksize)
+                sol1 = brentq(f1, 0.0000001, 0.9999999)
+                sol2 = brentq(f2, 0.0000001, 0.9999999)
 
-        except ValueError as exc:
-            notify("WARNING: Cannot estimate ANI. Are your minhashes big enough?")
-            notify(str(exc))
-            return None, None, None
+            except ValueError as exc:
+                # afaict, this only happens with extremely small test data
+                notify("WARNING: Cannot estimate ANI from jaccard. Do your sketches contain enough hashes?")
+                notify(str(exc))
+                return None, None, None
+
+    # Do this here, so that we don't need to reconvert distance <--> identity later.
+    prob_nothing_in_common = get_exp_probability_nothing_common(point_estimate, ksize, scaled, n_unique_kmers=n_unique_kmers)
+    if prob_nothing_in_common >= prob_threshold:
+        notify('WARNING: These sketches may have no hashes in common based on chance alone.')
 
     if return_identity:
         point_estimate,sol2,sol1 = distance_to_identity(point_estimate,sol2,sol1)
 
-    return point_estimate,sol2,sol1
+    if return_ci:
+        return point_estimate, sol2, sol1, prob_nothing_in_common
+
+    return point_estimate, prob_nothing_in_common
 
 
-def jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None, return_identity=False, prob_threshold = 10.0**(-3)):
+def jaccard_to_distance(jaccard, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None, return_identity=False, prob_threshold = 10.0**(-3)):
     """
     Given parameters, calculate point estimate for mutation rate from jaccard index.
     First checks if parameters are valid (checks are not exhaustive). Then uses formulas
@@ -235,7 +252,7 @@ def jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers=No
     # Returns: point_estimate_of_mutation_rate
     """
     # NTP question: does this equation consider variance of jaccard due to scaled? 
-    #Or was that only used for estimating the CI around the pt estimate?
+    # Or was that only used for estimating the CI around the pt estimate?
     error_lower_bound = None
     if sequence_len_bp and not n_unique_kmers:
         n_unique_kmers = sequence_len_to_n_kmers(sequence_len_bp, ksize)
@@ -250,20 +267,20 @@ def jaccard_to_distance_point_estimate(jaccard, ksize, scaled, n_unique_kmers=No
         var_n_mut = var_n_mutated(n_unique_kmers, ksize, point_estimate)
         error_lower_bound = 1.0 * n_unique_kmers * var_n_mut / (n_unique_kmers + exp_n_mut)**3
     
-    if error_lower_bound is not None and error_lower_bound > 10.0**(-4.0):
-        print(f"err: ({error_lower_bound})")
+    if error_lower_bound is not None and error_lower_bound > 10.0**(-4.0): # does this need to be modifiable?
+        #print(f"err: ({error_lower_bound})")
         notify(f"WARNING: Error on Jaccard distance point estimate is too high ({error_lower_bound}).")
+        # @NTP: ruturn ANI estimate anyway, NA later instead? Probably want this value for `sig overlap, at least?`
         notify(f"Returning 'NA' for this comparison and continuing.")
         point_estimate = "NA"
     
     # get probability nothing in common
     prob_nothing_in_common = get_exp_probability_nothing_common(point_estimate, ksize, scaled, n_unique_kmers=n_unique_kmers)
     if prob_nothing_in_common >= prob_threshold:
-        # how to store this information? Do we want a col in search/prefetch/gather?
         notify('WARNING: These sketches may have no hashes in common based on chance alone.')
 
     if return_identity:
         point_estimate = distance_to_identity(point_estimate)
 
-    return point_estimate, error_lower_bound
+    return point_estimate, prob_nothing_in_common, error_lower_bound
 
