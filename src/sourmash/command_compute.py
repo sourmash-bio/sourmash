@@ -14,6 +14,7 @@ from .utils import RustObject
 from ._lowlevel import ffi, lib
 
 DEFAULT_COMPUTE_K = '21,31,51'
+DEFAULT_MMHASH_SEED = 42
 DEFAULT_LINE_COUNT = 1500
 
 
@@ -197,8 +198,13 @@ def _compute_individual(args, signatures_factory):
             if args.singleton:
                 for n, record in enumerate(screed_iter):
                     sigs = signatures_factory()
-                    add_seq(sigs, record.sequence,
-                            args.input_is_protein, args.check_sequence)
+                    try:
+                        add_seq(sigs, record.sequence,
+                                args.input_is_protein, args.check_sequence)
+                    except ValueError as exc:
+                        error(f"ERROR when reading from '{filename}' - ")
+                        error(str(exc))
+                        sys.exit(-1)
 
                     set_sig_name(sigs, filename, name=record.name)
                     save_sigs_to_location(sigs, save_sigs)
@@ -211,7 +217,7 @@ def _compute_individual(args, signatures_factory):
                 sigs = signatures_factory()
 
                 # consume & calculate signatures
-                notify('... reading sequences from {}', filename)
+                notify(f'... reading sequences from {filename}')
                 name = None
                 for n, record in enumerate(screed_iter):
                     if n % 10000 == 0:
@@ -220,8 +226,13 @@ def _compute_individual(args, signatures_factory):
                         elif args.name_from_first:
                             name = record.name
 
-                    add_seq(sigs, record.sequence,
-                            args.input_is_protein, args.check_sequence)
+                    try:
+                        add_seq(sigs, record.sequence,
+                                args.input_is_protein, args.check_sequence)
+                    except ValueError as exc:
+                        error(f"ERROR when reading from '{filename}' - ")
+                        error(str(exc))
+                        sys.exit(-1)
 
                 notify('...{} {} sequences', filename, n, end='')
 
@@ -348,11 +359,10 @@ class ComputeParameters(RustObject):
         else:
             ksize = row['ksize'] * 3
 
-        p = cls([ksize], 42, is_protein, is_dayhoff, is_hp, is_dna,
+        p = cls([ksize], DEFAULT_MMHASH_SEED, is_protein, is_dayhoff, is_hp, is_dna,
                 row['num'], row['with_abundance'], row['scaled'])
 
         return p
-
 
     def to_param_str(self):
         "Convert object to equivalent params str."
@@ -388,7 +398,7 @@ class ComputeParameters(RustObject):
             pi.append("abund")
         # noabund is default
 
-        if self.seed != 42:
+        if self.seed != DEFAULT_MMHASH_SEED:
             pi.append(f"seed={self.seed}")
         # self.seed
 
@@ -473,6 +483,16 @@ class ComputeParameters(RustObject):
     @dna.setter
     def dna(self, v):
         return self._methodcall(lib.computeparams_set_dna, v)
+
+    @property
+    def moltype(self):
+        if self.dna: moltype = 'DNA'
+        elif self.protein: moltype = 'protein'
+        elif self.hp: moltype = 'hp'
+        elif self.dayhoff: moltype = 'dayhoff'
+        else: assert 0
+
+        return moltype
 
     @property
     def num_hashes(self):

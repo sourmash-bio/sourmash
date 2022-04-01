@@ -119,12 +119,13 @@ information for each command.
 
 Most of the commands in sourmash work with **signatures**, which contain information about genomic or proteomic sequences. Each signature contains one or more **sketches**, which are compressed versions of these sequences. Using sourmash, you can search, compare, and analyze these sequences in various ways.
 
-To create a signature with one or more sketches, you use the `sourmash sketch` command. There are three main commands:
+To create a signature with one or more sketches, you use the `sourmash sketch` command. There are four main commands:
 
 ```
 sourmash sketch dna
 sourmash sketch protein
 sourmash sketch translate
+sourmash sketch fromfile
 ```
 
 The `sketch dna` command reads in **DNA sequences** and outputs **DNA sketches**.
@@ -133,10 +134,14 @@ The `sketch protein` command reads in **protein sequences** and outputs **protei
 
 The `sketch translate` command reads in **DNA sequences**, translates them in all six frames, and outputs **protein sketches**.
 
-`sourmash sketch` takes FASTA or FASTQ sequences as input; input data can be
-uncompressed, compressed with gzip, or compressed with bzip2. The output
-will be one or more JSON signature files that can be used with the other
-sourmash commands.
+The `sketch fromfile` command takes in a CSV file containing the
+locations of genomes and proteomes, and outputs all of the requested
+sketches. It is primarily intended for large-scale database construction.
+
+All of the `sourmash sketch` commands take FASTA or FASTQ sequences as
+input; input data can be uncompressed, compressed with gzip, or
+compressed with bzip2. The output will be one or more signature files
+that can be used by other sourmash commands.
 
 Please see
 [the `sourmash sketch` documentation page](sourmash-sketch.md) for
@@ -1584,6 +1589,9 @@ in the JSON `.sig` format, either to the provided output filename or
 to stdout.
 
 All of these save formats can be loaded by sourmash commands.
+
+**We strongly suggest using .zip files to store signatures: they are fast,
+small, and fully supported by all the sourmash commands.**
 
 ### Loading many signatures
 
