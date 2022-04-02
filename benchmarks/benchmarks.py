@@ -1,6 +1,10 @@
+import os
 import random
+from pathlib import Path
+from tempfile import mkdtemp
 
 
+from sourmash.sbt_storage import ZipStorage
 from sourmash.minhash import MinHash
 
 
@@ -139,3 +143,28 @@ class PeakmemMinAbundanceSuite(PeakmemMinHashSuite):
     def setup(self):
         PeakmemMinHashSuite.setup(self)
         self.mh = MinHash(500, 21, track_abundance=True)
+
+####################
+
+class TimeZipStorageSuite:
+
+    def setup(self):
+        self.tempdir = mkdtemp()
+        self.zipfile = Path(self.tempdir) / "temp.zip"
+
+        with ZipStorage(self.zipfile, mode="w") as storage:
+            # one big-ish entry
+            storage.save("sig1", b"9" * 1_000_000)
+            for i in range(100_000):
+                # just so we have lots of entries
+                storage.save(str(i), b"0")
+            storage.flush()
+
+    def time_load_from_zipstorage(self):
+        with ZipStorage(self.zipfile) as storage:
+            for i in range(20):
+                storage.load("sig1")
+
+    def teardown(self):
+        self.zipfile.unlink()
+        os.rmdir(self.tempdir)
