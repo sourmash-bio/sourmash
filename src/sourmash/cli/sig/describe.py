@@ -1,7 +1,7 @@
 """show details of signature"""
 
 from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
-                                add_picklist_args)
+                                add_picklist_args, add_pattern_args)
 
 
 def subparser(subparsers):
@@ -10,6 +10,10 @@ def subparser(subparsers):
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
+    )
+    subparser.add_argument(
+        '-d', '--debug', action='store_true',
+        help='provide debugging output'
     )
     subparser.add_argument(
         '--csv', metavar='FILE',
@@ -26,6 +30,7 @@ def subparser(subparsers):
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
+    add_pattern_args(subparser)
 
 
 def main(args):

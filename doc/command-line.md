@@ -119,12 +119,13 @@ information for each command.
 
 Most of the commands in sourmash work with **signatures**, which contain information about genomic or proteomic sequences. Each signature contains one or more **sketches**, which are compressed versions of these sequences. Using sourmash, you can search, compare, and analyze these sequences in various ways.
 
-To create a signature with one or more sketches, you use the `sourmash sketch` command. There are three main commands:
+To create a signature with one or more sketches, you use the `sourmash sketch` command. There are four main commands:
 
 ```
 sourmash sketch dna
 sourmash sketch protein
 sourmash sketch translate
+sourmash sketch fromfile
 ```
 
 The `sketch dna` command reads in **DNA sequences** and outputs **DNA sketches**.
@@ -133,10 +134,14 @@ The `sketch protein` command reads in **protein sequences** and outputs **protei
 
 The `sketch translate` command reads in **DNA sequences**, translates them in all six frames, and outputs **protein sketches**.
 
-`sourmash sketch` takes FASTA or FASTQ sequences as input; input data can be
-uncompressed, compressed with gzip, or compressed with bzip2. The output
-will be one or more JSON signature files that can be used with the other
-sourmash commands.
+The `sketch fromfile` command takes in a CSV file containing the
+locations of genomes and proteomes, and outputs all of the requested
+sketches. It is primarily intended for large-scale database construction.
+
+All of the `sourmash sketch` commands take FASTA or FASTQ sequences as
+input; input data can be uncompressed, compressed with gzip, or
+compressed with bzip2. The output will be one or more signature files
+that can be used by other sourmash commands.
 
 Please see
 [the `sourmash sketch` documentation page](sourmash-sketch.md) for
@@ -948,10 +953,7 @@ for an example use case.
 
 ## `sourmash signature` subcommands for signature manipulation
 
-These commands manipulate signatures from the command line. Currently
-supported subcommands are `merge`, `rename`, `intersect`,
-`extract`, `downsample`, `subtract`, `import`, `export`, `info`,
-`flatten`, `filter`, `cat`, and `split`.
+These commands manipulate signatures from the command line.
 
 The signature commands that combine or otherwise have multiple
 signatures interacting (`merge`, `intersect`, `subtract`) work only on
@@ -989,19 +991,24 @@ Display signature details.
 
 For example,
 ```
-sourmash sig describe tests/test-data/47.fa.sig
+sourmash sig describe tests/test-data/track_abund/47.fa.sig
 ```
 will display:
 
 ```
-signature filename: tests/test-data/47.fa.sig
+signature filename: tests/test-data/track_abund/47.fa.sig
 signature: NC_009665.1 Shewanella baltica OS185, complete genome
-source file: 47.fa
+source file: podar-ref/47.fa
 md5: 09a08691ce52952152f0e866a59f6261
-k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=0
+k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=1
 size: 5177
+sum hashes: 5292
 signature license: CC0
 ```
+
+Here, the `size` is the number of distinct hashes in the sketch, and
+`sum_hashes` is the total number of hashes in the sketch, with abundances.
+When `track_abundance` is 0, `size` is always the same as `sum_hashes`.
 
 ### `sourmash signature fileinfo` - display a summary of the contents of a sourmash collection
 
@@ -1179,10 +1186,23 @@ will output the intersection of all the hashes in those three files to
 
 The `intersect` command flattens all signatures, i.e. the abundances
 in any signatures will be ignored and the output signature will have
-`track_abundance` turned off.
+`track_abundance` turned off.  The `-A/--abundance-from` argument will
+borrow abundances from the specified signature (which will also be added
+to the intersection).
 
-Note: `intersect` only creates one output file, with one signature in it,
-in the JSON `.sig` format.
+### `sourmash signature inflate` - transfer abundances from one signature to others
+
+Use abundances from one signature to provide abundances on other signatures.
+
+For example,
+
+```
+sourmash signature inflate file1.sig file2.sig file3.sig -o inflated.sig
+```
+will take the abundances from hashes `file1.sig` and use them to set
+the abundances on matching hashes in `file2.sig` and `file3.sig`.
+Any hashes that are not present in `file1.sig` will be removed from
+`file2.sig` and `file3.sig` as they will now have zero abundance.
 
 ### `sourmash signature downsample` - decrease the size of a signature
 
@@ -1379,6 +1399,25 @@ iterating over the signatures in the input file. This can be slow for
 large collections. Use `--no-rebuild-manifest` to load an existing
 manifest if it is available.
 
+### `sourmash signature check` - compare picklists and manifests
+
+Compare picklists and manifests across databases, and optionally output matches
+and missing items.
+
+For example,
+```
+sourmash sig check tests/test-data/gather/GCF*.sig \
+    --picklist tests/test-data/gather/salmonella-picklist.csv::manifest
+```
+will load all of the `GCF` signatures and compare them to the given picklist.
+With `-o/--output-missing`, `sig check` will save unmatched elements of the
+picklist CSV. With `--save-manifest-matching`, `sig check` will save all
+of the _matched_ elements to a manifest file, which can then be used as a
+sourmash database.
+
+`sourmash sig check` is particularly useful when working with large
+collections of signatures and identifiers.
+
 ## Advanced command-line usage
 
 ### Loading signatures and databases
@@ -1551,6 +1590,9 @@ to stdout.
 
 All of these save formats can be loaded by sourmash commands.
 
+**We strongly suggest using .zip files to store signatures: they are fast,
+small, and fully supported by all the sourmash commands.**
+
 ### Loading many signatures
 
 #### Loading signatures within a directory hierarchy
@@ -1606,3 +1648,69 @@ sig` commands will output to stdout.  So, for example,
 
 `sourmash sketch ... -o - | sourmash sig describe -` will describe the
 signatures that were just created.
+
+### Using manifests to explicitly refer to collections of files
+
+(sourmash v4.4.0 and later)
+
+Manifests are metadata catalogs of signatures that are used for
+signature selection and loading. They are used extensively by sourmash
+internals to speed up signature selection through picklists and
+pattern matching.
+
+Manifests can _also_ be used externally (via the command-line), and
+may be useful for organizing large collections of signatures. They can
+be generated with `sourmash sig manifest` as well as `sourmash sig check`.
+
+Suppose you have a large collection of signature (`.sig` or `.sig.gz`
+files) under a directory. You can create a manifest file for them like so:
+```
+sourmash sig manifest <dir> -o <dir>/manifest.csv
+```
+and then use the manifest directly for sourmash operations:
+```
+sourmash sig fileinfo <dir>/manifest.csv
+```
+This manifest can be used as a database target for most sourmash
+operations - search, gather, etc.  Note that manifests for directories
+must be placed within (and loaded from) the directory from which the
+manifest was generated; the specific manifest filename does not
+matter.
+
+A more advanced and slightly tricky way to use explicit manifest files
+is with lists of files.  If you create a file with a path list
+containing the locations of loadable sourmash collections, you can run
+`sourmash sig manifest pathlist.txt -o mf.csv` to generate a manifest
+of all of the files.  The resulting manifest in `mf.csv` can then be
+loaded directly.  This is very handy when you have many sourmash
+signatures, or large signature files.  The tricky part in doing this
+is that the manifest will store the same paths listed in the pathlist
+file - whether they are relative or absolute paths - and these paths
+must be resolvable by sourmash from the current working directory.
+This makes explicit manifests built from pathlist files less portable
+within or across systems than the other sourmash collections, which
+are all relocatable.
+
+For example, if you create a pathlist file `paths.txt` containing the
+following:
+```
+/path/to/zipfile.zip
+local_directory/some_signature.sig.gz
+local_dir2/
+```
+and then run:
+```
+sourmash sig manifest paths.txt -o mf.csv
+```
+you will be able to use `mf.csv` as a database for `sourmash search`
+and `sourmash gather` commands.  But, because it contains two relative paths,
+you will only be able to use it _from the directory that contains those
+two relative paths_.
+
+**Our advice:** We suggest using zip file collections for most
+situations; we primarily recommend using explicit manifests for
+situations where you have a **very large** collection of signatures
+(1000s or more), and don't want to make multiple copies of signatures
+in the collection (as you would have to, with a zipfile). This can be
+useful if you want to refer to different subsets of the collection
+without making multiple copies in a zip file.

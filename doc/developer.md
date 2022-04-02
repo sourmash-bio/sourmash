@@ -105,6 +105,11 @@ Code coverage can be viewed interactively at [codecov.io][1].
 [1]: https://codecov.io/gh/sourmash-bio/sourmash/
 [2]: https://github.com/sourmash-bio/sourmash/actions
 
+## Writing docs.
+
+Please see [the docs README](README.md) for information on how we
+write and build the sourmash docs.
+
 ## Code organization
 
 There are three main components in the sourmash repo:

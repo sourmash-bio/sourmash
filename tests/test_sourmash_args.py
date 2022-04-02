@@ -447,7 +447,7 @@ def test_get_manifest_3_build():
         was_called = 0
         def _signatures_with_internal(self):
             self.was_called = 1
-            return [(ss47, "fakeloc", "fakeiloc")]
+            return [(ss47, "fakeiloc")]
 
     idx = FakeIndex([sig47])
 
@@ -471,7 +471,7 @@ def test_get_manifest_3_build_2():
 
         def _signatures_with_internal(self):
             self.was_called = 1
-            return [(ss47, "fakeloc", "fakeiloc")]
+            return [(ss47, "fakeiloc")]
 
     idx = FakeIndex([sig47])
 

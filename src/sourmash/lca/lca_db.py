@@ -58,6 +58,10 @@ class LCA_Database(Index):
     """
     is_database = True
 
+    # we set manifest to None to avoid implication of fast on-disk access to
+    # sketches. This may be revisited later.
+    manifest = None
+
     def __init__(self, ksize, scaled, moltype='DNA'):
         self.ksize = int(ksize)
         self.scaled = int(scaled)
@@ -181,8 +185,9 @@ class LCA_Database(Index):
             yield v
 
     def _signatures_with_internal(self):
+        "Return all of the signatures in this LCA database."
         for idx, ss in self._signatures.items():
-            yield ss, self.location, idx
+            yield ss, idx
 
     def select(self, ksize=None, moltype=None, num=0, scaled=0, abund=None,
                containment=False, picklist=None):
