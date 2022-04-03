@@ -155,9 +155,14 @@ impl Storage for FSStorage {
     }
 }
 
-pub struct ZipStorage<'a> {
+#[ouroboros::self_referencing]
+pub struct ZipStorage {
     mapping: Option<memmap2::Mmap>,
-    archive: Option<piz::ZipArchive<'a>>,
+
+    #[borrows(mapping)]
+    #[not_covariant]
+    archive: Option<piz::ZipArchive<'this>>,
+
     subdir: Option<String>,
     path: Option<String>,
     //metadata: piz::read::DirectoryContents<'a>,
@@ -190,7 +195,7 @@ fn find_path<'a, P: AsRef<Path>>(
     archive.entries().iter().find(|entry| entry.path == path)
 }
 
-impl<'a> Storage for ZipStorage<'a> {
+impl Storage for ZipStorage {
     fn save(&self, _path: &str, _content: &[u8]) -> Result<String, Error> {
         unimplemented!();
     }
@@ -237,8 +242,8 @@ impl<'a> Storage for ZipStorage<'a> {
     }
 }
 
-impl<'a> ZipStorage<'a> {
-    pub fn new(location: &str) -> Result<Self, Error> {
+impl<'a> ZipStorage {
+    pub fn from_file(location: &str) -> Result<Self, Error> {
         let zip_file = File::open(location)?;
         let mapping = unsafe { memmap2::Mmap::map(&zip_file)? };
 

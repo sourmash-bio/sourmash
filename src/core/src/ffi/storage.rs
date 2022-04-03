@@ -8,7 +8,7 @@ use crate::storage::ZipStorage;
 pub struct SourmashZipStorage;
 
 impl ForeignObject for SourmashZipStorage {
-    type RustObject = ZipStorage<'static>;
+    type RustObject = ZipStorage;
 }
 
 ffi_fn! {
