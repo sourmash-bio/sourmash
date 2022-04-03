@@ -1627,6 +1627,45 @@ def test_sig_extract_7_no_ksize(c):
     assert len(siglist) == 3
 
 
+def test_sig_extract_8_empty_picklist_fail(runtmp):
+    # what happens with an empty picklist?
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # make empty picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        pass
+
+    picklist_arg = f"{picklist_csv}:md5full:md5"
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist', picklist_arg)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    assert "empty or improperly formatted pickfile" in err
+
+
+def test_sig_extract_8_nofile_picklist_fail(runtmp):
+    # what happens with an empty picklist?
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # picklist file does not exist
+    picklist_csv = runtmp.output('pick.csv')
+    picklist_arg = f"{picklist_csv}:md5full:md5"
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist', picklist_arg)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    assert "must exist and be a regular file" in err
+
+
 def test_sig_extract_8_picklist_md5(runtmp):
     # extract 47 from 47, using a picklist w/full md5
     sig47 = utils.get_test_data('47.fa.sig')
