@@ -39,6 +39,7 @@ TODO:
 @CTB add DISTINCT to sketch and hash select
 @CTB don't do constraints if scaleds are equal?
 @CTB figure out what to do about 'sourmash sig manifest sqldb'
+@CTB do we want to limit to one moltype/ksize, too, like LCA index?
 """
 import time
 import sqlite3
@@ -83,67 +84,24 @@ picklist_selects = dict(
 class SqliteIndex(Index):
     is_database = True
     
-    def __init__(self, dbfile, selection_dict=None, conn=None):
+    # NOTE: we do not need _signatures_with_internal for this class
+    # because it supplies a manifest directly :tada:.
+
+    def __init__(self, dbfile, sqlite_manifest=None, conn=None):
+        "Constructor. 'dbfile' should be valid filename or ':memory:'."
         self.dbfile = dbfile
-        self.selection_dict = selection_dict
 
-        if conn is not None:
-            self.conn = conn
-        else:
-            try:
-                self.conn = sqlite3.connect(dbfile,
-                                            detect_types=sqlite3.PARSE_DECLTYPES)
+        # no connection? connect and/or create!
+        if conn is None:
+            conn = self._connect(dbfile)
 
-                c = self.conn.cursor()
+        # build me a SQLite manifest class to use for selection.
+        if sqlite_manifest is None:
+            sqlite_manifest = CollectionManifest_Sqlite(conn)
+        self.manifest = sqlite_manifest
+        self.conn = conn
 
-                c.execute("PRAGMA cache_size=10000000")
-                c.execute("PRAGMA synchronous = OFF")
-                c.execute("PRAGMA journal_mode = MEMORY")
-                c.execute("PRAGMA temp_store = MEMORY")
-
-                c.execute("""
-                CREATE TABLE IF NOT EXISTS sketches
-                  (id INTEGER PRIMARY KEY,
-                   name TEXT,
-                   scaled INTEGER NOT NULL,
-                   ksize INTEGER NOT NULL,
-                   filename TEXT,
-                   is_dna BOOLEAN NOT NULL,
-                   is_protein BOOLEAN NOT NULL,
-                   is_dayhoff BOOLEAN NOT NULL,
-                   is_hp BOOLEAN NOT NULL,
-                   md5sum TEXT NOT NULL, 
-                   seed INTEGER NOT NULL,
-                   n_hashes INTEGER NOT NULL
-                )
-                """)
-                c.execute("""
-                CREATE TABLE IF NOT EXISTS hashes (
-                   hashval INTEGER NOT NULL,
-                   sketch_id INTEGER NOT NULL,
-                   FOREIGN KEY (sketch_id) REFERENCES sketches (id)
-                )
-                """)
-                c.execute("""
-                CREATE INDEX IF NOT EXISTS hashval_idx ON hashes (
-                   hashval,
-                   sketch_id
-                )
-                """)
-                c.execute("""
-                CREATE INDEX IF NOT EXISTS hashval_idx2 ON hashes (
-                   hashval
-                )
-                """)
-                c.execute("""
-                CREATE INDEX IF NOT EXISTS sketch_idx ON hashes (
-                   sketch_id
-                )
-                """
-                )
-            except (sqlite3.OperationalError, sqlite3.DatabaseError):
-                raise ValueError(f"cannot open '{dbfile}' as sqlite3 database")
-
+        # set 'scaled'.
         c = self.conn.cursor()
         c.execute("SELECT DISTINCT scaled FROM sketches")
         scaled_vals = c.fetchall()
@@ -155,6 +113,65 @@ class SqliteIndex(Index):
         else:
             self.scaled = None
 
+    def _connect(self, dbfile):
+        "Connect to existing SQLite database or create new."
+        try:
+            conn = sqlite3.connect(dbfile,
+                                   detect_types=sqlite3.PARSE_DECLTYPES)
+
+            c = conn.cursor()
+
+            c.execute("PRAGMA cache_size=10000000")
+            c.execute("PRAGMA synchronous = OFF")
+            c.execute("PRAGMA journal_mode = MEMORY")
+            c.execute("PRAGMA temp_store = MEMORY")
+
+            # @CTB move to sqlite manifest class?
+            c.execute("""
+            CREATE TABLE IF NOT EXISTS sketches
+              (id INTEGER PRIMARY KEY,
+               name TEXT,
+               scaled INTEGER NOT NULL,
+               ksize INTEGER NOT NULL,
+               filename TEXT,
+               is_dna BOOLEAN NOT NULL,
+               is_protein BOOLEAN NOT NULL,
+               is_dayhoff BOOLEAN NOT NULL,
+               is_hp BOOLEAN NOT NULL,
+               md5sum TEXT NOT NULL, 
+               seed INTEGER NOT NULL,
+               n_hashes INTEGER NOT NULL
+            )
+            """)
+            c.execute("""
+            CREATE TABLE IF NOT EXISTS hashes (
+               hashval INTEGER NOT NULL,
+               sketch_id INTEGER NOT NULL,
+               FOREIGN KEY (sketch_id) REFERENCES sketches (id)
+            )
+            """)
+            c.execute("""
+            CREATE INDEX IF NOT EXISTS hashval_idx ON hashes (
+               hashval,
+               sketch_id
+            )
+            """)
+            c.execute("""
+            CREATE INDEX IF NOT EXISTS hashval_idx2 ON hashes (
+               hashval
+            )
+            """)
+            c.execute("""
+            CREATE INDEX IF NOT EXISTS sketch_idx ON hashes (
+               sketch_id
+            )
+            """
+            )
+        except (sqlite3.OperationalError, sqlite3.DatabaseError):
+            raise ValueError(f"cannot open '{dbfile}' as sqlite3 database")
+
+        return conn
+
     def cursor(self):
         return self.conn.cursor()
 
@@ -165,20 +182,7 @@ class SqliteIndex(Index):
         self.conn.commit()
 
     def __len__(self):
-        c = self.cursor()
-        conditions, values, picklist = self._select_signatures(c)
-        if conditions:
-            conditions = conditions = "WHERE " + " AND ".join(conditions)
-        else:
-            conditions = ""
-
-        c.execute(f"SELECT COUNT(*) FROM sketches {conditions}", values)
-        count, = c.fetchone()
-
-        # @CTB do we need to pay attention to picklist here?
-        # we can generate manifest and use 'picklist.matches_manifest_row'
-        # on rows.
-        return count
+        return len(self.manifest)
 
     def insert(self, ss, *, cursor=None, commit=True):
         """
@@ -189,7 +193,7 @@ class SqliteIndex(Index):
 
         If 'commit' is True, commit after add; otherwise, do not.
 
-        # @CTB do we want to limit to one moltype/ksize, too, like LCA index?
+        @CTB: move parts of this to manifest?
         """
         if cursor:
             c = cursor
@@ -234,63 +238,6 @@ class SqliteIndex(Index):
     def location(self):
         return self.dbfile
 
-    def _select_signatures(self, c):
-        """
-        Given cursor 'c', build a set of SQL SELECT conditions
-        and matching value tuple that can be used to select the
-        right sketches from the database.
-
-        Returns a triple 'conditions', 'values', and 'picklist'.
-        'conditions' is a list that should be joined with 'AND'.
-        The picklist is simply retrieved from the selection dictionary.
-        """
-        conditions = []
-        values = []
-        picklist = None
-        if self.selection_dict:
-            select_d = self.selection_dict
-            if 'ksize' in select_d and select_d['ksize']:
-                conditions.append("sketches.ksize = ?")
-                values.append(select_d['ksize'])
-            if 'scaled' in select_d and select_d['scaled'] > 0:
-                conditions.append("sketches.scaled > 0")
-            if 'containment' in select_d and select_d['containment']:
-                conditions.append("sketches.scaled > 0")
-            if 'moltype' in select_d:
-                moltype = select_d['moltype']
-                if moltype == 'DNA':
-                    conditions.append("sketches.is_dna")
-                elif moltype == 'protein':
-                    conditions.append("sketches.is_protein")
-                elif moltype == 'dayhoff':
-                    conditions.append("sketches.is_dayhoff")
-                elif moltype == 'hp':
-                    conditions.append("sketches.is_hp")
-
-            picklist = select_d.get('picklist')
-
-            # support picklists!
-            if picklist is not None:
-                c.execute("DROP TABLE IF EXISTS pickset")
-                c.execute("CREATE TABLE pickset (sketch_id INTEGER)")
-
-                transform = picklist_transforms[picklist.coltype]
-                sql_stmt = picklist_selects[picklist.coltype]
-
-                vals = [ (transform(v),) for v in picklist.pickset ]
-                c.executemany(sql_stmt, vals)
-
-                if picklist.pickstyle == PickStyle.INCLUDE:
-                    conditions.append("""
-                    sketches.id IN (SELECT sketch_id FROM pickset)
-                    """)
-                elif picklist.pickstyle == PickStyle.EXCLUDE:
-                    conditions.append("""
-                    sketches.id NOT IN (SELECT sketch_id FROM pickset)
-                    """)
-
-        return conditions, values, picklist
-
     def signatures(self):
         "Return an iterator over all signatures in the Index object."
         for ss, loc in self.signatures_with_location():
@@ -301,66 +248,13 @@ class SqliteIndex(Index):
         c = self.conn.cursor()
         c2 = self.conn.cursor()
 
-        conditions, values, picklist = self._select_signatures(c)
-        if conditions:
-            conditions = conditions = "WHERE " + " AND ".join(conditions)
-        else:
-            conditions = ""
+        # have the manifest run a select...
+        picklist = self.manifest._run_select(c)
 
-        c.execute(f"""
-        SELECT id, name, scaled, ksize, filename, is_dna, is_protein,
-        is_dayhoff, is_hp, seed FROM sketches {conditions}""",
-                  values)
-
+        #... and then operate on the results of that in 'c'
         for ss, loc, iloc in self._load_sketches(c, c2):
             if picklist is None or ss in picklist:
                 yield ss, loc
-
-
-    # NOTE: we do not need _signatures_with_internal for this class
-    # because it supplies a manifest directly :tada:.
-    @property
-    def manifest(self):
-        """
-        Generate manifests dynamically from the SQL database.
-        """
-        c1 = self.conn.cursor()
-        c2 = self.conn.cursor()
-
-        conditions, values, picklist = self._select_signatures(c1)
-        if conditions:
-            conditions = conditions = "WHERE " + " AND ".join(conditions)
-        else:
-            conditions = ""
-
-        c1.execute(f"""
-        SELECT id, name, md5sum, scaled, ksize, filename, is_dna, is_protein,
-        is_dayhoff, is_hp, seed, n_hashes FROM sketches {conditions}""",
-                  values)
-
-        manifest_list = []
-        for (iloc, name, md5sum, scaled, ksize, filename, is_dna, is_protein,
-             is_dayhoff, is_hp, seed, n_hashes) in c1:
-            row = dict(num=0, scaled=scaled, name=name, filename=filename,
-                       n_hashes=n_hashes, with_abundance=0, ksize=ksize,
-                       md5=md5sum)
-            row['md5short'] = md5sum[:8]
-
-            if is_dna:
-                moltype = 'DNA'
-            elif is_dayhoff:
-                moltype = 'dayhoff'
-            elif is_hp:
-                moltype = 'hp'
-            else:
-                assert is_protein
-                moltype = 'protein'
-            row['moltype'] = moltype
-            row['internal_location'] = iloc
-
-            manifest_list.append(row)
-        m = CollectionManifest(manifest_list)
-        return m
 
     def save(self, *args, **kwargs):
         raise NotImplementedError
@@ -378,8 +272,8 @@ class SqliteIndex(Index):
             query_mh = query_mh.downsample(scaled=self.scaled)
 
         picklist = None
-        if self.selection_dict:
-            picklist = self.selection_dict.get('picklist')
+        if self.manifest.selection_dict:
+            picklist = self.manifest.selection_dict.get('picklist')
 
         c1 = self.conn.cursor()
         c2 = self.conn.cursor()
@@ -419,23 +313,23 @@ class SqliteIndex(Index):
                         yield IndexSearchResult(score, subj, self.location)
 
     def select(self, *, num=0, track_abundance=False, **kwargs):
+        "Run a select! This just modifies the manifest."
+
+        # check SqliteIndex specific conditions on the 'select'
         if num:
             raise ValueError("cannot select on 'num' in SqliteIndex")
         if track_abundance:
             raise ValueError("cannot store or search signatures with abundance")
+        manifest = self.manifest
+        if manifest is None:
+            manifest = CollectionManifest_Sqlite(self.conn)
 
-        # Pass along all the selection kwargs to a new instance
-        if self.selection_dict:
-            # combine selects...
-            d = dict(self.selection_dict)
-            for k, v in kwargs.items():
-                if k in d:
-                    if d[k] is not None and d[k] != v:
-                        raise ValueError(f"incompatible select on '{k}'")
-                d[k] = v
-            kwargs = d
+        manifest = manifest.select_to_manifest(**kwargs)
 
-        return SqliteIndex(self.dbfile, selection_dict=kwargs, conn=self.conn)
+        # return a new SqliteIndex with a 
+        return SqliteIndex(self.dbfile,
+                           sqlite_manifest=manifest,
+                           conn=self.conn)
 
     #
     # Actual SQL queries, etc.
@@ -523,6 +417,9 @@ class SqliteIndex(Index):
         """
         For hashvals in 'hashes', retrieve all matching sketches,
         together with the number of overlapping hashes for each sketh.
+
+        CTB: we do not use sqlite manifest conditions on this select,
+        because it slows things down in practice.
         """
         c.execute("DROP TABLE IF EXISTS hash_query")
         c.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER PRIMARY KEY)")
@@ -533,9 +430,7 @@ class SqliteIndex(Index):
         #
         # set up SELECT conditions
         #
-        # @CTB test these combinations...
 
-        #conditions, template_values, picklist = self._select_signatures(c)
         conditions = []
         template_values = []
 
@@ -548,7 +443,6 @@ class SqliteIndex(Index):
 
         # format conditions
         conditions.append('hashes.hashval=hash_query.hashval')
-        #conditions.append('hashes.sketch_id = sketches.id')
         conditions = " AND ".join(conditions)
 
         c.execute(f"""
@@ -559,3 +453,185 @@ class SqliteIndex(Index):
         """, template_values)
 
         return c
+
+
+class CollectionManifest_Sqlite(CollectionManifest):
+    def __init__(self, conn, selection_dict=None):
+        """
+        Here, 'conn' should already be connected and configured.
+        """
+        assert conn is not None
+        self.conn = conn
+        self.selection_dict = selection_dict
+
+    def __bool__(self):
+        return bool(len(self))
+
+    def __eq__(self, other):
+        raise NotImplementedError
+
+    def __len__(self):
+        c = self.conn.cursor()
+        conditions, values, picklist = self._select_signatures(c)
+        if conditions:
+            conditions = conditions = "WHERE " + " AND ".join(conditions)
+        else:
+            conditions = ""
+
+        c.execute(f"SELECT COUNT(*) FROM sketches {conditions}", values)
+        count, = c.fetchone()
+
+        # @CTB do we need to pay attention to picklist here?
+        # we can generate manifest and use 'picklist.matches_manifest_row'
+        # on rows.
+        return count
+
+    def _select_signatures(self, c):
+        """
+        Given cursor 'c', build a set of SQL SELECT conditions
+        and matching value tuple that can be used to select the
+        right sketches from the database.
+
+        Returns a triple 'conditions', 'values', and 'picklist'.
+        'conditions' is a list that should be joined with 'AND'.
+        The picklist is simply retrieved from the selection dictionary.
+        """
+        conditions = []
+        values = []
+        picklist = None
+        if self.selection_dict:
+            select_d = self.selection_dict
+            if 'ksize' in select_d and select_d['ksize']:
+                conditions.append("sketches.ksize = ?")
+                values.append(select_d['ksize'])
+            if 'scaled' in select_d and select_d['scaled'] > 0:
+                conditions.append("sketches.scaled > 0")
+            if 'containment' in select_d and select_d['containment']:
+                conditions.append("sketches.scaled > 0")
+            if 'moltype' in select_d:
+                moltype = select_d['moltype']
+                if moltype == 'DNA':
+                    conditions.append("sketches.is_dna")
+                elif moltype == 'protein':
+                    conditions.append("sketches.is_protein")
+                elif moltype == 'dayhoff':
+                    conditions.append("sketches.is_dayhoff")
+                elif moltype == 'hp':
+                    conditions.append("sketches.is_hp")
+
+            picklist = select_d.get('picklist')
+
+            # support picklists!
+            if picklist is not None:
+                c.execute("DROP TABLE IF EXISTS pickset")
+                c.execute("CREATE TABLE pickset (sketch_id INTEGER)")
+
+                transform = picklist_transforms[picklist.coltype]
+                sql_stmt = picklist_selects[picklist.coltype]
+
+                vals = [ (transform(v),) for v in picklist.pickset ]
+                c.executemany(sql_stmt, vals)
+
+                if picklist.pickstyle == PickStyle.INCLUDE:
+                    conditions.append("""
+                    sketches.id IN (SELECT sketch_id FROM pickset)
+                    """)
+                elif picklist.pickstyle == PickStyle.EXCLUDE:
+                    conditions.append("""
+                    sketches.id NOT IN (SELECT sketch_id FROM pickset)
+                    """)
+
+        return conditions, values, picklist
+
+    def select_to_manifest(self, **kwargs):
+        # Pass along all the selection kwargs to a new instance
+        if self.selection_dict:
+            # combine selects...
+            d = dict(self.selection_dict)
+            for k, v in kwargs.items():
+                if k in d:
+                    if d[k] is not None and d[k] != v:
+                        raise ValueError(f"incompatible select on '{k}'")
+                d[k] = v
+            kwargs = d
+
+        return CollectionManifest_Sqlite(self.conn, selection_dict=kwargs)
+
+    def _run_select(self, c):
+        conditions, values, picklist = self._select_signatures(c)
+        if conditions:
+            conditions = conditions = "WHERE " + " AND ".join(conditions)
+        else:
+            conditions = ""
+
+        c.execute(f"""
+        SELECT id, name, scaled, ksize, filename, is_dna, is_protein,
+        is_dayhoff, is_hp, seed FROM sketches {conditions}""",
+                  values)
+
+        return picklist
+
+    def _extract_manifest(self):
+        """
+        Generate a CollectionManifest dynamically from the SQL database.
+        """
+        c1 = self.conn.cursor()
+        c2 = self.conn.cursor()
+
+        conditions, values, picklist = self._select_signatures(c1)
+        if conditions:
+            conditions = conditions = "WHERE " + " AND ".join(conditions)
+        else:
+            conditions = ""
+
+        c1.execute(f"""
+        SELECT id, name, md5sum, scaled, ksize, filename, is_dna, is_protein,
+        is_dayhoff, is_hp, seed, n_hashes FROM sketches {conditions}""",
+                  values)
+
+        manifest_list = []
+        for (iloc, name, md5sum, scaled, ksize, filename, is_dna, is_protein,
+             is_dayhoff, is_hp, seed, n_hashes) in c1:
+            row = dict(num=0, scaled=scaled, name=name, filename=filename,
+                       n_hashes=n_hashes, with_abundance=0, ksize=ksize,
+                       md5=md5sum)
+            row['md5short'] = md5sum[:8]
+
+            if is_dna:
+                moltype = 'DNA'
+            elif is_dayhoff:
+                moltype = 'dayhoff'
+            elif is_hp:
+                moltype = 'hp'
+            else:
+                assert is_protein
+                moltype = 'protein'
+            row['moltype'] = moltype
+            row['internal_location'] = iloc
+
+            manifest_list.append(row)
+        m = CollectionManifest(manifest_list)
+        return m
+
+    def write_to_csv(self, fp, *, write_header=True):
+        mf = self._extract_manifest()
+        mf.write_to_csv(fp, write_header=write_header)
+
+    def filter_rows(self, row_filter_fn):
+        raise NotImplementedError
+
+    def filter_on_columns(self, col_filter_fn, col_names):
+        raise NotImplementedError
+
+    def locations(self):
+        raise NotImplementedError
+
+    def __contains__(Self, ss):
+        raise NotImplementedError
+
+    def to_picklist(self):
+        raise NotImplementedError
+
+    @classmethod
+    def create_manifest(cls, *args, **kwargs):
+        raise NotImplementedError
