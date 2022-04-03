@@ -579,8 +579,7 @@ class CollectionManifest_Sqlite(CollectionManifest):
         for row in self.rows:
             manifest_list.append(row)
 
-        m = CollectionManifest(manifest_list)
-        return m
+            return CollectionManifest(manifest_list)
 
     @property
     def rows(self):
