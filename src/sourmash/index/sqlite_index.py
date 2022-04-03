@@ -19,15 +19,32 @@ Features and limitations:
 * Likewise, SqliteIndex does not support 'abund' signatures because it cannot
   search them (just like SBTs cannot).
 
+CTB consider:
+* a SqliteIndex sqldb can store taxonomy table just fine. Is there any
+    extra support that might be worthwhile?
+
+* if we build a sqlite-based manifest that is standalone, how should we
+    integrate it here? two thoughts -
+   * we could do most of the selection currently in SqliteIndex on manifests,
+     instead.
+   * we could make a view that mimics the manifest table so that both
+     interfaces could work.
+   * how do we / can we take advantage of having both the Index and the
+     manifest in a SQLite database?
+
+* do we want to prevent storage of scaled=1 sketches and then
+  dispense with the MAX_SQLITE_INT stuff? It's kind of a nice hack :laugh:
+
+TODO:
+@CTB add DISTINCT to sketch and hash select
+@CTB don't do constraints if scaleds are equal?
+@CTB figure out what to do about 'sourmash sig manifest sqldb'
 """
 import time
 import sqlite3
 from collections import Counter
 
 from bitstring import BitArray
-
-# @CTB add DISTINCT to sketch and hash select
-# @CTB don't do constraints if scaleds are equal?
 
 from sourmash.index import Index
 import sourmash
@@ -158,7 +175,7 @@ class SqliteIndex(Index):
         count, = c.fetchone()
 
         # @CTB do we need to pay attention to picklist here?
-        # we can geneate manifest and use 'picklist.matches_manifest_row'
+        # we can generate manifest and use 'picklist.matches_manifest_row'
         # on rows.
         return count
 
@@ -298,6 +315,7 @@ class SqliteIndex(Index):
             if picklist is None or ss in picklist:
                 yield ss, loc
 
+
     # NOTE: we do not need _signatures_with_internal for this class
     # because it supplies a manifest directly :tada:.
     @property
@@ -387,7 +405,7 @@ class SqliteIndex(Index):
 
             # do we pass?
             if not search_fn.passes(score):
-                print('FAIL')
+                print('FAIL', score, query_size, shared_size, subj_size, total_size)
                 # break out, because we've ordered the results by
                 # overlap. @CTB does this work for jaccard? Probably not...
                 break
