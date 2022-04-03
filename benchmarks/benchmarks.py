@@ -1,7 +1,7 @@
 import os
 import random
 from pathlib import Path
-from tempfile import mkdtemp
+from tempfile import NamedTemporaryFile
 
 
 from sourmash.sbt_storage import ZipStorage
@@ -149,22 +149,21 @@ class PeakmemMinAbundanceSuite(PeakmemMinHashSuite):
 class TimeZipStorageSuite:
 
     def setup(self):
-        self.tempdir = mkdtemp()
-        self.zipfile = Path(self.tempdir) / "temp.zip"
+        import zipfile
+        self.zipfile = NamedTemporaryFile()
 
-        with ZipStorage(self.zipfile, mode="w") as storage:
-            # one big-ish entry
-            storage.save("sig1", b"9" * 1_000_000)
+        with zipfile.ZipFile(self.zipfile, mode='w',
+                          compression=zipfile.ZIP_STORED) as storage:
             for i in range(100_000):
                 # just so we have lots of entries
-                storage.save(str(i), b"0")
-            storage.flush()
+                storage.writestr(str(i), b"0")
+            # one big-ish entry
+            storage.writestr("sig1", b"9" * 1_000_000)
 
     def time_load_from_zipstorage(self):
-        with ZipStorage(self.zipfile) as storage:
+        with ZipStorage(self.zipfile.name) as storage:
             for i in range(20):
                 storage.load("sig1")
 
     def teardown(self):
-        self.zipfile.unlink()
-        os.rmdir(self.tempdir)
+        self.zipfile.close()
