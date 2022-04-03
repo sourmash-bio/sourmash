@@ -165,5 +165,10 @@ class TimeZipStorageSuite:
             for i in range(20):
                 storage.load("sig1")
 
+    def time_load_small_from_zipstorage(self):
+        with ZipStorage(self.zipfile.name) as storage:
+            for i in range(20):
+                storage.load("99999")
+
     def teardown(self):
         self.zipfile.close()
