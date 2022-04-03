@@ -51,7 +51,7 @@ from sourmash.index import Index
 import sourmash
 from sourmash import MinHash, SourmashSignature
 from sourmash.index import IndexSearchResult
-from sourmash.picklist import PickStyle
+from sourmash.picklist import PickStyle, SignaturePicklist
 from sourmash.manifest import CollectionManifest
 from sourmash.logging import debug_literal
 
@@ -626,11 +626,25 @@ class CollectionManifest_Sqlite(CollectionManifest):
     def locations(self):
         raise NotImplementedError
 
-    def __contains__(Self, ss):
-        raise NotImplementedError
+    def __contains__(self, ss):
+        md5 = ss.md5sum()
+
+        c = self.conn.cursor()
+        c.execute('SELECT COUNT(*) FROM sketches WHERE md5sum=?', (md5,))
+        val, = c.fetchone()
+        return bool(val)
 
     def to_picklist(self):
-        raise NotImplementedError
+        "Convert this manifest to a picklist."
+        picklist = SignaturePicklist('md5')
+
+        c = self.conn.cursor()
+        c.execute('SELECT md5sum FROM sketches')
+        pickset = set()
+        pickset.update(( val for val, in c ))
+        picklist.pickset = pickset
+
+        return picklist
 
     @classmethod
     def create_manifest(cls, *args, **kwargs):

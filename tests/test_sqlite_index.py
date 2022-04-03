@@ -4,6 +4,7 @@ import pytest
 
 import sourmash
 from sourmash.index.sqlite_index import SqliteIndex
+from sourmash.index.sqlite_index import CollectionManifest_Sqlite
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.picklist import SignaturePicklist, PickStyle
 
@@ -308,7 +309,7 @@ def test_sqlite_index_abund_select():
 
 
 def test_sqlite_index_moltype_select():
-    # @CTB
+    # @CTB cannot do multiple scaled values.
     return
 
     # this loads multiple ksizes (19, 31) and moltypes (DNA, protein, hp, etc)
@@ -440,3 +441,31 @@ def test_sqlite_jaccard_ordering():
     assert len(sr) == 2
     assert sr[0].signature == ss_a
     assert sr[1].signature == ss_c
+
+
+def test_sqlite_manifest_basic():
+    # test gather() method above threshold
+    sig2 = load_one_signature(utils.get_test_data('2.fa.sig'), ksize=31)
+    sig47 = load_one_signature(utils.get_test_data('47.fa.sig'), ksize=31)
+    sig63 = load_one_signature(utils.get_test_data('63.fa.sig'), ksize=31)
+
+    sqlidx = SqliteIndex(":memory:")
+
+    # empty manifest tests
+    manifest = sqlidx.manifest
+    assert not manifest
+    assert len(manifest) == 0
+
+    sqlidx.insert(sig47)
+    sqlidx.insert(sig63)
+
+    # ok, more full manifest tests!
+    assert manifest
+    assert len(manifest) == 2
+
+    assert sig47 in manifest
+    assert sig2 not in manifest
+
+    picklist = manifest.to_picklist()
+    assert sig47 in picklist
+    assert sig2 not in picklist
