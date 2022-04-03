@@ -575,8 +575,16 @@ class CollectionManifest_Sqlite(CollectionManifest):
         """
         Generate a CollectionManifest dynamically from the SQL database.
         """
+        manifest_list = []
+        for row in self.rows:
+            manifest_list.append(row)
+
+        m = CollectionManifest(manifest_list)
+        return m
+
+    @property
+    def rows(self):
         c1 = self.conn.cursor()
-        c2 = self.conn.cursor()
 
         conditions, values, picklist = self._select_signatures(c1)
         if conditions:
@@ -608,10 +616,7 @@ class CollectionManifest_Sqlite(CollectionManifest):
                 moltype = 'protein'
             row['moltype'] = moltype
             row['internal_location'] = iloc
-
-            manifest_list.append(row)
-        m = CollectionManifest(manifest_list)
-        return m
+            yield row
 
     def write_to_csv(self, fp, *, write_header=True):
         mf = self._extract_manifest()

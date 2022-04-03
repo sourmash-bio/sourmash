@@ -3245,6 +3245,25 @@ def test_sig_describe_empty(c):
     assert 'source file: ** no name **' in c.last_result.out
 
 
+def test_sig_describe_sqldb(runtmp):
+    # make a sqldb and run fileinfo on it
+    gcf_all = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    sqldb = runtmp.output('some.sqldb')
+
+    runtmp.sourmash('sig', 'cat', '-k', '31', *gcf_all, '-o', sqldb)
+
+    runtmp.sourmash('sig', 'describe', sqldb)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert 'md5: 4289d4241be8573145282352215ca3c4' in out
+    assert 'md5: 85c3aeec6457c0b1d210472ddeb67714' in out
+
+
 def test_sig_describe_2_csv(runtmp):
     # output info in CSV spreadsheet
     c = runtmp

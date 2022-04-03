@@ -3,9 +3,10 @@ Tests for the 'sourmash signature fileinfo' command line.
 """
 import shutil
 import os
+import glob
+import json
 
 import pytest
-import json
 
 import sourmash_tst_utils as utils
 from sourmash_tst_utils import SourmashCommandFailed
@@ -364,3 +365,21 @@ def test_sig_fileinfo_8_manifest_works_when_moved(runtmp):
     assert 'has manifest? yes' in out
     assert 'is database? yes' in out
     assert 'path filetype: StandaloneManifestIndex' in out
+
+
+def test_sig_fileinfo_8_sqldb(runtmp):
+    # make a sqldb and run fileinfo on it
+    gcf_all = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    sqldb = runtmp.output('some.sqldb')
+
+    runtmp.sourmash('sig', 'cat', '-k', '31', *gcf_all, '-o', sqldb)
+
+    runtmp.sourmash('sig', 'fileinfo', sqldb)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "12 sketches with DNA, k=31, scaled=10000           4540 total hashes" in out
