@@ -85,6 +85,19 @@ def add_picklist_args(parser):
     )
 
 
+def add_pattern_args(parser):
+    parser.add_argument(
+        '--include-db-pattern',
+        default=None,
+        help='search only signatures that match this pattern in name, filename, or md5'
+    )
+    parser.add_argument(
+        '--exclude-db-pattern',
+        default=None,
+        help='search only signatures that do not match this pattern in name, filename, or md5'
+    )
+
+
 def opfilter(path):
     return not path.startswith('__') and path not in ['utils']
 

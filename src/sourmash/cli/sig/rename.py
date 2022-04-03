@@ -1,7 +1,7 @@
 """rename signature"""
 
 from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
-                                add_picklist_args)
+                                add_picklist_args, add_pattern_args)
 
 
 def subparser(subparsers):
@@ -31,6 +31,7 @@ def subparser(subparsers):
     )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
+    add_pattern_args(subparser)
     add_picklist_args(subparser)
 
 

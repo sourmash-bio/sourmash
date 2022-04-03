@@ -1,3 +1,7 @@
+"""
+RevIndex - a rust-based reverse index by hashes.
+"""
+
 import weakref
 
 from sourmash.index import Index, IndexSearchResult

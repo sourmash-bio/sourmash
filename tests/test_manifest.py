@@ -17,7 +17,7 @@ def test_generate_manifest():
 
     rows = []
     siglist = []
-    for (sig, _, loc) in loader._signatures_with_internal():
+    for (sig, loc) in loader._signatures_with_internal():
         row = index.CollectionManifest.make_manifest_row(sig, loc)
         rows.append(row)
         siglist.append(sig)
@@ -35,6 +35,30 @@ def test_generate_manifest():
         assert sig in manifest
 
 
+def test_manifest_operations():
+    # test basic manifest operations - +=
+    protzip = utils.get_test_data('prot/protein.zip')
+
+    loader = sourmash.load_file_as_index(protzip)
+
+    rows = []
+    siglist = []
+    for (sig, loc) in loader._signatures_with_internal():
+        row = index.CollectionManifest.make_manifest_row(sig, loc)
+        rows.append(row)
+        siglist.append(sig)
+
+    manifest = index.CollectionManifest(rows)
+    manifest += manifest
+
+    assert len(manifest) == 2*len(rows)
+    assert len(manifest) == 4
+
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+
 def test_manifest_to_picklist():
     # test manifest/picklist interaction basics
     protzip = utils.get_test_data('prot/protein.zip')
@@ -43,7 +67,7 @@ def test_manifest_to_picklist():
 
     rows = []
     siglist = []
-    for (sig, _, loc) in loader._signatures_with_internal():
+    for (sig, loc) in loader._signatures_with_internal():
         row = index.CollectionManifest.make_manifest_row(sig, loc)
         rows.append(row)
         siglist.append(sig)
@@ -64,7 +88,7 @@ def test_save_load_manifest():
 
     rows = []
     siglist = []
-    for (sig, _, loc) in loader._signatures_with_internal():
+    for (sig, loc) in loader._signatures_with_internal():
         row = index.CollectionManifest.make_manifest_row(sig, loc)
         rows.append(row)
         siglist.append(sig)

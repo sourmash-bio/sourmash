@@ -28,7 +28,7 @@ background information on how and why MinHash works.
 
 **Want to migrate to sourmash v4?** sourmash v4 is now available, and
 has a number of incompatibilites with v2 and v3. Please see 
-[our migration guide](support.md#migrating-from-sourmash-v3-x-to-sourmash-v4-x)!
+[our migration guide](support.md#migrating-from-sourmash-v3x-to-sourmash-v4x)!
 
 ----
 

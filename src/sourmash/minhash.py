@@ -779,10 +779,15 @@ class MinHash(RustObject):
         return new_mh
 
     def inflate(self, from_mh):
-        "return a new MinHash object with abundances taken from 'from_mh'"
+        """return a new MinHash object with abundances taken from 'from_mh'
+
+        note that this implicitly does an intersection: hashes that have
+        no abundance in 'from_mh' are set to abundance 0 and removed from
+        'self'.
+        """
         if not self.track_abundance and from_mh.track_abundance:
             orig_abunds = from_mh.hashes
-            abunds = { h: orig_abunds[h] for h in self.hashes }
+            abunds = { h: orig_abunds.get(h, 0) for h in self.hashes }
 
             abund_mh = from_mh.copy_and_clear()
 

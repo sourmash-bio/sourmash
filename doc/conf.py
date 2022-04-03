@@ -37,7 +37,7 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
-    'sphinxcontrib.napoleon',
+    'sphinx.ext.napoleon',
     'nbsphinx',
     'IPython.sphinxext.ipython_console_highlighting',
     'myst_parser'
@@ -302,3 +302,4 @@ texinfo_documents = [
 #texinfo_no_detailmenu = False
 
 autodoc_mock_imports = ["sourmash.minhash"]
+myst_heading_anchors = 3

@@ -38,7 +38,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '--check-sequence', action='store_true',
-        help='complain if input sequence is invalid (NOTE: only checks DNA)'
+        help='complain if input sequence is invalid DNA'
     )
     subparser.add_argument(
         '-p', '--param-string', default=[],

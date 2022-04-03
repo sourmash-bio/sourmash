@@ -62,6 +62,8 @@ class SignaturePicklist:
         valid_coltypes.update(self.supported_coltypes)
         if coltype not in valid_coltypes:
             raise ValueError(f"invalid picklist column type '{coltype}'")
+        self.orig_coltype = coltype
+        self.orig_colname = column_name
 
         # if we're using gather or prefetch or manifest, set column_name
         # automatically (after checks).
@@ -224,6 +226,19 @@ class SignaturePicklist:
             if q not in self.pickset:
                 self.found.add(q)
                 return True
+        return False
+
+    def matched_csv_row(self, row):
+        """did the given CSV row object match this picklist?
+
+        This is used for examining matches/nomatches to original picklist file.
+        """
+        q = row[self.column_name]
+        q = self.preprocess_fn(q)
+        self.n_queries += 1
+
+        if q in self.found:
+            return True
         return False
 
     def filter(self, it):

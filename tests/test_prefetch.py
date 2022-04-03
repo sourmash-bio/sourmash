@@ -37,6 +37,82 @@ def test_prefetch_basic(runtmp, linear_gather):
     assert "a total of 0 query hashes remain unmatched." in c.last_result.err
 
 
+def test_prefetch_select_query_ksize(runtmp, linear_gather):
+    # test prefetch where query and subject db both have multiple ksizes
+    c = runtmp
+
+    ss = utils.get_test_data('GCF_000005845.2_ASM584v2_genomic.fna.gz.sig')
+
+    c.run_sourmash('prefetch', ss, ss, linear_gather)
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert 'of 4476 distinct query hashes, 4476 were found in matches above threshold.' in c.last_result.err
+
+
+def test_prefetch_subject_scaled_is_larger(runtmp, linear_gather):
+    # test prefetch where subject scaled is larger
+    c = runtmp
+
+    # make a query sketch with scaled=1000
+    fa = utils.get_test_data('genome-s10.fa.gz')
+    c.run_sourmash('sketch', 'dna', fa, '-o', 'query.sig')
+    assert os.path.exists(runtmp.output('query.sig'))
+
+    # this has a scaled of 10000, from same genome:
+    against1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+    against2 = utils.get_test_data('scaled/all.sbt.zip')
+    against3 = utils.get_test_data('scaled/all.lca.json')
+
+    # run against large scaled, then small (self)
+    c.run_sourmash('prefetch', 'query.sig', against1, against2, against3,
+                   'query.sig', linear_gather)
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert 'total of 8 matching signatures.' in c.last_result.err
+    assert 'of 48 distinct query hashes, 48 were found in matches above threshold.' in c.last_result.err
+    assert 'final scaled value (max across query and all matches) is 10000' in c.last_result.err
+
+
+def test_prefetch_subject_scaled_is_larger_outsigs(runtmp, linear_gather):
+    # test prefetch where subject scaled is larger -- output sigs
+    c = runtmp
+
+    # make a query sketch with scaled=1000
+    fa = utils.get_test_data('genome-s10.fa.gz')
+    c.run_sourmash('sketch', 'dna', fa, '-o', 'query.sig')
+    assert os.path.exists(runtmp.output('query.sig'))
+
+    # this has a scaled of 10000, from same genome:
+    against1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+    against2 = utils.get_test_data('scaled/all.sbt.zip')
+    against3 = utils.get_test_data('scaled/all.lca.json')
+
+    # run against large scaled, then small (self)
+    c.run_sourmash('prefetch', 'query.sig', against1, against2, against3,
+                   'query.sig', linear_gather, '--save-matches', 'matches.sig')
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert 'total of 8 matching signatures.' in c.last_result.err
+    assert 'of 48 distinct query hashes, 48 were found in matches above threshold.' in c.last_result.err
+    assert 'final scaled value (max across query and all matches) is 10000' in c.last_result.err
+
+    # make sure non-downsampled sketches were saved.
+    matches = sourmash.load_file_as_signatures(runtmp.output('matches.sig'))
+    scaled_vals = set([ match.minhash.scaled for match in matches ])
+    assert 1000 in scaled_vals
+    assert 10000 in scaled_vals
+    assert len(scaled_vals) == 2
+
+
 def test_prefetch_query_abund(runtmp, linear_gather):
     c = runtmp
 
@@ -499,7 +575,7 @@ def test_prefetch_with_picklist(runtmp):
     picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
 
     runtmp.sourmash('prefetch', metag_sig, *gcf_sigs,
-                    '-k', '21', '--picklist', f"{picklist}:md5:md5")
+                    '--picklist', f"{picklist}:md5:md5")
 
     err = runtmp.last_result.err
     print(err)
@@ -522,12 +598,50 @@ def test_prefetch_with_picklist_exclude(runtmp):
     picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
 
     runtmp.sourmash('prefetch', metag_sig, *gcf_sigs,
-                    '-k', '21', '--picklist', f"{picklist}:md5:md5:exclude")
+                    '--picklist', f"{picklist}:md5:md5:exclude")
 
     err = runtmp.last_result.err
     print(err)
     assert "for given picklist, found 9 matches by excluding 9 distinct values" in err
     # these are the different ksizes
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "total of 9 matching signatures." in err
+    assert "of 1466 distinct query hashes, 1013 were found in matches above threshold." in err
+    assert "a total of 453 query hashes remain unmatched." in err
+
+
+def test_prefetch_with_pattern_include(runtmp):
+    # test 'sourmash prefetch' with --include-db-pattern
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+
+    runtmp.sourmash('prefetch', metag_sig, *gcf_sigs,
+                    '--include', 'thermotoga')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "total of 3 matching signatures." in err
+    assert "of 1466 distinct query hashes, 453 were found in matches above threshold." in err
+    assert "a total of 1013 query hashes remain unmatched." in err
+
+
+def test_prefetch_with_pattern_exclude(runtmp):
+    # test 'sourmash prefetch' with --exclude-db-pattern
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+
+    runtmp.sourmash('prefetch', metag_sig, *gcf_sigs,
+                    '--exclude', 'thermotoga')
+
+    err = runtmp.last_result.err
+    print(err)
 
     out = runtmp.last_result.out
     print(out)

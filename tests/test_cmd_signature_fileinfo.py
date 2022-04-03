@@ -1,19 +1,13 @@
 """
 Tests for the 'sourmash signature fileinfo' command line.
 """
-import csv
 import shutil
 import os
-import glob
 
 import pytest
-import screed
 import json
 
 import sourmash_tst_utils as utils
-import sourmash
-from sourmash.signature import load_signatures
-from sourmash.manifest import CollectionManifest
 from sourmash_tst_utils import SourmashCommandFailed
 
 ## command line tests
@@ -43,9 +37,33 @@ summary of sketches:
         assert line.strip() in out
 
 
+def test_fileinfo_1_sig_summarize(runtmp):
+    # get basic info on a signature with 'summarize' as alias for fileinfo
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    shutil.copyfile(sig47, runtmp.output('sig47.sig'))
+    runtmp.run_sourmash('sig', 'summarize', 'sig47.sig')
+
+    out = runtmp.last_result.out
+    print(runtmp.last_result.out)
+
+    expected_output = """\
+path filetype: MultiIndex
+location: sig47.sig
+is database? no
+has manifest? yes
+num signatures: 1
+total hashes: 5177
+summary of sketches:
+   1 sketches with DNA, k=31, scaled=1000             5177
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
 def test_fileinfo_1_sig_abund(runtmp):
     # get basic info on a signature with abundance
-    sig47 = utils.get_test_data('47.abunds.fa.sig')
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
 
     shutil.copyfile(sig47, runtmp.output('sig47.sig'))
     runtmp.run_sourmash('sig', 'fileinfo', 'sig47.sig')
@@ -126,7 +144,7 @@ def test_fileinfo_4_zip(runtmp):
     print(runtmp.last_result.out)
 
     # 'location' will be fully resolved, ignore it for now
-    expected_output = f"""\
+    expected_output = """\
 path filetype: ZipFileLinearIndex
 is database? yes
 has manifest? yes
@@ -187,7 +205,7 @@ def test_fileinfo_4_zip_rebuild(runtmp):
     # CTB: note we're missing one of the 8 in the rebuilt, dna-sig.noext,
     # because it is not automatically included unless you load the zipfile
     # with traverse. This is intentional.
-    expected_output = f"""\
+    expected_output = """\
 path filetype: ZipFileLinearIndex
 is database? yes
 has manifest? yes
@@ -311,4 +329,38 @@ def test_sig_fileinfo_does_not_exist(runtmp):
     with pytest.raises(SourmashCommandFailed):
         runtmp.run_sourmash('sig', 'fileinfo', 'does-not-exist')
 
-    assert "Cannot open 'does-not-exist'." in runtmp.last_result.err
+    assert "Cannot open 'does-not-exist' as a sourmash signature collection" in runtmp.last_result.err
+
+
+def test_sig_fileinfo_8_manifest_works(runtmp):
+    # test on a manifest with relative paths, in proper location
+    mf = utils.get_test_data('scaled/mf.csv')
+    runtmp.sourmash('sig', 'fileinfo', mf)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert '15 sketches with DNA, k=31, scaled=10000           717 total hashes' in out
+    assert 'num signatures: 15' in out
+    assert 'has manifest? yes' in out
+    assert 'is database? yes' in out
+    assert 'path filetype: StandaloneManifestIndex' in out
+
+
+def test_sig_fileinfo_8_manifest_works_when_moved(runtmp):
+    # test on a manifest with relative paths, when in wrong place
+    # note: this works, unlike 'describe', because all the necessary info
+    # for 'fileinfo' is in the manifest.
+    mf = utils.get_test_data('scaled/mf.csv')
+    shutil.copyfile(mf, runtmp.output('mf.csv'))
+
+    runtmp.sourmash('sig', 'fileinfo', 'mf.csv')
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert '15 sketches with DNA, k=31, scaled=10000           717 total hashes' in out
+    assert 'num signatures: 15' in out
+    assert 'has manifest? yes' in out
+    assert 'is database? yes' in out
+    assert 'path filetype: StandaloneManifestIndex' in out
