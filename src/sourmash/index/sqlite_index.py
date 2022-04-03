@@ -389,7 +389,7 @@ class SqliteIndex(Index):
         xx = self._get_matching_sketches(c1, query_mh.hashes,
                                          query_mh._max_hash)
         for sketch_id, n_matching_hashes in xx:
-            debug_literal(f"...got sketch {sketch_id}, with {n_matching_hashes} matching hashes in {time.time() - t0}")
+            debug_literal(f"...got sketch {sketch_id}, with {n_matching_hashes} matching hashes in {time.time() - t0:.2f}")
             #
             # first, estimate sketch size using sql results.
             #
@@ -407,11 +407,9 @@ class SqliteIndex(Index):
             # do we pass?
             if not search_fn.passes(score):
                 debug_literal(f"FAIL score={score}")
-                # break out, because we've ordered the results by
-                # overlap. @CTB does this work for jaccard? Probably not...
-                break
-            else:
-                debug_literal(f"SUCCEED score={score}")
+            # CTB if we are doing containment only, we could break here.
+            # but for Jaccard, we must continue.
+            # see 'test_sqlite_jaccard_ordering'
 
             if search_fn.passes(score):
                 subj = self._load_sketch(c2, sketch_id)
@@ -465,7 +463,7 @@ class SqliteIndex(Index):
         SELECT id, name, scaled, ksize, filename, is_dna, is_protein,
         is_dayhoff, is_hp, seed FROM sketches WHERE id=?""",
                    (sketch_id,))
-        debug_literal(f"load sketch {sketch_id}: got sketch info in {time.time() - start}")
+        debug_literal(f"load sketch {sketch_id}: got sketch info in {time.time() - start:.2f}")
 
         (sketch_id, name, scaled, ksize, filename, is_dna,
          is_protein, is_dayhoff, is_hp, seed) = c1.fetchone()
@@ -486,17 +484,17 @@ class SqliteIndex(Index):
         else:
             debug_literal('NOT EMPLOYING hash_constraint_str')
 
-        debug_literal(f"finding hashes for sketch {sketch_id} in {time.time() - start})")
+        debug_literal(f"finding hashes for sketch {sketch_id} in {time.time() - start:.2f}")
         c1.execute(f"SELECT hashval FROM hashes WHERE {hash_constraint_str} hashes.sketch_id=?", template_values)
 
-        debug_literal(f"loading hashes for sketch {sketch_id} in {time.time() - start}")
+        debug_literal(f"loading hashes for sketch {sketch_id} in {time.time() - start:.2f}")
         xy = c1.fetchall()
-        debug_literal(f"adding hashes for sketch {sketch_id} in {time.time() - start}")
+        debug_literal(f"adding hashes for sketch {sketch_id} in {time.time() - start:.2f}")
         for hashval, in xy:
             hh = convert_hash_from(hashval)
             mh.add_hash(hh)
 
-        debug_literal(f"done loading sketch {sketch_id} {time.time() - start})")
+        debug_literal(f"done loading sketch {sketch_id} {time.time() - start:.2f})")
 
         ss = SourmashSignature(mh, name=name, filename=filename)
         return ss
