@@ -30,10 +30,7 @@ CTB consider:
   dispense with the MAX_SQLITE_INT stuff? It's kind of a nice hack :laugh:
 
 TODO:
-@CTB add DISTINCT to sketch and hash select?
 @CTB don't do constraints if scaleds are equal?
-@CTB do we want to limit Index to one moltype/ksize, too, like LCA index?
-@CTB scaled=0 for num?
 """
 import time
 import os
@@ -93,7 +90,7 @@ def load_sqlite_file(filename):
 
     # now, use sourmash_internal table to figure out what it can do.
     try:
-        c.execute('SELECT key, value FROM sourmash_internal')
+        c.execute('SELECT DISTINCT key, value FROM sourmash_internal')
     except (sqlite3.OperationalError, sqlite3.DatabaseError):
         return
 
@@ -449,7 +446,9 @@ class SqliteIndex(Index):
         Here, 'c1' should already have run an appropriate 'select' on
         'sketches'. 'c2' will be used to load the hash values.
         """
-        for (sketch_id, name, scaled, ksize, filename, moltype, seed) in c1:
+        for sketch_id, name, num, scaled, ksize, filename, moltype, seed in c1:
+            assert num == 0
+
             is_protein = 1 if moltype=='protein' else 0
             is_dayhoff = 1 if moltype=='dayhoff' else 0
             is_hp = 1 if moltype=='hp' else 0
@@ -537,6 +536,7 @@ class CollectionManifest_Sqlite(CollectionManifest):
         CREATE TABLE IF NOT EXISTS sketches
           (id INTEGER PRIMARY KEY,
            name TEXT,
+           num INTEGER NOT NULL,
            scaled INTEGER NOT NULL,
            ksize INTEGER NOT NULL,
            filename TEXT,
@@ -553,10 +553,11 @@ class CollectionManifest_Sqlite(CollectionManifest):
     def _insert_row(cls, cursor, row):
         cursor.execute("""
         INSERT INTO sketches
-          (name, scaled, ksize, filename, md5sum, moltype,
+          (name, num, scaled, ksize, filename, md5sum, moltype,
            seed, n_hashes, with_abundance, internal_location)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (row['name'],
+         row['num'],
          row['scaled'],
          row['ksize'],
          row['filename'],
@@ -630,6 +631,7 @@ class CollectionManifest_Sqlite(CollectionManifest):
             if 'ksize' in select_d and select_d['ksize']:
                 conditions.append("sketches.ksize = ?")
                 values.append(select_d['ksize'])
+            # @CTB check num
             if 'scaled' in select_d and select_d['scaled'] > 0:
                 conditions.append("sketches.scaled > 0")
             if 'containment' in select_d and select_d['containment']:
@@ -685,7 +687,7 @@ class CollectionManifest_Sqlite(CollectionManifest):
             conditions = ""
 
         c.execute(f"""
-        SELECT id, name, scaled, ksize, filename, moltype, seed
+        SELECT id, name, num, scaled, ksize, filename, moltype, seed
         FROM sketches {conditions}""",
                   values)
 
@@ -712,15 +714,14 @@ class CollectionManifest_Sqlite(CollectionManifest):
             conditions = ""
 
         c1.execute(f"""
-        SELECT id, name, md5sum, scaled, ksize, filename, moltype,
-        seed, n_hashes, internal_location
-        FROM sketches {conditions}""",
-                  values)
+        SELECT id, name, md5sum, num, scaled, ksize, filename, moltype,
+        seed, n_hashes, internal_location FROM sketches {conditions}
+        """, values)
 
         manifest_list = []
-        for (iloc, name, md5sum, scaled, ksize, filename, moltype,
+        for (iloc, name, md5sum, num, scaled, ksize, filename, moltype,
              seed, n_hashes, iloc) in c1:
-            row = dict(num=0, scaled=scaled, name=name, filename=filename,
+            row = dict(num=num, scaled=scaled, name=name, filename=filename,
                        n_hashes=n_hashes, with_abundance=0, ksize=ksize,
                        md5=md5sum, internal_location=iloc,
                        moltype=moltype, md5short=md5sum[:8])
@@ -752,7 +753,7 @@ class CollectionManifest_Sqlite(CollectionManifest):
         picklist = SignaturePicklist('md5')
 
         c = self.conn.cursor()
-        c.execute('SELECT md5sum FROM sketches')
+        c.execute('SELECT DISTINCT md5sum FROM sketches')
         pickset = set()
         pickset.update(( val for val, in c ))
         picklist.pickset = pickset

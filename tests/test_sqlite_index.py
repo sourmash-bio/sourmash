@@ -570,3 +570,22 @@ def test_sqlite_manifest_create_yesload_sigs(runtmp):
     # 'describe' should now be able to load the sqlmf, which is cool
     runtmp.sourmash('sig', 'describe', 'prot/mf.sqlmf')
     print(runtmp.last_result.out)
+
+
+def test_sqlite_manifest_num(runtmp):
+    # should be able to produce sql manifests with 'num' sketches in them
+    numsig = utils.get_test_data('num/47.fa.sig')
+
+    # create mf
+    runtmp.sourmash('sig', 'manifest', '-F', 'sql', numsig,
+                    '-o', 'mf.sqlmf')
+
+    # do summarize:
+    runtmp.sourmash('sig', 'summarize', 'mf.sqlmf')
+    out = runtmp.last_result.out
+
+    print(out)
+
+    assert "1 sketches with DNA, k=21, num=500                 500 total hashes" in out
+    assert "1 sketches with DNA, k=31, num=500                 500 total hashes" in out
+    assert "1 sketches with DNA, k=51, num=500                 500 total hashes" in out
