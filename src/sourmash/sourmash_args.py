@@ -930,8 +930,8 @@ class SaveSignatures_SqliteIndex(_BaseSaveSignaturesToLocation):
             super().add(ss)
             self.idx.insert(ss, cursor=self.cursor, commit=False)
 
-            if self.count % 100 == 0:
-                print('XXX committing.', self.count)
+            # commit every 1000 signatures.
+            if self.count % 1000 == 0:
                 self.idx.commit()
 
 
