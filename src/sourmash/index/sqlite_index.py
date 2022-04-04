@@ -335,20 +335,23 @@ class SqliteIndex(Index):
         n_hashes, = c1.fetchone()
         return n_hashes
 
-    def _load_sketch(self, c1, sketch_id, *, match_scaled=None):
+    def _load_sketch(self, c, sketch_id, *, match_scaled=None):
         "Load an individual sketch. If match_scaled is set, downsample."
 
         start = time.time()
-        c1.execute("""
-        SELECT id, name, scaled, ksize, filename, is_dna, is_protein,
-        is_dayhoff, is_hp, seed FROM sketches WHERE id=?""",
+        c.execute("""
+        SELECT id, name, scaled, ksize, filename, moltype, seed
+        FROM sketches WHERE id=?""",
                    (sketch_id,))
         debug_literal(f"load sketch {sketch_id}: got sketch info in {time.time() - start:.2f}")
 
-        (sketch_id, name, scaled, ksize, filename, is_dna,
-         is_protein, is_dayhoff, is_hp, seed) = c1.fetchone()
+        sketch_id, name, scaled, ksize, filename, moltype, seed = c.fetchone()
         if match_scaled is not None:
             scaled = max(scaled, match_scaled)
+
+        is_protein = 1 if moltype=='protein' else 0
+        is_dayhoff = 1 if moltype=='dayhoff' else 0
+        is_hp = 1 if moltype=='hp' else 0
 
         mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
                      is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp)
@@ -365,10 +368,10 @@ class SqliteIndex(Index):
             debug_literal('NOT EMPLOYING hash_constraint_str')
 
         debug_literal(f"finding hashes for sketch {sketch_id} in {time.time() - start:.2f}")
-        c1.execute(f"SELECT hashval FROM hashes WHERE {hash_constraint_str} hashes.sketch_id=?", template_values)
+        c.execute(f"SELECT hashval FROM hashes WHERE {hash_constraint_str} hashes.sketch_id=?", template_values)
 
         debug_literal(f"loading hashes for sketch {sketch_id} in {time.time() - start:.2f}")
-        xy = c1.fetchall()
+        xy = c.fetchall()
         debug_literal(f"adding hashes for sketch {sketch_id} in {time.time() - start:.2f}")
         for hashval, in xy:
             hh = convert_hash_from(hashval)
@@ -385,8 +388,11 @@ class SqliteIndex(Index):
         Here, 'c1' should already have run an appropriate 'select' on
         'sketches'. 'c2' will be used to load the hash values.
         """
-        for (sketch_id, name, scaled, ksize, filename, is_dna, is_protein,
-             is_dayhoff, is_hp, seed) in c1:
+        for (sketch_id, name, scaled, ksize, filename, moltype, seed) in c1:
+            is_protein = 1 if moltype=='protein' else 0
+            is_dayhoff = 1 if moltype=='dayhoff' else 0
+            is_hp = 1 if moltype=='hp' else 0
+
             mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
                          is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp)
             c2.execute("SELECT hashval FROM hashes WHERE sketch_id=?",
@@ -460,10 +466,7 @@ class CollectionManifest_Sqlite(CollectionManifest):
            scaled INTEGER NOT NULL,
            ksize INTEGER NOT NULL,
            filename TEXT,
-           is_dna BOOLEAN NOT NULL,
-           is_protein BOOLEAN NOT NULL,
-           is_dayhoff BOOLEAN NOT NULL,
-           is_hp BOOLEAN NOT NULL,
+           moltype TEXT NOT NULL,
            with_abundance BOOLEAN NOT NULL,
            md5sum TEXT NOT NULL,
            seed INTEGER NOT NULL,
@@ -476,19 +479,15 @@ class CollectionManifest_Sqlite(CollectionManifest):
     def _insert_row(cls, cursor, row):
         cursor.execute("""
         INSERT INTO sketches
-          (name, scaled, ksize, filename, md5sum,
-           is_dna, is_protein, is_dayhoff, is_hp,
+          (name, scaled, ksize, filename, md5sum, moltype,
            seed, n_hashes, with_abundance, internal_location)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (row['name'],
          row['scaled'],
          row['ksize'],
          row['filename'],
          row['md5'],
-         row['moltype'] == 'DNA',
-         row['moltype'] == 'protein',
-         row['moltype'] == 'dayhoff',
-         row['moltype'] == 'hp',
+         row['moltype'],
          row.get('seed', 42),
          row['n_hashes'],
          row['with_abundance'],
@@ -558,16 +557,10 @@ class CollectionManifest_Sqlite(CollectionManifest):
                 conditions.append("sketches.scaled > 0")
             if 'containment' in select_d and select_d['containment']:
                 conditions.append("sketches.scaled > 0")
-            if 'moltype' in select_d:
+            if 'moltype' in select_d and select_d['moltype'] is not None:
                 moltype = select_d['moltype']
-                if moltype == 'DNA':
-                    conditions.append("sketches.is_dna")
-                elif moltype == 'protein':
-                    conditions.append("sketches.is_protein")
-                elif moltype == 'dayhoff':
-                    conditions.append("sketches.is_dayhoff")
-                elif moltype == 'hp':
-                    conditions.append("sketches.is_hp")
+                assert moltype in ('DNA', 'protein', 'dayhoff', 'hp'), moltype
+                conditions.append(f"moltype = '{moltype}'")
 
             picklist = select_d.get('picklist')
 
@@ -615,8 +608,8 @@ class CollectionManifest_Sqlite(CollectionManifest):
             conditions = ""
 
         c.execute(f"""
-        SELECT id, name, scaled, ksize, filename, is_dna, is_protein,
-        is_dayhoff, is_hp, seed FROM sketches {conditions}""",
+        SELECT id, name, scaled, ksize, filename, moltype, seed
+        FROM sketches {conditions}""",
                   values)
 
         return picklist
@@ -642,30 +635,18 @@ class CollectionManifest_Sqlite(CollectionManifest):
             conditions = ""
 
         c1.execute(f"""
-        SELECT id, name, md5sum, scaled, ksize, filename, is_dna, is_protein,
-        is_dayhoff, is_hp, seed, n_hashes, internal_location
+        SELECT id, name, md5sum, scaled, ksize, filename, moltype,
+        seed, n_hashes, internal_location
         FROM sketches {conditions}""",
                   values)
 
         manifest_list = []
-        for (iloc, name, md5sum, scaled, ksize, filename, is_dna, is_protein,
-             is_dayhoff, is_hp, seed, n_hashes, iloc) in c1:
+        for (iloc, name, md5sum, scaled, ksize, filename, moltype,
+             seed, n_hashes, iloc) in c1:
             row = dict(num=0, scaled=scaled, name=name, filename=filename,
                        n_hashes=n_hashes, with_abundance=0, ksize=ksize,
-                       md5=md5sum, internal_location=iloc)
-            row['md5short'] = md5sum[:8]
-
-            if is_dna:
-                moltype = 'DNA'
-            elif is_dayhoff:
-                moltype = 'dayhoff'
-            elif is_hp:
-                moltype = 'hp'
-            else:
-                assert is_protein
-                moltype = 'protein'
-            row['moltype'] = moltype
-            row['internal_location'] = iloc
+                       md5=md5sum, internal_location=iloc,
+                       moltype=moltype, md5short=md5sum[:8])
             yield row
 
     def write_to_csv(self, fp, *, write_header=True):
