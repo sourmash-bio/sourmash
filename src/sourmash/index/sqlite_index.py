@@ -38,7 +38,6 @@ CTB consider:
 TODO:
 @CTB add DISTINCT to sketch and hash select
 @CTB don't do constraints if scaleds are equal?
-@CTB figure out what to do about 'sourmash sig manifest sqldb'
 @CTB do we want to limit to one moltype/ksize, too, like LCA index?
 """
 import time
@@ -126,7 +125,6 @@ class SqliteIndex(Index):
             c.execute("PRAGMA journal_mode = MEMORY")
             c.execute("PRAGMA temp_store = MEMORY")
 
-            # @CTB move to sqlite manifest class?
             CollectionManifest_Sqlite._create_table(c)
 
             c.execute("""
@@ -178,8 +176,6 @@ class SqliteIndex(Index):
         generating a new one.
 
         If 'commit' is True, commit after add; otherwise, do not.
-
-        @CTB: move parts of this to manifest?
         """
         if cursor:
             c = cursor
@@ -196,15 +192,18 @@ class SqliteIndex(Index):
         elif self.scaled is None:
             self.scaled = ss.minhash.scaled
 
-        c.execute("""
-        INSERT INTO sketches
-          (name, scaled, ksize, filename, md5sum,
-           is_dna, is_protein, is_dayhoff, is_hp, seed, n_hashes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (ss.name, ss.minhash.scaled, ss.minhash.ksize,
-         ss.filename, ss.md5sum(),
-         ss.minhash.is_dna, ss.minhash.is_protein, ss.minhash.dayhoff,
-         ss.minhash.hp, ss.minhash.seed, len(ss.minhash)))
+        row = dict(name=ss.name,
+                   scaled=ss.minhash.scaled,
+                   ksize=ss.minhash.ksize,
+                   filename=ss.filename,
+                   md5=ss.md5sum(),
+                   moltype=ss.minhash.moltype,
+                   seed=ss.minhash.seed,
+                   n_hashes=len(ss.minhash),
+                   internal_location=None,
+                   with_abundance=False)
+
+        self.manifest._insert_row(c, row)
 
         c.execute("SELECT last_insert_rowid()")
         sketch_id, = c.fetchone()
@@ -464,12 +463,48 @@ class CollectionManifest_Sqlite(CollectionManifest):
            is_protein BOOLEAN NOT NULL,
            is_dayhoff BOOLEAN NOT NULL,
            is_hp BOOLEAN NOT NULL,
+           with_abundance BOOLEAN NOT NULL,
            md5sum TEXT NOT NULL,
            seed INTEGER NOT NULL,
            n_hashes INTEGER NOT NULL,
            internal_location TEXT
         )
         """)
+
+    @classmethod
+    def _insert_row(cls, cursor, row):
+        cursor.execute("""
+        INSERT INTO sketches
+          (name, scaled, ksize, filename, md5sum,
+           is_dna, is_protein, is_dayhoff, is_hp,
+           seed, n_hashes, with_abundance, internal_location)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (row['name'],
+         row['scaled'],
+         row['ksize'],
+         row['filename'],
+         row['md5'],
+         row['moltype'] == 'DNA',
+         row['moltype'] == 'protein',
+         row['moltype'] == 'dayhoff',
+         row['moltype'] == 'hp',
+         row.get('seed', 42),
+         row['n_hashes'],
+         row['with_abundance'],
+         row['internal_location']))
+
+    @classmethod
+    def create_from_manifest(cls, filename, manifest):
+        conn = sqlite3.connect(dbfile)
+        cursor = conn.cursor()
+
+        obj = cls(conn)
+        cls._create_table(cursor)
+
+        assert isinstance(manifest, CollectionManifest)
+        for row in manifest.rows:
+            cls._insert_row(row)
+        return obj(conn)
 
     def __bool__(self):
         return bool(len(self))
