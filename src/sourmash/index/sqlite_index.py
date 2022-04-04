@@ -641,7 +641,9 @@ class CollectionManifest_Sqlite(CollectionManifest):
             if 'ksize' in select_d and select_d['ksize']:
                 conditions.append("sketches.ksize = ?")
                 values.append(select_d['ksize'])
-            # @CTB check num
+            if 'num' in select_d and select_d['num'] > 0:
+                # @CTB check num
+                assert 0
             if 'scaled' in select_d and select_d['scaled'] > 0:
                 conditions.append("sketches.scaled > 0")
             if 'containment' in select_d and select_d['containment']:
