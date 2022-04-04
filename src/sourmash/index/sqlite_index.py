@@ -30,7 +30,7 @@ CTB consider:
   dispense with the MAX_SQLITE_INT stuff? It's kind of a nice hack :laugh:
 
 TODO:
-@CTB add DISTINCT to sketch and hash select
+@CTB add DISTINCT to sketch and hash select?
 @CTB don't do constraints if scaleds are equal?
 @CTB do we want to limit Index to one moltype/ksize, too, like LCA index?
 @CTB scaled=0 for num?
@@ -103,15 +103,17 @@ def load_sqlite_file(filename):
     is_manifest = False
     for k, v in results:
         if k == 'SqliteIndex':
-            assert v == '1.0'
+            # @CTB: check version errors on sbt
+            if v != '1.0':
+                raise Exception(f"unknown SqliteManifest version '{v}'")
             is_index = True
         elif k == 'SqliteManifest':
+            if v != '1.0':
+                raise Exception(f"unknown SqliteManifest version '{v}'")
             assert v == '1.0'
             is_manifest = True
-        else:
-            # probably need to handle for future proofing, along with
-            # different version numbers ^^ @CTB
-            raise Exception("unknown values in 'sourmash_internal' table")
+        # it's ok if there's no match, that just means we added keys
+        # for some other type of sourmash SQLite database. #futureproofing.
 
     # every Index is a Manifest!
     if is_index:
