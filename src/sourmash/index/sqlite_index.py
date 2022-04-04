@@ -80,40 +80,58 @@ picklist_selects = dict(
 # @CTB add a sourmash table that identifies database functions
 # @CTB write a standard loading function in sourmash_args?
 # @CTB write tests that cross-product the various types.
-def load_sql_index(filename):
+def load_sqlite_file(filename):
+    "Load a SqliteIndex or a CollectionManifest_Sqlite from a sqlite file."
+    # file must already exist, and be non-zero in size
     if not os.path.exists(filename) or os.path.getsize(filename) == 0:
         return
 
     # can we connect?
     try:
         conn = sqlite3.connect(filename)
-        c = conn.cursor()
     except (sqlite3.OperationalError, sqlite3.DatabaseError):
         return
 
-    # does it have the 'sketches' table, necessary for either index or mf?
+    c = conn.cursor()
+
+    # now, use sourmash_internal table to figure out what it can do.
     try:
-        # @CTB test with a taxonomy file..
-        # @CTB versioning? just have a table or info that identifies?
-        c.execute('SELECT * FROM sketches LIMIT 1')
+        c.execute('SELECT key, value FROM sourmash_internal')
     except (sqlite3.OperationalError, sqlite3.DatabaseError):
-        # is nothing.
-        conn.close()
         return
 
-    # it has 'sketches' - is it a SqliteIndex / does it have 'hashes'?
-    try:
-        c.execute('SELECT * from hashes LIMIT 1')
+    results = c.fetchall()
+
+    is_index = False
+    is_manifest = False
+    for k, v in results:
+        if k == 'SqliteIndex':
+            assert v == '1.0'
+            is_index = True
+        elif k == 'SqliteManifest':
+            assert v == '1.0'
+            is_manifest = True
+        else:
+            # probably need to handle for future proofing, along with
+            # different version numbers ^^ @CTB
+            raise Exception("unknown values in 'sourmash_internal' table")
+
+    # every Index is a Manifest
+    if is_index:
+        assert is_manifest
+
+    idx = None
+    if is_index:
         conn.close()
+        idx = SqliteIndex(filename)
+    elif is_manifest:
+        assert not is_index     # indices are already handled!
 
-        return SqliteIndex.load(filename)
-    except (sqlite3.OperationalError, sqlite3.DatabaseError):
-        pass
+        prefix = os.path.dirname(filename)
+        mf = CollectionManifest_Sqlite(conn)
+        idx = StandaloneManifestIndex(mf, filename, prefix=prefix)
 
-    # no 'hashes' - must be a manifest - load that as standalone manifest idx
-    mf = CollectionManifest_Sqlite(conn)
-    prefix = os.path.dirname(filename)
-    return StandaloneManifestIndex(mf, filename, prefix=prefix)
+    return idx
 
 
 class SqliteIndex(Index):
@@ -160,6 +178,19 @@ class SqliteIndex(Index):
             c.execute("PRAGMA synchronous = OFF")
             c.execute("PRAGMA journal_mode = MEMORY")
             c.execute("PRAGMA temp_store = MEMORY")
+
+            c.execute("""
+            CREATE TABLE IF NOT EXISTS sourmash_internal (
+               key TEXT,
+               value TEXT
+            )
+            """)
+
+            # @CTB unique?
+            c.execute("""
+            INSERT INTO sourmash_internal (key, value)
+            VALUES ('SqliteIndex', '1.0')
+            """)
 
             CollectionManifest_Sqlite._create_table(c)
 
@@ -490,6 +521,19 @@ class CollectionManifest_Sqlite(CollectionManifest):
     @classmethod
     def _create_table(cls, cursor):
         "Create the manifest table."
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sourmash_internal (
+            key TEXT,
+            value TEXT
+        )
+        """)
+
+        cursor.execute("""
+        INSERT INTO sourmash_internal (key, value)
+        VALUES ('SqliteManifest', '1.0')
+        """)
+
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS sketches
           (id INTEGER PRIMARY KEY,
@@ -530,6 +574,7 @@ class CollectionManifest_Sqlite(CollectionManifest):
         cursor = conn.cursor()
 
         obj = cls(conn)
+
         cls._create_table(cursor)
 
         assert isinstance(manifest, CollectionManifest)
