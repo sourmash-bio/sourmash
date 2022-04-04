@@ -33,7 +33,7 @@ TODO:
 @CTB add DISTINCT to sketch and hash select
 @CTB don't do constraints if scaleds are equal?
 @CTB do we want to limit to one moltype/ksize, too, like LCA index?
-
+@CTB scaled=0 for num?
 """
 import time
 import os
@@ -76,33 +76,38 @@ picklist_selects = dict(
     )
 
 
+# @CTB write tests for each try/except
 def load_sql_index(filename):
     if not os.path.exists(filename) or os.path.getsize(filename) == 0:
         return
 
-    conn = sqlite3.connect(filename)
-    c = conn.cursor()
+    # can we connect?
+    try:
+        conn = sqlite3.connect(filename)
+        c = conn.cursor()
+    except (sqlite3.OperationalError, sqlite3.DatabaseError):
+        return
 
-    # does it have the 'sketches' table, necessary for either option?
+    # does it have the 'sketches' table, necessary for either index or mf?
     try:
         # @CTB test with a taxonomy file..
         # @CTB versioning?
         c.execute('SELECT * FROM sketches LIMIT 1')
-    except sqlite3.OperationalError:
+    except (sqlite3.OperationalError, sqlite3.DatabaseError):
         # is nothing.
         conn.close()
         return
 
+    # it has 'sketches' - is it a SqliteIndex / does it have 'hashes'?
     try:
-        # this means it's a SqliteIndex:
         c.execute('SELECT * from hashes LIMIT 1')
         conn.close()
 
         return SqliteIndex.load(filename)
-    except sqlite3.OperationalError:
+    except (sqlite3.OperationalError, sqlite3.DatabaseError):
         pass
 
-    # must be a manifest - load _that_ as Index.
+    # no 'hashes' - must be a manifest - load that as standalone manifest idx
     mf = CollectionManifest_Sqlite(conn)
     prefix = os.path.dirname(filename)
     return StandaloneManifestIndex(mf, filename, prefix=prefix)
