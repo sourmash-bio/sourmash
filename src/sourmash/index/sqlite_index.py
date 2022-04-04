@@ -39,6 +39,7 @@ TODO:
 @CTB add DISTINCT to sketch and hash select
 @CTB don't do constraints if scaleds are equal?
 @CTB do we want to limit to one moltype/ksize, too, like LCA index?
+@CTB keep moltype as a string?
 """
 import time
 import sqlite3
@@ -494,7 +495,7 @@ class CollectionManifest_Sqlite(CollectionManifest):
          row['internal_location']))
 
     @classmethod
-    def create_from_manifest(cls, filename, manifest):
+    def create_from_manifest(cls, dbfile, manifest):
         conn = sqlite3.connect(dbfile)
         cursor = conn.cursor()
 
@@ -503,8 +504,8 @@ class CollectionManifest_Sqlite(CollectionManifest):
 
         assert isinstance(manifest, CollectionManifest)
         for row in manifest.rows:
-            cls._insert_row(row)
-        return obj(conn)
+            cls._insert_row(cursor, row)
+        return cls(conn)
 
     def __bool__(self):
         return bool(len(self))

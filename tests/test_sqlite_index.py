@@ -7,6 +7,7 @@ from sourmash.index.sqlite_index import SqliteIndex
 from sourmash.index.sqlite_index import CollectionManifest_Sqlite
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.picklist import SignaturePicklist, PickStyle
+from sourmash.manifest import CollectionManifest
 
 import sourmash_tst_utils as utils
 
@@ -444,7 +445,7 @@ def test_sqlite_jaccard_ordering():
 
 
 def test_sqlite_manifest_basic():
-    # test gather() method above threshold
+    # test some features of the SQLite-based manifest.
     sig2 = load_one_signature(utils.get_test_data('2.fa.sig'), ksize=31)
     sig47 = load_one_signature(utils.get_test_data('47.fa.sig'), ksize=31)
     sig63 = load_one_signature(utils.get_test_data('63.fa.sig'), ksize=31)
@@ -466,9 +467,38 @@ def test_sqlite_manifest_basic():
     assert sig47 in manifest
     assert sig2 not in manifest
 
+    # check that we can get a "standard" manifest out
     standard_mf = sqlidx.manifest._extract_manifest()
     assert len(standard_mf) == 2
 
     picklist = manifest.to_picklist()
     assert sig47 in picklist
     assert sig2 not in picklist
+
+
+def test_sqlite_manifest_round_trip():
+    # check that we can go from regular mf -> sqlite mf -> regular again.
+    sig2 = load_one_signature(utils.get_test_data('2.fa.sig'), ksize=31)
+    sig47 = load_one_signature(utils.get_test_data('47.fa.sig'), ksize=31)
+    sig63 = load_one_signature(utils.get_test_data('63.fa.sig'), ksize=31)
+
+    rows = []
+    rows.append(CollectionManifest.make_manifest_row(sig47, None,
+                                                     include_signature=False))
+    rows.append(CollectionManifest.make_manifest_row(sig63, None,
+                                                     include_signature=False))
+    nosql_mf = CollectionManifest(rows)
+
+    sqlite_mf = CollectionManifest_Sqlite.create_from_manifest(":memory:",
+                                                               nosql_mf)
+
+    # test roundtrip
+    round_mf = sqlite_mf._extract_manifest()
+
+    assert len(round_mf) == 2
+    assert round_mf == nosql_mf
+
+    for mf in (nosql_mf, sqlite_mf, round_mf):
+        picklist = mf.to_picklist()
+        assert sig47 in picklist
+        assert sig2 not in picklist
