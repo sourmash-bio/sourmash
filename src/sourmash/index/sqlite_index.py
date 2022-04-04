@@ -77,6 +77,9 @@ picklist_selects = dict(
 
 
 # @CTB write tests for each try/except
+# @CTB add a sourmash table that identifies database functions
+# @CTB write a standard loading function in sourmash_args?
+# @CTB write tests that cross-product the various types.
 def load_sql_index(filename):
     if not os.path.exists(filename) or os.path.getsize(filename) == 0:
         return
@@ -91,7 +94,7 @@ def load_sql_index(filename):
     # does it have the 'sketches' table, necessary for either index or mf?
     try:
         # @CTB test with a taxonomy file..
-        # @CTB versioning?
+        # @CTB versioning? just have a table or info that identifies?
         c.execute('SELECT * FROM sketches LIMIT 1')
     except (sqlite3.OperationalError, sqlite3.DatabaseError):
         # is nothing.
