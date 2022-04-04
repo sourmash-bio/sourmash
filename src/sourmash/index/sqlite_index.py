@@ -100,7 +100,7 @@ def load_sqlite_file(filename):
     is_manifest = False
     for k, v in results:
         if k == 'SqliteIndex':
-            # @CTB: check version errors on sbt
+            # @CTB: check how we do version errors on sbt
             if v != '1.0':
                 raise Exception(f"unknown SqliteManifest version '{v}'")
             is_index = True
@@ -182,7 +182,7 @@ class SqliteIndex(Index):
             )
             """)
 
-            # @CTB unique?
+            # @CTB supply unique constraints?
             c.execute("""
             INSERT INTO sourmash_internal (key, value)
             VALUES ('SqliteIndex', '1.0')
@@ -350,7 +350,17 @@ class SqliteIndex(Index):
 
             if search_fn.passes(score):
                 subj = self._load_sketch(c2, sketch_id)
-                # check actual against approx result here w/assert. @CTB
+
+                # for testing only, I guess? remove this after validation :) @CTB
+                subj_mh = subj.minhash.downsample(scaled=query_mh.scaled)
+                int_size, un_size = query_mh.intersection_and_union_size(subj_mh)
+
+                query_size = len(query_mh)
+                subj_size = len(subj_mh)
+                score2 = search_fn.score_fn(query_size, int_size, subj_size,
+                                            un_size)
+                assert score == score2
+
                 if search_fn.collect(score, subj):
                     if picklist is None or subj in picklist:
                         yield IndexSearchResult(score, subj, self.location)
