@@ -193,29 +193,24 @@ class SqliteIndex(Index):
         elif self.scaled is None:
             self.scaled = ss.minhash.scaled
 
-        row = dict(name=ss.name,
-                   scaled=ss.minhash.scaled,
-                   ksize=ss.minhash.ksize,
-                   filename=ss.filename,
-                   md5=ss.md5sum(),
-                   moltype=ss.minhash.moltype,
-                   seed=ss.minhash.seed,
-                   n_hashes=len(ss.minhash),
-                   internal_location=None,
-                   with_abundance=False)
-
+        # ok, first create and insert a manifest row
+        row = CollectionManifest.make_manifest_row(ss, None,
+                                                   include_signature=False)
         self.manifest._insert_row(c, row)
 
+        # retrieve ID of row for retrieving hashes:
         c.execute("SELECT last_insert_rowid()")
         sketch_id, = c.fetchone()
 
+        # insert all the hashes
         hashes = []
         hashes_to_sketch = []
         for h in ss.minhash.hashes:
             hh = convert_hash_to(h)
             hashes_to_sketch.append((hh, sketch_id))
 
-        c.executemany("INSERT INTO hashes (hashval, sketch_id) VALUES (?, ?)", hashes_to_sketch)
+        c.executemany("INSERT INTO hashes (hashval, sketch_id) VALUES (?, ?)",
+                      hashes_to_sketch)
 
         if commit:
             self.conn.commit()
@@ -300,19 +295,20 @@ class SqliteIndex(Index):
 
     def select(self, *, num=0, track_abundance=False, **kwargs):
         "Run a select! This just modifies the manifest."
-
         # check SqliteIndex specific conditions on the 'select'
         if num:
             raise ValueError("cannot select on 'num' in SqliteIndex")
         if track_abundance:
             raise ValueError("cannot store or search signatures with abundance")
+        # create manifest if needed
         manifest = self.manifest
         if manifest is None:
             manifest = CollectionManifest_Sqlite(self.conn)
 
+        # modify manifest
         manifest = manifest.select_to_manifest(**kwargs)
 
-        # return a new SqliteIndex with a 
+        # return a new SqliteIndex with a new manifest, but same old conn.
         return SqliteIndex(self.dbfile,
                            sqlite_manifest=manifest,
                            conn=self.conn)
@@ -684,4 +680,17 @@ class CollectionManifest_Sqlite(CollectionManifest):
 
     @classmethod
     def create_manifest(cls, *args, **kwargs):
+        """Create a manifest from an iterator that yields (ss, location)
+
+        Stores signatures in manifest rows by default.
+
+        Note: do NOT catch exceptions here, so this passes through load excs.
+        """
         raise NotImplementedError
+
+        manifest_list = []
+        for ss, location in locations_iter:
+            row = cls.make_manifest_row(ss, location, include_signature=True)
+            manifest_list.append(row)
+
+        return cls(manifest_list)
