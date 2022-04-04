@@ -3671,7 +3671,7 @@ def test_sig_manifest_7_allzip_3(runtmp):
 
 
 def test_sig_manifest_8_sqldb(runtmp):
-    # make a sqldb and run fileinfo on it
+    # make a sqldb and then run sig manifest on it.
     gcf_all = glob.glob(utils.get_test_data('gather/GCF*.sig'))
     sqldb = runtmp.output('some.sqldb')
 
@@ -3700,6 +3700,31 @@ def test_sig_manifest_8_sqldb(runtmp):
 
     mf = CollectionManifest.load_from_filename(runtmp.output('mf.csv'))
     assert len(mf) == 12
+
+
+def test_sig_manifest_8_sqldb_out(runtmp):
+    # make a zip and run manifest out on it to make a sql format manifest.
+    gcf_all = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    zipfile = runtmp.output('some.zip')
+
+    runtmp.sourmash('sig', 'cat', '-k', '31', *gcf_all, '-o', zipfile)
+
+    # ...and this should succeed:
+    runtmp.sourmash('sig', 'manifest', zipfile, '-o', 'mf.sqldb',
+                    '-F', 'sql')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert 'manifest contains 12 signatures total.' in err
+    assert "wrote manifest to 'mf.sqldb'" in err
+
+    # @CTB test me somehow.
+    #mf = CollectionManifest.load_from_filename(runtmp.output('mf.c'))
+    #assert len(mf) == 12
 
 
 def test_sig_kmers_1_dna(runtmp):

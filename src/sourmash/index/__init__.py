@@ -1212,8 +1212,7 @@ class StandaloneManifestIndex(Index):
         if not os.path.isfile(location):
             raise ValueError(f"provided manifest location '{location}' is not a file")
 
-        with open(location, newline='') as fp:
-            m = CollectionManifest.load_from_csv(fp)
+        m = CollectionManifest.load_from_filename(location)
 
         if prefix is None:
             prefix = os.path.dirname(location)

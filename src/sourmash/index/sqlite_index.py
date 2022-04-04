@@ -36,6 +36,7 @@ TODO:
 
 """
 import time
+import os
 import sqlite3
 from collections import Counter
 
@@ -44,7 +45,7 @@ from bitstring import BitArray
 from sourmash.index import Index
 import sourmash
 from sourmash import MinHash, SourmashSignature
-from sourmash.index import IndexSearchResult
+from sourmash.index import IndexSearchResult, StandaloneManifestIndex
 from sourmash.picklist import PickStyle, SignaturePicklist
 from sourmash.manifest import CollectionManifest
 from sourmash.logging import debug_literal
@@ -73,6 +74,38 @@ picklist_selects = dict(
     md5prefix8='INSERT INTO pickset SELECT id FROM sketches WHERE md5sum LIKE ?',
     md5='INSERT INTO pickset SELECT id FROM sketches WHERE md5sum=?',
     )
+
+
+def load_sql_index(filename):
+    if not os.path.exists(filename) or os.path.getsize(filename) == 0:
+        return
+
+    conn = sqlite3.connect(filename)
+    c = conn.cursor()
+
+    # does it have the 'sketches' table, necessary for either option?
+    try:
+        # @CTB test with a taxonomy file..
+        # @CTB versioning?
+        c.execute('SELECT * FROM sketches LIMIT 1')
+    except sqlite3.OperationalError:
+        # is nothing.
+        conn.close()
+        return
+
+    try:
+        # this means it's a SqliteIndex:
+        c.execute('SELECT * from hashes LIMIT 1')
+        conn.close()
+
+        return SqliteIndex.load(filename)
+    except sqlite3.OperationalError:
+        pass
+
+    # must be a manifest - load _that_ as Index.
+    mf = CollectionManifest_Sqlite(conn)
+    prefix = os.path.dirname(filename)
+    return StandaloneManifestIndex(mf, filename, prefix=prefix)
 
 
 class SqliteIndex(Index):
@@ -494,6 +527,8 @@ class CollectionManifest_Sqlite(CollectionManifest):
         assert isinstance(manifest, CollectionManifest)
         for row in manifest.rows:
             cls._insert_row(cursor, row)
+        conn.commit()
+
         return cls(conn)
 
     def __bool__(self):

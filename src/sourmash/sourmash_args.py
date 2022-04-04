@@ -53,7 +53,7 @@ import sourmash.exceptions
 from .logging import notify, error, debug_literal
 
 from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
-from .index.sqlite_index import SqliteIndex
+from .index.sqlite_index import load_sql_index, SqliteIndex
 from . import signature as sigmod
 from .picklist import SignaturePicklist, PickStyle
 from .manifest import CollectionManifest
@@ -405,8 +405,8 @@ def _load_revindex(filename, **kwargs):
 
 
 def _load_sqlitedb(filename, **kwargs):
-    if os.path.exists(filename) and os.path.getsize(filename) > 0:
-        return SqliteIndex.load(filename)
+    "Load either a SqliteIndex or a CollectionManifest_Sqlite"
+    return load_sql_index(filename)
 
 
 def _load_zipfile(filename, **kwargs):

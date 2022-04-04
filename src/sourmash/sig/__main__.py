@@ -301,11 +301,17 @@ def manifest(args):
     manifest = sourmash_args.get_manifest(loader, require=True,
                                           rebuild=rebuild)
 
-    with open(args.output, "w", newline='') as csv_fp:
-        manifest.write_to_csv(csv_fp, write_header=True)
+    if args.manifest_format == 'csv':
+        manifest.write_to_filename(args.output)
+    elif args.manifest_format == 'sql':
+        from sourmash.index.sqlite_index import CollectionManifest_Sqlite
+        CollectionManifest_Sqlite.create_from_manifest(args.output,
+                                                       manifest)
+    else:
+        assert 0
 
     notify(f"manifest contains {len(manifest)} signatures total.")
-    notify(f"wrote manifest to '{args.output}'")
+    notify(f"wrote manifest to '{args.output}' ({args.manifest_format})")
 
 
 def overlap(args):
