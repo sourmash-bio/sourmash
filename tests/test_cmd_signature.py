@@ -3670,6 +3670,38 @@ def test_sig_manifest_7_allzip_3(runtmp):
     assert 'dna-sig.noext' in filenames
 
 
+def test_sig_manifest_8_sqldb(runtmp):
+    # make a sqldb and run fileinfo on it
+    gcf_all = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    sqldb = runtmp.output('some.sqldb')
+
+    runtmp.sourmash('sig', 'cat', '-k', '31', *gcf_all, '-o', sqldb)
+
+    # need to use '--no-rebuild-manifest' with 'sig manifest' on sqldb,
+    # because it has a manifest but not the _signatures_with_internal
+    # method to rebuild one ;)
+
+    # so, this should fail...
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'manifest', sqldb, '-o', 'mf.csv')
+
+    # ...and this should succeed:
+    runtmp.sourmash('sig', 'manifest', sqldb, '-o', 'mf.csv',
+                    '--no-rebuild')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert 'manifest contains 12 signatures total.' in err
+    assert "wrote manifest to 'mf.csv'" in err
+
+    mf = CollectionManifest.load_from_filename(runtmp.output('mf.csv'))
+    assert len(mf) == 12
+
+
 def test_sig_kmers_1_dna(runtmp):
     # test sig kmers on dna
     seqfile = utils.get_test_data('short.fa')

@@ -466,6 +466,9 @@ def test_sqlite_manifest_basic():
     assert sig47 in manifest
     assert sig2 not in manifest
 
+    standard_mf = sqlidx.manifest._extract_manifest()
+    assert len(standard_mf) == 2
+
     picklist = manifest.to_picklist()
     assert sig47 in picklist
     assert sig2 not in picklist

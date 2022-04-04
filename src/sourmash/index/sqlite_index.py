@@ -127,22 +127,8 @@ class SqliteIndex(Index):
             c.execute("PRAGMA temp_store = MEMORY")
 
             # @CTB move to sqlite manifest class?
-            c.execute("""
-            CREATE TABLE IF NOT EXISTS sketches
-              (id INTEGER PRIMARY KEY,
-               name TEXT,
-               scaled INTEGER NOT NULL,
-               ksize INTEGER NOT NULL,
-               filename TEXT,
-               is_dna BOOLEAN NOT NULL,
-               is_protein BOOLEAN NOT NULL,
-               is_dayhoff BOOLEAN NOT NULL,
-               is_hp BOOLEAN NOT NULL,
-               md5sum TEXT NOT NULL, 
-               seed INTEGER NOT NULL,
-               n_hashes INTEGER NOT NULL
-            )
-            """)
+            CollectionManifest_Sqlite._create_table(c)
+
             c.execute("""
             CREATE TABLE IF NOT EXISTS hashes (
                hashval INTEGER NOT NULL,
@@ -464,10 +450,33 @@ class CollectionManifest_Sqlite(CollectionManifest):
         self.conn = conn
         self.selection_dict = selection_dict
 
+    @classmethod
+    def _create_table(cls, cursor):
+        "Create the manifest table."
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sketches
+          (id INTEGER PRIMARY KEY,
+           name TEXT,
+           scaled INTEGER NOT NULL,
+           ksize INTEGER NOT NULL,
+           filename TEXT,
+           is_dna BOOLEAN NOT NULL,
+           is_protein BOOLEAN NOT NULL,
+           is_dayhoff BOOLEAN NOT NULL,
+           is_hp BOOLEAN NOT NULL,
+           md5sum TEXT NOT NULL,
+           seed INTEGER NOT NULL,
+           n_hashes INTEGER NOT NULL,
+           internal_location TEXT
+        )
+        """)
+
     def __bool__(self):
         return bool(len(self))
 
     def __eq__(self, other):
+        # could check if selection dict is the same, database conn is the
+        # same...
         raise NotImplementedError
 
     def __len__(self):
@@ -483,7 +492,12 @@ class CollectionManifest_Sqlite(CollectionManifest):
 
         # @CTB do we need to pay attention to picklist here?
         # we can generate manifest and use 'picklist.matches_manifest_row'
-        # on rows.
+        # on rows...? basically is there a place where this will be
+        # different / can we find it and test it :grin:
+        # count = 0
+        # for row in self.rows:
+        #    if picklist.matches_manifest_row(row):
+        #       count += 1
         return count
 
     def _select_signatures(self, c):
@@ -579,7 +593,7 @@ class CollectionManifest_Sqlite(CollectionManifest):
         for row in self.rows:
             manifest_list.append(row)
 
-            return CollectionManifest(manifest_list)
+        return CollectionManifest(manifest_list)
 
     @property
     def rows(self):
@@ -593,15 +607,16 @@ class CollectionManifest_Sqlite(CollectionManifest):
 
         c1.execute(f"""
         SELECT id, name, md5sum, scaled, ksize, filename, is_dna, is_protein,
-        is_dayhoff, is_hp, seed, n_hashes FROM sketches {conditions}""",
+        is_dayhoff, is_hp, seed, n_hashes, internal_location
+        FROM sketches {conditions}""",
                   values)
 
         manifest_list = []
         for (iloc, name, md5sum, scaled, ksize, filename, is_dna, is_protein,
-             is_dayhoff, is_hp, seed, n_hashes) in c1:
+             is_dayhoff, is_hp, seed, n_hashes, iloc) in c1:
             row = dict(num=0, scaled=scaled, name=name, filename=filename,
                        n_hashes=n_hashes, with_abundance=0, ksize=ksize,
-                       md5=md5sum)
+                       md5=md5sum, internal_location=iloc)
             row['md5short'] = md5sum[:8]
 
             if is_dna:
