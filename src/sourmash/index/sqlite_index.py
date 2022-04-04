@@ -13,24 +13,18 @@ Features and limitations:
 
 * Unlike LCA_Database, SqliteIndex supports multiple ksizes and moltypes.
 
-* SqliteIndex does not support 'num' signatures. It could store them easily, but
-  since it cannot search them properly with 'find', we've omitted them.
+* SqliteIndex does not support 'num' signatures. It could store them
+  easily, but since it cannot search them properly with 'find', we've
+  omitted them.
 
 * Likewise, SqliteIndex does not support 'abund' signatures because it cannot
   search them (just like SBTs cannot).
 
+* @CTB document manifest stuff.
+
 CTB consider:
 * a SqliteIndex sqldb can store taxonomy table just fine. Is there any
     extra support that might be worthwhile?
-
-* if we build a sqlite-based manifest that is standalone, how should we
-    integrate it here? two thoughts -
-   * we could do most of the selection currently in SqliteIndex on manifests,
-     instead.
-   * we could make a view that mimics the manifest table so that both
-     interfaces could work.
-   * how do we / can we take advantage of having both the Index and the
-     manifest in a SQLite database?
 
 * do we want to prevent storage of scaled=1 sketches and then
   dispense with the MAX_SQLITE_INT stuff? It's kind of a nice hack :laugh:
@@ -39,7 +33,7 @@ TODO:
 @CTB add DISTINCT to sketch and hash select
 @CTB don't do constraints if scaleds are equal?
 @CTB do we want to limit to one moltype/ksize, too, like LCA index?
-@CTB keep moltype as a string?
+
 """
 import time
 import sqlite3
