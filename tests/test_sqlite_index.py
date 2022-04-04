@@ -1,15 +1,18 @@
-"Tests for SqliteIndex"
-
+"Tests for SqliteIndex and CollectionManifest_Sqlite"
+import os
 import pytest
+import shutil
 
 import sourmash
-from sourmash.index.sqlite_index import SqliteIndex
+from sourmash.index.sqlite_index import SqliteIndex, load_sqlite_file
 from sourmash.index.sqlite_index import CollectionManifest_Sqlite
+from sourmash.index import StandaloneManifestIndex
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.picklist import SignaturePicklist, PickStyle
 from sourmash.manifest import CollectionManifest
 
 import sourmash_tst_utils as utils
+from sourmash_tst_utils import SourmashCommandFailed
 
 
 def test_sqlite_index_search():
@@ -502,3 +505,63 @@ def test_sqlite_manifest_round_trip():
         picklist = mf.to_picklist()
         assert sig47 in picklist
         assert sig2 not in picklist
+
+
+def test_sqlite_manifest_create(runtmp):
+    # test creation and summarization of a manifest of prot.zip
+    zipfile = utils.get_test_data('prot/all.zip')
+
+    # create manifest
+    runtmp.sourmash('sig', 'manifest', '-F', 'sql', zipfile,
+                    '-o', 'mf.sqlmf')
+
+    sqlmf = runtmp.output('mf.sqlmf')
+    assert os.path.exists(sqlmf)
+
+    # verify it's loadable as the right type
+    idx = load_sqlite_file(sqlmf)
+    assert isinstance(idx, StandaloneManifestIndex)
+
+    # summarize
+    runtmp.sourmash('sig', 'fileinfo', 'mf.sqlmf')
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "2 sketches with dayhoff, k=19, scaled=100          7945 total hashes" in out
+    assert "2 sketches with hp, k=19, scaled=100               5184 total hashes" in out
+    assert "2 sketches with protein, k=19, scaled=100          8214 total hashes" in out
+    assert "1 sketches with DNA, k=31, scaled=1000             5238 total hashes" in out
+
+    assert "path filetype: StandaloneManifestIndex" in out
+    assert "location: mf.sqlmf" in out
+    assert "is database? yes" in out
+    assert "has manifest? yes" in out
+    assert "num signatures: 7" in out
+
+
+def test_sqlite_manifest_create_noload_sigs(runtmp):
+    # sigs should not be loadable from manifest this way...
+    zipfile = utils.get_test_data('prot/all.zip')
+
+    # create manifest
+    runtmp.sourmash('sig', 'manifest', '-F', 'sql', zipfile,
+                    '-o', 'mf.sqlmf')
+
+    # 'describe' should not be able to load the sqlmf b/c prefix is wrong
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'describe', 'mf.sqlmf')
+
+
+def test_sqlite_manifest_create_yesload_sigs(runtmp):
+    # should be able to load after copying files
+    zipfile = utils.get_test_data('prot/all.zip')
+    shutil.copytree(utils.get_test_data('prot'), runtmp.output('prot'))
+
+    # create manifest
+    runtmp.sourmash('sig', 'manifest', '-F', 'sql', zipfile,
+                    '-o', 'prot/mf.sqlmf')
+
+    # 'describe' should now be able to load the sqlmf, which is cool
+    runtmp.sourmash('sig', 'describe', 'prot/mf.sqlmf')
+    print(runtmp.last_result.out)

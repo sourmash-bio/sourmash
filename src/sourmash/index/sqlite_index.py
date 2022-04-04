@@ -32,7 +32,7 @@ CTB consider:
 TODO:
 @CTB add DISTINCT to sketch and hash select
 @CTB don't do constraints if scaleds are equal?
-@CTB do we want to limit to one moltype/ksize, too, like LCA index?
+@CTB do we want to limit Index to one moltype/ksize, too, like LCA index?
 @CTB scaled=0 for num?
 """
 import time
@@ -76,9 +76,6 @@ picklist_selects = dict(
     )
 
 
-# @CTB write tests for each try/except
-# @CTB add a sourmash table that identifies database functions
-# @CTB write a standard loading function in sourmash_args?
 # @CTB write tests that cross-product the various types.
 def load_sqlite_file(filename):
     "Load a SqliteIndex or a CollectionManifest_Sqlite from a sqlite file."
@@ -116,7 +113,7 @@ def load_sqlite_file(filename):
             # different version numbers ^^ @CTB
             raise Exception("unknown values in 'sourmash_internal' table")
 
-    # every Index is a Manifest
+    # every Index is a Manifest!
     if is_index:
         assert is_manifest
 
