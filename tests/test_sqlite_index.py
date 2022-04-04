@@ -312,46 +312,51 @@ def test_sqlite_index_abund_select():
         sqlidx.select(track_abundance=True)
 
 
-def test_sqlite_index_moltype_select():
-    # @CTB cannot do multiple scaled values.
-    return
+def test_sqlite_index_insert_num_fail():
+    # cannot insert 'num' signatures
+    sqlidx = SqliteIndex(":memory:")
+
+    sig47 = utils.get_test_data('num/47.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    assert ss47.minhash.num != 0
+
+    with pytest.raises(ValueError) as exc:
+        sqlidx.insert(ss47)
+
+    assert "cannot store 'num' signatures in SqliteIndex" in str(exc)
+
+
+def test_sqlite_index_insert_abund_fail():
+    # cannot insert 'num' signatures
+    sqlidx = SqliteIndex(":memory:")
+
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+
+    with pytest.raises(ValueError) as exc:
+        sqlidx.insert(ss47)
+
+    assert "cannot store signatures with abundance in SqliteIndex" in str(exc)
+
+
+def test_sqlite_index_moltype_multi_fail():
+    # check that we cannot store sigs with multiple scaled values.
 
     # this loads multiple ksizes (19, 31) and moltypes (DNA, protein, hp, etc)
     filename = utils.get_test_data('prot/all.zip')
     siglist = sourmash.load_file_as_signatures(filename)
+    siglist = list(siglist)
 
     sqlidx = SqliteIndex(":memory:")
-    for ss in siglist:
-        sqlidx.insert(ss)
 
-    # select most specific DNA
-    sqlidx2 = sqlidx.select(ksize=31, moltype='DNA')
-    assert len(sqlidx2) == 2
+    sqlidx.insert(siglist[0])
+    assert sqlidx.scaled == 100
 
-    # select most specific protein
-    sqlidx2 = sqlidx.select(ksize=19, moltype='protein')
-    assert len(sqlidx2) == 2
+    with pytest.raises(ValueError) as exc:
+        for ss in siglist:
+            sqlidx.insert(ss)
 
-    # can leave off ksize, selects all ksizes
-    sqlidx2 = sqlidx.select(moltype='DNA')
-    assert len(sqlidx2) == 2
-
-    # can leave off ksize, selects all ksizes
-    sqlidx2 = sqlidx.select(moltype='protein')
-    assert len(sqlidx2) == 2
-
-    # try hp
-    sqlidx2 = sqlidx.select(moltype='hp')
-    assert len(sqlidx2) == 2
-
-    # try dayhoff
-    sqlidx2 = sqlidx.select(moltype='dayhoff')
-    assert len(sqlidx2) == 2
-
-    # select something impossible
-    sqlidx2 = sqlidx.select(ksize=4)
-    assert len(sqlidx2) == 0
-
+    assert "this database can only store scaled values=100" in str(exc)
 
 def test_sqlite_index_picklist_select():
     # test select with a picklist

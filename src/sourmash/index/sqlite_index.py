@@ -254,7 +254,7 @@ class SqliteIndex(Index):
             raise ValueError("cannot store signatures with abundance in SqliteIndex")
 
         if self.scaled is not None and self.scaled != ss.minhash.scaled:
-            raise ValueError("this database can only store scaled values = {self.scaled}")
+            raise ValueError(f"this database can only store scaled values={self.scaled}")
         elif self.scaled is None:
             self.scaled = ss.minhash.scaled
 
