@@ -1244,6 +1244,7 @@ class StandaloneManifestIndex(Index):
         manifest in this class.
         """
         # collect all internal locations
+        # @CTB use manifest.locations() to enable SQLite optimizations!
         iloc_to_rows = defaultdict(list)
         for row in self.manifest.rows:
             iloc = row['internal_location']

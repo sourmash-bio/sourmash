@@ -614,6 +614,9 @@ class CollectionManifest_Sqlite(CollectionManifest):
         count, = c.fetchone()
 
         # @CTB do we need to pay attention to picklist here?
+        # @CTB yes - we don't do prefix checking, we do 'like' in SQL.
+        # e.g. check ident.
+        #
         # we can generate manifest and use 'picklist.matches_manifest_row'
         # on rows...? basically is there a place where this will be
         # different / can we find it and test it :grin:
@@ -744,12 +747,15 @@ class CollectionManifest_Sqlite(CollectionManifest):
         mf.write_to_csv(fp, write_header=write_header)
 
     def filter_rows(self, row_filter_fn):
+        # @CTB
         raise NotImplementedError
 
     def filter_on_columns(self, col_filter_fn, col_names):
+        # @CTB
         raise NotImplementedError
 
     def locations(self):
+        # @CTB
         raise NotImplementedError
 
     def __contains__(self, ss):

@@ -1,5 +1,8 @@
 """
 Manifests for collections of signatures.
+
+@CTB refactor in light of CollectionManifest_Sqlite to have base class, load,
+etc.
 """
 import csv
 import ast
