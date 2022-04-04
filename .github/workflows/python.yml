@@ -64,7 +64,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: .tox/
-          key: ${{ runner.os }}-tox-${{ hashFiles('**/setup.py') }}
+          key: ${{ runner.os }}-tox-${{ hashFiles('**/setup.cfg') }}
           restore-keys: |
             ${{ runner.os }}-tox-
 
