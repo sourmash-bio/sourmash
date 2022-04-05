@@ -1,11 +1,11 @@
-"Tests for SqliteIndex and CollectionManifest_Sqlite"
+"Tests for SqliteIndex and SqliteCollectionManifest"
 import os
 import pytest
 import shutil
 
 import sourmash
 from sourmash.index.sqlite_index import SqliteIndex, load_sqlite_file
-from sourmash.index.sqlite_index import CollectionManifest_Sqlite
+from sourmash.index.sqlite_index import SqliteCollectionManifest
 from sourmash.index import StandaloneManifestIndex
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.picklist import SignaturePicklist, PickStyle
@@ -497,7 +497,7 @@ def test_sqlite_manifest_round_trip():
                                                      include_signature=False))
     nosql_mf = CollectionManifest(rows)
 
-    sqlite_mf = CollectionManifest_Sqlite.create_from_manifest(":memory:",
+    sqlite_mf = SqliteCollectionManifest.create_from_manifest(":memory:",
                                                                nosql_mf)
 
     # test roundtrip

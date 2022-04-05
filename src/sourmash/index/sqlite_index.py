@@ -75,7 +75,7 @@ picklist_selects = dict(
 
 # @CTB write tests that cross-product the various types.
 def load_sqlite_file(filename):
-    "Load a SqliteIndex or a CollectionManifest_Sqlite from a sqlite file."
+    "Load a SqliteIndex or a SqliteCollectionManifest from a sqlite file."
     # file must already exist, and be non-zero in size
     if not os.path.exists(filename) or os.path.getsize(filename) == 0:
         return
@@ -124,7 +124,7 @@ def load_sqlite_file(filename):
         assert not is_index     # indices are already handled!
 
         prefix = os.path.dirname(filename)
-        mf = CollectionManifest_Sqlite(conn)
+        mf = SqliteCollectionManifest(conn)
         idx = StandaloneManifestIndex(mf, filename, prefix=prefix)
 
     return idx
@@ -146,7 +146,7 @@ class SqliteIndex(Index):
 
         # build me a SQLite manifest class to use for selection.
         if sqlite_manifest is None:
-            sqlite_manifest = CollectionManifest_Sqlite(conn)
+            sqlite_manifest = SqliteCollectionManifest(conn)
         self.manifest = sqlite_manifest
         self.conn = conn
 
@@ -188,7 +188,7 @@ class SqliteIndex(Index):
             VALUES ('SqliteIndex', '1.0')
             """)
 
-            CollectionManifest_Sqlite._create_table(c)
+            SqliteCollectionManifest._create_table(c)
 
             c.execute("""
             CREATE TABLE IF NOT EXISTS hashes (
@@ -375,7 +375,7 @@ class SqliteIndex(Index):
         # create manifest if needed
         manifest = self.manifest
         if manifest is None:
-            manifest = CollectionManifest_Sqlite(self.conn)
+            manifest = SqliteCollectionManifest(self.conn)
 
         # modify manifest
         manifest = manifest.select_to_manifest(**kwargs)
@@ -517,7 +517,7 @@ class SqliteIndex(Index):
         return c
 
 
-class CollectionManifest_Sqlite(CollectionManifest):
+class SqliteCollectionManifest(CollectionManifest):
     def __init__(self, conn, selection_dict=None):
         """
         Here, 'conn' should already be connected and configured.
@@ -692,7 +692,7 @@ class CollectionManifest_Sqlite(CollectionManifest):
                 d[k] = v
             kwargs = d
 
-        return CollectionManifest_Sqlite(self.conn, selection_dict=kwargs)
+        return SqliteCollectionManifest(self.conn, selection_dict=kwargs)
 
     def _run_select(self, c):
         conditions, values, picklist = self._select_signatures(c)

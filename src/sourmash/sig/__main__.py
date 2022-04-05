@@ -304,9 +304,9 @@ def manifest(args):
     if args.manifest_format == 'csv':
         manifest.write_to_filename(args.output)
     elif args.manifest_format == 'sql':
-        from sourmash.index.sqlite_index import CollectionManifest_Sqlite
-        CollectionManifest_Sqlite.create_from_manifest(args.output,
-                                                       manifest)
+        from sourmash.index.sqlite_index import SqliteCollectionManifest
+        SqliteCollectionManifest.create_from_manifest(args.output,
+                                                      manifest)
     else:
         assert 0
 
