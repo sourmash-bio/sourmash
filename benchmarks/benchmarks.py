@@ -172,3 +172,31 @@ class TimeZipStorageSuite:
 
     def teardown(self):
         self.zipfile.close()
+
+
+class PeakmemZipStorageSuite:
+    def setup(self):
+        import zipfile
+        self.zipfile = NamedTemporaryFile()
+
+        with zipfile.ZipFile(self.zipfile, mode='w',
+                          compression=zipfile.ZIP_STORED) as storage:
+            for i in range(100_000):
+                # just so we have lots of entries
+                storage.writestr(str(i), b"0")
+            # one big-ish entry
+            storage.writestr("sig1", b"9" * 1_000_000)
+
+
+    def peakmem_load_from_zipstorage(self):
+        with ZipStorage(self.zipfile.name) as storage:
+            for i in range(20):
+                storage.load("sig1")
+
+    def peakmem_load_small_from_zipstorage(self):
+        with ZipStorage(self.zipfile.name) as storage:
+            for i in range(20):
+                storage.load("99999")
+
+    def teardown(self):
+        self.zipfile.close()

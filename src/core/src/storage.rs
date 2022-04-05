@@ -257,7 +257,7 @@ impl ZipStorage {
             metadata_builder: |archive: &piz::ZipArchive| {
                 archive
                     .entries()
-                    .into_iter()
+                    .iter()
                     .map(|entry| (entry.path.as_os_str(), entry))
                     .collect()
             },
