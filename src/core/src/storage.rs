@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+use std::ffi::OsStr;
 use std::fs::{DirBuilder, File};
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
@@ -46,6 +48,12 @@ impl Storage for InnerStorage {
 pub enum StorageError {
     #[error("Path can't be empty")]
     EmptyPathError,
+
+    #[error("Path not found: {0}")]
+    PathNotFoundError(String),
+
+    #[error("Error reading data from {0}")]
+    DataReadError(String),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -160,12 +168,28 @@ pub struct ZipStorage {
     mapping: Option<memmap2::Mmap>,
 
     #[borrows(mapping)]
-    #[not_covariant]
-    archive: Option<piz::ZipArchive<'this>>,
+    #[covariant]
+    archive: piz::ZipArchive<'this>,
 
     subdir: Option<String>,
     path: Option<String>,
-    //metadata: piz::read::DirectoryContents<'a>,
+
+    #[borrows(archive)]
+    #[covariant]
+    metadata: Metadata<'this>,
+}
+
+pub type Metadata<'a> = BTreeMap<&'a OsStr, &'a piz::read::FileMetadata<'a>>;
+
+fn lookup<'a, P: AsRef<Path>>(
+    metadata: &'a Metadata,
+    path: P,
+) -> Result<&'a piz::read::FileMetadata<'a>, Error> {
+    let path = path.as_ref();
+    metadata
+        .get(&path.as_os_str())
+        .ok_or_else(|| StorageError::PathNotFoundError(path.to_str().unwrap().into()).into())
+        .map(|entry| *entry)
 }
 
 fn find_subdirs<'a>(archive: &'a piz::ZipArchive<'a>) -> Result<Option<String>, Error> {
@@ -187,54 +211,32 @@ fn find_subdirs<'a>(archive: &'a piz::ZipArchive<'a>) -> Result<Option<String>, 
     }
 }
 
-fn find_path<'a, P: AsRef<Path>>(
-    archive: &'a piz::ZipArchive<'a>,
-    path: P,
-) -> Option<&'a piz::read::FileMetadata<'a>> {
-    let path = path.as_ref();
-    archive.entries().iter().find(|entry| entry.path == path)
-}
-
 impl Storage for ZipStorage {
     fn save(&self, _path: &str, _content: &[u8]) -> Result<String, Error> {
         unimplemented!();
     }
 
     fn load(&self, path: &str) -> Result<Vec<u8>, Error> {
-        let load_from_archive = |archive: &piz::ZipArchive<'_>, path: &str| {
-            // FIXME error
-            let entry = match find_path(archive, path) {
-                Some(entry) => Ok(entry),
-                None => {
-                    if let Some(subdir) = &self.subdir {
-                        find_path(archive, subdir.to_owned() + path)
-                            .ok_or(StorageError::EmptyPathError)
-                    } else {
-                        Err(StorageError::EmptyPathError)
-                    }
-                }
-            }?;
+        let metadata = self.borrow_metadata();
 
-            // FIXME error
-            let mut reader = BufReader::new(
-                archive
-                    .read(entry)
-                    .map_err(|_| StorageError::EmptyPathError)?,
-            );
-            let mut contents = Vec::new();
-            reader.read_to_end(&mut contents)?;
+        let entry = lookup(metadata, path).or_else(|_| {
+            if let Some(subdir) = self.borrow_subdir() {
+                lookup(metadata, subdir.to_owned() + path)
+                    .map_err(|_| StorageError::PathNotFoundError(path.into()))
+            } else {
+                Err(StorageError::PathNotFoundError(path.into()))
+            }
+        })?;
 
-            Ok(contents)
-        };
+        let mut reader = BufReader::new(
+            self.borrow_archive()
+                .read(entry)
+                .map_err(|_| StorageError::DataReadError(path.into()))?,
+        );
+        let mut contents = Vec::new();
+        reader.read_to_end(&mut contents)?;
 
-        if let Some(archive) = &self.archive {
-            load_from_archive(archive, path)
-        } else {
-            //FIXME
-            let archive = piz::ZipArchive::new((&self.mapping.as_ref()).unwrap())
-                .map_err(|_| StorageError::EmptyPathError)?;
-            load_from_archive(&archive, path)
-        }
+        Ok(contents)
     }
 
     fn args(&self) -> StorageArgs {
@@ -242,103 +244,68 @@ impl Storage for ZipStorage {
     }
 }
 
-impl<'a> ZipStorage {
+impl ZipStorage {
     pub fn from_file(location: &str) -> Result<Self, Error> {
         let zip_file = File::open(location)?;
         let mapping = unsafe { memmap2::Mmap::map(&zip_file)? };
 
-        //FIXME
-        //let archive = piz::ZipArchive::new(&mapping).map_err(|_| StorageError::EmptyPathError)?;
-
-        //FIXME
-        //  let tree =
-        //      piz::read::as_tree(archive.entries()).map_err(|_| StorageError::EmptyPathError)?;
-        let archive =
-            piz::ZipArchive::new(mapping.as_ref()).map_err(|_| StorageError::EmptyPathError)?;
-        let subdir = find_subdirs(&archive)?;
-
-        Ok(Self {
+        let mut storage = ZipStorageBuilder {
             mapping: Some(mapping),
-            archive: None,
-            path: Some(location.to_string()),
-            subdir, //metadata: tree,
-        })
-    }
+            archive_builder: |mapping: &Option<memmap2::Mmap>| {
+                piz::ZipArchive::new(mapping.as_ref().unwrap()).unwrap()
+            },
+            metadata_builder: |archive: &piz::ZipArchive| {
+                archive
+                    .entries()
+                    .into_iter()
+                    .map(|entry| (entry.path.as_os_str(), entry))
+                    .collect()
+            },
+            subdir: None,
+            path: Some(location.to_owned()),
+        }
+        .build();
 
-    pub fn from_slice(mapping: &'a [u8]) -> Result<Self, Error> {
-        //FIXME
-        let archive = piz::ZipArchive::new(mapping).map_err(|_| StorageError::EmptyPathError)?;
+        let subdir = find_subdirs(storage.borrow_archive())?;
+        storage.with_mut(|fields| *fields.subdir = subdir);
 
-        //FIXME
-        //let entries: Vec<_> = archive.entries().iter().map(|x| x.to_owned()).collect();
-        //let tree =
-        //    piz::read::as_tree(entries.as_slice()).map_err(|_| StorageError::EmptyPathError)?;
-        let subdir = find_subdirs(&archive)?;
-
-        Ok(Self {
-            archive: Some(archive),
-            mapping: None,
-            path: None,
-            subdir, /*            metadata: archive
-                    .as_tree()
-                    .map_err(|_| StorageError::EmptyPathError)?, */
-        })
+        Ok(storage)
     }
 
     pub fn path(&self) -> Option<String> {
-        self.path.clone()
+        self.borrow_path().clone()
     }
 
     pub fn subdir(&self) -> Option<String> {
-        self.subdir.clone()
+        self.borrow_subdir().clone()
     }
 
     pub fn set_subdir(&mut self, path: String) {
-        self.subdir = Some(path);
+        self.with_mut(|fields| *fields.subdir = Some(path))
     }
 
     pub fn list_sbts(&self) -> Result<Vec<String>, Error> {
-        let sbts_in_archive = |archive: &'_ piz::ZipArchive<'_>| {
-            Ok(archive
-                .entries()
-                .iter()
-                .filter_map(|entry| {
-                    let path = entry.path.to_str().expect("Error converting path");
-                    if path.ends_with(".sbt.json") {
-                        Some(path.into())
-                    } else {
-                        None
-                    }
-                })
-                .collect())
-        };
-
-        if let Some(archive) = &self.archive {
-            sbts_in_archive(archive)
-        } else {
-            //FIXME
-            let archive = piz::ZipArchive::new((&self.mapping.as_ref()).unwrap())
-                .map_err(|_| StorageError::EmptyPathError)?;
-            sbts_in_archive(&archive)
-        }
+        Ok(self
+            .borrow_archive()
+            .entries()
+            .iter()
+            .filter_map(|entry| {
+                let path = entry.path.to_str().expect("Error converting path");
+                if path.ends_with(".sbt.json") {
+                    Some(path.into())
+                } else {
+                    None
+                }
+            })
+            .collect())
     }
 
     pub fn filenames(&self) -> Result<Vec<String>, Error> {
-        let filenames = |archive: &'_ piz::ZipArchive<'_>| {
-            Ok(archive
-                .entries()
-                .iter()
-                .map(|entry| entry.path.to_str().expect("Error converting path").into())
-                .collect())
-        };
-
-        if let Some(archive) = &self.archive {
-            filenames(archive)
-        } else {
-            //FIXME
-            let archive = piz::ZipArchive::new((&self.mapping.as_ref()).unwrap())
-                .map_err(|_| StorageError::EmptyPathError)?;
-            filenames(&archive)
-        }
+        Ok(self
+            .borrow_archive()
+            .entries()
+            .iter()
+            .map(|entry| entry.path.to_str().expect("Error converting path").into())
+            .collect())
     }
 }

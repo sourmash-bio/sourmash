@@ -18,7 +18,7 @@ unsafe fn zipstorage_new(ptr: *const c_char, insize: usize) -> Result<*mut Sourm
         let path = slice::from_raw_parts(ptr as *mut u8, insize);
         std::str::from_utf8(path)?
     };
-    let zipstorage = ZipStorage::new(path)?;
+    let zipstorage = ZipStorage::from_file(path)?;
 
     Ok(SourmashZipStorage::from_rust(zipstorage))
 }
