@@ -47,6 +47,8 @@ from sourmash.picklist import PickStyle, SignaturePicklist
 from sourmash.manifest import CollectionManifest
 from sourmash.logging import debug_literal
 
+from sourmash.lca.lca_db import cached_property
+
 # converters for unsigned 64-bit ints: if over MAX_SQLITE_INT,
 # convert to signed int.
 
@@ -734,12 +736,13 @@ class SqliteCollectionManifest(CollectionManifest):
         """, values)
 
         manifest_list = []
-        for (iloc, name, md5sum, num, scaled, ksize, filename, moltype,
+        for (_id, name, md5sum, num, scaled, ksize, filename, moltype,
              seed, n_hashes, iloc) in c1:
             row = dict(num=num, scaled=scaled, name=name, filename=filename,
                        n_hashes=n_hashes, with_abundance=0, ksize=ksize,
                        md5=md5sum, internal_location=iloc,
-                       moltype=moltype, md5short=md5sum[:8])
+                       moltype=moltype, md5short=md5sum[:8],
+                       id=_id)
             yield row
 
     def write_to_csv(self, fp, *, write_header=True):
@@ -794,3 +797,180 @@ class SqliteCollectionManifest(CollectionManifest):
             manifest_list.append(row)
 
         return cls(manifest_list)
+
+
+class LCA_Database_SqliteWrapper:
+    # LCA database functions/dictionary
+    # hashval_to_idx
+    # idx_to_lid
+    # lid_to_lineage
+
+    def __init__(self, sqlite_idx, ksize, lineage_db):
+        assert isinstance(sqlite_idx, SqliteIndex)
+        assert sqlite_idx.scaled
+        self.sqlidx = sqlite_idx
+        self.ksize = ksize
+        self.lineage_db = lineage_db
+
+        ##
+        mf = sqlite_idx.manifest
+        ident_to_name = {}
+        ident_to_idx = {}
+        next_lid = 0
+        idx_to_lid = {}
+        lineage_to_lid = {}
+        lid_to_lineage = {}
+
+        for row in mf.rows:
+            name = row['name']
+            if name:
+                ident = name.split(' ')[0].split('.')[0]
+
+                assert ident not in ident_to_name
+                ident_to_name[ident] = name
+                idx = row['id']
+                ident_to_idx[ident] = idx
+
+                lineage = lineage_db[ident]
+
+                lid = lineage_to_lid.get(lineage)
+                if lid is None:
+                    lid = next_lid
+                    next_lid += 1
+                    lineage_to_lid[lineage] = lid
+                    lid_to_lineage[lid] = lineage
+                    idx_to_lid[idx] = lid
+
+        self.ident_to_name = ident_to_name
+        self.ident_to_idx = ident_to_idx
+        self._next_lid = next_lid
+        self.idx_to_lid = idx_to_lid
+        self.lineage_to_lid = lineage_to_lid
+        self.lid_to_lineage = lid_to_lineage
+
+    @property
+    def location(self):
+        return self.sqlidx.location
+
+    def __len__(self):
+        return len(self.sqlidx)
+
+    def _get_ident_index(self, ident, fail_on_duplicate=False):
+        "Get (create if nec) a unique int id, idx, for each identifier."
+        idx = self.ident_to_idx.get(ident)
+        if fail_on_duplicate:
+            assert idx is None     # should be no duplicate identities
+
+        if idx is None:
+            idx = self._next_index
+            self._next_index += 1
+
+            self.ident_to_idx[ident] = idx
+
+        return idx
+
+    def _get_lineage_id(self, lineage):
+        "Get (create if nec) a unique lineage ID for each LineagePair tuples."
+        # does one exist already?
+        lid = self.lineage_to_lid.get(lineage)
+
+        # nope - create one. Increment next_lid.
+        if lid is None:
+            lid = self._next_lid
+            self._next_lid += 1
+
+            # build mappings
+            self.lineage_to_lid[lineage] = lid
+            self.lid_to_lineage[lid] = lineage
+
+        return lid
+
+    def insert(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def __repr__(self):
+        return "LCA_Database_SqliteWrapper('{}')".format(self.location)
+
+    def signatures(self):
+        "Return all of the signatures in this LCA database."
+        return self.sqlidx.signatures()
+
+    def _signatures_with_internal(self):
+        "Return all of the signatures in this LCA database."
+        for idx, ss in self._signatures.items():
+            yield ss, idx
+
+    def select(self, **kwargs):
+        raise NotImplementedError
+
+    def load(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def downsample_scaled(self, scaled):
+        if scaled < self.sqlidx.scaled:
+            assert 0
+
+    def get_lineage_assignments(self, hashval):
+        """
+        Get a list of lineages for this hashval.
+        """
+        x = []
+
+        idx_list = self.hashval_to_idx.get(hashval, [])
+        for idx in idx_list:
+            lid = self.idx_to_lid.get(idx, None)
+            if lid is not None:
+                lineage = self.lid_to_lineage[lid]
+                x.append(lineage)
+
+        return x
+
+    def find(self, *args, **kwargs):
+        return self.sqlidx.find(*args, **kwargs)
+
+    @cached_property
+    def lid_to_idx(self):
+        d = defaultdict(set)
+        for idx, lid in self.idx_to_lid.items():
+            d[lid].add(idx)
+        return d
+
+    @cached_property
+    def idx_to_ident(self):
+        d = defaultdict(set)
+        for ident, idx in self.ident_to_idx.items():
+            assert idx not in d
+            d[idx] = ident
+        return d
+
+    @property
+    def hashval_to_idx(self):
+        return _SqliteIndexHashvalToIndex(self.sqlidx)
+
+
+class _SqliteIndexHashvalToIndex:
+    def __init__(self, sqlidx):
+        self.sqlidx = sqlidx
+
+    def items(self):
+        sqlidx = self.sqlidx
+        c = sqlidx.cursor()
+
+        c.execute('SELECT hashval, sketch_id FROM hashes ORDER BY hashval')
+
+        this_hashval = None
+        idxlist = []
+        for hashval, sketch_id in c:
+            if hashval == this_hashval:
+                idxlist.append(sketch_id)
+            else:
+                if idxlist:
+                    hh = convert_hash_from(this_hashval)
+                    yield hh, idxlist
+
+                this_hashval = hashval
+                idxlist = []
+
+        if idxlist:
+            hh = convert_hash_from(this_hashval)
+            yield hh, idxlist
