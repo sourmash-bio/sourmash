@@ -125,15 +125,16 @@ def test_containment_to_distance_2():
     scaled = 100
     nkmers = 10000
     ksize=31
-    dist,low,high = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers)
+    dist,low,high,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_ci=True)
     print("\nDIST:", dist)
     print("CI:", low, " - ", high)
-    print(f"{dist},{low},{high}")
+    print(f"{dist},{low},{high},{p_not_in_common}")
     # check results
-    exp_dist, exp_low,exp_high = 0.07158545548052564,0.05320779238601372,0.09055547672455365
+    exp_dist, exp_low,exp_high,pnc = 0.07158545548052564,0.05320779238601372,0.09055547672455365,4.3171247410658655e-05
     assert dist == exp_dist
     assert low == exp_low
     assert high == exp_high
+    assert p_not_in_common == pnc
 
 
 def test_containment_to_distance_scaled100():
@@ -141,31 +142,34 @@ def test_containment_to_distance_scaled100():
     scaled = 100
     nkmers = 10000
     ksize=21
-    dist,low,high = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers)
+    dist,low,high,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_ci=True)
     print("\nDIST:", dist)
     print("CI:", low, " - ", high)
     print(f"{dist},{low},{high}")
     # check results
-    exp_dist, exp_low,exp_high = 0.032468221476108394,0.023712063916639017,0.04309960543965866
+    exp_dist, exp_low,exp_high,pnc = 0.032468221476108394,0.023712063916639017,0.04309960543965866,1.4995915609979772e-22
     assert dist == exp_dist
     assert low == exp_low
     assert high == exp_high
+    assert pnc == p_not_in_common
 
 
 def test_containment_to_distance_k10():
-    jaccard = 0.5
+    contain = 0.5
     scaled = 100
     nkmers = 10000
     ksize=10
-    dist,low,high = containment_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
+    dist,low,high,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_ci=True)
     print("\nDIST:", dist)
     print("CI:", low, " - ", high)
-    print(f"{dist},{low},{high}")
+    print(f"{dist},{low},{high},{p_not_in_common}")
     # check results
-    exp_dist, exp_low,exp_high = 0.06696700846319259,0.04982777541057476,0.08745108232411622
+    exp_dist, exp_low,exp_high,pnc = 0.06696700846319259,0.04982777541057476,0.08745108232411622,1.499591560997956e-22
     assert dist == exp_dist
     assert low == exp_low
     assert high == exp_high
+    assert pnc == p_not_in_common
+
 
 def test_containment_to_distance_confidence():
     contain = 0.1
@@ -173,26 +177,27 @@ def test_containment_to_distance_confidence():
     nkmers = 10000
     ksize=31
     confidence=0.99
-    dist,low,high = containment_to_distance(contain,ksize,scaled,confidence=confidence,n_unique_kmers=nkmers)
+    dist,low,high,p_not_in_common = containment_to_distance(contain,ksize,scaled,confidence=confidence,n_unique_kmers=nkmers, return_ci=True)
     print("\nDIST:", dist)
     print("CI:", low, " - ", high)
-    print(f"{dist},{low},{high}")
+    print(f"{dist},{low},{high},{p_not_in_common}")
     # check results
-    exp_dist, exp_low,exp_high = 0.07158545548052564,0.04802880300938562,0.09619930040790341
+    exp_dist, exp_low,exp_high,pnc = 0.07158545548052564,0.04802880300938562,0.09619930040790341,4.3171247410658655e-05
     assert dist == exp_dist
     assert low == exp_low
     assert high == exp_high
-
+    assert pnc == p_not_in_common
     confidence=0.90
-    dist,low,high = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,confidence=confidence)
+    dist,low,high,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,confidence=confidence, return_ci=True)
     print("\nDIST:", dist)
     print("CI:", low, " - ", high)
-    print(f"{dist},{low},{high}")
+    print(f"{dist},{low},{high},{p_not_in_common}")
     # check results
-    exp_dist, exp_low,exp_high = 0.07158545548052564,0.05599435479247415,0.08758718871990222
+    exp_dist, exp_low,exp_high,pnc = 0.07158545548052564,0.05599435479247415,0.08758718871990222,4.3171247410658655e-05
     assert dist == exp_dist
     assert low == exp_low
     assert high == exp_high
+    assert pnc == p_not_in_common
 
 
 def test_nkmers_to_bp_containment():
@@ -203,13 +208,13 @@ def test_nkmers_to_bp_containment():
     nkmers = sequence_len_to_n_kmers(bp_len,ksize)
     print("nkmers_from_bp:", bp_len)
     confidence=0.99
-    kmer_dist = containment_to_distance(containment,ksize,scaled,confidence=confidence,n_unique_kmers=nkmers)
-    bp_dist = containment_to_distance(containment,ksize,scaled,confidence=confidence,sequence_len_bp=bp_len)
+    kmer_dist = containment_to_distance(containment,ksize,scaled,confidence=confidence,n_unique_kmers=nkmers,return_ci=True)
+    bp_dist = containment_to_distance(containment,ksize,scaled,confidence=confidence,sequence_len_bp=bp_len,return_ci=True)
     print(f"\nkDIST:", kmer_dist)
     print(f"\nbpDIST:",bp_dist)
     # check results
-    assert kmer_dist == (0.07158545548052564, 0.04802880300938562, 0.09619930040790341)
-    assert bp_dist ==  (0.07158545548052564, 0.04802880300938562, 0.09619930040790341)
+    assert kmer_dist == (0.07158545548052564, 0.04802880300938562, 0.09619930040790341,4.3171247410658655e-05)
+    assert bp_dist ==  (0.07158545548052564, 0.04802880300938562, 0.09619930040790341,4.3171247410658655e-05)
     assert kmer_dist==bp_dist
 
 
