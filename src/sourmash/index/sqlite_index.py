@@ -798,6 +798,7 @@ class SqliteCollectionManifest(CollectionManifest):
 
         return cls(manifest_list)
 
+
 class LCA_Database_SqliteWrapper:
     # @CTB: test via roundtrip ;).
 

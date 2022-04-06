@@ -629,8 +629,16 @@ class LineageDB_Sqlite(abc.Mapping):
                'genus', 'species', 'strain')
 
     def __init__(self, conn):
+        import sqlite3
         self.conn = conn
 
+        # check that the right table is there.
+        c = conn.cursor()
+        try:
+            c.execute('SELECT * FROM taxonomy LIMIT 1')
+        except (sqlite3.DatabaseError, sqlite3.OperationalError):
+            raise ValueError("not a taxonomy database")
+            
         # check: can we do a 'select' on the right table?
         self.__len__()
         c = conn.cursor()
@@ -651,11 +659,17 @@ class LineageDB_Sqlite(abc.Mapping):
     def load(cls, location):
         "load taxonomy information from a sqlite3 database"
         import sqlite3
+        if not os.path.exists(filename) or os.path.getsize(filename) == 0:
+            return
+
         try:
             conn = sqlite3.connect(location)
+
+            c = conn.cursor()
             db = cls(conn)
         except sqlite3.DatabaseError:
             raise ValueError("not a sqlite database")
+
         return db
 
     def _make_tup(self, row):

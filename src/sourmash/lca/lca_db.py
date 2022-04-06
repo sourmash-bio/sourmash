@@ -80,17 +80,32 @@ class LCA_Database(Index):
 
     @property
     def location(self):
+        """Return source filename.
+
+        Part of the Index protocol.
+        """
         return self.filename
 
     def __len__(self):
+        """Return number of sketches.
+
+        Part of the Index protocol.
+        """
         return self._next_index
 
     def _invalidate_cache(self):
+        """Force rebuild of signatures after an 'insert'.
+
+        Internal method.
+        """
         if hasattr(self, '_cache'):
             del self._cache
 
     def _get_ident_index(self, ident, fail_on_duplicate=False):
-        "Get (create if nec) a unique int id, idx, for each identifier."
+        """Get (create if necessary) a unique int idx, for each identifier.
+
+        Internal method.
+        """
         idx = self.ident_to_idx.get(ident)
         if fail_on_duplicate:
             assert idx is None     # should be no duplicate identities
@@ -104,7 +119,11 @@ class LCA_Database(Index):
         return idx
 
     def _get_lineage_id(self, lineage):
-        "Get (create if nec) a unique lineage ID for each LineagePair tuples."
+        """Get (create if nec) a unique lineage ID for each
+        LineagePair tuples."
+
+        Internal method of this class.
+        """
         # does one exist already?
         lid = self.lineage_to_lid.get(lineage)
 
@@ -128,6 +147,8 @@ class LCA_Database(Index):
         if not specified, the signature name (sig.name) is used.
 
         'lineage', if specified, must contain a tuple of LineagePair objects.
+
+        Method unique to this class.
         """
         minhash = sig.minhash
 
@@ -179,19 +200,28 @@ class LCA_Database(Index):
         return "LCA_Database('{}')".format(self.filename)
 
     def signatures(self):
-        "Return all of the signatures in this LCA database."
+        """Return all of the signatures in this LCA database.
+
+        Part of the Index protocol.
+
+        @CTB: note this does not respect picklists!?
+        """
         from sourmash import SourmashSignature
         for v in self._signatures.values():
             yield v
 
     def _signatures_with_internal(self):
-        "Return all of the signatures in this LCA database."
+        """Return all of the signatures in this LCA database.
+
+        Part of the Index protocol; used for buulding manifests.
+        """
+
         for idx, ss in self._signatures.items():
             yield ss, idx
 
     def select(self, ksize=None, moltype=None, num=0, scaled=0, abund=None,
                containment=False, picklist=None):
-        """Make sure this database matches the requested requirements.
+        """Select a subset of signatures to search.
 
         As with SBTs, queries with higher scaled values than the database
         can still be used for containment search, but not for similarity
@@ -223,7 +253,10 @@ class LCA_Database(Index):
 
     @classmethod
     def load(cls, db_name):
-        "Load LCA_Database from a JSON file."
+        """Load LCA_Database from a JSON file.
+
+        Method specific to this class.
+        """
         from .lca_utils import taxlist, LineagePair
 
         if not os.path.isfile(db_name):
@@ -330,7 +363,10 @@ class LCA_Database(Index):
         return db
 
     def save(self, db_name):
-        "Save LCA_Database to a JSON file."
+        """Save LCA_Database to a JSON file.
+
+        Method specific to this class.
+        """
         xopen = open
         if db_name.endswith('.gz'):
             xopen = gzip.open
@@ -373,6 +409,8 @@ class LCA_Database(Index):
         that don't fall in the required range.
 
         This applies to this database in place.
+
+        Method specific to LCA databases.
         """
         if scaled == self.scaled:
             return
@@ -392,8 +430,9 @@ class LCA_Database(Index):
         self.scaled = scaled
 
     def get_lineage_assignments(self, hashval):
-        """
-        Get a list of lineages for this hashval.
+        """Get a list of lineages for this hashval.
+
+        Method specific to LCA Databases.
         """
         x = []
 
@@ -408,7 +447,10 @@ class LCA_Database(Index):
 
     @cached_property
     def _signatures(self):
-        "Create a _signatures member dictionary that contains {idx: sigobj}."
+        """Create a _signatures member dictionary that contains {idx: sigobj}.
+
+        Internal method of this class.
+        """
         from sourmash import MinHash, SourmashSignature
 
         is_protein = False
@@ -471,6 +513,8 @@ class LCA_Database(Index):
         As with SBTs, queries with higher scaled values than the database
         can still be used for containment search, but not for similarity
         search. See SBT.select(...) for details.
+
+        Part of the Index protocol.
         """
         search_fn.check_is_compatible(query)
 
@@ -531,6 +575,10 @@ class LCA_Database(Index):
 
     @cached_property
     def lid_to_idx(self):
+        """Connect lineage id lid (int) to idx set (set of ints).""
+
+        Method specific to LCA databases.
+        """
         d = defaultdict(set)
         for idx, lid in self.idx_to_lid.items():
             d[lid].add(idx)
@@ -538,6 +586,10 @@ class LCA_Database(Index):
 
     @cached_property
     def idx_to_ident(self):
+        """Connect idx (int) to ident (str).
+
+        Method specific to LCA databases.
+        """
         d = defaultdict(set)
         for ident, idx in self.ident_to_idx.items():
             assert idx not in d
