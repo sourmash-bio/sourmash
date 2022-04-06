@@ -1,5 +1,6 @@
 "Picklist code for extracting subsets of signatures."
 import csv
+import os
 from enum import Enum
 
 # set up preprocessing functions for column stuff
@@ -143,18 +144,23 @@ class SignaturePicklist:
         "load pickset, return num empty vals, and set of duplicate vals."
         pickset = self.init()
 
+        if not os.path.exists(pickfile) or not os.path.isfile(pickfile):
+            raise ValueError(f"pickfile '{pickfile}' must exist and be a regular file")
+
         n_empty_val = 0
         dup_vals = set()
         with open(pickfile, newline='') as csvfile:
             x = csvfile.readline()
 
             # skip leading comment line in case there's a manifest header
-            if x[0] == '#':
+            if not x or x[0] == '#':
                 pass
             else:
                 csvfile.seek(0)
 
             r = csv.DictReader(csvfile)
+            if not r.fieldnames:
+                raise ValueError(f"empty or improperly formatted pickfile '{pickfile}'")
 
             if column_name not in r.fieldnames:
                 raise ValueError(f"column '{column_name}' not in pickfile '{pickfile}'")
