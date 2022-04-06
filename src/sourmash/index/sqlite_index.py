@@ -799,6 +799,8 @@ class SqliteCollectionManifest(CollectionManifest):
         return cls(manifest_list)
 
 class LCA_Database_SqliteWrapper:
+    # @CTB: test via roundtrip ;).
+
     def __init__(self, filename):
         from sourmash.tax.tax_utils import LineageDB_Sqlite
 
@@ -831,8 +833,14 @@ class LCA_Database_SqliteWrapper:
         self.sqlidx = sqlite_idx
         self.lineage_db = lineage_db
 
-        ##
-        mf = sqlite_idx.manifest
+        ## the below is done once, but could be implemented as something
+        ## ~dynamic.
+        self._build_index()
+
+    def _build_index(self):
+        mf = self.sqlidx.manifest
+        lineage_db = self.lineage_db
+
         ident_to_name = {}
         ident_to_idx = {}
         next_lid = 0
@@ -868,10 +876,13 @@ class LCA_Database_SqliteWrapper:
         self.lid_to_lineage = lid_to_lineage
 
     def __len__(self):
+        assert 0
         return len(self.sqlidx)
 
     def _get_ident_index(self, ident, fail_on_duplicate=False):
         "Get (create if nec) a unique int id, idx, for each identifier."
+        assert 0
+
         idx = self.ident_to_idx.get(ident)
         if fail_on_duplicate:
             assert idx is None     # should be no duplicate identities
@@ -886,6 +897,7 @@ class LCA_Database_SqliteWrapper:
 
     def _get_lineage_id(self, lineage):
         "Get (create if nec) a unique lineage ID for each LineagePair tuples."
+        assert 0
         # does one exist already?
         lid = self.lineage_to_lid.get(lineage)
 
@@ -907,9 +919,12 @@ class LCA_Database_SqliteWrapper:
         return "LCA_Database_SqliteWrapper('{}')".format(self.location)
 
     def load(self, *args, **kwargs):
+        # this could do the appropriate MultiLineageDB stuff.
         raise NotImplementedError
 
     def downsample_scaled(self, scaled):
+        # @CTB this is necessary for internal implementation reasons,
+        # but is not required technically.
         if scaled < self.sqlidx.scaled:
             assert 0
         else:
@@ -930,9 +945,6 @@ class LCA_Database_SqliteWrapper:
 
         return x
 
-    def find(self, *args, **kwargs):
-        return self.sqlidx.find(*args, **kwargs)
-
     @cached_property
     def lid_to_idx(self):
         d = defaultdict(set)
@@ -950,6 +962,7 @@ class LCA_Database_SqliteWrapper:
 
     @property
     def hashval_to_idx(self):
+        "Dynamically interpret the SQL 'hashes' table like it's a dict."
         return _SqliteIndexHashvalToIndex(self.sqlidx)
 
 
@@ -958,6 +971,7 @@ class _SqliteIndexHashvalToIndex:
         self.sqlidx = sqlidx
 
     def items(self):
+        "Retrieve hashval, idxlist for all hashvals."
         sqlidx = self.sqlidx
         c = sqlidx.cursor()
 
@@ -981,6 +995,7 @@ class _SqliteIndexHashvalToIndex:
             yield hh, idxlist
 
     def get(self, key, dv=None):
+        "Retrieve idxlist for a given hash."
         sqlidx = self.sqlidx
         c = sqlidx.cursor()
 
