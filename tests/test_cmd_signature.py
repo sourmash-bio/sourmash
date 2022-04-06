@@ -1649,7 +1649,7 @@ def test_sig_extract_8_empty_picklist_fail(runtmp):
 
 
 def test_sig_extract_8_nofile_picklist_fail(runtmp):
-    # what happens with an empty picklist?
+    # what happens when picklist file does not exist?
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
 
