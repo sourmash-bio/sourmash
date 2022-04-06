@@ -15,6 +15,7 @@ use crate::index::Index;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
+use crate::storage::ZipStorage;
 use crate::Error;
 use crate::HashIntoType;
 
@@ -108,8 +109,9 @@ pub struct RevIndex {
 
     template: Sketch,
     colors: Colors,
-    //#[serde(skip)]
-    //storage: Option<InnerStorage>,
+
+    #[serde(skip)]
+    storage: Option<ZipStorage>,
 }
 
 impl RevIndex {
@@ -231,7 +233,7 @@ impl RevIndex {
             ref_sigs,
             template: template.clone(),
             colors,
-            //            storage: Some(InnerStorage::new(MemStorage::default())),
+            storage: None,
         }
     }
 
@@ -297,7 +299,7 @@ impl RevIndex {
             ref_sigs: search_sigs.into(),
             template: template.clone(),
             colors,
-            //storage: None,
+            storage: None,
         }
     }
 
