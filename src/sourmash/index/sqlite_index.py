@@ -798,18 +798,37 @@ class SqliteCollectionManifest(CollectionManifest):
 
         return cls(manifest_list)
 
-
 class LCA_Database_SqliteWrapper:
-    # LCA database functions/dictionary
-    # hashval_to_idx
-    # idx_to_lid
-    # lid_to_lineage
+    def __init__(self, filename):
+        from sourmash.tax.tax_utils import LineageDB_Sqlite
 
-    def __init__(self, sqlite_idx, ksize, lineage_db):
+        sqlite_idx = SqliteIndex(filename)
+        lineage_db = LineageDB_Sqlite(sqlite_idx.conn)
+
+        conn = sqlite_idx.conn
+        c = conn.cursor()
+        c.execute('SELECT DISTINCT key, value FROM sourmash_internal')
+        d = dict(c)
+        print(d)
+        # @CTB
+
+        c.execute('SELECT DISTINCT ksize FROM sketches')
+        ksizes = set(( ksize for ksize, in c ))
+        assert len(ksizes) == 1
+        self.ksize = next(iter(ksizes))
+        print(f"setting ksize to {self.ksize}")
+
+        c.execute('SELECT DISTINCT moltype FROM sketches')
+        moltypes = set(( moltype for moltype, in c ))
+        assert len(moltypes) == 1
+        self.moltype = next(iter(moltypes))
+        print(f"setting moltype to {self.moltype}")
+
+        self.scaled = sqlite_idx.scaled
+
         assert isinstance(sqlite_idx, SqliteIndex)
         assert sqlite_idx.scaled
         self.sqlidx = sqlite_idx
-        self.ksize = ksize
         self.lineage_db = lineage_db
 
         ##
@@ -847,10 +866,6 @@ class LCA_Database_SqliteWrapper:
         self.idx_to_lid = idx_to_lid
         self.lineage_to_lid = lineage_to_lid
         self.lid_to_lineage = lid_to_lineage
-
-    @property
-    def location(self):
-        return self.sqlidx.location
 
     def __len__(self):
         return len(self.sqlidx)
@@ -891,24 +906,14 @@ class LCA_Database_SqliteWrapper:
     def __repr__(self):
         return "LCA_Database_SqliteWrapper('{}')".format(self.location)
 
-    def signatures(self):
-        "Return all of the signatures in this LCA database."
-        return self.sqlidx.signatures()
-
-    def _signatures_with_internal(self):
-        "Return all of the signatures in this LCA database."
-        for idx, ss in self._signatures.items():
-            yield ss, idx
-
-    def select(self, **kwargs):
-        raise NotImplementedError
-
     def load(self, *args, **kwargs):
         raise NotImplementedError
 
     def downsample_scaled(self, scaled):
         if scaled < self.sqlidx.scaled:
             assert 0
+        else:
+            self.scaled = scaled
 
     def get_lineage_assignments(self, hashval):
         """
@@ -974,3 +979,14 @@ class _SqliteIndexHashvalToIndex:
         if idxlist:
             hh = convert_hash_from(this_hashval)
             yield hh, idxlist
+
+    def get(self, key, dv=None):
+        sqlidx = self.sqlidx
+        c = sqlidx.cursor()
+
+        hh = convert_hash_to(key)
+
+        c.execute('SELECT sketch_id FROM hashes WHERE hashval=?', (hh,))
+
+        x = set(( convert_hash_from(h) for h, in c ))
+        return x or dv
