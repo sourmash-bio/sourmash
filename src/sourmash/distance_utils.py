@@ -189,7 +189,7 @@ def variance_scaled_jaccard(L, p, k, s):
     return term1 + term2 - term3
 
 
-def jaccard_to_distance(jaccard, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None, return_identity=False, prob_threshold = 10.0**(-3)):
+def jaccard_to_distance(jaccard, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None, return_identity=False, prob_threshold = 10.0**(-3), err_threshold=10.0**(-4.0)):
     """
     Given parameters, calculate point estimate for mutation rate from jaccard index.
     First checks if parameters are valid (checks are not exhaustive). Then uses formulas
@@ -213,8 +213,10 @@ def jaccard_to_distance(jaccard, ksize, scaled, n_unique_kmers=None, sequence_le
         n_unique_kmers = sequence_len_to_n_kmers(sequence_len_bp, ksize)
     if jaccard <= 0.0001:
         point_estimate = 1.0
+        error_lower_bound = 0.0
     elif jaccard >= 0.9999:
         point_estimate = 0.0
+        error_lower_bound = 0.0
     else:
         point_estimate = 1.0 - ( 2.0 * jaccard / float(1+jaccard) ) ** (1.0/float(ksize))
 
@@ -222,12 +224,9 @@ def jaccard_to_distance(jaccard, ksize, scaled, n_unique_kmers=None, sequence_le
         var_n_mut = var_n_mutated(n_unique_kmers, ksize, point_estimate)
         error_lower_bound = 1.0 * n_unique_kmers * var_n_mut / (n_unique_kmers + exp_n_mut)**3
     
-    if error_lower_bound is not None and error_lower_bound > 10.0**(-4.0): # does this need to be modifiable?
+    if error_lower_bound is not None and error_lower_bound > err_threshold:
         #print(f"err: ({error_lower_bound})")
         notify(f"WARNING: Error on Jaccard distance point estimate is too high ({error_lower_bound}).")
-        # @NTP: ruturn ANI estimate anyway, NA later instead? Probably want this value for `sig overlap, at least?`
-        notify(f"Returning 'NA' for this comparison and continuing.")
-        point_estimate = "NA"
     
     # get probability nothing in common
     prob_nothing_in_common = get_exp_probability_nothing_common(point_estimate, ksize, scaled, n_unique_kmers=n_unique_kmers)
