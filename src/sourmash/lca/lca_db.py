@@ -411,6 +411,32 @@ class LCA_Database(Index):
             
             json.dump(save_d, fp)
 
+    def save_to_sql(self, dbname):
+        from sourmash.index.sqlite_index import SqliteIndex
+        sqlidx = SqliteIndex.create(dbname)
+
+        for ss in self.signatures():
+            sqlidx.insert(ss)
+
+        assignments = {}
+        available_ranks = set() # track ranks, too
+        for ident, idx in self.ident_to_idx.items():
+            lid = self.idx_to_lid.get(idx)
+            if lid is not None:
+                lineage = self.lid_to_lineage[lid]
+                assignments[ident] = lineage
+                for pair in lineage:
+                    available_ranks.add(pair.rank)
+
+        print(assignments)
+        print(available_ranks)
+
+        from sourmash.tax.tax_utils import MultiLineageDB, LineageDB
+        ldb = LineageDB(assignments, available_ranks)
+        out_lineage_db = MultiLineageDB()
+        out_lineage_db.add(ldb)
+        out_lineage_db._save_sqlite(None, conn=sqlidx.conn)
+
     def downsample_scaled(self, scaled):
         """
         Downsample to the provided scaled value, i.e. eliminate all hashes

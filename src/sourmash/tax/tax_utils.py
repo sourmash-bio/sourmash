@@ -718,6 +718,7 @@ class LineageDB_Sqlite(abc.Mapping):
         for ident, *names in c:
             yield ident, self._make_tup(names)
 
+
 class MultiLineageDB(abc.Mapping):
     "A wrapper for (dynamically) combining multiple lineage databases."
 
@@ -814,8 +815,12 @@ class MultiLineageDB(abc.Mapping):
                 if is_filename:
                     fp.close()
 
-    def _save_sqlite(self, filename):
-        db = sqlite3.connect(filename)
+    def _save_sqlite(self, filename, *, conn=None):
+        if conn is None:
+            db = sqlite3.connect(filename)
+        else:
+            assert not filename
+            db = conn
 
         cursor = db.cursor()
         try:

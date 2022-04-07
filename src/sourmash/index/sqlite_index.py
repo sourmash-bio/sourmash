@@ -161,7 +161,7 @@ class SqliteIndex(Index):
             self.scaled = None
 
     @classmethod
-    def _open(cls, dbfile):
+    def _open(cls, dbfile, *, empty_ok=True):
         "Connect to existing SQLite database or create new."
         try:
             # note: here we will want to re-open database.
@@ -175,8 +175,9 @@ class SqliteIndex(Index):
             c.execute("PRAGMA journal_mode = MEMORY")
             c.execute("PRAGMA temp_store = MEMORY")
 
-            c.execute("SELECT * FROM hashes LIMIT 1")
-            c.fetchone()
+            if not empty_ok:
+                c.execute("SELECT * FROM hashes LIMIT 1")
+                c.fetchone()
         except (sqlite3.OperationalError, sqlite3.DatabaseError):
             raise ValueError(f"cannot open '{dbfile}' as SqliteIndex database")
 
@@ -184,7 +185,7 @@ class SqliteIndex(Index):
 
     @classmethod
     def create(cls, dbfile):
-        conn = cls._open(dbfile)
+        conn = cls._open(dbfile, empty_ok=True)
         cls._create_tables(conn.cursor())
         conn.commit()
 
@@ -819,7 +820,7 @@ class LCA_Database_SqliteWrapper:
         c = conn.cursor()
         c.execute('SELECT DISTINCT key, value FROM sourmash_internal')
         d = dict(c)
-        print(d)
+        #print(d)
         # @CTB
 
         c.execute('SELECT DISTINCT ksize FROM sketches')
@@ -924,7 +925,7 @@ class LCA_Database_SqliteWrapper:
         raise NotImplementedError
 
     def __repr__(self):
-        return "LCA_Database_SqliteWrapper('{}')".format(self.location)
+        return "LCA_Database_SqliteWrapper('{}')".format(self.sqlidx.location)
 
     def load(self, *args, **kwargs):
         # this could do the appropriate MultiLineageDB stuff.
@@ -996,7 +997,7 @@ class _SqliteIndexHashvalToIndex:
                     yield hh, idxlist
 
                 this_hashval = hashval
-                idxlist = []
+                idxlist = [sketch_id]
 
         if idxlist:
             hh = convert_hash_from(this_hashval)
