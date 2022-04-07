@@ -296,12 +296,14 @@ def index(args):
 
     # now, save!
     db_outfile = args.lca_db_out
-    if not (db_outfile.endswith('.lca.json') or \
-                db_outfile.endswith('.lca.json.gz')):   # logic -> db.save
-        db_outfile += '.lca.json'
+    if args.database_format == 'json':
+        if not (db_outfile.endswith('.lca.json') or \
+                    db_outfile.endswith('.lca.json.gz')):   # logic -> db.save
+            db_outfile += '.lca.json'
+
     notify(f'saving to LCA DB: {format(db_outfile)}')
 
-    db.save(db_outfile)
+    db.save(db_outfile, format=args.database_format)
 
     ## done!
 

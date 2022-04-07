@@ -174,6 +174,9 @@ class SqliteIndex(Index):
             c.execute("PRAGMA synchronous = OFF")
             c.execute("PRAGMA journal_mode = MEMORY")
             c.execute("PRAGMA temp_store = MEMORY")
+
+            c.execute("SELECT * FROM hashes LIMIT 1")
+            c.fetchone()
         except (sqlite3.OperationalError, sqlite3.DatabaseError):
             raise ValueError(f"cannot open '{dbfile}' as SqliteIndex database")
 

@@ -362,7 +362,15 @@ class LCA_Database(Index):
 
         return db
 
-    def save(self, db_name):
+    def save(self, db_name, format='json'):
+        if format == 'json':
+            self.save_to_json(db_name)
+        elif format == 'sql':
+            self.save_to_sql(db_name)
+        else:
+            raise Exception(f"unknown save format for LCA_Database: '{format}'")
+
+    def save_to_json(self, db_name):
         """Save LCA_Database to a JSON file.
 
         Method specific to this class.
