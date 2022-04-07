@@ -921,7 +921,7 @@ class SaveSignatures_SqliteIndex(_BaseSaveSignaturesToLocation):
         self.idx.close()
 
     def open(self):
-        self.idx = SqliteIndex(self.location)
+        self.idx = SqliteIndex.create(self.location)
         self.cursor = self.idx.cursor()
 
     def add(self, add_sig):

@@ -24,7 +24,7 @@ def test_sqlite_index_search():
     ss47 = sourmash.load_one_signature(sig47)
     ss63 = sourmash.load_one_signature(sig63)
 
-    sqlidx = SqliteIndex(":memory:")
+    sqlidx = SqliteIndex.create(":memory:")
     sqlidx.insert(ss2)
     sqlidx.insert(ss47)
     sqlidx.insert(ss63)
@@ -69,7 +69,7 @@ def test_sqlite_index_prefetch():
     ss47 = sourmash.load_one_signature(sig47)
     ss63 = sourmash.load_one_signature(sig63)
 
-    sqlidx = SqliteIndex(":memory:")
+    sqlidx = SqliteIndex.create(":memory:")
     sqlidx.insert(ss2)
     sqlidx.insert(ss47)
     sqlidx.insert(ss63)
@@ -97,7 +97,7 @@ def test_sqlite_index_prefetch_empty():
     sig2 = utils.get_test_data('2.fa.sig')
     ss2 = sourmash.load_one_signature(sig2, ksize=31)
 
-    sqlidx = SqliteIndex(":memory:")
+    sqlidx = SqliteIndex.create(":memory:")
 
     # since this is a generator, we need to actually ask for a value to
     # get exception raised.
@@ -117,7 +117,7 @@ def test_sqlite_index_gather():
     ss47 = sourmash.load_one_signature(sig47)
     ss63 = sourmash.load_one_signature(sig63)
 
-    sqlidx = SqliteIndex(":memory:")
+    sqlidx = SqliteIndex.create(":memory:")
     sqlidx.insert(ss2)
     sqlidx.insert(ss47)
     sqlidx.insert(ss63)
@@ -145,7 +145,7 @@ def test_index_search_subj_scaled_is_lower():
     qs = SourmashSignature(ss.minhash.downsample(scaled=1000))
 
     # create Index to search
-    sqlidx = SqliteIndex(":memory:")
+    sqlidx = SqliteIndex.create(":memory:")
     sqlidx.insert(ss)
 
     # search!
@@ -165,7 +165,7 @@ def test_sqlite_index_save_load(runtmp):
     ss63 = sourmash.load_one_signature(sig63)
 
     filename = runtmp.output('foo')
-    sqlidx = SqliteIndex(filename)
+    sqlidx = SqliteIndex.create(filename)
     sqlidx.insert(ss2)
     sqlidx.insert(ss47)
     sqlidx.insert(ss63)
@@ -187,7 +187,7 @@ def test_sqlite_gather_threshold_1():
     sig47 = load_one_signature(utils.get_test_data('47.fa.sig'), ksize=31)
     sig63 = load_one_signature(utils.get_test_data('63.fa.sig'), ksize=31)
 
-    sqlidx = SqliteIndex(":memory:")
+    sqlidx = SqliteIndex.create(":memory:")
 
     sqlidx.insert(sig47)
     sqlidx.insert(sig63)
@@ -243,7 +243,7 @@ def test_sqlite_gather_threshold_5():
     sig47 = load_one_signature(utils.get_test_data('47.fa.sig'), ksize=31)
     sig63 = load_one_signature(utils.get_test_data('63.fa.sig'), ksize=31)
 
-    sqlidx = SqliteIndex(":memory:")
+    sqlidx = SqliteIndex.create(":memory:")
 
     sqlidx.insert(sig47)
     sqlidx.insert(sig63)
@@ -285,7 +285,7 @@ def test_sqlite_index_multik_select():
     sig2 = utils.get_test_data('2.fa.sig')
     siglist = sourmash.load_file_as_signatures(sig2)
 
-    sqlidx = SqliteIndex(":memory:")
+    sqlidx = SqliteIndex.create(":memory:")
     for ss in siglist:
         sqlidx.insert(ss)
 
@@ -300,21 +300,21 @@ def test_sqlite_index_multik_select():
 
 def test_sqlite_index_num_select():
     # this will fail on 'num' select, which is not allowed
-    sqlidx = SqliteIndex(":memory:")
+    sqlidx = SqliteIndex.create(":memory:")
     with pytest.raises(ValueError):
         sqlidx.select(num=100)
 
 
 def test_sqlite_index_abund_select():
     # this will fail on 'track_abundance' select, which is not allowed
-    sqlidx = SqliteIndex(":memory:")
+    sqlidx = SqliteIndex.create(":memory:")
     with pytest.raises(ValueError):
         sqlidx.select(track_abundance=True)
 
 
 def test_sqlite_index_insert_num_fail():
     # cannot insert 'num' signatures
-    sqlidx = SqliteIndex(":memory:")
+    sqlidx = SqliteIndex.create(":memory:")
 
     sig47 = utils.get_test_data('num/47.fa.sig')
     ss47 = sourmash.load_one_signature(sig47, ksize=31)
@@ -328,7 +328,7 @@ def test_sqlite_index_insert_num_fail():
 
 def test_sqlite_index_insert_abund_fail():
     # cannot insert 'num' signatures
-    sqlidx = SqliteIndex(":memory:")
+    sqlidx = SqliteIndex.create(":memory:")
 
     sig47 = utils.get_test_data('track_abund/47.fa.sig')
     ss47 = sourmash.load_one_signature(sig47, ksize=31)
@@ -347,7 +347,7 @@ def test_sqlite_index_moltype_multi_fail():
     siglist = sourmash.load_file_as_signatures(filename)
     siglist = list(siglist)
 
-    sqlidx = SqliteIndex(":memory:")
+    sqlidx = SqliteIndex.create(":memory:")
 
     sqlidx.insert(siglist[0])
     assert sqlidx.scaled == 100
@@ -365,7 +365,7 @@ def test_sqlite_index_picklist_select():
     sig2 = utils.get_test_data('2.fa.sig')
     siglist = sourmash.load_file_as_signatures(sig2)
 
-    sqlidx = SqliteIndex(":memory:")
+    sqlidx = SqliteIndex.create(":memory:")
     for ss in siglist:
         sqlidx.insert(ss)
 
@@ -388,7 +388,7 @@ def test_sqlite_index_picklist_select_exclude():
     sig2 = utils.get_test_data('2.fa.sig')
     siglist = sourmash.load_file_as_signatures(sig2)
 
-    sqlidx = SqliteIndex(":memory:")
+    sqlidx = SqliteIndex.create(":memory:")
     for ss in siglist:
         sqlidx.insert(ss)
 
@@ -440,7 +440,7 @@ def test_sqlite_jaccard_ordering():
     ss_b = sourmash.SourmashSignature(b, name='B')
     ss_c = sourmash.SourmashSignature(c, name='C')
 
-    sqlidx = SqliteIndex(":memory:")
+    sqlidx = SqliteIndex.create(":memory:")
     sqlidx.insert(ss_a)
     sqlidx.insert(ss_b)
     sqlidx.insert(ss_c)
@@ -458,7 +458,7 @@ def test_sqlite_manifest_basic():
     sig47 = load_one_signature(utils.get_test_data('47.fa.sig'), ksize=31)
     sig63 = load_one_signature(utils.get_test_data('63.fa.sig'), ksize=31)
 
-    sqlidx = SqliteIndex(":memory:")
+    sqlidx = SqliteIndex.create(":memory:")
 
     # empty manifest tests
     manifest = sqlidx.manifest

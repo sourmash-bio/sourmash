@@ -134,13 +134,13 @@ class SqliteIndex(Index):
     # NOTE: we do not need _signatures_with_internal for this class
     # because it supplies a manifest directly :tada:.
 
-    def __init__(self, dbfile, sqlite_manifest=None, conn=None):
+    def __init__(self, dbfile, *, sqlite_manifest=None, conn=None):
         "Constructor. 'dbfile' should be valid filename or ':memory:'."
         self.dbfile = dbfile
 
         # no connection? connect and/or create!
         if conn is None:
-            conn = self._connect(dbfile)
+            conn = self._open(dbfile)
 
         # build me a SQLite manifest class to use for selection.
         if sqlite_manifest is None:
@@ -160,9 +160,11 @@ class SqliteIndex(Index):
         else:
             self.scaled = None
 
-    def _connect(self, dbfile):
+    @classmethod
+    def _open(cls, dbfile):
         "Connect to existing SQLite database or create new."
         try:
+            # note: here we will want to re-open database.
             conn = sqlite3.connect(dbfile,
                                    detect_types=sqlite3.PARSE_DECLTYPES)
 
@@ -172,20 +174,24 @@ class SqliteIndex(Index):
             c.execute("PRAGMA synchronous = OFF")
             c.execute("PRAGMA journal_mode = MEMORY")
             c.execute("PRAGMA temp_store = MEMORY")
+        except (sqlite3.OperationalError, sqlite3.DatabaseError):
+            raise ValueError(f"cannot open '{dbfile}' as SqliteIndex database")
 
-            c.execute("""
-            CREATE TABLE IF NOT EXISTS sourmash_internal (
-               key TEXT,
-               value TEXT
-            )
-            """)
+        return conn
 
-            # @CTB supply unique constraints?
-            c.execute("""
-            INSERT INTO sourmash_internal (key, value)
-            VALUES ('SqliteIndex', '1.0')
-            """)
+    @classmethod
+    def create(cls, dbfile):
+        conn = cls._open(dbfile)
+        cls._create_tables(conn.cursor())
+        conn.commit()
 
+        return cls(dbfile, conn=conn)
+
+    @classmethod
+    def _create_tables(cls, c):
+        "Create sqlite tables for SqliteIndex"
+        try:
+            sqlite_utils.add_sourmash_internal(c, 'SqliteIndex', '1.0')
             SqliteCollectionManifest._create_table(c)
 
             c.execute("""
@@ -213,9 +219,9 @@ class SqliteIndex(Index):
             """
             )
         except (sqlite3.OperationalError, sqlite3.DatabaseError):
-            raise ValueError(f"cannot open '{dbfile}' as sqlite3 database")
+            raise ValueError(f"cannot create SqliteIndex tables")
 
-        return conn
+        return c
 
     def cursor(self):
         return self.conn.cursor()
