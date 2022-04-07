@@ -45,7 +45,7 @@ from sourmash import MinHash, SourmashSignature
 from sourmash.index import IndexSearchResult, StandaloneManifestIndex
 from sourmash.picklist import PickStyle, SignaturePicklist
 from sourmash.manifest import CollectionManifest
-from sourmash.logging import debug_literal
+from sourmash.logging import debug_literal, notify
 from sourmash import sqlite_utils
 
 from sourmash.lca.lca_db import cached_property
@@ -813,27 +813,30 @@ class LCA_Database_SqliteWrapper:
     def __init__(self, filename):
         from sourmash.tax.tax_utils import LineageDB_Sqlite
 
-        sqlite_idx = SqliteIndex(filename)
-        lineage_db = LineageDB_Sqlite(sqlite_idx.conn)
+        try:
+            sqlite_idx = SqliteIndex.load(filename)
+            lineage_db = LineageDB_Sqlite(sqlite_idx.conn)
 
-        conn = sqlite_idx.conn
-        c = conn.cursor()
-        c.execute('SELECT DISTINCT key, value FROM sourmash_internal')
-        d = dict(c)
-        #print(d)
-        # @CTB
+            conn = sqlite_idx.conn
+            c = conn.cursor()
+            c.execute('SELECT DISTINCT key, value FROM sourmash_internal')
+            d = dict(c)
+            #print(d)
+            # @CTB
+        except sqlite3.OperationalError:
+            raise ValueError(f"cannot open '{filename}' as sqlite database.")
 
         c.execute('SELECT DISTINCT ksize FROM sketches')
         ksizes = set(( ksize for ksize, in c ))
         assert len(ksizes) == 1
         self.ksize = next(iter(ksizes))
-        print(f"setting ksize to {self.ksize}")
+        notify(f"setting ksize to {self.ksize}")
 
         c.execute('SELECT DISTINCT moltype FROM sketches')
         moltypes = set(( moltype for moltype, in c ))
         assert len(moltypes) == 1
         self.moltype = next(iter(moltypes))
-        print(f"setting moltype to {self.moltype}")
+        notify(f"setting moltype to {self.moltype}")
 
         self.scaled = sqlite_idx.scaled
 
@@ -867,15 +870,15 @@ class LCA_Database_SqliteWrapper:
                 idx = row['_id'] # this is only present in sqlite manifests.
                 ident_to_idx[ident] = idx
 
-                lineage = lineage_db[ident]
-
-                lid = lineage_to_lid.get(lineage)
-                if lid is None:
-                    lid = next_lid
-                    next_lid += 1
-                    lineage_to_lid[lineage] = lid
-                    lid_to_lineage[lid] = lineage
-                    idx_to_lid[idx] = lid
+                lineage = lineage_db.get(ident)
+                if lineage:
+                    lid = lineage_to_lid.get(lineage)
+                    if lid is None:
+                        lid = next_lid
+                        next_lid += 1
+                        lineage_to_lid[lineage] = lid
+                        lid_to_lineage[lid] = lineage
+                        idx_to_lid[idx] = lid
 
         self.ident_to_name = ident_to_name
         self.ident_to_idx = ident_to_idx
@@ -887,6 +890,15 @@ class LCA_Database_SqliteWrapper:
     def __len__(self):
         assert 0
         return len(self.sqlidx)
+
+    def signatures(self):
+        return self.sqlidx.signatures()
+
+    def search(self, *args, **kwargs):
+        return self.sqlidx.search(*args, **kwargs)
+
+    def gather(self, *args, **kwargs):
+        return self.sqlidx.gather(*args, **kwargs)
 
     def _get_ident_index(self, ident, fail_on_duplicate=False):
         "Get (create if nec) a unique int id, idx, for each identifier."
