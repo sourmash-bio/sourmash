@@ -46,6 +46,7 @@ from sourmash.index import IndexSearchResult, StandaloneManifestIndex
 from sourmash.picklist import PickStyle, SignaturePicklist
 from sourmash.manifest import CollectionManifest
 from sourmash.logging import debug_literal
+from sourmash import sqlite_utils
 
 from sourmash.lca.lca_db import cached_property
 
@@ -78,14 +79,9 @@ picklist_selects = dict(
 # @CTB write tests that cross-product the various types.
 def load_sqlite_file(filename):
     "Load a SqliteIndex or a SqliteCollectionManifest from a sqlite file."
-    # file must already exist, and be non-zero in size
-    if not os.path.exists(filename) or os.path.getsize(filename) == 0:
-        return
+    conn = sqlite_utils.open_sqlite_db(filename)
 
-    # can we connect?
-    try:
-        conn = sqlite3.connect(filename)
-    except (sqlite3.OperationalError, sqlite3.DatabaseError):
+    if conn is None:
         return
 
     c = conn.cursor()
@@ -742,7 +738,7 @@ class SqliteCollectionManifest(CollectionManifest):
                        n_hashes=n_hashes, with_abundance=0, ksize=ksize,
                        md5=md5sum, internal_location=iloc,
                        moltype=moltype, md5short=md5sum[:8],
-                       id=_id)
+                       _id=_id)
             yield row
 
     def write_to_csv(self, fp, *, write_header=True):
@@ -856,7 +852,7 @@ class LCA_Database_SqliteWrapper:
 
                 assert ident not in ident_to_name
                 ident_to_name[ident] = name
-                idx = row['id']
+                idx = row['_id'] # this is only present in sqlite manifests.
                 ident_to_idx[ident] = idx
 
                 lineage = lineage_db[ident]

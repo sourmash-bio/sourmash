@@ -113,7 +113,8 @@ class CollectionManifest:
 
     def write_to_csv(self, fp, write_header=False):
         "write manifest CSV to specified file handle"
-        w = csv.DictWriter(fp, fieldnames=self.required_keys)
+        w = csv.DictWriter(fp, fieldnames=self.required_keys,
+                           extrasaction='ignore')
 
         if write_header:
             self.write_csv_header(fp)

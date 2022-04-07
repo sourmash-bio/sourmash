@@ -6,6 +6,11 @@ import csv
 from collections import namedtuple, defaultdict
 from collections import abc
 
+from sourmash import sqlite_utils
+
+import sqlite3
+
+
 __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
            'load_gather_results', 'check_and_load_gather_csvs',
            'find_match_lineage', 'summarize_gather_at',
@@ -629,7 +634,6 @@ class LineageDB_Sqlite(abc.Mapping):
                'genus', 'species', 'strain')
 
     def __init__(self, conn):
-        import sqlite3
         self.conn = conn
 
         # check that the right table is there.
@@ -657,20 +661,11 @@ class LineageDB_Sqlite(abc.Mapping):
 
     @classmethod
     def load(cls, location):
-        "load taxonomy information from a sqlite3 database"
-        import sqlite3
-        if not os.path.exists(filename) or os.path.getsize(filename) == 0:
-            return
-
-        try:
-            conn = sqlite3.connect(location)
-
-            c = conn.cursor()
-            db = cls(conn)
-        except sqlite3.DatabaseError:
-            raise ValueError("not a sqlite database")
-
-        return db
+        "load taxonomy information from an existing sqlite3 database"
+        conn = sqlite_utils.open_sqlite_db(location)
+        if not conn:
+            raise ValueError("not a sqlite taxonomy database")
+        return cls(conn)
 
     def _make_tup(self, row):
         "build a tuple of LineagePairs for this sqlite row"
@@ -825,6 +820,7 @@ class MultiLineageDB(abc.Mapping):
 
         cursor = db.cursor()
         try:
+            # CTB: could add 'IF NOT EXIST' here; would need tests, too.
             cursor.execute("""
 
         CREATE TABLE taxonomy (
