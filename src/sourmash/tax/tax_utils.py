@@ -815,7 +815,6 @@ class MultiLineageDB(abc.Mapping):
                     fp.close()
 
     def _save_sqlite(self, filename):
-        import sqlite3
         db = sqlite3.connect(filename)
 
         cursor = db.cursor()

@@ -504,6 +504,7 @@ def test_sqlite_manifest_round_trip():
     round_mf = sqlite_mf._extract_manifest()
 
     assert len(round_mf) == 2
+    print(round_mf.rows, nosql_mf.rows)
     assert round_mf == nosql_mf
 
     for mf in (nosql_mf, sqlite_mf, round_mf):

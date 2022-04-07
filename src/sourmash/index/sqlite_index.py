@@ -712,6 +712,8 @@ class SqliteCollectionManifest(CollectionManifest):
         """
         manifest_list = []
         for row in self.rows:
+            if '_id' in row:
+                del row['_id']
             manifest_list.append(row)
 
         return CollectionManifest(manifest_list)
