@@ -145,7 +145,10 @@ def index_obj(request, runtmp):
 
 @pytest.fixture(params=[build_sbt_index,
                         build_zipfile_index,
-                        build_multi_index])
+                        build_multi_index,
+                        build_standalone_manifest_index,
+                        build_sbt_index_save_load,
+                        build_lca_index_save_load])
 def index_with_manifest_obj(request, runtmp):
     build_fn = request.param
 
@@ -226,3 +229,157 @@ def test_index_len(index_obj):
 def test_index_bool(index_obj):
     # bool works?
     assert bool(index_obj)
+
+
+def test_index_select_basic(index_obj):
+    # select does the basic thing ok
+    idx = index_obj.select(ksize=31, moltype='DNA', abund=False,
+                           containment=True, scaled=1000, num=0, picklist=None)
+
+    assert len(idx) == 3
+    siglist = list(idx.signatures())
+    assert len(siglist) == 3
+
+    # check md5sums, since 'in' doesn't always work
+    md5s = set(( ss.md5sum() for ss in siglist ))
+    ss2, ss47, ss63 = _load_three_sigs()
+    assert ss2.md5sum() in md5s
+    assert ss47.md5sum() in md5s
+    assert ss63.md5sum() in md5s
+
+
+def test_index_select_nada(index_obj):
+    # select works ok when nothing matches!
+
+    # @CTB: currently this EITHER raises a ValueError OR returns an empty
+    # Index object, depending on implementation. :think:
+    try:
+        idx = index_obj.select(ksize=21)
+    except ValueError:
+        idx = LinearIndex([])
+
+    assert len(idx) == 0
+    siglist = list(idx.signatures())
+    assert len(siglist) == 0
+
+
+def test_index_prefetch(index_obj):
+    # test basic prefetch
+    ss2, ss47, ss63 = _load_three_sigs()
+
+    # search for ss2
+    results = []
+    for result in index_obj.prefetch(ss2, threshold_bp=0):
+        results.append(result)
+
+    assert len(results) == 1
+    assert results[0].signature.minhash == ss2.minhash
+
+    # search for ss47 - expect two results
+    results = []
+    for result in index_obj.prefetch(ss47, threshold_bp=0):
+        results.append(result)
+
+    assert len(results) == 2
+    assert results[0].signature.minhash == ss47.minhash
+    assert results[1].signature.minhash == ss63.minhash
+
+
+def test_index_gather(index_obj):
+    # test basic gather
+    ss2, ss47, ss63 = _load_three_sigs()
+
+    matches = index_obj.gather(ss2)
+    assert len(matches) == 1
+    assert matches[0][0] == 1.0
+    assert matches[0][1].minhash == ss2.minhash
+
+    matches = index_obj.gather(ss47)
+    assert len(matches) == 1
+    assert matches[0][0] == 1.0
+    assert matches[0][1].minhash == ss47.minhash
+
+
+def test_linear_gather_threshold_1(index_obj):
+    # test gather() method, in some detail
+    ss2, ss47, ss63 = _load_three_sigs()
+
+    # now construct query signatures with specific numbers of hashes --
+    # note, these signatures all have scaled=1000.
+
+    mins = list(sorted(ss2.minhash.hashes))
+    new_mh = ss2.minhash.copy_and_clear()
+
+    # query with empty hashes
+    assert not new_mh
+    with pytest.raises(ValueError):
+        index_obj.gather(SourmashSignature(new_mh))
+
+    # add one hash
+    new_mh.add_hash(mins.pop())
+    assert len(new_mh) == 1
+
+    results = index_obj.gather(SourmashSignature(new_mh))
+    assert len(results) == 1
+    containment, match_sig, name = results[0]
+    assert containment == 1.0
+    assert match_sig.minhash == ss2.minhash
+
+    # check with a threshold -> should be no results.
+    with pytest.raises(ValueError):
+        index_obj.gather(SourmashSignature(new_mh), threshold_bp=5000)
+
+    # add three more hashes => length of 4
+    new_mh.add_hash(mins.pop())
+    new_mh.add_hash(mins.pop())
+    new_mh.add_hash(mins.pop())
+    assert len(new_mh) == 4
+
+    results = index_obj.gather(SourmashSignature(new_mh))
+    assert len(results) == 1
+    containment, match_sig, name = results[0]
+    assert containment == 1.0
+    assert match_sig.minhash == ss2.minhash
+
+    # check with a too-high threshold -> should be no results.
+    with pytest.raises(ValueError):
+        index_obj.gather(SourmashSignature(new_mh), threshold_bp=5000)
+
+
+def test_gather_threshold_5(index_obj):
+    # test gather() method, in some detail
+    ss2, ss47, ss63 = _load_three_sigs()
+
+    # now construct query signatures with specific numbers of hashes --
+    # note, these signatures all have scaled=1000.
+
+    mins = list(sorted(ss2.minhash.hashes.keys()))
+    new_mh = ss2.minhash.copy_and_clear()
+
+    # add five hashes
+    for i in range(5):
+        new_mh.add_hash(mins.pop())
+        new_mh.add_hash(mins.pop())
+        new_mh.add_hash(mins.pop())
+        new_mh.add_hash(mins.pop())
+        new_mh.add_hash(mins.pop())
+
+    # should get a result with no threshold (any match at all is returned)
+    results = index_obj.gather(SourmashSignature(new_mh))
+    assert len(results) == 1
+    containment, match_sig, name = results[0]
+    assert containment == 1.0
+    assert match_sig.minhash == ss2.minhash
+
+    # now, check with a threshold_bp that should be meet-able.
+    results = index_obj.gather(SourmashSignature(new_mh), threshold_bp=5000)
+    assert len(results) == 1
+    containment, match_sig, name = results[0]
+    assert containment == 1.0
+    assert match_sig.minhash == ss2.minhash
+
+
+##
+## index-with-manifest tests go here!
+##
+
