@@ -154,7 +154,8 @@ class CollectionManifest:
         """
         manifest_list = []
         for ss, location in locations_iter:
-            row = cls.make_manifest_row(ss, location, include_signature=True)
+            row = cls.make_manifest_row(ss, location,
+                                        include_signature=include_signature)
             manifest_list.append(row)
 
         return cls(manifest_list)

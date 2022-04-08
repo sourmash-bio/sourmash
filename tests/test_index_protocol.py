@@ -143,25 +143,12 @@ def index_obj(request, runtmp):
     return build_fn(runtmp)
 
 
-@pytest.fixture(params=[build_sbt_index,
-                        build_zipfile_index,
-                        build_multi_index,
-                        build_standalone_manifest_index,
-                        build_sbt_index_save_load,
-                        build_lca_index_save_load])
-def index_with_manifest_obj(request, runtmp):
-    build_fn = request.param
-
-    # build on demand
-    return build_fn(runtmp)
-
-
 ###
 ### generic Index tests go here
 ###
 
 
-def test_index_search_extact_match(index_obj):
+def test_index_search_exact_match(index_obj):
     # search for an exact match
     ss2, ss47, ss63 = _load_three_sigs()
 
