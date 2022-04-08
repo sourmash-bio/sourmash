@@ -941,8 +941,7 @@ def test_zipfile_API_signatures_traverse_yield_all(use_manifest):
     assert len(zipidx) == 8
 
     # confirm that there are 12 files in there total, incl build.sh and dirs
-    zf = zipidx.storage.zipfile
-    allfiles = [ zi.filename for zi in zf.infolist() ]
+    allfiles = zipidx.storage._filenames()
     print(allfiles)
     assert len(allfiles) == 13
 
