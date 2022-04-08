@@ -1,10 +1,8 @@
 """
 Tests for distance utils.
 """
-
-from concurrent.futures.process import _ExecutorManagerThread
 import pytest
-from sourmash.distance_utils import containment_to_distance, jaccard_to_distance, distance_to_identity, sequence_len_to_n_kmers
+from sourmash.distance_utils import containment_to_distance, get_exp_probability_nothing_common, jaccard_to_distance, distance_to_identity, sequence_len_to_n_kmers
 
 def test_distance_to_identity():
     ident,id_low,id_high = distance_to_identity(0.5,0.4,0.6)
@@ -27,6 +25,9 @@ def test_distance_to_identity_just_point_estimate_extra_input():
     
 
 def test_distance_to_identity_fail():
+    """
+    Fail if distance is not between 0 and 1.
+    """
     with pytest.raises(Exception) as exc:
         ident,id_low,id_high = distance_to_identity(1.1,0.4,0.6)
     assert "distance value 1.1 is not between 0 and 1!" in str(exc.value)
@@ -44,7 +45,7 @@ def test_containment_to_distance_zero():
     print("\nDIST:", dist)
     print("CI:", low, " - ", high)
     # check results
-    exp_dist, exp_low,exp_high,pnc = 1.0,1.0,1.0,1.0
+    exp_dist,exp_low,exp_high,pnc = 1.0,1.0,1.0,1.0
     assert dist == exp_dist
     assert low == exp_low
     assert high == exp_high
@@ -99,26 +100,17 @@ def test_containment_to_distance_scaled1():
     print("CI:", low, " - ", high)
     print(f"{dist},{low},{high},{p_not_in_common}")
     # check results
-    exp_dist, exp_low,exp_high,pnc = 0.032468221476108394,0.028709912966405623,0.03647860197289783,0.0
-    assert dist == exp_dist
-    assert low == exp_low
-    assert high == exp_high
-    assert p_not_in_common == pnc
+    assert (dist,low,high,p_not_in_common) == (0.032468221476108394,0.028709912966405623,0.03647860197289783,0.0)
     # without returning ci
     dist,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers)
-    assert dist == exp_dist
-    assert p_not_in_common == pnc
+    assert (dist,p_not_in_common) == (0.032468221476108394,0.0)
     # return identity instead
-    exp_id, exp_idlow,exp_idhigh,pnc = 0.9675317785238916,0.9635213980271021,0.9712900870335944,0
     ident,low,high,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_identity=True,return_ci=True)
     print(f"{ident},{low},{high}")
-    assert ident == exp_id
-    assert low == exp_idlow
-    assert high == exp_idhigh
+    assert (ident,low,high,p_not_in_common) == (0.9675317785238916,0.9635213980271021,0.9712900870335944,0.0)
     # without returning ci
     ident,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_identity=True)
-    assert ident == exp_id
-    assert p_not_in_common == pnc
+    assert (ident,p_not_in_common) == (0.9675317785238916,0.0)
 
 
 def test_containment_to_distance_2():
@@ -218,7 +210,7 @@ def test_nkmers_to_bp_containment():
     assert bp_dist ==  (0.07158545548052564, 0.04802880300938562, 0.09619930040790341,4.3171247410658655e-05)
     assert kmer_dist==bp_dist
 
-# WORKING HERE
+
 def test_jaccard_to_distance_zero():
     jaccard = 0
     scaled = 1
@@ -315,7 +307,7 @@ def test_nkmers_to_bp_jaccard():
     bp_len = 10030
     ksize=31
     nkmers = sequence_len_to_n_kmers(bp_len,ksize)
-    print("nkmers_from_bp:", bp_len)
+    print("nkmers_from_bp:", nkmers)
     kmer_dist = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
     bp_dist = jaccard_to_distance(jaccard,ksize,scaled,sequence_len_bp=bp_len)
     print(f"\nk_jDIST:", kmer_dist)
@@ -333,7 +325,7 @@ def test_nkmers_to_bp_containment():
     ksize = 31
     confidence=0.99
     nkmers = sequence_len_to_n_kmers(bp_len,ksize)
-    print("nkmers_from_bp:", bp_len)
+    print("nkmers_from_bp:", nkmers)
     kmer_cdist = containment_to_distance(containment,ksize,scaled,confidence=confidence,n_unique_kmers=nkmers, return_ci= True)
     bp_cdist = containment_to_distance(containment,ksize,scaled,confidence=confidence,sequence_len_bp=bp_len, return_ci=True)
     print(f"\nk_cDIST:", kmer_cdist)
@@ -342,3 +334,17 @@ def test_nkmers_to_bp_containment():
     assert kmer_cdist == (0.07158545548052564, 0.04802880300938562, 0.09619930040790341, 4.3171247410658655e-05)
     assert bp_cdist == (0.07158545548052564, 0.04802880300938562, 0.09619930040790341, 4.3171247410658655e-05) 
     assert kmer_cdist==bp_cdist
+
+
+def test_exp_prob_nothing_common():
+    dist = 0.25
+    ksize = 31
+    scaled = 10
+    bp_len = 1000030
+    nkmers = sequence_len_to_n_kmers(bp_len,ksize)
+    print("nkmers_from_bp:", nkmers)
+
+    nkmers_pnc = get_exp_probability_nothing_common(dist,ksize,scaled,n_unique_kmers=nkmers)
+    print(f"prob nothing in common: {nkmers_pnc}")
+    bp_pnc = get_exp_probability_nothing_common(dist,ksize,scaled,sequence_len_bp=bp_len)
+    assert nkmers_pnc == bp_pnc == 7.437016945722123e-07

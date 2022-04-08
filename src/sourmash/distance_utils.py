@@ -45,18 +45,6 @@ def exp_n_mutated_squared(L, k, p):
     return var_n_mutated(L, k, p) + exp_n_mutated(L, k, p) ** 2
 
 
-def third_moment_nmut_exact(L,k,p):
-    t1 = (L * (-2 + 3*L) * p**2 + 3 * (1 - p)**(2*k) * (2 + (-1 + k - L) * p * (2 + k * p - L * p)) - (1 - p)**k * (6 + p * (-6 + L * (-6 + p + 6 * L * p))))/(p**2)
-    t2 = (-2 + 2 * k - L) * (-1 + 2 * k - L) * (2 * k - L) * (-1 + (1 - p)**k)**3
-    t3 = (1/(p**3))*(-6 * (-1 + k)**2 * (k - L) * p**3 + 6 * (1 - p)**(3 * k) * (2 + (-2 + 2 * k - L) * p) + (1 - p)**(2 * k) * (-12 + 6 * (2 * k + L) * p + 6 * (4 * k**2 + 2 * (1 + L) - 3 * k * (2 + L)) * p**2 - (-1 + k) * k * (-2 + 4 * k - 3 * L) * p**3) + 6 * (-1 + k) * (1 - p)**k * p * (-2 + p * (2 - k + 2 * L + (k * (-2 + 3 * k - 3 * L) + L) * p)))
-    t4 = 6 * (-1 + (1 - p)**k) * ((k + k**2 - 2 * k * L + (-1 + L) * L) * (-1 + 2 * (1 - p)**k) * hyp2f1(1, 2 + k - L, k - L, 1) + (k + k**2 - 2 * k * L + (-1 + L) * L) * (1 - p)**k * (-1 + p) * hyp2f1(1, 2 + k - L, k - L, 1 - p) - (-2 * k + 4 * k**2 + L - 4 * k * L + L**2) * ((-1 + 2 * (1 - p)**k) * hyp2f1(1, 1 + 2 * k - L, -1 + 2 * k - L, 1)- (-1 + p)**(2 * k) * hyp2f1(1, 1 + 2 * k - L, -1 + 2 * k - L, 1 - p)))
-    return t1+t2+t3+t4
-
-
-def exp_n_mutated_cubed(L, k, p):
-    return third_moment_nmut_exact(L, k, p)
-
-
 def probit(p):
     return scipy_norm.ppf(p)
 
@@ -174,21 +162,6 @@ def containment_to_distance(containment, ksize, scaled, n_unique_kmers=None, seq
     return point_estimate, prob_nothing_in_common
 
 
-def variance_scaled_jaccard(L, p, k, s):
-    exp_n_mut = exp_n_mutated(L, k, p)
-    exp_n_mut_squared = exp_n_mutated_squared(L, k, p)
-    exp_n_mut_cubed = exp_n_mutated_cubed(L, k, p)
-    bias_factor = 1 - (1 - s) ** ( int(L + exp_n_mut) )
-
-    factor1 = (1-s)/(s * bias_factor**2)
-    factor2 = (2 * L * exp_n_mut - 2 * exp_n_mut_squared) / (L ** 3 + 3*L*exp_n_mut_squared + 3*L*L*exp_n_mut + exp_n_mut_cubed)
-    term1 = factor1 * factor2
-    term2 = (L**2 - 2 * L * exp_n_mut + exp_n_mut_squared) / (L**2 + 2 * L * exp_n_mut + exp_n_mut_squared)
-    term3 = ((L - exp_n_mut) / (L + exp_n_mut))**2
-
-    return term1 + term2 - term3
-
-
 def jaccard_to_distance(jaccard, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None, return_identity=False, prob_threshold = 10.0**(-3), err_threshold=10.0**(-4.0)):
     """
     Given parameters, calculate point estimate for mutation rate from jaccard index.
@@ -205,9 +178,10 @@ def jaccard_to_distance(jaccard, ksize, scaled, n_unique_kmers=None, sequence_le
     # Returns: tuple (point_estimate_of_mutation_rate, lower_bound_of_error)
 
     # Returns: point_estimate_of_mutation_rate
+
+    Note: point estimate does not consider impact of scaled, but p_nothing_in_common can be
+    useful for determining whether scaled is sufficient for these comparisons.
     """
-    # NTP question: does this equation consider variance of jaccard due to scaled? 
-    # Or was that only used for estimating the CI around the pt estimate?
     error_lower_bound = None
     if sequence_len_bp and not n_unique_kmers:
         n_unique_kmers = sequence_len_to_n_kmers(sequence_len_bp, ksize)
@@ -225,12 +199,11 @@ def jaccard_to_distance(jaccard, ksize, scaled, n_unique_kmers=None, sequence_le
         error_lower_bound = 1.0 * n_unique_kmers * var_n_mut / (n_unique_kmers + exp_n_mut)**3
     
     if error_lower_bound is not None and error_lower_bound > err_threshold:
-        #print(f"err: ({error_lower_bound})")
         notify(f"WARNING: Error on Jaccard distance point estimate is too high ({error_lower_bound}).")
     
-    # get probability nothing in common
     prob_nothing_in_common = get_exp_probability_nothing_common(point_estimate, ksize, scaled, n_unique_kmers=n_unique_kmers)
     if prob_nothing_in_common >= prob_threshold:
+        # to do: keep count and recommend user lower scaled val
         notify('WARNING: These sketches may have no hashes in common based on chance alone.')
 
     if return_identity:
