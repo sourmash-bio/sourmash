@@ -203,12 +203,13 @@ def test_nkmers_to_bp_containment():
     confidence=0.99
     kmer_dist = containment_to_distance(containment,ksize,scaled,confidence=confidence,n_unique_kmers=nkmers,return_ci=True)
     bp_dist = containment_to_distance(containment,ksize,scaled,confidence=confidence,sequence_len_bp=bp_len,return_ci=True)
-    print(f"\nkDIST:", kmer_dist)
-    print(f"\nbpDIST:",bp_dist)
+    print(f"\nkDIST: {kmer_dist}")
+    print(f"\nbpDIST:,{bp_dist}")
     # check results
     assert kmer_dist == (0.07158545548052564, 0.04802880300938562, 0.09619930040790341,4.3171247410658655e-05)
     assert bp_dist ==  (0.07158545548052564, 0.04802880300938562, 0.09619930040790341,4.3171247410658655e-05)
     assert kmer_dist==bp_dist
+
 
 
 def test_jaccard_to_distance_zero():
@@ -310,30 +311,12 @@ def test_nkmers_to_bp_jaccard():
     print("nkmers_from_bp:", nkmers)
     kmer_dist = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
     bp_dist = jaccard_to_distance(jaccard,ksize,scaled,sequence_len_bp=bp_len)
-    print(f"\nk_jDIST:", kmer_dist)
-    print(f"\nbp_jDIST:",bp_dist)
+    print(f"\nk_jDIST: {kmer_dist}")
+    print(f"\nbp_jDIST: {bp_dist}")
     # check results
     assert kmer_dist == (0.0535071608231702, 1.1587511478551202e-08, 5.588721845727948e-05)
     assert bp_dist ==  (0.0535071608231702, 1.1587511478551202e-08, 5.588721845727948e-05)
     assert kmer_dist==bp_dist
-
-
-def test_nkmers_to_bp_containment():
-    containment = 0.1
-    scaled = 100
-    bp_len = 10030
-    ksize = 31
-    confidence=0.99
-    nkmers = sequence_len_to_n_kmers(bp_len,ksize)
-    print("nkmers_from_bp:", nkmers)
-    kmer_cdist = containment_to_distance(containment,ksize,scaled,confidence=confidence,n_unique_kmers=nkmers, return_ci= True)
-    bp_cdist = containment_to_distance(containment,ksize,scaled,confidence=confidence,sequence_len_bp=bp_len, return_ci=True)
-    print(f"\nk_cDIST:", kmer_cdist)
-    print(f"\nbp_cDIST:",bp_cdist)
-    # check results
-    assert kmer_cdist == (0.07158545548052564, 0.04802880300938562, 0.09619930040790341, 4.3171247410658655e-05)
-    assert bp_cdist == (0.07158545548052564, 0.04802880300938562, 0.09619930040790341, 4.3171247410658655e-05) 
-    assert kmer_cdist==bp_cdist
 
 
 def test_exp_prob_nothing_common():
