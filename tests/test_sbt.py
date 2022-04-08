@@ -367,7 +367,7 @@ def test_sbt_zipstorage(tmpdir):
     old_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
     print(*old_result, sep='\n')
 
-    with ZipStorage(str(tmpdir.join("tree.sbt.zip"))) as storage:
+    with ZipStorage(str(tmpdir.join("tree.sbt.zip")), mode="w") as storage:
         tree.save(str(tmpdir.join("tree.sbt.json")), storage=storage)
 
     with ZipStorage(str(tmpdir.join("tree.sbt.zip"))) as storage:
