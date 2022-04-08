@@ -510,10 +510,13 @@ class LCA_Database(Index):
             score = search_fn.score_fn(query_size, shared_size, subj_size,
                                        total_size)
 
-            # note to self: even with JaccardSearchBestOnly, this will
+            # CTB note to self: even with JaccardSearchBestOnly, this will
             # still iterate over & score all signatures. We should come
             # up with a protocol by which the JaccardSearch object can
             # signal that it is done, or something.
+            # For example, see test_lca_jaccard_ordering, where
+            # for containment we could be done early, but for Jaccard we
+            # cannot.
             if search_fn.passes(score):
                 if search_fn.collect(score, subj):
                     if passes_all_picklists(subj, self.picklists):
