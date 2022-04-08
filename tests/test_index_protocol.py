@@ -60,6 +60,14 @@ def build_sbt_index(runtmp):
     return root
 
 
+def build_sbt_index_save_load(runtmp):
+    root = build_sbt_index(runtmp)
+    out = runtmp.output('xyz.sbt.zip')
+    root.save(out)
+
+    return sourmash.load_file_as_index(out)
+
+
 def build_zipfile_index(runtmp):
     from sourmash.sourmash_args import SaveSignatures_ZipFile
 
@@ -111,12 +119,23 @@ def build_lca_index(runtmp):
     return db
 
 
+def build_lca_index_save_load(runtmp):
+    db = build_lca_index(runtmp)
+    outfile = runtmp.output('db.lca.json')
+    db.save(outfile)
+
+    return sourmash.load_file_as_index(outfile)
+
+
 @pytest.fixture(params=[build_linear_index,
                         build_sbt_index,
                         build_zipfile_index,
                         build_multi_index,
                         build_standalone_manifest_index,
-                        build_lca_index])
+                        build_lca_index,
+                        build_sbt_index_save_load,
+                        build_lca_index_save_load],
+)
 def index_obj(request, runtmp):
     build_fn = request.param
 
