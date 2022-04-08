@@ -3,11 +3,12 @@ Manifests for collections of signatures.
 """
 import csv
 import ast
+from abc import abstractmethod
 
 from sourmash.picklist import SignaturePicklist
 
 
-class CollectionManifest:
+class BaseCollectionManifest:
     """
     Signature metadata for a collection of signatures.
 
@@ -24,37 +25,6 @@ class CollectionManifest:
                      'md5', 'md5short', 'ksize', 'moltype', 'num',
                      'scaled', 'n_hashes', 'with_abundance',
                      'name', 'filename')
-
-    def __init__(self, rows):
-        "Initialize from an iterable of metadata dictionaries."
-        self.rows = ()
-        self._md5_set = set()
-
-        self._add_rows(rows)
-
-    def _add_rows(self, rows):
-        self.rows += tuple(rows)
-
-        # maintain a fast lookup table for md5sums
-        md5set = self._md5_set
-        for row in self.rows:
-            md5set.add(row['md5'])
-
-    def __iadd__(self, other):
-        self._add_rows(other.rows)
-        return self
-
-    def __add__(self, other):
-        return CollectionManifest(self.rows + other.rows)
-
-    def __bool__(self):
-        return bool(self.rows)
-
-    def __len__(self):
-        return len(self.rows)
-
-    def __eq__(self, other):
-        return self.rows == other.rows
 
     @classmethod
     def load_from_filename(cls, filename):
@@ -159,6 +129,80 @@ class CollectionManifest:
             manifest_list.append(row)
 
         return cls(manifest_list)
+
+    ## implement me
+    @abstractmethod
+    def __add__(self, other):
+        pass
+
+    @abstractmethod
+    def __bool__(self):
+        pass
+
+    @abstractmethod
+    def __len__(self):
+        pass
+
+    @abstractmethod
+    def __eq__(self, other):
+        pass
+
+    @abstractmethod
+    def select_to_manifest(self, **kwargs):
+        pass
+
+    @abstractmethod
+    def filter_rows(self, row_filter_fn):
+        pass
+
+    @abstractmethod
+    def filter_on_columns(self, col_filter_fn, col_names):
+        pass
+
+    @abstractmethod
+    def locations(self):
+        pass
+
+    @abstractmethod
+    def __contains__(self, ss):
+        pass
+
+    @abstractmethod
+    def to_picklist(self):
+        pass
+
+
+class CollectionManifest(BaseCollectionManifest):
+    def __init__(self, rows):
+        "Initialize from an iterable of metadata dictionaries."
+        self.rows = ()
+        self._md5_set = set()
+
+        self._add_rows(rows)
+
+    def _add_rows(self, rows):
+        self.rows += tuple(rows)
+
+        # maintain a fast lookup table for md5sums
+        md5set = self._md5_set
+        for row in self.rows:
+            md5set.add(row['md5'])
+
+    def __iadd__(self, other):
+        self._add_rows(other.rows)
+        return self
+
+    def __add__(self, other):
+        return CollectionManifest(self.rows + other.rows)
+
+    def __bool__(self):
+        return bool(self.rows)
+
+    def __len__(self):
+        return len(self.rows)
+
+    def __eq__(self, other):
+        return self.rows == other.rows
 
     def _select(self, *, ksize=None, moltype=None, scaled=0, num=0,
                 containment=False, abund=None, picklist=None):
