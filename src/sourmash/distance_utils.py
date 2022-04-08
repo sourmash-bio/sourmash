@@ -65,11 +65,17 @@ def distance_to_identity(dist, d_low=None, d_high=None):
     ident = 1 - dist
     result = ident
     id_low, id_high = None, None
-    if d_low is not None and d_high is not None:
-        if (0 <= d_low <= 1) and (0 <= d_high <= 1):
-            id_high = 1 - d_low
-            id_low = 1 - d_high
-            result = [ident, id_low, id_high]
+    if any([d_low is not None, d_high is not None]):
+        if d_low is not None and d_high is not None:
+            if (0 <= d_low <= 1) and (0 <= d_high <= 1):
+                id_high = 1 - d_low
+                id_low = 1 - d_high
+                result = [ident, id_low, id_high]
+        else:
+            raise ValueError(
+                "Error: `distance_to_identity` expects either one value (distance) or three values (distance, low_ci, high_ci)."
+            )
+
     return result
 
 

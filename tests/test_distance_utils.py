@@ -16,15 +16,7 @@ def test_distance_to_identity_just_point_estimate():
     assert ident == 0.6
 
 
-def test_distance_to_identity_just_point_estimate_extra_input():
-    """
-    Ignore 2nd input, unless put both dist_low and dist_high
-    """
-    ident = distance_to_identity(0.4,0.5)
-    assert ident == 0.6
-    
-
-def test_distance_to_identity_fail():
+def test_distance_to_identity_fail_distance():
     """
     Fail if distance is not between 0 and 1.
     """
@@ -34,6 +26,16 @@ def test_distance_to_identity_fail():
     with pytest.raises(Exception) as exc:
         ident,id_low,id_high = distance_to_identity(-0.1,0.4,0.6)
     assert "distance value -0.1 is not between 0 and 1!" in str(exc.value)
+
+
+def test_distance_to_identity_fail_incorrect_input():
+    """
+    Ignore 2nd input, unless put both dist_low and dist_high
+    """
+    with pytest.raises(Exception) as exc: 
+        distance_to_identity(0.4,0.5)
+    print("\n", str(exc.value))
+    assert "Error: `distance_to_identity` expects either one value (distance) or three values" in str(exc.value)
 
 
 def test_containment_to_distance_zero():
