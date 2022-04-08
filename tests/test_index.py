@@ -89,51 +89,6 @@ def test_simple_index(n_children):
         assert tree_found == set(linear_found)
 
 
-def test_linear_index_search():
-    # test LinearIndex searching - all in memory
-    sig2 = utils.get_test_data('2.fa.sig')
-    sig47 = utils.get_test_data('47.fa.sig')
-    sig63 = utils.get_test_data('63.fa.sig')
-
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
-
-    lidx = LinearIndex()
-    lidx.insert(ss2)
-    lidx.insert(ss47)
-    lidx.insert(ss63)
-
-    # now, search for sig2
-    sr = lidx.search(ss2, threshold=1.0)
-    print([s[1].name for s in sr])
-    assert len(sr) == 1
-    assert sr[0][1] == ss2
-
-    # search for sig47 with lower threshold; search order not guaranteed.
-    sr = lidx.search(ss47, threshold=0.1)
-    print([s[1].name for s in sr])
-    assert len(sr) == 2
-    sr.sort(key=lambda x: -x[0])
-    assert sr[0][1] == ss47
-    assert sr[1][1] == ss63
-
-    # search for sig63 with lower threshold; search order not guaranteed.
-    sr = lidx.search(ss63, threshold=0.1)
-    print([s[1].name for s in sr])
-    assert len(sr) == 2
-    sr.sort(key=lambda x: -x[0])
-    assert sr[0][1] == ss63
-    assert sr[1][1] == ss47
-
-    # search for sig63 with high threshold => 1 match
-    sr = lidx.search(ss63, threshold=0.8)
-    print([s[1].name for s in sr])
-    assert len(sr) == 1
-    sr.sort(key=lambda x: -x[0])
-    assert sr[0][1] == ss63
-
-
 def test_linear_index_prefetch():
     # check that prefetch does basic things right:
     sig2 = utils.get_test_data('2.fa.sig')
