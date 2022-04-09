@@ -384,6 +384,11 @@ class LCA_Database(Index):
         self.hashval_to_idx = new_hashvals
         self.scaled = scaled
 
+    @property
+    def hashvals(self):
+        "Return all hashvals stored in this database."
+        return self.hashval_to_idx.keys()
+
     def get_lineage_assignments(self, hashval, min_num=None):
         """
         Get a list of lineages for this hashval.
@@ -402,6 +407,15 @@ class LCA_Database(Index):
                 x.append(lineage)
 
         return x
+
+    def get_identifiers_for_hashval(self, hashval):
+        """
+        Get a list of identifiers for signatures containing this hashval
+        """
+        idx_list = self.hashval_to_idx.get(hashval, [])
+
+        for idx in idx_list:
+            yield self._idx_to_ident[idx]
 
     @cached_property
     def _signatures(self):
