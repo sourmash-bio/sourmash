@@ -127,6 +127,17 @@ def build_lca_index_save_load(runtmp):
     return sourmash.load_file_as_index(outfile)
 
 
+def build_revindex(runtmp):
+    ss2, ss47, ss63 = _load_three_sigs()
+
+    lidx = RevIndex(template=ss2.minhash)
+    lidx.insert(ss2)
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    return lidx
+
+
 @pytest.fixture(params=[build_linear_index,
                         build_sbt_index,
                         build_zipfile_index,
@@ -134,7 +145,9 @@ def build_lca_index_save_load(runtmp):
                         build_standalone_manifest_index,
                         build_lca_index,
                         build_sbt_index_save_load,
-                        build_lca_index_save_load],
+                        build_lca_index_save_load,
+#                        build_revindex,
+                        ]
 )
 def index_obj(request, runtmp):
     build_fn = request.param
