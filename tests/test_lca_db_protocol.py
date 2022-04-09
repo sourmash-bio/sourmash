@@ -59,5 +59,5 @@ def test_hashval_to_ident(lca_db_obj):
     assert len(idxlist) == 1
     idx = idxlist[0]
 
-    ident = lca_db_obj.idx_to_ident[idx]
+    ident = lca_db_obj._idx_to_ident[idx]
     assert ident == 'GCA_001593925'

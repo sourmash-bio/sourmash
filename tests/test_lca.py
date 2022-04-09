@@ -123,8 +123,8 @@ def test_api_create_insert():
     assert len(lca_db.ident_to_idx) == 1
     assert lca_db.ident_to_idx[ident] == 0
     assert len(lca_db.hashval_to_idx) == len(ss.minhash)
-    assert len(lca_db.idx_to_ident) == 1
-    assert lca_db.idx_to_ident[0] == ident
+    assert len(lca_db._idx_to_ident) == 1
+    assert lca_db._idx_to_ident[0] == ident
 
     set_of_values = set()
     for vv in lca_db.hashval_to_idx.values():
@@ -204,8 +204,8 @@ def test_api_create_insert_ident():
     assert len(lca_db.ident_to_idx) == 1
     assert lca_db.ident_to_idx[ident] == 0
     assert len(lca_db.hashval_to_idx) == len(ss.minhash)
-    assert len(lca_db.idx_to_ident) == 1
-    assert lca_db.idx_to_ident[0] == ident
+    assert len(lca_db._idx_to_ident) == 1
+    assert lca_db._idx_to_ident[0] == ident
 
     set_of_values = set()
     for vv in lca_db.hashval_to_idx.values():
@@ -216,7 +216,7 @@ def test_api_create_insert_ident():
     assert not lca_db.idx_to_lid          # no lineage added
     assert not lca_db.lid_to_lineage      # no lineage added
     assert not lca_db.lineage_to_lid
-    assert not lca_db.lid_to_idx
+    assert not lca_db._lid_to_idx
 
 
 def test_api_create_insert_two():
@@ -246,9 +246,9 @@ def test_api_create_insert_two():
     combined_mins.update(set(ss2.minhash.hashes.keys()))
     assert len(lca_db.hashval_to_idx) == len(combined_mins)
 
-    assert len(lca_db.idx_to_ident) == 2
-    assert lca_db.idx_to_ident[0] == ident
-    assert lca_db.idx_to_ident[1] == ident2
+    assert len(lca_db._idx_to_ident) == 2
+    assert lca_db._idx_to_ident[0] == ident
+    assert lca_db._idx_to_ident[1] == ident2
 
     set_of_values = set()
     for vv in lca_db.hashval_to_idx.values():
@@ -259,7 +259,7 @@ def test_api_create_insert_two():
     assert not lca_db.idx_to_lid          # no lineage added
     assert not lca_db.lid_to_lineage      # no lineage added
     assert not lca_db.lineage_to_lid
-    assert not lca_db.lid_to_idx
+    assert not lca_db._lid_to_idx
 
 
 def test_api_create_insert_w_lineage():
@@ -281,8 +281,8 @@ def test_api_create_insert_w_lineage():
     assert len(lca_db.ident_to_idx) == 1
     assert lca_db.ident_to_idx[ident] == 0
     assert len(lca_db.hashval_to_idx) == len(ss.minhash)
-    assert len(lca_db.idx_to_ident) == 1
-    assert lca_db.idx_to_ident[0] == ident
+    assert len(lca_db._idx_to_ident) == 1
+    assert lca_db._idx_to_ident[0] == ident
 
     # all hash values added
     set_of_values = set()
@@ -296,7 +296,7 @@ def test_api_create_insert_w_lineage():
     assert lca_db.idx_to_lid[0] == 0
     assert len(lca_db.lid_to_lineage) == 1
     assert lca_db.lid_to_lineage[0] == lineage
-    assert lca_db.lid_to_idx[0] == { 0 }
+    assert lca_db._lid_to_idx[0] == { 0 }
 
     assert len(lca_db.lineage_to_lid) == 1
     assert lca_db.lineage_to_lid[lineage] == 0
@@ -711,7 +711,7 @@ def test_db_lid_to_idx():
     dbfile = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
 
-    d = db.lid_to_idx
+    d = db._lid_to_idx
     items = list(d.items())
     items.sort()
     assert len(items) == 2
@@ -724,7 +724,7 @@ def test_db_idx_to_ident():
     dbfile = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
 
-    d = db.idx_to_ident
+    d = db._idx_to_ident
     items = list(d.items())
     items.sort()
     assert len(items) == 2

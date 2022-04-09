@@ -449,7 +449,7 @@ class LCA_Database(Index):
 
         sigd = {}
         for idx, mh in mhd.items():
-            ident = self.idx_to_ident[idx]
+            ident = self._idx_to_ident[idx]
             name = self.ident_to_name[ident]
             ss = SourmashSignature(mh, name=name)
 
@@ -527,14 +527,14 @@ class LCA_Database(Index):
                         yield IndexSearchResult(score, subj, self.location)
 
     @cached_property
-    def lid_to_idx(self):
+    def _lid_to_idx(self):
         d = defaultdict(set)
         for idx, lid in self.idx_to_lid.items():
             d[lid].add(idx)
         return d
 
     @cached_property
-    def idx_to_ident(self):
+    def _idx_to_ident(self):
         d = defaultdict(set)
         for ident, idx in self.ident_to_idx.items():
             assert idx not in d
