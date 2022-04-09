@@ -88,7 +88,11 @@ def test_manifest_create_manifest(manifest_obj):
     
     row = manifest_obj.make_manifest_row(ss, 'fiz', include_signature=False)
 
-    assert new_row == row
+    all_keys = set(new_row.keys())
+    all_keys.update(row.keys())
+    for k in all_keys:
+        if not k.startswith('_'):
+            assert new_row[k] == row[k], k
 
 
 def test_manifest_select_to_manifest(manifest_obj):
