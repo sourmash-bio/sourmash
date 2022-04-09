@@ -11,6 +11,7 @@ from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             make_jaccard_search_query, CounterGather,
                             LazyLinearIndex, MultiIndex,
                             StandaloneManifestIndex)
+from sourmash.index.sqlite_index import SqliteIndex
 from sourmash.index.revindex import RevIndex
 from sourmash.sbt import SBT, GraphFactory
 from sourmash import sourmash_args
@@ -127,6 +128,17 @@ def build_lca_index_save_load(runtmp):
     return sourmash.load_file_as_index(outfile)
 
 
+def build_sqlite_index(runtmp):
+    filename = runtmp.output('idx.sqldb')
+    db = SqliteIndex(filename)
+
+    siglist = _load_three_sigs()
+    for ss in siglist:
+        db.insert(ss)
+
+    return db
+
+
 @pytest.fixture(params=[build_linear_index,
                         build_sbt_index,
                         build_zipfile_index,
@@ -134,7 +146,8 @@ def build_lca_index_save_load(runtmp):
                         build_standalone_manifest_index,
                         build_lca_index,
                         build_sbt_index_save_load,
-                        build_lca_index_save_load],
+                        build_lca_index_save_load,
+                        build_sqlite_index],
 )
 def index_obj(request, runtmp):
     build_fn = request.param

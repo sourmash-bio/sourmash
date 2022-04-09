@@ -2,6 +2,7 @@ import pytest
 import sourmash_tst_utils as utils
 
 import sourmash
+from sourmash.index.sqlite_index import SqliteCollectionManifest
 
 def build_simple_manifest(runtmp):
     # return the manifest from prot/all.zip
@@ -10,9 +11,21 @@ def build_simple_manifest(runtmp):
     mf = idx.manifest
     assert len(mf) == 8
     return mf
+
+
+def build_sqlite_manifest(runtmp):
+    # return the manifest from prot/all.zip
+    filename = utils.get_test_data('prot/all.zip')
+    idx = sourmash.load_file_as_index(filename)
+    mf = idx.manifest
+
+    # build sqlite manifest from this 'un
+    mfdb = runtmp.output('test.sqlmf')
+    return SqliteCollectionManifest.create_from_manifest(mfdb, mf)
     
 
-@pytest.fixture(params=[build_simple_manifest,])
+@pytest.fixture(params=[build_simple_manifest,
+                        build_sqlite_manifest])
 def manifest_obj(request, runtmp):
     build_fn = request.param
 
