@@ -59,7 +59,8 @@ def test_get_lineage_assignments(lca_db_obj):
 
     x = []
     for tup in lineage:
-        x.append((tup[0], tup[1]))
+        if tup[0] != 'strain' or tup[1]: # ignore empty strain
+            x.append((tup[0], tup[1]))
 
     assert x == [('superkingdom', 'd__Archaea'),
                  ('phylum', 'p__Crenarchaeota'),
@@ -67,8 +68,7 @@ def test_get_lineage_assignments(lca_db_obj):
                  ('order', 'o__B26-1'),
                  ('family', 'f__B26-1'), 
                  ('genus', 'g__B26-1'),
-                 ('species', 's__B26-1 sp001593925'),
-                 ('strain', '')]
+                 ('species', 's__B26-1 sp001593925'),]
 
 
 def test_hashvals(lca_db_obj):

@@ -35,7 +35,7 @@ TODO:
 import time
 import os
 import sqlite3
-from collections import Counter
+from collections import Counter, defaultdict
 from collections.abc import Mapping
 
 from bitstring import BitArray
@@ -1029,6 +1029,22 @@ class LCA_Database_SqliteWrapper:
     def hashval_to_idx(self):
         "Dynamically interpret the SQL 'hashes' table like it's a dict."
         return _SqliteIndexHashvalToIndex(self.sqlidx)
+
+    @property
+    def conn(self):
+        return self.sqlidx.conn
+
+    @property
+    def hashvals(self):
+        c = self.conn.cursor()
+        c.execute('SELECT DISTINCT hashval FROM hashes')
+        for hashval, in c:
+            yield hashval
+
+    def get_identifiers_for_hashval(self, hashval):
+        idxlist = self.hashval_to_idx[hashval]
+        for idx in idxlist:
+            yield self.idx_to_ident[idx]
 
 
 class _SqliteIndexHashvalToIndex:
