@@ -25,7 +25,26 @@ def build_inmem_lca_db(runtmp):
     return db2
     
 
-@pytest.fixture(params=[build_inmem_lca_db,])
+def build_sql_lca_db(runtmp):
+    # test command-line creation of LCA database with protein sigs
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+    lineages = utils.get_test_data('prot/gtdb-subset-lineages.csv')
+
+    db_out = runtmp.output('protein.lca.sqldb')
+
+    runtmp.sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
+                   '-C', '2', '--split-identifiers', '--require-taxonomy',
+                    '--scaled', '100', '-k', '19', '--protein', '-F', 'sql')
+
+    x = sourmash.lca.lca_db.load_single_database(db_out)
+    db2 = x[0]
+
+    return db2
+
+
+@pytest.fixture(params=[build_inmem_lca_db,
+                        build_sql_lca_db])
 def lca_db_obj(request, runtmp):
     build_fn = request.param
 

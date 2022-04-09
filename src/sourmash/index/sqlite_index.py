@@ -36,6 +36,7 @@ import time
 import os
 import sqlite3
 from collections import Counter
+from collections.abc import Mapping
 
 from bitstring import BitArray
 
@@ -1024,5 +1025,11 @@ class _SqliteIndexHashvalToIndex:
 
         c.execute('SELECT sketch_id FROM hashes WHERE hashval=?', (hh,))
 
-        x = set(( convert_hash_from(h) for h, in c ))
+        x = [ convert_hash_from(h) for h, in c ]
         return x or dv
+
+    def __getitem__(self, key):
+        v = self.get(key)
+        if v is None:
+            raise KeyError(key)
+        return v
