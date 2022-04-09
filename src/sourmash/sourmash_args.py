@@ -1001,7 +1001,7 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         if os.path.exists(self.location):
             do_create = False
 
-        storage = ZipStorage(self.location)
+        storage = ZipStorage(self.location, mode="w")
         if not storage.subdir:
             storage.subdir = 'signatures'
 
