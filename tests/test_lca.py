@@ -2060,6 +2060,20 @@ def test_rankinfo_with_min(runtmp):
     assert not lines
 
 
+def test_rankinfo_with_min_2(runtmp):
+    db1 = utils.get_test_data('lca/dir1.lca.json')
+    db2 = utils.get_test_data('lca/dir2.lca.json')
+
+    cmd = ['lca', 'rankinfo', db1, db2, '--minimum-num', '2']
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "(no hashvals with lineages found)" in runtmp.last_result.err
+
+
 def test_compare_csv(runtmp):
     a = utils.get_test_data('lca/classify-by-both.csv')
     b = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
