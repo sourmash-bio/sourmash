@@ -2359,7 +2359,7 @@ def test_lca_db_protein_command_index(c):
     db_out = c.output('protein.lca.json')
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
-                   '-C', '3', '--split-identifiers', '--require-taxonomy',
+                   '-C', '2', '--split-identifiers', '--require-taxonomy',
                    '--scaled', '100', '-k', '19', '--protein')
 
     x = sourmash.lca.lca_db.load_single_database(db_out)
@@ -2468,7 +2468,7 @@ def test_lca_db_hp_command_index(c):
     db_out = c.output('hp.lca.json')
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
-                   '-C', '3', '--split-identifiers', '--require-taxonomy',
+                   '-C', '2', '--split-identifiers', '--require-taxonomy',
                    '--scaled', '100', '-k', '19', '--hp')
 
     x = sourmash.lca.lca_db.load_single_database(db_out)
@@ -2577,7 +2577,7 @@ def test_lca_db_dayhoff_command_index(c):
     db_out = c.output('dayhoff.lca.json')
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
-                   '-C', '3', '--split-identifiers', '--require-taxonomy',
+                   '-C', '2', '--split-identifiers', '--require-taxonomy',
                    '--scaled', '100', '-k', '19', '--dayhoff')
 
     x = sourmash.lca.lca_db.load_single_database(db_out)
