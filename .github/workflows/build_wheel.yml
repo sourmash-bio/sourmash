@@ -20,6 +20,7 @@ jobs:
           linux-ppc64le,
           linux-s390x,
           macos-x86_64,
+          macos-arm64,
         ]
         include:
           - build: linux-x86_64
@@ -41,7 +42,11 @@ jobs:
           - build: macos-x86_64
             os: macos-latest
             arch: x86_64
-            macos_target: 'MACOSX_DEPLOYMENT_TARGET=10.11'
+            macos_target: 'MACOSX_DEPLOYMENT_TARGET=10.11 CARGO_BUILD_TARGET=x86_64-apple-darwin'
+          - build: macos-arm64
+            os: macos-latest
+            arch: arm64
+            macos_target: 'MACOSX_DEPLOYMENT_TARGET=11 CARGO_BUILD_TARGET=aarch64-apple-darwin'
       fail-fast: false
 
     steps:
@@ -63,12 +68,7 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.2.2
         env:
-          CIBW_BUILD: "cp39-*"
-          CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_ppc64le *-musllinux_s390x"
-          CIBW_BEFORE_BUILD: 'source .ci/install_cargo.sh'
-          CIBW_ENVIRONMENT: 'PATH="$HOME/.cargo/bin:$PATH"'
           CIBW_ENVIRONMENT_MACOS: ${{ matrix.macos_target }}
-          CIBW_BUILD_VERBOSITY: 3
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
           CIBW_ARCHS_MACOS: ${{ matrix.arch }}
 

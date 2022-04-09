@@ -625,7 +625,7 @@ class SBT(Index):
             kind = "Zip"
             if not path.endswith('.sbt.zip'):
                 path += '.sbt.zip'
-            storage = ZipStorage(path)
+            storage = ZipStorage(path, mode="w")
             backend = "FSStorage"
 
             assert path[-8:] == '.sbt.zip'
@@ -1191,8 +1191,7 @@ class SBT(Index):
                 debug("processed {}, in queue {}", processed, len(queue), sep='\r')
 
     def __len__(self):
-        internal_nodes = set(self._nodes).union(self._missing_nodes)
-        return len(internal_nodes) + len(self._leaves)
+        return len(self._leaves)
 
     def print_dot(self):
         print("""
@@ -1440,6 +1439,8 @@ def convert_cmd(name, backend):
     backend = options.pop(0)
     backend = backend.lower().strip("'")
 
+    kwargs = {}
+
     if options:
       print(options)
       options = options[0].split(')')
@@ -1454,6 +1455,7 @@ def convert_cmd(name, backend):
         backend = RedisStorage
     elif backend.lower() in ('zip', 'zipstorage'):
         backend = ZipStorage
+        kwargs['mode'] = 'w'
     elif backend.lower() in ('fs', 'fsstorage'):
         backend = FSStorage
         if options:
@@ -1469,6 +1471,6 @@ def convert_cmd(name, backend):
     else:
         error('backend not recognized: {}'.format(backend))
 
-    with backend(*options) as storage:
+    with backend(*options, **kwargs) as storage:
         sbt = SBT.load(name, leaf_loader=SigLeaf.load)
         sbt.save(name, storage=storage)

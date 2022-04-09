@@ -123,8 +123,8 @@ def test_api_create_insert():
     assert len(lca_db.ident_to_idx) == 1
     assert lca_db.ident_to_idx[ident] == 0
     assert len(lca_db.hashval_to_idx) == len(ss.minhash)
-    assert len(lca_db.idx_to_ident) == 1
-    assert lca_db.idx_to_ident[0] == ident
+    assert len(lca_db._idx_to_ident) == 1
+    assert lca_db._idx_to_ident[0] == ident
 
     set_of_values = set()
     for vv in lca_db.hashval_to_idx.values():
@@ -204,8 +204,8 @@ def test_api_create_insert_ident():
     assert len(lca_db.ident_to_idx) == 1
     assert lca_db.ident_to_idx[ident] == 0
     assert len(lca_db.hashval_to_idx) == len(ss.minhash)
-    assert len(lca_db.idx_to_ident) == 1
-    assert lca_db.idx_to_ident[0] == ident
+    assert len(lca_db._idx_to_ident) == 1
+    assert lca_db._idx_to_ident[0] == ident
 
     set_of_values = set()
     for vv in lca_db.hashval_to_idx.values():
@@ -216,7 +216,7 @@ def test_api_create_insert_ident():
     assert not lca_db.idx_to_lid          # no lineage added
     assert not lca_db.lid_to_lineage      # no lineage added
     assert not lca_db.lineage_to_lid
-    assert not lca_db.lid_to_idx
+    assert not lca_db._lid_to_idx
 
 
 def test_api_create_insert_two():
@@ -246,9 +246,9 @@ def test_api_create_insert_two():
     combined_mins.update(set(ss2.minhash.hashes.keys()))
     assert len(lca_db.hashval_to_idx) == len(combined_mins)
 
-    assert len(lca_db.idx_to_ident) == 2
-    assert lca_db.idx_to_ident[0] == ident
-    assert lca_db.idx_to_ident[1] == ident2
+    assert len(lca_db._idx_to_ident) == 2
+    assert lca_db._idx_to_ident[0] == ident
+    assert lca_db._idx_to_ident[1] == ident2
 
     set_of_values = set()
     for vv in lca_db.hashval_to_idx.values():
@@ -259,7 +259,7 @@ def test_api_create_insert_two():
     assert not lca_db.idx_to_lid          # no lineage added
     assert not lca_db.lid_to_lineage      # no lineage added
     assert not lca_db.lineage_to_lid
-    assert not lca_db.lid_to_idx
+    assert not lca_db._lid_to_idx
 
 
 def test_api_create_insert_w_lineage():
@@ -281,8 +281,8 @@ def test_api_create_insert_w_lineage():
     assert len(lca_db.ident_to_idx) == 1
     assert lca_db.ident_to_idx[ident] == 0
     assert len(lca_db.hashval_to_idx) == len(ss.minhash)
-    assert len(lca_db.idx_to_ident) == 1
-    assert lca_db.idx_to_ident[0] == ident
+    assert len(lca_db._idx_to_ident) == 1
+    assert lca_db._idx_to_ident[0] == ident
 
     # all hash values added
     set_of_values = set()
@@ -296,7 +296,7 @@ def test_api_create_insert_w_lineage():
     assert lca_db.idx_to_lid[0] == 0
     assert len(lca_db.lid_to_lineage) == 1
     assert lca_db.lid_to_lineage[0] == lineage
-    assert lca_db.lid_to_idx[0] == { 0 }
+    assert lca_db._lid_to_idx[0] == { 0 }
 
     assert len(lca_db.lineage_to_lid) == 1
     assert lca_db.lineage_to_lid[lineage] == 0
@@ -711,7 +711,7 @@ def test_db_lid_to_idx():
     dbfile = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
 
-    d = db.lid_to_idx
+    d = db._lid_to_idx
     items = list(d.items())
     items.sort()
     assert len(items) == 2
@@ -724,7 +724,7 @@ def test_db_idx_to_ident():
     dbfile = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
 
-    d = db.idx_to_ident
+    d = db._idx_to_ident
     items = list(d.items())
     items.sort()
     assert len(items) == 2
@@ -2080,6 +2080,20 @@ def test_rankinfo_with_min(runtmp):
     assert not lines
 
 
+def test_rankinfo_with_min_2(runtmp):
+    db1 = utils.get_test_data('lca/dir1.lca.json')
+    db2 = utils.get_test_data('lca/dir2.lca.json')
+
+    cmd = ['lca', 'rankinfo', db1, db2, '--minimum-num', '2']
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "(no hashvals with lineages found)" in runtmp.last_result.err
+
+
 def test_compare_csv(runtmp):
     a = utils.get_test_data('lca/classify-by-both.csv')
     b = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
@@ -2383,7 +2397,7 @@ def test_lca_db_protein_command_index(runtmp, lca_db_format):
     db_out = c.output('protein.lca.json')
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
-                   '-C', '3', '--split-identifiers', '--require-taxonomy',
+                   '-C', '2', '--split-identifiers', '--require-taxonomy',
                    '--scaled', '100', '-k', '19', '--protein',
                    '-F', lca_db_format)
 
@@ -2494,7 +2508,7 @@ def test_lca_db_hp_command_index(runtmp, lca_db_format):
     db_out = c.output('hp.lca.json')
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
-                   '-C', '3', '--split-identifiers', '--require-taxonomy',
+                   '-C', '2', '--split-identifiers', '--require-taxonomy',
                    '--scaled', '100', '-k', '19', '--hp',
                    '-F', lca_db_format)
 
@@ -2605,7 +2619,7 @@ def test_lca_db_dayhoff_command_index(runtmp, lca_db_format):
     db_out = c.output('dayhoff.lca.json')
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
-                   '-C', '3', '--split-identifiers', '--require-taxonomy',
+                   '-C', '2', '--split-identifiers', '--require-taxonomy',
                    '--scaled', '100', '-k', '19', '--dayhoff',
                    '-F', lca_db_format)
 

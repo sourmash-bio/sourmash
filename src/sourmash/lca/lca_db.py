@@ -463,7 +463,7 @@ class LCA_Database(Index):
         self.hashval_to_idx = new_hashvals
         self.scaled = scaled
 
-    def get_lineage_assignments(self, hashval):
+    def get_lineage_assignments(self, hashval, min_num=None):
         """Get a list of lineages for this hashval.
 
         Method specific to LCA Databases.
@@ -471,6 +471,10 @@ class LCA_Database(Index):
         x = []
 
         idx_list = self.hashval_to_idx.get(hashval, [])
+
+        if min_num and len(idx_list) < min_num:
+            return []
+
         for idx in idx_list:
             lid = self.idx_to_lid.get(idx, None)
             if lid is not None:
@@ -528,7 +532,7 @@ class LCA_Database(Index):
 
         sigd = {}
         for idx, mh in mhd.items():
-            ident = self.idx_to_ident[idx]
+            ident = self._idx_to_ident[idx]
             name = self.ident_to_name[ident]
             ss = SourmashSignature(mh, name=name)
 
@@ -608,7 +612,7 @@ class LCA_Database(Index):
                         yield IndexSearchResult(score, subj, self.location)
 
     @cached_property
-    def lid_to_idx(self):
+    def _lid_to_idx(self):
         """Connect lineage id lid (int) to idx set (set of ints).""
 
         Method specific to LCA databases.
@@ -619,7 +623,7 @@ class LCA_Database(Index):
         return d
 
     @cached_property
-    def idx_to_ident(self):
+    def _idx_to_ident(self):
         """Connect idx (int) to ident (str).
 
         Method specific to LCA databases.

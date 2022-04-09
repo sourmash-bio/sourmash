@@ -554,7 +554,7 @@ class ZipFileLinearIndex(Index):
         "Load a manifest if one exists"
         try:
             manifest_data = self.storage.load('SOURMASH-MANIFEST.csv')
-        except KeyError:
+        except (KeyError, FileNotFoundError):
             self.manifest = None
         else:
             debug_literal(f'found manifest on load for {self.storage.path}')
@@ -616,18 +616,16 @@ class ZipFileLinearIndex(Index):
 
         Note: does not limit signatures to subsets.
         """
-        zf = self.storage.zipfile
-
         # list all the files, without using the Storage interface; currently,
         # 'Storage' does not provide a way to list all the files, so :shrug:.
-        for zipinfo in zf.infolist():
+        for filename in self.storage._filenames():
             # should we load this file? if it ends in .sig OR we are forcing:
-            if zipinfo.filename.endswith('.sig') or \
-               zipinfo.filename.endswith('.sig.gz') or \
+            if filename.endswith('.sig') or \
+               filename.endswith('.sig.gz') or \
                self.traverse_yield_all:
-                fp = zf.open(zipinfo)
-                for ss in load_signatures(fp):
-                    yield ss, zipinfo.filename
+                sig_data = self.storage.load(filename)
+                for ss in load_signatures(sig_data):
+                    yield ss, filename
 
     def signatures(self):
         "Load all signatures in the zip file."
@@ -652,10 +650,10 @@ class ZipFileLinearIndex(Index):
             # if no manifest here, break Storage class encapsulation
             # and go for all the files. (This is necessary to support
             # ad-hoc zipfiles that have no manifests.)
-            for zipinfo in storage.zipfile.infolist():
+            for filename in storage._filenames():
                 # should we load this file? if it ends in .sig OR force:
-                if zipinfo.filename.endswith('.sig') or \
-                   zipinfo.filename.endswith('.sig.gz') or \
+                if filename.endswith('.sig') or \
+                   filename.endswith('.sig.gz') or \
                    self.traverse_yield_all:
                     if selection_dict:
                         select = lambda x: select_signature(x,
@@ -663,7 +661,7 @@ class ZipFileLinearIndex(Index):
                     else:
                         select = lambda x: True
 
-                    data = self.storage.load(zipinfo.filename)
+                    data = self.storage.load(filename)
                     for ss in load_signatures(data):
                         if select(ss):
                             yield ss
