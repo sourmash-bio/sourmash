@@ -146,7 +146,7 @@ class RevIndex(RustObject, Index):
     def load(cls, location):
         pass
 
-    def select(self, ksize=None, moltype=None):
+    def select(self, ksize=None, moltype=None, **kwargs):
         if self.template:
             if ksize:
                 self.template.ksize = ksize
