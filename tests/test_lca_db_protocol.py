@@ -52,12 +52,34 @@ def test_get_lineage_assignments(lca_db_obj):
                  ('strain', '')]
 
 
-def test_hashval_to_ident(lca_db_obj):
-    # @CTB: abstract me a bit. hashvals, hashval_to_ident, hashval_to_lineages?
-    idxlist = lca_db_obj.hashval_to_idx[178936042868009693]
+def test_hashvals(lca_db_obj):
+    # test getting individual hashvals
+    hashvals = set(lca_db_obj.hashvals)
+    assert 178936042868009693 in hashvals
 
-    assert len(idxlist) == 1
-    idx = idxlist[0]
 
-    ident = lca_db_obj._idx_to_ident[idx]
+def test_get_identifiers_for_hashval(lca_db_obj):
+    # test getting identifiers belonging to individual hashvals
+    idents = lca_db_obj.get_identifiers_for_hashval(178936042868009693)
+    idents = list(idents)
+    assert len(idents) == 1
+
+    ident = idents[0]
     assert ident == 'GCA_001593925'
+
+
+def test_get_identifiers_for_hashval_2(lca_db_obj):
+    # test systematic hashval => identifiers
+    all_idents = set()
+
+    for hashval in lca_db_obj.hashvals:
+        idents = lca_db_obj.get_identifiers_for_hashval(hashval)
+        #idents = list(idents)
+        all_idents.update(idents)
+
+    all_idents = list(all_idents)
+    print(all_idents)
+    assert len(all_idents) == 2
+
+    assert 'GCA_001593925' in all_idents
+    assert 'GCA_001593935' in all_idents
