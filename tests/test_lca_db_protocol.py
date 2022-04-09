@@ -53,7 +53,7 @@ def test_get_lineage_assignments(lca_db_obj):
 
 
 def test_hashval_to_ident(lca_db_obj):
-    # @CTB: abstract me a bit.
+    # @CTB: abstract me a bit. hashvals, hashval_to_ident, hashval_to_lineages?
     idxlist = lca_db_obj.hashval_to_idx[178936042868009693]
 
     assert len(idxlist) == 1
