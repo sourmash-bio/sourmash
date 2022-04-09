@@ -130,7 +130,7 @@ def build_lca_index_save_load(runtmp):
 
 def build_sqlite_index(runtmp):
     filename = runtmp.output('idx.sqldb')
-    db = SqliteIndex(filename)
+    db = SqliteIndex.create(filename)
 
     siglist = _load_three_sigs()
     for ss in siglist:
