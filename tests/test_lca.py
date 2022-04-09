@@ -2042,9 +2042,9 @@ def test_rankinfo_no_tax(runtmp, lca_db_format):
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-F', lca_db_format]
     runtmp.sourmash(*cmd)
 
-    print(cmd)
-    print(runtmp.last_result.out)
-    print(runtmp.last_result.err)
+    print('cmd:', cmd)
+    print('out:', runtmp.last_result.out)
+    print('err:', runtmp.last_result.err)
 
     assert os.path.exists(lca_db)
 

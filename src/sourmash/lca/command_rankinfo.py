@@ -19,8 +19,8 @@ def make_lca_counts(dblist, min_num=0):
     # gather all hashvalue assignments from across all the databases
     assignments = defaultdict(set)
     for lca_db in dblist:
-        for hashval in lca_db.hashval_to_idx:
-            lineages = lca_db.get_lineage_assignments(hashval, min_num)
+        for hashval in lca_db.hashvals:
+            lineages = lca_db.get_lineage_assignments(hashval, min_num=min_num)
             if lineages:
                 assignments[hashval].update(lineages)
 

@@ -995,18 +995,19 @@ class LCA_Database_SqliteWrapper:
         else:
             self.scaled = scaled
 
-    def get_lineage_assignments(self, hashval):
+    def get_lineage_assignments(self, hashval, *, min_num=None):
         """
         Get a list of lineages for this hashval.
         """
         x = []
 
         idx_list = self.hashval_to_idx.get(hashval, [])
-        for idx in idx_list:
-            lid = self.idx_to_lid.get(idx, None)
-            if lid is not None:
-                lineage = self.lid_to_lineage[lid]
-                x.append(lineage)
+        if min_num is None or len(idx_list) >= min_num:
+            for idx in idx_list:
+                lid = self.idx_to_lid.get(idx, None)
+                if lid is not None:
+                    lineage = self.lid_to_lineage[lid]
+                    x.append(lineage)
 
         return x
 
@@ -1036,10 +1037,7 @@ class LCA_Database_SqliteWrapper:
 
     @property
     def hashvals(self):
-        c = self.conn.cursor()
-        c.execute('SELECT DISTINCT hashval FROM hashes')
-        for hashval, in c:
-            yield hashval
+        return iter(_SqliteIndexHashvalToIndex(self.sqlidx))
 
     def get_identifiers_for_hashval(self, hashval):
         idxlist = self.hashval_to_idx[hashval]
@@ -1050,6 +1048,12 @@ class LCA_Database_SqliteWrapper:
 class _SqliteIndexHashvalToIndex:
     def __init__(self, sqlidx):
         self.sqlidx = sqlidx
+
+    def __iter__(self):
+        c = self.sqlidx.conn.cursor()
+        c.execute('SELECT DISTINCT hashval FROM hashes')
+        for hashval, in c:
+            yield hashval
 
     def items(self):
         "Retrieve hashval, idxlist for all hashvals."

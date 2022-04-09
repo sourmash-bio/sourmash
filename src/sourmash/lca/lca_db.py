@@ -428,9 +428,6 @@ class LCA_Database(Index):
                 for pair in lineage:
                     available_ranks.add(pair.rank)
 
-        print(assignments)
-        print(available_ranks)
-
         from sourmash.tax.tax_utils import MultiLineageDB, LineageDB
         ldb = LineageDB(assignments, available_ranks)
         out_lineage_db = MultiLineageDB()
