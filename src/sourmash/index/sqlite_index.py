@@ -44,7 +44,7 @@ import sourmash
 from sourmash import MinHash, SourmashSignature
 from sourmash.index import IndexSearchResult, StandaloneManifestIndex
 from sourmash.picklist import PickStyle, SignaturePicklist
-from sourmash.manifest import CollectionManifest
+from sourmash.manifest import BaseCollectionManifest, CollectionManifest
 from sourmash.logging import debug_literal
 
 # converters for unsigned 64-bit ints: if over MAX_SQLITE_INT,
@@ -256,8 +256,8 @@ class SqliteIndex(Index):
             self.scaled = ss.minhash.scaled
 
         # ok, first create and insert a manifest row
-        row = CollectionManifest.make_manifest_row(ss, None,
-                                                   include_signature=False)
+        row = BaseCollectionManifest.make_manifest_row(ss, None,
+                                                       include_signature=False)
         self.manifest._insert_row(c, row)
 
         # retrieve ID of row for retrieving hashes:
@@ -517,7 +517,7 @@ class SqliteIndex(Index):
         return c
 
 
-class SqliteCollectionManifest(CollectionManifest):
+class SqliteCollectionManifest(BaseCollectionManifest):
     def __init__(self, conn, selection_dict=None):
         """
         Here, 'conn' should already be connected and configured.
@@ -525,6 +525,13 @@ class SqliteCollectionManifest(CollectionManifest):
         assert conn is not None
         self.conn = conn
         self.selection_dict = selection_dict
+
+    @classmethod
+    def create(cls, filename):
+        conn = sqlite3.connect(filename)
+        cursor = conn.cursor()
+        cls._create_table(cursor)
+        return cls(conn)
 
     @classmethod
     def _create_table(cls, cursor):
@@ -583,24 +590,21 @@ class SqliteCollectionManifest(CollectionManifest):
         conn = sqlite3.connect(dbfile)
         cursor = conn.cursor()
 
-        obj = cls(conn)
+        new_mf = cls(conn)
+        new_mf._create_table(cursor)
 
-        cls._create_table(cursor)
-
-        assert isinstance(manifest, CollectionManifest)
+        assert isinstance(manifest, BaseCollectionManifest)
         for row in manifest.rows:
-            cls._insert_row(cursor, row)
+            new_mf._insert_row(cursor, row)
         conn.commit()
 
-        return cls(conn)
+        return new_mf
 
     def __bool__(self):
         return bool(len(self))
 
     def __eq__(self, other):
-        # could check if selection dict is the same, database conn is the
-        # same...
-        raise NotImplementedError
+        return list(self.rows) == list(other.rows)
 
     def __len__(self):
         c = self.conn.cursor()
@@ -747,16 +751,38 @@ class SqliteCollectionManifest(CollectionManifest):
         mf.write_to_csv(fp, write_header=write_header)
 
     def filter_rows(self, row_filter_fn):
-        # @CTB
-        raise NotImplementedError
+        """Create a new manifest filtered through row_filter_fn.
+
+        This is done in memory, inserting each row one at a time.
+        """
+        def rows_iter():
+            for row in self.rows:
+                if row_filter_fn(row):
+                    yield row
+
+        return self._create_manifest_from_rows(rows_iter())
 
     def filter_on_columns(self, col_filter_fn, col_names):
-        # @CTB
-        raise NotImplementedError
+        "Create a new manifest based on column matches."
+        def row_filter_fn(row):
+            x = [ row[col] for col in col_names if row[col] is not None ]
+            return col_filter_fn(x)
+        return self.filter_rows(row_filter_fn)
 
     def locations(self):
-        # @CTB
-        raise NotImplementedError
+        c1 = self.conn.cursor()
+
+        conditions, values, picklist = self._select_signatures(c1)
+        if conditions:
+            conditions = conditions = "WHERE " + " AND ".join(conditions)
+        else:
+            conditions = ""
+
+        c1.execute(f"""
+        SELECT DISTINCT internal_location FROM sketches {conditions}
+        """, values)
+
+        return ( iloc for iloc, in c1 )
 
     def __contains__(self, ss):
         md5 = ss.md5sum()
@@ -779,18 +805,35 @@ class SqliteCollectionManifest(CollectionManifest):
         return picklist
 
     @classmethod
-    def create_manifest(cls, *args, **kwargs):
+    def create_manifest(cls, locations_iter, *, include_signature=False):
         """Create a manifest from an iterator that yields (ss, location)
 
         Stores signatures in manifest rows by default.
 
         Note: do NOT catch exceptions here, so this passes through load excs.
+        Note: ignores 'include_signature'.
         """
-        raise NotImplementedError
+        def rows_iter():
+            for ss, location in locations_iter:
+                row = cls.make_manifest_row(ss, location,
+                                            include_signature=False)
+                yield row
 
-        manifest_list = []
-        for ss, location in locations_iter:
-            row = cls.make_manifest_row(ss, location, include_signature=True)
-            manifest_list.append(row)
+        return cls._create_manifest_from_rows(rows_iter())
 
-        return cls(manifest_list)
+    @classmethod
+    def _create_manifest_from_rows(cls, rows_iter, *, location=":memory:"):
+        """Create an in-memory SqliteCollectionManifest from a rows iterator.
+
+        Internal utility function.
+        @CTB how do we convert in-memory sqlite db to on-disk?
+        """
+        mf = cls.create(location)
+        cursor = mf.conn.cursor()
+
+        for row in rows_iter:
+            cls._insert_row(cursor, row)
+
+        mf.conn.commit()
+
+        return mf
