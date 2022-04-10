@@ -56,7 +56,7 @@ impl From<&[PathBuf]> for Manifest {
     fn from(v: &[PathBuf]) -> Self {
         Manifest {
             records: v
-                .into_iter()
+                .iter()
                 .map(|p| Record {
                     internal_location: p.to_str().unwrap().into(),
                 })

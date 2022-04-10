@@ -127,44 +127,39 @@ impl LinearRevIndex {
         ref_sigs: Option<Vec<Signature>>,
         storage: Option<ZipStorage>,
     ) -> Self {
-        let search_sigs: Vec<_> = sig_files
-            .internal_locations()
-            .map(|l| PathBuf::from(l))
-            .collect();
+        let search_sigs: Vec<_> = sig_files.internal_locations().map(PathBuf::from).collect();
 
         let ref_sigs = if let Some(ref_sigs) = ref_sigs {
             Some(ref_sigs)
+        } else if keep_sigs {
+            #[cfg(feature = "parallel")]
+            let sigs_iter = search_sigs.par_iter();
+
+            #[cfg(not(feature = "parallel"))]
+            let sigs_iter = search_sigs.iter();
+
+            Some(
+                sigs_iter
+                    .map(|ref_path| {
+                        if let Some(storage) = &storage {
+                            let sig_data = storage
+                                .load(ref_path.to_str().unwrap_or_else(|| {
+                                    panic!("error converting path {:?}", ref_path)
+                                }))
+                                .unwrap_or_else(|_| panic!("error loading {:?}", ref_path));
+                            Signature::from_reader(sig_data.as_slice())
+                                .unwrap_or_else(|_| panic!("Error processing {:?}", ref_path))
+                                .swap_remove(0)
+                        } else {
+                            Signature::from_path(&ref_path)
+                                .unwrap_or_else(|_| panic!("Error processing {:?}", ref_path))
+                                .swap_remove(0)
+                        }
+                    })
+                    .collect(),
+            )
         } else {
-            if keep_sigs {
-                #[cfg(feature = "parallel")]
-                let sigs_iter = search_sigs.par_iter();
-
-                #[cfg(not(feature = "parallel"))]
-                let sigs_iter = search_sigs.iter();
-
-                Some(
-                    sigs_iter
-                        .map(|ref_path| {
-                            if let Some(storage) = &storage {
-                                let sig_data = storage
-                                    .load(ref_path.to_str().expect(
-                                        format!("error converting path {:?}", ref_path).as_str(),
-                                    ))
-                                    .expect(format!("error loading {:?}", ref_path).as_str());
-                                Signature::from_reader(sig_data.as_slice())
-                                    .unwrap_or_else(|_| panic!("Error processing {:?}", ref_path))
-                                    .swap_remove(0)
-                            } else {
-                                Signature::from_path(&ref_path)
-                                    .unwrap_or_else(|_| panic!("Error processing {:?}", ref_path))
-                                    .swap_remove(0)
-                            }
-                        })
-                        .collect(),
-                )
-            } else {
-                None
-            }
+            None
         };
 
         LinearRevIndex {
@@ -186,7 +181,7 @@ impl LinearRevIndex {
         let search_sigs: Vec<_> = self
             .sig_files
             .internal_locations()
-            .map(|l| PathBuf::from(l))
+            .map(PathBuf::from)
             .collect();
 
         #[cfg(feature = "parallel")]
@@ -206,9 +201,9 @@ impl LinearRevIndex {
                     .load(
                         filename
                             .to_str()
-                            .expect(format!("error converting path {:?}", filename).as_str()),
+                            .unwrap_or_else(|| panic!("error converting path {:?}", filename)),
                     )
-                    .expect(format!("error loading {:?}", filename).as_str());
+                    .unwrap_or_else(|_| panic!("error loading {:?}", filename));
 
                 Signature::from_reader(sig_data.as_slice())
             } else {
@@ -315,10 +310,7 @@ impl RevIndex {
 
         // Load manifest from zipstorage
         let manifest = Manifest::from_reader(storage.load("SOURMASH-MANIFEST.csv")?.as_slice())?;
-        let search_sigs: Vec<_> = manifest
-            .internal_locations()
-            .map(|l| PathBuf::from(l))
-            .collect();
+        let search_sigs: Vec<_> = manifest.internal_locations().map(PathBuf::from).collect();
 
         let linear = LinearRevIndex::new(
             search_sigs.as_slice().into(),
@@ -354,7 +346,7 @@ impl RevIndex {
 
         let linear = LinearRevIndex::new(
             Default::default(),
-            &template,
+            template,
             false,
             search_sigs.into(),
             None,
@@ -460,13 +452,12 @@ impl RevIndex {
                 &refsigs[dataset_id as usize]
             } else {
                 let mut sig = if let Some(storage) = &self.linear.storage {
-                    let sig_data = storage
-                        .load(
-                            match_path
-                                .to_str()
-                                .expect(format!("error converting path {:?}", match_path).as_str()),
-                        )
-                        .expect(format!("error loading {:?}", match_path).as_str());
+                    let sig_data =
+                        storage
+                            .load(match_path.to_str().unwrap_or_else(|| {
+                                panic!("error converting path {:?}", match_path)
+                            }))
+                            .unwrap_or_else(|_| panic!("error loading {:?}", match_path));
                     Signature::from_reader(sig_data.as_slice())?
                 } else {
                     Signature::from_path(&match_path)?
@@ -615,13 +606,12 @@ impl RevIndex {
                 &refsigs[dataset_id as usize]
             } else {
                 let mut sig = if let Some(storage) = &self.linear.storage {
-                    let sig_data = storage
-                        .load(
-                            match_path
-                                .to_str()
-                                .expect(format!("error converting path {:?}", match_path).as_str()),
-                        )
-                        .expect(format!("error loading {:?}", match_path).as_str());
+                    let sig_data =
+                        storage
+                            .load(match_path.to_str().unwrap_or_else(|| {
+                                panic!("error converting path {:?}", match_path)
+                            }))
+                            .unwrap_or_else(|_| panic!("error loading {:?}", match_path));
                     Signature::from_reader(sig_data.as_slice())?
                 } else {
                     Signature::from_path(&match_path)?
