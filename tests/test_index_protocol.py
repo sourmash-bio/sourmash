@@ -1,30 +1,25 @@
+"""
+Tests for the 'Index' class and protocol. All Index classes should support
+this functionality.
+"""
+
 import pytest
-import glob
-import os
-import zipfile
-import shutil
 
 import sourmash
-from sourmash import index
-from sourmash import load_one_signature, SourmashSignature
+from sourmash import SourmashSignature
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
-                            make_jaccard_search_query, CounterGather,
                             LazyLinearIndex, MultiIndex,
-                            StandaloneManifestIndex)
+                            StandaloneManifestIndex, LazyLoadedIndex)
 from sourmash.index.revindex import RevIndex
 from sourmash.sbt import SBT, GraphFactory
-from sourmash import sourmash_args
-from sourmash.search import JaccardSearch, SearchType
-from sourmash.picklist import SignaturePicklist, PickStyle
-from sourmash_tst_utils import SourmashCommandFailed
 from sourmash.manifest import CollectionManifest
-from sourmash import signature as sigmod
 from sourmash.lca.lca_db import LCA_Database
 
 import sourmash_tst_utils as utils
 
 
 def _load_three_sigs():
+    # utility function - load & return these three sigs.
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -45,6 +40,11 @@ def build_linear_index(runtmp):
     lidx.insert(ss63)
 
     return lidx
+
+
+def build_lazy_linear_index(runtmp):
+    lidx = build_linear_index(runtmp)
+    return LazyLinearIndex(lidx)
 
 
 def build_sbt_index(runtmp):
@@ -127,6 +127,17 @@ def build_lca_index_save_load(runtmp):
     return sourmash.load_file_as_index(outfile)
 
 
+def build_lazy_loaded_index(runtmp):
+    db = build_lca_index(runtmp)
+    outfile = runtmp.output('db.lca.json')
+    db.save(outfile)
+
+    mf = CollectionManifest.create_manifest(db._signatures_with_internal())
+    print('XXX', mf)
+
+    return LazyLoadedIndex(outfile, mf)
+
+
 def build_revindex(runtmp):
     ss2, ss47, ss63 = _load_three_sigs()
 
@@ -138,7 +149,13 @@ def build_revindex(runtmp):
     return lidx
 
 
+#
+# create a fixture 'index_obj' that is parameterized by all of these
+# building functions.
+#
+
 @pytest.fixture(params=[build_linear_index,
+                        build_lazy_linear_index,
                         build_sbt_index,
                         build_zipfile_index,
                         build_multi_index,
@@ -146,6 +163,7 @@ def build_revindex(runtmp):
                         build_lca_index,
                         build_sbt_index_save_load,
                         build_lca_index_save_load,
+                        build_lazy_loaded_index
 #                        build_revindex,
                         ]
 )
@@ -377,9 +395,3 @@ def test_gather_threshold_5(index_obj):
     containment, match_sig, name = results[0]
     assert containment == 1.0
     assert match_sig.minhash == ss2.minhash
-
-
-##
-## index-with-manifest tests go here!
-##
-
