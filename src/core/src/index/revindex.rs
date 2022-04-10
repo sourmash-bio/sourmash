@@ -101,18 +101,28 @@ impl HashToColor {
 // https://davidkoloski.me/rkyv/
 #[derive(Serialize, Deserialize)]
 pub struct RevIndex {
+    linear: LinearRevIndex,
     hash_to_color: HashToColor,
+    colors: Colors,
+}
 
-    sig_files: Vec<PathBuf>,
+#[derive(Serialize, Deserialize)]
+pub struct LinearRevIndex {
+    sig_files: Manifest,
 
     #[serde(skip)]
     ref_sigs: Option<Vec<Signature>>,
 
     template: Sketch,
-    colors: Colors,
 
     #[serde(skip)]
     storage: Option<ZipStorage>,
+}
+
+impl From<LinearRevIndex> for RevIndex {
+    fn from(v: LinearRevIndex) -> Self {
+        unimplemented!()
+    }
 }
 
 impl RevIndex {
@@ -228,13 +238,17 @@ impl RevIndex {
             None
         };
 
+        let linear = LinearRevIndex {
+            sig_files: search_sigs.into(),
+            template: template.clone(),
+            ref_sigs,
+            storage: None,
+        };
+
         RevIndex {
             hash_to_color,
-            sig_files: search_sigs.into(),
-            ref_sigs,
-            template: template.clone(),
             colors,
-            storage: None,
+            linear,
         }
     }
 
@@ -329,13 +343,17 @@ impl RevIndex {
             None
         };
 
+        let linear = LinearRevIndex {
+            sig_files: search_sigs.as_slice().into(),
+            template: template.clone(),
+            ref_sigs,
+            storage: Some(storage),
+        };
+
         Ok(RevIndex {
             hash_to_color,
-            sig_files: search_sigs.into(),
-            ref_sigs,
-            template: template.clone(),
             colors,
-            storage: Some(storage),
+            linear,
         })
     }
 
@@ -395,13 +413,17 @@ impl RevIndex {
             HashToColor::reduce_hashes_colors,
         );
 
+        let linear = LinearRevIndex {
+            sig_files: Default::default(),
+            template: template.clone(),
+            ref_sigs: search_sigs.into(),
+            storage: None,
+        };
+
         RevIndex {
             hash_to_color,
-            sig_files: vec![],
-            ref_sigs: search_sigs.into(),
-            template: template.clone(),
             colors,
-            storage: None,
+            linear,
         }
     }
 
@@ -464,7 +486,13 @@ impl RevIndex {
 
         for (dataset_id, size) in counter.most_common() {
             if size >= threshold {
-                matches.push(self.sig_files[dataset_id as usize].to_str().unwrap().into());
+                matches.push(
+                    self.linear.sig_files[dataset_id as usize]
+                        .internal_location()
+                        .to_str()
+                        .unwrap()
+                        .into(),
+                );
             } else {
                 break;
             };
@@ -485,19 +513,17 @@ impl RevIndex {
             let (dataset_id, size) = counter.most_common()[0];
             match_size = if size >= threshold { size } else { break };
 
-            let p;
-            let match_path = if self.sig_files.is_empty() {
-                p = PathBuf::new(); // TODO: Fix somehow?
-                &p
+            let match_path = if self.linear.sig_files.is_empty() {
+                PathBuf::new()
             } else {
-                &self.sig_files[dataset_id as usize]
+                self.linear.sig_files[dataset_id as usize].internal_location()
             };
 
             let ref_match;
-            let match_sig = if let Some(refsigs) = &self.ref_sigs {
+            let match_sig = if let Some(refsigs) = &self.linear.ref_sigs {
                 &refsigs[dataset_id as usize]
             } else {
-                let mut sig = if let Some(storage) = &self.storage {
+                let mut sig = if let Some(storage) = &self.linear.storage {
                     let sig_data = storage
                         .load(
                             match_path
@@ -515,7 +541,7 @@ impl RevIndex {
             };
 
             let mut match_mh = None;
-            if let Some(Sketch::MinHash(mh)) = match_sig.select_sketch(&self.template) {
+            if let Some(Sketch::MinHash(mh)) = match_sig.select_sketch(&self.linear.template) {
                 match_mh = Some(mh);
             }
             let match_mh = match_mh.expect("Couldn't find a compatible MinHash");
@@ -591,7 +617,7 @@ impl RevIndex {
     }
 
     pub fn template(&self) -> Sketch {
-        self.template.clone()
+        self.linear.template.clone()
     }
 
     // TODO: mh should be a sketch, or even a sig...
@@ -642,19 +668,17 @@ impl RevIndex {
         for (dataset_id, size) in counter.most_common() {
             let match_size = if size >= threshold { size } else { break };
 
-            let p;
-            let match_path = if self.sig_files.is_empty() {
-                p = PathBuf::new(); // TODO: Fix somehow?
-                &p
+            let match_path = if self.linear.sig_files.is_empty() {
+                PathBuf::new()
             } else {
-                &self.sig_files[dataset_id as usize]
+                self.linear.sig_files[dataset_id as usize].internal_location()
             };
 
             let ref_match;
-            let match_sig = if let Some(refsigs) = &self.ref_sigs {
+            let match_sig = if let Some(refsigs) = &self.linear.ref_sigs {
                 &refsigs[dataset_id as usize]
             } else {
-                let mut sig = if let Some(storage) = &self.storage {
+                let mut sig = if let Some(storage) = &self.linear.storage {
                     let sig_data = storage
                         .load(
                             match_path
@@ -672,7 +696,7 @@ impl RevIndex {
             };
 
             let mut match_mh = None;
-            if let Some(Sketch::MinHash(mh)) = match_sig.select_sketch(&self.template) {
+            if let Some(Sketch::MinHash(mh)) = match_sig.select_sketch(&self.linear.template) {
                 match_mh = Some(mh);
             }
             let match_mh = match_mh.unwrap();
@@ -749,15 +773,15 @@ impl<'a> Index<'a> for RevIndex {
     }
 
     fn len(&self) -> usize {
-        if let Some(refs) = &self.ref_sigs {
+        if let Some(refs) = &self.linear.ref_sigs {
             refs.len()
         } else {
-            self.sig_files.len()
+            self.linear.sig_files.len()
         }
     }
 
     fn signatures(&self) -> Vec<Self::Item> {
-        if let Some(ref sigs) = self.ref_sigs {
+        if let Some(ref sigs) = self.linear.ref_sigs {
             sigs.to_vec()
         } else {
             unimplemented!()

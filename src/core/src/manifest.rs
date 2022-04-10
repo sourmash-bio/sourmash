@@ -1,11 +1,13 @@
 use std::io::Read;
+use std::ops::Deref;
+use std::path::PathBuf;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::Error;
 
-#[derive(Debug, Deserialize)]
-struct Record {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Record {
     internal_location: String,
     /*
     md5: String,
@@ -13,17 +15,22 @@ struct Record {
     ksize: String,
     moltype: String,
     num: String,
-    scaled: String,
-    n_hashes: String,
+    scaled: String, n_hashes: String,
     with_abundance: String,
     name: String,
     filename: String,
     */
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Manifest {
     records: Vec<Record>,
+}
+
+impl Record {
+    pub fn internal_location(&self) -> PathBuf {
+        self.internal_location.clone().into()
+    }
 }
 
 impl Manifest {
@@ -42,5 +49,26 @@ impl Manifest {
 
     pub fn internal_locations(&self) -> impl Iterator<Item = &str> {
         self.records.iter().map(|r| r.internal_location.as_str())
+    }
+}
+
+impl From<&[PathBuf]> for Manifest {
+    fn from(v: &[PathBuf]) -> Self {
+        Manifest {
+            records: v
+                .into_iter()
+                .map(|p| Record {
+                    internal_location: p.to_str().unwrap().into(),
+                })
+                .collect(),
+        }
+    }
+}
+
+impl Deref for Manifest {
+    type Target = Vec<Record>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.records
     }
 }

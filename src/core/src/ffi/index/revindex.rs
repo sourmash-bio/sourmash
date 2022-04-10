@@ -58,6 +58,7 @@ unsafe fn revindex_new_with_paths(
             .collect();
         Some(queries_vec.as_ref())
     };
+
     let revindex = RevIndex::new(
         search_sigs.as_ref(),
         &template,
