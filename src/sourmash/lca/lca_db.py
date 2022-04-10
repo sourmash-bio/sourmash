@@ -39,21 +39,21 @@ class LCA_Database(Index):
     the `ident` keyword argument in `insert`.
 
     Integer `idx` indices can be used as keys in dictionary attributes:
-    * `idx_to_lid`, to get an (optional) lineage index.
-    * `idx_to_ident`, to retrieve the unique string identifier for that `idx`.
+    * `_idx_to_lid`, to get an (optional) lineage index.
+    * `_idx_to_ident`, to retrieve the unique string identifier for that `idx`.
 
     Integer `lid` indices can be used as keys in dictionary attributes:
-    * `lid_to_idx`, to get a set of `idx` with that lineage.
-    * `lid_to_lineage`, to get a lineage for that `lid`.
+    * `_lid_to_idx`, to get a set of `idx` with that lineage.
+    * `_lid_to_lineage`, to get a lineage for that `lid`.
 
-    `lineage_to_lid` is a dictionary with tuples of LineagePair as keys,
+    `_lineage_to_lid` is a dictionary with tuples of LineagePair as keys,
     `lid` as values.
 
-    `ident_to_name` is a dictionary from unique str identifer to a name.
+    `_ident_to_name` is a dictionary from unique str identifer to a name.
 
-    `ident_to_idx` is a dictionary from unique str identifer to integer `idx`.
+    `_ident_to_idx` is a dictionary from unique str identifer to integer `idx`.
 
-    `hashval_to_idx` is a dictionary from individual hash values to sets of
+    `_hashval_to_idx` is a dictionary from individual hash values to sets of
     `idx`.
     """
     is_database = True
@@ -70,12 +70,12 @@ class LCA_Database(Index):
 
         self._next_index = 0
         self._next_lid = 0
-        self.ident_to_name = {}
-        self.ident_to_idx = {}
-        self.idx_to_lid = {}
-        self.lineage_to_lid = {}
-        self.lid_to_lineage = {}
-        self.hashval_to_idx = defaultdict(set)
+        self._ident_to_name = {}
+        self._ident_to_idx = {}
+        self._idx_to_lid = {}
+        self._lineage_to_lid = {}
+        self._lid_to_lineage = {}
+        self._hashval_to_idx = defaultdict(set)
         self.picklists = []
 
     @property
@@ -91,7 +91,7 @@ class LCA_Database(Index):
 
     def _get_ident_index(self, ident, fail_on_duplicate=False):
         "Get (create if nec) a unique int id, idx, for each identifier."
-        idx = self.ident_to_idx.get(ident)
+        idx = self._ident_to_idx.get(ident)
         if fail_on_duplicate:
             assert idx is None     # should be no duplicate identities
 
@@ -99,14 +99,14 @@ class LCA_Database(Index):
             idx = self._next_index
             self._next_index += 1
 
-            self.ident_to_idx[ident] = idx
+            self._ident_to_idx[ident] = idx
 
         return idx
 
     def _get_lineage_id(self, lineage):
         "Get (create if nec) a unique lineage ID for each LineagePair tuples."
         # does one exist already?
-        lid = self.lineage_to_lid.get(lineage)
+        lid = self._lineage_to_lid.get(lineage)
 
         # nope - create one. Increment next_lid.
         if lid is None:
@@ -114,8 +114,8 @@ class LCA_Database(Index):
             self._next_lid += 1
 
             # build mappings
-            self.lineage_to_lid[lineage] = lid
-            self.lid_to_lineage[lid] = lineage
+            self._lineage_to_lid[lineage] = lid
+            self._lid_to_lineage[lid] = lineage
 
         return lid
 
@@ -147,14 +147,14 @@ class LCA_Database(Index):
         if not ident:
             ident = str(sig)
 
-        if ident in self.ident_to_name:
+        if ident in self._ident_to_name:
             raise ValueError("signature '{}' is already in this LCA db.".format(ident))
 
         # before adding, invalide any caching from @cached_property
         self._invalidate_cache()
 
         # store full name
-        self.ident_to_name[ident] = sig.name
+        self._ident_to_name[ident] = sig.name
 
         # identifier -> integer index (idx)
         idx = self._get_ident_index(ident, fail_on_duplicate=True)
@@ -166,12 +166,12 @@ class LCA_Database(Index):
                 lid = self._get_lineage_id(lineage)
 
                 # map idx to lid as well.
-                self.idx_to_lid[idx] = lid
+                self._idx_to_lid[idx] = lid
             except TypeError:
                 raise ValueError('lineage cannot be used as a key?!')
 
         for hashval in minhash.hashes:
-            self.hashval_to_idx[hashval].add(idx)
+            self._hashval_to_idx[hashval].add(idx)
 
         return len(minhash)
 
@@ -290,8 +290,8 @@ class LCA_Database(Index):
                 vv = tuple(vv)
                 lid_to_lineage[int(k)] = vv
                 lineage_to_lid[vv] = int(k)
-            db.lid_to_lineage = lid_to_lineage
-            db.lineage_to_lid = lineage_to_lid
+            db._lid_to_lineage = lid_to_lineage
+            db._lineage_to_lid = lineage_to_lid
 
             # convert hashval -> lineage index keys to integers (looks like
             # JSON doesn't have a 64 bit type so stores them as strings)
@@ -300,21 +300,21 @@ class LCA_Database(Index):
 
             for k, v in hashval_to_idx_2.items():
                 hashval_to_idx[int(k)] = v
-            db.hashval_to_idx = hashval_to_idx
+            db._hashval_to_idx = hashval_to_idx
 
-            db.ident_to_name = load_d['ident_to_name']
-            db.ident_to_idx = load_d['ident_to_idx']
+            db._ident_to_name = load_d['ident_to_name']
+            db._ident_to_idx = load_d['ident_to_idx']
 
-            db.idx_to_lid = {}
+            db._idx_to_lid = {}
             for k, v in load_d['idx_to_lid'].items():
-                db.idx_to_lid[int(k)] = v
+                db._idx_to_lid[int(k)] = v
 
-        if db.ident_to_idx:
-            db._next_index = max(db.ident_to_idx.values()) + 1
+        if db._ident_to_idx:
+            db._next_index = max(db._ident_to_idx.values()) + 1
         else:
             db._next_index = 0
-        if db.idx_to_lid:
-            db._next_lid = max(db.idx_to_lid.values()) + 1
+        if db._idx_to_lid:
+            db._next_lid = max(db._idx_to_lid.values()) + 1
         else:
             db._next_lid = 0
 
@@ -345,18 +345,18 @@ class LCA_Database(Index):
 
             # convert lineage internals from tuples to dictionaries
             d = OrderedDict()
-            for k, v in self.lid_to_lineage.items():
+            for k, v in self._lid_to_lineage.items():
                 d[k] = dict([ (vv.rank, vv.name) for vv in v ])
             save_d['lid_to_lineage'] = d
 
             # convert values from sets to lists, so that JSON knows how to save
             save_d['hashval_to_idx'] = \
-               dict((k, list(v)) for (k, v) in self.hashval_to_idx.items())
+               dict((k, list(v)) for (k, v) in self._hashval_to_idx.items())
 
-            save_d['ident_to_name'] = self.ident_to_name
-            save_d['ident_to_idx'] = self.ident_to_idx
-            save_d['idx_to_lid'] = self.idx_to_lid
-            save_d['lid_to_lineage'] = self.lid_to_lineage
+            save_d['ident_to_name'] = self._ident_to_name
+            save_d['ident_to_idx'] = self._ident_to_idx
+            save_d['idx_to_lid'] = self._idx_to_lid
+            save_d['lid_to_lineage'] = self._lid_to_lineage
             
             json.dump(save_d, fp)
 
@@ -378,16 +378,16 @@ class LCA_Database(Index):
 
         # filter out all hashes over max_hash in value.
         new_hashvals = {}
-        for k, v in self.hashval_to_idx.items():
+        for k, v in self._hashval_to_idx.items():
             if k < max_hash:
                 new_hashvals[k] = v
-        self.hashval_to_idx = new_hashvals
+        self._hashval_to_idx = new_hashvals
         self.scaled = scaled
 
     @property
     def hashvals(self):
         "Return all hashvals stored in this database."
-        return self.hashval_to_idx.keys()
+        return self._hashval_to_idx.keys()
 
     def get_lineage_assignments(self, hashval, min_num=None):
         """
@@ -395,15 +395,15 @@ class LCA_Database(Index):
         """
         x = []
 
-        idx_list = self.hashval_to_idx.get(hashval, [])
+        idx_list = self._hashval_to_idx.get(hashval, [])
 
         if min_num and len(idx_list) < min_num:
             return []
 
         for idx in idx_list:
-            lid = self.idx_to_lid.get(idx, None)
+            lid = self._idx_to_lid.get(idx, None)
             if lid is not None:
-                lineage = self.lid_to_lineage[lid]
+                lineage = self._lid_to_lineage[lid]
                 x.append(lineage)
 
         return x
@@ -412,7 +412,7 @@ class LCA_Database(Index):
         """
         Get a list of identifiers for signatures containing this hashval
         """
-        idx_list = self.hashval_to_idx.get(hashval, [])
+        idx_list = self._hashval_to_idx.get(hashval, [])
 
         for idx in idx_list:
             yield self._idx_to_ident[idx]
@@ -440,7 +440,7 @@ class LCA_Database(Index):
         temp_vals = defaultdict(list)
 
         # invert the hashval_to_idx dictionary
-        for (hashval, idlist) in self.hashval_to_idx.items():
+        for (hashval, idlist) in self._hashval_to_idx.items():
             for idx in idlist:
                 temp_hashes = temp_vals[idx]
                 temp_hashes.append(hashval)
@@ -464,7 +464,7 @@ class LCA_Database(Index):
         sigd = {}
         for idx, mh in mhd.items():
             ident = self._idx_to_ident[idx]
-            name = self.ident_to_name[ident]
+            name = self._ident_to_name[ident]
             ss = SourmashSignature(mh, name=name)
 
             if passes_all_picklists(ss, self.picklists):
@@ -499,7 +499,7 @@ class LCA_Database(Index):
         c = Counter()
         query_hashes = set(query_mh.hashes)
         for hashval in query_hashes:
-            idx_list = self.hashval_to_idx.get(hashval, [])
+            idx_list = self._hashval_to_idx.get(hashval, [])
             for idx in idx_list:
                 c[idx] += 1
 
@@ -543,14 +543,14 @@ class LCA_Database(Index):
     @cached_property
     def _lid_to_idx(self):
         d = defaultdict(set)
-        for idx, lid in self.idx_to_lid.items():
+        for idx, lid in self._idx_to_lid.items():
             d[lid].add(idx)
         return d
 
     @cached_property
     def _idx_to_ident(self):
         d = defaultdict(set)
-        for ident, idx in self.ident_to_idx.items():
+        for ident, idx in self._ident_to_idx.items():
             assert idx not in d
             d[idx] = ident
         return d
