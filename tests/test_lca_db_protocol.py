@@ -5,45 +5,61 @@ import pytest
 import sourmash_tst_utils as utils
 
 import sourmash
+from sourmash.tax.tax_utils import MultiLineageDB
+from sourmash.lca.lca_db import (LCA_Database, load_single_database)
 
 
 def build_inmem_lca_db(runtmp):
-    # test command-line creation of LCA database with protein sigs
+    # test in-memory LCA_Database
     sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
-    lineages = utils.get_test_data('prot/gtdb-subset-lineages.csv')
 
+    ss1 = sourmash.load_one_signature(sigfile1)
+    ss2 = sourmash.load_one_signature(sigfile2)
+
+    lineages_file = utils.get_test_data('prot/gtdb-subset-lineages.csv')
+    lineages = MultiLineageDB.load([lineages_file])
+
+    db = LCA_Database(ksize=19, scaled=100, moltype='protein')
+
+    ident1 = ss1.name.split(' ')[0].split('.')[0]
+    assert lineages[ident1]
+    db.insert(ss1, ident=ident1, lineage=lineages[ident1])
+    ident2 = ss2.name.split(' ')[0].split('.')[0]
+    assert lineages[ident2]
+    db.insert(ss2, ident=ident2, lineage=lineages[ident2])
+
+    return db
+
+
+def build_json_lca_db(runtmp):
+    # test saved/loaded JSON database
+    db = build_inmem_lca_db(runtmp)
     db_out = runtmp.output('protein.lca.json')
 
-    runtmp.sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
-                   '-C', '2', '--split-identifiers', '--require-taxonomy',
-                   '--scaled', '100', '-k', '19', '--protein')
+    db.save(db_out, format='json')
 
-    x = sourmash.lca.lca_db.load_single_database(db_out)
-    db2 = x[0]
+    x = load_single_database(db_out)
+    db_load = x[0]
 
-    return db2
-    
+    return db_load
+
 
 def build_sql_lca_db(runtmp):
-    # test command-line creation of LCA database with protein sigs
-    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
-    sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
-    lineages = utils.get_test_data('prot/gtdb-subset-lineages.csv')
+    # test saved/loaded SQL database
+    db = build_inmem_lca_db(runtmp)
+    db_out = runtmp.output('protein.lca.json')
 
-    db_out = runtmp.output('protein.lca.sqldb')
+    db.save(db_out, format='sql')
 
-    runtmp.sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
-                   '-C', '2', '--split-identifiers', '--require-taxonomy',
-                    '--scaled', '100', '-k', '19', '--protein', '-F', 'sql')
+    x = load_single_database(db_out)
+    db_load = x[0]
 
-    x = sourmash.lca.lca_db.load_single_database(db_out)
-    db2 = x[0]
-
-    return db2
+    return db_load
 
 
 @pytest.fixture(params=[build_inmem_lca_db,
+                        build_json_lca_db,
                         build_sql_lca_db])
 def lca_db_obj(request, runtmp):
     build_fn = request.param
@@ -52,6 +68,7 @@ def lca_db_obj(request, runtmp):
 
 
 def test_get_lineage_assignments(lca_db_obj):
+    # test get_lineage_assignments for a specific hash
     lineages = lca_db_obj.get_lineage_assignments(178936042868009693)
 
     assert len(lineages) == 1
