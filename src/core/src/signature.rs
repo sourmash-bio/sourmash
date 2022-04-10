@@ -2,12 +2,12 @@
 //!
 //! A signature is a collection of sketches for a genomic dataset.
 
+use std::collections::VecDeque;
 use std::fs::File;
 use std::io;
 use std::iter::Iterator;
 use std::path::Path;
 use std::str;
-use std::collections::VecDeque;
 
 use cfg_if::cfg_if;
 #[cfg(feature = "parallel")]
