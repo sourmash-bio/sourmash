@@ -176,17 +176,20 @@ class BaseCollectionManifest:
 
 
 class CollectionManifest(BaseCollectionManifest):
+    """
+    An in-memory manifest that simply stores the rows in a list.
+    """
     def __init__(self, rows):
         "Initialize from an iterable of metadata dictionaries."
-        self.rows = ()
+        self.rows = []
         self._md5_set = set()
 
         self._add_rows(rows)
 
     def _add_rows(self, rows):
-        self.rows += tuple(rows)
+        self.rows.extend(rows)
 
-        # maintain a fast lookup table for md5sums
+        # maintain a fast check for md5sums for __contains__ check.
         md5set = self._md5_set
         for row in self.rows:
             md5set.add(row['md5'])
@@ -196,7 +199,9 @@ class CollectionManifest(BaseCollectionManifest):
         return self
 
     def __add__(self, other):
-        return CollectionManifest(self.rows + other.rows)
+        mf = CollectionManifest(self.rows)
+        mf._add_rows(other.rows)
+        return mf
 
     def __bool__(self):
         return bool(self.rows)

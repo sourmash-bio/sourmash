@@ -277,10 +277,10 @@ def index(args):
         sys.exit(1)
 
     # check -- did the signatures we found have any hashes?
-    if not db.hashval_to_idx:
+    if not db.hashvals:
         error('ERROR: no hash values found - are there any signatures?')
         sys.exit(1)
-    notify(f'loaded {len(db.hashval_to_idx)} hashes at ksize={args.ksize} scaled={args.scaled}')
+    notify(f'loaded {len(db.hashvals)} hashes at ksize={args.ksize} scaled={args.scaled}')
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
