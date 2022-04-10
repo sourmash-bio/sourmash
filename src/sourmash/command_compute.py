@@ -137,10 +137,15 @@ class _signatures_for_compute_factory(object):
 
     def __call__(self):
         args = self.args
-        params = ComputeParameters(args.ksizes, args.seed, args.protein,
-                                   args.dayhoff, args.hp, args.dna,
-                                   args.num_hashes,
-                                   args.track_abundance, args.scaled)
+        params = ComputeParameters(ksizes=args.ksizes,
+                                   seed=args.seed,
+                                   protein=args.protein,
+                                   dayhoff=args.dayhoff,
+                                   hp=args.hp,
+                                   dna=args.dna,
+                                   num_hashes=args.num_hashes,
+                                   track_abundance=args.track_abundance,
+                                   scaled=args.scaled)
         sig = SourmashSignature.from_params(params)
         return [sig]
 
@@ -327,6 +332,7 @@ class ComputeParameters(RustObject):
     __dealloc_func__ = lib.computeparams_free
 
     def __init__(self,
+                 *,
                  ksizes=(21, 31, 51),
                  seed=42,
                  protein=False,
@@ -368,8 +374,15 @@ class ComputeParameters(RustObject):
         else:
             ksize = row['ksize'] * 3
 
-        p = cls([ksize], DEFAULT_MMHASH_SEED, is_protein, is_dayhoff, is_hp, is_dna,
-                row['num'], row['with_abundance'], row['scaled'])
+        p = cls(ksizes=[ksize],
+                seed=DEFAULT_MMHASH_SEED,
+                protein=is_protein,
+                dayhoff=is_dayhoff,
+                hp=is_hp,
+                dna=is_dna,
+                num_hashes=row['num'],
+                track_abundance=row['with_abundance'],
+                scaled=row['scaled'])
 
         return p
 
