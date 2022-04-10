@@ -301,15 +301,8 @@ def manifest(args):
     manifest = sourmash_args.get_manifest(loader, require=True,
                                           rebuild=rebuild)
 
-    if args.manifest_format == 'csv':
-        manifest.write_to_filename(args.output)
-    elif args.manifest_format == 'sql':
-        from sourmash.index.sqlite_index import SqliteCollectionManifest
-        SqliteCollectionManifest.create_from_manifest(args.output,
-                                                      manifest)
-    else:
-        assert 0
-
+    manifest.write_to_filename(args.output,
+                               database_format=args.manifest_format)
     notify(f"manifest contains {len(manifest)} signatures total.")
     notify(f"wrote manifest to '{args.output}' ({args.manifest_format})")
 
