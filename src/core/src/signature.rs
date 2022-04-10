@@ -7,6 +7,7 @@ use std::io;
 use std::iter::Iterator;
 use std::path::Path;
 use std::str;
+use std::collections::VecDeque;
 
 use cfg_if::cfg_if;
 #[cfg(feature = "parallel")]
@@ -169,7 +170,7 @@ pub struct SeqToHashes {
     is_protein: bool,
     hash_function: HashFunctions,
     seed: u64,
-    hashes_buffer: Vec<u64>,
+    hashes_buffer: VecDeque<u64>,
 
     dna_configured: bool,
     dna_rc: Vec<u8>,
@@ -214,7 +215,7 @@ impl SeqToHashes {
             is_protein,
             hash_function,
             seed,
-            hashes_buffer: Vec::with_capacity(1000),
+            hashes_buffer: VecDeque::with_capacity(1000),
             dna_configured: false,
             dna_rc: Vec::with_capacity(1000),
             dna_ksize: 0,
@@ -313,7 +314,7 @@ impl Iterator for SeqToHashes {
 
                         aa.windows(self.k_size as usize).for_each(|n| {
                             let hash = crate::_hash_murmur(n, self.seed);
-                            self.hashes_buffer.push(hash);
+                            self.hashes_buffer.push_back(hash);
                         });
 
                         let rc_substr: Vec<u8> = self
@@ -332,13 +333,13 @@ impl Iterator for SeqToHashes {
 
                         aa_rc.windows(self.k_size as usize).for_each(|n| {
                             let hash = crate::_hash_murmur(n, self.seed);
-                            self.hashes_buffer.push(hash);
+                            self.hashes_buffer.push_back(hash);
                         });
                     }
                     self.kmer_index = self.max_index;
-                    Some(Ok(self.hashes_buffer.remove(0)))
+                    Some(Ok(self.hashes_buffer.remove(0).unwrap()))
                 } else {
-                    let first_element: u64 = self.hashes_buffer.remove(0);
+                    let first_element: u64 = self.hashes_buffer.pop_front().unwrap();
                     Some(Ok(first_element))
                 }
             } else {
