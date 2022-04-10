@@ -119,9 +119,131 @@ pub struct LinearRevIndex {
     storage: Option<ZipStorage>,
 }
 
-impl From<LinearRevIndex> for RevIndex {
-    fn from(v: LinearRevIndex) -> Self {
-        unimplemented!()
+impl LinearRevIndex {
+    fn new(
+        sig_files: Manifest,
+        template: &Sketch,
+        keep_sigs: bool,
+        ref_sigs: Option<Vec<Signature>>,
+        storage: Option<ZipStorage>,
+    ) -> Self {
+        let search_sigs: Vec<_> = sig_files
+            .internal_locations()
+            .map(|l| PathBuf::from(l))
+            .collect();
+
+        let ref_sigs = if let Some(ref_sigs) = ref_sigs {
+            Some(ref_sigs)
+        } else {
+            if keep_sigs {
+                #[cfg(feature = "parallel")]
+                let sigs_iter = search_sigs.par_iter();
+
+                #[cfg(not(feature = "parallel"))]
+                let sigs_iter = search_sigs.iter();
+
+                Some(
+                    sigs_iter
+                        .map(|ref_path| {
+                            if let Some(storage) = &storage {
+                                let sig_data = storage
+                                    .load(ref_path.to_str().expect(
+                                        format!("error converting path {:?}", ref_path).as_str(),
+                                    ))
+                                    .expect(format!("error loading {:?}", ref_path).as_str());
+                                Signature::from_reader(sig_data.as_slice())
+                                    .unwrap_or_else(|_| panic!("Error processing {:?}", ref_path))
+                                    .swap_remove(0)
+                            } else {
+                                Signature::from_path(&ref_path)
+                                    .unwrap_or_else(|_| panic!("Error processing {:?}", ref_path))
+                                    .swap_remove(0)
+                            }
+                        })
+                        .collect(),
+                )
+            } else {
+                None
+            }
+        };
+
+        LinearRevIndex {
+            sig_files,
+            template: template.clone(),
+            ref_sigs,
+            storage,
+        }
+    }
+
+    fn index(
+        self,
+        threshold: usize,
+        merged_query: Option<KmerMinHash>,
+        queries: Option<&[KmerMinHash]>,
+    ) -> RevIndex {
+        let processed_sigs = AtomicUsize::new(0);
+
+        let search_sigs: Vec<_> = self
+            .sig_files
+            .internal_locations()
+            .map(|l| PathBuf::from(l))
+            .collect();
+
+        #[cfg(feature = "parallel")]
+        let sig_iter = search_sigs.par_iter();
+
+        #[cfg(not(feature = "parallel"))]
+        let sig_iter = search_sigs.iter();
+
+        let filtered_sigs = sig_iter.enumerate().filter_map(|(dataset_id, filename)| {
+            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+            if i % 1000 == 0 {
+                info!("Processed {} reference sigs", i);
+            }
+
+            let search_sig = if let Some(storage) = &self.storage {
+                let sig_data = storage
+                    .load(
+                        filename
+                            .to_str()
+                            .expect(format!("error converting path {:?}", filename).as_str()),
+                    )
+                    .expect(format!("error loading {:?}", filename).as_str());
+
+                Signature::from_reader(sig_data.as_slice())
+            } else {
+                Signature::from_path(&filename)
+            }
+            .unwrap_or_else(|_| panic!("Error processing {:?}", filename))
+            .swap_remove(0);
+
+            RevIndex::map_hashes_colors(
+                dataset_id,
+                &search_sig,
+                queries,
+                &merged_query,
+                threshold,
+                &self.template,
+            )
+        });
+
+        #[cfg(feature = "parallel")]
+        let (hash_to_color, colors) = filtered_sigs.reduce(
+            || (HashToColor::new(), Colors::default()),
+            HashToColor::reduce_hashes_colors,
+        );
+
+        #[cfg(not(feature = "parallel"))]
+        let (hash_to_color, colors) = filtered_sigs.fold(
+            (HashToColor::new(), Colors::default()),
+            HashToColor::reduce_hashes_colors,
+        );
+
+        RevIndex {
+            hash_to_color,
+            colors,
+            linear: self,
+        }
     }
 }
 
@@ -177,79 +299,8 @@ impl RevIndex {
         // If threshold is zero, let's merge all queries and save time later
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
-        let processed_sigs = AtomicUsize::new(0);
-
-        #[cfg(feature = "parallel")]
-        let sig_iter = search_sigs.par_iter();
-
-        #[cfg(not(feature = "parallel"))]
-        let sig_iter = search_sigs.iter();
-
-        let filtered_sigs = sig_iter.enumerate().filter_map(|(dataset_id, filename)| {
-            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-            if i % 1000 == 0 {
-                info!("Processed {} reference sigs", i);
-            }
-
-            let search_sig = Signature::from_path(&filename)
-                .unwrap_or_else(|_| panic!("Error processing {:?}", filename))
-                .swap_remove(0);
-
-            RevIndex::map_hashes_colors(
-                dataset_id,
-                &search_sig,
-                queries,
-                &merged_query,
-                threshold,
-                template,
-            )
-        });
-
-        #[cfg(feature = "parallel")]
-        let (hash_to_color, colors) = filtered_sigs.reduce(
-            || (HashToColor::new(), Colors::default()),
-            HashToColor::reduce_hashes_colors,
-        );
-
-        #[cfg(not(feature = "parallel"))]
-        let (hash_to_color, colors) = filtered_sigs.fold(
-            (HashToColor::new(), Colors::default()),
-            HashToColor::reduce_hashes_colors,
-        );
-
-        // TODO: build this together with hash_to_idx?
-        let ref_sigs = if keep_sigs {
-            #[cfg(feature = "parallel")]
-            let sigs_iter = search_sigs.par_iter();
-
-            #[cfg(not(feature = "parallel"))]
-            let sigs_iter = search_sigs.iter();
-
-            Some(
-                sigs_iter
-                    .map(|ref_path| {
-                        Signature::from_path(&ref_path)
-                            .unwrap_or_else(|_| panic!("Error processing {:?}", ref_path))
-                            .swap_remove(0)
-                    })
-                    .collect(),
-            )
-        } else {
-            None
-        };
-
-        let linear = LinearRevIndex {
-            sig_files: search_sigs.into(),
-            template: template.clone(),
-            ref_sigs,
-            storage: None,
-        };
-
-        RevIndex {
-            hash_to_color,
-            colors,
-            linear,
-        }
+        let linear = LinearRevIndex::new(search_sigs.into(), template, keep_sigs, None, None);
+        linear.index(threshold, merged_query, queries)
     }
 
     pub fn from_zipstorage(
@@ -262,8 +313,6 @@ impl RevIndex {
         // If threshold is zero, let's merge all queries and save time later
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
-        let processed_sigs = AtomicUsize::new(0);
-
         // Load manifest from zipstorage
         let manifest = Manifest::from_reader(storage.load("SOURMASH-MANIFEST.csv")?.as_slice())?;
         let search_sigs: Vec<_> = manifest
@@ -271,90 +320,15 @@ impl RevIndex {
             .map(|l| PathBuf::from(l))
             .collect();
 
-        #[cfg(feature = "parallel")]
-        let sig_iter = search_sigs.par_iter();
-
-        #[cfg(not(feature = "parallel"))]
-        let sig_iter = search_sigs.iter();
-
-        let filtered_sigs = sig_iter.enumerate().filter_map(|(dataset_id, filename)| {
-            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-            if i % 1000 == 0 {
-                info!("Processed {} reference sigs", i);
-            }
-
-            let sig_data = storage
-                .load(
-                    filename
-                        .to_str()
-                        .expect(format!("error converting path {:?}", filename).as_str()),
-                )
-                .expect(format!("error loading {:?}", filename).as_str());
-            let search_sig = Signature::from_reader(sig_data.as_slice())
-                .unwrap_or_else(|_| panic!("Error processing {:?}", filename))
-                .swap_remove(0);
-
-            RevIndex::map_hashes_colors(
-                dataset_id,
-                &search_sig,
-                queries,
-                &merged_query,
-                threshold,
-                template,
-            )
-        });
-
-        #[cfg(feature = "parallel")]
-        let (hash_to_color, colors) = filtered_sigs.reduce(
-            || (HashToColor::new(), Colors::default()),
-            HashToColor::reduce_hashes_colors,
+        let linear = LinearRevIndex::new(
+            search_sigs.as_slice().into(),
+            template,
+            keep_sigs,
+            None,
+            Some(storage),
         );
 
-        #[cfg(not(feature = "parallel"))]
-        let (hash_to_color, colors) = filtered_sigs.fold(
-            (HashToColor::new(), Colors::default()),
-            HashToColor::reduce_hashes_colors,
-        );
-
-        // TODO: build this together with hash_to_idx?
-        let ref_sigs = if keep_sigs {
-            #[cfg(feature = "parallel")]
-            let sigs_iter = search_sigs.par_iter();
-
-            #[cfg(not(feature = "parallel"))]
-            let sigs_iter = search_sigs.iter();
-
-            Some(
-                sigs_iter
-                    .map(|ref_path| {
-                        let sig_data =
-                            storage
-                                .load(ref_path.to_str().expect(
-                                    format!("error converting path {:?}", ref_path).as_str(),
-                                ))
-                                .expect(format!("error loading {:?}", ref_path).as_str());
-                        Signature::from_reader(sig_data.as_slice())
-                            .unwrap_or_else(|_| panic!("Error processing {:?}", ref_path))
-                            .swap_remove(0)
-                    })
-                    .collect(),
-            )
-        } else {
-            None
-        };
-
-        let linear = LinearRevIndex {
-            sig_files: search_sigs.as_slice().into(),
-            template: template.clone(),
-            ref_sigs,
-            storage: Some(storage),
-        };
-
-        Ok(RevIndex {
-            hash_to_color,
-            colors,
-            linear,
-        })
+        Ok(linear.index(threshold, merged_query, queries))
     }
 
     fn merge_queries(qs: &[KmerMinHash], threshold: usize) -> Option<KmerMinHash> {
@@ -378,53 +352,15 @@ impl RevIndex {
         // If threshold is zero, let's merge all queries and save time later
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
-        let processed_sigs = AtomicUsize::new(0);
-
-        #[cfg(feature = "parallel")]
-        let sigs_iter = search_sigs.par_iter();
-        #[cfg(not(feature = "parallel"))]
-        let sigs_iter = search_sigs.iter();
-
-        let filtered_sigs = sigs_iter.enumerate().filter_map(|(dataset_id, sig)| {
-            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-            if i % 1000 == 0 {
-                info!("Processed {} reference sigs", i);
-            }
-
-            RevIndex::map_hashes_colors(
-                dataset_id,
-                sig,
-                queries,
-                &merged_query,
-                threshold,
-                template,
-            )
-        });
-
-        #[cfg(feature = "parallel")]
-        let (hash_to_color, colors) = filtered_sigs.reduce(
-            || (HashToColor::new(), Colors::default()),
-            HashToColor::reduce_hashes_colors,
+        let linear = LinearRevIndex::new(
+            Default::default(),
+            &template,
+            false,
+            search_sigs.into(),
+            None,
         );
 
-        #[cfg(not(feature = "parallel"))]
-        let (hash_to_color, colors) = filtered_sigs.fold(
-            (HashToColor::new(), Colors::default()),
-            HashToColor::reduce_hashes_colors,
-        );
-
-        let linear = LinearRevIndex {
-            sig_files: Default::default(),
-            template: template.clone(),
-            ref_sigs: search_sigs.into(),
-            storage: None,
-        };
-
-        RevIndex {
-            hash_to_color,
-            colors,
-            linear,
-        }
+        linear.index(threshold, merged_query, queries)
     }
 
     fn map_hashes_colors(
