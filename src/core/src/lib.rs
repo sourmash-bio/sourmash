@@ -26,6 +26,7 @@ pub mod prelude;
 
 pub mod cmd;
 
+pub mod manifest;
 pub mod signature;
 pub mod sketch;
 pub mod storage;

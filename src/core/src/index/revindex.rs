@@ -12,10 +12,11 @@ use rayon::prelude::*;
 
 use crate::encodings::{Color, Colors, Idx};
 use crate::index::Index;
+use crate::manifest::Manifest;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
-use crate::storage::ZipStorage;
+use crate::storage::{Storage, ZipStorage};
 use crate::Error;
 use crate::HashIntoType;
 
@@ -237,6 +238,107 @@ impl RevIndex {
         }
     }
 
+    pub fn from_zipstorage(
+        storage: ZipStorage,
+        template: &Sketch,
+        threshold: usize,
+        queries: Option<&[KmerMinHash]>,
+        keep_sigs: bool,
+    ) -> Result<RevIndex, Error> {
+        // If threshold is zero, let's merge all queries and save time later
+        let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
+
+        let processed_sigs = AtomicUsize::new(0);
+
+        // Load manifest from zipstorage
+        let manifest = Manifest::from_reader(storage.load("SOURMASH-MANIFEST.csv")?.as_slice())?;
+        let search_sigs: Vec<_> = manifest
+            .internal_locations()
+            .map(|l| PathBuf::from(l))
+            .collect();
+
+        #[cfg(feature = "parallel")]
+        let sig_iter = search_sigs.par_iter();
+
+        #[cfg(not(feature = "parallel"))]
+        let sig_iter = search_sigs.iter();
+
+        let filtered_sigs = sig_iter.enumerate().filter_map(|(dataset_id, filename)| {
+            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+            if i % 1000 == 0 {
+                info!("Processed {} reference sigs", i);
+            }
+
+            let sig_data = storage
+                .load(
+                    filename
+                        .to_str()
+                        .expect(format!("error converting path {:?}", filename).as_str()),
+                )
+                .expect(format!("error loading {:?}", filename).as_str());
+            let search_sig = Signature::from_reader(sig_data.as_slice())
+                .unwrap_or_else(|_| panic!("Error processing {:?}", filename))
+                .swap_remove(0);
+
+            RevIndex::map_hashes_colors(
+                dataset_id,
+                &search_sig,
+                queries,
+                &merged_query,
+                threshold,
+                template,
+            )
+        });
+
+        #[cfg(feature = "parallel")]
+        let (hash_to_color, colors) = filtered_sigs.reduce(
+            || (HashToColor::new(), Colors::default()),
+            HashToColor::reduce_hashes_colors,
+        );
+
+        #[cfg(not(feature = "parallel"))]
+        let (hash_to_color, colors) = filtered_sigs.fold(
+            (HashToColor::new(), Colors::default()),
+            HashToColor::reduce_hashes_colors,
+        );
+
+        // TODO: build this together with hash_to_idx?
+        let ref_sigs = if keep_sigs {
+            #[cfg(feature = "parallel")]
+            let sigs_iter = search_sigs.par_iter();
+
+            #[cfg(not(feature = "parallel"))]
+            let sigs_iter = search_sigs.iter();
+
+            Some(
+                sigs_iter
+                    .map(|ref_path| {
+                        let sig_data =
+                            storage
+                                .load(ref_path.to_str().expect(
+                                    format!("error converting path {:?}", ref_path).as_str(),
+                                ))
+                                .expect(format!("error loading {:?}", ref_path).as_str());
+                        Signature::from_reader(sig_data.as_slice())
+                            .unwrap_or_else(|_| panic!("Error processing {:?}", ref_path))
+                            .swap_remove(0)
+                    })
+                    .collect(),
+            )
+        } else {
+            None
+        };
+
+        Ok(RevIndex {
+            hash_to_color,
+            sig_files: search_sigs.into(),
+            ref_sigs,
+            template: template.clone(),
+            colors,
+            storage: Some(storage),
+        })
+    }
+
     fn merge_queries(qs: &[KmerMinHash], threshold: usize) -> Option<KmerMinHash> {
         if threshold == 0 {
             let mut merged = qs[0].clone();
@@ -395,8 +497,20 @@ impl RevIndex {
             let match_sig = if let Some(refsigs) = &self.ref_sigs {
                 &refsigs[dataset_id as usize]
             } else {
+                let mut sig = if let Some(storage) = &self.storage {
+                    let sig_data = storage
+                        .load(
+                            match_path
+                                .to_str()
+                                .expect(format!("error converting path {:?}", match_path).as_str()),
+                        )
+                        .expect(format!("error loading {:?}", match_path).as_str());
+                    Signature::from_reader(sig_data.as_slice())?
+                } else {
+                    Signature::from_path(&match_path)?
+                };
                 // TODO: remove swap_remove
-                ref_match = Signature::from_path(&match_path)?.swap_remove(0);
+                ref_match = sig.swap_remove(0);
                 &ref_match
             };
 
@@ -540,8 +654,20 @@ impl RevIndex {
             let match_sig = if let Some(refsigs) = &self.ref_sigs {
                 &refsigs[dataset_id as usize]
             } else {
+                let mut sig = if let Some(storage) = &self.storage {
+                    let sig_data = storage
+                        .load(
+                            match_path
+                                .to_str()
+                                .expect(format!("error converting path {:?}", match_path).as_str()),
+                        )
+                        .expect(format!("error loading {:?}", match_path).as_str());
+                    Signature::from_reader(sig_data.as_slice())?
+                } else {
+                    Signature::from_path(&match_path)?
+                };
                 // TODO: remove swap_remove
-                ref_match = Signature::from_path(&match_path)?.swap_remove(0);
+                ref_match = sig.swap_remove(0);
                 &ref_match
             };
 
