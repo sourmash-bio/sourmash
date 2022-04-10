@@ -126,10 +126,13 @@ def load_sqlite_file(filename, *, request_manifest=False):
         idx = SqliteIndex(filename)
         debug_literal("load_sqlite_file: returning SqliteIndex")
     elif is_manifest:
-        assert not is_index     # indices are already handled!
+        managed_by_index=False
+        if is_index:
+            assert request_manifest
+            managed_by_index=True
 
         prefix = os.path.dirname(filename)
-        mf = SqliteCollectionManifest(conn)
+        mf = SqliteCollectionManifest(conn, managed_by_index=managed_by_index)
         idx = StandaloneManifestIndex(mf, filename, prefix=prefix)
         debug_literal("load_sqlite_file: returning StandaloneManifestIndex")
 
@@ -152,7 +155,8 @@ class SqliteIndex(Index):
 
         # build me a SQLite manifest class to use for selection.
         if sqlite_manifest is None:
-            sqlite_manifest = SqliteCollectionManifest(conn)
+            sqlite_manifest = SqliteCollectionManifest(conn,
+                                                       managed_by_index=True)
         self.manifest = sqlite_manifest
         self.conn = conn
 
@@ -391,7 +395,8 @@ class SqliteIndex(Index):
         # create manifest if needed
         manifest = self.manifest
         if manifest is None:
-            manifest = SqliteCollectionManifest(self.conn)
+            manifest = SqliteCollectionManifest(self.conn,
+                                                managed_by_index=True)
 
         # modify manifest
         manifest = manifest.select_to_manifest(**kwargs)
@@ -534,13 +539,14 @@ class SqliteIndex(Index):
 
 
 class SqliteCollectionManifest(BaseCollectionManifest):
-    def __init__(self, conn, selection_dict=None):
+    def __init__(self, conn, *, selection_dict=None, managed_by_index=False):
         """
         Here, 'conn' should already be connected and configured.
         """
         assert conn is not None
         self.conn = conn
         self.selection_dict = selection_dict
+        self.managed_by_index = managed_by_index
 
     @classmethod
     def create(cls, filename):
@@ -566,7 +572,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         """)
 
         cursor.execute("""
-        CREATE TABLE IF NOT EXISTS sketches
+        CREATE TABLE sketches
           (id INTEGER PRIMARY KEY,
            name TEXT,
            num INTEGER NOT NULL,
@@ -578,14 +584,15 @@ class SqliteCollectionManifest(BaseCollectionManifest):
            md5sum TEXT NOT NULL,
            seed INTEGER NOT NULL,
            n_hashes INTEGER NOT NULL,
-           internal_location TEXT
+           internal_location TEXT,
+        UNIQUE(internal_location, md5sum)
         )
         """)
 
     @classmethod
     def _insert_row(cls, cursor, row):
         cursor.execute("""
-        INSERT INTO sketches
+        INSERT OR IGNORE INTO sketches
           (name, num, scaled, ksize, filename, md5sum, moltype,
            seed, n_hashes, with_abundance, internal_location)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
@@ -603,18 +610,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
     @classmethod
     def create_from_manifest(cls, dbfile, manifest):
-        conn = sqlite3.connect(dbfile)
-        cursor = conn.cursor()
-
-        new_mf = cls(conn)
-        new_mf._create_table(cursor)
-
-        assert isinstance(manifest, BaseCollectionManifest)
-        for row in manifest.rows:
-            new_mf._insert_row(cursor, row)
-        conn.commit()
-
-        return new_mf
+        return cls._create_manifest_from_rows(manifest.rows, location=dbfile)
 
     def __bool__(self):
         return bool(len(self))
@@ -850,6 +846,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         mf = cls.create(location)
         cursor = mf.conn.cursor()
 
+        # @CTB: manage/test already existing/managed_by_index
         for row in rows_iter:
             cls._insert_row(cursor, row)
 

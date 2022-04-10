@@ -80,9 +80,13 @@ class BaseCollectionManifest:
         if db:
             return db.manifest
 
-    def write_to_filename(self, filename):
-        with open(filename, "w", newline="") as fp:
-            return self.write_to_csv(fp, write_header=True)
+    def write_to_filename(self, filename, *, database_format='csv'):
+        if database_format == 'csv':
+            with open(filename, "w", newline="") as fp:
+                return self.write_to_csv(fp, write_header=True)
+        elif database_format == 'sql':
+            from sourmash.index.sqlite_index import SqliteCollectionManifest
+            SqliteCollectionManifest.create_from_manifest(filename, self)
 
     @classmethod
     def write_csv_header(cls, fp):
