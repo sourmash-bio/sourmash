@@ -267,8 +267,9 @@ def test_index_select_basic(index_obj):
 def test_index_select_nada(index_obj):
     # select works ok when nothing matches!
 
-    # @CTB: currently this EITHER raises a ValueError OR returns an empty
+    # CTB: currently this EITHER raises a ValueError OR returns an empty
     # Index object, depending on implementation. :think:
+    # See: https://github.com/sourmash-bio/sourmash/issues/1940
     try:
         idx = index_obj.select(ksize=21)
     except ValueError:
