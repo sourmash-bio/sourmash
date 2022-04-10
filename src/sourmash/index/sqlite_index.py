@@ -761,10 +761,6 @@ class SqliteCollectionManifest(BaseCollectionManifest):
                        _id=_id)
             yield row
 
-    def write_to_csv(self, fp, *, write_header=True):
-        mf = self._extract_manifest()
-        mf.write_to_csv(fp, write_header=write_header)
-
     def filter_rows(self, row_filter_fn):
         """Create a new manifest filtered through row_filter_fn.
 
@@ -838,12 +834,16 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
     @classmethod
     def _create_manifest_from_rows(cls, rows_iter, *, location=":memory:"):
-        """Create an in-memory SqliteCollectionManifest from a rows iterator.
+        """Create a SqliteCollectionManifest from a rows iterator.
 
         Internal utility function.
-        @CTB how do we convert in-memory sqlite db to on-disk?
+        CTB: should enable converting in-memory sqlite db to on-disk,
+        probably with sqlite3 'conn.backup(...)' function.
         """
-        mf = cls.create(location)
+        try:
+            mf = cls.create(location)
+        except (sqlite3.OperationalError, sqlite3.DatabaseError) as exc:
+            raise Exception(f"cannot create sqlite3 db at '{location}'; exception: {str(exc)}")
         cursor = mf.conn.cursor()
 
         # @CTB: manage/test already existing/managed_by_index
