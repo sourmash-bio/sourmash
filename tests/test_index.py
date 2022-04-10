@@ -2243,15 +2243,6 @@ def test_lazy_index_4_bool():
     assert lazy
 
 
-def test_lazy_index_5_len():
-    # test some basic features of LazyLinearIndex
-    lidx = LinearIndex()
-    lazy = LazyLinearIndex(lidx)
-
-    with pytest.raises(NotImplementedError):
-        len(lazy)
-
-
 def test_lazy_index_wraps_multi_index_location():
     # check that 'location' works fine when MultiIndex is wrapped by
     # LazyLinearIndex.
