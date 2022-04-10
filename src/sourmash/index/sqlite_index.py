@@ -79,11 +79,12 @@ picklist_selects = dict(
 
 
 # @CTB write tests that cross-product the various types.
-def load_sqlite_file(filename):
+def load_sqlite_file(filename, *, request_manifest=False):
     "Load a SqliteIndex or a SqliteCollectionManifest from a sqlite file."
     conn = sqlite_utils.open_sqlite_db(filename)
 
     if conn is None:
+        debug_literal("load_sqlite_file: conn is None.")
         return
 
     c = conn.cursor()
@@ -92,6 +93,7 @@ def load_sqlite_file(filename):
     try:
         c.execute('SELECT DISTINCT key, value FROM sourmash_internal')
     except (sqlite3.OperationalError, sqlite3.DatabaseError):
+        debug_literal("load_sqlite_file: no sourmash_internal table")
         return
 
     results = c.fetchall()
@@ -102,13 +104,15 @@ def load_sqlite_file(filename):
         if k == 'SqliteIndex':
             # @CTB: check how we do version errors on sbt
             if v != '1.0':
-                raise Exception(f"unknown SqliteManifest version '{v}'")
+                raise Exception(f"unknown SqliteIndex version '{v}'")
             is_index = True
+            debug_literal("load_sqlite_file: it's an index!")
         elif k == 'SqliteManifest':
             if v != '1.0':
                 raise Exception(f"unknown SqliteManifest version '{v}'")
             assert v == '1.0'
             is_manifest = True
+            debug_literal("load_sqlite_file: it's a manifest!")
         # it's ok if there's no match, that just means we added keys
         # for some other type of sourmash SQLite database. #futureproofing.
 
@@ -117,15 +121,17 @@ def load_sqlite_file(filename):
         assert is_manifest
 
     idx = None
-    if is_index:
+    if is_index and not request_manifest:
         conn.close()
         idx = SqliteIndex(filename)
+        debug_literal("load_sqlite_file: returning SqliteIndex")
     elif is_manifest:
         assert not is_index     # indices are already handled!
 
         prefix = os.path.dirname(filename)
         mf = SqliteCollectionManifest(conn)
         idx = StandaloneManifestIndex(mf, filename, prefix=prefix)
+        debug_literal("load_sqlite_file: returning StandaloneManifestIndex")
 
     return idx
 

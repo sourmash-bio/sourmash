@@ -12,11 +12,13 @@ def open_sqlite_db(filename):
 
     Otherwise, return None.
     """
+    debug_literal("open_sqlite_db: started")
     # does it already exist/is it non-zero size?
 
     # note: sqlite3.connect creates the file if it doesn't exist, which
     # we don't want in this function.
     if not os.path.exists(filename) or os.path.getsize(filename) == 0:
+        debug_literal("open_sqlite_db: no file/zero sized file")
         return None
 
     # can we connect to it?

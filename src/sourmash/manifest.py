@@ -28,6 +28,12 @@ class BaseCollectionManifest:
 
     @classmethod
     def load_from_filename(cls, filename):
+        # SQLite db?
+        db = cls.load_from_sql(filename)
+        if db is not None:
+            return db
+
+        # not a SQLite db?
         with open(filename, newline="") as fp:
             return cls.load_from_csv(fp)
 
@@ -66,6 +72,13 @@ class BaseCollectionManifest:
             manifest_list.append(row)
 
         return cls(manifest_list)
+
+    @classmethod
+    def load_from_sql(cls, filename):
+        from sourmash.index.sqlite_index import load_sqlite_file
+        db = load_sqlite_file(filename, request_manifest=True)
+        if db:
+            return db.manifest
 
     def write_to_filename(self, filename):
         with open(filename, "w", newline="") as fp:
