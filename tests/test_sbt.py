@@ -921,7 +921,7 @@ def test_gather_single_return(c):
     sig47 = load_one_signature(sig47file, ksize=31)
     sig63 = load_one_signature(sig63file, ksize=31)
 
-    # construct LCA Database
+    # construct SBT Database
     factory = GraphFactory(31, 1e5, 4)
     tree = SBT(factory, d=2)
 
@@ -935,6 +935,51 @@ def test_gather_single_return(c):
     print(len(results))
     assert len(results) == 1
     assert results[0][0] == 1.0
+
+
+def test_sbt_jaccard_ordering(runtmp):
+    # this tests a tricky situation where for three sketches A, B, C,
+    # |A intersect B| is greater than |A intersect C|
+    # _but_
+    # |A jaccard B| is less than |A intersect B|
+    a = sourmash.MinHash(ksize=31, n=0, scaled=2)
+    b = a.copy_and_clear()
+    c = a.copy_and_clear()
+
+    a.add_many([1, 2, 3, 4])
+    b.add_many([1, 2, 3] + list(range(10, 30)))
+    c.add_many([1, 5])
+
+    def _intersect(x, y):
+        return x.intersection_and_union_size(y)[0]
+
+    print('a intersect b:', _intersect(a, b))
+    print('a intersect c:', _intersect(a, c))
+    print('a jaccard b:', a.jaccard(b))
+    print('a jaccard c:', a.jaccard(c))
+    assert _intersect(a, b) > _intersect(a, c)
+    assert a.jaccard(b) < a.jaccard(c)
+
+    # thresholds to use:
+    assert a.jaccard(b) < 0.15
+    assert a.jaccard(c) > 0.15
+
+    # now - make signatures, try out :)
+    ss_a = sourmash.SourmashSignature(a, name='A')
+    ss_b = sourmash.SourmashSignature(b, name='B')
+    ss_c = sourmash.SourmashSignature(c, name='C')
+
+    factory = GraphFactory(31, 1e5, 4)
+    db = SBT(factory, d=2)
+    db.insert(ss_a)
+    db.insert(ss_b)
+    db.insert(ss_c)
+
+    sr = db.search(ss_a, threshold=0.15)
+    print(sr)
+    assert len(sr) == 2
+    assert sr[0].signature == ss_a
+    assert sr[1].signature == ss_c
 
 
 def test_sbt_protein_command_index(runtmp):
