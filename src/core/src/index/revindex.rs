@@ -774,4 +774,25 @@ mod test {
         //assert_eq!(index.colors.len(), 3);
         assert_eq!(index.colors.len(), 7);
     }
+
+    #[test]
+    fn revindex_from_zipstorage() {
+        let max_hash = max_hash_for_scaled(100);
+        let template = Sketch::MinHash(
+            KmerMinHash::builder()
+                .num(0u32)
+                .ksize(57)
+                .hash_function(crate::encodings::HashFunctions::murmur64_protein)
+                .max_hash(max_hash)
+                .build(),
+        );
+        let storage = ZipStorage::from_file("../../tests/test-data/prot/protein.zip")
+            .expect("error loading zipfile");
+        let index = RevIndex::from_zipstorage(storage, &template, 0, None, false)
+            .expect("error building from ziptorage");
+
+        // TODO: search too
+
+        assert_eq!(index.colors.len(), 3);
+    }
 }
