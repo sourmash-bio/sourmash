@@ -206,6 +206,7 @@ class SqliteIndex(Index):
     @classmethod
     def _create_tables(cls, c):
         "Create sqlite tables for SqliteIndex"
+        # @CTB check what happens when you try to append to existing.
         try:
             sqlite_utils.add_sourmash_internal(c, 'SqliteIndex', '1.0')
             SqliteCollectionManifest._create_table(c)
@@ -278,7 +279,7 @@ class SqliteIndex(Index):
         # ok, first create and insert a manifest row
         row = BaseCollectionManifest.make_manifest_row(ss, None,
                                                        include_signature=False)
-        self.manifest._insert_row(c, row)
+        self.manifest._insert_row(c, row, call_is_from_index=True)
 
         # retrieve ID of row for retrieving hashes:
         c.execute("SELECT last_insert_rowid()")
@@ -589,8 +590,11 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         )
         """)
 
-    @classmethod
-    def _insert_row(cls, cursor, row):
+    def _insert_row(self, cursor, row, *, call_is_from_index=False):
+        # check - is this manifest managed by SqliteIndex?
+        if self.managed_by_index and not call_is_from_index:
+            raise Exception("must use SqliteIndex.insert to add to this manifest")
+
         cursor.execute("""
         INSERT OR IGNORE INTO sketches
           (name, num, scaled, ksize, filename, md5sum, moltype,
@@ -609,8 +613,9 @@ class SqliteCollectionManifest(BaseCollectionManifest):
          row['internal_location']))
 
     @classmethod
-    def create_from_manifest(cls, dbfile, manifest):
-        return cls._create_manifest_from_rows(manifest.rows, location=dbfile)
+    def create_from_manifest(cls, dbfile, manifest, *, append=False):
+        return cls._create_manifest_from_rows(manifest.rows, location=dbfile,
+                                              append=append)
 
     def __bool__(self):
         return bool(len(self))
@@ -833,7 +838,8 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         return cls._create_manifest_from_rows(rows_iter())
 
     @classmethod
-    def _create_manifest_from_rows(cls, rows_iter, *, location=":memory:"):
+    def _create_manifest_from_rows(cls, rows_iter, *, location=":memory:",
+                                   append=False):
         """Create a SqliteCollectionManifest from a rows iterator.
 
         Internal utility function.
@@ -843,12 +849,15 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         try:
             mf = cls.create(location)
         except (sqlite3.OperationalError, sqlite3.DatabaseError) as exc:
-            raise Exception(f"cannot create sqlite3 db at '{location}'; exception: {str(exc)}")
+            if not append:
+                raise Exception(f"cannot create sqlite3 db at '{location}'; exception: {str(exc)}")
+            db = load_sqlite_file(location, request_manifest=True)
+            mf = db.manifest
+
         cursor = mf.conn.cursor()
 
-        # @CTB: manage/test already existing/managed_by_index
         for row in rows_iter:
-            cls._insert_row(cursor, row)
+            mf._insert_row(cursor, row)
 
         mf.conn.commit()
         return mf

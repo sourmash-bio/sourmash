@@ -3,6 +3,7 @@ Manifests for collections of signatures.
 """
 import csv
 import ast
+import os.path
 from abc import abstractmethod
 
 from sourmash.picklist import SignaturePicklist
@@ -80,13 +81,19 @@ class BaseCollectionManifest:
         if db:
             return db.manifest
 
-    def write_to_filename(self, filename, *, database_format='csv'):
+    def write_to_filename(self, filename, *, database_format='csv',
+                          ok_if_exists=False):
         if database_format == 'csv':
-            with open(filename, "w", newline="") as fp:
-                return self.write_to_csv(fp, write_header=True)
+            if ok_if_exists or not os.path.exists(filename):
+                with open(filename, "w", newline="") as fp:
+                    return self.write_to_csv(fp, write_header=True)
         elif database_format == 'sql':
             from sourmash.index.sqlite_index import SqliteCollectionManifest
-            SqliteCollectionManifest.create_from_manifest(filename, self)
+            append = False
+            if ok_if_exists:
+                append= True
+            SqliteCollectionManifest.create_from_manifest(filename, self,
+                                                          append=append)
 
     @classmethod
     def write_csv_header(cls, fp):
