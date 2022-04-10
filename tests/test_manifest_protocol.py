@@ -2,17 +2,30 @@ import pytest
 import sourmash_tst_utils as utils
 
 import sourmash
+from sourmash.manifest import CollectionManifest
 
 def build_simple_manifest(runtmp):
-    # return the manifest from prot/all.zip
+    # load and return the manifest from prot/all.zip
     filename = utils.get_test_data('prot/all.zip')
     idx = sourmash.load_file_as_index(filename)
     mf = idx.manifest
     assert len(mf) == 8
     return mf
+
+
+def save_load_manifest(runtmp):
+    # save/load the manifest from a CSV.
+    mf = build_simple_manifest(runtmp)
+
+    mf_csv = runtmp.output('mf.csv')
+    mf.write_to_filename(mf_csv)
+
+    load_mf = CollectionManifest.load_from_filename(mf_csv)
+    return load_mf
     
 
-@pytest.fixture(params=[build_simple_manifest,])
+@pytest.fixture(params=[build_simple_manifest,
+                        save_load_manifest])
 def manifest_obj(request, runtmp):
     build_fn = request.param
 
