@@ -133,8 +133,6 @@ def build_lazy_loaded_index(runtmp):
     db.save(outfile)
 
     mf = CollectionManifest.create_manifest(db._signatures_with_internal())
-    print('XXX', mf)
-
     return LazyLoadedIndex(outfile, mf)
 
 
@@ -163,7 +161,7 @@ def build_revindex(runtmp):
                         build_lca_index,
                         build_sbt_index_save_load,
                         build_lca_index_save_load,
-                        build_lazy_loaded_index
+                        build_lazy_loaded_index,
 #                        build_revindex,
                         ]
 )
