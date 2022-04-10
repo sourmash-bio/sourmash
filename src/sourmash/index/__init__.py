@@ -491,7 +491,8 @@ class LazyLinearIndex(Index):
             return False
 
     def __len__(self):
-        raise NotImplementedError
+        db = self.db.select(**self.selection_dict)
+        return len(db)
 
     def insert(self, node):
         raise NotImplementedError
@@ -1069,6 +1070,10 @@ class LazyLoadedIndex(Index):
     """
     def __init__(self, filename, manifest):
         "Create an Index with given filename and manifest."
+        if not os.path.exists(filename):
+            raise ValueError(f"'{filename}' must exist when creating LazyLoadedIndex")
+        if manifest is None:
+            raise ValueError("manifest cannot be 'none'")
         self.filename = filename
         self.manifest = manifest
 
