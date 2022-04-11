@@ -220,11 +220,11 @@ def jaccard_to_distance(
 ):
     """
     Given parameters, calculate point estimate for mutation rate from jaccard index.
-    First checks if parameters are valid (checks are not exhaustive). Then uses formulas
-    derived mathematically to compute the point estimate. The formula uses approximations,
-    therefore a tiny error is associated with it. A lower bound of that error is also returned.
-    A high error indicates that the point estimate cannot be trusted. Threshold of the error
-    is open to interpretation, but suggested that > 10^-4 should be handled with caution.
+    Uses formulas derived mathematically to compute the point estimate. The formula uses
+    approximations, therefore a tiny error is associated with it. A lower bound of that error
+    is also returned. A high error indicates that the point estimate cannot be trusted.
+    Threshold of the error is open to interpretation, but suggested that > 10^-4 should be
+    handled with caution.
 
     Note that the error is NOT a mutation rate, and therefore cannot be considered in
     something like mut.rate +/- error.
