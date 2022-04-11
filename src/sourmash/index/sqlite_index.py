@@ -713,7 +713,15 @@ class SqliteCollectionManifest(BaseCollectionManifest):
                 d[k] = v
             kwargs = d
 
-        return SqliteCollectionManifest(self.conn, selection_dict=kwargs)
+        new_mf = SqliteCollectionManifest(self.conn, selection_dict=kwargs)
+        if 'picklist' in kwargs:
+            picklist = kwargs['picklist']
+            for row in new_mf.rows:
+                does_match = picklist.matches_manifest_row(row)
+                if not does_match:
+                    assert 0
+
+        return new_mf
 
     def _run_select(self, c):
         conditions, values, picklist = self._select_signatures(c)

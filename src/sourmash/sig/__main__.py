@@ -13,7 +13,8 @@ import screed
 import sourmash
 from sourmash.sourmash_args import FileOutput
 
-from sourmash.logging import set_quiet, error, notify, print_results, debug
+from sourmash.logging import (set_quiet, error, notify, print_results, debug,
+                              debug_literal)
 from sourmash import sourmash_args
 from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.manifest import CollectionManifest
@@ -1336,6 +1337,7 @@ def check(args):
         # has manifest, or ok to build (require_manifest=False) - continue!
         manifest = sourmash_args.get_manifest(idx, require=True)
         manifest_rows = manifest.select_to_manifest(picklist=picklist)
+        debug_literal(f"of {len(manifest)} rows, found {len(manifest_rows)} matching rows; {len(picklist.pickset - picklist.found)} pick values still missing.")
         total_rows_examined += len(manifest)
         total_manifest_rows += manifest_rows
 
