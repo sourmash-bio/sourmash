@@ -1317,7 +1317,7 @@ def check(args):
     else:
         debug("sig check: manifest required")
 
-    total_manifest_rows = []
+    total_manifest_rows = CollectionManifest([])
 
     # start loading!
     total_rows_examined = 0
@@ -1335,7 +1335,7 @@ def check(args):
 
         # has manifest, or ok to build (require_manifest=False) - continue!
         manifest = sourmash_args.get_manifest(idx, require=True)
-        manifest_rows = manifest._select(picklist=picklist)
+        manifest_rows = manifest.select_to_manifest(picklist=picklist)
         total_rows_examined += len(manifest)
         total_manifest_rows += manifest_rows
 
@@ -1369,7 +1369,7 @@ def check(args):
 
     # save manifest of matching!
     if args.save_manifest_matching and total_manifest_rows:
-        mf = CollectionManifest(total_manifest_rows)
+        mf = total_manifest_rows
         with open(args.save_manifest_matching, 'w', newline="") as fp:
             mf.write_to_csv(fp, write_header=True)
         notify(f"wrote {len(mf)} matching manifest rows to '{args.save_manifest_matching}'")
