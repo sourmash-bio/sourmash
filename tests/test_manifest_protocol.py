@@ -1,3 +1,8 @@
+"""
+Tests for the 'CollectionManifest' class and protocol. All subclasses
+of BaseCollectionManifest should support this functionality.
+"""
+
 import pytest
 import sourmash_tst_utils as utils
 
