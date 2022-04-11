@@ -133,43 +133,43 @@ class BaseCollectionManifest:
     ## implement me
     @abstractmethod
     def __add__(self, other):
-        pass
+        "Add two manifests"
 
     @abstractmethod
     def __bool__(self):
-        pass
+        "Test if manifest is empty"
 
     @abstractmethod
     def __len__(self):
-        pass
+        "Get number of entries in manifest"
 
     @abstractmethod
     def __eq__(self, other):
-        pass
+        "Check for equality of manifest based on rows"
 
     @abstractmethod
     def select_to_manifest(self, **kwargs):
-        pass
+        "Select compatible signatures"
 
     @abstractmethod
     def filter_rows(self, row_filter_fn):
-        pass
+        "Filter rows based on a pattern matching function."
 
     @abstractmethod
     def filter_on_columns(self, col_filter_fn, col_names):
-        pass
+        "Filter on column values."
 
     @abstractmethod
     def locations(self):
-        pass
+        "Return a list of distinct locations"
 
     @abstractmethod
     def __contains__(self, ss):
-        pass
+        "Determine if a particular SourmashSignature is in this manifest."
 
     @abstractmethod
     def to_picklist(self):
-        pass
+        "Convert manifest to a picklist."
 
 
 class CollectionManifest(BaseCollectionManifest):
