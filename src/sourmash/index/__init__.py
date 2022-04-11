@@ -1072,8 +1072,10 @@ class LazyLoadedIndex(Index):
         "Create an Index with given filename and manifest."
         if not os.path.exists(filename):
             raise ValueError(f"'{filename}' must exist when creating LazyLoadedIndex")
+
         if manifest is None:
-            raise ValueError("manifest cannot be 'none'")
+            raise ValueError("manifest cannot be None")
+
         self.filename = filename
         self.manifest = manifest
 

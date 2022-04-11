@@ -76,5 +76,75 @@ fn add_sequence(c: &mut Criterion) {
     });
 }
 
-criterion_group!(compute, add_sequence);
+fn add_sequence_protein(c: &mut Criterion) {
+    let mut cp = ComputeParameters::default();
+    cp.set_protein(true);
+    cp.set_dna(false);
+    cp.set_scaled(200);
+    cp.set_ksizes(vec![30]);
+    let template_sig = Signature::from_params(&cp);
+
+    let mut data: Vec<u8> = vec![];
+    let (mut f, _) = niffler::from_path("../../tests/test-data/genome-s10.fa.gz").unwrap();
+    let _ = f.read_to_end(&mut data);
+
+    let data = data.repeat(10);
+
+    let data_upper = data.to_ascii_uppercase();
+    let data_lower = data.to_ascii_lowercase();
+    let data_errors: Vec<u8> = data
+        .iter()
+        .enumerate()
+        .map(|(i, x)| if i % 89 == 1 { b'N' } else { *x })
+        .collect();
+
+    let mut group = c.benchmark_group("add_sequence_protein");
+    group.sample_size(10);
+
+    group.bench_function("valid", |b| {
+        b.iter(|| {
+            let fasta_data = Cursor::new(data_upper.clone());
+            let mut sig = template_sig.clone();
+            let mut parser = parse_fastx_reader(fasta_data).unwrap();
+            while let Some(rec) = parser.next() {
+                sig.add_protein(&rec.unwrap().seq()).unwrap();
+            }
+        });
+    });
+
+    group.bench_function("lowercase", |b| {
+        b.iter(|| {
+            let fasta_data = Cursor::new(data_lower.clone());
+            let mut sig = template_sig.clone();
+            let mut parser = parse_fastx_reader(fasta_data).unwrap();
+            while let Some(rec) = parser.next() {
+                sig.add_protein(&rec.unwrap().seq()).unwrap();
+            }
+        });
+    });
+
+    group.bench_function("invalid kmers", |b| {
+        b.iter(|| {
+            let fasta_data = Cursor::new(data_errors.clone());
+            let mut sig = template_sig.clone();
+            let mut parser = parse_fastx_reader(fasta_data).unwrap();
+            while let Some(rec) = parser.next() {
+                sig.add_protein(&rec.unwrap().seq()).unwrap();
+            }
+        });
+    });
+
+    group.bench_function("force with valid kmers", |b| {
+        b.iter(|| {
+            let fasta_data = Cursor::new(data_upper.clone());
+            let mut sig = template_sig.clone();
+            let mut parser = parse_fastx_reader(fasta_data).unwrap();
+            while let Some(rec) = parser.next() {
+                sig.add_protein(&rec.unwrap().seq()).unwrap();
+            }
+        });
+    });
+}
+
+criterion_group!(compute, add_sequence, add_sequence_protein);
 criterion_main!(compute);
