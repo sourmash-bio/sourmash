@@ -2343,6 +2343,24 @@ def test_lazy_loaded_index_3_find(runtmp):
     assert len(x) == 0
 
 
+def test_lazy_loaded_index_4_nofile(runtmp):
+    # test check for filename must exist
+    with pytest.raises(ValueError) as exc:
+        index.LazyLoadedIndex(runtmp.output('xyz'), True)
+
+    assert "must exist when creating" in str(exc)
+
+
+def test_lazy_loaded_index_4_noanifest(runtmp):
+    # test check for empty manifest
+    sig2 = utils.get_test_data("2.fa.sig")
+
+    with pytest.raises(ValueError) as exc:
+        index.LazyLoadedIndex(sig2, None)
+
+    assert "manifest cannot be None" in str(exc)
+
+
 def test_revindex_index_search():
     # confirm that RevIndex works
     sig2 = utils.get_test_data("2.fa.sig")
