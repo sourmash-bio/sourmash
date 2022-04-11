@@ -17,7 +17,7 @@ def r1_to_q(k, r1):
     return float(q)
 
 
-def var_n_mutated(L, k, r1, q=None):
+def var_n_mutated(L, k, r1, *, q=None):
     # there are computational issues in the variance formula that we solve here
     # by the use of higher-precision arithmetic; the problem occurs when r is
     # very small; for example, with L=10,k=2,r1=1e-6 standard precision
@@ -56,7 +56,7 @@ def sequence_len_to_n_kmers(sequence_len_bp, ksize):
     return n_kmers
 
 
-def distance_to_identity(dist, d_low=None, d_high=None):
+def distance_to_identity(dist, *, d_low=None, d_high=None):
     """
     ANI = 1-distance
     """
@@ -92,7 +92,7 @@ def get_expected_log_probability(n_unique_kmers, ksize, mutation_rate, scaled_fr
 
 
 def get_exp_probability_nothing_common(
-    mutation_rate, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None
+    mutation_rate, ksize, scaled, *, n_unique_kmers=None, sequence_len_bp=None
 ):
     """
     Given parameters, calculate the expected probability that nothing will be common
@@ -121,12 +121,13 @@ def containment_to_distance(
     containment,
     ksize,
     scaled,
+    *,
     n_unique_kmers=None,
     sequence_len_bp=None,
     confidence=0.95,
     return_identity=False,
     return_ci=False,
-    prob_threshold=10.0 ** (-3),
+    prob_threshold=1e-3,
 ):
     """
     Containment --> distance CI (one step)
@@ -212,11 +213,12 @@ def jaccard_to_distance(
     jaccard,
     ksize,
     scaled,
+    *,
     n_unique_kmers=None,
     sequence_len_bp=None,
     return_identity=False,
-    prob_threshold=10.0 ** (-3),
-    err_threshold=10.0 ** (-4.0),
+    prob_threshold=1e-3,
+    err_threshold=1e-4,
 ):
     """
     Given parameters, calculate point estimate for mutation rate from jaccard index.
