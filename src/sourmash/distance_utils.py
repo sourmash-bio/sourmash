@@ -7,9 +7,13 @@ from scipy.optimize import brentq
 from scipy.stats import norm as scipy_norm
 from numpy import sqrt
 from math import log, exp
+from collections import namedtuple
 
 from .logging import notify
 
+containmentANIResult = namedtuple("containANIResult", ["ani", "p_nothing_in_common", "ci_low", "ci_high"])
+
+jaccardANIResult = namedtuple("jaccardANIResult", ["ani", "p_nothing_in_common","jaccard_error"])
 
 def r1_to_q(k, r1):
     r1 = float(r1)
@@ -17,7 +21,7 @@ def r1_to_q(k, r1):
     return float(q)
 
 
-def var_n_mutated(L, k, r1, q=None):
+def var_n_mutated(L, k, r1, *, q=None):
     # there are computational issues in the variance formula that we solve here
     # by the use of higher-precision arithmetic; the problem occurs when r is
     # very small; for example, with L=10,k=2,r1=1e-6 standard precision
@@ -56,7 +60,7 @@ def sequence_len_to_n_kmers(sequence_len_bp, ksize):
     return n_kmers
 
 
-def distance_to_identity(dist, d_low=None, d_high=None):
+def distance_to_identity(dist, *, d_low=None, d_high=None):
     """
     ANI = 1-distance
     """
@@ -92,7 +96,7 @@ def get_expected_log_probability(n_unique_kmers, ksize, mutation_rate, scaled_fr
 
 
 def get_exp_probability_nothing_common(
-    mutation_rate, ksize, scaled, n_unique_kmers=None, sequence_len_bp=None
+    mutation_rate, ksize, scaled, *, n_unique_kmers=None, sequence_len_bp=None
 ):
     """
     Given parameters, calculate the expected probability that nothing will be common
@@ -121,12 +125,13 @@ def containment_to_distance(
     containment,
     ksize,
     scaled,
+    *,
     n_unique_kmers=None,
     sequence_len_bp=None,
     confidence=0.95,
     return_identity=False,
     return_ci=False,
-    prob_threshold=10.0 ** (-3),
+    prob_threshold=1e-3,
 ):
     """
     Containment --> distance CI (one step)
@@ -199,24 +204,31 @@ def containment_to_distance(
             point_estimate = distance_to_identity(point_estimate)
         else:
             point_estimate, sol2, sol1 = distance_to_identity(
-                point_estimate, sol2, sol1
+                point_estimate, d_low=sol2, d_high=sol1
             )
 
-    if return_ci:
-        return point_estimate, sol2, sol1, prob_nothing_in_common
+    # round everything
+    point_estimate,prob_nothing_in_common = round(point_estimate,2),round(prob_nothing_in_common,2)
+    if sol1 is not None and sol2 is not None:
+        sol1,sol2 = round(sol1, 2), round(sol2,2)
 
-    return point_estimate, prob_nothing_in_common
+    return containmentANIResult(point_estimate,prob_nothing_in_common,sol2,sol1)
+#    if return_ci:
+#        return point_estimate, sol2, sol1, prob_nothing_in_common
+#
+#    return point_estimate, prob_nothing_in_common
 
 
 def jaccard_to_distance(
     jaccard,
     ksize,
     scaled,
+    *,
     n_unique_kmers=None,
     sequence_len_bp=None,
     return_identity=False,
-    prob_threshold=10.0 ** (-3),
-    err_threshold=10.0 ** (-4.0),
+    prob_threshold=1e-3,
+    err_threshold=1e-4,
 ):
     """
     Given parameters, calculate point estimate for mutation rate from jaccard index.
@@ -274,4 +286,8 @@ def jaccard_to_distance(
     if return_identity:
         point_estimate = distance_to_identity(point_estimate)
 
-    return point_estimate, prob_nothing_in_common, error_lower_bound
+    # round
+    point_estimate = round(point_estimate,2)
+    prob_nothing_in_common= round(prob_nothing_in_common,2)
+    error_lower_bound = round(error_lower_bound,2)
+    return jaccardANIResult(point_estimate, prob_nothing_in_common, error_lower_bound)

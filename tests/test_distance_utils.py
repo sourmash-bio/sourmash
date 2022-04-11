@@ -5,7 +5,7 @@ import pytest
 from sourmash.distance_utils import containment_to_distance, get_exp_probability_nothing_common, jaccard_to_distance, distance_to_identity, sequence_len_to_n_kmers
 
 def test_distance_to_identity():
-    ident,id_low,id_high = distance_to_identity(0.5,0.4,0.6)
+    ident,id_low,id_high = distance_to_identity(0.5,d_low=0.4,d_high=0.6)
     assert ident == 0.5
     assert id_low == 0.4
     assert id_high ==0.6
@@ -21,10 +21,10 @@ def test_distance_to_identity_fail_distance():
     Fail if distance is not between 0 and 1.
     """
     with pytest.raises(Exception) as exc:
-        ident,id_low,id_high = distance_to_identity(1.1,0.4,0.6)
+        ident,id_low,id_high = distance_to_identity(1.1,d_low=0.4,d_high=0.6)
     assert "distance value 1.1 is not between 0 and 1!" in str(exc.value)
     with pytest.raises(Exception) as exc:
-        ident,id_low,id_high = distance_to_identity(-0.1,0.4,0.6)
+        ident,id_low,id_high = distance_to_identity(-0.1,d_low=0.4,d_high=0.6)
     assert "distance value -0.1 is not between 0 and 1!" in str(exc.value)
 
 
@@ -33,7 +33,7 @@ def test_distance_to_identity_fail_incorrect_input():
     Ignore 2nd input, unless put both dist_low and dist_high
     """
     with pytest.raises(Exception) as exc: 
-        distance_to_identity(0.4,0.5)
+        distance_to_identity(0.4,d_low=0.5)
     print("\n", str(exc.value))
     assert "Error: `distance_to_identity` expects either one value (distance) or three values" in str(exc.value)
 
