@@ -1,5 +1,6 @@
 """
-Test the behavior of LCA databases.
+Test the behavior of LCA databases. New LCA database classes should support
+all of this functionality.
 """
 import pytest
 import sourmash_tst_utils as utils
