@@ -752,7 +752,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         else:
             conditions = ""
 
-        debug_literal(f"sqlite manifest: executing select with {conditions}")
+        debug_literal(f"sqlite manifest rows: executing select with '{conditions}'")
         c1.execute(f"""
         SELECT id, name, md5sum, num, scaled, ksize, filename, moltype,
         seed, n_hashes, internal_location FROM sketches {conditions}

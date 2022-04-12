@@ -1336,11 +1336,8 @@ def check(args):
 
         # has manifest, or ok to build (require_manifest=False) - continue!
         manifest = sourmash_args.get_manifest(idx, require=True)
-        debug_literal(f"got manifest! {len(manifest)} rows. Running select on {len(picklist.pickset)} pickset items.")
         manifest_rows = manifest.select_to_manifest(picklist=picklist)
-        debug_literal(f"of {len(manifest)} rows, found {len(manifest_rows)} matching rows; {len(picklist.pickset - picklist.found)} pick values still missing.")
         total_rows_examined += len(manifest)
-        debug_literal(f"merging new rows into {len(total_manifest_rows)} current.")
         total_manifest_rows += manifest_rows
 
     notify(f"loaded {total_rows_examined} signatures.")
