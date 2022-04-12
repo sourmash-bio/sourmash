@@ -10,6 +10,7 @@ import sourmash
 from sourmash.manifest import CollectionManifest
 from sourmash.index.sqlite_index import SqliteCollectionManifest
 
+
 def build_simple_manifest(runtmp):
     # load and return the manifest from prot/all.zip
     filename = utils.get_test_data('prot/all.zip')
@@ -108,9 +109,14 @@ def test_manifest_create_manifest(manifest_obj):
 
     all_keys = set(new_row.keys())
     all_keys.update(row.keys())
+
+    remove_set = set()
+    remove_set.add('_id')
+    remove_set.add('seed')
+
+    all_keys -= remove_set
     for k in all_keys:
-        if not k.startswith('_'):
-            assert new_row[k] == row[k], k
+        assert new_row[k] == row[k], k
 
 
 def test_manifest_select_to_manifest(manifest_obj):

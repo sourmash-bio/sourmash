@@ -179,7 +179,13 @@ class SqliteIndex(Index):
         return conn
 
     @classmethod
+    def load(self, dbfile):
+        "Load an existing SqliteIndex from dbfile."
+        return SqliteIndex(dbfile)
+
+    @classmethod
     def create(cls, dbfile):
+        "Create a new SqliteIndex in dbfile."
         conn = cls._open(dbfile, empty_ok=True)
         cls._create_tables(conn.cursor())
         conn.commit()
@@ -293,22 +299,12 @@ class SqliteIndex(Index):
     def signatures_with_location(self):
         "Return an iterator over tuples (signature, location) in the Index."
         c = self.conn.cursor()
-        c2 = self.conn.cursor()
 
-        # have the manifest run a select...
-        picklist = self.manifest._run_select(c)
-
-        #... and then operate on the results of that in 'c'
-        for ss, loc, iloc in self._load_sketches(c, c2):
-            if picklist is None or ss in picklist:
-                yield ss, loc
+        for ss, loc, iloc in self._load_sketches(c):
+            yield ss, loc
 
     def save(self, *args, **kwargs):
         raise NotImplementedError
-
-    @classmethod
-    def load(self, dbfile):
-        return SqliteIndex(dbfile)
 
     def find(self, search_fn, query, **kwargs):
         search_fn.check_is_compatible(query)
@@ -455,29 +451,33 @@ class SqliteIndex(Index):
         ss = SourmashSignature(mh, name=name, filename=filename)
         return ss
 
-    def _load_sketches(self, c1, c2):
-        """Load sketches based on results from 'c1', using 'c2'.
+    def _load_sketches(self, c):
+        "Load sketches based on manifest _id column."
+        for row in self.manifest.rows:
+            sketch_id = row['_id']
+            assert row['num'] == 0
 
-        Here, 'c1' should already have run an appropriate 'select' on
-        'sketches'. 'c2' will be used to load the hash values.
-        """
-        for sketch_id, name, num, scaled, ksize, filename, moltype, seed in c1:
-            assert num == 0
-
+            moltype = row['moltype']
             is_protein = 1 if moltype=='protein' else 0
             is_dayhoff = 1 if moltype=='dayhoff' else 0
             is_hp = 1 if moltype=='hp' else 0
 
+            ksize = row['ksize']
+            scaled = row['scaled']
+            seed = row['seed']
+
             mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
                          is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp)
-            c2.execute("SELECT hashval FROM hashes WHERE sketch_id=?",
+
+            c.execute("SELECT hashval FROM hashes WHERE sketch_id=?",
                        (sketch_id,))
 
-            hashvals = c2.fetchall()
+            hashvals = c.fetchall()
             for hashval, in hashvals:
                 mh.add_hash(convert_hash_from(hashval))
 
-            ss = SourmashSignature(mh, name=name, filename=filename)
+            ss = SourmashSignature(mh, name=row['name'],
+                                   filename=row['filename'])
             yield ss, self.dbfile, sketch_id
 
     def _get_matching_sketches(self, c, hashes, max_hash):
@@ -565,6 +565,25 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         "Create a new sqlite manifest from an existing manifest object."
         return cls._create_manifest_from_rows(manifest.rows, location=dbfile,
                                               append=append)
+
+    @classmethod
+    def create_manifest(cls, locations_iter, *, include_signature=False):
+        """Create a manifest from an iterator that yields (ss, location)
+
+        Stores signatures in manifest rows by default.
+
+        Note: do NOT catch exceptions here, so this passes through load excs.
+        Note: ignores 'include_signature'.
+
+        # @CTB revisit create names...
+        """
+        def rows_iter():
+            for ss, location in locations_iter:
+                row = cls.make_manifest_row(ss, location,
+                                            include_signature=False)
+                yield row
+
+        return cls._create_manifest_from_rows(rows_iter())
 
     @classmethod
     def _create_table(cls, cursor):
@@ -656,14 +675,14 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         self._num_rows = sum(1 for _ in self.rows)
         return self._num_rows
 
-    def _select_signatures(self, c):
-        """
-        Given cursor 'c', build a set of SQL SELECT conditions
-        and matching value tuple that can be used to select the
-        right sketches from the database.
+    def _make_select(self):
+        """Build a set of SQL SELECT conditions and matching value tuple
+        that can be used to select the right sketches from the
+        database.
 
         Returns a triple 'conditions', 'values', and 'picklist'.
         'conditions' is a list that should be joined with 'AND'.
+
         The picklist is simply retrieved from the selection dictionary.
         """
         conditions = []
@@ -714,21 +733,6 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
         return new_mf
 
-    def _run_select(self, c):
-        "Run the actual 'select' on sketches."
-        conditions, values, picklist = self._select_signatures(c)
-        if conditions:
-            conditions = conditions = "WHERE " + " AND ".join(conditions)
-        else:
-            conditions = ""
-
-        c.execute(f"""
-        SELECT id, name, num, scaled, ksize, filename, moltype, seed
-        FROM sketches {conditions}""",
-                  values)
-
-        return picklist
-
     def _extract_manifest(self):
         """
         Generate a regular CollectionManifest object.
@@ -737,6 +741,8 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         for row in self.rows:
             if '_id' in row:
                 del row['_id']
+            if 'seed' in row:
+                del row['seed']
             manifest_list.append(row)
 
         return CollectionManifest(manifest_list)
@@ -746,7 +752,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         "Return rows that match the selection."
         c1 = self.conn.cursor()
 
-        conditions, values, picklist = self._select_signatures(c1)
+        conditions, values, picklist = self._make_select()
         if conditions:
             conditions = conditions = "WHERE " + " AND ".join(conditions)
         else:
@@ -766,7 +772,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
                        n_hashes=n_hashes, with_abundance=0, ksize=ksize,
                        md5=md5sum, internal_location=iloc,
                        moltype=moltype, md5short=md5sum[:8],
-                       _id=_id)
+                       seed=seed, _id=_id)
             if picklist is None or picklist.matches_manifest_row(row):
                 yield row
 
@@ -792,13 +798,13 @@ class SqliteCollectionManifest(BaseCollectionManifest):
     def locations(self):
         c1 = self.conn.cursor()
 
-        conditions, values, picklist = self._select_signatures(c1)
+        conditions, values, picklist = self._make_select()
         if conditions:
             conditions = conditions = "WHERE " + " AND ".join(conditions)
         else:
             conditions = ""
 
-        # @CTB check picklist?
+        # @CTB check picklist? may return too many :think:.
         c1.execute(f"""
         SELECT DISTINCT internal_location FROM sketches {conditions}
         """, values)
@@ -806,41 +812,35 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         return ( iloc for iloc, in c1 )
 
     def __contains__(self, ss):
+        "Check to see if signature 'ss' is in this manifest."
+        # @CTB check picklist?
         md5 = ss.md5sum()
 
         c = self.conn.cursor()
         c.execute('SELECT COUNT(*) FROM sketches WHERE md5sum=?', (md5,))
         val, = c.fetchone()
-        return bool(val)
+
+        if bool(val):
+            picklist = self.picklist
+            return picklist is None or ss in self.picklist
+        return False
+
+    @property
+    def picklist(self):
+        "Return the picklist, if any."
+        if self.selection_dict:
+            return self.selection_dict.get('picklist')
+        return None
 
     def to_picklist(self):
         "Convert this manifest to a picklist."
-        picklist = SignaturePicklist('md5')
-
-        c = self.conn.cursor()
-        c.execute('SELECT DISTINCT md5sum FROM sketches')
         pickset = set()
-        pickset.update(( val for val, in c ))
+        for row in self.rows:
+            pickset.add(row['md5'])
+
+        picklist = SignaturePicklist('md5')
         picklist.pickset = pickset
-
         return picklist
-
-    @classmethod
-    def create_manifest(cls, locations_iter, *, include_signature=False):
-        """Create a manifest from an iterator that yields (ss, location)
-
-        Stores signatures in manifest rows by default.
-
-        Note: do NOT catch exceptions here, so this passes through load excs.
-        Note: ignores 'include_signature'.
-        """
-        def rows_iter():
-            for ss, location in locations_iter:
-                row = cls.make_manifest_row(ss, location,
-                                            include_signature=False)
-                yield row
-
-        return cls._create_manifest_from_rows(rows_iter())
 
     @classmethod
     def _create_manifest_from_rows(cls, rows_iter, *, location=":memory:",
@@ -848,6 +848,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         """Create a SqliteCollectionManifest from a rows iterator.
 
         Internal utility function.
+
         CTB: should enable converting in-memory sqlite db to on-disk,
         probably with sqlite3 'conn.backup(...)' function.
         """
