@@ -342,11 +342,10 @@ impl Iterator for SeqToHashes {
                         self.hashes_buffer.clear();
                         self.kmer_index = self.max_index;
                         return Some(Ok(0));
-                    } else {
-                        let curr_idx = self.translate_iter_step;
-                        self.translate_iter_step += 1;
-                        return Some(Ok(self.hashes_buffer[curr_idx]));
                     }
+                    let curr_idx = self.translate_iter_step;
+                    self.translate_iter_step += 1;
+                    Some(Ok(self.hashes_buffer[curr_idx]))
                 }
             } else {
                 // Processing protein
