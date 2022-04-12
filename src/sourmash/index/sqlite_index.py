@@ -682,13 +682,15 @@ class SqliteCollectionManifest(BaseCollectionManifest):
             # support picklists!
             if picklist is not None:
                 c.execute("DROP TABLE IF EXISTS pickset")
-                c.execute("CREATE TABLE pickset (sketch_id INTEGER)")
+                c.execute("CREATE TEMPORARY TABLE pickset (sketch_id INTEGER)")
 
                 transform = picklist_transforms[picklist.coltype]
                 sql_stmt = picklist_selects[picklist.coltype]
 
                 vals = [ (transform(v),) for v in picklist.pickset ]
+                debug_literal(f"sqlite manifest: creating sql pickset with {picklist.coltype}")
                 c.executemany(sql_stmt, vals)
+                debug_literal("sqlite manifest: done creating pickset!")
 
                 if picklist.pickstyle == PickStyle.INCLUDE:
                     conditions.append("""
@@ -704,6 +706,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
     def select_to_manifest(self, **kwargs):
         # Pass along all the selection kwargs to a new instance
         if self.selection_dict:
+            debug_literal("sqlite manifest: merging selection dicts")
             # combine selects...
             d = dict(self.selection_dict)
             for k, v in kwargs.items():
@@ -714,8 +717,9 @@ class SqliteCollectionManifest(BaseCollectionManifest):
             kwargs = d
 
         new_mf = SqliteCollectionManifest(self.conn, selection_dict=kwargs)
-        if 'picklist' in kwargs:
-            picklist = kwargs['picklist']
+        picklist = kwargs.get('picklist')
+        if picklist is not None:
+            debug_literal("sqlite manifest: iterating through picklist")
             for row in new_mf.rows:
                 does_match = picklist.matches_manifest_row(row)
                 if not does_match:
@@ -759,11 +763,13 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         else:
             conditions = ""
 
+        debug_literal(f"sqlite manifest: executing select with {conditions}")
         c1.execute(f"""
         SELECT id, name, md5sum, num, scaled, ksize, filename, moltype,
         seed, n_hashes, internal_location FROM sketches {conditions}
         """, values)
 
+        debug_literal("sqlite manifest: entering row yield loop")
         manifest_list = []
         for (_id, name, md5sum, num, scaled, ksize, filename, moltype,
              seed, n_hashes, iloc) in c1:
