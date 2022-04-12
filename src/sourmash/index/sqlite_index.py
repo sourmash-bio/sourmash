@@ -735,6 +735,8 @@ class SqliteCollectionManifest(BaseCollectionManifest):
     def _extract_manifest(self):
         """
         Generate a regular CollectionManifest object.
+
+        @CTB: remove me.
         """
         manifest_list = []
         for row in self.rows:
