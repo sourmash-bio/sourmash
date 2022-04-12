@@ -1339,6 +1339,7 @@ def check(args):
         manifest_rows = manifest.select_to_manifest(picklist=picklist)
         total_rows_examined += len(manifest)
         total_manifest_rows += manifest_rows
+        debug_literal(f"examined {len(manifest)} new rows, found {len(manifest_rows)} matching rows")
 
     notify(f"loaded {total_rows_examined} signatures.")
 
