@@ -2,40 +2,68 @@
 Tests for distance utils.
 """
 import pytest
-from sourmash.distance_utils import containment_to_distance, get_exp_probability_nothing_common, jaccard_to_distance, distance_to_identity, sequence_len_to_n_kmers
+from sourmash.distance_utils import containment_to_distance, get_exp_probability_nothing_common, \
+                                    jaccard_to_distance, sequence_len_to_n_kmers, ANIResult, \
+                                    ciANIResult, jaccardANIResult
 
-def test_distance_to_identity():
-    ident,id_low,id_high = distance_to_identity(0.5,d_low=0.4,d_high=0.6)
-    assert ident == 0.5
-    assert id_low == 0.4
-    assert id_high ==0.6
+def test_aniresult():
+    res = ANIResult(0.4, 0.1)
+    assert res.dist == 0.4
+    assert res.ani == 0.6
+    assert res.p_nothing_in_common == 0.1
 
-
-def test_distance_to_identity_just_point_estimate():
-    ident = distance_to_identity(0.4)
-    assert ident == 0.6
-
-
-def test_distance_to_identity_fail_distance():
+def test_aniresult_bad_distance():
     """
     Fail if distance is not between 0 and 1.
     """
     with pytest.raises(Exception) as exc:
-        ident,id_low,id_high = distance_to_identity(1.1,d_low=0.4,d_high=0.6)
+        ANIResult(1.1, 0.1)
+    print("\n", str(exc.value))
     assert "distance value 1.1 is not between 0 and 1!" in str(exc.value)
     with pytest.raises(Exception) as exc:
-        ident,id_low,id_high = distance_to_identity(-0.1,d_low=0.4,d_high=0.6)
-    assert "distance value -0.1 is not between 0 and 1!" in str(exc.value)
-
-
-def test_distance_to_identity_fail_incorrect_input():
-    """
-    Ignore 2nd input, unless put both dist_low and dist_high
-    """
-    with pytest.raises(Exception) as exc: 
-        distance_to_identity(0.4,d_low=0.5)
+        jaccardANIResult(1.1, 0.1)
     print("\n", str(exc.value))
-    assert "Error: `distance_to_identity` expects either one value (distance) or three values" in str(exc.value)
+    assert "distance value 1.1 is not between 0 and 1!" in str(exc.value)
+
+def test_jaccard_aniresult():
+    res = jaccardANIResult(0.4, 0.1, jaccard_error=0.003)
+    assert res.dist == 0.4
+    assert res.ani == 0.6
+    assert res.p_nothing_in_common == 0.1
+    assert res.jaccard_error == 0.003
+
+#def test_distance_to_identity():
+#    ident,id_low,id_high = distance_to_identity(0.5,d_low=0.4,d_high=0.6)
+#    assert ident == 0.5
+#    assert id_low == 0.4
+#    assert id_high ==0.6
+
+
+#def test_distance_to_identity_just_point_estimate():
+#    ident = distance_to_identity(0.4)
+#    assert ident == 0.6
+
+
+#def test_distance_to_identity_fail_distance():
+#    """
+#    Fail if distance is not between 0 and 1.
+#    """
+#    with pytest.raises(Exception) as exc:
+#        ident,id_low,id_high = distance_to_identity(1.1,d_low=0.4,d_high=0.6)
+#    assert "distance value 1.1 is not between 0 and 1!" in str(exc.value)
+#    with pytest.raises(Exception) as exc:
+#        ident,id_low,id_high = distance_to_identity(-0.1,d_low=0.4,d_high=0.6)
+#    assert "distance value -0.1 is not between 0 and 1!" in str(exc.value)
+
+
+#def test_distance_to_identity_fail_incorrect_input():
+#    """
+#    Ignore 2nd input, unless put both dist_low and dist_high
+#    """
+#    with pytest.raises(Exception) as exc: 
+#        distance_to_identity(0.4,d_low=0.5)
+#    print("\n", str(exc.value))
+#    assert "Error: `distance_to_identity` expects either one value (distance) or three values" in str(exc.value)
 
 
 def test_containment_to_distance_zero():
@@ -53,16 +81,20 @@ def test_containment_to_distance_zero():
     assert high == exp_high
     assert p_not_in_common == pnc
     # check without returning ci
-    dist,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers)
+    result = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers)
     assert dist == exp_dist
     assert p_not_in_common == pnc
+    assert result.dist == exp_dist
+    assert result.dist_low == None
+    assert result.dist_high == None
+    assert result.p_nothing_in_common == pnc
     # return identity instead
     exp_id, exp_idlow,exp_idhigh,pnc = 0.0,0.0,0.0,1.0
-    ident,low,high,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_identity=True, return_ci=True)
-    assert ident == exp_id
-    assert low == exp_idlow
-    assert high == exp_idhigh
-    assert p_not_in_common == pnc
+    result = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_identity=True, return_ci=True)
+    assert result.ani == exp_id
+    assert result.ci_low == exp_idlow
+    assert result.ci_high == exp_idhigh
+    assert result.p_nothing_in_common == pnc
 
 
 def test_containment_to_distance_one():
