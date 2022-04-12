@@ -240,6 +240,300 @@ impl LinearRevIndex {
             linear: self,
         }
     }
+
+    pub fn counter_for_query(&self, query: &KmerMinHash) -> SigCounter {
+        let processed_sigs = AtomicUsize::new(0);
+
+        // TODO: Some(ref_sigs) case
+
+        let search_sigs: Vec<_> = self
+            .sig_files
+            .internal_locations()
+            .map(PathBuf::from)
+            .collect();
+
+        #[cfg(feature = "parallel")]
+        let sig_iter = search_sigs.par_iter();
+
+        #[cfg(not(feature = "parallel"))]
+        let sig_iter = search_sigs.iter();
+
+        let counters = sig_iter.enumerate().filter_map(|(dataset_id, filename)| {
+            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+            if i % 1000 == 0 {
+                info!("Processed {} reference sigs", i);
+            }
+
+            let search_sig = if let Some(storage) = &self.storage {
+                let sig_data = storage
+                    .load(
+                        filename
+                            .to_str()
+                            .unwrap_or_else(|| panic!("error converting path {:?}", filename)),
+                    )
+                    .unwrap_or_else(|_| panic!("error loading {:?}", filename));
+
+                Signature::from_reader(sig_data.as_slice())
+            } else {
+                Signature::from_path(&filename)
+            }
+            .unwrap_or_else(|_| panic!("Error processing {:?}", filename))
+            .swap_remove(0);
+
+            let mut search_mh = None;
+            if let Some(Sketch::MinHash(mh)) = search_sig.select_sketch(&self.template) {
+                search_mh = Some(mh);
+            };
+            let search_mh = search_mh.expect("Couldn't find a compatible MinHash");
+
+            let (large_mh, small_mh) = if query.size() > search_mh.size() {
+                (query, search_mh)
+            } else {
+                (search_mh, query)
+            };
+
+            let (size, _) = small_mh
+                .intersection_size(large_mh)
+                .unwrap_or_else(|_| panic!("error computing intersection for {:?}", filename));
+
+            if size == 0 {
+                None
+            } else {
+                let mut counter: SigCounter = Default::default();
+                counter[&(dataset_id as u64)] += size as usize;
+                Some(counter)
+            }
+        });
+
+        let reduce_counters = |mut a: SigCounter, b: SigCounter| {
+            a.extend(&b);
+            a
+        };
+
+        #[cfg(feature = "parallel")]
+        let counter = counters.reduce(|| SigCounter::new(), reduce_counters);
+
+        #[cfg(not(feature = "parallel"))]
+        let counter = counters.fold(SigCounter::new(), reduce_counters);
+
+        counter
+    }
+
+    pub fn search(
+        &self,
+        counter: SigCounter,
+        similarity: bool,
+        threshold: usize,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+        let mut matches = vec![];
+        if similarity {
+            unimplemented!("TODO: threshold correction")
+        }
+
+        for (dataset_id, size) in counter.most_common() {
+            if size >= threshold {
+                matches.push(
+                    self.sig_files[dataset_id as usize]
+                        .internal_location()
+                        .to_str()
+                        .unwrap()
+                        .into(),
+                );
+            } else {
+                break;
+            };
+        }
+        Ok(matches)
+    }
+
+    fn gather_round(
+        &self,
+        dataset_id: u64,
+        match_size: usize,
+        query: &KmerMinHash,
+        round: usize,
+    ) -> Result<GatherResult, Error> {
+        let match_path = if self.sig_files.is_empty() {
+            PathBuf::new()
+        } else {
+            self.sig_files[dataset_id as usize].internal_location()
+        };
+        let match_sig = self.sig_for_dataset(dataset_id as usize)?;
+        let result = self.stats_for_match(&match_sig, query, match_size, match_path, round)?;
+        Ok(result)
+    }
+
+    fn sig_for_dataset(&self, dataset_id: usize) -> Result<Signature, Error> {
+        let match_path = if self.sig_files.is_empty() {
+            PathBuf::new()
+        } else {
+            self.sig_files[dataset_id as usize].internal_location()
+        };
+
+        let match_sig = if let Some(refsigs) = &self.ref_sigs {
+            refsigs[dataset_id as usize].clone()
+        } else {
+            let mut sig = if let Some(storage) = &self.storage {
+                let sig_data = storage
+                    .load(
+                        match_path
+                            .to_str()
+                            .unwrap_or_else(|| panic!("error converting path {:?}", match_path)),
+                    )
+                    .unwrap_or_else(|_| panic!("error loading {:?}", match_path));
+                Signature::from_reader(sig_data.as_slice())?
+            } else {
+                Signature::from_path(&match_path)?
+            };
+            // TODO: remove swap_remove
+            sig.swap_remove(0)
+        };
+        Ok(match_sig)
+    }
+
+    fn stats_for_match(
+        &self,
+        match_sig: &Signature,
+        query: &KmerMinHash,
+        match_size: usize,
+        match_path: PathBuf,
+        gather_result_rank: usize,
+    ) -> Result<GatherResult, Error> {
+        let mut match_mh = None;
+        if let Some(Sketch::MinHash(mh)) = match_sig.select_sketch(&self.template) {
+            match_mh = Some(mh);
+        }
+        let match_mh = match_mh.expect("Couldn't find a compatible MinHash");
+
+        // Calculate stats
+        let f_orig_query = match_size as f64 / query.size() as f64;
+        let f_match = match_size as f64 / match_mh.size() as f64;
+        let filename = match_path.to_str().unwrap().into();
+        let name = match_sig.name();
+        let unique_intersect_bp = match_mh.scaled() as usize * match_size;
+
+        let (intersect_orig, _) = match_mh.intersection_size(query)?;
+        let intersect_bp = (match_mh.scaled() as u64 * intersect_orig) as usize;
+
+        let f_unique_to_query = intersect_orig as f64 / query.size() as f64;
+        let match_ = match_sig.clone();
+
+        // TODO: all of these
+        let f_unique_weighted = 0.;
+        let average_abund = 0;
+        let median_abund = 0;
+        let std_abund = 0;
+        let md5 = "".into();
+        let f_match_orig = 0.;
+        let remaining_bp = 0;
+
+        Ok(GatherResult {
+            intersect_bp,
+            f_orig_query,
+            f_match,
+            f_unique_to_query,
+            f_unique_weighted,
+            average_abund,
+            median_abund,
+            std_abund,
+            filename,
+            name,
+            md5,
+            match_,
+            f_match_orig,
+            unique_intersect_bp,
+            gather_result_rank,
+            remaining_bp,
+        })
+    }
+
+    pub fn gather(
+        &self,
+        mut counter: SigCounter,
+        threshold: usize,
+        query: &KmerMinHash,
+    ) -> Result<Vec<GatherResult>, Box<dyn std::error::Error>> {
+        let mut match_size = usize::max_value();
+        let mut matches = vec![];
+
+        while match_size > threshold && !counter.is_empty() {
+            let (dataset_id, size) = counter.most_common()[0];
+            if threshold == 0 && size == 0 {
+                break;
+            }
+
+            match_size = if size >= threshold {
+                size
+            } else {
+                break;
+            };
+
+            let result = self.gather_round(dataset_id, match_size, query, matches.len())?;
+
+            // Prepare counter for finding the next match by decrementing
+            // all hashes found in the current match in other datasets
+            // TODO: maybe par_iter?
+            let mut to_remove: HashSet<u64> = Default::default();
+            to_remove.insert(dataset_id);
+
+            for (dataset, value) in counter.iter_mut() {
+                let dataset_sig = self.sig_for_dataset(*dataset as usize)?;
+                let mut match_mh = None;
+                if let Some(Sketch::MinHash(mh)) = dataset_sig.select_sketch(&self.template) {
+                    match_mh = Some(mh);
+                }
+                let match_mh = match_mh.expect("Couldn't find a compatible MinHash");
+
+                let (intersection, _) = query.intersection_size(match_mh)?;
+                if intersection as usize > *value {
+                    to_remove.insert(*dataset);
+                } else {
+                    *value -= intersection as usize;
+                };
+            }
+            to_remove.iter().for_each(|dataset_id| {
+                counter.remove(&dataset_id);
+            });
+            matches.push(result);
+        }
+        Ok(matches)
+    }
+}
+
+impl<'a> Index<'a> for LinearRevIndex {
+    type Item = Signature;
+
+    fn insert(&mut self, _node: Self::Item) -> Result<(), Error> {
+        unimplemented!()
+    }
+
+    fn save<P: AsRef<Path>>(&self, _path: P) -> Result<(), Error> {
+        unimplemented!()
+    }
+
+    fn load<P: AsRef<Path>>(_path: P) -> Result<(), Error> {
+        unimplemented!()
+    }
+
+    fn len(&self) -> usize {
+        if let Some(refs) = &self.ref_sigs {
+            refs.len()
+        } else {
+            self.sig_files.len()
+        }
+    }
+
+    fn signatures(&self) -> Vec<Self::Item> {
+        if let Some(ref sigs) = self.ref_sigs {
+            sigs.to_vec()
+        } else {
+            unimplemented!()
+        }
+    }
+
+    fn signature_refs(&self) -> Vec<&Self::Item> {
+        unimplemented!()
+    }
 }
 
 impl RevIndex {
@@ -401,31 +695,22 @@ impl RevIndex {
         }
     }
 
+    pub fn counter_for_query(&self, query: &KmerMinHash) -> SigCounter {
+        query
+            .iter_mins()
+            .filter_map(|hash| self.hash_to_color.get(hash))
+            .flat_map(|color| self.colors.indices(color))
+            .cloned()
+            .collect()
+    }
+
     pub fn search(
         &self,
         counter: SigCounter,
         similarity: bool,
         threshold: usize,
     ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-        let mut matches = vec![];
-        if similarity {
-            unimplemented!("TODO: threshold correction")
-        }
-
-        for (dataset_id, size) in counter.most_common() {
-            if size >= threshold {
-                matches.push(
-                    self.linear.sig_files[dataset_id as usize]
-                        .internal_location()
-                        .to_str()
-                        .unwrap()
-                        .into(),
-                );
-            } else {
-                break;
-            };
-        }
-        Ok(matches)
+        self.linear.search(counter, similarity, threshold)
     }
 
     pub fn gather(
@@ -440,107 +725,26 @@ impl RevIndex {
         while match_size > threshold && !counter.is_empty() {
             let (dataset_id, size) = counter.most_common()[0];
             match_size = if size >= threshold { size } else { break };
-
-            let match_path = if self.linear.sig_files.is_empty() {
-                PathBuf::new()
-            } else {
-                self.linear.sig_files[dataset_id as usize].internal_location()
-            };
-
-            let ref_match;
-            let match_sig = if let Some(refsigs) = &self.linear.ref_sigs {
-                &refsigs[dataset_id as usize]
-            } else {
-                let mut sig = if let Some(storage) = &self.linear.storage {
-                    let sig_data =
-                        storage
-                            .load(match_path.to_str().unwrap_or_else(|| {
-                                panic!("error converting path {:?}", match_path)
-                            }))
-                            .unwrap_or_else(|_| panic!("error loading {:?}", match_path));
-                    Signature::from_reader(sig_data.as_slice())?
-                } else {
-                    Signature::from_path(&match_path)?
-                };
-                // TODO: remove swap_remove
-                ref_match = sig.swap_remove(0);
-                &ref_match
-            };
-
-            let mut match_mh = None;
-            if let Some(Sketch::MinHash(mh)) = match_sig.select_sketch(&self.linear.template) {
-                match_mh = Some(mh);
-            }
-            let match_mh = match_mh.expect("Couldn't find a compatible MinHash");
-
-            // Calculate stats
-            let f_orig_query = match_size as f64 / query.size() as f64;
-            let f_match = match_size as f64 / match_mh.size() as f64;
-            let filename = match_path.to_str().unwrap().into();
-            let name = match_sig.name();
-            let unique_intersect_bp = match_mh.scaled() as usize * match_size;
-            let gather_result_rank = matches.len();
-
-            let (intersect_orig, _) = match_mh.intersection_size(query)?;
-            let intersect_bp = (match_mh.scaled() as u64 * intersect_orig) as usize;
-
-            let f_unique_to_query = intersect_orig as f64 / query.size() as f64;
-            let match_ = match_sig.clone();
-
-            // TODO: all of these
-            let f_unique_weighted = 0.;
-            let average_abund = 0;
-            let median_abund = 0;
-            let std_abund = 0;
-            let md5 = "".into();
-            let f_match_orig = 0.;
-            let remaining_bp = 0;
-
-            let result = GatherResult {
-                intersect_bp,
-                f_orig_query,
-                f_match,
-                f_unique_to_query,
-                f_unique_weighted,
-                average_abund,
-                median_abund,
-                std_abund,
-                filename,
-                name,
-                md5,
-                match_,
-                f_match_orig,
-                unique_intersect_bp,
-                gather_result_rank,
-                remaining_bp,
-            };
-            matches.push(result);
-
-            // Prepare counter for finding the next match by decrementing
-            // all hashes found in the current match in other datasets
-            for hash in match_mh.iter_mins() {
-                if let Some(color) = self.hash_to_color.get(hash) {
-                    for dataset in self.colors.indices(color) {
-                        counter.entry(*dataset).and_modify(|e| {
-                            if *e > 0 {
-                                *e -= 1
-                            }
-                        });
+            let result = self
+                .linear
+                .gather_round(dataset_id, match_size, query, matches.len())?;
+            if let Some(Sketch::MinHash(match_mh)) =
+                result.match_.select_sketch(&self.linear.template)
+            {
+                // Prepare counter for finding the next match by decrementing
+                // all hashes found in the current match in other datasets
+                for hash in match_mh.iter_mins() {
+                    if let Some(color) = self.hash_to_color.get(hash) {
+                        counter.subtract(self.colors.indices(color).cloned());
                     }
                 }
+                counter.remove(&dataset_id);
+                matches.push(result);
+            } else {
+                unimplemented!()
             }
-            counter.remove(&dataset_id);
         }
         Ok(matches)
-    }
-
-    pub fn counter_for_query(&self, query: &KmerMinHash) -> SigCounter {
-        query
-            .iter_mins()
-            .filter_map(|hash| self.hash_to_color.get(hash))
-            .flat_map(|color| self.colors.indices(color))
-            .cloned()
-            .collect()
     }
 
     pub fn template(&self) -> Sketch {
@@ -646,7 +850,7 @@ impl RevIndex {
     }
 }
 
-#[derive(CopyGetters, Getters, Setters, Serialize, Deserialize, Debug)]
+#[derive(CopyGetters, Getters, Setters, Serialize, Deserialize, Debug, PartialEq)]
 pub struct GatherResult {
     #[getset(get_copy = "pub")]
     intersect_bp: usize,
@@ -791,8 +995,32 @@ mod test {
         let index = RevIndex::from_zipstorage(storage, &template, 0, None, false)
             .expect("error building from ziptorage");
 
-        // TODO: search too
-
         assert_eq!(index.colors.len(), 3);
+
+        let query_sig = Signature::from_path(
+            "../../tests/test-data/prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
+        )
+        .expect("Error processing query")
+        .swap_remove(0);
+        let mut query_mh = None;
+        if let Some(Sketch::MinHash(mh)) = query_sig.select_sketch(&template) {
+            query_mh = Some(mh);
+        }
+        let query_mh = query_mh.expect("Couldn't find a compatible MinHash");
+
+        let counter_rev = index.counter_for_query(query_mh);
+        let counter_lin = index.linear.counter_for_query(query_mh);
+
+        let results_rev = index.search(counter_rev, false, 0).unwrap();
+        let results_linear = index.linear.search(counter_lin, false, 0).unwrap();
+        assert_eq!(results_rev, results_linear);
+
+        let counter_rev = index.counter_for_query(query_mh);
+        let counter_lin = index.linear.counter_for_query(query_mh);
+
+        let results_rev = index.gather(counter_rev, 0, query_mh).unwrap();
+        let results_linear = index.linear.gather(counter_lin, 0, query_mh).unwrap();
+        assert_eq!(results_rev.len(), 1);
+        assert_eq!(results_rev, results_linear);
     }
 }
