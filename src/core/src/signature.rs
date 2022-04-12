@@ -2,7 +2,6 @@
 //!
 //! A signature is a collection of sketches for a genomic dataset.
 
-use std::collections::VecDeque;
 use std::fs::File;
 use std::io;
 use std::iter::Iterator;
@@ -170,7 +169,7 @@ pub struct SeqToHashes {
     is_protein: bool,
     hash_function: HashFunctions,
     seed: u64,
-    hashes_buffer: VecDeque<u64>,
+    hashes_buffer: Vec<u64>,
 
     dna_configured: bool,
     dna_rc: Vec<u8>,
@@ -180,6 +179,7 @@ pub struct SeqToHashes {
 
     prot_configured: bool,
     aa_seq: Vec<u8>,
+    translate_iter_step: usize,
 }
 
 impl SeqToHashes {
@@ -215,7 +215,7 @@ impl SeqToHashes {
             is_protein,
             hash_function,
             seed,
-            hashes_buffer: VecDeque::with_capacity(1000),
+            hashes_buffer: Vec::with_capacity(1000),
             dna_configured: false,
             dna_rc: Vec::with_capacity(1000),
             dna_ksize: 0,
@@ -223,6 +223,7 @@ impl SeqToHashes {
             dna_last_position_check: 0,
             prot_configured: false,
             aa_seq: Vec::new(),
+            translate_iter_step: 0,
         }
     }
 }
@@ -291,18 +292,17 @@ impl Iterator for SeqToHashes {
                     let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed);
                     self.kmer_index += 1;
                     Some(Ok(hash))
-                } else if self.hashes_buffer.is_empty() {
+                } else if self.hashes_buffer.is_empty() && self.translate_iter_step == 0 {
                     // Processing protein by translating DNA
                     // TODO: make it a real iterator not a buffer
 
-                    // Three frames
-                    for i in 0..3 {
+                    for frame_number in 0..3 {
                         let substr: Vec<u8> = self
                             .sequence
                             .iter()
                             .cloned()
-                            .skip(i)
-                            .take(self.sequence.len() - i)
+                            .skip(frame_number)
+                            .take(self.sequence.len() - frame_number)
                             .collect();
 
                         let aa = to_aa(
@@ -314,15 +314,15 @@ impl Iterator for SeqToHashes {
 
                         aa.windows(self.k_size as usize).for_each(|n| {
                             let hash = crate::_hash_murmur(n, self.seed);
-                            self.hashes_buffer.push_back(hash);
+                            self.hashes_buffer.push(hash);
                         });
 
                         let rc_substr: Vec<u8> = self
                             .dna_rc
                             .iter()
                             .cloned()
-                            .skip(i)
-                            .take(self.dna_rc.len() - i)
+                            .skip(frame_number)
+                            .take(self.dna_rc.len() - frame_number)
                             .collect();
                         let aa_rc = to_aa(
                             &rc_substr,
@@ -333,14 +333,20 @@ impl Iterator for SeqToHashes {
 
                         aa_rc.windows(self.k_size as usize).for_each(|n| {
                             let hash = crate::_hash_murmur(n, self.seed);
-                            self.hashes_buffer.push_back(hash);
+                            self.hashes_buffer.push(hash);
                         });
                     }
-                    self.kmer_index = self.max_index;
-                    Some(Ok(self.hashes_buffer.remove(0).unwrap()))
+                    Some(Ok(0))
                 } else {
-                    let first_element: u64 = self.hashes_buffer.pop_front().unwrap();
-                    Some(Ok(first_element))
+                    if self.translate_iter_step == self.hashes_buffer.len() {
+                        self.hashes_buffer.clear();
+                        self.kmer_index = self.max_index;
+                        return Some(Ok(0));
+                    } else {
+                        let curr_idx = self.translate_iter_step;
+                        self.translate_iter_step += 1;
+                        return Some(Ok(self.hashes_buffer[curr_idx]));
+                    }
                 }
             } else {
                 // Processing protein
