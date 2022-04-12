@@ -631,20 +631,10 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         else:
             conditions = ""
 
-        c.execute(f"SELECT COUNT(*) FROM sketches {conditions}", values)
-        count, = c.fetchone()
-
-        # @CTB do we need to pay attention to picklist here?
-        # @CTB yes - we don't do prefix checking, we do 'like' in SQL.
-        # e.g. check ident.
-        #
-        # we can generate manifest and use 'picklist.matches_manifest_row'
-        # on rows...? basically is there a place where this will be
-        # different / can we find it and test it :grin:
-        # count = 0
-        # for row in self.rows:
-        #    if picklist.matches_manifest_row(row):
-        #       count += 1
+        count = 0
+        for row in self.rows:
+            if picklist is None or picklist.matches_manifest_row(row):
+               count += 1
         return count
 
     def _select_signatures(self, c):
@@ -680,7 +670,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
             picklist = select_d.get('picklist')
 
             # support picklists!
-            if picklist is not None:
+            if picklist is not None and 0:
                 c.execute("DROP TABLE IF EXISTS pickset")
                 c.execute("CREATE TEMPORARY TABLE pickset (sketch_id INTEGER)")
 
@@ -721,9 +711,8 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         if picklist is not None:
             debug_literal("sqlite manifest: iterating through picklist")
             for row in new_mf.rows:
-                does_match = picklist.matches_manifest_row(row)
-                if not does_match:
-                    assert 0
+                if picklist:
+                    _ = picklist.matches_manifest_row(row)
 
         return new_mf
 
@@ -778,7 +767,8 @@ class SqliteCollectionManifest(BaseCollectionManifest):
                        md5=md5sum, internal_location=iloc,
                        moltype=moltype, md5short=md5sum[:8],
                        _id=_id)
-            yield row
+            if picklist is None or picklist.matches_manifest_row(row):
+                yield row
 
     def filter_rows(self, row_filter_fn):
         """Create a new manifest filtered through row_filter_fn.
@@ -808,6 +798,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         else:
             conditions = ""
 
+        # @CTB check picklist?
         c1.execute(f"""
         SELECT DISTINCT internal_location FROM sketches {conditions}
         """, values)
