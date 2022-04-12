@@ -59,24 +59,6 @@ MAX_SQLITE_INT = 2 ** 63 - 1
 convert_hash_to = lambda x: BitArray(uint=x, length=64).int if x > MAX_SQLITE_INT else x
 convert_hash_from = lambda x: BitArray(int=x, length=64).uint if x < 0 else x
 
-picklist_transforms = dict(
-    name=lambda x: x,
-    ident=lambda x: x + ' %',
-    identprefix=lambda x: x + '%',
-    md5short=lambda x: x[:8] + '%',
-    md5prefix8=lambda x: x[:8] + '%',
-    md5=lambda x: x,
-    )
-
-picklist_selects = dict(
-    name='INSERT INTO pickset SELECT id FROM sketches WHERE name=?',
-    ident='INSERT INTO pickset SELECT id FROM sketches WHERE name LIKE ?',
-    identprefix='INSERT INTO pickset SELECT id FROM sketches WHERE name LIKE ?',
-    md5short='INSERT INTO pickset SELECT id FROM sketches WHERE md5sum LIKE ?',
-    md5prefix8='INSERT INTO pickset SELECT id FROM sketches WHERE md5sum LIKE ?',
-    md5='INSERT INTO pickset SELECT id FROM sketches WHERE md5sum=?',
-    )
-
 
 # @CTB write tests that cross-product the various types.
 def load_sqlite_file(filename, *, request_manifest=False):
@@ -668,28 +650,6 @@ class SqliteCollectionManifest(BaseCollectionManifest):
                 conditions.append(f"moltype = '{moltype}'")
 
             picklist = select_d.get('picklist')
-
-            # support picklists!
-            if picklist is not None and 0:
-                c.execute("DROP TABLE IF EXISTS pickset")
-                c.execute("CREATE TEMPORARY TABLE pickset (sketch_id INTEGER)")
-
-                transform = picklist_transforms[picklist.coltype]
-                sql_stmt = picklist_selects[picklist.coltype]
-
-                vals = [ (transform(v),) for v in picklist.pickset ]
-                debug_literal(f"sqlite manifest: creating sql pickset with {picklist.coltype}")
-                c.executemany(sql_stmt, vals)
-                debug_literal("sqlite manifest: done creating pickset!")
-
-                if picklist.pickstyle == PickStyle.INCLUDE:
-                    conditions.append("""
-                    sketches.id IN (SELECT sketch_id FROM pickset)
-                    """)
-                elif picklist.pickstyle == PickStyle.EXCLUDE:
-                    conditions.append("""
-                    sketches.id NOT IN (SELECT sketch_id FROM pickset)
-                    """)
 
         return conditions, values, picklist
 
