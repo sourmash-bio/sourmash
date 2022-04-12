@@ -37,6 +37,7 @@ import os
 import sqlite3
 from collections import Counter, defaultdict
 from collections.abc import Mapping
+import itertools
 
 from bitstring import BitArray
 
@@ -522,21 +523,48 @@ class SqliteIndex(Index):
 
 
 class SqliteCollectionManifest(BaseCollectionManifest):
+    """
+    A SQLite-based manifest, used both for SqliteIndex and as a standalone
+    manifest class.
+
+    This class serves two purposes:
+    * first, it is a fast, on-disk manifest that can be used in place of
+      CollectionManifest.
+    * second, it can be included within a SqliteIndex (which stores hashes
+      too). In this case, however, new entries must be inserted by SqliteIndex
+      rather than directly in this class.
+
+    In the latter case, the SqliteCollectionManifest is created with
+    managed_by_index set to True.
+    """
     def __init__(self, conn, *, selection_dict=None, managed_by_index=False):
         """
         Here, 'conn' should already be connected and configured.
+
+        Use 'create(filename)' to create a new database.
+
+        Use 'create_from_manifest(filename, manifest) to create a new db
+        from an existing manifest object.
         """
         assert conn is not None
         self.conn = conn
         self.selection_dict = selection_dict
         self.managed_by_index = managed_by_index
+        self._num_rows = None
 
     @classmethod
     def create(cls, filename):
+        "Connect to 'filename' and create the tables as a standalone manifest."
         conn = sqlite3.connect(filename)
         cursor = conn.cursor()
         cls._create_table(cursor)
         return cls(conn)
+
+    @classmethod
+    def create_from_manifest(cls, dbfile, manifest, *, append=False):
+        "Create a new sqlite manifest from an existing manifest object."
+        return cls._create_manifest_from_rows(manifest.rows, location=dbfile,
+                                              append=append)
 
     @classmethod
     def _create_table(cls, cursor):
@@ -573,6 +601,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         """)
 
     def _insert_row(self, cursor, row, *, call_is_from_index=False):
+        "Insert a new manifest row."
         # check - is this manifest managed by SqliteIndex?
         if self.managed_by_index and not call_is_from_index:
             raise Exception("must use SqliteIndex.insert to add to this manifest")
@@ -594,30 +623,38 @@ class SqliteCollectionManifest(BaseCollectionManifest):
          row['with_abundance'],
          row['internal_location']))
 
-    @classmethod
-    def create_from_manifest(cls, dbfile, manifest, *, append=False):
-        return cls._create_manifest_from_rows(manifest.rows, location=dbfile,
-                                              append=append)
+        self._num_rows = None   # reset cache
 
     def __bool__(self):
-        return bool(len(self))
+        "Is this manifest empty?"
+        if self._num_rows is not None:
+            print('ZZZ', self._num_rows)
+            return bool(self._num_rows)
+
+        print('FOO')
+        try:
+            next(iter(self.rows))
+            return True
+        except StopIteration:
+            return False
 
     def __eq__(self, other):
-        return list(self.rows) == list(other.rows)
+        "Check equality on a row-by-row basis. May fail on out-of-order rows."
+        # @CTB do we need to worry about off-label values like _id?
+        for (a, b) in itertools.zip_longest(self.rows, other.rows):
+            if a != b:
+                return False
+        return True
 
     def __len__(self):
-        c = self.conn.cursor()
-        conditions, values, picklist = self._select_signatures(c)
-        if conditions:
-            conditions = conditions = "WHERE " + " AND ".join(conditions)
-        else:
-            conditions = ""
+        "Number of rows."
 
-        count = 0
-        for row in self.rows:
-            if picklist is None or picklist.matches_manifest_row(row):
-               count += 1
-        return count
+        if self._num_rows is not None:
+            return self._num_rows
+
+        # self.rows is a generator, so can't use 'len'
+        self._num_rows = sum(1 for _ in self.rows)
+        return self._num_rows
 
     def _select_signatures(self, c):
         """
@@ -654,6 +691,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         return conditions, values, picklist
 
     def select_to_manifest(self, **kwargs):
+        "Create a new SqliteCollectionManifest with the given select args."
         # Pass along all the selection kwargs to a new instance
         if self.selection_dict:
             debug_literal("sqlite manifest: merging selection dicts")
@@ -667,16 +705,17 @@ class SqliteCollectionManifest(BaseCollectionManifest):
             kwargs = d
 
         new_mf = SqliteCollectionManifest(self.conn, selection_dict=kwargs)
+
+        # if picklist, make sure we fill in.
         picklist = kwargs.get('picklist')
         if picklist is not None:
             debug_literal("sqlite manifest: iterating through picklist")
-            for row in new_mf.rows:
-                if picklist:
-                    _ = picklist.matches_manifest_row(row)
+            _ = len(self)       # this forces iteration through rows.
 
         return new_mf
 
     def _run_select(self, c):
+        "Run the actual 'select' on sketches."
         conditions, values, picklist = self._select_signatures(c)
         if conditions:
             conditions = conditions = "WHERE " + " AND ".join(conditions)
@@ -692,7 +731,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
     def _extract_manifest(self):
         """
-        Generate a CollectionManifest dynamically from the SQL database.
+        Generate a regular CollectionManifest object.
         """
         manifest_list = []
         for row in self.rows:
@@ -704,6 +743,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
     @property
     def rows(self):
+        "Return rows that match the selection."
         c1 = self.conn.cursor()
 
         conditions, values, picklist = self._select_signatures(c1)
