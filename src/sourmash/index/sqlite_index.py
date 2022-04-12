@@ -575,7 +575,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         Note: do NOT catch exceptions here, so this passes through load excs.
         Note: ignores 'include_signature'.
 
-        # @CTB revisit create names...
+        # @CTB revisit create method names...
         """
         def rows_iter():
             for ss, location in locations_iter:
@@ -647,10 +647,8 @@ class SqliteCollectionManifest(BaseCollectionManifest):
     def __bool__(self):
         "Is this manifest empty?"
         if self._num_rows is not None:
-            print('ZZZ', self._num_rows)
             return bool(self._num_rows)
 
-        print('FOO')
         try:
             next(iter(self.rows))
             return True
@@ -668,6 +666,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
     def __len__(self):
         "Number of rows."
 
+        # can we use cached value?
         if self._num_rows is not None:
             return self._num_rows
 
@@ -725,7 +724,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
         new_mf = SqliteCollectionManifest(self.conn, selection_dict=kwargs)
 
-        # if picklist, make sure we fill in.
+        # if picklist, make sure we fill in 'found'.
         picklist = kwargs.get('picklist')
         if picklist is not None:
             debug_literal("sqlite manifest: iterating through picklist")
@@ -813,7 +812,6 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
     def __contains__(self, ss):
         "Check to see if signature 'ss' is in this manifest."
-        # @CTB check picklist?
         md5 = ss.md5sum()
 
         c = self.conn.cursor()
