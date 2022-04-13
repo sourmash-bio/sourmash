@@ -7,7 +7,7 @@ import pytest
 import sourmash_tst_utils as utils
 
 import sourmash
-from sourmash.manifest import CollectionManifest
+from sourmash.manifest import BaseCollectionManifest, CollectionManifest
 from sourmash.index.sqlite_index import SqliteCollectionManifest
 
 
@@ -65,6 +65,11 @@ def test_manifest_rows(manifest_obj):
     rows = list(manifest_obj.rows)
     assert len(rows) == 8
 
+    required_keys = set(BaseCollectionManifest.required_keys)
+    for row in rows:
+        kk = set(row.keys())
+        assert required_keys.issubset(kk)
+
 
 def test_manifest_bool(manifest_obj):
     # check that 'bool' works
@@ -107,15 +112,8 @@ def test_manifest_create_manifest(manifest_obj):
     
     row = manifest_obj.make_manifest_row(ss, 'fiz', include_signature=False)
 
-    all_keys = set(new_row.keys())
-    all_keys.update(row.keys())
-
-    remove_set = set()
-    remove_set.add('_id')
-    remove_set.add('seed')
-
-    all_keys -= remove_set
-    for k in all_keys:
+    required_keys = BaseCollectionManifest.required_keys
+    for k in required_keys:
         assert new_row[k] == row[k], k
 
 
