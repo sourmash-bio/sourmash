@@ -7,7 +7,8 @@ import pytest
 import sourmash_tst_utils as utils
 
 import sourmash
-from sourmash.manifest import CollectionManifest
+from sourmash.manifest import BaseCollectionManifest, CollectionManifest
+
 
 def build_simple_manifest(runtmp):
     # load and return the manifest from prot/all.zip
@@ -51,6 +52,11 @@ def test_manifest_rows(manifest_obj):
     rows = list(manifest_obj.rows)
     assert len(rows) == 8
 
+    required_keys = set(BaseCollectionManifest.required_keys)
+    for row in rows:
+        kk = set(row.keys())
+        assert required_keys.issubset(kk)
+
 
 def test_manifest_bool(manifest_obj):
     # check that 'bool' works
@@ -93,7 +99,9 @@ def test_manifest_create_manifest(manifest_obj):
     
     row = manifest_obj.make_manifest_row(ss, 'fiz', include_signature=False)
 
-    assert new_row == row
+    required_keys = BaseCollectionManifest.required_keys
+    for k in required_keys:
+        assert new_row[k] == row[k], k
 
 
 def test_manifest_select_to_manifest(manifest_obj):
