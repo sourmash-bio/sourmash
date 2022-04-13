@@ -1,10 +1,9 @@
 """
 Utility functions for jaccard/containment --> distance estimates
-From https://github.com/KoslickiLab/mutation-rate-ci-calculator
-https://doi.org/10.1101/2022.01.11.475870
+Equations from: https://github.com/KoslickiLab/mutation-rate-ci-calculator
+Reference: https://doi.org/10.1101/2022.01.11.475870
 """
-from attr import field
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from scipy.optimize import brentq
 from scipy.stats import norm as scipy_norm
 from numpy import sqrt
@@ -12,50 +11,92 @@ from math import log, exp
 
 from .logging import notify
 
+def check_and_round_distance(dist, round_dec=3):
+    if not 0 <= dist <= 1:
+        raise ValueError(f"Error: distance value {dist} is not between 0 and 1!")
+    else:
+        return round(dist, round_dec)
+
+def check_threshold_and_round(val, threshold=1e-3, round_dec=3):
+    # to do: keep count and recommend user lower scaled val
+    exceeds_threshold = False
+    if threshold is not None and val > threshold:
+        notify("WARNING: These sketches may have no hashes in common based on chance alone.")
+        exceeds_threshold = True
+    return round(val, round_dec), exceeds_threshold
+
+def check_jaccard_error_and_round(val, threshold=1e-4, round_dec=3):
+    exceeds_threshold = False
+    if threshold is not None and val > threshold:
+        notify(f"WARNING: Error on Jaccard distance point estimate is too high ({val}).")
+        exceeds_threshold = True
+    return round(val, round_dec), exceeds_threshold
 
 @dataclass
 class ANIResult:
-    """Base class for distance/ANI from k-mer counts."""
+    """Base class for distance/ANI from k-mer containment."""
     dist: float
     p_nothing_in_common: float
-    ani: float = field(init=False)
+    p_threshold: float = 1e-3
+    p_exceeds_threshold: bool = field(init=False)
 
     def __post_init__(self):
-        # check values, get ani from dist, round all
-        if not 0 <= self.dist <= 1:
-            raise ValueError(f"Error: distance value {self.dist} is not between 0 and 1!")
-        self.ani = 1 - self.dist
-        self.dist = round(self.dist, 2)
-        self.ani = round(self.ani, 2)
-        self.p_nothing_in_common = round(self.p_nothing_in_common, 2)
+        # check values, round
+        self.dist = check_and_round_distance(self.dist)
+        self.p_nothing_in_common, self.p_exceeds_threshold = check_threshold_and_round(self.p_nothing_in_common, self.p_threshold)
+
+    @property
+    def ani(self):
+        return 1 - self.dist
 
 
 @dataclass
 class jaccardANIResult(ANIResult):
-    """Class for distance/ANI from jaccard."""
+    """Class for distance/ANI from jaccard (includes jaccard_error)."""
     jaccard_error: float = None
+    je_threshold: float = 1e-4
+
     def __post_init__(self):
-        # need to run base class post init too, but don't want to rewrite here. sort out.
+        # check values, round
+        self.dist = check_and_round_distance(self.dist)
+        self.p_nothing_in_common, self.p_exceeds_threshold = check_threshold_and_round(self.p_nothing_in_common, self.p_threshold)
+        # check jaccard error
         if self.jaccard_error is not None:
-            self.jaccard_error = round(self.jaccard_error, 2)
+            self.jaccard_error, self.je_exceeds_threshold = check_jaccard_error_and_round(self.jaccard_error, self.je_threshold)
+        else:
+            raise ValueError(f"Error: jaccard_error cannot be None.")
 
 
 @dataclass
 class ciANIResult(ANIResult):
-    """Class for distance/ANI from containment: with confidence intervals."""
+    """
+    Class for distance/ANI from containment: with confidence intervals.
+
+    Set CI defaults to None, just in case CI can't be estimated for given sample.
+    """
     dist_low: float = None
     dist_high: float = None
-    ani_low: float = field(init=False)
-    ani_high: float = field(init=False)
 
     def __post_init__(self):
-        # need to run base class post init too, but don't want to rewrite here. sort out.
-        # get ANI confidence intervals from dist CI
-        if self.dist_low is None and self.dist_high is not None:
-            self.dist_low = round(self.dist_low, 2)
-            self.dist_high = round(self.dist_high, 2)
-            self.ani_low = 1 - self.dist_high
-            self.ani_high = 1 - self.dist_low
+        # check values, round
+        self.dist = check_and_round_distance(self.dist)
+        self.p_nothing_in_common, self.p_exceeds_threshold = check_threshold_and_round(self.p_nothing_in_common, self.p_threshold)
+
+        if self.dist_low is not None and self.dist_high is not None:
+            self.dist_low = check_and_round_distance(self.dist_low)
+            self.dist_high = check_and_round_distance(self.dist_high)
+
+    @property
+    def ani_low(self):
+        if self.dist_high is None:
+            return None
+        return 1 - self.dist_high
+
+    @property
+    def ani_high(self):
+        if self.dist_low is None:
+            return None
+        return 1 - self.dist_low
 
 
 def r1_to_q(k, r1):
@@ -102,6 +143,16 @@ def sequence_len_to_n_kmers(sequence_len_bp, ksize):
     n_kmers = sequence_len_bp - (ksize - 1)
     return n_kmers
 
+def handle_seqlen_nkmers(sequence_len_bp, ksize, *, n_unique_kmers=None):
+    if n_unique_kmers is not None:
+        return n_unique_kmers
+    elif sequence_len_bp is None:
+        # both are None, raise ValueError
+        raise ValueError(f"Error: distance estimation requires input of either `sequence_len_bp` or `n_unique_kmers`")
+    else:
+        n_unique_kmers = sequence_len_bp - (ksize - 1)
+        return n_unique_kmers
+
 
 def get_expected_log_probability(n_unique_kmers, ksize, mutation_rate, scaled_fraction):
     """helper function
@@ -127,8 +178,7 @@ def get_exp_probability_nothing_common(
     Arguments: n_unique_kmers, ksize, mutation_rate, scaled
     Returns: float - expected likelihood that nothing is common between sketches
     """
-    if sequence_len_bp and not n_unique_kmers:
-        n_unique_kmers = sequence_len_to_n_kmers(sequence_len_bp, ksize)
+    n_unique_kmers = handle_seqlen_nkmers(sequence_len_bp, ksize, n_unique_kmers=n_unique_kmers)
     f_scaled = 1.0 / float(scaled)
     if mutation_rate == 1.0:
         return 1.0
@@ -154,9 +204,7 @@ def containment_to_distance(
     Containment --> distance CI (one step)
     """
     sol1, sol2, point_estimate = None, None, None
-    if sequence_len_bp and not n_unique_kmers:
-        # to do: check that we have at least one of these, raise valueerror if not
-        n_unique_kmers = sequence_len_to_n_kmers(sequence_len_bp, ksize)
+    n_unique_kmers = handle_seqlen_nkmers(sequence_len_bp, ksize, n_unique_kmers=n_unique_kmers)
     if containment <= 0.0001:
         sol2 = sol1 = point_estimate = 1.0
     elif containment >= 0.9999:
@@ -202,21 +250,19 @@ def containment_to_distance(
             except ValueError as exc:
                 # afaict, this only happens with extremely small test data
                 notify(
-                    "WARNING: Cannot estimate ANI from containment. Do your sketches contain enough hashes?"
+                    "WARNING: Cannot estimate ANI confidence intervals from containment. Do your sketches contain enough hashes?"
                 )
                 notify(str(exc))
-                return ciANIResult(None,None)
+                return ciANIResult(point_estimate, prob_nothing_in_common)
 
     # Do this here, so that we don't need to reconvert distance <--> identity later.
     prob_nothing_in_common = get_exp_probability_nothing_common(
         point_estimate, ksize, scaled, n_unique_kmers=n_unique_kmers
     )
-    if prob_nothing_in_common >= prob_threshold:
-        # TO DO: keep count; suggest user decrease scaled value. If that is unsuccessful, maybe decrease ksize
-        notify(
-            "WARNING: These sketches may have no hashes in common based on chance alone."
-        )
-    return ciANIResult(point_estimate, prob_nothing_in_common, dist_low=sol2, dist_high=sol1)
+    if return_ci:
+        return ciANIResult(point_estimate, prob_nothing_in_common, dist_low=sol2, dist_high=sol1, p_threshold=prob_threshold)
+    else:
+        return ANIResult(point_estimate, prob_nothing_in_common, p_threshold=prob_threshold)
 
 
 def jaccard_to_distance(
@@ -249,9 +295,7 @@ def jaccard_to_distance(
     useful for determining whether scaled is sufficient for these comparisons.
     """
     error_lower_bound = None
-    if sequence_len_bp and not n_unique_kmers:
-        # to do: check that we have at least one of these, raise valueerror if not
-        n_unique_kmers = sequence_len_to_n_kmers(sequence_len_bp, ksize)
+    n_unique_kmers = handle_seqlen_nkmers(sequence_len_bp, ksize, n_unique_kmers=n_unique_kmers)
     if jaccard <= 0.0001:
         point_estimate = 1.0
         error_lower_bound = 0.0
@@ -268,18 +312,7 @@ def jaccard_to_distance(
         error_lower_bound = (
             1.0 * n_unique_kmers * var_n_mut / (n_unique_kmers + exp_n_mut) ** 3
         )
-
-    if error_lower_bound is not None and error_lower_bound > err_threshold:
-        notify(
-            f"WARNING: Error on Jaccard distance point estimate is too high ({error_lower_bound})."
-        )
-
     prob_nothing_in_common = get_exp_probability_nothing_common(
         point_estimate, ksize, scaled, n_unique_kmers=n_unique_kmers
     )
-    if prob_nothing_in_common >= prob_threshold:
-        # to do: keep count and recommend user lower scaled val
-        notify(
-            "WARNING: These sketches may have no hashes in common based on chance alone."
-        )
-    return jaccardANIResult(point_estimate, prob_nothing_in_common, error_lower_bound)
+    return jaccardANIResult(point_estimate, prob_nothing_in_common, jaccard_error=error_lower_bound, p_threshold=prob_threshold, je_threshold=err_threshold)

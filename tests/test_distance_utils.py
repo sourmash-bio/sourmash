@@ -2,15 +2,22 @@
 Tests for distance utils.
 """
 import pytest
-from sourmash.distance_utils import containment_to_distance, get_exp_probability_nothing_common, \
-                                    jaccard_to_distance, sequence_len_to_n_kmers, ANIResult, \
-                                    ciANIResult, jaccardANIResult
+from sourmash.distance_utils import (containment_to_distance, get_exp_probability_nothing_common,
+                                    jaccard_to_distance, sequence_len_to_n_kmers, ANIResult,
+                                    ciANIResult, jaccardANIResult)
 
 def test_aniresult():
     res = ANIResult(0.4, 0.1)
     assert res.dist == 0.4
     assert res.ani == 0.6
     assert res.p_nothing_in_common == 0.1
+    assert res.p_exceeds_threshold ==True
+    # check that they're equivalent
+    res2 = ANIResult(0.4, 0.1)
+    assert res == res2
+    res3 = ANIResult(0.5, 0)
+    assert res != res3
+    assert res3.p_exceeds_threshold ==False
 
 def test_aniresult_bad_distance():
     """
@@ -21,49 +28,43 @@ def test_aniresult_bad_distance():
     print("\n", str(exc.value))
     assert "distance value 1.1 is not between 0 and 1!" in str(exc.value)
     with pytest.raises(Exception) as exc:
-        jaccardANIResult(1.1, 0.1)
+        ANIResult(-0.1, 0.1)
     print("\n", str(exc.value))
-    assert "distance value 1.1 is not between 0 and 1!" in str(exc.value)
+    assert "distance value -0.1 is not between 0 and 1!" in str(exc.value)
+
 
 def test_jaccard_aniresult():
-    res = jaccardANIResult(0.4, 0.1, jaccard_error=0.003)
+    res = jaccardANIResult(0.4, 0.1, jaccard_error=0.03)
     assert res.dist == 0.4
     assert res.ani == 0.6
     assert res.p_nothing_in_common == 0.1
-    assert res.jaccard_error == 0.003
-
-#def test_distance_to_identity():
-#    ident,id_low,id_high = distance_to_identity(0.5,d_low=0.4,d_high=0.6)
-#    assert ident == 0.5
-#    assert id_low == 0.4
-#    assert id_high ==0.6
+    assert res.jaccard_error == 0.03
+    assert res.p_exceeds_threshold ==True
+    assert res.je_exceeds_threshold ==True
+    res2 = jaccardANIResult(0.4, 0.1, jaccard_error=0.03, je_threshold=0.1)
+    assert res2.je_exceeds_threshold ==False
 
 
-#def test_distance_to_identity_just_point_estimate():
-#    ident = distance_to_identity(0.4)
-#    assert ident == 0.6
+def test_jaccard_aniresult_nojaccarderror():
+    #jaccard error is None
+    with pytest.raises(Exception) as exc:
+        jaccardANIResult(0.4, 0.1, None)
+    print("\n", str(exc.value))
+    assert "Error: jaccard_error cannot be None." in str(exc.value)
 
 
-#def test_distance_to_identity_fail_distance():
-#    """
-#    Fail if distance is not between 0 and 1.
-#    """
-#    with pytest.raises(Exception) as exc:
-#        ident,id_low,id_high = distance_to_identity(1.1,d_low=0.4,d_high=0.6)
-#    assert "distance value 1.1 is not between 0 and 1!" in str(exc.value)
-#    with pytest.raises(Exception) as exc:
-#        ident,id_low,id_high = distance_to_identity(-0.1,d_low=0.4,d_high=0.6)
-#    assert "distance value -0.1 is not between 0 and 1!" in str(exc.value)
-
-
-#def test_distance_to_identity_fail_incorrect_input():
-#    """
-#    Ignore 2nd input, unless put both dist_low and dist_high
-#    """
-#    with pytest.raises(Exception) as exc: 
-#        distance_to_identity(0.4,d_low=0.5)
-#    print("\n", str(exc.value))
-#    assert "Error: `distance_to_identity` expects either one value (distance) or three values" in str(exc.value)
+def test_ci_aniresult():
+    res = ciANIResult(0.4, 0.1, dist_low=0.3,dist_high=0.5)
+    print(res)
+    assert res.dist == 0.4
+    assert res.ani == 0.6
+    assert res.p_nothing_in_common == 0.1
+    assert res.ani_low == 0.5
+    assert res.ani_high == 0.7
+    res2 = ciANIResult(0.4, 0.1, dist_low=0.3,dist_high=0.5)
+    assert res == res2
+    res3 = ciANIResult(0.4, 0.2, dist_low=0.3, dist_high=0.5)
+    assert res != res3
 
 
 def test_containment_to_distance_zero():
@@ -71,30 +72,23 @@ def test_containment_to_distance_zero():
     scaled = 1
     nkmers = 10000
     ksize=21
-    dist,low,high,p_not_in_common= containment_to_distance(contain,ksize,scaled, n_unique_kmers=nkmers, return_ci=True)
-    print("\nDIST:", dist)
-    print("CI:", low, " - ", high)
+    res = containment_to_distance(contain,ksize,scaled, n_unique_kmers=nkmers, return_ci=True)
+    print(res)
     # check results
     exp_dist,exp_low,exp_high,pnc = 1.0,1.0,1.0,1.0
-    assert dist == exp_dist
-    assert low == exp_low
-    assert high == exp_high
-    assert p_not_in_common == pnc
-    # check without returning ci
-    result = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers)
-    assert dist == exp_dist
-    assert p_not_in_common == pnc
-    assert result.dist == exp_dist
-    assert result.dist_low == None
-    assert result.dist_high == None
-    assert result.p_nothing_in_common == pnc
-    # return identity instead
     exp_id, exp_idlow,exp_idhigh,pnc = 0.0,0.0,0.0,1.0
-    result = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_identity=True, return_ci=True)
-    assert result.ani == exp_id
-    assert result.ci_low == exp_idlow
-    assert result.ci_high == exp_idhigh
-    assert result.p_nothing_in_common == pnc
+    assert res.dist == exp_dist
+    assert res.dist_low == exp_low
+    assert res.dist_high == exp_high
+    assert res.p_nothing_in_common == pnc
+    assert res.ani == exp_id
+    assert res.ani_low == exp_idlow
+    assert res.ani_high == exp_idhigh
+    # check without returning ci
+    res = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers)
+    print(res)
+    exp_res = ANIResult(dist=1.0, p_nothing_in_common=1.0, p_threshold=0.001)
+    assert res == exp_res
 
 
 def test_containment_to_distance_one():
@@ -102,26 +96,25 @@ def test_containment_to_distance_one():
     scaled = 1
     nkmers = 10000
     ksize=21
-    dist,low,high,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_ci=True)
-    print("\nDIST:", dist)
-    print("CI:", low, " - ", high)
+    res = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_ci=True)
+    print(res)
+    #print("\nDIST:", res.dist)
+    #print("CI:", res.dist_low, " - ", res.dist_high)
     # check results
     exp_dist, exp_low,exp_high,pnc = 0.0,0.0,0.0,0.0
-    assert dist == exp_dist
-    assert low == exp_low
-    assert high == exp_high
-    assert p_not_in_common == pnc
-    # check without returning ci
-    dist,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers)
-    assert dist == exp_dist
-    assert p_not_in_common == pnc
-    # return identity instead
     exp_id, exp_idlow,exp_idhigh,pnc = 1.0,1.0,1.0,0.0
-    ident,low,high,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_identity=True, return_ci=True)
-    assert ident == exp_id
-    assert low == exp_idlow
-    assert high == exp_idhigh
-    assert p_not_in_common == pnc
+    assert res.dist == exp_dist
+    assert res.dist_low == exp_low
+    assert res.dist_high == exp_high
+    assert res.p_nothing_in_common == pnc
+    assert res.ani == exp_id
+    assert res.ani_low == exp_idlow
+    assert res.ani_high == exp_idhigh
+
+    # check without returning ci
+    res = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers)
+    assert res.dist == exp_dist
+    assert res.p_nothing_in_common == pnc
 
 
 def test_containment_to_distance_scaled1():
