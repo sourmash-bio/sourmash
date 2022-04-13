@@ -15,83 +15,6 @@ import sourmash_tst_utils as utils
 from sourmash_tst_utils import SourmashCommandFailed
 
 
-def test_sqlite_index_search():
-    sig2 = utils.get_test_data('2.fa.sig')
-    sig47 = utils.get_test_data('47.fa.sig')
-    sig63 = utils.get_test_data('63.fa.sig')
-
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
-
-    sqlidx = SqliteIndex.create(":memory:")
-    sqlidx.insert(ss2)
-    sqlidx.insert(ss47)
-    sqlidx.insert(ss63)
-
-    # now, search for sig2
-    sr = sqlidx.search(ss2, threshold=1.0)
-    print([s[1].name for s in sr])
-    assert len(sr) == 1
-    assert sr[0][1] == ss2
-
-    # search for sig47 with lower threshold; search order not guaranteed.
-    sr = sqlidx.search(ss47, threshold=0.1)
-    print([s[1].name for s in sr])
-    assert len(sr) == 2
-    sr.sort(key=lambda x: -x[0])
-    assert sr[0][1] == ss47
-    assert sr[1][1] == ss63
-
-    # search for sig63 with lower threshold; search order not guaranteed.
-    sr = sqlidx.search(ss63, threshold=0.1)
-    print([s[1].name for s in sr])
-    assert len(sr) == 2
-    sr.sort(key=lambda x: -x[0])
-    assert sr[0][1] == ss63
-    assert sr[1][1] == ss47
-
-    # search for sig63 with high threshold => 1 match
-    sr = sqlidx.search(ss63, threshold=0.8)
-    print([s[1].name for s in sr])
-    assert len(sr) == 1
-    sr.sort(key=lambda x: -x[0])
-    assert sr[0][1] == ss63
-
-
-def test_sqlite_index_prefetch():
-    # prefetch does basic things right:
-    sig2 = utils.get_test_data('2.fa.sig')
-    sig47 = utils.get_test_data('47.fa.sig')
-    sig63 = utils.get_test_data('63.fa.sig')
-
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
-
-    sqlidx = SqliteIndex.create(":memory:")
-    sqlidx.insert(ss2)
-    sqlidx.insert(ss47)
-    sqlidx.insert(ss63)
-
-    # search for ss2
-    results = []
-    for result in sqlidx.prefetch(ss2, threshold_bp=0):
-        results.append(result)
-
-    assert len(results) == 1
-    assert results[0].signature == ss2
-
-    # search for ss47 - expect two results
-    results = []
-    for result in sqlidx.prefetch(ss47, threshold_bp=0):
-        results.append(result)
-
-    assert len(results) == 2
-    assert results[0].signature == ss47
-    assert results[1].signature == ss63
-
-
 def test_sqlite_index_prefetch_empty():
     # check that an exception is raised upon for an empty database
     sig2 = utils.get_test_data('2.fa.sig')
@@ -106,31 +29,6 @@ def test_sqlite_index_prefetch_empty():
         next(g)
 
     assert "no signatures to search" in str(e.value)
-
-
-def test_sqlite_index_gather():
-    sig2 = utils.get_test_data('2.fa.sig')
-    sig47 = utils.get_test_data('47.fa.sig')
-    sig63 = utils.get_test_data('63.fa.sig')
-
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
-
-    sqlidx = SqliteIndex.create(":memory:")
-    sqlidx.insert(ss2)
-    sqlidx.insert(ss47)
-    sqlidx.insert(ss63)
-
-    matches = sqlidx.gather(ss2)
-    assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][1] == ss2
-
-    matches = sqlidx.gather(ss47)
-    assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][1] == ss47
 
 
 def test_index_search_subj_scaled_is_lower():
@@ -179,105 +77,6 @@ def test_sqlite_index_save_load(runtmp):
     print([s[1].name for s in sr])
     assert len(sr) == 1
     assert sr[0][1] == ss2
-
-
-def test_sqlite_gather_threshold_1():
-    # test gather() method, in some detail
-    sig2 = load_one_signature(utils.get_test_data('2.fa.sig'), ksize=31)
-    sig47 = load_one_signature(utils.get_test_data('47.fa.sig'), ksize=31)
-    sig63 = load_one_signature(utils.get_test_data('63.fa.sig'), ksize=31)
-
-    sqlidx = SqliteIndex.create(":memory:")
-
-    sqlidx.insert(sig47)
-    sqlidx.insert(sig63)
-    sqlidx.insert(sig2)
-
-    # now construct query signatures with specific numbers of hashes --
-    # note, these signatures all have scaled=1000.
-
-    mins = list(sorted(sig2.minhash.hashes.keys()))
-    new_mh = sig2.minhash.copy_and_clear()
-
-    # query with empty hashes
-    assert not new_mh
-    with pytest.raises(ValueError):
-        sqlidx.gather(SourmashSignature(new_mh))
-
-    # add one hash
-    new_mh.add_hash(mins.pop())
-    assert len(new_mh) == 1
-
-    results = sqlidx.gather(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
-    assert containment == 1.0
-    assert match_sig == sig2
-    assert name == ":memory:"
-
-    # check with a threshold -> should be no results.
-    with pytest.raises(ValueError):
-        sqlidx.gather(SourmashSignature(new_mh), threshold_bp=5000)
-
-    # add three more hashes => length of 4
-    new_mh.add_hash(mins.pop())
-    new_mh.add_hash(mins.pop())
-    new_mh.add_hash(mins.pop())
-    assert len(new_mh) == 4
-
-    results = sqlidx.gather(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
-    assert containment == 1.0
-    assert match_sig == sig2
-    assert name == ":memory:"
-
-    # check with a too-high threshold -> should be no results.
-    with pytest.raises(ValueError):
-        sqlidx.gather(SourmashSignature(new_mh), threshold_bp=5000)
-
-
-def test_sqlite_gather_threshold_5():
-    # test gather() method above threshold
-    sig2 = load_one_signature(utils.get_test_data('2.fa.sig'), ksize=31)
-    sig47 = load_one_signature(utils.get_test_data('47.fa.sig'), ksize=31)
-    sig63 = load_one_signature(utils.get_test_data('63.fa.sig'), ksize=31)
-
-    sqlidx = SqliteIndex.create(":memory:")
-
-    sqlidx.insert(sig47)
-    sqlidx.insert(sig63)
-    sqlidx.insert(sig2)
-
-    # now construct query signatures with specific numbers of hashes --
-    # note, these signatures all have scaled=1000.
-
-    mins = list(sorted(sig2.minhash.hashes.keys()))
-    new_mh = sig2.minhash.copy_and_clear()
-
-    # add five hashes
-    for i in range(5):
-        new_mh.add_hash(mins.pop())
-        new_mh.add_hash(mins.pop())
-        new_mh.add_hash(mins.pop())
-        new_mh.add_hash(mins.pop())
-        new_mh.add_hash(mins.pop())
-
-    # should get a result with no threshold (any match at all is returned)
-    results = sqlidx.gather(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
-    assert containment == 1.0
-    assert match_sig == sig2
-    assert name == ':memory:'
-
-    # now, check with a threshold_bp that should be meet-able.
-    results = sqlidx.gather(SourmashSignature(new_mh), threshold_bp=5000)
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
-    assert containment == 1.0
-    assert match_sig == sig2
-    assert name == ':memory:'
 
 
 def test_sqlite_index_multik_select():
@@ -357,6 +156,7 @@ def test_sqlite_index_moltype_multi_fail():
             sqlidx.insert(ss)
 
     assert "this database can only store scaled values=100" in str(exc)
+
 
 def test_sqlite_index_picklist_select():
     # test select with a picklist
