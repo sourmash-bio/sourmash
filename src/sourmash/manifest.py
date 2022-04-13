@@ -5,6 +5,7 @@ import csv
 import ast
 import os.path
 from abc import abstractmethod
+import itertools
 
 from sourmash.picklist import SignaturePicklist
 
@@ -242,7 +243,14 @@ class CollectionManifest(BaseCollectionManifest):
         return len(self.rows)
 
     def __eq__(self, other):
-        return self.rows == other.rows
+        "Check equality on a row-by-row basis. May fail on out-of-order rows."
+        for (a, b) in itertools.zip_longest(self.rows, other.rows):
+            # ignore non-required keys.
+            for k in self.required_keys:
+                if a[k] != b[k]:
+                    return False
+
+        return True
 
     def _select(self, *, ksize=None, moltype=None, scaled=0, num=0,
                 containment=False, abund=None, picklist=None):

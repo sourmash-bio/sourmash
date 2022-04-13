@@ -636,10 +636,12 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
     def __eq__(self, other):
         "Check equality on a row-by-row basis. May fail on out-of-order rows."
-        # @CTB do we need to worry about off-label values like _id?
         for (a, b) in itertools.zip_longest(self.rows, other.rows):
-            if a != b:
-                return False
+            # ignore non-required keys.
+            for k in self.required_keys:
+                if a[k] != b[k]:
+                    return False
+
         return True
 
     def __len__(self):
