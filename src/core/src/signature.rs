@@ -228,13 +228,21 @@ impl SeqToHashes {
     }
 }
 
+/*
+Iterator that return a kmer hash for all modes except translate.
+In translate mode:
+    - all the frames are processed at once and converted to hashes.
+    - all the hashes are stored in `hashes_buffer`
+    - after processing all the kmers, `translate_iter_step` is incremented
+      per iteration to iterate over all the indeces of the `hashes_buffer`.
+    - the iterator will die once `translate_iter_step` == length(hashes_buffer)
+More info https://github.com/sourmash-bio/sourmash/pull/1946
+*/
+
 impl Iterator for SeqToHashes {
     type Item = Result<u64, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // TODO: Remove the hashes buffer
-        // Priority for flushing the hashes buffer
-
         if (self.kmer_index < self.max_index) || !self.hashes_buffer.is_empty() {
             // Processing DNA or Translated DNA
             if !self.is_protein {
@@ -294,7 +302,7 @@ impl Iterator for SeqToHashes {
                     Some(Ok(hash))
                 } else if self.hashes_buffer.is_empty() && self.translate_iter_step == 0 {
                     // Processing protein by translating DNA
-                    // TODO: make it a real iterator not a buffer
+                    // TODO: Implement iterator over frames instead of hashes_buffer.
 
                     for frame_number in 0..3 {
                         let substr: Vec<u8> = self
