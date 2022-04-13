@@ -3,8 +3,8 @@ Tests for distance utils.
 """
 import pytest
 from sourmash.distance_utils import (containment_to_distance, get_exp_probability_nothing_common,
-                                    jaccard_to_distance, sequence_len_to_n_kmers, ANIResult,
-                                    ciANIResult, jaccardANIResult)
+                                    handle_seqlen_nkmers, jaccard_to_distance,
+                                    ANIResult, ciANIResult, jaccardANIResult)
 
 def test_aniresult():
     res = ANIResult(0.4, 0.1)
@@ -26,11 +26,11 @@ def test_aniresult_bad_distance():
     with pytest.raises(Exception) as exc:
         ANIResult(1.1, 0.1)
     print("\n", str(exc.value))
-    assert "distance value 1.1 is not between 0 and 1!" in str(exc.value)
+    assert "distance value 1.1000 is not between 0 and 1!" in str(exc.value)
     with pytest.raises(Exception) as exc:
         ANIResult(-0.1, 0.1)
     print("\n", str(exc.value))
-    assert "distance value -0.1 is not between 0 and 1!" in str(exc.value)
+    assert "distance value -0.1000 is not between 0 and 1!" in str(exc.value)
 
 
 def test_jaccard_aniresult():
@@ -72,7 +72,7 @@ def test_containment_to_distance_zero():
     scaled = 1
     nkmers = 10000
     ksize=21
-    res = containment_to_distance(contain,ksize,scaled, n_unique_kmers=nkmers, return_ci=True)
+    res = containment_to_distance(contain,ksize,scaled, n_unique_kmers=nkmers, estimate_ci=True)
     print(res)
     # check results
     exp_dist,exp_low,exp_high,pnc = 1.0,1.0,1.0,1.0
@@ -96,11 +96,8 @@ def test_containment_to_distance_one():
     scaled = 1
     nkmers = 10000
     ksize=21
-    res = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_ci=True)
+    res = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,estimate_ci=True)
     print(res)
-    #print("\nDIST:", res.dist)
-    #print("CI:", res.dist_low, " - ", res.dist_high)
-    # check results
     exp_dist, exp_low,exp_high,pnc = 0.0,0.0,0.0,0.0
     exp_id, exp_idlow,exp_idhigh,pnc = 1.0,1.0,1.0,0.0
     assert res.dist == exp_dist
@@ -114,6 +111,7 @@ def test_containment_to_distance_one():
     # check without returning ci
     res = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers)
     assert res.dist == exp_dist
+    assert res.ani == exp_id
     assert res.p_nothing_in_common == pnc
 
 
@@ -122,56 +120,49 @@ def test_containment_to_distance_scaled1():
     scaled = 1
     nkmers = 10000
     ksize=21
-    dist,low,high,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_ci=True)
-    print("\nDIST:", dist)
-    print("CI:", low, " - ", high)
-    print(f"{dist},{low},{high},{p_not_in_common}")
+    res = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,estimate_ci=True)
+    print(res)
     # check results
-    assert (dist,low,high,p_not_in_common) == (0.032468221476108394,0.028709912966405623,0.03647860197289783,0.0)
+    assert res.dist == 0.032
+    assert res.ani == 0.968
+    assert res.dist_low == 0.029
+    assert res.ani_high == 0.971
+    assert res.dist_high == 0.036
+    assert res.ani_low == 0.964
+    assert res.p_nothing_in_common == 0.0
     # without returning ci
-    dist,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers)
-    assert (dist,p_not_in_common) == (0.032468221476108394,0.0)
-    # return identity instead
-    ident,low,high,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_identity=True,return_ci=True)
-    print(f"{ident},{low},{high}")
-    assert (ident,low,high,p_not_in_common) == (0.9675317785238916,0.9635213980271021,0.9712900870335944,0.0)
-    # without returning ci
-    ident,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_identity=True)
-    assert (ident,p_not_in_common) == (0.9675317785238916,0.0)
+    res2 = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers)
+    assert (res2.dist,res2.ani,res2.p_nothing_in_common) == (0.032,0.968,0.0)
+    assert (res2.dist,res2.ani,res2.p_nothing_in_common) == (res.dist, res.ani, res.p_nothing_in_common)
 
 
-def test_containment_to_distance_2():
+def test_containment_to_distance_scaled100():
     contain = 0.1
     scaled = 100
     nkmers = 10000
     ksize=31
-    dist,low,high,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_ci=True)
-    print("\nDIST:", dist)
-    print("CI:", low, " - ", high)
-    print(f"{dist},{low},{high},{p_not_in_common}")
+    res = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,estimate_ci=True)
+    print(res)
     # check results
-    exp_dist, exp_low,exp_high,pnc = 0.07158545548052564,0.05320779238601372,0.09055547672455365,4.3171247410658655e-05
-    assert dist == exp_dist
-    assert low == exp_low
-    assert high == exp_high
-    assert p_not_in_common == pnc
+    assert res.dist == 0.072
+    assert res.dist_low == 0.053
+    assert res.dist_high == 0.091
+    assert res.p_nothing_in_common == 0.0
+    assert res.p_exceeds_threshold == False
 
 
-def test_containment_to_distance_scaled100():
+def test_containment_to_distance_scaled100_2():
     contain = 0.5
     scaled = 100
     nkmers = 10000
     ksize=21
-    dist,low,high,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_ci=True)
-    print("\nDIST:", dist)
-    print("CI:", low, " - ", high)
-    print(f"{dist},{low},{high}")
+    res= containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,estimate_ci=True)
+    print(res)
     # check results
-    exp_dist, exp_low,exp_high,pnc = 0.032468221476108394,0.023712063916639017,0.04309960543965866,1.4995915609979772e-22
-    assert dist == exp_dist
-    assert low == exp_low
-    assert high == exp_high
-    assert pnc == p_not_in_common
+    assert res.dist == 0.032
+    assert res.dist_low == 0.024
+    assert res.dist_high == 0.043
+    assert res.p_exceeds_threshold == False
 
 
 def test_containment_to_distance_k10():
@@ -179,16 +170,13 @@ def test_containment_to_distance_k10():
     scaled = 100
     nkmers = 10000
     ksize=10
-    dist,low,high,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,return_ci=True)
-    print("\nDIST:", dist)
-    print("CI:", low, " - ", high)
-    print(f"{dist},{low},{high},{p_not_in_common}")
+    res = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,estimate_ci=True)
+    print(res)
     # check results
-    exp_dist, exp_low,exp_high,pnc = 0.06696700846319259,0.04982777541057476,0.08745108232411622,1.499591560997956e-22
-    assert dist == exp_dist
-    assert low == exp_low
-    assert high == exp_high
-    assert pnc == p_not_in_common
+    assert res.dist == 0.067
+    assert res.dist_low == 0.050
+    assert res.dist_high == 0.087
+    assert res.p_exceeds_threshold == False
 
 
 def test_containment_to_distance_confidence():
@@ -197,27 +185,21 @@ def test_containment_to_distance_confidence():
     nkmers = 10000
     ksize=31
     confidence=0.99
-    dist,low,high,p_not_in_common = containment_to_distance(contain,ksize,scaled,confidence=confidence,n_unique_kmers=nkmers, return_ci=True)
-    print("\nDIST:", dist)
-    print("CI:", low, " - ", high)
-    print(f"{dist},{low},{high},{p_not_in_common}")
+    res = containment_to_distance(contain,ksize,scaled,confidence=confidence,n_unique_kmers=nkmers, estimate_ci=True)
+    print(res)
     # check results
-    exp_dist, exp_low,exp_high,pnc = 0.07158545548052564,0.04802880300938562,0.09619930040790341,4.3171247410658655e-05
-    assert dist == exp_dist
-    assert low == exp_low
-    assert high == exp_high
-    assert pnc == p_not_in_common
+    assert res.dist == 0.072
+    assert res.dist_low == 0.048
+    assert res.dist_high == 0.096
+    assert res.p_exceeds_threshold == False
     confidence=0.90
-    dist,low,high,p_not_in_common = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,confidence=confidence, return_ci=True)
-    print("\nDIST:", dist)
-    print("CI:", low, " - ", high)
-    print(f"{dist},{low},{high},{p_not_in_common}")
+    res2 = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,confidence=confidence, estimate_ci=True)
+    print(res2)
     # check results
-    exp_dist, exp_low,exp_high,pnc = 0.07158545548052564,0.05599435479247415,0.08758718871990222,4.3171247410658655e-05
-    assert dist == exp_dist
-    assert low == exp_low
-    assert high == exp_high
-    assert pnc == p_not_in_common
+    assert res2.dist == res.dist
+    assert res2.dist_low == 0.056
+    assert res2.dist_high == 0.088
+    assert res.p_exceeds_threshold == False
 
 
 def test_nkmers_to_bp_containment():
@@ -225,18 +207,18 @@ def test_nkmers_to_bp_containment():
     scaled = 100
     bp_len = 10030
     ksize=31
-    nkmers = sequence_len_to_n_kmers(bp_len,ksize)
-    print("nkmers_from_bp:", bp_len)
+    nkmers = handle_seqlen_nkmers(bp_len,ksize)
+    print("nkmers_from_bp:", nkmers)
     confidence=0.99
-    kmer_dist = containment_to_distance(containment,ksize,scaled,confidence=confidence,n_unique_kmers=nkmers,return_ci=True)
-    bp_dist = containment_to_distance(containment,ksize,scaled,confidence=confidence,sequence_len_bp=bp_len,return_ci=True)
-    print(f"\nkDIST: {kmer_dist}")
-    print(f"\nbpDIST:,{bp_dist}")
+    kmer_res = containment_to_distance(containment,ksize,scaled,confidence=confidence,n_unique_kmers=nkmers,estimate_ci=True)
+    bp_res = containment_to_distance(containment,ksize,scaled,confidence=confidence,sequence_len_bp=bp_len,estimate_ci=True)
+    print(f"\nkDIST: {kmer_res}")
+    print(f"\nbpDIST:,{bp_res}")
     # check results
-    assert kmer_dist == (0.07158545548052564, 0.04802880300938562, 0.09619930040790341,4.3171247410658655e-05)
-    assert bp_dist ==  (0.07158545548052564, 0.04802880300938562, 0.09619930040790341,4.3171247410658655e-05)
-    assert kmer_dist==bp_dist
-
+    assert kmer_res==bp_res
+    assert kmer_res.dist == 0.072
+    assert kmer_res.dist_low == 0.048
+    assert kmer_res.dist_high == 0.096
 
 
 def test_jaccard_to_distance_zero():
@@ -244,20 +226,13 @@ def test_jaccard_to_distance_zero():
     scaled = 1
     nkmers = 10000
     ksize=21
-    dist, p_not_in_common, errlb = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
-    print(f"{dist},{p_not_in_common},{errlb}")
+    res= jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
+    print(res)
     # check results
-    exp_dist, pnc,err = 1.0,1.0,0.0
-    assert dist == exp_dist
-    assert p_not_in_common == pnc
-    assert errlb == err
-    # return identity instead
-    exp_id=0.0
-    ident,low,high = jaccard_to_distance(jaccard,ksize,scaled,return_identity=True,n_unique_kmers=nkmers)
-    print(f"{ident},{low},{high}")
-    assert ident == exp_id
-    assert p_not_in_common == pnc
-    assert errlb == err
+    assert res.dist == 1.0
+    assert res.ani == 0.0
+    assert res.p_nothing_in_common == 1.0
+    assert res.jaccard_error == 0.0
 
 
 def test_jaccard_to_distance_one():
@@ -265,46 +240,40 @@ def test_jaccard_to_distance_one():
     scaled = 1
     nkmers = 10000
     ksize=21
-    dist, p_not_in_common, errlb = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
-    print(f"{dist},{p_not_in_common},{errlb}")
+    res= jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
+    print(res)
     # check results
-    exp_dist, pnc,err = 0.0,0.0,0.0
-    assert dist == exp_dist
-    assert p_not_in_common == pnc
-    assert errlb == err
-    # return identity instead
-    exp_id=1.0
-    ident,low,high = jaccard_to_distance(jaccard,ksize,scaled,return_identity=True,n_unique_kmers=nkmers)
-    print(f"{ident},{low},{high}")
-    assert ident == exp_id
-    assert p_not_in_common == pnc
-    assert errlb == err
+    assert res.dist == 0.0
+    assert res.ani == 1.0
+    assert res.p_nothing_in_common == 0.0
+    assert res.jaccard_error == 0.0
 
 
-def test_jaccard_to_distance_scaled1():
+def test_jaccard_to_distance_scaled():
+    # scaled value doesn't impact point estimate or jaccard error, just p_nothing_in_common
     jaccard = 0.5
     scaled = 1
     nkmers = 10000
     ksize=21
-    dist, p_not_in_common, errlb = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
-    print(f"{dist},{p_not_in_common},{errlb}")
+    res = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
+    print(res)
     # check results
-    assert (dist,p_not_in_common,errlb) == (0.019122659390482077, 0.0, 0.00018351337045518042) 
-    # return identity instead
-    ident, p_not_in_common, errlb = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers,return_identity=True)
-    print(f"{ident},{p_not_in_common},{errlb}")
-    assert (ident,p_not_in_common, errlb) == (0.9808773406095179, 0.0, 0.00018351337045518042)
-
-
-def test_jaccard_to_distance_scaled100():
-    jaccard = 0.5
+    assert res.dist == 0.019
+    assert res.ani == 0.981
+    assert res.p_exceeds_threshold == False
+    assert res.jaccard_error == 0.0002
+    assert res.je_exceeds_threshold ==True
     scaled = 100
-    nkmers = 10000
-    ksize=21
-    ident,p_not_in_common, errlb = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers, return_identity=True)
-    print(f"{ident},{p_not_in_common},{errlb}")
-    # check results
-    assert (ident,p_not_in_common, errlb) == (0.9808773406095179, 7.967045858822289e-30, 0.00018351337045518042) 
+    res2 = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
+    print(res2)
+    assert res == res2
+    scaled = 10000
+    res3 = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
+    print(res3)
+    assert res3.dist == res.dist
+    assert res3.jaccard_error == res.jaccard_error
+    assert res3.p_nothing_in_common != res.p_nothing_in_common
+    assert res3.p_exceeds_threshold ==True
 
 
 def test_jaccard_to_distance_k31():
@@ -312,10 +281,15 @@ def test_jaccard_to_distance_k31():
     scaled = 100
     nkmers = 10000
     ksize=31
-    ident,p_not_in_common, errlb = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers, return_identity=True)
-    print(f"{ident},{p_not_in_common},{errlb}")
+    res = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
+    print(res)
     # check results
-    assert (ident,p_not_in_common, errlb) == (0.9870056455892898, 7.967045858822514e-30, 0.00027078924329882424) 
+    assert res.ani == 0.987
+    assert res.p_exceeds_threshold == False
+    assert res.je_exceeds_threshold ==True
+    res2 = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers, err_threshold=0.1)
+    assert res2.ani == res.ani
+    assert res2.je_exceeds_threshold == False
 
 
 def test_jaccard_to_distance_k31_2():
@@ -323,10 +297,12 @@ def test_jaccard_to_distance_k31_2():
     scaled = 100
     nkmers = 10000
     ksize=31
-    ident,p_not_in_common, errlb = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers, return_identity=True)
-    print(f"{ident},{p_not_in_common},{errlb}")
+    res = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
+    print(res)
     # check results
-    assert (ident,p_not_in_common, errlb) == (0.9464928391768298, 1.1587511478551202e-08, 5.588721845727948e-05) 
+    assert res.ani == 0.946
+    assert res.p_exceeds_threshold == False
+    assert res.je_exceeds_threshold == False
 
 
 def test_nkmers_to_bp_jaccard():
@@ -334,16 +310,17 @@ def test_nkmers_to_bp_jaccard():
     scaled = 100
     bp_len = 10030
     ksize=31
-    nkmers = sequence_len_to_n_kmers(bp_len,ksize)
+    nkmers = handle_seqlen_nkmers(bp_len,ksize)
     print("nkmers_from_bp:", nkmers)
-    kmer_dist = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
-    bp_dist = jaccard_to_distance(jaccard,ksize,scaled,sequence_len_bp=bp_len)
-    print(f"\nk_jDIST: {kmer_dist}")
-    print(f"\nbp_jDIST: {bp_dist}")
+    kmer_res = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
+    bp_res = jaccard_to_distance(jaccard,ksize,scaled,sequence_len_bp=bp_len)
+    print(f"\nkmer_res: {kmer_res}")
+    print(f"\nbp_res: {bp_res}")
     # check results
-    assert kmer_dist == (0.0535071608231702, 1.1587511478551202e-08, 5.588721845727948e-05)
-    assert bp_dist ==  (0.0535071608231702, 1.1587511478551202e-08, 5.588721845727948e-05)
-    assert kmer_dist==bp_dist
+    assert kmer_res == bp_res
+    assert kmer_res.dist == 0.054
+    assert kmer_res.p_exceeds_threshold == False
+    assert kmer_res.je_exceeds_threshold == False
 
 
 def test_exp_prob_nothing_common():
@@ -351,7 +328,7 @@ def test_exp_prob_nothing_common():
     ksize = 31
     scaled = 10
     bp_len = 1000030
-    nkmers = sequence_len_to_n_kmers(bp_len,ksize)
+    nkmers = handle_seqlen_nkmers(bp_len,ksize)
     print("nkmers_from_bp:", nkmers)
 
     nkmers_pnc = get_exp_probability_nothing_common(dist,ksize,scaled,n_unique_kmers=nkmers)

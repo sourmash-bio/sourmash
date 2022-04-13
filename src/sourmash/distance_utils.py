@@ -13,11 +13,11 @@ from .logging import notify
 
 def check_and_round_distance(dist, round_dec=3):
     if not 0 <= dist <= 1:
-        raise ValueError(f"Error: distance value {dist} is not between 0 and 1!")
+        raise ValueError(f"Error: distance value {dist :.4f} is not between 0 and 1!")
     else:
         return round(dist, round_dec)
 
-def check_threshold_and_round(val, threshold=1e-3, round_dec=3):
+def check_threshold_and_round(val, threshold=1e-3, round_dec=4):
     # to do: keep count and recommend user lower scaled val
     exceeds_threshold = False
     if threshold is not None and val > threshold:
@@ -25,10 +25,10 @@ def check_threshold_and_round(val, threshold=1e-3, round_dec=3):
         exceeds_threshold = True
     return round(val, round_dec), exceeds_threshold
 
-def check_jaccard_error_and_round(val, threshold=1e-4, round_dec=3):
+def check_jaccard_error_and_round(val, threshold=1e-4, round_dec=4):
     exceeds_threshold = False
     if threshold is not None and val > threshold:
-        notify(f"WARNING: Error on Jaccard distance point estimate is too high ({val}).")
+        notify(f"WARNING: Error on Jaccard distance point estimate is too high ({val :.4f}).")
         exceeds_threshold = True
     return round(val, round_dec), exceeds_threshold
 
@@ -197,7 +197,7 @@ def containment_to_distance(
     n_unique_kmers=None,
     sequence_len_bp=None,
     confidence=0.95,
-    return_ci=False,
+    estimate_ci=False,
     prob_threshold=1e-3,
 ):
     """
@@ -211,7 +211,7 @@ def containment_to_distance(
         sol1 = sol2 = point_estimate = 0.0
     else:
         point_estimate = 1.0 - containment ** (1.0 / ksize)
-        if return_ci:
+        if estimate_ci:
             try:
                 alpha = 1 - confidence
                 z_alpha = probit(1 - alpha / 2)
@@ -259,7 +259,7 @@ def containment_to_distance(
     prob_nothing_in_common = get_exp_probability_nothing_common(
         point_estimate, ksize, scaled, n_unique_kmers=n_unique_kmers
     )
-    if return_ci:
+    if estimate_ci:
         return ciANIResult(point_estimate, prob_nothing_in_common, dist_low=sol2, dist_high=sol1, p_threshold=prob_threshold)
     else:
         return ANIResult(point_estimate, prob_nothing_in_common, p_threshold=prob_threshold)
