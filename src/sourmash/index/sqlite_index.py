@@ -847,21 +847,11 @@ class LCA_SqliteDatabase:
 
     @CTB test create/insert, as opposed to just load.
     """
-    def __init__(self, filename):
-        from sourmash.tax.tax_utils import LineageDB_Sqlite
+    def __init__(self, conn, sqlite_idx, lineage_db):
+        assert isinstance(sqlite_idx, SqliteIndex)
+        assert sqlite_idx.scaled
 
-        try:
-            sqlite_idx = SqliteIndex.load(filename)
-            lineage_db = LineageDB_Sqlite(sqlite_idx.conn)
-
-            conn = sqlite_idx.conn
-            c = conn.cursor()
-            c.execute('SELECT DISTINCT key, value FROM sourmash_internal')
-            d = dict(c)
-            #print(d)
-            # @CTB
-        except sqlite3.OperationalError:
-            raise ValueError(f"cannot open '{filename}' as sqlite database.")
+        c = conn.cursor()
 
         c.execute('SELECT DISTINCT ksize FROM sketches')
         ksizes = set(( ksize for ksize, in c ))
@@ -877,14 +867,32 @@ class LCA_SqliteDatabase:
 
         self.scaled = sqlite_idx.scaled
 
-        assert isinstance(sqlite_idx, SqliteIndex)
-        assert sqlite_idx.scaled
         self.sqlidx = sqlite_idx
         self.lineage_db = lineage_db
 
         ## the below is done once, but could be implemented as something
         ## ~dynamic.
         self._build_index()
+
+    @classmethod
+    def create_from_sqlite_index_and_lineage(cls, filename):
+        from sourmash.tax.tax_utils import LineageDB_Sqlite
+
+        try:
+            sqlite_idx = SqliteIndex.load(filename)
+            lineage_db = LineageDB_Sqlite(sqlite_idx.conn)
+
+            conn = sqlite_idx.conn
+            c = conn.cursor()
+            c.execute('SELECT DISTINCT key, value FROM sourmash_internal')
+            d = dict(c)
+            #print(d)
+            # @CTB
+        except sqlite3.OperationalError:
+            raise ValueError(f"cannot open '{filename}' as sqlite database.")
+
+        obj = cls(conn, sqlite_idx=sqlite_idx, lineage_db=lineage_db)
+        return obj
 
     def _build_index(self):
         mf = self.sqlidx.manifest
@@ -940,8 +948,8 @@ class LCA_SqliteDatabase:
         return self.sqlidx.prefetch(*args, **kwargs)
 
     def select(self, *args, **kwargs):
-        # @CTB fixme.
-        return self.sqlidx.select(*args, **kwargs)
+        sqlidx = self.sqlidx.select(*args, **kwargs)
+        return LCA_SqliteDatabase(self.conn, sqlidx, self.lineage_db)
 
     def _get_ident_index(self, ident, fail_on_duplicate=False):
         "Get (create if nec) a unique int id, idx, for each identifier."
