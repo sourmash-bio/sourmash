@@ -28,9 +28,6 @@ CTB consider:
 
 * do we want to prevent storage of scaled=1 sketches and then
   dispense with the MAX_SQLITE_INT stuff? It's kind of a nice hack :laugh:
-
-TODO:
-@CTB don't do constraints if scaleds are equal?
 """
 import time
 import os
@@ -344,23 +341,13 @@ class SqliteIndex(Index):
             # do we pass?
             if not search_fn.passes(score):
                 debug_literal(f"FAIL score={score}")
-            # CTB if we are doing containment only, we could break here.
+
+            # CTB if we are doing containment only, we could break loop here.
             # but for Jaccard, we must continue.
             # see 'test_sqlite_jaccard_ordering'
 
             if search_fn.passes(score):
                 subj = self._load_sketch(c2, sketch_id)
-
-                # for testing only, I guess? remove this after validation :) @CTB
-                subj_mh = subj.minhash.downsample(scaled=query_mh.scaled)
-                int_size, un_size = query_mh.intersection_and_union_size(subj_mh)
-
-                query_size = len(query_mh)
-                subj_size = len(subj_mh)
-                score2 = search_fn.score_fn(query_size, int_size, subj_size,
-                                            un_size)
-                assert score == score2
-
                 if search_fn.collect(score, subj):
                     if picklist is None or subj in picklist:
                         yield IndexSearchResult(score, subj, self.location)
@@ -410,8 +397,7 @@ class SqliteIndex(Index):
         start = time.time()
         c.execute("""
         SELECT id, name, scaled, ksize, filename, moltype, seed
-        FROM sketches WHERE id=?""",
-                   (sketch_id,))
+        FROM sketches WHERE id=?""", (sketch_id,))
         debug_literal(f"load sketch {sketch_id}: got sketch info in {time.time() - start:.2f}")
 
         sketch_id, name, scaled, ksize, filename, moltype, seed = c.fetchone()
@@ -440,16 +426,13 @@ class SqliteIndex(Index):
         c.execute(f"SELECT hashval FROM hashes WHERE {hash_constraint_str} hashes.sketch_id=?", template_values)
 
         debug_literal(f"loading hashes for sketch {sketch_id} in {time.time() - start:.2f}")
-        xy = c.fetchall()
-        debug_literal(f"adding hashes for sketch {sketch_id} in {time.time() - start:.2f}")
-        for hashval, in xy:
+        for hashval, in c:
             hh = convert_hash_from(hashval)
             mh.add_hash(hh)
 
         debug_literal(f"done loading sketch {sketch_id} {time.time() - start:.2f})")
 
-        ss = SourmashSignature(mh, name=name, filename=filename)
-        return ss
+        return SourmashSignature(mh, name=name, filename=filename)
 
     def _load_sketches(self, c):
         "Load sketches based on manifest _id column."
@@ -472,8 +455,7 @@ class SqliteIndex(Index):
             c.execute("SELECT hashval FROM hashes WHERE sketch_id=?",
                        (sketch_id,))
 
-            hashvals = c.fetchall()
-            for hashval, in hashvals:
+            for hashval, in c:
                 mh.add_hash(convert_hash_from(hashval))
 
             ss = SourmashSignature(mh, name=row['name'],
@@ -492,7 +474,8 @@ class SqliteIndex(Index):
         c.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER PRIMARY KEY)")
 
         hashvals = [ (convert_hash_to(h),) for h in hashes ]
-        c.executemany("INSERT OR IGNORE INTO hash_query (hashval) VALUES (?)", hashvals)
+        c.executemany("INSERT OR IGNORE INTO hash_query (hashval) VALUES (?)",
+                      hashvals)
 
         #
         # set up SELECT conditions
