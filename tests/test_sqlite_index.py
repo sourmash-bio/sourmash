@@ -608,3 +608,26 @@ def test_sqlite_manifest_num_select(runtmp):
     idx = idx.select(num=500)
     print(list(idx.manifest.rows))
     assert len(idx) == 3
+
+
+def test_sqlite_manifest_locations(runtmp):
+    # check what locations returns... may return too many, that's ok.
+    prot = utils.get_test_data('prot')
+
+    runtmp.sourmash('sig', 'manifest', '-F', 'sql', prot,
+                    '-o', 'mf.sqlmf')
+
+    # load as index
+    idx = sourmash.load_file_as_index(runtmp.output('mf.sqlmf'))
+
+    picklist = SignaturePicklist('identprefix')
+    picklist.pickset = set(['GCA_001593925'])
+    idx = idx.select(picklist=picklist)
+
+    sql_locations = set(idx.manifest.locations())
+    row_locations = set(row['internal_location'] for row in idx.manifest.rows)
+
+    assert sql_locations.issuperset(row_locations)
+
+    assert 'dna-sig.sig.gz' in sql_locations # this is unnecessary...
+    assert 'dna-sig.sig.gz' not in row_locations # ...this is correct :)

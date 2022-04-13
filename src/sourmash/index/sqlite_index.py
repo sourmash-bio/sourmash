@@ -796,6 +796,15 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         return self.filter_rows(row_filter_fn)
 
     def locations(self):
+        """Return all possible locations for signatures.
+
+        CTB: this may be a (big) superset of locations, if picklists are used.
+        See test_sqlite_manifest_locations.
+
+        Use set(row['internal_locations'] for row in self.rows)
+        if you want an exact set of locations; will be slow for big manifests
+        tho.
+        """
         c1 = self.conn.cursor()
 
         conditions, values, picklist = self._make_select()
@@ -804,7 +813,6 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         else:
             conditions = ""
 
-        # @CTB check picklist? may return too many :think:.
         c1.execute(f"""
         SELECT DISTINCT internal_location FROM sketches {conditions}
         """, values)
