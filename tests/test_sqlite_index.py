@@ -254,6 +254,49 @@ def test_sqlite_jaccard_ordering():
     assert sr[1].score == 0.2
 
 
+def test_sqlite_index_scaled1():
+    # check on scaled=1 storage.
+    sqlidx = SqliteIndex.create(":memory:")
+
+    mh1 = sourmash.MinHash(0, 31, scaled=1)
+    mh1.add_hash(2**64 - 1)
+    mh1.add_hash(2**64 - 2)
+    mh1.add_hash(2**64 - 3)
+    ss1 = sourmash.SourmashSignature(mh1, name='ss 1')
+
+    mh2 = sourmash.MinHash(0, 31, scaled=1)
+    mh2.add_hash(2**64 - 1)
+    mh2.add_hash(2**64 - 2)
+    mh2.add_hash(2**64 - 3)
+    mh2.add_hash(0)
+    mh2.add_hash(1)
+    mh2.add_hash(2)
+    ss2 = sourmash.SourmashSignature(mh2, name='ss 2')
+
+    sqlidx.insert(ss1)
+    sqlidx.insert(ss2)
+
+    # check jaccard search
+    results = list(sqlidx.search(ss1, threshold=0))
+    print(results)
+    assert len(results) == 2
+    assert results[0].signature == ss1
+    assert results[0].score == 1.0
+    assert results[1].signature == ss2
+    assert results[1].score == 0.5
+
+    results = list(sqlidx.search(ss1, threshold=0, do_containment=True))
+    print(results)
+    assert results[0].signature == ss1
+    assert results[0].score == 1.0
+    assert results[1].signature == ss2
+    assert results[1].score == 1.0
+
+    # minhashes retrieved successfully?
+    assert len(results[0].signature.minhash) == 3
+    assert len(results[1].signature.minhash) == 6
+
+
 def test_sqlite_manifest_basic():
     # test some features of the SQLite-based manifest.
     sig2 = load_one_signature(utils.get_test_data('2.fa.sig'), ksize=31)
