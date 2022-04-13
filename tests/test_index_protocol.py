@@ -14,7 +14,7 @@ from sourmash.index.sqlite_index import SqliteIndex
 from sourmash.index.revindex import RevIndex
 from sourmash.sbt import SBT, GraphFactory
 from sourmash.manifest import CollectionManifest
-from sourmash.lca.lca_db import LCA_Database
+from sourmash.lca.lca_db import LCA_Database, load_single_database
 
 import sourmash_tst_utils as utils
 
@@ -128,6 +128,14 @@ def build_lca_index_save_load(runtmp):
     return sourmash.load_file_as_index(outfile)
 
 
+def build_lca_index_save_load(runtmp):
+    db = build_lca_index(runtmp)
+    outfile = runtmp.output('db.lca.json')
+    db.save(outfile)
+
+    return sourmash.load_file_as_index(outfile)
+
+
 def build_sqlite_index(runtmp):
     filename = runtmp.output('idx.sqldb')
     db = SqliteIndex.create(filename)
@@ -159,6 +167,17 @@ def build_revindex(runtmp):
     return lidx
 
 
+def build_lca_index_save_load_sql(runtmp):
+    db = build_lca_index(runtmp)
+    outfile = runtmp.output('db.lca.json')
+    db.save(outfile, format='sql')
+
+    x = load_single_database(outfile)
+    db_load = x[0]
+
+    return db_load
+
+
 #
 # create a fixture 'index_obj' that is parameterized by all of these
 # building functions.
@@ -175,6 +194,7 @@ def build_revindex(runtmp):
                         build_lca_index_save_load,
                         build_sqlite_index,
                         build_lazy_loaded_index,
+                        build_lca_index_save_load_sql,
 #                        build_revindex,
                         ]
 )

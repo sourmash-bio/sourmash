@@ -712,22 +712,6 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
         return new_mf
 
-    def _extract_manifest(self):
-        """
-        Generate a regular CollectionManifest object.
-
-        @CTB: remove me.
-        """
-        manifest_list = []
-        for row in self.rows:
-            if '_id' in row:
-                del row['_id']
-            if 'seed' in row:
-                del row['seed']
-            manifest_list.append(row)
-
-        return CollectionManifest(manifest_list)
-
     @property
     def rows(self):
         "Return rows that match the selection."
@@ -857,9 +841,12 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         return mf
 
 
-class LCA_Database_SqliteWrapper:
-    # @CTB: test via roundtrip ;).
+class LCA_SqliteDatabase:
+    """
+    A wrapper class for SqliteIndex + lineage db => LCA_Database functionality.
 
+    @CTB test create/insert, as opposed to just load.
+    """
     def __init__(self, filename):
         from sourmash.tax.tax_utils import LineageDB_Sqlite
 
@@ -880,13 +867,13 @@ class LCA_Database_SqliteWrapper:
         ksizes = set(( ksize for ksize, in c ))
         assert len(ksizes) == 1
         self.ksize = next(iter(ksizes))
-        notify(f"setting ksize to {self.ksize}")
+        debug_literal(f"setting ksize to {self.ksize}")
 
         c.execute('SELECT DISTINCT moltype FROM sketches')
         moltypes = set(( moltype for moltype, in c ))
         assert len(moltypes) == 1
         self.moltype = next(iter(moltypes))
-        notify(f"setting moltype to {self.moltype}")
+        debug_literal(f"setting moltype to {self.moltype}")
 
         self.scaled = sqlite_idx.scaled
 
@@ -938,7 +925,6 @@ class LCA_Database_SqliteWrapper:
         self.lid_to_lineage = lid_to_lineage
 
     def __len__(self):
-        assert 0
         return len(self.sqlidx)
 
     def signatures(self):
@@ -949,6 +935,13 @@ class LCA_Database_SqliteWrapper:
 
     def gather(self, *args, **kwargs):
         return self.sqlidx.gather(*args, **kwargs)
+
+    def prefetch(self, *args, **kwargs):
+        return self.sqlidx.prefetch(*args, **kwargs)
+
+    def select(self, *args, **kwargs):
+        # @CTB fixme.
+        return self.sqlidx.select(*args, **kwargs)
 
     def _get_ident_index(self, ident, fail_on_duplicate=False):
         "Get (create if nec) a unique int id, idx, for each identifier."
@@ -987,7 +980,7 @@ class LCA_Database_SqliteWrapper:
         raise NotImplementedError
 
     def __repr__(self):
-        return "LCA_Database_SqliteWrapper('{}')".format(self.sqlidx.location)
+        return "LCA_SqliteDatabase('{}')".format(self.sqlidx.location)
 
     def load(self, *args, **kwargs):
         # this could do the appropriate MultiLineageDB stuff.
@@ -996,6 +989,7 @@ class LCA_Database_SqliteWrapper:
     def downsample_scaled(self, scaled):
         # @CTB this is necessary for internal implementation reasons,
         # but is not required technically.
+        # @CTB should this be part of lca_db protocol?
         if scaled < self.sqlidx.scaled:
             assert 0
         else:

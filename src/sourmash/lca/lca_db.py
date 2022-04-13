@@ -263,8 +263,8 @@ class LCA_Database(Index):
             raise ValueError(f"'{db_name}' is not a file and cannot be loaded as an LCA database")
 
         try:
-            from sourmash.index.sqlite_index import LCA_Database_SqliteWrapper
-            db = LCA_Database_SqliteWrapper(db_name)
+            from sourmash.index.sqlite_index import LCA_SqliteDatabase
+            db = LCA_SqliteDatabase(db_name)
             return db
         except ValueError:
             pass
