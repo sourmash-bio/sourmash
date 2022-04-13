@@ -2758,4 +2758,6 @@ def test_lca_jaccard_ordering():
     print(sr)
     assert len(sr) == 2
     assert sr[0].signature == ss_a
+    assert sr[0].score == 1.0
     assert sr[1].signature == ss_c
+    assert sr[1].score == 0.2
