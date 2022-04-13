@@ -197,31 +197,36 @@ def test_index_search_exact_match(index_obj):
     sr = index_obj.search(ss2, threshold=1.0)
     print([s[1].name for s in sr])
     assert len(sr) == 1
-    assert sr[0][1].minhash == ss2.minhash
+    assert sr[0].signature.minhash == ss2.minhash
+    assert sr[0].score == 1.0
 
 
 def test_index_search_lower_threshold(index_obj):
-    # search at a lower threshold/multiple; order of results not guaranteed
+    # search at a lower threshold/multiple results with ss47
     ss2, ss47, ss63 = _load_three_sigs()
 
     sr = index_obj.search(ss47, threshold=0.1)
     print([s[1].name for s in sr])
     assert len(sr) == 2
     sr.sort(key=lambda x: -x[0])
-    assert sr[0][1].minhash == ss47.minhash
-    assert sr[1][1].minhash == ss63.minhash
+    assert sr[0].signature.minhash == ss47.minhash
+    assert sr[0].score == 1.0
+    assert sr[1].signature.minhash == ss63.minhash
+    assert round(sr[1].score, 2) == 0.32
 
 
 def test_index_search_lower_threshold_2(index_obj):
-    # search at a lower threshold/multiple; order of results not guaranteed
+    # search at a lower threshold/multiple results with ss63
     ss2, ss47, ss63 = _load_three_sigs()
 
     sr = index_obj.search(ss63, threshold=0.1)
     print([s[1].name for s in sr])
     assert len(sr) == 2
     sr.sort(key=lambda x: -x[0])
-    assert sr[0][1].minhash == ss63.minhash
-    assert sr[1][1].minhash == ss47.minhash
+    assert sr[0].signature.minhash == ss63.minhash
+    assert sr[0].score == 1.0
+    assert sr[1].signature.minhash == ss47.minhash
+    assert round(sr[1].score, 2) == 0.32
 
 
 def test_index_search_higher_threshold_2(index_obj):
@@ -233,7 +238,22 @@ def test_index_search_higher_threshold_2(index_obj):
     print([s[1].name for s in sr])
     assert len(sr) == 1
     sr.sort(key=lambda x: -x[0])
-    assert sr[0][1].minhash == ss63.minhash
+    assert sr[0].signature.minhash == ss63.minhash
+    assert sr[0].score == 1.0
+
+
+def test_index_search_containment(index_obj):
+    # search for containment at a low threshold/multiple results with ss63
+    ss2, ss47, ss63 = _load_three_sigs()
+
+    sr = index_obj.search(ss63, do_containment=True, threshold=0.1)
+    print([s[1].name for s in sr])
+    assert len(sr) == 2
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0].signature.minhash == ss63.minhash
+    assert sr[0].score == 1.0
+    assert sr[1].signature.minhash == ss47.minhash
+    assert round(sr[1].score, 2) == 0.48
 
 
 def test_index_signatures(index_obj):
@@ -321,13 +341,13 @@ def test_index_gather(index_obj):
 
     matches = index_obj.gather(ss2)
     assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][1].minhash == ss2.minhash
+    assert matches[0].score == 1.0
+    assert matches[0].signature.minhash == ss2.minhash
 
     matches = index_obj.gather(ss47)
     assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][1].minhash == ss47.minhash
+    assert matches[0].score == 1.0
+    assert matches[0].signature.minhash == ss47.minhash
 
 
 def test_linear_gather_threshold_1(index_obj):
