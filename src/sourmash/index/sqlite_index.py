@@ -544,7 +544,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         return cls(conn)
 
     @classmethod
-    def create_from_manifest(cls, dbfile, manifest, *, append=False):
+    def load_from_manifest(cls, manifest, *, dbfile=":memory:", append=False):
         "Create a new sqlite manifest from an existing manifest object."
         return cls._create_manifest_from_rows(manifest.rows, location=dbfile,
                                               append=append)

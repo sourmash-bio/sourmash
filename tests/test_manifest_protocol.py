@@ -28,7 +28,7 @@ def build_sqlite_manifest(runtmp):
 
     # build sqlite manifest from this 'un
     mfdb = runtmp.output('test.sqlmf')
-    return SqliteCollectionManifest.create_from_manifest(mfdb, mf)
+    return SqliteCollectionManifest.load_from_manifest(mf, dbfile=mfdb)
     
 
 def save_load_manifest(runtmp):

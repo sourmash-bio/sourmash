@@ -28,6 +28,11 @@ class BaseCollectionManifest:
                      'name', 'filename')
 
     @classmethod
+    @abstractmethod
+    def load_from_manifest(cls, manifest, **kwargs):
+        "Load this manifest from another manifest object."
+
+    @classmethod
     def load_from_filename(cls, filename):
         # SQLite db?
         db = cls.load_from_sql(filename)
@@ -92,8 +97,8 @@ class BaseCollectionManifest:
             append = False
             if ok_if_exists:
                 append= True
-            SqliteCollectionManifest.create_from_manifest(filename, self,
-                                                          append=append)
+            SqliteCollectionManifest.load_from_manifest(self, dbfile=filename,
+                                                        append=append)
 
     @classmethod
     def write_csv_header(cls, fp):
@@ -207,6 +212,11 @@ class CollectionManifest(BaseCollectionManifest):
         self._md5_set = set()
 
         self._add_rows(rows)
+
+    @classmethod
+    def load_from_manifest(cls, manifest, **kwargs):
+        "Load this manifest from another manifest object."
+        return cls(manifest.rows)
 
     def _add_rows(self, rows):
         self.rows.extend(rows)

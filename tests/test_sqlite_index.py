@@ -321,7 +321,7 @@ def test_sqlite_manifest_basic():
     assert sig2 not in manifest
 
     # check that we can get a "standard" manifest out
-    standard_mf = sqlidx.manifest._extract_manifest()
+    standard_mf = CollectionManifest.load_from_manifest(sqlidx.manifest)
     assert len(standard_mf) == 2
 
     picklist = manifest.to_picklist()
@@ -342,11 +342,10 @@ def test_sqlite_manifest_round_trip():
                                                      include_signature=False))
     nosql_mf = CollectionManifest(rows)
 
-    sqlite_mf = SqliteCollectionManifest.create_from_manifest(":memory:",
-                                                               nosql_mf)
+    sqlite_mf = SqliteCollectionManifest.load_from_manifest(nosql_mf)
 
     # test roundtrip
-    round_mf = sqlite_mf._extract_manifest()
+    round_mf = CollectionManifest.load_from_manifest(sqlite_mf)
 
     assert len(round_mf) == 2
     print(round_mf.rows, nosql_mf.rows)
