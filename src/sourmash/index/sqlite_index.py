@@ -556,9 +556,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         Stores signatures in manifest rows by default.
 
         Note: do NOT catch exceptions here, so this passes through load excs.
-        Note: ignores 'include_signature'.
-
-        # @CTB revisit create method names...
+        Note: this method ignores 'include_signature'.
         """
         def rows_iter():
             for ss, location in locations_iter:
@@ -571,6 +569,8 @@ class SqliteCollectionManifest(BaseCollectionManifest):
     @classmethod
     def _create_table(cls, cursor):
         "Create the manifest table."
+        # this is a class method so that it can be used by SqliteIndex to
+        # create manifest-compatible tables.
 
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS sourmash_internal (
@@ -604,26 +604,22 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
     def _insert_row(self, cursor, row, *, call_is_from_index=False):
         "Insert a new manifest row."
-        # check - is this manifest managed by SqliteIndex?
+        # check - is this manifest managed by SqliteIndex? If so, prevent
+        # insertions unless SqliteIndex is the one calling it.
         if self.managed_by_index and not call_is_from_index:
             raise Exception("must use SqliteIndex.insert to add to this manifest")
+
+        row = dict(row)
+        if 'seed' not in row:
+            row['seed'] = 42
 
         cursor.execute("""
         INSERT OR IGNORE INTO sketches
           (name, num, scaled, ksize, filename, md5sum, moltype,
            seed, n_hashes, with_abundance, internal_location)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (row['name'],
-         row['num'],
-         row['scaled'],
-         row['ksize'],
-         row['filename'],
-         row['md5'],
-         row['moltype'],
-         row.get('seed', 42),
-         row['n_hashes'],
-         row['with_abundance'],
-         row['internal_location']))
+        VALUES (:name, :num, :scaled, :ksize, :filename, :md5,
+                :moltype, :seed, :n_hashes, :with_abundance,
+                :internal_location)""", row)
 
         self._num_rows = None   # reset cache
 
