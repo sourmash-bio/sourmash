@@ -146,16 +146,17 @@ class _signatures_for_sketch_factory(object):
             if self.mult_ksize_by_3 and not def_dna:
                 ksizes = [ k*3 for k in ksizes ]
 
-            make_param = lambda ksizes: ComputeParameters(ksizes,
-                                            params_d.get('seed', def_seed),
-                                            def_protein,
-                                            def_dayhoff,
-                                            def_hp,
-                                            def_dna,
-                                            params_d.get('num', def_num),
-                                            params_d.get('track_abundance',
-                                                         def_abund),
-                                            params_d.get('scaled', def_scaled))
+            make_param = lambda ksizes: ComputeParameters(
+                                            ksizes=ksizes,
+                                            seed=params_d.get('seed', def_seed),
+                                            protein=def_protein,
+                                            dayhoff=def_dayhoff,
+                                            hp=def_hp,
+                                            dna=def_dna,
+                                            num_hashes=params_d.get('num', def_num),
+                                            track_abundance=params_d.get('track_abundance',
+                                                                         def_abund),
+                                            scaled=params_d.get('scaled', def_scaled))
 
             if split_ksizes:
                 for ksize in ksizes:
