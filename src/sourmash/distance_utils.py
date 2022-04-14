@@ -21,8 +21,8 @@ def check_prob_threshold(val, threshold=1e-3):
     """
     Check likelihood of no shared hashes based on chance alone (false neg).
     If too many exceed threshold, recommend user lower their scaled value.
+    # !! when using this, keep count and recommend user lower scaled val
     """
-    # to do: keep count and recommend user lower scaled val
     exceeds_threshold = False
     if threshold is not None and val > threshold:
         notify("WARNING: These sketches may have no hashes in common based on chance alone.")
