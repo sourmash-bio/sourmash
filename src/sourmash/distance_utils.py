@@ -1,5 +1,5 @@
 """
-Utility functions for jaccard/containment --> distance estimates
+Utilities for jaccard/containment --> distance estimation
 Equations from: https://github.com/KoslickiLab/mutation-rate-ci-calculator
 Reference: https://doi.org/10.1101/2022.01.11.475870
 """
@@ -11,26 +11,30 @@ from math import log, exp
 
 from .logging import notify
 
-def check_and_round_distance(dist, round_dec=3):
+def check_distance(dist):
     if not 0 <= dist <= 1:
         raise ValueError(f"Error: distance value {dist :.4f} is not between 0 and 1!")
     else:
-        return round(dist, round_dec)
+        return dist
 
-def check_threshold_and_round(val, threshold=1e-3, round_dec=4):
+def check_prob_threshold(val, threshold=1e-3):
+    """
+    Check likelihood of no shared hashes based on chance alone (false neg).
+    If too many exceed threshold, recommend user lower their scaled value.
+    """
     # to do: keep count and recommend user lower scaled val
     exceeds_threshold = False
     if threshold is not None and val > threshold:
         notify("WARNING: These sketches may have no hashes in common based on chance alone.")
         exceeds_threshold = True
-    return round(val, round_dec), exceeds_threshold
+    return val, exceeds_threshold
 
-def check_jaccard_error_and_round(val, threshold=1e-4, round_dec=4):
+def check_jaccard_error(val, threshold=1e-4):
     exceeds_threshold = False
     if threshold is not None and val > threshold:
         notify(f"WARNING: Error on Jaccard distance point estimate is too high ({val :.4f}).")
         exceeds_threshold = True
-    return round(val, round_dec), exceeds_threshold
+    return val, exceeds_threshold
 
 @dataclass
 class ANIResult:
@@ -41,9 +45,9 @@ class ANIResult:
     p_exceeds_threshold: bool = field(init=False)
 
     def __post_init__(self):
-        # check values, round
-        self.dist = check_and_round_distance(self.dist)
-        self.p_nothing_in_common, self.p_exceeds_threshold = check_threshold_and_round(self.p_nothing_in_common, self.p_threshold)
+        # check values
+        self.dist = check_distance(self.dist)
+        self.p_nothing_in_common, self.p_exceeds_threshold = check_prob_threshold(self.p_nothing_in_common, self.p_threshold)
 
     @property
     def ani(self):
@@ -57,12 +61,12 @@ class jaccardANIResult(ANIResult):
     je_threshold: float = 1e-4
 
     def __post_init__(self):
-        # check values, round
-        self.dist = check_and_round_distance(self.dist)
-        self.p_nothing_in_common, self.p_exceeds_threshold = check_threshold_and_round(self.p_nothing_in_common, self.p_threshold)
+        # check values
+        self.dist = check_distance(self.dist)
+        self.p_nothing_in_common, self.p_exceeds_threshold = check_prob_threshold(self.p_nothing_in_common, self.p_threshold)
         # check jaccard error
         if self.jaccard_error is not None:
-            self.jaccard_error, self.je_exceeds_threshold = check_jaccard_error_and_round(self.jaccard_error, self.je_threshold)
+            self.jaccard_error, self.je_exceeds_threshold = check_jaccard_error(self.jaccard_error, self.je_threshold)
         else:
             raise ValueError(f"Error: jaccard_error cannot be None.")
 
@@ -78,13 +82,13 @@ class ciANIResult(ANIResult):
     dist_high: float = None
 
     def __post_init__(self):
-        # check values, round
-        self.dist = check_and_round_distance(self.dist)
-        self.p_nothing_in_common, self.p_exceeds_threshold = check_threshold_and_round(self.p_nothing_in_common, self.p_threshold)
+        # check values
+        self.dist = check_distance(self.dist)
+        self.p_nothing_in_common, self.p_exceeds_threshold = check_prob_threshold(self.p_nothing_in_common, self.p_threshold)
 
         if self.dist_low is not None and self.dist_high is not None:
-            self.dist_low = check_and_round_distance(self.dist_low)
-            self.dist_high = check_and_round_distance(self.dist_high)
+            self.dist_low = check_distance(self.dist_low)
+            self.dist_high = check_distance(self.dist_high)
 
     @property
     def ani_low(self):
@@ -262,7 +266,8 @@ def containment_to_distance(
     if estimate_ci:
         return ciANIResult(point_estimate, prob_nothing_in_common, dist_low=sol2, dist_high=sol1, p_threshold=prob_threshold)
     else:
-        return ANIResult(point_estimate, prob_nothing_in_common, p_threshold=prob_threshold)
+        # return ci result anyway, with `None` as the low/high ci vals
+        return ciANIResult(point_estimate, prob_nothing_in_common, p_threshold=prob_threshold)
 
 
 def jaccard_to_distance(

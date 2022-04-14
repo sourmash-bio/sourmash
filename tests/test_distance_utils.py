@@ -87,7 +87,7 @@ def test_containment_to_distance_zero():
     # check without returning ci
     res = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers)
     print(res)
-    exp_res = ANIResult(dist=1.0, p_nothing_in_common=1.0, p_threshold=0.001)
+    exp_res = ciANIResult(dist=1.0, p_nothing_in_common=1.0, p_threshold=0.001)
     assert res == exp_res
 
 
@@ -123,16 +123,16 @@ def test_containment_to_distance_scaled1():
     res = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,estimate_ci=True)
     print(res)
     # check results
-    assert res.dist == 0.032
-    assert res.ani == 0.968
-    assert res.dist_low == 0.029
-    assert res.ani_high == 0.971
-    assert res.dist_high == 0.036
-    assert res.ani_low == 0.964
+    assert res.dist == 0.032468221476108394
+    assert res.ani == 0.9675317785238916
+    assert res.dist_low == 0.028709912966405623
+    assert res.ani_high == 0.9712900870335944
+    assert res.dist_high == 0.03647860197289783
+    assert res.ani_low == 0.9635213980271021
     assert res.p_nothing_in_common == 0.0
     # without returning ci
     res2 = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers)
-    assert (res2.dist,res2.ani,res2.p_nothing_in_common) == (0.032,0.968,0.0)
+    assert (res2.dist,res2.ani,res2.p_nothing_in_common) == (0.032468221476108394, 0.9675317785238916, 0.0)
     assert (res2.dist,res2.ani,res2.p_nothing_in_common) == (res.dist, res.ani, res.p_nothing_in_common)
 
 
@@ -144,10 +144,10 @@ def test_containment_to_distance_scaled100():
     res = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,estimate_ci=True)
     print(res)
     # check results
-    assert res.dist == 0.072
-    assert res.dist_low == 0.053
-    assert res.dist_high == 0.091
-    assert res.p_nothing_in_common == 0.0
+    assert res.dist == 0.07158545548052564
+    assert res.dist_low == 0.05320779238601372
+    assert res.dist_high == 0.09055547672455365
+    assert res.p_nothing_in_common == 4.3171247410658655e-05
     assert res.p_exceeds_threshold == False
 
 
@@ -159,9 +159,9 @@ def test_containment_to_distance_scaled100_2():
     res= containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,estimate_ci=True)
     print(res)
     # check results
-    assert res.dist == 0.032
-    assert res.dist_low == 0.024
-    assert res.dist_high == 0.043
+    assert res.dist == 0.032468221476108394
+    assert res.dist_low == 0.023712063916639017
+    assert res.dist_high == 0.04309960543965866
     assert res.p_exceeds_threshold == False
 
 
@@ -173,9 +173,9 @@ def test_containment_to_distance_k10():
     res = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,estimate_ci=True)
     print(res)
     # check results
-    assert res.dist == 0.067
-    assert res.dist_low == 0.050
-    assert res.dist_high == 0.087
+    assert res.dist == 0.06696700846319259
+    assert res.dist_low == 0.04982777541057476
+    assert res.dist_high == 0.08745108232411622
     assert res.p_exceeds_threshold == False
 
 
@@ -188,17 +188,17 @@ def test_containment_to_distance_confidence():
     res = containment_to_distance(contain,ksize,scaled,confidence=confidence,n_unique_kmers=nkmers, estimate_ci=True)
     print(res)
     # check results
-    assert res.dist == 0.072
-    assert res.dist_low == 0.048
-    assert res.dist_high == 0.096
+    assert res.dist == 0.07158545548052564
+    assert res.dist_low == 0.04802880300938562
+    assert res.dist_high == 0.09619930040790341
     assert res.p_exceeds_threshold == False
     confidence=0.90
     res2 = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,confidence=confidence, estimate_ci=True)
     print(res2)
     # check results
     assert res2.dist == res.dist
-    assert res2.dist_low == 0.056
-    assert res2.dist_high == 0.088
+    assert res2.dist_low == 0.05599435479247415
+    assert res2.dist_high == 0.08758718871990222
     assert res.p_exceeds_threshold == False
 
 
@@ -216,9 +216,9 @@ def test_nkmers_to_bp_containment():
     print(f"\nbpDIST:,{bp_res}")
     # check results
     assert kmer_res==bp_res
-    assert kmer_res.dist == 0.072
-    assert kmer_res.dist_low == 0.048
-    assert kmer_res.dist_high == 0.096
+    assert kmer_res.dist == 0.07158545548052564
+    assert kmer_res.dist_low == 0.04802880300938562
+    assert kmer_res.dist_high == 0.09619930040790341
 
 
 def test_jaccard_to_distance_zero():
@@ -258,22 +258,18 @@ def test_jaccard_to_distance_scaled():
     res = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
     print(res)
     # check results
-    assert res.dist == 0.019
-    assert res.ani == 0.981
+    assert res.dist == 0.019122659390482077
+    assert res.ani == 0.9808773406095179
     assert res.p_exceeds_threshold == False
-    assert res.jaccard_error == 0.0002
+    assert res.jaccard_error == 0.00018351337045518042
     assert res.je_exceeds_threshold ==True
     scaled = 100
     res2 = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
     print(res2)
-    assert res == res2
-    scaled = 10000
-    res3 = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
-    print(res3)
-    assert res3.dist == res.dist
-    assert res3.jaccard_error == res.jaccard_error
-    assert res3.p_nothing_in_common != res.p_nothing_in_common
-    assert res3.p_exceeds_threshold ==True
+    assert res2.dist == res.dist
+    assert res2.jaccard_error == res.jaccard_error
+    assert res2.p_nothing_in_common != res.p_nothing_in_common
+    assert res2.p_exceeds_threshold ==False
 
 
 def test_jaccard_to_distance_k31():
@@ -284,7 +280,7 @@ def test_jaccard_to_distance_k31():
     res = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
     print(res)
     # check results
-    assert res.ani == 0.987
+    assert res.ani == 0.9870056455892898
     assert res.p_exceeds_threshold == False
     assert res.je_exceeds_threshold ==True
     res2 = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers, err_threshold=0.1)
@@ -300,7 +296,7 @@ def test_jaccard_to_distance_k31_2():
     res = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
     print(res)
     # check results
-    assert res.ani == 0.946
+    assert res.ani == 0.9464928391768298
     assert res.p_exceeds_threshold == False
     assert res.je_exceeds_threshold == False
 
@@ -318,7 +314,7 @@ def test_nkmers_to_bp_jaccard():
     print(f"\nbp_res: {bp_res}")
     # check results
     assert kmer_res == bp_res
-    assert kmer_res.dist == 0.054
+    assert kmer_res.dist == 0.0535071608231702
     assert kmer_res.p_exceeds_threshold == False
     assert kmer_res.je_exceeds_threshold == False
 
