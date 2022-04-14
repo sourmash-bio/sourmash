@@ -143,10 +143,6 @@ def probit(p):
     return scipy_norm.ppf(p)
 
 
-def sequence_len_to_n_kmers(sequence_len_bp, ksize):
-    n_kmers = sequence_len_bp - (ksize - 1)
-    return n_kmers
-
 def handle_seqlen_nkmers(sequence_len_bp, ksize, *, n_unique_kmers=None):
     if n_unique_kmers is not None:
         return n_unique_kmers
@@ -257,17 +253,13 @@ def containment_to_distance(
                     "WARNING: Cannot estimate ANI confidence intervals from containment. Do your sketches contain enough hashes?"
                 )
                 notify(str(exc))
-                return ciANIResult(point_estimate, prob_nothing_in_common)
+                sol1 = sol2 = None
 
     # Do this here, so that we don't need to reconvert distance <--> identity later.
     prob_nothing_in_common = get_exp_probability_nothing_common(
         point_estimate, ksize, scaled, n_unique_kmers=n_unique_kmers
     )
-    if estimate_ci:
-        return ciANIResult(point_estimate, prob_nothing_in_common, dist_low=sol2, dist_high=sol1, p_threshold=prob_threshold)
-    else:
-        # return ci result anyway, with `None` as the low/high ci vals
-        return ciANIResult(point_estimate, prob_nothing_in_common, p_threshold=prob_threshold)
+    return ciANIResult(point_estimate, prob_nothing_in_common, dist_low=sol2, dist_high=sol1, p_threshold=prob_threshold)
 
 
 def jaccard_to_distance(

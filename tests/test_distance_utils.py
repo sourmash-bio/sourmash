@@ -113,6 +113,8 @@ def test_containment_to_distance_one():
     assert res.dist == exp_dist
     assert res.ani == exp_id
     assert res.p_nothing_in_common == pnc
+    assert res.ani_low == None
+    assert res.ani_high == None
 
 
 def test_containment_to_distance_scaled1():
@@ -331,3 +333,24 @@ def test_exp_prob_nothing_common():
     print(f"prob nothing in common: {nkmers_pnc}")
     bp_pnc = get_exp_probability_nothing_common(dist,ksize,scaled,sequence_len_bp=bp_len)
     assert nkmers_pnc == bp_pnc == 7.437016945722123e-07
+
+
+def test_containment_to_distance_tinytestdata_var0():
+    """
+    tiny test data to trigger the following:
+    WARNING: Cannot estimate ANI confidence intervals from containment. Do your sketches contain enough hashes?
+    Error: varN <0.0!
+    """
+    contain = 0.9
+    scaled = 1
+    nkmers = 4
+    ksize=31
+    res = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers, estimate_ci=True)
+    print(res)
+    # check results
+    assert res.dist == 0.003392957179023992
+    assert res.dist_low == None
+    assert res.dist_high == None
+    assert res.ani_low == None
+    assert res.ani_high == None
+    assert res.p_exceeds_threshold == False

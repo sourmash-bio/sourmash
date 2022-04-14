@@ -2771,3 +2771,21 @@ def test_jaccard_ANI_downsample():
     assert mh1.scaled == mh2.scaled
     ds_j_manual = mh1.jaccard_ani(mh2)
     assert ds_s1c == ds_s2c == ds_j_manual
+
+def test_containment_ani_ci_tiny_testdata():
+    """
+    tiny test data to trigger the following:
+    WARNING: Cannot estimate ANI confidence intervals from containment. Do your sketches contain enough hashes?
+    Error: varN <0.0!
+    """
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 3, 4))
+    mh2.add_many((1, 2, 3, 4))
+
+    m2_cani_m1 = mh2.containment_ani(mh1, estimate_ci=True)
+    print(m2_cani_m1)
+    assert m2_cani_m1.ani == 0.986394259982259
+    assert m2_cani_m1.ani_low == None
+    assert m2_cani_m1.ani_high == None
