@@ -887,7 +887,7 @@ class LCA_SqliteDatabase:
             c.execute('SELECT DISTINCT key, value FROM sourmash_internal')
             d = dict(c)
             #print(d)
-            # @CTB
+            # @CTB confirm version, LCA functionality, etc etc.
         except sqlite3.OperationalError:
             raise ValueError(f"cannot open '{filename}' as sqlite database.")
 
