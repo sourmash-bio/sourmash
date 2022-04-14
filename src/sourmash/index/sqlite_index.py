@@ -898,7 +898,6 @@ class LCA_SqliteDatabase:
         mf = self.sqlidx.manifest
         lineage_db = self.lineage_db
 
-        ident_to_name = {}
         ident_to_idx = {}
         next_lid = 0
         idx_to_lid = {}
@@ -910,8 +909,6 @@ class LCA_SqliteDatabase:
             if name:
                 ident = name.split(' ')[0].split('.')[0]
 
-                assert ident not in ident_to_name
-                ident_to_name[ident] = name
                 idx = row['_id'] # this is only present in sqlite manifests.
                 ident_to_idx[ident] = idx
 
@@ -925,11 +922,8 @@ class LCA_SqliteDatabase:
                         lid_to_lineage[lid] = lineage
                         idx_to_lid[idx] = lid
 
-        self.ident_to_name = ident_to_name
         self.ident_to_idx = ident_to_idx
-        self._next_lid = next_lid
         self.idx_to_lid = idx_to_lid
-        self.lineage_to_lid = lineage_to_lid
         self.lid_to_lineage = lid_to_lineage
 
     ### Index API/protocol: forward on to SqliteIndex
@@ -960,7 +954,7 @@ class LCA_SqliteDatabase:
         return "LCA_SqliteDatabase('{}')".format(self.sqlidx.location)
 
     def load(self, *args, **kwargs):
-        # this could do the appropriate MultiLineageDB stuff.
+        # this could do the appropriate MultiLineageDB stuff. @CTB
         raise NotImplementedError
 
     def downsample_scaled(self, scaled):
@@ -990,6 +984,7 @@ class LCA_SqliteDatabase:
 
     @cached_property
     def idx_to_ident(self):
+        "Map individual idx to ident."
         d = defaultdict(set)
         for ident, idx in self.ident_to_idx.items():
             assert idx not in d
