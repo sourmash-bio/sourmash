@@ -2655,45 +2655,24 @@ def test_containment(track_abundance):
 def test_containment_ANI():
     f1 = utils.get_test_data('2.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')
-    f3 = utils.get_test_data('47+63.fa.sig')
     mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
     mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
-    mh3 = sourmash.load_one_signature(f3, ksize=31).minhash
 
-    print("\nmh1 contained by mh2", mh1.containment_ani(mh2, return_ci =True))
-    print("mh2 contained by mh1",mh2.containment_ani(mh1, return_ci=True))
-    print("mh1 max containment", mh1.max_containment_ani(mh2, return_ci=True))
-    print("mh2 max containment", mh2.max_containment_ani(mh1, return_ci=True))
+    m1_cont_m2 = mh1.containment_ani(mh2, estimate_ci =True)
+    m2_cont_m1 = mh2.containment_ani(mh1, estimate_ci =True)
+    print("\nmh1 contained by mh2", m1_cont_m2)
+    print("mh2 contained by mh1", m2_cont_m1)
 
-    print("\nmh2 contained by mh3", mh2.containment_ani(mh3))
-    print("mh3 contained by mh2",mh3.containment_ani(mh2))
+    assert (m1_cont_m2.ani, m1_cont_m2.ani_low, m1_cont_m2.ani_high, m1_cont_m2.p_nothing_in_common) == (1.0, 1.0, 1.0, 0.0)
+    assert (m2_cont_m1.ani, m2_cont_m1.ani_low, m2_cont_m1.ani_high, m2_cont_m1.p_nothing_in_common) == (0.966, 0.965, 0.967, 0.0)
 
-    print("\nmh2 contained by mh3, CI 90%", mh2.containment_ani(mh3, confidence=0.9, return_ci=True))
-    print("mh3 contained by mh2, CI 99%",mh3.containment_ani(mh2, confidence=0.99, return_ci=True))
-
-    assert mh1.containment_ani(mh2,return_ci=True) == (1.0, 1.0, 1.0, 0.0)
-    assert mh2.containment_ani(mh1, return_ci=True) == (0.9658183324254062, 0.9648452889933389, 0.966777042966207, 0.0)
-    assert mh1.max_containment_ani(mh2, return_ci=True) == (1.0, 1.0, 1.0, 0.0)
-    assert mh2.max_containment_ani(mh1, return_ci=True) == (1.0, 1.0, 1.0, 0.0)
-
-    # containment 1 is special case. check max containment for non 0/1 values:
-    assert mh2.containment_ani(mh3, return_ci=True) == (0.9866751346467802, 0.9861576758035308, 0.9871770716451368, 0.0)
-    assert mh3.containment_ani(mh2, return_ci=True) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516, 0.0)
-    assert mh2.max_containment_ani(mh3, return_ci=True) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516, 0.0)
-    assert mh3.max_containment_ani(mh2, return_ci=True) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516, 0.0)
-    assert mh2.max_containment_ani(mh3)[0] == max(mh2.containment_ani(mh3)[0], mh3.containment_ani(mh2)[0])
-
-    # check confidence
-    assert mh2.containment_ani(mh3, confidence=0.9, return_ci=True) == (0.9866751346467802, 0.986241913154108, 0.9870974232542815, 0.0)
-    assert mh3.containment_ani(mh2, confidence=0.99, return_ci=True) == (0.9868883523107224, 0.9862092287269876, 0.987540474733798, 0.0)
-    assert mh3.max_containment_ani(mh2, confidence=0.99, return_ci=True) == (0.9868883523107224, 0.9862092287269876, 0.987540474733798, 0.0)
-
-    # check return_ci=False
-    assert mh2.containment_ani(mh3, return_ci=True)[0] == mh2.containment_ani(mh3)[0]
-    assert mh2.containment_ani(mh3, return_ci=True)[3] == mh2.containment_ani(mh3)[1]
-    assert mh2.max_containment_ani(mh3, return_ci=True)[0] == mh2.max_containment_ani(mh3)[0]
-    assert mh2.max_containment_ani(mh3, return_ci=True)[3] == mh2.max_containment_ani(mh3)[1]
-
+    m1_mc_m2 = mh1.max_containment_ani(mh2, estimate_ci =True)
+    m2_mc_m1 = mh2.max_containment_ani(mh1, estimate_ci =True)
+    print("mh1 max containment", m1_mc_m2)
+    print("mh2 max containment", m2_mc_m1)
+    assert m1_mc_m2 == m2_mc_m1
+    assert (m1_mc_m2.ani, m1_mc_m2.ani_low, m1_mc_m2.ani_high) == (1.0,1.0,1.0)
+ 
 
 def test_containment_ANI_precalc_containment():
     f1 = utils.get_test_data('2.fa.sig')
