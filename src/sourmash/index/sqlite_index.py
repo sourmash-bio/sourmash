@@ -989,13 +989,6 @@ class LCA_SqliteDatabase:
         return x
 
     @cached_property
-    def lid_to_idx(self):
-        d = defaultdict(set)
-        for idx, lid in self.idx_to_lid.items():
-            d[lid].add(idx)
-        return d
-
-    @cached_property
     def idx_to_ident(self):
         d = defaultdict(set)
         for ident, idx in self.ident_to_idx.items():
