@@ -68,7 +68,7 @@ class jaccardANIResult(ANIResult):
         if self.jaccard_error is not None:
             self.jaccard_error, self.je_exceeds_threshold = check_jaccard_error(self.jaccard_error, self.je_threshold)
         else:
-            raise ValueError(f"Error: jaccard_error cannot be None.")
+            raise ValueError("Error: jaccard_error cannot be None.")
 
 
 @dataclass
@@ -143,12 +143,12 @@ def probit(p):
     return scipy_norm.ppf(p)
 
 
-def handle_seqlen_nkmers(sequence_len_bp, ksize, *, n_unique_kmers=None):
+def handle_seqlen_nkmers(ksize, *, sequence_len_bp=None, n_unique_kmers=None):
     if n_unique_kmers is not None:
         return n_unique_kmers
     elif sequence_len_bp is None:
         # both are None, raise ValueError
-        raise ValueError(f"Error: distance estimation requires input of either `sequence_len_bp` or `n_unique_kmers`")
+        raise ValueError("Error: distance estimation requires input of either `sequence_len_bp` or `n_unique_kmers`")
     else:
         n_unique_kmers = sequence_len_bp - (ksize - 1)
         return n_unique_kmers
@@ -178,7 +178,7 @@ def get_exp_probability_nothing_common(
     Arguments: n_unique_kmers, ksize, mutation_rate, scaled
     Returns: float - expected likelihood that nothing is common between sketches
     """
-    n_unique_kmers = handle_seqlen_nkmers(sequence_len_bp, ksize, n_unique_kmers=n_unique_kmers)
+    n_unique_kmers = handle_seqlen_nkmers(ksize, sequence_len_bp=sequence_len_bp,n_unique_kmers=n_unique_kmers)
     f_scaled = 1.0 / float(scaled)
     if mutation_rate == 1.0:
         return 1.0
@@ -204,7 +204,7 @@ def containment_to_distance(
     Containment --> distance CI (one step)
     """
     sol1, sol2, point_estimate = None, None, None
-    n_unique_kmers = handle_seqlen_nkmers(sequence_len_bp, ksize, n_unique_kmers=n_unique_kmers)
+    n_unique_kmers = handle_seqlen_nkmers(ksize, sequence_len_bp = sequence_len_bp, n_unique_kmers=n_unique_kmers)
     if containment <= 0.0001:
         sol2 = sol1 = point_estimate = 1.0
     elif containment >= 0.9999:
@@ -292,7 +292,7 @@ def jaccard_to_distance(
     useful for determining whether scaled is sufficient for these comparisons.
     """
     error_lower_bound = None
-    n_unique_kmers = handle_seqlen_nkmers(sequence_len_bp, ksize, n_unique_kmers=n_unique_kmers)
+    n_unique_kmers = handle_seqlen_nkmers(ksize, sequence_len_bp=sequence_len_bp, n_unique_kmers=n_unique_kmers)
     if jaccard <= 0.0001:
         point_estimate = 1.0
         error_lower_bound = 0.0

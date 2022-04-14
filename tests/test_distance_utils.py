@@ -209,7 +209,7 @@ def test_nkmers_to_bp_containment():
     scaled = 100
     bp_len = 10030
     ksize=31
-    nkmers = handle_seqlen_nkmers(bp_len,ksize)
+    nkmers = handle_seqlen_nkmers(ksize, sequence_len_bp= bp_len)
     print("nkmers_from_bp:", nkmers)
     confidence=0.99
     kmer_res = containment_to_distance(containment,ksize,scaled,confidence=confidence,n_unique_kmers=nkmers,estimate_ci=True)
@@ -308,7 +308,7 @@ def test_nkmers_to_bp_jaccard():
     scaled = 100
     bp_len = 10030
     ksize=31
-    nkmers = handle_seqlen_nkmers(bp_len,ksize)
+    nkmers = handle_seqlen_nkmers(ksize, sequence_len_bp= bp_len)
     print("nkmers_from_bp:", nkmers)
     kmer_res = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers)
     bp_res = jaccard_to_distance(jaccard,ksize,scaled,sequence_len_bp=bp_len)
@@ -326,7 +326,7 @@ def test_exp_prob_nothing_common():
     ksize = 31
     scaled = 10
     bp_len = 1000030
-    nkmers = handle_seqlen_nkmers(bp_len,ksize)
+    nkmers = handle_seqlen_nkmers(ksize, sequence_len_bp= bp_len)
     print("nkmers_from_bp:", nkmers)
 
     nkmers_pnc = get_exp_probability_nothing_common(dist,ksize,scaled,n_unique_kmers=nkmers)
@@ -378,3 +378,18 @@ def test_var_n_mutated():
     var_n_mut = var_n_mutated(nkmers,ksize,r)
     print(f"var_n_mutated: {var_n_mut}")
     assert var_n_mut == 0.10611425440741508
+
+
+def test_handle_seqlen_nkmers():
+    bp_len = 10030
+    ksize=31
+    # convert seqlen to nkmers
+    nkmers = handle_seqlen_nkmers(ksize, sequence_len_bp= bp_len)
+    assert nkmers == 10000
+    # if nkmers is provided, just use that
+    nkmers = handle_seqlen_nkmers(ksize, sequence_len_bp= bp_len, n_unique_kmers= bp_len)
+    assert nkmers == 10030
+    # if neither seqlen or nkmers provided, complain
+    with pytest.raises(ValueError) as exc:
+        nkmers = handle_seqlen_nkmers(ksize)
+    assert("Error: distance estimation requires input of either `sequence_len_bp` or `n_unique_kmers`") in str(exc)
