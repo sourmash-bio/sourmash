@@ -120,3 +120,18 @@ def test_get_identifiers_for_hashval_2(lca_db_obj):
 
     assert 'GCA_001593925' in all_idents
     assert 'GCA_001593935' in all_idents
+
+
+def test_downsample_scaled(lca_db_obj):
+    # check the downsample_scaled method
+    assert lca_db_obj.scaled == 100
+    lca_db_obj.downsample_scaled(500)
+    assert lca_db_obj.scaled == 500
+
+
+def test_downsample_scaled_fail(lca_db_obj):
+    # check the downsample_scaled method - should fail if lower scaled.
+    assert lca_db_obj.scaled == 100
+
+    with pytest.raises(ValueError):
+        lca_db_obj.downsample_scaled(50)
