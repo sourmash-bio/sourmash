@@ -932,6 +932,8 @@ class LCA_SqliteDatabase:
         self.lineage_to_lid = lineage_to_lid
         self.lid_to_lineage = lid_to_lineage
 
+    ### Index API/protocol: forward on to SqliteIndex
+
     def __len__(self):
         return len(self.sqlidx)
 
@@ -949,40 +951,7 @@ class LCA_SqliteDatabase:
 
     def select(self, *args, **kwargs):
         sqlidx = self.sqlidx.select(*args, **kwargs)
-        return LCA_SqliteDatabase(self.conn, sqlidx, self.lineage_db)
-
-    def _get_ident_index(self, ident, fail_on_duplicate=False):
-        "Get (create if nec) a unique int id, idx, for each identifier."
-        assert 0
-
-        idx = self.ident_to_idx.get(ident)
-        if fail_on_duplicate:
-            assert idx is None     # should be no duplicate identities
-
-        if idx is None:
-            idx = self._next_index
-            self._next_index += 1
-
-            self.ident_to_idx[ident] = idx
-
-        return idx
-
-    def _get_lineage_id(self, lineage):
-        "Get (create if nec) a unique lineage ID for each LineagePair tuples."
-        assert 0
-        # does one exist already?
-        lid = self.lineage_to_lid.get(lineage)
-
-        # nope - create one. Increment next_lid.
-        if lid is None:
-            lid = self._next_lid
-            self._next_lid += 1
-
-            # build mappings
-            self.lineage_to_lid[lineage] = lid
-            self.lid_to_lineage[lid] = lineage
-
-        return lid
+        return LCA_SqliteDatabase(self.sqlidx.conn, sqlidx, self.lineage_db)
 
     def insert(self, *args, **kwargs):
         raise NotImplementedError
@@ -995,13 +964,13 @@ class LCA_SqliteDatabase:
         raise NotImplementedError
 
     def downsample_scaled(self, scaled):
-        # @CTB this is necessary for internal implementation reasons,
-        # but is not required technically.
-        # @CTB should this be part of lca_db protocol?
+        """This doesn't really do anything for SqliteIndex, but is needed
+        for the API.
+        """
         if scaled < self.sqlidx.scaled:
-            assert 0
-        else:
-            self.scaled = scaled
+            raise ValueError("cannot decrease scaled from {} to {}".format(self.scaled, scaled))
+
+        self.scaled = scaled
 
     def get_lineage_assignments(self, hashval, *, min_num=None):
         """
@@ -1040,52 +1009,31 @@ class LCA_SqliteDatabase:
         return _SqliteIndexHashvalToIndex(self.sqlidx)
 
     @property
-    def conn(self):
-        return self.sqlidx.conn
-
-    @property
     def hashvals(self):
+        "Return all hashvals"
         return iter(_SqliteIndexHashvalToIndex(self.sqlidx))
 
     def get_identifiers_for_hashval(self, hashval):
+        "Return identifiers associated with this hashval"
         idxlist = self.hashval_to_idx[hashval]
         for idx in idxlist:
             yield self.idx_to_ident[idx]
 
 
 class _SqliteIndexHashvalToIndex:
+    """
+    Wrapper class to retrieve keys and key/value pairs for 
+    hashval -> [ list of idx ].
+    """
     def __init__(self, sqlidx):
         self.sqlidx = sqlidx
 
     def __iter__(self):
+        "Get all hashvals."
         c = self.sqlidx.conn.cursor()
         c.execute('SELECT DISTINCT hashval FROM hashes')
         for hashval, in c:
             yield hashval
-
-    def items(self):
-        "Retrieve hashval, idxlist for all hashvals."
-        sqlidx = self.sqlidx
-        c = sqlidx.cursor()
-
-        c.execute('SELECT hashval, sketch_id FROM hashes ORDER BY hashval')
-
-        this_hashval = None
-        idxlist = []
-        for hashval, sketch_id in c:
-            if hashval == this_hashval:
-                idxlist.append(sketch_id)
-            else:
-                if idxlist:
-                    hh = convert_hash_from(this_hashval)
-                    yield hh, idxlist
-
-                this_hashval = hashval
-                idxlist = [sketch_id]
-
-        if idxlist:
-            hh = convert_hash_from(this_hashval)
-            yield hh, idxlist
 
     def get(self, key, dv=None):
         "Retrieve idxlist for a given hash."
@@ -1100,6 +1048,7 @@ class _SqliteIndexHashvalToIndex:
         return x or dv
 
     def __getitem__(self, key):
+        "Retrieve idxlist for a given hash; raise KeyError if not present."
         v = self.get(key)
         if v is None:
             raise KeyError(key)
