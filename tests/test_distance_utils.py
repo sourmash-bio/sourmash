@@ -4,7 +4,7 @@ Tests for distance utils.
 import pytest
 from sourmash.distance_utils import (containment_to_distance, get_exp_probability_nothing_common,
                                     handle_seqlen_nkmers, jaccard_to_distance,
-                                    ANIResult, ciANIResult, jaccardANIResult)
+                                    ANIResult, ciANIResult, jaccardANIResult, var_n_mutated)
 
 def test_aniresult():
     res = ANIResult(0.4, 0.1)
@@ -354,3 +354,27 @@ def test_containment_to_distance_tinytestdata_var0():
     assert res.ani_low == None
     assert res.ani_high == None
     assert res.p_exceeds_threshold == False
+
+
+def test_var_n_mutated():
+    # check 0
+    r = 0
+    ksize = 31
+    nkmers = 200
+    var_n_mut = var_n_mutated(nkmers,ksize,r)
+    print(f"var_n_mutated: {var_n_mut}")
+    assert var_n_mut == 0
+    # check var 0.0 valuerror
+    r = 10
+    ksize = 31
+    nkmers = 200
+    with pytest.raises(ValueError) as exc:
+        var_n_mut = var_n_mutated(nkmers,ksize,r)
+    assert "Error: varN <0.0!" in str(exc)
+    # check successful
+    r = 0.4
+    ksize = 31
+    nkmers = 200000
+    var_n_mut = var_n_mutated(nkmers,ksize,r)
+    print(f"var_n_mutated: {var_n_mut}")
+    assert var_n_mut == 0.10611425440741508
