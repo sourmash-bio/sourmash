@@ -26,8 +26,7 @@ CTB consider:
 * a SqliteIndex sqldb can store taxonomy table just fine. Is there any
     extra support that might be worthwhile?
 
-* do we want to prevent storage of scaled=1 sketches and then
-  dispense with the MAX_SQLITE_INT stuff? It's kind of a nice hack :laugh:
+@CTB: add an existing sqlitedb and test on that
 """
 import time
 import os
@@ -142,7 +141,7 @@ class SqliteIndex(Index):
 
         # set 'scaled'.
         c = self.conn.cursor()
-        c.execute("SELECT DISTINCT scaled FROM sketches")
+        c.execute("SELECT DISTINCT scaled FROM sourmash_sketches")
         scaled_vals = c.fetchall()
         if len(scaled_vals) > 1:
             raise ValueError("this database has multiple scaled values, which is not currently allowed")
@@ -168,7 +167,7 @@ class SqliteIndex(Index):
             c.execute("PRAGMA temp_store = MEMORY")
 
             if not empty_ok:
-                c.execute("SELECT * FROM hashes LIMIT 1")
+                c.execute("SELECT * FROM sourmash_hashes LIMIT 1")
                 c.fetchone()
         except (sqlite3.OperationalError, sqlite3.DatabaseError):
             raise ValueError(f"cannot open '{dbfile}' as SqliteIndex database")
@@ -195,28 +194,28 @@ class SqliteIndex(Index):
         # @CTB check what happens when you try to append to existing.
         try:
             sqlite_utils.add_sourmash_internal(c, 'SqliteIndex', '1.0')
-            SqliteCollectionManifest._create_table(c)
+            SqliteCollectionManifest._create_tables(c)
 
             c.execute("""
-            CREATE TABLE IF NOT EXISTS hashes (
+            CREATE TABLE IF NOT EXISTS sourmash_hashes (
                hashval INTEGER NOT NULL,
                sketch_id INTEGER NOT NULL,
-               FOREIGN KEY (sketch_id) REFERENCES sketches (id)
+               FOREIGN KEY (sketch_id) REFERENCES sourmash_sketches (id)
             )
             """)
             c.execute("""
-            CREATE INDEX IF NOT EXISTS hashval_idx ON hashes (
+            CREATE INDEX IF NOT EXISTS sourmash_hashval_idx ON sourmash_hashes (
                hashval,
                sketch_id
             )
             """)
             c.execute("""
-            CREATE INDEX IF NOT EXISTS hashval_idx2 ON hashes (
+            CREATE INDEX IF NOT EXISTS sourmash_hashval_idx2 ON sourmash_hashes (
                hashval
             )
             """)
             c.execute("""
-            CREATE INDEX IF NOT EXISTS sketch_idx ON hashes (
+            CREATE INDEX IF NOT EXISTS sourmash_sketch_idx ON sourmash_hashes (
                sketch_id
             )
             """
@@ -278,7 +277,7 @@ class SqliteIndex(Index):
             hh = convert_hash_to(h)
             hashes_to_sketch.append((hh, sketch_id))
 
-        c.executemany("INSERT INTO hashes (hashval, sketch_id) VALUES (?, ?)",
+        c.executemany("INSERT INTO sourmash_hashes (hashval, sketch_id) VALUES (?, ?)",
                       hashes_to_sketch)
 
         if commit:
@@ -381,11 +380,11 @@ class SqliteIndex(Index):
         "Get sketch size for given sketch, downsampled by max_hash."
         if max_hash <= MAX_SQLITE_INT:
             c1.execute("""
-            SELECT COUNT(hashval) FROM hashes
+            SELECT COUNT(hashval) FROM sourmash_hashes
             WHERE sketch_id=? AND hashval >= 0 AND hashval <= ?""",
                        (sketch_id, max_hash))
         else:
-            c1.execute('SELECT COUNT(hashval) FROM hashes WHERE sketch_id=?',
+            c1.execute('SELECT COUNT(hashval) FROM sourmash_hashes WHERE sketch_id=?',
                        (sketch_id,))
 
         n_hashes, = c1.fetchone()
@@ -397,7 +396,7 @@ class SqliteIndex(Index):
         start = time.time()
         c.execute("""
         SELECT id, name, scaled, ksize, filename, moltype, seed
-        FROM sketches WHERE id=?""", (sketch_id,))
+        FROM sourmash_sketches WHERE id=?""", (sketch_id,))
         debug_literal(f"load sketch {sketch_id}: got sketch info in {time.time() - start:.2f}")
 
         sketch_id, name, scaled, ksize, filename, moltype, seed = c.fetchone()
@@ -417,13 +416,13 @@ class SqliteIndex(Index):
         hash_constraint_str = ""
         max_hash = mh._max_hash
         if max_hash <= MAX_SQLITE_INT:
-            hash_constraint_str = "hashes.hashval >= 0 AND hashes.hashval <= ? AND"
+            hash_constraint_str = "sourmash_hashes.hashval >= 0 AND sourmash_hashes.hashval <= ? AND"
             template_values.insert(0, max_hash)
         else:
             debug_literal('NOT EMPLOYING hash_constraint_str')
 
         debug_literal(f"finding hashes for sketch {sketch_id} in {time.time() - start:.2f}")
-        c.execute(f"SELECT hashval FROM hashes WHERE {hash_constraint_str} hashes.sketch_id=?", template_values)
+        c.execute(f"SELECT hashval FROM sourmash_hashes WHERE {hash_constraint_str} sourmash_hashes.sketch_id=?", template_values)
 
         debug_literal(f"loading hashes for sketch {sketch_id} in {time.time() - start:.2f}")
         for hashval, in c:
@@ -452,7 +451,7 @@ class SqliteIndex(Index):
             mh = MinHash(n=0, ksize=ksize, scaled=scaled, seed=seed,
                          is_protein=is_protein, dayhoff=is_dayhoff, hp=is_hp)
 
-            c.execute("SELECT hashval FROM hashes WHERE sketch_id=?",
+            c.execute("SELECT hashval FROM sourmash_hashes WHERE sketch_id=?",
                        (sketch_id,))
 
             for hashval, in c:
@@ -470,11 +469,11 @@ class SqliteIndex(Index):
         CTB: we do not use sqlite manifest conditions on this select,
         because it slows things down in practice.
         """
-        c.execute("DROP TABLE IF EXISTS hash_query")
-        c.execute("CREATE TEMPORARY TABLE hash_query (hashval INTEGER PRIMARY KEY)")
+        c.execute("DROP TABLE IF EXISTS sourmash_hash_query")
+        c.execute("CREATE TEMPORARY TABLE sourmash_hash_query (hashval INTEGER PRIMARY KEY)")
 
         hashvals = [ (convert_hash_to(h),) for h in hashes ]
-        c.executemany("INSERT OR IGNORE INTO hash_query (hashval) VALUES (?)",
+        c.executemany("INSERT OR IGNORE INTO sourmash_hash_query (hashval) VALUES (?)",
                       hashvals)
 
         #
@@ -487,19 +486,19 @@ class SqliteIndex(Index):
         # downsample? => add to conditions
         max_hash = min(max_hash, max(hashes))
         if max_hash <= MAX_SQLITE_INT:
-            select_str = "hashes.hashval >= 0 AND hashes.hashval <= ?"
+            select_str = "sourmash_hashes.hashval >= 0 AND sourmash_hashes.hashval <= ?"
             conditions.append(select_str)
             template_values.append(max_hash)
 
         # format conditions
-        conditions.append('hashes.hashval=hash_query.hashval')
+        conditions.append('sourmash_hashes.hashval=sourmash_hash_query.hashval')
         conditions = " AND ".join(conditions)
 
         c.execute(f"""
-        SELECT DISTINCT hashes.sketch_id,COUNT(hashes.hashval) as CNT
-        FROM hashes,hash_query
+        SELECT DISTINCT sourmash_hashes.sketch_id,COUNT(sourmash_hashes.hashval) as CNT
+        FROM sourmash_hashes, sourmash_hash_query
         WHERE {conditions}
-        GROUP BY hashes.sketch_id ORDER BY CNT DESC
+        GROUP BY sourmash_hashes.sketch_id ORDER BY CNT DESC
         """, template_values)
 
         return c
@@ -540,7 +539,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         "Connect to 'filename' and create the tables as a standalone manifest."
         conn = sqlite3.connect(filename)
         cursor = conn.cursor()
-        cls._create_table(cursor)
+        cls._create_tables(cursor)
         return cls(conn)
 
     @classmethod
@@ -567,7 +566,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         return cls._create_manifest_from_rows(rows_iter())
 
     @classmethod
-    def _create_table(cls, cursor):
+    def _create_tables(cls, cursor):
         "Create the manifest table."
         # this is a class method so that it can be used by SqliteIndex to
         # create manifest-compatible tables.
@@ -585,7 +584,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         """)
 
         cursor.execute("""
-        CREATE TABLE sketches
+        CREATE TABLE sourmash_sketches
           (id INTEGER PRIMARY KEY,
            name TEXT,
            num INTEGER NOT NULL,
@@ -614,7 +613,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
             row['seed'] = 42
 
         cursor.execute("""
-        INSERT OR IGNORE INTO sketches
+        INSERT OR IGNORE INTO sourmash_sketches
           (name, num, scaled, ksize, filename, md5sum, moltype,
            seed, n_hashes, with_abundance, internal_location)
         VALUES (:name, :num, :scaled, :ksize, :filename, :md5,
@@ -671,18 +670,18 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         if self.selection_dict:
             select_d = self.selection_dict
             if 'ksize' in select_d and select_d['ksize']:
-                conditions.append("sketches.ksize = ?")
+                conditions.append("sourmash_sketches.ksize = ?")
                 values.append(select_d['ksize'])
             if 'num' in select_d and select_d['num'] > 0:
-                conditions.append("sketches.num > 0")
+                conditions.append("sourmash_sketches.num > 0")
             if 'scaled' in select_d and select_d['scaled'] > 0:
-                conditions.append("sketches.scaled > 0")
+                conditions.append("sourmash_sketches.scaled > 0")
             if 'containment' in select_d and select_d['containment']:
-                conditions.append("sketches.scaled > 0")
+                conditions.append("sourmash_sketches.scaled > 0")
             if 'moltype' in select_d and select_d['moltype'] is not None:
                 moltype = select_d['moltype']
                 assert moltype in ('DNA', 'protein', 'dayhoff', 'hp'), moltype
-                conditions.append(f"moltype = '{moltype}'")
+                conditions.append(f"sourmash_sketches.moltype = '{moltype}'")
 
             picklist = select_d.get('picklist')
 
@@ -726,7 +725,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         debug_literal(f"sqlite manifest rows: executing select with '{conditions}'")
         c1.execute(f"""
         SELECT id, name, md5sum, num, scaled, ksize, filename, moltype,
-        seed, n_hashes, internal_location FROM sketches {conditions}
+        seed, n_hashes, internal_location FROM sourmash_sketches {conditions}
         """, values)
 
         debug_literal("sqlite manifest: entering row yield loop")
@@ -779,7 +778,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
             conditions = ""
 
         c1.execute(f"""
-        SELECT DISTINCT internal_location FROM sketches {conditions}
+        SELECT DISTINCT internal_location FROM sourmash_sketches {conditions}
         """, values)
 
         return ( iloc for iloc, in c1 )
@@ -789,7 +788,8 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         md5 = ss.md5sum()
 
         c = self.conn.cursor()
-        c.execute('SELECT COUNT(*) FROM sketches WHERE md5sum=?', (md5,))
+        c.execute('SELECT COUNT(*) FROM sourmash_sketches WHERE md5sum=?',
+                  (md5,))
         val, = c.fetchone()
 
         if bool(val):
@@ -853,13 +853,13 @@ class LCA_SqliteDatabase:
 
         c = conn.cursor()
 
-        c.execute('SELECT DISTINCT ksize FROM sketches')
+        c.execute('SELECT DISTINCT ksize FROM sourmash_sketches')
         ksizes = set(( ksize for ksize, in c ))
         assert len(ksizes) == 1
         self.ksize = next(iter(ksizes))
         debug_literal(f"setting ksize to {self.ksize}")
 
-        c.execute('SELECT DISTINCT moltype FROM sketches')
+        c.execute('SELECT DISTINCT moltype FROM sourmash_sketches')
         moltypes = set(( moltype for moltype, in c ))
         assert len(moltypes) == 1
         self.moltype = next(iter(moltypes))
@@ -1019,7 +1019,7 @@ class _SqliteIndexHashvalToIndex:
     def __iter__(self):
         "Get all hashvals."
         c = self.sqlidx.conn.cursor()
-        c.execute('SELECT DISTINCT hashval FROM hashes')
+        c.execute('SELECT DISTINCT hashval FROM sourmash_hashes')
         for hashval, in c:
             yield hashval
 
@@ -1030,7 +1030,8 @@ class _SqliteIndexHashvalToIndex:
 
         hh = convert_hash_to(key)
 
-        c.execute('SELECT sketch_id FROM hashes WHERE hashval=?', (hh,))
+        c.execute('SELECT sketch_id FROM sourmash_hashes WHERE hashval=?',
+                  (hh,))
 
         x = [ convert_hash_from(h) for h, in c ]
         return x or dv
