@@ -53,6 +53,21 @@ def test_sqlite_index_bad_version(runtmp):
         idx = sourmash.load_file_as_index(dbfile)
 
 
+def test_sqlite_index_bad_version_unique(runtmp):
+    # try to insert duplicate sqlite index info into sourmash_internal; fail
+
+    dbfile = runtmp.output('xyz.sqldb')
+    conn = sqlite3.connect(dbfile)
+    c = conn.cursor()
+
+    SqliteIndex._create_tables(c)
+
+    # can't insert duplicate key
+    with pytest.raises(sqlite3.IntegrityError):
+        c.execute('INSERT INTO sourmash_internal (value, key) VALUES (?, ?)',
+                  ('1.1', 'SqliteIndex'))
+
+
 def test_index_search_subj_scaled_is_lower():
     # check that subject sketches are appropriately downsampled
     sigfile = utils.get_test_data('scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz')
@@ -369,7 +384,7 @@ def test_sqlite_index_create_load_insert_existing(runtmp):
 
 
 def test_sqlite_manifest_bad_version(runtmp):
-    # create a sqlite database with a bad index version in the
+    # create a sqlite database with a bad manifest version in the
     # sourmash_internal table, see what happens :)
 
     dbfile = runtmp.output('xyz.sqlmf')
@@ -386,6 +401,21 @@ def test_sqlite_manifest_bad_version(runtmp):
 
     with pytest.raises(IndexNotSupported):
         mf = CollectionManifest.load_from_filename(dbfile)
+
+
+def test_sqlite_manifest_bad_version_unique(runtmp):
+    # try to insert duplicate sqlite manifest info into sourmash_internal; fail
+
+    dbfile = runtmp.output('xyz.sqldb')
+    conn = sqlite3.connect(dbfile)
+    c = conn.cursor()
+
+    SqliteCollectionManifest._create_tables(c)
+
+    # can't insert duplicate key
+    with pytest.raises(sqlite3.IntegrityError):
+        c.execute('INSERT INTO sourmash_internal (value, key) VALUES (?, ?)',
+                  ('1.1', 'SqliteManifest'))
 
 
 def test_sqlite_manifest_basic():

@@ -82,32 +82,26 @@ def load_sqlite_file(filename, *, request_manifest=False):
         return
 
     c = conn.cursor()
-
-    # now, use sourmash_internal table to figure out what it can do.
-    try:
-        c.execute('SELECT DISTINCT key, value FROM sourmash_internal')
-    except (sqlite3.OperationalError, sqlite3.DatabaseError):
-        debug_literal("load_sqlite_file: no sourmash_internal table")
-        return
+    internal_d = sqlite_utils.get_sourmash_internal(c)
 
     results = c.fetchall()
 
     is_index = False
     is_manifest = False
-    for k, v in results:
-        if k == 'SqliteIndex':
-            if v != '1.0':
-                raise IndexNotSupported
-            is_index = True
-            debug_literal("load_sqlite_file: it's an index!")
-        elif k == 'SqliteManifest':
-            if v != '1.0':
-                raise IndexNotSupported
-            assert v == '1.0'
-            is_manifest = True
-            debug_literal("load_sqlite_file: it's a manifest!")
-        # it's ok if there's no match, that just means we added keys
-        # for some other type of sourmash SQLite database. #futureproofing.
+
+    if 'SqliteIndex' in internal_d:
+        v = internal_d['SqliteIndex']
+        if v != '1.0':
+            raise IndexNotSupported
+        is_index = True
+        debug_literal("load_sqlite_file: it's an index!")
+
+    if internal_d['SqliteManifest']:
+        v = internal_d['SqliteManifest']
+        if v != '1.0':
+            raise IndexNotSupported
+        is_manifest = True
+        debug_literal("load_sqlite_file: it's a manifest!")
 
     # every Index is a Manifest!
     if is_index:
@@ -587,18 +581,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         # this is a class method so that it can be used by SqliteIndex to
         # create manifest-compatible tables.
 
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS sourmash_internal (
-            key TEXT,
-            value TEXT
-        )
-        """)
-
-        cursor.execute("""
-        INSERT INTO sourmash_internal (key, value)
-        VALUES ('SqliteManifest', '1.0')
-        """)
-
+        sqlite_utils.add_sourmash_internal(cursor, 'SqliteManifest', '1.0')
         cursor.execute("""
         CREATE TABLE sourmash_sketches
           (id INTEGER PRIMARY KEY,

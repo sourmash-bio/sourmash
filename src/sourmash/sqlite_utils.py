@@ -46,15 +46,18 @@ def open_sqlite_db(filename):
 
 
 def add_sourmash_internal(cursor, use_type, version):
+    """
+    Add use_type/version to sourmash_internal table.
+    """
+    # @CTB update test-data/sqlite with unique
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS sourmash_internal (
-       key TEXT,
+       key TEXT UNIQUE,
        value TEXT
     )
     """)
 
-    cursor.execute('SELECT DISTINCT key, value FROM sourmash_internal')
-    d = dict(cursor)
+    d = get_sourmash_internal(cursor)
 
     val = d.get(use_type)
     if val is not None:
@@ -62,7 +65,16 @@ def add_sourmash_internal(cursor, use_type, version):
         if version != val:
             raise Exception(f"sqlite problem: for {use_type}, want version {version}, got version {val}")
     else:
-        # @CTB supply unique constraints?
         cursor.execute("""
         INSERT INTO sourmash_internal (key, value) VALUES (?, ?)
         """, (use_type, version))
+
+
+def get_sourmash_internal(cursor):
+    """
+    Retrieve a key/value dictionary from sourmash_internal.
+    """
+    cursor.execute('SELECT DISTINCT key, value FROM sourmash_internal')
+    d = dict(cursor)
+
+    return d
