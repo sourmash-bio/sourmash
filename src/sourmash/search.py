@@ -195,7 +195,7 @@ def search_databases_with_flat_query(query, databases, **kwargs):
     results.sort(key=lambda x: -x[0])
 
     x = []
-    ksize = query_mh.ksize
+    ksize = query.minhash.ksize
     for (score, match, filename) in results:
         x.append(SearchResult(similarity=score,
                               match=match,
