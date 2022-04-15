@@ -1,9 +1,11 @@
-"Tests for SqliteIndex and SqliteCollectionManifest"
+"Tests for SqliteIndex, SqliteCollectionManifest, and LCA_SqliteDatabase"
 import os
 import pytest
 import shutil
+import sqlite3
 
 import sourmash
+from sourmash.exceptions import IndexNotSupported
 from sourmash.index.sqlite_index import SqliteIndex, load_sqlite_file
 from sourmash.index.sqlite_index import SqliteCollectionManifest
 from sourmash.index import StandaloneManifestIndex
@@ -29,6 +31,26 @@ def test_sqlite_index_prefetch_empty():
         next(g)
 
     assert "no signatures to search" in str(e.value)
+
+
+def test_sqlite_index_bad_version(runtmp):
+    # create a sqlite database with a bad index version in the
+    # sourmash_internal table, see what happens :)
+
+    dbfile = runtmp.output('xyz.sqldb')
+    conn = sqlite3.connect(dbfile)
+    c = conn.cursor()
+
+    SqliteIndex._create_tables(c)
+
+    # 0.9 doesn't exist/is bad version
+    c.execute('UPDATE sourmash_internal SET value=? WHERE key=?',
+              ('0.9', 'SqliteIndex'))
+
+    conn.commit()
+
+    with pytest.raises(IndexNotSupported):
+        idx = sourmash.load_file_as_index(dbfile)
 
 
 def test_index_search_subj_scaled_is_lower():
@@ -344,6 +366,26 @@ def test_sqlite_index_create_load_insert_existing(runtmp):
     runtmp.sourmash('sig', 'describe', filename)
     print(runtmp.last_result.out)
     assert "md5: f3a90d4e5528864a5bcc8434b0d0c3b1" in runtmp.last_result.out
+
+
+def test_sqlite_manifest_bad_version(runtmp):
+    # create a sqlite database with a bad index version in the
+    # sourmash_internal table, see what happens :)
+
+    dbfile = runtmp.output('xyz.sqlmf')
+    conn = sqlite3.connect(dbfile)
+    c = conn.cursor()
+
+    SqliteCollectionManifest._create_tables(c)
+
+    # 0.9 doesn't exist/bad version
+    c.execute('UPDATE sourmash_internal SET value=? WHERE key=?',
+              ('0.9', 'SqliteManifest'))
+
+    conn.commit()
+
+    with pytest.raises(IndexNotSupported):
+        mf = CollectionManifest.load_from_filename(dbfile)
 
 
 def test_sqlite_manifest_basic():

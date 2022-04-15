@@ -53,6 +53,7 @@ import itertools
 from bitstring import BitArray
 
 from sourmash.index import Index
+from sourmash.exceptions import IndexNotSupported
 import sourmash
 from sourmash import MinHash, SourmashSignature
 from sourmash.index import IndexSearchResult, StandaloneManifestIndex
@@ -72,7 +73,6 @@ convert_hash_to = lambda x: BitArray(uint=x, length=64).int if x > MAX_SQLITE_IN
 convert_hash_from = lambda x: BitArray(int=x, length=64).uint if x < 0 else x
 
 
-# @CTB write tests that cross-product the various types.
 def load_sqlite_file(filename, *, request_manifest=False):
     "Load a SqliteIndex or a SqliteCollectionManifest from a sqlite file."
     conn = sqlite_utils.open_sqlite_db(filename)
@@ -96,14 +96,13 @@ def load_sqlite_file(filename, *, request_manifest=False):
     is_manifest = False
     for k, v in results:
         if k == 'SqliteIndex':
-            # @CTB: check how we do version errors on sbt
             if v != '1.0':
-                raise Exception(f"unknown SqliteIndex version '{v}'")
+                raise IndexNotSupported
             is_index = True
             debug_literal("load_sqlite_file: it's an index!")
         elif k == 'SqliteManifest':
             if v != '1.0':
-                raise Exception(f"unknown SqliteManifest version '{v}'")
+                raise IndexNotSupported
             assert v == '1.0'
             is_manifest = True
             debug_literal("load_sqlite_file: it's a manifest!")
