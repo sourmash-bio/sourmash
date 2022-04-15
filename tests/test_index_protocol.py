@@ -128,7 +128,6 @@ def build_lca_index_save_load(runtmp):
     return sourmash.load_file_as_index(outfile)
 
 
-<<<<<<< HEAD
 def build_lca_index_save_load(runtmp):
     db = build_lca_index(runtmp)
     outfile = runtmp.output('db.lca.json')
@@ -168,7 +167,6 @@ def build_revindex(runtmp):
     return lidx
 
 
-<<<<<<< HEAD
 def build_lca_index_save_load_sql(runtmp):
     db = build_lca_index(runtmp)
     outfile = runtmp.output('db.lca.json')

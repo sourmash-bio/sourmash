@@ -38,7 +38,6 @@ def build_json_lca_db(runtmp):
     db = build_inmem_lca_db(runtmp)
     db_out = runtmp.output('protein.lca.json')
 
-<<<<<<< HEAD
     db.save(db_out, format='json')
 
     x = load_single_database(db_out)
@@ -121,7 +120,6 @@ def test_get_identifiers_for_hashval_2(lca_db_obj):
 
     assert 'GCA_001593925' in all_idents
     assert 'GCA_001593935' in all_idents
-<<<<<<< HEAD
 
 
 def test_downsample_scaled(lca_db_obj):
