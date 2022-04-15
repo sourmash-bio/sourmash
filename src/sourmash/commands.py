@@ -533,7 +533,7 @@ def search(args):
         notify("** reporting only one match because --best-only was set")
 
     if args.output:
-        fieldnames = SearchResult.write_search_cols
+        fieldnames = SearchResult.write_cols
 
         with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)

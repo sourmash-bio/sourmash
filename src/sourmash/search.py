@@ -175,8 +175,8 @@ class SearchResult:
     filename: str = None
 
     #columns for standard SearchResult output
-    write_search_cols = ['similarity', 'md5', 'filename', 'name',
-                         'query_filename', 'query_name', 'query_md5']
+    write_cols = ['similarity', 'md5', 'filename', 'name',
+                  'query_filename', 'query_name', 'query_md5']
 
     def __post_init__(self):
         # calculate general info
@@ -212,7 +212,7 @@ class SearchResult:
         #self.md5 = shorten_md5(self.md5)
         #self.match_md5 = shorten_md5(self.match_md5)
         info = {k: v for k, v in self.__dict__.items()
-                if k in self.write_search_cols and v}
+                if k in self.write_cols and v}
         return info
 
 
@@ -221,7 +221,12 @@ class SearchResult:
 #    intersect_bp: int = None
 #    f_query_match: float = None
 #    f_match_query: float = None
-
+#
+#    write_cols = ['intersect_bp', 'jaccard', 'max_containment', 'f_query_match',
+#                  'f_match_query', 'match', 'match_filename', 'match_name',
+#                  'match_md5', 'match_bp', 'query', 'query_filename', 'query_name',
+#                  'query_md5', 'query_bp', 'ksize', 'moltype', 'num', 'scaled',
+#                  'query_nhashes', 'query_abundance']
 
 #@dataclass
 #class GatherResult(SearchResult):
