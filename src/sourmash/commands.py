@@ -796,7 +796,6 @@ def gather(args):
 
     # save CSV?
     if found and args.output:
-        #fieldnames = GatherResult._fields
         fieldnames = GatherResult.gather_write_cols
         with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
@@ -962,7 +961,6 @@ def multigather(args):
 
             output_base = os.path.basename(query_filename)
             output_csv = output_base + '.csv'
-            #fieldnames = GatherResult._fields
             fieldnames = GatherResult.gather_write_cols
             with FileOutputCSV(output_csv) as fp:
                 w = csv.DictWriter(fp, fieldnames=fieldnames)
