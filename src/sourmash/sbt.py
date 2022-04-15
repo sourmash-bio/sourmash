@@ -670,7 +670,10 @@ class SBT(Index):
 
         nodes = {}
         leaves = {}
-        total_nodes = len(self)
+
+        internal_nodes = set(self._nodes).union(self._missing_nodes)
+        total_nodes = len(self) + len(internal_nodes)
+
         manifest_rows = []
         for n, (i, node) in enumerate(self):
             if node is None:
