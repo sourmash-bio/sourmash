@@ -2351,7 +2351,7 @@ def test_lazy_loaded_index_4_nofile(runtmp):
     assert "must exist when creating" in str(exc)
 
 
-def test_lazy_loaded_index_4_noanifest(runtmp):
+def test_lazy_loaded_index_4_nomanifest(runtmp):
     # test check for empty manifest
     sig2 = utils.get_test_data("2.fa.sig")
 
