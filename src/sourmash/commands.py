@@ -533,7 +533,7 @@ def search(args):
         notify("** reporting only one match because --best-only was set")
 
     if args.output:
-        fieldnames = SearchResult.write_cols
+        fieldnames = SearchResult.search_write_cols
 
         with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
@@ -685,7 +685,7 @@ def gather(args):
         prefetch_csvout_fp = None
         prefetch_csvout_w = None
         if args.save_prefetch_csv:
-            fieldnames = PrefetchResult._fields
+            fieldnames = PrefetchResult.prefetch_write_cols
             prefetch_csvout_fp = FileOutput(args.save_prefetch_csv, 'wt').open()
             prefetch_csvout_w = csv.DictWriter(prefetch_csvout_fp, fieldnames=fieldnames)
             prefetch_csvout_w.writeheader()
@@ -715,11 +715,7 @@ def gather(args):
                     assert scaled
                     # calculate intersection stats and info
                     prefetch_result = calculate_prefetch_info(prefetch_query, found_sig, scaled, args.threshold_bp)
-                    # remove match and query signatures; write result to prefetch csv
-                    d = dict(prefetch_result._asdict())
-                    del d['match']
-                    del d['query']
-                    prefetch_csvout_w.writerow(d)
+                    prefetch_csvout_w.writerow(prefetch_result.writedict())
 
             counters.append(counter)
 
@@ -1171,7 +1167,7 @@ def prefetch(args):
     csvout_fp = None
     csvout_w = None
     if args.output:
-        fieldnames = PrefetchResult._fields
+        fieldnames = PrefetchResult.prefetch_write_cols
         csvout_fp = FileOutput(args.output, 'wt').open()
         csvout_w = csv.DictWriter(csvout_fp, fieldnames=fieldnames)
         csvout_w.writeheader()
@@ -1228,10 +1224,7 @@ def prefetch(args):
 
             # output match info as we go
             if csvout_fp:
-                d = dict(result._asdict())
-                del d['match']                 # actual signatures not in CSV.
-                del d['query']
-                csvout_w.writerow(d)
+                csvout_w.writerow(result.writedict())
 
             # output match signatures as we go (maybe)
             matches_out.add(match)

@@ -175,8 +175,8 @@ class SearchResult:
     filename: str = None
 
     #columns for standard SearchResult output
-    write_cols = ['similarity', 'md5', 'filename', 'name',
-                  'query_filename', 'query_name', 'query_md5']
+    search_write_cols = ['similarity', 'md5', 'filename', 'name',
+                         'query_filename', 'query_name', 'query_md5']
 
     def __post_init__(self):
         # calculate general info
@@ -212,22 +212,58 @@ class SearchResult:
         #self.md5 = shorten_md5(self.md5)
         #self.match_md5 = shorten_md5(self.match_md5)
         info = {k: v for k, v in self.__dict__.items()
-                if k in self.write_cols and v}
+                if k in self.search_write_cols and v}
         return info
 
 
-#@dataclass
-#class PrefetchResult(SearchResult):
-#    intersect_bp: int = None
-#    f_query_match: float = None
-#    f_match_query: float = None
-#
-#    write_cols = ['intersect_bp', 'jaccard', 'max_containment', 'f_query_match',
-#                  'f_match_query', 'match', 'match_filename', 'match_name',
-#                  'match_md5', 'match_bp', 'query', 'query_filename', 'query_name',
-#                  'query_md5', 'query_bp', 'ksize', 'moltype', 'num', 'scaled',
-#                  'query_nhashes', 'query_abundance']
+@dataclass
+class PrefetchResult(SearchResult):
+    intersect_bp: int = None
+    f_query_match: float = None
+    f_match_query: float = None
 
+    prefetch_write_cols = ['intersect_bp', 'jaccard', 'max_containment', 'f_query_match',
+                           'f_match_query', 'match', 'match_filename', 'match_name',
+                           'match_md5', 'match_bp', 'query', 'query_filename', 'query_name',
+                           'query_md5', 'query_bp', 'ksize', 'moltype', 'num', 'scaled',
+                           'query_nhashes', 'query_abundance']
+
+
+    def __post_init__(self):
+        # calculate general info
+        self.ksize = self.query.minhash.ksize
+        self.moltype = self.query.minhash.moltype
+        self.num = self.query.minhash.num
+        # get info about each signature/minhash
+        self.match_name = self.match.name
+        self.query_name = self.query.name
+        self.match_filename = self.match.filename
+        self.query_filename = self.query.filename
+        # do we want short md5s as well?
+        self.match_md5 = self.match.md5sum()
+        self.query_md5 = self.query.md5sum()
+        self.match_scaled = self.match.minhash.scaled
+        self.query_scaled = self.query.minhash.scaled
+        self.query_nhashes = len(self.query.minhash)
+        self.match_nhashes = len(self.match.minhash)
+        self.match_bp = self.query_nhashes * self.query_scaled
+        self.query_bp = self.match_nhashes * self.match_scaled
+        self.query_abundance = self.query.minhash.track_abundance
+        self.match_abundance = self.match.minhash.track_abundance
+        #deprecate these at some point, in favor of match_md5, etc
+        self.md5 = self.match_md5
+        self.name = self.match_name
+        if self.filename is None:
+            self.filename = self.match_filename
+
+
+    def writedict(self):
+        self.query_md5 = shorten_md5(self.query_md5)
+        self.md5 = shorten_md5(self.md5)
+        self.match_md5 = shorten_md5(self.match_md5)
+        info = {k: v for k, v in self.__dict__.items()
+                if k in self.prefetch_write_cols and v}
+        return info
 #@dataclass
 #class GatherResult(SearchResult):
 #    f_orig_query: float = None
@@ -547,14 +583,6 @@ class GatherDatabases:
 ### prefetch code
 ###
 
-PrefetchResult = namedtuple('PrefetchResult',
-                            ['intersect_bp', 'jaccard', 'max_containment', 'f_query_match',
-                            'f_match_query', 'match', 'match_filename', 'match_name',
-                            'match_md5', 'match_bp', 'query', 'query_filename', 'query_name',
-                            'query_md5', 'query_bp', 'ksize', 'moltype', 'num', 'scaled',
-                            'query_nhashes', 'query_abundance'])
-
-
 def calculate_prefetch_info(query, match, scaled, threshold_bp):
     """
     For a single query and match, calculate all search info and return a PrefetchResult.
@@ -577,27 +605,14 @@ def calculate_prefetch_info(query, match, scaled, threshold_bp):
 
     # build a result namedtuple
     result = PrefetchResult(
+        query=query,
+        match=match,
+        search_scaled=scaled,
         intersect_bp=len(intersect_mh) * scaled,
-        query_bp = len(query_mh) * scaled,
-        match_bp = len(db_mh) * scaled,
         jaccard=db_mh.jaccard(query_mh),
         max_containment=max_containment,
         f_query_match=f_query_match,
         f_match_query=f_match_query,
-        match=match,
-        match_filename=match.filename,
-        match_name=match.name,
-        match_md5=match.md5sum()[:8],
-        query=query,
-        query_filename=query.filename,
-        query_name=query.name,
-        query_md5=query.md5sum()[:8],
-        ksize =  query_mh.ksize,
-        moltype = query_mh.moltype,
-        num = query_mh.num,
-        scaled = scaled,
-        query_nhashes=len(query_mh),
-        query_abundance=query_mh.track_abundance,
     )
 
     return result
