@@ -383,6 +383,29 @@ def test_sqlite_index_create_load_insert_existing(runtmp):
     assert "md5: f3a90d4e5528864a5bcc8434b0d0c3b1" in runtmp.last_result.out
 
 
+def test_sqlite_index_create_load_insert_existing_cli(runtmp):
+    # try creating, loading, inserting into an existing sqlite index from cli
+    filename = runtmp.output('idx.sqldb')
+    sig1 = utils.get_test_data('47.fa.sig')
+    sig2 = utils.get_test_data('63.fa.sig')
+    sig3 = utils.get_test_data('2.fa.sig')
+
+    runtmp.sourmash('sig', 'cat', sig1, sig2, '-o', filename)
+
+    sqlidx = sourmash.load_file_as_index(filename)
+    assert isinstance(sqlidx, SqliteIndex)
+
+    siglist = list(sqlidx.signatures())
+    assert len(siglist) == 2
+
+    # @CTB we probably want to allow this tho
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'cat', sig3, '-o', filename)
+
+    #siglist = list(sqlidx.signatures())
+    #assert len(siglist) == 2
+
+
 def test_sqlite_manifest_bad_version(runtmp):
     # create a sqlite database with a bad manifest version in the
     # sourmash_internal table, see what happens :)
