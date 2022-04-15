@@ -38,6 +38,7 @@ TODO testing: test internal and command line for,
 - loading a checked-in lineage db with old table
 - loading a checked-in lineage db with new table
 - lca DB/on disk insert stuff
+- test various combinations of database types.
 """
 import time
 import os
