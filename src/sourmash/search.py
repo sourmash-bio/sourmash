@@ -173,7 +173,7 @@ class SearchResult:
     max_containment: float = None
     avg_containment: float = None
     filename: str = None
-    intersect_bp: int = 0
+    intersect_bp: int = None
 
     #columns for standard SearchResult output
     search_write_cols = ['similarity', 'md5', 'filename', 'name',
@@ -189,7 +189,6 @@ class SearchResult:
         self.query_name = self.query.name
         self.match_filename = self.match.filename
         self.query_filename = self.query.filename
-        # do we want short md5s as well?
         self.match_md5 = self.match.md5sum()
         self.query_md5 = self.query.md5sum()
         self.match_scaled = self.match.minhash.scaled
