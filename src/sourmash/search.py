@@ -160,7 +160,9 @@ class JaccardSearchBestOnly(JaccardSearch):
 
 # generic SearchResult tuple.
 SearchResult = namedtuple('SearchResult',
-                          'similarity, match, md5, filename, name, query, query_filename, query_name, query_md5')
+                          ['similarity', 'match', 'md5', 'filename', 'name',
+                          'query', 'query_filename', 'query_name', 'query_md5',
+                          'ksize'])
 
 
 def format_bp(bp):
@@ -193,6 +195,7 @@ def search_databases_with_flat_query(query, databases, **kwargs):
     results.sort(key=lambda x: -x[0])
 
     x = []
+    ksize = query_mh.ksize
     for (score, match, filename) in results:
         x.append(SearchResult(similarity=score,
                               match=match,
@@ -202,7 +205,8 @@ def search_databases_with_flat_query(query, databases, **kwargs):
                               query=query,
                               query_filename=query.filename,
                               query_name=query.name,
-                              query_md5=query.md5sum()[:8]
+                              query_md5=query.md5sum()[:8],
+                              ksize=ksize,
         ))
     return x
 
@@ -235,7 +239,8 @@ def search_databases_with_abund_query(query, databases, **kwargs):
                               query=query,
                               query_filename=query.filename,
                               query_name=query.name,
-                              query_md5=query.md5sum()[:8]
+                              query_md5=query.md5sum()[:8],
+                              ksize=query.minhash.ksize,
         ))
     return x
 
@@ -243,8 +248,11 @@ def search_databases_with_abund_query(query, databases, **kwargs):
 ### gather code
 ###
 
-GatherResult = namedtuple('GatherResult',
-                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, match, f_match_orig, unique_intersect_bp, gather_result_rank, remaining_bp, query_filename, query_name, query_md5, query_bp')
+GatherResult = namedtuple('GatherResult', ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
+                            'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename',
+                            'name', 'md5', 'match', 'f_match_orig', 'unique_intersect_bp', 'gather_result_rank',
+                            'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
+                            'moltype', 'num', 'scaled', 'query_nhashes', 'query_abundance'])
 
 
 def _find_best(counters, query, threshold_bp):
@@ -453,6 +461,12 @@ class GatherDatabases:
                               query_filename=self.orig_query_filename,
                               query_name=self.orig_query_name,
                               query_md5=self.orig_query_md5,
+                              ksize =  self.orig_query_mh.ksize,
+                              moltype = self.orig_query_mh.moltype,
+                              num = self.orig_query_mh.num,
+                              scaled = scaled,
+                              query_nhashes=len(self.orig_query_mh),
+                              query_abundance=self.orig_query_mh.track_abundance,
                               )
         self.result_n += 1
         self.query = new_query
@@ -466,7 +480,11 @@ class GatherDatabases:
 ###
 
 PrefetchResult = namedtuple('PrefetchResult',
-                            'intersect_bp, jaccard, max_containment, f_query_match, f_match_query, match, match_filename, match_name, match_md5, match_bp, query, query_filename, query_name, query_md5, query_bp')
+                            ['intersect_bp', 'jaccard', 'max_containment', 'f_query_match',
+                            'f_match_query', 'match', 'match_filename', 'match_name',
+                            'match_md5', 'match_bp', 'query', 'query_filename', 'query_name',
+                            'query_md5', 'query_bp', 'ksize', 'moltype', 'num', 'scaled',
+                            'query_nhashes', 'query_abundance'])
 
 
 def calculate_prefetch_info(query, match, scaled, threshold_bp):
@@ -505,7 +523,13 @@ def calculate_prefetch_info(query, match, scaled, threshold_bp):
         query=query,
         query_filename=query.filename,
         query_name=query.name,
-        query_md5=query.md5sum()[:8]
+        query_md5=query.md5sum()[:8],
+        ksize =  query_mh.ksize,
+        moltype = query_mh.moltype,
+        num = query_mh.num,
+        scaled = scaled,
+        query_nhashes=len(query_mh),
+        query_abundance=query_mh.track_abundance,
     )
 
     return result
