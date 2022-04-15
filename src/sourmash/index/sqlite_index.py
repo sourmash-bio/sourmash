@@ -20,11 +20,7 @@ Features and limitations:
 * Likewise, SqliteIndex does not support 'abund' signatures because it cannot
   search them (just like SBTs cannot).
 
-* @CTB document manifest stuff.
-
-CTB consider:
-* a SqliteIndex sqldb can store taxonomy table just fine. Is there any
-    extra support that might be worthwhile?
+* @CTB document manifest and LCA stuff.
 
 TODO testing: test internal and command line for,
 - [x] creating an index
@@ -35,12 +31,12 @@ TODO testing: test internal and command line for,
 - [x] loading a manifest as a standalone index
 - [x] loading a manifest as a standalone index in wrong directory
 - [x] loading a manifest as a standalone index and insert (should succeed)
+- [x] loading/using a checked-in index
+- [x] loading/using a checked-in manifest
 - loading a lineage db with old table
 - loading a lineage db with new table name/sourmash info
 - loading a checked-in lineage db with old table
 - loading a checked-in lineage db with new table
-- [x] loading/using a checked-in index
-- [x] loading/using a checked-in manifest
 - lca DB/on disk insert stuff
 """
 import time
