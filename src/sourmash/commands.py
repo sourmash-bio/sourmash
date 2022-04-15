@@ -540,7 +540,7 @@ def search(args):
 
             w.writeheader()
             for sr in results:
-                w.writerow(sr.writedict())
+                w.writerow(sr.writedict)
 
     # save matching signatures upon request
     if args.save_matches:
@@ -715,7 +715,7 @@ def gather(args):
                     assert scaled
                     # calculate intersection stats and info
                     prefetch_result = calculate_prefetch_info(prefetch_query, found_sig, scaled, args.threshold_bp)
-                    prefetch_csvout_w.writerow(prefetch_result.writedict())
+                    prefetch_csvout_w.writerow(prefetch_result.writedict)
 
             counters.append(counter)
 
@@ -1224,7 +1224,7 @@ def prefetch(args):
 
             # output match info as we go
             if csvout_fp:
-                csvout_w.writerow(result.writedict())
+                csvout_w.writerow(result.writedict)
 
             # output match signatures as we go (maybe)
             matches_out.add(match)
