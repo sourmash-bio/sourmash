@@ -533,17 +533,14 @@ def search(args):
         notify("** reporting only one match because --best-only was set")
 
     if args.output:
-        fieldnames = SearchResult._fields
+        fieldnames = SearchResult.write_search_cols
 
         with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
 
             w.writeheader()
             for sr in results:
-                d = dict(sr._asdict())
-                del d['match']
-                del d['query']
-                w.writerow(d)
+                w.writerow(sr.writedict())
 
     # save matching signatures upon request
     if args.save_matches:

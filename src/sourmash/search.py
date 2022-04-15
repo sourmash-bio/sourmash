@@ -4,6 +4,7 @@ Code for searching collections of signatures.
 from collections import namedtuple
 from enum import Enum
 import numpy as np
+from dataclasses import dataclass
 
 from .signature import SourmashSignature
 
@@ -157,12 +158,87 @@ class JaccardSearchBestOnly(JaccardSearch):
         self.threshold = max(self.threshold, score)
         return True
 
+def shorten_md5(md5):
+    return md5[:8]
 
-# generic SearchResult tuple.
-SearchResult = namedtuple('SearchResult',
-                          ['similarity', 'match', 'md5', 'filename', 'name',
-                          'query', 'query_filename', 'query_name', 'query_md5',
-                          'ksize'])
+@dataclass
+class SearchResult:
+    """Base class for sourmash search results."""
+    query: SourmashSignature
+    match: SourmashSignature
+    search_scaled: int
+    similarity: float = None # would be great to know which similarity it is & get rid of this.
+    jaccard: float = None
+    containment: float = None
+    max_containment: float = None
+    avg_containment: float = None
+    filename: str = None
+
+    #columns for standard SearchResult output
+    write_search_cols = ['similarity', 'md5', 'filename', 'name',
+                         'query_filename', 'query_name', 'query_md5']
+
+    def __post_init__(self):
+        # calculate general info
+        self.ksize = self.query.minhash.ksize
+        self.moltype = self.query.minhash.moltype
+        self.num = self.query.minhash.num
+        # get info about each signature/minhash
+        self.match_name = self.match.name
+        self.query_name = self.query.name
+        self.match_filename = self.match.filename
+        self.query_filename = self.query.filename
+        # do we want short md5s as well?
+        self.match_md5 = self.match.md5sum()
+        self.query_md5 = self.query.md5sum()
+        self.match_scaled = self.match.minhash.scaled
+        self.query_scaled = self.query.minhash.scaled
+        self.query_nhashes = len(self.query.minhash)
+        self.match_nhashes = len(self.match.minhash)
+        self.match_bp = self.query_nhashes * self.query_scaled
+        self.query_bp = self.match_nhashes * self.match_scaled
+        self.query_abundance = self.query.minhash.track_abundance
+        self.match_abundance = self.match.minhash.track_abundance
+        #deprecate these at some point, in favor of match_md5, etc
+        self.md5 = self.match_md5
+        self.name = self.match_name
+        if self.filename is None:
+            self.filename = self.match_filename
+        # calculate intersect_bp
+        #intersect_bp = None
+
+    def writedict(self):
+        self.query_md5 = shorten_md5(self.query_md5)
+        #self.md5 = shorten_md5(self.md5)
+        #self.match_md5 = shorten_md5(self.match_md5)
+        info = {k: v for k, v in self.__dict__.items()
+                if k in self.write_search_cols and v}
+        return info
+
+
+#@dataclass
+#class PrefetchResult(SearchResult):
+#    intersect_bp: int = None
+#    f_query_match: float = None
+#    f_match_query: float = None
+
+
+#@dataclass
+#class GatherResult(SearchResult):
+#    f_orig_query: float = None
+#    f_match: float = None
+#    f_unique_to_query: float = None
+#    f_unique_weighted: float = None
+#    average_abund: float = None
+#    median_abund: float = None
+#    std_abund: float = None
+#    f_match_orig: float = None
+#    unique_intersect_bp: int = None
+#    gather_result_rank: int = None
+#    remaining_bp: int = None
+#    query_bp: int = None
+#    query_nhashes: int = None
+#    query_abundance: bool = None
 
 
 def format_bp(bp):
@@ -195,19 +271,12 @@ def search_databases_with_flat_query(query, databases, **kwargs):
     results.sort(key=lambda x: -x[0])
 
     x = []
-    ksize = query.minhash.ksize
+    search_scaled = query.minhash.scaled # is this true?
     for (score, match, filename) in results:
-        x.append(SearchResult(similarity=score,
-                              match=match,
-                              md5=match.md5sum(),
-                              filename=filename,
-                              name=match.name,
-                              query=query,
-                              query_filename=query.filename,
-                              query_name=query.name,
-                              query_md5=query.md5sum()[:8],
-                              ksize=ksize,
-        ))
+        x.append(SearchResult(query, match,
+                               search_scaled=search_scaled,
+                               similarity=score,
+                               filename = filename))
     return x
 
 
@@ -230,18 +299,12 @@ def search_databases_with_abund_query(query, databases, **kwargs):
     results.sort(key=lambda x: -x[0])
 
     x = []
+    search_scaled = query.minhash.scaled ## is this true? or do i need min of match/query scaled?
     for (score, match, filename) in results:
-        x.append(SearchResult(similarity=score,
-                              match=match,
-                              md5=match.md5sum(),
-                              filename=filename,
-                              name=match.name,
-                              query=query,
-                              query_filename=query.filename,
-                              query_name=query.name,
-                              query_md5=query.md5sum()[:8],
-                              ksize=query.minhash.ksize,
-        ))
+        x.append(SearchResult(query, match,
+                               search_scaled=search_scaled,
+                               similarity=score,  # this is actually cosine sim? (abund)
+                               filename = filename))
     return x
 
 ###
