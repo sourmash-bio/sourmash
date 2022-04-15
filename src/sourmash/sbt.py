@@ -670,7 +670,10 @@ class SBT(Index):
 
         nodes = {}
         leaves = {}
-        total_nodes = len(self)
+
+        internal_nodes = set(self._nodes).union(self._missing_nodes)
+        total_nodes = len(self) + len(internal_nodes)
+
         manifest_rows = []
         for n, (i, node) in enumerate(self):
             if node is None:
@@ -1191,8 +1194,7 @@ class SBT(Index):
                 debug("processed {}, in queue {}", processed, len(queue), sep='\r')
 
     def __len__(self):
-        internal_nodes = set(self._nodes).union(self._missing_nodes)
-        return len(internal_nodes) + len(self._leaves)
+        return len(self._leaves)
 
     def print_dot(self):
         print("""
