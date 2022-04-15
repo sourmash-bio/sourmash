@@ -297,6 +297,55 @@ def test_sqlite_index_scaled1():
     assert len(results[1].signature.minhash) == 6
 
 
+def test_sqlite_index_load_existing():
+    # try loading an existing sqlite index
+    filename = utils.get_test_data('sqlite/index.sqldb')
+    sqlidx = sourmash.load_file_as_index(filename)
+    assert isinstance(sqlidx, SqliteIndex)
+
+    siglist = list(sqlidx.signatures())
+    assert len(siglist) == 2
+
+
+def test_sqlite_index_create_load_existing(runtmp):
+    # try creating then loading an existing sqlite index; create from CLI
+    filename = runtmp.output('idx.sqldb')
+    sig1 = utils.get_test_data('47.fa.sig')
+    sig2 = utils.get_test_data('63.fa.sig')
+
+    runtmp.sourmash('sig', 'cat', sig1, sig2, '-o', filename)
+
+    sqlidx = sourmash.load_file_as_index(filename)
+    assert isinstance(sqlidx, SqliteIndex)
+
+    siglist = list(sqlidx.signatures())
+    assert len(siglist) == 2
+
+
+def test_sqlite_index_create_load_insert_existing(runtmp):
+    # try creating, loading, inserting into an existing sqlite index
+    filename = runtmp.output('idx.sqldb')
+    sig1 = utils.get_test_data('47.fa.sig')
+    sig2 = utils.get_test_data('63.fa.sig')
+    sig3 = utils.get_test_data('2.fa.sig')
+
+    runtmp.sourmash('sig', 'cat', sig1, sig2, '-o', filename)
+
+    sqlidx = sourmash.load_file_as_index(filename)
+    assert isinstance(sqlidx, SqliteIndex)
+
+    siglist = list(sqlidx.signatures())
+    assert len(siglist) == 2
+
+    ss3 = sourmash.load_one_signature(sig3, ksize=31)
+    sqlidx.insert(ss3)
+    sqlidx.commit()
+
+    runtmp.sourmash('sig', 'describe', filename)
+    print(runtmp.last_result.out)
+    assert "md5: f3a90d4e5528864a5bcc8434b0d0c3b1" in runtmp.last_result.out
+
+
 def test_sqlite_manifest_basic():
     # test some features of the SQLite-based manifest.
     sig2 = load_one_signature(utils.get_test_data('2.fa.sig'), ksize=31)
@@ -475,3 +524,154 @@ def test_sqlite_manifest_locations(runtmp):
 
     assert 'dna-sig.sig.gz' in sql_locations # this is unnecessary...
     assert 'dna-sig.sig.gz' not in row_locations # ...this is correct :)
+
+
+def test_sqlite_manifest_create_insert(runtmp):
+    # try out creating a sqlite manifest and then running cli on it
+
+    mfname = runtmp.output("some.sqlmf")
+    mf = SqliteCollectionManifest.create(mfname)
+
+    sigfile = utils.get_test_data('47.fa.sig')
+    ss = sourmash.load_one_signature(sigfile)
+
+    mf._insert_row(mf.conn.cursor(), mf.make_manifest_row(ss, 'some.sig'))
+    mf.conn.commit()
+
+    # copy sig in since we want it to resolve...
+    shutil.copyfile(sigfile, runtmp.output('some.sig'))
+
+    # 'describe' should work here, to resolve actual sigs.
+    runtmp.sourmash('sig', 'describe', mfname)
+    print(runtmp.last_result.out)
+    assert 'md5: 09a08691ce52952152f0e866a59f6261' in runtmp.last_result.out
+
+
+def test_sqlite_manifest_create_insert_2(runtmp):
+    # try out creating a sqlite manifest from cli and then _insert_row into it
+
+    # copy sig in since we want it to resolve...
+    sigfile = utils.get_test_data('47.fa.sig')
+    shutil.copyfile(sigfile, runtmp.output('some.sig'))
+
+    runtmp.sourmash('sig', 'manifest', 'some.sig', '-F', 'sql',
+                    '-o', 'some.sqlmf')
+    mfname = runtmp.output("some.sqlmf")
+
+    mf = CollectionManifest.load_from_filename(mfname)
+    ss = sourmash.load_one_signature(runtmp.output('some.sig'))
+    mf._insert_row(mf.conn.cursor(), mf.make_manifest_row(ss, 'some.sig'))
+    mf.conn.commit()
+
+    # 'describe' should work here, to resolve actual sigs.
+    runtmp.sourmash('sig', 'describe', mfname)
+    print(runtmp.last_result.out)
+    assert 'md5: 09a08691ce52952152f0e866a59f6261' in runtmp.last_result.out
+
+
+def test_sqlite_manifest_existing(runtmp):
+    # try out an existing sqlite manifest
+
+    prefix = runtmp.output('protdir')
+    mf = runtmp.output('protdir/prot.sqlmf')
+    shutil.copytree(utils.get_test_data('prot'), prefix)
+    shutil.copyfile(utils.get_test_data('sqlite/prot.sqlmf'), mf)
+
+    runtmp.sourmash('sig', 'describe', mf)
+    print(runtmp.last_result.out)
+
+
+def test_sqlite_manifest_existing_insert(runtmp):
+    # try out an existing sqlite manifest - insert into it
+
+    prefix = runtmp.output('protdir')
+    shutil.copytree(utils.get_test_data('prot'), prefix)
+
+    mfname = runtmp.output('protdir/prot.sqlmf')
+    shutil.copyfile(utils.get_test_data('sqlite/prot.sqlmf'), mfname)
+    mf = CollectionManifest.load_from_filename(mfname)
+    assert isinstance(mf, SqliteCollectionManifest)
+
+    sigfile = utils.get_test_data('47.fa.sig')
+    ss = sourmash.load_one_signature(sigfile)
+
+    mf._insert_row(mf.conn.cursor(), mf.make_manifest_row(ss, 'some.sig'))
+    mf.conn.commit()
+
+    # copy sig in since we want it to resolve...
+    shutil.copyfile(sigfile, runtmp.output('protdir/some.sig'))
+
+    # 'describe' should work here.
+    runtmp.sourmash('sig', 'describe', mfname)
+    print(runtmp.last_result.out)
+
+
+def test_sqlite_manifest_existing_mf_only(runtmp):
+    # try out an existing sqlite manifest, but without underlying files -> fail
+
+    mf = runtmp.output('prot.sqlmf')
+    shutil.copyfile(utils.get_test_data('sqlite/prot.sqlmf'), mf)
+
+    # 'fileinfo' should work...
+    runtmp.sourmash('sig', 'fileinfo', mf)
+    print(runtmp.last_result.out)
+    assert 'num signatures: 7' in runtmp.last_result.out
+
+    # ...but 'describe' should fail, since it needs actual sigs.
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sig', 'describe', mf)
+
+    print(runtmp.last_result.err)
+    assert 'ERROR: Error while reading signatures from' in runtmp.last_result.err
+
+
+def test_sqlite_manifest_existing_mfonly_insert(runtmp):
+    # try out an existing sqlite manifest - insert into it, but fail describe
+
+    mfname = runtmp.output('prot.sqlmf')
+    shutil.copyfile(utils.get_test_data('sqlite/prot.sqlmf'), mfname)
+    mf = CollectionManifest.load_from_filename(mfname)
+    assert isinstance(mf, SqliteCollectionManifest)
+
+    sigfile = utils.get_test_data('47.fa.sig')
+    ss = sourmash.load_one_signature(sigfile)
+
+    mf._insert_row(mf.conn.cursor(), mf.make_manifest_row(ss, sigfile))
+    mf.conn.commit()
+
+    # 'fileinfo' should work...
+    runtmp.sourmash('sig', 'fileinfo', mfname)
+    print(runtmp.last_result.out)
+    assert 'num signatures: 8' in runtmp.last_result.out
+
+    # ...but 'describe' should fail, since it needs actual sigs.
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sig', 'describe', mfname)
+
+
+def test_sqlite_manifest_load_existing_index():
+    # try loading an existing sqlite index as a manifest
+    filename = utils.get_test_data('sqlite/index.sqldb')
+    mf = CollectionManifest.load_from_filename(filename)
+    assert isinstance(mf, SqliteCollectionManifest)
+
+    assert len(mf) == 2
+
+
+def test_sqlite_manifest_load_existing_index_insert_fail():
+    # try loading an existing sqlite index as a manifest; insert should fail
+    filename = utils.get_test_data('sqlite/index.sqldb')
+    mf = CollectionManifest.load_from_filename(filename)
+    assert isinstance(mf, SqliteCollectionManifest)
+
+    assert len(mf) == 2
+
+    # try insert - should fail
+    sigfile = utils.get_test_data('47.fa.sig')
+    ss = sourmash.load_one_signature(sigfile)
+
+    with pytest.raises(Exception) as exc:
+        mf._insert_row(mf.conn.cursor(), mf.make_manifest_row(ss, sigfile))
+
+    assert "must use SqliteIndex.insert to add to this manifest" in str(exc)
+

@@ -26,7 +26,22 @@ CTB consider:
 * a SqliteIndex sqldb can store taxonomy table just fine. Is there any
     extra support that might be worthwhile?
 
-@CTB: add an existing sqlitedb and test on that
+TODO testing: test internal and command line for,
+- [x] creating an index
+- [x] loading an index
+- [x] loading an index as a manifest (should work)
+- [x] loading an index as a standalone manifest and inserting (should fail)
+- [x] creating a manifest, using from CLI
+- [x] loading a manifest as a standalone index
+- [x] loading a manifest as a standalone index in wrong directory
+- [x] loading a manifest as a standalone index and insert (should succeed)
+- loading a lineage db with old table
+- loading a lineage db with new table name/sourmash info
+- loading a checked-in lineage db with old table
+- loading a checked-in lineage db with new table
+- [x] loading/using a checked-in index
+- [x] loading/using a checked-in manifest
+- lca DB/on disk insert stuff
 """
 import time
 import os
@@ -527,6 +542,8 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 
         Use 'create_from_manifest(filename, manifest) to create a new db
         from an existing manifest object.
+
+        Use 'load_from_filename' to load from file.
         """
         assert conn is not None
         self.conn = conn
