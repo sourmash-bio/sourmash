@@ -173,7 +173,7 @@ class SearchResult:
     max_containment: float = None
     avg_containment: float = None
     filename: str = None
-    intersect_bp = None
+    intersect_bp: int = 0
 
     #columns for standard SearchResult output
     search_write_cols = ['similarity', 'md5', 'filename', 'name',
@@ -211,7 +211,7 @@ class SearchResult:
 
     def to_write(self, columns=search_write_cols):
         info = {k: v for k, v in self.__dict__.items()
-                if k in columns and v}
+                if k in columns and v is not None}
         return info
 
     def searchresultdict(self):
@@ -225,7 +225,6 @@ class SearchResult:
 
 @dataclass
 class PrefetchResult(SearchResult):
-    intersect_bp: int = None
     f_query_match: float = None
     f_match_query: float = None
 
@@ -249,44 +248,46 @@ class PrefetchResult(SearchResult):
         return self.prefetchresultdict()
 
 
-#@dataclass
-#class GatherResult(SearchResult):
-##    intersect_bp = None
-#    f_orig_query: float = None
-#    f_match: float = None
-#    f_unique_to_query: float = None
-#    f_unique_weighted: float = None
-#    average_abund: float = None
-#    median_abund: float = None
-#    std_abund: float = None
-#    f_match_orig: float = None
-#    unique_intersect_bp: int = None
-#    gather_result_rank: int = None
-#    remaining_bp: int = None
-#    query_bp: int = None
-#    query_nhashes: int = None
-#    query_abundance: bool = None
-#
-#    gather_write_cols = ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
-#                         'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename',
-#                         'name', 'md5', 'match', 'f_match_orig', 'unique_intersect_bp', 'gather_result_rank',
-#                         'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
-#                         'moltype', 'num', 'scaled', 'query_nhashes', 'query_abundance']
-#
-#
-#    def __post_init__(self):
-#        self.init_searchresult_info()
-#
-#    def prep_md5print(self):
-#        self.query_md5 = shorten_md5(self.query_md5)
-#        self.md5 = shorten_md5(self.md5)
-#        self.match_md5 = shorten_md5(self.match_md5)
-#
-#    def writedict(self):
-#        self.prep_md5print()
-#        info = {k: v for k, v in self.__dict__.items()
-#                if k in self.gather_write_cols and v}
-#        return info
+@dataclass
+class GatherResult(SearchResult):
+    f_orig_query: float = None
+    f_match: float = None
+    f_unique_to_query: float = None
+    f_unique_weighted: float = None
+    average_abund: float = None
+    median_abund: float = None
+    std_abund: float = None
+    f_match_orig: float = None
+    unique_intersect_bp: int = None
+    gather_result_rank: int = None
+    remaining_bp: int = None
+    query_bp: int = None
+    query_nhashes: int = None
+    query_abundance: bool = False
+
+    gather_write_cols = ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
+                         'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename',
+                         'name', 'md5', 'match', 'f_match_orig', 'unique_intersect_bp', 'gather_result_rank',
+                         'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
+                         'moltype', 'num', 'scaled', 'query_nhashes', 'query_abundance']
+
+    def __post_init__(self):
+        self.init_searchresult_info()
+
+    def prep_md5print(self):
+        self.query_md5 = shorten_md5(self.query_md5)
+        self.md5 = shorten_md5(self.md5)
+        self.match_md5 = shorten_md5(self.match_md5)
+
+    def gatherresultdict(self):
+        self.query_md5 = shorten_md5(self.query_md5)
+        #self.md5 = shorten_md5(self.md5)
+        #self.match_md5 = shorten_md5(self.match_md5)
+        return self.to_write(columns=self.gather_write_cols)
+
+    @property
+    def writedict(self):
+        return self.gatherresultdict()
 
 
 def format_bp(bp):
@@ -347,7 +348,7 @@ def search_databases_with_abund_query(query, databases, **kwargs):
     results.sort(key=lambda x: -x[0])
 
     x = []
-    search_scaled = query.minhash.scaled ## is this true? or do i need min of match/query scaled?
+    search_scaled = query.minhash.scaled ## is this true? or do i need max of match/query scaled?
     for (score, match, filename) in results:
         x.append(SearchResult(query, match,
                                search_scaled=search_scaled,
@@ -358,13 +359,6 @@ def search_databases_with_abund_query(query, databases, **kwargs):
 ###
 ### gather code
 ###
-
-GatherResult = namedtuple('GatherResult', ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
-                            'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename',
-                            'name', 'md5', 'match', 'f_match_orig', 'unique_intersect_bp', 'gather_result_rank',
-                            'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
-                            'moltype', 'num', 'scaled', 'query_nhashes', 'query_abundance'])
-
 
 def _find_best(counters, query, threshold_bp):
     """
@@ -552,8 +546,11 @@ class GatherDatabases:
         weighted_missed += self.noident_query_sum_abunds
         weighted_missed /= sum_abunds
 
-        # build a result namedtuple
-        result = GatherResult(intersect_bp=intersect_bp,
+        # build a GatherResult
+        result = GatherResult(self.orig_query, best_match, # query or original query??
+                              cmp_scaled,
+                              filename=filename,
+                              intersect_bp=intersect_bp,
                               unique_intersect_bp=unique_intersect_bp,
                               f_orig_query=f_orig_query,
                               f_match=f_match,
@@ -563,39 +560,9 @@ class GatherDatabases:
                               average_abund=average_abund,
                               median_abund=median_abund,
                               std_abund=std_abund,
-                              filename=filename,
-                              md5=best_match.md5sum(),
-                              name=str(best_match),
-                              match=best_match,
                               gather_result_rank=self.result_n,
                               remaining_bp=remaining_bp,
-                              query_bp = self.orig_query_bp,
-                              query_filename=self.orig_query_filename,
-                              query_name=self.orig_query_name,
-                              query_md5=self.orig_query_md5,
-                              ksize =  self.orig_query_mh.ksize,
-                              moltype = self.orig_query_mh.moltype,
-                              num = self.orig_query_mh.num,
-                              scaled = scaled,
-                              query_nhashes=len(self.orig_query_mh),
-                              query_abundance=self.orig_query_mh.track_abundance,
                               )
-#        result = GatherResult(self.orig_query, best_match,
-#                              cmp_scaled,
-#                              filename=filename,
-#                              intersect_bp=intersect_bp,
-#                              unique_intersect_bp=unique_intersect_bp,
-#                              f_orig_query=f_orig_query,
-#                              f_match=f_match,
-#                              f_match_orig=f_match_orig,
-#                              f_unique_to_query=f_unique_to_query,
-#                              f_unique_weighted=f_unique_weighted,
-#                              average_abund=average_abund,
-#                              median_abund=median_abund,
-#                              std_abund=std_abund,
-#                              gather_result_rank=self.result_n,
-#                              remaining_bp=remaining_bp,
-#                              )
         self.result_n += 1
         self.query = new_query
         self.orig_query_mh = orig_query_mh

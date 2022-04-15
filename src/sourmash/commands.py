@@ -796,14 +796,13 @@ def gather(args):
 
     # save CSV?
     if found and args.output:
-        fieldnames = GatherResult._fields
+        #fieldnames = GatherResult._fields
+        fieldnames = GatherResult.gather_write_cols
         with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
             w.writeheader()
             for result in found:
-                d = dict(result._asdict())
-                del d['match']                 # actual signature not in CSV.
-                w.writerow(d)
+                w.writerow(result.writedict)
 
     # save matching signatures?
     if found and args.save_matches:
@@ -963,14 +962,13 @@ def multigather(args):
 
             output_base = os.path.basename(query_filename)
             output_csv = output_base + '.csv'
-            fieldnames = GatherResult._fields
+            #fieldnames = GatherResult._fields
+            fieldnames = GatherResult.gather_write_cols
             with FileOutputCSV(output_csv) as fp:
                 w = csv.DictWriter(fp, fieldnames=fieldnames)
                 w.writeheader()
                 for result in found:
-                    d = dict(result._asdict())
-                    del d['match']      # actual signature not output to CSV!
-                    w.writerow(d)
+                    w.writerow(result.writedict)
 
             output_matches = output_base + '.matches.sig'
             with open(output_matches, 'wt') as fp:
