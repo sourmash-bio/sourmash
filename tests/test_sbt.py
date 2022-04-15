@@ -979,7 +979,9 @@ def test_sbt_jaccard_ordering(runtmp):
     print(sr)
     assert len(sr) == 2
     assert sr[0].signature == ss_a
+    assert sr[0].score == 1.0
     assert sr[1].signature == ss_c
+    assert sr[1].score == 0.2
 
 
 def test_sbt_protein_command_index(runtmp):

@@ -124,7 +124,7 @@ path filetype: SBT
 location: protein.sbt.zip
 is database? yes
 has manifest? yes
-num signatures: 3
+num signatures: 2
 total hashes: 8214
 summary of sketches:
    2 sketches with protein, k=19, scaled=100          8214 total hashes
@@ -290,7 +290,7 @@ path filetype: SBT
 location: {dbfile}
 is database? yes
 has manifest? no
-num signatures: 13
+num signatures: 7
 total hashes: 3500
 summary of sketches:
    7 sketches with DNA, k=31, num=500                 3500 total hashes

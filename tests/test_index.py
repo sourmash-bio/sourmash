@@ -89,84 +89,6 @@ def test_simple_index(n_children):
         assert tree_found == set(linear_found)
 
 
-def test_linear_index_search():
-    # test LinearIndex searching - all in memory
-    sig2 = utils.get_test_data('2.fa.sig')
-    sig47 = utils.get_test_data('47.fa.sig')
-    sig63 = utils.get_test_data('63.fa.sig')
-
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
-
-    lidx = LinearIndex()
-    lidx.insert(ss2)
-    lidx.insert(ss47)
-    lidx.insert(ss63)
-
-    # now, search for sig2
-    sr = lidx.search(ss2, threshold=1.0)
-    print([s[1].name for s in sr])
-    assert len(sr) == 1
-    assert sr[0][1] == ss2
-
-    # search for sig47 with lower threshold; search order not guaranteed.
-    sr = lidx.search(ss47, threshold=0.1)
-    print([s[1].name for s in sr])
-    assert len(sr) == 2
-    sr.sort(key=lambda x: -x[0])
-    assert sr[0][1] == ss47
-    assert sr[1][1] == ss63
-
-    # search for sig63 with lower threshold; search order not guaranteed.
-    sr = lidx.search(ss63, threshold=0.1)
-    print([s[1].name for s in sr])
-    assert len(sr) == 2
-    sr.sort(key=lambda x: -x[0])
-    assert sr[0][1] == ss63
-    assert sr[1][1] == ss47
-
-    # search for sig63 with high threshold => 1 match
-    sr = lidx.search(ss63, threshold=0.8)
-    print([s[1].name for s in sr])
-    assert len(sr) == 1
-    sr.sort(key=lambda x: -x[0])
-    assert sr[0][1] == ss63
-
-
-def test_linear_index_prefetch():
-    # check that prefetch does basic things right:
-    sig2 = utils.get_test_data('2.fa.sig')
-    sig47 = utils.get_test_data('47.fa.sig')
-    sig63 = utils.get_test_data('63.fa.sig')
-
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
-
-    lidx = LinearIndex()
-    lidx.insert(ss2)
-    lidx.insert(ss47)
-    lidx.insert(ss63)
-
-    # search for ss2
-    results = []
-    for result in lidx.prefetch(ss2, threshold_bp=0):
-        results.append(result)
-
-    assert len(results) == 1
-    assert results[0].signature == ss2
-
-    # search for ss47 - expect two results
-    results = []
-    for result in lidx.prefetch(ss47, threshold_bp=0):
-        results.append(result)
-
-    assert len(results) == 2
-    assert results[0].signature == ss47
-    assert results[1].signature == ss63
-
-
 def test_linear_index_prefetch_empty():
     # check that an exception is raised upon for an empty LinearIndex
     sig2 = utils.get_test_data('2.fa.sig')
@@ -217,32 +139,6 @@ def test_linear_index_prefetch_lazy():
         next(g)
 
     assert "don't touch me!" in str(e.value)
-
-
-def test_linear_index_gather():
-    # test LinearIndex gather
-    sig2 = utils.get_test_data('2.fa.sig')
-    sig47 = utils.get_test_data('47.fa.sig')
-    sig63 = utils.get_test_data('63.fa.sig')
-
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
-
-    lidx = LinearIndex()
-    lidx.insert(ss2)
-    lidx.insert(ss47)
-    lidx.insert(ss63)
-
-    matches = lidx.gather(ss2)
-    assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][1] == ss2
-
-    matches = lidx.gather(ss47)
-    assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][1] == ss47
 
 
 def test_linear_index_search_subj_has_abundance():
@@ -2347,15 +2243,6 @@ def test_lazy_index_4_bool():
     assert lazy
 
 
-def test_lazy_index_5_len():
-    # test some basic features of LazyLinearIndex
-    lidx = LinearIndex()
-    lazy = LazyLinearIndex(lidx)
-
-    with pytest.raises(NotImplementedError):
-        len(lazy)
-
-
 def test_lazy_index_wraps_multi_index_location():
     # check that 'location' works fine when MultiIndex is wrapped by
     # LazyLinearIndex.
@@ -2454,6 +2341,24 @@ def test_lazy_loaded_index_3_find(runtmp):
     x = db.search(query, threshold=0.0)
     x = list(x)
     assert len(x) == 0
+
+
+def test_lazy_loaded_index_4_nofile(runtmp):
+    # test check for filename must exist
+    with pytest.raises(ValueError) as exc:
+        index.LazyLoadedIndex(runtmp.output('xyz'), True)
+
+    assert "must exist when creating" in str(exc)
+
+
+def test_lazy_loaded_index_4_nomanifest(runtmp):
+    # test check for empty manifest
+    sig2 = utils.get_test_data("2.fa.sig")
+
+    with pytest.raises(ValueError) as exc:
+        index.LazyLoadedIndex(sig2, None)
+
+    assert "manifest cannot be None" in str(exc)
 
 
 def test_revindex_index_search():
