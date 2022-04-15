@@ -392,4 +392,4 @@ def test_handle_seqlen_nkmers():
     # if neither seqlen or nkmers provided, complain
     with pytest.raises(ValueError) as exc:
         nkmers = handle_seqlen_nkmers(ksize)
-    assert("Error: distance estimation requires input of either `sequence_len_bp` or `n_unique_kmers`") in str(exc)
+    assert("Error: distance estimation requires input of either 'sequence_len_bp' or 'n_unique_kmers'") in str(exc)
