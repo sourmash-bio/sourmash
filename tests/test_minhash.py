@@ -2655,62 +2655,39 @@ def test_containment(track_abundance):
 def test_containment_ANI():
     f1 = utils.get_test_data('2.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')
-    f3 = utils.get_test_data('47+63.fa.sig')
     mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
     mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
-    mh3 = sourmash.load_one_signature(f3, ksize=31).minhash
 
-    print("\nmh1 contained by mh2", mh1.containment_ani(mh2))
-    print("mh2 contained by mh1",mh2.containment_ani(mh1))
-    print("mh1 max containment", mh1.max_containment_ani(mh2))
-    print("mh2 max containment", mh2.max_containment_ani(mh1))
+    m1_cont_m2 = mh1.containment_ani(mh2, estimate_ci =True)
+    m2_cont_m1 = mh2.containment_ani(mh1, estimate_ci =True)
+    print("\nmh1 contained by mh2", m1_cont_m2)
+    print("mh2 contained by mh1", m2_cont_m1)
 
-    print("\nmh2 contained by mh3", mh2.containment_ani(mh3))
-    print("mh3 contained by mh2",mh3.containment_ani(mh2))
+    assert (m1_cont_m2.ani, m1_cont_m2.ani_low, m1_cont_m2.ani_high, m1_cont_m2.p_nothing_in_common) == (1.0, None, None, 0.0)
+    assert (round(m2_cont_m1.ani,3), round(m2_cont_m1.ani_low,3), round(m2_cont_m1.ani_high,3)) == (0.966, 0.965, 0.967)
 
-    print("\nmh2 contained by mh3, CI 90%", mh2.containment_ani(mh3, confidence=0.9))
-    print("mh3 contained by mh2, CI 99%",mh3.containment_ani(mh2, confidence=0.99))
-
-    assert mh1.containment_ani(mh2) == (1.0, 1.0, 1.0)
-    assert mh2.containment_ani(mh1) == (0.9658183324254062, 0.9648452889933389, 0.966777042966207)
-    assert mh1.max_containment_ani(mh2) == (1.0, 1.0, 1.0)
-    assert mh2.max_containment_ani(mh1) == (1.0, 1.0, 1.0)
-
-    # containment 1 is special case. check max containment for non 0/1 values:
-    assert mh2.containment_ani(mh3) == (0.9866751346467802, 0.9861576758035308, 0.9871770716451368)
-    assert mh3.containment_ani(mh2) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
-    assert mh2.max_containment_ani(mh3) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
-    assert mh3.max_containment_ani(mh2) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
-    assert mh2.max_containment_ani(mh3)[0] == max(mh2.containment_ani(mh3)[0], mh3.containment_ani(mh2)[0])
-
-    # check confidence
-    assert mh2.containment_ani(mh3, confidence=0.9) == (0.9866751346467802, 0.986241913154108, 0.9870974232542815)
-    assert mh3.containment_ani(mh2, confidence=0.99) == (0.9868883523107224, 0.9862092287269876, 0.987540474733798)
-
+    m1_mc_m2 = mh1.max_containment_ani(mh2, estimate_ci =True)
+    m2_mc_m1 = mh2.max_containment_ani(mh1, estimate_ci =True)
+    print("mh1 max containment", m1_mc_m2)
+    print("mh2 max containment", m2_mc_m1)
+    assert m1_mc_m2 == m2_mc_m1
+    assert (m1_mc_m2.ani, m1_mc_m2.ani_low, m1_mc_m2.ani_high) == (1.0,None,None)
+ 
 
 def test_containment_ANI_precalc_containment():
     f1 = utils.get_test_data('2.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')
-    f3 = utils.get_test_data('47+63.fa.sig')
     mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
     mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
-    mh3 = sourmash.load_one_signature(f3, ksize=31).minhash
     # precalc containments and assert same results
     s1c = mh1.contained_by(mh2)
     s2c = mh2.contained_by(mh1)
-    s3c = mh2.contained_by(mh3)
-    s4c = mh3.contained_by(mh2)
     mc = max(s1c, s2c)
-    assert mh1.containment_ani(mh2, containment=s1c) == (1.0, 1.0, 1.0)
-    assert mh2.containment_ani(mh1, containment=s2c) == (0.9658183324254062, 0.9648452889933389, 0.966777042966207)
-    assert mh1.max_containment_ani(mh2, max_containment=mc) == (1.0, 1.0, 1.0)
-    assert mh2.max_containment_ani(mh1, max_containment=mc) == (1.0, 1.0, 1.0)
 
-    assert mh2.containment_ani(mh3, containment=s3c) == (0.9866751346467802, 0.9861576758035308, 0.9871770716451368)
-    assert mh3.containment_ani(mh2, containment=s4c) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
-    assert mh3.containment_ani(mh2, containment=s4c, confidence=0.99) == (0.9868883523107224, 0.9862092287269876, 0.987540474733798)
-    assert mh2.max_containment_ani(mh3, max_containment=s4c) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
-    assert mh3.max_containment_ani(mh2, max_containment=s4c) == (0.9868883523107224, 0.986374049720872, 0.9873870188726516)
+    assert mh1.containment_ani(mh2, estimate_ci=True) ==  mh1.containment_ani(mh2, containment=s1c, estimate_ci=True)
+    assert mh2.containment_ani(mh1) ==  mh2.containment_ani(mh1, containment=s2c)
+    assert mh1.max_containment_ani(mh2) ==  mh1.max_containment_ani(mh2, max_containment=mc)
+    assert mh1.max_containment_ani(mh2) ==  mh2.max_containment_ani(mh1, max_containment=mc)
 
 
 def test_containment_ANI_downsample():
@@ -2752,12 +2729,12 @@ def test_jaccard_ANI():
     mh2 = sourmash.load_one_signature(f2).minhash
 
     print("\nJACCARD_ANI", mh1.jaccard_ani(mh2))
-    print("\nJACCARD_ANI 90% CI", mh1.jaccard_ani(mh2, confidence=0.9))
-    print("\nJACCARD_ANI 99% CI", mh1.jaccard_ani(mh2, confidence=0.99))
 
-    assert mh1.jaccard_ani(mh2) == (0.9783711630110239, 0.9776381521132318, 0.9790929734698974)
-    assert mh1.jaccard_ani(mh2, confidence=0.9) == (0.9783711630110239, 0.9777567290812516, 0.9789777082973189)
-    assert mh1.jaccard_ani(mh2, confidence=0.99) == (0.9783711630110239, 0.9774056164150094, 0.9793173653983231)
+    m1_jani_m2 = mh1.jaccard_ani(mh2)
+    m2_jani_m1 = mh2.jaccard_ani(mh1)
+
+    assert m1_jani_m2 == m2_jani_m1
+    assert (m1_jani_m2.ani, m1_jani_m2.p_nothing_in_common, m1_jani_m2.jaccard_error) == (0.9783711630110239, 0.0, 3.891666770716877e-07)
 
 
 def test_jaccard_ANI_precalc_jaccard():
@@ -2769,8 +2746,9 @@ def test_jaccard_ANI_precalc_jaccard():
     jaccard = mh1.jaccard(mh2)
     print("\nJACCARD_ANI", mh1.jaccard_ani(mh2,jaccard=jaccard))
 
-    assert mh1.jaccard_ani(mh2, jaccard=jaccard) == (0.9783711630110239, 0.9776381521132318, 0.9790929734698974)
-    assert mh1.jaccard_ani(mh2, jaccard=jaccard, confidence=0.9) == (0.9783711630110239, 0.9777567290812516, 0.9789777082973189) 
+    assert mh1.jaccard_ani(mh2) == mh1.jaccard_ani(mh2, jaccard=jaccard) == mh2.jaccard_ani(mh1, jaccard=jaccard)
+    wrong_jaccard = jaccard - 0.1
+    assert mh1.jaccard_ani(mh2) != mh1.jaccard_ani(mh2, jaccard=wrong_jaccard)
 
 
 def test_jaccard_ANI_downsample():
@@ -2793,3 +2771,21 @@ def test_jaccard_ANI_downsample():
     assert mh1.scaled == mh2.scaled
     ds_j_manual = mh1.jaccard_ani(mh2)
     assert ds_s1c == ds_s2c == ds_j_manual
+
+def test_containment_ani_ci_tiny_testdata():
+    """
+    tiny test data to trigger the following:
+    WARNING: Cannot estimate ANI confidence intervals from containment. Do your sketches contain enough hashes?
+    Error: varN <0.0!
+    """
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 3, 4))
+    mh2.add_many((1, 2, 3, 4))
+
+    m2_cani_m1 = mh2.containment_ani(mh1, estimate_ci=True)
+    print(m2_cani_m1)
+    assert m2_cani_m1.ani == 0.986394259982259
+    assert m2_cani_m1.ani_low == None
+    assert m2_cani_m1.ani_high == None

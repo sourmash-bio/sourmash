@@ -501,12 +501,16 @@ def search(args):
 
     # do the actual search
     if query.minhash.track_abundance:
-        results = search_databases_with_abund_query(query, databases,
-                                   threshold=args.threshold,
-                                   do_containment=args.containment,
-                                   do_max_containment=args.max_containment,
-                                   best_only=args.best_only,
-                                   unload_data=True)
+        try:
+            results = search_databases_with_abund_query(query, databases,
+                                       threshold=args.threshold,
+                                       do_containment=args.containment,
+                                       do_max_containment=args.max_containment,
+                                       best_only=args.best_only,
+                                       unload_data=True)
+        except TypeError as exc:
+            error(f"ERROR: {str(exc)}")
+            sys.exit(-1)
     else:
         results = search_databases_with_flat_query(query, databases,
                                    threshold=args.threshold,

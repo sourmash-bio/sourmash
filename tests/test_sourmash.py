@@ -982,6 +982,17 @@ def test_search_ignore_abundance(runtmp):
     assert out1 != out2
 
 
+def test_search_abund_subj_flat(runtmp):
+    # test Index.search_abund requires an abund subj
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('search', sig47, sig63)
+
+    assert "'search_abund' requires subject signatures with abundance information" in str(exc.value)
+
+
 def test_search_abund_csv(runtmp):
     # test search with abundance signatures, look at CSV output
     testdata1 = utils.get_test_data('short.fa')

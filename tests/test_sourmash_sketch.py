@@ -511,7 +511,8 @@ def test_manifest_row_to_compute_parameters_4():
 
 
 def test_bad_compute_parameters():
-    p = ComputeParameters([31], 42, 0, 0, 0, 0, 0, True, 1000)
+    p = ComputeParameters(ksizes=[31], seed=42, dna=0, protein=0, dayhoff=0,
+                          hp=0, num_hashes=0, track_abundance=True, scaled=1000)
     with pytest.raises(AssertionError):
         p.moltype
 

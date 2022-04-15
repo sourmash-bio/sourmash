@@ -77,6 +77,20 @@
             DYLD_LIBRARY_PATH = "${self.packages.${system}.lib}/lib";
             NO_BUILD = "1";
           };
+          docker =
+            let
+              bin = self.defaultPackage.${system};
+            in
+            pkgs.dockerTools.buildLayeredImage {
+              name = bin.pname;
+              tag = bin.version;
+              contents = [ bin ];
+
+              config = {
+                Cmd = [ "/bin/sourmash" ];
+                WorkingDir = "/";
+              };
+            };
         };
 
         defaultPackage = self.packages.${system}.sourmash;
