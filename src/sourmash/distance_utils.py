@@ -148,7 +148,7 @@ def handle_seqlen_nkmers(ksize, *, sequence_len_bp=None, n_unique_kmers=None):
         return n_unique_kmers
     elif sequence_len_bp is None:
         # both are None, raise ValueError
-        raise ValueError("Error: distance estimation requires input of either `sequence_len_bp` or `n_unique_kmers`")
+        raise ValueError("Error: distance estimation requires input of either 'sequence_len_bp' or 'n_unique_kmers'")
     else:
         n_unique_kmers = sequence_len_bp - (ksize - 1)
         return n_unique_kmers
