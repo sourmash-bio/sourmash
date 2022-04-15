@@ -206,9 +206,9 @@ def containment_to_distance(
     sol1, sol2, point_estimate = None, None, None
     n_unique_kmers = handle_seqlen_nkmers(ksize, sequence_len_bp = sequence_len_bp, n_unique_kmers=n_unique_kmers)
     if containment <= 0.0001:
-        sol2 = sol1 = point_estimate = 1.0
+        point_estimate = 1.0
     elif containment >= 0.9999:
-        sol1 = sol2 = point_estimate = 0.0
+        point_estimate = 0.0
     else:
         point_estimate = 1.0 - containment ** (1.0 / ksize)
         if estimate_ci:

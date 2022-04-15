@@ -2663,7 +2663,7 @@ def test_containment_ANI():
     print("\nmh1 contained by mh2", m1_cont_m2)
     print("mh2 contained by mh1", m2_cont_m1)
 
-    assert (m1_cont_m2.ani, m1_cont_m2.ani_low, m1_cont_m2.ani_high, m1_cont_m2.p_nothing_in_common) == (1.0, 1.0, 1.0, 0.0)
+    assert (m1_cont_m2.ani, m1_cont_m2.ani_low, m1_cont_m2.ani_high, m1_cont_m2.p_nothing_in_common) == (1.0, None, None, 0.0)
     assert (round(m2_cont_m1.ani,3), round(m2_cont_m1.ani_low,3), round(m2_cont_m1.ani_high,3)) == (0.966, 0.965, 0.967)
 
     m1_mc_m2 = mh1.max_containment_ani(mh2, estimate_ci =True)
@@ -2671,7 +2671,7 @@ def test_containment_ANI():
     print("mh1 max containment", m1_mc_m2)
     print("mh2 max containment", m2_mc_m1)
     assert m1_mc_m2 == m2_mc_m1
-    assert (m1_mc_m2.ani, m1_mc_m2.ani_low, m1_mc_m2.ani_high) == (1.0,1.0,1.0)
+    assert (m1_mc_m2.ani, m1_mc_m2.ani_low, m1_mc_m2.ani_high) == (1.0,None,None)
  
 
 def test_containment_ANI_precalc_containment():
