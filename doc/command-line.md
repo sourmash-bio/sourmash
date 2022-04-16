@@ -727,7 +727,7 @@ database. It can be used to combine multiple taxonomies into a single file,
 as well as change formats between CSV and sqlite3.
 
 The following command will take in two taxonomy files and combine them into
-a single taxonomy sqlite database.
+a single taxonomy SQLite database.
 
 ```
 sourmash tax prepare --taxonomy file1.csv file2.csv -o tax.db
@@ -930,6 +930,15 @@ As of sourmash 4.2.0, `lca index` supports `--picklist`, to
 [select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
 can be used to index a subset of a large collection, or to
 exclude a few signatures from an index being built from a large collection.
+
+As of sourmash 4.4.0, `lca index` can produce an _on disk_ LCA
+databases stored in a SQLite database. To prepare such a database, use
+`sourmash lca index ... -F sql`.
+
+All sourmash commands work with either type of LCA database (the
+default JSON database, and the SQLite version). SQLite databases are
+larger than JSON databases on disk but are typically much faster and
+to load and search, and use much less memory.
 
 ### `sourmash lca rankinfo` - examine an LCA database
 
@@ -1399,6 +1408,14 @@ iterating over the signatures in the input file. This can be slow for
 large collections. Use `--no-rebuild-manifest` to load an existing
 manifest if it is available.
 
+As of sourmash 4.4.0, `sig manifest` can produce a manifest in a fast
+on-disk format (a SQLite database). SQLite manifests can be _much_
+faster when working with very large collections of signatures.
+To produce a SQLite manifest, use `sourmash sig manifest ... -F sql`.
+
+All sourmash commands that work with manifests will accept both
+CSV and SQLite manifest files.
+
 ### `sourmash signature check` - compare picklists and manifests
 
 Compare picklists and manifests across databases, and optionally output matches
@@ -1452,7 +1469,7 @@ Briefly,
 
 None of these commands currently support searching, comparing, or indexing
 signatures with multiple ksizes or moltypes at the same time; you need
-to pick the ksize and moltype to use for your search. Where possible,
+to pick the ksize and moltype to use for your query. Where possible,
 scaled values will be made compatible.
 
 ### Selecting signatures 
@@ -1549,9 +1566,10 @@ In addition to `sig extract`, the following commands support
 ### Storing (and searching) signatures
   
 Backing up a little, there are many ways to store and search
-signatures. `sourmash` supports storing and loading signatures from JSON
-files, directories, lists of files, Zip files, and indexed databases.
-These can all be used interchangeably for sourmash operations.
+signatures. `sourmash` supports storing and loading signatures from
+JSON files, directories, lists of files, Zip files, custom indexed
+databases, and SQLite databases.  These can all be used
+interchangeably for most sourmash operations.
 
 The simplest is one signature in a single JSON file. You can also put
 many signatures in a single JSON file, either by building them that
@@ -1567,7 +1585,7 @@ signatures from zip files.  You can create a compressed collection of
 signatures using `zip -r collection.zip *.sig` and then specify
 `collections.zip` on the command line.
 
-### Saving signatures, more generally
+### Choosing signature output formats
 
 (sourmash v4.1 and later)
 
@@ -1583,6 +1601,7 @@ This behavior is triggered by the requested output filename --
 * to save to gzipped JSON signature files, use `.sig.gz`;
 * to save to a Zip file collection, use `.zip`;
 * to save signature files to a directory, use a name ending in `/`; the directory will be created if it doesn't exist;
+* to save to a SQLite database, use `.sqldb` (as of sourmash v4.4.0).
 
 If none of these file extensions is detected, output will be written
 in the JSON `.sig` format, either to the provided output filename or
@@ -1614,17 +1633,23 @@ Indexed databases can make searching signatures much faster. SBT
 databases are low memory and disk-intensive databases that allow for
 fast searches using a tree structure, while LCA databases are higher
 memory and (after a potentially significant load time) are quite fast.
+SQLite databases (new in sourmash v4.4.0) are typically larger on disk
+than SBTs and LCAs, but in turn are fast to load and support very low
+memory search.
 
 (LCA databases also directly permit taxonomic searches using `sourmash lca`
 functions.)
 
 Commands that take multiple signatures or collections of signatures
-will also work with databases.
+will also work with indexed databases.
 
-One limitation of indexed databases is that both SBT and LCA database
-can only contain one "type" of signature (one ksize/one moltype at one
-scaled value). If the database signature type is incompatible with the
-other signatures, sourmash will complain appropriately.
+One limitation of indexed databases is that they are all restricted in
+to certain kinds of signatures. Both SBT and LCA databases can only
+contain one "type" of signature (one ksize/one moltype at one scaled
+value). SQLite databases can contain multiple ksizes and moltypes, but
+only at one scaled value. If the database signature type is
+incompatible with the other signatures, sourmash will complain
+appropriately.
 
 In contrast, signature files, zip collections, and directory
 hierarchies can contain many different types of signatures, and
