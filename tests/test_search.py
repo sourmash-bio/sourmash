@@ -3,9 +3,11 @@
 # CTB TODO: test search protocol with mock class?
 
 import pytest
+import sourmash_tst_utils as utils
 
-from sourmash import search, SourmashSignature, MinHash
-from sourmash.search import make_jaccard_search_query, make_gather_query
+from sourmash import search, SourmashSignature, MinHash, load_one_signature
+from sourmash.search import (make_jaccard_search_query, make_gather_query,
+                             SearchResult, PrefetchResult, GatherResult)
 from sourmash.index import LinearIndex
 
 
@@ -67,8 +69,6 @@ def test_cont_requires_scaled():
     with pytest.raises(TypeError) as exc:
         search_obj.check_is_compatible(SourmashSignature(mh))
     assert str(exc.value) == "this search requires a scaled signature"
-
-
 
 
 def test_search_requires_flat():
@@ -248,3 +248,86 @@ def test_search_with_abund_query():
         search.search_databases_with_abund_query(query, [],
                                                  threshold=0,
                                                  do_max_containment=True)
+
+
+def test_SearchResult():
+    ss47_file = utils.get_test_data('47.fa.sig')
+    ss4763_file = utils.get_test_data('47+63.fa.sig')
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype='dna')
+    ss4763.filename = ss4763_file
+
+    scaled = ss47.minhash.scaled
+
+    res = SearchResult(ss47, ss4763, scaled)
+
+    assert res.query_name == ss47.name
+    assert res.match_name == ss4763.name
+    assert res.query_scaled == ss47.minhash.scaled == 1000
+    assert res.match_scaled == ss4763.minhash.scaled == 1000
+    assert res.search_scaled == 1000
+    assert res.num == 0
+    assert res.query_abundance == ss47.minhash.track_abundance
+    assert res.match_abundance == ss4763.minhash.track_abundance
+    assert res.query_bp == len(ss47.minhash) * scaled
+    assert res.match_bp == len(ss4763.minhash) * scaled
+    assert res.ksize == 31
+    assert res.moltype == 'DNA'
+    assert res.query_filename == '47.fa'
+    assert res.match_filename == ss4763_file
+    assert res.query_md5 == ss47.md5sum()
+    assert res.match_md5 == ss4763.md5sum()
+    assert res.query_n_hashes == len(ss47.minhash)
+    assert res.match_n_hashes == len(ss4763.minhash)
+    assert res.md5 == ss4763.md5sum()
+    assert res.name == ss4763.name
+    assert res.filename == ss4763.filename
+
+
+def test_PrefetchResult():
+    ss47_file = utils.get_test_data('47.fa.sig')
+    ss4763_file = utils.get_test_data('47+63.fa.sig')
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype='dna')
+    ss4763.filename = ss4763_file
+
+    scaled = ss47.minhash.scaled
+
+    intersect_mh = ss47.minhash.intersection(ss4763.minhash)
+    intersect_bp = len(intersect_mh) * scaled,
+    jaccard=ss4763.jaccard(ss47),
+    max_containment=ss4763.max_containment(ss47),
+    f_query_match=ss47.contained_by(ss4763),
+    f_match_query=ss4763.contained_by(ss47),
+
+    res = PrefetchResult(ss47, ss4763, scaled,
+                        intersect_bp=intersect_bp,
+                        jaccard=jaccard, max_containment=max_containment,
+                        f_query_match=f_query_match, f_match_query=f_match_query)
+
+    assert res.query_name == ss47.name
+    assert res.match_name == ss4763.name
+    assert res.query_scaled == ss47.minhash.scaled == 1000
+    assert res.match_scaled == ss4763.minhash.scaled == 1000
+    assert res.search_scaled == 1000
+    assert res.num == 0
+    assert res.query_abundance == ss47.minhash.track_abundance
+    assert res.match_abundance == ss4763.minhash.track_abundance
+    assert res.query_bp == len(ss47.minhash) * scaled
+    assert res.match_bp == len(ss4763.minhash) * scaled
+    assert res.ksize == 31
+    assert res.moltype == 'DNA'
+    assert res.query_filename == '47.fa'
+    assert res.match_filename == ss4763_file
+    assert res.query_md5 == ss47.md5sum()
+    assert res.match_md5 == ss4763.md5sum()
+    assert res.query_n_hashes == len(ss47.minhash)
+    assert res.match_n_hashes == len(ss4763.minhash)
+    assert res.md5 == ss4763.md5sum()
+    assert res.name == ss4763.name
+    assert res.filename == ss4763.filename
+    assert res.intersect_bp == intersect_bp
+    assert res.jaccard == jaccard
+    assert res.max_containment == max_containment
+    assert res.f_query_match == f_query_match
+    assert res.f_match_query == f_match_query

@@ -193,10 +193,10 @@ class SearchResult:
         self.query_md5 = self.query.md5sum()
         self.match_scaled = self.match.minhash.scaled
         self.query_scaled = self.query.minhash.scaled
-        self.query_nhashes = len(self.query.minhash)
-        self.match_nhashes = len(self.match.minhash)
-        self.match_bp = self.query_nhashes * self.query_scaled
-        self.query_bp = self.match_nhashes * self.match_scaled
+        self.query_n_hashes = len(self.query.minhash)
+        self.match_n_hashes = len(self.match.minhash)
+        self.query_bp = self.query_n_hashes * self.query_scaled
+        self.match_bp = self.match_n_hashes * self.match_scaled
         self.query_abundance = self.query.minhash.track_abundance
         self.match_abundance = self.match.minhash.track_abundance
         #deprecate these at some point, in favor of match_md5, etc
@@ -231,7 +231,7 @@ class PrefetchResult(SearchResult):
                            'f_match_query', 'match', 'match_filename', 'match_name',
                            'match_md5', 'match_bp', 'query', 'query_filename', 'query_name',
                            'query_md5', 'query_bp', 'ksize', 'moltype', 'num', 'scaled',
-                           'query_nhashes', 'query_abundance']
+                           'query_n_hashes', 'query_abundance']
 
     def __post_init__(self):
         self.init_searchresult_info()
@@ -260,15 +260,12 @@ class GatherResult(SearchResult):
     unique_intersect_bp: int = None
     gather_result_rank: int = None
     remaining_bp: int = None
-    query_bp: int = None
-    query_nhashes: int = None
-    query_abundance: bool = False
 
     gather_write_cols = ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
                          'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename',
                          'name', 'md5', 'match', 'f_match_orig', 'unique_intersect_bp', 'gather_result_rank',
                          'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
-                         'moltype', 'num', 'scaled', 'query_nhashes', 'query_abundance']
+                         'moltype', 'num', 'scaled', 'query_n_hashes', 'query_abundance']
 
     def __post_init__(self):
         self.init_searchresult_info()
