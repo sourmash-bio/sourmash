@@ -1,26 +1,76 @@
-"""Provide SqliteIndex, a sqlite3-based Index class for storing and searching
-sourmash signatures.
+"""sqlite3 based Index, CollectionManifest, and LCA_Database
+implementations.
 
-Note that SqliteIndex supports both storage and fast _search_ of scaled
-signatures, via a reverse index.
+These classes support a variety of flexible and fast on-disk storage,
+search, and retrieval functions.
 
-Features and limitations:
+SqliteIndex stores full scaled signatures; sketches are stored as
+reverse-indexed collections of hashes. Search is optimized via the
+reverse index. Num and abund sketches are not supported. All scaled
+values must be the same upon insertion. Multiple moltypes _are_
+supproted.
 
-* Currently we try to maintain only one database connection.  It's not 100%
-  clear what happens if the same database is opened by multiple independent
-  processes and one or more of them write to it. It should all work, because
-  SQL...
+SqliteCollectionManifest provides a full implementation of the
+manifest API. It can store details for all signature types. When used
+as part of a SqliteIndex database, it does not support independent
+insertion.
 
-* Unlike LCA_Database, SqliteIndex supports multiple ksizes and moltypes.
+LCA_SqliteDatabase builds on top of SqliteIndex and LineageDB_Sqlite
+(in the tax submodule) to provide a full on-disk implementation of
+LCA_Database.
 
-* SqliteIndex does not support 'num' signatures. It could store them
-  easily, but since it cannot search them properly with 'find', we've
-  omitted them.
+Using these classes
+-------------------
 
-* Likewise, SqliteIndex does not support 'abund' signatures because it cannot
-  search them (just like SBTs cannot).
+These classes are fully integrated into sourmash loading.
 
-* @CTB document manifest and LCA stuff.
+Internally, use `sqlite_index.load_sqlite_file(...)` to load a specific
+file; this will return the appropriate SqliteIndex, StandaloneManifestIndex,
+or LCA_Database object. @CTB test this last ;).
+
+Use `CollectionManifest.load_from_filename(...)` to load the manifest
+directly as a manifest object.
+
+Implementation Details
+----------------------
+
+SqliteIndex:
+
+* Hashes with values above MAX_SQLITE_INT=2**63-1 are transformed into
+  signed long longs upon insertion, and then back into ulong longs upon
+  retrieval.
+
+* Hash overlap is calculated via a SELECT.
+
+* SqliteIndex relies on SqliteCollectionManifest for manifest functionality,
+  including signature selection and picklists.
+
+SqliteCollectionManifest:
+
+* each object maintains info about whether it is being "managed" by a
+  SqliteIndex class or not. If it is, `_insert_row(...)` cannot be
+  called directly.
+
+* `select(...)` operates directly with SQL queries, except for
+  picklist selection, which involves inspect each manifest row in
+  Python. In addition to being (much) simpler, this ends up being
+  faster in some important real world situations, even for millions of
+  rows!
+
+* filter_on_rows and filter_on_columns also both operate in Python,
+  not SQL.
+
+* for this reason, the `locations()` method returns a superset of
+  locations.  This is potentially very significant if you do a select
+  with a picklist that ignores most sketches - the `locations()`
+  method will ignore the picklist.
+
+Limitations:
+
+* all of these classes share a single connection object, and it could
+  get confusing quickly if you simultaneously insert and query. We suggest
+  separating creation and insertion. That having been said, these databases
+  should work fine for many simultaneous queries; just don't write :).
 
 TODO testing: test internal and command line for,
 - [x] creating an index
@@ -39,6 +89,9 @@ TODO testing: test internal and command line for,
 - loading a checked-in lineage db with new table
 - lca DB/on disk insert stuff
 - test various combinations of database types.
+- do some realistic benchmarking of SqliteIndex and LCA_Database
+- check LCA database is loaded load_sqlite_index. @CTB and rename.
+
 """
 import time
 import os
@@ -949,17 +1002,22 @@ class LCA_SqliteDatabase:
     def __repr__(self):
         return "LCA_SqliteDatabase('{}')".format(self.sqlidx.location)
 
-    def load(self, *args, **kwargs):
+    @classmethod
+    def load(cls, *args, **kwargs):
         # this could do the appropriate MultiLineageDB stuff. @CTB
         raise NotImplementedError
 
+    ### LCA_Database API/protocol.
+
     def downsample_scaled(self, scaled):
         """This doesn't really do anything for SqliteIndex, but is needed
-        for the API.
+        for the LCA_Database API.
         """
         if scaled < self.sqlidx.scaled:
             raise ValueError("cannot decrease scaled from {} to {}".format(self.scaled, scaled))
 
+        # CTB: maybe return a new LCA_Database? Right now this isn't how
+        # the lca_db protocol works tho.
         self.scaled = scaled
 
     def get_lineage_assignments(self, hashval, *, min_num=None):
@@ -1006,7 +1064,7 @@ class LCA_SqliteDatabase:
 
 class _SqliteIndexHashvalToIndex:
     """
-    Wrapper class to retrieve keys and key/value pairs for 
+    Internal wrapper class to retrieve keys and key/value pairs for 
     hashval -> [ list of idx ].
     """
     def __init__(self, sqlidx):
