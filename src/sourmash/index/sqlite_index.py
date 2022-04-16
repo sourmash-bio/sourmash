@@ -24,7 +24,7 @@ Using these classes
 
 These classes are fully integrated into sourmash loading.
 
-Internally, use `sqlite_index.load_sqlite_file(...)` to load a specific
+Internally, use `sqlite_index.load_sqlite_index(...)` to load a specific
 file; this will return the appropriate SqliteIndex, StandaloneManifestIndex,
 or LCA_Database object. @CTB test this last ;).
 
@@ -123,12 +123,23 @@ convert_hash_to = lambda x: BitArray(uint=x, length=64).int if x > MAX_SQLITE_IN
 convert_hash_from = lambda x: BitArray(int=x, length=64).uint if x < 0 else x
 
 
-def load_sqlite_file(filename, *, request_manifest=False):
-    "Load a SqliteIndex or a SqliteCollectionManifest from a sqlite file."
+def load_sqlite_index(filename, *, request_manifest=False):
+    """Load a SqliteIndex, SqliteCollectionManifest, or LCA_SqliteDatabase.
+
+    This is the main top-level API for loading an Index-like object. The logic
+    is roughly:
+
+    * does this database have both index and lineage tables? If so,
+      return an LCA_SqliteDatabase.
+    * if it only has an index, return a SqliteIndex.
+    * if it only has a manifest, return a StandaloneManifestIndex.
+
+    If you would like only a manifest, specify 'request_manifest=True'.
+    """
     conn = sqlite_utils.open_sqlite_db(filename)
 
     if conn is None:
-        debug_literal("load_sqlite_file: conn is None.")
+        debug_literal("load_sqlite_index: conn is None.")
         return
 
     c = conn.cursor()
@@ -138,30 +149,44 @@ def load_sqlite_file(filename, *, request_manifest=False):
 
     is_index = False
     is_manifest = False
+    is_lca_db = False
 
     if 'SqliteIndex' in internal_d:
         v = internal_d['SqliteIndex']
         if v != '1.0':
             raise IndexNotSupported
         is_index = True
-        debug_literal("load_sqlite_file: it's an index!")
+        debug_literal("load_sqlite_index: it's an index!")
+
+    if is_index and 'SqliteLineage' in internal_d:
+        v = internal_d['SqliteLineage']
+        if v != '1.0':
+            raise IndexNotSupported
+
+        is_lca_db = True
+        debug_literal("load_sqlite_index: it's got a lineage table!")
 
     if internal_d['SqliteManifest']:
         v = internal_d['SqliteManifest']
         if v != '1.0':
             raise IndexNotSupported
         is_manifest = True
-        debug_literal("load_sqlite_file: it's a manifest!")
+        debug_literal("load_sqlite_index: it's a manifest!")
 
     # every Index is a Manifest!
-    if is_index:
+    if is_index or is_lca_db:
         assert is_manifest
 
     idx = None
     if is_index and not request_manifest:
         conn.close()
-        idx = SqliteIndex(filename)
-        debug_literal("load_sqlite_file: returning SqliteIndex")
+
+        if is_lca_db:
+            idx = LCA_SqliteDatabase.create_from_sqlite_index_and_lineage(filename)
+            debug_literal("load_sqlite_index: returning LCA_SqliteDatabase")
+        else:
+            idx = SqliteIndex(filename)
+            debug_literal("load_sqlite_index: returning SqliteIndex")
     elif is_manifest:
         managed_by_index=False
         if is_index:
@@ -171,7 +196,7 @@ def load_sqlite_file(filename, *, request_manifest=False):
         prefix = os.path.dirname(filename)
         mf = SqliteCollectionManifest(conn, managed_by_index=managed_by_index)
         idx = StandaloneManifestIndex(mf, filename, prefix=prefix)
-        debug_literal("load_sqlite_file: returning StandaloneManifestIndex")
+        debug_literal("load_sqlite_index: returning StandaloneManifestIndex")
 
     return idx
 
@@ -878,7 +903,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         except (sqlite3.OperationalError, sqlite3.DatabaseError) as exc:
             if not append:
                 raise Exception(f"cannot create sqlite3 db at '{location}'; exception: {str(exc)}")
-            db = load_sqlite_file(location, request_manifest=True)
+            db = load_sqlite_index(location, request_manifest=True)
             mf = db.manifest
 
         cursor = mf.conn.cursor()

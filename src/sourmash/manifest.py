@@ -82,8 +82,8 @@ class BaseCollectionManifest:
 
     @classmethod
     def load_from_sql(cls, filename):
-        from sourmash.index.sqlite_index import load_sqlite_file
-        db = load_sqlite_file(filename, request_manifest=True)
+        from sourmash.index.sqlite_index import load_sqlite_index
+        db = load_sqlite_index(filename, request_manifest=True)
         if db:
             return db.manifest
 

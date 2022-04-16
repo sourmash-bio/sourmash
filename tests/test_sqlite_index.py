@@ -6,7 +6,7 @@ import sqlite3
 
 import sourmash
 from sourmash.exceptions import IndexNotSupported
-from sourmash.index.sqlite_index import SqliteIndex, load_sqlite_file
+from sourmash.index.sqlite_index import SqliteIndex, load_sqlite_index
 from sourmash.index.sqlite_index import SqliteCollectionManifest
 from sourmash.index import StandaloneManifestIndex
 from sourmash import load_one_signature, SourmashSignature
@@ -513,7 +513,7 @@ def test_sqlite_manifest_create(runtmp):
     assert os.path.exists(sqlmf)
 
     # verify it's loadable as the right type
-    idx = load_sqlite_file(sqlmf)
+    idx = load_sqlite_index(sqlmf)
     assert isinstance(idx, StandaloneManifestIndex)
 
     # summarize
