@@ -251,6 +251,7 @@ def test_search_with_abund_query():
 
 
 def test_SearchResult():
+    # check that values get stored/calculated correctly
     ss47_file = utils.get_test_data('47.fa.sig')
     ss4763_file = utils.get_test_data('47+63.fa.sig')
     ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
@@ -285,6 +286,7 @@ def test_SearchResult():
 
 
 def test_PrefetchResult():
+    # check that values get stored/calculated correctly
     ss47_file = utils.get_test_data('47.fa.sig')
     ss4763_file = utils.get_test_data('47+63.fa.sig')
     ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
@@ -331,3 +333,82 @@ def test_PrefetchResult():
     assert res.max_containment == max_containment
     assert res.f_query_match == f_query_match
     assert res.f_match_query == f_match_query
+
+
+def test_GatherResult():
+    # check that values get stored/calculated correctly
+    ss47_file = utils.get_test_data('47.fa.sig')
+    ss4763_file = utils.get_test_data('47+63.fa.sig')
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype='dna')
+    ss4763.filename = ss4763_file
+
+    scaled = ss47.minhash.scaled
+
+    intersect_mh = ss47.minhash.intersection(ss4763.minhash)
+    intersect_bp = len(intersect_mh) * scaled,
+    max_containment=ss4763.max_containment(ss47),
+    f_orig_query = ss47.contained_by(ss4763)
+    f_match_query=ss4763.contained_by(ss47),
+
+    # make some fake vals to check
+    unique_intersect_bp = 10
+    f_match = 0.6
+    f_unique_to_query = 0.2
+    f_unique_weighted = 0.4
+    average_abund = 1.3
+    median_abund = 1.2
+    std_abund = 0.1
+    gather_result_rank = 1
+    remaining_bp = 500
+
+    res = GatherResult(ss47, ss4763, scaled,
+                        intersect_bp=intersect_bp,
+                        max_containment=max_containment,
+                        f_match_orig=f_match_query,
+                        f_orig_query=f_orig_query,
+                        unique_intersect_bp=unique_intersect_bp,
+                        f_match=f_match,
+                        f_unique_to_query=f_unique_to_query,
+                        f_unique_weighted = f_unique_weighted,
+                        average_abund=average_abund,
+                        median_abund=median_abund,
+                        std_abund=std_abund,
+                        gather_result_rank=gather_result_rank,
+                        remaining_bp=remaining_bp)
+
+    assert res.query_name == ss47.name
+    assert res.match_name == ss4763.name
+    assert res.query_scaled == ss47.minhash.scaled == 1000
+    assert res.match_scaled == ss4763.minhash.scaled == 1000
+    assert res.search_scaled == 1000
+    assert res.num == 0
+    assert res.query_abundance == ss47.minhash.track_abundance
+    assert res.match_abundance == ss4763.minhash.track_abundance
+    assert res.query_bp == len(ss47.minhash) * scaled
+    assert res.match_bp == len(ss4763.minhash) * scaled
+    assert res.ksize == 31
+    assert res.moltype == 'DNA'
+    assert res.query_filename == '47.fa'
+    assert res.match_filename == ss4763_file
+    assert res.query_md5 == ss47.md5sum()
+    assert res.match_md5 == ss4763.md5sum()
+    assert res.query_n_hashes == len(ss47.minhash)
+    assert res.match_n_hashes == len(ss4763.minhash)
+    assert res.md5 == ss4763.md5sum()
+    assert res.name == ss4763.name
+    assert res.filename == ss4763.filename
+    # gather specific
+    assert res.intersect_bp == intersect_bp
+    assert res.max_containment == max_containment
+    assert res.f_match_orig == f_match_query
+    assert res.f_orig_query == f_orig_query
+    assert res.unique_intersect_bp == unique_intersect_bp
+    assert res.f_match == f_match
+    assert res.f_unique_to_query == f_unique_to_query
+    assert res.f_unique_weighted == f_unique_weighted
+    assert res.average_abund == average_abund
+    assert res.median_abund == median_abund
+    assert res.std_abund == std_abund
+    assert res.gather_result_rank == gather_result_rank
+    assert res.remaining_bp == remaining_bp
