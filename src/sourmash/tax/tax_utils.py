@@ -7,6 +7,7 @@ from collections import namedtuple, defaultdict
 from collections import abc
 
 from sourmash import sqlite_utils
+from sourmash.exceptions import IndexNotSupported
 
 import sqlite3
 
@@ -627,19 +628,24 @@ class LineageDB(abc.Mapping):
 
 class LineageDB_Sqlite(abc.Mapping):
     """
-    A LineageDB based on a sqlite3 database with a 'taxonomy' table.
+    A LineageDB based on a sqlite3 database with a 'sourmash_taxonomy' table.
     """
     # NOTE: 'order' is a reserved name in sql, so we have to use 'order_'.
     columns = ('superkingdom', 'phylum', 'order_', 'class', 'family',
                'genus', 'species', 'strain')
+    table_name = 'sourmash_taxonomy'
 
-    def __init__(self, conn):
+    def __init__(self, conn, *, table_name=None):
         self.conn = conn
+
+        # provide for legacy support for pre-sourmash_internal days...
+        if table_name is not None:
+            self.table_name = table_name
 
         # check that the right table is there.
         c = conn.cursor()
         try:
-            c.execute('SELECT * FROM taxonomy LIMIT 1')
+            c.execute(f'SELECT * FROM {self.table_name} LIMIT 1')
         except (sqlite3.DatabaseError, sqlite3.OperationalError):
             raise ValueError("not a taxonomy database")
             
@@ -650,7 +656,7 @@ class LineageDB_Sqlite(abc.Mapping):
         # get available ranks...
         ranks = set()
         for column, rank in zip(self.columns, taxlist(include_strain=True)):
-            query = f'SELECT COUNT({column}) FROM taxonomy WHERE {column} IS NOT NULL AND {column} != ""'
+            query = f'SELECT COUNT({column}) FROM {self.table_name} WHERE {column} IS NOT NULL AND {column} != ""'
             c.execute(query)
             cnt, = c.fetchone()
             if cnt:
@@ -665,7 +671,27 @@ class LineageDB_Sqlite(abc.Mapping):
         conn = sqlite_utils.open_sqlite_db(location)
         if not conn:
             raise ValueError("not a sqlite taxonomy database")
-        return cls(conn)
+
+        c = conn.cursor()
+        try:
+            info = sqlite_utils.get_sourmash_internal(c)
+        except sqlite3.OperationalError:
+            info = {}
+
+        if 'SqliteLineage' in info:
+            if info['SqliteLineage'] != '1.0':
+                raise IndexNotSupported
+
+            table_name = 'sourmash_taxonomy'
+        else:
+            # legacy support for old taxonomy DB, pre sourmash_internal.
+            try:
+                c.execute('SELECT * FROM taxonomy LIMIT 1')
+                table_name = 'taxonomy'
+            except sqlite3.OperationalError:
+                pass
+
+        return cls(conn, table_name=table_name)
 
     def _make_tup(self, row):
         "build a tuple of LineagePairs for this sqlite row"
@@ -675,7 +701,7 @@ class LineageDB_Sqlite(abc.Mapping):
     def __getitem__(self, ident):
         "Retrieve lineage for identifer"
         c = self.cursor
-        c.execute('SELECT superkingdom, phylum, class, order_, family, genus, species, strain FROM taxonomy WHERE ident=?', (ident,))
+        c.execute(f'SELECT superkingdom, phylum, class, order_, family, genus, species, strain FROM {self.table_name} WHERE ident=?', (ident,))
 
         # retrieve names list...
         names = c.fetchone()
@@ -696,7 +722,7 @@ class LineageDB_Sqlite(abc.Mapping):
     def __len__(self):
         "Return number of rows"
         c = self.conn.cursor()
-        c.execute('SELECT COUNT(DISTINCT ident) FROM taxonomy')
+        c.execute(f'SELECT COUNT(DISTINCT ident) FROM {self.table_name}')
         nrows, = c.fetchone()
         return nrows
 
@@ -704,7 +730,7 @@ class LineageDB_Sqlite(abc.Mapping):
         "Return all identifiers"
         # create new cursor so as to allow other operations
         c = self.conn.cursor()
-        c.execute('SELECT DISTINCT ident FROM taxonomy')
+        c.execute(f'SELECT DISTINCT ident FROM {self.table_name}')
 
         for ident, in c:
             yield ident
@@ -713,7 +739,7 @@ class LineageDB_Sqlite(abc.Mapping):
         "return all items in the sqlite database"
         c = self.conn.cursor()
 
-        c.execute('SELECT DISTINCT ident, superkingdom, phylum, class, order_, family, genus, species, strain FROM taxonomy')
+        c.execute(f'SELECT DISTINCT ident, superkingdom, phylum, class, order_, family, genus, species, strain FROM {self.table_name}')
 
         for ident, *names in c:
             yield ident, self._make_tup(names)
@@ -816,6 +842,8 @@ class MultiLineageDB(abc.Mapping):
                     fp.close()
 
     def _save_sqlite(self, filename, *, conn=None):
+        from sourmash import sqlite_utils
+
         if conn is None:
             db = sqlite3.connect(filename)
         else:
@@ -824,10 +852,12 @@ class MultiLineageDB(abc.Mapping):
 
         cursor = db.cursor()
         try:
+            sqlite_utils.add_sourmash_internal(cursor, 'SqliteLineage', '1.0')
+
             # CTB: could add 'IF NOT EXIST' here; would need tests, too.
             cursor.execute("""
 
-        CREATE TABLE taxonomy (
+        CREATE TABLE sourmash_taxonomy (
             ident TEXT NOT NULL,
             superkingdom TEXT,
             phylum TEXT,
@@ -845,7 +875,7 @@ class MultiLineageDB(abc.Mapping):
             raise ValueError(f"taxonomy table already exists in '{filename}'")
 
         # follow up and create index
-        cursor.execute("CREATE UNIQUE INDEX taxonomy_ident ON taxonomy(ident);")
+        cursor.execute("CREATE UNIQUE INDEX sourmash_taxonomy_ident ON sourmash_taxonomy(ident);")
         for ident, tax in self.items():
             x = [ident, *[ t.name for t in tax ]]
 
@@ -854,7 +884,7 @@ class MultiLineageDB(abc.Mapping):
             while len(x) < 9:
                 x.append('')
 
-            cursor.execute('INSERT INTO taxonomy (ident, superkingdom, phylum, class, order_, family, genus, species, strain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', x)
+            cursor.execute('INSERT INTO sourmash_taxonomy (ident, superkingdom, phylum, class, order_, family, genus, species, strain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', x)
 
         db.commit()
 

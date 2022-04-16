@@ -49,7 +49,6 @@ def add_sourmash_internal(cursor, use_type, version):
     """
     Add use_type/version to sourmash_internal table.
     """
-    # @CTB update test-data/sqlite with unique
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS sourmash_internal (
        key TEXT UNIQUE,
