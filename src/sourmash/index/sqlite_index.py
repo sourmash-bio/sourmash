@@ -93,6 +93,7 @@ TODO testing: test internal and command line for,
 - check LCA database is loaded load_sqlite_index.
 - implement lca convert? hmm.
 - cli ways to build LCA_Sqlitedatabase... what advise?
+- check 'summarize' output on all three
 """
 import time
 import os
