@@ -6,8 +6,10 @@ import sqlite3
 
 import sourmash
 from sourmash.exceptions import IndexNotSupported
-from sourmash.index.sqlite_index import SqliteIndex, load_sqlite_index
-from sourmash.index.sqlite_index import SqliteCollectionManifest
+from sourmash.index.sqlite_index import (SqliteIndex, load_sqlite_index,
+                                         SqliteCollectionManifest,
+                                         LCA_SqliteDatabase)
+
 from sourmash.index import StandaloneManifestIndex
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.picklist import SignaturePicklist, PickStyle
@@ -770,3 +772,32 @@ def test_sqlite_manifest_load_existing_index_insert_fail():
 
     assert "must use SqliteIndex.insert to add to this manifest" in str(exc)
 
+
+def test_sqlite_lca_db_load_existing():
+    # try loading an existing sqlite index
+    filename = utils.get_test_data('sqlite/lca.sqldb')
+    sqlidx = sourmash.load_file_as_index(filename)
+    assert isinstance(sqlidx, LCA_SqliteDatabase)
+
+    siglist = list(sqlidx.signatures())
+    assert len(siglist) == 2
+
+
+def test_sqlite_lca_db_create_load_existing(runtmp):
+    # try creating then loading an existing sqlite index; create from CLI
+    filename = runtmp.output('lca.sqldb')
+    sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+
+    runtmp.sourmash('sig', 'flatten', sig1, sig2, '-o', filename, '-k', '31')
+
+    # load tax
+    tax_csv = utils.get_test_data('sqlite/delmont-6.csv')
+    runtmp.sourmash('tax', 'prepare', '-t', tax_csv,
+                    '-o', filename, '-F', 'sql')
+
+    sqlidx = sourmash.load_file_as_index(filename)
+    assert isinstance(sqlidx, LCA_SqliteDatabase)
+
+    siglist = list(sqlidx.signatures())
+    assert len(siglist) == 2

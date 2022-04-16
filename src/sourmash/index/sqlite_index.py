@@ -90,30 +90,28 @@ TODO testing: test internal and command line for,
 - lca DB/on disk insert stuff
 - test various combinations of database types.
 - do some realistic benchmarking of SqliteIndex and LCA_Database
-- check LCA database is loaded load_sqlite_index. @CTB and rename.
-
+- check LCA database is loaded load_sqlite_index.
+- implement lca convert? hmm.
+- cli ways to build LCA_Sqlitedatabase... what advise?
 """
 import time
 import os
 import sqlite3
-from collections import Counter, defaultdict
-from collections.abc import Mapping
+from collections import defaultdict
 import itertools
 
 from bitstring import BitArray
 
 from sourmash.index import Index
 from sourmash.exceptions import IndexNotSupported
-import sourmash
 from sourmash import MinHash, SourmashSignature
 from sourmash.index import IndexSearchResult, StandaloneManifestIndex
-from sourmash.picklist import PickStyle, SignaturePicklist
-from sourmash.logging import debug_literal, notify
+from sourmash.picklist import SignaturePicklist
+from sourmash.logging import debug_literal
 from sourmash import sqlite_utils
 
 from sourmash.lca.lca_db import cached_property
-from sourmash.manifest import BaseCollectionManifest, CollectionManifest
-from sourmash.logging import debug_literal
+from sourmash.manifest import BaseCollectionManifest
 
 # converters for unsigned 64-bit ints: if over MAX_SQLITE_INT,
 # convert to signed int.
@@ -144,8 +142,6 @@ def load_sqlite_index(filename, *, request_manifest=False):
 
     c = conn.cursor()
     internal_d = sqlite_utils.get_sourmash_internal(c)
-
-    results = c.fetchall()
 
     is_index = False
     is_manifest = False
@@ -304,7 +300,7 @@ class SqliteIndex(Index):
             """
             )
         except (sqlite3.OperationalError, sqlite3.DatabaseError):
-            raise ValueError(f"cannot create SqliteIndex tables")
+            raise ValueError("cannot create SqliteIndex tables")
 
         return c
 
@@ -354,7 +350,6 @@ class SqliteIndex(Index):
         sketch_id, = c.fetchone()
 
         # insert all the hashes
-        hashes = []
         hashes_to_sketch = []
         for h in ss.minhash.hashes:
             hh = convert_hash_to(h)
@@ -803,7 +798,6 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         """, values)
 
         debug_literal("sqlite manifest: entering row yield loop")
-        manifest_list = []
         for (_id, name, md5sum, num, scaled, ksize, filename, moltype,
              seed, n_hashes, iloc) in c1:
             row = dict(num=num, scaled=scaled, name=name, filename=filename,
