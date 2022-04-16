@@ -252,7 +252,7 @@ GatherResult = namedtuple('GatherResult', ['intersect_bp', 'f_orig_query', 'f_ma
                             'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename',
                             'name', 'md5', 'match', 'f_match_orig', 'unique_intersect_bp', 'gather_result_rank',
                             'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
-                            'moltype', 'num', 'scaled', 'query_nhashes', 'query_abundance'])
+                            'moltype', 'scaled', 'query_n_hashes', 'query_abundance'])
 
 
 def _find_best(counters, query, threshold_bp):
@@ -463,9 +463,8 @@ class GatherDatabases:
                               query_md5=self.orig_query_md5,
                               ksize =  self.orig_query_mh.ksize,
                               moltype = self.orig_query_mh.moltype,
-                              num = self.orig_query_mh.num,
                               scaled = scaled,
-                              query_nhashes=len(self.orig_query_mh),
+                              query_n_hashes=len(self.orig_query_mh),
                               query_abundance=self.orig_query_mh.track_abundance,
                               )
         self.result_n += 1
@@ -483,8 +482,8 @@ PrefetchResult = namedtuple('PrefetchResult',
                             ['intersect_bp', 'jaccard', 'max_containment', 'f_query_match',
                             'f_match_query', 'match', 'match_filename', 'match_name',
                             'match_md5', 'match_bp', 'query', 'query_filename', 'query_name',
-                            'query_md5', 'query_bp', 'ksize', 'moltype', 'num', 'scaled',
-                            'query_nhashes', 'query_abundance'])
+                            'query_md5', 'query_bp', 'ksize', 'moltype', 'scaled',
+                            'query_n_hashes', 'query_abundance'])
 
 
 def calculate_prefetch_info(query, match, scaled, threshold_bp):
@@ -526,9 +525,8 @@ def calculate_prefetch_info(query, match, scaled, threshold_bp):
         query_md5=query.md5sum()[:8],
         ksize =  query_mh.ksize,
         moltype = query_mh.moltype,
-        num = query_mh.num,
         scaled = scaled,
-        query_nhashes=len(query_mh),
+        query_n_hashes=len(query_mh),
         query_abundance=query_mh.track_abundance,
     )
 
