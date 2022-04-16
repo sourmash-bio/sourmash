@@ -915,6 +915,8 @@ class LCA_SqliteDatabase:
 
     @CTB test create/insert, as opposed to just load.
     """
+    is_database = True
+
     def __init__(self, conn, sqlite_idx, lineage_db):
         assert isinstance(sqlite_idx, SqliteIndex)
         assert sqlite_idx.scaled
@@ -990,11 +992,22 @@ class LCA_SqliteDatabase:
                         lid_to_lineage[lid] = lineage
                         idx_to_lid[idx] = lid
 
+        #if not idx_to_lid:
+        #    raise Exception
+
         self.ident_to_idx = ident_to_idx
         self.idx_to_lid = idx_to_lid
         self.lid_to_lineage = lid_to_lineage
 
     ### Index API/protocol: forward on to SqliteIndex
+
+    @property
+    def location(self):
+        return self.sqlidx.location
+
+    @property
+    def manifest(self):
+        return self.sqlidx.manifest
 
     def __len__(self):
         return len(self.sqlidx)
