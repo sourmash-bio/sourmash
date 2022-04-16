@@ -1,5 +1,6 @@
 pub mod revindex;
 
+use crate::index::Selection;
 use crate::signature::Signature;
 
 use crate::ffi::signature::SourmashSignature;
@@ -34,4 +35,10 @@ pub unsafe extern "C" fn searchresult_signature(
 ) -> *mut SourmashSignature {
     let result = SourmashSearchResult::as_rust(ptr);
     SourmashSignature::from_rust((result.1).clone())
+}
+
+pub struct SourmashSelection;
+
+impl ForeignObject for SourmashSelection {
+    type RustObject = Selection;
 }

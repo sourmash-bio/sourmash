@@ -120,7 +120,7 @@ pub struct LinearRevIndex {
 }
 
 impl LinearRevIndex {
-    fn new(
+    pub fn new(
         sig_files: Manifest,
         template: &Sketch,
         keep_sigs: bool,

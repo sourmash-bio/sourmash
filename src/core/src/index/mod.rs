@@ -29,6 +29,8 @@ use crate::Error;
 
 pub type MHBT = SBT<Node<Nodegraph>, Signature>;
 
+pub struct Selection;
+
 /* FIXME: bring back after MQF works on macOS and Windows
 use cfg_if::cfg_if;
 cfg_if! {

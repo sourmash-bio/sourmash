@@ -41,6 +41,7 @@ enum SourmashErrorCode {
   SOURMASH_ERROR_CODE_PARSE_INT = 100003,
   SOURMASH_ERROR_CODE_SERDE_ERROR = 100004,
   SOURMASH_ERROR_CODE_NIFFLER_ERROR = 100005,
+  SOURMASH_ERROR_CODE_CSV_ERROR = 100006,
 };
 typedef uint32_t SourmashErrorCode;
 
@@ -49,6 +50,8 @@ typedef struct SourmashComputeParameters SourmashComputeParameters;
 typedef struct SourmashHyperLogLog SourmashHyperLogLog;
 
 typedef struct SourmashKmerMinHash SourmashKmerMinHash;
+
+typedef struct SourmashLinearIndex SourmashLinearIndex;
 
 typedef struct SourmashNodegraph SourmashNodegraph;
 
@@ -263,6 +266,13 @@ double kmerminhash_similarity(const SourmashKmerMinHash *ptr,
 void kmerminhash_slice_free(uint64_t *ptr, uintptr_t insize);
 
 bool kmerminhash_track_abundance(const SourmashKmerMinHash *ptr);
+
+void linearindex_free(SourmashLinearIndex *ptr);
+
+SourmashLinearIndex *linearindex_new(const SourmashZipStorage *storage_ptr,
+                                     const SourmashManifest *manifest_ptr,
+                                     const SourmashSelection *selection_ptr,
+                                     bool use_manifest);
 
 void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
 

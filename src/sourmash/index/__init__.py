@@ -535,10 +535,13 @@ class ZipFileLinearIndex(Index, RustObject):
     """
     is_database = True
 
-    #__dealloc_func__ = lib.zflinearindex_free
+    __dealloc_func__ = lib.linearindex_free
 
     def __init__(self, storage, *, selection_dict=None,
                  traverse_yield_all=False, manifest=None, use_manifest=True):
+        self._objptr = rustcall(lib.linearindex_new, storage._get_objptr(),
+                                ffi.NULL, ffi.NULL, use_manifest)
+        """
         self.storage = storage
         self.selection_dict = selection_dict
         self.traverse_yield_all = traverse_yield_all
@@ -558,6 +561,7 @@ class ZipFileLinearIndex(Index, RustObject):
             assert not self.selection_dict, self.selection_dict
         if self.selection_dict:
             assert self.manifest is None
+        """
 
     def _load_manifest(self):
         "Load a manifest if one exists"
