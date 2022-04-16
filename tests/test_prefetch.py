@@ -5,10 +5,12 @@ import os
 import csv
 import pytest
 import glob
+import random
 
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash_tst_utils import SourmashCommandFailed
+from sourmash import signature
 
 
 def test_prefetch_basic(runtmp, linear_gather):
@@ -525,6 +527,47 @@ def test_prefetch_downsample_scaled(runtmp, linear_gather):
 
     assert c.last_result.status == 0
     assert "downsampling query from scaled=1000 to 10000" in c.last_result.err
+
+
+
+
+def test_prefetch_downsample_multiple(runtmp, linear_gather):
+    # test multiple different downsamplings in prefetch code
+    query_sig = utils.get_test_data('GCF_000006945.2-s500.sig')
+
+    # load in the hashes and do split them into four bins, randomly.
+    ss = sourmash.load_one_signature(query_sig)
+    hashes = list(ss.minhash.hashes)
+
+    random.seed(a=1)            # fix seed so test is reproducible
+    random.shuffle(hashes)
+
+    # split into 4 bins:
+    mh_bins = [ ss.minhash.copy_and_clear() for i in range(4) ]
+    for i, hashval in enumerate(hashes):
+        mh_bins[i % 4].add_hash(hashval)
+
+    # downsample with different scaleds; initial scaled is 500, note.
+    mh_bins[0] = mh_bins[0].downsample(scaled=750)
+    mh_bins[1] = mh_bins[1].downsample(scaled=600)
+    mh_bins[2] = mh_bins[2].downsample(scaled=1000)
+    mh_bins[3] = mh_bins[3].downsample(scaled=650)
+
+    gathersigs = []
+    for i in range(4):
+        binsig = signature.SourmashSignature(mh_bins[i], name=f"bin{i}")
+
+        with open(runtmp.output(f"bin{i}.sig"), "wb") as fp:
+            sourmash.save_signatures([binsig], fp)
+
+        gathersigs.append(f"bin{i}.sig")
+
+    runtmp.sourmash('prefetch', linear_gather, query_sig, *gathersigs)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "final scaled value (max across query and all matches) is 1000" in runtmp.last_result.err
 
 
 def test_prefetch_empty(runtmp, linear_gather):
