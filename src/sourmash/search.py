@@ -557,7 +557,7 @@ class GatherDatabases:
                               median_abund=median_abund,
                               std_abund=std_abund,
                               gather_result_rank=self.result_n,
-                              remaining_bp=remaining_bp,
+                              remaining_bp=remaining_bp
                               )
         self.result_n += 1
         self.query = new_query
@@ -599,9 +599,8 @@ def calculate_prefetch_info(query, match, scaled, threshold_bp):
         jaccard=db_mh.jaccard(query_mh),
         max_containment=max_containment,
         f_query_match=f_query_match,
-        f_match_query=f_match_query,
+        f_match_query=f_match_query
     )
-
     return result
 
 
