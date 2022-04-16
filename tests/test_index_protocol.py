@@ -13,7 +13,7 @@ from sourmash.index import (LinearIndex, ZipFileLinearIndex,
 from sourmash.index.sqlite_index import SqliteIndex
 from sourmash.index.revindex import RevIndex
 from sourmash.sbt import SBT, GraphFactory
-from sourmash.manifest import CollectionManifest
+from sourmash.manifest import CollectionManifest, BaseCollectionManifest
 from sourmash.lca.lca_db import LCA_Database, load_single_database
 
 import sourmash_tst_utils as utils
@@ -193,6 +193,7 @@ def build_lca_index_save_load_sql(runtmp):
                         build_sbt_index_save_load,
                         build_lca_index_save_load,
                         build_sqlite_index,
+                        build_lca_index_save_load_sql,
                         build_lazy_loaded_index,
 #                        build_revindex,
                         ]
@@ -299,6 +300,18 @@ def test_index_bool(index_obj):
     assert bool(index_obj)
 
 
+def test_index_location(index_obj):
+    # location works?
+    assert str(index_obj.location)
+
+
+def test_index_manifest(index_obj):
+    # manifest is either None or a BaseCollectionManifest
+    manifest = index_obj.manifest
+    if manifest is not None:
+        assert isinstance(manifest, BaseCollectionManifest)
+
+
 def test_index_select_basic(index_obj):
     # select does the basic thing ok
     idx = index_obj.select(ksize=31, moltype='DNA', abund=False,
@@ -369,7 +382,7 @@ def test_index_gather(index_obj):
     assert matches[0].signature.minhash == ss47.minhash
 
 
-def test_linear_gather_threshold_1(index_obj):
+def test_index_gather_threshold_1(index_obj):
     # test gather() method, in some detail
     ss2, ss47, ss63 = _load_three_sigs()
 
