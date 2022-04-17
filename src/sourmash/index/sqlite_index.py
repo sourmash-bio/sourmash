@@ -89,11 +89,12 @@ TODO testing: test internal and command line for,
 - loading a checked-in lineage db with new table
 - lca DB/on disk insert stuff
 - test various combinations of database types.
-- do some realistic benchmarking of SqliteIndex and LCA_Database
-- check LCA database is loaded load_sqlite_index.
+- [x] do some realistic benchmarking of SqliteIndex and LCA_Database
+- [x] check LCA database is loaded by load_sqlite_index.
 - implement lca convert? hmm.
 - cli ways to build LCA_Sqlitedatabase... what advise?
-- check 'summarize' output on all three
+- [x] check 'summarize' output on all three
+- add counter_gather to protocol tests
 """
 import time
 import os
@@ -1011,10 +1012,17 @@ class LCA_SqliteDatabase:
         return self.sqlidx.manifest
 
     def __len__(self):
+        "@CTB add docstring"
         return len(self.sqlidx)
 
     def signatures(self):
         return self.sqlidx.signatures()
+
+    def signatures_with_location(self):
+        return self.sqlidx.signatures_with_location()
+
+    def counter_gather(self, *args, **kwargs):
+        return self.sqlidx.counter_gather(*args, **kwargs)
 
     def search(self, *args, **kwargs):
         return self.sqlidx.search(*args, **kwargs)

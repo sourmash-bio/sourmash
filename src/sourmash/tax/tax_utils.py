@@ -234,7 +234,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
 
         # summarize at rank!
         lineage = pop_to_rank(lineage, rank)
-        assert lineage[-1].rank == rank, lineage[-1]
+        assert lineage[-1].rank == rank, (rank, lineage[-1])
         # record info
         sum_uniq_to_query[query_name][lineage] += f_unique_to_query
         sum_uniq_weighted[query_name][lineage] += f_uniq_weighted
