@@ -188,6 +188,7 @@ def test_prefetch_csv_out(runtmp, linear_gather):
     with open(csvout, 'rt', newline="") as fp:
         r = csv.DictReader(fp)
         for (row, expected) in zip(r, expected_intersect_bp):
+            print(row)
             assert int(row['intersect_bp']) == expected
 
 
