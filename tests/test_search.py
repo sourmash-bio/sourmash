@@ -355,7 +355,7 @@ def test_GatherResult():
     res = GatherResult(ss47, ss4763, cmp_scaled=scaled,
                         current_gathersketch=remaining_mh,
                         gather_result_rank=gather_result_rank,
-                        sum_abunds = sum_abunds)
+                        total_abund = sum_abunds)
 
     assert res.query_name == ss47.name
     assert res.match_name == ss4763.name
@@ -392,4 +392,4 @@ def test_GatherResult():
     assert res.median_abund == 1.0
     assert res.std_abund == 0
     assert res.gather_result_rank == gather_result_rank
-    assert res.remaining_bp == 0
+    assert res.remaining_bp == 2468000

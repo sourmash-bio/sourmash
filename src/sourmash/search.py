@@ -173,7 +173,7 @@ class FracMinHashComparison:
     flatten: bool = False # optionally ignore abundances
     threshold_bp: int = 0 # default 0 bp threshold
 
-    def _downsample_andor_flatten(self, use_abundances=False):
+    def _downsample_to_cmp_scaled(self, use_abundances=True):
         """
         Downsample and/or flatten minhashes for comparison
         """
@@ -192,8 +192,8 @@ class FracMinHashComparison:
 
     @property
     def intersect_mh(self):
-        # do we always need to flatten? do we need to flatten both?
-        return self.mh1_cmp.flatten().intersection(self.mh2_cmp)
+        # flatten and intersect
+        return self.mh1_cmp.flatten().intersection(self.mh2_cmp.flatten())
 
     @property
     def intersect_bp(self):
@@ -203,7 +203,7 @@ class FracMinHashComparison:
     def mh1_weighted_intersection(self):
          # map mh1 hash abundances to all intersection hashes.
         if not self.mh1.track_abundance:
-            return  self.intersect_mh # flattened should have abund 1 for every hash, right?
+            return self.intersect_mh # flattened should have abund 1 for every hash, right?
         else:
             intersect_w_abunds = self.intersect_mh.inflate(self.mh1)
             return intersect_w_abunds
@@ -217,15 +217,32 @@ class FracMinHashComparison:
             intersect_w_abunds = self.intersect_mh.inflate(self.mh2)
             return intersect_w_abunds
 
-    @property
-    def sum_m1_weighted_hashes(self):
-        hashD = self.mh1_weighted_intersection.hashes
-        return sum(v for v in hashD.values())
+    # these four work on a single minhash-- add to MinHash instead?
+    def sum_mh_abundances(self, mh):
+        return sum(v for v in mh.hashes.values())
 
-    @property
-    def sum_m2_weighted_hashes(self):
-        hashD = self.mh2_weighted_intersection.hashes
-        return sum(v for v in hashD.values())
+    ### WHAT DO WE ACTUALLY WANT TO RETURN HERE? Both None and 0 cause issues in different tests...
+    def mean_mh_abundances(self, mh):
+#        return np.mean((v for v in mh.hashes.values()))
+        if not mh.track_abundance:
+        #    raise ValueError("Error: Cannot get mean abundance for non-abundance signatures.")
+            return "" 
+            #return 1.0
+        return np.mean(mh.hashes.values())
+
+    def median_mh_abundances(self, mh):
+        if not mh.track_abundance:
+            #return 1.0
+            return ""
+        return np.median(mh.hashes.values())
+#        return np.median(v for v in mh.hashes.values())
+
+    def std_mh_abundances(self, mh):
+        if not mh.track_abundance:
+            #return 0.0
+            return ""
+        return np.std(mh.hashes.values())
+#        return np.std(v for v in mh.hashes.values())
 
     @property
     def jaccard(self):
@@ -269,6 +286,9 @@ class FracMinHashComparison:
         m2= self.mh2.moltype
         if m1 != m2:
             raise ValueError(f"Error: Invalid Comparison, moltypes: {m1}, {m2}). Must compare sketches of the same moltype.")
+        # switch to the following? no,bc checks scaled too
+        #if not self.mh1.is_compatible(self.mh2):
+        #    raise ValueError("Error: Cannot compare incompatible sketches.")
 
     def init_sketchcomparison(self):
         "Initialize ScaledComparison using values from provided FracMinHashes"
@@ -291,8 +311,9 @@ class FracMinHashComparison:
         self.compare_abundances = all([self.mh1_abundance, self.mh2_abundance]) # only use abunds if both have them
         if self.flatten:
             self.compare_abundances = False # force flatten
+        self._downsample_to_cmp_scaled(use_abundances=self.compare_abundances)
         # build comparison minhashes at cmp_scaled
-        self._downsample_andor_flatten(use_abundances=self.compare_abundances)
+        #sevlf._downsample_andor_flatten(use_abundances=self.compare_abundances)
         #self.intersect_bp = len(self.intersect_mh) * self.cmp_scaled
     
     def __post_init__(self):
@@ -331,15 +352,15 @@ class SignatureComparison:
         self.match_abundance = self.sketch_comparison.mh2.track_abundance
         self.compare_abundances = self.sketch_comparison.compare_abundances
         
-        # actually, maybe add these to the minhash implementation to calculate as needed.
+        # actually, maybe add these to the minhash implementation to calculate as needed?
         self.query_n_hashes = self.sketch_comparison.mh1_n_hashes
         self.match_n_hashes = self.sketch_comparison.mh2_n_hashes 
         self.query_bp = self.sketch_comparison.mh1_bp
         self.match_bp = self.sketch_comparison.mh2_bp
 
-        # intersection stuff. todo: figure out which of theese I want to be properties vs intialized with comparison
+        # automatically make some comparisons
         self.intersect_bp = self.sketch_comparison.intersect_bp
- 
+
     def init_sigcomparison(self):
         ## get minhash sketch info / comparison
         self.get_signature_info()
@@ -359,9 +380,9 @@ class SignatureComparison:
     def query_filename(self):
         return self.query.filename
 
-#    @property
-#    def intersect_bp(self):
-#        return self.sketch_comparison.intersect_bp
+    #@property
+    #def do_intersect_bp(self):
+    #    return self.sketch_comparison.intersect_bp
 
     @property
     def query_weighted_intersection(self):
@@ -370,6 +391,22 @@ class SignatureComparison:
     @property
     def match_weighted_intersection(self):
         return self.sketch_comparison.mh2_weighted_intersection
+
+    @property
+    def query_weighted_intersection_sum_abunds(self):
+        return self.sketch_comparison.sum_mh_abundances(self.query_weighted_intersection)
+
+    @property
+    def query_weighted_intersection_mean_abunds(self):
+        return self.sketch_comparison.mean_mh_abundances(self.query_weighted_intersection)
+
+    @property
+    def query_weighted_intersection_median_abunds(self):
+        return self.sketch_comparison.median_mh_abundances(self.query_weighted_intersection)
+
+    @property
+    def query_weighted_intersection_std_abunds(self):
+        return self.sketch_comparison.std_mh_abundances(self.query_weighted_intersection)
 
     @property
     def jaccard(self):
@@ -440,9 +477,18 @@ class PrefetchResult(SignatureComparison):
                            'query_md5', 'query_bp', 'ksize', 'moltype', 'num', 'scaled',
                            'query_n_hashes', 'query_abundance']
 
+    def build_prefetch_result(self):
+    ## ARE THESE THE RIGHT DIRECTION???
+    #f_query_match = db_mh.contained_by(query_mh)
+    #f_match_query = query_mh.contained_by(db_mh)
+       self.f_match_query = self.query_containment
+       self.f_query_match = self.match_containment
+
+
     def __post_init__(self):
         # do we ever pass filename in prefetch?
         self.init_sigcomparison()
+        self.build_prefetch_result()
 
     def prefetchresultdict(self):
         self.query_md5 = shorten_md5(self.query_md5)
@@ -450,17 +496,6 @@ class PrefetchResult(SignatureComparison):
         self.match_md5 = shorten_md5(self.match_md5)
         return self.to_write(columns=self.prefetch_write_cols)
     
-    ## ARE THESE THE RIGHT DIRECTION???
-    #f_query_match = db_mh.contained_by(query_mh)
-    #f_match_query = query_mh.contained_by(db_mh)
-    @property
-    def f_match_query(self):
-        return self.query_containment
-    
-    @property
-    def f_query_match(self):
-        return self.match_containment
-
     @property
     def writedict(self):
         return self.prefetchresultdict()
@@ -468,11 +503,11 @@ class PrefetchResult(SignatureComparison):
 
 @dataclass
 class GatherResult(PrefetchResult):
-    #cmp_scaled: int  # we need to force gather results to all be at same scaled, bc substraction (not independent)
-    # BUT, also report original size for the f_orig_query, etc!
+#class GatherResult(SignatureComparison):
     current_gathersketch: MinHash = None
     gather_result_rank: int = None
-    sum_abunds: int = None
+    total_abund: int = None
+    filename: str = None
 
     gather_write_cols = ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
                          'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename',
@@ -480,7 +515,7 @@ class GatherResult(PrefetchResult):
                          'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
                          'moltype', 'num', 'scaled', 'query_n_hashes', 'query_abundance']
 
-    def init_gathersigcomparison(self):
+    def init_gathersketchcomparison(self):
         # compare remaining gather hashes with match. Force at cmp_scaled.
         self.gather_comparison = FracMinHashComparison(self.current_gathersketch, self.match.minhash, cmp_scaled=self.cmp_scaled, threshold_bp=self.threshold_bp)
 
@@ -491,10 +526,13 @@ class GatherResult(PrefetchResult):
             raise ValueError("Error: must provide current gather sketch (remaining hashes) for GatherResult") # todo: fix this description
         if self.gather_result_rank is None:
             raise ValueError("Error: must provide 'gather_result_rank' to GatherResult")
-        if self.sum_abunds is None:
+        if self.total_abund is None:
             raise ValueError("Error: must provide 'sum_abunds' to GatherResult")
         self.init_sigcomparison() # initialize original sketch vs match sketch comparison
-        self.init_gathersigcomparison() # initialize remaining gather sketch vs match sketch comparison
+        self.init_gathersketchcomparison() # initialize remaining gather sketch vs match sketch comparison
+        self.build_gather_result()
+        if self.filename is None and self.match_filename is not None:
+            self.filename = self.match_filename
 
     def gatherresultdict(self):
         # todo: standardize when we shorten the md5s between each type of result
@@ -507,50 +545,27 @@ class GatherResult(PrefetchResult):
     def writedict(self):
         return self.gatherresultdict()
     
-    @property
-    def f_orig_query(self):
-        return self.query_containment
-    
-    @property
-    def f_unique_to_query(self):
-        #containment of remaining, unaccounted for hashes with the database match
-        return self.gather_comparison.mh1_containment
-    
-    @property
-    def f_unique_weighted(self):
-        return self.gather_comparison.sum_m1_weighted_hashes / self.sum_abunds
-    
-    @property
-    def f_match_orig(self):
+    def build_gather_result(self):
+        self.f_orig_query = self.query_containment
+#       #containment of remaining, unaccounted for hashes with the database match
+        self.f_unique_to_query =self.gather_comparison.mh1_containment
+        # get current query-weighted intersection
+        self.current_weighted_intersection =  self.gather_comparison.mh1_weighted_intersection
+        self.f_unique_weighted =  self.gather_comparison.sum_mh_abundances(self.current_weighted_intersection)/ self.total_abund
         #original match containment
-        return self.match_containment
-    
-    @property
-    def f_match(self):
+        self.f_match_orig = self.match_containment
         # unique match containment
-        return self.gather_comparison.mh2_containment
-    
-    @property
-    def unique_intersect_bp(self):
+        self.f_match = self.gather_comparison.mh2_containment
         #intersect bp of remaining, unaccounted for hashes with the database match
-        return self.gather_comparison.intersect_bp
-   
-    @property
-    def remaining_bp(self):
+        self.unique_intersect_bp = self.gather_comparison.intersect_bp
         #current gather sketch bp - intersect bp OR PASS THIS IN?
-        return self.gather_comparison.mh1_bp - self.gather_comparison.intersect_bp
-
-    @property
-    def average_abund(self):
-        return np.mean(list(self.gather_comparison.mh1_weighted_intersection.hashes.values()))
+        self.remaining_bp = self.query_bp - self.gather_comparison.intersect_bp
+#        self.remaining_bp = self.gather_comparison.mh1_bp - self.gather_comparison.intersect_bp
+        self.average_abund = self.gather_comparison.mean_mh_abundances(self.current_weighted_intersection)
+        self.median_abund = self.gather_comparison.median_mh_abundances(self.current_weighted_intersection)
+        self.std_abund = self.gather_comparison.std_mh_abundances(self.current_weighted_intersection)
+        # how to we get properties to build? e.g. self.jaccard?
     
-    @property
-    def median_abund(self):
-        return np.median(list(self.gather_comparison.mh1_weighted_intersection.hashes.values()))
-    
-    @property
-    def std_abund(self):
-        return np.std(list(self.gather_comparison.mh1_weighted_intersection.hashes.values()))
  
 
 def format_bp(bp):
@@ -813,7 +828,8 @@ class GatherDatabases:
                               cmp_scaled=scaled,
                               filename=filename,
                               gather_result_rank=self.result_n,
-                              sum_abunds=sum_abunds
+                              total_abund= sum_abunds,
+                              current_gathersketch=query_mh, # do we need to pass in found_mh too?
 #                              intersect_bp=intersect_bp,
 #                              unique_intersect_bp=unique_intersect_bp,
 #                              f_orig_query=f_orig_query,
