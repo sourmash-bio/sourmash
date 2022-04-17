@@ -290,6 +290,20 @@ def test_index_signatures(index_obj):
     assert ss63.md5sum() in md5s
 
 
+def test_index_signatures_with_location(index_obj):
+    # signatures_with_location works?
+    siglist = list(index_obj.signatures_with_location())
+
+    ss2, ss47, ss63 = _load_three_sigs()
+    assert len(siglist) == 3
+
+    # check md5sums, since 'in' doesn't always work
+    md5s = set(( ss.md5sum() for ss, loc in siglist ))
+    assert ss2.md5sum() in md5s
+    assert ss47.md5sum() in md5s
+    assert ss63.md5sum() in md5s
+
+
 def test_index_len(index_obj):
     # len works?
     assert len(index_obj) == 3
