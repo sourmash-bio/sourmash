@@ -909,7 +909,7 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         return mf
 
 
-class LCA_SqliteDatabase:
+class LCA_SqliteDatabase(SqliteIndex):
     """
     A wrapper class for SqliteIndex + lineage db => LCA_Database functionality.
 
@@ -917,28 +917,26 @@ class LCA_SqliteDatabase:
     """
     is_database = True
 
-    def __init__(self, conn, sqlite_idx, lineage_db):
-        assert isinstance(sqlite_idx, SqliteIndex)
-        assert sqlite_idx.scaled
+    def __init__(self, dbfile):
+        from sourmash.tax.tax_utils import LineageDB_Sqlite
 
-        c = conn.cursor()
+        super().__init__(dbfile)
+
+        c = self.conn.cursor()
 
         c.execute('SELECT DISTINCT ksize FROM sourmash_sketches')
         ksizes = set(( ksize for ksize, in c ))
-        assert len(ksizes) == 1
+        assert len(ksizes) == 1 # @CTB test
         self.ksize = next(iter(ksizes))
         debug_literal(f"setting ksize to {self.ksize}")
 
         c.execute('SELECT DISTINCT moltype FROM sourmash_sketches')
         moltypes = set(( moltype for moltype, in c ))
-        assert len(moltypes) == 1
+        assert len(moltypes) == 1 # @CTB test
         self.moltype = next(iter(moltypes))
         debug_literal(f"setting moltype to {self.moltype}")
 
-        self.scaled = sqlite_idx.scaled
-
-        self.sqlidx = sqlite_idx
-        self.lineage_db = lineage_db
+        self.lineage_db = LineageDB_Sqlite(self.conn)
 
         ## the below is done once, but could be implemented as something
         ## ~dynamic.
@@ -949,23 +947,14 @@ class LCA_SqliteDatabase:
         from sourmash.tax.tax_utils import LineageDB_Sqlite
 
         try:
-            sqlite_idx = SqliteIndex.load(filename)
-            lineage_db = LineageDB_Sqlite(sqlite_idx.conn)
-
-            conn = sqlite_idx.conn
-            c = conn.cursor()
-            c.execute('SELECT DISTINCT key, value FROM sourmash_internal')
-            d = dict(c)
-            #print(d)
-            # @CTB confirm version, LCA functionality, etc etc.
+            obj = cls(filename)
         except sqlite3.OperationalError:
             raise ValueError(f"cannot open '{filename}' as sqlite database.")
 
-        obj = cls(conn, sqlite_idx=sqlite_idx, lineage_db=lineage_db)
         return obj
 
     def _build_index(self):
-        mf = self.sqlidx.manifest
+        mf = self.manifest
         lineage_db = self.lineage_db
 
         ident_to_idx = {}
@@ -999,60 +988,13 @@ class LCA_SqliteDatabase:
         self.idx_to_lid = idx_to_lid
         self.lid_to_lineage = lid_to_lineage
 
-    ### Index API/protocol: forward on to SqliteIndex
-
-    @property
-    def location(self):
-        return self.sqlidx.location
-
-    @property
-    def manifest(self):
-        return self.sqlidx.manifest
-
-    def __len__(self):
-        "@CTB add docstring"
-        return len(self.sqlidx)
-
-    def signatures(self):
-        return self.sqlidx.signatures()
-
-    def signatures_with_location(self):
-        return self.sqlidx.signatures_with_location()
-
-    def counter_gather(self, *args, **kwargs):
-        return self.sqlidx.counter_gather(*args, **kwargs)
-
-    def search(self, *args, **kwargs):
-        return self.sqlidx.search(*args, **kwargs)
-
-    def gather(self, *args, **kwargs):
-        return self.sqlidx.gather(*args, **kwargs)
-
-    def prefetch(self, *args, **kwargs):
-        return self.sqlidx.prefetch(*args, **kwargs)
-
-    def select(self, *args, **kwargs):
-        sqlidx = self.sqlidx.select(*args, **kwargs)
-        return LCA_SqliteDatabase(self.sqlidx.conn, sqlidx, self.lineage_db)
-
-    def insert(self, *args, **kwargs):
-        raise NotImplementedError
-
-    def __repr__(self):
-        return "LCA_SqliteDatabase('{}')".format(self.sqlidx.location)
-
-    @classmethod
-    def load(cls, *args, **kwargs):
-        # this could do the appropriate MultiLineageDB stuff. @CTB
-        raise NotImplementedError
-
     ### LCA_Database API/protocol.
 
     def downsample_scaled(self, scaled):
         """This doesn't really do anything for SqliteIndex, but is needed
         for the LCA_Database API.
         """
-        if scaled < self.sqlidx.scaled:
+        if scaled < self.scaled:
             raise ValueError("cannot decrease scaled from {} to {}".format(self.scaled, scaled))
 
         # CTB: maybe return a new LCA_Database? Right now this isn't how
@@ -1087,12 +1029,12 @@ class LCA_SqliteDatabase:
     @property
     def hashval_to_idx(self):
         "Dynamically interpret the SQL 'hashes' table like it's a dict."
-        return _SqliteIndexHashvalToIndex(self.sqlidx)
+        return _SqliteIndexHashvalToIndex(self)
 
     @property
     def hashvals(self):
         "Return all hashvals"
-        return iter(_SqliteIndexHashvalToIndex(self.sqlidx))
+        return iter(_SqliteIndexHashvalToIndex(self))
 
     def get_identifiers_for_hashval(self, hashval):
         "Return identifiers associated with this hashval"
