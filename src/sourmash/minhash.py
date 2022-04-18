@@ -8,6 +8,9 @@ class FrozenMinHash - read-only MinHash class.
 from __future__ import unicode_literals, division
 from .distance_utils import jaccard_to_distance, containment_to_distance
 
+import numpy as np
+
+
 __all__ = ['get_minhash_default_seed',
            'get_minhash_max_hash',
            'hash_murmur',
@@ -854,7 +857,37 @@ class MinHash(RustObject):
 
             return abund_mh
         else:
-            raise ValueError("inflate operates on a flat MinHash and takes a MinHash object with track_abundance=True") 
+            raise ValueError("inflate operates on a flat MinHash and takes a MinHash object with track_abundance=True")
+
+    @property
+    def sum_abundances(self):
+        if self.track_abundance:
+            return sum(v for v in self.hashes.values())
+        return ""
+
+    @property
+    def mean_abundance(self):
+        if self.track_abundance:
+            return np.mean(self.hashes.values())
+        return ""
+
+    @property
+    def median_abundance(self):
+        if self.track_abundance:
+            return np.median(self.hashes.values())
+        return ""
+
+    @property
+    def std_abundance(self):
+        if self.track_abundance:
+            return np.std(self.hashes.values())
+        return ""
+
+    @property
+    def bp(self):
+        if not self.scaled:
+            raise TypeError("can only calculate bp for scaled MinHashes")
+        return len(self.hashes) * self.scaled
         
 
 class FrozenMinHash(MinHash):
