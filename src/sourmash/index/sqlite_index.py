@@ -90,9 +90,9 @@ TODO testing: test internal and command line for,
 - [x] do some realistic benchmarking of SqliteIndex and LCA_Database
 - [x] check LCA database is loaded by load_sqlite_index.
 - [x] check 'summarize' output on all three
-- [ ] test LCA_SqliteDatabase with a different lineagedb class?
-- [ ] implement update lca DB/on disk insert stuff?
+- [ ] implement update lca DB/on disk insert stuff for lca index?
 - [ ] test identifiers with '.' in sql lca dbs...
+- [ ] test LCA_SqliteDatabase with a different lineagedb class?
 - [ ] create guide to initial review?
 """
 import time
@@ -990,12 +990,17 @@ class LCA_SqliteDatabase(SqliteIndex):
         for row in mf.rows:
             name = row['name']
             if name:
-                ident = name.split(' ')[0].split('.')[0]
+                ident = name.split(' ')[0]
+                # @CB add debug? document...
+
+                lineage = lineage_db.get(ident)
+                if not lineage:
+                    ident = name.split('.')[0]
+                    lineage = lineage_db.get(ident)
 
                 idx = row['_id'] # this is only present in sqlite manifests.
                 ident_to_idx[ident] = idx
 
-                lineage = lineage_db.get(ident)
                 if lineage:
                     lid = lineage_to_lid.get(lineage)
                     if lid is None:
@@ -1004,9 +1009,6 @@ class LCA_SqliteDatabase(SqliteIndex):
                         lineage_to_lid[lineage] = lid
                         lid_to_lineage[lid] = lineage
                         idx_to_lid[idx] = lid
-
-        #if not idx_to_lid:
-        #    raise Exception
 
         self.ident_to_idx = ident_to_idx
         self.idx_to_lid = idx_to_lid
