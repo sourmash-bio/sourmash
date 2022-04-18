@@ -91,9 +91,9 @@ TODO testing: test internal and command line for,
 - [x] check LCA database is loaded by load_sqlite_index.
 - [x] check 'summarize' output on all three
 - [ ] implement update lca DB/on disk insert stuff for lca index?
-- [ ] test identifiers with '.' in sql lca dbs...
+- [x] test identifiers with '.' in sql lca dbs...
 - [ ] test LCA_SqliteDatabase with a different lineagedb class?
-- [ ] create guide to initial review?
+- [ ] create guide to initial review? and/or a tutorial?
 """
 import time
 import os
