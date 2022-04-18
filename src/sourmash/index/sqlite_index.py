@@ -83,7 +83,7 @@ TODO testing: test internal and command line for,
 - [x] loading a manifest as a standalone index and insert (should succeed)
 - [x] loading/using a checked-in index
 - [x] loading/using a checked-in manifest
-- loading a lineage db with old table
+- [x] loading a lineage db with old table
 - loading a lineage db with new table name/sourmash info
 - loading a checked-in lineage db with old table
 - loading a checked-in lineage db with new table
