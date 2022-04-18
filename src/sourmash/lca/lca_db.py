@@ -412,6 +412,7 @@ class LCA_Database(Index):
             json.dump(save_d, fp)
 
     def save_to_sql(self, dbname):
+        # @CTB change over to sqlite_index classmethod on lca_sqlitedatabase
         from sourmash.index.sqlite_index import SqliteIndex
         sqlidx = SqliteIndex.create(dbname)
 
