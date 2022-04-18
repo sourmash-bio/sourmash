@@ -90,9 +90,9 @@ TODO testing: test internal and command line for,
 - [x] do some realistic benchmarking of SqliteIndex and LCA_Database
 - [x] check LCA database is loaded by load_sqlite_index.
 - [x] check 'summarize' output on all three
-- lca DB/on disk insert stuff
-- test loading various combinations of database types.
-- test identifiers with '.' in sql lca dbs
+- [ ] test LCA_SqliteDatabase with a different lineagedb class?
+- [ ] implement update lca DB/on disk insert stuff?
+- [ ] test identifiers with '.' in sql lca dbs...
 """
 import time
 import os
@@ -178,7 +178,7 @@ def load_sqlite_index(filename, *, request_manifest=False):
         conn.close()
 
         if is_lca_db:
-            idx = LCA_SqliteDatabase.create_from_sqlite_index_and_lineage(filename)
+            idx = LCA_SqliteDatabase.load(filename)
             debug_literal("load_sqlite_index: returning LCA_SqliteDatabase")
         else:
             idx = SqliteIndex(filename)
@@ -270,7 +270,7 @@ class SqliteIndex(Index):
     @classmethod
     def _create_tables(cls, c):
         "Create sqlite tables for SqliteIndex"
-        # @CTB check what happens when you try to append to existing.
+        # @CTB check what happens when you try to append to existing; fixme.
         try:
             sqlite_utils.add_sourmash_internal(c, 'SqliteIndex', '1.0')
             SqliteCollectionManifest._create_tables(c)
@@ -917,39 +917,46 @@ class LCA_SqliteDatabase(SqliteIndex):
     """
     is_database = True
 
-    def __init__(self, dbfile):
-        from sourmash.tax.tax_utils import LineageDB_Sqlite
-
+    def __init__(self, dbfile, *, lineage_db=None):
+        # CTB note: we need to let SqliteIndex open dbfile here,
+        # so we need to allow for lineage_db to be None in case it
+        # wants to use a sqlite lineage db that reuses the conn.
         super().__init__(dbfile)
 
         c = self.conn.cursor()
 
         c.execute('SELECT DISTINCT ksize FROM sourmash_sketches')
         ksizes = set(( ksize for ksize, in c ))
-        assert len(ksizes) == 1 # @CTB test
+        assert len(ksizes) == 1 # @CTB test with empty?
         self.ksize = next(iter(ksizes))
         debug_literal(f"setting ksize to {self.ksize}")
 
         c.execute('SELECT DISTINCT moltype FROM sourmash_sketches')
         moltypes = set(( moltype for moltype, in c ))
-        assert len(moltypes) == 1 # @CTB test
+        assert len(moltypes) == 1 # @CTB test with empty?
         self.moltype = next(iter(moltypes))
         debug_literal(f"setting moltype to {self.moltype}")
 
-        self.lineage_db = LineageDB_Sqlite(self.conn)
+        if lineage_db is not None:
+            self.lineage_db = lineage_db
 
-        ## the below is done once, but could be implemented as something
-        ## ~dynamic.
-        self._build_index()
+            ## the below is done once, but could be implemented as something
+            ## ~dynamic.
+            self._build_index()
 
     @classmethod
-    def create_from_sqlite_index_and_lineage(cls, filename):
+    def load(cls, filename):
+        "Load SqliteIndex and LineageDB_Sqlite from same filename."
         from sourmash.tax.tax_utils import LineageDB_Sqlite
 
         try:
             obj = cls(filename)
         except sqlite3.OperationalError:
             raise ValueError(f"cannot open '{filename}' as sqlite database.")
+
+        lineage_db = LineageDB_Sqlite(obj.conn)
+        obj.lineage_db = lineage_db
+        obj._build_index()
 
         return obj
 

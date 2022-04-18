@@ -264,8 +264,7 @@ class LCA_Database(Index):
 
         try:
             from sourmash.index.sqlite_index import LCA_SqliteDatabase
-            db = LCA_SqliteDatabase.create_from_sqlite_index_and_lineage(db_name)
-            return db
+            return LCA_SqliteDatabase.load(db_name)
         except ValueError:
             pass
 
