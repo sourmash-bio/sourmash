@@ -93,6 +93,7 @@ TODO testing: test internal and command line for,
 - [ ] test LCA_SqliteDatabase with a different lineagedb class?
 - [ ] implement update lca DB/on disk insert stuff?
 - [ ] test identifiers with '.' in sql lca dbs...
+- [ ] create guide to initial review?
 """
 import time
 import os
@@ -946,7 +947,7 @@ class LCA_SqliteDatabase(SqliteIndex):
 
     @classmethod
     def load(cls, filename):
-        "Load SqliteIndex and LineageDB_Sqlite from same filename."
+        "Load LCA_SqliteDatabase from a single file."
         from sourmash.tax.tax_utils import LineageDB_Sqlite
 
         try:
@@ -959,6 +960,22 @@ class LCA_SqliteDatabase(SqliteIndex):
         obj._build_index()
 
         return obj
+
+    @classmethod
+    def create(cls, filename, idx, lineage_db):
+        "Create a LCA_SqliteDatabase in a single file from existing idx/ldb."
+        from sourmash.tax.tax_utils import MultiLineageDB
+
+        # first, save/create signatures
+        sqlidx = SqliteIndex.create(filename)
+
+        for ss in idx.signatures():
+            sqlidx.insert(ss)
+
+        # now, save/etc the lineage_db into the same database
+        out_lineage_db = MultiLineageDB()
+        out_lineage_db.add(lineage_db)
+        out_lineage_db._save_sqlite(None, conn=sqlidx.conn)
 
     def _build_index(self):
         mf = self.manifest

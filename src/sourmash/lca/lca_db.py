@@ -411,13 +411,11 @@ class LCA_Database(Index):
             json.dump(save_d, fp)
 
     def save_to_sql(self, dbname):
-        # @CTB change over to sqlite_index classmethod on lca_sqlitedatabase
-        from sourmash.index.sqlite_index import SqliteIndex
-        sqlidx = SqliteIndex.create(dbname)
+        "Save this LCA_Database into an LCA_SqliteDatabase"
+        from sourmash.index.sqlite_index import LCA_SqliteDatabase
+        from sourmash.tax.tax_utils import LineageDB
 
-        for ss in self.signatures():
-            sqlidx.insert(ss)
-
+        # create a new in-memory lineage db...
         assignments = {}
         available_ranks = set() # track ranks, too
         for ident, idx in self._ident_to_idx.items():
@@ -428,11 +426,10 @@ class LCA_Database(Index):
                 for pair in lineage:
                     available_ranks.add(pair.rank)
 
-        from sourmash.tax.tax_utils import MultiLineageDB, LineageDB
         ldb = LineageDB(assignments, available_ranks)
-        out_lineage_db = MultiLineageDB()
-        out_lineage_db.add(ldb)
-        out_lineage_db._save_sqlite(None, conn=sqlidx.conn)
+
+        # ...and pass over to create, using 'self' as index.
+        LCA_SqliteDatabase.create(dbname, self, ldb)
 
     def downsample_scaled(self, scaled):
         """
