@@ -84,17 +84,15 @@ TODO testing: test internal and command line for,
 - [x] loading/using a checked-in index
 - [x] loading/using a checked-in manifest
 - [x] loading a lineage db with old table
-- loading a lineage db with new table name/sourmash info
-- loading a checked-in lineage db with old table
-- loading a checked-in lineage db with new table
-- lca DB/on disk insert stuff
-- test various combinations of database types.
+- [x] loading a lineage db with new table name/sourmash info
+- [x] loading a checked-in lineage db with old table
+- [x] loading a checked-in lineage db with new table
 - [x] do some realistic benchmarking of SqliteIndex and LCA_Database
 - [x] check LCA database is loaded by load_sqlite_index.
-- implement lca convert? hmm.
-- cli ways to build LCA_Sqlitedatabase... what advise?
 - [x] check 'summarize' output on all three
-- add counter_gather to protocol tests
+- lca DB/on disk insert stuff
+- test loading various combinations of database types.
+- test identifiers with '.' in sql lca dbs
 """
 import time
 import os
