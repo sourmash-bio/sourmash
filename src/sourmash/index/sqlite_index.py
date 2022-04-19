@@ -273,7 +273,6 @@ class SqliteIndex(Index):
     @classmethod
     def _create_tables(cls, c, *, ignore_exists=False):
         "Create sqlite tables for SqliteIndex"
-        # @CTB check what happens when you try to append to existing; fixme.
         try:
             sqlite_utils.add_sourmash_internal(c, 'SqliteIndex', '1.0')
             SqliteCollectionManifest._create_tables(c)

@@ -867,7 +867,15 @@ class MultiIndex(Index):
 
     Note: this is an in-memory collection, and does not do lazy loading:
     all signatures are loaded upon instantiation and kept in memory.
-    (@CTB update this with information on the various load functions.)
+
+    There are a variety of loading functions:
+    * `load` takes a list of already-loaded Index objects,
+      together with a list of their locations.
+    * `load_from_directory` traverses a directory to load files within.
+    * `load_from_path` takes an arbitrary pathname and tries to load it
+      as a directory, or as a .sig file.
+    * `load_from_pathlist` takes a text file full of pathnames and tries
+      to load them all.
 
     Concrete class; signatures held in memory; builds and uses manifests.
     """
@@ -881,10 +889,6 @@ class MultiIndex(Index):
 
         if prepend_location and self.parent is None:
             raise ValueError("must set 'parent' if 'prepend_location' is set")
-
-    @property
-    def location(self):
-        return self.parent
 
     @property
     def location(self):
