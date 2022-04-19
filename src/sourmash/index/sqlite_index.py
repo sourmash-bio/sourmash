@@ -26,7 +26,7 @@ These classes are fully integrated into sourmash loading.
 
 Internally, use `sqlite_index.load_sqlite_index(...)` to load a specific
 file; this will return the appropriate SqliteIndex, StandaloneManifestIndex,
-or LCA_Database object. @CTB test this last ;).
+or LCA_Database object.
 
 Use `CollectionManifest.load_from_filename(...)` to load the manifest
 directly as a manifest object.
@@ -91,11 +91,11 @@ TODO testing: test internal and command line for,
 - [x] check LCA database is loaded by load_sqlite_index.
 - [x] check 'summarize' output on all three
 - [x] test identifiers with '.' in sql lca dbs...
-- [ ] test LCA_SqliteDatabase.open with a SqliteIndde.
-- [ ] test LCA_SqliteDatabase.open with an empty SqliteIndex
+- [X] test LCA_SqliteDatabase.open with a SqliteIndde.
+- [X] test LCA_SqliteDatabase.open with an empty SqliteIndex
 - [ ] create guide to initial review? and/or a tutorial?
-- [ ] implement update lca DB/on disk insert stuff for lca index?
-- [ ] test LCA_SqliteDatabase with a different lineagedb class?
+- [x] implement update lca DB/on disk insert stuff for lca index?
+- [x] test LCA_SqliteDatabase with a different lineagedb class?
 """
 import time
 import os
@@ -929,6 +929,8 @@ class LCA_SqliteDatabase(SqliteIndex):
         res = list(c)
         if len(res) > 1:
             raise TypeError("can only have one ksize & moltype in an LCA_SqliteDatabase")
+        if len(res) == 0:
+            raise ValueError("cannot load an LCA_SqliteDatabase")
 
         self.ksize, self.moltype = res[0]
         debug_literal(f"setting ksize and moltype to {self.ksize}, {self.moltype}")
@@ -994,11 +996,12 @@ class LCA_SqliteDatabase(SqliteIndex):
             if name:
                 # this is a bit of a hack. we try identifiers _with_ and
                 # _without_ versions, and take whichever works. There is
-                # probably a better way to do this :).
+                # definitely a better way to do this, but I can't think
+                # of one right now.
                 ident = name.split(' ')[0]
 
-                lineage = lineage_db.get(ident)
-                if not lineage:
+                lineage = lineage_db.get(ident) # try with identifier version
+                if lineage is None:             # nope - remove version.x
                     ident = name.split('.')[0]
                     lineage = lineage_db.get(ident)
 

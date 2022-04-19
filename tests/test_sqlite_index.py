@@ -14,6 +14,7 @@ from sourmash.index import StandaloneManifestIndex
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.picklist import SignaturePicklist, PickStyle
 from sourmash.manifest import CollectionManifest
+from sourmash.tax.tax_utils import MultiLineageDB
 
 import sourmash_tst_utils as utils
 from sourmash_tst_utils import SourmashCommandFailed
@@ -784,7 +785,7 @@ def test_sqlite_lca_db_load_existing():
 
 
 def test_sqlite_lca_db_create_load_existing(runtmp):
-    # try creating then loading an existing sqlite index; create from CLI
+    # try creating (from CLI) then loading (from API) an LCA db
     filename = runtmp.output('lca.sqldb')
     sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
     sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
@@ -801,3 +802,47 @@ def test_sqlite_lca_db_create_load_existing(runtmp):
 
     siglist = list(sqlidx.signatures())
     assert len(siglist) == 2
+
+
+def test_sqlite_lca_db_load_empty(runtmp):
+    # try creating then loading an _empty_ LCA_SqliteDatabase
+
+    dbname = runtmp.output('empty.sqldb')
+
+    # create empty SqliteIndex...
+    runtmp.sourmash('sig', 'cat', '-o', dbname)
+    assert os.path.exists(dbname)
+
+    # ...and create empty sourmash_taxonomy tables in there...
+    empty_tax = utils.get_test_data('scaled/empty-lineage.csv')
+    runtmp.sourmash('tax', 'prepare', '-F', 'sql', '-t', empty_tax,
+                    '-o', dbname)
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'describe', dbname)
+
+
+def test_sqlite_lca_db_try_load_sqlite_index():
+    # try loading a SqliteIndex with no tax tables from .load classmethod
+    dbname = utils.get_test_data('sqlite/index.sqldb')
+
+    with pytest.raises(ValueError) as exc:
+        db = LCA_SqliteDatabase.load(dbname)
+
+    assert "not a taxonomy database" in str(exc)
+
+
+def test_sqlite_lca_db_supply_lineage_db():
+    # try creating an LCA_SqliteDatabase object with a separate lineage DB.
+    dbname = utils.get_test_data('sqlite/index.sqldb')
+
+    tax_csv = utils.get_test_data('sqlite/shewanella-lineage.csv')
+    lineage_db = MultiLineageDB.load([tax_csv])
+
+    db = LCA_SqliteDatabase(dbname, lineage_db=lineage_db)
+
+    hashval = next(iter(db.hashvals))
+    lineages = db.get_lineage_assignments(hashval)
+    assert len(lineages) == 1
+    assert lineages[0][0].rank == 'superkingdom'
+    assert lineages[0][0].name == 'd__Bacteria'
