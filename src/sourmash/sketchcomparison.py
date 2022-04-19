@@ -4,7 +4,7 @@ Sketch Comparison Classes
 import numpy as np
 from dataclasses import dataclass
 
-from .signature import SourmashSignature, MinHash
+from .signature import MinHash
 
 
 @dataclass
@@ -60,76 +60,17 @@ class BaseMinHashComparison:
 
     @property
     def angular_similarity(self):
-        if not self.mh1_cmp.track_abundance and self.mh2_cmp.track_abundance:
-            raise ValueError("Error: Angular (cosine) similarity requires both sketches to track hash abundance.")
         return self.mh1_cmp.angular_similarity(self.mh2_cmp)
+        # do we want to shield against error here? Or let TypeError through?
+        #if not (self.mh1_cmp.track_abundance and self.mh2_cmp.track_abundance):
+        #    return self.mh1_cmp.angular_similarity(self.mh2_cmp)
+        #else:
+        #    return ""
 
     @property
     def cosine_similarity(self):
         return self.angular_similarity
 
-    # do we need these? Now that I've added them to MinHash, maybe don't need? Except ignore_abundance -- what do we want to do there?
-    @property
-    def mh1_sum_abunds(self):
-        if self.ignore_abundance:
-            return ""
-        return self.mh1.sum_abundances
-
-    @property
-    def mh1_mean_abund(self):
-        if self.ignore_abundance:
-            return ""
-        return self.mh1.mean_abundance
-
-    @property
-    def mh2_mean_abund(self):
-        if self.ignore_abundance:
-            return ""
-        return self.mh2.mean_abundance
-
-    @property
-    def mh1_median_abund(self):
-        if self.ignore_abundance:
-            return ""
-        return self.mh1.median_abundance
-
-    @property
-    def mh2_median_abund(self):
-        if self.ignore_abundance:
-            return ""
-        return self.mh2.median_abundance
-
-    @property
-    def mh1_std_abund(self):
-        if self.ignore_abundance:
-            return ""
-        return self.mh1.std_abundance
-
-    @property
-    def mh2_std_abund(self):
-        if self.ignore_abundance:
-            return ""
-        return self.mh2.std_abundance
-
-    @property
-    def mh1_weighted_intersection(self):
-         # map mh1 hash abundances to all intersection hashes.
-         # WHAT DO WE WANT TO DO ABOUT ignore_abundance here?
-        #if self.ignore_abundance or not self.mh1.track_abundance:
-        if not self.mh1.track_abundance:
-            return self.intersect_mh # or do we want to set all abundances to 1?
-        else:
- #           return self.mh2_cmp.flatten().inflate(self.mh1) #implicitly intersects...
-            return self.intersect_mh.inflate(self.mh1)
-
-    @property
-    def mh2_weighted_intersection(self):
-         # map mh2 hash abundances to all intersection hashes.
-        if self.ignore_abundance or not self.mh2.track_abundance:
-            return self.intersect_mh  # or do we want to set all abundances to 1?
-        else:
-            intersect_w_abunds = self.intersect_mh.inflate(self.mh2)
-            return intersect_w_abunds
 
 @dataclass
 class NumMinHashComparison(BaseMinHashComparison):
@@ -185,4 +126,22 @@ class FracMinHashComparison(BaseMinHashComparison):
 
     @property
     def avg_containment(self):
-        return np.mean(self.mh1_containment, self.mh2_containment)
+        return np.mean([self.mh1_containment, self.mh2_containment])
+
+    @property
+    def mh1_weighted_intersection(self):
+         # map mh1 hash abundances to all intersection hashes.
+        if self.ignore_abundance or not self.mh1.track_abundance:
+            return self.intersect_mh # or do we want to set all abundances to 1?
+        else:
+        # current functionality inflates by original minhash (not downsampled)-- is that what we want??
+            return self.intersect_mh.inflate(self.mh1)
+
+    @property
+    def mh2_weighted_intersection(self):
+         # map mh2 hash abundances to all intersection hashes.
+        if self.ignore_abundance or not self.mh2.track_abundance:
+            return self.intersect_mh  # or do we want to set all abundances to 1?
+        else:
+        # current functionality inflates by original minhash (not downsampled)-- is that what we want??
+            return self.intersect_mh.inflate(self.mh2)

@@ -565,6 +565,30 @@ def test_mh_similarity_downsample_angular_value():
     jaccard = a.similarity(b, downsample=True, ignore_abundance=True)
     assert jaccard == 4. / 6.
 
+def test_mh_angular_similarity_fail():
+    # raise TypeError if calling angular_similarity directly and
+    # one or both sketches do not have abundance info
+    a = MinHash(0, 20, scaled=scaled50, track_abundance=True)
+    b = MinHash(0, 20, scaled=scaled50, track_abundance=False)
+    a_values = { 1:5, 3:3, 5:2, 8:2}
+    b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
+
+    a.set_abundances(a_values)
+    b.add_many(b_values.keys())
+
+    # one sketch lacks track_abundance
+    with pytest.raises(TypeError) as exc:
+        a.angular_similarity(b)
+    print(str(exc))
+    assert "Error: Angular (cosine) similarity requires both sketches to track hash abundance." in str(exc)
+    # both sketches lack track abundance
+    a = MinHash(0, 20, scaled=scaled50, track_abundance=False)
+    a.add_many(a_values.keys())
+    with pytest.raises(TypeError) as exc:
+        a.angular_similarity(b)
+    print(str(exc))
+    assert "Error: Angular (cosine) similarity requires both sketches to track hash abundance." in str(exc)
+
 
 def test_mh_similarity_downsample_true(track_abundance):
     # verify sim(a, b) == sim(b, a), with and without ignore_abundance

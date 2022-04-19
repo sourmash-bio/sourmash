@@ -689,6 +689,8 @@ class MinHash(RustObject):
 
     def angular_similarity(self, other):
         "Calculate the angular similarity."
+        if not (self.track_abundance and other.track_abundance):
+            raise TypeError("Error: Angular (cosine) similarity requires both sketches to track hash abundance.")
         return self._methodcall(lib.kmerminhash_angular_similarity,
                                 other._get_objptr())
 
