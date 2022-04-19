@@ -242,12 +242,10 @@ class SearchResult(BaseResult):
 
     def init_sigcomparison(self):
         self.init_result()
-        if not any([not self.mh1.scaled, not self.mh2.scaled]):
+        if any([self.mh1.scaled, self.mh2.scaled]):
             self.build_fracminhashcomparison(cmp_scaled = self.cmp_scaled, threshold_bp = self.threshold_bp)
-        elif not any([not self.mh1.num, not self.mh2.num]):
+        elif any([not self.mh1.num, not self.mh2.num]):
             self.build_numminhashcomparison(cmp_num=self.cmp_num)
-        else:
-            raise ValueError("Error: Cannot compare num and scaled signatures.")
         self.get_cmpinfo() # grab comparison metadata
 
     def __post_init__(self):
@@ -289,10 +287,10 @@ class PrefetchResult(BaseResult):
     def init_sigcomparison(self):
         # shared prefetch/gather initialization
         self.init_result()
-        if not any([not self.mh1.scaled, not self.mh2.scaled]):
+        if all([self.mh1.scaled, self.mh2.scaled]):
             self.build_fracminhashcomparison(cmp_scaled = self.cmp_scaled, threshold_bp = self.threshold_bp)
         else:
-            raise ValueError("Error: prefetch and gather results must be between scaled signatures.")
+            raise TypeError("Error: prefetch and gather results must be between scaled signatures.")
         self.get_cmpinfo() # grab comparison metadata
         self.intersect_bp = self.cmp.intersect_bp
         self.max_containment = self.cmp.max_containment
@@ -354,10 +352,10 @@ class GatherResult(PrefetchResult):
         if self.cmp_scaled is None:
             raise ValueError("Error: must provide comparison scaled value ('cmp_scaled') for GatherResult")
         if self.gather_querymh is None:
-            raise ValueError("Error: must provide current gather sketch (remaining hashes) for GatherResult") # todo: fix this description
+            raise ValueError("Error: must provide current gather sketch (remaining hashes) for GatherResult")
         if self.gather_result_rank is None:
             raise ValueError("Error: must provide 'gather_result_rank' to GatherResult")
-        if self.total_abund is None:
+        if not self.total_abund: # catch total_abund = 0 as well
             raise ValueError("Error: must provide sum of all abundances ('total_abund') to GatherResult")
 
     def build_gather_result(self):
@@ -369,21 +367,21 @@ class GatherResult(PrefetchResult):
         self.f_orig_query = len(self.cmp.intersect_mh) / self.orig_query_len
         self.f_unique_to_query = len(self.gather_comparison.intersect_mh)/self.orig_query_len
 
-    def build_gather_result_incorrect(self):
-        # get current query-weighted intersection
-        self.query_weighted_unique_intersection = self.gather_comparison.mh1_weighted_intersection
-        # calculate scores weighted by abundances
-        #f_unique_weighted = sum((orig_query_abunds[k] for k in intersect_mh.hashes ))
-        #f_unique_weighted /= sum_abunds
-        if self.query_abundance:
-            self.f_unique_weighted =  float(self.query_weighted_unique_intersection.sum_abundances) / self.total_abund
-        else:
-            self.f_unique_weighted = self.f_unique_to_query # is this right?
-        self.remaining_bp = self.query_bp - self.gather_comparison.intersect_bp
-        #self.remaining_bp = self.gather_comparison.mh1_bp - self.gather_comparison.intersect_bp
-        self.average_abund = self.query_weighted_unique_intersection.mean_abundance
-        self.median_abund = self.query_weighted_unique_intersection.median_abundance
-        self.std_abund = self.query_weighted_unique_intersection.std_abundance
+    #def build_gather_result_incorrect(self):
+    #    # get current query-weighted intersection
+    #    self.query_weighted_unique_intersection = self.gather_comparison.mh1_weighted_intersection
+    #    # calculate scores weighted by abundances
+    #    #f_unique_weighted = sum((orig_query_abunds[k] for k in intersect_mh.hashes ))
+    #    #f_unique_weighted /= sum_abunds
+    #    if self.query_abundance:
+    #        self.f_unique_weighted =  float(self.query_weighted_unique_intersection.sum_abundances) / self.total_abund
+    #    else:
+    #        self.f_unique_weighted = self.f_unique_to_query # is this right?
+    #    self.remaining_bp = self.query_bp - self.gather_comparison.intersect_bp
+    #    #self.remaining_bp = self.gather_comparison.mh1_bp - self.gather_comparison.intersect_bp
+    #    self.average_abund = self.query_weighted_unique_intersection.mean_abundance
+    #    self.median_abund = self.query_weighted_unique_intersection.median_abundance
+    #    self.std_abund = self.query_weighted_unique_intersection.std_abundance
 
     def __post_init__(self):
         self.check_gatherresult_input()
