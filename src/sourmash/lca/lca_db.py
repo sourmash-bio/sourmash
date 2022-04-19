@@ -204,11 +204,18 @@ class LCA_Database(Index):
 
         Part of the Index protocol.
 
-        @CTB: note this does not respect picklists!?
+        CTB: note this does not respect picklists!?
         """
         from sourmash import SourmashSignature
-        for v in self._signatures.values():
-            yield v
+
+        if self.picklists:
+            pl = self.picklists
+            for v in self._signatures.values():
+                if passes_all_picklists(v, pl): # @CTB testme
+                    yield v
+        else:
+            for v in self._signatures.values():
+                yield v
 
     def _signatures_with_internal(self):
         """Return all of the signatures in this LCA database.
