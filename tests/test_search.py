@@ -251,7 +251,7 @@ def test_search_with_abund_query():
                                                  do_max_containment=True)
 
 
-def test_SearchResult():
+def test_scaledSearchResult():
     # check that values get stored/calculated correctly
     ss47_file = utils.get_test_data('47.fa.sig')
     ss4763_file = utils.get_test_data('47+63.fa.sig')
@@ -283,6 +283,36 @@ def test_SearchResult():
     assert res.md5 == ss4763.md5sum()
     assert res.name == ss4763.name
     assert res.filename == ss4763.filename
+
+def test_numSearchResult():
+    # check that values get stored/calculated correctly
+    ss47_file = utils.get_test_data('num/47.fa.sig')
+    ss63_file = utils.get_test_data('num/63.fa.sig')
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
+    ss63 = load_one_signature(ss63_file, ksize=31, select_moltype='dna')
+    ss63.filename = ss63_file
+
+    assert ss47.minhash.num and ss63.minhash.num
+
+    res = SearchResult(ss47, ss63, similarity= ss47.jaccard(ss63))
+    print(res.cmp_num)
+    assert res.mh1.num
+    assert res.cmp.cmp_num == 500
+    assert res.query_name == ss47.name
+    assert res.match_name == ss63.name
+    assert res.query_num == ss47.minhash.num == 500
+    assert res.match_num == ss63.minhash.num == 500
+    assert res.query_abundance == ss47.minhash.track_abundance
+    assert res.match_abundance == ss63.minhash.track_abundance
+    assert res.ksize == 31
+    assert res.moltype == 'DNA'
+    assert res.query_filename == '47.fa'
+    assert res.match_filename == ss63_file
+    assert res.query_md5 == ss47.md5sum()
+    assert res.match_md5 == ss63.md5sum()
+    assert res.md5 == ss63.md5sum()
+    assert res.name == ss63.name
+    assert res.filename == ss63.filename
 
 
 def test_SearchResult_incompatible_sigs():

@@ -186,7 +186,7 @@ class BaseResult:
 
     def build_numminhashcomparison(self, cmp_num=None):
         self.cmp = NumMinHashComparison(self.mh1, self.mh2, cmp_num=cmp_num, ignore_abundance=self.ignore_abundance)
-        self.num = self.cmp.cmp_num
+        self.cmp_num = self.cmp.cmp_num
         self.query_num = self.mh1.num
         self.match_num = self.mh2.num
 
@@ -244,7 +244,7 @@ class SearchResult(BaseResult):
         self.init_result()
         if any([self.mh1.scaled, self.mh2.scaled]):
             self.build_fracminhashcomparison(cmp_scaled = self.cmp_scaled, threshold_bp = self.threshold_bp)
-        elif any([not self.mh1.num, not self.mh2.num]):
+        elif any([self.mh1.num, self.mh2.num]):
             self.build_numminhashcomparison(cmp_num=self.cmp_num)
         self.get_cmpinfo() # grab comparison metadata
 
