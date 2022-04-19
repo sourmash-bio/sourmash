@@ -672,6 +672,7 @@ class LineageDB_Sqlite(abc.Mapping):
         if not conn:
             raise ValueError("not a sqlite taxonomy database")
 
+        table_name = None
         c = conn.cursor()
         try:
             info = sqlite_utils.get_sourmash_internal(c)
@@ -690,6 +691,9 @@ class LineageDB_Sqlite(abc.Mapping):
                 table_name = 'taxonomy'
             except sqlite3.OperationalError:
                 pass
+
+        if table_name is None:
+            raise ValueError("not a sqlite taxonomy database")
 
         return cls(conn, table_name=table_name)
 

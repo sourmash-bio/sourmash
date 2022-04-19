@@ -100,9 +100,9 @@ TODO testing: test internal and command line for,
 - [x] test `append= True` in manifest.py
 - [x] test `__eq__` in CollectionManifest where manifests are NOT equal
 - [ ] document sourmash_internal table in PR, along with taxonomy foo
-- [ ] test sqlite_utils/bad version code
-- [ ] test tax_utils/bad version code
-- [ ] test tax_utils/no version code
+- [x] test sqlite_utils/bad version code
+- [x] test tax_utils/bad version code
+- [x] test tax_utils/no version code
 """
 import time
 import os

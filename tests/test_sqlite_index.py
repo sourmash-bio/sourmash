@@ -18,6 +18,7 @@ from sourmash.tax.tax_utils import MultiLineageDB
 
 import sourmash_tst_utils as utils
 from sourmash_tst_utils import SourmashCommandFailed
+from sourmash import sqlite_utils
 
 
 def test_sqlite_index_prefetch_empty():
@@ -845,3 +846,13 @@ def test_sqlite_lca_db_supply_lineage_db():
     assert len(lineages) == 1
     assert lineages[0][0].rank == 'superkingdom'
     assert lineages[0][0].name == 'd__Bacteria'
+
+
+def test_bad_sqlite_internal_version():
+    # check get_sourmash_internal
+    dbname = utils.get_test_data('sqlite/index.sqldb')
+
+    conn = sqlite_utils.open_sqlite_db(dbname)
+    c = conn.cursor()
+    with pytest.raises(Exception):
+        sqlite_utils.add_sourmash_internal(c, 'SqliteIndex', '0.9')
