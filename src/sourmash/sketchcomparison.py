@@ -19,16 +19,16 @@ class BaseMinHashComparison:
         k1 = self.mh1.ksize
         k2 = self.mh2.ksize
         if k1 != k2:
-            raise ValueError(f"Error: Invalid Comparison, ksizes: {k1}, {k2}). Must compare sketches of the same ksize.")
+            raise TypeError(f"Error: Invalid Comparison, ksizes: {k1}, {k2}. Must compare sketches of the same ksize.")
         self.ksize = self.mh1.ksize
-        m1 = self.mh2.moltype
+        m1 = self.mh1.moltype
         m2= self.mh2.moltype
         if m1 != m2:
-            raise ValueError(f"Error: Invalid Comparison, moltypes: {m1}, {m2}). Must compare sketches of the same moltype.")
+            raise TypeError(f"Error: Invalid Comparison, moltypes: {m1}, {m2}. Must compare sketches of the same moltype.")
         self.moltype= self.mh1.moltype
         # check num, scaled
         if not any([(self.mh1.num and self.mh2.num), (self.mh1.scaled and self.mh2.scaled)]):
-            raise ValueError("Error: Both sketches must be 'num' or 'scaled'.")
+            raise TypeError("Error: Both sketches must be 'num' or 'scaled'.")
 
     def downsample_and_handle_ignore_abundance(self, cmp_num=None, cmp_scaled=None):
         """

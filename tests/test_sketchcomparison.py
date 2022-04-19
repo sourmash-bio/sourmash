@@ -224,6 +224,91 @@ def test_FracMinHashComparison_ignore_abundance(track_abundance):
     assert cmp.mh2_weighted_intersection == intersect_mh
 
 
+def test_FracMinHashComparison_incompatible_ksize(track_abundance):
+    a = MinHash(0, 31, scaled=1, track_abundance=track_abundance)
+    b = MinHash(0, 21, scaled=2, track_abundance=track_abundance)
+
+    a_values = { 1:5, 3:3, 5:2, 8:2}
+    b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
+
+    if track_abundance:
+        a.set_abundances(a_values)
+        b.set_abundances(b_values)
+    else:
+        a.add_many(a_values.keys())
+        b.add_many(b_values.keys())
+
+    with pytest.raises(TypeError) as exc:
+        FracMinHashComparison(a, b)
+    print(str(exc))
+    assert "Error: Invalid Comparison, ksizes: 31, 21. Must compare sketches of the same ksize." in str(exc)
+
+
+def test_FracMinHashComparison_incompatible_moltype(track_abundance):
+    a = MinHash(0, 31, scaled=1, track_abundance=track_abundance)
+    b = MinHash(0, 31, scaled=2, is_protein=True, track_abundance=track_abundance)
+
+    a_values = { 1:5, 3:3, 5:2, 8:2}
+    b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
+
+    if track_abundance:
+        a.set_abundances(a_values)
+        b.set_abundances(b_values)
+    else:
+        a.add_many(a_values.keys())
+        b.add_many(b_values.keys())
+
+    with pytest.raises(TypeError) as exc:
+        FracMinHashComparison(a, b)
+    print(str(exc))
+    assert "Error: Invalid Comparison, moltypes: DNA, protein. Must compare sketches of the same moltype." in str(exc)
+
+
+
+def test_FracMinHashComparison_incompatible_sketchtype(track_abundance):
+    a = MinHash(0, 31, scaled=1, track_abundance=track_abundance)
+    b = MinHash(10, 31, track_abundance=track_abundance)
+
+    a_values = { 1:5, 3:3, 5:2, 8:2}
+    b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
+
+    if track_abundance:
+        a.set_abundances(a_values)
+        b.set_abundances(b_values)
+    else:
+        a.add_many(a_values.keys())
+        b.add_many(b_values.keys())
+
+    with pytest.raises(TypeError) as exc:
+        FracMinHashComparison(a, b)
+    print(str(exc))
+    assert "Error: Both sketches must be 'num' or 'scaled'." in str(exc)
+
+
+def test_FracMinHashComparison_redownsample_without_scaled(track_abundance):
+    a = MinHash(0, 31, scaled=1, track_abundance=track_abundance)
+    b = MinHash(0, 31, scaled=10, track_abundance=track_abundance)
+
+    a_values = { 1:5, 3:3, 5:2, 8:2}
+    b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
+
+    if track_abundance:
+        a.set_abundances(a_values)
+        b.set_abundances(b_values)
+    else:
+        a.add_many(a_values.keys())
+        b.add_many(b_values.keys())
+
+    cmp = FracMinHashComparison(a, b)
+    assert cmp.cmp_scaled == 10
+
+    with pytest.raises(ValueError) as exc:
+        # try to redownsample without passing in cmp_num
+        cmp.downsample_and_handle_ignore_abundance()
+    print(str(exc))
+    assert "Error: must pass in a comparison scaled or num value." in str(exc)
+
+
 def test_NumMinHashComparison(track_abundance):
     # build FracMinHash Comparison and check values 
     a = MinHash(10, 21, scaled=0, track_abundance=track_abundance)
@@ -310,6 +395,7 @@ def test_NumMinHashComparison_downsample(track_abundance):
         print(str(exc))
         assert "Error: Angular (cosine) similarity requires both sketches to track hash abundance." in str(exc)
 
+
 def test_NumMinHashComparison_autodownsample(track_abundance):
     # build FracMinHash Comparison and check values 
     a = MinHash(10, 21, scaled=0, track_abundance=track_abundance)
@@ -353,4 +439,87 @@ def test_NumMinHashComparison_autodownsample(track_abundance):
             cmp.cosine_similarity
         print(str(exc))
         assert "Error: Angular (cosine) similarity requires both sketches to track hash abundance." in str(exc)
-    
+
+
+def test_NumMinHashComparison_incompatible_ksize(track_abundance):
+    a_num = MinHash(20, 31, track_abundance=track_abundance)
+    b_num = MinHash(10, 21, track_abundance=track_abundance)
+
+    a_values = { 1:5, 3:3, 5:2, 8:2}
+    b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
+
+    if track_abundance:
+        a_num.set_abundances(a_values)
+        b_num.set_abundances(b_values)
+    else:
+        a_num.add_many(a_values.keys())
+        b_num.add_many(b_values.keys())
+
+    # build NumMinHashComparison
+    with pytest.raises(TypeError) as exc:
+        NumMinHashComparison(a_num, b_num)
+    print(str(exc))
+    assert "Error: Invalid Comparison, ksizes: 31, 21. Must compare sketches of the same ksize." in str(exc)
+
+
+def test_NumMinHashComparison_incompatible_moltype(track_abundance):
+    a_num = MinHash(20, 31, track_abundance=track_abundance)
+    b_num = MinHash(10, 31, is_protein=True, track_abundance=track_abundance)
+
+    a_values = { 1:5, 3:3, 5:2, 8:2}
+    b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
+
+    if track_abundance:
+        a_num.set_abundances(a_values)
+        b_num.set_abundances(b_values)
+    else:
+        a_num.add_many(a_values.keys())
+        b_num.add_many(b_values.keys())
+
+    with pytest.raises(TypeError) as exc:
+        NumMinHashComparison(a_num, b_num)
+    print(str(exc))
+    assert "Error: Invalid Comparison, moltypes: DNA, protein. Must compare sketches of the same moltype." in str(exc)
+
+
+def test_NumMinHashComparison_incompatible_sketchtype(track_abundance):
+    a = MinHash(0, 31, scaled=1, track_abundance=track_abundance)
+    b = MinHash(10, 31, track_abundance=track_abundance)
+
+    a_values = { 1:5, 3:3, 5:2, 8:2}
+    b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
+
+    if track_abundance:
+        a.set_abundances(a_values)
+        b.set_abundances(b_values)
+    else:
+        a.add_many(a_values.keys())
+        b.add_many(b_values.keys())
+
+    with pytest.raises(TypeError) as exc:
+        NumMinHashComparison(a, b)
+    print(str(exc))
+    assert "Error: Both sketches must be 'num' or 'scaled'." in str(exc)
+
+
+def test_NumMinHashComparison_redownsample_without_num(track_abundance):
+    a = MinHash(10, 31, track_abundance=track_abundance)
+    b = MinHash(5, 31, track_abundance=track_abundance)
+
+    a_values = { 1:5, 3:3, 5:2, 8:2}
+    b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
+
+    if track_abundance:
+        a.set_abundances(a_values)
+        b.set_abundances(b_values)
+    else:
+        a.add_many(a_values.keys())
+        b.add_many(b_values.keys())
+
+    cmp = NumMinHashComparison(a, b)
+
+    with pytest.raises(ValueError) as exc:
+        # try to redownsample without passing in cmp_num
+        cmp.downsample_and_handle_ignore_abundance()
+    print(str(exc))
+    assert "Error: must pass in a comparison scaled or num value." in str(exc)
