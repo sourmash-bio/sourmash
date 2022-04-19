@@ -262,16 +262,16 @@ class SqliteIndex(Index):
         return SqliteIndex(dbfile)
 
     @classmethod
-    def create(cls, dbfile):
+    def create(cls, dbfile, *, append=False):
         "Create a new SqliteIndex in dbfile."
         conn = cls._open(dbfile, empty_ok=True)
-        cls._create_tables(conn.cursor())
+        cls._create_tables(conn.cursor(), ignore_exists=append)
         conn.commit()
 
         return cls(dbfile, conn=conn)
 
     @classmethod
-    def _create_tables(cls, c):
+    def _create_tables(cls, c, *, ignore_exists=False):
         "Create sqlite tables for SqliteIndex"
         # @CTB check what happens when you try to append to existing; fixme.
         try:
@@ -303,7 +303,8 @@ class SqliteIndex(Index):
             """
             )
         except (sqlite3.OperationalError, sqlite3.DatabaseError):
-            raise ValueError("cannot create SqliteIndex tables")
+            if not ignore_exists:
+                raise ValueError("cannot create SqliteIndex tables")
 
         return c
 

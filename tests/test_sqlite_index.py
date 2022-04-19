@@ -401,12 +401,11 @@ def test_sqlite_index_create_load_insert_existing_cli(runtmp):
     siglist = list(sqlidx.signatures())
     assert len(siglist) == 2
 
-    # @CTB we probably want to allow this tho
-    with pytest.raises(SourmashCommandFailed):
-        runtmp.sourmash('sig', 'cat', sig3, '-o', filename)
+    # add a third
+    runtmp.sourmash('sig', 'cat', sig3, '-o', filename, '-k', '31')
 
-    #siglist = list(sqlidx.signatures())
-    #assert len(siglist) == 2
+    siglist = list(sqlidx.signatures())
+    assert len(siglist) == 3
 
 
 def test_sqlite_manifest_bad_version(runtmp):
