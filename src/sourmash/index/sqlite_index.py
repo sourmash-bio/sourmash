@@ -72,37 +72,6 @@ Limitations:
   separating creation and insertion. That having been said, these databases
   should work fine for many simultaneous queries; just don't write :).
 
-TODO testing: test internal and command line for,
-- [x] creating an index
-- [x] loading an index
-- [x] loading an index as a manifest (should work)
-- [x] loading an index as a standalone manifest and inserting (should fail)
-- [x] creating a manifest, using from CLI
-- [x] loading a manifest as a standalone index
-- [x] loading a manifest as a standalone index in wrong directory
-- [x] loading a manifest as a standalone index and insert (should succeed)
-- [x] loading/using a checked-in index
-- [x] loading/using a checked-in manifest
-- [x] loading a lineage db with old table
-- [x] loading a lineage db with new table name/sourmash info
-- [x] loading a checked-in lineage db with old table
-- [x] loading a checked-in lineage db with new table
-- [x] do some realistic benchmarking of SqliteIndex and LCA_Database
-- [x] check LCA database is loaded by load_sqlite_index.
-- [x] check 'summarize' output on all three
-- [x] test identifiers with '.' in sql lca dbs...
-- [X] test LCA_SqliteDatabase.open with a SqliteIndex.
-- [X] test LCA_SqliteDatabase.open with an empty SqliteIndex
-- [x] implement update lca DB/on disk insert stuff for lca index?
-- [x] test LCA_SqliteDatabase with a different lineagedb class?
-- [x] test `db_outfile += '.lca.json'` line in lca_db.py
-- [x] test `raise Exception(f"unknown save format for LCA_Database: '{format}'")` in lca_db.py
-- [x] test `append= True` in manifest.py
-- [x] test `__eq__` in CollectionManifest where manifests are NOT equal
-- [ ] document sourmash_internal table in PR, along with taxonomy foo
-- [x] test sqlite_utils/bad version code
-- [x] test tax_utils/bad version code
-- [x] test tax_utils/no version code
 """
 import time
 import os
