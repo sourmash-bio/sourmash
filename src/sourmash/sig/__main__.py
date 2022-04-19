@@ -1372,8 +1372,8 @@ def check(args):
     # save manifest of matching!
     if args.save_manifest_matching and total_manifest_rows:
         mf = total_manifest_rows
-        with open(args.save_manifest_matching, 'w', newline="") as fp:
-            mf.write_to_csv(fp, write_header=True)
+        mf.write_to_filename(args.save_manifest_matching,
+                             database_format=args.manifest_format)
         notify(f"wrote {len(mf)} matching manifest rows to '{args.save_manifest_matching}'")
     elif args.save_manifest_matching:
         notify(f"(not saving matching manifest to '{args.save_manifest_matching}' because no matches)")

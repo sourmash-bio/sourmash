@@ -744,16 +744,16 @@ def test_run_sourmash_lca():
 def test_basic_index(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/delmont-1.csv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    lca_db = runtmp.output('delmont-1.lca.json')
+    lca_db = runtmp.output(f'delmont-1.lca.{lca_db_format}')
 
-    cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-F', lca_db_format]
+    cmd = ['lca', 'index', taxcsv, 'delmont-1', input_sig, '-F', lca_db_format]
     runtmp.sourmash(*cmd)
 
     print(cmd)
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert os.path.exists(lca_db)
+    assert os.path.exists(lca_db), lca_db
 
     assert 'Building LCA database with ksize=31 scaled=10000 moltype=DNA' in runtmp.last_result.err
     assert "** assuming column 'MAGs' is identifiers in spreadsheet" in runtmp.last_result.err
@@ -764,7 +764,7 @@ def test_basic_index(runtmp, lca_db_format):
 def test_basic_index_bad_spreadsheet(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/bad-spreadsheet.csv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    lca_db = runtmp.output('delmont-1.lca.json')
+    lca_db = runtmp.output(f'delmont-1.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-F', lca_db_format]
     runtmp.sourmash(*cmd)
@@ -773,7 +773,7 @@ def test_basic_index_bad_spreadsheet(runtmp, lca_db_format):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert os.path.exists(lca_db)
+    assert os.path.exists(lca_db), lca_db
 
     assert "** assuming column 'MAGs' is identifiers in spreadsheet" in runtmp.last_result.err
     assert "** assuming column 'Domain' is superkingdom in spreadsheet" in runtmp.last_result.err
@@ -784,7 +784,7 @@ def test_basic_index_broken_spreadsheet(runtmp, lca_db_format):
     # duplicate identifiers in this spreadsheet
     taxcsv = utils.get_test_data('lca/bad-spreadsheet-2.csv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    lca_db = runtmp.output('delmont-1.lca.json')
+    lca_db = runtmp.output(f'delmont-1.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-F', lca_db_format]
     with pytest.raises(SourmashCommandFailed):
@@ -799,7 +799,7 @@ def test_basic_index_too_many_strains_too_few_species(runtmp, lca_db_format):
     # if lineage was at strain level resolution.
     taxcsv = utils.get_test_data('lca/podar-lineage.csv')
     input_sig = utils.get_test_data('47.fa.sig')
-    lca_db = runtmp.output('out.lca.json')
+    lca_db = runtmp.output(f'out.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig,
             '-C', '3', '--split-identifiers', '-F', lca_db_format]
@@ -815,7 +815,7 @@ def test_basic_index_too_few_species(runtmp, lca_db_format):
 
     # (these don't really matter, should break on load spreadsheet)
     input_sig = utils.get_test_data('47.fa.sig')
-    lca_db = runtmp.output('out.lca.json')
+    lca_db = runtmp.output(f'out.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-C', '3',
            '-F', lca_db_format]
@@ -830,7 +830,7 @@ def test_basic_index_require_taxonomy(runtmp, lca_db_format):
     # no taxonomy in here
     taxcsv = utils.get_test_data('lca/bad-spreadsheet-3.csv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    lca_db = runtmp.output('delmont-1.lca.json')
+    lca_db = runtmp.output(f'delmont-1.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', '--require-taxonomy', taxcsv, lca_db, input_sig,
            '-F', lca_db_format]
@@ -844,7 +844,7 @@ def test_basic_index_require_taxonomy(runtmp, lca_db_format):
 def test_basic_index_column_start(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/delmont-3.csv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    lca_db = runtmp.output('delmont-1.lca.json')
+    lca_db = runtmp.output(f'delmont-1.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', '-C', '3', taxcsv, lca_db, input_sig,
            '-F', lca_db_format]
@@ -874,12 +874,7 @@ def test_index_empty_sketch_name(runtmp, lca_db_format):
     sig2 = c.output('genome-s12.fa.gz.sig')
     assert os.path.exists(sig2)
 
-    outfile = 'zzz'
-    if lca_db_format == 'json':
-        outfile += '.lca.json'
-    else:
-        assert lca_db_format == 'sql'
-        outfile += '.sqldb'
+    outfile = f'zzz.lca.{lca_db_format}'
 
     # can we insert them both?
     taxcsv = utils.get_test_data('lca/delmont-1.csv')
@@ -896,7 +891,11 @@ def test_index_empty_sketch_name(runtmp, lca_db_format):
 def test_basic_index_and_classify_with_tsv_and_gz(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/delmont-1.tsv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    lca_db = runtmp.output('delmont-1.lca.json.gz')
+
+    if lca_db_format == 'json':
+        lca_db = runtmp.output(f'delmont-1.lca.json.gz')
+    else:
+        lca_db = runtmp.output(f'delmont-1.lca.sql')
 
     cmd = ['lca', 'index', '--tabs', '--no-header', taxcsv, lca_db, input_sig,
            '-F', lca_db_format]
@@ -926,7 +925,7 @@ def test_basic_index_and_classify_with_tsv_and_gz(runtmp, lca_db_format):
 def test_basic_index_and_classify(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/delmont-1.csv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    lca_db = runtmp.output('delmont-1.lca.json')
+    lca_db = runtmp.output(f'delmont-1.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-F', lca_db_format]
     runtmp.sourmash(*cmd)
@@ -957,7 +956,7 @@ def test_basic_index_and_classify(runtmp, lca_db_format):
 def test_index_traverse(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/delmont-1.csv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    lca_db = runtmp.output('delmont-1.lca.json')
+    lca_db = runtmp.output(f'delmont-1.lca.{lca_db_format}')
 
     in_dir = runtmp.output('sigs')
     os.mkdir(in_dir)
@@ -983,7 +982,7 @@ def test_index_traverse_force(runtmp, lca_db_format):
     # test the use of --force to load all files, not just .sig
     taxcsv = utils.get_test_data('lca/delmont-1.csv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    lca_db = c.output('delmont-1.lca.json')
+    lca_db = c.output(f'delmont-1.lca.{lca_db_format}')
 
     in_dir = c.output('sigs')
     os.mkdir(in_dir)
@@ -1011,7 +1010,7 @@ def test_index_from_file_cmdline_sig(runtmp, lca_db_format):
     c = runtmp
     taxcsv = utils.get_test_data('lca/delmont-1.csv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    lca_db = c.output('delmont-1.lca.json')
+    lca_db = c.output(f'delmont-1.lca.{lca_db_format}')
 
     file_list = c.output('sigs.list')
     with open(file_list, 'wt') as fp:
@@ -1039,7 +1038,7 @@ def test_index_from_file(runtmp, lca_db_format):
 
     taxcsv = utils.get_test_data('lca/delmont-1.csv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    lca_db = c.output('delmont-1.lca.json')
+    lca_db = c.output(f'delmont-1.lca.{lca_db_format}')
 
     file_list = c.output('sigs.list')
     with open(file_list, 'wt') as fp:
@@ -1068,7 +1067,7 @@ def test_index_fail_on_num(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/podar-lineage.csv')
 
     with pytest.raises(SourmashCommandFailed):
-        c.run_sourmash('lca', 'index', taxcsv, 'xxx.lca.json', sigfile,
+        c.run_sourmash('lca', 'index', taxcsv, f'xxx.lca.{lca_db_format}', sigfile,
                        '-C', '3', '-F', lca_db_format)
 
     err = c.last_result.err
@@ -1081,7 +1080,7 @@ def test_index_fail_on_num(runtmp, lca_db_format):
 def test_index_traverse_real_spreadsheet_no_report(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    lca_db = runtmp.output('delmont-1.lca.json')
+    lca_db = runtmp.output(f'delmont-1.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-f',
            '-F', lca_db_format]
@@ -1104,7 +1103,7 @@ def test_index_traverse_real_spreadsheet_no_report(runtmp, lca_db_format):
 def test_index_traverse_real_spreadsheet_report(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    lca_db = runtmp.output('delmont-1.lca.json')
+    lca_db = runtmp.output(f'delmont-1.lca.{lca_db_format}')
     report_loc = runtmp.output('report.txt')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '--report',
@@ -1143,7 +1142,7 @@ def test_single_classify(runtmp):
 
 
 def test_single_classify_to_output(runtmp):
-    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    db1 = utils.get_test_data(f'lca/delmont-1.lca.json')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
     cmd = ['lca', 'classify', '--db', db1, '--query', input_sig,
@@ -1162,7 +1161,7 @@ def test_single_classify_to_output(runtmp):
 
 
 def test_single_classify_to_output_no_name(runtmp):
-    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    db1 = utils.get_test_data(f'lca/delmont-1.lca.json')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
     ss = sourmash.load_one_signature(input_sig, ksize=31)
 
@@ -1188,7 +1187,7 @@ def test_single_classify_to_output_no_name(runtmp):
 
 
 def test_single_classify_empty(runtmp):
-    db1 = utils.get_test_data('lca/both.lca.json')
+    db1 = utils.get_test_data(f'lca/both.lca.json')
     input_sig = utils.get_test_data('GCF_000005845.2_ASM584v2_genomic.fna.gz.sig')
 
     cmd = ['lca', 'classify', '--db', db1, '--query', input_sig]
@@ -1204,7 +1203,7 @@ def test_single_classify_empty(runtmp):
 
 
 def test_single_classify_traverse(runtmp):
-    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    db1 = utils.get_test_data(f'lca/delmont-1.lca.json')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
     in_dir = runtmp.output('sigs')
     os.mkdir(in_dir)
@@ -1224,7 +1223,7 @@ def test_single_classify_traverse(runtmp):
 
 def test_multi_query_classify_traverse(runtmp):
     # both.lca.json is built from both dir and dir2
-    db1 = utils.get_test_data('lca/both.lca.json')
+    db1 = utils.get_test_data(f'lca/both.lca.json')
     dir1 = utils.get_test_data('lca/dir1')
     dir2 = utils.get_test_data('lca/dir2')
 
@@ -1235,7 +1234,7 @@ def test_multi_query_classify_traverse(runtmp):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    with open(utils.get_test_data('lca/classify-by-both.csv'), 'rt') as fp:
+    with open(utils.get_test_data('lca/classify-by-both.csv')) as fp:
         fp_lines = fp.readlines()
         out_lines = runtmp.last_result.out.splitlines()
 
@@ -1265,7 +1264,7 @@ def test_multi_query_classify_query_from_file(c):
     c.run_sourmash(*cmd)
     out = c.last_result.out
 
-    with open(utils.get_test_data('lca/classify-by-both.csv'), 'rt') as fp:
+    with open(utils.get_test_data('lca/classify-by-both.csv')) as fp:
         fp_lines = fp.readlines()
         out_lines = out.splitlines()
 
@@ -1280,7 +1279,7 @@ def test_multi_query_classify_query_from_file(c):
 @utils.in_tempdir
 def test_multi_query_classify_query_from_file_and_query(c):
     # both.lca.json is built from both dir and dir2
-    db1 = utils.get_test_data('lca/both.lca.json')
+    db1 = utils.get_test_data(f'lca/both.lca.json')
     dir1_glob = utils.get_test_data('lca/dir1/*.sig')
     dir1_files = glob.glob(dir1_glob)
     dir2_glob = utils.get_test_data('lca/dir2/*.sig')
@@ -1310,8 +1309,8 @@ def test_multi_query_classify_query_from_file_and_query(c):
 
 def test_multi_db_multi_query_classify_traverse(runtmp):
     # two halves of both.lca.json, see above test.
-    db1 = utils.get_test_data('lca/dir1.lca.json')
-    db2 = utils.get_test_data('lca/dir2.lca.json')
+    db1 = utils.get_test_data(f'lca/dir1.lca.json')
+    db2 = utils.get_test_data(f'lca/dir2.lca.json')
     dir1 = utils.get_test_data('lca/dir1')
     dir2 = utils.get_test_data('lca/dir2')
 
@@ -1337,7 +1336,7 @@ def test_multi_db_multi_query_classify_traverse(runtmp):
 def test_unassigned_internal_index_and_classify(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/delmont-4.csv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    lca_db = runtmp.output('delmont-1.lca.json')
+    lca_db = runtmp.output(f'delmont-1.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-F', lca_db_format]
     runtmp.sourmash(*cmd)
@@ -1368,7 +1367,7 @@ def test_unassigned_internal_index_and_classify(runtmp, lca_db_format):
 def test_unassigned_last_index_and_classify(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/delmont-5.csv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    lca_db = runtmp.output('delmont-1.lca.json')
+    lca_db = runtmp.output(f'delmont-1.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-F', lca_db_format]
     runtmp.sourmash(*cmd)
@@ -1400,7 +1399,7 @@ def test_index_and_classify_internal_unassigned_multi(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/delmont-6.csv')
     input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
     input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
-    lca_db = runtmp.output('delmont-1.lca.json')
+    lca_db = runtmp.output(f'delmont-1.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2,
            '-F', lca_db_format]
@@ -1451,7 +1450,7 @@ def test_classify_majority_vote_1(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/delmont-6.csv')
     input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
     input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
-    lca_db = c.output('delmont-1.lca.json')
+    lca_db = c.output(f'delmont-1.lca.{lca_db_format}')
 
     c.run_sourmash('lca', 'index', taxcsv, lca_db, input_sig1, input_sig2,
                    '-F', lca_db_format)
@@ -1494,7 +1493,7 @@ def test_classify_majority_vote_2(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/delmont-6.csv')
     input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
     input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
-    lca_db = c.output('delmont-1.lca.json')
+    lca_db = c.output(f'delmont-1.lca.{lca_db_format}')
 
     c.run_sourmash('lca', 'index', taxcsv, lca_db, input_sig1, input_sig2,
                    '-F', lca_db_format)
@@ -1534,7 +1533,7 @@ def test_classify_majority_vote_3(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/delmont-6.csv')
     input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
     input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
-    lca_db = c.output('delmont-1.lca.json')
+    lca_db = c.output(f'delmont-1.lca.{lca_db_format}')
 
     c.run_sourmash('lca', 'index', taxcsv, lca_db, input_sig1, input_sig2,
                    '-F', lca_db_format)
@@ -1566,7 +1565,7 @@ def test_classify_majority_vote_3(runtmp, lca_db_format):
 
 
 def test_multi_db_classify(runtmp):
-    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    db1 = utils.get_test_data(f'lca/delmont-1.lca.json')
     db2 = utils.get_test_data('lca/delmont-2.lca.json')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
@@ -1587,7 +1586,7 @@ def test_classify_unknown_hashes(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca-root/tax.csv')
     input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
     input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
-    lca_db = runtmp.output('lca-root.lca.json')
+    lca_db = runtmp.output(f'lca-root.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig2, '-F', lca_db_format]
     runtmp.sourmash(*cmd)
@@ -1731,7 +1730,7 @@ def test_summarize_unknown_hashes_to_output_check_total_counts(runtmp, lca_db_fo
     taxcsv = utils.get_test_data('lca-root/tax.csv')
     input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
     input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
-    lca_db = runtmp.output('lca-root.lca.json')
+    lca_db = runtmp.output(f'lca-root.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig2, '-F', lca_db_format]
     runtmp.sourmash(*cmd)
@@ -1788,7 +1787,7 @@ def test_multi_summarize_with_unassigned_singleton(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/delmont-6.csv')
     input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
     input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
-    lca_db = runtmp.output('delmont-1.lca.json')
+    lca_db = runtmp.output(f'delmont-1.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2,
            '-F', lca_db_format]
@@ -1844,7 +1843,7 @@ def test_summarize_to_root(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca-root/tax.csv')
     input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
     input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
-    lca_db = runtmp.output('lca-root.lca.json')
+    lca_db = runtmp.output(f'lca-root.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2,
            '-F', lca_db_format]
@@ -1874,7 +1873,7 @@ def test_summarize_unknown_hashes(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca-root/tax.csv')
     input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
     input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
-    lca_db = runtmp.output('lca-root.lca.json')
+    lca_db = runtmp.output(f'lca-root.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig2, '-F', lca_db_format]
     runtmp.sourmash(*cmd)
@@ -1902,7 +1901,7 @@ def test_summarize_to_root_abund(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca-root/tax.csv')
     input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
     input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
-    lca_db = runtmp.output('lca-root.lca.json')
+    lca_db = runtmp.output(f'lca-root.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2,
            '-F', lca_db_format]
@@ -1931,7 +1930,7 @@ def test_summarize_unknown_hashes_abund(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca-root/tax.csv')
     input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
     input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
-    lca_db = runtmp.output('lca-root.lca.json')
+    lca_db = runtmp.output(f'lca-root.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig2, '-F', lca_db_format]
     runtmp.sourmash(*cmd)
@@ -2043,7 +2042,7 @@ def test_rankinfo_no_tax(runtmp, lca_db_format):
     # note: TARA_PSW_MAG_00136 is _not_ in delmont-1.csv.
     taxcsv = utils.get_test_data('lca/delmont-1.csv')
     input_sig = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
-    lca_db = runtmp.output('delmont-1.lca.json')
+    lca_db = runtmp.output(f'delmont-1.lca.{lca_db_format}')
 
     cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-F', lca_db_format]
     runtmp.sourmash(*cmd)
@@ -2152,7 +2151,7 @@ def test_incompat_lca_db_ksize_2(runtmp, lca_db_format):
     print(c)
 
     c.run_sourmash('lca', 'index', utils.get_test_data('lca/delmont-1.csv',),
-                   'test.lca.json', 'test_db.sig',
+                   f'test.lca.{lca_db_format}', 'test_db.sig',
                     '-k', '25', '--scaled', '10000',
                    '-F', lca_db_format)
     print(c)
@@ -2160,13 +2159,13 @@ def test_incompat_lca_db_ksize_2(runtmp, lca_db_format):
     # this should fail: the LCA database has ksize 25, and the query sig has
     # no compatible ksizes.
     with pytest.raises(SourmashCommandFailed) as e:
-        c.run_sourmash('gather', utils.get_test_data('lca/TARA_ASE_MAG_00031.sig'), 'test.lca.json')
+        c.run_sourmash('gather', utils.get_test_data('lca/TARA_ASE_MAG_00031.sig'), f'test.lca.{lca_db_format}')
 
     err = c.last_result.err
     print(err)
 
     if lca_db_format == 'sql':
-        assert "no compatible signatures found in 'test.lca.json'" in err
+        assert "no compatible signatures found in 'test.lca.sql'" in err
     else:
         assert "ERROR: cannot use 'test.lca.json' for this query." in err
         assert "ksize on this database is 25; this is different from requested ksize of 31"
@@ -2186,12 +2185,12 @@ def test_lca_index_empty(runtmp, lca_db_format):
         fp.write('accession,superkingdom,phylum,class,order,family,genus,species,strain')
 
     # index!
-    c.run_sourmash('lca', 'index', 'empty.csv', 'xxx.lca.json',
+    c.run_sourmash('lca', 'index', 'empty.csv', 'xxx',
                    sig2file, sig47file, sig63file, '--scaled', '1000',
                    '-F', lca_db_format)
 
     # can we load and search?
-    lca_db_filename = c.output('xxx.lca.json')
+    lca_db_filename = c.output(f'xxx.lca.{lca_db_format}')
     db, ksize, scaled = lca_utils.load_single_database(lca_db_filename)
 
     results = db.gather(sig63)
@@ -2402,7 +2401,7 @@ def test_lca_db_protein_command_index(runtmp, lca_db_format):
     sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
     lineages = utils.get_test_data('prot/gtdb-subset-lineages.csv')
 
-    db_out = c.output('protein.lca.json')
+    db_out = c.output(f'protein.lca.{lca_db_format}')
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
                    '-C', '2', '--split-identifiers', '--require-taxonomy',
@@ -2513,7 +2512,7 @@ def test_lca_db_hp_command_index(runtmp, lca_db_format):
     sigfile2 = utils.get_test_data('prot/hp/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
     lineages = utils.get_test_data('prot/gtdb-subset-lineages.csv')
 
-    db_out = c.output('hp.lca.json')
+    db_out = c.output(f'hp.lca.{lca_db_format}')
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
                    '-C', '2', '--split-identifiers', '--require-taxonomy',
@@ -2624,7 +2623,7 @@ def test_lca_db_dayhoff_command_index(runtmp, lca_db_format):
     sigfile2 = utils.get_test_data('prot/dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
     lineages = utils.get_test_data('prot/gtdb-subset-lineages.csv')
 
-    db_out = c.output('dayhoff.lca.json')
+    db_out = c.output(f'dayhoff.lca.{lca_db_format}')
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
                    '-C', '2', '--split-identifiers', '--require-taxonomy',
@@ -2669,7 +2668,7 @@ def test_lca_db_dayhoff_command_search(c):
 
 def test_lca_index_with_picklist(runtmp, lca_db_format):
     gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
-    outdb = runtmp.output('gcf.lca.json')
+    outdb = runtmp.output(f'gcf.lca.{lca_db_format}')
     picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
 
     # create an empty spreadsheet
@@ -2698,7 +2697,7 @@ def test_lca_index_with_picklist(runtmp, lca_db_format):
 
 def test_lca_index_with_picklist_exclude(runtmp, lca_db_format):
     gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
-    outdb = runtmp.output('gcf.lca.json')
+    outdb = runtmp.output(f'gcf.lca.{lca_db_format}')
     picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
 
     # create an empty spreadsheet
@@ -2724,7 +2723,7 @@ def test_lca_index_with_picklist_exclude(runtmp, lca_db_format):
 def test_lca_index_select_with_picklist(runtmp, lca_db_format):
     # check what happens with picklists after index
     gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
-    outdb = runtmp.output('gcf.lca.json')
+    outdb = runtmp.output(f'gcf.lca.{lca_db_format}')
     picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
 
     # create an empty spreadsheet
@@ -2755,7 +2754,7 @@ def test_lca_index_select_with_picklist(runtmp, lca_db_format):
 def test_lca_index_select_with_picklist_exclude(runtmp, lca_db_format):
     # check what happens with picklists after index
     gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
-    outdb = runtmp.output('gcf.lca.json')
+    outdb = runtmp.output(f'gcf.lca.{lca_db_format}')
     picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
 
     # create an empty spreadsheet

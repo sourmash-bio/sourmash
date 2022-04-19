@@ -300,6 +300,10 @@ def index(args):
         if not (db_outfile.endswith('.lca.json') or \
                     db_outfile.endswith('.lca.json.gz')):   # logic -> db.save
             db_outfile += '.lca.json'
+    else:
+        assert args.database_format == 'sql'
+        if not db_outfile.endswith('.lca.sql'):
+                db_outfile += '.lca.sql'
 
     notify(f'saving to LCA DB: {format(db_outfile)}')
 

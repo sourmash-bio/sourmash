@@ -932,7 +932,7 @@ can be used to index a subset of a large collection, or to
 exclude a few signatures from an index being built from a large collection.
 
 As of sourmash 4.4.0, `lca index` can produce an _on disk_ LCA
-databases stored in a SQLite database. To prepare such a database, use
+database using SQLite. To prepare such a database, use
 `sourmash lca index ... -F sql`.
 
 All sourmash commands work with either type of LCA database (the

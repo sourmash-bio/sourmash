@@ -4495,6 +4495,31 @@ def test_sig_check_1_ksize(runtmp):
     assert 31 in ksizes
 
 
+def test_sig_check_1_ksize_output_sql(runtmp):
+    # basic check functionality with selection for ksize
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    runtmp.sourmash('sig', 'check', *sigfiles, '-k', '31',
+                    "--picklist", f"{picklist}::manifest",
+                    "-m", "mf.mfsql", "-F", "sql")
+
+    out_mf = runtmp.output('mf.mfsql')
+    assert os.path.exists(out_mf)
+
+    # 8 of the 24 should match.
+    mf = CollectionManifest.load_from_filename(out_mf)
+    assert len(mf) == 8
+    assert mf.conn              # check that it's a sqlite manifest! hacky...
+
+    idx = sourmash.load_file_as_index(out_mf)
+    siglist = list(idx.signatures())
+    assert len(siglist) == 8
+    ksizes = set([ ss.minhash.ksize for ss in siglist ])
+    assert len(ksizes) == 1
+    assert 31 in ksizes
+
+
 def test_sig_check_2_output_missing(runtmp):
     # output missing all as identical to input picklist
     sigfiles = utils.get_test_data('gather/combined.sig')
@@ -4585,7 +4610,7 @@ def test_sig_check_2_output_missing_exclude(runtmp):
     assert "** ERROR: Cannot use an 'exclude' picklist with '-o/--output-missing'" in str(exc)
 
 
-def test_check_3_no_manifest(runtmp):
+def test_sig_check_3_no_manifest(runtmp):
     # fail check when no manifest, by default
     sbt = utils.get_test_data('v6.sbt.zip')
     picklist = utils.get_test_data('v6.sbt.zip.mf.csv')
@@ -4601,7 +4626,7 @@ def test_check_3_no_manifest(runtmp):
     assert "sig check requires a manifest by default, but no manifest present." in err
 
 
-def test_check_3_no_manifest_ok(runtmp):
+def test_sig_check_3_no_manifest_ok(runtmp):
     # generate manifest if --no-require-manifest
     sbt = utils.get_test_data('v6.sbt.zip')
     picklist = utils.get_test_data('v6.sbt.zip.mf.csv')

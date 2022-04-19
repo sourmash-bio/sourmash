@@ -8,7 +8,7 @@ SqliteIndex stores full scaled signatures; sketches are stored as
 reverse-indexed collections of hashes. Search is optimized via the
 reverse index. Num and abund sketches are not supported. All scaled
 values must be the same upon insertion. Multiple moltypes _are_
-supproted.
+supported.
 
 SqliteCollectionManifest provides a full implementation of the
 manifest API. It can store details for all signature types. When used
@@ -91,11 +91,18 @@ TODO testing: test internal and command line for,
 - [x] check LCA database is loaded by load_sqlite_index.
 - [x] check 'summarize' output on all three
 - [x] test identifiers with '.' in sql lca dbs...
-- [X] test LCA_SqliteDatabase.open with a SqliteIndde.
+- [X] test LCA_SqliteDatabase.open with a SqliteIndex.
 - [X] test LCA_SqliteDatabase.open with an empty SqliteIndex
-- [ ] create guide to initial review? and/or a tutorial?
 - [x] implement update lca DB/on disk insert stuff for lca index?
 - [x] test LCA_SqliteDatabase with a different lineagedb class?
+- [ ] test `db_outfile += '.lca.json'` line in lca_db.py
+- [ ] test `raise Exception(f"unknown save format for LCA_Database: '{format}'")` in lca_db.py
+- [ ] test `append= True` in manifest.py
+- [ ] test `__eq__` in CollectionManifest where manifests are NOT equal
+- [ ] document sourmash_internal table in PR, along with taxonomy foo
+- [ ] test sqlite_utils/bad version code
+- [ ] test tax_utils/bad version code
+- [ ] test tax_utils/no version code
 """
 import time
 import os
