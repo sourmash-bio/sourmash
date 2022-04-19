@@ -245,6 +245,9 @@ class CollectionManifest(BaseCollectionManifest):
     def __eq__(self, other):
         "Check equality on a row-by-row basis. May fail on out-of-order rows."
         for (a, b) in itertools.zip_longest(self.rows, other.rows):
+            if a is None or b is None:
+                return False
+
             # ignore non-required keys.
             for k in self.required_keys:
                 if a[k] != b[k]:

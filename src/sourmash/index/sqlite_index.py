@@ -98,7 +98,7 @@ TODO testing: test internal and command line for,
 - [x] test `db_outfile += '.lca.json'` line in lca_db.py
 - [x] test `raise Exception(f"unknown save format for LCA_Database: '{format}'")` in lca_db.py
 - [x] test `append= True` in manifest.py
-- [ ] test `__eq__` in CollectionManifest where manifests are NOT equal
+- [x] test `__eq__` in CollectionManifest where manifests are NOT equal
 - [ ] document sourmash_internal table in PR, along with taxonomy foo
 - [ ] test sqlite_utils/bad version code
 - [ ] test tax_utils/bad version code

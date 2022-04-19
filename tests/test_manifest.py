@@ -115,3 +115,21 @@ def test_save_load_manifest():
     # manifest 2 in manifest?
     for row in manifest2.rows:
         assert pick1.matches_manifest_row(row)
+
+    # equal?
+    assert manifest == manifest2
+
+    # not equal / shorter
+    rows = list(manifest.rows)
+    rows = rows[1:]
+
+    short_mf = index.CollectionManifest(rows)
+    assert short_mf != manifest
+
+    # not equal / diff values
+    rows = list(manifest.rows)
+    rows[0] = dict(rows[0])
+    rows[0]['internal_location'] += '.foo'
+
+    short_mf = index.CollectionManifest(rows)
+    assert short_mf != manifest
