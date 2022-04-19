@@ -874,13 +874,19 @@ def test_index_empty_sketch_name(runtmp, lca_db_format):
     sig2 = c.output('genome-s12.fa.gz.sig')
     assert os.path.exists(sig2)
 
+    outfile = 'zzz'
+    if lca_db_format == 'json':
+        outfile += '.lca.json'
+    else:
+        assert lca_db_format == 'sql'
+        outfile += '.sqldb'
+
     # can we insert them both?
     taxcsv = utils.get_test_data('lca/delmont-1.csv')
-    cmd = ['lca', 'index', taxcsv, 'zzz.lca.json', sig1, sig2, '-F', lca_db_format]
+    cmd = ['lca', 'index', taxcsv, outfile, sig1, sig2, '-F', lca_db_format]
     c.run_sourmash(*cmd)
 
-    # @CTB zzz sqldb foo
-    assert os.path.exists(c.output('zzz.lca.json'))
+    assert os.path.exists(c.output(outfile))
 
     print(c.last_result.out)
     print(c.last_result.err)
@@ -2159,9 +2165,11 @@ def test_incompat_lca_db_ksize_2(runtmp, lca_db_format):
     err = c.last_result.err
     print(err)
 
-    # @CTB different error messages for the different databases...
-    #assert "ERROR: cannot use 'test.lca.json' for this query." in err
-    #assert "ksize on this database is 25; this is different from requested ksize of 31"
+    if lca_db_format == 'sql':
+        assert "no compatible signatures found in 'test.lca.json'" in err
+    else:
+        assert "ERROR: cannot use 'test.lca.json' for this query." in err
+        assert "ksize on this database is 25; this is different from requested ksize of 31"
 
 
 def test_lca_index_empty(runtmp, lca_db_format):
