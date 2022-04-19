@@ -3556,6 +3556,54 @@ def test_sig_manifest_1_zipfile(runtmp):
     assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
 
 
+def test_sig_manifest_1_zipfile_already_exists(runtmp):
+    # make a manifest from a .zip file; f
+    protzip = utils.get_test_data('prot/protein.zip')
+
+    mf_csv = runtmp.output('mf.csv')
+    with open(mf_csv, "w") as fp:
+        fp.write("hello, world")
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'manifest', protzip, '-o', 'mf.csv')
+
+
+def test_sig_manifest_1_zipfile_already_exists_force(runtmp):
+    # make a manifest from a .zip file
+    protzip = utils.get_test_data('prot/protein.zip')
+
+    mf_csv = runtmp.output('mf.csv')
+    with open(mf_csv, "w") as fp:
+        fp.write("hello, world")
+
+    runtmp.sourmash('sig', 'manifest', protzip, '-o', 'mf.csv', '-f')
+
+    with open(mf_csv, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+
+def test_sig_manifest_1_zipfile_already_exists_sql(runtmp):
+    # make a manifest from a .zip file
+    protzip = utils.get_test_data('prot/protein.zip')
+
+    mf_csv = runtmp.output('mf.mfsql')
+    runtmp.sourmash('sig', 'manifest', protzip, '-o', 'mf.mfsql', '-F', 'sql')
+    runtmp.sourmash('sig', 'manifest', protzip, '-o', 'mf.mfsql', '-F', 'sql',
+                    '-f')
+
+    manifest = CollectionManifest.load_from_filename(mf_csv)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+
 def test_sig_manifest_2_sigfile(runtmp):
     # make a manifest from a .sig file
     sigfile = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')

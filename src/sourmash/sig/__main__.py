@@ -303,7 +303,8 @@ def manifest(args):
                                           rebuild=rebuild)
 
     manifest.write_to_filename(args.output,
-                               database_format=args.manifest_format)
+                               database_format=args.manifest_format,
+                               ok_if_exists=args.force)
     notify(f"manifest contains {len(manifest)} signatures total.")
     notify(f"wrote manifest to '{args.output}' ({args.manifest_format})")
 

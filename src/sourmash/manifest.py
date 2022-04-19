@@ -93,13 +93,13 @@ class BaseCollectionManifest:
             if ok_if_exists or not os.path.exists(filename):
                 with open(filename, "w", newline="") as fp:
                     return self.write_to_csv(fp, write_header=True)
+            elif os.path.exists(filename) and not ok_if_exists:
+                raise Exception("output manifest already exists")
+
         elif database_format == 'sql':
             from sourmash.index.sqlite_index import SqliteCollectionManifest
-            append = False
-            if ok_if_exists:
-                append= True
             SqliteCollectionManifest.load_from_manifest(self, dbfile=filename,
-                                                        append=append)
+                                                        append=ok_if_exists)
 
     @classmethod
     def write_csv_header(cls, fp):

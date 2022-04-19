@@ -95,9 +95,9 @@ TODO testing: test internal and command line for,
 - [X] test LCA_SqliteDatabase.open with an empty SqliteIndex
 - [x] implement update lca DB/on disk insert stuff for lca index?
 - [x] test LCA_SqliteDatabase with a different lineagedb class?
-- [ ] test `db_outfile += '.lca.json'` line in lca_db.py
-- [ ] test `raise Exception(f"unknown save format for LCA_Database: '{format}'")` in lca_db.py
-- [ ] test `append= True` in manifest.py
+- [x] test `db_outfile += '.lca.json'` line in lca_db.py
+- [x] test `raise Exception(f"unknown save format for LCA_Database: '{format}'")` in lca_db.py
+- [x] test `append= True` in manifest.py
 - [ ] test `__eq__` in CollectionManifest where manifests are NOT equal
 - [ ] document sourmash_internal table in PR, along with taxonomy foo
 - [ ] test sqlite_utils/bad version code
