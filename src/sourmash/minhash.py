@@ -863,7 +863,10 @@ class MinHash(RustObject):
     def sum_abundances(self):
         if self.track_abundance:
             return sum(v for v in self.hashes.values())
+        # which of these do we want?
         return ""
+        # if each hash = 1, sum is just len
+#        return len(self.hashes)
 
     @property
     def mean_abundance(self):
@@ -881,7 +884,7 @@ class MinHash(RustObject):
     def std_abundance(self):
         if self.track_abundance:
             return np.std(self.hashes.values())
-        return ""
+        return "" # None? 0?
 
     @property
     def bp(self):
