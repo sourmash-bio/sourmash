@@ -16,7 +16,7 @@ from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
 from .sourmash_args import (FileOutput, FileOutputCSV,
                             SaveSignaturesToLocation)
-from .search import SearchResult, prefetch_database, PrefetchResult, GatherResult, calculate_prefetch_info
+from .search import prefetch_database, calculate_prefetch_info, SearchResult, PrefetchResult, GatherResult
 from .index import LazyLinearIndex
 
 WATERMARK_SIZE = 10000

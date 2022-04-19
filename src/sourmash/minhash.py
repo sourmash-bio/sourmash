@@ -864,9 +864,9 @@ class MinHash(RustObject):
         if self.track_abundance:
             return sum(v for v in self.hashes.values())
         # which of these do we want?
-        return ""
         # if each hash = 1, sum is just len
-#        return len(self.hashes)
+        return len(self.hashes)
+        #return ""
 
     @property
     def mean_abundance(self):
@@ -887,7 +887,7 @@ class MinHash(RustObject):
         return None#"" # None? 0?
 
     @property
-    def bp(self):
+    def covered_bp(self):
         if not self.scaled:
             raise TypeError("can only calculate bp for scaled MinHashes")
         return len(self.hashes) * self.scaled

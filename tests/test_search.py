@@ -2,6 +2,7 @@
 
 # CTB TODO: test search protocol with mock class?
 
+from pyparsing import original_text_for
 import pytest
 import sourmash_tst_utils as utils
 
@@ -260,7 +261,7 @@ def test_SearchResult():
 
     scaled = ss47.minhash.scaled
 
-    res = SearchResult(ss47, ss4763, cmp_scaled=scaled)
+    res = SearchResult(ss47, ss4763, cmp_scaled=scaled, similarity= ss47.contained_by(ss4763))
 
     assert res.query_name == ss47.name
     assert res.match_name == ss4763.name
@@ -355,7 +356,8 @@ def test_GatherResult():
     res = GatherResult(ss47, ss4763, cmp_scaled=scaled,
                         gather_querymh=remaining_mh,
                         gather_result_rank=gather_result_rank,
-                        total_abund = sum_abunds)
+                        total_abund = sum_abunds,
+                        orig_query_len=len(ss47.minhash))
 
     assert res.query_name == ss47.name
     assert res.match_name == ss4763.name
