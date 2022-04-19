@@ -90,10 +90,12 @@ TODO testing: test internal and command line for,
 - [x] do some realistic benchmarking of SqliteIndex and LCA_Database
 - [x] check LCA database is loaded by load_sqlite_index.
 - [x] check 'summarize' output on all three
-- [ ] implement update lca DB/on disk insert stuff for lca index?
 - [x] test identifiers with '.' in sql lca dbs...
-- [ ] test LCA_SqliteDatabase with a different lineagedb class?
+- [ ] test LCA_SqliteDatabase.open with a SqliteIndde.
+- [ ] test LCA_SqliteDatabase.open with an empty SqliteIndex
 - [ ] create guide to initial review? and/or a tutorial?
+- [ ] implement update lca DB/on disk insert stuff for lca index?
+- [ ] test LCA_SqliteDatabase with a different lineagedb class?
 """
 import time
 import os
@@ -168,7 +170,7 @@ def load_sqlite_index(filename, *, request_manifest=False):
         if v != '1.0':
             raise IndexNotSupported
         is_manifest = True
-        debug_literal("load_sqlite_index: it's a manifest!")
+        debug_literal(f"load_sqlite_index: it's a manifest! request_manifest: {request_manifest}")
 
     # every Index is a Manifest!
     if is_index or is_lca_db:
@@ -179,11 +181,11 @@ def load_sqlite_index(filename, *, request_manifest=False):
         conn.close()
 
         if is_lca_db:
-            idx = LCA_SqliteDatabase.load(filename)
             debug_literal("load_sqlite_index: returning LCA_SqliteDatabase")
+            idx = LCA_SqliteDatabase.load(filename)
         else:
-            idx = SqliteIndex(filename)
             debug_literal("load_sqlite_index: returning SqliteIndex")
+            idx = SqliteIndex(filename)
     elif is_manifest:
         managed_by_index=False
         if is_index:
@@ -913,30 +915,23 @@ class SqliteCollectionManifest(BaseCollectionManifest):
 class LCA_SqliteDatabase(SqliteIndex):
     """
     A wrapper class for SqliteIndex + lineage db => LCA_Database functionality.
-
-    @CTB test create/insert, as opposed to just load.
     """
     is_database = True
 
     def __init__(self, dbfile, *, lineage_db=None):
-        # CTB note: we need to let SqliteIndex open dbfile here,
-        # so we need to allow for lineage_db to be None in case it
-        # wants to use a sqlite lineage db that reuses the conn.
+        # CTB note: we need to let SqliteIndex open dbfile here, so can't
+        # just pass in a conn.
         super().__init__(dbfile)
 
         c = self.conn.cursor()
 
-        c.execute('SELECT DISTINCT ksize FROM sourmash_sketches')
-        ksizes = set(( ksize for ksize, in c ))
-        assert len(ksizes) == 1 # @CTB test with empty?
-        self.ksize = next(iter(ksizes))
-        debug_literal(f"setting ksize to {self.ksize}")
+        c.execute('SELECT DISTINCT ksize, moltype FROM sourmash_sketches')
+        res = list(c)
+        if len(res) > 1:
+            raise TypeError("can only have one ksize & moltype in an LCA_SqliteDatabase")
 
-        c.execute('SELECT DISTINCT moltype FROM sourmash_sketches')
-        moltypes = set(( moltype for moltype, in c ))
-        assert len(moltypes) == 1 # @CTB test with empty?
-        self.moltype = next(iter(moltypes))
-        debug_literal(f"setting moltype to {self.moltype}")
+        self.ksize, self.moltype = res[0]
+        debug_literal(f"setting ksize and moltype to {self.ksize}, {self.moltype}")
 
         if lineage_db is not None:
             self.lineage_db = lineage_db
@@ -950,11 +945,14 @@ class LCA_SqliteDatabase(SqliteIndex):
         "Load LCA_SqliteDatabase from a single file."
         from sourmash.tax.tax_utils import LineageDB_Sqlite
 
+        # first, load the SqliteIndex:
         try:
+            debug_literal("sqlite_index: loading LCA_SqliteDatabase as SqliteIndex.")
             obj = cls(filename)
         except sqlite3.OperationalError:
-            raise ValueError(f"cannot open '{filename}' as sqlite database.")
+            raise ValueError(f"cannot open '{filename}' as a SQLite index.")
 
+        # now, toss in the lineage DB.
         lineage_db = LineageDB_Sqlite(obj.conn)
         obj.lineage_db = lineage_db
         obj._build_index()
@@ -966,18 +964,22 @@ class LCA_SqliteDatabase(SqliteIndex):
         "Create a LCA_SqliteDatabase in a single file from existing idx/ldb."
         from sourmash.tax.tax_utils import MultiLineageDB
 
-        # first, save/create signatures
+        # first, save/create signatures...
         sqlidx = SqliteIndex.create(filename)
 
         for ss in idx.signatures():
             sqlidx.insert(ss)
 
-        # now, save/etc the lineage_db into the same database
+        # now, save the lineage_db into the same database
         out_lineage_db = MultiLineageDB()
         out_lineage_db.add(lineage_db)
         out_lineage_db._save_sqlite(None, conn=sqlidx.conn)
 
+        # and voila! return, I guess?
+        return cls.load(filename)
+
     def _build_index(self):
+        "Rebuild the mappings that support identifier <-> lineage."
         mf = self.manifest
         lineage_db = self.lineage_db
 
@@ -990,8 +992,10 @@ class LCA_SqliteDatabase(SqliteIndex):
         for row in mf.rows:
             name = row['name']
             if name:
+                # this is a bit of a hack. we try identifiers _with_ and
+                # _without_ versions, and take whichever works. There is
+                # probably a better way to do this :).
                 ident = name.split(' ')[0]
-                # @CB add debug? document...
 
                 lineage = lineage_db.get(ident)
                 if not lineage:
@@ -1014,12 +1018,14 @@ class LCA_SqliteDatabase(SqliteIndex):
         self.idx_to_lid = idx_to_lid
         self.lid_to_lineage = lid_to_lineage
 
+    # prevent insertions
+    def insert(self, *args, **kwargs):
+        raise NotImplementedError
+
     ### LCA_Database API/protocol.
 
     def downsample_scaled(self, scaled):
-        """This doesn't really do anything for SqliteIndex, but is needed
-        for the LCA_Database API.
-        """
+        "Downsample the scaled for querying."
         if scaled < self.scaled:
             raise ValueError("cannot decrease scaled from {} to {}".format(self.scaled, scaled))
 
