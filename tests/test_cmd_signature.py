@@ -208,7 +208,7 @@ def test_sig_merge_3_abund_ab_ok(c):
 
     c.run_sourmash('sig', 'merge', sig47abund, sig63abund)
     actual_merge_sig = sourmash.load_one_signature(c.last_result.out)
-    # @CTB: should check that this merge did what we think it should do!
+    # CTB: should check that this merge did what we think it should do!
 
 
 @utils.in_tempdir
@@ -3761,9 +3761,8 @@ def test_sig_manifest_8_sqldb_out(runtmp):
     assert 'manifest contains 12 signatures total.' in err
     assert "wrote manifest to 'mf.sqldb'" in err
 
-    # @CTB test me somehow.
-    #mf = CollectionManifest.load_from_filename(runtmp.output('mf.c'))
-    #assert len(mf) == 12
+    mf = CollectionManifest.load_from_filename(runtmp.output('mf.sqldb'))
+    assert len(mf) == 12
 
 
 def test_sig_kmers_1_dna(runtmp):
