@@ -4,6 +4,7 @@ Code for searching collections of signatures.
 from collections import namedtuple
 from enum import Enum
 from multiprocessing.sharedctypes import Value
+from re import I
 import numpy as np
 from dataclasses import dataclass
 
@@ -162,18 +163,16 @@ class JaccardSearchBestOnly(JaccardSearch):
 def shorten_md5(md5):
     return md5[:8]
 
+
 @dataclass
-class MinHashComparison:
-    """Class for standard comparison between two scaled minhashes"""
+class BaseMinHashComparison:
+    """Class for standard comparison between two MinHashes"""
     mh1: MinHash
     mh2: MinHash
     ignore_abundance: bool = False # optionally ignore abundances
-    cmp_num: int = None
 
-    def check_sketch_num_compatibility(self):
+    def check_comparison_compatibility(self):
         # do we need this check + error? Minhash functions should already complain appropriately...
-        if any([self.mh1.num is None, self.mh2.num is None]):
-            raise ValueError("Error: Both sketches must be 'num'.")
         k1 = self.mh1.ksize
         k2 = self.mh2.ksize
         if k1 != k2:
@@ -184,27 +183,29 @@ class MinHashComparison:
         if m1 != m2:
             raise ValueError(f"Error: Invalid Comparison, moltypes: {m1}, {m2}). Must compare sketches of the same moltype.")
         self.moltype= self.mh1.moltype
+        # check num, scaled
+        if not any([(self.mh1.num and self.mh2.num), (self.mh1.scaled and self.mh2.scaled)]):
+            raise ValueError("Error: Both sketches must be 'num' or 'scaled'.")
 
-    def downsample_to_cmp_num(self):
+    def downsample_and_handle_ignore_abundance(self, cmp_num=None, cmp_scaled=None):
         """
         Downsample and/or flatten minhashes for comparison
         """
-        if self.cmp_num is None: # record the num we're doing this comparison on 
-            self.cmp_num = min(self.mh1.num, self.mh2.num)
-        # set num?
-#        self.num = self.cmp_num
         if self.ignore_abundance:
-            self.mh1_cmp = self.mh1.flatten().downsample(num=self.cmp_num)
-            self.mh2_cmp = self.mh2.flatten().downsample(num=self.cmp_num)
+            self.mh1_cmp = self.mh1.flatten()
+            self.mh2_cmp = self.mh2.flatten()
         else:
-            self.mh1_cmp = self.mh1.downsample(num=self.cmp_num)
-            self.mh2_cmp = self.mh2.downsample(num=self.cmp_num)
+            self.mh1_cmp = self.mh1
+            self.mh2_cmp = self.mh2
+        if cmp_num is not None:
+            self.mh1_cmp = self.mh1_cmp.downsample(num=cmp_num)
+            self.mh2_cmp = self.mh2_cmp.downsample(num=cmp_num)
+        elif cmp_scaled is not None:
+            self.mh1_cmp = self.mh1_cmp.downsample(scaled=cmp_scaled)
+            self.mh2_cmp = self.mh2_cmp.downsample(scaled=cmp_scaled)
+        else:
+            raise ValueError("Error: must pass in a comparison scaled or num value.")
 
-
-    def __post_init__(self):
-        "Initialize MinHashComparison using values from provided MinHashes"
-        self.check_sketch_num_compatibility()
-        self.downsample_to_cmp_num()
 
     @property
     def intersect_mh(self):
@@ -269,24 +270,38 @@ class MinHashComparison:
         return self.mh2.std_abundance
 
 
+
 @dataclass
-class FracMinHashComparison(MinHashComparison):
+class NumMinHashComparison(BaseMinHashComparison):
+    """Class for standard comparison between two scaled minhashes"""
+    cmp_num: int = None
+
+    def __post_init__(self):
+        "Initialize NumMinHashComparison using values from provided MinHashes"
+        if self.cmp_num is None: # record the num we're doing this compa#rison on 
+            self.cmp_num = min(self.mh1.num, self.mh2.num)
+        self.check_comparison_compatibility()
+        self.downsample_and_handle_ignore_abundance(cmp_num=self.cmp_num)
+
+@dataclass
+class FracMinHashComparison(BaseMinHashComparison):
     """Class for standard comparison between two scaled minhashes"""
     cmp_scaled: int = None # scaled value for this comparison (defaults to maximum scaled between the two sigs)
     threshold_bp: int = 0
 
-    def _downsample_to_cmp_scaled(self):
-        """
-        Downsample and/or flatten minhashes for comparison
-        """
+    def __post_init__(self):
+        "Initialize ScaledComparison using values from provided FracMinHashes"
         if self.cmp_scaled is None: # record the scaled we're doing this comparison on
             self.cmp_scaled = max(self.mh1.scaled, self.mh2.scaled)
-        if self.ignore_abundance:
-            self.mh1_cmp = self.mh1.flatten().downsample(scaled=self.cmp_scaled)
-            self.mh2_cmp = self.mh2.flatten().downsample(scaled=self.cmp_scaled)
-        else:
-            self.mh1_cmp = self.mh1.downsample(scaled=self.cmp_scaled)
-            self.mh2_cmp = self.mh2.downsample(scaled=self.cmp_scaled)
+        self.check_comparison_compatibility()
+        self.downsample_and_handle_ignore_abundance(cmp_scaled=self.cmp_scaled)
+        # for these, do we want the originals, or the cmp_scaled versions?? (or both?)
+        self.mh1_scaled = self.mh1.scaled
+        self.mh2_scaled = self.mh2.scaled
+        self.mh1_n_hashes = len(self.mh1)
+        self.mh2_n_hashes = len(self.mh2)
+        self.mh1_bp = self.mh1.bp
+        self.mh2_bp = self.mh2.bp
 
     @property
     def pass_threshold(self):
@@ -332,91 +347,35 @@ class FracMinHashComparison(MinHashComparison):
     def avg_containment(self):
         return np.mean(self.mh1_containment, self.mh2_containment)
 
-    def check_scaled_sketch_compatibility(self):
-        # do we need this check + error? Minhash functions should already complain appropriately...
-        if any([self.mh1.scaled is None, self.mh2.scaled is None]):
-            raise ValueError("Error: Both sketches must be 'scaled'.")
-        k1 = self.mh1.ksize
-        k2 = self.mh2.ksize
-        if k1 != k2:
-            raise ValueError(f"Error: Invalid Comparison, ksizes: {k1}, {k2}). Must compare sketches of the same ksize.")
-        self.ksize = k1
-        m1 = self.mh2.moltype
-        m2= self.mh2.moltype
-        if m1 != m2:
-            raise ValueError(f"Error: Invalid Comparison, moltypes: {m1}, {m2}). Must compare sketches of the same moltype.")
-        self.moltype = m1
-        # switch to the following? no,bc checks scaled too
-        #if not self.mh1.is_compatible(self.mh2):
-        #    raise ValueError("Error: Cannot compare incompatible sketches.")
-
-    def init_sketchcomparison(self):
-        "Initialize ScaledComparison using values from provided FracMinHashes"
-        self.check_scaled_sketch_compatibility()
-        # get original scaled values -- maybe just use .scaled? no need to store separately...
-        self.mh1_scaled = self.mh1.scaled
-        self.mh2_scaled = self.mh2.scaled
-        # handle abundance
-        # for these, do we want the originals, or the cmp_scaled versions?? (or both?)
-        self.mh1_n_hashes = len(self.mh1)
-        self.mh2_n_hashes = len(self.mh2)
-        self.mh1_bp = self.mh1.bp
-        self.mh2_bp = self.mh2.bp
-        # does this enable all abund options we want?
-        self._downsample_to_cmp_scaled()
-        # build comparison minhashes at cmp_scaled
-        #sevlf._downsample_andor_flatten(use_abundances=self.compare_abundances)
-        #self.intersect_bp = len(self.intersect_mh) * self.cmp_scaled
-    
-    def __post_init__(self):
-        self.init_sketchcomparison()
-
 
 @dataclass
-class SearchResult:
+class BaseResult:
     """Base class for sourmash search results."""
     query: SourmashSignature
     match: SourmashSignature
-    similarity: float = None
-    cmp_scaled: int = None
-    cmp_num: int = None
-    threshold_bp: int = None
     filename: str = None
     ignore_abundance: bool = False # optionally ignore abundances
 
-    #columns for standard SearchResult output
-    search_write_cols = ['similarity', 'md5', 'filename', 'name',  # here we use 'filename'
-                         'query_filename', 'query_name', 'query_md5']
-
-    def __post_init__(self):
-        self.init_sigcomparison()
-        if self.similarity is None:
-            # Require similarity for SearchResult?
-#            raise ValueError("Error: Must provide 'similarity' for SearchResult.")
-            #OR, if don't pass in similarity, return query contained by match? avg containment? Or jaccard?
-            self.similarity = self.cmp.mh1_containment
-
-    def init_sigcomparison(self):
+    def init_result(self):
         self.mh1 = self.query.minhash
         self.mh2 = self.match.minhash
-        if all([self.mh1.scaled, self.mh2.scaled]):
-            #self.sig_cmp = SignatureComparison(self.query, self.match, cmp_scaled=self.cmp_scaled, threshold_bp=self.threshold_bp, ignore_abundance=self.ignore_abundance)
-            self.cmp = FracMinHashComparison(self.mh1, self.mh2, cmp_scaled=self.cmp_scaled, threshold_bp=self.threshold_bp, ignore_abundance=self.ignore_abundance)
-            self.scaled = self.cmp.cmp_scaled # should we rename this to comparison_scaled?
-            self.query_scaled = self.mh1.scaled
-            self.match_scaled = self.mh2.scaled
-            # could get these in prefetch/gather instead, don't quite need here
-            self.query_bp = self.mh1.bp
-            self.match_bp = self.mh2.bp
-        elif all([self.mh1.num, self.mh2.num]):
-            self.cmp = MinHashComparison(self.mh1, self.mh2, cmp_num = self.cmp_num, ignore_abundance=self.ignore_abundance)
-            self.num = self.cmp.cmp_num # should we rename this to comparison_scaled?
-            self.query_num = self.mh1.num
-            self.match_num = self.mh2.num
-        self.ksize = self.cmp.ksize
-        self.moltype = self.cmp.moltype
 
-        # grab query and match sig info
+    def build_fracminhashcomparison(self, cmp_scaled=None, threshold_bp=None):
+        self.cmp = FracMinHashComparison(self.mh1, self.mh2, cmp_scaled=cmp_scaled, threshold_bp=threshold_bp, ignore_abundance=self.ignore_abundance)
+        self.scaled = self.cmp.cmp_scaled
+        self.query_scaled = self.mh1.scaled
+        self.match_scaled = self.mh2.scaled
+
+    def build_numminhashcomparison(self, cmp_num=None):
+        self.cmp = NumMinHashComparison(self.mh1, self.mh2, cmp_num=cmp_num, ignore_abundance=self.ignore_abundance)
+        self.num = self.cmp.cmp_num
+        self.query_num = self.mh1.num
+        self.match_num = self.mh2.num
+
+    def get_cmpinfo(self):
+        # grab signature /minhash metadata
+        self.ksize = self.mh1.ksize
+        self.moltype = self.mh1.moltype
         self.query_name = self.query.name
         self.query_filename = self.query.filename
         self.query_md5 = self.query.md5sum()
@@ -430,11 +389,53 @@ class SearchResult:
         # set these from self.match_*
         self.md5= self.match_md5
         self.name = self.match_name
-        # do we actually need these? Need for Prefetch, but could define there...
+        # do we actually need these here? Def need for prefetch, but maybe define there?
         self.query_abundance = self.mh1.track_abundance
         self.match_abundance = self.mh2.track_abundance
         self.query_n_hashes = len(self.mh1.hashes)
         self.match_n_hashes = len(self.mh2.hashes)
+
+    def to_write(self, columns=[]):
+        info = {k: v for k, v in self.__dict__.items()
+                if k in columns and v is not None}
+        return info
+
+
+@dataclass
+class SearchResult(BaseResult):
+    """Base class for sourmash search results."""
+    similarity: float = None
+    cmp_scaled: int = None
+    cmp_num: int = None
+    threshold_bp: int = None
+
+    #columns for standard SearchResult output
+    search_write_cols = ['similarity', 'md5', 'filename', 'name',  # here we use 'filename'
+                         'query_filename', 'query_name', 'query_md5']
+
+    def init_sigcomparison(self):
+        self.init_result()
+        if not any([not self.mh1.scaled, not self.mh2.scaled]):
+            self.build_fracminhashcomparison(cmp_scaled = self.cmp_scaled, threshold_bp = self.threshold_bp)
+        elif not any([not self.mh1.num, not self.mh2.num]):
+            self.build_numminhashcomparison(cmp_num=self.cmp_num)
+        else:
+            raise ValueError("Error: Cannot compare num and scaled signatures.")
+        self.get_cmpinfo() # grab comparison metadata
+
+    def __post_init__(self):
+        self.init_sigcomparison() # build sketch comparison
+        self.set_similarity() # set similarity (if not passed in)
+
+    def set_similarity(self):
+        if self.similarity is None:
+            # Require similarity for SearchResult?
+#            raise ValueError("Error: Must provide 'similarity' for SearchResult.")
+            #OR, if don't pass in similarity, return jaccard?
+            if self.cmp.cmp_scaled is not None:
+                self.similarity = self.cmp.mh1_containment
+            else:
+                self.similarity = self.cmp.jaccard
 
     def searchresultdict(self):
         self.query_md5 = shorten_md5(self.query_md5)
@@ -444,19 +445,16 @@ class SearchResult:
     def writedict(self):
         return self.searchresultdict()
 
-    # maybe define this in PrefetchResult, don't need here...
+    # maybe define this in PrefetchResult? Do we need it for SearchResult?
     @property
     def pass_threshold(self):
         return self.cmp.pass_threshold
 
-    def to_write(self, columns=search_write_cols):
-        info = {k: v for k, v in self.__dict__.items()
-                if k in columns and v is not None}
-        return info
-
 
 @dataclass
-class PrefetchResult(SearchResult):
+class PrefetchResult(BaseResult):
+    cmp_scaled: int = None
+    threshold_bp: int = None
 
     # current prefetch columns
     prefetch_write_cols = ['intersect_bp', 'jaccard', 'max_containment', 'f_query_match',
@@ -464,6 +462,19 @@ class PrefetchResult(SearchResult):
                            'match_md5', 'match_bp', 'query_filename', 'query_name',
                            'query_md5', 'query_bp', 'ksize', 'moltype', 'scaled',
                            'query_n_hashes', 'query_abundance'] #, 'match_abundance'
+
+    def init_sigcomparison(self):
+        # shared prefetch/gather initialization
+        self.init_result()
+        if not any([not self.mh1.scaled, not self.mh2.scaled]):
+            self.build_fracminhashcomparison(cmp_scaled = self.cmp_scaled, threshold_bp = self.threshold_bp)
+        else:
+            raise ValueError("Error: prefetch and gather results must be between scaled signatures.")
+        self.get_cmpinfo() # grab comparison metadata
+        self.intersect_bp = self.cmp.intersect_bp
+        self.max_containment = self.cmp.max_containment
+        self.query_bp = self.mh1.bp
+        self.match_bp = self.mh2.bp
 
     def build_prefetch_result(self):
         # unique prefetch values
@@ -473,19 +484,8 @@ class PrefetchResult(SearchResult):
         #f_query_match = db_mh.contained_by(query_mh)
         #f_match_query = query_mh.contained_by(db_mh)
 
-    def init_prefetch_or_gather(self):
-        # shared btwn prefetch and gather
-        if self.similarity is not None: # SearchResult allows 'similarity' input
-            raise ValueError("Error: cannot pass 'similarity' into PrefetchResult or GatherResult. Please use 'similarity' for SearchResult only.")
-        if self.cmp_num is not None:
-            raise ValueError("Error: Prefetch and Gather work with scaled sketches and cannot take a 'cmp_num' value.")
-        self.intersect_bp = self.cmp.intersect_bp
-        self.max_containment = self.cmp.max_containment
-
     def __post_init__(self):
-        # do we ever pass filename in prefetch?
         self.init_sigcomparison()
-        self.init_prefetch_or_gather()
         self.build_prefetch_result()
 
     def prefetchresultdict(self):
@@ -498,6 +498,15 @@ class PrefetchResult(SearchResult):
     @property
     def writedict(self):
         return self.prefetchresultdict()
+
+    @property
+    def pass_threshold(self):
+        return self.cmp.pass_threshold
+
+    def to_write(self, columns=prefetch_write_cols):
+        info = {k: v for k, v in self.__dict__.items()
+                if k in columns and v is not None}
+        return info
 
 
 @dataclass
@@ -572,7 +581,6 @@ class GatherResult(PrefetchResult):
     def __post_init__(self):
         self.check_gatherresult_input()
         self.init_sigcomparison() # initialize original sketch vs match sketch comparison (inherited from PrefetchResult)
-        self.init_prefetch_or_gather()
         self.init_gathersketchcomparison() # initialize remaining gather sketch vs match sketch comparison
         #self.build_gather_result() # build gather-specific attributes
 

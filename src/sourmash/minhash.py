@@ -872,19 +872,19 @@ class MinHash(RustObject):
     def mean_abundance(self):
         if self.track_abundance:
             return np.mean(self.hashes.values())
-        return ""
+        return None #""
 
     @property
     def median_abundance(self):
         if self.track_abundance:
             return np.median(self.hashes.values())
-        return ""
+        return None #""
 
     @property
     def std_abundance(self):
         if self.track_abundance:
             return np.std(self.hashes.values())
-        return "" # None? 0?
+        return None#"" # None? 0?
 
     @property
     def bp(self):
