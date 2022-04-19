@@ -2715,11 +2715,68 @@ def test_lca_index_with_picklist_exclude(runtmp, lca_db_format):
     print(out)
     print(err)
 
-    assert "for given picklist, found 9 matches by excluding 9 distinct values" in err
-    assert "WARNING: 3 missing picklist values."
-    assert "WARNING: no lineage provided for 9 signatures" in err
-
     siglist = list(sourmash.load_file_as_signatures(outdb))
+    assert len(siglist) == 9
+    for ss in siglist:
+        assert 'Thermotoga' not in ss.name
+
+
+def test_lca_index_select_with_picklist(runtmp, lca_db_format):
+    # check what happens with picklists after index
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    outdb = runtmp.output('gcf.lca.json')
+    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
+
+    # create an empty spreadsheet
+    with open(runtmp.output('empty.csv'), 'wt') as fp:
+        fp.write('accession,superkingdom,phylum,class,order,family,genus,species,strain')
+
+    runtmp.sourmash('lca', 'index', 'empty.csv', outdb, *gcf_sigs,
+                    '-k', '21', '-F', lca_db_format)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(out)
+    print(err)
+
+    idx = sourmash.load_file_as_index(outdb)
+    picklist_obj = SignaturePicklist.from_picklist_args(f"{picklist}:md5:md5")
+    picklist_obj.load(picklist_obj.pickfile, picklist_obj.column_name)
+
+    idx = idx.select(picklist=picklist_obj)
+
+    siglist = list(idx.signatures())
+    assert len(siglist) == 3
+    for ss in siglist:
+        assert 'Thermotoga' in ss.name
+
+
+def test_lca_index_select_with_picklist_exclude(runtmp, lca_db_format):
+    # check what happens with picklists after index
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    outdb = runtmp.output('gcf.lca.json')
+    picklist = utils.get_test_data('gather/thermotoga-picklist.csv')
+
+    # create an empty spreadsheet
+    with open(runtmp.output('empty.csv'), 'wt') as fp:
+        fp.write('accession,superkingdom,phylum,class,order,family,genus,species,strain')
+
+    runtmp.sourmash('lca', 'index', 'empty.csv', outdb, *gcf_sigs,
+                    '-k', '21', '-F', lca_db_format)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(out)
+    print(err)
+
+    idx = sourmash.load_file_as_index(outdb)
+    picklist_obj = SignaturePicklist.from_picklist_args(f"{picklist}:md5:md5:exclude")
+    picklist_obj.load(picklist_obj.pickfile, picklist_obj.column_name)
+    idx = idx.select(picklist=picklist_obj)
+
+    siglist = list(idx.signatures())
     assert len(siglist) == 9
     for ss in siglist:
         assert 'Thermotoga' not in ss.name

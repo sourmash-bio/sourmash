@@ -203,15 +203,13 @@ class LCA_Database(Index):
         """Return all of the signatures in this LCA database.
 
         Part of the Index protocol.
-
-        CTB: note this does not respect picklists!?
         """
         from sourmash import SourmashSignature
 
         if self.picklists:
             pl = self.picklists
             for v in self._signatures.values():
-                if passes_all_picklists(v, pl): # @CTB testme
+                if passes_all_picklists(v, pl):
                     yield v
         else:
             for v in self._signatures.values():
