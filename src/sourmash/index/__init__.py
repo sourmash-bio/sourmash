@@ -1253,20 +1253,11 @@ class StandaloneManifestIndex(Index):
         manifest in this class.
         """
         # collect all internal locations
-        # @CTB use manifest.locations() to enable SQLite optimizations!
-        iloc_to_rows = defaultdict(list)
-        for row in self.manifest.rows:
-            iloc = row['internal_location']
-            iloc_to_rows[iloc].append(row)
-
-        # iterate over internal locations, selecting relevant sigs
-        for iloc, iloc_rows in iloc_to_rows.items():
-            # prepend with prefix?
+        picklist = self.manifest.to_picklist()
+        for iloc in self.manifest.locations():
+            # prepend location with prefix?
             if not iloc.startswith('/') and self.prefix:
                 iloc = os.path.join(self.prefix, iloc)
-
-            sub_mf = CollectionManifest(iloc_rows)
-            picklist = sub_mf.to_picklist()
 
             idx = sourmash.load_file_as_index(iloc)
             idx = idx.select(picklist=picklist)
