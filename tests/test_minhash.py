@@ -2652,6 +2652,97 @@ def test_containment(track_abundance):
     assert mh2.contained_by(mh1) == 1/2
 
 
+def test_sum_abundances(track_abundance):
+    "test sum_abundances"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    if track_abundance:
+        assert mh1.sum_abundances == 6
+        assert mh2.sum_abundances == 6
+    else:
+        assert mh1.sum_abundances == 4
+        assert mh2.sum_abundances == 2
+
+
+def test_mean_abundance(track_abundance):
+    "test mean_abundance"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    if track_abundance:
+        assert mh1.mean_abundance == 1.5
+        assert mh2.mean_abundance == 3
+    else:
+        assert not mh1.mean_abundance
+        assert not mh2.mean_abundance
+
+
+def test_median_abundance(track_abundance):
+    "test median_abundance"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    if track_abundance:
+        assert mh1.median_abundance == 1.5
+        assert mh2.median_abundance == 3
+    else:
+        assert not mh1.median_abundance
+        assert not mh2.median_abundance
+
+
+def test_std_abundance(track_abundance):
+    "test std_abundance"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    if track_abundance:
+        assert mh1.std_abundance == 0.5
+        assert mh2.std_abundance == 0.0
+    else:
+        assert not mh1.std_abundance
+        assert not mh2.std_abundance
+
+
+def test_covered_bp(track_abundance):
+    "test covered_bp"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(4, 21, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+
+    assert mh1.covered_bp == 4 # hmmm...
+    with pytest.raises(TypeError) as exc:
+        mh2.covered_bp
+    assert "can only calculate bp for scaled MinHashes" in str(exc)
+
+
 def test_containment_ANI():
     f1 = utils.get_test_data('2.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')
