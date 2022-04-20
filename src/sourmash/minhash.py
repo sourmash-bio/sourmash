@@ -651,7 +651,7 @@ class MinHash(RustObject):
         return self._methodcall(lib.kmerminhash_similarity, other._get_objptr(), True, downsample)
 
     def jaccard_ani(self, other, *, downsample=False, jaccard=None, prob_threshold=1e-3,  err_threshold=1e-4):
-        "Calculate Jaccard --> ANI of two MinHash objects."
+        "Use jaccard to estimate ANI between two MinHash objects."
         self_mh = self
         other_mh = other
         scaled = self.scaled
@@ -709,7 +709,7 @@ class MinHash(RustObject):
         return self.count_common(other, downsample) / len(self)
 
     def containment_ani(self, other, *, downsample=False, containment=None, confidence=0.95, estimate_ci = False):
-        "Estimate ANI from containment with the other MinHash."
+        "Use containment to estimate ANI between two MinHash objects."
         self_mh = self
         other_mh = other
         scaled = self.scaled
@@ -740,7 +740,7 @@ class MinHash(RustObject):
         return self.count_common(other, downsample) / min_denom
 
     def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False):
-        "Estimate ANI from containment with the other MinHash."
+        "Use max_containment to estimate ANI between two MinHash objects."
         self_mh = self
         other_mh = other
         scaled = self.scaled
