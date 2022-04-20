@@ -54,6 +54,10 @@ class BaseMinHashComparison:
         return self.mh1_cmp.jaccard(self.mh2_cmp)
 
     @property
+    def jaccard_ani(self):
+        return self.mh1_cmp.jaccard_ani(self.mh2_cmp)
+
+    @property
     def angular_similarity(self):
         # Note: this currently throws TypeError if self.ignore_abundance.
         return self.mh1_cmp.angular_similarity(self.mh2_cmp)
@@ -79,6 +83,8 @@ class FracMinHashComparison(BaseMinHashComparison):
     """Class for standard comparison between two scaled minhashes"""
     cmp_scaled: int = None # optionally force scaled value for this comparison
     threshold_bp: int = 0
+    estimate_ani_ci: bool = False
+    ani_confidence: int = 0.95
 
     def __post_init__(self):
         "Initialize ScaledComparison using values from provided FracMinHashes"
@@ -100,16 +106,39 @@ class FracMinHashComparison(BaseMinHashComparison):
         return self.mh1_cmp.contained_by(self.mh2_cmp)
 
     @property
+    def mh1_containment_ani(self):
+        return self.mh1_cmp.containment_ani(self.mh2_cmp,
+                                            confidence=self.ani_confidence,
+                                            estimate_ci=self.estimate_ani_ci)
+
+    @property
     def mh2_containment(self):
         return self.mh2_cmp.contained_by(self.mh1_cmp)
+
+    @property
+    def mh2_containment_ani(self):
+        return self.mh2_cmp.containment_ani(self.mh1_cmp,
+                                            confidence=self.ani_confidence,
+                                            estimate_ci=self.estimate_ani_ci)
 
     @property
     def max_containment(self):
         return self.mh1_cmp.max_containment(self.mh2_cmp)
 
     @property
+    def max_containment_ani(self):
+        return self.mh1_cmp.max_containment_ani(self.mh2_cmp,
+                                                confidence=self.ani_confidence,
+                                                estimate_ci=self.estimate_ani_ci)
+
+    @property
     def avg_containment(self):
         return np.mean([self.mh1_containment, self.mh2_containment])
+
+    @property
+    def avg_containment_ani(self):
+        "Returns single average_containment_ani value."
+        return np.mean([self.mh1_containment_ani.ani, self.mh2_containment_ani.ani])
 
     def weighted_intersection(self, from_mh=None, from_abundD={}):
          # map abundances to all intersection hashes.

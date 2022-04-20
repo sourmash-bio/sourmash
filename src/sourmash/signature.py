@@ -142,13 +142,31 @@ class SourmashSignature(RustObject):
         return self.minhash.similarity(other.minhash, ignore_abundance=True,
                                        downsample=False)
 
+    def jaccard_ani(self, other, *, downsample=False, jaccard=None, prob_threshold=1e-3, err_threshold=1e-4):
+        "Use jaccard to estimate ANI between two FracMinHash signatures."
+        return self.minhash.jaccard_ani(other.minhash, downsample=downsample,
+                                        jaccard=jaccard, prob_threshold=prob_threshold,
+                                        err_threshold=err_threshold)
+
     def contained_by(self, other, downsample=False):
         "Compute containment by the other signature. Note: ignores abundance."
         return self.minhash.contained_by(other.minhash, downsample)
 
+    def containment_ani(self, other, *, downsample=False, containment=None, confidence=0.95, estimate_ci=False):
+        "Use containment to estimate ANI between two FracMinHash signatures."
+        return self.minhash.containment_ani(other.minhash, downsample=downsample,
+                                        containment=containment, confidence=confidence,
+                                        estimate_ci=estimate_ci)
+
     def max_containment(self, other, downsample=False):
         "Compute max containment w/other signature. Note: ignores abundance."
         return self.minhash.max_containment(other.minhash, downsample)
+
+    def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False):
+        "Use max containment to estimate ANI between two FracMinHash signatures."
+        return self.minhash.max_containment_ani(other.minhash, downsample=downsample,
+                                                max_containment=max_containment, confidence=confidence,
+                                                estimate_ci=estimate_ci)
 
     def add_sequence(self, sequence, force=False):
         self._methodcall(lib.signature_add_sequence, to_bytes(sequence), force)
