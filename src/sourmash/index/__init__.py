@@ -42,6 +42,7 @@ from abc import abstractmethod, ABC
 from collections import Counter
 from collections import defaultdict
 from typing import NamedTuple, Optional, TypedDict, TYPE_CHECKING
+import weakref
 
 from ..search import (make_jaccard_search_query,
                       make_gather_query
@@ -539,67 +540,48 @@ class ZipFileLinearIndex(Index, RustObject):
 
     def __init__(self, storage, *, selection_dict=None,
                  traverse_yield_all=False, manifest=None, use_manifest=True):
-        self._objptr = rustcall(lib.linearindex_new, storage._get_objptr(),
-                                ffi.NULL, ffi.NULL, use_manifest)
-        """
-        self.storage = storage
-        self.selection_dict = selection_dict
-        self.traverse_yield_all = traverse_yield_all
-        self.use_manifest = use_manifest
 
+        self._selection_dict = selection_dict
+        self._traverse_yield_all = traverse_yield_all
+        self._use_manifest = use_manifest
+
+        # Taking ownership of the storage
+        storage_ptr = storage._take_objptr()
+
+        manifest_ptr = ffi.NULL
         # do we have a manifest already? if not, try loading.
         if use_manifest:
             if manifest is not None:
                 debug_literal('ZipFileLinearIndex using passed-in manifest')
-                self.manifest = manifest
-            else:
-                self._load_manifest()
-        else:
-            self.manifest = None
+                manifest_ptr = manifest._as_rust()._take_objptr()
 
+        selection_ptr = ffi.NULL
+
+        self._objptr = rustcall(lib.linearindex_new, storage_ptr,
+                                manifest_ptr, selection_ptr, use_manifest)
+
+        """
         if self.manifest is not None:
             assert not self.selection_dict, self.selection_dict
         if self.selection_dict:
             assert self.manifest is None
         """
 
-    def _load_manifest(self):
-        "Load a manifest if one exists"
-        try:
-            manifest_data = self.storage.load('SOURMASH-MANIFEST.csv')
-        except (KeyError, FileNotFoundError):
-            self.manifest = None
-        else:
-            debug_literal(f'found manifest on load for {self.storage.path}')
+    @property
+    def manifest(self):
+        return CollectionManifest._from_rust(self._methodcall(lib.linearindex_manifest))
 
-            # load manifest!
-            from io import StringIO
-            manifest_data = manifest_data.decode('utf-8')
-            manifest_fp = StringIO(manifest_data)
-            self.manifest = CollectionManifest.load_from_csv(manifest_fp)
+    @manifest.setter
+    def manifest(self, value):
+        raise NotImplementedError()
 
     def __bool__(self):
         "Are there any matching signatures in this zipfile? Avoid calling len."
-        try:
-            next(iter(self.signatures()))
-        except StopIteration:
-            return False
-
-        return True
+        return self._methodcall(lib.linearindex_len) > 0
 
     def __len__(self):
         "calculate number of signatures."
-
-        # use manifest, if available.
-        m = self.manifest
-        if self.manifest is not None:
-            return len(m)
-
-        # otherwise, iterate across all signatures.
-        n = 0
-        for _ in self.signatures():
-            n += 1
-        return n
+        return self._methodcall(lib.linearindex_len)
 
     @property
     def location(self):
@@ -642,42 +624,14 @@ class ZipFileLinearIndex(Index, RustObject):
 
     def signatures(self):
         "Load all signatures in the zip file."
-        selection_dict = self.selection_dict
-        manifest = None
-        if self.manifest is not None:
-            manifest = self.manifest
-            assert not selection_dict
+        attached_refs = weakref.WeakKeyDictionary()
+        iterator = self._methodcall(lib.linearindex_signatures)
 
-            # yield all signatures found in manifest
-            for filename in manifest.locations():
-                data = self.storage.load(filename)
-                for ss in load_signatures(data):
-                    # in case multiple signatures are in the file, check
-                    # to make sure we want to return each one.
-                    if ss in manifest:
-                        yield ss
-
-        # no manifest! iterate.
-        else:
-            storage = self.storage
-            # if no manifest here, break Storage class encapsulation
-            # and go for all the files. (This is necessary to support
-            # ad-hoc zipfiles that have no manifests.)
-            for filename in storage._filenames():
-                # should we load this file? if it ends in .sig OR force:
-                if filename.endswith('.sig') or \
-                   filename.endswith('.sig.gz') or \
-                   self.traverse_yield_all:
-                    if selection_dict:
-                        select = lambda x: select_signature(x,
-                                                            **selection_dict)
-                    else:
-                        select = lambda x: True
-
-                    data = self.storage.load(filename)
-                    for ss in load_signatures(data):
-                        if select(ss):
-                            yield ss
+        next_sig = rustcall(lib.signatures_iter_next, iterator)
+        while next_sig != ffi.NULL:
+            attached_refs[next_sig] = iterator
+            yield SourmashSignature._from_objptr(next_sig)
+            next_sig = rustcall(lib.signatures_iter_next, iterator)
 
     def select(self, **kwargs: Unpack[Selection]):
         "Select signatures in zip file based on ksize/moltype/etc."

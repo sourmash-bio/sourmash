@@ -42,3 +42,25 @@ pub struct SourmashSelection;
 impl ForeignObject for SourmashSelection {
     type RustObject = Selection;
 }
+
+pub struct SignatureIterator {
+    iter: Box<dyn Iterator<Item = Signature>>,
+}
+
+pub struct SourmashSignatureIter;
+
+impl ForeignObject for SourmashSignatureIter {
+    type RustObject = SignatureIterator;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn signatures_iter_next(
+    ptr: *mut SourmashSignatureIter,
+) -> *const SourmashSignature {
+    let mut iterator = SourmashSignatureIter::into_rust(ptr);
+
+    match iterator.iter.next() {
+        Some(sig) => SourmashSignature::from_rust(sig),
+        None => std::ptr::null(),
+    }
+}

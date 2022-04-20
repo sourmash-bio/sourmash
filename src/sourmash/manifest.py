@@ -336,3 +336,7 @@ class CollectionManifest(BaseCollectionManifest):
         picklist.pickset = set(self._md5_set)
 
         return picklist
+
+    @staticmethod
+    def _from_rust(value):
+        raise NotImplementedError()

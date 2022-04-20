@@ -498,6 +498,21 @@ impl LinearRevIndex {
         }
         Ok(matches)
     }
+
+    pub fn manifest(&self) -> Manifest {
+        self.sig_files.clone()
+    }
+
+    pub fn signatures_iter(&self) -> impl Iterator<Item = Signature> + '_ {
+        if let Some(_sigs) = &self.ref_sigs {
+            //sigs.iter().cloned()
+            todo!("this works, but need to match return types")
+        } else {
+            // FIXME temp solution, must find better one!
+            (0..self.sig_files.len())
+                .map(move |dataset_id| self.sig_for_dataset(dataset_id).expect("error loading sig"))
+        }
+    }
 }
 
 impl<'a> Index<'a> for LinearRevIndex {

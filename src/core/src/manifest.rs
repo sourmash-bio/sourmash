@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::Error;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Record {
     internal_location: String,
     /*
@@ -22,7 +22,7 @@ pub struct Record {
     */
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct Manifest {
     records: Vec<Record>,
 }

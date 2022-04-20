@@ -53,13 +53,19 @@ typedef struct SourmashKmerMinHash SourmashKmerMinHash;
 
 typedef struct SourmashLinearIndex SourmashLinearIndex;
 
+typedef struct SourmashManifest SourmashManifest;
+
 typedef struct SourmashNodegraph SourmashNodegraph;
 
 typedef struct SourmashRevIndex SourmashRevIndex;
 
 typedef struct SourmashSearchResult SourmashSearchResult;
 
+typedef struct SourmashSelection SourmashSelection;
+
 typedef struct SourmashSignature SourmashSignature;
+
+typedef struct SourmashSignatureIter SourmashSignatureIter;
 
 typedef struct SourmashZipStorage SourmashZipStorage;
 
@@ -269,10 +275,16 @@ bool kmerminhash_track_abundance(const SourmashKmerMinHash *ptr);
 
 void linearindex_free(SourmashLinearIndex *ptr);
 
-SourmashLinearIndex *linearindex_new(const SourmashZipStorage *storage_ptr,
-                                     const SourmashManifest *manifest_ptr,
-                                     const SourmashSelection *selection_ptr,
+uint64_t linearindex_len(const SourmashLinearIndex *ptr);
+
+const SourmashManifest *linearindex_manifest(const SourmashLinearIndex *ptr);
+
+SourmashLinearIndex *linearindex_new(SourmashZipStorage *storage_ptr,
+                                     SourmashManifest *manifest_ptr,
+                                     SourmashSelection *selection_ptr,
                                      bool use_manifest);
+
+SourmashSignatureIter *linearindex_signatures(const SourmashLinearIndex *ptr);
 
 void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
 
@@ -396,6 +408,8 @@ void signature_set_filename(SourmashSignature *ptr, const char *name);
 void signature_set_mh(SourmashSignature *ptr, const SourmashKmerMinHash *other);
 
 void signature_set_name(SourmashSignature *ptr, const char *name);
+
+const SourmashSignature *signatures_iter_next(SourmashSignatureIter *ptr);
 
 SourmashSignature **signatures_load_buffer(const char *ptr,
                                            uintptr_t insize,
