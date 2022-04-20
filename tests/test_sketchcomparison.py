@@ -7,7 +7,7 @@ import pytest
 
 
 from sourmash.minhash import MinHash
-from sourmash.sketchcomparison import BaseMinHashComparison, FracMinHashComparison, NumMinHashComparison
+from sourmash.sketchcomparison import FracMinHashComparison, NumMinHashComparison
 
 import sourmash_tst_utils as utils
 
@@ -287,7 +287,7 @@ def test_FracMinHashComparison_incompatible_ksize(track_abundance):
     with pytest.raises(TypeError) as exc:
         FracMinHashComparison(a, b)
     print(str(exc))
-    assert "Error: Invalid Comparison, ksizes: 31, 21. Must compare sketches of the same ksize." in str(exc)
+    assert "Error: Cannot compare incompatible sketches." in str(exc)
 
 
 def test_FracMinHashComparison_incompatible_moltype(track_abundance):
@@ -307,8 +307,7 @@ def test_FracMinHashComparison_incompatible_moltype(track_abundance):
     with pytest.raises(TypeError) as exc:
         FracMinHashComparison(a, b)
     print(str(exc))
-    assert "Error: Invalid Comparison, moltypes: DNA, protein. Must compare sketches of the same moltype." in str(exc)
-
+    assert "Error: Cannot compare incompatible sketches." in str(exc)
 
 
 def test_FracMinHashComparison_incompatible_sketchtype(track_abundance):
@@ -331,6 +330,27 @@ def test_FracMinHashComparison_incompatible_sketchtype(track_abundance):
     assert "Error: Both sketches must be 'num' or 'scaled'." in str(exc)
 
 
+def test_FracMinHashComparison_incompatible_cmp_scaled(track_abundance):
+    # pass in too low of a cmp_scaled value
+    a = MinHash(0, 31, scaled=1, track_abundance=track_abundance)
+    b = MinHash(0, 31, scaled=10, track_abundance=track_abundance)
+
+    a_values = { 1:5, 3:3, 5:2, 8:2}
+    b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
+
+    if track_abundance:
+        a.set_abundances(a_values)
+        b.set_abundances(b_values)
+    else:
+        a.add_many(a_values.keys())
+        b.add_many(b_values.keys())
+
+    with pytest.raises(ValueError) as exc:
+        FracMinHashComparison(a, b, cmp_scaled = 1)
+    print(str(exc))
+    assert "new scaled 1 is lower than current sample scaled 10" in str(exc)
+
+
 def test_FracMinHashComparison_redownsample_without_scaled(track_abundance):
     a = MinHash(0, 31, scaled=1, track_abundance=track_abundance)
     b = MinHash(0, 31, scaled=10, track_abundance=track_abundance)
@@ -349,7 +369,7 @@ def test_FracMinHashComparison_redownsample_without_scaled(track_abundance):
     assert cmp.cmp_scaled == 10
 
     with pytest.raises(ValueError) as exc:
-        # try to redownsample without passing in cmp_num
+        # try to redownsample without passing in cmp_scaled
         cmp.downsample_and_handle_ignore_abundance()
     print(str(exc))
     assert "Error: must pass in a comparison scaled or num value." in str(exc)
@@ -505,7 +525,7 @@ def test_NumMinHashComparison_incompatible_ksize(track_abundance):
     with pytest.raises(TypeError) as exc:
         NumMinHashComparison(a_num, b_num)
     print(str(exc))
-    assert "Error: Invalid Comparison, ksizes: 31, 21. Must compare sketches of the same ksize." in str(exc)
+    assert "Error: Cannot compare incompatible sketches." in str(exc)
 
 
 def test_NumMinHashComparison_incompatible_moltype(track_abundance):
@@ -525,7 +545,7 @@ def test_NumMinHashComparison_incompatible_moltype(track_abundance):
     with pytest.raises(TypeError) as exc:
         NumMinHashComparison(a_num, b_num)
     print(str(exc))
-    assert "Error: Invalid Comparison, moltypes: DNA, protein. Must compare sketches of the same moltype." in str(exc)
+    assert "Error: Cannot compare incompatible sketches." in str(exc)
 
 
 def test_NumMinHashComparison_incompatible_sketchtype(track_abundance):
@@ -569,3 +589,24 @@ def test_NumMinHashComparison_redownsample_without_num(track_abundance):
         cmp.downsample_and_handle_ignore_abundance()
     print(str(exc))
     assert "Error: must pass in a comparison scaled or num value." in str(exc)
+
+
+def test_NumMinHashComparison_incompatible_cmp_num(track_abundance):
+    # pass in too high of a cmp_num value
+    a = MinHash(200, 31, track_abundance=track_abundance)
+    b = MinHash(100, 31, track_abundance=track_abundance)
+
+    a_values = { 1:5, 3:3, 5:2, 8:2}
+    b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
+
+    if track_abundance:
+        a.set_abundances(a_values)
+        b.set_abundances(b_values)
+    else:
+        a.add_many(a_values.keys())
+        b.add_many(b_values.keys())
+
+    with pytest.raises(ValueError) as exc:
+        NumMinHashComparison(a, b, cmp_num = 150)
+    print(str(exc))
+    assert "new sample num is higher than current sample num" in str(exc)

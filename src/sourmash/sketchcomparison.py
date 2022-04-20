@@ -14,22 +14,6 @@ class BaseMinHashComparison:
     mh2: MinHash
     ignore_abundance: bool = False # optionally ignore abundances
 
-    def check_comparison_compatibility(self):
-        # do we need this check + error? Minhash functions should already complain appropriately...
-        k1 = self.mh1.ksize
-        k2 = self.mh2.ksize
-        if k1 != k2:
-            raise TypeError(f"Error: Invalid Comparison, ksizes: {k1}, {k2}. Must compare sketches of the same ksize.")
-        self.ksize = self.mh1.ksize
-        m1 = self.mh1.moltype
-        m2= self.mh2.moltype
-        if m1 != m2:
-            raise TypeError(f"Error: Invalid Comparison, moltypes: {m1}, {m2}. Must compare sketches of the same moltype.")
-        self.moltype= self.mh1.moltype
-        # check num, scaled
-        if not any([(self.mh1.num and self.mh2.num), (self.mh1.scaled and self.mh2.scaled)]):
-            raise TypeError("Error: Both sketches must be 'num' or 'scaled'.")
-
     def downsample_and_handle_ignore_abundance(self, cmp_num=None, cmp_scaled=None):
         """
         Downsample and/or flatten minhashes for comparison
@@ -49,6 +33,17 @@ class BaseMinHashComparison:
         else:
             raise ValueError("Error: must pass in a comparison scaled or num value.")
 
+    def check_compatibility_and_downsample(self, cmp_num=None, cmp_scaled=None):
+        if not any([(self.mh1.num and self.mh2.num), (self.mh1.scaled and self.mh2.scaled)]):
+            raise TypeError("Error: Both sketches must be 'num' or 'scaled'.")
+
+        #need to downsample first because is_compatible checks scaled (though does not check num)
+        self.downsample_and_handle_ignore_abundance(cmp_num=cmp_num, cmp_scaled=cmp_scaled)
+        if not self.mh1_cmp.is_compatible(self.mh2_cmp):
+            raise TypeError("Error: Cannot compare incompatible sketches.")
+        self.ksize = self.mh1.ksize
+        self.moltype = self.mh1.moltype
+
     @property
     def intersect_mh(self):
         # flatten and intersect
@@ -60,12 +55,8 @@ class BaseMinHashComparison:
 
     @property
     def angular_similarity(self):
+        # Note: this currently throws TypeError if self.ignore_abundance.
         return self.mh1_cmp.angular_similarity(self.mh2_cmp)
-        # do we want to shield against error here? Or let TypeError through?
-        #if not (self.mh1_cmp.track_abundance and self.mh2_cmp.track_abundance):
-        #    return self.mh1_cmp.angular_similarity(self.mh2_cmp)
-        #else:
-        #    return ""
 
     @property
     def cosine_similarity(self):
@@ -74,31 +65,27 @@ class BaseMinHashComparison:
 
 @dataclass
 class NumMinHashComparison(BaseMinHashComparison):
-    """Class for standard comparison between two scaled minhashes"""
+    """Class for standard comparison between two num minhashes"""
     cmp_num: int = None
 
     def __post_init__(self):
         "Initialize NumMinHashComparison using values from provided MinHashes"
-        if self.cmp_num is None: # record the num we're doing this compa#rison on
+        if self.cmp_num is None: # record the num we're doing this comparison on
             self.cmp_num = min(self.mh1.num, self.mh2.num)
-        self.check_comparison_compatibility()
-        self.downsample_and_handle_ignore_abundance(cmp_num=self.cmp_num)
+        self.check_compatibility_and_downsample(cmp_num=self.cmp_num)
 
 @dataclass
 class FracMinHashComparison(BaseMinHashComparison):
     """Class for standard comparison between two scaled minhashes"""
-    cmp_scaled: int = None # scaled value for this comparison (defaults to maximum scaled between the two sigs)
+    cmp_scaled: int = None # optionally force scaled value for this comparison
     threshold_bp: int = 0
 
     def __post_init__(self):
         "Initialize ScaledComparison using values from provided FracMinHashes"
-        if self.cmp_scaled is None: # record the scaled we're doing this comparison on
+        if self.cmp_scaled is None:
+            # comparison scaled defaults to maximum scaled between the two sigs
             self.cmp_scaled = max(self.mh1.scaled, self.mh2.scaled)
-        self.check_comparison_compatibility()
-        self.downsample_and_handle_ignore_abundance(cmp_scaled=self.cmp_scaled)
-        # for these, do we want the originals, or the cmp_scaled versions?? (or both?). do we need them at all?
-        self.mh1_scaled = self.mh1.scaled
-        self.mh2_scaled = self.mh2.scaled
+        self.check_compatibility_and_downsample(cmp_scaled=self.cmp_scaled)
 
     @property
     def pass_threshold(self):
@@ -128,11 +115,14 @@ class FracMinHashComparison(BaseMinHashComparison):
          # map abundances to all intersection hashes.
         abund_mh = self.intersect_mh.copy_and_clear()
         abund_mh.track_abundance = True
-        if from_mh is not None:
+        # if from_mh is provided, it takes precedence over from_abund dict
+        if from_mh is not None and from_mh.track_abundance:
             from_abundD = from_mh.hashes
-        if from_abundD is not None:
-            #abundD[k] for k in intersect_mh.hashes
+        if from_abundD:
+            # this sets any hash not present in abundD to 1. Is that desired? Or should we return 0?
             abunds = {k: from_abundD.get(k, 1) for k in self.intersect_mh.hashes }
             abund_mh.set_abundances(abunds)
             return abund_mh
-        return self.intersect_mh # or do we want to set all abundances to 1?
+        # if no abundances are passed in, return intersect_mh
+        # future note: do we want to return 1 as abundance instead?
+        return self.intersect_mh

@@ -577,11 +577,11 @@ def test_GatherResult_incomplete_input_orig_query_abunds():
         GatherResult(ss47, ss4763, cmp_scaled=1000,
                         gather_querymh=ss47.minhash,
                         gather_result_rank=1,
-                        total_abund = None,
+                        total_abund = 1,
                         orig_query_len=len(ss47.minhash),
                         orig_query_abunds=orig_query_abunds)
     print(str(exc))
-    assert "Error: must provide sum of all abundances ('total_abund') to GatherResult" in str(exc)
+    assert "Error: must provide original query abundances ('orig_query_abunds') to GatherResult" in str(exc)
 
     orig_query_abunds = {}
 
@@ -589,8 +589,8 @@ def test_GatherResult_incomplete_input_orig_query_abunds():
         GatherResult(ss47, ss4763, cmp_scaled=1000,
                         gather_querymh=ss47.minhash,
                         gather_result_rank=1,
-                        total_abund = 0,
+                        total_abund = 1,
                         orig_query_len=len(ss47.minhash),
                         orig_query_abunds=orig_query_abunds)
     print(str(exc))
-    assert "Error: must provide sum of all abundances ('total_abund') to GatherResult" in str(exc)
+    assert "Error: must provide original query abundances ('orig_query_abunds') to GatherResult" in str(exc)

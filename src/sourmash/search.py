@@ -200,14 +200,14 @@ class BaseResult:
         self.match_name = self.match.name
         self.match_filename = self.match.filename
         # sometimes filename is not set in sig (match_filename is None),
-        # and `search` is able to pass in the filename...
+        # and `search` is able to pass in the filename.
         if self.filename is None and self.match_filename is not None:
             self.filename = self.match_filename
         self.match_md5 = self.match.md5sum()
         # set these from self.match_*
         self.md5= self.match_md5
         self.name = self.match_name
-        # do we actually need these here? Def need for prefetch, but maybe define there?
+        # we may not need these here - could define in PrefetchResult instead
         self.query_abundance = self.mh1.track_abundance
         self.match_abundance = self.mh2.track_abundance
         self.query_n_hashes = len(self.mh1.hashes)
@@ -250,17 +250,14 @@ class SearchResult(BaseResult):
 
     def __post_init__(self):
         self.init_sigcomparison() # build sketch comparison
-        self.check_similarity() # set similarity (if not passed in)
+        self.check_similarity()
 
     def check_similarity(self):
-        # Require similarity for SearchResult
+        # for now, require similarity for SearchResult
+        # future: consider returning SearchResult *during* search, and passing SearchType in.
+        # then allow similarity to be calculated here according to SearchType.
         if self.similarity is None:
             raise ValueError("Error: Must provide 'similarity' for SearchResult.")
-            #OR, if don't pass in similarity, return jaccard?
-            #if self.cmp.cmp_scaled is not None:
-            #    self.similarity = self.cmp.mh1_containment
-            #else:
-            #    self.similarity = self.cmp.jaccard
 
     @property
     def writedict(self):
@@ -320,14 +317,11 @@ class PrefetchResult(BaseResult):
         return self.prefetchresultdict()
 
 
-
 @dataclass
 class GatherResult(PrefetchResult):
     gather_querymh: MinHash = None
     gather_result_rank: int = None
     total_abund: int = None
-   # orig_query_len includes len(noident_mh), which has been subtracted out of query, right? This subtraction is an issue for query_covered bp,etc!
-   # can we set some original query info so we can get the right vals to output?
     orig_query_len: int = None
     orig_query_abunds: list = None
 
@@ -355,8 +349,15 @@ class GatherResult(PrefetchResult):
             raise ValueError("Error: must provide original query abundances ('orig_query_abunds') to GatherResult")
 
     def build_gather_result(self):
-        # build gather specific attributes
+        # build gather-specific attributes
     
+        # the 'query' that is passed into gather is all _matched_ hashes, after subtracting noident_mh
+        # this affects estimation of original query information, and requires us to pass in orig_query_len and orig_query_abunds.
+        # we also need to overwrite self.query_bp, self.query_n_hashes, and self.query_abundance
+        # todo: find a better solution?
+        self.query_bp = self.orig_query_len * self.query.minhash.scaled
+        self.query_n_hashes = self.orig_query_len
+
         # calculate intersection with query hashes:
         self.unique_intersect_bp = self.gather_comparison.intersect_bp
     
@@ -382,6 +383,8 @@ class GatherResult(PrefetchResult):
             self.average_abund = self.query_weighted_unique_intersection.mean_abundance
             self.median_abund = self.query_weighted_unique_intersection.median_abundance
             self.std_abund = self.query_weighted_unique_intersection.std_abundance
+            # 'query' will be flattened by default. reset track abundance if we have abunds
+            self.query_abundance = self.query_weighted_unique_intersection.track_abundance
              # calculate scores weighted by abundances
             self.f_unique_weighted =  float(self.query_weighted_unique_intersection.sum_abundances) / self.total_abund
         else:
@@ -396,17 +399,15 @@ class GatherResult(PrefetchResult):
     def gatherresultdict(self):
         # for gather, we only shorten the query_md5
         self.query_md5 = self.shorten_md5(self.query_md5)
-        #self.md5 = self.shorten_md5(self.md5)
-        #self.match_md5 = self.shorten_md5(self.match_md5)
         return self.to_write(columns=self.gather_write_cols)
 
     @property
     def writedict(self):
         return self.gatherresultdict()
 
-    # we can write prefetch results from a GatherResult
     @property
     def prefetchwritedict(self):
+        # enable writing prefetch csv from a GatherResult
         self.build_prefetch_result()
         return self.prefetchresultdict()
 
@@ -457,7 +458,7 @@ def search_databases_with_abund_query(query, databases, **kwargs):
         raise TypeError("containment searches cannot be done with abund sketches")
 
     for db in databases:
-        search_iter = db.search_abund(query, **kwargs)
+        search_iter = db.search_abund(query, **kwargs) # could return SearchResult here instead of tuple?
         for (score, match, filename) in search_iter:
             md5 = match.md5sum()
             if md5 not in found_md5:
@@ -470,7 +471,7 @@ def search_databases_with_abund_query(query, databases, **kwargs):
     x = []
     for (score, match, filename) in results:
         x.append(SearchResult(query, match,
-                               similarity=score,  # this is actually cosine sim (abund). do we want to specify this in SearchResult somehow?
+                               similarity=score,
                                filename = filename))
     return x
 
@@ -663,7 +664,7 @@ def prefetch_database(query, database, threshold_bp):
     assert scaled
 
     # iterate over all signatures in database, find matches
-    for result in database.prefetch(query, threshold_bp):
+    for result in database.prefetch(query, threshold_bp): # future: could return PrefetchResult directly here
         #result = calculate_prefetch_info(query, result.signature, threshold_bp)
         result = PrefetchResult(query, result.signature, threshold_bp=threshold_bp)
         assert result.pass_threshold
