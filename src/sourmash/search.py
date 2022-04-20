@@ -3,9 +3,13 @@ Code for searching collections of signatures.
 """
 from collections import namedtuple
 from enum import Enum
+from multiprocessing.sharedctypes import Value
+from re import I
 import numpy as np
+from dataclasses import dataclass
 
-from .signature import SourmashSignature
+from .signature import SourmashSignature, MinHash
+from .sketchcomparison import FracMinHashComparison, NumMinHashComparison
 
 
 class SearchType(Enum):
@@ -157,12 +161,256 @@ class JaccardSearchBestOnly(JaccardSearch):
         self.threshold = max(self.threshold, score)
         return True
 
+@dataclass
+class BaseResult:
+    """
+    Base class for sourmash search results.
+    Since we need some additional info (scaled vs num minhashes) to
+    properly initialize a SketchComparison, this class doesn't actually do
+    anything other than define some functions needed by *Result classes.
+    """
+    query: SourmashSignature
+    match: SourmashSignature
+    filename: str = None
+    ignore_abundance: bool = False # optionally ignore abundances
 
-# generic SearchResult tuple.
-SearchResult = namedtuple('SearchResult',
-                          ['similarity', 'match', 'md5', 'filename', 'name',
-                          'query', 'query_filename', 'query_name', 'query_md5',
-                          'ksize'])
+    def init_result(self):
+        self.mh1 = self.query.minhash
+        self.mh2 = self.match.minhash
+
+    def build_fracminhashcomparison(self, cmp_scaled=None, threshold_bp=None):
+        self.cmp = FracMinHashComparison(self.mh1, self.mh2, cmp_scaled=cmp_scaled, threshold_bp=threshold_bp, ignore_abundance=self.ignore_abundance)
+        self.scaled = self.cmp.cmp_scaled
+        self.query_scaled = self.mh1.scaled
+        self.match_scaled = self.mh2.scaled
+
+    def build_numminhashcomparison(self, cmp_num=None):
+        self.cmp = NumMinHashComparison(self.mh1, self.mh2, cmp_num=cmp_num, ignore_abundance=self.ignore_abundance)
+        self.cmp_num = self.cmp.cmp_num
+        self.query_num = self.mh1.num
+        self.match_num = self.mh2.num
+
+    def get_cmpinfo(self):
+        # grab signature /minhash metadata
+        self.ksize = self.mh1.ksize
+        self.moltype = self.mh1.moltype
+        self.query_name = self.query.name
+        self.query_filename = self.query.filename
+        self.query_md5 = self.query.md5sum()
+        self.match_name = self.match.name
+        self.match_filename = self.match.filename
+        # sometimes filename is not set in sig (match_filename is None),
+        # and `search` is able to pass in the filename.
+        if self.filename is None and self.match_filename is not None:
+            self.filename = self.match_filename
+        self.match_md5 = self.match.md5sum()
+        # set these from self.match_*
+        self.md5= self.match_md5
+        self.name = self.match_name
+        # we may not need these here - could define in PrefetchResult instead
+        self.query_abundance = self.mh1.track_abundance
+        self.match_abundance = self.mh2.track_abundance
+        self.query_n_hashes = len(self.mh1.hashes)
+        self.match_n_hashes = len(self.mh2.hashes)
+
+    @property
+    def pass_threshold(self):
+        return self.cmp.pass_threshold
+
+    def shorten_md5(self, md5):
+        return md5[:8]
+
+    def to_write(self, columns=[]):
+        info = {k: v for k, v in self.__dict__.items()
+                if k in columns and v is not None}
+        return info
+
+
+@dataclass
+class SearchResult(BaseResult):
+    """
+    SearchResult class supports 'sourmash search' operations.
+    """
+    similarity: float = None
+    cmp_scaled: int = None
+    cmp_num: int = None
+    threshold_bp: int = None
+
+    #columns for standard SearchResult output
+    search_write_cols = ['similarity', 'md5', 'filename', 'name',  # here we use 'filename'
+                         'query_filename', 'query_name', 'query_md5']
+
+    def init_sigcomparison(self):
+        self.init_result()
+        if any([self.mh1.scaled, self.mh2.scaled]):
+            self.build_fracminhashcomparison(cmp_scaled = self.cmp_scaled, threshold_bp = self.threshold_bp)
+        elif any([self.mh1.num, self.mh2.num]):
+            self.build_numminhashcomparison(cmp_num=self.cmp_num)
+        self.get_cmpinfo() # grab comparison metadata
+
+    def __post_init__(self):
+        self.init_sigcomparison() # build sketch comparison
+        self.check_similarity()
+
+    def check_similarity(self):
+        # for now, require similarity for SearchResult
+        # future: consider returning SearchResult *during* search, and passing SearchType in.
+        # then allow similarity to be calculated here according to SearchType.
+        if self.similarity is None:
+            raise ValueError("Error: Must provide 'similarity' for SearchResult.")
+
+    @property
+    def writedict(self):
+        self.query_md5 = self.shorten_md5(self.query_md5)
+        return self.to_write(columns=self.search_write_cols)
+
+
+
+@dataclass
+class PrefetchResult(BaseResult):
+    """
+    PrefetchResult class supports 'sourmash prefetch' operations.
+    """
+    cmp_scaled: int = None
+    threshold_bp: int = None
+
+    # current prefetch columns
+    prefetch_write_cols = ['intersect_bp', 'jaccard', 'max_containment', 'f_query_match',
+                           'f_match_query', 'match_filename', 'match_name', # here we use 'match_filename'
+                           'match_md5', 'match_bp', 'query_filename', 'query_name',
+                           'query_md5', 'query_bp', 'ksize', 'moltype', 'scaled',
+                           'query_n_hashes', 'query_abundance'] #, 'match_abundance'
+
+    def init_sigcomparison(self):
+        # shared prefetch/gather initialization
+        self.init_result()
+        if all([self.mh1.scaled, self.mh2.scaled]):
+            self.build_fracminhashcomparison(cmp_scaled = self.cmp_scaled, threshold_bp = self.threshold_bp)
+        else:
+            raise TypeError("Error: prefetch and gather results must be between scaled signatures.")
+        self.get_cmpinfo() # grab comparison metadata
+        self.intersect_bp = self.cmp.intersect_bp
+        self.max_containment = self.cmp.max_containment
+        self.query_bp = self.mh1.covered_bp
+        self.match_bp = self.mh2.covered_bp
+        self.threshold = self.threshold_bp
+
+    def build_prefetch_result(self):
+        # unique prefetch values
+        self.jaccard = self.cmp.jaccard
+        self.f_query_match = self.cmp.mh2_containment #db_mh.contained_by(query_mh)
+        self.f_match_query = self.cmp.mh1_containment #query_mh.contained_by(db_mh)
+
+    def __post_init__(self):
+        self.init_sigcomparison()
+        self.build_prefetch_result()
+
+    def prefetchresultdict(self):
+        # in prefetch, we shorten all md5's
+        self.query_md5 = self.shorten_md5(self.query_md5)
+        self.md5 = self.shorten_md5(self.md5)
+        self.match_md5 = self.shorten_md5(self.match_md5)
+        return self.to_write(columns=self.prefetch_write_cols)
+
+    @property
+    def writedict(self):
+        return self.prefetchresultdict()
+
+
+@dataclass
+class GatherResult(PrefetchResult):
+    gather_querymh: MinHash = None
+    gather_result_rank: int = None
+    total_abund: int = None
+    orig_query_len: int = None
+    orig_query_abunds: list = None
+
+    gather_write_cols = ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
+                         'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename', # here we use 'filename'
+                         'name', 'md5', 'f_match_orig', 'unique_intersect_bp', 'gather_result_rank',
+                         'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
+                         'moltype', 'scaled', 'query_n_hashes', 'query_abundance']
+
+    def init_gathersketchcomparison(self):
+        # compare remaining gather hashes with match. Force at cmp_scaled. Force match flatten(), bc we don't need abunds.
+        self.gather_comparison = FracMinHashComparison(self.gather_querymh, self.match.minhash.flatten(), cmp_scaled=self.cmp_scaled, threshold_bp=self.threshold_bp)
+
+    def check_gatherresult_input(self):
+        # check we have what we need:
+        if self.cmp_scaled is None:
+            raise ValueError("Error: must provide comparison scaled value ('cmp_scaled') for GatherResult")
+        if self.gather_querymh is None:
+            raise ValueError("Error: must provide current gather sketch (remaining hashes) for GatherResult")
+        if self.gather_result_rank is None:
+            raise ValueError("Error: must provide 'gather_result_rank' to GatherResult")
+        if not self.total_abund: # catch total_abund = 0 as well
+            raise ValueError("Error: must provide sum of all abundances ('total_abund') to GatherResult")
+        if not self.orig_query_abunds:
+            raise ValueError("Error: must provide original query abundances ('orig_query_abunds') to GatherResult")
+
+    def build_gather_result(self):
+        # build gather-specific attributes
+    
+        # the 'query' that is passed into gather is all _matched_ hashes, after subtracting noident_mh
+        # this affects estimation of original query information, and requires us to pass in orig_query_len and orig_query_abunds.
+        # we also need to overwrite self.query_bp, self.query_n_hashes, and self.query_abundance
+        # todo: find a better solution?
+        self.query_bp = self.orig_query_len * self.query.minhash.scaled
+        self.query_n_hashes = self.orig_query_len
+
+        # calculate intersection with query hashes:
+        self.unique_intersect_bp = self.gather_comparison.intersect_bp
+    
+        # calculate fraction of subject match with orig query
+        self.f_match_orig = self.cmp.mh2_containment
+
+        # calculate fractions wrt first denominator - genome size
+        self.f_match = self.gather_comparison.mh2_containment # unique match containment
+        self.f_orig_query = len(self.cmp.intersect_mh) / self.orig_query_len
+        assert self.gather_comparison.intersect_mh.contained_by(self.gather_comparison.mh1_cmp) == 1.0
+    
+        # calculate fractions wrt second denominator - metagenome size
+        assert self.gather_comparison.intersect_mh.contained_by(self.gather_comparison.mh2_cmp) == 1.0
+        self.f_unique_to_query = len(self.gather_comparison.intersect_mh)/self.orig_query_len
+
+        # here, need to make sure to use the mh1_cmp (bc was downsampled to cmp_scaled)
+        self.remaining_bp = (self.gather_comparison.mh1_cmp.covered_bp - self.gather_comparison.intersect_bp)
+
+        # calculate stats on abundances, if desired.
+        self.average_abund, self.median_abund, self.std_abund = None, None, None
+        if not self.ignore_abundance:
+            self.query_weighted_unique_intersection = self.gather_comparison.weighted_intersection(from_abundD = self.orig_query_abunds)
+            self.average_abund = self.query_weighted_unique_intersection.mean_abundance
+            self.median_abund = self.query_weighted_unique_intersection.median_abundance
+            self.std_abund = self.query_weighted_unique_intersection.std_abundance
+            # 'query' will be flattened by default. reset track abundance if we have abunds
+            self.query_abundance = self.query_weighted_unique_intersection.track_abundance
+             # calculate scores weighted by abundances
+            self.f_unique_weighted =  float(self.query_weighted_unique_intersection.sum_abundances) / self.total_abund
+        else:
+            self.f_unique_weighted = self.f_unique_to_query
+
+    def __post_init__(self):
+        self.check_gatherresult_input()
+        self.init_sigcomparison() # initialize original sketch vs match sketch comparison (inherited from PrefetchResult)
+        self.init_gathersketchcomparison() # initialize remaining gather sketch vs match sketch comparison
+        self.build_gather_result() # build gather-specific attributes
+
+    def gatherresultdict(self):
+        # for gather, we only shorten the query_md5
+        self.query_md5 = self.shorten_md5(self.query_md5)
+        return self.to_write(columns=self.gather_write_cols)
+
+    @property
+    def writedict(self):
+        return self.gatherresultdict()
+
+    @property
+    def prefetchwritedict(self):
+        # enable writing prefetch csv from a GatherResult
+        self.build_prefetch_result()
+        return self.prefetchresultdict()
+
 
 
 def format_bp(bp):
@@ -195,19 +443,10 @@ def search_databases_with_flat_query(query, databases, **kwargs):
     results.sort(key=lambda x: -x[0])
 
     x = []
-    ksize = query.minhash.ksize
     for (score, match, filename) in results:
-        x.append(SearchResult(similarity=score,
-                              match=match,
-                              md5=match.md5sum(),
-                              filename=filename,
-                              name=match.name,
-                              query=query,
-                              query_filename=query.filename,
-                              query_name=query.name,
-                              query_md5=query.md5sum()[:8],
-                              ksize=ksize,
-        ))
+        x.append(SearchResult(query, match,
+                               similarity=score,
+                               filename = filename))
     return x
 
 
@@ -219,7 +458,7 @@ def search_databases_with_abund_query(query, databases, **kwargs):
         raise TypeError("containment searches cannot be done with abund sketches")
 
     for db in databases:
-        search_iter = db.search_abund(query, **kwargs)
+        search_iter = db.search_abund(query, **kwargs) # could return SearchResult here instead of tuple?
         for (score, match, filename) in search_iter:
             md5 = match.md5sum()
             if md5 not in found_md5:
@@ -231,29 +470,14 @@ def search_databases_with_abund_query(query, databases, **kwargs):
 
     x = []
     for (score, match, filename) in results:
-        x.append(SearchResult(similarity=score,
-                              match=match,
-                              md5=match.md5sum(),
-                              filename=filename,
-                              name=match.name,
-                              query=query,
-                              query_filename=query.filename,
-                              query_name=query.name,
-                              query_md5=query.md5sum()[:8],
-                              ksize=query.minhash.ksize,
-        ))
+        x.append(SearchResult(query, match,
+                               similarity=score,
+                               filename = filename))
     return x
 
 ###
 ### gather code
 ###
-
-GatherResult = namedtuple('GatherResult', ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
-                            'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename',
-                            'name', 'md5', 'match', 'f_match_orig', 'unique_intersect_bp', 'gather_result_rank',
-                            'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
-                            'moltype', 'scaled', 'query_n_hashes', 'query_abundance'])
-
 
 def _find_best(counters, query, threshold_bp):
     """
@@ -289,6 +513,7 @@ class GatherDatabases:
                  threshold_bp=0, ignore_abundance=False, noident_mh=None):
         # track original query information for later usage?
         track_abundance = query.minhash.track_abundance and not ignore_abundance
+        self.orig_query = query
         self.orig_query_bp = len(query.minhash) * query.minhash.scaled
         self.orig_query_filename = query.filename
         self.orig_query_name = query.name
@@ -396,43 +621,10 @@ class GatherDatabases:
         query_mh = query.minhash.downsample(scaled=scaled)
         found_mh = best_match.minhash.downsample(scaled=scaled).flatten()
 
-        # calculate intersection with query hashes:
-        unique_intersect_bp = scaled * len(intersect_mh)
-        intersect_orig_mh = orig_query_mh & found_mh
-        intersect_bp = scaled * len(intersect_orig_mh)
-
-        # calculate fractions wrt first denominator - genome size
-        assert intersect_mh.contained_by(found_mh) == 1.0
-        f_match = len(intersect_mh) / len(found_mh)
-        f_orig_query = len(intersect_orig_mh) / orig_query_len
-
-        # calculate fractions wrt second denominator - metagenome size
-        assert intersect_mh.contained_by(orig_query_mh) == 1.0
-        f_unique_to_query = len(intersect_mh) / orig_query_len
-
-        # calculate fraction of subject match with orig query
-        f_match_orig = found_mh.contained_by(orig_query_mh)
-
-        # calculate scores weighted by abundances
-        f_unique_weighted = sum((orig_query_abunds[k] for k in intersect_mh.hashes ))
-        f_unique_weighted /= sum_abunds
-
-        # calculate stats on abundances, if desired.
-        average_abund, median_abund, std_abund = None, None, None
-        if track_abundance:
-            intersect_abunds = (orig_query_abunds[k] for k in intersect_mh.hashes )
-            intersect_abunds = list(intersect_abunds)
-
-            average_abund = np.mean(intersect_abunds)
-            median_abund = np.median(intersect_abunds)
-            std_abund = np.std(intersect_abunds)
-
         # construct a new query, subtracting hashes found in previous one.
         new_query_mh = query_mh.to_mutable()
         new_query_mh.remove_many(found_mh)
         new_query = SourmashSignature(new_query_mh)
-
-        remaining_bp = scaled * len(new_query_mh)
 
         # compute weighted_missed for remaining query hashes
         query_hashes = set(query_mh.hashes) - set(found_mh.hashes)
@@ -440,33 +632,19 @@ class GatherDatabases:
         weighted_missed += self.noident_query_sum_abunds
         weighted_missed /= sum_abunds
 
-        # build a result namedtuple
-        result = GatherResult(intersect_bp=intersect_bp,
-                              unique_intersect_bp=unique_intersect_bp,
-                              f_orig_query=f_orig_query,
-                              f_match=f_match,
-                              f_match_orig=f_match_orig,
-                              f_unique_to_query=f_unique_to_query,
-                              f_unique_weighted=f_unique_weighted,
-                              average_abund=average_abund,
-                              median_abund=median_abund,
-                              std_abund=std_abund,
+        # build a GatherResult
+        result = GatherResult(self.orig_query, best_match,
+                              cmp_scaled=scaled,
                               filename=filename,
-                              md5=best_match.md5sum(),
-                              name=str(best_match),
-                              match=best_match,
                               gather_result_rank=self.result_n,
-                              remaining_bp=remaining_bp,
-                              query_bp = self.orig_query_bp,
-                              query_filename=self.orig_query_filename,
-                              query_name=self.orig_query_name,
-                              query_md5=self.orig_query_md5,
-                              ksize =  self.orig_query_mh.ksize,
-                              moltype = self.orig_query_mh.moltype,
-                              scaled = scaled,
-                              query_n_hashes=len(self.orig_query_mh),
-                              query_abundance=self.orig_query_mh.track_abundance,
+                              total_abund= sum_abunds,
+                              gather_querymh=query.minhash,
+                              ignore_abundance= not track_abundance,
+                              threshold_bp=threshold_bp,
+                              orig_query_len=orig_query_len,
+                              orig_query_abunds = self.orig_query_abunds,
                               )
+
         self.result_n += 1
         self.query = new_query
         self.orig_query_mh = orig_query_mh
@@ -478,71 +656,16 @@ class GatherDatabases:
 ### prefetch code
 ###
 
-PrefetchResult = namedtuple('PrefetchResult',
-                            ['intersect_bp', 'jaccard', 'max_containment', 'f_query_match',
-                            'f_match_query', 'match', 'match_filename', 'match_name',
-                            'match_md5', 'match_bp', 'query', 'query_filename', 'query_name',
-                            'query_md5', 'query_bp', 'ksize', 'moltype', 'scaled',
-                            'query_n_hashes', 'query_abundance'])
-
-
-def calculate_prefetch_info(query, match, scaled, threshold_bp):
-    """
-    For a single query and match, calculate all search info and return a PrefetchResult.
-    """
-    # base intersections on downsampled minhashes
-    query_mh = query.minhash
-
-    scaled = max(scaled, match.minhash.scaled)
-    query_mh = query_mh.downsample(scaled=scaled)
-    db_mh = match.minhash.flatten().downsample(scaled=scaled)
-
-    # calculate db match intersection with query hashes:
-    intersect_mh = query_mh & db_mh
-    threshold = threshold_bp / scaled
-    assert len(intersect_mh) >= threshold
-
-    f_query_match = db_mh.contained_by(query_mh)
-    f_match_query = query_mh.contained_by(db_mh)
-    max_containment = max(f_query_match, f_match_query)
-
-    # build a result namedtuple
-    result = PrefetchResult(
-        intersect_bp=len(intersect_mh) * scaled,
-        query_bp = len(query_mh) * scaled,
-        match_bp = len(db_mh) * scaled,
-        jaccard=db_mh.jaccard(query_mh),
-        max_containment=max_containment,
-        f_query_match=f_query_match,
-        f_match_query=f_match_query,
-        match=match,
-        match_filename=match.filename,
-        match_name=match.name,
-        match_md5=match.md5sum()[:8],
-        query=query,
-        query_filename=query.filename,
-        query_name=query.name,
-        query_md5=query.md5sum()[:8],
-        ksize =  query_mh.ksize,
-        moltype = query_mh.moltype,
-        scaled = scaled,
-        query_n_hashes=len(query_mh),
-        query_abundance=query_mh.track_abundance,
-    )
-
-    return result
-
-
 def prefetch_database(query, database, threshold_bp):
     """
     Find all matches to `query_mh` >= `threshold_bp` in `database`.
     """
-    query_mh = query.minhash
-    scaled = query_mh.scaled
+    scaled = query.minhash.scaled
     assert scaled
 
     # iterate over all signatures in database, find matches
-    for result in database.prefetch(query, threshold_bp):
-        match = result.signature
-        result = calculate_prefetch_info(query, match, scaled, threshold_bp)
+    for result in database.prefetch(query, threshold_bp): # future: could return PrefetchResult directly here
+        #result = calculate_prefetch_info(query, result.signature, threshold_bp)
+        result = PrefetchResult(query, result.signature, threshold_bp=threshold_bp)
+        assert result.pass_threshold
         yield result

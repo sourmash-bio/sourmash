@@ -16,7 +16,7 @@ from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
 from .sourmash_args import (FileOutput, FileOutputCSV,
                             SaveSignaturesToLocation)
-from .search import SearchResult, prefetch_database, PrefetchResult, GatherResult, calculate_prefetch_info
+from .search import prefetch_database, SearchResult, PrefetchResult, GatherResult
 from .index import LazyLinearIndex
 
 WATERMARK_SIZE = 10000
@@ -533,17 +533,13 @@ def search(args):
         notify("** reporting only one match because --best-only was set")
 
     if args.output:
-        fieldnames = SearchResult._fields
-
+        fieldnames = SearchResult.search_write_cols
         with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
 
             w.writeheader()
             for sr in results:
-                d = dict(sr._asdict())
-                del d['match']
-                del d['query']
-                w.writerow(d)
+                w.writerow(sr.writedict)
 
     # save matching signatures upon request
     if args.save_matches:
@@ -688,7 +684,7 @@ def gather(args):
         prefetch_csvout_fp = None
         prefetch_csvout_w = None
         if args.save_prefetch_csv:
-            fieldnames = PrefetchResult._fields
+            fieldnames = PrefetchResult.prefetch_write_cols
             prefetch_csvout_fp = FileOutput(args.save_prefetch_csv, 'wt').open()
             prefetch_csvout_w = csv.DictWriter(prefetch_csvout_fp, fieldnames=fieldnames)
             prefetch_csvout_w.writeheader()
@@ -717,12 +713,8 @@ def gather(args):
                 if prefetch_csvout_fp:
                     assert scaled
                     # calculate intersection stats and info
-                    prefetch_result = calculate_prefetch_info(prefetch_query, found_sig, scaled, args.threshold_bp)
-                    # remove match and query signatures; write result to prefetch csv
-                    d = dict(prefetch_result._asdict())
-                    del d['match']
-                    del d['query']
-                    prefetch_csvout_w.writerow(d)
+                    prefetch_result = PrefetchResult(prefetch_query, found_sig, cmp_scaled=scaled, threshold_bp=args.threshold_bp)
+                    prefetch_csvout_w.writerow(prefetch_result.writedict)
 
             counters.append(counter)
 
@@ -803,14 +795,12 @@ def gather(args):
 
     # save CSV?
     if found and args.output:
-        fieldnames = GatherResult._fields
+        fieldnames = GatherResult.gather_write_cols
         with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
             w.writeheader()
             for result in found:
-                d = dict(result._asdict())
-                del d['match']                 # actual signature not in CSV.
-                w.writerow(d)
+                w.writerow(result.writedict)
 
     # save matching signatures?
     if found and args.save_matches:
@@ -970,14 +960,12 @@ def multigather(args):
 
             output_base = os.path.basename(query_filename)
             output_csv = output_base + '.csv'
-            fieldnames = GatherResult._fields
+            fieldnames = GatherResult.gather_write_cols
             with FileOutputCSV(output_csv) as fp:
                 w = csv.DictWriter(fp, fieldnames=fieldnames)
                 w.writeheader()
                 for result in found:
-                    d = dict(result._asdict())
-                    del d['match']      # actual signature not output to CSV!
-                    w.writerow(d)
+                    w.writerow(result.writedict)
 
             output_matches = output_base + '.matches.sig'
             with open(output_matches, 'wt') as fp:
@@ -1174,7 +1162,7 @@ def prefetch(args):
     csvout_fp = None
     csvout_w = None
     if args.output:
-        fieldnames = PrefetchResult._fields
+        fieldnames = PrefetchResult.prefetch_write_cols
         csvout_fp = FileOutput(args.output, 'wt').open()
         csvout_w = csv.DictWriter(csvout_fp, fieldnames=fieldnames)
         csvout_w.writeheader()
@@ -1231,10 +1219,7 @@ def prefetch(args):
 
             # output match info as we go
             if csvout_fp:
-                d = dict(result._asdict())
-                del d['match']                 # actual signatures not in CSV.
-                del d['query']
-                csvout_w.writerow(d)
+                csvout_w.writerow(result.writedict)
 
             # output match signatures as we go (maybe)
             matches_out.add(match)
