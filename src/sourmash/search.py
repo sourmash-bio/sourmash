@@ -213,6 +213,35 @@ class BaseResult:
         self.query_n_hashes = len(self.mh1.hashes)
         self.match_n_hashes = len(self.mh2.hashes)
 
+    def estimate_containment_ani(self):
+        # can only estimate ANI from scaled signatures
+        if self.cmp_scaled is not None:
+            self.potential_false_negative = False
+            query_containment_ani_info = self.cmp.mh1_containment_ani
+            match_containment_ani_info = self.cmp.mh1_containment_ani
+            # populate ani values to return
+            self.query_containment_ani = query_containment_ani_info.ani
+            self.match_containment_ani = match_containment_ani_info.ani
+            self.average_containment_ani = self.cmp.avg_containment_ani
+            self.max_containment_ani = max(self.query_containment_ani, self.match_containment_ani)
+            # check likelihood false negative
+            if any([match_containment_ani_info.p_exceeds_threshold, match_containment_ani_info.p_exceeds_threshold]):
+                self.potential_false_negative = True
+
+    def estimate_jaccard_ani(self):
+        # can only estimate ANI from scaled signatures
+        if self.cmp_scaled is not None:
+            self.potential_false_negative = False
+            jaccard_ani_info = self.cmp.mh1_containment_ani
+            # populate ani values to return
+            self.jaccard_ani = jaccard_ani_info.ani
+            # check likelihood false negative
+            if any(jaccard_ani_info.p_exceeds_threshold):
+                self.potential_false_negative = True
+            # check likehood jaccard error is too high
+            if jaccard_ani_info.je_exceeds_threshold:
+                self.jaccard_ani_untrustworthy = True
+
     @property
     def pass_threshold(self):
         return self.cmp.pass_threshold
@@ -231,6 +260,7 @@ class SearchResult(BaseResult):
     """
     SearchResult class supports 'sourmash search' operations.
     """
+    # TODO: need SearchType here in order to estimate ANI properly (call jaccard vs containment ani for scaled sigs)
     similarity: float = None
     cmp_scaled: int = None
     cmp_num: int = None
@@ -279,7 +309,9 @@ class PrefetchResult(BaseResult):
                            'f_match_query', 'match_filename', 'match_name', # here we use 'match_filename'
                            'match_md5', 'match_bp', 'query_filename', 'query_name',
                            'query_md5', 'query_bp', 'ksize', 'moltype', 'scaled',
-                           'query_n_hashes', 'query_abundance'] #, 'match_abundance'
+                           'query_n_hashes', 'query_abundance', 'query_containment_ani',
+                           'match_containment_ani', 'average_containment_ani', 'max_containment_ani',
+                           'potential_false_negative']#, 'match_abundance'
 
     def init_sigcomparison(self):
         # shared prefetch/gather initialization
@@ -294,6 +326,7 @@ class PrefetchResult(BaseResult):
         self.query_bp = self.mh1.covered_bp
         self.match_bp = self.mh2.covered_bp
         self.threshold = self.threshold_bp
+        self.estimate_containment_ani()
 
     def build_prefetch_result(self):
         # unique prefetch values
@@ -329,7 +362,9 @@ class GatherResult(PrefetchResult):
                          'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename', # here we use 'filename'
                          'name', 'md5', 'f_match_orig', 'unique_intersect_bp', 'gather_result_rank',
                          'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
-                         'moltype', 'scaled', 'query_n_hashes', 'query_abundance']
+                         'moltype', 'scaled', 'query_n_hashes', 'query_abundance', 'query_containment_ani',
+                         'match_containment_ani', 'average_containment_ani', 'max_containment_ani',
+                         'potential_false_negative']
 
     def init_gathersketchcomparison(self):
         # compare remaining gather hashes with match. Force at cmp_scaled. Force match flatten(), bc we don't need abunds.
