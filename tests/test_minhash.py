@@ -565,6 +565,30 @@ def test_mh_similarity_downsample_angular_value():
     jaccard = a.similarity(b, downsample=True, ignore_abundance=True)
     assert jaccard == 4. / 6.
 
+def test_mh_angular_similarity_fail():
+    # raise TypeError if calling angular_similarity directly and
+    # one or both sketches do not have abundance info
+    a = MinHash(0, 20, scaled=scaled50, track_abundance=True)
+    b = MinHash(0, 20, scaled=scaled50, track_abundance=False)
+    a_values = { 1:5, 3:3, 5:2, 8:2}
+    b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
+
+    a.set_abundances(a_values)
+    b.add_many(b_values.keys())
+
+    # one sketch lacks track_abundance
+    with pytest.raises(TypeError) as exc:
+        a.angular_similarity(b)
+    print(str(exc))
+    assert "Error: Angular (cosine) similarity requires both sketches to track hash abundance." in str(exc)
+    # both sketches lack track abundance
+    a = MinHash(0, 20, scaled=scaled50, track_abundance=False)
+    a.add_many(a_values.keys())
+    with pytest.raises(TypeError) as exc:
+        a.angular_similarity(b)
+    print(str(exc))
+    assert "Error: Angular (cosine) similarity requires both sketches to track hash abundance." in str(exc)
+
 
 def test_mh_similarity_downsample_true(track_abundance):
     # verify sim(a, b) == sim(b, a), with and without ignore_abundance
@@ -2650,6 +2674,97 @@ def test_containment(track_abundance):
 
     assert mh1.contained_by(mh2) == 1/4
     assert mh2.contained_by(mh1) == 1/2
+
+
+def test_sum_abundances(track_abundance):
+    "test sum_abundances"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    if track_abundance:
+        assert mh1.sum_abundances == 6
+        assert mh2.sum_abundances == 6
+    else:
+        assert mh1.sum_abundances == None
+        assert mh2.sum_abundances == None
+
+
+def test_mean_abundance(track_abundance):
+    "test mean_abundance"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    if track_abundance:
+        assert mh1.mean_abundance == 1.5
+        assert mh2.mean_abundance == 3
+    else:
+        assert not mh1.mean_abundance
+        assert not mh2.mean_abundance
+
+
+def test_median_abundance(track_abundance):
+    "test median_abundance"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    if track_abundance:
+        assert mh1.median_abundance == 1.5
+        assert mh2.median_abundance == 3
+    else:
+        assert not mh1.median_abundance
+        assert not mh2.median_abundance
+
+
+def test_std_abundance(track_abundance):
+    "test std_abundance"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    if track_abundance:
+        assert mh1.std_abundance == 0.5
+        assert mh2.std_abundance == 0.0
+    else:
+        assert not mh1.std_abundance
+        assert not mh2.std_abundance
+
+
+def test_covered_bp(track_abundance):
+    "test covered_bp"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(4, 21, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+
+    assert mh1.covered_bp == 4 # hmmm...
+    with pytest.raises(TypeError) as exc:
+        mh2.covered_bp
+    assert "can only calculate bp for scaled MinHashes" in str(exc)
 
 
 def test_containment_ANI():
