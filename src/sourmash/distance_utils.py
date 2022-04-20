@@ -44,10 +44,13 @@ class ANIResult:
     p_threshold: float = 1e-3
     p_exceeds_threshold: bool = field(init=False)
 
-    def __post_init__(self):
+    def check_dist_and_p_threshold(self):
         # check values
         self.dist = check_distance(self.dist)
         self.p_nothing_in_common, self.p_exceeds_threshold = check_prob_threshold(self.p_nothing_in_common, self.p_threshold)
+
+    def __post_init__(self):
+        self.check_dist_and_p_threshold()
 
     @property
     def ani(self):
@@ -62,8 +65,7 @@ class jaccardANIResult(ANIResult):
 
     def __post_init__(self):
         # check values
-        self.dist = check_distance(self.dist)
-        self.p_nothing_in_common, self.p_exceeds_threshold = check_prob_threshold(self.p_nothing_in_common, self.p_threshold)
+        self.check_dist_and_p_threshold()
         # check jaccard error
         if self.jaccard_error is not None:
             self.jaccard_error, self.je_exceeds_threshold = check_jaccard_error(self.jaccard_error, self.je_threshold)
@@ -83,8 +85,7 @@ class ciANIResult(ANIResult):
 
     def __post_init__(self):
         # check values
-        self.dist = check_distance(self.dist)
-        self.p_nothing_in_common, self.p_exceeds_threshold = check_prob_threshold(self.p_nothing_in_common, self.p_threshold)
+        self.check_dist_and_p_threshold()
 
         if self.dist_low is not None and self.dist_high is not None:
             self.dist_low = check_distance(self.dist_low)
