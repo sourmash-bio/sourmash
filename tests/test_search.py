@@ -425,6 +425,7 @@ def test_GatherResult():
     max_containment=ss4763.max_containment(ss47)
     f_orig_query = ss47.contained_by(ss4763)
     f_match_query=ss4763.contained_by(ss47)
+    orig_query_abunds = ss47.minhash.hashes
 
     # make some fake vals to check
     gather_result_rank = 1
@@ -434,7 +435,8 @@ def test_GatherResult():
                         gather_querymh=remaining_mh,
                         gather_result_rank=gather_result_rank,
                         total_abund = sum_abunds,
-                        orig_query_len=len(ss47.minhash))
+                        orig_query_len=len(ss47.minhash),
+                        orig_query_abunds=orig_query_abunds)
 
     assert res.query_name == ss47.name
     assert res.match_name == ss4763.name
@@ -459,18 +461,9 @@ def test_GatherResult():
     # gather specific
     assert res.intersect_bp == intersect_bp
     assert res.max_containment == max_containment
-    # to do -- make sure these vals are correct!
-#    assert res.f_match_orig == f_match_query
-#    assert res.f_orig_query == f_orig_query
-#    assert res.unique_intersect_bp == 2709000
-#    assert res.f_match == 0.3435201623129597
-#    assert res.f_unique_to_query == 1.0
-#    assert res.f_unique_weighted ==  2.709
-#    assert res.average_abund == 1.0
-#    assert res.median_abund == 1.0
-#    assert res.std_abund == 0
-#    assert res.gather_result_rank == gather_result_rank
-#    assert res.remaining_bp == 2468000
+    prefetch_write_dict = list(res.prefetchwritedict.keys())
+    print(prefetch_write_dict)
+    assert set(prefetch_write_dict) == set(PrefetchResult.prefetch_write_cols)
 
 
 def test_GatherResult_incompatible_sigs():
@@ -478,13 +471,15 @@ def test_GatherResult_incompatible_sigs():
     ss4763_file = utils.get_test_data('47+63.fa.sig')
     ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
     ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype='dna')
+    orig_query_abunds = ss47.minhash.hashes
 
     with pytest.raises(TypeError) as exc:
         GatherResult(ss47, ss4763, cmp_scaled=1,
                         gather_querymh=ss47.minhash,
                         gather_result_rank=1,
                         total_abund = 1,
-                        orig_query_len=len(ss47.minhash))
+                        orig_query_len=len(ss47.minhash),
+                        orig_query_abunds=orig_query_abunds)
     print(str(exc))
     assert "Error: prefetch and gather results must be between scaled signatures." in str(exc)
 
@@ -494,13 +489,15 @@ def test_GatherResult_incomplete_input_cmpscaled():
     ss4763_file = utils.get_test_data('47+63.fa.sig')
     ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
     ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype='dna')
+    orig_query_abunds = ss47.minhash.hashes
 
     with pytest.raises(ValueError) as exc:
         GatherResult(ss47, ss4763, cmp_scaled=None,
                         gather_querymh=ss47.minhash,
                         gather_result_rank=1,
                         total_abund = 1,
-                        orig_query_len=len(ss47.minhash))
+                        orig_query_len=len(ss47.minhash),
+                        orig_query_abunds=orig_query_abunds)
     print(str(exc))
     assert "Error: must provide comparison scaled value ('cmp_scaled') for GatherResult" in str(exc)
 
@@ -510,13 +507,15 @@ def test_GatherResult_incomplete_input_gathermh():
     ss4763_file = utils.get_test_data('47+63.fa.sig')
     ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
     ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype='dna')
+    orig_query_abunds = ss47.minhash.hashes
 
     with pytest.raises(ValueError) as exc:
         GatherResult(ss47, ss4763, cmp_scaled=1000,
                         gather_querymh=None,
                         gather_result_rank=1,
                         total_abund = 1,
-                        orig_query_len=len(ss47.minhash))
+                        orig_query_len=len(ss47.minhash),
+                        orig_query_abunds=orig_query_abunds)
     print(str(exc))
     assert "Error: must provide current gather sketch (remaining hashes) for GatherResult" in str(exc)
 
@@ -526,13 +525,15 @@ def test_GatherResult_incomplete_input_gather_result_rank():
     ss4763_file = utils.get_test_data('47+63.fa.sig')
     ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
     ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype='dna')
+    orig_query_abunds = ss47.minhash.hashes
 
     with pytest.raises(ValueError) as exc:
         GatherResult(ss47, ss4763, cmp_scaled=1000,
                         gather_querymh=ss47.minhash,
                         gather_result_rank=None,
                         total_abund = 1,
-                        orig_query_len=len(ss47.minhash))
+                        orig_query_len=len(ss47.minhash),
+                        orig_query_abunds=orig_query_abunds)
     print(str(exc))
     assert "Error: must provide 'gather_result_rank' to GatherResult" in str(exc)
 
@@ -542,13 +543,15 @@ def test_GatherResult_incomplete_input_total_abund():
     ss4763_file = utils.get_test_data('47+63.fa.sig')
     ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
     ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype='dna')
+    orig_query_abunds = ss47.minhash.hashes
 
     with pytest.raises(ValueError) as exc:
         GatherResult(ss47, ss4763, cmp_scaled=1000,
                         gather_querymh=ss47.minhash,
                         gather_result_rank=1,
                         total_abund = None,
-                        orig_query_len=len(ss47.minhash))
+                        orig_query_len=len(ss47.minhash),
+                        orig_query_abunds=orig_query_abunds)
     print(str(exc))
     assert "Error: must provide sum of all abundances ('total_abund') to GatherResult" in str(exc)
 
@@ -557,6 +560,37 @@ def test_GatherResult_incomplete_input_total_abund():
                         gather_querymh=ss47.minhash,
                         gather_result_rank=1,
                         total_abund = 0,
-                        orig_query_len=len(ss47.minhash))
+                        orig_query_len=len(ss47.minhash),
+                        orig_query_abunds=orig_query_abunds)
+    print(str(exc))
+    assert "Error: must provide sum of all abundances ('total_abund') to GatherResult" in str(exc)
+
+
+def test_GatherResult_incomplete_input_orig_query_abunds():
+    ss47_file = utils.get_test_data('47.fa.sig')
+    ss4763_file = utils.get_test_data('47+63.fa.sig')
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype='dna')
+    orig_query_abunds = None
+
+    with pytest.raises(ValueError) as exc:
+        GatherResult(ss47, ss4763, cmp_scaled=1000,
+                        gather_querymh=ss47.minhash,
+                        gather_result_rank=1,
+                        total_abund = None,
+                        orig_query_len=len(ss47.minhash),
+                        orig_query_abunds=orig_query_abunds)
+    print(str(exc))
+    assert "Error: must provide sum of all abundances ('total_abund') to GatherResult" in str(exc)
+
+    orig_query_abunds = {}
+
+    with pytest.raises(ValueError) as exc:
+        GatherResult(ss47, ss4763, cmp_scaled=1000,
+                        gather_querymh=ss47.minhash,
+                        gather_result_rank=1,
+                        total_abund = 0,
+                        orig_query_len=len(ss47.minhash),
+                        orig_query_abunds=orig_query_abunds)
     print(str(exc))
     assert "Error: must provide sum of all abundances ('total_abund') to GatherResult" in str(exc)

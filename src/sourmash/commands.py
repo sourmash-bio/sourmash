@@ -16,7 +16,7 @@ from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
 from .sourmash_args import (FileOutput, FileOutputCSV,
                             SaveSignaturesToLocation)
-from .search import prefetch_database, calculate_prefetch_info, SearchResult, PrefetchResult, GatherResult
+from .search import prefetch_database, SearchResult, PrefetchResult, GatherResult
 from .index import LazyLinearIndex
 
 WATERMARK_SIZE = 10000
@@ -713,7 +713,7 @@ def gather(args):
                 if prefetch_csvout_fp:
                     assert scaled
                     # calculate intersection stats and info
-                    prefetch_result = calculate_prefetch_info(prefetch_query, found_sig, scaled, args.threshold_bp)
+                    prefetch_result = PrefetchResult(prefetch_query, found_sig, cmp_scaled=scaled, threshold_bp=args.threshold_bp)
                     prefetch_csvout_w.writerow(prefetch_result.writedict)
 
             counters.append(counter)

@@ -99,10 +99,6 @@ class FracMinHashComparison(BaseMinHashComparison):
         # for these, do we want the originals, or the cmp_scaled versions?? (or both?). do we need them at all?
         self.mh1_scaled = self.mh1.scaled
         self.mh2_scaled = self.mh2.scaled
-        self.mh1_n_hashes = len(self.mh1)
-        self.mh2_n_hashes = len(self.mh2)
-        self.mh1_bp = self.mh1.covered_bp
-        self.mh2_bp = self.mh2.covered_bp
 
     @property
     def pass_threshold(self):
@@ -128,20 +124,15 @@ class FracMinHashComparison(BaseMinHashComparison):
     def avg_containment(self):
         return np.mean([self.mh1_containment, self.mh2_containment])
 
-    @property
-    def mh1_weighted_intersection(self):
-         # map mh1 hash abundances to all intersection hashes.
-        if self.ignore_abundance or not self.mh1.track_abundance:
-            return self.intersect_mh # or do we want to set all abundances to 1?
-        else:
-        # current functionality inflates by original minhash (not downsampled)-- is that what we want??
-            return self.intersect_mh.inflate(self.mh1)
-
-    @property
-    def mh2_weighted_intersection(self):
-         # map mh2 hash abundances to all intersection hashes.
-        if self.ignore_abundance or not self.mh2.track_abundance:
-            return self.intersect_mh  # or do we want to set all abundances to 1?
-        else:
-        # current functionality inflates by original minhash (not downsampled)-- is that what we want??
-            return self.intersect_mh.inflate(self.mh2)
+    def weighted_intersection(self, from_mh=None, from_abundD={}):
+         # map abundances to all intersection hashes.
+        abund_mh = self.intersect_mh.copy_and_clear()
+        abund_mh.track_abundance = True
+        if from_mh is not None:
+            from_abundD = from_mh.hashes
+        if from_abundD is not None:
+            #abundD[k] for k in intersect_mh.hashes
+            abunds = {k: from_abundD.get(k, 1) for k in self.intersect_mh.hashes }
+            abund_mh.set_abundances(abunds)
+            return abund_mh
+        return self.intersect_mh # or do we want to set all abundances to 1?

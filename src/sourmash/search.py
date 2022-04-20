@@ -296,6 +296,7 @@ class PrefetchResult(BaseResult):
         self.max_containment = self.cmp.max_containment
         self.query_bp = self.mh1.covered_bp
         self.match_bp = self.mh2.covered_bp
+        self.threshold = self.threshold_bp
 
     def build_prefetch_result(self):
         # unique prefetch values
@@ -328,13 +329,7 @@ class GatherResult(PrefetchResult):
    # orig_query_len includes len(noident_mh), which has been subtracted out of query, right? This subtraction is an issue for query_covered bp,etc!
    # can we set some original query info so we can get the right vals to output?
     orig_query_len: int = None
-
-    # pass in for now bc I'm not calculating correctly...
-    remaining_bp: int = None
-    average_abund: int = None
-    median_abund: int = None
-    std_abund: int = None
-    f_unique_weighted: int =None
+    orig_query_abunds: list = None
 
     gather_write_cols = ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
                          'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename', # here we use 'filename'
@@ -343,9 +338,8 @@ class GatherResult(PrefetchResult):
                          'moltype', 'scaled', 'query_n_hashes', 'query_abundance']
 
     def init_gathersketchcomparison(self):
-        # compare remaining gather hashes with match. Force at cmp_scaled. Do we need for force match flatten()?
+        # compare remaining gather hashes with match. Force at cmp_scaled. Force match flatten(), bc we don't need abunds.
         self.gather_comparison = FracMinHashComparison(self.gather_querymh, self.match.minhash.flatten(), cmp_scaled=self.cmp_scaled, threshold_bp=self.threshold_bp)
-        #self.gather_comparison = FracMinHashComparison(self.gather_querymh, self.match.minhash, cmp_scaled=self.cmp_scaled, threshold_bp=self.threshold_bp)
 
     def check_gatherresult_input(self):
         # check we have what we need:
@@ -357,31 +351,41 @@ class GatherResult(PrefetchResult):
             raise ValueError("Error: must provide 'gather_result_rank' to GatherResult")
         if not self.total_abund: # catch total_abund = 0 as well
             raise ValueError("Error: must provide sum of all abundances ('total_abund') to GatherResult")
+        if not self.orig_query_abunds:
+            raise ValueError("Error: must provide original query abundances ('orig_query_abunds') to GatherResult")
 
     def build_gather_result(self):
         # build gather specific attributes
-        self.f_match_orig = self.cmp.mh2_containment #original match containment
-        self.f_match = self.gather_comparison.mh2_containment # unique match containment
-        #intersect bp of remaining, unaccounted for hashes with the database match
+    
+        # calculate intersection with query hashes:
         self.unique_intersect_bp = self.gather_comparison.intersect_bp
+    
+        # calculate fraction of subject match with orig query
+        self.f_match_orig = self.cmp.mh2_containment
+
+        # calculate fractions wrt first denominator - genome size
+        self.f_match = self.gather_comparison.mh2_containment # unique match containment
         self.f_orig_query = len(self.cmp.intersect_mh) / self.orig_query_len
+        assert self.gather_comparison.intersect_mh.contained_by(self.gather_comparison.mh1_cmp) == 1.0
+    
+        # calculate fractions wrt second denominator - metagenome size
+        assert self.gather_comparison.intersect_mh.contained_by(self.gather_comparison.mh2_cmp) == 1.0
         self.f_unique_to_query = len(self.gather_comparison.intersect_mh)/self.orig_query_len
 
-    #def build_gather_result_incorrect(self):
-    #    # get current query-weighted intersection
-    #    self.query_weighted_unique_intersection = self.gather_comparison.mh1_weighted_intersection
-    #    # calculate scores weighted by abundances
-    #    #f_unique_weighted = sum((orig_query_abunds[k] for k in intersect_mh.hashes ))
-    #    #f_unique_weighted /= sum_abunds
-    #    if self.query_abundance:
-    #        self.f_unique_weighted =  float(self.query_weighted_unique_intersection.sum_abundances) / self.total_abund
-    #    else:
-    #        self.f_unique_weighted = self.f_unique_to_query # is this right?
-    #    self.remaining_bp = self.query_bp - self.gather_comparison.intersect_bp
-    #    #self.remaining_bp = self.gather_comparison.mh1_bp - self.gather_comparison.intersect_bp
-    #    self.average_abund = self.query_weighted_unique_intersection.mean_abundance
-    #    self.median_abund = self.query_weighted_unique_intersection.median_abundance
-    #    self.std_abund = self.query_weighted_unique_intersection.std_abundance
+        # here, need to make sure to use the mh1_cmp (bc was downsampled to cmp_scaled)
+        self.remaining_bp = (self.gather_comparison.mh1_cmp.covered_bp - self.gather_comparison.intersect_bp)
+
+        # calculate stats on abundances, if desired.
+        self.average_abund, self.median_abund, self.std_abund = None, None, None
+        if not self.ignore_abundance:
+            self.query_weighted_unique_intersection = self.gather_comparison.weighted_intersection(from_abundD = self.orig_query_abunds)
+            self.average_abund = self.query_weighted_unique_intersection.mean_abundance
+            self.median_abund = self.query_weighted_unique_intersection.median_abundance
+            self.std_abund = self.query_weighted_unique_intersection.std_abundance
+             # calculate scores weighted by abundances
+            self.f_unique_weighted =  float(self.query_weighted_unique_intersection.sum_abundances) / self.total_abund
+        else:
+            self.f_unique_weighted = self.f_unique_to_query
 
     def __post_init__(self):
         self.check_gatherresult_input()
@@ -616,44 +620,10 @@ class GatherDatabases:
         query_mh = query.minhash.downsample(scaled=scaled)
         found_mh = best_match.minhash.downsample(scaled=scaled).flatten()
 
-        # calculate intersection with query hashes:
-        unique_intersect_bp = scaled * len(intersect_mh)
-        intersect_orig_mh = orig_query_mh & found_mh
-        intersect_bp = scaled * len(intersect_orig_mh)
-
-        # calculate fractions wrt first denominator - genome size
-        assert intersect_mh.contained_by(found_mh) == 1.0  ## TODO: add this check to GatherResult?
-        f_match = len(intersect_mh) / len(found_mh)
-        f_orig_query = len(intersect_orig_mh) / orig_query_len
-
-        # calculate fractions wrt second denominator - metagenome size
-        assert intersect_mh.contained_by(orig_query_mh) == 1.0
-        f_unique_to_query = len(intersect_mh) / orig_query_len
-
-        # calculate fraction of subject match with orig query
-        f_match_orig = found_mh.contained_by(orig_query_mh)
-
-        # calculate scores weighted by abundances
-        f_unique_weighted = sum((orig_query_abunds[k] for k in intersect_mh.hashes ))
-        f_unique_weighted /= sum_abunds
-
-        # calculate stats on abundances, if desired.
-        average_abund, median_abund, std_abund = None, None, None
-        if track_abundance:
-            intersect_abunds = (orig_query_abunds[k] for k in intersect_mh.hashes )
-            intersect_abunds = list(intersect_abunds)
-
-            average_abund = np.mean(intersect_abunds)
-            median_abund = np.median(intersect_abunds)
-            std_abund = np.std(intersect_abunds)
-
         # construct a new query, subtracting hashes found in previous one.
         new_query_mh = query_mh.to_mutable()
         new_query_mh.remove_many(found_mh)
         new_query = SourmashSignature(new_query_mh)
-
-        remaining_bp = scaled * len(new_query_mh)
-        #remaining_bp = new_query_mh.bp
 
         # compute weighted_missed for remaining query hashes
         query_hashes = set(query_mh.hashes) - set(found_mh.hashes)
@@ -671,20 +641,8 @@ class GatherDatabases:
                               ignore_abundance= not track_abundance,
                               threshold_bp=threshold_bp,
                               orig_query_len=orig_query_len,
-                              f_unique_weighted=f_unique_weighted,
-                              average_abund=average_abund,
-                              median_abund=median_abund,
-                              std_abund=std_abund,
-                              remaining_bp=remaining_bp,
+                              orig_query_abunds = self.orig_query_abunds,
                               )
-
-        # temp dev: make sure these vals are correct
-        assert result.remaining_bp == remaining_bp
-        assert result.f_unique_weighted == f_unique_weighted
-        assert result.average_abund == average_abund
-        assert result.median_abund == median_abund
-        assert result.std_abund == std_abund
-
 
         self.result_n += 1
         self.query = new_query
@@ -697,34 +655,6 @@ class GatherDatabases:
 ### prefetch code
 ###
 
-def calculate_prefetch_info(query, match, scaled, threshold_bp):
-#def calculate_prefetch_info(query, match, threshold_bp):
-    """
-    For a single query and match, calculate all search info and return a PrefetchResult.
-    """
-    # base intersections on downsampled minhashes
-#    query_mh = query.minhash
-
-   # scaled = max(scaled, match.minhash.scaled)
- #   query_mh = query_mh.downsample(scaled=scaled)
- #   db_mh = match.minhash.flatten().downsample(scaled=scaled)
-
-    # calculate db match intersection with query hashes:
-#    intersect_mh = query_mh & db_mh
-#    threshold = threshold_bp / scaled
-#    assert len(intersect_mh) >= threshold
-
-    #f_query_match = db_mh.contained_by(query_mh)
-    #f_match_query = query_mh.contained_by(db_mh)
-    #max_containment = max(f_query_match, f_match_query)
-
-    # build a PrefetchResult
-    result = PrefetchResult(query,match, threshold_bp=threshold_bp)
-    assert result.pass_threshold
-
-    return result
-
-
 def prefetch_database(query, database, threshold_bp):
     """
     Find all matches to `query_mh` >= `threshold_bp` in `database`.
@@ -735,6 +665,6 @@ def prefetch_database(query, database, threshold_bp):
     # iterate over all signatures in database, find matches
     for result in database.prefetch(query, threshold_bp):
         #result = calculate_prefetch_info(query, result.signature, threshold_bp)
-        result = calculate_prefetch_info(query, result.signature, scaled, threshold_bp)
-        #result = PrefetchResult(query=query, match=result.signature, search_scaled=scaled, threshold_bp=threshold_bp)
+        result = PrefetchResult(query, result.signature, threshold_bp=threshold_bp)
+        assert result.pass_threshold
         yield result

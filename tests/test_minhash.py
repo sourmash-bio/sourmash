@@ -2691,8 +2691,8 @@ def test_sum_abundances(track_abundance):
         assert mh1.sum_abundances == 6
         assert mh2.sum_abundances == 6
     else:
-        assert mh1.sum_abundances == 4
-        assert mh2.sum_abundances == 2
+        assert mh1.sum_abundances == None
+        assert mh2.sum_abundances == None
 
 
 def test_mean_abundance(track_abundance):
