@@ -54,8 +54,8 @@ class BaseMinHashComparison:
         return self.mh1_cmp.jaccard(self.mh2_cmp)
 
     @property
-    def jaccard_ani(self, jaccard=None, prob_threshold=1e-3,  err_threshold=1e-4):
-        return self.mh1_cmp.jaccard_ani(self.mh2_cmp, jaccard=jaccard, prob_threshold=prob_threshold, err_threshold=err_threshold)
+    def jaccard_ani(self):
+        return self.mh1_cmp.jaccard_ani(self.mh2_cmp)
 
     @property
     def angular_similarity(self):
@@ -107,7 +107,9 @@ class FracMinHashComparison(BaseMinHashComparison):
 
     @property
     def mh1_containment_ani(self):
-        return self.mh1_cmp.containment_ani(self.mh2_cmp, confidence=self.ani_confidence, estimate_ci=self.estimate_ani_ci)
+        return self.mh1_cmp.containment_ani(self.mh2_cmp,
+                                            confidence=self.ani_confidence,
+                                            estimate_ci=self.estimate_ani_ci)
 
     @property
     def mh2_containment(self):
@@ -115,7 +117,9 @@ class FracMinHashComparison(BaseMinHashComparison):
 
     @property
     def mh2_containment_ani(self):
-        return self.mh2_cmp.containment_ani(self.mh1_cmp, confidence=self.ani_confidence, estimate_ci=self.estimate_ani_ci)
+        return self.mh2_cmp.containment_ani(self.mh1_cmp,
+                                            confidence=self.ani_confidence,
+                                            estimate_ci=self.estimate_ani_ci)
 
     @property
     def max_containment(self):
@@ -123,7 +127,9 @@ class FracMinHashComparison(BaseMinHashComparison):
 
     @property
     def max_containment_ani(self):
-        return self.mh1_cmp.max_containment_ani(self.mh2_cmp, confidence=self.ani_confidence, estimate_ci=self.estimate_ani_ci)
+        return self.mh1_cmp.max_containment_ani(self.mh2_cmp,
+                                                confidence=self.ani_confidence,
+                                                estimate_ci=self.estimate_ani_ci)
 
     @property
     def avg_containment(self):
