@@ -937,7 +937,7 @@ database using SQLite. To prepare such a database, use
 
 All sourmash commands work with either type of LCA database (the
 default JSON database, and the SQLite version). SQLite databases are
-larger than JSON databases on disk but are typically much faster and
+larger than JSON databases on disk but are typically much faster
 to load and search, and use much less memory.
 
 ### `sourmash lca rankinfo` - examine an LCA database
