@@ -4,6 +4,7 @@
 
 from pyparsing import original_text_for
 import pytest
+import numpy as np
 import sourmash_tst_utils as utils
 
 from sourmash import search, SourmashSignature, MinHash, load_one_signature
@@ -366,6 +367,8 @@ def test_PrefetchResult():
     max_containment=ss4763.max_containment(ss47)
     f_match_query=ss47.contained_by(ss4763)
     f_query_match=ss4763.contained_by(ss47)
+    queryc_ani = ss47.containment_ani(ss4763)
+    matchc_ani = ss4763.containment_ani(ss47)
 
     res = PrefetchResult(ss47, ss4763, cmp_scaled = scaled)
 
@@ -393,6 +396,15 @@ def test_PrefetchResult():
     assert res.max_containment == max_containment
     assert res.f_query_match == f_query_match
     assert res.f_match_query == f_match_query
+
+    # check ani
+    assert res.query_containment_ani == queryc_ani.ani
+    print(queryc_ani.ani)
+    print(matchc_ani.ani)
+    assert res.match_containment_ani == matchc_ani.ani
+    assert res.max_containment_ani == max(queryc_ani.ani, matchc_ani.ani)
+    assert res.average_containment_ani == np.mean([queryc_ani.ani, matchc_ani.ani])
+    assert res.potential_false_negative == False
 
 
 def test_PrefetchResult_incompatible_sigs():
@@ -423,9 +435,10 @@ def test_GatherResult():
 
     intersect_bp = len(intersect_mh) * scaled
     max_containment=ss4763.max_containment(ss47)
-    f_orig_query = ss47.contained_by(ss4763)
-    f_match_query=ss4763.contained_by(ss47)
+    f_match_query = ss47.contained_by(ss4763)
     orig_query_abunds = ss47.minhash.hashes
+    queryc_ani = ss47.containment_ani(ss4763)
+    matchc_ani = ss4763.containment_ani(ss47)
 
     # make some fake vals to check
     gather_result_rank = 1
@@ -464,6 +477,16 @@ def test_GatherResult():
     prefetch_write_dict = list(res.prefetchwritedict.keys())
     print(prefetch_write_dict)
     assert set(prefetch_write_dict) == set(PrefetchResult.prefetch_write_cols)
+    assert res.f_match_query == f_match_query
+
+    # check ani
+    assert res.query_containment_ani == queryc_ani.ani
+    print(queryc_ani.ani)
+    print(matchc_ani.ani)
+    assert res.match_containment_ani == matchc_ani.ani
+    assert res.max_containment_ani == max(queryc_ani.ani, matchc_ani.ani)
+    assert res.average_containment_ani == np.mean([queryc_ani.ani, matchc_ani.ani])
+    assert res.potential_false_negative == False
 
 
 def test_GatherResult_incompatible_sigs():

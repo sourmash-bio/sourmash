@@ -218,7 +218,7 @@ class BaseResult:
         if self.cmp_scaled is not None:
             self.potential_false_negative = False
             query_containment_ani_info = self.cmp.mh1_containment_ani
-            match_containment_ani_info = self.cmp.mh1_containment_ani
+            match_containment_ani_info = self.cmp.mh2_containment_ani
             # populate ani values to return
             self.query_containment_ani = query_containment_ani_info.ani
             self.match_containment_ani = match_containment_ani_info.ani
