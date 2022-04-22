@@ -178,8 +178,12 @@ class BaseResult:
         self.mh1 = self.query.minhash
         self.mh2 = self.match.minhash
 
-    def build_fracminhashcomparison(self, cmp_scaled=None, threshold_bp=None):
-        self.cmp = FracMinHashComparison(self.mh1, self.mh2, cmp_scaled=cmp_scaled, threshold_bp=threshold_bp, ignore_abundance=self.ignore_abundance)
+    def build_fracminhashcomparison(self, *, cmp_scaled=None, threshold_bp=None, estimate_ani_ci=None, ani_confidence = None):
+        self.cmp = FracMinHashComparison(self.mh1, self.mh2, cmp_scaled=cmp_scaled,
+                                        threshold_bp=threshold_bp,
+                                        ignore_abundance=self.ignore_abundance,
+                                        estimate_ani_ci=estimate_ani_ci,
+                                        ani_confidence=ani_confidence)
         self.scaled = self.cmp.cmp_scaled
         self.query_scaled = self.mh1.scaled
         self.match_scaled = self.mh2.scaled
@@ -213,35 +217,6 @@ class BaseResult:
         self.query_n_hashes = len(self.mh1.hashes)
         self.match_n_hashes = len(self.mh2.hashes)
 
-    def estimate_containment_ani(self):
-        # can only estimate ANI from scaled signatures
-        if self.cmp_scaled is not None:
-            self.potential_false_negative = False
-            query_containment_ani_info = self.cmp.mh1_containment_ani
-            match_containment_ani_info = self.cmp.mh2_containment_ani
-            # populate ani values to return
-            self.query_containment_ani = query_containment_ani_info.ani
-            self.match_containment_ani = match_containment_ani_info.ani
-            self.average_containment_ani = self.cmp.avg_containment_ani
-            self.max_containment_ani = max(self.query_containment_ani, self.match_containment_ani)
-            # check likelihood false negative
-            if any([match_containment_ani_info.p_exceeds_threshold, match_containment_ani_info.p_exceeds_threshold]):
-                self.potential_false_negative = True
-
-    def estimate_jaccard_ani(self):
-        # can only estimate ANI from scaled signatures
-        if self.cmp_scaled is not None:
-            self.potential_false_negative = False
-            jaccard_ani_info = self.cmp.mh1_containment_ani
-            # populate ani values to return
-            self.jaccard_ani = jaccard_ani_info.ani
-            # check likelihood false negative
-            if any(jaccard_ani_info.p_exceeds_threshold):
-                self.potential_false_negative = True
-            # check likehood jaccard error is too high
-            if jaccard_ani_info.je_exceeds_threshold:
-                self.jaccard_ani_untrustworthy = True
-
     @property
     def pass_threshold(self):
         return self.cmp.pass_threshold
@@ -265,6 +240,7 @@ class SearchResult(BaseResult):
     cmp_scaled: int = None
     cmp_num: int = None
     threshold_bp: int = None
+    searchtype: SearchType = None
 
     #columns for standard SearchResult output
     search_write_cols = ['similarity', 'md5', 'filename', 'name',  # here we use 'filename'
@@ -281,6 +257,10 @@ class SearchResult(BaseResult):
     def __post_init__(self):
         self.init_sigcomparison() # build sketch comparison
         self.check_similarity()
+        if self.cmp_scaled is not None and self.searchtype is not None:
+            self.estimate_search_ani()
+            ani_cols = ["ani"]
+            self.search_write_cols.append(ani_cols)
 
     def check_similarity(self):
         # for now, require similarity for SearchResult
@@ -288,6 +268,24 @@ class SearchResult(BaseResult):
         # then allow similarity to be calculated here according to SearchType.
         if self.similarity is None:
             raise ValueError("Error: Must provide 'similarity' for SearchResult.")
+
+    def estimate_search_ani(self):
+        if self.cmp_scaled is None:
+            raise TypeError("ANI can only be estimated from scaled signatures.")
+        if self.searchtype == SearchType.CONTAINMENT:
+            self.self.cmp.estimate_mh1_containment_ani(containment = self.similarity)
+            self.ani == self.cmp.mh1_containment_ani
+        elif self.searchtype == SearchType.MAX_CONTAINMENT:
+            self.self.cmp.estimate_max_containment_ani(max_containment = self.similarity)
+            self.ani == self.cmp.max_containment_ani
+        elif self.searchtype == SearchType.JACCARD:
+            #future: if we want to est ANI from abund searches, do it here (would use jaccard)
+            self.cmp.estimate_jaccard_ani(jaccard=self.similarity)
+            self.ani = self.cmp.jaccard_ani
+            # not really sure what to do with this yet. Just report?
+            self.ani_untrustworthy = self.cmp.jaccard_ani_untrustworthy
+        # this can be set from any of the above
+        self.potential_false_negative = self.cmp.potential_false_negative
 
     @property
     def writedict(self):
@@ -303,6 +301,8 @@ class PrefetchResult(BaseResult):
     """
     cmp_scaled: int = None
     threshold_bp: int = None
+    estimate_ani_ci: bool = False
+    ani_confidence: float = 0.95
 
     # current prefetch columns
     prefetch_write_cols = ['intersect_bp', 'jaccard', 'max_containment', 'f_query_match',
@@ -317,7 +317,10 @@ class PrefetchResult(BaseResult):
         # shared prefetch/gather initialization
         self.init_result()
         if all([self.mh1.scaled, self.mh2.scaled]):
-            self.build_fracminhashcomparison(cmp_scaled = self.cmp_scaled, threshold_bp = self.threshold_bp)
+            self.build_fracminhashcomparison(cmp_scaled = self.cmp_scaled,
+                                             threshold_bp = self.threshold_bp,
+                                             estimate_ani_ci = self.estimate_ani_ci,
+                                             ani_confidence = self.ani_confidence)
         else:
             raise TypeError("Error: prefetch and gather results must be between scaled signatures.")
         self.get_cmpinfo() # grab comparison metadata
@@ -327,6 +330,25 @@ class PrefetchResult(BaseResult):
         self.match_bp = self.mh2.covered_bp
         self.threshold = self.threshold_bp
         self.estimate_containment_ani()
+
+    def estimate_containment_ani(self):
+        self.cmp.estimate_all_containment_ani()
+        self.query_containment_ani = self.cmp.mh1_containment_ani
+        self.match_containment_ani = self.cmp.mh2_containment_ani
+        self.average_containment_ani = self.cmp.avg_containment_ani
+        self.max_containment_ani = self.cmp.max_containment_ani
+        self.potential_false_negative = self.cmp.potential_false_negative
+        if self.estimate_ani_ci:
+            self.handle_ani_ci()
+
+    def handle_ani_ci(self):
+        self.query_containment_ani_low == self.cmp.mh1_containment_ani_low
+        self.query_containment_ani_high == self.cmp.mh1_containment_ani_high
+        self.match_containment_ani_low == self.cmp.mh2_containment_ani_low
+        self.match_containment_ani_high == self.cmp.mh2_containment_ani_high
+        ci_cols = ["query_containment_ani_low", "query_containment_ani_high",
+                   "match_containment_ani_low", "match_containment_ani_high"]
+        self.prefetch_write_cols.append(ci_cols)
 
     def build_prefetch_result(self):
         # unique prefetch values
@@ -477,11 +499,21 @@ def search_databases_with_flat_query(query, databases, **kwargs):
     # sort results on similarity (reverse)
     results.sort(key=lambda x: -x[0])
 
+    # redefine searchtype and pass in here
+    # repetitive/not optimal - would it be better to produce SearchResult from db.search?
+    if kwargs.get('do_containment'):
+        search_type = SearchType.CONTAINMENT
+    elif kwargs.get('do_max_containment'):
+        search_type = SearchType.MAX_CONTAINMENT
+    else:
+        search_type = SearchType.JACCARD
+
     x = []
     for (score, match, filename) in results:
         x.append(SearchResult(query, match,
                                similarity=score,
-                               filename = filename))
+                               filename = filename,
+                               searchtype=search_type))
     return x
 
 
