@@ -161,6 +161,21 @@ def test_contained_requires_scaled_2(track_abundance):
         mh1.max_containment(mh2)
 
 
+def test_contained_requires_scaled_3(track_abundance):
+    # test that avg_containment requires scaled signatures
+    mh1 = MinHash(1, 4, track_abundance=track_abundance)
+    mh2 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_sequence('ATGC')
+    mh2.add_sequence('ATGC')
+
+    with pytest.raises(TypeError):
+        mh2.avg_containment(mh1)
+
+    with pytest.raises(TypeError):
+        mh1.avg_containment(mh2)
+
+
 def test_bytes_dna(track_abundance):
     mh = MinHash(1, 4, track_abundance=track_abundance)
     mh.add_sequence('ATGC')
@@ -2299,6 +2314,43 @@ def test_max_containment_equal():
     assert mh2.max_containment(mh1) == 1
 
 
+def test_avg_containment():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh2.add_many((1, 5))
+
+    assert mh1.contained_by(mh2) == 1/4
+    assert mh2.contained_by(mh1) == 1/2
+    assert mh1.avg_containment(mh2) == 0.375
+    assert mh2.avg_containment(mh1) == 0.375
+
+
+def test_avg_containment_empty():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+
+    assert mh1.contained_by(mh2) == 0
+    assert mh2.contained_by(mh1) == 0
+    assert mh1.avg_containment(mh2) == 0
+    assert mh2.avg_containment(mh1) == 0
+
+
+def test_avg_containment_equal():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh2.add_many((1, 2, 3, 4))
+
+    assert mh1.contained_by(mh2) == 1
+    assert mh2.contained_by(mh1) == 1
+    assert mh1.avg_containment(mh2) == 1
+    assert mh2.avg_containment(mh1) == 1
+
 def test_frozen_and_mutable_1(track_abundance):
     # mutable minhashes -> mutable minhashes creates new copy
     mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
@@ -2798,9 +2850,12 @@ def test_containment_ANI_precalc_containment():
     s1c = mh1.contained_by(mh2)
     s2c = mh2.contained_by(mh1)
     mc = max(s1c, s2c)
+    ac = (s1c + s2c)/2
+    print(ac)
 
     assert mh1.containment_ani(mh2, estimate_ci=True) ==  mh1.containment_ani(mh2, containment=s1c, estimate_ci=True)
     assert mh2.containment_ani(mh1) ==  mh2.containment_ani(mh1, containment=s2c)
+    assert mh1.max_containment_ani(mh2) ==  mh2.max_containment_ani(mh1)
     assert mh1.max_containment_ani(mh2) ==  mh1.max_containment_ani(mh2, max_containment=mc)
     assert mh1.max_containment_ani(mh2) ==  mh2.max_containment_ani(mh1, max_containment=mc)
 

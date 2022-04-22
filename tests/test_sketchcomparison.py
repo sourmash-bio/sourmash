@@ -37,7 +37,7 @@ def test_FracMinHashComparison(track_abundance):
     assert cmp.moltype == "DNA"
     assert cmp.mh1_containment == a.contained_by(b)
     assert cmp.mh2_containment == b.contained_by(a)
-    assert cmp.avg_containment == np.mean([a.contained_by(b), b.contained_by(a)])
+    assert cmp.avg_containment == a.avg_containment(b)
     assert cmp.max_containment == a.max_containment(b)
     assert cmp.jaccard == a.jaccard(b) == b.jaccard(a)
     intersect_mh = a.flatten().intersection(b.flatten())
@@ -95,7 +95,7 @@ def test_FracMinHashComparison_downsample(track_abundance):
     assert cmp.moltype == "DNA"
     assert cmp.mh1_containment == ds_a.contained_by(ds_b)
     assert cmp.mh2_containment == ds_b.contained_by(ds_a)
-    assert cmp.avg_containment == np.mean([ds_a.contained_by(ds_b), ds_b.contained_by(ds_a)])
+    assert cmp.avg_containment == ds_a.avg_containment(ds_b)
     assert cmp.max_containment == ds_a.max_containment(ds_b)
     assert cmp.jaccard == ds_a.jaccard(ds_b) == ds_b.jaccard(ds_a)
     intersect_mh = ds_a.flatten().intersection(ds_b.flatten())
@@ -153,7 +153,7 @@ def test_FracMinHashComparison_autodownsample(track_abundance):
     assert cmp.moltype == "DNA"
     assert cmp.mh1_containment == ds_a.contained_by(ds_b)
     assert cmp.mh2_containment == ds_b.contained_by(ds_a)
-    assert cmp.avg_containment == np.mean([ds_a.contained_by(ds_b), ds_b.contained_by(ds_a)])
+    assert cmp.avg_containment == ds_a.avg_containment(ds_b)
     assert cmp.max_containment == ds_a.max_containment(ds_b)
     assert cmp.jaccard == ds_a.jaccard(ds_b) == ds_b.jaccard(ds_a)
     intersect_mh = ds_a.flatten().intersection(ds_b.flatten())
@@ -210,7 +210,7 @@ def test_FracMinHashComparison_ignore_abundance(track_abundance):
     assert cmp.moltype == "DNA"
     assert cmp.mh1_containment == a.contained_by(b)
     assert cmp.mh2_containment == b.contained_by(a)
-    assert cmp.avg_containment == np.mean([a.contained_by(b), b.contained_by(a)])
+    assert cmp.avg_containment == b.avg_containment(a)
     assert cmp.max_containment == a.max_containment(b)
     assert cmp.jaccard == a.jaccard(b) == b.jaccard(a)
     intersect_mh = ds_a.flatten().intersection(ds_b.flatten())
@@ -261,7 +261,7 @@ def test_FracMinHashComparison_fail_threshold(track_abundance):
     assert cmp.moltype == "DNA"
     assert cmp.mh1_containment == a.contained_by(b)
     assert cmp.mh2_containment == b.contained_by(a)
-    assert cmp.avg_containment == np.mean([a.contained_by(b), b.contained_by(a)])
+    assert cmp.avg_containment == a.avg_containment(b)
     assert cmp.max_containment == a.max_containment(b)
     assert cmp.jaccard == a.jaccard(b) == b.jaccard(a)
     intersect_mh = ds_a.flatten().intersection(ds_b.flatten())

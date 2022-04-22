@@ -160,10 +160,12 @@ class FracMinHashComparison(BaseMinHashComparison):
 
     @property
     def avg_containment(self):
-        return np.mean([self.mh1_containment, self.mh2_containment])
+        return self.mh1_cmp.avg_containment(self.mh2_cmp)
 
     def estimate_avg_containment_ani(self):
         "Returns single average_containment_ani value."
+        # estimating average containment ani using the average n kmers
+        # does not make sense, so do it this way instead. No CI.
         if self.mh1_containment_ani is None:
             self.estimate_mh1_containment_ani()
         if self.mh2_containment_ani is None:

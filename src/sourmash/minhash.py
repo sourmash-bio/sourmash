@@ -661,8 +661,8 @@ class MinHash(RustObject):
             other_mh = other.downsample(scaled=scaled)
         if jaccard is None:
             jaccard = self_mh.similarity(other_mh, ignore_abundance=True)
-        avg_scaled_kmers = round((len(self_mh) + len(other_mh))/2)
-        avg_n_kmers = avg_scaled_kmers * scaled  # would be better if hll estimate - see #1798
+        avg_sketch_kmers = (len(self_mh) + len(other_mh))/2
+        avg_n_kmers = round(avg_sketch_kmers * scaled)  # would be better if hll estimate - see #1798
         j_aniresult = jaccard_to_distance(jaccard, self_mh.ksize, scaled,
                                           n_unique_kmers=avg_n_kmers,
                                           prob_threshold = prob_threshold,
@@ -757,6 +757,19 @@ class MinHash(RustObject):
                                            n_unique_kmers=n_kmers,confidence=confidence,
                                            estimate_ci = estimate_ci)
         return c_aniresult
+
+    def avg_containment(self, other, downsample=False):
+        """
+        Calculate average containment.
+        Note: this is average of the containments, *not* count_common/ avg_denom
+        """
+        if not (self.scaled and other.scaled):
+            raise TypeError("can only calculate containment for scaled MinHashes")
+
+        c1 = self.contained_by(other, downsample)
+        c2 = other.contained_by(self, downsample)
+
+        return (c1 + c2)/2
 
     def __add__(self, other):
         if not isinstance(other, MinHash):
