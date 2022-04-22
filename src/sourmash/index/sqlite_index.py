@@ -213,10 +213,7 @@ class SqliteIndex(Index):
     def _open(cls, dbfile, *, empty_ok=True):
         "Connect to existing SQLite database or create new."
         try:
-            # note: here we will want to re-open database.
-            conn = sqlite3.connect(dbfile,
-                                   detect_types=sqlite3.PARSE_DECLTYPES)
-
+            conn = sqlite3.connect(dbfile)
             c = conn.cursor()
 
             c.execute("PRAGMA cache_size=10000000")
@@ -521,7 +518,7 @@ class SqliteIndex(Index):
     def _get_matching_sketches(self, c, hashes, max_hash):
         """
         For hashvals in 'hashes', retrieve all matching sketches,
-        together with the number of overlapping hashes for each sketh.
+        together with the number of overlapping hashes for each sketch.
 
         CTB: we do not use sqlite manifest conditions on this select,
         because it slows things down in practice.
