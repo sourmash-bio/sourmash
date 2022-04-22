@@ -800,6 +800,8 @@ def gather(args):
     # save CSV?
     if found and args.output:
         fieldnames = GatherResult.gather_write_cols
+        if args.estimate_ani_ci:
+            fieldnames.extend(GatherResult.ci_cols)
         with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
             w.writeheader()
@@ -965,6 +967,8 @@ def multigather(args):
             output_base = os.path.basename(query_filename)
             output_csv = output_base + '.csv'
             fieldnames = GatherResult.gather_write_cols
+            if args.estimate_ani_ci:
+                fieldnames.extend(GatherResult.ci_cols)
             with FileOutputCSV(output_csv) as fp:
                 w = csv.DictWriter(fp, fieldnames=fieldnames)
                 w.writeheader()

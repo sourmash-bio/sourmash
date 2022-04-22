@@ -5537,3 +5537,95 @@ def test_search_jaccard_ani_downsample(c):
     ani_info = mh1.jaccard_ani(mh2_sc2)
     print(ani_info)
     assert ani_info.ani == 0.9988019200011651
+
+
+def test_gather_ani_csv(runtmp, linear_gather, prefetch_gather):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '--name-from-first', testdata1, testdata2)
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', '--name-from-first', testdata2)
+
+    runtmp.sourmash('index', '-k', '31', 'zzz', 'short.fa.sig', 'short2.fa.sig')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', '-o', 'foo.csv', '--threshold-bp=1', linear_gather, prefetch_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    csv_file = runtmp.output('foo.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert float(row['intersect_bp']) == 910
+        assert float(row['unique_intersect_bp']) == 910
+        assert float(row['remaining_bp']) == 0
+        assert float(row['f_orig_query']) == 1.0
+        assert float(row['f_unique_to_query']) == 1.0
+        assert float(row['f_match']) == 1.0
+        assert row['filename'] == 'zzz'
+        assert row['name'] == 'tr1 4'
+        assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
+        assert row['gather_result_rank'] == '0'
+        assert row['query_filename'].endswith('short2.fa')
+        assert row['query_name'] == 'tr1 4'
+        assert row['query_md5'] == 'c9d5a795'
+        assert row['query_bp'] == '910'
+        assert row['query_containment_ani']== '1.0'
+        assert row['match_containment_ani'] == '1.0'
+        assert row['average_containment_ani'] == '1.0'
+        assert row['max_containment_ani'] =='1.0'
+        assert row['potential_false_negative'] == 'False'
+
+
+def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '--name-from-first', testdata1, testdata2)
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', '--name-from-first', testdata2)
+
+    runtmp.sourmash('index', '-k', '31', 'zzz', 'short.fa.sig', 'short2.fa.sig')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', '-o', 'foo.csv', '--threshold-bp=1', '--estimate-ani-ci', linear_gather, prefetch_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    csv_file = runtmp.output('foo.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert float(row['intersect_bp']) == 910
+        assert float(row['unique_intersect_bp']) == 910
+        assert float(row['remaining_bp']) == 0
+        assert float(row['f_orig_query']) == 1.0
+        assert float(row['f_unique_to_query']) == 1.0
+        assert float(row['f_match']) == 1.0
+        assert row['filename'] == 'zzz'
+        assert row['name'] == 'tr1 4'
+        assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
+        assert row['gather_result_rank'] == '0'
+        assert row['query_filename'].endswith('short2.fa')
+        assert row['query_name'] == 'tr1 4'
+        assert row['query_md5'] == 'c9d5a795'
+        assert row['query_bp'] == '910'
+        assert row['query_containment_ani']== '1.0'
+        assert row['query_containment_ani_low']== ''
+        assert row['query_containment_ani_high']== ''
+        assert row['match_containment_ani'] == '1.0'
+        assert row['match_containment_ani_low'] == ''
+        assert row['match_containment_ani_high'] == ''
+        assert row['average_containment_ani'] == '1.0'
+        assert row['max_containment_ani'] =='1.0'
+        assert row['potential_false_negative'] == 'False'
