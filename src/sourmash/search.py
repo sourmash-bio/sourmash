@@ -173,18 +173,23 @@ class BaseResult:
     match: SourmashSignature
     filename: str = None
     ignore_abundance: bool = False # optionally ignore abundances
+    # we don't need these for Num Search Results, bud do need them for Scaled Search Results. Ok to define here?
+    estimate_ani_ci: bool = False
+    ani_confidence: float = 0.95
+    threshold_bp: int = None
+    cmp_scaled: int = None
 
     def init_result(self):
         self.mh1 = self.query.minhash
         self.mh2 = self.match.minhash
 
-    def build_fracminhashcomparison(self, *, cmp_scaled=None, threshold_bp=None, estimate_ani_ci=None, ani_confidence = None):
-        self.cmp = FracMinHashComparison(self.mh1, self.mh2, cmp_scaled=cmp_scaled,
-                                        threshold_bp=threshold_bp,
+    def build_fracminhashcomparison(self):
+        self.cmp = FracMinHashComparison(self.mh1, self.mh2, cmp_scaled=self.cmp_scaled,
+                                        threshold_bp=self.threshold_bp,
                                         ignore_abundance=self.ignore_abundance,
-                                        estimate_ani_ci=estimate_ani_ci,
-                                        ani_confidence=ani_confidence)
-        self.scaled = self.cmp.cmp_scaled
+                                        estimate_ani_ci=self.estimate_ani_ci,
+                                        ani_confidence=self.ani_confidence)
+        self.cmp_scaled = self.cmp.cmp_scaled
         self.query_scaled = self.mh1.scaled
         self.match_scaled = self.mh2.scaled
 
@@ -237,9 +242,7 @@ class SearchResult(BaseResult):
     """
     # TODO: need SearchType here in order to estimate ANI properly (call jaccard vs containment ani for scaled sigs)
     similarity: float = None
-    cmp_scaled: int = None
     cmp_num: int = None
-    threshold_bp: int = None
     searchtype: SearchType = None
 
     #columns for standard SearchResult output
@@ -249,7 +252,7 @@ class SearchResult(BaseResult):
     def init_sigcomparison(self):
         self.init_result()
         if any([self.mh1.scaled, self.mh2.scaled]):
-            self.build_fracminhashcomparison(cmp_scaled = self.cmp_scaled, threshold_bp = self.threshold_bp)
+            self.build_fracminhashcomparison()
         elif any([self.mh1.num, self.mh2.num]):
             self.build_numminhashcomparison(cmp_num=self.cmp_num)
         self.get_cmpinfo() # grab comparison metadata
@@ -258,9 +261,11 @@ class SearchResult(BaseResult):
         self.init_sigcomparison() # build sketch comparison
         self.check_similarity()
         if self.cmp_scaled is not None and self.searchtype is not None:
+            from .logging import notify
+            notify("got here")
+            self.ani_cols = ["ani"]
             self.estimate_search_ani()
-            ani_cols = ["ani"]
-            self.search_write_cols.append(ani_cols)
+            self.search_write_cols.extend(self.ani_cols)
 
     def check_similarity(self):
         # for now, require similarity for SearchResult
@@ -270,14 +275,23 @@ class SearchResult(BaseResult):
             raise ValueError("Error: Must provide 'similarity' for SearchResult.")
 
     def estimate_search_ani(self):
+        ci_cols = ["ani_low", "ani_high"]
         if self.cmp_scaled is None:
             raise TypeError("ANI can only be estimated from scaled signatures.")
         if self.searchtype == SearchType.CONTAINMENT:
-            self.self.cmp.estimate_mh1_containment_ani(containment = self.similarity)
-            self.ani == self.cmp.mh1_containment_ani
+            self.cmp.estimate_mh1_containment_ani(containment = self.similarity)
+            self.ani = self.cmp.mh1_containment_ani
+            if self.estimate_ani_ci:
+                self.ani_low = self.cmp.mh1_containment_ani_low
+                self.ani_high = self.cmp.mh1_containment_ani_high
+                self.ani_cols.extend(ci_cols)
         elif self.searchtype == SearchType.MAX_CONTAINMENT:
-            self.self.cmp.estimate_max_containment_ani(max_containment = self.similarity)
-            self.ani == self.cmp.max_containment_ani
+            self.cmp.estimate_max_containment_ani(max_containment = self.similarity)
+            self.ani = self.cmp.max_containment_ani
+            if self.estimate_ani_ci:
+                self.ani_low = self.cmp.max_containment_ani_low
+                self.ani_high = self.cmp.max_containment_ani_high
+                self.ani_cols.extend(ci_cols)
         elif self.searchtype == SearchType.JACCARD:
             #future: if we want to est ANI from abund searches, do it here (would use jaccard)
             self.cmp.estimate_jaccard_ani(jaccard=self.similarity)
@@ -299,10 +313,6 @@ class PrefetchResult(BaseResult):
     """
     PrefetchResult class supports 'sourmash prefetch' operations.
     """
-    cmp_scaled: int = None
-    threshold_bp: int = None
-    estimate_ani_ci: bool = False
-    ani_confidence: float = 0.95
 
     # current prefetch columns
     prefetch_write_cols = ['intersect_bp', 'jaccard', 'max_containment', 'f_query_match',
@@ -317,10 +327,7 @@ class PrefetchResult(BaseResult):
         # shared prefetch/gather initialization
         self.init_result()
         if all([self.mh1.scaled, self.mh2.scaled]):
-            self.build_fracminhashcomparison(cmp_scaled = self.cmp_scaled,
-                                             threshold_bp = self.threshold_bp,
-                                             estimate_ani_ci = self.estimate_ani_ci,
-                                             ani_confidence = self.ani_confidence)
+            self.build_fracminhashcomparison()
         else:
             raise TypeError("Error: prefetch and gather results must be between scaled signatures.")
         self.get_cmpinfo() # grab comparison metadata
@@ -342,13 +349,13 @@ class PrefetchResult(BaseResult):
             self.handle_ani_ci()
 
     def handle_ani_ci(self):
-        self.query_containment_ani_low == self.cmp.mh1_containment_ani_low
-        self.query_containment_ani_high == self.cmp.mh1_containment_ani_high
-        self.match_containment_ani_low == self.cmp.mh2_containment_ani_low
-        self.match_containment_ani_high == self.cmp.mh2_containment_ani_high
+        self.query_containment_ani_low = self.cmp.mh1_containment_ani_low
+        self.query_containment_ani_high = self.cmp.mh1_containment_ani_high
+        self.match_containment_ani_low = self.cmp.mh2_containment_ani_low
+        self.match_containment_ani_high = self.cmp.mh2_containment_ani_high
         ci_cols = ["query_containment_ani_low", "query_containment_ani_high",
                    "match_containment_ani_low", "match_containment_ani_high"]
-        self.prefetch_write_cols.append(ci_cols)
+        self.prefetch_write_cols.extend(ci_cols)
 
     def build_prefetch_result(self):
         # unique prefetch values
@@ -362,6 +369,7 @@ class PrefetchResult(BaseResult):
 
     def prefetchresultdict(self):
         # in prefetch, we shorten all md5's
+        self.scaled = self.cmp_scaled
         self.query_md5 = self.shorten_md5(self.query_md5)
         self.md5 = self.shorten_md5(self.md5)
         self.match_md5 = self.shorten_md5(self.match_md5)
@@ -390,7 +398,7 @@ class GatherResult(PrefetchResult):
 
     def init_gathersketchcomparison(self):
         # compare remaining gather hashes with match. Force at cmp_scaled. Force match flatten(), bc we don't need abunds.
-        self.gather_comparison = FracMinHashComparison(self.gather_querymh, self.match.minhash.flatten(), cmp_scaled=self.cmp_scaled, threshold_bp=self.threshold_bp)
+        self.gather_comparison = FracMinHashComparison(self.gather_querymh, self.match.minhash.flatten())
 
     def check_gatherresult_input(self):
         # check we have what we need:
@@ -455,6 +463,7 @@ class GatherResult(PrefetchResult):
 
     def gatherresultdict(self):
         # for gather, we only shorten the query_md5
+        self.scaled = self.cmp_scaled
         self.query_md5 = self.shorten_md5(self.query_md5)
         return self.to_write(columns=self.gather_write_cols)
 
@@ -501,19 +510,30 @@ def search_databases_with_flat_query(query, databases, **kwargs):
 
     # redefine searchtype and pass in here
     # repetitive/not optimal - would it be better to produce SearchResult from db.search?
+    estimate_ani_ci = False
+    search_type = SearchType.JACCARD
     if kwargs.get('do_containment'):
         search_type = SearchType.CONTAINMENT
+        if kwargs.get('estimate_ani_ci'):
+            estimate_ani_ci = True
     elif kwargs.get('do_max_containment'):
         search_type = SearchType.MAX_CONTAINMENT
-    else:
-        search_type = SearchType.JACCARD
+        if kwargs.get('estimate_ani_ci'):
+            estimate_ani_ci = True
 
     x = []
     for (score, match, filename) in results:
-        x.append(SearchResult(query, match,
-                               similarity=score,
-                               filename = filename,
-                               searchtype=search_type))
+        if estimate_ani_ci:
+            x.append(SearchResult(query, match,
+                                  similarity=score,
+                                  filename = filename,
+                                  searchtype=search_type,
+                                  estimate_ani_ci=estimate_ani_ci))
+        else:
+            x.append(SearchResult(query, match,
+                                  similarity=score,
+                                  filename = filename,
+                                  searchtype=search_type))
     return x
 
 
