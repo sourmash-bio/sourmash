@@ -686,6 +686,8 @@ def gather(args):
         prefetch_csvout_w = None
         if args.save_prefetch_csv:
             fieldnames = PrefetchResult.prefetch_write_cols
+            if args.estimate_ani_ci:
+                fieldnames.extend(PrefetchResult.ci_cols)
             prefetch_csvout_fp = FileOutput(args.save_prefetch_csv, 'wt').open()
             prefetch_csvout_w = csv.DictWriter(prefetch_csvout_fp, fieldnames=fieldnames)
             prefetch_csvout_w.writeheader()
@@ -714,7 +716,8 @@ def gather(args):
                 if prefetch_csvout_fp:
                     assert scaled
                     # calculate intersection stats and info
-                    prefetch_result = PrefetchResult(prefetch_query, found_sig, cmp_scaled=scaled, threshold_bp=args.threshold_bp)
+                    prefetch_result = PrefetchResult(prefetch_query, found_sig, cmp_scaled=scaled, 
+                                                     threshold_bp=args.threshold_bp, estimate_ani_ci=args.estimate_ani_ci)
                     prefetch_csvout_w.writerow(prefetch_result.writedict)
 
             counters.append(counter)
@@ -1164,6 +1167,8 @@ def prefetch(args):
     csvout_w = None
     if args.output:
         fieldnames = PrefetchResult.prefetch_write_cols
+        if args.estimate_ani_ci:
+            fieldnames.extend(PrefetchResult.ci_cols)
         csvout_fp = FileOutput(args.output, 'wt').open()
         csvout_w = csv.DictWriter(csvout_fp, fieldnames=fieldnames)
         csvout_w.writeheader()
@@ -1199,7 +1204,7 @@ def prefetch(args):
             notify(f"...no compatible signatures in '{dbfilename}'; skipping")
             continue
 
-        for result in prefetch_database(query, db, args.threshold_bp):
+        for result in prefetch_database(query, db, args.threshold_bp, estimate_ani_ci= args.estimate_ani_ci):
             match = result.match
 
             # ensure we're all on the same page wrt scaled resolution:

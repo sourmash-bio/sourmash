@@ -201,6 +201,7 @@ class BaseResult:
 
     def get_cmpinfo(self):
         # grab signature /minhash metadata
+        # note, could probably pare this down to essentials for SearchResult, get remaining in PrefetchResult
         self.ksize = self.mh1.ksize
         self.moltype = self.mh1.moltype
         self.query_name = self.query.name
@@ -320,7 +321,10 @@ class PrefetchResult(BaseResult):
                            'query_md5', 'query_bp', 'ksize', 'moltype', 'scaled',
                            'query_n_hashes', 'query_abundance', 'query_containment_ani',
                            'match_containment_ani', 'average_containment_ani', 'max_containment_ani',
-                           'potential_false_negative']#, 'match_abundance'
+                           'potential_false_negative'] #'match_abundance'
+
+    ci_cols = ["query_containment_ani_low", "query_containment_ani_high",
+                   "match_containment_ani_low", "match_containment_ani_high"]
 
     def init_sigcomparison(self):
         # shared prefetch/gather initialization
@@ -352,9 +356,8 @@ class PrefetchResult(BaseResult):
         self.query_containment_ani_high = self.cmp.mh1_containment_ani_high
         self.match_containment_ani_low = self.cmp.mh2_containment_ani_low
         self.match_containment_ani_high = self.cmp.mh2_containment_ani_high
-        ci_cols = ["query_containment_ani_low", "query_containment_ani_high",
-                   "match_containment_ani_low", "match_containment_ani_high"]
-        self.prefetch_write_cols.extend(ci_cols)
+        if self.estimate_ani_ci:
+            self.prefetch_write_cols.extend(self.ci_cols)
 
     def build_prefetch_result(self):
         # unique prefetch values
@@ -736,16 +739,15 @@ class GatherDatabases:
 ### prefetch code
 ###
 
-def prefetch_database(query, database, threshold_bp):
+def prefetch_database(query, database, threshold_bp, *, estimate_ani_ci=False):
     """
     Find all matches to `query_mh` >= `threshold_bp` in `database`.
     """
     scaled = query.minhash.scaled
     assert scaled
-
     # iterate over all signatures in database, find matches
     for result in database.prefetch(query, threshold_bp): # future: could return PrefetchResult directly here
         #result = calculate_prefetch_info(query, result.signature, threshold_bp)
-        result = PrefetchResult(query, result.signature, threshold_bp=threshold_bp)
+        result = PrefetchResult(query, result.signature, threshold_bp=threshold_bp, estimate_ani_ci=estimate_ani_ci)
         assert result.pass_threshold
         yield result

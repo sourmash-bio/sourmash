@@ -713,3 +713,85 @@ def test_prefetch_output_with_abundance(runtmp, prefetch_gather, linear_gather):
     assert os.path.exists(c.output('nomatch-hash.sig'))
     ss = list(sourmash.load_file_as_signatures(c.output('nomatch-hash.sig')))[0]
     assert ss.minhash.track_abundance
+
+
+def test_prefetch_ani_csv_out(runtmp, linear_gather):
+    c = runtmp
+
+    # test a basic prefetch, with CSV output
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    csvout = c.output('out.csv')
+
+    c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
+                   '-o', csvout, linear_gather)
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    exp1 = {'q_ani': '0.9771552502238963','m_ani': '0.9767860811200507',
+                      'ac_ani': '0.9769706656719734','mc_ani': '0.9771552502238963',
+                      'pfn': 'False'}
+    exp2 = {'q_ani': '1.0','m_ani': '1.0',
+                      'ac_ani': '1.0','mc_ani': '1.0',
+                      'pfn': 'False'}
+    expected_ani_vals = [exp1, exp2]
+    with open(csvout, 'rt', newline="") as fp:
+        r = csv.DictReader(fp)
+        for (row, expected) in zip(r, expected_ani_vals):
+            print(row)
+            assert row['query_containment_ani'] == expected['q_ani']
+            assert row['match_containment_ani'] == expected['m_ani']
+            assert row['max_containment_ani'] == expected['mc_ani']
+            assert row['average_containment_ani'] == expected['ac_ani']
+            assert row['potential_false_negative'] == expected['pfn']
+
+
+def test_prefetch_ani_csv_out_estimate_ci(runtmp, linear_gather):
+    c = runtmp
+
+    # test a basic prefetch, with CSV output
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    csvout = c.output('out.csv')
+
+    c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
+                   '-o', csvout, linear_gather, '--estimate-ani-ci')
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    exp1 = {'q_ani': '0.9771552502238963','m_ani': '0.9767860811200507',
+            'q_ani_low': "0.9762537506990911", 'q_ani_high': "0.9780336875157754",
+            'm_ani_low': "0.9758801604653301", "m_ani_high": "0.9776692390768575",
+            'ac_ani': '0.9769706656719734','mc_ani': '0.9771552502238963',
+            'pfn': 'False'}
+    exp2 = {'q_ani': '1.0','m_ani': '1.0',
+            'q_ani_low': "", 'q_ani_high': "",
+            'm_ani_low': "", "m_ani_high": "",
+                      'ac_ani': '1.0','mc_ani': '1.0',
+                      'pfn': 'False'}
+    expected_ani_vals = [exp1, exp2]
+    with open(csvout, 'rt', newline="") as fp:
+        r = csv.DictReader(fp)
+        for (row, expected) in zip(r, expected_ani_vals):
+            print(row)
+            assert row['query_containment_ani'] == expected['q_ani']
+            assert row['query_containment_ani_low'] == expected['q_ani_low']
+            assert row['query_containment_ani_high'] == expected['q_ani_high']
+            assert row['match_containment_ani'] == expected['m_ani']
+            assert row['match_containment_ani_low'] == expected['m_ani_low']
+            assert row['match_containment_ani_high'] == expected['m_ani_high']
+            assert row['max_containment_ani'] == expected['mc_ani']
+            assert row['average_containment_ani'] == expected['ac_ani']
+            assert row['potential_false_negative'] == expected['pfn']
