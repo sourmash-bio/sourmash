@@ -249,6 +249,9 @@ class SearchResult(BaseResult):
     search_write_cols = ['similarity', 'md5', 'filename', 'name',  # here we use 'filename'
                          'query_filename', 'query_name', 'query_md5']
 
+    ani_cols = ["ani"]
+    ci_cols = ["ani_low", "ani_high"]
+
     def init_sigcomparison(self):
         self.init_result()
         if any([self.mh1.scaled, self.mh2.scaled]):
@@ -261,9 +264,6 @@ class SearchResult(BaseResult):
         self.init_sigcomparison() # build sketch comparison
         self.check_similarity()
         if self.cmp_scaled is not None and self.searchtype is not None:
-            from .logging import notify
-            notify("got here")
-            self.ani_cols = ["ani"]
             self.estimate_search_ani()
             self.search_write_cols.extend(self.ani_cols)
 
@@ -275,7 +275,7 @@ class SearchResult(BaseResult):
             raise ValueError("Error: Must provide 'similarity' for SearchResult.")
 
     def estimate_search_ani(self):
-        ci_cols = ["ani_low", "ani_high"]
+        #future: could estimate ANI from abund searches if we want (use query containment?)
         if self.cmp_scaled is None:
             raise TypeError("ANI can only be estimated from scaled signatures.")
         if self.searchtype == SearchType.CONTAINMENT:
@@ -284,16 +284,15 @@ class SearchResult(BaseResult):
             if self.estimate_ani_ci:
                 self.ani_low = self.cmp.mh1_containment_ani_low
                 self.ani_high = self.cmp.mh1_containment_ani_high
-                self.ani_cols.extend(ci_cols)
+                self.ani_cols.extend(self.ci_cols)
         elif self.searchtype == SearchType.MAX_CONTAINMENT:
             self.cmp.estimate_max_containment_ani(max_containment = self.similarity)
             self.ani = self.cmp.max_containment_ani
             if self.estimate_ani_ci:
                 self.ani_low = self.cmp.max_containment_ani_low
                 self.ani_high = self.cmp.max_containment_ani_high
-                self.ani_cols.extend(ci_cols)
+                self.ani_cols.extend(self.ci_cols)
         elif self.searchtype == SearchType.JACCARD:
-            #future: if we want to est ANI from abund searches, do it here (would use jaccard)
             self.cmp.estimate_jaccard_ani(jaccard=self.similarity)
             self.ani = self.cmp.jaccard_ani
             # not really sure what to do with this yet. Just report?
@@ -523,17 +522,11 @@ def search_databases_with_flat_query(query, databases, **kwargs):
 
     x = []
     for (score, match, filename) in results:
-        if estimate_ani_ci:
-            x.append(SearchResult(query, match,
-                                  similarity=score,
-                                  filename = filename,
-                                  searchtype=search_type,
-                                  estimate_ani_ci=estimate_ani_ci))
-        else:
-            x.append(SearchResult(query, match,
-                                  similarity=score,
-                                  filename = filename,
-                                  searchtype=search_type))
+        x.append(SearchResult(query, match,
+                              similarity=score,
+                              filename = filename,
+                              searchtype=search_type,
+                              estimate_ani_ci=estimate_ani_ci))
     return x
 
 

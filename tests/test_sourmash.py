@@ -5330,7 +5330,7 @@ def test_search_ani_jaccard(c):
 
 
 @utils.in_tempdir
-def test_search_ani_empty_abund(c):
+def test_searchabund_no_ani(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=10,abund', testdata1, testdata2)
@@ -5351,7 +5351,7 @@ def test_search_ani_empty_abund(c):
         assert row['query_name'] == ''
         assert row['query_md5'] == 'b5cc464c'
         assert not row['ani']
-#        assert row['ani'] == ""
+#        assert row['ani'] == "" # do we want empty column to appear??
 
 
 @utils.in_tempdir
@@ -5395,6 +5395,51 @@ def test_search_ani_containment(c):
         assert row['query_md5'] == 'bf752903'
         assert row['ani'] == "0.9990405323606487"
 
+@utils.in_tempdir
+def test_search_ani_containment_estimate_ci(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', testdata1, testdata2)
+
+    c.run_sourmash('search', '--containment', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv', '--estimate-ani-ci')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    csv_file = c.output('xxx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert float(row['similarity']) == 0.9556701030927836
+        assert row['filename'].endswith('short2.fa.sig')
+        assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
+        assert row['query_filename'].endswith('short.fa')
+        assert row['query_name'] == ''
+        assert row['query_md5'] == '9191284a'
+        assert row['ani'] == "0.9985384076863009"
+        assert row['ani_low'] == "0.9938337244993366"
+        assert row['ani_high'] == "0.9996796589835425"
+
+    # search other direction
+    c.run_sourmash('search', '--containment', 'short2.fa.sig', 'short.fa.sig', '-o', 'xxxx.csv', '--estimate-ani-ci')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    csv_file = c.output('xxxx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert float(row['similarity']) == 0.9706806282722513
+        assert row['filename'].endswith('short.fa.sig')
+        assert row['md5'] == '9191284a3a23a913d8d410f3d53ce8f0'
+        assert row['query_filename'].endswith('short2.fa')
+        assert row['query_name'] == ''
+        assert row['query_md5'] == 'bf752903'
+        assert row['ani'] == "0.9990405323606487"
+        assert row['ani_low'] == "0.9946019114041683"
+        assert row['ani_high'] == "0.9998424422764817"
+
 
 @utils.in_tempdir
 def test_search_ani_max_containment(c):
@@ -5418,6 +5463,32 @@ def test_search_ani_max_containment(c):
         assert row['query_name'] == ''
         assert row['query_md5'] == '9191284a'
         assert row['ani'] == "0.9990405323606487"
+
+
+@utils.in_tempdir
+def test_search_ani_max_containment_estimate_ci(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', testdata1, testdata2)
+
+    c.run_sourmash('search', '--max-containment', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv', '--estimate-ani-ci')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    csv_file = c.output('xxx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert float(row['similarity']) == 0.9706806282722513
+        assert row['filename'].endswith('short2.fa.sig')
+        assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
+        assert row['query_filename'].endswith('short.fa')
+        assert row['query_name'] == ''
+        assert row['query_md5'] == '9191284a'
+        assert row['ani'] == "0.9990405323606487"
+        assert row['ani_low'] == "0.9946019114041683"
+        assert row['ani_high'] =="0.9998424422764817"
 
 
 @utils.in_tempdir

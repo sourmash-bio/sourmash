@@ -508,7 +508,8 @@ def search(args):
                                    do_containment=args.containment,
                                    do_max_containment=args.max_containment,
                                    best_only=args.best_only,
-                                   unload_data=True)
+                                   unload_data=True,
+                                   estimate_ani_ci=args.estimate_ani_ci)
 
     n_matches = len(results)
     if args.best_only:
