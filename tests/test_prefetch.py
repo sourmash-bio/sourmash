@@ -6,6 +6,7 @@ import csv
 import pytest
 import glob
 import random
+from sourmash.search import PrefetchResult
 
 import sourmash_tst_utils as utils
 import sourmash
@@ -734,6 +735,7 @@ def test_prefetch_ani_csv_out(runtmp, linear_gather):
     assert c.last_result.status == 0
     assert os.path.exists(csvout)
 
+    prefetch_result_names = PrefetchResult.prefetch_write_cols
     exp1 = {'q_ani': '0.9771552502238963','m_ani': '0.9767860811200507',
                       'ac_ani': '0.9769706656719734','mc_ani': '0.9771552502238963',
                       'pfn': 'False'}
@@ -745,6 +747,7 @@ def test_prefetch_ani_csv_out(runtmp, linear_gather):
         r = csv.DictReader(fp)
         for (row, expected) in zip(r, expected_ani_vals):
             print(row)
+            assert prefetch_result_names == list(row.keys())
             assert row['query_containment_ani'] == expected['q_ani']
             assert row['match_containment_ani'] == expected['m_ani']
             assert row['max_containment_ani'] == expected['mc_ani']
@@ -770,6 +773,7 @@ def test_prefetch_ani_csv_out_estimate_ci(runtmp, linear_gather):
 
     assert c.last_result.status == 0
     assert os.path.exists(csvout)
+    prefetch_result_names_ci = PrefetchResult.prefetch_write_cols_ci
 
     exp1 = {'q_ani': '0.9771552502238963','m_ani': '0.9767860811200507',
             'q_ani_low': "0.9762537506990911", 'q_ani_high': "0.9780336875157754",
@@ -786,6 +790,7 @@ def test_prefetch_ani_csv_out_estimate_ci(runtmp, linear_gather):
         r = csv.DictReader(fp)
         for (row, expected) in zip(r, expected_ani_vals):
             print(row)
+            assert prefetch_result_names_ci == list(row.keys())
             assert row['query_containment_ani'] == expected['q_ani']
             assert row['query_containment_ani_low'] == expected['q_ani_low']
             assert row['query_containment_ani_high'] == expected['q_ani_high']

@@ -13,6 +13,7 @@ import pytest
 import sys
 import zipfile
 import random
+from sourmash.search import SearchResult,GatherResult
 
 import sourmash_tst_utils as utils
 
@@ -5327,12 +5328,15 @@ def test_search_ani_jaccard(c):
     c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
     print(c.last_result.status, c.last_result.out, c.last_result.err)
 
+    search_result_names = SearchResult.search_write_cols
+
     csv_file = c.output('xxx.csv')
 
     with open(csv_file) as fp:
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
+        assert search_result_names == list(row.keys())
         assert float(row['similarity']) == 0.9288577154308617
         assert row['filename'].endswith('short2.fa.sig')
         assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
@@ -5352,19 +5356,20 @@ def test_searchabund_no_ani(c):
     print(c.last_result.status, c.last_result.out, c.last_result.err)
 
     csv_file = c.output('xxx.csv')
+    search_result_names = SearchResult.search_write_cols
 
     with open(csv_file) as fp:
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
+        assert search_result_names == list(row.keys())
         assert float(row['similarity']) == 0.8224046424612483
         assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
         assert row['filename'].endswith('short2.fa.sig')
         assert row['query_filename'].endswith('short.fa')
         assert row['query_name'] == ''
         assert row['query_md5'] == 'b5cc464c'
-        assert not row['ani']
-#        assert row['ani'] == "" # do we want empty column to appear??
+        assert row['ani'] == "" # do we want empty column to appear??
 
 
 @utils.in_tempdir
@@ -5376,12 +5381,15 @@ def test_search_ani_containment(c):
     c.run_sourmash('search', '--containment', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
     print(c.last_result.status, c.last_result.out, c.last_result.err)
 
+    search_result_names = SearchResult.search_write_cols
+
     csv_file = c.output('xxx.csv')
 
     with open(csv_file) as fp:
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
+        assert search_result_names == list(row.keys())
         assert float(row['similarity']) == 0.9556701030927836
         assert row['filename'].endswith('short2.fa.sig')
         assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
@@ -5400,6 +5408,7 @@ def test_search_ani_containment(c):
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
+        assert search_result_names == list(row.keys())
         assert float(row['similarity']) == 0.9706806282722513
         assert row['filename'].endswith('short.fa.sig')
         assert row['md5'] == '9191284a3a23a913d8d410f3d53ce8f0'
@@ -5417,12 +5426,14 @@ def test_search_ani_containment_estimate_ci(c):
     c.run_sourmash('search', '--containment', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv', '--estimate-ani-ci')
     print(c.last_result.status, c.last_result.out, c.last_result.err)
 
+    search_result_names_ci = SearchResult.search_write_cols_ci
     csv_file = c.output('xxx.csv')
 
     with open(csv_file) as fp:
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
+        assert search_result_names_ci == list(row.keys())
         assert float(row['similarity']) == 0.9556701030927836
         assert row['filename'].endswith('short2.fa.sig')
         assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
@@ -5443,6 +5454,7 @@ def test_search_ani_containment_estimate_ci(c):
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
+        assert search_result_names_ci == list(row.keys())
         assert float(row['similarity']) == 0.9706806282722513
         assert row['filename'].endswith('short.fa.sig')
         assert row['md5'] == '9191284a3a23a913d8d410f3d53ce8f0'
@@ -5464,11 +5476,13 @@ def test_search_ani_max_containment(c):
     print(c.last_result.status, c.last_result.out, c.last_result.err)
 
     csv_file = c.output('xxx.csv')
+    search_result_names = SearchResult.search_write_cols
 
     with open(csv_file) as fp:
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
+        assert search_result_names == list(row.keys())
         assert float(row['similarity']) == 0.9706806282722513
         assert row['filename'].endswith('short2.fa.sig')
         assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
@@ -5488,11 +5502,13 @@ def test_search_ani_max_containment_estimate_ci(c):
     print(c.last_result.status, c.last_result.out, c.last_result.err)
 
     csv_file = c.output('xxx.csv')
+    search_result_names_ci = SearchResult.search_write_cols_ci
 
     with open(csv_file) as fp:
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
+        assert search_result_names_ci == list(row.keys())
         assert float(row['similarity']) == 0.9706806282722513
         assert row['filename'].endswith('short2.fa.sig')
         assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
@@ -5529,11 +5545,15 @@ def test_search_jaccard_ani_downsample(c):
     print(c.last_result.status, c.last_result.out, c.last_result.err)
 
     csv_file = c.output('xdx.csv')
+    search_result_names = SearchResult.search_write_cols
+    search_result_names_ci = SearchResult.search_write_cols_ci
 
     with open(csv_file) as fp:
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
+        assert search_result_names == list(row.keys())
+        assert search_result_names_ci != list(row.keys())
         assert float(row['similarity']) == 0.9296066252587992
         assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
         assert row['filename'].endswith('sig2.sig')
@@ -5570,11 +5590,15 @@ def test_gather_ani_csv(runtmp, linear_gather, prefetch_gather):
     print(runtmp.last_result.err)
 
     csv_file = runtmp.output('foo.csv')
+    gather_result_names = GatherResult.gather_write_cols
+    gather_result_names_ci = GatherResult.gather_write_cols_ci
 
     with open(csv_file) as fp:
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
+        assert gather_result_names == list(row.keys())
+        assert gather_result_names_ci != list(row.keys())
         assert float(row['intersect_bp']) == 910
         assert float(row['unique_intersect_bp']) == 910
         assert float(row['remaining_bp']) == 0
@@ -5615,10 +5639,13 @@ def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
 
     csv_file = runtmp.output('foo.csv')
 
+    gather_result_names = GatherResult.gather_write_cols_ci
+
     with open(csv_file) as fp:
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
+        assert gather_result_names == list(row.keys())
         assert float(row['intersect_bp']) == 910
         assert float(row['unique_intersect_bp']) == 910
         assert float(row['remaining_bp']) == 0
