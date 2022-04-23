@@ -2,7 +2,6 @@
 
 # CTB TODO: test search protocol with mock class?
 
-from pyparsing import original_text_for
 import pytest
 import sourmash_tst_utils as utils
 

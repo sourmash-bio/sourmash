@@ -3,8 +3,6 @@ Code for searching collections of signatures.
 """
 from collections import namedtuple
 from enum import Enum
-from multiprocessing.sharedctypes import Value
-from re import I
 import numpy as np
 from dataclasses import dataclass
 
