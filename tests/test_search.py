@@ -286,6 +286,7 @@ def test_scaledSearchResult():
     assert res.filename == ss4763.filename
     queryc_ani = ss47.containment_ani(ss4763)
     matchc_ani = ss4763.containment_ani(ss47)
+    # check that we _can_ get avg_containment_ani
     assert res.cmp.avg_containment_ani == np.mean([queryc_ani.ani, matchc_ani.ani])
 
 def test_numSearchResult():
@@ -318,6 +319,7 @@ def test_numSearchResult():
     assert res.name == ss63.name
     assert res.filename == ss63.filename
 
+    # check that we can't get ani
     with pytest.raises(TypeError) as exc:
         res.estimate_search_ani()
     assert("ANI can only be estimated from scaled signatures.") in str(exc)

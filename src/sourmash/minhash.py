@@ -652,6 +652,8 @@ class MinHash(RustObject):
 
     def jaccard_ani(self, other, *, downsample=False, jaccard=None, prob_threshold=1e-3,  err_threshold=1e-4):
         "Use jaccard to estimate ANI between two MinHash objects."
+        if not (self.scaled and other.scaled):
+            raise TypeError("Error: can only calculate ANI for scaled MinHashes")
         self_mh = self
         other_mh = other
         scaled = self.scaled
@@ -710,6 +712,8 @@ class MinHash(RustObject):
 
     def containment_ani(self, other, *, downsample=False, containment=None, confidence=0.95, estimate_ci = False):
         "Use containment to estimate ANI between two MinHash objects."
+        if not (self.scaled and other.scaled):
+            raise TypeError("Error: can only calculate ANI for scaled MinHashes")
         self_mh = self
         other_mh = other
         scaled = self.scaled
@@ -741,6 +745,8 @@ class MinHash(RustObject):
 
     def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False):
         "Use max_containment to estimate ANI between two MinHash objects."
+        if not (self.scaled and other.scaled):
+            raise TypeError("Error: can only calculate ANI for scaled MinHashes")
         self_mh = self
         other_mh = other
         scaled = self.scaled
@@ -777,7 +783,7 @@ class MinHash(RustObject):
         Note: this is average of the containment ANI's, *not* ANI using count_common/ avg_denom
         """
         if not (self.scaled and other.scaled):
-            raise TypeError("can only calculate containment ANI for scaled MinHashes")
+            raise TypeError("Error: can only calculate ANI for scaled MinHashes")
 
         a1 = self.containment_ani(other, downsample=downsample).ani
         a2 = other.containment_ani(self, downsample=downsample).ani

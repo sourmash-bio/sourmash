@@ -2966,3 +2966,27 @@ def test_containment_ani_ci_tiny_testdata():
     assert m2_cani_m1.ani == 0.986394259982259
     assert m2_cani_m1.ani_low == None
     assert m2_cani_m1.ani_high == None
+
+def test_ANI_num_fail():
+    f1 = utils.get_test_data('num/47.fa.sig')
+    f2 = utils.get_test_data('num/63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+
+    with pytest.raises(TypeError) as exc:
+        mh1.containment_ani(mh2)
+    print(str(exc))
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+    with pytest.raises(TypeError) as exc:
+        mh2.containment_ani(mh1, estimate_ci =True)
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+    with pytest.raises(TypeError) as exc:
+        mh1.max_containment_ani(mh2)
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+    with pytest.raises(TypeError) as exc:
+        mh1.avg_containment_ani(mh2)
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+    with pytest.raises(TypeError) as exc:
+        mh1.jaccard_ani(mh2)
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+
