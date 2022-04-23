@@ -543,7 +543,10 @@ def search(args):
         notify("** reporting only one match because --best-only was set")
 
     if args.output:
-        fieldnames = SearchResult.search_write_cols
+        if args.estimate_ani_ci:
+            fieldnames = SearchResult.search_write_cols_ci
+        else:
+            fieldnames = SearchResult.search_write_cols
         with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
 
@@ -694,9 +697,10 @@ def gather(args):
         prefetch_csvout_fp = None
         prefetch_csvout_w = None
         if args.save_prefetch_csv:
-            fieldnames = PrefetchResult.prefetch_write_cols
             if args.estimate_ani_ci:
-                fieldnames.extend(PrefetchResult.ci_cols)
+                fieldnames = PrefetchResult.prefetch_write_cols_ci
+            else:
+                fieldnames = PrefetchResult.prefetch_write_cols
             prefetch_csvout_fp = FileOutput(args.save_prefetch_csv, 'wt').open()
             prefetch_csvout_w = csv.DictWriter(prefetch_csvout_fp, fieldnames=fieldnames)
             prefetch_csvout_w.writeheader()
@@ -808,9 +812,10 @@ def gather(args):
 
     # save CSV?
     if found and args.output:
-        fieldnames = GatherResult.gather_write_cols
         if args.estimate_ani_ci:
-            fieldnames.extend(GatherResult.ci_cols)
+            fieldnames = GatherResult.gather_write_cols_ci
+        else:
+            fieldnames = GatherResult.gather_write_cols
         with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
             w.writeheader()
@@ -975,9 +980,10 @@ def multigather(args):
 
             output_base = os.path.basename(query_filename)
             output_csv = output_base + '.csv'
-            fieldnames = GatherResult.gather_write_cols
             if args.estimate_ani_ci:
-                fieldnames.extend(GatherResult.ci_cols)
+                fieldnames = GatherResult.gather_write_cols_ci
+            else:
+                fieldnames = GatherResult.gather_write_cols
             with FileOutputCSV(output_csv) as fp:
                 w = csv.DictWriter(fp, fieldnames=fieldnames)
                 w.writeheader()
@@ -1179,9 +1185,10 @@ def prefetch(args):
     csvout_fp = None
     csvout_w = None
     if args.output:
-        fieldnames = PrefetchResult.prefetch_write_cols
         if args.estimate_ani_ci:
-            fieldnames.extend(PrefetchResult.ci_cols)
+            fieldnames = PrefetchResult.prefetch_write_cols_ci
+        else:
+            fieldnames = PrefetchResult.prefetch_write_cols
         csvout_fp = FileOutput(args.output, 'wt').open()
         csvout_w = csv.DictWriter(csvout_fp, fieldnames=fieldnames)
         csvout_w.writeheader()

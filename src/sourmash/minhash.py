@@ -771,6 +771,19 @@ class MinHash(RustObject):
 
         return (c1 + c2)/2
 
+    def avg_containment_ani(self, other, downsample=False):
+        """
+        Calculate average containment ANI.
+        Note: this is average of the containment ANI's, *not* ANI using count_common/ avg_denom
+        """
+        if not (self.scaled and other.scaled):
+            raise TypeError("can only calculate containment ANI for scaled MinHashes")
+
+        a1 = self.containment_ani(other, downsample=downsample).ani
+        a2 = other.containment_ani(self, downsample=downsample).ani
+
+        return (a1 + a2)/2
+
     def __add__(self, other):
         if not isinstance(other, MinHash):
             raise TypeError("can only add MinHash objects to MinHash objects!")

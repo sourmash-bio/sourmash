@@ -162,22 +162,16 @@ class FracMinHashComparison(BaseMinHashComparison):
     def avg_containment(self):
         return self.mh1_cmp.avg_containment(self.mh2_cmp)
 
-    def estimate_avg_containment_ani(self):
+    @property
+    def avg_containment_ani(self):
         "Returns single average_containment_ani value."
-        # estimating average containment ani using the average n kmers
-        # does not make sense, so do it this way instead. No CI.
-        if self.mh1_containment_ani is None:
-            self.estimate_mh1_containment_ani()
-        if self.mh2_containment_ani is None:
-            self.estimate_mh2_containment_ani()
-        self.avg_containment_ani = np.mean([self.mh1_containment_ani, self.mh2_containment_ani])
+        return self.mh1_cmp.avg_containment_ani(self.mh2_cmp)
 
     def estimate_all_containment_ani(self):
         "Estimate all containment ANI values."
         self.estimate_mh1_containment_ani()
         self.estimate_mh2_containment_ani()
         self.max_containment_ani = max([self.mh1_containment_ani, self.mh2_containment_ani])
-        self.avg_containment_ani = np.mean([self.mh1_containment_ani, self.mh2_containment_ani])
 
     def weighted_intersection(self, from_mh=None, from_abundD={}):
          # map abundances to all intersection hashes.

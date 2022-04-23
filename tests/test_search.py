@@ -284,6 +284,9 @@ def test_scaledSearchResult():
     assert res.md5 == ss4763.md5sum()
     assert res.name == ss4763.name
     assert res.filename == ss4763.filename
+    queryc_ani = ss47.containment_ani(ss4763)
+    matchc_ani = ss4763.containment_ani(ss47)
+    assert res.cmp.avg_containment_ani == np.mean([queryc_ani.ani, matchc_ani.ani])
 
 def test_numSearchResult():
     # check that values get stored/calculated correctly
@@ -314,6 +317,10 @@ def test_numSearchResult():
     assert res.md5 == ss63.md5sum()
     assert res.name == ss63.name
     assert res.filename == ss63.filename
+
+    with pytest.raises(TypeError) as exc:
+        res.estimate_search_ani()
+    assert("ANI can only be estimated from scaled signatures.") in str(exc)
 
 
 def test_SearchResult_incompatible_sigs():
@@ -476,10 +483,10 @@ def test_GatherResult():
     assert res.max_containment == max_containment
 
     # check that we can write prefetch result directly from gather
-    #pf = PrefetchResult(ss47, ss4763, cmp_scaled=scaled, estimate_ani_ci=False)
-    #prefetch_write_dict = list(res.prefetchwritedict.keys())
-    #print(prefetch_write_dict)
-    #assert set(prefetch_write_dict) == set(pf.prefetch_write_cols)
+    pf = PrefetchResult(ss47, ss4763, cmp_scaled=scaled, estimate_ani_ci=False)
+    prefetch_write_dict = list(res.prefetchwritedict.keys())
+    print(prefetch_write_dict)
+    assert set(prefetch_write_dict) == set(pf.prefetch_write_cols)
 
     # check ani
     assert res.query_containment_ani == queryc_ani.ani

@@ -651,7 +651,6 @@ def test_FracMinHashComparison_ANI(track_abundance):
     assert cmp.potential_false_negative == mc_ani_manual.p_exceeds_threshold
 #    assert cmp.max_containment_ani_low is None
 #    assert cmp.max_containment_ani_high is None
-    cmp.estimate_avg_containment_ani()
     assert cmp.avg_containment_ani == np.mean([a.containment_ani(b).ani, b.containment_ani(a).ani])
 
 
@@ -693,7 +692,6 @@ def test_FracMinHashComparison_ANI_provide_similarity(track_abundance):
     mc_ani_manual = a.max_containment_ani(b)
     assert cmp.max_containment_ani == max(a.containment_ani(b).ani, b.containment_ani(a).ani) == mc_ani_manual.ani
     assert cmp.potential_false_negative == mc_ani_manual.p_exceeds_threshold
-    cmp.estimate_avg_containment_ani()
     assert cmp.avg_containment_ani == np.mean([a.containment_ani(b).ani, b.containment_ani(a).ani])
 
 

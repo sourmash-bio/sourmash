@@ -241,17 +241,17 @@ class SearchResult(BaseResult):
     """
     SearchResult class supports 'sourmash search' operations.
     """
-    # TODO: need SearchType here in order to estimate ANI properly (call jaccard vs containment ani for scaled sigs)
     similarity: float = None
     cmp_num: int = None
     searchtype: SearchType = None
 
     #columns for standard SearchResult output
     search_write_cols = ['similarity', 'md5', 'filename', 'name',  # here we use 'filename'
-                         'query_filename', 'query_name', 'query_md5']
+                         'query_filename', 'query_name', 'query_md5', 'ani']
 
-    ani_cols = ["ani"]
     ci_cols = ["ani_low", "ani_high"]
+
+    search_write_cols_ci = search_write_cols + ci_cols
 
     def init_sigcomparison(self):
         self.init_result()
@@ -266,7 +266,6 @@ class SearchResult(BaseResult):
         self.check_similarity()
         if self.cmp_scaled is not None and self.searchtype is not None:
             self.estimate_search_ani()
-            self.search_write_cols.extend(self.ani_cols)
 
     def check_similarity(self):
         # for now, require similarity for SearchResult
@@ -285,14 +284,12 @@ class SearchResult(BaseResult):
             if self.estimate_ani_ci:
                 self.ani_low = self.cmp.mh1_containment_ani_low
                 self.ani_high = self.cmp.mh1_containment_ani_high
-                self.ani_cols.extend(self.ci_cols)
         elif self.searchtype == SearchType.MAX_CONTAINMENT:
             self.cmp.estimate_max_containment_ani(max_containment = self.similarity)
             self.ani = self.cmp.max_containment_ani
             if self.estimate_ani_ci:
                 self.ani_low = self.cmp.max_containment_ani_low
                 self.ani_high = self.cmp.max_containment_ani_high
-                self.ani_cols.extend(self.ci_cols)
         elif self.searchtype == SearchType.JACCARD:
             self.cmp.estimate_jaccard_ani(jaccard=self.similarity)
             self.ani = self.cmp.jaccard_ani
@@ -304,6 +301,8 @@ class SearchResult(BaseResult):
     @property
     def writedict(self):
         self.query_md5 = self.shorten_md5(self.query_md5)
+        if self.estimate_ani_ci:
+            return self.to_write(columns=self.search_write_cols_ci)
         return self.to_write(columns=self.search_write_cols)
 
 
@@ -325,6 +324,8 @@ class PrefetchResult(BaseResult):
 
     ci_cols = ["query_containment_ani_low", "query_containment_ani_high",
                    "match_containment_ani_low", "match_containment_ani_high"]
+
+    prefetch_write_cols_ci = prefetch_write_cols + ci_cols
 
     def init_sigcomparison(self):
         # shared prefetch/gather initialization
@@ -356,8 +357,6 @@ class PrefetchResult(BaseResult):
         self.query_containment_ani_high = self.cmp.mh1_containment_ani_high
         self.match_containment_ani_low = self.cmp.mh2_containment_ani_low
         self.match_containment_ani_high = self.cmp.mh2_containment_ani_high
-        if self.estimate_ani_ci:
-            self.prefetch_write_cols.extend(self.ci_cols)
 
     def build_prefetch_result(self):
         # unique prefetch values
@@ -375,6 +374,8 @@ class PrefetchResult(BaseResult):
         self.query_md5 = self.shorten_md5(self.query_md5)
         self.md5 = self.shorten_md5(self.md5)
         self.match_md5 = self.shorten_md5(self.match_md5)
+        if self.estimate_ani_ci:
+            return self.to_write(columns=self.prefetch_write_cols_ci)
         return self.to_write(columns=self.prefetch_write_cols)
 
     @property
@@ -397,6 +398,11 @@ class GatherResult(PrefetchResult):
                          'moltype', 'scaled', 'query_n_hashes', 'query_abundance', 'query_containment_ani',
                          'match_containment_ani', 'average_containment_ani', 'max_containment_ani',
                          'potential_false_negative']
+
+    ci_cols = ["query_containment_ani_low", "query_containment_ani_high",
+                   "match_containment_ani_low", "match_containment_ani_high"]
+
+    gather_write_cols_ci = gather_write_cols + ci_cols
 
     def init_gathersketchcomparison(self):
         # compare remaining gather hashes with match. Force at cmp_scaled. Force match flatten(), bc we don't need abunds.
@@ -468,7 +474,7 @@ class GatherResult(PrefetchResult):
         self.scaled = self.cmp_scaled
         self.query_md5 = self.shorten_md5(self.query_md5)
         if self.estimate_ani_ci:
-            self.gather_write_cols.extend(self.ci_cols)
+            self.to_write(columns=self.gather_write_cols_ci)
         return self.to_write(columns=self.gather_write_cols)
 
     @property

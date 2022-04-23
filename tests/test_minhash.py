@@ -2839,6 +2839,9 @@ def test_containment_ANI():
     print("mh2 max containment", m2_mc_m1)
     assert m1_mc_m2 == m2_mc_m1
     assert (m1_mc_m2.ani, m1_mc_m2.ani_low, m1_mc_m2.ani_high) == (1.0,None,None)
+    ac_m1 = mh1.avg_containment_ani(mh2)
+    ac_m2 = mh2.avg_containment_ani(mh1)
+    assert ac_m1 == ac_m2 == (m1_cont_m2.ani + m2_cont_m1.ani)/2
  
 
 def test_containment_ANI_precalc_containment():
@@ -2890,6 +2893,10 @@ def test_containment_ANI_downsample():
     assert ds_s3c == ds_s3c_manual
     assert ds_s4c == ds_s4c_manual
     assert mc_w_ds_1 == mc_w_ds_2 == ds_mc_manual
+
+    ac_m2 = mh2.avg_containment_ani(mh3)
+    ac_m3 = mh3.avg_containment_ani(mh2)
+    assert ac_m2 == ac_m3 == (ds_s3c.ani + ds_s4c.ani)/2
 
 
 def test_jaccard_ANI():
