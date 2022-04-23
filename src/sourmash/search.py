@@ -467,6 +467,8 @@ class GatherResult(PrefetchResult):
         # for gather, we only shorten the query_md5
         self.scaled = self.cmp_scaled
         self.query_md5 = self.shorten_md5(self.query_md5)
+        if self.estimate_ani_ci:
+            self.gather_write_cols.extend(self.ci_cols)
         return self.to_write(columns=self.gather_write_cols)
 
     @property

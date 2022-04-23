@@ -59,6 +59,10 @@ def subparser(subparsers):
         help='calculate max containment instead of similarity'
     )
     subparser.add_argument(
+        '--estimate-ani', '--ANI', '--ani', action='store_true',
+        help='return ANI estimated from jaccard, containment, or max containment; see https://doi.org/10.1101/2022.01.11.475870'
+    )
+    subparser.add_argument(
         '--from-file',
         help='a text file containing a list of files to load signatures from'
     )
