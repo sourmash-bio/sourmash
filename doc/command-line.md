@@ -1655,6 +1655,14 @@ In contrast, signature files, zip collections, and directory
 hierarchies can contain many different types of signatures, and
 compatible ones will be selected automatically.
 
+Use the `sourmash index` command to create an SBT.
+
+Use the `sourmash lca index` command to create an LCA database; the
+database can be saved in JSON or SQL format with `-F json` or `-F sql`.
+
+Use `sourmash sig cat <list of signatures> -o <output>.sqldb` to create
+a SQLite indexed database.
+
 ### Combining search databases on the command line
 
 All of the commands in sourmash operate in "online" mode, so you can
