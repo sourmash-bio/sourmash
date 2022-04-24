@@ -119,7 +119,7 @@ class LCA_Database(Index):
         return idx
 
     def _get_lineage_id(self, lineage):
-        """Get (create if nec) a unique lineage ID for each
+        """Get (create if necessary) a unique lineage ID for each
         LineagePair tuples."
 
         Internal method of this class.
