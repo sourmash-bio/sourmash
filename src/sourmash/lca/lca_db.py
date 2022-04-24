@@ -378,6 +378,9 @@ class LCA_Database(Index):
 
         Method specific to this class.
         """
+        if os.path.exists(db_name):
+            raise ValueError(f"LCA database {db_name} already exists; not overwriting or appending")
+
         xopen = open
         if db_name.endswith('.gz'):
             xopen = gzip.open
@@ -418,6 +421,9 @@ class LCA_Database(Index):
         "Save this LCA_Database into an LCA_SqliteDatabase"
         from sourmash.index.sqlite_index import LCA_SqliteDatabase
         from sourmash.tax.tax_utils import LineageDB
+
+        if os.path.exists(dbname):
+            raise ValueError(f"LCA database {dbname} already exists; not overwriting or appending")
 
         # create a new in-memory lineage db...
         assignments = {}

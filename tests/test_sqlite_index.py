@@ -389,6 +389,7 @@ def test_sqlite_index_create_load_insert_existing(runtmp):
 
 def test_sqlite_index_create_load_insert_existing_cli(runtmp):
     # try creating, loading, inserting into an existing sqlite index from cli
+    # (aka "append" to existing database)
     filename = runtmp.output('idx.sqldb')
     sig1 = utils.get_test_data('47.fa.sig')
     sig2 = utils.get_test_data('63.fa.sig')

@@ -761,6 +761,26 @@ def test_basic_index(runtmp, lca_db_format):
     assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in runtmp.last_result.err
 
 
+def test_basic_index_twice(runtmp, lca_db_format):
+    # run 'lca index' twice.
+    taxcsv = utils.get_test_data('lca/delmont-1.csv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = runtmp.output(f'delmont-1.lca.{lca_db_format}')
+
+    cmd = ['lca', 'index', taxcsv, 'delmont-1', input_sig, '-F', lca_db_format]
+    runtmp.sourmash(*cmd)
+
+    with pytest.raises(SourmashCommandFailed):
+        cmd = ['lca', 'index', taxcsv, 'delmont-1', input_sig, '-F', lca_db_format]
+        runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'already exists. Not overwriting.' in runtmp.last_result.err
+
+
 def test_basic_index_bad_spreadsheet(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/bad-spreadsheet.csv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
@@ -2825,3 +2845,21 @@ def test_lca_jaccard_ordering():
     assert sr[0].score == 1.0
     assert sr[1].signature == ss_c
     assert sr[1].score == 0.2
+
+
+def test_lca_db_protein_save_twice(runtmp, lca_db_format):
+    # test save twice
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype='protein')
+    assert db.insert(sig1)
+    assert db.insert(sig2)
+
+    db.save(runtmp.output('xxx'), format=lca_db_format)
+
+    with pytest.raises(ValueError):
+        db.save(runtmp.output('xxx'), format=lca_db_format)
