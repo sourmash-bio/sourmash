@@ -45,7 +45,7 @@ jobs:
           pip install tox tox-gh-actions
 
       - name: Set up Pandoc
-        uses: r-lib/actions/setup-pandoc@v1
+        uses: r-lib/actions/setup-pandoc@v2
 
       - name: Set up IPFS
         if: startsWith(runner.os, 'Linux') && (matrix.py == '3.9')
