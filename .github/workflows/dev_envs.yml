@@ -13,7 +13,7 @@ jobs:
 
     - name: Cache nix store
       id: cache-nix
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: |
           ~/.nix-portable/store
@@ -37,7 +37,7 @@ jobs:
         fetch-depth: 0
 
     - name: cache conda
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       env:
         CACHE_NUMBER: 0
       with:
