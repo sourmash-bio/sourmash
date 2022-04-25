@@ -1,11 +1,11 @@
 """
 Code for searching collections of signatures.
 """
-from collections import namedtuple
+import csv
+import numpy as np
 from enum import Enum
 from multiprocessing.sharedctypes import Value
 from re import I
-import numpy as np
 from dataclasses import dataclass
 
 from .signature import SourmashSignature, MinHash
@@ -178,6 +178,7 @@ class BaseResult:
     ani_confidence: float = 0.95
     threshold_bp: int = None
     cmp_scaled: int = None
+    write_cols: list = None
 
     def init_result(self):
         self.mh1 = self.query.minhash
@@ -235,6 +236,26 @@ class BaseResult:
                 if k in columns and v is not None}
         return info
 
+    def init_dictwriter(self, csv_handle):
+        # initialize the csv, return writer (do once)
+        w = csv.DictWriter(csv_handle, fieldnames=self.write_cols)
+        w.writeheader()
+        return w
+
+    def prep_result(self):
+        self.query_md5 = self.shorten_md5(self.query_md5)
+
+    def write(self, w):
+        # write result dictionary using csv dictwriter
+        self.prep_result()
+        w.writerow(self.to_write(columns=w.fieldnames))
+
+    @property
+    def resultdict(self):
+        # instead of writing, just return dictionary of what we want to write
+        self.prep_result()
+        return self.to_write(columns=self.write_cols)
+
 
 @dataclass
 class SearchResult(BaseResult):
@@ -266,6 +287,10 @@ class SearchResult(BaseResult):
         self.check_similarity()
         if self.cmp_scaled is not None and self.searchtype is not None:
             self.estimate_search_ani()
+        # define columns we want to write
+        self.write_cols = self.search_write_cols
+        if self.estimate_ani_ci:
+            self.write_cols = self.search_write_cols_ci
 
     def check_similarity(self):
         # for now, require similarity for SearchResult
@@ -297,14 +322,6 @@ class SearchResult(BaseResult):
             self.ani_untrustworthy = self.cmp.jaccard_ani_untrustworthy
         # this can be set from any of the above
         self.potential_false_negative = self.cmp.potential_false_negative
-
-    @property
-    def writedict(self):
-        self.query_md5 = self.shorten_md5(self.query_md5)
-        if self.estimate_ani_ci:
-            return self.to_write(columns=self.search_write_cols_ci)
-        return self.to_write(columns=self.search_write_cols)
-
 
 
 @dataclass
@@ -363,24 +380,32 @@ class PrefetchResult(BaseResult):
         self.jaccard = self.cmp.jaccard
         self.f_query_match = self.cmp.mh2_containment #db_mh.contained_by(query_mh)
         self.f_match_query = self.cmp.mh1_containment #query_mh.contained_by(db_mh)
+        # set write columns for prefetch result
+        self.write_cols = self.prefetch_write_cols
+        if self.estimate_ani_ci:
+            self.write_cols = self.prefetch_write_cols_ci
 
     def __post_init__(self):
         self.init_sigcomparison()
         self.build_prefetch_result()
 
-    def prefetchresultdict(self):
-        # in prefetch, we shorten all md5's
+    def prep_prefetch_result(self):
+        # explicitly name so we can use this within GatherResult too
         self.scaled = self.cmp_scaled
+        # in prefetch, we shorten all md5's
         self.query_md5 = self.shorten_md5(self.query_md5)
         self.md5 = self.shorten_md5(self.md5)
         self.match_md5 = self.shorten_md5(self.match_md5)
-        if self.estimate_ani_ci:
-            return self.to_write(columns=self.prefetch_write_cols_ci)
-        return self.to_write(columns=self.prefetch_write_cols)
+
+    def prep_result(self):
+        # overwrite base prep_result
+        self.prep_prefetch_result()
 
     @property
-    def writedict(self):
-        return self.prefetchresultdict()
+    def prefetchresultdict(self):
+        # just return dictionary of what we want to write
+        self.prep_prefetch_result()
+        return self.to_write(columns=self.write_cols)
 
 
 @dataclass
@@ -468,25 +493,35 @@ class GatherResult(PrefetchResult):
         self.init_sigcomparison() # initialize original sketch vs match sketch comparison (inherited from PrefetchResult)
         self.init_gathersketchcomparison() # initialize remaining gather sketch vs match sketch comparison
         self.build_gather_result() # build gather-specific attributes
+        # set write columns for prefetch result
+        self.write_cols = self.gather_write_cols
+        if self.estimate_ani_ci:
+            self.write_cols = self.gather_write_cols_ci
 
-    def gatherresultdict(self):
+    def prep_gather_result(self):
         # for gather, we only shorten the query_md5
         self.scaled = self.cmp_scaled
         self.query_md5 = self.shorten_md5(self.query_md5)
+
+    def prep_result(self):
+        # overwrite base prep_result
+        self.prep_gather_result()
+
+    @property
+    def gatherresultdict(self):
+        # just return dictionary of what we want to write
+        self.prep_gather_result()
+        return self.to_write(columns=self.write_cols)
+
+    def init_prefetch_dictwriter(self, csv_handle):
+        # set write columns for prefetch result
+        prefetch_cols = self.prefetch_write_cols
         if self.estimate_ani_ci:
-            self.to_write(columns=self.gather_write_cols_ci)
-        return self.to_write(columns=self.gather_write_cols)
+            prefetch_cols = self.prefetch_write_cols_ci
+        return csv.DictWriter(csv_handle, fieldnames = prefetch_cols)
 
-    @property
-    def writedict(self):
-        return self.gatherresultdict()
-
-    @property
-    def prefetchwritedict(self):
-        # enable writing prefetch csv from a GatherResult
-        self.build_prefetch_result()
-        return self.prefetchresultdict()
-
+    def write_prefetch_result(self, w):
+        w.writerow(self.prefetchresultdict())
 
 
 def format_bp(bp):
@@ -601,7 +636,7 @@ class GatherDatabases:
     "Iterator object for doing gather/min-set-cov."
 
     def __init__(self, query, counters, *,
-                 threshold_bp=0, ignore_abundance=False, noident_mh=None):
+                 threshold_bp=0, ignore_abundance=False, noident_mh=None, estimate_ani_ci=False):
         # track original query information for later usage?
         track_abundance = query.minhash.track_abundance and not ignore_abundance
         self.orig_query = query
@@ -641,6 +676,8 @@ class GatherDatabases:
 
         self.cmp_scaled = 0     # initialize with something very low!
         self._update_scaled(cmp_scaled)
+
+        self.estimate_ani_ci = estimate_ani_ci # by default, do not report ANI confidence intervals
 
     def _update_scaled(self, scaled):
         max_scaled = max(self.cmp_scaled, scaled)
@@ -734,6 +771,7 @@ class GatherDatabases:
                               threshold_bp=threshold_bp,
                               orig_query_len=orig_query_len,
                               orig_query_abunds = self.orig_query_abunds,
+                              estimate_ani_ci=self.estimate_ani_ci,
                               )
 
         self.result_n += 1
@@ -755,7 +793,6 @@ def prefetch_database(query, database, threshold_bp, *, estimate_ani_ci=False):
     assert scaled
     # iterate over all signatures in database, find matches
     for result in database.prefetch(query, threshold_bp): # future: could return PrefetchResult directly here
-        #result = calculate_prefetch_info(query, result.signature, threshold_bp)
         result = PrefetchResult(query, result.signature, threshold_bp=threshold_bp, estimate_ani_ci=estimate_ani_ci)
         assert result.pass_threshold
         yield result

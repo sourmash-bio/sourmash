@@ -16,7 +16,7 @@ from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
 from .sourmash_args import (FileOutput, FileOutputCSV,
                             SaveSignaturesToLocation)
-from .search import prefetch_database, SearchResult, PrefetchResult, GatherResult
+from .search import prefetch_database, PrefetchResult
 from .index import LazyLinearIndex
 
 WATERMARK_SIZE = 10000
@@ -542,17 +542,14 @@ def search(args):
     if args.best_only:
         notify("** reporting only one match because --best-only was set")
 
+    dw = None
     if args.output:
-        if args.estimate_ani_ci:
-            fieldnames = SearchResult.search_write_cols_ci
-        else:
-            fieldnames = SearchResult.search_write_cols
         with FileOutputCSV(args.output) as fp:
-            w = csv.DictWriter(fp, fieldnames=fieldnames)
-
-            w.writeheader()
             for sr in results:
-                w.writerow(sr.writedict)
+                # if this is the first result we're writing, initialize the csv, return writer
+                if dw is None:
+                    dw = sr.init_dictwriter(fp)
+                sr.write(dw)
 
     # save matching signatures upon request
     if args.save_matches:
@@ -697,13 +694,7 @@ def gather(args):
         prefetch_csvout_fp = None
         prefetch_csvout_w = None
         if args.save_prefetch_csv:
-            if args.estimate_ani_ci:
-                fieldnames = PrefetchResult.prefetch_write_cols_ci
-            else:
-                fieldnames = PrefetchResult.prefetch_write_cols
             prefetch_csvout_fp = FileOutput(args.save_prefetch_csv, 'wt').open()
-            prefetch_csvout_w = csv.DictWriter(prefetch_csvout_fp, fieldnames=fieldnames)
-            prefetch_csvout_w.writeheader()
 
             query_mh = prefetch_query.minhash
             scaled = query_mh.scaled
@@ -731,7 +722,9 @@ def gather(args):
                     # calculate intersection stats and info
                     prefetch_result = PrefetchResult(prefetch_query, found_sig, cmp_scaled=scaled, 
                                                      threshold_bp=args.threshold_bp, estimate_ani_ci=args.estimate_ani_ci)
-                    prefetch_csvout_w.writerow(prefetch_result.writedict)
+                    if prefetch_csvout_w is None:
+                        prefetch_csvout_w = prefetch_result.init_dictwriter(prefetch_csvout_fp)
+                    prefetch_result.write(prefetch_csvout_w)
 
             counters.append(counter)
 
@@ -757,7 +750,8 @@ def gather(args):
     gather_iter = GatherDatabases(query, counters,
                                   threshold_bp=args.threshold_bp,
                                   ignore_abundance=args.ignore_abundance,
-                                  noident_mh=noident_mh)
+                                  noident_mh=noident_mh,
+                                  estimate_ani_ci=args.estimate_ani_ci)
 
     for result, weighted_missed in gather_iter:
         if not len(found):                # first result? print header.
@@ -811,16 +805,13 @@ def gather(args):
         print_results(f'WARNING: final scaled was {gather_iter.scaled}, vs query scaled of {query.minhash.scaled}')
 
     # save CSV?
+    w = None
     if found and args.output:
-        if args.estimate_ani_ci:
-            fieldnames = GatherResult.gather_write_cols_ci
-        else:
-            fieldnames = GatherResult.gather_write_cols
         with FileOutputCSV(args.output) as fp:
-            w = csv.DictWriter(fp, fieldnames=fieldnames)
-            w.writeheader()
             for result in found:
-                w.writerow(result.writedict)
+                if w is None:
+                    w = result.init_dictwriter(fp)
+                result.write(w)
 
     # save matching signatures?
     if found and args.save_matches:
@@ -980,15 +971,15 @@ def multigather(args):
 
             output_base = os.path.basename(query_filename)
             output_csv = output_base + '.csv'
-            if args.estimate_ani_ci:
-                fieldnames = GatherResult.gather_write_cols_ci
-            else:
-                fieldnames = GatherResult.gather_write_cols
+
+            w = None
             with FileOutputCSV(output_csv) as fp:
-                w = csv.DictWriter(fp, fieldnames=fieldnames)
-                w.writeheader()
                 for result in found:
-                    w.writerow(result.writedict)
+                    if result is not None:
+                        if w is None:
+                            w = result.init_dictwriter(fp)
+    #                    w.writerow(result.writedict)
+                            result.write(w)
 
             output_matches = output_base + '.matches.sig'
             with open(output_matches, 'wt') as fp:
@@ -1185,13 +1176,7 @@ def prefetch(args):
     csvout_fp = None
     csvout_w = None
     if args.output:
-        if args.estimate_ani_ci:
-            fieldnames = PrefetchResult.prefetch_write_cols_ci
-        else:
-            fieldnames = PrefetchResult.prefetch_write_cols
         csvout_fp = FileOutput(args.output, 'wt').open()
-        csvout_w = csv.DictWriter(csvout_fp, fieldnames=fieldnames)
-        csvout_w.writeheader()
 
     # track & maybe save matches progressively
     matches_out = SaveSignaturesToLocation(args.save_matches)
@@ -1245,7 +1230,10 @@ def prefetch(args):
 
             # output match info as we go
             if csvout_fp:
-                csvout_w.writerow(result.writedict)
+                if csvout_w is None:
+                    csvout_w = result.init_dictwriter(csvout_fp)
+#                csvout_w.writerow(result.writedict)
+                result.write(csvout_w)
 
             # output match signatures as we go (maybe)
             matches_out.add(match)
