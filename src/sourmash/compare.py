@@ -99,9 +99,7 @@ def similarity_args_unpack(args, ignore_abundance, downsample, return_ani=False)
     as it can only be given one argument."""
     sig1, sig2 = args
     if return_ani:
-        return sig1.jaccard_ani(sig2,
-                           ignore_abundance=ignore_abundance,
-                           downsample=downsample).ani
+        return sig1.jaccard_ani(sig2, downsample=downsample).ani
     else:
         return sig1.similarity(sig2,
                            ignore_abundance=ignore_abundance,
