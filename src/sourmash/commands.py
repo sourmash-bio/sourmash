@@ -658,7 +658,7 @@ def gather(args):
         error('query signature needs to be created with --scaled')
         sys.exit(-1)
 
-    if args.scaled:
+    if args.scaled and args.scaled != query.minhash.scaled:
         notify(f'downsampling query from scaled={query.minhash.scaled} to {int(args.scaled)}')
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
@@ -891,7 +891,7 @@ def multigather(args):
                 error('query signature needs to be created with --scaled; skipping')
                 continue
 
-            if args.scaled:
+            if args.scaled and args.scaled != query.minhash.scaled:
                 notify(f'downsampling query from scaled={query.minhash.scaled} to {int(args.scaled)}')
                 query.minhash = query.minhash.downsample(scaled=args.scaled)
 
@@ -1157,7 +1157,7 @@ def prefetch(args):
     if query_mh.track_abundance:
         query_mh = query_mh.flatten()
 
-    if args.scaled:
+    if args.scaled and args.scaled != query_mh.scaled:
         notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
         query_mh = query_mh.downsample(scaled=args.scaled)
 

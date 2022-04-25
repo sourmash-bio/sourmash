@@ -4,8 +4,7 @@ Code for searching collections of signatures.
 import csv
 import numpy as np
 from enum import Enum
-from multiprocessing.sharedctypes import Value
-from re import I
+import numpy as np
 from dataclasses import dataclass
 
 from .signature import SourmashSignature, MinHash
