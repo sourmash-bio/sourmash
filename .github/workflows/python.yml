@@ -33,7 +33,7 @@ jobs:
           echo "::set-output name=dir::$(pip cache dir)"
 
       - name: pip cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ${{ steps.pip-cache.outputs.dir }}
           key: ${{ runner.os }}-pip-v2-${{ hashFiles('**/setup.cfg') }}
@@ -46,7 +46,7 @@ jobs:
           pip install tox tox-gh-actions
 
       - name: Set up Pandoc
-        uses: r-lib/actions/setup-pandoc@v1
+        uses: r-lib/actions/setup-pandoc@v2
 
       - name: Set up IPFS
         if: startsWith(runner.os, 'Linux') && (matrix.py == '3.9')
@@ -62,7 +62,7 @@ jobs:
           redis-version: 6
 
       - name: tox cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: .tox/
           key: ${{ runner.os }}-tox-v2-${{ hashFiles('**/setup.cfg') }}
