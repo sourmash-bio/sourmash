@@ -844,9 +844,15 @@ def test_sqlite_lca_db_supply_lineage_db():
 
     hashval = next(iter(db.hashvals))
     lineages = db.get_lineage_assignments(hashval)
-    assert len(lineages) == 1
+    print(lineages)
     assert lineages[0][0].rank == 'superkingdom'
     assert lineages[0][0].name == 'd__Bacteria'
+    assert lineages[0][-1].rank == 'species'
+    assert lineages[0][-1].name == 's__Shewanella baltica'
+    assert lineages[1][0].rank == 'superkingdom'
+    assert lineages[1][0].name == 'd__Bacteria'
+    assert lineages[0][-1].rank == 'species'
+    assert lineages[0][-1].name == 's__Shewanella baltica'
 
 
 def test_bad_sqlite_internal_version():
