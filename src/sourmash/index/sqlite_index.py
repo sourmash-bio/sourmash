@@ -983,12 +983,17 @@ class LCA_SqliteDatabase(SqliteIndex):
 
                 if lineage:
                     lid = lineage_to_lid.get(lineage)
+
+                    # manufacture new lid?
                     if lid is None:
                         lid = next_lid
                         next_lid += 1
+
                         lineage_to_lid[lineage] = lid
                         lid_to_lineage[lid] = lineage
-                        idx_to_lid[idx] = lid
+
+                    # assign idx <-> lid
+                    idx_to_lid[idx] = lid
 
         self.ident_to_idx = ident_to_idx
         self.idx_to_lid = idx_to_lid

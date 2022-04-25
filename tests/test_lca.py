@@ -973,6 +973,41 @@ def test_basic_index_and_classify(runtmp, lca_db_format):
     assert 'loaded 1 LCA databases' in runtmp.last_result.err
 
 
+def test_basic_index_and_classify_dup_lineage(runtmp, lca_db_format):
+    taxcsv = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
+    input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00007.sig')
+    input_sig2 = utils.get_test_data('lca/TARA_ANW_MAG_00005.sig')
+    lca_db = runtmp.output(f'delmont-dup.lca.{lca_db_format}')
+
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2,
+           '-F', lca_db_format, '-f']
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(lca_db)
+
+    cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig1]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'TARA_ASE_MAG_00007,found,Bacteria,Proteobacteria,Gammaproteobacteria,,,,,' in runtmp.last_result.out
+
+    cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig2]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'TARA_ANW_MAG_00005,found,Bacteria,Proteobacteria,Gammaproteobacteria,,,,,' in runtmp.last_result.out
+
+
 def test_index_traverse(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/delmont-1.csv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
