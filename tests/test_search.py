@@ -485,10 +485,8 @@ def test_GatherResult():
     assert res.max_containment == max_containment
 
     # check that we can write prefetch result directly from gather
-    pf = PrefetchResult(ss47, ss4763, cmp_scaled=scaled, estimate_ani_ci=False)
-    prefetch_write_dict = list(res.prefetchwritedict.keys())
-    print(prefetch_write_dict)
-    assert set(prefetch_write_dict) == set(pf.prefetch_write_cols)
+    pf = PrefetchResult(ss47, ss4763, cmp_scaled=scaled)
+    assert pf.prefetchresultdict == res.prefetchresultdict
 
     # check ani
     assert res.query_containment_ani == queryc_ani.ani

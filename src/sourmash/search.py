@@ -513,6 +513,18 @@ class GatherResult(PrefetchResult):
         self.prep_gather_result()
         return self.to_write(columns=self.write_cols)
 
+    @property
+    def prefetchresultdict(self):
+        # get all prefetch cols from gatherresult
+        prefetch_cols = self.prefetch_write_cols
+        if self.estimate_ani_ci:
+            prefetch_cols = self.prefetch_write_cols_ci
+        self.jaccard = self.cmp.jaccard
+        self.f_query_match = self.cmp.mh2_containment #db_mh.contained_by(query_mh)
+        self.f_match_query = self.cmp.mh1_containment #query_mh.contained_by(db_mh)
+        self.prep_prefetch_result()
+        return self.to_write(columns=prefetch_cols)
+
     def init_prefetch_dictwriter(self, csv_handle):
         # set write columns for prefetch result
         prefetch_cols = self.prefetch_write_cols
@@ -521,7 +533,7 @@ class GatherResult(PrefetchResult):
         return csv.DictWriter(csv_handle, fieldnames = prefetch_cols)
 
     def write_prefetch_result(self, w):
-        w.writerow(self.prefetchresultdict())
+        w.writerow(self.prefetchresultdict)
 
 
 def format_bp(bp):
