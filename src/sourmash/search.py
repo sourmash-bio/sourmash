@@ -201,7 +201,7 @@ class BaseResult:
 
     def get_cmpinfo(self):
         # grab signature /minhash metadata
-        # note, With so few columns written for current SearchResult, we could move these to PrefetchResult initialization
+        # note, with so few columns written for current SearchResult, we could move these to PrefetchResult initialization
         # I've left here for now because I think at some point we want to output more info from search..
         self.ksize = self.mh1.ksize
         self.moltype = self.mh1.moltype

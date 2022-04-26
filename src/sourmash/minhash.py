@@ -764,7 +764,7 @@ class MinHash(RustObject):
                                            estimate_ci = estimate_ci)
         return c_aniresult
 
-    def avg_containment(self, other, downsample=False):
+    def avg_containment(self, other, *, downsample=False):
         """
         Calculate average containment.
         Note: this is average of the containments, *not* count_common/ avg_denom
@@ -777,7 +777,7 @@ class MinHash(RustObject):
 
         return (c1 + c2)/2
 
-    def avg_containment_ani(self, other, downsample=False):
+    def avg_containment_ani(self, other, *, downsample=False):
         """
         Calculate average containment ANI.
         Note: this is average of the containment ANI's, *not* ANI using count_common/ avg_denom

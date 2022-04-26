@@ -9,7 +9,7 @@ from .logging import notify
 from sourmash.np_utils import to_memmap
 
 
-def compare_serial(siglist, ignore_abundance, downsample=False, return_ani=False):
+def compare_serial(siglist, ignore_abundance, *, downsample=False, return_ani=False):
     """Compare all combinations of signatures and return a matrix
     of similarities. Processes combinations serially on a single
     process. Best to use when there is few signatures.
@@ -37,12 +37,12 @@ def compare_serial(siglist, ignore_abundance, downsample=False, return_ani=False
         if return_ani:
             similarities[i][j] = similarities[j][i] = siglist[i].jaccard_ani(siglist[j],downsample=downsample).ani
         else:
-            similarities[i][j] = similarities[j][i] = siglist[i].similarity(siglist[j], ignore_abundance, downsample)
+            similarities[i][j] = similarities[j][i] = siglist[i].similarity(siglist[j], ignore_abundance=ignore_abundance, downsample=downsample)
 
     return similarities
 
 
-def compare_serial_containment(siglist, downsample=False, return_ani=False):
+def compare_serial_containment(siglist, *, downsample=False, return_ani=False):
     """Compare all combinations of signatures and return a matrix
     of containments. Processes combinations serially on a single
     process. Best to only use when there are few signatures.
@@ -68,7 +68,7 @@ def compare_serial_containment(siglist, downsample=False, return_ani=False):
     return containments
 
 
-def compare_serial_max_containment(siglist, downsample=False, return_ani=False):
+def compare_serial_max_containment(siglist, *, downsample=False, return_ani=False):
     """Compare all combinations of signatures and return a matrix
     of max_containments. Processes combinations serially on a single
     process. Best to only use when there are few signatures.
@@ -94,7 +94,7 @@ def compare_serial_max_containment(siglist, downsample=False, return_ani=False):
     return containments
 
 
-def similarity_args_unpack(args, ignore_abundance, downsample, return_ani=False):
+def similarity_args_unpack(args, ignore_abundance, *, downsample, return_ani=False):
     """Helper function to unpack the arguments. Written to use in pool.imap
     as it can only be given one argument."""
     sig1, sig2 = args
@@ -106,7 +106,7 @@ def similarity_args_unpack(args, ignore_abundance, downsample, return_ani=False)
                            downsample=downsample)
 
 
-def get_similarities_at_index(index, ignore_abundance, downsample, siglist, return_ani=False):
+def get_similarities_at_index(index, ignore_abundance, downsample, siglist, *, return_ani=False):
     """Returns similarities of all the combinations of signature at index in
     the siglist with the rest of the indices starting at index + 1. Doesn't
     redundantly calculate signatures with all the other indices prior to
@@ -136,7 +136,7 @@ def get_similarities_at_index(index, ignore_abundance, downsample, siglist, retu
     return similarity_list
 
 
-def compare_parallel(siglist, ignore_abundance, downsample, n_jobs, return_ani=False):
+def compare_parallel(siglist, ignore_abundance, downsample, n_jobs, *, return_ani=False):
     """Compare all combinations of signatures and return a matrix
     of similarities. Processes combinations parallely on number of processes
     given by n_jobs
@@ -232,7 +232,7 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None, 
     :return: np.array similarity matrix
     """
     if n_jobs is None or n_jobs == 1:
-        similarities = compare_serial(siglist, ignore_abundance, downsample, return_ani=return_ani)
+        similarities = compare_serial(siglist, ignore_abundance=ignore_abundance, downsample=downsample, return_ani=return_ani)
     else:
-        similarities = compare_parallel(siglist, ignore_abundance, downsample, n_jobs, return_ani=return_ani)
+        similarities = compare_parallel(siglist, ignore_abundance=ignore_abundance, downsample=downsample, n_jobs, return_ani=return_ani)
     return similarities
