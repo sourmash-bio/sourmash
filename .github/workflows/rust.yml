@@ -63,7 +63,7 @@ jobs:
           override: true
 
       - name: Set up Python 3.8
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v3
         with:
           python-version: "3.8"
 
@@ -90,7 +90,7 @@ jobs:
           override: true
 
       - name: Set up Python 3.8
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v3
         with:
           python-version: "3.8"
 
@@ -132,7 +132,7 @@ jobs:
         run: cargo tarpaulin --all --all-features --timeout 600 --out Xml -- --test-threads 1
 
       - name: Upload Rust coverage to codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
           flags: rust
           fail_ci_if_error: true
@@ -204,7 +204,7 @@ jobs:
         working-directory: pkg
         run: npm pack
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           path: 'pkg/sourmash*.tgz'
 
@@ -274,7 +274,7 @@ jobs:
         run: grep '1.48.0' src/core/README.md
 
       - name: Set up Python 3.8
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v3
         with:
           python-version: "3.8"
 
