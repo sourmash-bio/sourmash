@@ -80,6 +80,35 @@ def test_manifest_to_picklist():
     assert len(new_manifest) == len(manifest)
 
 
+def test_manifest_compare():
+    # test saving and loading manifests
+    protzip = utils.get_test_data('prot/protein.zip')
+
+    loader = sourmash.load_file_as_index(protzip)
+    manifest = loader.manifest
+
+    # equal
+    rows = list(manifest.rows)
+
+    equal_mf = index.CollectionManifest(rows)
+    assert equal_mf == manifest
+
+    # not equal / shorter
+    rows = list(manifest.rows)
+    rows = rows[:-1]
+
+    short_mf = index.CollectionManifest(rows)
+    assert short_mf != manifest
+
+    # not equal / diff values
+    rows = list(manifest.rows)
+    rows[0] = dict(rows[0])
+    rows[0]['internal_location'] += '.foo'
+
+    short_mf = index.CollectionManifest(rows)
+    assert short_mf != manifest
+
+
 def test_save_load_manifest():
     # test saving and loading manifests
     protzip = utils.get_test_data('prot/protein.zip')
@@ -115,3 +144,21 @@ def test_save_load_manifest():
     # manifest 2 in manifest?
     for row in manifest2.rows:
         assert pick1.matches_manifest_row(row)
+
+    # equal?
+    assert manifest == manifest2
+
+    # not equal / shorter
+    rows = list(manifest.rows)
+    rows = rows[1:]
+
+    short_mf = index.CollectionManifest(rows)
+    assert short_mf != manifest
+
+    # not equal / diff values
+    rows = list(manifest.rows)
+    rows[0] = dict(rows[0])
+    rows[0]['internal_location'] += '.foo'
+
+    short_mf = index.CollectionManifest(rows)
+    assert short_mf != manifest

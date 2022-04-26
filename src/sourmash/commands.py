@@ -450,7 +450,7 @@ def search(args):
     from .search import (search_databases_with_flat_query,
                          search_databases_with_abund_query)
 
-    set_quiet(args.quiet)
+    set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
     pattern_search = sourmash_args.load_include_exclude_db_patterns(args)

@@ -55,6 +55,13 @@ def subparser(subparsers):
         help='do not require a manifest; generate dynamically if needed',
         action='store_true'
     )
+    subparser.add_argument(
+        '-F', '--manifest-format',
+        help="format of manifest output file; default is 'csv')",
+        default='csv',
+        choices=['csv', 'sql'],
+    )
+
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
     add_pattern_args(subparser)

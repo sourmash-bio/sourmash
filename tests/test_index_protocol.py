@@ -10,10 +10,11 @@ from sourmash import SourmashSignature
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             LazyLinearIndex, MultiIndex,
                             StandaloneManifestIndex, LazyLoadedIndex)
+from sourmash.index.sqlite_index import SqliteIndex
 from sourmash.index.revindex import RevIndex
 from sourmash.sbt import SBT, GraphFactory
-from sourmash.manifest import CollectionManifest
-from sourmash.lca.lca_db import LCA_Database
+from sourmash.manifest import CollectionManifest, BaseCollectionManifest
+from sourmash.lca.lca_db import LCA_Database, load_single_database
 
 import sourmash_tst_utils as utils
 
@@ -127,6 +128,25 @@ def build_lca_index_save_load(runtmp):
     return sourmash.load_file_as_index(outfile)
 
 
+def build_lca_index_save_load(runtmp):
+    db = build_lca_index(runtmp)
+    outfile = runtmp.output('db.lca.json')
+    db.save(outfile)
+
+    return sourmash.load_file_as_index(outfile)
+
+
+def build_sqlite_index(runtmp):
+    filename = runtmp.output('idx.sqldb')
+    db = SqliteIndex.create(filename)
+
+    siglist = _load_three_sigs()
+    for ss in siglist:
+        db.insert(ss)
+
+    return db
+
+
 def build_lazy_loaded_index(runtmp):
     db = build_lca_index(runtmp)
     outfile = runtmp.output('db.lca.json')
@@ -147,6 +167,17 @@ def build_revindex(runtmp):
     return lidx
 
 
+def build_lca_index_save_load_sql(runtmp):
+    db = build_lca_index(runtmp)
+    outfile = runtmp.output('db.lca.json')
+    db.save(outfile, format='sql')
+
+    x = load_single_database(outfile)
+    db_load = x[0]
+
+    return db_load
+
+
 #
 # create a fixture 'index_obj' that is parameterized by all of these
 # building functions.
@@ -161,6 +192,8 @@ def build_revindex(runtmp):
                         build_lca_index,
                         build_sbt_index_save_load,
                         build_lca_index_save_load,
+                        build_sqlite_index,
+                        build_lca_index_save_load_sql,
                         build_lazy_loaded_index,
 #                        build_revindex,
                         ]
@@ -257,6 +290,20 @@ def test_index_signatures(index_obj):
     assert ss63.md5sum() in md5s
 
 
+def test_index_signatures_with_location(index_obj):
+    # signatures_with_location works?
+    siglist = list(index_obj.signatures_with_location())
+
+    ss2, ss47, ss63 = _load_three_sigs()
+    assert len(siglist) == 3
+
+    # check md5sums, since 'in' doesn't always work
+    md5s = set(( ss.md5sum() for ss, loc in siglist ))
+    assert ss2.md5sum() in md5s
+    assert ss47.md5sum() in md5s
+    assert ss63.md5sum() in md5s
+
+
 def test_index_len(index_obj):
     # len works?
     assert len(index_obj) == 3
@@ -265,6 +312,18 @@ def test_index_len(index_obj):
 def test_index_bool(index_obj):
     # bool works?
     assert bool(index_obj)
+
+
+def test_index_location(index_obj):
+    # location works?
+    assert str(index_obj.location)
+
+
+def test_index_manifest(index_obj):
+    # manifest is either None or a BaseCollectionManifest
+    manifest = index_obj.manifest
+    if manifest is not None:
+        assert isinstance(manifest, BaseCollectionManifest)
 
 
 def test_index_select_basic(index_obj):
@@ -337,7 +396,7 @@ def test_index_gather(index_obj):
     assert matches[0].signature.minhash == ss47.minhash
 
 
-def test_linear_gather_threshold_1(index_obj):
+def test_index_gather_threshold_1(index_obj):
     # test gather() method, in some detail
     ss2, ss47, ss63 = _load_three_sigs()
 

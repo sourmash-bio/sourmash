@@ -57,6 +57,10 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
+        '-d', '--debug', action='store_true',
+        help='output debug information'
+    )
+    subparser.add_argument(
         '--threshold', metavar='T', default=0.08, type=float,
         help='minimum threshold for reporting matches; default=0.08'
     )

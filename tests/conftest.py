@@ -59,8 +59,14 @@ def linear_gather(request):
 def prefetch_gather(request):
     return request.param
 
+
 @pytest.fixture(params=[True, False])
 def use_manifest(request):
+    return request.param
+
+
+@pytest.fixture(params=['json', 'sql'])
+def lca_db_format(request):
     return request.param
 
 

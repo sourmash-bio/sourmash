@@ -38,7 +38,20 @@ def build_json_lca_db(runtmp):
     db = build_inmem_lca_db(runtmp)
     db_out = runtmp.output('protein.lca.json')
 
-    db.save(db_out)
+    db.save(db_out, format='json')
+
+    x = load_single_database(db_out)
+    db_load = x[0]
+
+    return db_load
+
+
+def build_sql_lca_db(runtmp):
+    # test saved/loaded SQL database
+    db = build_inmem_lca_db(runtmp)
+    db_out = runtmp.output('protein.lca.json')
+
+    db.save(db_out, format='sql')
 
     x = load_single_database(db_out)
     db_load = x[0]
@@ -47,7 +60,8 @@ def build_json_lca_db(runtmp):
 
 
 @pytest.fixture(params=[build_inmem_lca_db,
-                        build_json_lca_db])
+                        build_json_lca_db,
+                        build_sql_lca_db])
 def lca_db_obj(request, runtmp):
     build_fn = request.param
 
@@ -106,3 +120,18 @@ def test_get_identifiers_for_hashval_2(lca_db_obj):
 
     assert 'GCA_001593925' in all_idents
     assert 'GCA_001593935' in all_idents
+
+
+def test_downsample_scaled(lca_db_obj):
+    # check the downsample_scaled method
+    assert lca_db_obj.scaled == 100
+    lca_db_obj.downsample_scaled(500)
+    assert lca_db_obj.scaled == 500
+
+
+def test_downsample_scaled_fail(lca_db_obj):
+    # check the downsample_scaled method - should fail if lower scaled.
+    assert lca_db_obj.scaled == 100
+
+    with pytest.raises(ValueError):
+        lca_db_obj.downsample_scaled(50)
