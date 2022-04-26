@@ -31,7 +31,6 @@ def subparser(subparsers):
 
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
-    add_picklist_args(subparser)
 
 
 def main(args):
