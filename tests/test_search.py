@@ -323,6 +323,12 @@ def test_numSearchResult():
         res.estimate_search_ani()
     assert("ANI can only be estimated from scaled signatures.") in str(exc)
 
+    # get result as dictionary (of just items to write)
+    resD = res.resultdict
+    assert resD["filename"] == res.filename
+    assert resD["name"] == res.name
+    assert resD["similarity"] == res.similarity
+
 
 def test_SearchResult_incompatible_sigs():
     ss47_file = utils.get_test_data('num/47.fa.sig')
@@ -479,7 +485,6 @@ def test_GatherResult():
     assert res.md5 == ss4763.md5sum()
     assert res.name == ss4763.name
     assert res.match_filename == ss4763.filename
-    # gather specific
     assert res.intersect_bp == intersect_bp
     assert res.max_containment == max_containment
 
@@ -495,6 +500,61 @@ def test_GatherResult():
     assert res.max_containment_ani == max(queryc_ani.ani, matchc_ani.ani)
     assert res.average_containment_ani == np.mean([queryc_ani.ani, matchc_ani.ani])
     assert res.potential_false_negative == False
+
+    # get write dict version of GatherResult
+    resD = res.gatherresultdict
+    assert resD["intersect_bp"] == res.intersect_bp
+
+
+def test_GatherResult_ci():
+    # check that values get stored/calculated correctly
+    ss47_file = utils.get_test_data('track_abund/47.fa.sig')
+    ss4763_file = utils.get_test_data('47+63.fa.sig')
+    ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
+    ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype='dna')
+    ss4763.filename = ss4763_file
+
+    scaled = ss47.minhash.scaled
+
+    intersect_mh = ss47.minhash.flatten().intersection(ss4763.minhash)
+    remaining_mh = ss4763.minhash.to_mutable()
+    remaining_mh.remove_many(intersect_mh)
+
+    orig_query_abunds = ss47.minhash.hashes
+    queryc_ani = ss47.containment_ani(ss4763,estimate_ci=True)
+    matchc_ani = ss4763.containment_ani(ss47, estimate_ci=True)
+
+    # make some fake vals to check
+    gather_result_rank = 1
+    sum_abunds = 1000
+
+    res = GatherResult(ss47, ss4763, cmp_scaled=scaled,
+                        gather_querymh=remaining_mh,
+                        gather_result_rank=gather_result_rank,
+                        total_abund = sum_abunds,
+                        orig_query_len=len(ss47.minhash),
+                        orig_query_abunds=orig_query_abunds,
+                        estimate_ani_ci=True)
+
+    # check that we can write prefetch result directly from gather
+    pf = PrefetchResult(ss47, ss4763, cmp_scaled=scaled, estimate_ani_ci=True)
+    assert pf.prefetchresultdict == res.prefetchresultdict
+
+    # check ani
+    assert res.query_containment_ani == queryc_ani.ani
+    print(queryc_ani.ani)
+    print(matchc_ani.ani)
+    assert res.match_containment_ani == matchc_ani.ani
+    assert res.match_containment_ani_low == matchc_ani.ani_low
+    assert res.match_containment_ani_high == matchc_ani.ani_high
+    assert res.max_containment_ani == max(queryc_ani.ani, matchc_ani.ani)
+    assert res.average_containment_ani == np.mean([queryc_ani.ani, matchc_ani.ani])
+    assert res.potential_false_negative == False
+
+    # get write dict version of GatherResult
+    resD = res.gatherresultdict
+    assert resD["intersect_bp"] == res.intersect_bp
+    assert resD["match_containment_ani_low"] == res.match_containment_ani_low
 
 
 def test_GatherResult_incompatible_sigs():

@@ -14,6 +14,12 @@ from sourmash_tst_utils import SourmashCommandFailed
 from sourmash import signature
 
 
+def approx_eq(val1, val2):
+    if val1 == "":
+        return val1 == val2
+    return round(float(val1), 3) == round(float(val2), 3)
+
+
 def test_prefetch_basic(runtmp, linear_gather):
     c = runtmp
 
@@ -748,10 +754,10 @@ def test_prefetch_ani_csv_out(runtmp, linear_gather):
         for (row, expected) in zip(r, expected_ani_vals):
             print(row)
             assert prefetch_result_names == list(row.keys())
-            assert row['query_containment_ani'] == expected['q_ani']
-            assert row['match_containment_ani'] == expected['m_ani']
-            assert row['max_containment_ani'] == expected['mc_ani']
-            assert row['average_containment_ani'] == expected['ac_ani']
+            assert approx_eq(row['query_containment_ani'], expected['q_ani'])
+            assert approx_eq(row['match_containment_ani'], expected['m_ani'])
+            assert approx_eq(row['max_containment_ani'], expected['mc_ani'])
+            assert approx_eq(row['average_containment_ani'], expected['ac_ani'])
             assert row['potential_false_negative'] == expected['pfn']
 
 
@@ -785,18 +791,19 @@ def test_prefetch_ani_csv_out_estimate_ci(runtmp, linear_gather):
             'm_ani_low': "", "m_ani_high": "",
                       'ac_ani': '1.0','mc_ani': '1.0',
                       'pfn': 'False'}
+
     expected_ani_vals = [exp1, exp2]
     with open(csvout, 'rt', newline="") as fp:
         r = csv.DictReader(fp)
         for (row, expected) in zip(r, expected_ani_vals):
             print(row)
             assert prefetch_result_names_ci == list(row.keys())
-            assert row['query_containment_ani'] == expected['q_ani']
-            assert row['query_containment_ani_low'] == expected['q_ani_low']
-            assert row['query_containment_ani_high'] == expected['q_ani_high']
-            assert row['match_containment_ani'] == expected['m_ani']
-            assert row['match_containment_ani_low'] == expected['m_ani_low']
-            assert row['match_containment_ani_high'] == expected['m_ani_high']
-            assert row['max_containment_ani'] == expected['mc_ani']
-            assert row['average_containment_ani'] == expected['ac_ani']
+            assert approx_eq(row['query_containment_ani'],expected['q_ani'])
+            assert approx_eq(row['query_containment_ani_low'], expected['q_ani_low'])
+            assert approx_eq(row['query_containment_ani_high'], expected['q_ani_high'])
+            assert approx_eq(row['match_containment_ani'], expected['m_ani'])
+            assert approx_eq(row['match_containment_ani_low'], expected['m_ani_low'])
+            assert approx_eq(row['match_containment_ani_high'], expected['m_ani_high'])
+            assert approx_eq(row['max_containment_ani'], expected['mc_ani'])
+            assert approx_eq(row['average_containment_ani'], expected['ac_ani'])
             assert row['potential_false_negative'] == expected['pfn']

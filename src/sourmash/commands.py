@@ -690,7 +690,7 @@ def gather(args):
         noident_mh = prefetch_query.minhash.to_mutable()
         save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
         save_prefetch.open()
-        # set up prefetch CSV output, write headers, etc.
+        # set up prefetch CSV output
         prefetch_csvout_fp = None
         prefetch_csvout_w = None
         if args.save_prefetch_csv:
@@ -1232,7 +1232,6 @@ def prefetch(args):
             if csvout_fp:
                 if csvout_w is None:
                     csvout_w = result.init_dictwriter(csvout_fp)
-#                csvout_w.writerow(result.writedict)
                 result.write(csvout_w)
 
             # output match signatures as we go (maybe)

@@ -172,7 +172,7 @@ class BaseResult:
     match: SourmashSignature
     filename: str = None
     ignore_abundance: bool = False # optionally ignore abundances
-    # we don't need these for Num Search Results, bud do need them for Scaled Search Results. Ok to define here?
+    # need these for scaled result comparisons
     estimate_ani_ci: bool = False
     ani_confidence: float = 0.95
     threshold_bp: int = None
@@ -201,7 +201,8 @@ class BaseResult:
 
     def get_cmpinfo(self):
         # grab signature /minhash metadata
-        # note, could probably pare this down to essentials for SearchResult, get remaining in PrefetchResult
+        # note, With so few columns written for current SearchResult, we could move these to PrefetchResult initialization
+        # I've left here for now because I think at some point we want to output more info from search..
         self.ksize = self.mh1.ksize
         self.moltype = self.mh1.moltype
         self.query_name = self.query.name
@@ -217,7 +218,7 @@ class BaseResult:
         # set these from self.match_*
         self.md5= self.match_md5
         self.name = self.match_name
-        # we may not need these here - could define in PrefetchResult instead
+        # could define in PrefetchResult instead, same reasoning as above
         self.query_abundance = self.mh1.track_abundance
         self.match_abundance = self.mh2.track_abundance
         self.query_n_hashes = len(self.mh1.hashes)
@@ -231,6 +232,8 @@ class BaseResult:
         return md5[:8]
 
     def to_write(self, columns=[]):
+        # convert comparison attrs into a dictionary
+        # that can be used by csv dictwriter
         info = {k: v for k, v in self.__dict__.items()
                 if k in columns and v is not None}
         return info
@@ -242,6 +245,7 @@ class BaseResult:
         return w
 
     def prep_result(self):
+        # shorten or modify any columns that need modifying
         self.query_md5 = self.shorten_md5(self.query_md5)
 
     def write(self, w):
@@ -317,7 +321,8 @@ class SearchResult(BaseResult):
         elif self.searchtype == SearchType.JACCARD:
             self.cmp.estimate_jaccard_ani(jaccard=self.similarity)
             self.ani = self.cmp.jaccard_ani
-            # not really sure what to do with this yet. Just report?
+            # Jaccard error was too high for ANI estimation.
+            # Just report, or do we want to do something else?
             self.ani_untrustworthy = self.cmp.jaccard_ani_untrustworthy
         # this can be set from any of the above
         self.potential_false_negative = self.cmp.potential_false_negative
