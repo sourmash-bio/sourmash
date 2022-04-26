@@ -88,6 +88,7 @@ from sourmash.index import IndexSearchResult, StandaloneManifestIndex
 from sourmash.picklist import SignaturePicklist
 from sourmash.logging import debug_literal
 from sourmash import sqlite_utils
+from sourmash.logging import notify
 
 from sourmash.lca.lca_db import cached_property
 from sourmash.manifest import BaseCollectionManifest
@@ -935,15 +936,22 @@ class LCA_SqliteDatabase(SqliteIndex):
         return obj
 
     @classmethod
-    def create(cls, filename, idx, lineage_db):
+    def create(cls, filename, idx, lineage_db, *, display_progress=False):
         "Create a LCA_SqliteDatabase in a single file from existing idx/ldb."
         from sourmash.tax.tax_utils import MultiLineageDB
 
         # first, save/create signatures...
         sqlidx = SqliteIndex.create(filename)
 
-        for ss in idx.signatures():
+        total_n = len(idx)
+        for n, ss in enumerate(idx.signatures()):
+            if display_progress:
+                if n and n % 1 == 0:
+                    notify(f"...saving {n} of {total_n} signatures", end="\r")
             sqlidx.insert(ss)
+
+        if display_progress:
+            notify(f"saved {total_n} signatures.")
 
         # now, save the lineage_db into the same database
         out_lineage_db = MultiLineageDB()

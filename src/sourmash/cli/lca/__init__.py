@@ -9,6 +9,7 @@ from . import compare_csv
 from . import index
 from . import rankinfo
 from . import summarize
+from . import convert
 from ..utils import command_list
 from argparse import SUPPRESS, RawDescriptionHelpFormatter
 import os

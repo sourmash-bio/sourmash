@@ -156,16 +156,8 @@ def index(args):
     moltype = sourmash_args.calculate_moltype(args, default='DNA')
     picklist = sourmash_args.load_picklist(args)
 
-    db_outfile = args.lca_db_out
-    if args.database_format == 'json':
-        if not (db_outfile.endswith('.lca.json') or \
-                    db_outfile.endswith('.lca.json.gz')):   # logic -> db.save
-            db_outfile += '.lca.json'
-    else:
-        assert args.database_format == 'sql'
-        if not db_outfile.endswith('.lca.sql'):
-                db_outfile += '.lca.sql'
-
+    db_outfile = LCA_Database.regularize_filename(args.lca_db_out,
+                                                  args.database_format)
     if os.path.exists(db_outfile):
         error(f"ERROR: output file {db_outfile} already exists. Not overwriting.")
         sys.exit(-1)
