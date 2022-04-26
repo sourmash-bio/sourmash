@@ -542,14 +542,14 @@ def search(args):
     if args.best_only:
         notify("** reporting only one match because --best-only was set")
 
-    dw = None
+    writer = None
     if args.output:
         with FileOutputCSV(args.output) as fp:
             for sr in results:
                 # if this is the first result we're writing, initialize the csv, return writer
-                if dw is None:
-                    dw = sr.init_dictwriter(fp)
-                sr.write(dw)
+                if writer is None:
+                    writer = sr.init_dictwriter(fp)
+                sr.write(writer)
 
     # save matching signatures upon request
     if args.save_matches:

@@ -106,8 +106,8 @@ def test_compare_all_pairs_jaccardANI(scaled_siglist, ignore_abundance):
     np.testing.assert_array_equal(similarities_parallel, similarities_serial)
 
 
-def test_compare_serial_containmentANI(scaled_siglist, ignore_abundance):
-    containment_ANI = compare_serial_containment(scaled_siglist, ignore_abundance, return_ani=True)
+def test_compare_serial_containmentANI(scaled_siglist):
+    containment_ANI = compare_serial_containment(scaled_siglist, return_ani=True)
 
     true_containment_ANI = np.array(
         [[1., 1., 1., 1., 0.],
@@ -119,7 +119,7 @@ def test_compare_serial_containmentANI(scaled_siglist, ignore_abundance):
     np.testing.assert_array_almost_equal(containment_ANI, true_containment_ANI, decimal=3)
 
     # check max_containment ANI
-    max_containment_ANI = compare_serial_max_containment(scaled_siglist, ignore_abundance, return_ani=True)
+    max_containment_ANI = compare_serial_max_containment(scaled_siglist, return_ani=True)
 
     true_max_containment_ANI = np.array(
         [[1., 1., 1., 1., 0.],

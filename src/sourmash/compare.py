@@ -234,5 +234,5 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None, 
     if n_jobs is None or n_jobs == 1:
         similarities = compare_serial(siglist, ignore_abundance=ignore_abundance, downsample=downsample, return_ani=return_ani)
     else:
-        similarities = compare_parallel(siglist, ignore_abundance=ignore_abundance, downsample=downsample, n_jobs, return_ani=return_ani)
+        similarities = compare_parallel(siglist, ignore_abundance, downsample, n_jobs, return_ani=return_ani)
     return similarities
