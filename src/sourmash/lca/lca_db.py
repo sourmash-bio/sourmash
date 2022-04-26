@@ -366,9 +366,23 @@ class LCA_Database(Index):
 
         return db
 
-    def save(self, db_name, *, format='json'):
+    @classmethod
+    def regularize_filename(cls, db_name, db_format):
+        "Adjust filename to match convention."
+        if db_format == 'json':
+            if not (db_name.endswith('.lca.json') or \
+                        db_name.endswith('.lca.json.gz')):
+                db_name += '.lca.json'
+        else:
+            assert db_format == 'sql'
+            if not db_name.endswith('.lca.sql'):
+                    db_name += '.lca.sql'
+
+        return db_name
+
+    def save(self, db_name, *, format='json', display_progress=False):
         if format == 'sql':
-            self.save_to_sql(db_name)
+            self.save_to_sql(db_name, display_progress=display_progress)
         else:
             assert format == 'json'
             self.save_to_json(db_name)
@@ -417,7 +431,7 @@ class LCA_Database(Index):
             
             json.dump(save_d, fp)
 
-    def save_to_sql(self, dbname):
+    def save_to_sql(self, dbname, *, display_progress=False):
         "Save this LCA_Database into an LCA_SqliteDatabase"
         from sourmash.index.sqlite_index import LCA_SqliteDatabase
         from sourmash.tax.tax_utils import LineageDB
@@ -439,7 +453,8 @@ class LCA_Database(Index):
         ldb = LineageDB(assignments, available_ranks)
 
         # ...and pass over to create, using 'self' as index.
-        LCA_SqliteDatabase.create(dbname, self, ldb)
+        LCA_SqliteDatabase.create(dbname, self, ldb,
+                                  display_progress=display_progress)
 
     def downsample_scaled(self, scaled):
         """

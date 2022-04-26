@@ -40,24 +40,18 @@ def convert_main(args):
     assert len(dblist) == 1
     db = dblist[0]
 
-    db_outfile = args.output_database
-    if args.database_format == 'json':
-        if not (db_outfile.endswith('.lca.json') or \
-                    db_outfile.endswith('.lca.json.gz')):   # logic -> db.save
-            db_outfile += '.lca.json'
-    else:
-        assert args.database_format == 'sql'
-        if not db_outfile.endswith('.lca.sql'):
-                db_outfile += '.lca.sql'
+    db_outfile = db.regularize_filename(args.output_database,
+                                        args.database_format)
 
     if os.path.exists(db_outfile):
         error(f"ERROR: output file {db_outfile} already exists. Not overwriting.")
         sys.exit(-1)
 
-    notify(f'saving to LCA DB: {format(db_outfile)}')
+    notify(f"saving LCA DB in format {args.database_format} to file '{format(db_outfile)}'")
 
     # now, save!
-    db.save(db_outfile, format=args.database_format)
+    db.save(db_outfile, format=args.database_format,
+            display_progress=not args.quiet)
 
     ## done!
 
