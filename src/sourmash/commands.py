@@ -975,11 +975,9 @@ def multigather(args):
             w = None
             with FileOutputCSV(output_csv) as fp:
                 for result in found:
-                    if result is not None:
-                        if w is None:
-                            w = result.init_dictwriter(fp)
-    #                    w.writerow(result.writedict)
-                            result.write(w)
+                    if w is None:
+                        w = result.init_dictwriter(fp)
+                        result.write(w)
 
             output_matches = output_base + '.matches.sig'
             with open(output_matches, 'wt') as fp:
