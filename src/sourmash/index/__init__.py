@@ -868,6 +868,15 @@ class MultiIndex(Index):
     Note: this is an in-memory collection, and does not do lazy loading:
     all signatures are loaded upon instantiation and kept in memory.
 
+    There are a variety of loading functions:
+    * `load` takes a list of already-loaded Index objects,
+      together with a list of their locations.
+    * `load_from_directory` traverses a directory to load files within.
+    * `load_from_path` takes an arbitrary pathname and tries to load it
+      as a directory, or as a .sig file.
+    * `load_from_pathlist` takes a text file full of pathnames and tries
+      to load them all.
+
     Concrete class; signatures held in memory; builds and uses manifests.
     """
     def __init__(self, manifest, parent, *, prepend_location=False):
@@ -1212,8 +1221,7 @@ class StandaloneManifestIndex(Index):
         if not os.path.isfile(location):
             raise ValueError(f"provided manifest location '{location}' is not a file")
 
-        with open(location, newline='') as fp:
-            m = CollectionManifest.load_from_csv(fp)
+        m = CollectionManifest.load_from_filename(location)
 
         if prefix is None:
             prefix = os.path.dirname(location)
@@ -1245,19 +1253,11 @@ class StandaloneManifestIndex(Index):
         manifest in this class.
         """
         # collect all internal locations
-        iloc_to_rows = defaultdict(list)
-        for row in self.manifest.rows:
-            iloc = row['internal_location']
-            iloc_to_rows[iloc].append(row)
-
-        # iterate over internal locations, selecting relevant sigs
-        for iloc, iloc_rows in iloc_to_rows.items():
-            # prepend with prefix?
+        picklist = self.manifest.to_picklist()
+        for iloc in self.manifest.locations():
+            # prepend location with prefix?
             if not iloc.startswith('/') and self.prefix:
                 iloc = os.path.join(self.prefix, iloc)
-
-            sub_mf = CollectionManifest(iloc_rows)
-            picklist = sub_mf.to_picklist()
 
             idx = sourmash.load_file_as_index(iloc)
             idx = idx.select(picklist=picklist)

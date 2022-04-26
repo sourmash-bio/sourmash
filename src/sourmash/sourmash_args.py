@@ -53,6 +53,7 @@ import sourmash.exceptions
 from .logging import notify, error, debug_literal
 
 from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
+from .index.sqlite_index import load_sqlite_index, SqliteIndex
 from . import signature as sigmod
 from .picklist import SignaturePicklist, PickStyle
 from .manifest import CollectionManifest
@@ -403,6 +404,10 @@ def _load_revindex(filename, **kwargs):
     return db
 
 
+def _load_sqlite_db(filename, **kwargs):
+    return load_sqlite_index(filename)
+
+
 def _load_zipfile(filename, **kwargs):
     "Load collection from a .zip file."
     db = None
@@ -422,6 +427,7 @@ def _load_zipfile(filename, **kwargs):
 # all loader functions, in order.
 _loader_functions = [
     ("load from stdin", _load_stdin),
+    ("load collection from sqlitedb", _load_sqlite_db),
     ("load from standalone manifest", _load_standalone_manifest),
     ("load from path (file or directory)", _multiindex_load_from_path),
     ("load from file list", _multiindex_load_from_pathlist),
@@ -765,7 +771,6 @@ def get_manifest(idx, *, require=True, rebuild=False):
     """
     Retrieve a manifest for this idx, loaded with `load_file_as_index`.
 
-    If a manifest exists and `rebuild` is False, return the manifest.
     Even if a manifest exists and `rebuild` is True, rebuild the manifest.
     If a manifest does not exist or `rebuild` is True, try to build one.
     If a manifest cannot be built and `require` is True, error exit.
@@ -786,7 +791,7 @@ def get_manifest(idx, *, require=True, rebuild=False):
 
     # need to build one...
     try:
-        debug_literal("get_manifest: rebuilding manifest")
+        notify("Generating a manifest...")
         m = CollectionManifest.create_manifest(idx._signatures_with_internal(),
                                                include_signature=False)
         debug_literal("get_manifest: rebuilt manifest.")
@@ -897,6 +902,36 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
 
         with gzip.open(outname, "wb") as fp:
             sigmod.save_signatures([ss], fp, compression=1)
+
+
+class SaveSignatures_SqliteIndex(_BaseSaveSignaturesToLocation):
+    "Save signatures within a directory, using md5sum names."
+    def __init__(self, location):
+        super().__init__(location)
+        self.location = location
+        self.idx = None
+        self.cursor = None
+
+    def __repr__(self):
+        return f"SaveSignatures_SqliteIndex('{self.location}')"
+
+    def close(self):
+        self.idx.commit()
+        self.cursor.execute('VACUUM')
+        self.idx.close()
+
+    def open(self):
+        self.idx = SqliteIndex.create(self.location, append=True)
+        self.cursor = self.idx.cursor()
+
+    def add(self, add_sig):
+        for ss in _get_signatures_from_rust([add_sig]):
+            super().add(ss)
+            self.idx.insert(ss, cursor=self.cursor, commit=False)
+
+            # commit every 1000 signatures.
+            if self.count % 1000 == 0:
+                self.idx.commit()
 
 
 class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
@@ -1014,18 +1049,20 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
 
 
 class SigFileSaveType(Enum):
+    NO_OUTPUT = 0
     SIGFILE = 1
     SIGFILE_GZ = 2
     DIRECTORY = 3
     ZIPFILE = 4
-    NO_OUTPUT = 5
+    SQLITEDB = 5
 
 _save_classes = {
+    SigFileSaveType.NO_OUTPUT: SaveSignatures_NoOutput,
     SigFileSaveType.SIGFILE: SaveSignatures_SigFile,
     SigFileSaveType.SIGFILE_GZ: SaveSignatures_SigFile,
     SigFileSaveType.DIRECTORY: SaveSignatures_Directory,
     SigFileSaveType.ZIPFILE: SaveSignatures_ZipFile,
-    SigFileSaveType.NO_OUTPUT: SaveSignatures_NoOutput
+    SigFileSaveType.SQLITEDB: SaveSignatures_SqliteIndex,
 }
 
 
@@ -1042,6 +1079,8 @@ def SaveSignaturesToLocation(filename, *, force_type=None):
             save_type = SigFileSaveType.SIGFILE_GZ
         elif filename.endswith('.zip'):
             save_type = SigFileSaveType.ZIPFILE
+        elif filename.endswith('.sqldb'):
+            save_type = SigFileSaveType.SQLITEDB
         else:
             # default to SIGFILE intentionally!
             save_type = SigFileSaveType.SIGFILE

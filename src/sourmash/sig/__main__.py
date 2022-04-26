@@ -13,7 +13,8 @@ import screed
 import sourmash
 from sourmash.sourmash_args import FileOutput
 
-from sourmash.logging import set_quiet, error, notify, print_results, debug
+from sourmash.logging import (set_quiet, error, notify, print_results, debug,
+                              debug_literal)
 from sourmash import sourmash_args
 from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.manifest import CollectionManifest
@@ -301,11 +302,11 @@ def manifest(args):
     manifest = sourmash_args.get_manifest(loader, require=True,
                                           rebuild=rebuild)
 
-    with open(args.output, "w", newline='') as csv_fp:
-        manifest.write_to_csv(csv_fp, write_header=True)
-
+    manifest.write_to_filename(args.output,
+                               database_format=args.manifest_format,
+                               ok_if_exists=args.force)
     notify(f"manifest contains {len(manifest)} signatures total.")
-    notify(f"wrote manifest to '{args.output}'")
+    notify(f"wrote manifest to '{args.output}' ({args.manifest_format})")
 
 
 def overlap(args):
@@ -1318,7 +1319,7 @@ def check(args):
     else:
         debug("sig check: manifest required")
 
-    total_manifest_rows = []
+    total_manifest_rows = CollectionManifest([])
 
     # start loading!
     total_rows_examined = 0
@@ -1336,9 +1337,10 @@ def check(args):
 
         # has manifest, or ok to build (require_manifest=False) - continue!
         manifest = sourmash_args.get_manifest(idx, require=True)
-        manifest_rows = manifest._select(picklist=picklist)
+        manifest_rows = manifest.select_to_manifest(picklist=picklist)
         total_rows_examined += len(manifest)
         total_manifest_rows += manifest_rows
+        debug_literal(f"examined {len(manifest)} new rows, found {len(manifest_rows)} matching rows")
 
     notify(f"loaded {total_rows_examined} signatures.")
 
@@ -1370,9 +1372,9 @@ def check(args):
 
     # save manifest of matching!
     if args.save_manifest_matching and total_manifest_rows:
-        mf = CollectionManifest(total_manifest_rows)
-        with open(args.save_manifest_matching, 'w', newline="") as fp:
-            mf.write_to_csv(fp, write_header=True)
+        mf = total_manifest_rows
+        mf.write_to_filename(args.save_manifest_matching,
+                             database_format=args.manifest_format)
         notify(f"wrote {len(mf)} matching manifest rows to '{args.save_manifest_matching}'")
     elif args.save_manifest_matching:
         notify(f"(not saving matching manifest to '{args.save_manifest_matching}' because no matches)")

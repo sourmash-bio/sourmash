@@ -40,7 +40,12 @@ def subparser(subparsers):
         '--no-rebuild-manifest', help='use existing manifest if available',
         action='store_true'
     )
-
+    subparser.add_argument(
+        '-F', '--manifest-format',
+        help="format of manifest output file; default is 'csv')",
+        default='csv',
+        choices=['csv', 'sql'],
+    )
 
 def main(args):
     import sourmash

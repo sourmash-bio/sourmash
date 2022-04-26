@@ -3,7 +3,9 @@ Manifests for collections of signatures.
 """
 import csv
 import ast
+import os.path
 from abc import abstractmethod
+import itertools
 
 from sourmash.picklist import SignaturePicklist
 
@@ -27,7 +29,18 @@ class BaseCollectionManifest:
                      'name', 'filename')
 
     @classmethod
+    @abstractmethod
+    def load_from_manifest(cls, manifest, **kwargs):
+        "Load this manifest from another manifest object."
+
+    @classmethod
     def load_from_filename(cls, filename):
+        # SQLite db?
+        db = cls.load_from_sql(filename)
+        if db is not None:
+            return db
+
+        # not a SQLite db?
         with open(filename, newline="") as fp:
             return cls.load_from_csv(fp)
 
@@ -67,9 +80,26 @@ class BaseCollectionManifest:
 
         return cls(manifest_list)
 
-    def write_to_filename(self, filename):
-        with open(filename, "w", newline="") as fp:
-            return self.write_to_csv(fp, write_header=True)
+    @classmethod
+    def load_from_sql(cls, filename):
+        from sourmash.index.sqlite_index import load_sqlite_index
+        db = load_sqlite_index(filename, request_manifest=True)
+        if db:
+            return db.manifest
+
+    def write_to_filename(self, filename, *, database_format='csv',
+                          ok_if_exists=False):
+        if database_format == 'csv':
+            if ok_if_exists or not os.path.exists(filename):
+                with open(filename, "w", newline="") as fp:
+                    return self.write_to_csv(fp, write_header=True)
+            elif os.path.exists(filename) and not ok_if_exists:
+                raise Exception("output manifest already exists")
+
+        elif database_format == 'sql':
+            from sourmash.index.sqlite_index import SqliteCollectionManifest
+            SqliteCollectionManifest.load_from_manifest(self, dbfile=filename,
+                                                        append=ok_if_exists)
 
     @classmethod
     def write_csv_header(cls, fp):
@@ -80,7 +110,8 @@ class BaseCollectionManifest:
 
     def write_to_csv(self, fp, write_header=False):
         "write manifest CSV to specified file handle"
-        w = csv.DictWriter(fp, fieldnames=self.required_keys)
+        w = csv.DictWriter(fp, fieldnames=self.required_keys,
+                           extrasaction='ignore')
 
         if write_header:
             self.write_csv_header(fp)
@@ -183,6 +214,11 @@ class CollectionManifest(BaseCollectionManifest):
 
         self._add_rows(rows)
 
+    @classmethod
+    def load_from_manifest(cls, manifest, **kwargs):
+        "Load this manifest from another manifest object."
+        return cls(manifest.rows)
+
     def _add_rows(self, rows):
         self.rows.extend(rows)
 
@@ -207,7 +243,17 @@ class CollectionManifest(BaseCollectionManifest):
         return len(self.rows)
 
     def __eq__(self, other):
-        return self.rows == other.rows
+        "Check equality on a row-by-row basis. May fail on out-of-order rows."
+        for (a, b) in itertools.zip_longest(self.rows, other.rows):
+            if a is None or b is None:
+                return False
+
+            # ignore non-required keys.
+            for k in self.required_keys:
+                if a[k] != b[k]:
+                    return False
+
+        return True
 
     def _select(self, *, ksize=None, moltype=None, scaled=0, num=0,
                 containment=False, abund=None, picklist=None):

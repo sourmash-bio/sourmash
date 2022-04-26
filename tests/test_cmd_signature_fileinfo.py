@@ -3,9 +3,10 @@ Tests for the 'sourmash signature fileinfo' command line.
 """
 import shutil
 import os
+import glob
+import json
 
 import pytest
-import json
 
 import sourmash_tst_utils as utils
 from sourmash_tst_utils import SourmashCommandFailed
@@ -364,3 +365,70 @@ def test_sig_fileinfo_8_manifest_works_when_moved(runtmp):
     assert 'has manifest? yes' in out
     assert 'is database? yes' in out
     assert 'path filetype: StandaloneManifestIndex' in out
+
+
+def test_sig_fileinfo_9_sqldb_make(runtmp):
+    # make a sqldb and run fileinfo on it
+    gcf_all = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    sqldb = runtmp.output('some.sqldb')
+
+    runtmp.sourmash('sig', 'cat', '-k', '31', *gcf_all, '-o', sqldb)
+
+    runtmp.sourmash('sig', 'fileinfo', sqldb)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "12 sketches with DNA, k=31, scaled=10000           4540 total hashes" in out
+
+
+def test_sig_fileinfo_9_sqldb_exists(runtmp):
+    # run fileinfo on existing sqldb
+    sqldb = utils.get_test_data('sqlite/index.sqldb')
+    runtmp.sourmash('sig', 'fileinfo', sqldb)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "path filetype: SqliteIndex" in out
+    assert "2 sketches with DNA, k=31, scaled=1000             10415 total hashes" in out
+
+
+def test_sig_fileinfo_9_sql_manifest(runtmp):
+    # run fileinfo on existing sqldb
+    sqldb = utils.get_test_data('sqlite/prot.sqlmf')
+    runtmp.sourmash('sig', 'fileinfo', sqldb)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "path filetype: StandaloneManifestIndex" in out
+    assert "num signatures: 7" in out
+    assert "1 sketches with DNA, k=31, scaled=1000             5238 total hashes" in out
+    assert "2 sketches with hp, k=19, scaled=100               5184 total hashes" in out
+    assert "2 sketches with dayhoff, k=19, scaled=100          7945 total hashes" in out
+    assert "2 sketches with protein, k=19, scaled=100          8214 total hashes" in out
+
+
+def test_sig_fileinfo_9_sql_lca_db(runtmp):
+    # run fileinfo on existing sqldb
+    sqldb = utils.get_test_data('sqlite/lca.sqldb')
+    runtmp.sourmash('sig', 'fileinfo', sqldb)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert "path filetype: LCA_SqliteDatabase" in out
+    assert "2 sketches with DNA, k=31, scaled=10000            1431 total hashes" in out

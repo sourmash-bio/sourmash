@@ -9,6 +9,9 @@ import sourmash_tst_utils as utils
 from sourmash.tax import tax_utils
 from sourmash_tst_utils import SourmashCommandFailed
 
+from sourmash import sqlite_utils
+from sourmash.exceptions import IndexNotSupported
+
 ## command line tests
 def test_run_sourmash_tax():
     status, out, err = utils.runscript('sourmash', ['tax'], fail_ok=True)
@@ -1819,3 +1822,31 @@ def test_tax_prepare_3_db_to_csv_empty_ranks_3(runtmp):
                                         keep_identifier_versions=False)
     assert set(db1) == set(db2)
     assert set(db1) == set(db3)
+
+
+def test_tax_prepare_sqlite_lineage_version(runtmp):
+    # test bad sourmash_internals version for SqliteLineage
+    taxcsv = utils.get_test_data('tax/test.taxonomy.csv')
+    taxout = runtmp.output('out.db')
+
+    runtmp.run_sourmash('tax', 'prepare', '-t', taxcsv,
+                        '-o', taxout, '-F', 'sql')
+    assert os.path.exists(taxout)
+
+    # set bad version
+    conn = sqlite_utils.open_sqlite_db(taxout)
+    c = conn.cursor()
+    c.execute("UPDATE sourmash_internal SET value='0.9' WHERE key='SqliteLineage'")
+
+    conn.commit()
+    conn.close()
+
+    with pytest.raises(IndexNotSupported):
+        db = tax_utils.MultiLineageDB.load([taxout])
+
+def test_tax_prepare_sqlite_no_lineage():
+    # no lineage table at all
+    sqldb = utils.get_test_data('sqlite/index.sqldb')
+
+    with pytest.raises(ValueError):
+        db = tax_utils.MultiLineageDB.load([sqldb])
