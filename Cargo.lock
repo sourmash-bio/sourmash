@@ -197,9 +197,9 @@ dependencies = [
 
 [[package]]
 name = "counter"
-version = "0.5.3"
+version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "878793089e7b461e0f316f45eb6d12ef73c0e5ec5194d372617eb47bb61a85ed"
+checksum = "7798e2993e65a31cccd4aea51cea5d768736df1e02b11a26b8935ab14819b176"
 dependencies = [
  "num-traits",
 ]
