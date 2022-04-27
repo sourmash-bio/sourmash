@@ -227,7 +227,7 @@ def genome(args):
                 status = 'nomatch'
                 if sg.query_name in matched_queries:
                     continue
-                if args.ani_threshold and sg.query_ani_at_rank >= args.ani_threshold:
+                if sg.query_ani_at_rank is not None and args.ani_threshold and sg.query_ani_at_rank >= args.ani_threshold:
                     status="match"
                 elif sg.fraction >= args.containment_threshold:
                     status = "match"
