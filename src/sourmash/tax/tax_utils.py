@@ -5,12 +5,7 @@ import os
 import csv
 from collections import namedtuple, defaultdict
 from collections import abc
-
-from sourmash import sqlite_utils
-from sourmash.exceptions import IndexNotSupported
-
-import sqlite3
-
+from sourmash.distance_utils import containment_to_distance
 
 __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
            'load_gather_results', 'check_and_load_gather_csvs',
@@ -24,9 +19,9 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
 from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
 
-QueryInfo = namedtuple("QueryInfo", "query_md5, query_filename, query_bp")
-SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank")
-ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank")
+QueryInfo = namedtuple("QueryInfo", "query_md5, query_filename, query_bp, query_hashes")
+SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
+ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
 
 # Essential Gather column names that must be in gather_csv to allow `tax` summarization
 EssentialGatherColnames = ('query_name', 'name', 'f_unique_weighted', 'f_unique_to_query', 'unique_intersect_bp', 'remaining_bp', 'query_md5', 'query_filename')
@@ -188,7 +183,7 @@ def find_match_lineage(match_ident, tax_assign, *, skip_idents = [],
 def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                         keep_full_identifiers=False,
                         keep_identifier_versions=False, best_only=False,
-                        seen_perfect=set()):
+                        seen_perfect=set(), estimate_query_ani=False):
     """
     Summarize gather results at specified taxonomic rank
     """
@@ -198,7 +193,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
     sum_uniq_to_query = defaultdict(lambda: defaultdict(float))
     sum_uniq_bp = defaultdict(lambda: defaultdict(float))
     query_info = {}
-
+    ksize,scaled,query_nhashes=None,None,None
     for row in gather_results:
         # get essential gather info
         query_name = row['query_name']
@@ -207,13 +202,25 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
         unique_intersect_bp = int(row['unique_intersect_bp'])
         query_md5 = row['query_md5']
         query_filename = row['query_filename']
-        # get query_bp
-        if query_name not in query_info.keys():
-            query_bp = unique_intersect_bp + int(row['remaining_bp'])
+        if query_name not in query_info.keys(): #REMOVING THIS AFFECTS GATHER RESULTS!!! BUT query bp should always be same for same query? bug?
+            if "query_nhashes" in row.keys():
+                query_nhashes = int(row["query_nhashes"])
+            if "query_bp" in row.keys():
+                query_bp = int(row["query_bp"])
+            else:
+                query_bp = unique_intersect_bp + int(row['remaining_bp'])
         # store query info
-        query_info[query_name] = QueryInfo(query_md5=query_md5, query_filename=query_filename, query_bp=query_bp)
-        match_ident = row['name']
+        query_info[query_name] = QueryInfo(query_md5=query_md5, query_filename=query_filename, query_bp=query_bp, query_hashes = query_nhashes)
 
+        if estimate_query_ani and (not ksize or not scaled): # just need to set these once. BUT, if we have these, should we check for compatibility when loading the gather file?
+            if "ksize" in row.keys(): # ksize and scaled were added to gather results in same PR
+                ksize = int(row['ksize'])
+                scaled = int(row['scaled'])
+            else:
+                estimate_query_ani=False
+                notify("WARNING: Please run gather with sourmash >= 4.3 to estimate query ANI at rank. Continuing without ANI...")
+
+        match_ident = row['name']
 
         # 100% match? are we looking at something in the database?
         if f_unique_to_query >= 1.0 and query_name not in seen_perfect: # only want to notify once, not for each rank
@@ -225,20 +232,21 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
 
         # get lineage for match
         lineage = find_match_lineage(match_ident, tax_assign,
-                                     skip_idents=skip_idents,
-                             keep_full_identifiers=keep_full_identifiers,
-                             keep_identifier_versions=keep_identifier_versions)
+                                    skip_idents=skip_idents,
+                                    keep_full_identifiers=keep_full_identifiers,
+                                    keep_identifier_versions=keep_identifier_versions)
         # ident was in skip_idents
         if not lineage:
             continue
 
         # summarize at rank!
         lineage = pop_to_rank(lineage, rank)
-        assert lineage[-1].rank == rank, (rank, lineage[-1])
+        assert lineage[-1].rank == rank, lineage[-1]
         # record info
         sum_uniq_to_query[query_name][lineage] += f_unique_to_query
         sum_uniq_weighted[query_name][lineage] += f_uniq_weighted
         sum_uniq_bp[query_name][lineage] += unique_intersect_bp
+
 
     # sort and store each as SummarizedGatherResult
     sum_uniq_to_query_sorted = []
@@ -246,6 +254,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
         qInfo = query_info[query_name]
         sumgather_items = list(lineage_weights.items())
         sumgather_items.sort(key = lambda x: -x[1])
+        query_ani = None
         if best_only:
             lineage, fraction = sumgather_items[0]
             if fraction > 1:
@@ -254,13 +263,19 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                 continue
             f_weighted_at_rank = sum_uniq_weighted[query_name][lineage]
             bp_intersect_at_rank = sum_uniq_bp[query_name][lineage]
-            sres = SummarizedGatherResult(query_name, rank, fraction, lineage, qInfo.query_md5, qInfo.query_filename, f_weighted_at_rank, bp_intersect_at_rank)
+            if estimate_query_ani:
+                query_ani = containment_to_distance(fraction, ksize, scaled,
+                                                    n_unique_kmers= qInfo.query_hashes, sequence_len_bp= qInfo.query_bp,
+                                                    return_identity=True)[0]
+            sres = SummarizedGatherResult(query_name, rank, fraction, lineage, qInfo.query_md5,
+                                          qInfo.query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
             sum_uniq_to_query_sorted.append(sres)
         else:
             total_f_weighted= 0.0
             total_f_classified = 0.0
             total_bp_classified = 0
             for lineage, fraction in sumgather_items:
+                query_ani=None
                 if fraction > 1:
                     raise ValueError(f"The tax summary of query '{query_name}' is {fraction}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
                 elif fraction == 0:
@@ -270,16 +285,23 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                 total_f_weighted += f_weighted_at_rank
                 bp_intersect_at_rank = int(sum_uniq_bp[query_name][lineage])
                 total_bp_classified += bp_intersect_at_rank
-                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_intersect_at_rank)
+                if estimate_query_ani:
+                    query_ani = containment_to_distance(fraction, ksize, scaled,
+                                                        n_unique_kmers=qInfo.query_hashes, sequence_len_bp=qInfo.query_bp,
+                                                        return_identity=True)[0]
+                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5,
+                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
                 sum_uniq_to_query_sorted.append(sres)
 
             # record unclassified
             lineage = ()
+            query_ani=None
             fraction = 1.0 - total_f_classified
             if fraction > 0:
                 f_weighted_at_rank = 1.0 - total_f_weighted
                 bp_intersect_at_rank = qInfo.query_bp - total_bp_classified
-                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_intersect_at_rank)
+                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5,
+                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
                 sum_uniq_to_query_sorted.append(sres)
 
     return sum_uniq_to_query_sorted, seen_perfect
@@ -628,27 +650,15 @@ class LineageDB(abc.Mapping):
 
 class LineageDB_Sqlite(abc.Mapping):
     """
-    A LineageDB based on a sqlite3 database with a 'sourmash_taxonomy' table.
+    A LineageDB based on a sqlite3 database with a 'taxonomy' table.
     """
     # NOTE: 'order' is a reserved name in sql, so we have to use 'order_'.
     columns = ('superkingdom', 'phylum', 'order_', 'class', 'family',
                'genus', 'species', 'strain')
-    table_name = 'sourmash_taxonomy'
 
-    def __init__(self, conn, *, table_name=None):
+    def __init__(self, conn):
         self.conn = conn
 
-        # provide for legacy support for pre-sourmash_internal days...
-        if table_name is not None:
-            self.table_name = table_name
-
-        # check that the right table is there.
-        c = conn.cursor()
-        try:
-            c.execute(f'SELECT * FROM {self.table_name} LIMIT 1')
-        except (sqlite3.DatabaseError, sqlite3.OperationalError):
-            raise ValueError("not a taxonomy database")
-            
         # check: can we do a 'select' on the right table?
         self.__len__()
         c = conn.cursor()
@@ -656,7 +666,7 @@ class LineageDB_Sqlite(abc.Mapping):
         # get available ranks...
         ranks = set()
         for column, rank in zip(self.columns, taxlist(include_strain=True)):
-            query = f'SELECT COUNT({column}) FROM {self.table_name} WHERE {column} IS NOT NULL AND {column} != ""'
+            query = f'SELECT COUNT({column}) FROM taxonomy WHERE {column} IS NOT NULL AND {column} != ""'
             c.execute(query)
             cnt, = c.fetchone()
             if cnt:
@@ -667,35 +677,14 @@ class LineageDB_Sqlite(abc.Mapping):
 
     @classmethod
     def load(cls, location):
-        "load taxonomy information from an existing sqlite3 database"
-        conn = sqlite_utils.open_sqlite_db(location)
-        if not conn:
-            raise ValueError("not a sqlite taxonomy database")
-
-        table_name = None
-        c = conn.cursor()
+        "load taxonomy information from a sqlite3 database"
+        import sqlite3
         try:
-            info = sqlite_utils.get_sourmash_internal(c)
-        except sqlite3.OperationalError:
-            info = {}
-
-        if 'SqliteLineage' in info:
-            if info['SqliteLineage'] != '1.0':
-                raise IndexNotSupported
-
-            table_name = 'sourmash_taxonomy'
-        else:
-            # legacy support for old taxonomy DB, pre sourmash_internal.
-            try:
-                c.execute('SELECT * FROM taxonomy LIMIT 1')
-                table_name = 'taxonomy'
-            except sqlite3.OperationalError:
-                pass
-
-        if table_name is None:
-            raise ValueError("not a sqlite taxonomy database")
-
-        return cls(conn, table_name=table_name)
+            conn = sqlite3.connect(location)
+            db = cls(conn)
+        except sqlite3.DatabaseError:
+            raise ValueError("not a sqlite database")
+        return db
 
     def _make_tup(self, row):
         "build a tuple of LineagePairs for this sqlite row"
@@ -705,7 +694,7 @@ class LineageDB_Sqlite(abc.Mapping):
     def __getitem__(self, ident):
         "Retrieve lineage for identifer"
         c = self.cursor
-        c.execute(f'SELECT superkingdom, phylum, class, order_, family, genus, species, strain FROM {self.table_name} WHERE ident=?', (ident,))
+        c.execute('SELECT superkingdom, phylum, class, order_, family, genus, species, strain FROM taxonomy WHERE ident=?', (ident,))
 
         # retrieve names list...
         names = c.fetchone()
@@ -726,7 +715,7 @@ class LineageDB_Sqlite(abc.Mapping):
     def __len__(self):
         "Return number of rows"
         c = self.conn.cursor()
-        c.execute(f'SELECT COUNT(DISTINCT ident) FROM {self.table_name}')
+        c.execute('SELECT COUNT(DISTINCT ident) FROM taxonomy')
         nrows, = c.fetchone()
         return nrows
 
@@ -734,7 +723,7 @@ class LineageDB_Sqlite(abc.Mapping):
         "Return all identifiers"
         # create new cursor so as to allow other operations
         c = self.conn.cursor()
-        c.execute(f'SELECT DISTINCT ident FROM {self.table_name}')
+        c.execute('SELECT DISTINCT ident FROM taxonomy')
 
         for ident, in c:
             yield ident
@@ -743,11 +732,10 @@ class LineageDB_Sqlite(abc.Mapping):
         "return all items in the sqlite database"
         c = self.conn.cursor()
 
-        c.execute(f'SELECT DISTINCT ident, superkingdom, phylum, class, order_, family, genus, species, strain FROM {self.table_name}')
+        c.execute('SELECT DISTINCT ident, superkingdom, phylum, class, order_, family, genus, species, strain FROM taxonomy')
 
         for ident, *names in c:
             yield ident, self._make_tup(names)
-
 
 class MultiLineageDB(abc.Mapping):
     "A wrapper for (dynamically) combining multiple lineage databases."
@@ -845,23 +833,15 @@ class MultiLineageDB(abc.Mapping):
                 if is_filename:
                     fp.close()
 
-    def _save_sqlite(self, filename, *, conn=None):
-        from sourmash import sqlite_utils
-
-        if conn is None:
-            db = sqlite3.connect(filename)
-        else:
-            assert not filename
-            db = conn
+    def _save_sqlite(self, filename):
+        import sqlite3
+        db = sqlite3.connect(filename)
 
         cursor = db.cursor()
         try:
-            sqlite_utils.add_sourmash_internal(cursor, 'SqliteLineage', '1.0')
-
-            # CTB: could add 'IF NOT EXIST' here; would need tests, too.
             cursor.execute("""
 
-        CREATE TABLE sourmash_taxonomy (
+        CREATE TABLE taxonomy (
             ident TEXT NOT NULL,
             superkingdom TEXT,
             phylum TEXT,
@@ -879,7 +859,7 @@ class MultiLineageDB(abc.Mapping):
             raise ValueError(f"taxonomy table already exists in '{filename}'")
 
         # follow up and create index
-        cursor.execute("CREATE UNIQUE INDEX sourmash_taxonomy_ident ON sourmash_taxonomy(ident);")
+        cursor.execute("CREATE UNIQUE INDEX taxonomy_ident ON taxonomy(ident);")
         for ident, tax in self.items():
             x = [ident, *[ t.name for t in tax ]]
 
@@ -888,7 +868,7 @@ class MultiLineageDB(abc.Mapping):
             while len(x) < 9:
                 x.append('')
 
-            cursor.execute('INSERT INTO sourmash_taxonomy (ident, superkingdom, phylum, class, order_, family, genus, species, strain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', x)
+            cursor.execute('INSERT INTO taxonomy (ident, superkingdom, phylum, class, order_, family, genus, species, strain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', x)
 
         db.commit()
 
