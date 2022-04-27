@@ -37,7 +37,7 @@ def test_FracMinHashComparison(track_abundance):
     assert cmp.moltype == "DNA"
     assert cmp.mh1_containment == a.contained_by(b)
     assert cmp.mh2_containment == b.contained_by(a)
-    assert cmp.avg_containment == np.mean([a.contained_by(b), b.contained_by(a)])
+    assert cmp.avg_containment == a.avg_containment(b)
     assert cmp.max_containment == a.max_containment(b)
     assert cmp.jaccard == a.jaccard(b) == b.jaccard(a)
     intersect_mh = a.flatten().intersection(b.flatten())
@@ -95,7 +95,7 @@ def test_FracMinHashComparison_downsample(track_abundance):
     assert cmp.moltype == "DNA"
     assert cmp.mh1_containment == ds_a.contained_by(ds_b)
     assert cmp.mh2_containment == ds_b.contained_by(ds_a)
-    assert cmp.avg_containment == np.mean([ds_a.contained_by(ds_b), ds_b.contained_by(ds_a)])
+    assert cmp.avg_containment == ds_a.avg_containment(ds_b)
     assert cmp.max_containment == ds_a.max_containment(ds_b)
     assert cmp.jaccard == ds_a.jaccard(ds_b) == ds_b.jaccard(ds_a)
     intersect_mh = ds_a.flatten().intersection(ds_b.flatten())
@@ -153,7 +153,7 @@ def test_FracMinHashComparison_autodownsample(track_abundance):
     assert cmp.moltype == "DNA"
     assert cmp.mh1_containment == ds_a.contained_by(ds_b)
     assert cmp.mh2_containment == ds_b.contained_by(ds_a)
-    assert cmp.avg_containment == np.mean([ds_a.contained_by(ds_b), ds_b.contained_by(ds_a)])
+    assert cmp.avg_containment == ds_a.avg_containment(ds_b)
     assert cmp.max_containment == ds_a.max_containment(ds_b)
     assert cmp.jaccard == ds_a.jaccard(ds_b) == ds_b.jaccard(ds_a)
     intersect_mh = ds_a.flatten().intersection(ds_b.flatten())
@@ -210,7 +210,7 @@ def test_FracMinHashComparison_ignore_abundance(track_abundance):
     assert cmp.moltype == "DNA"
     assert cmp.mh1_containment == a.contained_by(b)
     assert cmp.mh2_containment == b.contained_by(a)
-    assert cmp.avg_containment == np.mean([a.contained_by(b), b.contained_by(a)])
+    assert cmp.avg_containment == b.avg_containment(a)
     assert cmp.max_containment == a.max_containment(b)
     assert cmp.jaccard == a.jaccard(b) == b.jaccard(a)
     intersect_mh = ds_a.flatten().intersection(ds_b.flatten())
@@ -261,13 +261,72 @@ def test_FracMinHashComparison_fail_threshold(track_abundance):
     assert cmp.moltype == "DNA"
     assert cmp.mh1_containment == a.contained_by(b)
     assert cmp.mh2_containment == b.contained_by(a)
-    assert cmp.avg_containment == np.mean([a.contained_by(b), b.contained_by(a)])
+    assert cmp.avg_containment == a.avg_containment(b)
     assert cmp.max_containment == a.max_containment(b)
     assert cmp.jaccard == a.jaccard(b) == b.jaccard(a)
     intersect_mh = ds_a.flatten().intersection(ds_b.flatten())
     assert cmp.intersect_mh == intersect_mh == ds_b.flatten().intersection(ds_a.flatten())
     assert cmp.intersect_bp == 8
     assert not cmp.pass_threshold # threshold is 10; this should fail
+
+
+def test_FracMinHashComparison_potential_false_negative(track_abundance):
+    a = MinHash(0, 21, scaled=10000, track_abundance=track_abundance)
+    b = MinHash(0, 21, scaled=10000, track_abundance=track_abundance)
+    c = MinHash(0, 21, scaled=10000, track_abundance=track_abundance)
+    # make sketch overlap quite small
+    a_values = {1:5}
+    b_values = {1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
+    c_values = {2:1}
+
+    if track_abundance:
+        a.set_abundances(a_values)
+        b.set_abundances(b_values)
+        c.set_abundances(c_values)
+    else:
+        a.add_many(a_values.keys())
+        b.add_many(b_values.keys())
+        c.add_many(c_values.keys())
+
+    # build FracMinHashComparison
+    cmp = FracMinHashComparison(a, b)
+    # check ani, potential false negative
+    cmp.estimate_jaccard_ani()
+    assert cmp.jaccard_ani == a.jaccard_ani(b).ani == b.jaccard_ani(a).ani
+    assert cmp.potential_false_negative == a.jaccard_ani(b).p_exceeds_threshold == b.jaccard_ani(a).p_exceeds_threshold
+    assert cmp.potential_false_negative == True
+    assert cmp.jaccard_ani_untrustworthy == a.jaccard_ani(b).je_exceeds_threshold == b.jaccard_ani(a).je_exceeds_threshold
+
+    cmp.estimate_mh1_containment_ani()
+    a_cont_ani_manual = a.containment_ani(b)
+    assert cmp.mh1_containment_ani == a_cont_ani_manual.ani
+    # potential false negative is false here. But since we got it above, don't want to set to False
+    assert cmp.potential_false_negative != a_cont_ani_manual.p_exceeds_threshold
+    assert cmp.potential_false_negative == True
+
+    cmp.estimate_mh2_containment_ani()
+    b_cont_ani_manual = b.containment_ani(a)
+    assert cmp.mh2_containment_ani == b_cont_ani_manual.ani
+    assert cmp.potential_false_negative == b_cont_ani_manual.p_exceeds_threshold
+    assert cmp.potential_false_negative == True
+
+    cmp.estimate_max_containment_ani()
+    mc_ani_manual = a.max_containment_ani(b)
+    assert cmp.max_containment_ani == max(a.containment_ani(b).ani, b.containment_ani(a).ani) == mc_ani_manual.ani
+    # potential false negative is false here. But since we got it above, don't want to set to False
+    assert cmp.potential_false_negative != mc_ani_manual.p_exceeds_threshold
+    assert cmp.avg_containment_ani == np.mean([a.containment_ani(b).ani, b.containment_ani(a).ani])
+    assert cmp.potential_false_negative == True
+
+    # comparison in opposite direction, so we can test potential_false_neg in other direction
+    cmp2 = FracMinHashComparison(b, a)
+    cmp2.estimate_mh1_containment_ani()
+    assert cmp2.potential_false_negative == True
+
+    # test max cont potential_false_neg (via no overlap at all)
+    cmp3 = FracMinHashComparison(a,c)
+    cmp3.estimate_max_containment_ani()
+    assert cmp3.potential_false_negative == True
 
 
 def test_FracMinHashComparison_incompatible_ksize(track_abundance):
@@ -626,33 +685,73 @@ def test_FracMinHashComparison_ANI(track_abundance):
 
     cmp = FracMinHashComparison(a, b)
     # check jaccard ani
-    ani_res = cmp.jaccard_ani
-    assert ani_res.ani == a.jaccard_ani(b).ani == b.jaccard_ani(a).ani
-    assert ani_res.p_exceeds_threshold == a.jaccard_ani(b).p_exceeds_threshold == b.jaccard_ani(a).p_exceeds_threshold
-    assert ani_res.je_exceeds_threshold == a.jaccard_ani(b).je_exceeds_threshold == b.jaccard_ani(a).je_exceeds_threshold
+    cmp.estimate_jaccard_ani()
+    assert cmp.jaccard_ani == a.jaccard_ani(b).ani == b.jaccard_ani(a).ani
+    assert cmp.potential_false_negative == a.jaccard_ani(b).p_exceeds_threshold == b.jaccard_ani(a).p_exceeds_threshold
+    assert cmp.jaccard_ani_untrustworthy == a.jaccard_ani(b).je_exceeds_threshold == b.jaccard_ani(a).je_exceeds_threshold
 
-    a_cont_ani = cmp.mh1_containment_ani
+    cmp.estimate_mh1_containment_ani()
     a_cont_ani_manual = a.containment_ani(b)
-    assert a_cont_ani.ani == a_cont_ani_manual.ani
-    assert a_cont_ani.p_exceeds_threshold == a_cont_ani_manual.p_exceeds_threshold
-    assert a_cont_ani.ani_low is None
-    assert a_cont_ani.ani_high is None
+    assert cmp.mh1_containment_ani == a_cont_ani_manual.ani
+    assert cmp.potential_false_negative == a_cont_ani_manual.p_exceeds_threshold
+#    assert cmp.mh1_containment_ani_low is None
+#    assert cmp.mh1_containment_ani_high is None
 
-    b_cont_ani = cmp.mh2_containment_ani
+    cmp.estimate_mh2_containment_ani()
     b_cont_ani_manual = b.containment_ani(a)
-    assert b_cont_ani.ani == b_cont_ani_manual.ani
-    assert b_cont_ani.p_exceeds_threshold == b_cont_ani_manual.p_exceeds_threshold
-    assert b_cont_ani.ani_low is None
-    assert b_cont_ani.ani_high is None
+    assert cmp.mh2_containment_ani == b_cont_ani_manual.ani
+    assert cmp.potential_false_negative == b_cont_ani_manual.p_exceeds_threshold
+#    assert cmp.mh2_containment_ani_low is None
+#    assert cmp.mh2_containment_ani_high is None
 
-    mc_ani = cmp.max_containment_ani
+    cmp.estimate_max_containment_ani()
     mc_ani_manual = a.max_containment_ani(b)
-    assert mc_ani.ani == max(a.containment_ani(b).ani, b.containment_ani(a).ani) == mc_ani_manual.ani
-    assert mc_ani.p_exceeds_threshold == mc_ani_manual.p_exceeds_threshold
-    assert mc_ani.ani_low is None
-    assert mc_ani.ani_high is None
-    avgc_ani = cmp.avg_containment_ani
-    assert avgc_ani == np.mean([a.containment_ani(b).ani, b.containment_ani(a).ani])
+    assert cmp.max_containment_ani == max(a.containment_ani(b).ani, b.containment_ani(a).ani) == mc_ani_manual.ani
+    assert cmp.potential_false_negative == mc_ani_manual.p_exceeds_threshold
+#    assert cmp.max_containment_ani_low is None
+#    assert cmp.max_containment_ani_high is None
+    assert cmp.avg_containment_ani == np.mean([a.containment_ani(b).ani, b.containment_ani(a).ani])
+
+
+def test_FracMinHashComparison_ANI_provide_similarity(track_abundance):
+    # need real mh here, small test data fails
+    if track_abundance:
+        f1 = utils.get_test_data('track_abund/47.fa.sig')
+        f2 = utils.get_test_data('track_abund/63.fa.sig')
+    else:
+        f1 = utils.get_test_data('47.fa.sig')
+        f2 = utils.get_test_data('63.fa.sig')
+
+    a = load_one_signature(f1, ksize=31).minhash
+    b = load_one_signature(f2, ksize=31).minhash
+
+    cmp = FracMinHashComparison(a, b)
+    # check jaccard ani
+    jaccard = a.jaccard(b)
+    cmp.estimate_jaccard_ani(jaccard=jaccard)
+    assert cmp.jaccard_ani == a.jaccard_ani(b).ani == b.jaccard_ani(a).ani
+    assert cmp.potential_false_negative == a.jaccard_ani(b).p_exceeds_threshold == b.jaccard_ani(a).p_exceeds_threshold
+    assert cmp.jaccard_ani_untrustworthy == a.jaccard_ani(b).je_exceeds_threshold == b.jaccard_ani(a).je_exceeds_threshold
+
+    a_cont = a.contained_by(b)
+    b_cont = b.contained_by(a)
+    mc = a.max_containment(b)
+
+    cmp.estimate_mh1_containment_ani(containment=a_cont)
+    a_cont_ani_manual = a.containment_ani(b)
+    assert cmp.mh1_containment_ani == a_cont_ani_manual.ani
+    assert cmp.potential_false_negative == a_cont_ani_manual.p_exceeds_threshold
+
+    cmp.estimate_mh2_containment_ani(containment=b_cont)
+    b_cont_ani_manual = b.containment_ani(a)
+    assert cmp.mh2_containment_ani == b_cont_ani_manual.ani
+    assert cmp.potential_false_negative == b_cont_ani_manual.p_exceeds_threshold
+
+    cmp.estimate_max_containment_ani(max_containment=mc)
+    mc_ani_manual = a.max_containment_ani(b)
+    assert cmp.max_containment_ani == max(a.containment_ani(b).ani, b.containment_ani(a).ani) == mc_ani_manual.ani
+    assert cmp.potential_false_negative == mc_ani_manual.p_exceeds_threshold
+    assert cmp.avg_containment_ani == np.mean([a.containment_ani(b).ani, b.containment_ani(a).ani])
 
 
 def test_FracMinHashComparison_ANI_estimate_CI(track_abundance):
@@ -668,35 +767,31 @@ def test_FracMinHashComparison_ANI_estimate_CI(track_abundance):
     b = load_one_signature(f2, ksize=31).minhash
 
     cmp = FracMinHashComparison(a, b, estimate_ani_ci=True)
-    # check jaccard ani
-    ani_res = cmp.jaccard_ani
-    assert ani_res.ani == a.jaccard_ani(b).ani == b.jaccard_ani(a).ani
-    assert ani_res.p_exceeds_threshold == a.jaccard_ani(b).p_exceeds_threshold == b.jaccard_ani(a).p_exceeds_threshold
-    assert ani_res.je_exceeds_threshold == a.jaccard_ani(b).je_exceeds_threshold == b.jaccard_ani(a).je_exceeds_threshold
+    cmp.estimate_jaccard_ani()
+    assert cmp.jaccard_ani == a.jaccard_ani(b).ani == b.jaccard_ani(a).ani
+    assert cmp.potential_false_negative == a.jaccard_ani(b).p_exceeds_threshold == b.jaccard_ani(a).p_exceeds_threshold
+    assert cmp.jaccard_ani_untrustworthy == a.jaccard_ani(b).je_exceeds_threshold == b.jaccard_ani(a).je_exceeds_threshold
 
-    # check containment ani
-    a_cont_ani = cmp.mh1_containment_ani
+    cmp.estimate_mh1_containment_ani()
     a_cont_ani_manual = a.containment_ani(b, estimate_ci=True)
-    assert a_cont_ani.ani == a_cont_ani_manual.ani
-    assert a_cont_ani.p_exceeds_threshold == a_cont_ani_manual.p_exceeds_threshold
-    assert a_cont_ani.ani_low == a_cont_ani_manual.ani_low
-    assert a_cont_ani.ani_high == a_cont_ani_manual.ani_high
+    assert cmp.mh1_containment_ani == a_cont_ani_manual.ani
+    assert cmp.potential_false_negative == a_cont_ani_manual.p_exceeds_threshold
+    assert cmp.mh1_containment_ani_low == a_cont_ani_manual.ani_low
+    assert cmp.mh1_containment_ani_high == a_cont_ani_manual.ani_high
 
-    b_cont_ani = cmp.mh2_containment_ani
+    cmp.estimate_mh2_containment_ani()
     b_cont_ani_manual = b.containment_ani(a, estimate_ci=True)
-    assert b_cont_ani.ani == b_cont_ani_manual.ani
-    assert b_cont_ani.p_exceeds_threshold == b_cont_ani_manual.p_exceeds_threshold
-    assert b_cont_ani.ani_low == b_cont_ani_manual.ani_low
-    assert b_cont_ani.ani_high == b_cont_ani_manual.ani_high
+    assert cmp.mh2_containment_ani == b_cont_ani_manual.ani
+    assert cmp.potential_false_negative == b_cont_ani_manual.p_exceeds_threshold
+    assert cmp.mh2_containment_ani_low == b_cont_ani_manual.ani_low
+    assert cmp.mh2_containment_ani_high == b_cont_ani_manual.ani_high
 
-    mc_ani = cmp.max_containment_ani
+    cmp.estimate_max_containment_ani()
     mc_ani_manual = a.max_containment_ani(b, estimate_ci=True)
-    assert mc_ani.ani == max(a.containment_ani(b).ani, b.containment_ani(a).ani) == mc_ani_manual.ani
-    assert mc_ani.p_exceeds_threshold == mc_ani_manual.p_exceeds_threshold
-    assert mc_ani.ani_low == mc_ani_manual.ani_low
-    assert mc_ani.ani_high == mc_ani_manual.ani_high
-    avgc_ani = cmp.avg_containment_ani
-    assert avgc_ani == np.mean([a.containment_ani(b).ani, b.containment_ani(a).ani])
+    assert cmp.max_containment_ani == max(a.containment_ani(b).ani, b.containment_ani(a).ani) == mc_ani_manual.ani
+    assert cmp.potential_false_negative == mc_ani_manual.p_exceeds_threshold
+    assert cmp.max_containment_ani_low == mc_ani_manual.ani_low
+    assert cmp.max_containment_ani_high ==mc_ani_manual.ani_high
 
 
 def test_FracMinHashComparison_ANI_estimate_CI_ci99(track_abundance):
@@ -712,35 +807,27 @@ def test_FracMinHashComparison_ANI_estimate_CI_ci99(track_abundance):
     b = load_one_signature(f2, ksize=31).minhash
 
     cmp = FracMinHashComparison(a, b, estimate_ani_ci=True, ani_confidence=0.99)
-    # check jaccard ani
-    ani_res = cmp.jaccard_ani
-    assert ani_res.ani == a.jaccard_ani(b).ani == b.jaccard_ani(a).ani
-    assert ani_res.p_exceeds_threshold == a.jaccard_ani(b).p_exceeds_threshold == b.jaccard_ani(a).p_exceeds_threshold
-    assert ani_res.je_exceeds_threshold == a.jaccard_ani(b).je_exceeds_threshold == b.jaccard_ani(a).je_exceeds_threshold
-
     # check containment ani
-    a_cont_ani = cmp.mh1_containment_ani
+    cmp.estimate_mh1_containment_ani()
     a_cont_ani_manual = a.containment_ani(b, estimate_ci=True, confidence=0.99)
-    assert a_cont_ani.ani == a_cont_ani_manual.ani
-    assert a_cont_ani.p_exceeds_threshold == a_cont_ani_manual.p_exceeds_threshold
-    assert a_cont_ani.ani_low == a_cont_ani_manual.ani_low
-    assert a_cont_ani.ani_high == a_cont_ani_manual.ani_high
+    assert cmp.mh1_containment_ani == a_cont_ani_manual.ani
+    assert cmp.potential_false_negative == a_cont_ani_manual.p_exceeds_threshold
+    assert cmp.mh1_containment_ani_low == a_cont_ani_manual.ani_low
+    assert cmp.mh1_containment_ani_high == a_cont_ani_manual.ani_high
 
-    b_cont_ani = cmp.mh2_containment_ani
+    cmp.estimate_mh2_containment_ani()
     b_cont_ani_manual = b.containment_ani(a, estimate_ci=True, confidence=0.99)
-    assert b_cont_ani.ani == b_cont_ani_manual.ani
-    assert b_cont_ani.p_exceeds_threshold == b_cont_ani_manual.p_exceeds_threshold
-    assert b_cont_ani.ani_low == b_cont_ani_manual.ani_low
-    assert b_cont_ani.ani_high == b_cont_ani_manual.ani_high
+    assert cmp.mh2_containment_ani == b_cont_ani_manual.ani
+    assert cmp.potential_false_negative == b_cont_ani_manual.p_exceeds_threshold
+    assert cmp.mh2_containment_ani_low == b_cont_ani_manual.ani_low
+    assert cmp.mh2_containment_ani_high == b_cont_ani_manual.ani_high
 
-    mc_ani = cmp.max_containment_ani
+    cmp.estimate_max_containment_ani()
     mc_ani_manual = a.max_containment_ani(b, estimate_ci=True, confidence=0.99)
-    assert mc_ani.ani == max(a.containment_ani(b).ani, b.containment_ani(a).ani) == mc_ani_manual.ani
-    assert mc_ani.p_exceeds_threshold == mc_ani_manual.p_exceeds_threshold
-    assert mc_ani.ani_low == mc_ani_manual.ani_low
-    assert mc_ani.ani_high == mc_ani_manual.ani_high
-    avgc_ani = cmp.avg_containment_ani
-    assert avgc_ani == np.mean([a.containment_ani(b).ani, b.containment_ani(a).ani])
+    assert cmp.max_containment_ani == max(a.containment_ani(b).ani, b.containment_ani(a).ani) == mc_ani_manual.ani
+    assert cmp.potential_false_negative == mc_ani_manual.p_exceeds_threshold
+    assert cmp.max_containment_ani_low == mc_ani_manual.ani_low
+    assert cmp.max_containment_ani_high ==mc_ani_manual.ani_high
 
 
 def test_FracMinHashComparison_ANI_downsample(track_abundance):
@@ -762,28 +849,28 @@ def test_FracMinHashComparison_ANI_downsample(track_abundance):
     b = b.downsample(scaled=2000)
 
     # check jaccard ani
-    ani_res = cmp.jaccard_ani
-    assert ani_res.ani == a.jaccard_ani(b).ani == b.jaccard_ani(a).ani
-    assert ani_res.p_exceeds_threshold == a.jaccard_ani(b).p_exceeds_threshold == b.jaccard_ani(a).p_exceeds_threshold
-    assert ani_res.je_exceeds_threshold == a.jaccard_ani(b).je_exceeds_threshold == b.jaccard_ani(a).je_exceeds_threshold
+    cmp.estimate_jaccard_ani()
+    assert cmp.jaccard_ani == a.jaccard_ani(b).ani == b.jaccard_ani(a).ani
+    assert cmp.potential_false_negative == a.jaccard_ani(b).p_exceeds_threshold == b.jaccard_ani(a).p_exceeds_threshold
+    assert cmp.jaccard_ani_untrustworthy == a.jaccard_ani(b).je_exceeds_threshold == b.jaccard_ani(a).je_exceeds_threshold
 
-    a_cont_ani = cmp.mh1_containment_ani
+    cmp.estimate_mh1_containment_ani()
     a_cont_ani_manual = a.containment_ani(b, estimate_ci=True)
-    assert a_cont_ani.ani == a_cont_ani_manual.ani
-    assert a_cont_ani.p_exceeds_threshold == a_cont_ani_manual.p_exceeds_threshold
-    assert a_cont_ani.ani_low == a_cont_ani_manual.ani_low
-    assert a_cont_ani.ani_high == a_cont_ani_manual.ani_high
+    assert cmp.mh1_containment_ani == a_cont_ani_manual.ani
+    assert cmp.potential_false_negative == a_cont_ani_manual.p_exceeds_threshold
+    assert cmp.mh1_containment_ani_low == a_cont_ani_manual.ani_low
+    assert cmp.mh1_containment_ani_high == a_cont_ani_manual.ani_high
 
-    b_cont_ani = cmp.mh2_containment_ani
+    cmp.estimate_mh2_containment_ani()
     b_cont_ani_manual = b.containment_ani(a, estimate_ci=True)
-    assert b_cont_ani.ani == b_cont_ani_manual.ani
-    assert b_cont_ani.p_exceeds_threshold == b_cont_ani_manual.p_exceeds_threshold
-    assert b_cont_ani.ani_low == b_cont_ani_manual.ani_low
-    assert b_cont_ani.ani_high == b_cont_ani_manual.ani_high
+    assert cmp.mh2_containment_ani == b_cont_ani_manual.ani
+    assert cmp.potential_false_negative == b_cont_ani_manual.p_exceeds_threshold
+    assert cmp.mh2_containment_ani_low == b_cont_ani_manual.ani_low
+    assert cmp.mh2_containment_ani_high == b_cont_ani_manual.ani_high
 
-    mc_ani = cmp.max_containment_ani
+    cmp.estimate_max_containment_ani()
     mc_ani_manual = a.max_containment_ani(b, estimate_ci=True)
-    assert mc_ani.ani == max(a.containment_ani(b).ani, b.containment_ani(a).ani) == mc_ani_manual.ani
-    assert mc_ani.p_exceeds_threshold == mc_ani_manual.p_exceeds_threshold
-    avgc_ani = cmp.avg_containment_ani
-    assert avgc_ani == np.mean([a.containment_ani(b).ani, b.containment_ani(a).ani])
+    assert cmp.max_containment_ani == max(a.containment_ani(b).ani, b.containment_ani(a).ani) == mc_ani_manual.ani
+    assert cmp.potential_false_negative == mc_ani_manual.p_exceeds_threshold
+    assert cmp.max_containment_ani_low == mc_ani_manual.ani_low
+    assert cmp.max_containment_ani_high ==mc_ani_manual.ani_high

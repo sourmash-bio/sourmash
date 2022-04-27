@@ -53,9 +53,13 @@ class BaseMinHashComparison:
     def jaccard(self):
         return self.mh1_cmp.jaccard(self.mh2_cmp)
 
-    @property
-    def jaccard_ani(self):
-        return self.mh1_cmp.jaccard_ani(self.mh2_cmp)
+    def estimate_jaccard_ani(self, jaccard=None):
+        jinfo = self.mh1_cmp.jaccard_ani(self.mh2_cmp, jaccard=jaccard)
+        # propagate params
+        self.jaccard_ani = jinfo.ani
+        if jinfo.p_exceeds_threshold:
+            self.potential_false_negative = True
+        self.jaccard_ani_untrustworthy = jinfo.je_exceeds_threshold
 
     @property
     def angular_similarity(self):
@@ -84,7 +88,7 @@ class FracMinHashComparison(BaseMinHashComparison):
     cmp_scaled: int = None # optionally force scaled value for this comparison
     threshold_bp: int = 0
     estimate_ani_ci: bool = False
-    ani_confidence: int = 0.95
+    ani_confidence: float = 0.95
 
     def __post_init__(self):
         "Initialize ScaledComparison using values from provided FracMinHashes"
@@ -92,6 +96,7 @@ class FracMinHashComparison(BaseMinHashComparison):
             # comparison scaled defaults to maximum scaled between the two sigs
             self.cmp_scaled = max(self.mh1.scaled, self.mh2.scaled)
         self.check_compatibility_and_downsample(cmp_scaled=self.cmp_scaled)
+        self.potential_false_negative = False
 
     @property
     def pass_threshold(self):
@@ -105,40 +110,68 @@ class FracMinHashComparison(BaseMinHashComparison):
     def mh1_containment(self):
         return self.mh1_cmp.contained_by(self.mh2_cmp)
 
-    @property
-    def mh1_containment_ani(self):
-        return self.mh1_cmp.containment_ani(self.mh2_cmp,
+    def estimate_mh1_containment_ani(self, containment = None):
+        # build result once
+        m1_cani = self.mh1_cmp.containment_ani(self.mh2_cmp,
+                                            containment=containment,
                                             confidence=self.ani_confidence,
                                             estimate_ci=self.estimate_ani_ci)
+        # propagate params
+        self.mh1_containment_ani = m1_cani.ani
+        if m1_cani.p_exceeds_threshold:
+            # only update if True
+            self.potential_false_negative = True
+        if self.estimate_ani_ci:
+            self.mh1_containment_ani_low = m1_cani.ani_low
+            self.mh1_containment_ani_high = m1_cani.ani_high
 
     @property
     def mh2_containment(self):
         return self.mh2_cmp.contained_by(self.mh1_cmp)
 
-    @property
-    def mh2_containment_ani(self):
-        return self.mh2_cmp.containment_ani(self.mh1_cmp,
+    def estimate_mh2_containment_ani(self, containment=None):
+        m2_cani =  self.mh2_cmp.containment_ani(self.mh1_cmp,
+                                            containment=containment,
                                             confidence=self.ani_confidence,
                                             estimate_ci=self.estimate_ani_ci)
-
+        self.mh2_containment_ani = m2_cani.ani
+        if m2_cani.p_exceeds_threshold:
+            self.potential_false_negative = True
+        if self.estimate_ani_ci:
+            self.mh2_containment_ani_low = m2_cani.ani_low
+            self.mh2_containment_ani_high = m2_cani.ani_high
+    
     @property
     def max_containment(self):
         return self.mh1_cmp.max_containment(self.mh2_cmp)
 
-    @property
-    def max_containment_ani(self):
-        return self.mh1_cmp.max_containment_ani(self.mh2_cmp,
+    def estimate_max_containment_ani(self, max_containment=None):
+        mc_ani_info = self.mh1_cmp.max_containment_ani(self.mh2_cmp,
+                                                max_containment=max_containment,
                                                 confidence=self.ani_confidence,
                                                 estimate_ci=self.estimate_ani_ci)
+        # propagate params
+        self.max_containment_ani = mc_ani_info.ani
+        if mc_ani_info.p_exceeds_threshold:
+            self.potential_false_negative = True
+        if self.estimate_ani_ci:
+            self.max_containment_ani_low = mc_ani_info.ani_low
+            self.max_containment_ani_high = mc_ani_info.ani_high
 
     @property
     def avg_containment(self):
-        return np.mean([self.mh1_containment, self.mh2_containment])
+        return self.mh1_cmp.avg_containment(self.mh2_cmp)
 
     @property
     def avg_containment_ani(self):
         "Returns single average_containment_ani value."
-        return np.mean([self.mh1_containment_ani.ani, self.mh2_containment_ani.ani])
+        return self.mh1_cmp.avg_containment_ani(self.mh2_cmp)
+
+    def estimate_all_containment_ani(self):
+        "Estimate all containment ANI values."
+        self.estimate_mh1_containment_ani()
+        self.estimate_mh2_containment_ani()
+        self.max_containment_ani = max([self.mh1_containment_ani, self.mh2_containment_ani])
 
     def weighted_intersection(self, from_mh=None, from_abundD={}):
          # map abundances to all intersection hashes.

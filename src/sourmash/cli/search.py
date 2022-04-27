@@ -85,6 +85,10 @@ def subparser(subparsers):
         help='score based on max containment rather than similarity'
     )
     subparser.add_argument(
+        '--estimate-ani-ci', action='store_true',
+        help='for containment searches, also output confidence intervals for ANI estimates'
+    )
+    subparser.add_argument(
         '--ignore-abundance', action='store_true',
         help='do NOT use k-mer abundances if present; note: has no effect if '
         '--containment or --max-containment is specified'

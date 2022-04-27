@@ -131,6 +131,10 @@ def subparser(subparsers):
         '--prefetch', dest="prefetch", action='store_true',
         help="use prefetch before gather; see documentation",
     )
+    subparser.add_argument(
+        '--estimate-ani-ci', action='store_true',
+        help='also output confidence intervals for ANI estimates'
+    )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
     add_picklist_args(subparser)

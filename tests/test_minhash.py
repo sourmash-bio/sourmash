@@ -161,6 +161,21 @@ def test_contained_requires_scaled_2(track_abundance):
         mh1.max_containment(mh2)
 
 
+def test_contained_requires_scaled_3(track_abundance):
+    # test that avg_containment requires scaled signatures
+    mh1 = MinHash(1, 4, track_abundance=track_abundance)
+    mh2 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_sequence('ATGC')
+    mh2.add_sequence('ATGC')
+
+    with pytest.raises(TypeError):
+        mh2.avg_containment(mh1)
+
+    with pytest.raises(TypeError):
+        mh1.avg_containment(mh2)
+
+
 def test_bytes_dna(track_abundance):
     mh = MinHash(1, 4, track_abundance=track_abundance)
     mh.add_sequence('ATGC')
@@ -2299,6 +2314,43 @@ def test_max_containment_equal():
     assert mh2.max_containment(mh1) == 1
 
 
+def test_avg_containment():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh2.add_many((1, 5))
+
+    assert mh1.contained_by(mh2) == 1/4
+    assert mh2.contained_by(mh1) == 1/2
+    assert mh1.avg_containment(mh2) == 0.375
+    assert mh2.avg_containment(mh1) == 0.375
+
+
+def test_avg_containment_empty():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+
+    assert mh1.contained_by(mh2) == 0
+    assert mh2.contained_by(mh1) == 0
+    assert mh1.avg_containment(mh2) == 0
+    assert mh2.avg_containment(mh1) == 0
+
+
+def test_avg_containment_equal():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh2.add_many((1, 2, 3, 4))
+
+    assert mh1.contained_by(mh2) == 1
+    assert mh2.contained_by(mh1) == 1
+    assert mh1.avg_containment(mh2) == 1
+    assert mh2.avg_containment(mh1) == 1
+
 def test_frozen_and_mutable_1(track_abundance):
     # mutable minhashes -> mutable minhashes creates new copy
     mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
@@ -2787,6 +2839,9 @@ def test_containment_ANI():
     print("mh2 max containment", m2_mc_m1)
     assert m1_mc_m2 == m2_mc_m1
     assert (m1_mc_m2.ani, m1_mc_m2.ani_low, m1_mc_m2.ani_high) == (1.0,None,None)
+    ac_m1 = mh1.avg_containment_ani(mh2)
+    ac_m2 = mh2.avg_containment_ani(mh1)
+    assert ac_m1 == ac_m2 == (m1_cont_m2.ani + m2_cont_m1.ani)/2
  
 
 def test_containment_ANI_precalc_containment():
@@ -2798,9 +2853,12 @@ def test_containment_ANI_precalc_containment():
     s1c = mh1.contained_by(mh2)
     s2c = mh2.contained_by(mh1)
     mc = max(s1c, s2c)
+    ac = (s1c + s2c)/2
+    print(ac)
 
     assert mh1.containment_ani(mh2, estimate_ci=True) ==  mh1.containment_ani(mh2, containment=s1c, estimate_ci=True)
     assert mh2.containment_ani(mh1) ==  mh2.containment_ani(mh1, containment=s2c)
+    assert mh1.max_containment_ani(mh2) ==  mh2.max_containment_ani(mh1)
     assert mh1.max_containment_ani(mh2) ==  mh1.max_containment_ani(mh2, max_containment=mc)
     assert mh1.max_containment_ani(mh2) ==  mh2.max_containment_ani(mh1, max_containment=mc)
 
@@ -2835,6 +2893,10 @@ def test_containment_ANI_downsample():
     assert ds_s3c == ds_s3c_manual
     assert ds_s4c == ds_s4c_manual
     assert mc_w_ds_1 == mc_w_ds_2 == ds_mc_manual
+
+    ac_m2 = mh2.avg_containment_ani(mh3)
+    ac_m3 = mh3.avg_containment_ani(mh2)
+    assert ac_m2 == ac_m3 == (ds_s3c.ani + ds_s4c.ani)/2
 
 
 def test_jaccard_ANI():
@@ -2904,3 +2966,27 @@ def test_containment_ani_ci_tiny_testdata():
     assert m2_cani_m1.ani == 0.986394259982259
     assert m2_cani_m1.ani_low == None
     assert m2_cani_m1.ani_high == None
+
+def test_ANI_num_fail():
+    f1 = utils.get_test_data('num/47.fa.sig')
+    f2 = utils.get_test_data('num/63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+
+    with pytest.raises(TypeError) as exc:
+        mh1.containment_ani(mh2)
+    print(str(exc))
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+    with pytest.raises(TypeError) as exc:
+        mh2.containment_ani(mh1, estimate_ci =True)
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+    with pytest.raises(TypeError) as exc:
+        mh1.max_containment_ani(mh2)
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+    with pytest.raises(TypeError) as exc:
+        mh1.avg_containment_ani(mh2)
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+    with pytest.raises(TypeError) as exc:
+        mh1.jaccard_ani(mh2)
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+

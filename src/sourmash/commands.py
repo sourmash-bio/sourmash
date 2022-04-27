@@ -16,7 +16,7 @@ from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
 from .sourmash_args import (FileOutput, FileOutputCSV,
                             SaveSignaturesToLocation)
-from .search import prefetch_database, SearchResult, PrefetchResult, GatherResult
+from .search import prefetch_database, PrefetchResult
 from .index import LazyLinearIndex
 
 WATERMARK_SIZE = 10000
@@ -110,11 +110,20 @@ def compare(args):
         error('must use scaled signatures with --containment and --max-containment')
         sys.exit(-1)
 
+    # complain if --ani and not is_scaled
+    return_ani = False
+    if args.estimate_ani:
+        return_ani = True
+
+    if return_ani and not is_scaled:
+        error('must use scaled signatures with --estimate-ani')
+        sys.exit(-1)
+
     # notify about implicit --ignore-abundance:
-    if is_containment:
+    if is_containment or return_ani:
         track_abundances = any(( s.minhash.track_abundance for s in siglist ))
         if track_abundances:
-            notify('NOTE: --containment and --max-containment ignore signature abundances.')
+            notify('NOTE: --containment, --max-containment, and --estimate-ani ignore signature abundances.')
 
     # if using --scaled, downsample appropriately
     printed_scaled_msg = False
@@ -140,12 +149,12 @@ def compare(args):
 
     labeltext = [str(item) for item in siglist]
     if args.containment:
-        similarity = compare_serial_containment(siglist)
+        similarity = compare_serial_containment(siglist, return_ani=return_ani)
     elif args.max_containment:
-        similarity = compare_serial_max_containment(siglist)
+        similarity = compare_serial_max_containment(siglist, return_ani=return_ani)
     else:
         similarity = compare_all_pairs(siglist, args.ignore_abundance,
-                                       n_jobs=args.processes)
+                                       n_jobs=args.processes, return_ani=return_ani)
 
     if len(siglist) < 30:
         for i, E in enumerate(siglist):
@@ -508,7 +517,8 @@ def search(args):
                                    do_containment=args.containment,
                                    do_max_containment=args.max_containment,
                                    best_only=args.best_only,
-                                   unload_data=True)
+                                   unload_data=True,
+                                   estimate_ani_ci=args.estimate_ani_ci)
 
     n_matches = len(results)
     if args.best_only:
@@ -532,14 +542,14 @@ def search(args):
     if args.best_only:
         notify("** reporting only one match because --best-only was set")
 
+    writer = None
     if args.output:
-        fieldnames = SearchResult.search_write_cols
         with FileOutputCSV(args.output) as fp:
-            w = csv.DictWriter(fp, fieldnames=fieldnames)
-
-            w.writeheader()
             for sr in results:
-                w.writerow(sr.writedict)
+                # if this is the first result we're writing, initialize the csv, return writer
+                if writer is None:
+                    writer = sr.init_dictwriter(fp)
+                sr.write(writer)
 
     # save matching signatures upon request
     if args.save_matches:
@@ -680,14 +690,11 @@ def gather(args):
         noident_mh = prefetch_query.minhash.to_mutable()
         save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
         save_prefetch.open()
-        # set up prefetch CSV output, write headers, etc.
+        # set up prefetch CSV output
         prefetch_csvout_fp = None
         prefetch_csvout_w = None
         if args.save_prefetch_csv:
-            fieldnames = PrefetchResult.prefetch_write_cols
             prefetch_csvout_fp = FileOutput(args.save_prefetch_csv, 'wt').open()
-            prefetch_csvout_w = csv.DictWriter(prefetch_csvout_fp, fieldnames=fieldnames)
-            prefetch_csvout_w.writeheader()
 
             query_mh = prefetch_query.minhash
             scaled = query_mh.scaled
@@ -713,8 +720,11 @@ def gather(args):
                 if prefetch_csvout_fp:
                     assert scaled
                     # calculate intersection stats and info
-                    prefetch_result = PrefetchResult(prefetch_query, found_sig, cmp_scaled=scaled, threshold_bp=args.threshold_bp)
-                    prefetch_csvout_w.writerow(prefetch_result.writedict)
+                    prefetch_result = PrefetchResult(prefetch_query, found_sig, cmp_scaled=scaled, 
+                                                     threshold_bp=args.threshold_bp, estimate_ani_ci=args.estimate_ani_ci)
+                    if prefetch_csvout_w is None:
+                        prefetch_csvout_w = prefetch_result.init_dictwriter(prefetch_csvout_fp)
+                    prefetch_result.write(prefetch_csvout_w)
 
             counters.append(counter)
 
@@ -740,7 +750,8 @@ def gather(args):
     gather_iter = GatherDatabases(query, counters,
                                   threshold_bp=args.threshold_bp,
                                   ignore_abundance=args.ignore_abundance,
-                                  noident_mh=noident_mh)
+                                  noident_mh=noident_mh,
+                                  estimate_ani_ci=args.estimate_ani_ci)
 
     for result, weighted_missed in gather_iter:
         if not len(found):                # first result? print header.
@@ -794,13 +805,13 @@ def gather(args):
         print_results(f'WARNING: final scaled was {gather_iter.scaled}, vs query scaled of {query.minhash.scaled}')
 
     # save CSV?
+    w = None
     if found and args.output:
-        fieldnames = GatherResult.gather_write_cols
         with FileOutputCSV(args.output) as fp:
-            w = csv.DictWriter(fp, fieldnames=fieldnames)
-            w.writeheader()
             for result in found:
-                w.writerow(result.writedict)
+                if w is None:
+                    w = result.init_dictwriter(fp)
+                result.write(w)
 
     # save matching signatures?
     if found and args.save_matches:
@@ -960,12 +971,13 @@ def multigather(args):
 
             output_base = os.path.basename(query_filename)
             output_csv = output_base + '.csv'
-            fieldnames = GatherResult.gather_write_cols
+
+            w = None
             with FileOutputCSV(output_csv) as fp:
-                w = csv.DictWriter(fp, fieldnames=fieldnames)
-                w.writeheader()
                 for result in found:
-                    w.writerow(result.writedict)
+                    if w is None:
+                        w = result.init_dictwriter(fp)
+                        result.write(w)
 
             output_matches = output_base + '.matches.sig'
             with open(output_matches, 'wt') as fp:
@@ -1162,10 +1174,7 @@ def prefetch(args):
     csvout_fp = None
     csvout_w = None
     if args.output:
-        fieldnames = PrefetchResult.prefetch_write_cols
         csvout_fp = FileOutput(args.output, 'wt').open()
-        csvout_w = csv.DictWriter(csvout_fp, fieldnames=fieldnames)
-        csvout_w.writeheader()
 
     # track & maybe save matches progressively
     matches_out = SaveSignaturesToLocation(args.save_matches)
@@ -1198,7 +1207,7 @@ def prefetch(args):
             notify(f"...no compatible signatures in '{dbfilename}'; skipping")
             continue
 
-        for result in prefetch_database(query, db, args.threshold_bp):
+        for result in prefetch_database(query, db, args.threshold_bp, estimate_ani_ci= args.estimate_ani_ci):
             match = result.match
 
             # ensure we're all on the same page wrt scaled resolution:
@@ -1219,7 +1228,9 @@ def prefetch(args):
 
             # output match info as we go
             if csvout_fp:
-                csvout_w.writerow(result.writedict)
+                if csvout_w is None:
+                    csvout_w = result.init_dictwriter(csvout_fp)
+                result.write(csvout_w)
 
             # output match signatures as we go (maybe)
             matches_out.add(match)
