@@ -1000,6 +1000,17 @@ def test_tax_multi_load_files(runtmp):
         MultiLineageDB.load([runtmp.output('no-such-file')])
 
 
+def test_tax_sql_load_new_file(runtmp):
+    # test loading a newer-format sql file with sourmash_internals table
+    taxonomy_db = utils.get_test_data('sqlite/test.taxonomy.db')
+
+    db = MultiLineageDB.load([taxonomy_db])
+    print(list(db.keys()))
+    assert len(db) == 6
+    assert 'strain' not in db.available_ranks
+    assert db['GCF_001881345'][0].rank == 'superkingdom'
+
+
 def test_tax_multi_load_files_shadowed(runtmp):
     # test loading various good and bad files
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
