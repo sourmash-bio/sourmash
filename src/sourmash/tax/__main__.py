@@ -99,7 +99,7 @@ def metagenome(args):
     seen_perfect = set()
     for rank in sourmash.lca.taxlist(include_strain=False):
         try:
-            summarized_gather[rank], seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
+            summarized_gather[rank], seen_perfect, _ = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
                                                                 keep_full_identifiers=args.keep_full_identifiers,
                                                                 keep_identifier_versions = args.keep_identifier_versions,
                                                                 seen_perfect = seen_perfect)
@@ -179,9 +179,10 @@ def genome(args):
         sys.exit(-1)
 
     # if --rank is specified, classify to that rank
+    estimate_query_ani = True
     if args.rank:
         try:
-            best_at_rank, seen_perfect = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
+            best_at_rank, seen_perfect, estimate_query_ani = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
                                                      keep_full_identifiers=args.keep_full_identifiers,
                                                      keep_identifier_versions = args.keep_identifier_versions,
                                                      best_only=True, seen_perfect=seen_perfect, estimate_query_ani=True)
@@ -215,10 +216,10 @@ def genome(args):
         for rank in tax_utils.ascending_taxlist(include_strain=False):
             # gets best_at_rank for all queries in this gather_csv
             try:
-                best_at_rank, seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                         keep_full_identifiers=args.keep_full_identifiers,
-                                                         keep_identifier_versions = args.keep_identifier_versions,
-                                                         best_only=True, seen_perfect=seen_perfect, estimate_query_ani=True)
+                best_at_rank, seen_perfect, estimate_query_ani = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
+                                                                                                keep_full_identifiers=args.keep_full_identifiers,
+                                                                                                keep_identifier_versions = args.keep_identifier_versions,
+                                                                                                best_only=True, seen_perfect=seen_perfect, estimate_query_ani=estimate_query_ani)
             except ValueError as exc:
                 error(f"ERROR: {str(exc)}")
                 sys.exit(-1)

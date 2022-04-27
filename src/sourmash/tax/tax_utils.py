@@ -311,7 +311,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                                               query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
                 sum_uniq_to_query_sorted.append(sres)
 
-    return sum_uniq_to_query_sorted, seen_perfect
+    return sum_uniq_to_query_sorted, seen_perfect, estimate_query_ani
 
 
 def find_missing_identities(gather_results, tax_assign):
