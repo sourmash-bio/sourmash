@@ -287,7 +287,7 @@ def jaccard_to_distance(
     Arguments: jaccard, ksize, scaled, n_unique_kmers
     # Returns: tuple (point_estimate_of_mutation_rate, lower_bound_of_error)
 
-    # Returns: point_estimate_of_mutation_rate
+    # Returns: JaccardANIResult
 
     Note: point estimate does not consider impact of scaled, but p_nothing_in_common can be
     useful for determining whether scaled is sufficient for these comparisons.

@@ -529,16 +529,6 @@ class GatherResult(PrefetchResult):
         self.prep_prefetch_result()
         return self.to_write(columns=prefetch_cols)
 
-    def init_prefetch_dictwriter(self, csv_handle):
-        # set write columns for prefetch result
-        prefetch_cols = self.prefetch_write_cols
-        if self.estimate_ani_ci:
-            prefetch_cols = self.prefetch_write_cols_ci
-        return csv.DictWriter(csv_handle, fieldnames = prefetch_cols)
-
-    def write_prefetch_result(self, w):
-        w.writerow(self.prefetchresultdict)
-
 
 def format_bp(bp):
     "Pretty-print bp information."

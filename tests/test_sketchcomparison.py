@@ -323,7 +323,7 @@ def test_FracMinHashComparison_potential_false_negative(track_abundance):
     cmp2.estimate_mh1_containment_ani()
     assert cmp2.potential_false_negative == True
 
-    # test max cont potenital_false_neg (via no overlap at all)
+    # test max cont potential_false_neg (via no overlap at all)
     cmp3 = FracMinHashComparison(a,c)
     cmp3.estimate_max_containment_ani()
     assert cmp3.potential_false_negative == True
