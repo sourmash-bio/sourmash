@@ -75,7 +75,7 @@ bibliography: paper.bib
 sourmash is a command line tool and Python library for sketching
 collections of DNA, RNA, and amino acid k-mers for biological sequence
 search, comparison, and analysis [@Pierce:2019]. The most recent
-release, sourmash v4, is built on top of Rust and provides an
+major release, sourmash v4, is built on top of Rust and provides an
 experimental Rust interface.
 
 MinHash sketches provide a lightweight way to store "signatures" of
@@ -88,7 +88,9 @@ Since sourmash v1 was released in 2016 [@Brown:2016], sourmash has expanded
 to support new database types and many more command line functions.
 In particular, sourmash now has robust support for both Jaccard similarity
 and containment calculations, which enables analysis and comparison of data sets
-of different sizes, including large metagenomic samples.
+of different sizes, including large metagenomic samples. As of v4.4,
+sourmash can convert these to estimated Average Nucleotide Identity (ANI)
+values, which can provide improved biological context to sketch comparisons.
 
 # Statement of Need
 
