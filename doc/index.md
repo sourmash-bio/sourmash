@@ -182,6 +182,15 @@ support
 developer
 ```
 
+
+```{toctree}
+:hidden:
+README.md
+legacy-databases.md
+plotting-compare.ipynb
+sourmash-sketch.md
+```
+
 # Indices and tables
 
 * {ref}`genindex`
