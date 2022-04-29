@@ -29,7 +29,7 @@ use crate::storage::{FSStorage, InnerStorage, StorageInfo};
 use crate::Error;
 
 #[derive(TypedBuilder)]
-pub struct SBT<N, L> {
+pub struct SBT<N> {
     #[builder(default = 2)]
     d: u32,
 
@@ -43,7 +43,7 @@ pub struct SBT<N, L> {
     nodes: HashMap<u64, N>,
 
     #[builder(default = HashMap::default())]
-    leaves: HashMap<u64, SigStore<L>>,
+    leaves: HashMap<u64, SigStore>,
 }
 
 const fn parent(pos: u64, d: u64) -> u64 {
@@ -54,9 +54,8 @@ const fn child(parent: u64, pos: u64, d: u64) -> u64 {
     d * parent + pos + 1
 }
 
-impl<N, L> SBT<N, L>
+impl<N> SBT<N>
 where
-    L: std::clone::Clone + Default,
     N: Default,
 {
     #[inline(always)]
@@ -102,12 +101,10 @@ where
     // combine
 }
 
-impl<T, U> SBT<Node<U>, T>
+impl<U> SBT<Node<U>>
 where
-    T: ToWriter + Clone,
     U: ToWriter,
     Node<U>: ReadData<U>,
-    SigStore<T>: ReadData<T>,
 {
     fn parse_v4<R>(rdr: &mut R) -> Result<SBTInfo, Error>
     where
@@ -125,7 +122,7 @@ where
         Ok(SBTInfo::V5(sinfo))
     }
 
-    pub fn from_reader<R, P>(mut rdr: R, path: P) -> Result<SBT<Node<U>, T>, Error>
+    pub fn from_reader<R, P>(mut rdr: R, path: P) -> Result<SBT<Node<U>>, Error>
     where
         R: Read,
         P: AsRef<Path>,
@@ -276,7 +273,7 @@ where
         })
     }
 
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<SBT<Node<U>, T>, Error> {
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<SBT<Node<U>>, Error> {
         let file = File::open(&path)?;
         let mut reader = BufReader::new(file);
 
@@ -287,7 +284,7 @@ where
         // TODO: canonicalize doesn't work on wasm32-wasi
         //basepath.canonicalize()?;
 
-        let sbt = SBT::<Node<U>, T>::from_reader(&mut reader, &basepath.parent().unwrap())?;
+        let sbt = SBT::<Node<U>>::from_reader(&mut reader, &basepath.parent().unwrap())?;
         Ok(sbt)
     }
 
@@ -346,7 +343,7 @@ where
                 .iter_mut()
                 .map(|(n, l)| {
                     // Trigger data loading
-                    let _: &T = (*l).data().unwrap();
+                    let _: &Signature = (*l).data().unwrap();
 
                     // set storage to new one
                     l.storage = Some(storage.clone());
@@ -369,21 +366,25 @@ where
         Ok(())
     }
 
-    pub fn leaves(&self) -> Vec<SigStore<T>> {
+    pub fn leaves(&self) -> Vec<SigStore> {
         self.leaves.values().cloned().collect()
     }
 }
 
-impl<'a, N, L> Index<'a> for SBT<N, L>
+impl<'a, N> Index<'a> for SBT<N>
 where
-    N: Comparable<N> + Comparable<L> + Update<N> + Debug + Default,
-    L: Comparable<L> + Update<N> + Clone + Debug + Default,
-    SBT<N, L>: FromFactory<N>,
-    SigStore<L>: From<L> + ReadData<L>,
+    N: Comparable<N> + Comparable<Signature> + Update<N> + Debug + Default,
+    Signature: Update<N>,
+    SBT<N>: FromFactory<N>,
 {
-    type Item = L;
+    type Item = Signature;
 
-    fn find<F>(&self, search_fn: F, sig: &L, threshold: f64) -> Result<Vec<&L>, Error>
+    fn find<F>(
+        &self,
+        search_fn: F,
+        sig: &Self::Item,
+        threshold: f64,
+    ) -> Result<Vec<&Self::Item>, Error>
     where
         F: Fn(&dyn Comparable<Self::Item>, &Self::Item, f64) -> bool,
     {
@@ -415,7 +416,7 @@ where
         Ok(matches)
     }
 
-    fn insert(&mut self, dataset: L) -> Result<(), Error> {
+    fn insert(&mut self, dataset: Signature) -> Result<(), Error> {
         if self.leaves.is_empty() {
             // in this case the tree is empty,
             // just add the dataset to the first available leaf
@@ -594,10 +595,7 @@ where
     }
 }
 
-impl<T> SigStore<T>
-where
-    T: ToWriter,
-{
+impl SigStore {
     pub fn save(&self, path: &str) -> Result<String, Error> {
         if let Some(storage) = &self.storage {
             if let Some(data) = self.data.get() {
@@ -684,7 +682,7 @@ enum SBTInfo {
 enum BinaryTree {
     Empty,
     Internal(Box<TreeNode<HashSet<u64, BuildHasherDefault<NoHashHasher<u64>>>>>),
-    Leaf(Box<TreeNode<SigStore<Signature>>>),
+    Leaf(Box<TreeNode<SigStore>>),
 }
 
 struct TreeNode<T> {
@@ -693,14 +691,11 @@ struct TreeNode<T> {
     right: BinaryTree,
 }
 
-pub fn scaffold<N>(
-    mut datasets: Vec<SigStore<Signature>>,
-    storage: Option<InnerStorage>,
-) -> SBT<Node<N>, Signature>
+pub fn scaffold<N>(mut datasets: Vec<SigStore>, storage: Option<InnerStorage>) -> SBT<Node<N>>
 where
     N: Clone + Default,
 {
-    let mut leaves: HashMap<u64, SigStore<Signature>> = HashMap::with_capacity(datasets.len());
+    let mut leaves: HashMap<u64, SigStore> = HashMap::with_capacity(datasets.len());
 
     let mut next_round = Vec::new();
 

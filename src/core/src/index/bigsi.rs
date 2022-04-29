@@ -191,7 +191,7 @@ mod test {
         .unwrap();
         let sig_data = sigs[0].clone();
 
-        let leaf: SigStore<_> = sig_data.into();
+        let leaf: SigStore = sig_data.into();
 
         for l in datasets {
             bigsi.insert(l).expect("insertion error!");

@@ -19,7 +19,7 @@ impl ToWriter for Nodegraph {
     }
 }
 
-impl<L: Clone + Default> FromFactory<Node<Nodegraph>> for SBT<Node<Nodegraph>, L> {
+impl FromFactory<Node<Nodegraph>> for SBT<Node<Nodegraph>> {
     fn factory(&self, name: &str) -> Result<Node<Nodegraph>, Error> {
         match self.factory {
             Factory::GraphFactory { args: (k, t, n) } => {
@@ -279,7 +279,7 @@ mod test {
         )?;
         let sig_data = sigs[0].clone();
 
-        let leaf: SigStore<_> = sig_data.into();
+        let leaf: SigStore = sig_data.into();
 
         let results = sbt.find(search_minhashes, &leaf, 0.5)?;
         assert_eq!(results.len(), 1);
