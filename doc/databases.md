@@ -1,12 +1,10 @@
 # Prepared databases
 
-```{toctree}
-:maxdepth: 2
+```{contents}
 ```
 
-We provide a number of pre-built databases that you can use with sourmash.
-
-NOTE TO @CTB: add issue to do more/better benchmarking
+We provide a number of pre-built collections and indexed databases
+that you can use with sourmash.
 
 ## Types of databases
 
@@ -25,13 +23,13 @@ The databases do not need to be unpacked or prepared in any way after download.
 
 You can verify that they've been successfully downloaded with `sourmash sig summarize <output>`.
 
-## GTDB R07-RS207
+## GTDB R07-RS207 - DNA databases
 
 [GTDB R07-RS207](https://forum.gtdb.ecogenomic.org/t/announcing-gtdb-r07-rs207/264) consists of 317,542 genomes organized into 65,703 species clusters.
 
 The lineage spreadsheet (for `sourmash tax` commands) is available [at the species level](https://osf.io/v3zmg/download) and [at the strain level](https://osf.io/r87td/download).
 
-### GTDB R07-RS207 genomic representatives
+### GTDB R07-RS207 genomic representatives (66k)
 
 The GTDB genomic representatives are a low-redundancy subset of Genbank genomes, with 65,703 species-level genomes.
 
@@ -41,7 +39,7 @@ The GTDB genomic representatives are a low-redundancy subset of Genbank genomes,
 | 31 | [download (1.7 GB)](https://osf.io/3a6gn/download) | [download (3.5 GB)](https://osf.io/ernct/download) | [download (181 MB)](https://osf.io/p9ezm/download) |
 | 51 | [download (1.7 GB)](https://osf.io/f23qn/download) | [download (3.5 GB)](https://osf.io/yq7dc/download) | [download (181 MB)](https://osf.io/8qhgy/download) |
 
-### GTDB R07-RS207 all genomes
+### GTDB R07-RS207 all genomes (318k)
 
 These are databases for the full GTDB release, each containing 317,542 genomes.
 
@@ -125,7 +123,7 @@ Taxonomic spreadsheets for each domain are provided below as well.
 
 All files below are available under https://osf.io/wxf9z/. The GTDB taxonomy spreadsheet (in a format suitable for `sourmash lca index`) is available [here](https://osf.io/p6z3w/).
 
-### GTDB R06-RS202 genomic representatives (47.8k genomes)
+### GTDB R06-RS202 genomic representatives (47.8k)
 
 The GTDB genomic representatives are a low-redundancy subset of Genbank genomes.
 
@@ -135,7 +133,7 @@ The GTDB genomic representatives are a low-redundancy subset of Genbank genomes.
 | 31 | [download (1.3 GB)](https://osf.io/nqmau/download) | [download (2.6 GB)](https://osf.io/w4bcm/download) | [download (131 MB)](https://osf.io/ypsjq/download) | 
 | 51 | [download (1.3 GB)](https://osf.io/px6qd/download) | [download (2.6 GB)](https://osf.io/rv9zp/download) | [download (137 MB)](https://osf.io/297dp/download) | 
 
-### GTDB all genomes (258k genomes)
+### GTDB all genomes (258k)
 
 These databases contain the complete GTDB collection of 258,406 genomes.
 
