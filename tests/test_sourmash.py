@@ -5660,6 +5660,8 @@ def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
         assert row['query_name'] == 'tr1 4'
         assert row['query_md5'] == 'c9d5a795'
         assert row['query_bp'] == '910'
+        assert row['query_n_hashes'] == '91'
+        assert row['query_abundance'] == 'False'
         assert row['query_containment_ani']== '1.0'
         assert row['query_containment_ani_low']== ''
         assert row['query_containment_ani_high']== ''
