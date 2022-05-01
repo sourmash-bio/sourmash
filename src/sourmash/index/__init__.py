@@ -81,8 +81,27 @@ class Selection(TypedDict):
 
 # TypedDict can't have methods (it is a dict in runtime)
 def _selection_as_rust(selection: Selection):
-    ...
+    ptr = lib.selection_new()
 
+    for key, v in selection.items():
+        if v is not None:
+            if key == "ksize":
+                rustcall(lib.selection_set_ksize, ptr, v)
+            elif key == "moltype":
+                ...
+            elif key == "num":
+                ...
+            elif key == "scaled":
+                ...
+            elif key ==  "containment":
+                ...
+            elif key == "abund":
+                ...
+            elif key == "picklist":
+                ...
+            else:
+                raise KeyError(f"Unsupported key {key} for Selection in rust")
+    return ptr
 
 class Index(ABC):
     # this will be removed soon; see sourmash#1894.
@@ -573,7 +592,7 @@ class ZipFileLinearIndex(Index, RustObject):
 
     @manifest.setter
     def manifest(self, value):
-        raise NotImplementedError()
+        self._methodcall(lib.linearindex_set_manifest, value._as_rust()._take_objptr())
 
     def __bool__(self):
         "Are there any matching signatures in this zipfile? Avoid calling len."
@@ -585,7 +604,14 @@ class ZipFileLinearIndex(Index, RustObject):
 
     @property
     def location(self):
-        return self.storage.path
+        return self._methodcall(lib.linearindex_location)
+
+    @property
+    def storage(self):
+        from ..sbt_storage import ZipStorage
+
+        ptr = self._methodcall(lib.linearindex_storage)
+        return ZipStorage._from_objptr(ptr)
 
     def insert(self, signature):
         raise NotImplementedError
@@ -617,7 +643,7 @@ class ZipFileLinearIndex(Index, RustObject):
             # should we load this file? if it ends in .sig OR we are forcing:
             if filename.endswith('.sig') or \
                filename.endswith('.sig.gz') or \
-               self.traverse_yield_all:
+               self._traverse_yield_all:
                 sig_data = self.storage.load(filename)
                 for ss in load_signatures(sig_data):
                     yield ss, filename
@@ -636,37 +662,13 @@ class ZipFileLinearIndex(Index, RustObject):
     def select(self, **kwargs: Unpack[Selection]):
         "Select signatures in zip file based on ksize/moltype/etc."
 
-        # if we have a manifest, run 'select' on the manifest.
-        manifest = self.manifest
-        traverse_yield_all = self.traverse_yield_all
+        selection = _selection_as_rust(kwargs)
 
-        if manifest is not None:
-            manifest = manifest.select_to_manifest(**kwargs)
-            return ZipFileLinearIndex(self.storage,
-                                      selection_dict=None,
-                                      traverse_yield_all=traverse_yield_all,
-                                      manifest=manifest,
-                                      use_manifest=True)
-        else:
-            # no manifest? just pass along all the selection kwargs to
-            # the new ZipFileLinearIndex.
+        # select consumes the current index
+        ptr = self._take_objptr()
+        ptr = rustcall(lib.linearindex_select, ptr, selection)
 
-            assert manifest is None
-            if self.selection_dict:
-                # combine selects...
-                d = dict(self.selection_dict)
-                for k, v in kwargs.items():
-                    if k in d:
-                        if d[k] is not None and d[k] != v:
-                            raise ValueError(f"incompatible select on '{k}'")
-                    d[k] = v
-                kwargs = d
-
-            return ZipFileLinearIndex(self.storage,
-                                      selection_dict=kwargs,
-                                      traverse_yield_all=traverse_yield_all,
-                                      manifest=None,
-                                      use_manifest=False)
+        return ZipFileLinearIndex._from_objptr(ptr)
 
 
 class CounterGather:

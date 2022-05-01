@@ -29,7 +29,20 @@ use crate::Error;
 
 pub type MHBT = SBT<Node<Nodegraph>>;
 
-pub struct Selection;
+#[derive(Default)]
+pub struct Selection {
+    ksize: Option<u32>,
+}
+
+impl Selection {
+    pub fn ksize(&self) -> Option<u32> {
+        self.ksize
+    }
+
+    pub fn set_ksize(&mut self, ksize: u32) {
+        self.ksize = Some(ksize);
+    }
+}
 
 /* FIXME: bring back after MQF works on macOS and Windows
 use cfg_if::cfg_if;

@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::slice;
+use std::sync::Arc;
 
 use crate::index::revindex::{LinearRevIndex, RevIndex};
 use crate::index::Index;
@@ -271,7 +272,7 @@ unsafe fn linearindex_new(
     selection_ptr: *mut SourmashSelection,
     use_manifest: bool,
 ) -> Result<*mut SourmashLinearIndex> {
-    let storage = *SourmashZipStorage::into_rust(storage_ptr);
+    let storage = Arc::try_unwrap(*SourmashZipStorage::into_rust(storage_ptr)).ok().unwrap();
 
     let manifest = if manifest_ptr.is_null() {
         if use_manifest {
@@ -330,10 +331,46 @@ pub unsafe extern "C" fn linearindex_manifest(
     SourmashManifest::from_rust(index.manifest())
 }
 
+ffi_fn! {
+unsafe fn linearindex_set_manifest(
+    ptr: *mut SourmashLinearIndex,
+    manifest_ptr: *mut SourmashManifest,
+) -> Result<()> {
+    let index = SourmashLinearIndex::as_rust_mut(ptr);
+    let manifest = SourmashManifest::into_rust(manifest_ptr);
+
+    index.set_manifest(*manifest)?;
+    Ok(())
+}
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn linearindex_len(ptr: *const SourmashLinearIndex) -> u64 {
     let index = SourmashLinearIndex::as_rust(ptr);
     index.len() as u64
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn linearindex_location(ptr: *const SourmashLinearIndex) -> SourmashStr {
+    let index = SourmashLinearIndex::as_rust(ptr);
+    match index.location() {
+        Some(x) => x,
+        None => "".into(),
+    }
+    .into()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn linearindex_storage(
+    ptr: *const SourmashLinearIndex,
+) -> *const SourmashZipStorage {
+    let index = SourmashLinearIndex::as_rust(ptr);
+    let storage = index.storage();
+
+    match storage {
+        Some(st) => SourmashZipStorage::from_rust(st),
+        None => std::ptr::null::<SourmashZipStorage>(),
+    }
 }
 
 #[no_mangle]
@@ -344,4 +381,17 @@ pub unsafe extern "C" fn linearindex_signatures(
 
     let iter = Box::new(index.signatures_iter());
     SourmashSignatureIter::from_rust(SignatureIterator { iter })
+}
+
+ffi_fn! {
+unsafe fn linearindex_select(
+    ptr: *mut SourmashLinearIndex,
+    selection_ptr: *const SourmashSelection,
+) -> Result<*mut SourmashLinearIndex> {
+    let index = SourmashLinearIndex::into_rust(ptr);
+    let selection = SourmashSelection::as_rust(selection_ptr);
+
+    let new_index = index.select(selection)?;
+    Ok(SourmashLinearIndex::from_rust(new_index))
+}
 }

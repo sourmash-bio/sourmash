@@ -1,6 +1,6 @@
 pub mod revindex;
 
-use crate::index::Selection;
+use crate::index::{Selection, SigStore};
 use crate::signature::Signature;
 
 use crate::ffi::signature::SourmashSignature;
@@ -37,14 +37,39 @@ pub unsafe extern "C" fn searchresult_signature(
     SourmashSignature::from_rust((result.1).clone())
 }
 
+//================================================================
+
 pub struct SourmashSelection;
 
 impl ForeignObject for SourmashSelection {
     type RustObject = Selection;
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn selection_new() -> *mut SourmashSelection {
+    SourmashSelection::from_rust(Selection::default())
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn selection_ksize(ptr: *const SourmashSelection) -> u32 {
+    let sel = SourmashSelection::as_rust(ptr);
+    if let Some(ksize) = sel.ksize() {
+        ksize
+    } else {
+        todo!("empty ksize case not supported yet")
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn selection_set_ksize(ptr: *mut SourmashSelection, new_ksize: u32) {
+    let sel = SourmashSelection::as_rust_mut(ptr);
+    sel.set_ksize(new_ksize);
+}
+
+//================================================================
+//
 pub struct SignatureIterator {
-    iter: Box<dyn Iterator<Item = Signature>>,
+    iter: Box<dyn Iterator<Item = SigStore>>,
 }
 
 pub struct SourmashSignatureIter;
@@ -57,10 +82,10 @@ impl ForeignObject for SourmashSignatureIter {
 pub unsafe extern "C" fn signatures_iter_next(
     ptr: *mut SourmashSignatureIter,
 ) -> *const SourmashSignature {
-    let mut iterator = SourmashSignatureIter::into_rust(ptr);
+    let iterator = SourmashSignatureIter::as_rust_mut(ptr);
 
     match iterator.iter.next() {
-        Some(sig) => SourmashSignature::from_rust(sig),
+        Some(sig) => SourmashSignature::from_rust(sig.into()),
         None => std::ptr::null(),
     }
 }

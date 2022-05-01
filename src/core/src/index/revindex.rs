@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use getset::{CopyGetters, Getters, Setters};
 use log::{debug, info};
@@ -11,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use rayon::prelude::*;
 
 use crate::encodings::{Color, Colors, Idx};
-use crate::index::Index;
+use crate::index::{Index, Selection, SigStore};
 use crate::manifest::Manifest;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
@@ -111,12 +112,12 @@ pub struct LinearRevIndex {
     sig_files: Manifest,
 
     #[serde(skip)]
-    ref_sigs: Option<Vec<Signature>>,
+    ref_sigs: Option<Vec<SigStore>>,
 
     template: Sketch,
 
     #[serde(skip)]
-    storage: Option<ZipStorage>,
+    storage: Option<Arc<ZipStorage>>,
 }
 
 impl LinearRevIndex {
@@ -130,7 +131,7 @@ impl LinearRevIndex {
         let search_sigs: Vec<_> = sig_files.internal_locations().map(PathBuf::from).collect();
 
         let ref_sigs = if let Some(ref_sigs) = ref_sigs {
-            Some(ref_sigs)
+            Some(ref_sigs.into_iter().map(|m| m.into()).collect())
         } else if keep_sigs {
             #[cfg(feature = "parallel")]
             let sigs_iter = search_sigs.par_iter();
@@ -150,10 +151,12 @@ impl LinearRevIndex {
                             Signature::from_reader(sig_data.as_slice())
                                 .unwrap_or_else(|_| panic!("Error processing {:?}", ref_path))
                                 .swap_remove(0)
+                                .into()
                         } else {
                             Signature::from_path(&ref_path)
                                 .unwrap_or_else(|_| panic!("Error processing {:?}", ref_path))
                                 .swap_remove(0)
+                                .into()
                         }
                     })
                     .collect(),
@@ -161,6 +164,8 @@ impl LinearRevIndex {
         } else {
             None
         };
+
+        let storage = storage.map(Arc::new);
 
         LinearRevIndex {
             sig_files,
@@ -239,6 +244,58 @@ impl LinearRevIndex {
             colors,
             linear: self,
         }
+    }
+
+    pub fn location(&self) -> Option<String> {
+        if let Some(storage) = &self.storage {
+            storage.path()
+        } else {
+            None
+        }
+    }
+
+    pub fn storage(&self) -> Option<Arc<ZipStorage>> {
+        self.storage.clone()
+    }
+
+    pub fn select(mut self, selection: &Selection) -> Result<Self, Error> {
+        let manifest = self.sig_files.select_to_manifest(selection)?;
+        self.sig_files = manifest;
+
+        Ok(self)
+        /*
+        # if we have a manifest, run 'select' on the manifest.
+        manifest = self.manifest
+        traverse_yield_all = self.traverse_yield_all
+
+        if manifest is not None:
+            manifest = manifest.select_to_manifest(**kwargs)
+            return ZipFileLinearIndex(self.storage,
+                                      selection_dict=None,
+                                      traverse_yield_all=traverse_yield_all,
+                                      manifest=manifest,
+                                      use_manifest=True)
+        else:
+            # no manifest? just pass along all the selection kwargs to
+            # the new ZipFileLinearIndex.
+
+            assert manifest is None
+            if self.selection_dict:
+                # combine selects...
+                d = dict(self.selection_dict)
+                for k, v in kwargs.items():
+                    if k in d:
+                        if d[k] is not None and d[k] != v:
+                            raise ValueError(f"incompatible select on '{k}'")
+                    d[k] = v
+                kwargs = d
+
+            return ZipFileLinearIndex(self.storage,
+                                      selection_dict=kwargs,
+                                      traverse_yield_all=traverse_yield_all,
+                                      manifest=None,
+                                      use_manifest=False)
+        */
     }
 
     pub fn counter_for_query(&self, query: &KmerMinHash) -> SigCounter {
@@ -363,7 +420,7 @@ impl LinearRevIndex {
         Ok(result)
     }
 
-    fn sig_for_dataset(&self, dataset_id: usize) -> Result<Signature, Error> {
+    fn sig_for_dataset(&self, dataset_id: usize) -> Result<SigStore, Error> {
         let match_path = if self.sig_files.is_empty() {
             PathBuf::new()
         } else {
@@ -371,7 +428,7 @@ impl LinearRevIndex {
         };
 
         let match_sig = if let Some(refsigs) = &self.ref_sigs {
-            refsigs[dataset_id as usize].clone()
+            refsigs[dataset_id as usize].clone().into()
         } else {
             let mut sig = if let Some(storage) = &self.storage {
                 let sig_data = storage
@@ -386,7 +443,7 @@ impl LinearRevIndex {
                 Signature::from_path(&match_path)?
             };
             // TODO: remove swap_remove
-            sig.swap_remove(0)
+            sig.swap_remove(0).into()
         };
         Ok(match_sig)
     }
@@ -503,7 +560,12 @@ impl LinearRevIndex {
         self.sig_files.clone()
     }
 
-    pub fn signatures_iter(&self) -> impl Iterator<Item = Signature> + '_ {
+    pub fn set_manifest(&mut self, new_manifest: Manifest) -> Result<(), Error> {
+        self.sig_files = new_manifest;
+        Ok(())
+    }
+
+    pub fn signatures_iter(&self) -> impl Iterator<Item = SigStore> + '_ {
         if let Some(_sigs) = &self.ref_sigs {
             //sigs.iter().cloned()
             todo!("this works, but need to match return types")
@@ -516,7 +578,7 @@ impl LinearRevIndex {
 }
 
 impl<'a> Index<'a> for LinearRevIndex {
-    type Item = Signature;
+    type Item = SigStore;
 
     fn insert(&mut self, _node: Self::Item) -> Result<(), Error> {
         unimplemented!()
@@ -927,7 +989,7 @@ impl<'a> Index<'a> for RevIndex {
 
     fn signatures(&self) -> Vec<Self::Item> {
         if let Some(ref sigs) = self.linear.ref_sigs {
-            sigs.to_vec()
+            sigs.iter().map(|s| s.clone().into()).collect()
         } else {
             unimplemented!()
         }

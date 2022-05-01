@@ -55,6 +55,8 @@ typedef struct SourmashLinearIndex SourmashLinearIndex;
 
 typedef struct SourmashManifest SourmashManifest;
 
+typedef struct SourmashManifestRowIter SourmashManifestRowIter;
+
 typedef struct SourmashNodegraph SourmashNodegraph;
 
 typedef struct SourmashRevIndex SourmashRevIndex;
@@ -86,6 +88,10 @@ typedef struct {
    */
   bool owned;
 } SourmashStr;
+
+typedef struct {
+  uint32_t ksize;
+} SourmashManifestRow;
 
 bool computeparams_dayhoff(const SourmashComputeParameters *ptr);
 
@@ -277,6 +283,8 @@ void linearindex_free(SourmashLinearIndex *ptr);
 
 uint64_t linearindex_len(const SourmashLinearIndex *ptr);
 
+SourmashStr linearindex_location(const SourmashLinearIndex *ptr);
+
 const SourmashManifest *linearindex_manifest(const SourmashLinearIndex *ptr);
 
 SourmashLinearIndex *linearindex_new(SourmashZipStorage *storage_ptr,
@@ -284,7 +292,18 @@ SourmashLinearIndex *linearindex_new(SourmashZipStorage *storage_ptr,
                                      SourmashSelection *selection_ptr,
                                      bool use_manifest);
 
+SourmashLinearIndex *linearindex_select(SourmashLinearIndex *ptr,
+                                        const SourmashSelection *selection_ptr);
+
+void linearindex_set_manifest(SourmashLinearIndex *ptr, SourmashManifest *manifest_ptr);
+
 SourmashSignatureIter *linearindex_signatures(const SourmashLinearIndex *ptr);
+
+const SourmashZipStorage *linearindex_storage(const SourmashLinearIndex *ptr);
+
+SourmashManifestRowIter *manifest_rows(const SourmashManifest *ptr);
+
+const SourmashManifestRow *manifest_rows_iter_next(SourmashManifestRowIter *ptr);
 
 void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
 
@@ -374,6 +393,12 @@ void searchresult_free(SourmashSearchResult *ptr);
 double searchresult_score(const SourmashSearchResult *ptr);
 
 SourmashSignature *searchresult_signature(const SourmashSearchResult *ptr);
+
+uint32_t selection_ksize(const SourmashSelection *ptr);
+
+SourmashSelection *selection_new(void);
+
+void selection_set_ksize(SourmashSelection *ptr, uint32_t new_ksize);
 
 void signature_add_protein(SourmashSignature *ptr, const char *sequence);
 

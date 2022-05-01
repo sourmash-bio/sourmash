@@ -6,8 +6,12 @@ import ast
 import os.path
 from abc import abstractmethod
 import itertools
+from typing import TYPE_CHECKING
 
 from sourmash.picklist import SignaturePicklist
+
+if TYPE_CHECKING:
+    from typing_extensions import Unpack
 
 
 class BaseCollectionManifest:
@@ -296,6 +300,7 @@ class CollectionManifest(BaseCollectionManifest):
         for row in matching_rows:
             yield row
 
+    #def select_to_manifest(self, **kwargs: Unpack[Selection]):
     def select_to_manifest(self, **kwargs):
         "Do a 'select' and return a new CollectionManifest object."
         new_rows = self._select(**kwargs)
@@ -339,4 +344,30 @@ class CollectionManifest(BaseCollectionManifest):
 
     @staticmethod
     def _from_rust(value):
-        raise NotImplementedError()
+        from ._lowlevel import ffi, lib
+        from .utils import rustcall
+
+        iterator = rustcall(lib.manifest_rows, value)
+
+        rows = []
+        next_row = rustcall(lib.manifest_rows_iter_next, iterator)
+        while next_row != ffi.NULL:
+
+            # TODO: extract row data from next_row
+            row = {}
+            row['md5'] = "" #ss.md5sum()
+            row['md5short'] = row['md5'][:8]
+            row['ksize'] = 32 #ss.minhash.ksize
+            row['moltype'] = "" #ss.minhash.moltype
+            row['num'] = 0 #ss.minhash.num
+            row['scaled'] = 0 #ss.minhash.scaled
+            row['n_hashes'] = 0 # len(ss.minhash)
+            row['with_abundance'] = 1 # 1 if ss.minhash.track_abundance else 0
+            row['name'] = "" #ss.name
+            row['filename'] = "" #ss.filename
+            row['internal_location'] = "" #location
+            rows.append(row)
+
+            next_row = rustcall(lib.manifest_rows_iter_next, iterator)
+
+        return CollectionManifest(rows)
