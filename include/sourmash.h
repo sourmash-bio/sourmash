@@ -91,6 +91,11 @@ typedef struct {
 
 typedef struct {
   uint32_t ksize;
+  uint8_t with_abundance;
+  SourmashStr md5;
+  SourmashStr internal_location;
+  SourmashStr name;
+  SourmashStr moltype;
 } SourmashManifestRow;
 
 bool computeparams_dayhoff(const SourmashComputeParameters *ptr);

@@ -345,7 +345,7 @@ class CollectionManifest(BaseCollectionManifest):
     @staticmethod
     def _from_rust(value):
         from ._lowlevel import ffi, lib
-        from .utils import rustcall
+        from .utils import rustcall, decode_str
 
         iterator = rustcall(lib.manifest_rows, value)
 
@@ -354,18 +354,19 @@ class CollectionManifest(BaseCollectionManifest):
         while next_row != ffi.NULL:
 
             # TODO: extract row data from next_row
+            # FIXME: free mem from strings?
             row = {}
-            row['md5'] = "" #ss.md5sum()
+            row['md5'] = decode_str(next_row.md5)
             row['md5short'] = row['md5'][:8]
-            row['ksize'] = 32 #ss.minhash.ksize
-            row['moltype'] = "" #ss.minhash.moltype
+            row['ksize'] = next_row.ksize
+            row['moltype'] = decode_str(next_row.moltype)
             row['num'] = 0 #ss.minhash.num
             row['scaled'] = 0 #ss.minhash.scaled
             row['n_hashes'] = 0 # len(ss.minhash)
-            row['with_abundance'] = 1 # 1 if ss.minhash.track_abundance else 0
-            row['name'] = "" #ss.name
+            row['with_abundance'] = next_row.with_abundance
+            row['name'] = decode_str(next_row.name)
             row['filename'] = "" #ss.filename
-            row['internal_location'] = "" #location
+            row['internal_location'] = decode_str(next_row.internal_location)
             rows.append(row)
 
             next_row = rustcall(lib.manifest_rows_iter_next, iterator)

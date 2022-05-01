@@ -1,6 +1,6 @@
 use crate::manifest::{Manifest, Record};
 
-use crate::ffi::utils::ForeignObject;
+use crate::ffi::utils::{ForeignObject, SourmashStr};
 
 pub struct SourmashManifest;
 
@@ -43,6 +43,11 @@ pub unsafe extern "C" fn manifest_rows(
 #[repr(C)]
 pub struct SourmashManifestRow {
     pub ksize: u32,
+    pub with_abundance: u8,
+    pub md5: SourmashStr,
+    pub internal_location: SourmashStr,
+    pub name: SourmashStr,
+    pub moltype: SourmashStr,
 }
 
 impl ForeignObject for SourmashManifestRow {
@@ -53,6 +58,16 @@ impl From<&Record> for SourmashManifestRow {
     fn from(record: &Record) -> SourmashManifestRow {
         Self {
             ksize: record.ksize(),
+            with_abundance: record.with_abundance() as u8,
+            md5: record.md5().into(),
+            name: record.name().into(),
+            moltype: record.moltype().into(),
+            internal_location: record
+                .internal_location()
+                .to_str()
+                .unwrap()
+                .to_owned()
+                .into(),
         }
     }
 }

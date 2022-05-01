@@ -11,14 +11,15 @@ use crate::Error;
 pub struct Record {
     internal_location: String,
     ksize: u32,
-    /*
+    with_abundance: u8,
     md5: String,
-    md5short: String,
-    moltype: String,
-    num: String,
-    scaled: String, n_hashes: String,
-    with_abundance: String,
     name: String,
+    moltype: String,
+    /*
+    md5short: String,
+    num: String,
+    scaled: String,
+    n_hashes: String,
     filename: String,
     */
 }
@@ -35,6 +36,22 @@ impl Record {
 
     pub fn ksize(&self) -> u32 {
         self.ksize
+    }
+
+    pub fn with_abundance(&self) -> bool {
+        self.with_abundance != 0
+    }
+
+    pub fn md5(&self) -> &str {
+        self.md5.as_ref()
+    }
+
+    pub fn name(&self) -> &str {
+        self.name.as_ref()
+    }
+
+    pub fn moltype(&self) -> &str {
+        self.moltype.as_ref()
     }
 }
 
@@ -116,7 +133,11 @@ impl From<&[PathBuf]> for Manifest {
                 .iter()
                 .map(|p| Record {
                     internal_location: p.to_str().unwrap().into(),
-                    ksize: 0, // FIXME
+                    ksize: 0,           // FIXME
+                    with_abundance: 0,  // FIXME
+                    md5: "".into(),     // FIXME
+                    name: "".into(),    // FIXME
+                    moltype: "".into(), // FIXME
                 })
                 .collect(),
         }
