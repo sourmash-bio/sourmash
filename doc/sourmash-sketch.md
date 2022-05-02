@@ -24,6 +24,7 @@ The `sketch translate` command reads in **DNA sequences**, translates them in al
 The `sketch fromfile` command takes in a CSV file containing the
 locations of genomes and proteomes, and outputs all of the requested
 sketches. It is primarily intended for large-scale database construction.
+(`fromfile` is a new command as of sourmash v4.4.0.)
 
 All `sourmash sketch` commands take FASTA or FASTQ sequences as input;
 input data can be uncompressed, compressed with gzip, or compressed
@@ -88,6 +89,8 @@ use `sketch protein` to build signatures.
 
 ### Bulk sketch construction from many files
 
+(This was added as of sourmash v4.4.0.)
+
 The `sourmash sketch fromfile` command is intended for use when
 building many signatures as part of a larger workflow. It supports a
 variety of options to build new signatures, parallelize
@@ -108,7 +111,7 @@ can be empty for a given row; likewise, if no DNA sketches are requested,
 `genome_filename` can be empty for a given row.
 
 Some of the key command-line options supported by `fromfile` are:
-* `-o/--output-signatures` will save generated signatures to any of the [standard supported output formats](command-line.md#saving-signatures-more-generally).
+* `-o/--output-signatures` will save generated signatures to any of the [standard supported output formats](command-line.md#choosing-signature-output-formats).
 * `-o/--output-csv-info` will save a CSV file of input filenames and parameter strings for use with the `sourmash sketch` command line; this can be used to construct signatures in parallel.
 * `--already-done` will take a list of existing signatures/databases to check against; signatures with matching names and parameter strings will not be rebuilt.
 * `--output-manifest-matching` will output a manifest of already-existing signatures, which can then be used with `sourmash sig cat` to collate signatures across databases; see [using manifests](command-line.md#using-manifests-to-explicitly-refer-to-collections-of-files). (This provides [`sourmash sig check` functionality](command-line.md#sourmash-signature-check---compare-picklists-and-manifests) in `sketch fromfile`.)

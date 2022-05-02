@@ -137,6 +137,7 @@ The `sketch translate` command reads in **DNA sequences**, translates them in al
 The `sketch fromfile` command takes in a CSV file containing the
 locations of genomes and proteomes, and outputs all of the requested
 sketches. It is primarily intended for large-scale database construction.
+(`fromfile` is a new command as of sourmash v4.4.0.)
 
 All of the `sourmash sketch` commands take FASTA or FASTQ sequences as
 input; input data can be uncompressed, compressed with gzip, or
