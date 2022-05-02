@@ -57,7 +57,7 @@ jobs:
 
       - name: Start Redis
         if: startsWith(runner.os, 'Linux') && (matrix.py == '3.9')
-        uses: supercharge/redis-github-action@4687e0c1d27b144de1dadc32967b7ce7e1227c7f
+        uses: supercharge/redis-github-action@4b67a313c69bc7a90f162e8d810392fffe10d3b5
         with:
           redis-version: 6
 
