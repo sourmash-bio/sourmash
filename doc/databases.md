@@ -9,6 +9,7 @@ that you can use with sourmash.
 ## Types of databases
 
 For each k-mer size, three types of databases may be available: Zipfile (`.zip`), SBT (`.sbt.zip`), and LCA (`.lca.jzon.gz`).
+Unless otherwise specified, all databases are built with the default `scaled` value (DNA scaled=1000).
 We recommend using the Zipfile databases for `sourmash gather` and the SBT databases for `sourmash search`. You must use the LCA databases for `sourmash lca` operations.
 
 You can read more about the different database and index types [here](https://sourmash.readthedocs.io/en/latest/command-line.html#indexed-databases).
@@ -21,7 +22,7 @@ All databases below can be downloaded via the command line with `curl -L <url> -
 
 The databases do not need to be unpacked or prepared in any way after download.
 
-You can verify that they've been successfully downloaded with `sourmash sig summarize <output>`.
+You can verify that they've been successfully downloaded (and view database properties such as `ksize` and `scaled`) with `sourmash sig summarize <output>`.
 
 ## GTDB R07-RS207 - DNA databases
 
