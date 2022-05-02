@@ -321,9 +321,6 @@ class SearchResult(BaseResult):
         elif self.searchtype == SearchType.JACCARD:
             self.cmp.estimate_jaccard_ani(jaccard=self.similarity)
             self.ani = self.cmp.jaccard_ani
-            # Jaccard error was too high for ANI estimation.
-            # Just report, or do we want to do something else?
-            self.ani_untrustworthy = self.cmp.jaccard_ani_untrustworthy
         # this can be set from any of the above
         self.potential_false_negative = self.cmp.potential_false_negative
 

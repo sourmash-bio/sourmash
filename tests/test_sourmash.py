@@ -5321,6 +5321,32 @@ def test_standalone_manifest_search_fail(runtmp):
 
 @utils.in_tempdir
 def test_search_ani_jaccard(c):
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig4763 = utils.get_test_data('47+63.fa.sig')
+
+    c.run_sourmash('search', sig47, sig4763, '-o', 'xxx.csv')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    search_result_names = SearchResult.search_write_cols
+
+    csv_file = c.output('xxx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert search_result_names == list(row.keys())
+        assert float(row['similarity']) == 0.6564798376870403
+        assert row['filename'].endswith('47+63.fa.sig')
+        assert row['md5'] == '491c0a81b2cfb0188c0d3b46837c2f42'
+        assert row['query_filename'].endswith('47.fa')
+        assert row['query_name'] == 'NC_009665.1 Shewanella baltica OS185, complete genome'
+        assert row['query_md5'] == '09a08691'
+        assert row['ani'] == "0.992530907924384"
+
+
+@utils.in_tempdir
+def test_search_ani_jaccard_error_too_high(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', testdata1, testdata2)
@@ -5343,7 +5369,8 @@ def test_search_ani_jaccard(c):
         assert row['query_filename'].endswith('short.fa')
         assert row['query_name'] == ''
         assert row['query_md5'] == '9191284a'
-        assert row['ani'] == "0.9987884602947684"
+        #assert row['ani'] == "0.9987884602947684"
+        assert row['ani'] == ""
 
 
 @utils.in_tempdir
@@ -5522,31 +5549,19 @@ def test_search_ani_max_containment_estimate_ci(c):
 
 @utils.in_tempdir
 def test_search_jaccard_ani_downsample(c):
-    testdata1 = utils.get_test_data('short.fa')
-    testdata2 = utils.get_test_data('short2.fa')
-    sig1_out = c.output('short.fa.sig')
-    sig2_out = c.output('short2.fa.sig')
-    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=2', '--force', testdata1, '-o', sig1_out)
-    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', '--force', testdata1, '-o', sig2_out)
-    sig1 = sourmash.load_one_signature(sig1_out)
-    sig2 = sourmash.load_one_signature(sig2_out)
-    print(f"SCALED: sig1: {sig1.minhash.scaled}, sig2: {sig2.minhash.scaled}") # if don't change name, just reads prior sigfile!!?
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig4763 = utils.get_test_data('47+63.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47)
+    ss4763 = sourmash.load_one_signature(sig4763)
+    print(f"SCALED: sig1: {ss47.minhash.scaled}, sig2: {ss4763.minhash.scaled}")
 
-    sig1F = c.output('sig1.sig')
-    sig2F = c.output('sig2.sig')
-    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=2', '--force', testdata1, '-o', sig1F)
-    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', '--force', testdata2, '-o', sig2F)
-
-    sig1 = sourmash.load_one_signature(sig1F)
-    sig2 = sourmash.load_one_signature(sig2F)
-    print(f"SCALED: sig1: {sig1.minhash.scaled}, sig2: {sig2.minhash.scaled}")
-
-    c.run_sourmash('search', sig1F, sig2F, '-o', 'xdx.csv')
+    c.run_sourmash('search', sig47, sig4763, '-o', 'xxx.csv')
     print(c.last_result.status, c.last_result.out, c.last_result.err)
 
-    csv_file = c.output('xdx.csv')
     search_result_names = SearchResult.search_write_cols
     search_result_names_ci = SearchResult.search_write_cols_ci
+
+    csv_file = c.output('xxx.csv')
 
     with open(csv_file) as fp:
         reader = csv.DictReader(fp)
@@ -5554,22 +5569,33 @@ def test_search_jaccard_ani_downsample(c):
         print(row)
         assert search_result_names == list(row.keys())
         assert search_result_names_ci != list(row.keys())
-        assert float(row['similarity']) == 0.9296066252587992
-        assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
-        assert row['filename'].endswith('sig2.sig')
-        assert row['query_filename'].endswith('short.fa')
-        assert row['query_name'] == ''
-        assert row['query_md5'] == '8f74b0b8'
-        assert row['ani'] == "0.9988019200011651"
+        assert float(row['similarity']) == 0.6564798376870403
+        assert row['filename'].endswith('47+63.fa.sig')
+        assert row['md5'] == '491c0a81b2cfb0188c0d3b46837c2f42'
+        assert row['query_filename'].endswith('47.fa')
+        assert row['query_name'] == 'NC_009665.1 Shewanella baltica OS185, complete genome'
+        assert row['query_md5'] == '09a08691'
+        assert row['ani'] == "0.992530907924384"
+
+    # downsample one and check similarity and ANI
+    ds_sig47 = c.output("ds_sig47.sig")
+    c.run_sourmash('sig', "downsample", sig47, "--scaled", "2000", '-o', ds_sig47)
+    c.run_sourmash('search', ds_sig47, sig4763, '-o', 'xxx.csv')
+
+    csv_file = c.output('xxx.csv')
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert round(float(row['similarity']), 3) == round(0.6634517766497462, 3)
+        assert round(float(row['ani']), 3) == round(0.992530907924384, 3)
 
     #downsample manually and assert same ANI
-    mh1 = sig1.minhash
-    mh2 = sig2.minhash
-    mh2_sc2 = mh2.downsample(scaled=mh1.scaled)
-    print("SCALED:", mh1.scaled, mh2_sc2.scaled)
-    ani_info = mh1.jaccard_ani(mh2_sc2)
+    ss47_ds = signature.load_one_signature(ds_sig47)
+    print("SCALED:", ss47_ds.minhash.scaled, ss4763.minhash.scaled)
+    ani_info = ss47_ds.jaccard_ani(ss4763, downsample=True)
     print(ani_info)
-    assert ani_info.ani == 0.9988019200011651
+    assert round(ani_info.ani, 3) == round(0.992530907924384, 3)
 
 
 def test_gather_ani_csv(runtmp, linear_gather, prefetch_gather):
