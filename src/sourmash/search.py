@@ -321,9 +321,6 @@ class SearchResult(BaseResult):
         elif self.searchtype == SearchType.JACCARD:
             self.cmp.estimate_jaccard_ani(jaccard=self.similarity)
             self.ani = self.cmp.jaccard_ani
-            # if jaccard ANI is untrustworthy, do not return ANI
-            if self.cmp.jaccard_ani_untrustworthy:
-                self.ani = ""
         # this can be set from any of the above
         self.potential_false_negative = self.cmp.potential_false_negative
 

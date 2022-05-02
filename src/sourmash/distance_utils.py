@@ -62,6 +62,7 @@ class jaccardANIResult(ANIResult):
     """Class for distance/ANI from jaccard (includes jaccard_error)."""
     jaccard_error: float = None
     je_threshold: float = 1e-4
+    return_ani_despite_threshold: bool = False
 
     def __post_init__(self):
         # check values
@@ -71,6 +72,13 @@ class jaccardANIResult(ANIResult):
             self.jaccard_error, self.je_exceeds_threshold = check_jaccard_error(self.jaccard_error, self.je_threshold)
         else:
             raise ValueError("Error: jaccard_error cannot be None.")
+
+    @property
+    def ani(self):
+        # if jaccard error is too high (exceeds threshold), do not trust ANI estimate
+        if self.je_exceeds_threshold and not self.return_ani_despite_threshold:
+            return "" # or 0?
+        return 1 - self.dist
 
 
 @dataclass
