@@ -2914,6 +2914,20 @@ def test_jaccard_ANI():
     assert (m1_jani_m2.ani, m1_jani_m2.p_nothing_in_common, m1_jani_m2.jaccard_error) == (0.9783711630110239, 0.0, 3.891666770716877e-07)
 
 
+def test_jaccard_ANI_untrustworthy():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2).minhash
+
+    print("\nJACCARD_ANI", mh1.jaccard_ani(mh2))
+
+    m1_jani_m2 = mh1.jaccard_ani(mh2, err_threshold=1e-7)
+    assert m1_jani_m2.ani == ""
+    assert m1_jani_m2.je_exceeds_threshold==True
+    assert m1_jani_m2.je_threshold == 1e-7
+
+
 def test_jaccard_ANI_precalc_jaccard():
     f1 = utils.get_test_data('2.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')
