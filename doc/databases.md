@@ -8,8 +8,7 @@ that you can use with sourmash.
 
 ## Types of databases
 
-For each k-mer size, three types of databases may be available: Zipfile (`.zip`), SBT (`.sbt.zip`), and LCA (`.lca.jzon.gz`).
-Unless otherwise specified, all databases are built with the default `scaled` value (DNA scaled=1000).
+For each k-mer size, three types of databases may be available: Zipfile (`.zip`), SBT (`.sbt.zip`), and LCA (`.lca.jzon.gz`). The Zipfile and SBT databases are built with scaled=1000, and then LCA databases are built with scaled=10,000.
 We recommend using the Zipfile databases for `sourmash gather` and the SBT databases for `sourmash search`. You must use the LCA databases for `sourmash lca` operations.
 
 You can read more about the different database and index types [here](https://sourmash.readthedocs.io/en/latest/command-line.html#indexed-databases).
