@@ -77,7 +77,7 @@ class jaccardANIResult(ANIResult):
     def ani(self):
         # if jaccard error is too high (exceeds threshold), do not trust ANI estimate
         if self.je_exceeds_threshold and not self.return_ani_despite_threshold:
-            return "" # or 0?
+            return ""
         return 1 - self.dist
 
 
