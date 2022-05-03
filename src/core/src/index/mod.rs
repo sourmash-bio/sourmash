@@ -17,6 +17,7 @@ use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
+use crate::encodings::HashFunctions;
 use crate::errors::ReadDataError;
 use crate::index::sbt::{Node, SBT};
 use crate::index::search::{search_minhashes, search_minhashes_containment};
@@ -32,6 +33,8 @@ pub type MHBT = SBT<Node<Nodegraph>>;
 #[derive(Default)]
 pub struct Selection {
     ksize: Option<u32>,
+    abund: Option<bool>,
+    moltype: Option<HashFunctions>,
 }
 
 impl Selection {
@@ -41,6 +44,22 @@ impl Selection {
 
     pub fn set_ksize(&mut self, ksize: u32) {
         self.ksize = Some(ksize);
+    }
+
+    pub fn abund(&self) -> Option<bool> {
+        self.abund
+    }
+
+    pub fn set_abund(&mut self, value: bool) {
+        self.abund = Some(value);
+    }
+
+    pub fn moltype(&self) -> Option<HashFunctions> {
+        self.moltype
+    }
+
+    pub fn set_moltype(&mut self, value: HashFunctions) {
+        self.moltype = Some(value);
     }
 }
 

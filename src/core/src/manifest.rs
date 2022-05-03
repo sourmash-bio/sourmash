@@ -1,9 +1,11 @@
+use std::convert::TryInto;
 use std::io::Read;
 use std::ops::Deref;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+use crate::encodings::HashFunctions;
 use crate::index::Selection;
 use crate::Error;
 
@@ -50,8 +52,8 @@ impl Record {
         self.name.as_ref()
     }
 
-    pub fn moltype(&self) -> &str {
-        self.moltype.as_ref()
+    pub fn moltype(&self) -> HashFunctions {
+        self.moltype.as_str().try_into().unwrap()
     }
 }
 
@@ -79,9 +81,19 @@ impl Manifest {
 
     pub fn select_to_manifest(&self, selection: &Selection) -> Result<Self, Error> {
         let rows = self.records.iter().filter(|row| {
-            let mut valid = false;
+            let mut valid = true;
             valid = if let Some(ksize) = selection.ksize() {
                 row.ksize == ksize
+            } else {
+                valid
+            };
+            valid = if let Some(abund) = selection.abund() {
+                valid && row.with_abundance() == abund
+            } else {
+                valid
+            };
+            valid = if let Some(moltype) = selection.moltype() {
+                valid && row.moltype() == moltype
             } else {
                 valid
             };

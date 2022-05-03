@@ -399,11 +399,19 @@ double searchresult_score(const SourmashSearchResult *ptr);
 
 SourmashSignature *searchresult_signature(const SourmashSearchResult *ptr);
 
+bool selection_abund(const SourmashSelection *ptr);
+
 uint32_t selection_ksize(const SourmashSelection *ptr);
+
+HashFunctions selection_moltype(const SourmashSelection *ptr);
 
 SourmashSelection *selection_new(void);
 
+void selection_set_abund(SourmashSelection *ptr, bool new_abund);
+
 void selection_set_ksize(SourmashSelection *ptr, uint32_t new_ksize);
+
+void selection_set_moltype(SourmashSelection *ptr, HashFunctions new_moltype);
 
 void signature_add_protein(SourmashSignature *ptr, const char *sequence);
 

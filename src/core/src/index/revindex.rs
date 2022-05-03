@@ -122,17 +122,26 @@ pub struct LinearRevIndex {
 
 impl LinearRevIndex {
     pub fn new(
-        sig_files: Manifest,
+        sig_files: Option<Manifest>,
         template: &Sketch,
         keep_sigs: bool,
         ref_sigs: Option<Vec<Signature>>,
         storage: Option<ZipStorage>,
     ) -> Self {
-        let search_sigs: Vec<_> = sig_files.internal_locations().map(PathBuf::from).collect();
+        if ref_sigs.is_none() && sig_files.is_none() {
+            todo!("throw error, one need to be set");
+        }
 
         let ref_sigs = if let Some(ref_sigs) = ref_sigs {
             Some(ref_sigs.into_iter().map(|m| m.into()).collect())
         } else if keep_sigs {
+            let search_sigs: Vec<_> = sig_files
+                .as_ref()
+                .unwrap()
+                .internal_locations()
+                .map(PathBuf::from)
+                .collect();
+
             #[cfg(feature = "parallel")]
             let sigs_iter = search_sigs.par_iter();
 
@@ -168,7 +177,7 @@ impl LinearRevIndex {
         let storage = storage.map(Arc::new);
 
         LinearRevIndex {
-            sig_files,
+            sig_files: sig_files.unwrap(),
             template: template.clone(),
             ref_sigs,
             storage,
@@ -665,7 +674,7 @@ impl RevIndex {
         // If threshold is zero, let's merge all queries and save time later
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
-        let linear = LinearRevIndex::new(search_sigs.into(), template, keep_sigs, None, None);
+        let linear = LinearRevIndex::new(Some(search_sigs.into()), template, keep_sigs, None, None);
         linear.index(threshold, merged_query, queries)
     }
 
@@ -684,7 +693,7 @@ impl RevIndex {
         let search_sigs: Vec<_> = manifest.internal_locations().map(PathBuf::from).collect();
 
         let linear = LinearRevIndex::new(
-            search_sigs.as_slice().into(),
+            Some(search_sigs.as_slice().into()),
             template,
             keep_sigs,
             None,

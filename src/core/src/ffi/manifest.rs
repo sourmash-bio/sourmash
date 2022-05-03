@@ -61,7 +61,7 @@ impl From<&Record> for SourmashManifestRow {
             with_abundance: record.with_abundance() as u8,
             md5: record.md5().into(),
             name: record.name().into(),
-            moltype: record.moltype().into(),
+            moltype: record.moltype().to_string().into(),
             internal_location: record
                 .internal_location()
                 .to_str()

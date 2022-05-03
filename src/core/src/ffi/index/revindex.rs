@@ -277,12 +277,12 @@ unsafe fn linearindex_new(
     let manifest = if manifest_ptr.is_null() {
         if use_manifest {
         // Load manifest from zipstorage
-            Manifest::from_reader(storage.load("SOURMASH-MANIFEST.csv")?.as_slice())?
+            Some(Manifest::from_reader(storage.load("SOURMASH-MANIFEST.csv")?.as_slice())?)
         } else {
-            todo!("throw error")
+            None
         }
     } else {
-        *SourmashManifest::into_rust(manifest_ptr)
+        Some(*SourmashManifest::into_rust(manifest_ptr))
     };
 
     let _selection = if !selection_ptr.is_null() {

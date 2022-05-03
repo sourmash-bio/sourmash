@@ -88,7 +88,16 @@ def _selection_as_rust(selection: Selection):
             if key == "ksize":
                 rustcall(lib.selection_set_ksize, ptr, v)
             elif key == "moltype":
-                ...
+                hash_function = None
+                if v.lower() == "dna":
+                    hash_function = lib.HASH_FUNCTIONS_MURMUR64_DNA
+                elif v.lower() == "protein":
+                    hash_function = lib.HASH_FUNCTIONS_MURMUR64_PROTEIN
+                elif v.lower() == "dayhoff":
+                    hash_function = lib.HASH_FUNCTIONS_MURMUR64_DAYHOFF
+                elif v.lower() == "hp":
+                    hash_function = lib.HASH_FUNCTIONS_MURMUR64_HP
+                rustcall(lib.selection_set_moltype, ptr, hash_function)
             elif key == "num":
                 ...
             elif key == "scaled":
@@ -96,7 +105,7 @@ def _selection_as_rust(selection: Selection):
             elif key ==  "containment":
                 ...
             elif key == "abund":
-                ...
+                rustcall(lib.selection_set_abund, ptr, bool(v))
             elif key == "picklist":
                 ...
             else:
@@ -604,7 +613,7 @@ class ZipFileLinearIndex(Index, RustObject):
 
     @property
     def location(self):
-        return self._methodcall(lib.linearindex_location)
+        return decode_str(self._methodcall(lib.linearindex_location))
 
     @property
     def storage(self):
