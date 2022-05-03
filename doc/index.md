@@ -185,6 +185,7 @@ developer
 
 ```{toctree}
 :hidden:
+
 README.md
 legacy-databases.md
 databases-advanced.md
