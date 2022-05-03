@@ -4,9 +4,11 @@
 
 Read more about the [computational requirements, here.](requirements.md)
 
-## Prepared search database
+## Prepared search databases
 
 We offer a number of [prepared search databases.](databases.md)
+
+You can read about the supported database formats [here.](databases-advanced.md)
 
 ## Other MinHash implementations for DNA
 

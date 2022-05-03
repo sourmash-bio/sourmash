@@ -187,6 +187,7 @@ developer
 :hidden:
 README.md
 legacy-databases.md
+databases-advanced.md
 plotting-compare.ipynb
 sourmash-sketch.md
 ```
