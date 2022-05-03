@@ -355,8 +355,8 @@ class PrefetchResult(BaseResult):
         self.get_cmpinfo() # grab comparison metadata
         self.intersect_bp = self.cmp.intersect_bp
         self.max_containment = self.cmp.max_containment
-        self.query_bp = self.mh1.covered_bp
-        self.match_bp = self.mh2.covered_bp
+        self.query_bp = self.mh1.unique_covered_bp
+        self.match_bp = self.mh2.unique_covered_bp
         self.threshold = self.threshold_bp
         self.estimate_containment_ani()
 
@@ -473,7 +473,7 @@ class GatherResult(PrefetchResult):
         self.f_unique_to_query = len(self.gather_comparison.intersect_mh)/self.orig_query_len
 
         # here, need to make sure to use the mh1_cmp (bc was downsampled to cmp_scaled)
-        self.remaining_bp = (self.gather_comparison.mh1_cmp.covered_bp - self.gather_comparison.intersect_bp)
+        self.remaining_bp = (self.gather_comparison.mh1_cmp.unique_covered_bp - self.gather_comparison.intersect_bp)
 
         # calculate stats on abundances, if desired.
         self.average_abund, self.median_abund, self.std_abund = None, None, None
