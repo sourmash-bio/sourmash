@@ -118,6 +118,17 @@ or [this sourmash issue comment](https://github.com/sourmash-bio/sourmash/issues
 
 Newer versions of matplotlib do not seem to have this problem.
 
+```{toctree}
+---
+hidden:
+---
+README.md
+legacy-databases.md
+databases-advanced.md
+plotting-compare.ipynb
+sourmash-sketch.md
+```
+
 [0]:https://github.com/marbl/Mash
 [1]:https://github.com/edawson/rkmh
 [2]:https://github.com/lskatz/mashtree/blob/master/README.md
