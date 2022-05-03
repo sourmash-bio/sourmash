@@ -1,7 +1,5 @@
 # sourmash databases - advanced usage information.
 
-closes https://github.com/sourmash-bio/sourmash/issues/1293.
-
 sourmash uses a variety of different mechanisms and formats for storing, organizing, and searching signatures. Some of these mechanisms, "collections", just store the signatures; others ("indexed" databases) provide indices on the signatures for fast content-based search. _Most_ of the mechanisms now use manifests that permit fast selection and loading of signatures based on metadata. Below we refer to "databases" generically as any on-disk storage mechanism for sourmash signatures.
 
 Which database type is best to use depends on what you're doing - which is what this document is about! In general, however, sourmash should be fast enough that database choice will only impacts performance when searching 1000s of signatures, or doing many 1000s of searches.
