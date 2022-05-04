@@ -1613,6 +1613,10 @@ All of these save formats can be loaded by sourmash commands.
 **We strongly suggest using .zip files to store signatures: they are fast,
 small, and fully supported by all the sourmash commands.**
 
+For more detailed information on database formats and performance
+tradeoffs, please see [the advanced usage information for
+databases!](databases-advanced.md)
+
 ### Loading many signatures
 
 #### Loading signatures within a directory hierarchy

@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 """
 sourmash submodule that provides MinHash class and utility functions.
 
