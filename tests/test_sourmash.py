@@ -2872,8 +2872,8 @@ def test_gather_csv(runtmp, linear_gather, prefetch_gather):
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
-        assert float(row['intersect_bp']) == 942
-        assert float(row['unique_intersect_bp']) == 942
+        assert float(row['intersect_bp']) == 940
+        assert float(row['unique_intersect_bp']) == 940
         assert float(row['remaining_bp']) == 0
         assert float(row['f_orig_query']) == 1.0
         assert float(row['f_unique_to_query']) == 1.0
@@ -2885,7 +2885,7 @@ def test_gather_csv(runtmp, linear_gather, prefetch_gather):
         assert row['query_filename'].endswith('short2.fa')
         assert row['query_name'] == 'tr1 4'
         assert row['query_md5'] == 'c9d5a795'
-        assert row['query_bp'] == '942'
+        assert row['query_bp'] == '940'
 
 
 def test_gather_abund_x_abund(runtmp, prefetch_gather, linear_gather):
@@ -2974,7 +2974,7 @@ def test_gather_multiple_sbts_save_prefetch_csv(runtmp, linear_gather):
     with open(runtmp.output('prefetch.csv')) as f:
         output = f.read()
         print((output,))
-        assert '902,0.925531914893617,0.9666666666666667' in output
+        assert '900,0.925531914893617,0.9666666666666667' in output
 
 
 def test_gather_multiple_sbts_save_prefetch_and_prefetch_csv(runtmp, linear_gather):
@@ -3004,7 +3004,7 @@ def test_gather_multiple_sbts_save_prefetch_and_prefetch_csv(runtmp, linear_gath
     with open(runtmp.output('prefetch.csv')) as f:
         output = f.read()
         print((output,))
-        assert '902,0.925531914893617,0.9666666666666667' in output
+        assert '900,0.925531914893617,0.9666666666666667' in output
     assert os.path.exists(runtmp.output('out.zip'))
 
 
@@ -3048,7 +3048,7 @@ def test_gather_file_output(runtmp, linear_gather, prefetch_gather):
     with open(runtmp.output('foo.out')) as f:
         output = f.read()
         print((output,))
-        assert '942,1.0,1.0' in output
+        assert '940,1.0,1.0' in output
 
 
 def test_gather_f_match_orig(runtmp, linear_gather, prefetch_gather):
@@ -5628,8 +5628,8 @@ def test_gather_ani_csv(runtmp, linear_gather, prefetch_gather):
         print(row)
         assert gather_result_names == list(row.keys())
         assert gather_result_names_ci != list(row.keys())
-        assert float(row['intersect_bp']) == 942
-        assert float(row['unique_intersect_bp']) == 942
+        assert float(row['intersect_bp']) == 940
+        assert float(row['unique_intersect_bp']) == 940
         assert float(row['remaining_bp']) == 0
         assert float(row['f_orig_query']) == 1.0
         assert float(row['f_unique_to_query']) == 1.0
@@ -5641,7 +5641,7 @@ def test_gather_ani_csv(runtmp, linear_gather, prefetch_gather):
         assert row['query_filename'].endswith('short2.fa')
         assert row['query_name'] == 'tr1 4'
         assert row['query_md5'] == 'c9d5a795'
-        assert row['query_bp'] == '942'
+        assert row['query_bp'] == '940'
         assert row['query_containment_ani']== '1.0'
         assert row['match_containment_ani'] == '1.0'
         assert row['average_containment_ani'] == '1.0'
@@ -5675,8 +5675,8 @@ def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
         row = next(reader)
         print(row)
         assert gather_result_names == list(row.keys())
-        assert float(row['intersect_bp']) == 942
-        assert float(row['unique_intersect_bp']) == 942
+        assert float(row['intersect_bp']) == 940
+        assert float(row['unique_intersect_bp']) == 940
         assert float(row['remaining_bp']) == 0
         assert float(row['f_orig_query']) == 1.0
         assert float(row['f_unique_to_query']) == 1.0
@@ -5688,7 +5688,7 @@ def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
         assert row['query_filename'].endswith('short2.fa')
         assert row['query_name'] == 'tr1 4'
         assert row['query_md5'] == 'c9d5a795'
-        assert row['query_bp'] == '942'
+        assert row['query_bp'] == '940'
         assert row['query_containment_ani']== '1.0'
         assert row['query_containment_ani_low']== ''
         assert row['query_containment_ani_high']== ''

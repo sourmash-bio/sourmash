@@ -2813,7 +2813,7 @@ def test_unique_covered_bp(track_abundance):
     mh1.add_many((1, 2))
     mh2.add_many((1, 5))
 
-    assert mh1.unique_covered_bp == 26
+    assert mh1.unique_covered_bp == 24
     with pytest.raises(TypeError) as exc:
         mh2.unique_covered_bp
     assert "can only calculate bp for scaled MinHashes" in str(exc)
