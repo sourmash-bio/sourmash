@@ -4265,6 +4265,7 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
         remaining_bps = []
 
         for n, row in enumerate(r):
+            print(row)
             assert int(row['gather_result_rank']) == n
             overlap = float(row['intersect_bp'])
             remaining_bp = float(row['remaining_bp'])
@@ -4278,22 +4279,22 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
             average_abunds.append(average_abund)
             remaining_bps.append(remaining_bp)
 
+    query_sig = sourmash.load_one_signature(query)
+    query_mh = query_sig.minhash
+
     weighted_calc = []
     for (overlap, average_abund) in zip(overlaps, average_abunds):
-        prod = overlap*average_abund
+        prod - overlap*average_abund
         weighted_calc.append(prod)
 
     total_weighted = sum(weighted_calc)
     for prod, f_weighted in zip(weighted_calc, f_weighted_list):
-        fw_calc = (prod+ 32)/total_weighted
+        fw_calc = prod/total_weighted
         print(f"prod: {prod}, total_weighted: {total_weighted}, fw_calc: {fw_calc}, f_weighted: {f_weighted}")
         assert prod / total_weighted == f_weighted, (prod, f_weighted)
 
-    query_sig = sourmash.load_one_signature(query)
-    query_mh = query_sig.minhash
-
     total_bp_analyzed = sum(unique_overlaps) + remaining_bps[-1]
-    total_query_bp = len(query_mh) * query_mh.scaled
+    total_query_bp = query_mh.unique_covered_bp # len(query_mh) * query_mh.scaled
     assert total_bp_analyzed == total_query_bp
 
 
