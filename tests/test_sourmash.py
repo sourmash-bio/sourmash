@@ -4284,7 +4284,7 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
 
     weighted_calc = []
     for (overlap, average_abund) in zip(overlaps, average_abunds):
-        prod - overlap*average_abund
+        prod = overlap*average_abund
         weighted_calc.append(prod)
 
     total_weighted = sum(weighted_calc)
