@@ -52,7 +52,7 @@ LCA databases are [inverted indices](https://en.wikipedia.org/wiki/Inverted_inde
 
 Both SBTs and LCA databases can only store homogenous collections of signature types - all signatures must have the same molecule type and scaled or num value. Furthermore, LCA databases can only store scaled signatures.
 
-We recommend SBT and LCA databasesfor use only in specific situations - e.g. SBTs are great for single-genome "best match" search for SBTs, and `sourmash lca` commands require LCA databases.
+We recommend SBT and LCA databases for use only in specific situations - e.g. SBTs are great for single-genome "best match" search for SBTs, and `sourmash lca` commands require LCA databases.
 
 ### Manifests
 
