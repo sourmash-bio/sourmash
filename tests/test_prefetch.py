@@ -193,7 +193,7 @@ def test_prefetch_csv_out(runtmp, linear_gather):
     assert c.last_result.status == 0
     assert os.path.exists(csvout)
 
-    expected_intersect_bp = [2529000, 5177000]
+    expected_intersect_bp = [2529032, 5177032]
     with open(csvout, 'rt', newline="") as fp:
         r = csv.DictReader(fp)
         for (row, expected) in zip(r, expected_intersect_bp):

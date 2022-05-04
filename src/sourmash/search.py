@@ -454,7 +454,7 @@ class GatherResult(PrefetchResult):
         # this affects estimation of original query information, and requires us to pass in orig_query_len and orig_query_abunds.
         # we also need to overwrite self.query_bp, self.query_n_hashes, and self.query_abundance
         # todo: find a better solution?
-        self.query_bp = self.orig_query_len * self.query.minhash.scaled
+        self.query_bp = self.orig_query_len * self.query.minhash.scaled + self.ksize + 1
         self.query_n_hashes = self.orig_query_len
 
         # calculate intersection with query hashes:
@@ -643,7 +643,7 @@ class GatherDatabases:
         # track original query information for later usage?
         track_abundance = query.minhash.track_abundance and not ignore_abundance
         self.orig_query = query
-        self.orig_query_bp = len(query.minhash) * query.minhash.scaled
+        self.orig_query_bp = query.minhash.unique_covered_bp #len(query.minhash) * query.minhash.scaled
         self.orig_query_filename = query.filename
         self.orig_query_name = query.name
         self.orig_query_md5 = query.md5sum()[:8]
