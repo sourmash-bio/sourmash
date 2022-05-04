@@ -437,7 +437,7 @@ impl LinearRevIndex {
         };
 
         let match_sig = if let Some(refsigs) = &self.ref_sigs {
-            refsigs[dataset_id as usize].clone().into()
+            refsigs[dataset_id as usize].clone()
         } else {
             let mut sig = if let Some(storage) = &self.storage {
                 let sig_data = storage
@@ -558,7 +558,7 @@ impl LinearRevIndex {
                 };
             }
             to_remove.iter().for_each(|dataset_id| {
-                counter.remove(&dataset_id);
+                counter.remove(dataset_id);
             });
             matches.push(result);
         }
