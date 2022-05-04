@@ -24,7 +24,7 @@ jobs:
           wasm-pack build src/core -d ../../pkg
 
       - name: Prepare node for NPM publishing
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: 12
           registry-url: https://registry.npmjs.org/
