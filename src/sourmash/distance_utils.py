@@ -6,7 +6,7 @@ Reference: https://doi.org/10.1101/2022.01.11.475870
 from dataclasses import dataclass, field
 from scipy.optimize import brentq
 from scipy.stats import norm as scipy_norm
-from numpy import sqrt
+import numpy as np
 from math import log, exp
 
 from .logging import notify
@@ -163,6 +163,20 @@ def handle_seqlen_nkmers(ksize, *, sequence_len_bp=None, n_unique_kmers=None):
         return n_unique_kmers
 
 
+def set_size_chernoff(set_size, scaled, *, relative_error=0.05):
+    """
+    Computes the probability that the estimate: sketch_size * scaled deviates from the true
+    set_size by more than relative_error. This relies on the fact that the sketch_size
+    is binomially distributed with parameters sketch_size and 1/scale. The two-sided Chernoff
+    bounds are used.
+    @param set_size: The number of distinct k-mers in the given set
+    @param relative_error: the desired relative error (defaults to 5%)
+    @return: float (the upper bound probability)
+    """
+    upper_bound = 1 - 2 * np.exp(- relative_error**2*set_size/(scaled * 3))
+    return upper_bound
+
+
 def get_expected_log_probability(n_unique_kmers, ksize, mutation_rate, scaled_fraction):
     """helper function
     Note that scaled here needs to be between 0 and 1
@@ -244,12 +258,12 @@ def containment_to_distance(
 
                 f1 = (
                     lambda pest: (1 - pest) ** ksize
-                    + z_alpha * sqrt(var_direct(pest))
+                    + z_alpha * np.sqrt(var_direct(pest))
                     - containment
                 )
                 f2 = (
                     lambda pest: (1 - pest) ** ksize
-                    - z_alpha * sqrt(var_direct(pest))
+                    - z_alpha * np.sqrt(var_direct(pest))
                     - containment
                 )
 

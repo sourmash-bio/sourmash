@@ -3004,3 +3004,34 @@ def test_ANI_num_fail():
         mh1.jaccard_ani(mh2)
     assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
 
+
+def test_minhash_set_size_estimate_is_accurate():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2).minhash
+
+    # check accuracy using default thresholds (rel_err= 0.5, confidence=0.95)
+    assert mh1.size_is_accurate() == False
+    assert mh2.size_is_accurate() == True
+
+    # change rel err
+    assert mh1.size_is_accurate(relative_error=0.5) == True
+    assert mh2.size_is_accurate(relative_error=0.0001) == False
+
+    # change prob
+    assert mh1.size_is_accurate(confidence=0.5) == True
+    assert mh2.size_is_accurate(confidence=1) == False
+
+    # check that relative error and confidence must be between 0 and 1
+    with pytest.raises(ValueError) as exc:
+        mh2.size_is_accurate(relative_error=-1)
+    assert "Error: relative error and confidence values must be between 0 and 1." in str(exc)
+
+    with pytest.raises(ValueError) as exc:
+        mh2.size_is_accurate(confidence=-1)
+    assert "Error: relative error and confidence values must be between 0 and 1." in str(exc)
+
+    with pytest.raises(ValueError) as exc:
+        mh2.size_is_accurate(relative_error=-1, confidence=-1)
+    assert "Error: relative error and confidence values must be between 0 and 1." in str(exc)

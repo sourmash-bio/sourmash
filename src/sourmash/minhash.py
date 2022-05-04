@@ -6,7 +6,7 @@ class MinHash - core MinHash class.
 class FrozenMinHash - read-only MinHash class.
 """
 from __future__ import unicode_literals, division
-from .distance_utils import jaccard_to_distance, containment_to_distance
+from .distance_utils import jaccard_to_distance, containment_to_distance, set_size_chernoff
 
 import numpy as np
 
@@ -922,7 +922,23 @@ class MinHash(RustObject):
         if not self.scaled:
             raise TypeError("can only calculate bp for scaled MinHashes")
         return len(self.hashes) * self.scaled
+
+    def size_is_accurate(self, relative_error=0.05, confidence=0.95):
+        """
+        Computes the probability that the estimate: sketch_size * scaled deviates from the true
+        set_size by more than relative_error. This relies on the fact that the sketch_size
+        is binomially distributed with parameters sketch_size and 1/scaled. The two-sided Chernoff
+        bounds are used.
+        Returns True if probability is greater than or equal to the desired confidence.
+        """
+        if any([not (0 <= relative_error <= 1), not (0 <= confidence <= 1)]):
+            raise ValueError("Error: relative error and confidence values must be between 0 and 1.")
         
+        # TODO: replace len(self.hashes) with HLL estimate when that gets implemented
+        set_size = len(self.hashes) * self.scaled
+        probability = set_size_chernoff(set_size, self.scaled, relative_error=relative_error)
+        return probability >= confidence
+
 
 class FrozenMinHash(MinHash):
     def add_sequence(self, *args, **kwargs):

@@ -2,9 +2,11 @@
 Tests for distance utils.
 """
 import pytest
+import numpy as np
 from sourmash.distance_utils import (containment_to_distance, get_exp_probability_nothing_common,
                                     handle_seqlen_nkmers, jaccard_to_distance,
-                                    ANIResult, ciANIResult, jaccardANIResult, var_n_mutated)
+                                    ANIResult, ciANIResult, jaccardANIResult, var_n_mutated,
+                                    set_size_chernoff)
 
 def test_aniresult():
     res = ANIResult(0.4, 0.1)
@@ -396,3 +398,24 @@ def test_handle_seqlen_nkmers():
     with pytest.raises(ValueError) as exc:
         nkmers = handle_seqlen_nkmers(ksize)
     assert("Error: distance estimation requires input of either 'sequence_len_bp' or 'n_unique_kmers'") in str(exc)
+
+
+def test_set_size_chernoff():
+    eps = 10**(-6)
+    rel_error = 0.01
+    set_size = 1000000
+    s = 1/0.1  # I'm used to using a scale value between 0 and 1
+    value_from_mathematica = 0.928652
+    assert np.abs(set_size_chernoff(set_size, s, relative_error=rel_error) - value_from_mathematica) < eps
+
+    rel_error = 0.05
+    set_size = 10000
+    s = 1
+    value_from_mathematica = 0.999519
+    assert np.abs(set_size_chernoff(set_size, s, relative_error=rel_error) - value_from_mathematica) < eps
+
+    rel_error = 0.001
+    set_size = 10
+    s = 1/.01
+    value_from_mathematica = -1
+    assert np.abs(set_size_chernoff(set_size, s,relative_error=rel_error) - value_from_mathematica) < eps
