@@ -1394,8 +1394,9 @@ def collect(args):
     set_quiet(False, args.debug)
 
     if args.previous and args.previous == args.output:
+        assert 0
         if not args.merge_previous:
-            error("ERROR: --output and --previous are the same, but --merge-previous not specified.")
+            error("ERROR: --output and --previous are the same file, but --merge-previous not specified.")
             error("ERROR: so --previous would be overwritten with only new entries!?")
             error("ERROR: I'm worried this doesn't make sense, so I'm exiting. Good bye!")
             sys.exit(-1)
@@ -1403,6 +1404,7 @@ def collect(args):
     previous_filenames = set()
     previous = CollectionManifest([])
     if args.previous:
+        assert 0
         notify(f"loading previous manifest from '{args.previous}'")
         previous = CollectionManifest.load_from_filename(args.previous)
         assert previous is not None
@@ -1412,7 +1414,13 @@ def collect(args):
 
         notify(f"loaded {len(previous)} rows with {len(previous_filenames)} distinct sig files from '{args.previous}'")
 
-    rows = []
+    if args.manifest_format == 'sql':
+        from sourmash.index.sqlite_index import SqliteCollectionManifest
+        collected_mf = SqliteCollectionManifest.create(args.output)
+    else:
+        assert args.manifest_format == 'csv'
+        collected_mf = CollectionManifest()
+
     n_files = 0
     n_skipped = 0
 
@@ -1429,26 +1437,30 @@ def collect(args):
             continue
 
         idx = sourmash.load_file_as_index(loc)
+        mf = idx.manifest
+        notify(f"Loaded {len(mf)} manifest rows from '{loc}'")
 
-        rows.extend(idx.manifest.rows)
-        n_loaded += len(idx.manifest)
-        
-        notify(f"Loaded {n_loaded} manifest rows from '{loc}'")
+        collected_mf += mf
 
-    if not rows:
+    if not collected_mf:
         notify(f"NO NEW MANIFEST ROWS DETECTED. Exiting!")
         return 0
 
     if args.merge_previous:
+        assert 0
         # note, this is important for CSV manifests, but not for SQL manifests.
         notify(f"merging previous rows into current.")
         rows.extend(previous.rows)
 
-    m = CollectionManifest(rows)
-    m.write_to_filename(args.output, database_format=args.manifest_format,
-                        ok_if_exists=args.merge_previous)
+    if args.manifest_format == 'csv':
+        collected_mf.write_to_filename(args.output, database_format='csv',
+                                       ok_if_exists=args.merge_previous)
+    else:
+        #collected_mf.close()
+        collected_mf.close()
+        pass
 
-    notify(f"saved {len(m)} manifest rows to '{args.output}'")
+    notify(f"saved {len(collected_mf)} manifest rows to '{args.output}'")
 
     return 0
 

@@ -699,6 +699,15 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         self._num_rows = sum(1 for _ in self.rows)
         return self._num_rows
 
+    def __iadd__(self, other):
+        c = self.conn.cursor()
+        for row in other.rows:
+            self._insert_row(c, row)
+        return self
+
+    def close(self):
+        self.conn.commit()
+
     def _make_select(self):
         """Build a set of SQL SELECT conditions and matching value tuple
         that can be used to select the right sketches from the
