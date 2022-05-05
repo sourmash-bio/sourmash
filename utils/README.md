@@ -12,3 +12,9 @@
 * compute-prot-mh-another-way.py - a separate implementation of MinHash signature computing for 6-frame translations of DNA into amino acid space.
 
 CTB 1/2019
+
+## Formula implementations
+
+* cardinality_estimate_confidence.py - a function that will tell you if the sketch size is too small to trust the estimate `sketch_size * scale` as an estimate of the number of distinct k-mers.
+
+DMK 5/2022
