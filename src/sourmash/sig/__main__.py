@@ -1388,6 +1388,9 @@ def check(args):
 
 def collect(args):
     "Collect signature metadata across many locations, save to manifest"
+    # TODO:
+    # support manifest generation
+    # rewrite locations
     set_quiet(False, args.debug)
 
     if args.previous and args.previous == args.output:
