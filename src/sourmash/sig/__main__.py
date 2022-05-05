@@ -40,6 +40,8 @@ subtract <signature> <other_sig> [...]    - subtract one or more signatures
 import [ ... ]                            - import a mash or other signature
 export <signature>                        - export a signature, e.g. to mash
 overlap <signature1> <signature2>         - see detailed comparison of sigs
+# @CTB check
+# @CTB collect
 
 ** Use '-h' to get subcommand-specific help, e.g.
 
@@ -1382,6 +1384,70 @@ def check(args):
     if args.fail_if_missing and n_missing:
         error("** ERROR: missing values, and --fail-if-missing requested. Exiting.")
         sys.exit(-1)
+
+
+def collect(args):
+    "Collect signature metadata across many locations, save to manifest"
+    set_quiet(False, args.debug)
+
+    if args.previous and args.previous == args.output:
+        if not args.merge_previous:
+            error("ERROR: --output and --previous are the same, but --merge-previous not specified.")
+            error("ERROR: so --previous would be overwritten with only new entries!?")
+            error("ERROR: I'm worried this doesn't make sense, so I'm exiting. Good bye!")
+            sys.exit(-1)
+
+    previous_filenames = set()
+    previous = CollectionManifest([])
+    if args.previous:
+        notify(f"loading previous manifest from '{args.previous}'")
+        previous = CollectionManifest.load_from_filename(args.previous)
+        assert previous is not None
+
+        for row in previous.rows:
+            previous_filenames.add(row['internal_location'])
+
+        notify(f"loaded {len(previous)} rows with {len(previous_filenames)} distinct sig files from '{args.previous}'")
+
+    rows = []
+    n_files = 0
+    n_skipped = 0
+
+    # @CTB add from-file
+    for loc in set(args.locations):
+        notify(f"Loading signature information from {loc}.")
+        n_loaded = 0
+
+        if n_files and n_files % 100 == 0:
+            notify(f'... loaded {n_files} files, skipped {n_skipped}; {n_loaded} sigs', end='\r')
+
+        if loc in previous_filenames:
+            n_skipped += 1
+            continue
+
+        idx = sourmash.load_file_as_index(loc)
+
+        rows.extend(idx.manifest.rows)
+        n_loaded += len(idx.manifest)
+        
+        notify(f"Loaded {n_loaded} manifest rows from '{loc}'")
+
+    if not rows:
+        notify(f"NO NEW MANIFEST ROWS DETECTED. Exiting!")
+        return 0
+
+    if args.merge_previous:
+        # note, this is important for CSV manifests, but not for SQL manifests.
+        notify(f"merging previous rows into current.")
+        rows.extend(previous.rows)
+
+    m = CollectionManifest(rows)
+    m.write_to_filename(args.output, database_format=args.manifest_format,
+                        ok_if_exists=args.merge_previous)
+
+    notify(f"saved {len(m)} manifest rows to '{args.output}'")
+
+    return 0
 
 
 def main(arglist=None):
