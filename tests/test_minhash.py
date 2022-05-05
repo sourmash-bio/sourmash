@@ -2830,7 +2830,7 @@ def test_containment_ANI():
     print("\nmh1 contained by mh2", m1_cont_m2)
     print("mh2 contained by mh1", m2_cont_m1)
 
-    assert (m1_cont_m2.ani, m1_cont_m2.ani_low, m1_cont_m2.ani_high, m1_cont_m2.p_nothing_in_common) == (1.0, None, None, 0.0)
+    assert (m1_cont_m2.ani, m1_cont_m2.ani_low, m1_cont_m2.ani_high, m1_cont_m2.p_nothing_in_common) == (0.0, None, None, 0.0)
     assert (round(m2_cont_m1.ani,3), round(m2_cont_m1.ani_low,3), round(m2_cont_m1.ani_high,3)) == (0.966, 0.965, 0.967)
 
     m1_mc_m2 = mh1.max_containment_ani(mh2, estimate_ci =True)
@@ -3035,3 +3035,15 @@ def test_minhash_set_size_estimate_is_accurate():
     with pytest.raises(ValueError) as exc:
         mh2.size_is_accurate(relative_error=-1, confidence=-1)
     assert "Error: relative error and confidence values must be between 0 and 1." in str(exc)
+
+
+def test_minhash_ani_inaccurate_size_est():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2).minhash
+
+    assert mh1.size_is_accurate() == False
+    assert mh2.size_is_accurate() == True
+
+    assert mh1.jaccard_ani(mh2).ani == ""

@@ -42,6 +42,7 @@ class ANIResult:
     dist: float
     p_nothing_in_common: float
     p_threshold: float = 1e-3
+    size_is_inaccurate: bool = False
     p_exceeds_threshold: bool = field(init=False)
 
     def check_dist_and_p_threshold(self):
@@ -54,6 +55,9 @@ class ANIResult:
 
     @property
     def ani(self):
+        if self.size_is_inaccurate:
+            notify("WARNING: Cannot estimate ANI because size estimation for these sketches is inaccurate.")
+            return 0
         return 1 - self.dist
 
 
@@ -62,7 +66,6 @@ class jaccardANIResult(ANIResult):
     """Class for distance/ANI from jaccard (includes jaccard_error)."""
     jaccard_error: float = None
     je_threshold: float = 1e-4
-    return_ani_despite_threshold: bool = False
 
     def __post_init__(self):
         # check values
@@ -76,8 +79,12 @@ class jaccardANIResult(ANIResult):
     @property
     def ani(self):
         # if jaccard error is too high (exceeds threshold), do not trust ANI estimate
-        if self.je_exceeds_threshold and not self.return_ani_despite_threshold:
-            return ""
+        if self.je_exceeds_threshold or self.size_is_inaccurate:
+            if self.size_is_inaccurate:
+                notify("WARNING: Cannot estimate ANI because size estimation for at least one of these sketches is inaccurate.")
+            if self.je_exceeds_threshold:
+                notify("WARNING: Cannot estimate ANI because jaccard estimation for these sketches is inaccurate.")
+            return 0
         return 1 - self.dist
 
 
@@ -101,13 +108,13 @@ class ciANIResult(ANIResult):
 
     @property
     def ani_low(self):
-        if self.dist_high is None:
+        if self.dist_high is None or self.size_is_inaccurate:
             return None
         return 1 - self.dist_high
 
     @property
     def ani_high(self):
-        if self.dist_low is None:
+        if self.dist_low is None or self.size_is_inaccurate:
             return None
         return 1 - self.dist_low
 

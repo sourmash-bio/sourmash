@@ -669,6 +669,9 @@ class MinHash(RustObject):
                                           n_unique_kmers=avg_n_kmers,
                                           prob_threshold = prob_threshold,
                                           err_threshold = err_threshold)
+        # zero out ANI if either mh size estimation is inaccurate
+        if not (self.size_is_accurate() and other.size_is_accurate()):
+            j_aniresult.size_is_inaccurate =True
         return j_aniresult
 
     def similarity(self, other, ignore_abundance=False, downsample=False):
@@ -728,6 +731,9 @@ class MinHash(RustObject):
         c_aniresult = containment_to_distance(containment, self_mh.ksize, self_mh.scaled,
                                                         n_unique_kmers=n_kmers, confidence=confidence,
                                                         estimate_ci = estimate_ci)
+        # zero out ANI if either mh size estimation is inaccurate
+        if not (self.size_is_accurate() and other.size_is_accurate()):
+            c_aniresult.size_is_inaccurate = True
         return c_aniresult
 
 
@@ -762,6 +768,9 @@ class MinHash(RustObject):
         c_aniresult = containment_to_distance(max_containment, self_mh.ksize, scaled,
                                            n_unique_kmers=n_kmers,confidence=confidence,
                                            estimate_ci = estimate_ci)
+        # zero out ANI if either mh size estimation is inaccurate
+        if not (self.size_is_accurate() and other.size_is_accurate()):
+            c_aniresult.size_is_inaccurate = True
         return c_aniresult
 
     def avg_containment(self, other, *, downsample=False):
@@ -934,7 +943,7 @@ class MinHash(RustObject):
         if any([not (0 <= relative_error <= 1), not (0 <= confidence <= 1)]):
             raise ValueError("Error: relative error and confidence values must be between 0 and 1.")
         
-        # TODO: replace len(self.hashes) with HLL estimate when that gets implemented
+        # TODO: replace set_size with HLL estimate when that gets implemented
         set_size = len(self.hashes) * self.scaled
         probability = set_size_chernoff(set_size, self.scaled, relative_error=relative_error)
         return probability >= confidence

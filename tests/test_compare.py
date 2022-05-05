@@ -25,9 +25,11 @@ def siglist():
 def scaled_siglist():
     demo_path = utils.get_test_data("scaled")
     filenames = sorted(glob.glob(os.path.join(demo_path, "*.sig")))
+    sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
+    filenames = [utils.get_test_data(c) for c in sigfiles]
     sigs = []
     for filename in filenames:
-        these_sigs = sourmash.load_file_as_signatures(filename)
+        these_sigs = sourmash.load_file_as_signatures(filename, ksize=31)
         scaled_sigs = [s for s in these_sigs if s.minhash.scaled != 0]
         sigs.extend(scaled_sigs)
     return sigs
@@ -76,13 +78,13 @@ def test_compare_all_pairs(siglist, ignore_abundance):
 
 def test_compare_serial_jaccardANI(scaled_siglist, ignore_abundance):
     jANI = compare_serial(scaled_siglist, ignore_abundance, downsample=False, return_ani=True)
-
+    print(jANI)
+    
     true_jaccard_ANI = np.array(
-        [[1., 0.942, 0.988, 0.986, 0.],
-        [0.942, 1., 0.960, 0., 0.],
-        [0.988, 0.960, 1., 0., 0.],
-        [0.986, 0., 0., 1., 0.],
-        [0., 0., 0., 0., 1.]])
+           [[1., 0., 0., 0.],
+           [0., 1., 0.96973012, 0.99262776],
+           [0., 0.96973012, 1., 0.97697011],
+           [0., 0.99262776, 0.97697011, 1.]])
 
     np.testing.assert_array_almost_equal(jANI, true_jaccard_ANI, decimal=3)
 
@@ -91,11 +93,10 @@ def test_compare_parallel_jaccardANI(scaled_siglist, ignore_abundance):
     jANI = compare_parallel(scaled_siglist, ignore_abundance, downsample=False, n_jobs=2, return_ani=True)
 
     true_jaccard_ANI = np.array(
-        [[1., 0.942, 0.988, 0.986, 0.],
-        [0.942, 1., 0.960, 0., 0.],
-        [0.988, 0.960, 1., 0., 0.],
-        [0.986, 0., 0., 1., 0.],
-        [0., 0., 0., 0., 1.]])
+           [[1., 0., 0., 0.],
+           [0., 1., 0.96973012, 0.99262776],
+           [0., 0.96973012, 1., 0.97697011],
+           [0., 0.99262776, 0.97697011, 1.]])
 
     np.testing.assert_array_almost_equal(jANI, true_jaccard_ANI, decimal=3)
 
@@ -108,24 +109,24 @@ def test_compare_all_pairs_jaccardANI(scaled_siglist, ignore_abundance):
 
 def test_compare_serial_containmentANI(scaled_siglist):
     containment_ANI = compare_serial_containment(scaled_siglist, return_ani=True)
+    print(containment_ANI)
 
     true_containment_ANI = np.array(
-        [[1., 1., 1., 1., 0.],
-        [0.92391599, 1., 0.94383993, 0., 0.],
-        [0.97889056, 1., 1., 0., 0.],
-        [0.97685474, 0., 0., 1., 0.],
-        [0., 0., 0., 0., 1.]])
+        [[0., 0., 0., 0.],
+        [0., 1., 0.97715525, 1.],
+        [0., 0.96377054, 1., 0.97678608],
+        [0., 0.98667513, 0.97715525, 1.]])
 
     np.testing.assert_array_almost_equal(containment_ANI, true_containment_ANI, decimal=3)
 
     # check max_containment ANI
     max_containment_ANI = compare_serial_max_containment(scaled_siglist, return_ani=True)
+    print(max_containment_ANI)
 
     true_max_containment_ANI = np.array(
-        [[1., 1., 1., 1., 0.],
-        [1., 1., 1., 0., 0.],
-        [1., 1., 1., 0., 0.],
-        [1., 0., 0., 1., 0.],
-        [0., 0., 0., 0., 1.,]])
+        [[0., 0., 0., 0.],
+        [0., 1., 0.97715525, 1.],
+        [0., 0.97715525, 1., 0.97715525],
+        [0., 1., 0.97715525, 1.]])
 
     np.testing.assert_array_almost_equal(max_containment_ANI, true_max_containment_ANI, decimal=3)
