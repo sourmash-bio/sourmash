@@ -1423,7 +1423,6 @@ def collect(args):
         notify(f"loaded {len(previous)} rows with {len(previous_locations)} distinct locations from '{args.previous}'")
 
         if args.merge_previous:
-            # note, this is important for CSV manifests, but not for SQL manifests.
             notify(f"merging previous rows into current.")
             collected_mf += previous
         else:
@@ -1431,7 +1430,6 @@ def collect(args):
             notify(f"(specify --merge-previous to merge previous manifest instead!)")
 
     n_files = 0
-
     locations = set(args.locations)
 
     # load from_file
@@ -1442,13 +1440,13 @@ def collect(args):
     locations -= previous_locations
 
     # iterate through, loading all the things.
-    for loc in set(args.locations):
+    for n_files, loc in enumerate(args.locations):
         notify(f"Loading signature information from {loc}.")
 
         if n_files and n_files % 100 == 0:
             notify(f'... loaded {collected_mf} sigs from {n_files} files', end='\r')
         idx = sourmash.load_file_as_index(loc)
-        # @CTB: use get_manifest.
+        # @CTB: use get_manifest; update internal_location.
         mf = idx.manifest
 
         collected_mf += mf
