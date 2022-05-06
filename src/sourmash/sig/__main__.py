@@ -1401,64 +1401,67 @@ def collect(args):
             error("ERROR: I'm worried this doesn't make sense, so I'm exiting. Good bye!")
             sys.exit(-1)
 
-    previous_filenames = set()
-    previous = CollectionManifest([])
+    if args.manifest_format == 'sql':
+        # create on-disk manifest
+        from sourmash.index.sqlite_index import SqliteCollectionManifest
+        collected_mf = SqliteCollectionManifest.create(args.output)
+    else:
+        # create in-memory manifest that will be saved as CSV
+        assert args.manifest_format == 'csv'
+        collected_mf = CollectionManifest()
+
+    previous_locations = set()
     if args.previous:
-        assert 0
         notify(f"loading previous manifest from '{args.previous}'")
         previous = CollectionManifest.load_from_filename(args.previous)
         assert previous is not None
 
+        # recover the filenames so that they can be ignored below.
         for row in previous.rows:
-            previous_filenames.add(row['internal_location'])
+            previous_locations.add(row['internal_location'])
 
-        notify(f"loaded {len(previous)} rows with {len(previous_filenames)} distinct sig files from '{args.previous}'")
+        notify(f"loaded {len(previous)} rows with {len(previous_locations)} distinct locations from '{args.previous}'")
 
-    if args.manifest_format == 'sql':
-        from sourmash.index.sqlite_index import SqliteCollectionManifest
-        collected_mf = SqliteCollectionManifest.create(args.output)
-    else:
-        assert args.manifest_format == 'csv'
-        collected_mf = CollectionManifest()
+        if args.merge_previous:
+            # note, this is important for CSV manifests, but not for SQL manifests.
+            notify(f"merging previous rows into current.")
+            collected_mf += previous
+        else:
+            notify(f"ignoring {len(previous_locations)} locations from previous manifest")
+            notify(f"(specify --merge-previous to merge previous manifest instead!)")
 
     n_files = 0
-    n_skipped = 0
 
-    # @CTB add from-file
+    locations = set(args.locations)
+
+    # load from_file
+    if args.from_file:
+        locations.union_update(args.from_file)
+
+    # remove previous_locations
+    locations -= previous_locations
+
+    # iterate through, loading all the things.
     for loc in set(args.locations):
         notify(f"Loading signature information from {loc}.")
-        n_loaded = 0
 
         if n_files and n_files % 100 == 0:
-            notify(f'... loaded {n_files} files, skipped {n_skipped}; {n_loaded} sigs', end='\r')
-
-        if loc in previous_filenames:
-            n_skipped += 1
-            continue
-
+            notify(f'... loaded {collected_mf} sigs from {n_files} files', end='\r')
         idx = sourmash.load_file_as_index(loc)
+        # @CTB: use get_manifest.
         mf = idx.manifest
-        notify(f"Loaded {len(mf)} manifest rows from '{loc}'")
 
         collected_mf += mf
 
     if not collected_mf:
-        notify(f"NO NEW MANIFEST ROWS DETECTED. Exiting!")
+        notify(f"No new manifest rows detected. Exiting without saving!")
         return 0
-
-    if args.merge_previous:
-        assert 0
-        # note, this is important for CSV manifests, but not for SQL manifests.
-        notify(f"merging previous rows into current.")
-        rows.extend(previous.rows)
 
     if args.manifest_format == 'csv':
         collected_mf.write_to_filename(args.output, database_format='csv',
                                        ok_if_exists=args.merge_previous)
     else:
-        #collected_mf.close()
         collected_mf.close()
-        pass
 
     notify(f"saved {len(collected_mf)} manifest rows to '{args.output}'")
 
