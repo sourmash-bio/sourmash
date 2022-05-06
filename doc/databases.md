@@ -17,7 +17,7 @@ Note that the SBT and LCA databases can be used with sourmash v3.5 and later, wh
 
 ## Downloading and using the databases
 
-All databases below can be downloaded via the command line with `curl -L <url> -o <output>`, where `<url>` is the URL below, and `<output>` is the filename you want to use locally.
+All databases below can be downloaded via the command line with `curl -JLO <url>`, where `<url>` is the URL below. This will download an appropriately named file; you can name it yourself by specify `'-o <output>` to specify the local filename.
 
 The databases do not need to be unpacked or prepared in any way after download.
 
