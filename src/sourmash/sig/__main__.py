@@ -1394,17 +1394,28 @@ def collect(args):
     set_quiet(False, args.debug)
 
     if args.previous and args.previous == args.output:
-        assert 0
-        if not args.merge_previous:
+        if args.merge_previous or args.force_overwrite:
+            args.force_overwrite = True
+        else:
             error("ERROR: --output and --previous are the same file, but --merge-previous not specified.")
             error("ERROR: so --previous would be overwritten with only new entries!?")
             error("ERROR: I'm worried this doesn't make sense, so I'm exiting. Good bye!")
+            sys.exit(-1)
+
+    if os.path.exists(args.output) and args.output != args.previous:
+        if args.force_overwrite:
+            pass
+        else:
+            error(f"ERROR: '{args.output}' already exists!")
+            error(f"ERROR: please specify --force-overwrite to continue")
+            error("ERROR: or repeat with --previous={args.output} --merge-previous for a merge.")
             sys.exit(-1)
 
     if args.manifest_format == 'sql':
         # create on-disk manifest
         from sourmash.index.sqlite_index import SqliteCollectionManifest
         collected_mf = SqliteCollectionManifest.create(args.output)
+
     else:
         # create in-memory manifest that will be saved as CSV
         assert args.manifest_format == 'csv'
@@ -1457,7 +1468,7 @@ def collect(args):
 
     if args.manifest_format == 'csv':
         collected_mf.write_to_filename(args.output, database_format='csv',
-                                       ok_if_exists=args.merge_previous)
+                                       ok_if_exists=args.force_overwrite)
     else:
         collected_mf.close()
 

@@ -78,7 +78,7 @@ class BaseCollectionManifest:
             row['signature'] = None
             manifest_list.append(row)
 
-        return cls(manifest_list)
+        return CollectionManifest(manifest_list)
 
     @classmethod
     def load_from_sql(cls, filename):
@@ -207,7 +207,7 @@ class CollectionManifest(BaseCollectionManifest):
     """
     An in-memory manifest that simply stores the rows in a list.
     """
-    def __init__(self, rows):
+    def __init__(self, rows=[]):
         "Initialize from an iterable of metadata dictionaries."
         self.rows = []
         self._md5_set = set()

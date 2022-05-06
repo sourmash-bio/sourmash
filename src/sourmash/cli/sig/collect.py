@@ -52,6 +52,9 @@ def subparser(subparsers):
     # @CTB
     subparser.add_argument('--merge-previous', action='store_true',
                    help='merge previous and new manifests')
+    subparser.add_argument('-f', '--force-overwrite',
+                           help='overwrite output file if it already exists',
+                           action='store_true')
 
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
