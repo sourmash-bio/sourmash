@@ -601,6 +601,8 @@ class ZipFileLinearIndex(Index, RustObject):
 
     @manifest.setter
     def manifest(self, value):
+        if value is None:
+            return  # FIXME: can't unset manifest in a Rust Linear Index
         self._methodcall(lib.linearindex_set_manifest, value._as_rust()._take_objptr())
 
     def __bool__(self):

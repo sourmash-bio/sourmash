@@ -3,6 +3,7 @@ use std::io::Read;
 use std::ops::Deref;
 use std::path::PathBuf;
 
+use serde::de;
 use serde::{Deserialize, Serialize};
 
 use crate::encodings::HashFunctions;
@@ -13,7 +14,10 @@ use crate::Error;
 pub struct Record {
     internal_location: String,
     ksize: u32,
-    with_abundance: u8,
+
+    #[serde(deserialize_with = "to_bool")]
+    with_abundance: bool,
+
     md5: String,
     name: String,
     moltype: String,
@@ -24,6 +28,23 @@ pub struct Record {
     n_hashes: String,
     filename: String,
     */
+}
+
+fn to_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    match String::deserialize(deserializer)?
+        .to_ascii_lowercase()
+        .as_ref()
+    {
+        "0" | "false" => Ok(false),
+        "1" | "true" => Ok(true),
+        other => Err(de::Error::invalid_value(
+            de::Unexpected::Str(other),
+            &"0/1 or true/false are the only supported values",
+        )),
+    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
@@ -41,7 +62,7 @@ impl Record {
     }
 
     pub fn with_abundance(&self) -> bool {
-        self.with_abundance != 0
+        self.with_abundance
     }
 
     pub fn md5(&self) -> &str {
@@ -145,11 +166,11 @@ impl From<&[PathBuf]> for Manifest {
                 .iter()
                 .map(|p| Record {
                     internal_location: p.to_str().unwrap().into(),
-                    ksize: 0,           // FIXME
-                    with_abundance: 0,  // FIXME
-                    md5: "".into(),     // FIXME
-                    name: "".into(),    // FIXME
-                    moltype: "".into(), // FIXME
+                    ksize: 0,              // FIXME
+                    with_abundance: false, // FIXME
+                    md5: "".into(),        // FIXME
+                    name: "".into(),       // FIXME
+                    moltype: "".into(),    // FIXME
                 })
                 .collect(),
         }
