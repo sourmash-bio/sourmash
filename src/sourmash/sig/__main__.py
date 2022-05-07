@@ -1390,7 +1390,6 @@ def collect(args):
     "Collect signature metadata across many locations, save to manifest"
     # TODO:
     # support manifest generation
-    # rewrite locations
     set_quiet(False, args.debug)
 
     if args.previous and args.previous == args.output:
@@ -1457,8 +1456,8 @@ def collect(args):
         if n_files and n_files % 100 == 0:
             notify(f'... loaded {collected_mf} sigs from {n_files} files', end='\r')
         idx = sourmash.load_file_as_index(loc)
-        # @CTB: use get_manifest; update internal_location.
-        mf = idx.manifest
+        mf = sourmash_args.get_manifest(idx)
+
         rows = []
         for row in mf.rows:
             row['internal_location'] = loc
