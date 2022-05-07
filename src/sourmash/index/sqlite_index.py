@@ -599,6 +599,17 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         return cls(conn)
 
     @classmethod
+    def create_or_open(cls, filename):
+        "Connect to 'filename' and create tables if not exist."
+        conn = sqlite3.connect(filename)
+        cursor = conn.cursor()
+        try:
+            cls._create_tables(cursor)
+        except sqlite3.OperationalError:
+            pass
+        return cls(conn)
+
+    @classmethod
     def load_from_manifest(cls, manifest, *, dbfile=":memory:", append=False):
         "Create a new sqlite manifest from an existing manifest object."
         return cls._create_manifest_from_rows(manifest.rows, location=dbfile,

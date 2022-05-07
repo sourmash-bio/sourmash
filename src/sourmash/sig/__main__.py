@@ -1414,8 +1414,8 @@ def collect(args):
     if args.manifest_format == 'sql':
         # create on-disk manifest
         from sourmash.index.sqlite_index import SqliteCollectionManifest
-        collected_mf = SqliteCollectionManifest.create(args.output)
 
+        collected_mf = SqliteCollectionManifest.create_or_open(args.output)
     else:
         # create in-memory manifest that will be saved as CSV
         assert args.manifest_format == 'csv'
