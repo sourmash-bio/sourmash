@@ -1389,7 +1389,9 @@ def check(args):
 def collect(args):
     "Collect signature metadata across many locations, save to manifest"
     # TODO:
-    # support manifest generation
+    # check what happens with directories :)
+    # support --abspath
+    # upgrade sig check to rewrite locations?
     set_quiet(False, args.debug)
 
     if args.previous and args.previous == args.output:
