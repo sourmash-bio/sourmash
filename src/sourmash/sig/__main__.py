@@ -1439,6 +1439,14 @@ def collect(args):
             notify(f"ignoring {len(previous_locations)} locations from previous manifest")
             notify(f"(specify --merge-previous to merge previous manifest instead!)")
 
+    # require manifests? yes by default, since generating can be slow.
+    require_manifest = True
+    if args.no_require_manifest:
+        require_manifest = False
+        debug("sig check: manifest will not be required")
+    else:
+        debug("sig check: manifest required")
+
     n_files = 0
     locations = set(args.locations)
 
@@ -1456,6 +1464,12 @@ def collect(args):
         if n_files and n_files % 100 == 0:
             notify(f'... loaded {collected_mf} sigs from {n_files} files', end='\r')
         idx = sourmash.load_file_as_index(loc)
+        if idx.manifest is None and require_manifest:
+            error(f"ERROR on location '{loc}'")
+            error(f"sig collect requires a manifest by default, but no manifest present.")
+            error("specify --no-require-manifest to dynamically generate one.")
+            sys.exit(-1)
+
         mf = sourmash_args.get_manifest(idx)
 
         rows = []
