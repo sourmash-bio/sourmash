@@ -1734,7 +1734,7 @@ sourmash operations - search, gather, etc.
 Note that `sig collect` will generate manifests containing the
 pathnames given to it - so if you use relative paths, the references
 will be relative to the working directory in which `sig collect` was
-run.  You can use the `sig collect --abspath` to rewrite the paths
+run.  You can use `sig collect --abspath` to rewrite the paths
 into absolute paths.
 
 **Our advice:** We suggest using zip file collections for most

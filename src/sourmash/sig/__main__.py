@@ -1430,7 +1430,11 @@ def collect(args):
 
         # recover the filenames so that they can be ignored below.
         for row in previous.rows:
-            previous_locations.add(row['internal_location'])
+            iloc = row['internal_location']
+            if args.abspath:
+                iloc = os.path.abspath(iloc)
+
+            previous_locations.add(iloc)
 
         notify(f"loaded {len(previous)} rows with {len(previous_locations)} distinct locations from '{args.previous}'")
 
@@ -1456,11 +1460,15 @@ def collect(args):
     if args.from_file:
         locations.union_update(args.from_file)
 
+    # convert to abspath
+    if args.abspath:
+        locations = set(( os.path.abspath(iloc) for iloc in locations ))
+
     # remove previous_locations
     locations -= previous_locations
 
     # iterate through, loading all the things.
-    for n_files, loc in enumerate(args.locations):
+    for n_files, loc in enumerate(locations):
         notify(f"Loading signature information from {loc}.")
 
         if n_files and n_files % 100 == 0:

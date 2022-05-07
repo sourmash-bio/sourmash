@@ -2,6 +2,8 @@
 Tests for 'sourmash sig collect'
 """
 import pytest
+import shutil
+import os.path
 
 import sourmash
 from sourmash.manifest import BaseCollectionManifest
@@ -127,6 +129,67 @@ def test_sig_collect_4_multiple_from_sig(runtmp, manifest_db_format):
     assert sig43 in locations
     assert sig63 in locations
     assert len(locations) == 2, locations
+
+
+def test_sig_collect_4_multiple_from_sig_abspath(runtmp, manifest_db_format):
+    # collect a manifest from sig files, forcing abspath
+    sig43 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    shutil.copyfile(sig43, runtmp.output('47.fa.sig'))
+    shutil.copyfile(sig63, runtmp.output('63.fa.sig'))
+
+    ext = 'sqlmf' if manifest_db_format == 'sql' else 'csv'
+
+    runtmp.sourmash('sig', 'collect', '47.fa.sig', '63.fa.sig', '--abspath',
+                    '-o', f'mf.{ext}', '-F', manifest_db_format)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    manifest_fn = runtmp.output(f'mf.{ext}')
+    manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '09a08691ce52952152f0e866a59f6261' in md5_list
+    assert '38729c6374925585db28916b82a6f513' in md5_list
+
+    locations = set([ row['internal_location'] for row in manifest.rows ])
+    print(locations)
+    assert len(locations) == 2, locations
+
+    for xx in locations:
+        assert xx.startswith('/')
+
+
+def test_sig_collect_4_multiple_no_abspath(runtmp, manifest_db_format):
+    # collect a manifest from sig files, no abspath
+    sig43 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # copy files to tmp, where they will not have full paths
+    shutil.copyfile(sig43, runtmp.output('47.fa.sig'))
+    shutil.copyfile(sig63, runtmp.output('63.fa.sig'))
+
+    ext = 'sqlmf' if manifest_db_format == 'sql' else 'csv'
+
+    runtmp.sourmash('sig', 'collect', '47.fa.sig', '63.fa.sig',
+                    '-o', f'mf.{ext}', '-F', manifest_db_format)
+
+    manifest_fn = runtmp.output(f'mf.{ext}')
+    manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '09a08691ce52952152f0e866a59f6261' in md5_list
+    assert '38729c6374925585db28916b82a6f513' in md5_list
+
+    locations = set([ row['internal_location'] for row in manifest.rows ])
+    print(locations)
+    assert len(locations) == 2, locations
+    assert '47.fa.sig' in locations
+    assert '63.fa.sig' in locations
 
 
 def test_sig_collect_5_no_manifest_sbt_fail(runtmp, manifest_db_format):
