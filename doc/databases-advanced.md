@@ -2,11 +2,11 @@
 
 sourmash uses a variety of different mechanisms and formats for storing, organizing, and searching signatures. Some of these mechanisms, "collections", just store the signatures; others ("indexed" databases) provide indices on the signatures for fast content-based search. _Most_ of the mechanisms now use manifests that permit fast selection and loading of signatures based on metadata. Below we refer to "databases" generically as any on-disk storage mechanism for sourmash signatures.
 
-Which database type is best to use depends on what you're doing - which is what this document is about! In general, however, sourmash should be fast enough that database choice will only impacts performance when searching 1000s of signatures, or doing many 1000s of searches.
+Which database type is best to use depends on what you're doing - which is what this document is about! In general, however, sourmash should be fast enough that database choice will only impact performance when searching thousands of signatures, or doing thousands of searches.
 
 The recommended file extensions below are conventions used to signal the output format when using `-o` with `sourmash sketch` and the `sourmash sig` subcommands; so, for example, `sourmash sketch dna *.fa -o xyz.zip` will output signatures in the .zip format.
 
-sourmash will automatically detect and load the database, based on the database _content_ in most cases.
+sourmash will automatically detect and load the database, based on the database _content_ and not the database extension, in most cases.
 
 Unless noted otherwise, the below database formats are supported in all release since sourmash v3.5.
 
@@ -56,15 +56,16 @@ We recommend SBT and LCA databases for use only in specific situations - e.g. SB
 
 ### Manifests
 
-Manifests are catalogs of signature metadata - name, molecule type, k-mer size, and other information - that can be used to select specific signatures for searching or processing. Typically when using manifests the actual signatures themselves are not loaded until they are needed.
+Manifests are catalogs of signature metadata - name, molecule type, k-mer size, and other information - that can be used to select specific signatures for searching or processing. Typically when using manifests the actual signatures themselves are not loaded until they are needed, although the efficiency of this depends on the signature storage mechanism; for example, JSON-format containers (`.sig` and `.lca.json` files) must be entirely loaded before any signature with them can be used, unlike zip containers.
 
 As of sourmash 4.4 manifests can be *directly* loaded from the command line as standalone collections. This lets manifests serve as a catalog of signatures stored in many different locations.
 
 Standalone manifests are preferable to both directory storage and pathlists (below), because they support fast selection and direct lazy loading. They are the most effective solution for managing custom collections of thousands to millions of signatures.
 
-Manifests can be created with `sourmash sig manifest` and `sourmash sig check`. For complex situations, we recommend using custom Python scripts to manage them - for example, see [sigs-to-manifest.py in database-examples](https://github.com/sourmash-bio/database-examples/blob/main/sigs-to-manifest.py).
+Standalone manifests can be created with `sourmash sig collect`.
+(@CTB check version - sourmash 4.4.0? or later?)
 
-Sourmash supports two manifest file formats - CSV and SQLite. SQLite manifests are much faster than CSV manifests in exchange for extra disk space.
+Sourmash supports two manifest file formats - CSV and SQLite. SQLite manifests are much faster and lower-memory than CSV manifests in exchange for consuming some extra disk space.
 
 ### Directories
 

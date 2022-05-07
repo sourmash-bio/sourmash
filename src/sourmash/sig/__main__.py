@@ -1409,7 +1409,7 @@ def collect(args):
         else:
             error(f"ERROR: '{args.output}' already exists!")
             error(f"ERROR: please specify --force-overwrite to continue")
-            error("ERROR: or repeat with --previous={args.output} --merge-previous for a merge.")
+            error(f"ERROR: or repeat with --previous={args.output} --merge-previous for a merge.")
             sys.exit(-1)
 
     if args.manifest_format == 'sql':
