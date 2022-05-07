@@ -97,3 +97,9 @@ def test_sig_collect_3_multiple(runtmp, manifest_db_format):
     assert 'bb0e6d90df01b7bd5d0956a5f9e3ed12' in md5_list
     assert 'fbca5e5211e4d58427997fd5c8343e9a' in md5_list
     assert '1cbd888bf910f83ad8f1715509183223' in md5_list
+
+    locations = set([ row['internal_location'] for row in manifest.rows ])
+    assert protzip in locations
+    assert hpzip in locations
+    assert dayzip in locations
+    assert len(locations) == 3, locations

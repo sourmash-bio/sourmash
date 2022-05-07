@@ -1459,8 +1459,10 @@ def collect(args):
         idx = sourmash.load_file_as_index(loc)
         # @CTB: use get_manifest; update internal_location.
         mf = idx.manifest
-
-        collected_mf += mf
+        rows = []
+        for row in mf.rows:
+            row['internal_location'] = loc
+            collected_mf.add_row(row)
 
     if not collected_mf:
         notify(f"No new manifest rows detected. Exiting without saving!")

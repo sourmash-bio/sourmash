@@ -219,6 +219,9 @@ class CollectionManifest(BaseCollectionManifest):
         "Load this manifest from another manifest object."
         return cls(manifest.rows)
 
+    def add_row(self, row):
+        self._add_rows([row])
+
     def _add_rows(self, rows):
         self.rows.extend(rows)
 

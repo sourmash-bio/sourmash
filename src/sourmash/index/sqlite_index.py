@@ -657,6 +657,10 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         )
         """)
 
+    def add_row(self, row):
+        c = self.conn.cursor()
+        self._insert_row(c, row)
+
     def _insert_row(self, cursor, row, *, call_is_from_index=False):
         "Insert a new manifest row."
         # check - is this manifest managed by SqliteIndex? If so, prevent
