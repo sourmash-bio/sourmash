@@ -54,7 +54,7 @@ def test_sig_collect_2_exists_fail(runtmp, manifest_db_format):
                         '-F', manifest_db_format)
 
 
-def test_sig_collect_2_exists_force(runtmp, manifest_db_format):
+def test_sig_collect_2_exists_merge(runtmp, manifest_db_format):
     # collect a manifest from two .zip files
     protzip = utils.get_test_data('prot/protein.zip')
     allzip = utils.get_test_data('prot/all.zip')
@@ -72,9 +72,12 @@ def test_sig_collect_2_exists_force(runtmp, manifest_db_format):
     assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
     assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
 
-    # now run with same filename - should fail
+    # now run with same filename - should merge
     runtmp.sourmash('sig', 'collect', allzip, '-o', manifest_fn,
-                    '-F', manifest_db_format, '--force-overwrite')
+                    '-F', manifest_db_format, '--merge')
+
+    manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
+    assert len(manifest) == 10
 
 
 def test_sig_collect_3_multiple(runtmp, manifest_db_format):

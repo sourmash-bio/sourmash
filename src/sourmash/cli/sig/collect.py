@@ -47,14 +47,8 @@ def subparser(subparsers):
         choices=['csv', 'sql'],
     )
 
-    # @CTB
-    subparser.add_argument('--previous', help='previous manifest file')
-    # @CTB
     subparser.add_argument('--merge-previous', action='store_true',
-                   help='merge previous and new manifests')
-    subparser.add_argument('-f', '--force-overwrite',
-                           help='overwrite output file if it already exists',
-                           action='store_true')
+                           help='merge new manifests into existing')
     subparser.add_argument('--abspath',
                            help="convert all locations to absolute paths",
                            action='store_true')

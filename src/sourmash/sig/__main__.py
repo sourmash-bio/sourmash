@@ -1389,61 +1389,40 @@ def check(args):
 def collect(args):
     "Collect signature metadata across many locations, save to manifest"
     # TODO:
-    # check what happens with directories :)
-    # support --abspath
-    # upgrade sig check to rewrite locations?
+    # test what happens with directories :)
     set_quiet(False, args.debug)
 
-    if args.previous and args.previous == args.output:
-        if args.merge_previous or args.force_overwrite:
-            args.force_overwrite = True
-        else:
-            error("ERROR: --output and --previous are the same file, but --merge-previous not specified.")
-            error("ERROR: so --previous would be overwritten with only new entries!?")
-            error("ERROR: I'm worried this doesn't make sense, so I'm exiting. Good bye!")
-            sys.exit(-1)
-
-    if os.path.exists(args.output) and args.output != args.previous:
-        if args.force_overwrite:
+    if os.path.exists(args.output):
+        if args.merge_previous:
             pass
         else:
             error(f"ERROR: '{args.output}' already exists!")
-            error(f"ERROR: please specify --force-overwrite to continue")
-            error(f"ERROR: or repeat with --previous={args.output} --merge-previous for a merge.")
+            error(f"ERROR: please remove it, or use --merge-previous to merge")
             sys.exit(-1)
+    elif args.merge_previous:
+        notify(f"WARNING: --merge-previous specified, but output file '{args.poutput}' does not already exist?")
+
+    # @CTB: what happens if args.output is not of type manifest_type??
 
     if args.manifest_format == 'sql':
         # create on-disk manifest
         from sourmash.index.sqlite_index import SqliteCollectionManifest
 
-        collected_mf = SqliteCollectionManifest.create_or_open(args.output)
+        if args.merge_previous:
+            collected_mf = SqliteCollectionManifest.create_or_open(args.output)
+        else:
+            collected_mf = SqliteCollectionManifest.create(args.output)
     else:
         # create in-memory manifest that will be saved as CSV
         assert args.manifest_format == 'csv'
-        collected_mf = CollectionManifest()
 
-    previous_locations = set()
-    if args.previous:
-        notify(f"loading previous manifest from '{args.previous}'")
-        previous = CollectionManifest.load_from_filename(args.previous)
-        assert previous is not None
-
-        # recover the filenames so that they can be ignored below.
-        for row in previous.rows:
-            iloc = row['internal_location']
-            if args.abspath:
-                iloc = os.path.abspath(iloc)
-
-            previous_locations.add(iloc)
-
-        notify(f"loaded {len(previous)} rows with {len(previous_locations)} distinct locations from '{args.previous}'")
-
-        if args.merge_previous:
-            notify(f"merging previous rows into current.")
-            collected_mf += previous
+        if args.merge_previous and os.path.exists(args.output):
+            collected_mf = CollectionManifest.load_from_filename(args.output)
         else:
-            notify(f"ignoring {len(previous_locations)} locations from previous manifest")
-            notify(f"(specify --merge-previous to merge previous manifest instead!)")
+            collected_mf = CollectionManifest()
+
+    if args.merge_previous:
+        notify(f"merging new locations with {len(collected_mf)} previous rows.")
 
     # require manifests? yes by default, since generating can be slow.
     require_manifest = True
@@ -1463,9 +1442,6 @@ def collect(args):
     # convert to abspath
     if args.abspath:
         locations = set(( os.path.abspath(iloc) for iloc in locations ))
-
-    # remove previous_locations
-    locations -= previous_locations
 
     # iterate through, loading all the things.
     for n_files, loc in enumerate(locations):
@@ -1493,7 +1469,7 @@ def collect(args):
 
     if args.manifest_format == 'csv':
         collected_mf.write_to_filename(args.output, database_format='csv',
-                                       ok_if_exists=args.force_overwrite)
+                                       ok_if_exists=args.merge_previous)
     else:
         collected_mf.close()
 
