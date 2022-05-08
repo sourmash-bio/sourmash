@@ -94,6 +94,58 @@ def test_sig_collect_2_exists_merge(runtmp, manifest_db_format):
     assert len(manifest) == 10
 
 
+def test_sig_collect_2_exists_sql_merge_csv(runtmp, manifest_db_format):
+    # try to merge csv into sql
+    protzip = utils.get_test_data('prot/protein.zip')
+    allzip = utils.get_test_data('prot/all.zip')
+
+    ext = 'sqlmf'
+
+    # save as sql...
+    runtmp.sourmash('sig', 'collect', protzip, '-o', f'mf.{ext}',
+                    '-F', 'sql')
+
+    manifest_fn = runtmp.output(f'mf.{ext}')
+    manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'collect', allzip, '-o', manifest_fn,
+                        '-F', 'csv', '--merge')
+
+    assert "ERROR loading" in runtmp.last_result.err
+
+
+def test_sig_collect_2_exists_csv_merge_sql(runtmp):
+    # try to merge sql into csv
+    protzip = utils.get_test_data('prot/protein.zip')
+    allzip = utils.get_test_data('prot/all.zip')
+
+    ext = 'csv'
+
+    # save as sql...
+    runtmp.sourmash('sig', 'collect', protzip, '-o', f'mf.{ext}',
+                    '-F', 'csv')
+
+    manifest_fn = runtmp.output(f'mf.{ext}')
+    manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'collect', allzip, '-o', manifest_fn,
+                        '-F', 'sql', '--merge')
+
+    assert "ERROR loading" in runtmp.last_result.err
+
+
 def test_sig_collect_2_no_exists_merge(runtmp, manifest_db_format):
     # test 'merge' when args.output doesn't already exist => warning
     protzip = utils.get_test_data('prot/protein.zip')

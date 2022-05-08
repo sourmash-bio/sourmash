@@ -40,8 +40,8 @@ subtract <signature> <other_sig> [...]    - subtract one or more signatures
 import [ ... ]                            - import a mash or other signature
 export <signature>                        - export a signature, e.g. to mash
 overlap <signature1> <signature2>         - see detailed comparison of sigs
-# @CTB check
-# @CTB collect
+check <locations> --picklist ...          - check picklist against (many) sigs
+collect <locations> -o manifest.sqlmf     - collect sigs metadata into manifest
 
 ** Use '-h' to get subcommand-specific help, e.g.
 
@@ -1407,22 +1407,29 @@ def collect(args):
 
     # @CTB: what happens if args.output is not of type manifest_type??
 
-    if args.manifest_format == 'sql':
-        # create on-disk manifest
-        from sourmash.index.sqlite_index import SqliteCollectionManifest
+    try:
+        if args.manifest_format == 'sql':
+            # create on-disk manifest
+            from sourmash.index.sqlite_index import SqliteCollectionManifest
 
-        if args.merge_previous:
-            collected_mf = SqliteCollectionManifest.create_or_open(args.output)
+            if args.merge_previous:
+                collected_mf = SqliteCollectionManifest.create_or_open(args.output)
+            else:
+                collected_mf = SqliteCollectionManifest.create(args.output)
         else:
-            collected_mf = SqliteCollectionManifest.create(args.output)
-    else:
-        # create in-memory manifest that will be saved as CSV
-        assert args.manifest_format == 'csv'
+            # create in-memory manifest that will be saved as CSV
+            assert args.manifest_format == 'csv'
 
-        if args.merge_previous and os.path.exists(args.output):
-            collected_mf = CollectionManifest.load_from_filename(args.output)
-        else:
-            collected_mf = CollectionManifest()
+            if args.merge_previous and os.path.exists(args.output):
+                collected_mf = CollectionManifest.load_from_filename(args.output)
+            else:
+                collected_mf = CollectionManifest()
+
+            if not isinstance(collected_mf, CollectionManifest):
+                raise Exception
+    except:
+        error(f"ERROR loading '{args.output}' with --merge-previous. Is it of type {args.manifest_format}?")
+        sys.exit(-1)
 
     if args.merge_previous:
         notify(f"merging new locations with {len(collected_mf)} previous rows.")
