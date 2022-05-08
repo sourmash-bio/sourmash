@@ -720,6 +720,12 @@ class SqliteCollectionManifest(BaseCollectionManifest):
             self._insert_row(c, row)
         return self
 
+    def __add__(self, other):
+        new_mf = self.create(":memory:")
+        new_mf += self
+        new_mf += other
+        return new_mf
+
     def close(self):
         self.conn.commit()
 

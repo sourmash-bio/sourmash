@@ -1445,7 +1445,9 @@ For example,
 ```
 sourmash sig collect tests/test-data/gather/GCF*.sig -o mf.sqlmf
 ```
-will load all of the `GCF` signatures and build a manifest file `mf.sqlmf`.
+will load all of the `GCF` signatures and build a manifest file `mf.sqlmf`
+that contains references to all of the signatures, but not the signatures
+themselves.
 This manifest file can be loaded directly from the command line by sourmash.
 
 `sourmash sig collect` defaults to outputting SQLite manifests. It is
@@ -1728,7 +1730,7 @@ and then use the manifest directly for sourmash operations, for example:
 sourmash sig fileinfo manifest.sqlmf
 ```
 This manifest contains _references_ to the signatures (but not the
-signatures themselves) can then be used as a database target for most
+signatures themselves) and can then be used as a database target for most
 sourmash operations - search, gather, etc.
 
 Note that `sig collect` will generate manifests containing the
