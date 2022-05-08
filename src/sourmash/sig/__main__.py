@@ -1405,8 +1405,8 @@ def collect(args):
     elif args.merge_previous:
         notify(f"WARNING: --merge-previous specified, but output file '{args.output}' does not already exist?")
 
-    # @CTB: what happens if args.output is not of type manifest_type??
-
+    # load previous manifest for --merge-previous. This gets tricky with
+    # mismatched manifest types, which we forbid.
     try:
         if args.manifest_format == 'sql':
             # create on-disk manifest

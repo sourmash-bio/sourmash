@@ -62,8 +62,8 @@ As of sourmash 4.4 manifests can be *directly* loaded from the command line as s
 
 Standalone manifests are preferable to both directory storage and pathlists (below), because they support fast selection and direct lazy loading. They are the most effective solution for managing custom collections of thousands to millions of signatures.
 
-Standalone manifests can be created with `sourmash sig collect`.
-(@CTB check version - sourmash 4.4.0? or later?)
+Standalone manifests can be created with `sourmash sig collect`
+(sourmash v4.4 and later).
 
 Sourmash supports two manifest file formats - CSV and SQLite. SQLite manifests are much faster and lower-memory than CSV manifests in exchange for consuming some extra disk space.
 

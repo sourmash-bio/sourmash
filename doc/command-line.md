@@ -1705,7 +1705,7 @@ signatures that were just created.
 
 ### Using manifests to explicitly refer to collections of files
 
-(sourmash v4.4.X and later - @CTB update version before merge!)
+(sourmash v4.4 and later)
 
 Manifests are metadata catalogs of signatures that are used for
 signature selection and loading. They are used extensively by sourmash
