@@ -54,12 +54,15 @@ def _check_abundance_compatibility(sig1, sig2):
         raise ValueError("incompatible signatures: track_abundance is {} in first sig, {} in second".format(sig1.minhash.track_abundance, sig2.minhash.track_abundance))
 
 
-def _extend_signatures_with_from_file(args):
+def _extend_signatures_with_from_file(args, *, target_attr='signatures'):
     # extend input signatures with --from-file
     if args.from_file:
         more_files = sourmash_args.load_pathlist_from_file(args.from_file)
-        args.signatures = list(args.signatures)
-        args.signatures.extend(more_files)
+
+        sigs = list(getattr(args, target_attr))
+        sigs.extend(more_files)
+        setattr(args, target_attr, sigs)
+
 
 def _set_num_scaled(mh, num, scaled):
     "set num and scaled values on a MinHash object"
@@ -1400,7 +1403,7 @@ def collect(args):
             error(f"ERROR: please remove it, or use --merge-previous to merge")
             sys.exit(-1)
     elif args.merge_previous:
-        notify(f"WARNING: --merge-previous specified, but output file '{args.poutput}' does not already exist?")
+        notify(f"WARNING: --merge-previous specified, but output file '{args.output}' does not already exist?")
 
     # @CTB: what happens if args.output is not of type manifest_type??
 
@@ -1433,18 +1436,16 @@ def collect(args):
         debug("sig check: manifest required")
 
     n_files = 0
-    locations = set(args.locations)
 
     # load from_file
-    if args.from_file:
-        locations.union_update(args.from_file)
+    _extend_signatures_with_from_file(args, target_attr='locations')
 
     # convert to abspath
     if args.abspath:
-        locations = set(( os.path.abspath(iloc) for iloc in locations ))
+        args.locations = [ os.path.abspath(iloc) for iloc in args.locations ]
 
-    # iterate through, loading all the things.
-    for n_files, loc in enumerate(locations):
+    # iterate through, loading all the manifests from all the locations.
+    for n_files, loc in enumerate(args.locations):
         notify(f"Loading signature information from {loc}.")
 
         if n_files and n_files % 100 == 0:
@@ -1462,10 +1463,6 @@ def collect(args):
         for row in mf.rows:
             row['internal_location'] = loc
             collected_mf.add_row(row)
-
-    if not collected_mf:
-        notify(f"No new manifest rows detected. Exiting without saving!")
-        return 0
 
     if args.manifest_format == 'csv':
         collected_mf.write_to_filename(args.output, database_format='csv',

@@ -84,8 +84,11 @@ class BaseCollectionManifest:
     def load_from_sql(cls, filename):
         from sourmash.index.sqlite_index import load_sqlite_index
         db = load_sqlite_index(filename, request_manifest=True)
-        if db:
+        # @CTB test me - see test_sig_collect_0_nothing
+        if db is not None:
             return db.manifest
+
+        return None
 
     def write_to_filename(self, filename, *, database_format='csv',
                           ok_if_exists=False):

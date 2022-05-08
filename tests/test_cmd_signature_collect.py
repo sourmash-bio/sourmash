@@ -12,6 +12,20 @@ import sourmash_tst_utils as utils
 from sourmash_tst_utils import SourmashCommandFailed
 
 
+def test_sig_collect_0_nothing(runtmp, manifest_db_format):
+    # run with just output
+    ext = 'sqlmf' if manifest_db_format == 'sql' else 'csv'
+    if manifest_db_format != 'sql': return
+
+    runtmp.sourmash('sig', 'collect', '-o', f'mf.{ext}',
+                    '-F', manifest_db_format)
+
+    manifest_fn = runtmp.output(f'mf.{ext}')
+    manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
+
+    assert len(manifest) == 0
+
+
 def test_sig_collect_1_zipfile(runtmp, manifest_db_format):
     # collect a manifest from a .zip file
     protzip = utils.get_test_data('prot/protein.zip')
@@ -80,6 +94,26 @@ def test_sig_collect_2_exists_merge(runtmp, manifest_db_format):
     assert len(manifest) == 10
 
 
+def test_sig_collect_2_no_exists_merge(runtmp, manifest_db_format):
+    # test 'merge' when args.output doesn't already exist => warning
+    protzip = utils.get_test_data('prot/protein.zip')
+    allzip = utils.get_test_data('prot/all.zip')
+
+    ext = 'sqlmf' if manifest_db_format == 'sql' else 'csv'
+    manifest_fn = runtmp.output(f'mf.{ext}')
+
+    # run with --merge but no previous:
+    runtmp.sourmash('sig', 'collect', allzip, '-o', manifest_fn,
+                    '-F', manifest_db_format, '--merge')
+
+    manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
+    assert len(manifest) == 8
+
+    err = runtmp.last_result.err
+    print(err)
+    assert "WARNING: --merge-previous specified, but output file" in err
+
+
 def test_sig_collect_3_multiple(runtmp, manifest_db_format):
     # collect a manifest from two .zip files
     protzip = utils.get_test_data('prot/protein.zip')
@@ -89,6 +123,42 @@ def test_sig_collect_3_multiple(runtmp, manifest_db_format):
     ext = 'sqlmf' if manifest_db_format == 'sql' else 'csv'
 
     runtmp.sourmash('sig', 'collect', protzip, hpzip, dayzip,
+                    '-o', f'mf.{ext}', '-F', manifest_db_format)
+
+    manifest_fn = runtmp.output(f'mf.{ext}')
+    manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
+
+    assert len(manifest) == 6
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+    assert 'ea2a1ad233c2908529d124a330bcb672' in md5_list
+    assert 'bb0e6d90df01b7bd5d0956a5f9e3ed12' in md5_list
+    assert 'fbca5e5211e4d58427997fd5c8343e9a' in md5_list
+    assert '1cbd888bf910f83ad8f1715509183223' in md5_list
+
+    locations = set([ row['internal_location'] for row in manifest.rows ])
+    assert protzip in locations
+    assert hpzip in locations
+    assert dayzip in locations
+    assert len(locations) == 3, locations
+
+
+def test_sig_collect_3_multiple_use_fromfile(runtmp, manifest_db_format):
+    # collect a manifest from two .zip files
+    protzip = utils.get_test_data('prot/protein.zip')
+    hpzip = utils.get_test_data('prot/hp.zip')
+    dayzip = utils.get_test_data('prot/dayhoff.zip')
+
+    ext = 'sqlmf' if manifest_db_format == 'sql' else 'csv'
+
+    fromfile = runtmp.output('fromfile.txt')
+    with open(fromfile, 'wt') as fp:
+        print(protzip, file=fp)
+        print(hpzip, file=fp)
+        print(dayzip, file=fp)
+
+    runtmp.sourmash('sig', 'collect', '--from-file', 'fromfile.txt',
                     '-o', f'mf.{ext}', '-F', manifest_db_format)
 
     manifest_fn = runtmp.output(f'mf.{ext}')
