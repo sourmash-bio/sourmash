@@ -84,7 +84,6 @@ class BaseCollectionManifest:
     def load_from_sql(cls, filename):
         from sourmash.index.sqlite_index import load_sqlite_index
         db = load_sqlite_index(filename, request_manifest=True)
-        # @CTB test me - see test_sig_collect_0_nothing
         if db is not None:
             return db.manifest
 

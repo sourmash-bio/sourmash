@@ -141,7 +141,6 @@ def load_sqlite_index(filename, *, request_manifest=False):
         is_lca_db = True
         debug_literal("load_sqlite_index: it's got a lineage table!")
 
-    # @CTB test me - load empty manifest, I think? see test_sig_collect_0_nothing
     if 'SqliteManifest' in internal_d:
         v = internal_d['SqliteManifest']
         if v != '1.0':
