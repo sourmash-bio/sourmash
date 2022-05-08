@@ -1341,11 +1341,18 @@ def check(args):
             sys.exit(-1)
 
         # has manifest, or ok to build (require_manifest=False) - continue!
-        manifest = sourmash_args.get_manifest(idx, require=True)
-        manifest_rows = manifest.select_to_manifest(picklist=picklist)
-        total_rows_examined += len(manifest)
-        total_manifest_rows += manifest_rows
-        debug_literal(f"examined {len(manifest)} new rows, found {len(manifest_rows)} matching rows")
+        new_manifest = sourmash_args.get_manifest(idx, require=True)
+        sub_manifest = new_manifest.select_to_manifest(picklist=picklist)
+        total_rows_examined += len(new_manifest)
+
+        # rewrite locations so that each signature can be found by filename
+        # of its container; this follows `sig collect` logic.
+        rows = []
+        for row in sub_manifest.rows:
+            row['internal_location'] = filename
+            total_manifest_rows.add_row(row)
+
+        debug_literal(f"examined {len(new_manifest)} new rows, found {len(sub_manifest)} matching rows")
 
     notify(f"loaded {total_rows_examined} signatures.")
 
