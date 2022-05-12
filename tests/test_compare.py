@@ -112,7 +112,7 @@ def test_compare_serial_containmentANI(scaled_siglist):
     print(containment_ANI)
 
     true_containment_ANI = np.array(
-        [[0., 0., 0., 0.],
+        [[1, 0., 0., 0.],
         [0., 1., 0.97715525, 1.],
         [0., 0.96377054, 1., 0.97678608],
         [0., 0.98667513, 0.97715525, 1.]])
@@ -124,7 +124,7 @@ def test_compare_serial_containmentANI(scaled_siglist):
     print(max_containment_ANI)
 
     true_max_containment_ANI = np.array(
-        [[0., 0., 0., 0.],
+        [[1., 0., 0., 0.],
         [0., 1., 0.97715525, 1.],
         [0., 0.97715525, 1., 0.97715525],
         [0., 1., 0.97715525, 1.]])

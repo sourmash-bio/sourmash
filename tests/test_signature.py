@@ -439,8 +439,8 @@ def test_containment_ANI():
     print("\nss1 contained by ss2", s1_cont_s2)
     print("ss2 contained by ss1", s2_cont_s1)
 
-     # first, assess as-is. ANI should be 0, bc 2.fa.sig size is inaccurate
-    assert s1_cont_s2.ani == s2_cont_s1.ani == 0
+     # first, assess as-is. ANI should be None, bc 2.fa.sig size is inaccurate
+    assert s1_cont_s2.ani == s2_cont_s1.ani == None
 
     # since size is inaccurate on 2.fa.sig, need to override to be able to get ani
     s1_cont_s2.size_is_inaccurate = False
@@ -546,7 +546,7 @@ def test_jaccard_ANI():
 
     # first, assess as-is. ANI should be 0, bc 2.fa.sig size is inaccurate
     assert s1_jani_s2 == s2_jani_s1
-    assert (s1_jani_s2.ani, s1_jani_s2.p_nothing_in_common, s1_jani_s2.jaccard_error) == (0, 0.0, 3.891666770716877e-07)
+    assert (s1_jani_s2.ani, s1_jani_s2.p_nothing_in_common, s1_jani_s2.jaccard_error) == (None, 0.0, 3.891666770716877e-07)
 
     # since size is inaccurate on 2.fa.sig, need to override to be able to get ani
     s1_jani_s2.size_is_inaccurate = False
@@ -569,7 +569,7 @@ def test_jaccard_ANI_untrustworthy():
     # since size is inaccurate on 2.fa.sig, need to override to be able to get ani
     s1_jani_s2.size_is_inaccurate = False
 
-    assert s1_jani_s2.ani == 0
+    assert s1_jani_s2.ani == None
     assert s1_jani_s2.je_exceeds_threshold==True
     assert s1_jani_s2.je_threshold == 1e-7
 

@@ -5370,7 +5370,7 @@ def test_search_ani_jaccard_error_too_high(c):
         assert row['query_name'] == ''
         assert row['query_md5'] == '9191284a'
         #assert row['ani'] == "0.9987884602947684"
-        assert row['ani'] == '0'
+        assert row['ani'] == ''
 
 
 @utils.in_tempdir
@@ -5460,9 +5460,9 @@ def test_search_ani_containment_fail(c):
         print(row)
         assert search_result_names == list(row.keys())
         assert float(row['similarity']) == 0.9556701030927836 
-        assert row['ani'] == "0"
+        assert row['ani'] == ""
     
-    assert "WARNING: Cannot estimate ANI because size estimation for these sketches is inaccurate." in c.last_result.err
+    assert "WARNING: Cannot estimate ANI because size estimation for at least one of these sketches may be inaccurate." in c.last_result.err
 
 
 @utils.in_tempdir
@@ -5603,14 +5603,14 @@ def test_search_jaccard_ani_downsample(c):
         print(row)
         assert round(float(row['similarity']), 3) == round(0.6634517766497462, 3)
         #downsampled is too small, so ANI is 0. can get from dist, though
-        assert round(float(row['ani']), 3) == 0
+        assert row['ani'] == ""
 
     #downsample manually and assert same ANI
     ss47_ds = signature.load_one_signature(ds_sig47)
     print("SCALED:", ss47_ds.minhash.scaled, ss4763.minhash.scaled)
     ani_info = ss47_ds.jaccard_ani(ss4763, downsample=True)
     print(ani_info)
-    assert ani_info.ani == 0
+    assert ani_info.ani == None
     assert (1 - round(ani_info.dist, 3)) == round(0.992530907924384, 3)
 
 
@@ -5695,14 +5695,14 @@ def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
         assert row['query_name'] == 'tr1 4'
         assert row['query_md5'] == 'c9d5a795'
         assert row['query_bp'] == '910'
-        assert row['query_containment_ani']== '0'
+        assert row['query_containment_ani']== ''
         assert row['query_containment_ani_low']== ''
         assert row['query_containment_ani_high']== ''
-        assert row['match_containment_ani'] == '0'
+        assert row['match_containment_ani'] == ''
         assert row['match_containment_ani_low'] == ''
         assert row['match_containment_ani_high'] == ''
-        assert row['average_containment_ani'] == '0.0'
-        assert row['max_containment_ani'] =='0'
+        assert row['average_containment_ani'] == ''
+        assert row['max_containment_ani'] ==''
         assert row['potential_false_negative'] == 'False'
 
 
@@ -5710,8 +5710,8 @@ def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
 def test_compare_containment_ani(c):
     import numpy
 
-    testdata_glob = utils.get_test_data('scaled/*.sig')
-    testdata_sigs = glob.glob(testdata_glob)
+    sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
+    testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
 
     c.run_sourmash('compare', '--containment', '-k', '31',
                    '--ani', '--csv', 'output.csv', *testdata_sigs)
@@ -5738,19 +5738,26 @@ def test_compare_containment_ani(c):
     for i in range(len(idx_to_sig)):
         ss_i = idx_to_sig[i]
         for j in range(len(idx_to_sig)):
-            ss_j = idx_to_sig[j]
-            containment_ani = round(ss_j.containment_ani(ss_i).ani, 3)
             mat_val = round(mat[i][j], 3)
+            print(mat_val)
+            if i == j:
+                assert 1 == mat_val
+            else:
+                ss_j = idx_to_sig[j]
+                containment_ani = ss_j.containment_ani(ss_i).ani
+                if containment_ani is not None:
+                    containment_ani = round(containment_ani, 3)
+                else:
+                    containment_ani = 0.0
+                mat_val = round(mat[i][j], 3)
 
-            assert containment_ani == mat_val #, (i, j)
+                assert containment_ani == mat_val #, (i, j)
 
 
 @utils.in_tempdir
 def test_compare_jaccard_ani(c):
     import numpy
 
-#    testdata_glob = utils.get_test_data('scaled/*.sig')
-#    testdata_sigs = glob.glob(testdata_glob)
     sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
     testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
 
@@ -5779,21 +5786,28 @@ def test_compare_jaccard_ani(c):
     for i in range(len(idx_to_sig)):
         ss_i = idx_to_sig[i]
         for j in range(len(idx_to_sig)):
-            ss_j = idx_to_sig[j]
-            jaccard_ani = round(ss_j.jaccard_ani(ss_i).ani, 3)
-            print(jaccard_ani)
             mat_val = round(mat[i][j], 3)
             print(mat_val)
+            if i == j:
+                assert 1 == mat_val
+            else:
+                ss_j = idx_to_sig[j]
+                jaccard_ani = ss_j.jaccard_ani(ss_i).ani
+                if jaccard_ani is not None:
+                    jaccard_ani = round(jaccard_ani, 3)
+                else:
+                    jaccard_ani = 0.0
+                print(jaccard_ani)
 
-            assert jaccard_ani == mat_val #, (i, j)
+                assert jaccard_ani == mat_val #, (i, j)
 
 
 @utils.in_tempdir
 def test_compare_max_containment_ani(c):
     import numpy
-
-    testdata_glob = utils.get_test_data('scaled/*.sig')
-    testdata_sigs = glob.glob(testdata_glob)
+    
+    sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
+    testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
 
     c.run_sourmash('compare', '--max-containment', '-k', '31',
                    '--estimate-ani', '--csv', 'output.csv', *testdata_sigs)
@@ -5820,11 +5834,19 @@ def test_compare_max_containment_ani(c):
     for i in range(len(idx_to_sig)):
         ss_i = idx_to_sig[i]
         for j in range(len(idx_to_sig)):
-            ss_j = idx_to_sig[j]
-            containment_ani = round(ss_j.max_containment_ani(ss_i).ani, 3)
             mat_val = round(mat[i][j], 3)
+            print(mat_val)
+            if i == j:
+                assert 1 == mat_val
+            else:
+                ss_j = idx_to_sig[j]
+                containment_ani = ss_j.max_containment_ani(ss_i).ani
+                if containment_ani is not None:
+                    containment_ani = round(containment_ani, 3)
+                else:
+                    containment_ani = 0.0
 
-            assert containment_ani == mat_val, (i, j)
+                assert containment_ani == mat_val, (i, j)
 
 
 @utils.in_tempdir

@@ -56,8 +56,8 @@ class ANIResult:
     @property
     def ani(self):
         if self.size_is_inaccurate:
-            notify("WARNING: Cannot estimate ANI because size estimation for these sketches is inaccurate.")
-            return 0
+            notify("WARNING: Cannot estimate ANI because size estimation for at least one of these sketches may be inaccurate.")
+            return None
         return 1 - self.dist
 
 
@@ -81,10 +81,10 @@ class jaccardANIResult(ANIResult):
         # if jaccard error is too high (exceeds threshold), do not trust ANI estimate
         if self.je_exceeds_threshold or self.size_is_inaccurate:
             if self.size_is_inaccurate:
-                notify("WARNING: Cannot estimate ANI because size estimation for at least one of these sketches is inaccurate.")
+                notify("WARNING: Cannot estimate ANI because size estimation for at least one of these sketches may be inaccurate.")
             if self.je_exceeds_threshold:
                 notify("WARNING: Cannot estimate ANI because jaccard estimation for these sketches is inaccurate.")
-            return 0
+            return None
         return 1 - self.dist
 
 
@@ -236,8 +236,10 @@ def containment_to_distance(
     sol1, sol2, point_estimate = None, None, None
     n_unique_kmers = handle_seqlen_nkmers(ksize, sequence_len_bp = sequence_len_bp, n_unique_kmers=n_unique_kmers)
     if containment <= 0.0001:
+#        point_estimate = 1.0
         point_estimate = sol1 = sol2 = 1.0
     elif containment >= 0.9999:
+        #point_estimate = 0.0
         point_estimate = sol1 = sol2 = 0.0
     else:
         point_estimate = 1.0 - containment ** (1.0 / ksize)

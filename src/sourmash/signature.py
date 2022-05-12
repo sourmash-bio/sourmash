@@ -175,7 +175,7 @@ class SourmashSignature(RustObject):
         """
         return self.minhash.avg_containment(other.minhash, downsample=downsample)
 
-    def avg_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False):
+    def avg_containment_ani(self, other, *, downsample=False):
         """
         Calculate average containment ANI.
         Note: this is average of the containment ANI's, *not* ANI using count_common/ avg_denom

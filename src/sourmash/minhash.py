@@ -670,8 +670,8 @@ class MinHash(RustObject):
                                           n_unique_kmers=avg_n_kmers,
                                           prob_threshold = prob_threshold,
                                           err_threshold = err_threshold)
-        # zero out ANI if either mh size estimation is inaccurate
-        if not all([self.size_is_accurate(), other.size_is_accurate()]):
+        # null out ANI if either mh size estimation is inaccurate
+        if not self.size_is_accurate() or not other.size_is_accurate():
             j_aniresult.size_is_inaccurate = True
         return j_aniresult
 
@@ -704,21 +704,21 @@ class MinHash(RustObject):
         return self._methodcall(lib.kmerminhash_is_compatible, other._get_objptr())
 
     def contained_by(self, other, downsample=False):
-        """\
+        """
         Calculate how much of self is contained by other.
         """
         if not (self.scaled and other.scaled):
             raise TypeError("can only calculate containment for scaled MinHashes")
         if not len(self):
             return 0.0
-        if not self.size_is_accurate():
-            notify("WARNING: size estimation for at least one of these sketches is inaccurate.")
+        if not self.size_is_accurate() or not other.size_is_accurate():
+            notify("WARNING: size estimation for at least one of these sketches may be inaccurate.")
         return self.count_common(other, downsample) / len(self)
         # with bias factor
-#        return self.count_common(other, downsample) / (len(self) * (1- (1-1/self.scaled)^(len(self)*self.scaled)))
+        #return self.count_common(other, downsample) / (len(self) * (1- (1-1/self.scaled)^(len(self)*self.scaled)))
 
 
-    def containment_ani(self, other, *, downsample=False, containment=None, confidence=0.95, estimate_ci = False):
+    def containment_ani(self, other, *, downsample=False, containment=None, confidence=0.95, estimate_ci = False, prob_threshold=1e-3):
         "Use containment to estimate ANI between two MinHash objects."
         if not (self.scaled and other.scaled):
             raise TypeError("Error: can only calculate ANI for scaled MinHashes")
@@ -735,9 +735,9 @@ class MinHash(RustObject):
 
         c_aniresult = containment_to_distance(containment, self_mh.ksize, self_mh.scaled,
                                                         n_unique_kmers=n_kmers, confidence=confidence,
-                                                        estimate_ci = estimate_ci)
-        # zero out ANI if either mh size estimation is inaccurate
-        if not (self.size_is_accurate() and other.size_is_accurate()):
+                                                        estimate_ci = estimate_ci, prob_threshold=prob_threshold)
+        # null out ANI if either mh size estimation is inaccurate
+        if not self.size_is_accurate() or not other.size_is_accurate():
             c_aniresult.size_is_inaccurate = True
         return c_aniresult
 
@@ -754,7 +754,7 @@ class MinHash(RustObject):
 
         return self.count_common(other, downsample) / min_denom
 
-    def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False):
+    def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False, prob_threshold=1e-3):
         "Use max_containment to estimate ANI between two MinHash objects."
         if not (self.scaled and other.scaled):
             raise TypeError("Error: can only calculate ANI for scaled MinHashes")
@@ -772,9 +772,9 @@ class MinHash(RustObject):
 
         c_aniresult = containment_to_distance(max_containment, self_mh.ksize, scaled,
                                            n_unique_kmers=n_kmers,confidence=confidence,
-                                           estimate_ci = estimate_ci)
-        # zero out ANI if either mh size estimation is inaccurate
-        if not (self.size_is_accurate() and other.size_is_accurate()):
+                                           estimate_ci = estimate_ci, prob_threshold=prob_threshold)
+        # null out ANI if either mh size estimation is inaccurate
+        if not self.size_is_accurate() or not other.size_is_accurate():
             c_aniresult.size_is_inaccurate = True
         return c_aniresult
 
@@ -791,17 +791,17 @@ class MinHash(RustObject):
 
         return (c1 + c2)/2
 
-    def avg_containment_ani(self, other, *, downsample=False):
+    def avg_containment_ani(self, other, *, downsample=False, prob_threshold=1e-3):
         """
         Calculate average containment ANI.
         Note: this is average of the containment ANI's, *not* ANI using count_common/ avg_denom
         """
         if not (self.scaled and other.scaled):
             raise TypeError("Error: can only calculate ANI for scaled MinHashes")
-
-        a1 = self.containment_ani(other, downsample=downsample).ani
-        a2 = other.containment_ani(self, downsample=downsample).ani
-
+        a1 = self.containment_ani(other, downsample=downsample, prob_threshold=prob_threshold).ani
+        a2 = other.containment_ani(self, downsample=downsample, prob_threshold=prob_threshold).ani
+        if any([a1 is None, a2 is None]):
+            return None
         return (a1 + a2)/2
 
     def __add__(self, other):

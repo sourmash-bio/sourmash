@@ -2830,8 +2830,8 @@ def test_containment_ANI():
     print("\nmh1 contained by mh2", m1_cont_m2)
     print("mh2 contained by mh1", m2_cont_m1)
 
-     # first, assess as-is. ANI should be 0, bc 2.fa.sig size is inaccurate
-    assert m1_cont_m2.ani == m2_cont_m1.ani == 0
+     # first, assess as-is. ANI should be None, bc 2.fa.sig size is inaccurate
+    assert m1_cont_m2.ani == m2_cont_m1.ani == None
 
     # since size is inaccurate on 2.fa.sig, need to override to be able to get ani
     m1_cont_m2.size_is_inaccurate = False
@@ -2840,7 +2840,7 @@ def test_containment_ANI():
     print("\nmh1 contained by mh2", m1_cont_m2)
     print("mh2 contained by mh1", m2_cont_m1)
 
-    assert (round(m1_cont_m2.ani,3), m1_cont_m2.ani_low, m1_cont_m2.ani_high) == (1.0,1.0,1.0)#(1.0, None, None)
+    assert (round(m1_cont_m2.ani,3), m1_cont_m2.ani_low, m1_cont_m2.ani_high) == (1.0, 1.0, 1.0)
     assert (round(m2_cont_m1.ani,3), round(m2_cont_m1.ani_low,3), round(m2_cont_m1.ani_high,3)) == (0.966, 0.965, 0.967)
 
     m1_mc_m2 = mh1.max_containment_ani(mh2, estimate_ci =True)
@@ -2888,13 +2888,13 @@ def test_containment_ANI_downsample():
     mh3 = sourmash.load_one_signature(f3, ksize=31).minhash
     # check that downsampling works properly
     print(mh2.scaled)
-    mh2 = mh2.downsample(scaled=2000)
+    mh2 = mh2.downsample(scaled=1100)
     assert mh2.scaled != mh3.scaled
     ds_s3c = mh2.containment_ani(mh3, downsample=True)
     ds_s4c = mh3.containment_ani(mh2, downsample=True)
     mc_w_ds_1 =  mh2.max_containment_ani(mh3, downsample=True)
     mc_w_ds_2 =  mh3.max_containment_ani(mh2, downsample=True)
-
+    print(ds_s3c)
     with pytest.raises(ValueError) as e:
         mh2.containment_ani(mh3)
         assert "ValueError: mismatch in scaled; comparison fail" in e
@@ -2903,7 +2903,7 @@ def test_containment_ANI_downsample():
         mh2.max_containment_ani(mh3)
         assert "ValueError: mismatch in scaled; comparison fail" in e
 
-    mh3 = mh3.downsample(scaled=2000)
+    mh3 = mh3.downsample(scaled=1100)
     assert mh2.scaled == mh3.scaled
     ds_s3c_manual = mh2.containment_ani(mh3)
     ds_s4c_manual = mh3.containment_ani(mh2)
@@ -2930,7 +2930,7 @@ def test_jaccard_ANI():
 
     # first, assess as-is. ANI should be 0, bc 2.fa.sig size is inaccurate
     assert m1_jani_m2 == m2_jani_m1
-    assert (m1_jani_m2.ani, m1_jani_m2.p_nothing_in_common, m1_jani_m2.jaccard_error) == (0, 0.0, 3.891666770716877e-07)
+    assert (m1_jani_m2.ani, m1_jani_m2.p_nothing_in_common, m1_jani_m2.jaccard_error) == (None, 0.0, 3.891666770716877e-07)
 
     # since size is inaccurate on 2.fa.sig, need to override to be able to get ani
     m1_jani_m2.size_is_inaccurate = False
@@ -2953,7 +2953,7 @@ def test_jaccard_ANI_untrustworthy():
     # since size is inaccurate on 2.fa.sig, need to override to be able to get ani
     m1_jani_m2.size_is_inaccurate = False
 
-    assert m1_jani_m2.ani == 0
+    assert m1_jani_m2.ani == None
     assert m1_jani_m2.je_exceeds_threshold==True
     assert m1_jani_m2.je_threshold == 1e-7
 
@@ -3007,7 +3007,7 @@ def test_containment_ani_ci_tiny_testdata():
 
     m2_cani_m1 = mh2.containment_ani(mh1, estimate_ci=True)
     print(m2_cani_m1)
-    assert m2_cani_m1.ani == 0
+    assert m2_cani_m1.ani == None
     m2_cani_m1.size_is_inaccurate = False
     assert m2_cani_m1.ani == 0.986394259982259
     assert m2_cani_m1.ani_low == None
@@ -3073,10 +3073,23 @@ def test_minhash_set_size_estimate_is_accurate():
 def test_minhash_ani_inaccurate_size_est():
     f1 = utils.get_test_data('2.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')
+    f3 = utils.get_test_data('47+63.fa.sig')
     mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
     mh2 = sourmash.load_one_signature(f2).minhash
+    mh3 = sourmash.load_one_signature(f3).minhash
 
     assert mh1.size_is_accurate() == False
     assert mh2.size_is_accurate() == True
+    assert mh3.size_is_accurate() == True
 
-    assert mh1.jaccard_ani(mh2).ani == 0
+    assert mh1.jaccard_ani(mh2).ani == None
+    assert round(mh2.jaccard_ani(mh3).ani, 3) == 0.987
+
+    m1_ca_m2 = mh1.containment_ani(mh2)
+    assert m1_ca_m2.ani == None
+    assert m1_ca_m2.size_is_inaccurate == True
+
+    m2_ca_m3 = mh2.containment_ani(mh3)
+    print(m2_ca_m3)
+    assert round(m2_ca_m3.ani,3) == 0.987
+    assert m2_ca_m3.size_is_inaccurate == False

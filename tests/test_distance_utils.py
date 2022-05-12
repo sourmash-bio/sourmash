@@ -38,7 +38,7 @@ def test_aniresult_bad_distance():
 def test_jaccard_aniresult():
     res = jaccardANIResult(0.4, 0.1, jaccard_error=0.03)
     assert res.dist == 0.4
-    assert res.ani == 0
+    assert res.ani == None
     assert res.p_nothing_in_common == 0.1
     assert res.jaccard_error == 0.03
     assert res.p_exceeds_threshold ==True
@@ -264,7 +264,7 @@ def test_jaccard_to_distance_scaled():
     print(res)
     # check results
     assert round(res.dist, 3) == round(0.019122659390482077, 3)
-    assert res.ani == 0
+    assert res.ani == None
     assert res.p_exceeds_threshold == False
     assert res.jaccard_error == 0.00018351337045518042
     assert res.je_exceeds_threshold ==True
@@ -286,7 +286,7 @@ def test_jaccard_to_distance_k31():
     print(res)
     # check results
     assert res.je_exceeds_threshold ==True
-    assert res.ani == 0
+    assert res.ani == None
     assert res.p_exceeds_threshold == False
     res2 = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers, err_threshold=0.1)
     assert res2.je_exceeds_threshold == False
