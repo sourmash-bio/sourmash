@@ -439,19 +439,31 @@ def test_containment_ANI():
     print("\nss1 contained by ss2", s1_cont_s2)
     print("ss2 contained by ss1", s2_cont_s1)
 
-    assert (s1_cont_s2.ani, s1_cont_s2.ani_low, s1_cont_s2.ani_high, s1_cont_s2.p_nothing_in_common) == (1.0, None, None, 0.0)
+     # first, assess as-is. ANI should be 0, bc 2.fa.sig size is inaccurate
+    assert s1_cont_s2.ani == s2_cont_s1.ani == 0
+
+    # since size is inaccurate on 2.fa.sig, need to override to be able to get ani
+    s1_cont_s2.size_is_inaccurate = False
+    s2_cont_s1.size_is_inaccurate = False
+    
+    print("\nmh1 contained by mh2", s1_cont_s2)
+    print("mh2 contained by mh1", s2_cont_s1)
+
+    assert (round(s1_cont_s2.ani,3), s1_cont_s2.ani_low, s1_cont_s2.ani_high) == (1.0,1.0,1.0)#(1.0, None, None)
     assert (round(s2_cont_s1.ani,3), round(s2_cont_s1.ani_low,3), round(s2_cont_s1.ani_high,3)) == (0.966, 0.965, 0.967)
 
     s1_mc_s2 = ss1.max_containment_ani(ss2, estimate_ci =True)
     s2_mc_s1 = ss2.max_containment_ani(ss1, estimate_ci =True)
-    print("ss1 max containment", s1_mc_s2)
-    print("ss2 max containment", s2_mc_s1)
+    print("mh1 max containment", s1_mc_s2)
+    print("mh2 max containment", s2_mc_s1)
+    s1_mc_s2.size_is_inaccurate = False
+    s2_mc_s1.size_is_inaccurate = False
     assert s1_mc_s2 == s2_mc_s1
-    assert (s1_mc_s2.ani, s1_mc_s2.ani_low, s1_mc_s2.ani_high) == (1.0,None,None)
+    assert (round(s1_mc_s2.ani, 3), round(s1_mc_s2.ani_low, 3), round(s1_mc_s2.ani_high, 3)) == (1.0,1.0,1.0)
 
 
 def test_containment_ANI_precalc_containment():
-    f1 = utils.get_test_data('2.fa.sig')
+    f1 = utils.get_test_data('47+63.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')
     ss1 = sourmash.load_one_signature(f1, ksize=31)
     ss2 = sourmash.load_one_signature(f2, ksize=31)
@@ -462,8 +474,31 @@ def test_containment_ANI_precalc_containment():
 
     assert ss1.containment_ani(ss2, estimate_ci=True) ==  ss1.containment_ani(ss2, containment=s1c, estimate_ci=True)
     assert ss2.containment_ani(ss1) ==  ss2.containment_ani(ss1, containment=s2c)
+    assert ss1.max_containment_ani(ss2) ==  ss2.max_containment_ani(ss1)
     assert ss1.max_containment_ani(ss2) ==  ss1.max_containment_ani(ss2, max_containment=mc)
     assert ss1.max_containment_ani(ss2) ==  ss2.max_containment_ani(ss1, max_containment=mc)
+
+
+def test_avg_containment():
+    f1 = utils.get_test_data('47+63.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    ss1 = sourmash.load_one_signature(f1, ksize=31)
+    ss2 = sourmash.load_one_signature(f2, ksize=31)
+    # check average_containment_ani
+    ac_s1 = ss1.avg_containment(ss2)
+    ac_s2 = ss2.avg_containment(ss1)
+    assert ac_s1 == ac_s2 == (ss1.contained_by(ss2) + ss2.contained_by(ss1))/2 == 0.6619979467456603
+
+
+def test_avg_containment_ani():
+    f1 = utils.get_test_data('47+63.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    ss1 = sourmash.load_one_signature(f1, ksize=31)
+    ss2 = sourmash.load_one_signature(f2, ksize=31)
+    # check average_containment_ani
+    ac_s1 = ss1.avg_containment_ani(ss2)
+    ac_s2 = ss2.avg_containment_ani(ss1)
+    assert ac_s1 == ac_s2 == (ss1.containment_ani(ss2).ani + ss2.containment_ani(ss1).ani)/2 
 
 
 def test_containment_ANI_downsample():
@@ -509,6 +544,14 @@ def test_jaccard_ANI():
     s1_jani_s2 = ss1.jaccard_ani(ss2)
     s2_jani_s1 = ss2.jaccard_ani(ss1)
 
+    # first, assess as-is. ANI should be 0, bc 2.fa.sig size is inaccurate
+    assert s1_jani_s2 == s2_jani_s1
+    assert (s1_jani_s2.ani, s1_jani_s2.p_nothing_in_common, s1_jani_s2.jaccard_error) == (0, 0.0, 3.891666770716877e-07)
+
+    # since size is inaccurate on 2.fa.sig, need to override to be able to get ani
+    s1_jani_s2.size_is_inaccurate = False
+    s2_jani_s1.size_is_inaccurate = False
+
     assert s1_jani_s2 == s2_jani_s1
     assert (s1_jani_s2.ani, s1_jani_s2.p_nothing_in_common, s1_jani_s2.jaccard_error) == (0.9783711630110239, 0.0, 3.891666770716877e-07)
 
@@ -522,13 +565,17 @@ def test_jaccard_ANI_untrustworthy():
     print("\nJACCARD_ANI", ss1.jaccard_ani(ss2))
 
     s1_jani_s2 = ss1.jaccard_ani(ss2, err_threshold=1e-7)
-    assert s1_jani_s2.ani == ""
+
+    # since size is inaccurate on 2.fa.sig, need to override to be able to get ani
+    s1_jani_s2.size_is_inaccurate = False
+
+    assert s1_jani_s2.ani == 0
     assert s1_jani_s2.je_exceeds_threshold==True
     assert s1_jani_s2.je_threshold == 1e-7
 
 
 def test_jaccard_ANI_precalc_jaccard():
-    f1 = utils.get_test_data('2.fa.sig')
+    f1 = utils.get_test_data('47+63.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')
     ss1 = sourmash.load_one_signature(f1, ksize=31)
     ss2 = sourmash.load_one_signature(f2)
@@ -542,7 +589,7 @@ def test_jaccard_ANI_precalc_jaccard():
 
 
 def test_jaccard_ANI_downsample():
-    f1 = utils.get_test_data('2.fa.sig')
+    f1 = utils.get_test_data('47+63.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')
     ss1 = sourmash.load_one_signature(f1, ksize=31)
     ss2 = sourmash.load_one_signature(f2)

@@ -7,6 +7,7 @@ class FrozenMinHash - read-only MinHash class.
 """
 from __future__ import unicode_literals, division
 from .distance_utils import jaccard_to_distance, containment_to_distance, set_size_chernoff
+from .logging import notify
 
 import numpy as np
 
@@ -670,8 +671,8 @@ class MinHash(RustObject):
                                           prob_threshold = prob_threshold,
                                           err_threshold = err_threshold)
         # zero out ANI if either mh size estimation is inaccurate
-        if not (self.size_is_accurate() and other.size_is_accurate()):
-            j_aniresult.size_is_inaccurate =True
+        if not all([self.size_is_accurate(), other.size_is_accurate()]):
+            j_aniresult.size_is_inaccurate = True
         return j_aniresult
 
     def similarity(self, other, ignore_abundance=False, downsample=False):
@@ -710,8 +711,12 @@ class MinHash(RustObject):
             raise TypeError("can only calculate containment for scaled MinHashes")
         if not len(self):
             return 0.0
-
+        if not self.size_is_accurate():
+            notify("WARNING: size estimation for at least one of these sketches is inaccurate.")
         return self.count_common(other, downsample) / len(self)
+        # with bias factor
+#        return self.count_common(other, downsample) / (len(self) * (1- (1-1/self.scaled)^(len(self)*self.scaled)))
+
 
     def containment_ani(self, other, *, downsample=False, containment=None, confidence=0.95, estimate_ci = False):
         "Use containment to estimate ANI between two MinHash objects."

@@ -787,8 +787,8 @@ def test_prefetch_ani_csv_out_estimate_ci(runtmp, linear_gather):
             'ac_ani': '0.9769706656719734','mc_ani': '0.9771552502238963',
             'pfn': 'False'}
     exp2 = {'q_ani': '1.0','m_ani': '1.0',
-            'q_ani_low': "", 'q_ani_high': "",
-            'm_ani_low': "", "m_ani_high": "",
+            'q_ani_low': "1.0", 'q_ani_high': "1.0",
+            'm_ani_low': "1.0", "m_ani_high": "1.0",
                       'ac_ani': '1.0','mc_ani': '1.0',
                       'pfn': 'False'}
 

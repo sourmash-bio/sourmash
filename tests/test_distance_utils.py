@@ -78,8 +78,8 @@ def test_containment_to_distance_zero():
     res = containment_to_distance(contain,ksize,scaled, n_unique_kmers=nkmers, estimate_ci=True)
     print(res)
     # check results
-    exp_dist,exp_low,exp_high,pnc = 1.0,None,None,1.0
-    exp_id, exp_idlow,exp_idhigh,pnc = 0.0,None,None,1.0
+    exp_dist,exp_low,exp_high,pnc = 1.0,1.0,1.0,1.0
+    exp_id, exp_idlow,exp_idhigh,pnc = 0.0,0.0,0.0,1.0
     assert res.dist == exp_dist
     assert res.dist_low == exp_low
     assert res.dist_high == exp_high
@@ -90,7 +90,7 @@ def test_containment_to_distance_zero():
     # check without returning ci
     res2 = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers)
     print(res2)
-    exp_res = ciANIResult(dist=1.0, p_nothing_in_common=1.0, p_threshold=0.001)
+    exp_res = ciANIResult(dist=1.0, dist_low=1.0, dist_high=1.0, p_nothing_in_common=1.0, p_threshold=0.001)
     assert res2 == exp_res
 
 
@@ -101,8 +101,8 @@ def test_containment_to_distance_one():
     ksize=21
     res = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,estimate_ci=True)
     print(res)
-    exp_dist, exp_low,exp_high,pnc = 0.0,None,None,0.0
-    exp_id, exp_idlow,exp_idhigh,pnc = 1.0,None,None,0.0
+    exp_dist, exp_low,exp_high,pnc = 0.0,0.0,0.0,0.0
+    exp_id, exp_idlow,exp_idhigh,pnc = 1.0,1.0,1.0,0.0
     assert res.dist == exp_dist
     assert res.dist_low == exp_low
     assert res.dist_high == exp_high
@@ -116,8 +116,8 @@ def test_containment_to_distance_one():
     assert res.dist == exp_dist
     assert res.ani == exp_id
     assert res.p_nothing_in_common == pnc
-    assert res.ani_low == None
-    assert res.ani_high == None
+    assert res.ani_low == 1.0
+    assert res.ani_high == 1.0
 
 
 def test_containment_to_distance_scaled1():

@@ -5615,7 +5615,7 @@ def test_search_jaccard_ani_downsample(c):
 
 
 def test_gather_ani_csv(runtmp, linear_gather, prefetch_gather):
-    testdata1 = utils.get_test_data('2+63.fa.sig')
+    testdata1 = utils.get_test_data('63.fa.sig')
     testdata2 = utils.get_test_data('47+63.fa.sig')
 
     runtmp.sourmash('index', '-k', '31', 'zzz', testdata2)
@@ -5639,19 +5639,19 @@ def test_gather_ani_csv(runtmp, linear_gather, prefetch_gather):
         assert gather_result_names_ci != list(row.keys())
         assert float(row['intersect_bp']) == 5238000.0
         assert float(row['unique_intersect_bp']) == 5238000.0
-        #assert float(row['remaining_bp']) == 2701000.0
-        assert float(row['f_orig_query']) == 0.6597808288197506
-        assert float(row['f_unique_to_query']) == 0.6597808288197506
+        assert float(row['remaining_bp']) == 0.0
+        assert float(row['f_orig_query']) == 1.0
+        assert float(row['f_unique_to_query']) == 1.0
         assert float(row['f_match']) == 0.6642150646715699
         assert row['filename'] == 'zzz'
         assert row['md5'] == '491c0a81b2cfb0188c0d3b46837c2f42'
         assert row['gather_result_rank'] == '0'
-        assert row['query_md5'] == '832a45e8'
-        assert row['query_bp'] == '7939000'
-        assert row['query_containment_ani']== '0.9866751346467802'
-        assert row['match_containment_ani'] == '0.9868883523107224'
-        assert row['average_containment_ani'] == '0.9867817434787514'
-        assert row['max_containment_ani'] =='0.9868883523107224'
+        assert row['query_md5'] == '38729c63'
+        assert row['query_bp'] == '5238000'
+        assert row['query_containment_ani']== '1.0'
+        assert round(float(row['match_containment_ani']), 3) == 0.987
+        assert round(float(row['average_containment_ani']), 3) ==  0.993
+        assert round(float(row['max_containment_ani']),3) == 1.0
         assert row['potential_false_negative'] == 'False'
 
 
@@ -5749,8 +5749,10 @@ def test_compare_containment_ani(c):
 def test_compare_jaccard_ani(c):
     import numpy
 
-    testdata_glob = utils.get_test_data('scaled/*.sig')
-    testdata_sigs = glob.glob(testdata_glob)
+#    testdata_glob = utils.get_test_data('scaled/*.sig')
+#    testdata_sigs = glob.glob(testdata_glob)
+    sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
+    testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
 
     c.run_sourmash('compare', '-k', '31', '--estimate-ani',
                          '--csv', 'output.csv', *testdata_sigs)
