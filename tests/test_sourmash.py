@@ -2872,8 +2872,8 @@ def test_gather_csv(runtmp, linear_gather, prefetch_gather):
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
-        assert float(row['intersect_bp']) == 940
-        assert float(row['unique_intersect_bp']) == 940
+        assert float(row['intersect_bp']) == 910
+        assert float(row['unique_intersect_bp']) == 910
         assert float(row['remaining_bp']) == 0
         assert float(row['f_orig_query']) == 1.0
         assert float(row['f_unique_to_query']) == 1.0
@@ -2885,7 +2885,7 @@ def test_gather_csv(runtmp, linear_gather, prefetch_gather):
         assert row['query_filename'].endswith('short2.fa')
         assert row['query_name'] == 'tr1 4'
         assert row['query_md5'] == 'c9d5a795'
-        assert row['query_bp'] == '940'
+        assert row['query_bp'] == '910'
 
 
 def test_gather_abund_x_abund(runtmp, prefetch_gather, linear_gather):
@@ -2974,7 +2974,7 @@ def test_gather_multiple_sbts_save_prefetch_csv(runtmp, linear_gather):
     with open(runtmp.output('prefetch.csv')) as f:
         output = f.read()
         print((output,))
-        assert '900,0.925531914893617,0.9666666666666667' in output
+        assert '870,0.925531914893617,0.9666666666666667' in output
 
 
 def test_gather_multiple_sbts_save_prefetch_and_prefetch_csv(runtmp, linear_gather):
@@ -3004,7 +3004,7 @@ def test_gather_multiple_sbts_save_prefetch_and_prefetch_csv(runtmp, linear_gath
     with open(runtmp.output('prefetch.csv')) as f:
         output = f.read()
         print((output,))
-        assert '900,0.925531914893617,0.9666666666666667' in output
+        assert '870,0.925531914893617,0.9666666666666667' in output
     assert os.path.exists(runtmp.output('out.zip'))
 
 
@@ -3048,7 +3048,7 @@ def test_gather_file_output(runtmp, linear_gather, prefetch_gather):
     with open(runtmp.output('foo.out')) as f:
         output = f.read()
         print((output,))
-        assert '940,1.0,1.0' in output
+        assert '910,1.0,1.0' in output
 
 
 def test_gather_f_match_orig(runtmp, linear_gather, prefetch_gather):
@@ -3984,7 +3984,7 @@ def test_gather_with_picklist_exclude(runtmp, linear_gather, prefetch_gather):
     assert "found 9 matches total;" in out
     assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 Salmonella enterica subsp..." in out
     assert "1.6 Mbp       10.7%  100.0%    NC_002163.1 Campylobacter jejuni subs..." in out
-    assert "4.9 Mbp       10.4%   31.3%    NC_003197.2 Salmonella enterica subsp..." in out
+    assert "4.8 Mbp       10.4%   31.3%    NC_003197.2 Salmonella enterica subsp..." in out
     assert "4.7 Mbp        5.2%   16.1%    NC_006905.1 Salmonella enterica subsp..." in out
     assert "4.7 Mbp        4.0%   12.6%    NC_011080.1 Salmonella enterica subsp..." in out
     assert "4.6 Mbp        2.9%    9.2%    NC_011274.1 Salmonella enterica subsp..." in out
@@ -4030,7 +4030,7 @@ def test_gather_with_pattern_exclude(runtmp, linear_gather, prefetch_gather):
     assert "found 9 matches total;" in out
     assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 Salmonella enterica subsp..." in out
     assert "1.6 Mbp       10.7%  100.0%    NC_002163.1 Campylobacter jejuni subs..." in out
-    assert "4.9 Mbp       10.4%   31.3%    NC_003197.2 Salmonella enterica subsp..." in out
+    assert "4.8 Mbp       10.4%   31.3%    NC_003197.2 Salmonella enterica subsp..." in out
     assert "4.7 Mbp        5.2%   16.1%    NC_006905.1 Salmonella enterica subsp..." in out
     assert "4.7 Mbp        4.0%   12.6%    NC_011080.1 Salmonella enterica subsp..." in out
     assert "4.6 Mbp        2.9%    9.2%    NC_011274.1 Salmonella enterica subsp..." in out
@@ -4170,7 +4170,7 @@ def test_gather_deduce_moltype(runtmp, linear_gather, prefetch_gather):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert '2.0 kbp      100.0%  100.0%' in runtmp.last_result.out
+    assert '1.9 kbp      100.0%  100.0%' in runtmp.last_result.out
 
 
 def test_gather_abund_1_1(runtmp, linear_gather, prefetch_gather):
@@ -4265,7 +4265,6 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
         remaining_bps = []
 
         for n, row in enumerate(r):
-            print(row)
             assert int(row['gather_result_rank']) == n
             overlap = float(row['intersect_bp'])
             remaining_bp = float(row['remaining_bp'])
@@ -4279,9 +4278,6 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
             average_abunds.append(average_abund)
             remaining_bps.append(remaining_bp)
 
-    query_sig = sourmash.load_one_signature(query)
-    query_mh = query_sig.minhash
-
     weighted_calc = []
     for (overlap, average_abund) in zip(overlaps, average_abunds):
         prod = overlap*average_abund
@@ -4289,12 +4285,13 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
 
     total_weighted = sum(weighted_calc)
     for prod, f_weighted in zip(weighted_calc, f_weighted_list):
-        fw_calc = prod/total_weighted
-        print(f"prod: {prod}, total_weighted: {total_weighted}, fw_calc: {fw_calc}, f_weighted: {f_weighted}")
         assert prod / total_weighted == f_weighted, (prod, f_weighted)
 
+    query_sig = sourmash.load_one_signature(query)
+    query_mh = query_sig.minhash
+
     total_bp_analyzed = sum(unique_overlaps) + remaining_bps[-1]
-    total_query_bp = query_mh.unique_covered_bp # len(query_mh) * query_mh.scaled
+    total_query_bp = len(query_mh) * query_mh.scaled
     assert total_bp_analyzed == total_query_bp
 
 
@@ -5628,8 +5625,8 @@ def test_gather_ani_csv(runtmp, linear_gather, prefetch_gather):
         print(row)
         assert gather_result_names == list(row.keys())
         assert gather_result_names_ci != list(row.keys())
-        assert float(row['intersect_bp']) == 940
-        assert float(row['unique_intersect_bp']) == 940
+        assert float(row['intersect_bp']) == 910
+        assert float(row['unique_intersect_bp']) == 910
         assert float(row['remaining_bp']) == 0
         assert float(row['f_orig_query']) == 1.0
         assert float(row['f_unique_to_query']) == 1.0
@@ -5641,7 +5638,7 @@ def test_gather_ani_csv(runtmp, linear_gather, prefetch_gather):
         assert row['query_filename'].endswith('short2.fa')
         assert row['query_name'] == 'tr1 4'
         assert row['query_md5'] == 'c9d5a795'
-        assert row['query_bp'] == '940'
+        assert row['query_bp'] == '910'
         assert row['query_containment_ani']== '1.0'
         assert row['match_containment_ani'] == '1.0'
         assert row['average_containment_ani'] == '1.0'
@@ -5675,8 +5672,8 @@ def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
         row = next(reader)
         print(row)
         assert gather_result_names == list(row.keys())
-        assert float(row['intersect_bp']) == 940
-        assert float(row['unique_intersect_bp']) == 940
+        assert float(row['intersect_bp']) == 910
+        assert float(row['unique_intersect_bp']) == 910
         assert float(row['remaining_bp']) == 0
         assert float(row['f_orig_query']) == 1.0
         assert float(row['f_unique_to_query']) == 1.0
@@ -5688,7 +5685,7 @@ def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
         assert row['query_filename'].endswith('short2.fa')
         assert row['query_name'] == 'tr1 4'
         assert row['query_md5'] == 'c9d5a795'
-        assert row['query_bp'] == '940'
+        assert row['query_bp'] == '910'
         assert row['query_containment_ani']== '1.0'
         assert row['query_containment_ani_low']== ''
         assert row['query_containment_ani_high']== ''

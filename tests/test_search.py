@@ -270,6 +270,8 @@ def test_scaledSearchResult():
     assert res.cmp_scaled == 1000
     assert res.query_abundance == ss47.minhash.track_abundance
     assert res.match_abundance == ss4763.minhash.track_abundance
+#    assert res.query_bp == len(ss47.minhash) * scaled
+#    assert res.match_bp == len(ss4763.minhash) * scaled
     assert res.ksize == 31
     assert res.moltype == 'DNA'
     assert res.query_filename == '47.fa'
@@ -374,7 +376,7 @@ def test_PrefetchResult():
     scaled = ss47.minhash.scaled
 
     intersect_mh = ss47.minhash.intersection(ss4763.minhash)
-    intersect_bp = len(intersect_mh) * scaled + ss47.minhash.ksize + 1
+    intersect_bp = len(intersect_mh) * scaled
     jaccard=ss4763.jaccard(ss47)
     max_containment=ss4763.max_containment(ss47)
     f_match_query=ss47.contained_by(ss4763)
@@ -391,8 +393,8 @@ def test_PrefetchResult():
     assert res.cmp_scaled == 1000
     assert res.query_abundance == ss47.minhash.track_abundance
     assert res.match_abundance == ss4763.minhash.track_abundance
-    assert res.query_bp == len(ss47.minhash) * scaled + ss47.minhash.ksize + 1
-    assert res.match_bp == len(ss4763.minhash) * scaled + ss4763.minhash.ksize + 1
+    assert res.query_bp == len(ss47.minhash) * scaled
+    assert res.match_bp == len(ss4763.minhash) * scaled
     assert res.ksize == 31
     assert res.moltype == 'DNA'
     assert res.query_filename == '47.fa'
@@ -445,8 +447,9 @@ def test_GatherResult():
     remaining_mh = ss4763.minhash.to_mutable()
     remaining_mh.remove_many(intersect_mh)
 
-    intersect_bp = (len(intersect_mh) * scaled) + ss47.minhash.ksize + 1
+    intersect_bp = len(intersect_mh) * scaled
     max_containment=ss4763.max_containment(ss47)
+    f_match_query = ss47.contained_by(ss4763)
     orig_query_abunds = ss47.minhash.hashes
     queryc_ani = ss47.containment_ani(ss4763)
     matchc_ani = ss4763.containment_ani(ss47)
@@ -469,8 +472,8 @@ def test_GatherResult():
     assert res.cmp_scaled == 1000
     assert res.query_abundance == ss47.minhash.track_abundance
     assert res.match_abundance == ss4763.minhash.track_abundance
-    assert res.query_bp == ss47.minhash.unique_covered_bp
-    assert res.match_bp == ss4763.minhash.unique_covered_bp
+    assert res.query_bp == len(ss47.minhash) * scaled
+    assert res.match_bp == len(ss4763.minhash) * scaled
     assert res.ksize == 31
     assert res.moltype == 'DNA'
     assert res.query_filename == 'podar-ref/47.fa'
