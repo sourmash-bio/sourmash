@@ -918,13 +918,12 @@ class MinHash(RustObject):
         return None
 
     @property
-    def unique_covered_bp(self):
+    def unique_dataset_hashes(self):
         """
-        Approximate covered bp, num_hashes *scaled.
-        Does not take into account ksize (would need to add ksize -1)
+        Approximate total number of hashes (num_hashes *scaled).
         """
         if not self.scaled:
-            raise TypeError("can only approximate bp for scaled MinHashes")
+            raise TypeError("can only approximate unique_dataset_hashes for scaled MinHashes")
         return len(self.hashes) * self.scaled # + (self.ksize - 1)
         
 
