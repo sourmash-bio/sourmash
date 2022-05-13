@@ -42,7 +42,7 @@ def test_FracMinHashComparison(track_abundance):
     assert cmp.jaccard == a.jaccard(b) == b.jaccard(a)
     intersect_mh = a.flatten().intersection(b.flatten())
     assert cmp.intersect_mh == intersect_mh == b.flatten().intersection(a.flatten())
-    assert cmp.intersect_bp == 4
+    assert cmp.total_unique_intersect_hashes == 4
     assert cmp.pass_threshold # default threshold is 0; this should pass
     if track_abundance:
         assert cmp.angular_similarity == a.angular_similarity(b) == b.angular_similarity(a)
@@ -100,7 +100,7 @@ def test_FracMinHashComparison_downsample(track_abundance):
     assert cmp.jaccard == ds_a.jaccard(ds_b) == ds_b.jaccard(ds_a)
     intersect_mh = ds_a.flatten().intersection(ds_b.flatten())
     assert cmp.intersect_mh == intersect_mh == ds_b.flatten().intersection(ds_a.flatten())
-    assert cmp.intersect_bp == 8
+    assert cmp.total_unique_intersect_hashes == 8
     assert cmp.pass_threshold # default threshold is 0; this should pass
     if track_abundance:
         assert cmp.angular_similarity == ds_a.angular_similarity(ds_b) == ds_b.angular_similarity(ds_a)
@@ -158,7 +158,7 @@ def test_FracMinHashComparison_autodownsample(track_abundance):
     assert cmp.jaccard == ds_a.jaccard(ds_b) == ds_b.jaccard(ds_a)
     intersect_mh = ds_a.flatten().intersection(ds_b.flatten())
     assert cmp.intersect_mh == intersect_mh == ds_b.flatten().intersection(ds_a.flatten())
-    assert cmp.intersect_bp == 8
+    assert cmp.total_unique_intersect_hashes == 8
     assert cmp.pass_threshold # default threshold is 0; this should pass
     if track_abundance:
         assert cmp.angular_similarity == ds_a.angular_similarity(ds_b) == ds_b.angular_similarity(ds_a)
@@ -215,7 +215,7 @@ def test_FracMinHashComparison_ignore_abundance(track_abundance):
     assert cmp.jaccard == a.jaccard(b) == b.jaccard(a)
     intersect_mh = ds_a.flatten().intersection(ds_b.flatten())
     assert cmp.intersect_mh == intersect_mh == ds_b.flatten().intersection(ds_a.flatten())
-    assert cmp.intersect_bp == 8
+    assert cmp.total_unique_intersect_hashes == 8
     assert cmp.pass_threshold # default threshold is 0; this should pass
     # with ignore_abundance = True, all of these should not be usable. Do we want errors, or ""/None?
     with pytest.raises(TypeError) as exc:
@@ -266,7 +266,7 @@ def test_FracMinHashComparison_fail_threshold(track_abundance):
     assert cmp.jaccard == a.jaccard(b) == b.jaccard(a)
     intersect_mh = ds_a.flatten().intersection(ds_b.flatten())
     assert cmp.intersect_mh == intersect_mh == ds_b.flatten().intersection(ds_a.flatten())
-    assert cmp.intersect_bp == 8
+    assert cmp.total_unique_intersect_hashes == 8
     assert not cmp.pass_threshold # threshold is 40; this should fail
 
 

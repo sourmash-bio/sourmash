@@ -100,10 +100,15 @@ class FracMinHashComparison(BaseMinHashComparison):
 
     @property
     def pass_threshold(self):
-        return self.intersect_bp >= self.threshold_bp
+        return self.total_unique_intersect_hashes >= self.threshold_bp
 
     @property
-    def intersect_bp(self):
+    def total_unique_intersect_hashes(self):
+        """
+        approx equal to intersect_bp
+        To get true bp estimates, we would need to add `(k-1)`. However, this complicates
+        the iterative gather algorithm, so let's stick with hashes.
+        """
         return len(self.intersect_mh) * self.cmp_scaled
 
     @property

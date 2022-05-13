@@ -353,7 +353,7 @@ class PrefetchResult(BaseResult):
         else:
             raise TypeError("Error: prefetch and gather results must be between scaled signatures.")
         self.get_cmpinfo() # grab comparison metadata
-        self.intersect_bp = self.cmp.intersect_bp
+        self.intersect_bp = self.cmp.total_unique_intersect_hashes
         self.max_containment = self.cmp.max_containment
         self.query_bp = self.mh1.unique_dataset_hashes
         self.match_bp = self.mh2.unique_dataset_hashes
@@ -458,7 +458,7 @@ class GatherResult(PrefetchResult):
         self.query_n_hashes = self.orig_query_len
 
         # calculate intersection with query hashes:
-        self.unique_intersect_bp = self.gather_comparison.intersect_bp
+        self.unique_intersect_bp = self.gather_comparison.total_unique_intersect_hashes
     
         # calculate fraction of subject match with orig query
         self.f_match_orig = self.cmp.mh2_containment
@@ -473,7 +473,7 @@ class GatherResult(PrefetchResult):
         self.f_unique_to_query = len(self.gather_comparison.intersect_mh)/self.orig_query_len
 
         # here, need to make sure to use the mh1_cmp (bc was downsampled to cmp_scaled)
-        self.remaining_bp = (self.gather_comparison.mh1_cmp.unique_dataset_hashes - self.gather_comparison.intersect_bp)
+        self.remaining_bp = (self.gather_comparison.mh1_cmp.unique_dataset_hashes - self.gather_comparison.total_unique_intersect_hashes)
 
         # calculate stats on abundances, if desired.
         self.average_abund, self.median_abund, self.std_abund = None, None, None
