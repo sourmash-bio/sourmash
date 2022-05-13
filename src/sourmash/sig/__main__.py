@@ -1462,7 +1462,7 @@ def collect(args):
     for n_files, loc in enumerate(args.locations):
         notify(f"Loading signature information from {loc}.")
 
-        if n_files and n_files % 100 == 0:
+        if n_files % 100 == 0:
             notify(f'... loaded {len(collected_mf)} sigs from {n_files} files')
         idx = sourmash.load_file_as_index(loc)
         if idx.manifest is None and require_manifest:
