@@ -197,7 +197,7 @@ def test_sig_collect_3_multiple(runtmp, manifest_db_format):
 
 
 def test_sig_collect_3_multiple_use_fromfile(runtmp, manifest_db_format):
-    # collect a manifest from two .zip files
+    # collect a manifest from two .zip files using --from-file
     protzip = utils.get_test_data('prot/protein.zip')
     hpzip = utils.get_test_data('prot/hp.zip')
     dayzip = utils.get_test_data('prot/dayhoff.zip')
