@@ -918,10 +918,10 @@ class MinHash(RustObject):
         return None
 
     @property
-    def covered_bp(self):
+    def unique_covered_bp(self):
         if not self.scaled:
             raise TypeError("can only calculate bp for scaled MinHashes")
-        return len(self.hashes) * self.scaled
+        return len(self.hashes) * self.scaled + (self.ksize - 1)
         
 
 class FrozenMinHash(MinHash):

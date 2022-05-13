@@ -104,7 +104,7 @@ class FracMinHashComparison(BaseMinHashComparison):
 
     @property
     def intersect_bp(self):
-        return len(self.intersect_mh) * self.cmp_scaled
+        return (len(self.intersect_mh) * self.cmp_scaled) + (self.ksize - 1)
 
     @property
     def mh1_containment(self):

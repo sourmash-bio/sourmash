@@ -355,8 +355,8 @@ class PrefetchResult(BaseResult):
         self.get_cmpinfo() # grab comparison metadata
         self.intersect_bp = self.cmp.intersect_bp
         self.max_containment = self.cmp.max_containment
-        self.query_bp = self.mh1.covered_bp
-        self.match_bp = self.mh2.covered_bp
+        self.query_bp = self.mh1.unique_covered_bp
+        self.match_bp = self.mh2.unique_covered_bp
         self.threshold = self.threshold_bp
         self.estimate_containment_ani()
 
@@ -454,7 +454,7 @@ class GatherResult(PrefetchResult):
         # this affects estimation of original query information, and requires us to pass in orig_query_len and orig_query_abunds.
         # we also need to overwrite self.query_bp, self.query_n_hashes, and self.query_abundance
         # todo: find a better solution?
-        self.query_bp = self.orig_query_len * self.query.minhash.scaled
+        self.query_bp = self.orig_query_len * self.query.minhash.scaled + self.ksize - 1
         self.query_n_hashes = self.orig_query_len
 
         # calculate intersection with query hashes:
@@ -473,7 +473,7 @@ class GatherResult(PrefetchResult):
         self.f_unique_to_query = len(self.gather_comparison.intersect_mh)/self.orig_query_len
 
         # here, need to make sure to use the mh1_cmp (bc was downsampled to cmp_scaled)
-        self.remaining_bp = (self.gather_comparison.mh1_cmp.covered_bp - self.gather_comparison.intersect_bp)
+        self.remaining_bp = (self.gather_comparison.mh1_cmp.unique_covered_bp - self.gather_comparison.intersect_bp)
 
         # calculate stats on abundances, if desired.
         self.average_abund, self.median_abund, self.std_abund = None, None, None
@@ -643,7 +643,7 @@ class GatherDatabases:
         # track original query information for later usage?
         track_abundance = query.minhash.track_abundance and not ignore_abundance
         self.orig_query = query
-        self.orig_query_bp = len(query.minhash) * query.minhash.scaled
+        self.orig_query_bp = query.minhash.unique_covered_bp #len(query.minhash) * query.minhash.scaled
         self.orig_query_filename = query.filename
         self.orig_query_name = query.name
         self.orig_query_md5 = query.md5sum()[:8]
