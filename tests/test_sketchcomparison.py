@@ -270,63 +270,51 @@ def test_FracMinHashComparison_fail_threshold(track_abundance):
     assert not cmp.pass_threshold # threshold is 40; this should fail
 
 
-def test_FracMinHashComparison_potential_false_negative(track_abundance):
-    a = MinHash(0, 21, scaled=10000, track_abundance=track_abundance)
-    b = MinHash(0, 21, scaled=10000, track_abundance=track_abundance)
-    c = MinHash(0, 21, scaled=10000, track_abundance=track_abundance)
-    # make sketch overlap quite small
-    a_values = {1:5}
-    b_values = {1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
-    c_values = {2:1}
-
-    if track_abundance:
-        a.set_abundances(a_values)
-        b.set_abundances(b_values)
-        c.set_abundances(c_values)
-    else:
-        a.add_many(a_values.keys())
-        b.add_many(b_values.keys())
-        c.add_many(c_values.keys())
+def test_FracMinHashComparison_potential_false_negative():
+    f1 = utils.get_test_data('scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz')
+    f2 = utils.get_test_data('scaled100/GCF_000006945.1_ASM694v1_genomic.fna.gz.sig.gz')
+    f3 = utils.get_test_data('scaled100/GCF_000783305.1_ASM78330v1_genomic.fna.gz.sig.gz')
+    a = load_one_signature(f1, ksize=21).minhash
+    b = load_one_signature(f2).minhash
+    c = load_one_signature(f3).minhash
+    assert a.size_is_accurate() == True
+    assert b.size_is_accurate() == True
+    assert c.size_is_accurate() == True
 
     # build FracMinHashComparison
     cmp = FracMinHashComparison(a, b)
     # check ani, potential false negative
     cmp.estimate_jaccard_ani()
     assert cmp.jaccard_ani == a.jaccard_ani(b).ani == b.jaccard_ani(a).ani
+    print(cmp.jaccard_ani)
     assert cmp.potential_false_negative == a.jaccard_ani(b).p_exceeds_threshold == b.jaccard_ani(a).p_exceeds_threshold
-    assert cmp.potential_false_negative == True
+    assert cmp.potential_false_negative == False
     assert cmp.jaccard_ani_untrustworthy == a.jaccard_ani(b).je_exceeds_threshold == b.jaccard_ani(a).je_exceeds_threshold
 
     cmp.estimate_mh1_containment_ani()
     a_cont_ani_manual = a.containment_ani(b)
     assert cmp.mh1_containment_ani == a_cont_ani_manual.ani
-    # potential false negative is false here. But since we got it above, don't want to set to False
-    assert cmp.potential_false_negative != a_cont_ani_manual.p_exceeds_threshold
-    assert cmp.potential_false_negative == True
+    print(a_cont_ani_manual.p_exceeds_threshold)
+    assert cmp.potential_false_negative == a_cont_ani_manual.p_exceeds_threshold
+    assert cmp.potential_false_negative == False
 
     cmp.estimate_mh2_containment_ani()
     b_cont_ani_manual = b.containment_ani(a)
     assert cmp.mh2_containment_ani == b_cont_ani_manual.ani
     assert cmp.potential_false_negative == b_cont_ani_manual.p_exceeds_threshold
-    assert cmp.potential_false_negative == True
+    assert cmp.potential_false_negative == False
 
     cmp.estimate_max_containment_ani()
     mc_ani_manual = a.max_containment_ani(b)
     assert cmp.max_containment_ani == max(a.containment_ani(b).ani, b.containment_ani(a).ani) == mc_ani_manual.ani
-    # potential false negative is false here. But since we got it above, don't want to set to False
-    assert cmp.potential_false_negative != mc_ani_manual.p_exceeds_threshold
+    assert cmp.potential_false_negative == mc_ani_manual.p_exceeds_threshold
     assert cmp.avg_containment_ani == np.mean([a.containment_ani(b).ani, b.containment_ani(a).ani])
+    assert cmp.potential_false_negative == False
+
+    #downsample to where it becomes a potential false negative
+    cmp = FracMinHashComparison(a, b, cmp_scaled=16000)
+    cmp.estimate_mh1_containment_ani()
     assert cmp.potential_false_negative == True
-
-    # comparison in opposite direction, so we can test potential_false_neg in other direction
-    cmp2 = FracMinHashComparison(b, a)
-    cmp2.estimate_mh1_containment_ani()
-    assert cmp2.potential_false_negative == True
-
-    # test max cont potential_false_neg (via no overlap at all)
-    cmp3 = FracMinHashComparison(a,c)
-    cmp3.estimate_max_containment_ani()
-    assert cmp3.potential_false_negative == True
 
 
 def test_FracMinHashComparison_incompatible_ksize(track_abundance):
@@ -842,11 +830,11 @@ def test_FracMinHashComparison_ANI_downsample(track_abundance):
     a = load_one_signature(f1, ksize=31).minhash
     b = load_one_signature(f2, ksize=31).minhash
 
-    cmp = FracMinHashComparison(a, b, cmp_scaled=2000, estimate_ani_ci=True)
+    cmp = FracMinHashComparison(a, b, cmp_scaled=1100, estimate_ani_ci=True)
 
     # now manually downsample
-    a = a.downsample(scaled=2000)
-    b = b.downsample(scaled=2000)
+    a = a.downsample(scaled=1100)
+    b = b.downsample(scaled=1100)
 
     # check jaccard ani
     cmp.estimate_jaccard_ani()
