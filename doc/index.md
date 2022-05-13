@@ -169,7 +169,9 @@ Attribution-ShareAlike 4.0 International License</a>.
 ## Contents:
 
 ```{toctree}
-:maxdepth: 2
+---
+maxdepth: 2
+---
 
 command-line
 tutorials
@@ -180,15 +182,6 @@ api
 more-info
 support
 developer
-```
-
-
-```{toctree}
-:hidden:
-README.md
-legacy-databases.md
-plotting-compare.ipynb
-sourmash-sketch.md
 ```
 
 # Indices and tables
