@@ -177,3 +177,35 @@ def test_manifest_filter_cols(manifest_obj):
     assert len(mf) == 1
     row = list(mf.rows)[0]
     assert row['name'] == 'NC_011663.1 Shewanella baltica OS223, complete genome'
+
+
+def test_manifest_iadd(manifest_obj):
+    # test the 'create_manifest' method
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss = sourmash.load_one_signature(sig47)
+
+    def yield_sigs():
+        yield ss, 'fiz'
+
+    new_mf = manifest_obj.create_manifest(yield_sigs(),
+                                          include_signature=False)
+    assert len(new_mf) == 1
+
+    new_mf += manifest_obj
+    assert len(new_mf) == len(manifest_obj) + 1
+
+
+def test_manifest_add(manifest_obj):
+    # test the 'create_manifest' method
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss = sourmash.load_one_signature(sig47)
+
+    def yield_sigs():
+        yield ss, 'fiz'
+
+    new_mf = manifest_obj.create_manifest(yield_sigs(),
+                                          include_signature=False)
+    assert len(new_mf) == 1
+
+    new_mf2 = new_mf + manifest_obj
+    assert len(new_mf2) == len(manifest_obj) + len(new_mf)
