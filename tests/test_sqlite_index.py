@@ -775,6 +775,16 @@ def test_sqlite_manifest_load_existing_index_insert_fail():
     assert "must use SqliteIndex.insert to add to this manifest" in str(exc)
 
 
+def test_sqlite_manifest_create_load_empty(runtmp):
+    # try creating an empty manifest, then loading
+    mfname = runtmp.output("some.sqlmf")
+    mf = SqliteCollectionManifest.create(mfname)
+    mf.close()
+
+    mf2 = load_sqlite_index(mfname)
+    assert len(mf2) == 0
+
+
 def test_sqlite_lca_db_load_existing():
     # try loading an existing sqlite index
     filename = utils.get_test_data('sqlite/lca.sqldb')
@@ -819,8 +829,8 @@ def test_sqlite_lca_db_load_empty(runtmp):
     runtmp.sourmash('tax', 'prepare', '-F', 'sql', '-t', empty_tax,
                     '-o', dbname)
 
-    with pytest.raises(SourmashCommandFailed):
-        runtmp.sourmash('sig', 'describe', dbname)
+    runtmp.sourmash('sig', 'describe', dbname)
+    assert 'loaded 0 signatures' in runtmp.last_result.err
 
 
 def test_sqlite_lca_db_try_load_sqlite_index():

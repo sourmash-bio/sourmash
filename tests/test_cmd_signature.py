@@ -4475,6 +4475,57 @@ def test_sig_check_1_diff_col_name(runtmp):
         mf = CollectionManifest.load_from_csv(fp)
     assert len(mf) == 24
 
+    # internal locations should match
+    sigfile_set = set(sigfiles)
+    for row in mf.rows:
+        assert row['internal_location'] in sigfile_set
+
+    idx = sourmash.load_file_as_index(out_mf)
+    siglist = list(idx.signatures())
+    assert len(siglist) == 24
+    ksizes = set([ ss.minhash.ksize for ss in siglist ])
+    assert len(ksizes) == 3
+    assert 11 in ksizes
+    assert 21 in ksizes
+    assert 31 in ksizes
+
+    # should be one non-matching picklist row
+    with open(missing_csv, newline='') as fp:
+        rows = list(csv.reader(fp))
+    assert len(rows) == 2       # header row + data row
+    assert rows[1][0] == 'NOT THERE'
+
+
+def test_sig_check_1_diff_col_name_zip(runtmp):
+    # 'sig check' with 'name2' column instead of default name, on a zip file
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist-diffcolumn.csv')
+
+    # first create a zip db
+    runtmp.sourmash('sig', 'cat', *sigfiles, '-o', 'gcf.zip')
+
+    # now run against this zip
+    runtmp.sourmash('sig', 'check', 'gcf.zip',
+                    "--picklist", f"{picklist}:name2:name",
+                    "-o", "missing.csv",
+                    '-m', 'mf.csv')
+
+    out_mf = runtmp.output('mf.csv')
+    assert os.path.exists(out_mf)
+
+    missing_csv = runtmp.output('missing.csv')
+    assert os.path.exists(missing_csv)
+
+    # should be 24 matching manifest rows
+    with open(out_mf, newline='') as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 24
+
+    # internal locations should all point to zip
+    ilocs = set(( row['internal_location'] for row in mf.rows ))
+    assert len(ilocs) == 1
+
+    # can we get 'em?
     idx = sourmash.load_file_as_index(out_mf)
     siglist = list(idx.signatures())
     assert len(siglist) == 24
