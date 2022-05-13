@@ -35,7 +35,10 @@ def compare_serial(siglist, ignore_abundance, *, downsample=False, return_ani=Fa
 
     for i, j in iterator:
         if return_ani:
-            similarities[i][j] = similarities[j][i] = siglist[i].jaccard_ani(siglist[j],downsample=downsample).ani
+            ani = siglist[i].jaccard_ani(siglist[j],downsample=downsample).ani
+            if ani == None:
+                ani = 0.0
+            similarities[i][j] = similarities[j][i] = ani
         else:
             similarities[i][j] = similarities[j][i] = siglist[i].similarity(siglist[j], ignore_abundance=ignore_abundance, downsample=downsample)
 
@@ -58,9 +61,13 @@ def compare_serial_containment(siglist, *, downsample=False, return_ani=False):
     containments = np.ones((n, n))
     for i in range(n):
         for j in range(n):
-            if return_ani:
-                containments[i][j] = siglist[j].containment_ani(siglist[i],
-                                                                downsample=downsample).ani
+            if i == j:
+                containments[i][j] = 1
+            elif return_ani:
+                ani = siglist[j].containment_ani(siglist[i], downsample=downsample).ani
+                if ani == None:
+                    ani = 0.0
+                containments[i][j] = ani
             else:
                 containments[i][j] = siglist[j].contained_by(siglist[i],
                                                          downsample=downsample)
@@ -81,15 +88,20 @@ def compare_serial_max_containment(siglist, *, downsample=False, return_ani=Fals
 
     n = len(siglist)
 
+    # Combinations makes all unique sets of pairs, e.g. (A, B) but not (B, A)
+    iterator = itertools.combinations(range(n), 2)
+
     containments = np.ones((n, n))
-    for i in range(n):
-        for j in range(n):
-            if return_ani:
-                containments[i][j] = siglist[j].max_containment_ani(siglist[i],
-                                                             downsample=downsample).ani
-            else:
-                containments[i][j] = siglist[j].max_containment(siglist[i],
-                                                         downsample=downsample)
+
+    for i, j in iterator:
+        if return_ani:
+            ani = siglist[j].max_containment_ani(siglist[i], downsample=downsample).ani
+            if ani == None:
+                ani = 0.0
+            containments[i][j] = containments[j][i] = ani
+        else:
+            containments[i][j] = containments[j][i] = siglist[j].max_containment(siglist[i],
+                                                        downsample=downsample)
 
     return containments
 
@@ -99,7 +111,10 @@ def similarity_args_unpack(args, ignore_abundance, *, downsample, return_ani=Fal
     as it can only be given one argument."""
     sig1, sig2 = args
     if return_ani:
-        return sig1.jaccard_ani(sig2, downsample=downsample).ani
+        ani = sig1.jaccard_ani(sig2, downsample=downsample).ani
+        if ani == None:
+            ani = 0.0
+        return ani
     else:
         return sig1.similarity(sig2,
                            ignore_abundance=ignore_abundance,

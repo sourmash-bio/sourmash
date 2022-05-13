@@ -2,9 +2,11 @@
 Tests for distance utils.
 """
 import pytest
+import numpy as np
 from sourmash.distance_utils import (containment_to_distance, get_exp_probability_nothing_common,
                                     handle_seqlen_nkmers, jaccard_to_distance,
-                                    ANIResult, ciANIResult, jaccardANIResult, var_n_mutated)
+                                    ANIResult, ciANIResult, jaccardANIResult, var_n_mutated,
+                                    set_size_chernoff)
 
 def test_aniresult():
     res = ANIResult(0.4, 0.1)
@@ -34,12 +36,10 @@ def test_aniresult_bad_distance():
 
 
 def test_jaccard_aniresult():
-    res = jaccardANIResult(0.4, 0.1, jaccard_error=0.03, return_ani_despite_threshold=True)
-    res2 = jaccardANIResult(0.4, 0.1, jaccard_error=0.03)
-    assert res.dist == res2.dist == 0.4
-    assert res.ani == 0.6
-    assert res2.ani == ""
-    assert res.p_nothing_in_common == res2.p_nothing_in_common == 0.1
+    res = jaccardANIResult(0.4, 0.1, jaccard_error=0.03)
+    assert res.dist == 0.4
+    assert res.ani == None
+    assert res.p_nothing_in_common == 0.1
     assert res.jaccard_error == 0.03
     assert res.p_exceeds_threshold ==True
     assert res.je_exceeds_threshold ==True
@@ -78,8 +78,8 @@ def test_containment_to_distance_zero():
     res = containment_to_distance(contain,ksize,scaled, n_unique_kmers=nkmers, estimate_ci=True)
     print(res)
     # check results
-    exp_dist,exp_low,exp_high,pnc = 1.0,None,None,1.0
-    exp_id, exp_idlow,exp_idhigh,pnc = 0.0,None,None,1.0
+    exp_dist,exp_low,exp_high,pnc = 1.0,1.0,1.0,1.0
+    exp_id, exp_idlow,exp_idhigh,pnc = 0.0,0.0,0.0,1.0
     assert res.dist == exp_dist
     assert res.dist_low == exp_low
     assert res.dist_high == exp_high
@@ -90,7 +90,7 @@ def test_containment_to_distance_zero():
     # check without returning ci
     res2 = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers)
     print(res2)
-    exp_res = ciANIResult(dist=1.0, p_nothing_in_common=1.0, p_threshold=0.001)
+    exp_res = ciANIResult(dist=1.0, dist_low=1.0, dist_high=1.0, p_nothing_in_common=1.0, p_threshold=0.001)
     assert res2 == exp_res
 
 
@@ -101,8 +101,8 @@ def test_containment_to_distance_one():
     ksize=21
     res = containment_to_distance(contain,ksize,scaled,n_unique_kmers=nkmers,estimate_ci=True)
     print(res)
-    exp_dist, exp_low,exp_high,pnc = 0.0,None,None,0.0
-    exp_id, exp_idlow,exp_idhigh,pnc = 1.0,None,None,0.0
+    exp_dist, exp_low,exp_high,pnc = 0.0,0.0,0.0,0.0
+    exp_id, exp_idlow,exp_idhigh,pnc = 1.0,1.0,1.0,0.0
     assert res.dist == exp_dist
     assert res.dist_low == exp_low
     assert res.dist_high == exp_high
@@ -116,8 +116,8 @@ def test_containment_to_distance_one():
     assert res.dist == exp_dist
     assert res.ani == exp_id
     assert res.p_nothing_in_common == pnc
-    assert res.ani_low == None
-    assert res.ani_high == None
+    assert res.ani_low == 1.0
+    assert res.ani_high == 1.0
 
 
 def test_containment_to_distance_scaled1():
@@ -264,7 +264,7 @@ def test_jaccard_to_distance_scaled():
     print(res)
     # check results
     assert round(res.dist, 3) == round(0.019122659390482077, 3)
-    assert res.ani == ""
+    assert res.ani == None
     assert res.p_exceeds_threshold == False
     assert res.jaccard_error == 0.00018351337045518042
     assert res.je_exceeds_threshold ==True
@@ -286,7 +286,7 @@ def test_jaccard_to_distance_k31():
     print(res)
     # check results
     assert res.je_exceeds_threshold ==True
-    assert res.ani == ""
+    assert res.ani == None
     assert res.p_exceeds_threshold == False
     res2 = jaccard_to_distance(jaccard,ksize,scaled,n_unique_kmers=nkmers, err_threshold=0.1)
     assert res2.je_exceeds_threshold == False
@@ -396,3 +396,24 @@ def test_handle_seqlen_nkmers():
     with pytest.raises(ValueError) as exc:
         nkmers = handle_seqlen_nkmers(ksize)
     assert("Error: distance estimation requires input of either 'sequence_len_bp' or 'n_unique_kmers'") in str(exc)
+
+
+def test_set_size_chernoff():
+    eps = 10**(-6)
+    rel_error = 0.01
+    set_size = 1000000
+    s = 1/0.1  # I'm used to using a scale value between 0 and 1
+    value_from_mathematica = 0.928652
+    assert np.abs(set_size_chernoff(set_size, s, relative_error=rel_error) - value_from_mathematica) < eps
+
+    rel_error = 0.05
+    set_size = 10000
+    s = 1
+    value_from_mathematica = 0.999519
+    assert np.abs(set_size_chernoff(set_size, s, relative_error=rel_error) - value_from_mathematica) < eps
+
+    rel_error = 0.001
+    set_size = 10
+    s = 1/.01
+    value_from_mathematica = -1
+    assert np.abs(set_size_chernoff(set_size, s,relative_error=rel_error) - value_from_mathematica) < eps
