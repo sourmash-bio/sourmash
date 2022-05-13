@@ -2804,8 +2804,8 @@ def test_std_abundance(track_abundance):
         assert not mh2.std_abundance
 
 
-def test_covered_bp(track_abundance):
-    "test covered_bp"
+def test_unique_dataset_hashes(track_abundance):
+    "test total_hashes approximation"
     mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
     mh2 = MinHash(4, 21, track_abundance=track_abundance)
 
@@ -2813,10 +2813,10 @@ def test_covered_bp(track_abundance):
     mh1.add_many((1, 2))
     mh2.add_many((1, 5))
 
-    assert mh1.covered_bp == 4 # hmmm...
+    assert mh1.unique_dataset_hashes == 4
     with pytest.raises(TypeError) as exc:
-        mh2.covered_bp
-    assert "can only calculate bp for scaled MinHashes" in str(exc)
+        mh2.unique_dataset_hashes
+    assert "can only approximate unique_dataset_hashes for scaled MinHashes" in str(exc)
 
 
 def test_containment_ANI():

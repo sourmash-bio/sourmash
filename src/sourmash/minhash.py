@@ -932,10 +932,14 @@ class MinHash(RustObject):
         return None
 
     @property
-    def covered_bp(self):
+    def unique_dataset_hashes(self):
+        """
+        Approximate total number of hashes (num_hashes *scaled).
+        """
         if not self.scaled:
-            raise TypeError("can only calculate bp for scaled MinHashes")
-        return len(self.hashes) * self.scaled
+            raise TypeError("can only approximate unique_dataset_hashes for scaled MinHashes")
+        # TODO: replace set_size with HLL estimate when that gets implemented
+        return len(self.hashes) * self.scaled # + (self.ksize - 1) for bp estimation
 
     def size_is_accurate(self, relative_error=0.05, confidence=0.95):
         """
@@ -947,10 +951,8 @@ class MinHash(RustObject):
         """
         if any([not (0 <= relative_error <= 1), not (0 <= confidence <= 1)]):
             raise ValueError("Error: relative error and confidence values must be between 0 and 1.")
-        
-        # TODO: replace set_size with HLL estimate when that gets implemented
-        set_size = len(self.hashes) * self.scaled
-        probability = set_size_chernoff(set_size, self.scaled, relative_error=relative_error)
+        # to do: replace unique_dataset_hashes with HLL estimation when it gets implemented 
+        probability = set_size_chernoff(self.unique_dataset_hashes, self.scaled, relative_error=relative_error)
         return probability >= confidence
 
 
