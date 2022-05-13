@@ -6,7 +6,7 @@ Reference: https://doi.org/10.1101/2022.01.11.475870
 from dataclasses import dataclass, field
 from scipy.optimize import brentq
 from scipy.stats import norm as scipy_norm
-from numpy import sqrt
+import numpy as np
 from math import log, exp
 
 from .logging import notify
@@ -42,6 +42,7 @@ class ANIResult:
     dist: float
     p_nothing_in_common: float
     p_threshold: float = 1e-3
+    size_is_inaccurate: bool = False
     p_exceeds_threshold: bool = field(init=False)
 
     def check_dist_and_p_threshold(self):
@@ -54,6 +55,9 @@ class ANIResult:
 
     @property
     def ani(self):
+        if self.size_is_inaccurate:
+            notify("WARNING: Cannot estimate ANI because size estimation for at least one of these sketches may be inaccurate.")
+            return None
         return 1 - self.dist
 
 
@@ -62,7 +66,6 @@ class jaccardANIResult(ANIResult):
     """Class for distance/ANI from jaccard (includes jaccard_error)."""
     jaccard_error: float = None
     je_threshold: float = 1e-4
-    return_ani_despite_threshold: bool = False
 
     def __post_init__(self):
         # check values
@@ -76,8 +79,12 @@ class jaccardANIResult(ANIResult):
     @property
     def ani(self):
         # if jaccard error is too high (exceeds threshold), do not trust ANI estimate
-        if self.je_exceeds_threshold and not self.return_ani_despite_threshold:
-            return ""
+        if self.je_exceeds_threshold or self.size_is_inaccurate:
+            if self.size_is_inaccurate:
+                notify("WARNING: Cannot estimate ANI because size estimation for at least one of these sketches may be inaccurate.")
+            if self.je_exceeds_threshold:
+                notify("WARNING: Cannot estimate ANI because jaccard estimation for these sketches is inaccurate.")
+            return None
         return 1 - self.dist
 
 
@@ -101,13 +108,13 @@ class ciANIResult(ANIResult):
 
     @property
     def ani_low(self):
-        if self.dist_high is None:
+        if self.dist_high is None or self.size_is_inaccurate:
             return None
         return 1 - self.dist_high
 
     @property
     def ani_high(self):
-        if self.dist_low is None:
+        if self.dist_low is None or self.size_is_inaccurate:
             return None
         return 1 - self.dist_low
 
@@ -163,6 +170,20 @@ def handle_seqlen_nkmers(ksize, *, sequence_len_bp=None, n_unique_kmers=None):
         return n_unique_kmers
 
 
+def set_size_chernoff(set_size, scaled, *, relative_error=0.05):
+    """
+    Computes the probability that the estimate: sketch_size * scaled deviates from the true
+    set_size by more than relative_error. This relies on the fact that the sketch_size
+    is binomially distributed with parameters sketch_size and 1/scale. The two-sided Chernoff
+    bounds are used.
+    @param set_size: The number of distinct k-mers in the given set
+    @param relative_error: the desired relative error (defaults to 5%)
+    @return: float (the upper bound probability)
+    """
+    upper_bound = 1 - 2 * np.exp(- relative_error**2*set_size/(scaled * 3))
+    return upper_bound
+
+
 def get_expected_log_probability(n_unique_kmers, ksize, mutation_rate, scaled_fraction):
     """helper function
     Note that scaled here needs to be between 0 and 1
@@ -215,9 +236,11 @@ def containment_to_distance(
     sol1, sol2, point_estimate = None, None, None
     n_unique_kmers = handle_seqlen_nkmers(ksize, sequence_len_bp = sequence_len_bp, n_unique_kmers=n_unique_kmers)
     if containment <= 0.0001:
-        point_estimate = 1.0
+#        point_estimate = 1.0
+        point_estimate = sol1 = sol2 = 1.0
     elif containment >= 0.9999:
-        point_estimate = 0.0
+        #point_estimate = 0.0
+        point_estimate = sol1 = sol2 = 0.0
     else:
         point_estimate = 1.0 - containment ** (1.0 / ksize)
         if estimate_ci:
@@ -244,12 +267,12 @@ def containment_to_distance(
 
                 f1 = (
                     lambda pest: (1 - pest) ** ksize
-                    + z_alpha * sqrt(var_direct(pest))
+                    + z_alpha * np.sqrt(var_direct(pest))
                     - containment
                 )
                 f2 = (
                     lambda pest: (1 - pest) ** ksize
-                    - z_alpha * sqrt(var_direct(pest))
+                    - z_alpha * np.sqrt(var_direct(pest))
                     - containment
                 )
 
