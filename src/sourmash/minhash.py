@@ -924,7 +924,7 @@ class MinHash(RustObject):
         """
         if not self.scaled:
             raise TypeError("can only approximate unique_dataset_hashes for scaled MinHashes")
-        return len(self.hashes) * self.scaled # + (self.ksize - 1)
+        return len(self.hashes) * self.scaled # + (self.ksize - 1) for bp estimation
         
 
 class FrozenMinHash(MinHash):

@@ -2813,7 +2813,7 @@ def test_unique_dataset_hashes(track_abundance):
     mh1.add_many((1, 2))
     mh2.add_many((1, 5))
 
-    assert mh1.unique_dataset_hashes == 4 #24 if change to take into account ksize
+    assert mh1.unique_dataset_hashes == 4
     with pytest.raises(TypeError) as exc:
         mh2.unique_dataset_hashes
     assert "can only approximate unique_dataset_hashes for scaled MinHashes" in str(exc)

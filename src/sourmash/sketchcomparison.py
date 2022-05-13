@@ -109,7 +109,7 @@ class FracMinHashComparison(BaseMinHashComparison):
         To get true bp estimates, we would need to add `(k-1)`. However, this complicates
         the iterative gather algorithm, so let's stick with hashes.
         """
-        return len(self.intersect_mh) * self.cmp_scaled
+        return len(self.intersect_mh) * self.cmp_scaled # + (ksize-1) #for bp estimation
 
     @property
     def mh1_containment(self):
