@@ -6,7 +6,6 @@ from dataclasses import dataclass
 
 from .signature import MinHash
 
-
 @dataclass
 class BaseMinHashComparison:
     """Class for standard comparison between two MinHashes"""
@@ -89,6 +88,7 @@ class FracMinHashComparison(BaseMinHashComparison):
     threshold_bp: int = 0
     estimate_ani_ci: bool = False
     ani_confidence: float = 0.95
+#    pfn_threshold: float = 1e-3
 
     def __post_init__(self):
         "Initialize ScaledComparison using values from provided FracMinHashes"
@@ -116,6 +116,7 @@ class FracMinHashComparison(BaseMinHashComparison):
                                             containment=containment,
                                             confidence=self.ani_confidence,
                                             estimate_ci=self.estimate_ani_ci)
+#                                            prob_threshold=self.pfn_threshold)
         # propagate params
         self.mh1_containment_ani = m1_cani.ani
         if m1_cani.p_exceeds_threshold:
@@ -134,6 +135,7 @@ class FracMinHashComparison(BaseMinHashComparison):
                                             containment=containment,
                                             confidence=self.ani_confidence,
                                             estimate_ci=self.estimate_ani_ci)
+#                                            prob_threshold=self.pfn_threshold)
         self.mh2_containment_ani = m2_cani.ani
         if m2_cani.p_exceeds_threshold:
             self.potential_false_negative = True
@@ -150,6 +152,7 @@ class FracMinHashComparison(BaseMinHashComparison):
                                                 max_containment=max_containment,
                                                 confidence=self.ani_confidence,
                                                 estimate_ci=self.estimate_ani_ci)
+#                                                prob_threshold=self.pfn_threshold)
         # propagate params
         self.max_containment_ani = mc_ani_info.ani
         if mc_ani_info.p_exceeds_threshold:
@@ -171,7 +174,11 @@ class FracMinHashComparison(BaseMinHashComparison):
         "Estimate all containment ANI values."
         self.estimate_mh1_containment_ani()
         self.estimate_mh2_containment_ani()
-        self.max_containment_ani = max([self.mh1_containment_ani, self.mh2_containment_ani])
+        if any([self.mh1_containment_ani is None, self.mh2_containment_ani is None]):
+#            self.estimate_max_containment_ani()
+            self.max_containment_ani = None
+        else:
+            self.max_containment_ani = max([self.mh1_containment_ani, self.mh2_containment_ani])
 
     def weighted_intersection(self, from_mh=None, from_abundD={}):
          # map abundances to all intersection hashes.
