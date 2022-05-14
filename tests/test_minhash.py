@@ -343,13 +343,22 @@ def test_dayhoff(track_abundance):
     mh_dayhoff = MinHash(10, 2, is_protein=True,
                          dayhoff=True, hp=False, track_abundance=track_abundance)
     mh_dayhoff.add_sequence('ACTGAC')
+    # forward:
+    #  - ACT GAC (prot: ID; dayhoff: ec; hp: hp)
+    #  - CTG ACN (prot: LT; dayhoff: eb; hp: hp)
+    #  - TGA C (prot: *X; dayhoff: XX; hp: *X)
+    # reverse:
+    #  - CAG TCA (prot: QS; dayhoff: cb; hp: pp)
+    #  - AGT CAN (prot: SX; dayhoff: bX; hp: pX)
+    #  - GTC A (prot: VX, dayhoff: eX; hp: hX)
+    #
 
-    assert len(mh_dayhoff.hashes) == 2
+    assert len(mh_dayhoff.hashes) == 3
     # verify that dayhoff-encoded hashes are different from protein/aa hashes
     mh_protein = MinHash(10, 2, is_protein=True, track_abundance=track_abundance)
     mh_protein.add_sequence('ACTGAC')
 
-    assert len(mh_protein.hashes) == 2
+    assert len(mh_protein.hashes) == 4
     print(mh_protein.hashes)
     print(mh_dayhoff.hashes)
     assert mh_protein.hashes != mh_dayhoff.hashes
@@ -388,12 +397,12 @@ def test_hp(track_abundance):
 
     mh_hp.add_sequence('ACTGAC')
 
-    assert len(mh_hp.hashes) == 2
+    assert len(mh_hp.hashes) == 3
     # verify that hp-encoded hashes are different from protein/aa hashes
     mh_protein = MinHash(10, 2, is_protein=True, track_abundance=track_abundance)
     mh_protein.add_sequence('ACTGAC')
 
-    assert len(mh_protein.hashes) == 2
+    assert len(mh_protein.hashes) == 4
     assert mh_protein.hashes != mh_hp.hashes
 
 
@@ -1376,7 +1385,7 @@ def test_set_abundance_clear_3():
 
     a.add_hash(10)
     assert a.hashes == {10: 1}
-    
+
     a.set_abundances({20: 1, 30: 4}, clear=False)
     assert a.hashes == {10: 1, 20: 1, 30: 4}
 
@@ -1405,8 +1414,8 @@ def test_clear_abundance_on_zero():
         mh.set_abundances({ 2: -1 }) # Test on clear = True
 
     with pytest.raises(ValueError):
-        mh.set_abundances({ 2: -1 }, clear=False)    
-    
+        mh.set_abundances({ 2: -1 }, clear=False)
+
     assert len(mh) == 2 # Assert that nothing was affected
 
 def test_reset_abundance_initialized():
