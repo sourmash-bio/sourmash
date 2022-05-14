@@ -29,6 +29,7 @@ assert command_sketch.DEFAULTS['dna'] == 'k=31,scaled=1000,noabund'
 
 
 def subparser(subparsers):
+    "Aggregates argparse for sourmash dna subcommands"
     subparser = subparsers.add_parser('dna',
                                       aliases=['rna', 'nucleotide', 'nt'],
                                       usage=usage)

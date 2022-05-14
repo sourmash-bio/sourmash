@@ -31,6 +31,7 @@ from sourmash.logging import notify, print_results, error
 
 
 def subparser(subparsers):
+    "Aggregates argparse for sourmash translate subcommands"
     subparser = subparsers.add_parser('translate', usage=usage)
     subparser.add_argument(
         '--license', default='CC0', type=str,

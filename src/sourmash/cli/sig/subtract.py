@@ -4,6 +4,7 @@ from sourmash.cli.utils import (add_moltype_args, add_ksize_arg)
 
 
 def subparser(subparsers):
+    "Aggregates argparse for subtract subcommands"
     subparser = subparsers.add_parser('subtract')
     subparser.add_argument('signature_from')
     subparser.add_argument('subtraction_sigs', nargs='+')
@@ -28,5 +29,6 @@ def subparser(subparsers):
 
 
 def main(args):
+    "returns parsed subtract arguments"
     import sourmash
     return sourmash.sig.__main__.subtract(args)
