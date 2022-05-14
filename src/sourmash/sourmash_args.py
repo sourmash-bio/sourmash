@@ -58,6 +58,7 @@ from . import signature as sigmod
 from .picklist import SignaturePicklist, PickStyle
 from .manifest import CollectionManifest
 import argparse
+from .screed_index import ScreedIndex
 
 
 DEFAULT_LOAD_K = 31
@@ -423,6 +424,13 @@ def _load_zipfile(filename, **kwargs):
 
     return db
 
+def _load_screed(filename, **kwargs):
+    db = None
+    for suffix in '.fa', '.fasta', '.fq', '.fq.gz', '.fa.gz', '.fasta.gz':
+        if filename.endswith(suffix):
+            db = ScreedIndex(filename)
+            return db
+
 
 # all loader functions, in order.
 _loader_functions = [
@@ -434,6 +442,7 @@ _loader_functions = [
     ("load SBT", _load_sbt),
     ("load revindex", _load_revindex),
     ("load collection from zipfile", _load_zipfile),
+    ("load from FASTA/FASTQ", _load_screed),
     ]
 
 
