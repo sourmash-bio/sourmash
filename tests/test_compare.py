@@ -7,7 +7,7 @@ import pytest
 import sourmash
 from sourmash.compare import (compare_all_pairs, compare_parallel,
                               compare_serial, compare_serial_containment,
-                              compare_serial_max_containment)
+                              compare_serial_max_containment, compare_serial_avg_containment)
 import sourmash_tst_utils as utils
 
 
@@ -130,3 +130,15 @@ def test_compare_serial_containmentANI(scaled_siglist):
         [0., 1., 0.97715525, 1.]])
 
     np.testing.assert_array_almost_equal(max_containment_ANI, true_max_containment_ANI, decimal=3)
+
+    # check avg_containment ANI
+    avg_containment_ANI = compare_serial_avg_containment(scaled_siglist, return_ani=True)
+    print(avg_containment_ANI)
+
+    true_avg_containment_ANI = np.array(
+        [[1., 0., 0., 0.],
+        [0., 1., 0.97046289, 0.99333757],
+        [0., 0.97046289, 1., 0.97697067],
+        [0., 0.99333757, 0.97697067, 1.]])
+
+    np.testing.assert_array_almost_equal(avg_containment_ANI, true_avg_containment_ANI, decimal=3)

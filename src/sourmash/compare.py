@@ -106,6 +106,37 @@ def compare_serial_max_containment(siglist, *, downsample=False, return_ani=Fals
     return containments
 
 
+def compare_serial_avg_containment(siglist, *, downsample=False, return_ani=False):
+    """Compare all combinations of signatures and return a matrix
+    of avg_containments. Processes combinations serially on a single
+    process. Best to only use when there are few signatures.
+
+    :param list siglist: list of signatures to compare
+    :param boolean downsample by scaled if True
+    :return: np.array similarity matrix
+    """
+    import numpy as np
+
+    n = len(siglist)
+
+    # Combinations makes all unique sets of pairs, e.g. (A, B) but not (B, A)
+    iterator = itertools.combinations(range(n), 2)
+
+    containments = np.ones((n, n))
+
+    for i, j in iterator:
+        if return_ani:
+            ani = siglist[j].avg_containment_ani(siglist[i], downsample=downsample)
+            if ani == None:
+                ani = 0.0
+            containments[i][j] = containments[j][i] = ani
+        else:
+            containments[i][j] = containments[j][i] = siglist[j].avg_containment(siglist[i],
+                                                        downsample=downsample)
+
+    return containments
+
+
 def similarity_args_unpack(args, ignore_abundance, *, downsample, return_ani=False):
     """Helper function to unpack the arguments. Written to use in pool.imap
     as it can only be given one argument."""
