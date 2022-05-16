@@ -8,7 +8,7 @@ import sys
 
 import screed
 from .compare import (compare_all_pairs, compare_serial_containment,
-                      compare_serial_max_containment)
+                      compare_serial_max_containment, compare_serial_avg_containment)
 from . import MinHash
 from .sbtmh import load_sbt_index, create_sbt_index
 from . import signature as sig
@@ -98,16 +98,17 @@ def compare(args):
         sys.exit(-1)
 
     is_containment = False
-    if args.containment or args.max_containment:
+    if args.containment or args.max_containment or args.avg_containment:
         is_containment = True
 
-        if args.containment and args.max_containment:
-            notify("ERROR: cannot specify both --containment and --max-containment!")
+        containment_args = [args.containment, args.max_containment, args.avg_containment]
+        if sum(containment_args) > 1:
+            notify("ERROR: cannot specify more than one containment argument!")
             sys.exit(-1)
 
     # complain if --containment and not is_scaled
     if is_containment and not is_scaled:
-        error('must use scaled signatures with --containment and --max-containment')
+        error('must use scaled signatures with --containment, --max-containment, and --avg-containment')
         sys.exit(-1)
 
     # complain if --ani and not is_scaled
@@ -123,7 +124,7 @@ def compare(args):
     if is_containment or return_ani:
         track_abundances = any(( s.minhash.track_abundance for s in siglist ))
         if track_abundances:
-            notify('NOTE: --containment, --max-containment, and --estimate-ani ignore signature abundances.')
+            notify('NOTE: --containment, --max-containment, --avg-containment, and --estimate-ani ignore signature abundances.')
 
     # if using --scaled, downsample appropriately
     printed_scaled_msg = False
@@ -152,6 +153,8 @@ def compare(args):
         similarity = compare_serial_containment(siglist, return_ani=return_ani)
     elif args.max_containment:
         similarity = compare_serial_max_containment(siglist, return_ani=return_ani)
+    elif args.avg_containment:
+        similarity = compare_serial_avg_containment(siglist, return_ani=return_ani)
     else:
         similarity = compare_all_pairs(siglist, args.ignore_abundance,
                                        n_jobs=args.processes, return_ani=return_ani)
