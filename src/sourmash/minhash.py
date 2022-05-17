@@ -731,7 +731,8 @@ class MinHash(RustObject):
             notify("WARNING: size estimation for at least one of these sketches may be inaccurate.")
         #return self.count_common(other, downsample) / len(self)
         # with bias factor
-        return self.count_common(other, downsample) / (denom * (1- (1-1/self.scaled)**(denom*self.scaled)))
+        bf = 1.0 - (1.0 - 1.0/self.scaled) ** float(denom * self.scaled)
+        return self.count_common(other, downsample) / (denom * bf)# (1- (1-1/self.scaled)**(denom*self.scaled)))
 
 
     def containment_ani(self, other, *, downsample=False, containment=None, confidence=0.95, estimate_ci = False, prob_threshold=1e-3):
@@ -782,7 +783,8 @@ class MinHash(RustObject):
         if not min_denom:
             return 0.0
         #return self.count_common(other, downsample) / min_denom
-        return self.count_common(other, downsample) / (min_denom * (1- (1-1/self.scaled)**(min_denom*self.scaled)))
+        bf = 1.0 - (1.0 - 1.0/self.scaled) ** float(min_denom * self.scaled)
+        return self.count_common(other, downsample) / (min_denom * bf) #(1- (1-1/self.scaled)**(min_denom*self.scaled)))
 
 
     def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False, prob_threshold=1e-3):
