@@ -307,13 +307,17 @@ class SearchResult(BaseResult):
         if self.cmp_scaled is None:
             raise TypeError("ANI can only be estimated from scaled signatures.")
         if self.searchtype == SearchType.CONTAINMENT:
-            self.cmp.estimate_mh1_containment_ani(containment = self.similarity)
+            self.cmp.estimate_mh1_containment_ani()
+            #self.cmp.estimate_mh1_containment_ani(containment = self.similarity)
+            # redo containment with bias factor
             self.ani = self.cmp.mh1_containment_ani
             if self.estimate_ani_ci:
                 self.ani_low = self.cmp.mh1_containment_ani_low
                 self.ani_high = self.cmp.mh1_containment_ani_high
         elif self.searchtype == SearchType.MAX_CONTAINMENT:
-            self.cmp.estimate_max_containment_ani(max_containment = self.similarity)
+            #self.cmp.estimate_max_containment_ani(max_containment = self.similarity)
+            # redo containment with bias factor
+            self.cmp.estimate_max_containment_ani()
             self.ani = self.cmp.max_containment_ani
             if self.estimate_ani_ci:
                 self.ani_low = self.cmp.max_containment_ani_low

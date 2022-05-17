@@ -718,6 +718,22 @@ class MinHash(RustObject):
         #return self.count_common(other, downsample) / (len(self) * (1- (1-1/self.scaled)^(len(self)*self.scaled)))
 
 
+    def contained_by_with_bf(self, other, downsample=False):
+        """
+        Calculate how much of self is contained by other.
+        """
+        if not (self.scaled and other.scaled):
+            raise TypeError("can only calculate containment for scaled MinHashes")
+        denom = len(self)
+        if not denom:
+            return 0.0
+        if not self.size_is_accurate() or not other.size_is_accurate():
+            notify("WARNING: size estimation for at least one of these sketches may be inaccurate.")
+        #return self.count_common(other, downsample) / len(self)
+        # with bias factor
+        return self.count_common(other, downsample) / (denom * (1- (1-1/self.scaled)**(denom*self.scaled)))
+
+
     def containment_ani(self, other, *, downsample=False, containment=None, confidence=0.95, estimate_ci = False, prob_threshold=1e-3):
         "Use containment to estimate ANI between two MinHash objects."
         if not (self.scaled and other.scaled):
@@ -730,7 +746,8 @@ class MinHash(RustObject):
             self_mh = self.downsample(scaled=scaled)
             other_mh = other.downsample(scaled=scaled)
         if containment is None:
-            containment = self_mh.contained_by(other_mh)
+            #containment = self_mh.contained_by(other_mh)
+            containment = self_mh.contained_by_with_bf(other_mh)
         n_kmers = len(self_mh) * scaled # would be better if hll estimate - see #1798
 
         c_aniresult = containment_to_distance(containment, self_mh.ksize, self_mh.scaled,
@@ -754,6 +771,20 @@ class MinHash(RustObject):
 
         return self.count_common(other, downsample) / min_denom
 
+
+    def max_containment_with_bf(self, other, downsample=False):
+        """
+        Calculate maximum containment.
+        """
+        if not (self.scaled and other.scaled):
+            raise TypeError("can only calculate containment for scaled MinHashes")
+        min_denom = min((len(self), len(other)))
+        if not min_denom:
+            return 0.0
+        #return self.count_common(other, downsample) / min_denom
+        return self.count_common(other, downsample) / (min_denom * (1- (1-1/self.scaled)**(min_denom*self.scaled)))
+
+
     def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False, prob_threshold=1e-3):
         "Use max_containment to estimate ANI between two MinHash objects."
         if not (self.scaled and other.scaled):
@@ -766,7 +797,8 @@ class MinHash(RustObject):
             self_mh = self.downsample(scaled=scaled)
             other_mh = other.downsample(scaled=scaled)
         if max_containment is None:
-            max_containment = self_mh.max_containment(other_mh)
+            #max_containment = self_mh.max_containment(other_mh)
+            max_containment = self_mh.max_containment_with_bf(other_mh)
         min_n_kmers = min(len(self_mh), len(other_mh))
         n_kmers = min_n_kmers * scaled  # would be better if hll estimate - see #1798
 
