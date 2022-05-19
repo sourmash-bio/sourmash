@@ -54,6 +54,9 @@ pub struct KmerMinHash {
 
     #[builder(default)]
     md5sum: Mutex<Option<String>>,
+
+    #[builder(default)]
+    hll: HyperLogLog,
 }
 
 impl PartialEq for KmerMinHash {
@@ -74,6 +77,7 @@ impl Clone for KmerMinHash {
             mins: self.mins.clone(),
             abunds: self.abunds.clone(),
             md5sum: Mutex::new(Some(self.md5sum())),
+            hll: HyperLogLog::with_error_rate(0.01, 1).expect("error building HLL"),
         }
     }
 }
@@ -89,6 +93,7 @@ impl Default for KmerMinHash {
             mins: Vec::with_capacity(1000),
             abunds: None,
             md5sum: Mutex::new(None),
+            hll: HyperLogLog::with_error_rate(0.01, 1).expect("error building HLL"),
         }
     }
 }
@@ -110,6 +115,7 @@ impl Serialize for KmerMinHash {
         partial.serialize_field("max_hash", &self.max_hash)?;
         partial.serialize_field("mins", &self.mins)?;
         partial.serialize_field("md5sum", &self.md5sum())?;
+        partial.serialize_field("hll", &self.hll)?;
 
         if let Some(abunds) = &self.abunds {
             partial.serialize_field("abundances", abunds)?;
@@ -136,6 +142,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             mins: Vec<u64>,
             abundances: Option<Vec<u64>>,
             molecule: String,
+            hll: HyperLogLog,
         }
 
         let tmpsig = TempSig::deserialize(deserializer)?;
@@ -172,6 +179,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             mins,
             abunds,
             hash_function,
+            hll: HyperLogLog::with_error_rate(0.01, 1).expect("error building HLL"),
         })
     }
 }
@@ -184,6 +192,7 @@ impl KmerMinHash {
         seed: u64,
         track_abundance: bool,
         num: u32,
+        hll: HyperLogLog
     ) -> KmerMinHash {
         let mins = if num > 0 {
             Vec::with_capacity(num as usize)
@@ -208,6 +217,7 @@ impl KmerMinHash {
             mins,
             abunds,
             md5sum: Mutex::new(None),
+            hll: HyperLogLog::with_error_rate(0.01, 1).expect("error building HLL"),
         }
     }
 
@@ -236,6 +246,10 @@ impl KmerMinHash {
 
     pub fn is_empty(&self) -> bool {
         self.mins.is_empty()
+    }
+
+    pub fn cardinality(&self) -> u64 {
+        self.hll.cardinality()
     }
 
     pub fn set_hash_function(&mut self, h: HashFunctions) -> Result<(), Error> {
@@ -301,8 +315,9 @@ impl KmerMinHash {
 
     pub fn add_hash(&mut self, hash: u64) {
         self.add_hash_with_abundance(hash, 1);
+        self.hll.add_hash(hash)
     }
-
+    
     pub fn add_hash_with_abundance(&mut self, hash: u64, abundance: u64) {
         let current_max = match self.mins.last() {
             Some(&x) => x,
