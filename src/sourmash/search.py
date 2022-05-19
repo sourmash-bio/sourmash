@@ -322,6 +322,7 @@ class SearchResult(BaseResult):
                 self.ani_high = self.cmp.max_containment_ani_high
         elif self.searchtype == SearchType.JACCARD:
             self.cmp.estimate_jaccard_ani(jaccard=self.similarity)
+            self.jaccard_ani_untrustworthy = self.cmp.jaccard_ani_untrustworthy
             self.ani = self.cmp.jaccard_ani
         # this can be set from any of the above
         self.potential_false_negative = self.cmp.potential_false_negative

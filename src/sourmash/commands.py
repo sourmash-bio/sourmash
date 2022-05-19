@@ -18,6 +18,7 @@ from .sourmash_args import (FileOutput, FileOutputCSV,
                             SaveSignaturesToLocation)
 from .search import prefetch_database, PrefetchResult
 from .index import LazyLinearIndex
+from sourmash.sketchcomparison import FracMinHashComparison
 
 WATERMARK_SIZE = 10000
 
@@ -547,14 +548,21 @@ def search(args):
 
     writer = None
     size_may_be_inaccurate = False
+    jaccard_ani_untrustworthy = False
+    potential_false_negatives = False
     if args.output:
         with FileOutputCSV(args.output) as fp:
             for sr in results:
                 # if this is the first result we're writing, initialize the csv, return writer
                 if writer is None:
                     writer = sr.init_dictwriter(fp)
-                if sr.size_may_be_inaccurate:
-                    size_may_be_inaccurate = True
+                if isinstance(sr, FracMinHashComparison):
+                    if sr.size_may_be_inaccurate:
+                        size_may_be_inaccurate = True
+                    if sr.potential_false_negative:
+                        potential_false_negatives = True
+                    if not is_containment and sr.cmp.jaccard_ani_untrustworthy:
+                        jaccard_ani_untrustworthy = True
                 sr.write(writer)
 
     # save matching signatures upon request
@@ -570,6 +578,10 @@ def search(args):
 
     if size_may_be_inaccurate:
         notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons.")
+    if jaccard_ani_untrustworthy:
+        notify("WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons.")
+    if potential_false_negatives:
+        notify("WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this.")
 
 def categorize(args):
     "Use a database to find the best match to many signatures."
@@ -692,6 +704,7 @@ def gather(args):
         databases = [ LazyLinearIndex(db) for db in databases ]
 
     size_may_be_inaccurate = False
+    potential_false_negatives = False
     if args.prefetch:           # note: on by default!
         notify("Starting prefetch sweep across databases.")
         prefetch_query = query.copy()
@@ -736,6 +749,8 @@ def gather(args):
                     prefetch_result.write(prefetch_csvout_w)
                     if prefetch_result.size_may_be_inaccurate:
                         size_may_be_inaccurate = True
+                    if prefetch_result.potential_false_negative:
+                        potential_false_negatives = True
 
             counters.append(counter)
 
@@ -858,7 +873,8 @@ def gather(args):
 
     if size_may_be_inaccurate:
         notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons.")
-
+    if potential_false_negatives:
+        notify("WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this.")
     # DONE w/gather function.
 
 
@@ -1205,6 +1221,7 @@ def prefetch(args):
 
     did_a_search = False        # track whether we did _any_ search at all!
     size_may_be_inaccurate = False
+    potential_false_negatives = False
     for dbfilename in args.databases:
         notify(f"loading signatures from '{dbfilename}'")
 
@@ -1256,9 +1273,11 @@ def prefetch(args):
                 notify(f"total of {matches_out.count} matching signatures so far.",
                        end="\r")
 
-            # keep track of inaccurate size estimation
+            # keep track of inaccurate size estimation and potential false negatives
             if result.size_may_be_inaccurate:
                 size_may_be_inaccurate = True
+            if result.potential_false_negative:
+                potential_false_negatives = True
 
         did_a_search = True
 
@@ -1323,5 +1342,7 @@ def prefetch(args):
 
     if size_may_be_inaccurate:
         notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons.")
+    if potential_false_negatives:
+        notify("WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this.")
 
     return 0

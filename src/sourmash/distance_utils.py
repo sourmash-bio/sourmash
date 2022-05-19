@@ -25,14 +25,14 @@ def check_prob_threshold(val, threshold=1e-3):
     """
     exceeds_threshold = False
     if threshold is not None and val > threshold:
-        notify("WARNING: These sketches may have no hashes in common based on chance alone.")
+#        notify("WARNING: These sketches may have no hashes in common based on chance alone.")
         exceeds_threshold = True
     return val, exceeds_threshold
 
 def check_jaccard_error(val, threshold=1e-4):
     exceeds_threshold = False
     if threshold is not None and val > threshold:
-        notify(f"WARNING: Error on Jaccard distance point estimate is too high ({val :.4f}).")
+#        notify(f"WARNING: Error on Jaccard distance point estimate is too high ({val :.4f}).")
         exceeds_threshold = True
     return val, exceeds_threshold
 
