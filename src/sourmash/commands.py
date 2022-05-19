@@ -18,7 +18,6 @@ from .sourmash_args import (FileOutput, FileOutputCSV,
                             SaveSignaturesToLocation)
 from .search import prefetch_database, PrefetchResult
 from .index import LazyLinearIndex
-from sourmash.sketchcomparison import FracMinHashComparison
 
 WATERMARK_SIZE = 10000
 
@@ -541,6 +540,10 @@ def search(args):
                len(results), args.num_results)
         n_matches = args.num_results
 
+    size_may_be_inaccurate = False
+    jaccard_ani_untrustworthy = False
+    potential_false_negatives = False
+
     # output!
     print_results("similarity   match")
     print_results("----------   -----")
@@ -548,27 +551,24 @@ def search(args):
         pct = '{:.1f}%'.format(sr.similarity*100)
         name = sr.match._display_name(60)
         print_results('{:>6}       {}', pct, name)
+        if sr.cmp_scaled is not None:
+            if not size_may_be_inaccurate and sr.size_may_be_inaccurate:
+                size_may_be_inaccurate = True
+            if sr.potential_false_negative:
+                potential_false_negatives = True
+            if not is_containment and sr.cmp.jaccard_ani_untrustworthy:
+                jaccard_ani_untrustworthy = True
 
     if args.best_only:
         notify("** reporting only one match because --best-only was set")
 
     writer = None
-    size_may_be_inaccurate = False
-    jaccard_ani_untrustworthy = False
-    potential_false_negatives = False
     if args.output:
         with FileOutputCSV(args.output) as fp:
             for sr in results:
                 # if this is the first result we're writing, initialize the csv, return writer
                 if writer is None:
                     writer = sr.init_dictwriter(fp)
-                if isinstance(sr, FracMinHashComparison):
-                    if sr.size_may_be_inaccurate:
-                        size_may_be_inaccurate = True
-                    if sr.potential_false_negative:
-                        potential_false_negatives = True
-                    if not is_containment and sr.cmp.jaccard_ani_untrustworthy:
-                        jaccard_ani_untrustworthy = True
                 sr.write(writer)
 
     # save matching signatures upon request
