@@ -192,12 +192,14 @@ class BaseResult:
         self.cmp_scaled = self.cmp.cmp_scaled
         self.query_scaled = self.mh1.scaled
         self.match_scaled = self.mh2.scaled
+        self.size_may_be_inaccurate = self.cmp.size_may_be_inaccurate
 
     def build_numminhashcomparison(self, cmp_num=None):
         self.cmp = NumMinHashComparison(self.mh1, self.mh2, cmp_num=cmp_num, ignore_abundance=self.ignore_abundance)
         self.cmp_num = self.cmp.cmp_num
         self.query_num = self.mh1.num
         self.match_num = self.mh2.num
+        self.size_may_be_inaccurate = self.cmp.size_may_be_inaccurate
 
     def get_cmpinfo(self):
         # grab signature /minhash metadata

@@ -68,8 +68,7 @@ class BaseMinHashComparison:
     @property
     def cosine_similarity(self):
         return self.angular_similarity
-
-
+    
 @dataclass
 class NumMinHashComparison(BaseMinHashComparison):
     """Class for standard comparison between two num minhashes"""
@@ -80,6 +79,10 @@ class NumMinHashComparison(BaseMinHashComparison):
         if self.cmp_num is None: # record the num we're doing this comparison on
             self.cmp_num = min(self.mh1.num, self.mh2.num)
         self.check_compatibility_and_downsample(cmp_num=self.cmp_num)
+
+    @property
+    def size_may_be_inaccurate(self):
+        return False # not using size estimation, can ignore
 
 @dataclass
 class FracMinHashComparison(BaseMinHashComparison):
@@ -101,6 +104,14 @@ class FracMinHashComparison(BaseMinHashComparison):
     @property
     def pass_threshold(self):
         return self.total_unique_intersect_hashes >= self.threshold_bp
+
+    @property
+    def size_may_be_inaccurate(self):
+        # if either size estimation may be inaccurate
+        # NOTE: do we want to do this at original scaled instead?
+        if not self.mh1_cmp.size_is_accurate() or not self.mh2_cmp.size_is_accurate():
+            return True
+        return False
 
     @property
     def total_unique_intersect_hashes(self):

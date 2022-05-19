@@ -711,8 +711,8 @@ class MinHash(RustObject):
             raise TypeError("can only calculate containment for scaled MinHashes")
         if not len(self):
             return 0.0
-        if not self.size_is_accurate() or not other.size_is_accurate():
-            notify("WARNING: size estimation for at least one of these sketches may be inaccurate.")
+        #if not self.size_is_accurate() or not other.size_is_accurate():
+        #    notify("WARNING: size estimation for at least one of these sketches may be inaccurate.")
         return self.count_common(other, downsample) / len(self)
         # with bias factor
         #return self.count_common(other, downsample) / (len(self) * (1- (1-1/self.scaled)^(len(self)*self.scaled)))
@@ -949,6 +949,8 @@ class MinHash(RustObject):
         bounds are used.
         Returns True if probability is greater than or equal to the desired confidence.
         """
+        if not self.scaled:
+            raise TypeError("Error: can only estimate dataset size for scaled MinHashes")
         if any([not (0 <= relative_error <= 1), not (0 <= confidence <= 1)]):
             raise ValueError("Error: relative error and confidence values must be between 0 and 1.")
         # to do: replace unique_dataset_hashes with HLL estimation when it gets implemented 

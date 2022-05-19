@@ -546,12 +546,15 @@ def search(args):
         notify("** reporting only one match because --best-only was set")
 
     writer = None
+    size_may_be_inaccurate = False
     if args.output:
         with FileOutputCSV(args.output) as fp:
             for sr in results:
                 # if this is the first result we're writing, initialize the csv, return writer
                 if writer is None:
                     writer = sr.init_dictwriter(fp)
+                if sr.size_may_be_inaccurate:
+                    size_may_be_inaccurate = True
                 sr.write(writer)
 
     # save matching signatures upon request
@@ -565,6 +568,8 @@ def search(args):
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
+    if size_may_be_inaccurate:
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons.")
 
 def categorize(args):
     "Use a database to find the best match to many signatures."
@@ -686,6 +691,7 @@ def gather(args):
     if args.linear:             # force linear traversal?
         databases = [ LazyLinearIndex(db) for db in databases ]
 
+    size_may_be_inaccurate = False
     if args.prefetch:           # note: on by default!
         notify("Starting prefetch sweep across databases.")
         prefetch_query = query.copy()
@@ -728,6 +734,8 @@ def gather(args):
                     if prefetch_csvout_w is None:
                         prefetch_csvout_w = prefetch_result.init_dictwriter(prefetch_csvout_fp)
                     prefetch_result.write(prefetch_csvout_w)
+                    if prefetch_result.size_may_be_inaccurate:
+                        size_may_be_inaccurate = True
 
             counters.append(counter)
 
@@ -750,6 +758,8 @@ def gather(args):
     weighted_missed = 1
     is_abundance = query.minhash.track_abundance and not args.ignore_abundance
     orig_query_mh = query.minhash
+    if not orig_query_mh.size_is_accurate():
+        size_may_be_inaccurate = True
     gather_iter = GatherDatabases(query, counters,
                                   threshold_bp=args.threshold_bp,
                                   ignore_abundance=args.ignore_abundance,
@@ -845,6 +855,9 @@ def gather(args):
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
+
+    if size_may_be_inaccurate:
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons.")
 
     # DONE w/gather function.
 
@@ -1191,6 +1204,7 @@ def prefetch(args):
     noident_mh = query_mh.to_mutable()
 
     did_a_search = False        # track whether we did _any_ search at all!
+    size_may_be_inaccurate = False
     for dbfilename in args.databases:
         notify(f"loading signatures from '{dbfilename}'")
 
@@ -1241,6 +1255,10 @@ def prefetch(args):
             if matches_out.count % 10 == 0:
                 notify(f"total of {matches_out.count} matching signatures so far.",
                        end="\r")
+
+            # keep track of inaccurate size estimation
+            if result.size_may_be_inaccurate:
+                size_may_be_inaccurate = True
 
         did_a_search = True
 
@@ -1302,5 +1320,8 @@ def prefetch(args):
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
+
+    if size_may_be_inaccurate:
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons.")
 
     return 0
