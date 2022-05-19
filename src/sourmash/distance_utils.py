@@ -235,10 +235,10 @@ def containment_to_distance(
     """
     sol1, sol2, point_estimate = None, None, None
     n_unique_kmers = handle_seqlen_nkmers(ksize, sequence_len_bp = sequence_len_bp, n_unique_kmers=n_unique_kmers)
-    if containment <= 0.0001:
-#        point_estimate = 1.0
+    if containment == 0:
+        #point_estimate = 1.0
         point_estimate = sol1 = sol2 = 1.0
-    elif containment >= 0.9999:
+    elif containment == 1:
         #point_estimate = 0.0
         point_estimate = sol1 = sol2 = 0.0
     else:
@@ -325,10 +325,10 @@ def jaccard_to_distance(
     """
     error_lower_bound = None
     n_unique_kmers = handle_seqlen_nkmers(ksize, sequence_len_bp=sequence_len_bp, n_unique_kmers=n_unique_kmers)
-    if jaccard <= 0.0001:
+    if jaccard == 0:
         point_estimate = 1.0
         error_lower_bound = 0.0
-    elif jaccard >= 0.9999:
+    elif jaccard == 1:
         point_estimate = 0.0
         error_lower_bound = 0.0
     else:
