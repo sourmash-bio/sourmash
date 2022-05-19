@@ -5530,8 +5530,6 @@ def test_search_ani_containment_fail(c):
         assert float(row['similarity']) == 0.9556701030927836 
         assert row['ani'] == ""
     
-    assert "WARNING: Cannot estimate ANI because size estimation for at least one of these sketches may be inaccurate." in c.last_result.err
-
 
 @utils.in_tempdir
 def test_search_ani_containment_estimate_ci(c):

@@ -56,7 +56,6 @@ class ANIResult:
     @property
     def ani(self):
         if self.size_is_inaccurate:
-            notify("WARNING: Cannot estimate ANI because size estimation for at least one of these sketches may be inaccurate.")
             return None
         return 1 - self.dist
 
