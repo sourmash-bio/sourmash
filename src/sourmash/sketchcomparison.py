@@ -183,8 +183,13 @@ class FracMinHashComparison(BaseMinHashComparison):
 
     @property
     def avg_containment_ani(self):
-        "Returns single average_containment_ani value."
-        return self.mh1_cmp.avg_containment_ani(self.mh2_cmp)
+        "Returns single average_containment_ani value. Sets self.potential_false_negative internally."
+        self.estimate_mh1_containment_ani()
+        self.estimate_mh2_containment_ani()
+        if any([self.mh1_containment_ani is None, self.mh2_containment_ani is None]):
+            return None
+        else:
+            return (self.mh1_containment_ani + self.mh2_containment_ani)/2
 
     def estimate_all_containment_ani(self):
         "Estimate all containment ANI values."

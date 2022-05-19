@@ -43,6 +43,7 @@ def compare(args):
     siglist = []
     ksizes = set()
     moltypes = set()
+    size_may_be_inaccurate = False
     for filename in inp_files:
         notify(f"loading '{filename}'", end='\r')
         loaded = sourmash_args.load_file_as_signatures(filename,
@@ -137,6 +138,8 @@ def compare(args):
                     notify(f'downsampling to scaled value of {format(max_scaled)}')
                     printed_scaled_msg = True
                 s.minhash = s.minhash.downsample(scaled=max_scaled)
+                if not s.minhash.size_is_accurate():
+                    size_may_be_inaccurate = True
 
     if len(siglist) == 0:
         error('no signatures!')
@@ -191,6 +194,9 @@ def compare(args):
                 for j in range(len(labeltext)):
                     y.append('{}'.format(similarity[i][j]))
                 w.writerow(y)
+
+    if size_may_be_inaccurate:
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons.")
 
 
 def plot(args):
@@ -911,6 +917,8 @@ def multigather(args):
 
     # run gather on all the queries.
     n=0
+    size_may_be_inaccurate = False
+    potential_false_negatives = False
     for queryfile in inp_files:
         # load the query signature(s) & figure out all the things
         for query in sourmash_args.load_file_as_signatures(queryfile,
@@ -979,6 +987,12 @@ def multigather(args):
                               format_bp(result.intersect_bp), pct_query, pct_genome,
                               name)
                 found.append(result)
+                # check for issues impacting ANI estimation
+                if result.size_may_be_inaccurate:
+                    size_may_be_inaccurate = True
+                if result.potential_false_negative:
+                    potential_false_negatives = True
+
 
             # report on thresholding -
             if gather_iter.query.minhash:
@@ -1042,6 +1056,10 @@ def multigather(args):
 
         # fini, next query!
     notify(f'\nconducted gather searches on {n} signatures')
+    if size_may_be_inaccurate:
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons.")
+    if potential_false_negatives:
+        notify("WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this.")
 
 
 def watch(args):
