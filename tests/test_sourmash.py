@@ -5819,6 +5819,11 @@ def test_compare_containment_ani(c):
 
                 assert containment_ani == mat_val #, (i, j)
 
+    print(c.last_result.err)
+    print(c.last_result.out)
+    assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
+    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons." in c.last_result.err
+
 
 @utils.in_tempdir
 def test_compare_jaccard_ani(c):
@@ -5867,6 +5872,11 @@ def test_compare_jaccard_ani(c):
 
                 assert jaccard_ani == mat_val #, (i, j)
 
+    print(c.last_result.err)
+    print(c.last_result.out)
+    assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
+    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons." in c.last_result.err
+
 
 @utils.in_tempdir
 def test_compare_max_containment_ani(c):
@@ -5914,6 +5924,11 @@ def test_compare_max_containment_ani(c):
 
                 assert containment_ani == mat_val, (i, j)
 
+    print(c.last_result.err)
+    print(c.last_result.out)
+    assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
+    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons." in c.last_result.err
+
 
 @utils.in_tempdir
 def test_compare_avg_containment_ani(c):
@@ -5960,6 +5975,11 @@ def test_compare_avg_containment_ani(c):
                     containment_ani = 0.0
 
                 assert containment_ani == mat_val, (i, j)
+
+    print(c.last_result.err)
+    print(c.last_result.out)
+    assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
+    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons." in c.last_result.err
 
 
 @utils.in_tempdir

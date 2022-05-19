@@ -133,13 +133,13 @@ def compare(args):
     if is_scaled:
         max_scaled = max(s.minhash.scaled for s in siglist)
         for s in siglist:
+            if not size_may_be_inaccurate and not s.minhash.size_is_accurate():
+                size_may_be_inaccurate = True
             if s.minhash.scaled != max_scaled:
                 if not printed_scaled_msg:
                     notify(f'downsampling to scaled value of {format(max_scaled)}')
                     printed_scaled_msg = True
                 s.minhash = s.minhash.downsample(scaled=max_scaled)
-                if not s.minhash.size_is_accurate():
-                    size_may_be_inaccurate = True
 
     if len(siglist) == 0:
         error('no signatures!')

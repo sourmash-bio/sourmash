@@ -79,10 +79,10 @@ class jaccardANIResult(ANIResult):
     def ani(self):
         # if jaccard error is too high (exceeds threshold), do not trust ANI estimate
         if self.je_exceeds_threshold or self.size_is_inaccurate:
-            if self.size_is_inaccurate:
-                notify("WARNING: Cannot estimate ANI because size estimation for at least one of these sketches may be inaccurate.")
-            if self.je_exceeds_threshold:
-                notify("WARNING: Cannot estimate ANI because jaccard estimation for these sketches is inaccurate.")
+#            if self.size_is_inaccurate:
+#                notify("WARNING: Cannot estimate ANI because size estimation for at least one of these sketches may be inaccurate.")
+#            if self.je_exceeds_threshold:
+#                notify("WARNING: Cannot estimate ANI because jaccard estimation for these sketches is inaccurate.")
             return None
         return 1 - self.dist
 
