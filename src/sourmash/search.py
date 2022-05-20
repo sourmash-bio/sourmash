@@ -178,6 +178,7 @@ class BaseResult:
     threshold_bp: int = None
     cmp_scaled: int = None
     write_cols: list = None
+    potential_false_negative: bool = False
 
     def init_result(self):
         self.mh1 = self.query.minhash

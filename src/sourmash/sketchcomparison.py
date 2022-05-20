@@ -12,6 +12,7 @@ class BaseMinHashComparison:
     mh1: MinHash
     mh2: MinHash
     ignore_abundance: bool = False # optionally ignore abundances
+    jaccard_ani_untrustworthy: bool = False
 
     def downsample_and_handle_ignore_abundance(self, cmp_num=None, cmp_scaled=None):
         """
