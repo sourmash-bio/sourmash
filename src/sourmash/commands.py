@@ -542,7 +542,6 @@ def search(args):
 
     size_may_be_inaccurate = False
     jaccard_ani_untrustworthy = False
-    potential_false_negatives = False
 
     # output!
     print_results("similarity   match")
@@ -554,8 +553,6 @@ def search(args):
         if sr.cmp_scaled is not None:
             if not size_may_be_inaccurate and sr.size_may_be_inaccurate:
                 size_may_be_inaccurate = True
-            if sr.potential_false_negative:
-                potential_false_negatives = True
             if not is_containment and sr.cmp.jaccard_ani_untrustworthy:
                 jaccard_ani_untrustworthy = True
 
@@ -586,8 +583,6 @@ def search(args):
         notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons.")
     if jaccard_ani_untrustworthy:
         notify("WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons.")
-    if potential_false_negatives:
-        notify("WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this.")
 
 def categorize(args):
     "Use a database to find the best match to many signatures."
@@ -753,10 +748,6 @@ def gather(args):
                     if prefetch_csvout_w is None:
                         prefetch_csvout_w = prefetch_result.init_dictwriter(prefetch_csvout_fp)
                     prefetch_result.write(prefetch_csvout_w)
-                    if prefetch_result.size_may_be_inaccurate:
-                        size_may_be_inaccurate = True
-                    if prefetch_result.potential_false_negative:
-                        potential_false_negatives = True
 
             counters.append(counter)
 
@@ -1292,9 +1283,9 @@ def prefetch(args):
                        end="\r")
 
             # keep track of inaccurate size estimation and potential false negatives
-            if result.size_may_be_inaccurate:
+            if not size_may_be_inaccurate and result.size_may_be_inaccurate:
                 size_may_be_inaccurate = True
-            if result.potential_false_negative:
+            if not potential_false_negatives and result.potential_false_negative:
                 potential_false_negatives = True
 
         did_a_search = True
