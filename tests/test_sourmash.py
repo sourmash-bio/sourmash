@@ -5884,6 +5884,63 @@ def test_compare_jaccard_ani(c):
 
 
 @utils.in_tempdir
+def test_compare_jaccard_ani_jaccard_error_too_high(c):
+    import numpy
+    testdata1 = utils.get_test_data('short.fa')
+    sig1 = c.output('short.fa.sig')
+    testdata2 = utils.get_test_data('short2.fa')
+    sig2 = c.output('short2.fa.sig')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', '-o', sig1, testdata1)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', '-o', sig2, testdata2)
+    testdata_sigs = [sig1, sig2]
+
+    c.run_sourmash('compare', '-k', '31', '--estimate-ani', '--csv', 'output.csv', 'short.fa.sig', 'short2.fa.sig')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+
+    # load the matrix output of compare --estimate-ani
+    with open(c.output('output.csv'), 'rt') as fp:
+        r = iter(csv.reader(fp))
+        headers = next(r)
+
+        mat = numpy.zeros((len(headers), len(headers)))
+        for i, row in enumerate(r):
+            for j, val in enumerate(row):
+                mat[i][j] = float(val)
+
+        print(mat)
+
+    # load in all the input signatures
+    idx_to_sig = dict()
+    for idx, filename in enumerate(testdata_sigs):
+        ss = sourmash.load_one_signature(filename, ksize=31)
+        idx_to_sig[idx] = ss
+
+    # check explicit containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            mat_val = round(mat[i][j], 3)
+            print(mat_val)
+            if i == j:
+                assert 1 == mat_val
+            else:
+                ss_j = idx_to_sig[j]
+                jaccard_ani = ss_j.jaccard_ani(ss_i).ani
+                if jaccard_ani is not None:
+                    jaccard_ani = round(jaccard_ani, 3)
+                else:
+                    jaccard_ani = 0.0
+                print(jaccard_ani)
+
+                assert jaccard_ani == mat_val #, (i, j)
+
+
+    assert "WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons." in c.last_result.err
+    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons." in c.last_result.err
+
+
+@utils.in_tempdir
 def test_compare_max_containment_ani(c):
     import numpy
     
