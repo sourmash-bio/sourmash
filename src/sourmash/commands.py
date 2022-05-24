@@ -979,7 +979,6 @@ def multigather(args):
                 if not size_may_be_inaccurate and result.size_may_be_inaccurate:
                     size_may_be_inaccurate = True
 
-
             # report on thresholding -
             if gather_iter.query.minhash:
                 # if still a query, then we failed the threshold.
