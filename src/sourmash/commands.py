@@ -580,7 +580,7 @@ def search(args):
         sourmash_args.report_picklist(args, picklist)
 
     if size_may_be_inaccurate:
-        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons.")
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons.")
     if jaccard_ani_untrustworthy:
         notify("WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons.")
 
@@ -868,7 +868,7 @@ def gather(args):
         sourmash_args.report_picklist(args, picklist)
 
     if size_may_be_inaccurate:
-        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons.")
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons.")
     # DONE w/gather function.
 
 
@@ -1042,7 +1042,7 @@ def multigather(args):
         # fini, next query!
     notify(f'\nconducted gather searches on {n} signatures')
     if size_may_be_inaccurate:
-        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons.")
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons.")
 
 
 def watch(args):
@@ -1339,6 +1339,6 @@ def prefetch(args):
         sourmash_args.report_picklist(args, picklist)
 
     if size_may_be_inaccurate:
-        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons.")
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons.")
 
     return 0

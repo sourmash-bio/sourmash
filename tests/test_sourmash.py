@@ -5441,7 +5441,7 @@ def test_search_ani_jaccard_error_too_high(c):
         assert row['ani'] == ''
 
     assert "WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons." in c.last_result.err
-    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons." in c.last_result.err
+    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons." in c.last_result.err
 
 
 @utils.in_tempdir
@@ -5533,7 +5533,7 @@ def test_search_ani_containment_fail(c):
         assert float(row['similarity']) == 0.9556701030927836 
         assert row['ani'] == ""
 
-    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons." in c.last_result.err
+    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons." in c.last_result.err
     
 
 @utils.in_tempdir
