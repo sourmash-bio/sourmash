@@ -974,8 +974,9 @@ def multigather(args):
                               format_bp(result.intersect_bp), pct_query, pct_genome,
                               name)
                 found.append(result)
-                # check for issues impacting ANI estimation
-                if result.size_may_be_inaccurate:
+
+                # check for size estimation accuracy, which impacts ANI estimation
+                if not size_may_be_inaccurate and result.size_may_be_inaccurate:
                     size_may_be_inaccurate = True
 
 
@@ -1273,7 +1274,7 @@ def prefetch(args):
                 notify(f"total of {matches_out.count} matching signatures so far.",
                        end="\r")
 
-            # keep track of inaccurate size estimation and potential false negatives
+            # keep track of inaccurate size estimation
             if not size_may_be_inaccurate and result.size_may_be_inaccurate:
                 size_may_be_inaccurate = True
 
