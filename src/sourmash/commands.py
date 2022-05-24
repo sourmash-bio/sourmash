@@ -42,6 +42,7 @@ def compare(args):
     siglist = []
     ksizes = set()
     moltypes = set()
+    size_may_be_inaccurate = False
     for filename in inp_files:
         notify(f"loading '{filename}'", end='\r')
         loaded = sourmash_args.load_file_as_signatures(filename,
@@ -131,6 +132,8 @@ def compare(args):
     if is_scaled:
         max_scaled = max(s.minhash.scaled for s in siglist)
         for s in siglist:
+            if not size_may_be_inaccurate and not s.minhash.size_is_accurate():
+                size_may_be_inaccurate = True
             if s.minhash.scaled != max_scaled:
                 if not printed_scaled_msg:
                     notify(f'downsampling to scaled value of {format(max_scaled)}')
@@ -190,6 +193,9 @@ def compare(args):
                 for j in range(len(labeltext)):
                     y.append('{}'.format(similarity[i][j]))
                 w.writerow(y)
+
+    if size_may_be_inaccurate:
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will be set to 0 for these comparisons.")
 
 
 def plot(args):
@@ -534,6 +540,9 @@ def search(args):
                len(results), args.num_results)
         n_matches = args.num_results
 
+    size_may_be_inaccurate = False
+    jaccard_ani_untrustworthy = False
+
     # output!
     print_results("similarity   match")
     print_results("----------   -----")
@@ -541,6 +550,11 @@ def search(args):
         pct = '{:.1f}%'.format(sr.similarity*100)
         name = sr.match._display_name(60)
         print_results('{:>6}       {}', pct, name)
+        if sr.cmp_scaled is not None:
+            if not size_may_be_inaccurate and sr.size_may_be_inaccurate:
+                size_may_be_inaccurate = True
+            if not is_containment and sr.cmp.jaccard_ani_untrustworthy:
+                jaccard_ani_untrustworthy = True
 
     if args.best_only:
         notify("** reporting only one match because --best-only was set")
@@ -565,6 +579,10 @@ def search(args):
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
+    if size_may_be_inaccurate:
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons.")
+    if jaccard_ani_untrustworthy:
+        notify("WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons.")
 
 def categorize(args):
     "Use a database to find the best match to many signatures."
@@ -686,6 +704,7 @@ def gather(args):
     if args.linear:             # force linear traversal?
         databases = [ LazyLinearIndex(db) for db in databases ]
 
+    size_may_be_inaccurate = False
     if args.prefetch:           # note: on by default!
         notify("Starting prefetch sweep across databases.")
         prefetch_query = query.copy()
@@ -750,6 +769,8 @@ def gather(args):
     weighted_missed = 1
     is_abundance = query.minhash.track_abundance and not args.ignore_abundance
     orig_query_mh = query.minhash
+    if not orig_query_mh.size_is_accurate():
+        size_may_be_inaccurate = True
     gather_iter = GatherDatabases(query, counters,
                                   threshold_bp=args.threshold_bp,
                                   ignore_abundance=args.ignore_abundance,
@@ -846,6 +867,8 @@ def gather(args):
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
+    if size_may_be_inaccurate:
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons.")
     # DONE w/gather function.
 
 
@@ -882,6 +905,7 @@ def multigather(args):
 
     # run gather on all the queries.
     n=0
+    size_may_be_inaccurate = False
     for queryfile in inp_files:
         # load the query signature(s) & figure out all the things
         for query in sourmash_args.load_file_as_signatures(queryfile,
@@ -951,6 +975,10 @@ def multigather(args):
                               name)
                 found.append(result)
 
+                # check for size estimation accuracy, which impacts ANI estimation
+                if not size_may_be_inaccurate and result.size_may_be_inaccurate:
+                    size_may_be_inaccurate = True
+
             # report on thresholding -
             if gather_iter.query.minhash:
                 # if still a query, then we failed the threshold.
@@ -1013,6 +1041,8 @@ def multigather(args):
 
         # fini, next query!
     notify(f'\nconducted gather searches on {n} signatures')
+    if size_may_be_inaccurate:
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons.")
 
 
 def watch(args):
@@ -1191,6 +1221,7 @@ def prefetch(args):
     noident_mh = query_mh.to_mutable()
 
     did_a_search = False        # track whether we did _any_ search at all!
+    size_may_be_inaccurate = False
     for dbfilename in args.databases:
         notify(f"loading signatures from '{dbfilename}'")
 
@@ -1241,6 +1272,10 @@ def prefetch(args):
             if matches_out.count % 10 == 0:
                 notify(f"total of {matches_out.count} matching signatures so far.",
                        end="\r")
+
+            # keep track of inaccurate size estimation
+            if not size_may_be_inaccurate and result.size_may_be_inaccurate:
+                size_may_be_inaccurate = True
 
         did_a_search = True
 
@@ -1302,5 +1337,8 @@ def prefetch(args):
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
+
+    if size_may_be_inaccurate:
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons.")
 
     return 0

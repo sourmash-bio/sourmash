@@ -3093,3 +3093,13 @@ def test_minhash_ani_inaccurate_size_est():
     print(m2_ca_m3)
     assert round(m2_ca_m3.ani,3) == 0.987
     assert m2_ca_m3.size_is_inaccurate == False
+
+
+def test_size_num_fail():
+    f1 = utils.get_test_data('num/47.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+
+    with pytest.raises(TypeError) as exc:
+        mh1.size_is_accurate()
+    print(str(exc))
+    assert "Error: can only estimate dataset size for scaled MinHashes" in str(exc)

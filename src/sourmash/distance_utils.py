@@ -25,14 +25,12 @@ def check_prob_threshold(val, threshold=1e-3):
     """
     exceeds_threshold = False
     if threshold is not None and val > threshold:
-        notify("WARNING: These sketches may have no hashes in common based on chance alone.")
         exceeds_threshold = True
     return val, exceeds_threshold
 
 def check_jaccard_error(val, threshold=1e-4):
     exceeds_threshold = False
     if threshold is not None and val > threshold:
-        notify(f"WARNING: Error on Jaccard distance point estimate is too high ({val :.4f}).")
         exceeds_threshold = True
     return val, exceeds_threshold
 
@@ -56,7 +54,6 @@ class ANIResult:
     @property
     def ani(self):
         if self.size_is_inaccurate:
-            notify("WARNING: Cannot estimate ANI because size estimation for at least one of these sketches may be inaccurate.")
             return None
         return 1 - self.dist
 
@@ -80,10 +77,6 @@ class jaccardANIResult(ANIResult):
     def ani(self):
         # if jaccard error is too high (exceeds threshold), do not trust ANI estimate
         if self.je_exceeds_threshold or self.size_is_inaccurate:
-            if self.size_is_inaccurate:
-                notify("WARNING: Cannot estimate ANI because size estimation for at least one of these sketches may be inaccurate.")
-            if self.je_exceeds_threshold:
-                notify("WARNING: Cannot estimate ANI because jaccard estimation for these sketches is inaccurate.")
             return None
         return 1 - self.dist
 

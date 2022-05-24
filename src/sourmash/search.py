@@ -178,6 +178,7 @@ class BaseResult:
     threshold_bp: int = None
     cmp_scaled: int = None
     write_cols: list = None
+    potential_false_negative: bool = False
 
     def init_result(self):
         self.mh1 = self.query.minhash
@@ -192,12 +193,14 @@ class BaseResult:
         self.cmp_scaled = self.cmp.cmp_scaled
         self.query_scaled = self.mh1.scaled
         self.match_scaled = self.mh2.scaled
+        self.size_may_be_inaccurate = self.cmp.size_may_be_inaccurate
 
     def build_numminhashcomparison(self, cmp_num=None):
         self.cmp = NumMinHashComparison(self.mh1, self.mh2, cmp_num=cmp_num, ignore_abundance=self.ignore_abundance)
         self.cmp_num = self.cmp.cmp_num
         self.query_num = self.mh1.num
         self.match_num = self.mh2.num
+        self.size_may_be_inaccurate = self.cmp.size_may_be_inaccurate
 
     def get_cmpinfo(self):
         # grab signature /minhash metadata
@@ -320,6 +323,7 @@ class SearchResult(BaseResult):
                 self.ani_high = self.cmp.max_containment_ani_high
         elif self.searchtype == SearchType.JACCARD:
             self.cmp.estimate_jaccard_ani(jaccard=self.similarity)
+            self.jaccard_ani_untrustworthy = self.cmp.jaccard_ani_untrustworthy
             self.ani = self.cmp.jaccard_ani
         # this can be set from any of the above
         self.potential_false_negative = self.cmp.potential_false_negative
