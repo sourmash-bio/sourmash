@@ -195,7 +195,7 @@ def compare(args):
                 w.writerow(y)
 
     if size_may_be_inaccurate:
-        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values cannot be generated for these comparisons.")
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will be set to 0 for these comparisons.")
 
 
 def plot(args):

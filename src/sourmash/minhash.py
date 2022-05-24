@@ -711,8 +711,6 @@ class MinHash(RustObject):
             raise TypeError("can only calculate containment for scaled MinHashes")
         if not len(self):
             return 0.0
-        #if not self.size_is_accurate() or not other.size_is_accurate():
-        #    notify("WARNING: size estimation for at least one of these sketches may be inaccurate.")
         return self.count_common(other, downsample) / len(self)
         # with bias factor
         #return self.count_common(other, downsample) / (len(self) * (1- (1-1/self.scaled)^(len(self)*self.scaled)))
