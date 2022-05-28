@@ -998,9 +998,10 @@ def multigather(args):
             query_filename = query.filename
             if not query_filename:
                 # use md5sum if query.filename not properly set
-                query_filename = query.md5sum()
-
-            output_base = os.path.basename(query_filename)
+                output_base = query.md5sum()
+            else:
+                # Uniquify the output file if all signatures were made from the same file (e.g. with --singleton)
+                output_base = os.path.basename(query_filename) + "." + query.md5sum()
             output_csv = output_base + '.csv'
 
             w = None
