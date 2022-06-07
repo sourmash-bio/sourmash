@@ -573,7 +573,7 @@ def load_pathlist_from_file(filename):
     return file_list
 
 
-class FileOutput(object):
+class FileOutput():
     """A context manager for file outputs that handles sys.stdout gracefully.
 
     Usage:
@@ -655,7 +655,7 @@ class FileOutputCSV(FileOutput):
         return self.fp
 
 
-class SignatureLoadingProgress(object):
+class SignatureLoadingProgress():
     """A wrapper for signature loading progress reporting.
 
     Instantiate this class once, and then pass it to load_file_as_signatures

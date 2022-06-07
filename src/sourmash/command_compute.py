@@ -130,7 +130,7 @@ def compute(args):
         _compute_individual(args, signatures_factory)
 
 
-class _signatures_for_compute_factory(object):
+class _signatures_for_compute_factory():
     "Build signatures on demand, based on args input to 'compute'."
     def __init__(self, args):
         self.args = args

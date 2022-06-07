@@ -85,7 +85,7 @@ def _parse_params_str(params_str):
     return moltype, params
 
 
-class _signatures_for_sketch_factory(object):
+class _signatures_for_sketch_factory():
     "Build sigs on demand, based on args input to 'sketch'."
     def __init__(self, params_str_list, default_moltype):
         # first, set up defaults per-moltype

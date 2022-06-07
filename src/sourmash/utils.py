@@ -6,7 +6,7 @@ from .exceptions import exceptions_by_code, SourmashError
 attached_refs = weakref.WeakKeyDictionary()
 
 
-class RustObject(object):
+class RustObject():
     __dealloc_func__ = None
     _objptr = None
     _shared = False
