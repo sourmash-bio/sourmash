@@ -36,7 +36,7 @@ STORAGES = {
 NodePos = namedtuple("NodePos", ["pos", "node"])
 
 
-class GraphFactory():
+class GraphFactory:
     """Build new nodegraphs (Bloom filters) of a specific (fixed) size.
 
     Parameters
@@ -1290,7 +1290,7 @@ class SBT(Index):
         return self
 
 
-class Node():
+class Node:
     "Internal node of SBT."
 
     def __init__(self, factory, name=None, path=None, storage=None):
@@ -1349,7 +1349,7 @@ class Node():
             parent.metadata['min_n_below'] = min_n_below
 
 
-class Leaf():
+class Leaf:
     def __init__(self, metadata, data=None, name=None, storage=None, path=None):
         self.metadata = metadata
 
