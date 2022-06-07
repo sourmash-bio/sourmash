@@ -3,10 +3,10 @@ import weakref
 from ._lowlevel import ffi, lib
 from .exceptions import exceptions_by_code, SourmashError
 
-attached_refs = weakref.WeakKeyDictionary
+attached_refs = weakref.WeakKeyDictionary()
 
 
-class RustObject:
+class RustObject():
     __dealloc_func__ = None
     _objptr = None
     _shared = False
@@ -22,7 +22,7 @@ class RustObject:
         return rv
 
     def _methodcall(self, func, *args):
-        return rustcall(func, self._get_objptr, *args)
+        return rustcall(func, self._get_objptr(), *args)
 
     def _get_objptr(self):
         if not self._objptr:
@@ -64,15 +64,15 @@ def encode_str(s):
 
 def rustcall(func, *args):
     """Calls rust method and does some error handling."""
-    lib.sourmash_err_clear
+    lib.sourmash_err_clear()
     rv = func(*args)
-    err = lib.sourmash_err_get_last_code
+    err = lib.sourmash_err_get_last_code()
     if not err:
         return rv
-    msg = lib.sourmash_err_get_last_message
+    msg = lib.sourmash_err_get_last_message()
     cls = exceptions_by_code.get(err, SourmashError)
     exc = cls(decode_str(msg))
-    backtrace = decode_str(lib.sourmash_err_get_backtrace)
+    backtrace = decode_str(lib.sourmash_err_get_backtrace())
     if backtrace:
         exc.rust_info = backtrace
     raise exc

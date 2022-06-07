@@ -85,12 +85,12 @@ def _parse_params_str(params_str):
     return moltype, params
 
 
-class _signatures_for_sketch_factory:
+class _signatures_for_sketch_factory():
     "Build sigs on demand, based on args input to 'sketch'."
     def __init__(self, params_str_list, default_moltype):
         # first, set up defaults per-moltype
         defaults = {}
-        for moltype, pstr in DEFAULTS.items:
+        for moltype, pstr in DEFAULTS.items():
             mt, d = _parse_params_str(pstr)
             assert mt is None             # defaults cannot have moltype set!
             defaults[moltype] = d
@@ -301,9 +301,9 @@ def translate(args):
 def _compute_sigs(to_build, output, *, check_sequence=False):
     "actually build the signatures in 'to_build' and output them to 'output'"
     save_sigs = sourmash_args.SaveSignaturesToLocation(output)
-    save_sigs.open
+    save_sigs.open()
 
-    for (name, filename), param_objs in to_build.items:
+    for (name, filename), param_objs in to_build.items():
         assert param_objs
 
         # now, set up to iterate over sequences.
@@ -347,7 +347,7 @@ def _compute_sigs(to_build, output, *, check_sequence=False):
             notify(f'calculated {len(sigs)} signatures for {n+1} sequences in {filename}')
 
 
-    save_sigs.close
+    save_sigs.close()
     notify(f"saved {len(save_sigs)} signature(s) to '{save_sigs.location}'. Note: signature license is CC0.")
 
 
@@ -358,10 +358,10 @@ def _output_csv_info(filename, sigs_to_build):
         w = csv.DictWriter(csv_fp, fieldnames=['filename', 'sketchtype',
                                                'output_index', 'name',
                                                'param_strs'])
-        w.writeheader
+        w.writeheader()
 
         output_n = 0
-        for (name, filename), param_objs in sigs_to_build.items:
+        for (name, filename), param_objs in sigs_to_build.items():
             param_strs = []
 
             # should all be the same!
@@ -373,7 +373,7 @@ def _output_csv_info(filename, sigs_to_build):
                 sketchtype = "protein"
 
             for p in param_objs:
-                param_strs.append(p.to_param_str)
+                param_strs.append(p.to_param_str())
 
             row = dict(filename=filename, sketchtype=sketchtype,
                        param_strs="-p " + " -p ".join(param_strs),
@@ -492,7 +492,7 @@ def fromfile(args):
     total_sigs = 0
     missing = defaultdict(list)
     missing_count = 0
-    for name, (genome, proteome) in all_names.items:
+    for name, (genome, proteome) in all_names.items():
         plist = already_done.get(name, [])
 
         # check list of already done against build parameters
@@ -562,9 +562,9 @@ def fromfile(args):
     print_results('---')
     print_results("summary of sketches to build:")
 
-    counter = Counter
+    counter = Counter()
     build_info_d = {}
-    for filename, param_objs in to_build.items:
+    for filename, param_objs in to_build.items():
         for p in param_objs:
             moltype = p.moltype
             assert len(p.ksizes) == 1
@@ -576,7 +576,7 @@ def fromfile(args):
                               abund=p.track_abundance)
             counter[ski] += 1
 
-    for ski, count in counter.items:
+    for ski, count in counter.items():
         mh_type = f"num={ski.num}" if ski.num else f"scaled={ski.scaled}"
         mh_abund = ", abund" if ski.abund else ""
 

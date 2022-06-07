@@ -194,7 +194,7 @@ def apply_picklist_and_pattern(db, picklist, pattern):
 
         manifest = manifest.filter_on_columns(pattern,
                                               ["name", "filename", "md5"])
-        pattern_picklist = manifest.to_picklist
+        pattern_picklist = manifest.to_picklist()
         db = db.select(picklist=pattern_picklist)
 
     return db
@@ -217,8 +217,8 @@ def load_query_signature(filename, ksize, select_moltype, select_md5=None):
     if len(sl) and select_md5:
         found_sig = None
         for sig in sl:
-            sig_md5 = sig.md5sum
-            if sig_md5.startswith(select_md5.lower):
+            sig_md5 = sig.md5sum()
+            if sig_md5.startswith(select_md5.lower()):
                 # make sure we pick only one --
                 if found_sig is not None:
                     error(f"Error! Multiple signatures start with md5 '{select_md5}'")
@@ -232,7 +232,7 @@ def load_query_signature(filename, ksize, select_moltype, select_md5=None):
     if len(sl) and ksize is None:
         ksizes = set([ ss.minhash.ksize for ss in sl ])
         if len(ksizes) == 1:
-            ksize = ksizes.pop
+            ksize = ksizes.pop()
             sl = [ ss for ss in sl if ss.minhash.ksize == ksize ]
             notify(f'select query k={ksize} automatically.')
         elif DEFAULT_LOAD_K in ksizes:
@@ -456,7 +456,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
                          cache_size=cache_size)
         except ValueError:
             debug_literal(f"_load_databases: FAIL on fn {n} {desc}.")
-            debug_literal(traceback.format_exc)
+            debug_literal(traceback.format_exc())
 
         if db is not None:
             loaded = True
@@ -516,7 +516,7 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
     """Load 'filename' as a collection of signatures. Return an iterable.
 
     If 'filename' contains an SBT or LCA indexed database, or a regular
-    Zip file, will return a signatures generator. If a Zip file and
+    Zip file, will return a signatures() generator. If a Zip file and
     yield_all_files=True, will try to load all files within zip, not just
     .sig files.
 
@@ -545,7 +545,7 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
     # apply pattern search & picklist
     db = apply_picklist_and_pattern(db, picklist, pattern)
 
-    loader = db.signatures
+    loader = db.signatures()
 
     if progress is not None:
         return progress.start_file(filename, loader)
@@ -573,7 +573,7 @@ def load_pathlist_from_file(filename):
     return file_list
 
 
-class FileOutput:
+class FileOutput():
     """A context manager for file outputs that handles sys.stdout gracefully.
 
     Usage:
@@ -585,9 +585,9 @@ class FileOutput:
     is '-' or None. This makes it nicely compatible with argparse usage,
     e.g.
 
-    p = argparse.ArgumentParser
+    p = argparse.ArgumentParser()
     p.add_argument('--output')
-    args = p.parse_args
+    args = p.parse_args()
     ...
     with FileOutput(args.output, 'wt') as fp:
        ...
@@ -610,15 +610,15 @@ class FileOutput:
 
     def close(self):
         if self.fp is not None: # in case of stdout
-            self.fp.close
+            self.fp.close()
 
     def __enter__(self):
-        return self.open
+        return self.open()
 
     def __exit__(self, type, value, traceback):
         # do we need to handle exceptions here?
         if self.fp:
-            self.fp.close
+            self.fp.close()
 
         return False
 
@@ -635,9 +635,9 @@ class FileOutputCSV(FileOutput):
     is '-' or None. This makes it nicely compatible with argparse usage,
     e.g.
 
-    p = argparse.ArgumentParser
+    p = argparse.ArgumentParser()
     p.add_argument('--output')
-    args = p.parse_args
+    args = p.parse_args()
     ...
     with FileOutputCSV(args.output) as w:
        ...
@@ -655,7 +655,7 @@ class FileOutputCSV(FileOutput):
         return self.fp
 
 
-class SignatureLoadingProgress:
+class SignatureLoadingProgress():
     """A wrapper for signature loading progress reporting.
 
     Instantiate this class once, and then pass it to load_file_as_signatures
@@ -742,7 +742,7 @@ def load_many_signatures(locations, progress, *, yield_all_files=False,
             idx = apply_picklist_and_pattern(idx, picklist, pattern)
 
             # start up iterator,
-            loader = idx.signatures_with_location
+            loader = idx.signatures_with_location()
 
             # go!
             n = 0               # count signatures loaded
@@ -792,7 +792,7 @@ def get_manifest(idx, *, require=True, rebuild=False):
     # need to build one...
     try:
         notify("Generating a manifest...")
-        m = CollectionManifest.create_manifest(idx._signatures_with_internal,
+        m = CollectionManifest.create_manifest(idx._signatures_with_internal(),
                                                include_signature=False)
         debug_literal("get_manifest: rebuilt manifest.")
     except NotImplementedError:
@@ -812,7 +812,7 @@ def get_manifest(idx, *, require=True, rebuild=False):
 def _get_signatures_from_rust(siglist):
     for ss in siglist:
         try:
-            ss.md5sum
+            ss.md5sum()
             yield ss
         except sourmash.exceptions.Panic:
             # this deals with a disconnect between the way Rust
@@ -839,12 +839,12 @@ class _BaseSaveSignaturesToLocation:
 
     def __enter__(self):
         "provide context manager functionality"
-        self.open
+        self.open()
         return self
 
     def __exit__(self, type, value, traceback):
         "provide context manager functionality"
-        self.close
+        self.close()
 
     def add(self, ss):
         self.count += 1
@@ -857,7 +857,7 @@ class _BaseSaveSignaturesToLocation:
 class SaveSignatures_NoOutput(_BaseSaveSignaturesToLocation):
     "Do not save signatures."
     def __repr__(self):
-        return 'SaveSignatures_NoOutput'
+        return 'SaveSignatures_NoOutput()'
 
     def open(self):
         pass
@@ -869,7 +869,7 @@ class SaveSignatures_NoOutput(_BaseSaveSignaturesToLocation):
 class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
     "Save signatures within a directory, using md5sum names."
     def __init__(self, location):
-        super.__init__(location)
+        super().__init__(location)
 
     def __repr__(self):
         return f"SaveSignatures_Directory('{self.location}')"
@@ -887,8 +887,8 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
             sys.exit(-1)
 
     def add(self, ss):
-        super.add(ss)
-        md5 = ss.md5sum
+        super().add(ss)
+        md5 = ss.md5sum()
 
         # don't overwrite even if duplicate md5sum
         outname = os.path.join(self.location, f"{md5}.sig.gz")
@@ -907,7 +907,7 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
 class SaveSignatures_SqliteIndex(_BaseSaveSignaturesToLocation):
     "Save signatures within a directory, using md5sum names."
     def __init__(self, location):
-        super.__init__(location)
+        super().__init__(location)
         self.location = location
         self.idx = None
         self.cursor = None
@@ -916,28 +916,28 @@ class SaveSignatures_SqliteIndex(_BaseSaveSignaturesToLocation):
         return f"SaveSignatures_SqliteIndex('{self.location}')"
 
     def close(self):
-        self.idx.commit
+        self.idx.commit()
         self.cursor.execute('VACUUM')
-        self.idx.close
+        self.idx.close()
 
     def open(self):
         self.idx = SqliteIndex.create(self.location, append=True)
-        self.cursor = self.idx.cursor
+        self.cursor = self.idx.cursor()
 
     def add(self, add_sig):
         for ss in _get_signatures_from_rust([add_sig]):
-            super.add(ss)
+            super().add(ss)
             self.idx.insert(ss, cursor=self.cursor, commit=False)
 
             # commit every 1000 signatures.
             if self.count % 1000 == 0:
-                self.idx.commit
+                self.idx.commit()
 
 
 class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
     "Save signatures to a .sig JSON file."
     def __init__(self, location):
-        super.__init__(location)
+        super().__init__(location)
         self.keep = []
         self.compress = 0
         if self.location.endswith('.gz'):
@@ -967,14 +967,14 @@ class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
                                          compression=self.compress)
 
     def add(self, ss):
-        super.add(ss)
+        super().add(ss)
         self.keep.append(ss)
 
 
 class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
     "Save compressed signatures in an uncompressed Zip file."
     def __init__(self, location):
-        super.__init__(location)
+        super().__init__(location)
         self.storage = None
 
     def __repr__(self):
@@ -985,14 +985,14 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         manifest = CollectionManifest(self.manifest_rows)
         manifest_name = f"SOURMASH-MANIFEST.csv"
 
-        manifest_fp = StringIO
+        manifest_fp = StringIO()
         manifest.write_to_csv(manifest_fp, write_header=True)
-        manifest_data = manifest_fp.getvalue.encode("utf-8")
+        manifest_data = manifest_fp.getvalue().encode("utf-8")
 
         self.storage.save(manifest_name, manifest_data, overwrite=True,
                           compress=True)
-        self.storage.flush
-        self.storage.close
+        self.storage.flush()
+        self.storage.close()
 
     def open(self):
         from .sbt_storage import ZipStorage
@@ -1018,7 +1018,7 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
             manifest_data = manifest_data.decode('utf-8')
             manifest_fp = StringIO(manifest_data)
             manifest = CollectionManifest.load_from_csv(manifest_fp)
-            self.manifest_rows = list(manifest._select)
+            self.manifest_rows = list(manifest._select())
 
         self.storage = storage
 
@@ -1035,7 +1035,7 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
 
         for ss in _get_signatures_from_rust([add_sig]):
             buf = sigmod.save_signatures([ss], compression=1)
-            md5 = ss.md5sum
+            md5 = ss.md5sum()
 
             storage = self.storage
             path = f'{storage.subdir}/{md5}.sig.gz'
@@ -1045,7 +1045,7 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
             row = CollectionManifest.make_manifest_row(ss, location,
                                                        include_signature=False)
             self.manifest_rows.append(row)
-            super.add(ss)
+            super().add(ss)
 
 
 class SigFileSaveType(Enum):
