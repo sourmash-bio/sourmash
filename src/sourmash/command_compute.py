@@ -130,7 +130,7 @@ def compute(args):
         _compute_individual(args, signatures_factory)
 
 
-class _signatures_for_compute_factory():
+class _signatures_for_compute_factory:
     "Build signatures on demand, based on args input to 'compute'."
     def __init__(self, args):
         self.args = args
@@ -192,17 +192,17 @@ def _compute_individual(args, signatures_factory):
 
             # open output for signatures
             if open_output_each_time:
-                save_sigs.open()
+                save_sigs.open
             # or... is this the first time to write something to args.output?
             elif first_file_for_output:
                 save_sigs = sourmash_args.SaveSignaturesToLocation(args.output)
-                save_sigs.open()
+                save_sigs.open
                 first_file_for_output = False
 
             # make a new signature for each sequence?
             if args.singleton:
                 for n, record in enumerate(screed_iter):
-                    sigs = signatures_factory()
+                    sigs = signatures_factory
                     try:
                         add_seq(sigs, record.sequence,
                                 args.input_is_protein, args.check_sequence)
@@ -219,7 +219,7 @@ def _compute_individual(args, signatures_factory):
 
             # nope; make a single sig for the whole file
             else:
-                sigs = signatures_factory()
+                sigs = signatures_factory
 
                 # consume & calculate signatures
                 notify(f'... reading sequences from {filename}')
@@ -248,7 +248,7 @@ def _compute_individual(args, signatures_factory):
 
         # if not args.output, close output for every input filename.
         if open_output_each_time:
-            save_sigs.close()
+            save_sigs.close
             notify(f"saved {len(save_sigs)} signature(s) to '{save_sigs.location}'. Note: signature license is CC0.")
             save_sigs = None
 
@@ -256,13 +256,13 @@ def _compute_individual(args, signatures_factory):
     # if --output-dir specified, all collected signatures => args.output,
     # and we need to close here.
     if args.output and save_sigs is not None:
-        save_sigs.close()
+        save_sigs.close
         notify(f"saved {len(save_sigs)} signature(s) to '{save_sigs.location}'. Note: signature license is CC0.")
 
 
 def _compute_merged(args, signatures_factory):
     # make a signature for the whole file
-    sigs = signatures_factory()
+    sigs = signatures_factory
 
     total_seq = 0
     for filename in args.filenames:
@@ -342,7 +342,7 @@ class ComputeParameters(RustObject):
                  num_hashes=500,
                  track_abundance=False,
                  scaled=0):
-        self._objptr = lib.computeparams_new()
+        self._objptr = lib.computeparams_new
 
         self.seed = seed
         self.ksizes = ksizes
@@ -442,10 +442,10 @@ class ComputeParameters(RustObject):
 
     @staticmethod
     def from_args(args):
-        ptr = lib.computeparams_new()
+        ptr = lib.computeparams_new
         ret = ComputeParameters._from_objptr(ptr)
 
-        for arg, value in vars(args).items():
+        for arg, value in vars(args).items:
             try:
                 getattr(type(ret), arg).fset(ret, value)
             except AttributeError:
