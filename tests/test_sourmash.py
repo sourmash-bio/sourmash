@@ -5441,7 +5441,6 @@ def test_search_ani_jaccard_error_too_high(c):
         assert row['ani'] == ''
 
     assert "WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons." in c.last_result.err
-    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons." in c.last_result.err
 
 
 @utils.in_tempdir
@@ -5517,7 +5516,7 @@ def test_search_ani_containment(c):
 def test_search_ani_containment_fail(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', testdata1, testdata2)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=10', testdata1, testdata2)
 
     c.run_sourmash('search', '--containment', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
     print(c.last_result.status, c.last_result.out, c.last_result.err)
@@ -5530,7 +5529,7 @@ def test_search_ani_containment_fail(c):
         row = next(reader)
         print(row)
         assert search_result_names == list(row.keys())
-        assert float(row['similarity']) == 0.9556701030927836 
+        assert round(float(row['similarity']), 3) == 0.967
         assert row['ani'] == ""
 
     assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons." in c.last_result.err
@@ -5673,16 +5672,15 @@ def test_search_jaccard_ani_downsample(c):
         row = next(reader)
         print(row)
         assert round(float(row['similarity']), 3) == round(0.6634517766497462, 3)
-        #downsampled is too small, so ANI is 0. can get from dist, though
-        assert row['ani'] == ""
+        assert round(float(row['ani']), 3) == 0.993
 
     #downsample manually and assert same ANI
     ss47_ds = signature.load_one_signature(ds_sig47)
     print("SCALED:", ss47_ds.minhash.scaled, ss4763.minhash.scaled)
     ani_info = ss47_ds.jaccard_ani(ss4763, downsample=True)
     print(ani_info)
-    assert ani_info.ani == None
-    assert (1 - round(ani_info.dist, 3)) == round(0.992530907924384, 3)
+    assert round(ani_info.ani,3) == 0.993
+    assert (1 - round(ani_info.dist, 3)) == 0.993
 
 
 def test_gather_ani_csv(runtmp, linear_gather, prefetch_gather):
@@ -5827,7 +5825,6 @@ def test_compare_containment_ani(c):
     print(c.last_result.err)
     print(c.last_result.out)
     assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
-    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will be set to 0 for these comparisons." in c.last_result.err
 
 
 @utils.in_tempdir
@@ -5880,7 +5877,6 @@ def test_compare_jaccard_ani(c):
     print(c.last_result.err)
     print(c.last_result.out)
     assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
-    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will be set to 0 for these comparisons." in c.last_result.err
 
 
 @utils.in_tempdir
@@ -5937,7 +5933,6 @@ def test_compare_jaccard_ani_jaccard_error_too_high(c):
 
 
     assert "WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons." in c.last_result.err
-    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will be set to 0 for these comparisons." in c.last_result.err
 
 
 @utils.in_tempdir
@@ -5989,7 +5984,6 @@ def test_compare_max_containment_ani(c):
     print(c.last_result.err)
     print(c.last_result.out)
     assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
-    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will be set to 0 for these comparisons." in c.last_result.err
 
 
 @utils.in_tempdir
@@ -6041,7 +6035,6 @@ def test_compare_avg_containment_ani(c):
     print(c.last_result.err)
     print(c.last_result.out)
     assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
-    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will be set to 0 for these comparisons." in c.last_result.err
 
 
 @utils.in_tempdir
