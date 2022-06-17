@@ -63,7 +63,7 @@ jobs:
           override: true
 
       - name: Set up Python 3.8
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: "3.8"
 
@@ -90,7 +90,7 @@ jobs:
           override: true
 
       - name: Set up Python 3.8
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: "3.8"
 
@@ -274,7 +274,7 @@ jobs:
         run: grep '1.48.0' src/core/README.md
 
       - name: Set up Python 3.8
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: "3.8"
 
