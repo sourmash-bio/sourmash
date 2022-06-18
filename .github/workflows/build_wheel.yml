@@ -24,19 +24,19 @@ jobs:
         ]
         include:
           - build: linux-x86_64
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             arch: x86_64
             macos_target: ''
           - build: linux-aarch64
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             arch: aarch64
             macos_target: ''
           - build: linux-ppc64le
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             arch: ppc64le
             macos_target: ''
           - build: linux-s390x
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             arch: s390x
             macos_target: ''
           - build: macos-x86_64
