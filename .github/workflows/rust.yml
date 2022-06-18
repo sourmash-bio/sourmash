@@ -5,6 +5,7 @@ on:
     branches: [latest]
   pull_request:
     paths:
+      - 'Cargo.lock'
       - 'src/core/**'
       - 'tests/test-data/**'
       - '.github/workflows/rust.yml'
