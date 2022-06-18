@@ -62,13 +62,17 @@ jobs:
       # Added due to weird error when building inside docker container
       # for other platforms...
       # https://github.com/JonasAlfredsson/docker-nginx-certbot/issues/30
-      - name: Run Docker on tmpfs
+      - name: Set Swap Space
         if: runner.os == 'Linux'
-        uses: JonasAlfredsson/docker-on-tmpfs@v1
+        uses: pierotofy/set-swap-space@v1.0
         with:
-          tmpfs_size: 5
-          swap_size: 4
-          swap_location: '/mnt/swapfile'
+          swap-size-gb: 10
+      - run: |
+          # Workaround for https://github.com/rust-lang/cargo/issues/8719
+          sudo mkdir -p /var/lib/docker
+          sudo mount -t tmpfs -o size=10G none /var/lib/docker
+          sudo systemctl restart docker
+        if: runner.os == 'Linux'
 
       - name: Set up QEMU
         if: runner.os == 'Linux'
