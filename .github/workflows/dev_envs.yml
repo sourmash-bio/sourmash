@@ -29,6 +29,8 @@ jobs:
 
     - run: ~/bin/nix-portable nix-shell --command "tox -e py39"
 
+    - run: ~/bin/nix-portable nix run . -- --version
+
   mamba:
     runs-on: ubuntu-latest
     steps:
