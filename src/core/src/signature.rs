@@ -436,6 +436,14 @@ fn default_version() -> f64 {
     0.4
 }
 
+/* TODO: implement partial sketch loading using
+ https://serde.rs/stream-array.html
+ https://docs.serde.rs/serde_json/struct.StreamDeserializer.html
+
+ Can also do that with scaled in minhash, maybe? truncating the
+ mins/abund array once max_hash is reached for the new scaled value
+*/
+
 impl Signature {
     pub fn name(&self) -> String {
         if let Some(name) = &self.name {
