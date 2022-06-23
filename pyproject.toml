@@ -1,12 +1,125 @@
 [build-system]
 requires = [
-    "setuptools >= 48, <60",
+    "setuptools >= 61",
     "setuptools_scm[toml] >= 4, <6",
     "setuptools_scm_git_archive",
     "milksnake",
     "wheel >= 0.29.0",
 ]
 build-backend = 'setuptools.build_meta'
+
+[project]
+name = "sourmash"
+description = "tools for comparing DNA sequences with MinHash sketches"
+readme = "README.md"
+authors = [
+  { name="Luiz Irber", email="luiz@sourmash.bio" },
+
+  { name="Mohamed Abuelanin", email="temp@email.com" },
+  { name="Harriet Alexander", email="temp@email.com" },
+  { name="Keya Barve", email="temp@email.com" },
+  { name="Olga Botvinnik", email="temp@email.com" },
+  { name="Phillip Brooks", email="temp@email.com" },
+  { name="Laurent Gautier", email="temp@email.com" },
+  { name="Tim Head", email="temp@email.com" },
+  { name="Hannah Eve Houts", email="temp@email.com" },
+  { name="Lisa K. Johnson", email="temp@email.com" },
+  { name="Fabian Klötzl", email="temp@email.com" },
+  { name="Katrin Leinweber", email="temp@email.com" },
+  { name="Ivan Ogasawara", email="temp@email.com" },
+  { name="N. Tessa Pierce", email="temp@email.com" },
+  { name="Taylor Reiter", email="temp@email.com" },
+  { name="Andreas Sjödin", email="temp@email.com" },
+  { name="Connor T. Skennerton", email="temp@email.com" },
+  { name="Daniel Standage", email="temp@email.com" },
+  { name="S. Joshua Swamidass", email="temp@email.com" },
+  { name="Connor Tiffany", email="temp@email.com" },
+  { name="Pranathi Vemuri", email="temp@email.com" },
+  { name="Erik Young", email="temp@email.com" },
+
+  { name="C. Titus Brown", email="titus@idyll.org" },
+]
+
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Environment :: MacOS X",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: BSD License",
+  "Natural Language :: English",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS :: MacOS X",
+  "Programming Language :: Rust",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+dependencies = [
+  "screed>=1.0.5",
+  "cffi>=1.14.0",
+  "numpy",
+  "matplotlib",
+  "scipy",
+  "deprecation>=2.0.6",
+  "cachetools>=4,<6",
+  "bitstring>=3.1.9,<4",
+]
+
+requires-python = ">=3.8"
+license = { file = "LICENSE" }
+dynamic = ["version"]
+
+[project.urls]
+"Documentation" = "https://sourmash.readthedocs.io"
+"CI" = "https://github.com/dib-lab/sourmash/actions"
+"Source" = "https://github.com/dib-lab/sourmash"
+"Tracker" = "https://github.com/dib-lab/sourmash/issues"
+
+[project.scripts]
+"sourmash" = "sourmash.__main__:main"
+
+[project.optional-dependencies]
+test = [
+  "pytest>=6.2.4,<7.2.0",
+  "pytest-cov>=2.12,<4.0",
+  "pyyaml",
+  "recommonmark",
+  "hypothesis",
+]
+demo = [
+  "jupyter",
+  "jupyter_client",
+  "ipython",
+]
+doc = [
+  "sphinx>=4.4.0,<6",
+  "myst-parser==0.18.0",
+  "Jinja2==3.1.2",
+  "alabaster",
+  "sphinxcontrib-napoleon",
+  "nbsphinx",
+  "ipython",
+  "docutils>=0.17.1,<0.19.0",
+]
+storage = [
+  "ipfshttpclient>=0.4.13",
+  "redis",
+]
+# hmm, I think this is a hack, but it works...
+# https://github.com/pypa/pip/issues/10393#issuecomment-941885429
+all = ["sourmash[test,demo,doc,storage]"]
+
+[tool.setuptools]
+zip-safe = false
+platforms = ["any"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = {attr = "sourmash.version.version"}
 
 [tool.setuptools_scm]
 write_to = "src/sourmash/version.py"
@@ -26,3 +139,18 @@ skip = "*-win32 *-manylinux_i686 *-musllinux_ppc64le *-musllinux_s390x"
 before-build = "source .ci/install_cargo.sh"
 environment = { PATH="$HOME/.cargo/bin:$PATH" }
 build-verbosity = 3
+
+[tool.pytest.ini_options]
+addopts = "--doctest-glob='doc/*.md'"
+norecursedirs = [
+  "utils",
+  "build",
+  "buildenv",
+  ".tox",
+  ".asv",
+  ".eggs",
+]
+testpaths = [
+  "tests",
+  "doc",
+]
