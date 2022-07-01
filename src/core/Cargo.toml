@@ -81,11 +81,11 @@ version = "0.2.62"
 features = ["serde-serialize"]
 
 [target.'cfg(all(target_arch = "wasm32", target_vendor="unknown"))'.dependencies.web-sys]
-version = "0.3.57"
+version = "0.3.58"
 features = ["console", "File"]
 
 [target.'cfg(all(target_arch = "wasm32", target_vendor="unknown"))'.dev-dependencies]
-wasm-bindgen-test = "0.3.30"
+wasm-bindgen-test = "0.3.31"
 
 ### These crates don't compile on wasm
 [target.'cfg(not(all(target_arch = "wasm32", target_vendor="unknown")))'.dependencies]
