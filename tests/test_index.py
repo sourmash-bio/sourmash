@@ -2110,7 +2110,9 @@ def test_counter_gather_3_test_consume():
     pprint.pprint(counter.siglist)
     pprint.pprint(counter.locations)
 
-    assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
+    print('YYY', type(counter.siglist))
+    print('XXX', list(counter.siglist.values()))
+    assert set(counter.siglist.values()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
     assert counter.locations == ['loc a', 'loc b', 'loc c']
     assert list(counter.counter.items()) == [(0, 10), (1, 8), (2, 4)]
 

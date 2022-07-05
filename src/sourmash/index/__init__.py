@@ -719,7 +719,7 @@ class CounterGather:
         self.scaled = query_mh.scaled
 
         # track matching signatures & their locations
-        self.siglist = []
+        self.siglist = {}
         self.locations = []
 
         # ...and overlaps with query
@@ -739,7 +739,7 @@ class CounterGather:
             i = len(self.siglist)
 
             self.counter[i] = overlap
-            self.siglist.append(ss)
+            self.siglist[i] = ss
             self.locations.append(location)
 
             # note: scaled will be max of all matches.
@@ -825,7 +825,11 @@ class CounterGather:
         return (IndexSearchResult(cont, match, location), intersect_mh)
 
     def consume(self, intersect_mh):
-        "Remove the given hashes from this counter."
+        """Remove the given hashes from this counter.
+
+        This maintains the information necessary for counter.most_common()
+        to work.x
+        """
         self.query_started = 1
 
         if not intersect_mh:
@@ -834,12 +838,14 @@ class CounterGather:
         siglist = self.siglist
         counter = self.counter
 
-        most_common = counter.most_common()
+        # most_common = counter.most_common() # @CTB: unnecessary to use most_common.
 
         # Prepare counter for finding the next match by decrementing
         # all hashes found in the current match in other datasets;
         # remove empty datasets from counter, too.
-        for (dataset_id, _) in most_common:
+        n_sub = 0
+        keys = list(counter)
+        for dataset_id in keys:
             # CTB: note, remaining_mh may not be at correct scaled here.
             # this means that counters that _should_ be empty might not
             # _be_ empty in some situations.  This does not
@@ -850,9 +856,12 @@ class CounterGather:
             intersect_count = intersect_mh.count_common(remaining_mh,
                                                         downsample=True)
             if intersect_count:
+                n_sub += 1
                 counter[dataset_id] -= intersect_count
                 if counter[dataset_id] == 0:
                     del counter[dataset_id]
+
+        print(f'XXX n_sub={n_sub}')
 
 
 class MultiIndex(Index):
