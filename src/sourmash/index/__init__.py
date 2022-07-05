@@ -709,6 +709,8 @@ class CounterGather:
     could be used downstream of prefetch (for example).
 
     The public interface is `peek(...)` and `consume(...)` only.
+
+    CTB: what about using an LCA database for this? In-memory sqlite?
     """
     def __init__(self, query_mh):
         if not query_mh.scaled:
@@ -855,8 +857,8 @@ class CounterGather:
             remaining_mh = siglist[dataset_id].minhash
             intersect_count = intersect_mh.count_common(remaining_mh,
                                                         downsample=True)
+            n_sub += 1
             if intersect_count:
-                n_sub += 1
                 counter[dataset_id] -= intersect_count
                 if counter[dataset_id] == 0:
                     del counter[dataset_id]
