@@ -9,7 +9,7 @@ import sourmash
 from sourmash import SourmashSignature
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             LazyLinearIndex, MultiIndex,
-                            StandaloneManifestIndex, LazyLoadedIndex)
+                            StandaloneManifestIndex)
 from sourmash.index.sqlite_index import SqliteIndex
 from sourmash.index.revindex import RevIndex
 from sourmash.sbt import SBT, GraphFactory
@@ -147,15 +147,6 @@ def build_sqlite_index(runtmp):
     return db
 
 
-def build_lazy_loaded_index(runtmp):
-    db = build_lca_index(runtmp)
-    outfile = runtmp.output('db.lca.json')
-    db.save(outfile)
-
-    mf = CollectionManifest.create_manifest(db._signatures_with_internal())
-    return LazyLoadedIndex(outfile, mf)
-
-
 def build_revindex(runtmp):
     ss2, ss47, ss63 = _load_three_sigs()
 
@@ -194,7 +185,6 @@ def build_lca_index_save_load_sql(runtmp):
                         build_lca_index_save_load,
                         build_sqlite_index,
                         build_lca_index_save_load_sql,
-                        build_lazy_loaded_index,
 #                        build_revindex,
                         ]
 )
