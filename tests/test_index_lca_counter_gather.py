@@ -10,17 +10,36 @@ import sourmash_tst_utils as utils
 
 class CounterGather_LCA:
     def __init__(self, mh):
+        if mh.scaled == 0:
+            raise ValueError("must use scaled MinHash")
+
+        self.orig_query_mh = mh
         lca_db = LCA_Database(mh.ksize, mh.scaled, mh.moltype)
         self.db = lca_db
         self.siglist = []
         self.locations = []
+        self.query_started = 0
 
-    def add(self, ss, location=None):
+    def add(self, ss, location=None, require_overlap=True):
+        if self.query_started:
+            raise ValueError("cannot add more signatures to counter after peek/consume")
+
+        overlap = self.orig_query_mh.count_common(ss.minhash, True)
+        if not overlap and require_overlap:
+            raise ValueError("no overlap between query and signature!?")
+
         self.db.insert(ss)
         self.siglist.append(ss)
         self.locations.append(location)
 
     def peek(self, query_mh, threshold_bp=0):
+        self.query_started = 1
+        if not self.orig_query_mh or not query_mh:
+            return []
+
+        if query_mh.contained_by(self.orig_query_mh, downsample=True) < 1:
+            raise ValueError("current query not a subset of original query")
+
         query_ss = SourmashSignature(query_mh)
 
         # returns search_result, intersect_mh
@@ -42,7 +61,7 @@ class CounterGather_LCA:
         return [sr, intersect_mh]
 
     def consume(self, intersect_mh):
-        pass
+        self.query_started = 1
 
 
 def _consume_all(query_mh, counter, threshold_bp=0):
@@ -458,8 +477,6 @@ def test_counter_gather_consume_empty_intersect():
 
 
 def test_counter_gather_empty_initial_query():
-    return # @CTB
-
     # check empty initial query
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_ss = SourmashSignature(query_mh, name='query')
@@ -476,8 +493,6 @@ def test_counter_gather_empty_initial_query():
 
 
 def test_counter_gather_num_query():
-    return # @CTB
-
     # check num query
     query_mh = sourmash.MinHash(n=500, ksize=31)
     query_mh.add_many(range(0, 10))
@@ -519,8 +534,6 @@ def test_counter_gather_add_num_matchy():
 
 
 def test_counter_gather_bad_cur_query():
-    return # @CTB
-
     # test cur query that is not subset of original query
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
@@ -537,8 +550,6 @@ def test_counter_gather_bad_cur_query():
 
 
 def test_counter_gather_add_no_overlap():
-    return # @CTB
-
     # check adding match with no overlap w/query
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 10))
