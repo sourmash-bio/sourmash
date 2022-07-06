@@ -711,6 +711,8 @@ class CounterGather:
     The public interface is `peek(...)` and `consume(...)` only.
 
     CTB: what about using an LCA database for this? In-memory sqlite?
+    CTB: think about tracking (in LCA or elsewhere) only the intersections
+    with the query.
     """
     def __init__(self, query_mh):
         if not query_mh.scaled:
