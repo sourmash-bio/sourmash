@@ -9,7 +9,7 @@ import glob
 
 import sourmash_tst_utils as utils
 import sourmash
-from sourmash import load_one_signature, SourmashSignature
+from sourmash import load_one_signature, SourmashSignature, sourmash_args
 
 from sourmash.search import make_jaccard_search_query
 from sourmash.lca import lca_utils
@@ -1181,10 +1181,33 @@ def test_index_traverse_real_spreadsheet_report(runtmp, lca_db_format):
 
 
 def test_single_classify(runtmp):
+    # run a basic 'classify', check output.
     db1 = utils.get_test_data('lca/delmont-1.lca.json')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
     cmd = ['lca', 'classify', '--db', db1, '--query', input_sig]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in runtmp.last_result.out
+    assert 'classified 1 signatures total' in runtmp.last_result.err
+    assert 'loaded 1 LCA databases' in runtmp.last_result.err
+
+
+def test_single_classify_zip_query(runtmp):
+    # run 'classify' with a query in a zipfile
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+
+    query_ss = sourmash.load_one_signature(input_sig, ksize=31)
+    query_zipfile = runtmp.output('query.zip')
+    with sourmash_args.SaveSignaturesToLocation(query_zipfile) as save_sig:
+        save_sig.add(query_ss)
+
+    cmd = ['lca', 'classify', '--db', db1, '--query', query_zipfile]
     runtmp.sourmash(*cmd)
 
     print(cmd)
