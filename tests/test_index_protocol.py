@@ -486,17 +486,25 @@ def linear_index_as_counter_gather(runtmp):
                 raise ValueError
 
             self.idx = LinearIndex()
-            self.orig_query_mh = orig_query_mh
+            self.orig_query_mh = orig_query_mh.copy().flatten()
+            self.query_started = 0
 
         def add(self, ss, *, location=None, require_overlap=True):
-            if not self.orig_query_mh & ss.minhash and require_overlap:
+            if self.query_started:
+                raise ValueError("cannot add more signatures to counter after peek/consume")
+
+            add_mh = ss.minhash.flatten()
+            if not self.orig_query_mh & add_mh and require_overlap:
                 raise ValueError
 
             self.idx.insert(ss)
 
         def peek(self, cur_query_mh, *, threshold_bp=0):
-            if not self.orig_query_mh:
+            self.query_started = 1
+            if not self.orig_query_mh or not cur_query_mh:
                 return []
+
+            cur_query_mh = cur_query_mh.flatten()
 
             if cur_query_mh.contained_by(self.orig_query_mh, downsample=True) < 1:
                 raise ValueError
@@ -504,6 +512,7 @@ def linear_index_as_counter_gather(runtmp):
             return self.idx.peek(cur_query_mh, threshold_bp=threshold_bp)
 
         def consume(self, *args, **kwargs):
+            self.query_started = 1
             return self.idx.consume(*args, **kwargs)
 
     return LinearIndexWrapper
