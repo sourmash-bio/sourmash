@@ -22,7 +22,7 @@ type IdxTracker = (vec_collections::VecSet<[Idx; 4]>, u64);
 type ColorToIdx = HashMap<Color, IdxTracker, BuildNoHashHasher<Color>>;
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum HashFunctions {
     murmur64_DNA = 1,
