@@ -33,6 +33,18 @@ from sourmash.sourmash_args import load_pathlist_from_file
 from sourmash_tst_utils import SourmashCommandFailed
 
 
+def test_citation_file():
+    import yaml
+
+    thisdir = os.path.dirname(__file__)
+    citation_file = os.path.join(thisdir, '../CITATION.cff')
+
+    with open(citation_file) as fp:
+        x = yaml.safe_load(fp)
+
+    assert x['title'] == "sourmash: a library for MinHash sketching of DNA", x
+
+
 def test_run_sourmash():
     status, out, err = utils.runscript('sourmash', [], fail_ok=True)
     assert status != 0                    # no args provided, ok ;)
