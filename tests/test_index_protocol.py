@@ -481,15 +481,27 @@ def linear_index_as_counter_gather(runtmp):
     "test CounterGather API from LinearIndex"
 
     class LinearIndexWrapper:
-        def __init__(self, mh):
-            self.idx = LinearIndex()
-            self.mh = mh
+        def __init__(self, orig_query_mh):
+            if orig_query_mh.scaled == 0:
+                raise ValueError
 
-        def add(self, ss):
+            self.idx = LinearIndex()
+            self.orig_query_mh = orig_query_mh
+
+        def add(self, ss, *, location=None, require_overlap=True):
+            if not self.orig_query_mh & ss.minhash and require_overlap:
+                raise ValueError
+
             self.idx.insert(ss)
 
-        def peek(self, *args, **kwargs):
-            return self.idx.peek(*args, **kwargs)
+        def peek(self, cur_query_mh, *, threshold_bp=0):
+            if not self.orig_query_mh:
+                return []
+
+            if cur_query_mh.contained_by(self.orig_query_mh, downsample=True) < 1:
+                raise ValueError
+
+            return self.idx.peek(cur_query_mh, threshold_bp=threshold_bp)
 
         def consume(self, *args, **kwargs):
             return self.idx.consume(*args, **kwargs)
@@ -514,7 +526,7 @@ def _consume_all(query_mh, counter, threshold_bp=0):
 
     last_intersect_size = None
     while 1:
-        result = counter.peek(query_mh, threshold_bp)
+        result = counter.peek(query_mh, threshold_bp=threshold_bp)
         if not result:
             break
 
@@ -828,7 +840,7 @@ def test_counter_gather_2(counter_gather_constructor):
     # load up the counter
     counter = counter_gather_constructor(query_ss.minhash)
     for ss, loc in subject_sigs:
-        counter.add(ss, loc)
+        counter.add(ss, location=loc)
 
     results = _consume_all(query_ss.minhash, counter)
 
@@ -862,7 +874,7 @@ def test_counter_gather_exact_match(counter_gather_constructor):
 
     # load up the counter
     counter = counter_gather_constructor(query_ss.minhash)
-    counter.add(query_ss, 'somewhere over the rainbow')
+    counter.add(query_ss, location='somewhere over the rainbow')
 
     results = _consume_all(query_ss.minhash, counter)
     assert len(results) == 1
@@ -881,12 +893,12 @@ def test_counter_gather_add_after_peek(counter_gather_constructor):
 
     # load up the counter
     counter = counter_gather_constructor(query_ss.minhash)
-    counter.add(query_ss, 'somewhere over the rainbow')
+    counter.add(query_ss, location='somewhere over the rainbow')
 
     counter.peek(query_ss.minhash)
 
     with pytest.raises(ValueError):
-        counter.add(query_ss, "try again")
+        counter.add(query_ss, location="try again")
 
 
 def test_counter_gather_add_after_consume(counter_gather_constructor):
@@ -897,12 +909,12 @@ def test_counter_gather_add_after_consume(counter_gather_constructor):
 
     # load up the counter
     counter = counter_gather_constructor(query_ss.minhash)
-    counter.add(query_ss, 'somewhere over the rainbow')
+    counter.add(query_ss, location='somewhere over the rainbow')
 
     counter.consume(query_ss.minhash)
 
     with pytest.raises(ValueError):
-        counter.add(query_ss, "try again")
+        counter.add(query_ss, location="try again")
 
 
 def test_counter_gather_consume_empty_intersect(counter_gather_constructor):
@@ -913,7 +925,7 @@ def test_counter_gather_consume_empty_intersect(counter_gather_constructor):
 
     # load up the counter
     counter = counter_gather_constructor(query_ss.minhash)
-    counter.add(query_ss, 'somewhere over the rainbow')
+    counter.add(query_ss, location='somewhere over the rainbow')
 
     # nothing really happens here :laugh:, just making sure there's no error
     counter.consume(query_ss.minhash.copy_and_clear())
@@ -953,7 +965,7 @@ def test_counter_gather_empty_cur_query(counter_gather_constructor):
 
     # load up the counter
     counter = counter_gather_constructor(query_ss.minhash)
-    counter.add(query_ss, 'somewhere over the rainbow')
+    counter.add(query_ss, location='somewhere over the rainbow')
 
     cur_query_mh = query_ss.minhash.copy_and_clear()
     results = _consume_all(cur_query_mh, counter)
@@ -973,7 +985,7 @@ def test_counter_gather_add_num_matchy(counter_gather_constructor):
     # load up the counter
     counter = counter_gather_constructor(query_ss.minhash)
     with pytest.raises(ValueError):
-        counter.add(match_ss, 'somewhere over the rainbow')
+        counter.add(match_ss, location='somewhere over the rainbow')
 
 
 def test_counter_gather_bad_cur_query(counter_gather_constructor):
@@ -984,7 +996,7 @@ def test_counter_gather_bad_cur_query(counter_gather_constructor):
 
     # load up the counter
     counter = counter_gather_constructor(query_ss.minhash)
-    counter.add(query_ss, 'somewhere over the rainbow')
+    counter.add(query_ss, location='somewhere over the rainbow')
 
     cur_query_mh = query_ss.minhash.copy_and_clear()
     cur_query_mh.add_many(range(20, 30))

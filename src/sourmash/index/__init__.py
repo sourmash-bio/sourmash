@@ -277,7 +277,7 @@ class Index(ABC):
 
         return results[:1]
 
-    def peek(self, query_mh, threshold_bp=0):
+    def peek(self, query_mh, *, threshold_bp=0):
         "Mimic CounterGather.peek() on top of Index. Yes, this is backwards."
         from sourmash import SourmashSignature
 
@@ -764,7 +764,7 @@ class CounterGather:
 
         return threshold, n_threshold_hashes
 
-    def peek(self, cur_query_mh, threshold_bp=0):
+    def peek(self, cur_query_mh, *, threshold_bp=0):
         "Get next 'gather' result for this database, w/o changing counters."
         self.query_started = 1
         scaled = cur_query_mh.scaled
