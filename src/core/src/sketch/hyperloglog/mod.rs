@@ -25,7 +25,7 @@ use crate::HashIntoType;
 pub mod estimators;
 use estimators::CounterType;
 
-#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HyperLogLog {
     registers: Vec<CounterType>,
     p: usize,
