@@ -476,7 +476,29 @@ def basic_counter_gather(runtmp):
     from sourmash.index import CounterGather
     return CounterGather
 
+
+def linear_index_as_counter_gather(runtmp):
+    "test CounterGather API from LinearIndex"
+
+    class LinearIndexWrapper:
+        def __init__(self, mh):
+            self.idx = LinearIndex()
+            self.mh = mh
+
+        def add(self, ss):
+            self.idx.insert(ss)
+
+        def peek(self, *args, **kwargs):
+            return self.idx.peek(*args, **kwargs)
+
+        def consume(self, *args, **kwargs):
+            return self.idx.consume(*args, **kwargs)
+
+    return LinearIndexWrapper
+
+
 @pytest.fixture(params=[basic_counter_gather,
+                        linear_index_as_counter_gather,
                         ]
 )
 def counter_gather_constructor(request, runtmp):
