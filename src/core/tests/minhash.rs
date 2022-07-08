@@ -8,7 +8,9 @@ use proptest::proptest;
 use sourmash::encodings::HashFunctions;
 use sourmash::signature::SeqToHashes;
 use sourmash::signature::{Signature, SigsTrait};
-use sourmash::sketch::minhash::{max_hash_for_scaled, KmerMinHash, KmerMinHashBTree};
+use sourmash::sketch::minhash::{
+    max_hash_for_scaled, scaled_for_max_hash, KmerMinHash, KmerMinHashBTree,
+};
 use sourmash::sketch::Sketch;
 
 // TODO: use f64::EPSILON when we bump MSRV
@@ -251,7 +253,8 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
     assert_eq!(c.count_common(&a, true).unwrap(), d.count_common(&b, true).unwrap());
 
     let mut e = a.downsample_max_hash(100).unwrap();
-    let mut f = b.downsample_max_hash(100).unwrap();
+    let scaled = scaled_for_max_hash(100);
+    let mut f = b.downsample_scaled(scaled).unwrap();
 
     // Can't compare different scaled without explicit downsample
     assert!(c.similarity(&e, false, false).is_err());
@@ -327,7 +330,8 @@ fn prop_merge(seq1 in "[ACGT]{6,100}", seq2 in "[ACGT]{6,200}") {
     assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
 
     let mut e = a.downsample_max_hash(100).unwrap();
-    let mut f = b.downsample_max_hash(100).unwrap();
+    let scaled = scaled_for_max_hash(100);
+    let mut f = b.downsample_scaled(scaled).unwrap();
 
     assert!((e.similarity(&c, false, true).unwrap() - f.similarity(&d, false, true).unwrap()).abs() < EPSILON);
     assert!((e.similarity(&c, true, true).unwrap() - f.similarity(&d, true, true).unwrap()).abs() < EPSILON);
