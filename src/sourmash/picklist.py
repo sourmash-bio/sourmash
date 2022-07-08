@@ -140,7 +140,7 @@ class SignaturePicklist:
         self.pickset = set(values)
         return self.pickset
 
-    def load(self, pickfile, column_name):
+    def load(self, pickfile, column_name, *, allow_empty=False):
         "load pickset, return num empty vals, and set of duplicate vals."
         pickset = self.init()
 
@@ -150,6 +150,7 @@ class SignaturePicklist:
         n_empty_val = 0
         dup_vals = set()
         with open(pickfile, newline='') as csvfile:
+            self.pickfile = pickfile
             x = csvfile.readline()
 
             # skip leading comment line in case there's a manifest header
@@ -160,7 +161,10 @@ class SignaturePicklist:
 
             r = csv.DictReader(csvfile)
             if not r.fieldnames:
-                raise ValueError(f"empty or improperly formatted pickfile '{pickfile}'")
+                if not allow_empty:
+                    raise ValueError(f"empty or improperly formatted pickfile '{pickfile}'")
+                else:
+                    return 0, 0
 
             if column_name not in r.fieldnames:
                 raise ValueError(f"column '{column_name}' not in pickfile '{pickfile}'")
@@ -180,7 +184,6 @@ class SignaturePicklist:
                 else:
                     self.add(col)
 
-        self.pickfile = pickfile
         return n_empty_val, dup_vals
 
     def add(self, value):
