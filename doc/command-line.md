@@ -243,18 +243,16 @@ Example output:
 
 ### `sourmash search` - search for signatures in collections or databases
 
-The `search` subcommand searches a collection of signatures or SBTs for
-matches to the query signature.  It can search for matches with either
+The `search` subcommand searches a collection of signatures
+(in any of the [formats supported by sourmash](#storing-and-searching-signatures))
+for matches to the query signature.  It can search for matches with either
 high [Jaccard similarity](https://en.wikipedia.org/wiki/Jaccard_index)
 or containment; the default is to use Jaccard similarity, unless
 `--containment` is specified.  `-o/--output` will create a CSV file
 containing the matches.
 
-`search` will load all of provided signatures into memory, which can
-be slow and somewhat memory intensive for large collections.  You can
-use `sourmash index` to create a Sequence Bloom Tree (SBT) that can
-be quickly searched on disk; this is [the same format in which we provide
-GenBank and other databases](databases.md).
+`search` makes use of [indexed databases](#loading-many-signatures) to
+decrease search time and memory where possible.
 
 Usage:
 ```
@@ -295,10 +293,10 @@ will be abundance weighted (unless `--ignore-abundances` is
 specified).  `-o/--output` will create a CSV file containing the
 matches.
 
-`gather`, like `search`, will load all of provided signatures into
-memory.  You can use `sourmash index` to create a Sequence Bloom Tree
-(SBT) that can be quickly searched on disk; this is
-[the same format in which we provide GenBank and other databases](databases.md).
+`gather`, like `search`, works with any of the
+[signature collection formats supported by sourmash](#storing-and-searching-signatures)
+and will make use of [indexed databases](#loading-many-signatures) to
+decrease search time and memory where possible.
 
 Usage:
 ```
