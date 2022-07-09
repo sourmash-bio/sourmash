@@ -621,7 +621,7 @@ def _find_best(counters, query, threshold_bp):
 
     # find the best score across multiple counters, without consuming
     for counter in counters:
-        result = counter.peek(query.minhash, threshold_bp)
+        result = counter.peek(query.minhash, threshold_bp=threshold_bp)
         if result:
             (sr, intersect_mh) = result
 
