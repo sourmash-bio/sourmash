@@ -854,6 +854,66 @@ class CounterGather:
                     del counter[dataset_id]
 
 
+class CounterGather_LCA:
+    # @CTB
+    def __init__(self, mh):
+        from sourmash.lca.lca_db import LCA_Database
+        if mh.scaled == 0:
+            raise ValueError("must use scaled MinHash")
+
+        self.orig_query_mh = mh
+        lca_db = LCA_Database(mh.ksize, mh.scaled, mh.moltype)
+        self.db = lca_db
+        self.siglist = []
+        self.locations = []
+        self.query_started = 0
+
+    def add(self, ss, *, location=None, require_overlap=True):
+        if self.query_started:
+            raise ValueError("cannot add more signatures to counter after peek/consume")
+
+        overlap = self.orig_query_mh.count_common(ss.minhash, True)
+        if not overlap and require_overlap:
+            raise ValueError("no overlap between query and signature!?")
+
+        self.db.insert(ss)
+        self.siglist.append(ss)
+        self.locations.append(location)
+
+    def peek(self, query_mh, *, threshold_bp=0):
+        from sourmash import SourmashSignature
+
+        self.query_started = 1
+        if not self.orig_query_mh or not query_mh:
+            return []
+
+        if query_mh.contained_by(self.orig_query_mh, downsample=True) < 1:
+            raise ValueError("current query not a subset of original query")
+
+        query_ss = SourmashSignature(query_mh)
+
+        # returns search_result, intersect_mh
+        try:
+            result = self.db.gather(query_ss, threshold_bp=threshold_bp)
+        except ValueError:
+            result = None
+
+        if not result:
+            return []
+
+        sr = result[0]
+        match_mh = sr.signature.minhash
+        scaled = max(query_mh.scaled, match_mh.scaled)
+        match_mh = match_mh.downsample(scaled=scaled).flatten()
+        query_mh = query_mh.downsample(scaled=scaled)
+        intersect_mh = match_mh & query_mh
+
+        return [sr, intersect_mh]
+
+    def consume(self, intersect_mh):
+        self.query_started = 1
+
+
 class MultiIndex(Index):
     """
     Load a collection of signatures, and retain their original locations.

@@ -471,13 +471,13 @@ def test_gather_threshold_5(index_obj):
 ###
 
 
-def basic_counter_gather(runtmp):
+def create_basic_counter_gather(runtmp):
     "build a basic CounterGather class"
     from sourmash.index import CounterGather
     return CounterGather
 
 
-def linear_index_as_counter_gather(runtmp):
+def create_linear_index_as_counter_gather(runtmp):
     "test CounterGather API from LinearIndex"
 
     class LinearIndexWrapper:
@@ -518,8 +518,14 @@ def linear_index_as_counter_gather(runtmp):
     return LinearIndexWrapper
 
 
-@pytest.fixture(params=[basic_counter_gather,
-                        linear_index_as_counter_gather,
+def create_counter_gather_lca(runtmp):
+    from sourmash.index import CounterGather_LCA
+    return CounterGather_LCA
+
+
+@pytest.fixture(params=[create_basic_counter_gather,
+                        create_linear_index_as_counter_gather,
+                        create_counter_gather_lca,
                         ]
 )
 def counter_gather_constructor(request, runtmp):
