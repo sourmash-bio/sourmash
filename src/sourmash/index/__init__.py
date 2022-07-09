@@ -751,11 +751,11 @@ class CounterGather:
         "Track highest scaled across all possible matches."
         if scaled > self.scaled:
             self.scaled = scaled
+        return self.scaled
 
     def peek(self, cur_query_mh, *, threshold_bp=0):
         "Get next 'gather' result for this database, w/o changing counters."
         self.query_started = 1
-        scaled = cur_query_mh.scaled
 
         # empty? nothing to search.
         counter = self.counter
@@ -765,8 +765,7 @@ class CounterGather:
         siglist = self.siglist
         assert siglist
 
-        self.downsample(scaled)
-        scaled = self.scaled
+        scaled = self.downsample(cur_query_mh.scaled)
         cur_query_mh = cur_query_mh.downsample(scaled=scaled)
 
         if not cur_query_mh:             # empty query? quit.

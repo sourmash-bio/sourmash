@@ -488,26 +488,37 @@ def create_linear_index_as_counter_gather(runtmp):
             self.idx = LinearIndex()
             self.orig_query_mh = orig_query_mh.copy().flatten()
             self.query_started = 0
+            self.scaled = orig_query_mh.scaled
 
         def add(self, ss, *, location=None, require_overlap=True):
             if self.query_started:
                 raise ValueError("cannot add more signatures to counter after peek/consume")
 
             add_mh = ss.minhash.flatten()
-            if not self.orig_query_mh & add_mh and require_overlap:
-                raise ValueError
+            if self.orig_query_mh & add_mh:
+                self.downsample(ss.minhash.scaled)
+            elif require_overlap:
+                raise ValueError("no overlap between query and signature!?")
 
             self.idx.insert(ss)
 
+        def downsample(self, scaled):
+            "Track highest scaled across all possible matches."
+            if scaled > self.scaled:
+                self.scaled = scaled
+            return self.scaled
+
         def peek(self, cur_query_mh, *, threshold_bp=0):
             self.query_started = 1
+            cur_query_mh = cur_query_mh.flatten()
+            scaled = self.downsample(cur_query_mh.scaled)
+            cur_query_mh = cur_query_mh.downsample(scaled=scaled)
+
             if not self.orig_query_mh or not cur_query_mh:
                 return []
 
-            cur_query_mh = cur_query_mh.flatten()
-
             if cur_query_mh.contained_by(self.orig_query_mh, downsample=True) < 1:
-                raise ValueError
+                raise ValueError("current query not a subset of original query")
 
             return self.idx.peek(cur_query_mh, threshold_bp=threshold_bp)
 
