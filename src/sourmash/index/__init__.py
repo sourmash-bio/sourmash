@@ -40,10 +40,11 @@ from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
 from collections import defaultdict
 
-from ..search import make_jaccard_search_query, make_gather_query
-from ..manifest import CollectionManifest
-from ..logging import debug_literal
-from ..signature import load_signatures, save_signatures
+from sourmash.search import (make_jaccard_search_query, make_gather_query,
+                             calc_threshold_from_bp)
+from sourmash.manifest import CollectionManifest
+from sourmash.logging import debug_literal
+from sourmash.signature import load_signatures, save_signatures
 
 # generic return tuple for Index.search and Index.gather
 IndexSearchResult = namedtuple('Result', 'score, signature, location')
@@ -751,21 +752,6 @@ class CounterGather:
         if scaled > self.scaled:
             self.scaled = scaled
 
-    def calc_threshold(self, threshold_bp, scaled, query_size):
-        # CTB: this code doesn't need to be in this class.
-        threshold = 0.0
-        n_threshold_hashes = 0
-
-        if threshold_bp:
-            # if we have a threshold_bp of N, then that amounts to N/scaled
-            # hashes:
-            n_threshold_hashes = float(threshold_bp) / scaled
-
-            # that then requires the following containment:
-            threshold = n_threshold_hashes / query_size
-
-        return threshold, n_threshold_hashes
-
     def peek(self, cur_query_mh, *, threshold_bp=0):
         "Get next 'gather' result for this database, w/o changing counters."
         self.query_started = 1
@@ -790,9 +776,9 @@ class CounterGather:
             raise ValueError("current query not a subset of original query")
 
         # are we setting a threshold?
-        threshold, n_threshold_hashes = self.calc_threshold(threshold_bp,
-                                                            scaled,
-                                                            len(cur_query_mh))
+        threshold, n_threshold_hashes = calc_threshold_from_bp(threshold_bp,
+                                                               scaled,
+                                                             len(cur_query_mh))
         # is it too high to ever match? if so, exit.
         if threshold > 1.0:
             return []
