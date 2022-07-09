@@ -33,6 +33,10 @@ pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
 }
 
 #[derive(Debug, TypedBuilder)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub struct KmerMinHash {
     num: u32,
     ksize: u32,
@@ -53,6 +57,7 @@ pub struct KmerMinHash {
     abunds: Option<Vec<u64>>,
 
     #[builder(default)]
+    #[cfg_attr(feature = "rkyv", with(rkyv::with::Lock))]
     md5sum: Mutex<Option<String>>,
 }
 
@@ -928,6 +933,10 @@ mod test {
 // A MinHash implementation for low scaled or large cardinalities
 
 #[derive(Debug, TypedBuilder)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub struct KmerMinHashBTree {
     num: u32,
     ksize: u32,
@@ -951,6 +960,7 @@ pub struct KmerMinHashBTree {
     current_max: u64,
 
     #[builder(default)]
+    #[cfg_attr(feature = "rkyv", with(rkyv::with::Lock))]
     md5sum: Mutex<Option<String>>,
 }
 
