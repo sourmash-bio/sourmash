@@ -57,7 +57,8 @@ pub struct KmerMinHash {
     abunds: Option<Vec<u64>>,
 
     #[builder(default)]
-    #[cfg_attr(feature = "rkyv", with(rkyv::with::Lock))]
+    //#[cfg_attr(feature = "rkyv", with(rkyv::with::Lock))]
+    #[cfg_attr(feature = "rkyv", with(rkyv::with::Skip))]
     md5sum: Mutex<Option<String>>,
 }
 
@@ -960,7 +961,8 @@ pub struct KmerMinHashBTree {
     current_max: u64,
 
     #[builder(default)]
-    #[cfg_attr(feature = "rkyv", with(rkyv::with::Lock))]
+    //#[cfg_attr(feature = "rkyv", with(rkyv::with::Lock))]
+    #[cfg_attr(feature = "rkyv", with(rkyv::with::Skip))]
     md5sum: Mutex<Option<String>>,
 }
 
