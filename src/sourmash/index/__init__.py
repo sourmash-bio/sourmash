@@ -323,7 +323,7 @@ class Index(ABC):
         # find all matches and construct a CounterGather object.
         counter = CounterGather(prefetch_query.minhash)
         for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
-            counter.add(result.signature, result.location)
+            counter.add(result.signature, location=result.location)
 
         # tada!
         return counter
@@ -725,8 +725,10 @@ class CounterGather:
         # cannot add matches once query has started.
         self.query_started = 0
 
-    def add(self, ss, location=None, require_overlap=True):
+    def add(self, ss, *, location=None, require_overlap=True):
         "Add this signature in as a potential match."
+#        if location is not None: # @CTB
+#            raise Exception
         if self.query_started:
             raise ValueError("cannot add more signatures to counter after peek/consume")
 
