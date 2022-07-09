@@ -939,7 +939,7 @@ class MinHash(RustObject):
         # TODO: replace set_size with HLL estimate when that gets implemented
         return len(self.hashes) * self.scaled # + (self.ksize - 1) for bp estimation
 
-    def size_is_accurate(self, relative_error=0.05, confidence=0.95):
+    def size_is_accurate(self, relative_error=0.20, confidence=0.95):
         """
         Computes the probability that the estimate: sketch_size * scaled deviates from the true
         set_size by more than relative_error. This relies on the fact that the sketch_size

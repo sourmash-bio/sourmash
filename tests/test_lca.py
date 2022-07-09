@@ -9,7 +9,7 @@ import glob
 
 import sourmash_tst_utils as utils
 import sourmash
-from sourmash import load_one_signature, SourmashSignature
+from sourmash import load_one_signature, SourmashSignature, sourmash_args
 
 from sourmash.search import make_jaccard_search_query
 from sourmash.lca import lca_utils
@@ -1181,10 +1181,33 @@ def test_index_traverse_real_spreadsheet_report(runtmp, lca_db_format):
 
 
 def test_single_classify(runtmp):
+    # run a basic 'classify', check output.
     db1 = utils.get_test_data('lca/delmont-1.lca.json')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
     cmd = ['lca', 'classify', '--db', db1, '--query', input_sig]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in runtmp.last_result.out
+    assert 'classified 1 signatures total' in runtmp.last_result.err
+    assert 'loaded 1 LCA databases' in runtmp.last_result.err
+
+
+def test_single_classify_zip_query(runtmp):
+    # run 'classify' with a query in a zipfile
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+
+    query_ss = sourmash.load_one_signature(input_sig, ksize=31)
+    query_zipfile = runtmp.output('query.zip')
+    with sourmash_args.SaveSignaturesToLocation(query_zipfile) as save_sig:
+        save_sig.add(query_ss)
+
+    cmd = ['lca', 'classify', '--db', db1, '--query', query_zipfile]
     runtmp.sourmash(*cmd)
 
     print(cmd)
@@ -1838,6 +1861,28 @@ def test_single_summarize_scaled(runtmp):
     assert '100.0%    27   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales'
 
 
+def test_single_summarize_scaled_zip_query(runtmp):
+    # check zipfile as query
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+
+    query_ss = sourmash.load_one_signature(input_sig, ksize=31)
+    query_zipfile = runtmp.output('query.zip')
+    with sourmash_args.SaveSignaturesToLocation(query_zipfile) as save_sig:
+        save_sig.add(query_ss)
+
+    cmd = ['lca', 'summarize', '--db', db1, '--query', query_zipfile,
+            '--scaled', '100000']
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'loaded 1 signatures from 1 files total.' in runtmp.last_result.err
+    assert '100.0%    27   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales'
+
+
 def test_multi_summarize_with_unassigned_singleton(runtmp, lca_db_format):
     taxcsv = utils.get_test_data('lca/delmont-6.csv')
     input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
@@ -1884,6 +1929,73 @@ def test_multi_summarize_with_unassigned_singleton(runtmp, lca_db_format):
     remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned;unassigned ')
     remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta ')
     remove_line_startswith('100.0%  1231   Eukaryota ', 'TARA_PSW_MAG_00136.sig:db50b713')
+    remove_line_startswith('100.0%   200   Bacteria;Proteobacteria ')
+    remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned ')
+    remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae ')
+    remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned;unassigned;Alteromonadaceae ')
+    remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned ')
+    remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned ')
+    remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus ')
+    assert not out_lines
+
+
+def test_multi_summarize_with_zip_unassigned_singleton(runtmp, lca_db_format):
+    # test summarize on multiple queries, in a zipfile.
+    taxcsv = utils.get_test_data('lca/delmont-6.csv')
+    input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+    lca_db = runtmp.output(f'delmont-1.lca.{lca_db_format}')
+
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2,
+           '-F', lca_db_format]
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(lca_db)
+
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in runtmp.last_result.err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in runtmp.last_result.err
+    assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in runtmp.last_result.err
+
+    query_zipfile = runtmp.output('query.zip')
+    with sourmash_args.SaveSignaturesToLocation(query_zipfile) as save_sig:
+        input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        sig1 = sourmash.load_one_signature(input_sig1, ksize=31)
+        input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+        sig2 = sourmash.load_one_signature(input_sig2, ksize=31)
+
+        save_sig.add(sig1)
+        save_sig.add(sig2)
+
+    cmd = ['lca', 'summarize', '--db', lca_db, '--query', 'query.zip',
+           '--ignore-abundance']
+    runtmp.sourmash(*cmd)
+
+    print(cmd)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'loaded 2 signatures from 1 files total.' in runtmp.last_result.err
+
+    out_lines = runtmp.last_result.out.splitlines()
+    def remove_line_startswith(x, check=None):
+        for line in out_lines:
+            if line.startswith(x):
+                out_lines.remove(line)
+                if check:
+                    # make sure the check value is in there
+                    assert check in line
+                return line
+        assert 0, "couldn't find {}".format(x)
+
+    # note, proportions/percentages are now per-file
+    remove_line_startswith('100.0%   200   Bacteria ', ':5b438c6c')
+    remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned;unassigned ')
+    remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta ')
+    remove_line_startswith('100.0%  1231   Eukaryota ', ':db50b713')
     remove_line_startswith('100.0%   200   Bacteria;Proteobacteria ')
     remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned ')
     remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae ')
@@ -2010,7 +2122,7 @@ def test_summarize_unknown_hashes_abund(runtmp, lca_db_format):
 
 
 @utils.in_thisdir
-def test_lca_summarize_abund_hmp(c):
+def test_summarize_abund_hmp(c):
     # test lca summarize --with-abundance on some real data
     queryfile = utils.get_test_data('hmp-sigs/G36354.sig.gz')
     dbname = utils.get_test_data('hmp-sigs/G36354-matches.lca.json.gz')
@@ -2021,7 +2133,7 @@ def test_lca_summarize_abund_hmp(c):
 
 
 @utils.in_thisdir
-def test_lca_summarize_abund_fake_no_abund(c):
+def test_summarize_abund_fake_no_abund(c):
     # test lca summarize on some known/fake data; see docs for explanation.
     queryfile = utils.get_test_data('fake-abund/query.sig.gz')
     dbname = utils.get_test_data('fake-abund/matches.lca.json.gz')
@@ -2035,7 +2147,7 @@ def test_lca_summarize_abund_fake_no_abund(c):
 
 
 @utils.in_thisdir
-def test_lca_summarize_abund_fake_yes_abund(c):
+def test_summarize_abund_fake_yes_abund(c):
     # test lca summarize abundance weighting on some known/fake data
     queryfile = utils.get_test_data('fake-abund/query.sig.gz')
     dbname = utils.get_test_data('fake-abund/matches.lca.json.gz')

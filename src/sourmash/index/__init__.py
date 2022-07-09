@@ -31,9 +31,6 @@ index objects, using manifests. All signatures are kept in memory.
 StandaloneManifestIndex - load manifests directly, and do lazy loading of
 signatures on demand. No signatures are kept in memory.
 
-LazyLoadedIndex - selection on manifests with loading of index on demand.
-(Consider using StandaloneManifestIndex instead.)
-
 CounterGather - an ancillary class returned by the 'counter_gather()' method.
 """
 
@@ -280,7 +277,7 @@ class Index(ABC):
 
         return results[:1]
 
-    def peek(self, query_mh, threshold_bp=0):
+    def peek(self, query_mh, *, threshold_bp=0):
         "Mimic CounterGather.peek() on top of Index. Yes, this is backwards."
         from sourmash import SourmashSignature
 
@@ -326,7 +323,7 @@ class Index(ABC):
         # find all matches and construct a CounterGather object.
         counter = CounterGather(prefetch_query.minhash)
         for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
-            counter.add(result.signature, result.location)
+            counter.add(result.signature, location=result.location)
 
         # tada!
         return counter
@@ -462,7 +459,7 @@ class LazyLinearIndex(Index):
       signatures are actually requested (hence, 'lazy').
     * this class stores the provided index 'db' in memory. If you need
       a class that does lazy loading of signatures from disk and does not
-      store signatures in memory, see LazyLoadedIndex.
+      store signatures in memory, see StandaloneManifestIndex.
     * if you want efficient manifest-based selection, consider
       MultiIndex (signatures in memory).
     """
@@ -732,8 +729,10 @@ class CounterGather:
         # cannot add matches once query has started.
         self.query_started = 0
 
-    def add(self, ss, location=None, require_overlap=True):
+    def add(self, ss, *, location=None, require_overlap=True):
         "Add this signature in as a potential match."
+#        if location is not None: # @CTB
+#            raise Exception
         if self.query_started:
             raise ValueError("cannot add more signatures to counter after peek/consume")
 
@@ -771,7 +770,7 @@ class CounterGather:
 
         return threshold, n_threshold_hashes
 
-    def peek(self, cur_query_mh, threshold_bp=0):
+    def peek(self, cur_query_mh, *, threshold_bp=0):
         "Get next 'gather' result for this database, w/o changing counters."
         self.query_started = 1
         scaled = cur_query_mh.scaled
@@ -866,6 +865,66 @@ class CounterGather:
                     del counter[dataset_id]
 
         print(f'XXX n_sub={n_sub}')
+
+
+class CounterGather_LCA:
+    # @CTB
+    def __init__(self, mh):
+        from sourmash.lca.lca_db import LCA_Database
+        if mh.scaled == 0:
+            raise ValueError("must use scaled MinHash")
+
+        self.orig_query_mh = mh
+        lca_db = LCA_Database(mh.ksize, mh.scaled, mh.moltype)
+        self.db = lca_db
+        self.siglist = []
+        self.locations = []
+        self.query_started = 0
+
+    def add(self, ss, *, location=None, require_overlap=True):
+        if self.query_started:
+            raise ValueError("cannot add more signatures to counter after peek/consume")
+
+        overlap = self.orig_query_mh.count_common(ss.minhash, True)
+        if not overlap and require_overlap:
+            raise ValueError("no overlap between query and signature!?")
+
+        self.db.insert(ss)
+        self.siglist.append(ss)
+        self.locations.append(location)
+
+    def peek(self, query_mh, *, threshold_bp=0):
+        from sourmash import SourmashSignature
+
+        self.query_started = 1
+        if not self.orig_query_mh or not query_mh:
+            return []
+
+        if query_mh.contained_by(self.orig_query_mh, downsample=True) < 1:
+            raise ValueError("current query not a subset of original query")
+
+        query_ss = SourmashSignature(query_mh)
+
+        # returns search_result, intersect_mh
+        try:
+            result = self.db.gather(query_ss, threshold_bp=threshold_bp)
+        except ValueError:
+            result = None
+
+        if not result:
+            return []
+
+        sr = result[0]
+        match_mh = sr.signature.minhash
+        scaled = max(query_mh.scaled, match_mh.scaled)
+        match_mh = match_mh.downsample(scaled=scaled).flatten()
+        query_mh = query_mh.downsample(scaled=scaled)
+        intersect_mh = match_mh & query_mh
+
+        return [sr, intersect_mh]
+
+    def consume(self, intersect_mh):
+        self.query_started = 1
 
 
 class MultiIndex(Index):
@@ -1071,119 +1130,6 @@ class MultiIndex(Index):
                           prepend_location=self.prepend_location)
 
 
-class LazyLoadedIndex(Index):
-    """Given an index location and a manifest, do select only on the manifest
-    until signatures are actually requested, and only then load the index.
-
-    This class is useful when you have an index object that consume
-    memory when it is loaded (e.g. JSON signature files, or LCA
-    databases) and you want to avoid keeping them in memory.  The
-    downside of using this class is that it will load the signatures
-    from disk every time they are needed (e.g. 'find(...)', 'signatures()').
-
-    Wrapper class; signatures dynamically loaded from disk; uses manifests.
-
-    CTB: This may be redundant with StandaloneManifestIndex.
-    """
-    def __init__(self, filename, manifest):
-        "Create an Index with given filename and manifest."
-        if not os.path.exists(filename):
-            raise ValueError(f"'{filename}' must exist when creating LazyLoadedIndex")
-
-        if manifest is None:
-            raise ValueError("manifest cannot be None")
-
-        self.filename = filename
-        self.manifest = manifest
-
-    @property
-    def location(self):
-        "the 'location' attribute for this index will be the filename."
-        return self.filename
-
-    def signatures(self):
-        "yield all signatures from the manifest."
-        if not len(self):
-            # nothing in manifest? done!
-            return []
-
-        # ok - something in manifest, let's go get those signatures!
-        picklist = self.manifest.to_picklist()
-        idx = sourmash.load_file_as_index(self.location)
-
-        # convert remaining manifest into picklist
-        # CTB: one optimization down the road is, for storage-backed
-        # Index objects, to just reach in and get the signatures directly,
-        # without going through 'select'. Still, this is nice for abstraction
-        # because we don't need to care what the index is - it'll work on
-        # anything. It just might be a bit slower.
-        idx = idx.select(picklist=picklist)
-
-        # extract signatures.
-        for ss in idx.signatures():
-            yield ss
-
-    def find(self, *args, **kwargs):
-        """Run find after loading and selecting; this provides 'search',
-        "'gather', and 'prefetch' functionality, which are built on 'find'.
-        """
-        if not len(self):
-            # nothing in manifest? done!
-            return []
-
-        # ok - something in manifest, let's go get those signatures!
-        picklist = self.manifest.to_picklist()
-        idx = sourmash.load_file_as_index(self.location)
-
-        # convert remaining manifest into picklist
-        # CTB: one optimization down the road is, for storage-backed
-        # Index objects, to just reach in and get the signatures directly,
-        # without going through 'select'. Still, this is nice for abstraction
-        # because we don't need to care what the index is - it'll work on
-        # anything. It just might be a bit slower.
-        idx = idx.select(picklist=picklist)
-
-        for x in idx.find(*args, **kwargs):
-            yield x
-
-    def __len__(self):
-        "track index size based on the manifest."
-        return len(self.manifest)
-
-    def __bool__(self):
-        return bool(self.manifest)
-
-    @classmethod
-    def load(cls, location):
-        """Load index from given location, but retain only the manifest.
-
-        Fail if no manifest.
-        """
-        idx = sourmash.load_file_as_index(location)
-        manifest = idx.manifest
-
-        if not idx.manifest:
-            raise ValueError(f"no manifest on index at {location}")
-
-        del idx
-        # NOTE: index is not retained outside this scope, just location.
-
-        return cls(location, manifest)
-
-    def insert(self, *args):
-        raise NotImplementedError
-
-    def save(self, *args):
-        raise NotImplementedError
-
-    def select(self, **kwargs):
-        "Run 'select' on manifest, return new object with new manifest."
-        manifest = self.manifest
-        new_manifest = manifest.select_to_manifest(**kwargs)
-
-        return LazyLoadedIndex(self.filename, new_manifest)
-
-
 class StandaloneManifestIndex(Index):
     """Load a standalone manifest as an Index.
 
@@ -1203,11 +1149,6 @@ class StandaloneManifestIndex(Index):
     prefix.
 
     StandaloneManifestIndex does _not_ store signatures in memory.
-
-    This class overlaps in concept with LazyLoadedIndex and behaves
-    identically when a manifest contains only rows from a single
-    on-disk Index object.  However, unlike LazyLoadedIndex, this class
-    can be used to reference multiple on-disk Index objects.
 
     This class also overlaps in concept with MultiIndex when
     MultiIndex.load_from_pathlist is used to load other Index
