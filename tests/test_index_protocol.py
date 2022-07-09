@@ -495,8 +495,10 @@ def create_linear_index_as_counter_gather(runtmp):
                 raise ValueError("cannot add more signatures to counter after peek/consume")
 
             add_mh = ss.minhash.flatten()
-            if self.orig_query_mh & add_mh:
-                self.downsample(ss.minhash.scaled)
+            overlap = self.orig_query_mh.count_common(add_mh, downsample=True)
+
+            if overlap:
+                self.downsample(add_mh.scaled)
             elif require_overlap:
                 raise ValueError("no overlap between query and signature!?")
 
