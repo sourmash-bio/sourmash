@@ -489,6 +489,7 @@ def create_linear_index_as_counter_gather(runtmp):
             self.orig_query_mh = orig_query_mh.copy().flatten()
             self.query_started = 0
             self.scaled = orig_query_mh.scaled
+            self.locations = {}
 
         def add(self, ss, *, location=None, require_overlap=True):
             if self.query_started:
@@ -503,6 +504,9 @@ def create_linear_index_as_counter_gather(runtmp):
                 raise ValueError("no overlap between query and signature!?")
 
             self.idx.insert(ss)
+
+            md5 = ss.md5sum()
+            self.locations[md5] = location
 
         def downsample(self, scaled):
             "Track highest scaled across all possible matches."
@@ -522,7 +526,17 @@ def create_linear_index_as_counter_gather(runtmp):
             if cur_query_mh.contained_by(self.orig_query_mh, downsample=True) < 1:
                 raise ValueError("current query not a subset of original query")
 
-            return self.idx.peek(cur_query_mh, threshold_bp=threshold_bp)
+            res = self.idx.peek(cur_query_mh, threshold_bp=threshold_bp)
+            if not res:
+                return []
+            sr, intersect_mh = res
+
+            from sourmash.index import IndexSearchResult
+            match = sr.signature
+            md5 = match.md5sum()
+            location = self.locations[md5]
+            new_sr = IndexSearchResult(sr.score, match, location)
+            return new_sr, intersect_mh
 
         def consume(self, *args, **kwargs):
             self.query_started = 1
@@ -900,7 +914,8 @@ def test_counter_gather_exact_match(counter_gather_constructor):
     query_mh.add_many(range(0, 20))
     query_ss = SourmashSignature(query_mh, name='query')
 
-    # load up the counter
+    # load up the counter; provide a location override, too.
+    # @CTB split out into a separate test?
     counter = counter_gather_constructor(query_ss.minhash)
     counter.add(query_ss, location='somewhere over the rainbow')
 

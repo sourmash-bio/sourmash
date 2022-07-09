@@ -850,7 +850,7 @@ class CounterGather_LCA:
         lca_db = LCA_Database(mh.ksize, mh.scaled, mh.moltype)
         self.db = lca_db
         self.siglist = []
-        self.locations = []
+        self.locations = {}
         self.query_started = 0
 
     def add(self, ss, *, location=None, require_overlap=True):
@@ -865,7 +865,10 @@ class CounterGather_LCA:
 
         self.db.insert(ss)
         self.siglist.append(ss)
-        self.locations.append(location)
+        #self.locations.append(location)
+
+        md5 = ss.md5sum()
+        self.locations[md5] = location
 
     def downsample(self, scaled):
         "Track highest scaled across all possible matches."
@@ -898,13 +901,20 @@ class CounterGather_LCA:
             return []
 
         sr = result[0]
+        cont = sr.score
+        match = sr.signature
+
         match_mh = sr.signature.minhash
         scaled = max(query_mh.scaled, match_mh.scaled)
         match_mh = match_mh.downsample(scaled=scaled).flatten()
         query_mh = query_mh.downsample(scaled=scaled)
         intersect_mh = match_mh & query_mh
 
-        return [sr, intersect_mh]
+        md5 = sr.signature.md5sum()
+        location = self.locations[md5]
+
+        new_sr = IndexSearchResult(cont, match, location)
+        return [new_sr, intersect_mh]
 
     def consume(self, intersect_mh):
         self.query_started = 1
