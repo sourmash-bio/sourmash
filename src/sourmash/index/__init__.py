@@ -722,7 +722,7 @@ class CounterGather:
 
         # track matching signatures & their locations
         self.siglist = {}
-        self.locations = []
+        self.locations = {}
 
         # ...and overlaps with query
         self.counter = Counter()
@@ -744,7 +744,9 @@ class CounterGather:
 
             self.counter[i] = overlap
             self.siglist[i] = ss
-            self.locations.append(location)
+
+            md5 = ss.md5sum()
+            self.locations[md5] = location
 
             # note: scaled will be max of all matches.
             self.downsample(ss.minhash.scaled)
@@ -807,7 +809,9 @@ class CounterGather:
         # calculate intersection of this "best match" with query.
         match_mh = match.minhash.downsample(scaled=scaled).flatten()
         intersect_mh = cur_query_mh & match_mh
-        location = self.locations[dataset_id]
+
+        md5 = match.md5sum()
+        location = self.locations[md5]
 
         # build result & return intersection
         return (IndexSearchResult(cont, match, location), intersect_mh)
