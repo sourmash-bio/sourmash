@@ -858,17 +858,28 @@ class CounterGather_LCA:
             raise ValueError("cannot add more signatures to counter after peek/consume")
 
         overlap = self.orig_query_mh.count_common(ss.minhash, True)
-        if not overlap and require_overlap:
+        if overlap:
+            self.downsample(ss.minhash.scaled)
+        elif require_overlap:
             raise ValueError("no overlap between query and signature!?")
 
         self.db.insert(ss)
         self.siglist.append(ss)
         self.locations.append(location)
 
+    def downsample(self, scaled):
+        "Track highest scaled across all possible matches."
+        if scaled > self.db.scaled:
+            self.db.downsample_scaled(scaled)
+        return self.db.scaled
+
     def peek(self, query_mh, *, threshold_bp=0):
         from sourmash import SourmashSignature
 
         self.query_started = 1
+        scaled = self.downsample(query_mh.scaled)
+        query_mh = query_mh.downsample(scaled=scaled)
+
         if not self.orig_query_mh or not query_mh:
             return []
 
