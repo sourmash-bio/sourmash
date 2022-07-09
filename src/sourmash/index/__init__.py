@@ -40,10 +40,11 @@ from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
 from collections import defaultdict
 
-from ..search import make_jaccard_search_query, make_gather_query
-from ..manifest import CollectionManifest
-from ..logging import debug_literal
-from ..signature import load_signatures, save_signatures
+from sourmash.search import (make_jaccard_search_query, make_gather_query,
+                             calc_threshold_from_bp)
+from sourmash.manifest import CollectionManifest
+from sourmash.logging import debug_literal
+from sourmash.signature import load_signatures, save_signatures
 
 # generic return tuple for Index.search and Index.gather
 IndexSearchResult = namedtuple('Result', 'score, signature, location')
@@ -754,26 +755,11 @@ class CounterGather:
         "Track highest scaled across all possible matches."
         if scaled > self.scaled:
             self.scaled = scaled
-
-    def calc_threshold(self, threshold_bp, scaled, query_size):
-        # CTB: this code doesn't need to be in this class.
-        threshold = 0.0
-        n_threshold_hashes = 0
-
-        if threshold_bp:
-            # if we have a threshold_bp of N, then that amounts to N/scaled
-            # hashes:
-            n_threshold_hashes = float(threshold_bp) / scaled
-
-            # that then requires the following containment:
-            threshold = n_threshold_hashes / query_size
-
-        return threshold, n_threshold_hashes
+        return self.scaled
 
     def peek(self, cur_query_mh, *, threshold_bp=0):
         "Get next 'gather' result for this database, w/o changing counters."
         self.query_started = 1
-        scaled = cur_query_mh.scaled
 
         # empty? nothing to search.
         counter = self.counter
@@ -783,8 +769,7 @@ class CounterGather:
         siglist = self.siglist
         assert siglist
 
-        self.downsample(scaled)
-        scaled = self.scaled
+        scaled = self.downsample(cur_query_mh.scaled)
         cur_query_mh = cur_query_mh.downsample(scaled=scaled)
 
         if not cur_query_mh:             # empty query? quit.
@@ -794,9 +779,9 @@ class CounterGather:
             raise ValueError("current query not a subset of original query")
 
         # are we setting a threshold?
-        threshold, n_threshold_hashes = self.calc_threshold(threshold_bp,
-                                                            scaled,
-                                                            len(cur_query_mh))
+        threshold, n_threshold_hashes = calc_threshold_from_bp(threshold_bp,
+                                                               scaled,
+                                                             len(cur_query_mh))
         # is it too high to ever match? if so, exit.
         if threshold > 1.0:
             return []
@@ -878,7 +863,7 @@ class CounterGather_LCA:
         lca_db = LCA_Database(mh.ksize, mh.scaled, mh.moltype)
         self.db = lca_db
         self.siglist = []
-        self.locations = []
+        self.locations = {}
         self.query_started = 0
 
     def add(self, ss, *, location=None, require_overlap=True):
@@ -886,17 +871,31 @@ class CounterGather_LCA:
             raise ValueError("cannot add more signatures to counter after peek/consume")
 
         overlap = self.orig_query_mh.count_common(ss.minhash, True)
-        if not overlap and require_overlap:
+        if overlap:
+            self.downsample(ss.minhash.scaled)
+        elif require_overlap:
             raise ValueError("no overlap between query and signature!?")
 
         self.db.insert(ss)
         self.siglist.append(ss)
-        self.locations.append(location)
+        #self.locations.append(location)
+
+        md5 = ss.md5sum()
+        self.locations[md5] = location
+
+    def downsample(self, scaled):
+        "Track highest scaled across all possible matches."
+        if scaled > self.db.scaled:
+            self.db.downsample_scaled(scaled)
+        return self.db.scaled
 
     def peek(self, query_mh, *, threshold_bp=0):
         from sourmash import SourmashSignature
 
         self.query_started = 1
+        scaled = self.downsample(query_mh.scaled)
+        query_mh = query_mh.downsample(scaled=scaled)
+
         if not self.orig_query_mh or not query_mh:
             return []
 
@@ -915,13 +914,20 @@ class CounterGather_LCA:
             return []
 
         sr = result[0]
+        cont = sr.score
+        match = sr.signature
+
         match_mh = sr.signature.minhash
         scaled = max(query_mh.scaled, match_mh.scaled)
         match_mh = match_mh.downsample(scaled=scaled).flatten()
         query_mh = query_mh.downsample(scaled=scaled)
         intersect_mh = match_mh & query_mh
 
-        return [sr, intersect_mh]
+        md5 = sr.signature.md5sum()
+        location = self.locations[md5]
+
+        new_sr = IndexSearchResult(cont, match, location)
+        return [new_sr, intersect_mh]
 
     def consume(self, intersect_mh):
         self.query_started = 1

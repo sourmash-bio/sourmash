@@ -1567,9 +1567,9 @@ def test_counter_gather_3_test_consume():
 
     # load up the counter
     counter = CounterGather(query_ss.minhash)
-    counter.add(match_ss_1, 'loc a')
-    counter.add(match_ss_2, 'loc b')
-    counter.add(match_ss_3, 'loc c')
+    counter.add(match_ss_1, location='loc a')
+    counter.add(match_ss_2, location='loc b')
+    counter.add(match_ss_3, location='loc c')
 
     ### ok, dig into actual counts...
     import pprint
