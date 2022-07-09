@@ -26,6 +26,10 @@ pub mod estimators;
 use estimators::CounterType;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub struct HyperLogLog {
     registers: Vec<CounterType>,
     p: usize,
@@ -318,15 +322,15 @@ mod test {
         assert!(abs_error < ERR_RATE, "{}", abs_error);
 
         let similarity = hll1.similarity(&hll2);
-        let abs_error = (1. - (similarity / SIMILARITY as f64)).abs();
+        let abs_error = (1. - (similarity / SIMILARITY)).abs();
         assert!(abs_error < ERR_RATE, "{} {}", similarity, SIMILARITY);
 
         let containment = hll1.containment(&hll2);
-        let abs_error = (1. - (containment / CONTAINMENT_H1 as f64)).abs();
+        let abs_error = (1. - (containment / CONTAINMENT_H1)).abs();
         assert!(abs_error < ERR_RATE, "{} {}", containment, CONTAINMENT_H1);
 
         let containment = hll2.containment(&hll1);
-        let abs_error = (1. - (containment / CONTAINMENT_H2 as f64)).abs();
+        let abs_error = (1. - (containment / CONTAINMENT_H2)).abs();
         assert!(abs_error < ERR_RATE, "{} {}", containment, CONTAINMENT_H2);
 
         let intersection = hll1.intersection(&hll2) as f64;
@@ -335,13 +339,13 @@ mod test {
 
         hll1.merge(&hll2).unwrap();
 
-        let abs_error = (1. - (hllu.similarity(&hll1) as f64 / 1.)).abs();
+        let abs_error = (1. - (hllu.similarity(&hll1) / 1.)).abs();
         assert!(abs_error < ERR_RATE, "{}", abs_error);
 
-        let abs_error = (1. - (hllu.containment(&hll1) as f64 / 1.)).abs();
+        let abs_error = (1. - (hllu.containment(&hll1) / 1.)).abs();
         assert!(abs_error < ERR_RATE, "{}", abs_error);
 
-        let abs_error = (1. - (hll1.containment(&hllu) as f64 / 1.)).abs();
+        let abs_error = (1. - (hll1.containment(&hllu) / 1.)).abs();
         assert!(abs_error < ERR_RATE, "{}", abs_error);
 
         let intersection = hll1.intersection(&hllu) as f64;

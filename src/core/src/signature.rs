@@ -2,6 +2,8 @@
 //!
 //! A signature is a collection of sketches for a genomic dataset.
 
+use core::iter::FusedIterator;
+
 use std::fs::File;
 use std::io;
 use std::iter::Iterator;
@@ -15,11 +17,14 @@ use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::encodings::{aa_to_dayhoff, aa_to_hp, revcomp, to_aa, HashFunctions, VALID};
+use crate::index::Selection;
 use crate::prelude::*;
 use crate::sketch::Sketch;
 use crate::Error;
 use crate::HashIntoType;
 
+// TODO: this is the behavior expected from Sketch, but that name is already
+// used. Sketchable?
 pub trait SigsTrait {
     fn size(&self) -> usize;
     fn to_vec(&self) -> Vec<u64>;
@@ -395,6 +400,10 @@ impl Iterator for SeqToHashes {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, TypedBuilder)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub struct Signature {
     #[serde(default = "default_class")]
     #[builder(default = default_class())]
@@ -525,6 +534,32 @@ impl Signature {
         None
     }
 
+    pub fn select(mut self, selection: &Selection) -> Result<Self, Error> {
+        self.signatures.retain(|s| {
+            let mut valid = true;
+            valid = if let Some(ksize) = selection.ksize() {
+                let k = s.ksize() as u32;
+                k == ksize || k == ksize * 3
+            } else {
+                valid
+            };
+            /*
+            valid = if let Some(abund) = selection.abund() {
+                valid && *s.with_abundance() == abund
+            } else {
+                valid
+            };
+            valid = if let Some(moltype) = selection.moltype() {
+                valid && s.moltype() == moltype
+            } else {
+                valid
+            };
+            */
+            valid
+        });
+        Ok(self)
+    }
+
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Vec<Signature>, Error> {
         let mut reader = io::BufReader::new(File::open(path)?);
         Signature::from_reader(&mut reader)
@@ -653,6 +688,92 @@ impl Signature {
         }
 
         Ok(())
+    }
+
+    pub fn iter_mut(&mut self) -> IterMut<'_> {
+        let length = self.signatures.len();
+        IterMut {
+            iter: self.signatures.iter_mut(),
+            length,
+        }
+    }
+
+    pub fn iter(&self) -> Iter<'_> {
+        let length = self.signatures.len();
+        Iter {
+            iter: self.signatures.iter(),
+            length,
+        }
+    }
+}
+
+pub struct IterMut<'a> {
+    iter: std::slice::IterMut<'a, Sketch>,
+    length: usize,
+}
+
+impl<'a> IntoIterator for &'a mut Signature {
+    type Item = &'a mut Sketch;
+    type IntoIter = IterMut<'a>;
+
+    fn into_iter(self) -> IterMut<'a> {
+        self.iter_mut()
+    }
+}
+
+impl<'a> Iterator for IterMut<'a> {
+    type Item = &'a mut Sketch;
+
+    fn next(&mut self) -> Option<&'a mut Sketch> {
+        if self.length == 0 {
+            None
+        } else {
+            self.length -= 1;
+            self.iter.next()
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.length, Some(self.length))
+    }
+}
+
+pub struct Iter<'a> {
+    iter: std::slice::Iter<'a, Sketch>,
+    length: usize,
+}
+
+impl<'a> Iterator for Iter<'a> {
+    type Item = &'a Sketch;
+
+    fn next(&mut self) -> Option<&'a Sketch> {
+        if self.length == 0 {
+            None
+        } else {
+            self.length -= 1;
+            self.iter.next()
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.length, Some(self.length))
+    }
+}
+
+impl FusedIterator for Iter<'_> {}
+
+impl ExactSizeIterator for Iter<'_> {
+    fn len(&self) -> usize {
+        self.length
+    }
+}
+
+impl Clone for Iter<'_> {
+    fn clone(&self) -> Self {
+        Iter {
+            iter: self.iter.clone(),
+            length: self.length,
+        }
     }
 }
 

@@ -23,10 +23,8 @@ impl From<MashSketcher> for KmerMinHash {
             values.len() as u32,
         );
 
-        let hash_with_abunds: Vec<(u64, u64)> = values
-            .iter()
-            .map(|x| (x.hash as u64, x.count as u64))
-            .collect();
+        let hash_with_abunds: Vec<(u64, u64)> =
+            values.iter().map(|x| (x.hash, x.count as u64)).collect();
 
         new_mh
             .add_many_with_abund(&hash_with_abunds)
@@ -68,7 +66,7 @@ mod test {
         let b_hashes = b.to_vec();
 
         let s1: HashSet<_> = a.mins().into_iter().collect();
-        let s2: HashSet<_> = b_hashes.iter().map(|x| x.hash as u64).collect();
+        let s2: HashSet<_> = b_hashes.iter().map(|x| x.hash).collect();
         let i1 = &s1 & &s2;
 
         assert!(i1.len() == a.size());
@@ -79,10 +77,9 @@ mod test {
             let smap: HashMap<_, _> = mins.iter().zip(abunds.iter()).collect();
             println!("{:?}", smap);
             for item in b_hashes.iter() {
-                assert!(smap.contains_key(&(item.hash as u64)));
+                assert!(smap.contains_key(&{ item.hash }));
                 assert!(
-                    **smap.get(&(item.hash as u64)).unwrap()
-                        == ((item.count + item.extra_count) as u64)
+                    **smap.get(&{ item.hash }).unwrap() == ((item.count + item.extra_count) as u64)
                 );
             }
         }

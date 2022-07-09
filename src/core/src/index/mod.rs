@@ -4,35 +4,177 @@
 //! Some indices also support containment searches.
 
 pub mod linear;
+
+#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "branchwater")]
 pub mod revindex;
 
 pub mod search;
 
-use std::ops::Deref;
 use std::path::Path;
 
-use once_cell::sync::OnceCell;
+use getset::{CopyGetters, Getters, Setters};
+
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
-use crate::errors::ReadDataError;
+use crate::encodings::{HashFunctions, Idx};
 use crate::index::search::{search_minhashes, search_minhashes_containment};
+use crate::manifest::Record;
+use crate::picklist::Picklist;
 use crate::prelude::*;
 use crate::signature::SigsTrait;
 use crate::sketch::Sketch;
-use crate::storage::{InnerStorage, Storage};
-use crate::Error;
+use crate::Result;
+
+#[derive(TypedBuilder, CopyGetters, Getters, Setters, Serialize, Deserialize, Debug, PartialEq)]
+pub struct GatherResult {
+    #[getset(get_copy = "pub")]
+    intersect_bp: usize,
+
+    #[getset(get_copy = "pub")]
+    f_orig_query: f64,
+
+    #[getset(get_copy = "pub")]
+    f_match: f64,
+
+    f_unique_to_query: f64,
+    f_unique_weighted: f64,
+    average_abund: usize,
+    median_abund: usize,
+    std_abund: usize,
+
+    #[getset(get = "pub")]
+    filename: String,
+
+    #[getset(get = "pub")]
+    name: String,
+
+    #[getset(get = "pub")]
+    md5: String,
+
+    #[serde(skip)]
+    match_: Signature,
+
+    f_match_orig: f64,
+    unique_intersect_bp: usize,
+    gather_result_rank: usize,
+    remaining_bp: usize,
+}
+
+impl GatherResult {
+    pub fn get_match(&self) -> Signature {
+        self.match_.clone()
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct Selection {
+    ksize: Option<u32>,
+    abund: Option<bool>,
+    num: Option<u32>,
+    scaled: Option<u32>,
+    containment: Option<bool>,
+    moltype: Option<HashFunctions>,
+    picklist: Option<Picklist>,
+}
+
+type SigCounter = counter::Counter<Idx>;
+
+impl Selection {
+    pub fn ksize(&self) -> Option<u32> {
+        self.ksize
+    }
+
+    pub fn set_ksize(&mut self, ksize: u32) {
+        self.ksize = Some(ksize);
+    }
+
+    pub fn abund(&self) -> Option<bool> {
+        self.abund
+    }
+
+    pub fn set_abund(&mut self, value: bool) {
+        self.abund = Some(value);
+    }
+
+    pub fn num(&self) -> Option<u32> {
+        self.num
+    }
+
+    pub fn set_num(&mut self, num: u32) {
+        self.num = Some(num);
+    }
+
+    pub fn scaled(&self) -> Option<u32> {
+        self.scaled
+    }
+
+    pub fn set_scaled(&mut self, scaled: u32) {
+        self.scaled = Some(scaled);
+    }
+
+    pub fn containment(&self) -> Option<bool> {
+        self.containment
+    }
+
+    pub fn set_containment(&mut self, containment: bool) {
+        self.containment = Some(containment);
+    }
+
+    pub fn moltype(&self) -> Option<HashFunctions> {
+        self.moltype
+    }
+
+    pub fn set_moltype(&mut self, value: HashFunctions) {
+        self.moltype = Some(value);
+    }
+
+    pub fn picklist(&self) -> Option<Picklist> {
+        self.picklist.clone()
+    }
+
+    pub fn set_picklist(&mut self, value: Picklist) {
+        self.picklist = Some(value);
+    }
+
+    pub fn from_template(template: &Sketch) -> Self {
+        let (num, scaled) = match template {
+            Sketch::MinHash(mh) => (Some(mh.num()), Some(mh.scaled() as u32)),
+            Sketch::LargeMinHash(mh) => (Some(mh.num()), Some(mh.scaled() as u32)),
+            _ => (None, None),
+        };
+
+        Selection {
+            ksize: Some(template.ksize() as u32),
+            abund: None,
+            containment: None,
+            //moltype: Some(template.hash_function()),
+            moltype: None,
+            num,
+            picklist: None,
+            scaled,
+        }
+    }
+
+    pub fn from_record(row: &Record) -> Result<Self> {
+        Ok(Self {
+            ksize: Some(*row.ksize()),
+            abund: Some(*row.with_abundance()),
+            moltype: Some(row.moltype()),
+            num: None,
+            scaled: None,
+            containment: None,
+            picklist: None,
+        })
+    }
+}
 
 pub trait Index<'a> {
     type Item: Comparable<Self::Item>;
     //type SignatureIterator: Iterator<Item = Self::Item>;
 
-    fn find<F>(
-        &self,
-        search_fn: F,
-        sig: &Self::Item,
-        threshold: f64,
-    ) -> Result<Vec<&Self::Item>, Error>
+    fn find<F>(&self, search_fn: F, sig: &Self::Item, threshold: f64) -> Result<Vec<&Self::Item>>
     where
         F: Fn(&dyn Comparable<Self::Item>, &Self::Item, f64) -> bool,
     {
@@ -54,7 +196,7 @@ pub trait Index<'a> {
         sig: &Self::Item,
         threshold: f64,
         containment: bool,
-    ) -> Result<Vec<&Self::Item>, Error> {
+    ) -> Result<Vec<&Self::Item>> {
         if containment {
             self.find(search_minhashes_containment, sig, threshold)
         } else {
@@ -62,11 +204,11 @@ pub trait Index<'a> {
         }
     }
 
-    //fn gather(&self, sig: &Self::Item, threshold: f64) -> Result<Vec<&Self::Item>, Error>;
+    //fn gather(&self, sig: &Self::Item, threshold: f64) -> Result<Vec<&Self::Item>>;
 
-    fn insert(&mut self, node: Self::Item) -> Result<(), Error>;
+    fn insert(&mut self, node: Self::Item) -> Result<()>;
 
-    fn batch_insert(&mut self, nodes: Vec<Self::Item>) -> Result<(), Error> {
+    fn batch_insert(&mut self, nodes: Vec<Self::Item>) -> Result<()> {
         for node in nodes {
             self.insert(node)?;
         }
@@ -74,9 +216,9 @@ pub trait Index<'a> {
         Ok(())
     }
 
-    fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), Error>;
+    fn save<P: AsRef<Path>>(&self, path: P) -> Result<()>;
 
-    fn load<P: AsRef<Path>>(path: P) -> Result<(), Error>;
+    fn load<P: AsRef<Path>>(path: P) -> Result<()>;
 
     fn signatures(&self) -> Vec<Self::Item>;
 
@@ -105,234 +247,5 @@ where
 
     fn containment(&self, other: &L) -> f64 {
         (*self).containment(other)
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct DatasetInfo {
-    pub filename: String,
-    pub name: String,
-    pub metadata: String,
-}
-
-#[derive(TypedBuilder, Default, Clone)]
-pub struct SigStore<T> {
-    #[builder(setter(into))]
-    filename: String,
-
-    #[builder(setter(into))]
-    name: String,
-
-    #[builder(setter(into))]
-    metadata: String,
-
-    storage: Option<InnerStorage>,
-
-    #[builder(setter(into), default)]
-    data: OnceCell<T>,
-}
-
-impl<T> SigStore<T> {
-    pub fn name(&self) -> String {
-        self.name.clone()
-    }
-}
-
-impl<T> std::fmt::Debug for SigStore<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "SigStore [filename: {}, name: {}, metadata: {}]",
-            self.filename, self.name, self.metadata
-        )
-    }
-}
-
-impl ReadData<Signature> for SigStore<Signature> {
-    fn data(&self) -> Result<&Signature, Error> {
-        if let Some(sig) = self.data.get() {
-            Ok(sig)
-        } else if let Some(storage) = &self.storage {
-            let sig = self.data.get_or_init(|| {
-                let raw = storage.load(&self.filename).unwrap();
-                let sigs: Result<Vec<Signature>, _> = serde_json::from_reader(&mut &raw[..]);
-                if let Ok(sigs) = sigs {
-                    // TODO: select the right sig?
-                    sigs[0].to_owned()
-                } else {
-                    let sig: Signature = serde_json::from_reader(&mut &raw[..]).unwrap();
-                    sig
-                }
-            });
-
-            Ok(sig)
-        } else {
-            Err(ReadDataError::LoadError.into())
-        }
-    }
-}
-
-impl<T> SigStore<T>
-where
-    T: ToWriter,
-{
-    pub fn save(&self, path: &str) -> Result<String, Error> {
-        if let Some(storage) = &self.storage {
-            if let Some(data) = self.data.get() {
-                let mut buffer = Vec::new();
-                data.to_writer(&mut buffer)?;
-
-                Ok(storage.save(path, &buffer)?)
-            } else {
-                unimplemented!()
-            }
-        } else {
-            unimplemented!()
-        }
-    }
-}
-
-impl SigStore<Signature> {
-    pub fn count_common(&self, other: &SigStore<Signature>) -> u64 {
-        let ng: &Signature = self.data().unwrap();
-        let ong: &Signature = other.data().unwrap();
-
-        // TODO: select the right signatures...
-        // TODO: better matching here, what if it is not a mh?
-        if let Sketch::MinHash(mh) = &ng.signatures[0] {
-            if let Sketch::MinHash(omh) = &ong.signatures[0] {
-                return mh.count_common(omh, false).unwrap();
-            }
-        }
-        unimplemented!();
-    }
-
-    pub fn mins(&self) -> Vec<u64> {
-        let ng: &Signature = self.data().unwrap();
-
-        // TODO: select the right signatures...
-        // TODO: better matching here, what if it is not a mh?
-        if let Sketch::MinHash(mh) = &ng.signatures[0] {
-            mh.mins()
-        } else {
-            unimplemented!()
-        }
-    }
-}
-
-impl From<SigStore<Signature>> for Signature {
-    fn from(other: SigStore<Signature>) -> Signature {
-        other.data.get().unwrap().to_owned()
-    }
-}
-
-impl Deref for SigStore<Signature> {
-    type Target = Signature;
-
-    fn deref(&self) -> &Signature {
-        self.data.get().unwrap()
-    }
-}
-
-impl From<Signature> for SigStore<Signature> {
-    fn from(other: Signature) -> SigStore<Signature> {
-        let name = other.name();
-        let filename = other.filename();
-
-        SigStore::builder()
-            .name(name)
-            .filename(filename)
-            .data(other)
-            .metadata("")
-            .storage(None)
-            .build()
-    }
-}
-
-impl Comparable<SigStore<Signature>> for SigStore<Signature> {
-    fn similarity(&self, other: &SigStore<Signature>) -> f64 {
-        let ng: &Signature = self.data().unwrap();
-        let ong: &Signature = other.data().unwrap();
-
-        // TODO: select the right signatures...
-        // TODO: better matching here, what if it is not a mh?
-        if let Sketch::MinHash(mh) = &ng.signatures[0] {
-            if let Sketch::MinHash(omh) = &ong.signatures[0] {
-                return mh.similarity(omh, true, false).unwrap();
-            }
-        }
-
-        /* FIXME: bring back after boomphf changes
-        if let Sketch::UKHS(mh) = &ng.signatures[0] {
-            if let Sketch::UKHS(omh) = &ong.signatures[0] {
-                return 1. - mh.distance(&omh);
-            }
-        }
-        */
-
-        unimplemented!()
-    }
-
-    fn containment(&self, other: &SigStore<Signature>) -> f64 {
-        let ng: &Signature = self.data().unwrap();
-        let ong: &Signature = other.data().unwrap();
-
-        // TODO: select the right signatures...
-        // TODO: better matching here, what if it is not a mh?
-        if let Sketch::MinHash(mh) = &ng.signatures[0] {
-            if let Sketch::MinHash(omh) = &ong.signatures[0] {
-                let common = mh.count_common(omh, false).unwrap();
-                let size = mh.size();
-                return common as f64 / size as f64;
-            }
-        }
-        unimplemented!()
-    }
-}
-
-impl Comparable<Signature> for Signature {
-    fn similarity(&self, other: &Signature) -> f64 {
-        // TODO: select the right signatures...
-        // TODO: better matching here, what if it is not a mh?
-        if let Sketch::MinHash(mh) = &self.signatures[0] {
-            if let Sketch::MinHash(omh) = &other.signatures[0] {
-                return mh.similarity(omh, true, false).unwrap();
-            }
-        }
-
-        /* FIXME: bring back after boomphf changes
-        if let Sketch::UKHS(mh) = &self.signatures[0] {
-            if let Sketch::UKHS(omh) = &other.signatures[0] {
-                return 1. - mh.distance(&omh);
-            }
-        }
-        */
-
-        unimplemented!()
-    }
-
-    fn containment(&self, other: &Signature) -> f64 {
-        // TODO: select the right signatures...
-        // TODO: better matching here, what if it is not a mh?
-        if let Sketch::MinHash(mh) = &self.signatures[0] {
-            if let Sketch::MinHash(omh) = &other.signatures[0] {
-                let common = mh.count_common(omh, false).unwrap();
-                let size = mh.size();
-                return common as f64 / size as f64;
-            }
-        }
-        unimplemented!()
-    }
-}
-
-impl<L> From<DatasetInfo> for SigStore<L> {
-    fn from(other: DatasetInfo) -> SigStore<L> {
-        SigStore {
-            filename: other.filename,
-            name: other.name,
-            metadata: other.metadata,
-            storage: None,
-            data: OnceCell::new(),
-        }
     }
 }

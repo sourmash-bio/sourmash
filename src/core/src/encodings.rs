@@ -7,6 +7,7 @@ use std::str;
 
 use nohash_hasher::BuildNoHashHasher;
 use once_cell::sync::Lazy;
+use vec_collections::AbstractVecSet;
 
 use crate::Error;
 
@@ -17,12 +18,16 @@ use crate::Error;
 //   and a `Slab<V>`. This might be very useful if K is something
 //   heavy such as a `String`.
 pub type Color = u64;
-pub type Idx = u64;
-type IdxTracker = (vec_collections::VecSet<[Idx; 4]>, u64);
+pub type Idx = u32;
+type IdxTracker = (vec_collections::VecSet<[Idx; 8]>, u64);
 type ColorToIdx = HashMap<Color, IdxTracker, BuildNoHashHasher<Color>>;
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 #[repr(u32)]
 pub enum HashFunctions {
     murmur64_DNA = 1,
@@ -73,7 +78,7 @@ impl TryFrom<&str> for HashFunctions {
             "dayhoff" => Ok(HashFunctions::murmur64_dayhoff),
             "hp" => Ok(HashFunctions::murmur64_hp),
             "protein" => Ok(HashFunctions::murmur64_protein),
-            _ => unimplemented!(),
+            v => unimplemented!("{v}"),
         }
     }
 }
@@ -507,16 +512,16 @@ mod test {
     fn colors_update() {
         let mut colors = Colors::new();
 
-        let color = colors.update(None, &[1_u64]).unwrap();
+        let color = colors.update(None, &[1_u32]).unwrap();
         assert_eq!(colors.len(), 1);
 
         dbg!("update");
-        let new_color = colors.update(Some(color), &[1_u64]).unwrap();
+        let new_color = colors.update(Some(color), &[1_u32]).unwrap();
         assert_eq!(colors.len(), 1);
         assert_eq!(color, new_color);
 
         dbg!("upgrade");
-        let new_color = colors.update(Some(color), &[2_u64]).unwrap();
+        let new_color = colors.update(Some(color), &[2_u32]).unwrap();
         assert_eq!(colors.len(), 2);
         assert_ne!(color, new_color);
     }
@@ -525,20 +530,20 @@ mod test {
     fn colors_retain() {
         let mut colors = Colors::new();
 
-        let color1 = colors.update(None, &[1_u64]).unwrap();
+        let color1 = colors.update(None, &[1_u32]).unwrap();
         assert_eq!(colors.len(), 1);
         // used_colors:
         //   color1: 1
 
         dbg!("update");
-        let same_color = colors.update(Some(color1), &[1_u64]).unwrap();
+        let same_color = colors.update(Some(color1), &[1_u32]).unwrap();
         assert_eq!(colors.len(), 1);
         assert_eq!(color1, same_color);
         // used_colors:
         //   color1: 2
 
         dbg!("upgrade");
-        let color2 = colors.update(Some(color1), &[2_u64]).unwrap();
+        let color2 = colors.update(Some(color1), &[2_u32]).unwrap();
         assert_eq!(colors.len(), 2);
         assert_ne!(color1, color2);
         // used_colors:
@@ -546,7 +551,7 @@ mod test {
         //   color2: 1
 
         dbg!("update");
-        let same_color = colors.update(Some(color2), &[2_u64]).unwrap();
+        let same_color = colors.update(Some(color2), &[2_u32]).unwrap();
         assert_eq!(colors.len(), 2);
         assert_eq!(color2, same_color);
         // used_colors:
@@ -554,7 +559,7 @@ mod test {
         //   color1: 2
 
         dbg!("upgrade");
-        let color3 = colors.update(Some(color1), &[3_u64]).unwrap();
+        let color3 = colors.update(Some(color1), &[3_u32]).unwrap();
         assert_ne!(color1, color3);
         assert_ne!(color2, color3);
         // used_colors:

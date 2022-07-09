@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use getset::{CopyGetters, Getters, Setters};
+use camino::Utf8Path as Path;
+use camino::Utf8PathBuf as PathBuf;
 use log::{debug, info};
 use nohash_hasher::BuildNoHashHasher;
 use serde::{Deserialize, Serialize};
@@ -10,15 +10,25 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
+use crate::collection::Collection;
 use crate::encodings::{Color, Colors, Idx};
-use crate::index::Index;
+use crate::index::linear::LinearIndex;
+use crate::index::{GatherResult, Index, Selection, SigCounter};
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
-use crate::Error;
+use crate::storage::Storage;
 use crate::HashIntoType;
+use crate::Result;
 
-type SigCounter = counter::Counter<Idx>;
+// Use rkyv for serialization?
+// https://davidkoloski.me/rkyv/
+//#[derive(Serialize, Deserialize)]
+pub struct RevIndex {
+    linear: LinearIndex,
+    hash_to_color: HashToColor,
+    colors: Colors,
+}
 
 #[derive(Serialize, Deserialize)]
 struct HashToColor(HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>);
@@ -95,28 +105,78 @@ impl HashToColor {
     }
 }
 
-// Use rkyv for serialization?
-// https://davidkoloski.me/rkyv/
-#[derive(Serialize, Deserialize)]
-pub struct RevIndex {
-    hash_to_color: HashToColor,
+impl LinearIndex {
+    fn index(
+        self,
+        threshold: usize,
+        merged_query: Option<KmerMinHash>,
+        queries: Option<&[KmerMinHash]>,
+    ) -> RevIndex {
+        let processed_sigs = AtomicUsize::new(0);
 
-    sig_files: Vec<PathBuf>,
+        let search_sigs: Vec<_> = self
+            .collection()
+            .manifest
+            .internal_locations()
+            .map(PathBuf::from)
+            .collect();
 
-    #[serde(skip)]
-    ref_sigs: Option<Vec<Signature>>,
+        #[cfg(feature = "parallel")]
+        let sig_iter = search_sigs.par_iter();
 
-    template: Sketch,
-    colors: Colors,
-    //#[serde(skip)]
-    //storage: Option<InnerStorage>,
+        #[cfg(not(feature = "parallel"))]
+        let sig_iter = search_sigs.iter();
+
+        let filtered_sigs = sig_iter.enumerate().filter_map(|(dataset_id, filename)| {
+            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+            if i % 1000 == 0 {
+                info!("Processed {} reference sigs", i);
+            }
+
+            let search_sig = self
+                .collection()
+                .storage
+                .load_sig(filename.as_str())
+                .unwrap_or_else(|_| panic!("Error processing {:?}", filename))
+                .into();
+
+            RevIndex::map_hashes_colors(
+                dataset_id,
+                &search_sig,
+                queries,
+                &merged_query,
+                threshold,
+                self.template(),
+            )
+        });
+
+        #[cfg(feature = "parallel")]
+        let (hash_to_color, colors) = filtered_sigs.reduce(
+            || (HashToColor::new(), Colors::default()),
+            HashToColor::reduce_hashes_colors,
+        );
+
+        #[cfg(not(feature = "parallel"))]
+        let (hash_to_color, colors) = filtered_sigs.fold(
+            (HashToColor::new(), Colors::default()),
+            HashToColor::reduce_hashes_colors,
+        );
+
+        RevIndex {
+            hash_to_color,
+            colors,
+            linear: self,
+        }
+    }
 }
 
 impl RevIndex {
     pub fn load<P: AsRef<Path>>(
-        index_path: P,
-        queries: Option<&[KmerMinHash]>,
-    ) -> Result<RevIndex, Box<dyn std::error::Error>> {
+        _index_path: P,
+        _queries: Option<&[KmerMinHash]>,
+    ) -> Result<RevIndex> {
+        unimplemented!()
+        /*
         let (rdr, _) = niffler::from_path(index_path)?;
         let revindex = if let Some(qs) = queries {
             // TODO: avoid loading full revindex if query != None
@@ -152,6 +212,7 @@ impl RevIndex {
         };
 
         Ok(revindex)
+        */
     }
 
     pub fn new(
@@ -159,80 +220,33 @@ impl RevIndex {
         template: &Sketch,
         threshold: usize,
         queries: Option<&[KmerMinHash]>,
-        keep_sigs: bool,
-    ) -> RevIndex {
+        _keep_sigs: bool,
+    ) -> Result<RevIndex> {
         // If threshold is zero, let's merge all queries and save time later
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
-        let processed_sigs = AtomicUsize::new(0);
+        let collection =
+            Collection::from_paths(search_sigs)?.select(&Selection::from_template(template))?;
+        let linear = LinearIndex::from_collection(collection.try_into()?);
 
-        #[cfg(feature = "parallel")]
-        let sig_iter = search_sigs.par_iter();
+        Ok(linear.index(threshold, merged_query, queries))
+    }
 
-        #[cfg(not(feature = "parallel"))]
-        let sig_iter = search_sigs.iter();
+    pub fn from_zipfile<P: AsRef<Path>>(
+        zipfile: P,
+        template: &Sketch,
+        threshold: usize,
+        queries: Option<&[KmerMinHash]>,
+        _keep_sigs: bool,
+    ) -> Result<RevIndex> {
+        // If threshold is zero, let's merge all queries and save time later
+        let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
-        let filtered_sigs = sig_iter.enumerate().filter_map(|(dataset_id, filename)| {
-            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-            if i % 1000 == 0 {
-                info!("Processed {} reference sigs", i);
-            }
+        let collection =
+            Collection::from_zipfile(zipfile)?.select(&Selection::from_template(template))?;
+        let linear = LinearIndex::from_collection(collection.try_into()?);
 
-            let search_sig = Signature::from_path(filename)
-                .unwrap_or_else(|_| panic!("Error processing {:?}", filename))
-                .swap_remove(0);
-
-            RevIndex::map_hashes_colors(
-                dataset_id,
-                &search_sig,
-                queries,
-                &merged_query,
-                threshold,
-                template,
-            )
-        });
-
-        #[cfg(feature = "parallel")]
-        let (hash_to_color, colors) = filtered_sigs.reduce(
-            || (HashToColor::new(), Colors::default()),
-            HashToColor::reduce_hashes_colors,
-        );
-
-        #[cfg(not(feature = "parallel"))]
-        let (hash_to_color, colors) = filtered_sigs.fold(
-            (HashToColor::new(), Colors::default()),
-            HashToColor::reduce_hashes_colors,
-        );
-
-        // TODO: build this together with hash_to_idx?
-        let ref_sigs = if keep_sigs {
-            #[cfg(feature = "parallel")]
-            let sigs_iter = search_sigs.par_iter();
-
-            #[cfg(not(feature = "parallel"))]
-            let sigs_iter = search_sigs.iter();
-
-            Some(
-                sigs_iter
-                    .map(|ref_path| {
-                        Signature::from_path(ref_path)
-                            .unwrap_or_else(|_| panic!("Error processing {:?}", ref_path))
-                            .swap_remove(0)
-                    })
-                    .collect(),
-            )
-        } else {
-            None
-        };
-
-        RevIndex {
-            hash_to_color,
-            sig_files: search_sigs.into(),
-            ref_sigs,
-            template: template.clone(),
-            colors,
-            //            storage: Some(InnerStorage::new(MemStorage::default())),
-        }
+        Ok(linear.index(threshold, merged_query, queries))
     }
 
     fn merge_queries(qs: &[KmerMinHash], threshold: usize) -> Option<KmerMinHash> {
@@ -252,53 +266,17 @@ impl RevIndex {
         template: &Sketch,
         threshold: usize,
         queries: Option<&[KmerMinHash]>,
-    ) -> RevIndex {
+    ) -> Result<RevIndex> {
         // If threshold is zero, let's merge all queries and save time later
         let merged_query = queries.and_then(|qs| Self::merge_queries(qs, threshold));
 
-        let processed_sigs = AtomicUsize::new(0);
+        let collection =
+            Collection::from_sigs(search_sigs)?.select(&Selection::from_template(template))?;
+        let linear = LinearIndex::from_collection(collection.try_into()?);
 
-        #[cfg(feature = "parallel")]
-        let sigs_iter = search_sigs.par_iter();
-        #[cfg(not(feature = "parallel"))]
-        let sigs_iter = search_sigs.iter();
+        let idx = linear.index(threshold, merged_query, queries);
 
-        let filtered_sigs = sigs_iter.enumerate().filter_map(|(dataset_id, sig)| {
-            let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
-            if i % 1000 == 0 {
-                info!("Processed {} reference sigs", i);
-            }
-
-            RevIndex::map_hashes_colors(
-                dataset_id,
-                sig,
-                queries,
-                &merged_query,
-                threshold,
-                template,
-            )
-        });
-
-        #[cfg(feature = "parallel")]
-        let (hash_to_color, colors) = filtered_sigs.reduce(
-            || (HashToColor::new(), Colors::default()),
-            HashToColor::reduce_hashes_colors,
-        );
-
-        #[cfg(not(feature = "parallel"))]
-        let (hash_to_color, colors) = filtered_sigs.fold(
-            (HashToColor::new(), Colors::default()),
-            HashToColor::reduce_hashes_colors,
-        );
-
-        RevIndex {
-            hash_to_color,
-            sig_files: vec![],
-            ref_sigs: search_sigs.into(),
-            template: template.clone(),
-            colors,
-            //storage: None,
-        }
+        Ok(idx)
     }
 
     fn map_hashes_colors(
@@ -352,20 +330,8 @@ impl RevIndex {
         counter: SigCounter,
         similarity: bool,
         threshold: usize,
-    ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-        let mut matches = vec![];
-        if similarity {
-            unimplemented!("TODO: threshold correction")
-        }
-
-        for (dataset_id, size) in counter.most_common() {
-            if size >= threshold {
-                matches.push(self.sig_files[dataset_id as usize].to_str().unwrap().into());
-            } else {
-                break;
-            };
-        }
-        Ok(matches)
+    ) -> Result<Vec<String>> {
+        self.linear.search(counter, similarity, threshold)
     }
 
     pub fn gather(
@@ -373,109 +339,37 @@ impl RevIndex {
         mut counter: SigCounter,
         threshold: usize,
         query: &KmerMinHash,
-    ) -> Result<Vec<GatherResult>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<GatherResult>> {
         let mut match_size = usize::max_value();
         let mut matches = vec![];
 
         while match_size > threshold && !counter.is_empty() {
             let (dataset_id, size) = counter.most_common()[0];
             match_size = if size >= threshold { size } else { break };
-
-            let p;
-            let match_path = if self.sig_files.is_empty() {
-                p = PathBuf::new(); // TODO: Fix somehow?
-                &p
-            } else {
-                &self.sig_files[dataset_id as usize]
-            };
-
-            let ref_match;
-            let match_sig = if let Some(refsigs) = &self.ref_sigs {
-                &refsigs[dataset_id as usize]
-            } else {
-                // TODO: remove swap_remove
-                ref_match = Signature::from_path(match_path)?.swap_remove(0);
-                &ref_match
-            };
-
-            let mut match_mh = None;
-            if let Some(Sketch::MinHash(mh)) = match_sig.select_sketch(&self.template) {
-                match_mh = Some(mh);
-            }
-            let match_mh = match_mh.expect("Couldn't find a compatible MinHash");
-
-            // Calculate stats
-            let f_orig_query = match_size as f64 / query.size() as f64;
-            let f_match = match_size as f64 / match_mh.size() as f64;
-            let filename = match_path.to_str().unwrap().into();
-            let name = match_sig.name();
-            let unique_intersect_bp = match_mh.scaled() as usize * match_size;
-            let gather_result_rank = matches.len();
-
-            let (intersect_orig, _) = match_mh.intersection_size(query)?;
-            let intersect_bp = (match_mh.scaled() * intersect_orig) as usize;
-
-            let f_unique_to_query = intersect_orig as f64 / query.size() as f64;
-            let match_ = match_sig.clone();
-
-            // TODO: all of these
-            let f_unique_weighted = 0.;
-            let average_abund = 0;
-            let median_abund = 0;
-            let std_abund = 0;
-            let md5 = "".into();
-            let f_match_orig = 0.;
-            let remaining_bp = 0;
-
-            let result = GatherResult {
-                intersect_bp,
-                f_orig_query,
-                f_match,
-                f_unique_to_query,
-                f_unique_weighted,
-                average_abund,
-                median_abund,
-                std_abund,
-                filename,
-                name,
-                md5,
-                match_,
-                f_match_orig,
-                unique_intersect_bp,
-                gather_result_rank,
-                remaining_bp,
-            };
-            matches.push(result);
-
-            // Prepare counter for finding the next match by decrementing
-            // all hashes found in the current match in other datasets
-            for hash in match_mh.iter_mins() {
-                if let Some(color) = self.hash_to_color.get(hash) {
-                    for dataset in self.colors.indices(color) {
-                        counter.entry(*dataset).and_modify(|e| {
-                            if *e > 0 {
-                                *e -= 1
-                            }
-                        });
+            let result = self
+                .linear
+                .gather_round(dataset_id, match_size, query, matches.len())?;
+            if let Some(Sketch::MinHash(match_mh)) =
+                result.match_.select_sketch(self.linear.template())
+            {
+                // Prepare counter for finding the next match by decrementing
+                // all hashes found in the current match in other datasets
+                for hash in match_mh.iter_mins() {
+                    if let Some(color) = self.hash_to_color.get(hash) {
+                        counter.subtract(self.colors.indices(color).cloned());
                     }
                 }
+                counter.remove(&dataset_id);
+                matches.push(result);
+            } else {
+                unimplemented!()
             }
-            counter.remove(&dataset_id);
         }
         Ok(matches)
     }
 
-    pub fn counter_for_query(&self, query: &KmerMinHash) -> SigCounter {
-        query
-            .iter_mins()
-            .filter_map(|hash| self.hash_to_color.get(hash))
-            .flat_map(|color| self.colors.indices(color))
-            .cloned()
-            .collect()
-    }
-
     pub fn template(&self) -> Sketch {
-        self.template.clone()
+        self.linear.template().clone()
     }
 
     // TODO: mh should be a sketch, or even a sig...
@@ -485,7 +379,7 @@ impl RevIndex {
         threshold: f64,
         containment: bool,
         _ignore_scaled: bool,
-    ) -> Result<Vec<(f64, Signature, String)>, Error> {
+    ) -> Result<Vec<(f64, Signature, String)>> {
         /*
         let template_mh = None;
         if let Sketch::MinHash(mh) = self.template {
@@ -526,25 +420,12 @@ impl RevIndex {
         for (dataset_id, size) in counter.most_common() {
             let match_size = if size >= threshold { size } else { break };
 
-            let p;
-            let match_path = if self.sig_files.is_empty() {
-                p = PathBuf::new(); // TODO: Fix somehow?
-                &p
-            } else {
-                &self.sig_files[dataset_id as usize]
-            };
-
-            let ref_match;
-            let match_sig = if let Some(refsigs) = &self.ref_sigs {
-                &refsigs[dataset_id as usize]
-            } else {
-                // TODO: remove swap_remove
-                ref_match = Signature::from_path(match_path)?.swap_remove(0);
-                &ref_match
-            };
+            let match_sig = self.linear.sig_for_dataset(dataset_id)?;
+            let match_path =
+                self.linear.collection().manifest[dataset_id as usize].internal_location();
 
             let mut match_mh = None;
-            if let Some(Sketch::MinHash(mh)) = match_sig.select_sketch(&self.template) {
+            if let Some(Sketch::MinHash(mh)) = match_sig.select_sketch(self.linear.template()) {
                 match_mh = Some(mh);
             }
             let match_mh = match_mh.unwrap();
@@ -555,8 +436,8 @@ impl RevIndex {
                 } else {
                     size as f64 / (mh.size() + match_size - size) as f64
                 };
-                let filename = match_path.to_str().unwrap().into();
-                let mut sig = match_sig.clone();
+                let filename = match_path.to_string();
+                let mut sig: Signature = match_sig.clone().into();
                 sig.reset_sketches();
                 sig.push(Sketch::MinHash(match_mh.clone()));
                 results.push((score, sig, filename));
@@ -566,74 +447,42 @@ impl RevIndex {
         }
         Ok(results)
     }
-}
 
-#[derive(CopyGetters, Getters, Setters, Serialize, Deserialize, Debug)]
-pub struct GatherResult {
-    #[getset(get_copy = "pub")]
-    intersect_bp: usize,
-
-    #[getset(get_copy = "pub")]
-    f_orig_query: f64,
-
-    #[getset(get_copy = "pub")]
-    f_match: f64,
-
-    f_unique_to_query: f64,
-    f_unique_weighted: f64,
-    average_abund: usize,
-    median_abund: usize,
-    std_abund: usize,
-
-    #[getset(get = "pub")]
-    filename: String,
-
-    #[getset(get = "pub")]
-    name: String,
-
-    md5: String,
-    match_: Signature,
-    f_match_orig: f64,
-    unique_intersect_bp: usize,
-    gather_result_rank: usize,
-    remaining_bp: usize,
-}
-
-impl GatherResult {
-    pub fn get_match(&self) -> Signature {
-        self.match_.clone()
+    pub fn counter_for_query(&self, query: &KmerMinHash) -> SigCounter {
+        query
+            .iter_mins()
+            .filter_map(|hash| self.hash_to_color.get(hash))
+            .flat_map(|color| self.colors.indices(color))
+            .cloned()
+            .collect()
     }
 }
 
 impl<'a> Index<'a> for RevIndex {
     type Item = Signature;
 
-    fn insert(&mut self, _node: Self::Item) -> Result<(), Error> {
+    fn insert(&mut self, _node: Self::Item) -> Result<()> {
         unimplemented!()
     }
 
-    fn save<P: AsRef<Path>>(&self, _path: P) -> Result<(), Error> {
+    fn save<P: AsRef<std::path::Path>>(&self, _path: P) -> Result<()> {
         unimplemented!()
     }
 
-    fn load<P: AsRef<Path>>(_path: P) -> Result<(), Error> {
+    fn load<P: AsRef<std::path::Path>>(_path: P) -> Result<()> {
         unimplemented!()
     }
 
     fn len(&self) -> usize {
-        if let Some(refs) = &self.ref_sigs {
-            refs.len()
-        } else {
-            self.sig_files.len()
-        }
+        self.linear.len()
     }
 
     fn signatures(&self) -> Vec<Self::Item> {
-        if let Some(ref sigs) = self.ref_sigs {
-            sigs.to_vec()
-        } else {
-            unimplemented!()
-        }
+        self.linear
+            .signatures()
+            .into_iter()
+            .map(|sig| sig.into())
+            .collect()
     }
 
     fn signature_refs(&self) -> Vec<&Self::Item> {
@@ -641,14 +490,52 @@ impl<'a> Index<'a> for RevIndex {
     }
 }
 
+/*
+impl RevIndexOps for RevIndex {
+    /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
+        pub fn repair(index: &Path, colors: bool);
+    */
+
+    fn matches_from_counter(&self, counter: SigCounter, threshold: usize) -> Vec<(String, usize)>;
+
+    fn prepare_gather_counters(
+        &self,
+        query: &KmerMinHash,
+    ) -> (SigCounter, QueryColors, HashToColor);
+
+    fn index(&self, index_sigs: Vec<PathBuf>, template: &Sketch, threshold: f64, save_paths: bool);
+
+    fn update(&self, index_sigs: Vec<PathBuf>, template: &Sketch, threshold: f64, save_paths: bool);
+
+    fn compact(&self);
+
+    fn flush(&self) -> Result<()>;
+
+    fn convert(&self, output_db: RevIndex) -> Result<()>;
+
+    fn check(&self, quick: bool);
+
+    fn gather(
+        &self,
+        counter: SigCounter,
+        query_colors: QueryColors,
+        hash_to_color: HashToColor,
+        threshold: usize,
+        query: &KmerMinHash,
+        template: &Sketch,
+    ) -> Result<Vec<GatherResult>>;
+}
+*/
+
 #[cfg(test)]
 mod test {
     use super::*;
 
     use crate::sketch::minhash::max_hash_for_scaled;
+    use crate::Result;
 
     #[test]
-    fn revindex_new() {
+    fn revindex_new() -> Result<()> {
         let max_hash = max_hash_for_scaled(10000);
         let template = Sketch::MinHash(
             KmerMinHash::builder()
@@ -661,12 +548,14 @@ mod test {
             "../../tests/test-data/gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig".into(),
             "../../tests/test-data/gather/GCF_000007545.1_ASM754v1_genomic.fna.gz.sig".into(),
         ];
-        let index = RevIndex::new(&search_sigs, &template, 0, None, false);
+        let index = RevIndex::new(&search_sigs, &template, 0, None, false)?;
         assert_eq!(index.colors.len(), 3);
+
+        Ok(())
     }
 
     #[test]
-    fn revindex_many() {
+    fn revindex_many() -> Result<()> {
         let max_hash = max_hash_for_scaled(10000);
         let template = Sketch::MinHash(
             KmerMinHash::builder()
@@ -681,7 +570,46 @@ mod test {
             "../../tests/test-data/gather/GCF_000008105.1_ASM810v1_genomic.fna.gz.sig".into(),
         ];
 
-        let index = RevIndex::new(&search_sigs, &template, 0, None, false);
+        let index = RevIndex::new(&search_sigs, &template, 0, None, false)?;
+        //dbg!(&index.linear.collection().manifest);
+        /*
+        dbg!(&index.colors.colors);
+         0: 86
+         1: 132
+         2: 91
+         (0, 1): 53
+         (0, 2): 90
+         (1, 2): 26
+         (0, 1, 2): 261
+         union: 739
+
+        */
+        //assert_eq!(index.colors.len(), 3);
+        assert_eq!(index.colors.len(), 7);
+
+        Ok(())
+    }
+
+    #[test]
+    fn revindex_from_sigs() -> Result<()> {
+        let max_hash = max_hash_for_scaled(10000);
+        let template = Sketch::MinHash(
+            KmerMinHash::builder()
+                .num(0u32)
+                .ksize(31)
+                .max_hash(max_hash)
+                .build(),
+        );
+        let search_sigs: Vec<Signature> = [
+            "../../tests/test-data/gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig",
+            "../../tests/test-data/gather/GCF_000007545.1_ASM754v1_genomic.fna.gz.sig",
+            "../../tests/test-data/gather/GCF_000008105.1_ASM810v1_genomic.fna.gz.sig",
+        ]
+        .into_iter()
+        .map(|path| Signature::from_path(path).unwrap().swap_remove(0))
+        .collect();
+
+        let index = RevIndex::new_with_sigs(search_sigs, &template, 0, None)?;
         /*
          dbg!(&index.colors.colors);
          0: 86
@@ -695,5 +623,67 @@ mod test {
         */
         //assert_eq!(index.colors.len(), 3);
         assert_eq!(index.colors.len(), 7);
+
+        Ok(())
+    }
+
+    #[test]
+    fn revindex_from_zipstorage() -> Result<()> {
+        let max_hash = max_hash_for_scaled(100);
+        let template = Sketch::MinHash(
+            KmerMinHash::builder()
+                .num(0u32)
+                .ksize(19)
+                .hash_function(crate::encodings::HashFunctions::murmur64_protein)
+                .max_hash(max_hash)
+                .build(),
+        );
+        let index = RevIndex::from_zipfile(
+            "../../tests/test-data/prot/protein.zip",
+            &template,
+            0,
+            None,
+            false,
+        )
+        .expect("error building from ziptorage");
+
+        assert_eq!(index.colors.len(), 3);
+
+        let query_sig = Signature::from_path(
+            "../../tests/test-data/prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig",
+        )
+        .expect("Error processing query")
+        .swap_remove(0);
+
+        let template = Sketch::MinHash(
+            KmerMinHash::builder()
+                .num(0u32)
+                .ksize(57)
+                .hash_function(crate::encodings::HashFunctions::murmur64_protein)
+                .max_hash(max_hash)
+                .build(),
+        );
+        let mut query_mh = None;
+        if let Some(Sketch::MinHash(mh)) = query_sig.select_sketch(&template) {
+            query_mh = Some(mh);
+        }
+        let query_mh = query_mh.expect("Couldn't find a compatible MinHash");
+
+        let counter_rev = index.counter_for_query(query_mh);
+        let counter_lin = index.linear.counter_for_query(query_mh);
+
+        let results_rev = index.search(counter_rev, false, 0).unwrap();
+        let results_linear = index.linear.search(counter_lin, false, 0).unwrap();
+        assert_eq!(results_rev, results_linear);
+
+        let counter_rev = index.counter_for_query(query_mh);
+        let counter_lin = index.linear.counter_for_query(query_mh);
+
+        let results_rev = index.gather(counter_rev, 0, query_mh).unwrap();
+        let results_linear = index.linear.gather(counter_lin, 0, query_mh).unwrap();
+        assert_eq!(results_rev.len(), 1);
+        assert_eq!(results_rev, results_linear);
+
+        Ok(())
     }
 }

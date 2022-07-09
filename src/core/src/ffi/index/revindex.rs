@@ -1,16 +1,16 @@
-use std::path::PathBuf;
 use std::slice;
 
-use crate::index::revindex::RevIndex;
-use crate::index::Index;
-use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::KmerMinHash;
-use crate::sketch::Sketch;
+use camino::Utf8PathBuf as PathBuf;
 
 use crate::ffi::index::SourmashSearchResult;
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::signature::SourmashSignature;
 use crate::ffi::utils::{ForeignObject, SourmashStr};
+use crate::index::revindex::mem_revindex::RevIndex;
+use crate::index::Index;
+use crate::signature::{Signature, SigsTrait};
+use crate::sketch::minhash::KmerMinHash;
+use crate::sketch::Sketch;
 
 pub struct SourmashRevIndex;
 
@@ -64,7 +64,7 @@ unsafe fn revindex_new_with_paths(
         threshold,
         queries,
         keep_sigs,
-    );
+    )?;
     Ok(SourmashRevIndex::from_rust(revindex))
 }
 }
@@ -105,7 +105,7 @@ unsafe fn revindex_new_with_sigs(
             .collect();
         Some(queries_vec.as_ref())
     };
-    let revindex = RevIndex::new_with_sigs(search_sigs, &template, threshold, queries);
+    let revindex = RevIndex::new_with_sigs(search_sigs, &template, threshold, queries)?;
     Ok(SourmashRevIndex::from_rust(revindex))
 }
 }

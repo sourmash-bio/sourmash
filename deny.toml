@@ -29,6 +29,7 @@ default = "deny"
 confidence-threshold = 0.8
 exceptions = [
     { allow = ["Zlib"], name = "piz", version = "*" },
+    { allow = ["ISC"], name = "libloading", version = "*" },
 ]
 
 [bans]
