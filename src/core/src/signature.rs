@@ -395,6 +395,10 @@ impl Iterator for SeqToHashes {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, TypedBuilder)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub struct Signature {
     #[serde(default = "default_class")]
     #[builder(default = default_class())]

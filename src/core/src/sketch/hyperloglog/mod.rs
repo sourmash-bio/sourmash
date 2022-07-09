@@ -26,6 +26,10 @@ pub mod estimators;
 use estimators::CounterType;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub struct HyperLogLog {
     registers: Vec<CounterType>,
     p: usize,
