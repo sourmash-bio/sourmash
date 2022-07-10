@@ -82,8 +82,9 @@ dependencies = [
   "bitstring>=3.1.9,<4",
 ]
 
+url = "https://sourmash.readthedocs.io/en/latest/"
 requires-python = ">=3.8"
-license = { file = "LICENSE" }
+license = "BSD 3-Clause License"
 dynamic = ["version"]
 
 [project.urls]
