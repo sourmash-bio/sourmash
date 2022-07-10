@@ -83,10 +83,13 @@ dependencies = [
 ]
 
 requires-python = ">=3.8"
-license = { file = "LICENSE" }
 dynamic = ["version"]
 
+[metadata]
+license = { text = "BSD 3-Clause License" }
+
 [project.urls]
+"Homepage" = "https://sourmash.bio/"
 "Documentation" = "https://sourmash.readthedocs.io"
 "CI" = "https://github.com/dib-lab/sourmash/actions"
 "Source" = "https://github.com/dib-lab/sourmash"
