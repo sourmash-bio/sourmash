@@ -87,9 +87,9 @@ dynamic = ["version"]
 
 [metadata]
 license = "BSD 3-Clause License"
-url = "https://sourmash.readthedocs.io/en/latest/"
 
 [project.urls]
+"Homepage" = "https://sourmash.readthedocs.io/"
 "Documentation" = "https://sourmash.readthedocs.io"
 "CI" = "https://github.com/dib-lab/sourmash/actions"
 "Source" = "https://github.com/dib-lab/sourmash"
