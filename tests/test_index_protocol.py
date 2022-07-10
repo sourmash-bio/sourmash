@@ -915,7 +915,6 @@ def test_counter_gather_exact_match(counter_gather_constructor):
     query_ss = SourmashSignature(query_mh, name='query')
 
     # load up the counter; provide a location override, too.
-    # @CTB split out into a separate test?
     counter = counter_gather_constructor(query_ss.minhash)
     counter.add(query_ss, location='somewhere over the rainbow')
 
@@ -926,6 +925,34 @@ def test_counter_gather_exact_match(counter_gather_constructor):
     assert sr.score == 1.0
     assert sr.signature == query_ss
     assert sr.location == 'somewhere over the rainbow'
+
+
+def test_counter_gather_multiple_identical_matches(counter_gather_constructor):
+    # query == match
+    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
+    query_mh.add_many(range(0, 20))
+    query_ss = SourmashSignature(query_mh, name='query')
+
+    # create counter...
+    counter = counter_gather_constructor(query_ss.minhash)
+
+    # now add multiple identical matches.
+    match_mh = query_mh.copy_and_clear()
+    match_mh.add_many(range(5, 15))
+
+    for name in 'match1', 'match2', 'match3':
+        match_ss = SourmashSignature(match_mh, name=name)
+        counter.add(match_ss, location=name)
+
+    results = _consume_all(query_ss.minhash, counter)
+    assert len(results) == 1
+
+    sr, overlap_count = results[0]
+    assert sr.score == 0.5
+    assert overlap_count == 10
+
+    # any one of the three is valid
+    assert sr.location in ('match1', 'match2', 'match3')
 
 
 def test_counter_gather_add_after_peek(counter_gather_constructor):
