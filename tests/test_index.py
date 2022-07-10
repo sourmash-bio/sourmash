@@ -1542,13 +1542,10 @@ def test_sbt_index_gather_ignore():
     assert not is_found(ss2, results)
     assert is_found(ss63, results)
 
-###
-### CounterGather tests - implementation specific. See test_index_protocol
-### for protocol tests.
-###
 
-def test_counter_gather_3_test_consume():
+def test_counter_gather_test_consume():
     # open-box testing of CounterGather.consume(...)
+    # (see test_index_protocol.py for generic CounterGather tests.)
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
     query_ss = SourmashSignature(query_mh, name='query')

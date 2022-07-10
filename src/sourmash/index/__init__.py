@@ -728,8 +728,6 @@ class CounterGather:
 
     def add(self, ss, *, location=None, require_overlap=True):
         "Add this signature in as a potential match."
-#        if location is not None: # @CTB
-#            raise Exception
         if self.query_started:
             raise ValueError("cannot add more signatures to counter after peek/consume")
 
