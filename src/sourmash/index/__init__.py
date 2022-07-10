@@ -279,7 +279,11 @@ class Index(ABC):
         return results[:1]
 
     def peek(self, query_mh, *, threshold_bp=0):
-        "Mimic CounterGather.peek() on top of Index. Yes, this is backwards."
+        """Mimic CounterGather.peek() on top of Index.
+
+        This is implemented for situations where we don't want to use
+        'prefetch' functionality.
+        """
         from sourmash import SourmashSignature
 
         # build a signature to use with self.gather...
