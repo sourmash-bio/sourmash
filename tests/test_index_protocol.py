@@ -495,6 +495,11 @@ def create_linear_index_as_counter_gather(runtmp):
             if self.query_started:
                 raise ValueError("cannot add more signatures to counter after peek/consume")
 
+            # skip duplicates
+            md5 = ss.md5sum()
+            if md5 in self.locations:
+                return
+
             add_mh = ss.minhash.flatten()
             overlap = self.orig_query_mh.count_common(add_mh, downsample=True)
 
@@ -504,8 +509,6 @@ def create_linear_index_as_counter_gather(runtmp):
                 raise ValueError("no overlap between query and signature!?")
 
             self.idx.insert(ss)
-
-            md5 = ss.md5sum()
             self.locations[md5] = location
 
         def downsample(self, scaled):
@@ -928,7 +931,7 @@ def test_counter_gather_exact_match(counter_gather_constructor):
 
 
 def test_counter_gather_multiple_identical_matches(counter_gather_constructor):
-    # query == match
+    # test multiple identical matches being inserted, with only one return
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
     query_ss = SourmashSignature(query_mh, name='query')
