@@ -89,7 +89,7 @@ dynamic = ["version"]
 license = { text = "BSD 3-Clause License" }
 
 [project.urls]
-"Homepage" = "https://sourmash.readthedocs.io/"
+"Homepage" = "https://sourmash.bio/"
 "Documentation" = "https://sourmash.readthedocs.io"
 "CI" = "https://github.com/dib-lab/sourmash/actions"
 "Source" = "https://github.com/dib-lab/sourmash"
