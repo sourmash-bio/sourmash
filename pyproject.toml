@@ -86,7 +86,7 @@ requires-python = ">=3.8"
 dynamic = ["version"]
 
 [metadata]
-license = "BSD 3-Clause License"
+license = { text = "BSD 3-Clause License" }
 
 [project.urls]
 "Homepage" = "https://sourmash.readthedocs.io/"
