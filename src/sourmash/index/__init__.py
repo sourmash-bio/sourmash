@@ -38,7 +38,6 @@ import os
 import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
-from collections import defaultdict
 
 from sourmash.search import (make_jaccard_search_query, make_gather_query,
                              calc_threshold_from_bp)
@@ -279,7 +278,12 @@ class Index(ABC):
         return results[:1]
 
     def peek(self, query_mh, *, threshold_bp=0):
-        "Mimic CounterGather.peek() on top of Index. Yes, this is backwards."
+        """Mimic CounterGather.peek() on top of Index.
+
+        This is implemented for situations where we don't want to use
+        'prefetch' functionality. It is a light wrapper around the
+        'gather'/search-by-containment method.
+        """
         from sourmash import SourmashSignature
 
         # build a signature to use with self.gather...
@@ -702,17 +706,24 @@ class ZipFileLinearIndex(Index):
 
 
 class CounterGather:
-    """
-    Track and summarize matches for efficient 'gather' protocol.  This
-    could be used downstream of prefetch (for example).
+    """This is an ancillary class that is used to implement "fast
+    gather", post-prefetch. It tracks and summarize matches for
+    efficient min-set-cov/'gather'.
 
-    The public interface is `peek(...)` and `consume(...)` only.
+    The class constructor takes a query MinHash that must be scaled, and
+    then takes signatures that have overlaps with the query (via 'add').
 
-    CTB: what about using an LCA database for this? In-memory sqlite?
-    CTB: think about tracking (in LCA or elsewhere) only the intersections
-    with the query.
+    After all overlapping signatures have been loaded, the 'peek'
+    method is then used at each stage of the 'gather' procedure to
+    find the best match, and the 'consume' method is used to remove
+    a match from this counter.
+
+    This particular implementation maintains a collections.Counter that
+    is used to quickly find the best match when 'peek' is called, but
+    other implementations are possible ;).
     """
     def __init__(self, query_mh):
+        "Constructor - takes a query FracMinHash."
         if not query_mh.scaled:
             raise ValueError('gather requires scaled signatures')
 
@@ -724,16 +735,14 @@ class CounterGather:
         self.siglist = {}
         self.locations = {}
 
-        # ...and overlaps with query
+        # ...and also track overlaps with the progressive query
         self.counter = Counter()
 
-        # cannot add matches once query has started.
+        # fence to make sure we do add matches once query has started.
         self.query_started = 0
 
     def add(self, ss, *, location=None, require_overlap=True):
         "Add this signature in as a potential match."
-#        if location is not None: # @CTB
-#            raise Exception
         if self.query_started:
             raise ValueError("cannot add more signatures to counter after peek/consume")
 
@@ -777,6 +786,7 @@ class CounterGather:
         if not cur_query_mh:             # empty query? quit.
             return []
 
+        # CTB: could probably remove this check unless debug requested.
         if cur_query_mh.contained_by(self.orig_query_mh, downsample=True) < 1:
             raise ValueError("current query not a subset of original query")
 
@@ -788,7 +798,7 @@ class CounterGather:
         if threshold > 1.0:
             return []
 
-        # Find the best match -
+        # Find the best match using the internal Counter.
         most_common = counter.most_common()
         dataset_id, match_size = most_common[0]
 
@@ -796,12 +806,13 @@ class CounterGather:
         if match_size < n_threshold_hashes:
             return []
 
-        ## at this point, we must have a legitimate match above threshold!
+        ## at this point, we have a legitimate match above threshold!
 
         # pull match and location.
         match = siglist[dataset_id]
 
         # calculate containment
+        # CTB: this check is probably redundant with intersect_mh calc, below.
         cont = cur_query_mh.contained_by(match.minhash, downsample=True)
         assert cont
         assert cont >= threshold
@@ -854,87 +865,6 @@ class CounterGather:
                     del counter[dataset_id]
 
         print(f'XXX n_sub={n_sub}')
-
-
-class CounterGather_LCA:
-    # @CTB
-    def __init__(self, mh):
-        from sourmash.lca.lca_db import LCA_Database
-        if mh.scaled == 0:
-            raise ValueError("must use scaled MinHash")
-
-        self.orig_query_mh = mh
-        lca_db = LCA_Database(mh.ksize, mh.scaled, mh.moltype)
-        self.db = lca_db
-        self.siglist = []
-        self.locations = {}
-        self.query_started = 0
-
-    def add(self, ss, *, location=None, require_overlap=True):
-        if self.query_started:
-            raise ValueError("cannot add more signatures to counter after peek/consume")
-
-        overlap = self.orig_query_mh.count_common(ss.minhash, True)
-        if overlap:
-            self.downsample(ss.minhash.scaled)
-        elif require_overlap:
-            raise ValueError("no overlap between query and signature!?")
-
-        self.db.insert(ss)
-        self.siglist.append(ss)
-        #self.locations.append(location)
-
-        md5 = ss.md5sum()
-        self.locations[md5] = location
-
-    def downsample(self, scaled):
-        "Track highest scaled across all possible matches."
-        if scaled > self.db.scaled:
-            self.db.downsample_scaled(scaled)
-        return self.db.scaled
-
-    def peek(self, query_mh, *, threshold_bp=0):
-        from sourmash import SourmashSignature
-
-        self.query_started = 1
-        scaled = self.downsample(query_mh.scaled)
-        query_mh = query_mh.downsample(scaled=scaled)
-
-        if not self.orig_query_mh or not query_mh:
-            return []
-
-        if query_mh.contained_by(self.orig_query_mh, downsample=True) < 1:
-            raise ValueError("current query not a subset of original query")
-
-        query_ss = SourmashSignature(query_mh)
-
-        # returns search_result, intersect_mh
-        try:
-            result = self.db.gather(query_ss, threshold_bp=threshold_bp)
-        except ValueError:
-            result = None
-
-        if not result:
-            return []
-
-        sr = result[0]
-        cont = sr.score
-        match = sr.signature
-
-        match_mh = sr.signature.minhash
-        scaled = max(query_mh.scaled, match_mh.scaled)
-        match_mh = match_mh.downsample(scaled=scaled).flatten()
-        query_mh = query_mh.downsample(scaled=scaled)
-        intersect_mh = match_mh & query_mh
-
-        md5 = sr.signature.md5sum()
-        location = self.locations[md5]
-
-        new_sr = IndexSearchResult(cont, match, location)
-        return [new_sr, intersect_mh]
-
-    def consume(self, intersect_mh):
-        self.query_started = 1
 
 
 class MultiIndex(Index):

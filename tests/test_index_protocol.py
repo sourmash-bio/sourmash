@@ -11,6 +11,7 @@ from sourmash import SourmashSignature
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             LazyLinearIndex, MultiIndex,
                             StandaloneManifestIndex)
+from sourmash.index import CounterGather
 from sourmash.index.sqlite_index import SqliteIndex
 from sourmash.index.revindex import RevIndex
 from sourmash.sbt import SBT, GraphFactory
@@ -119,14 +120,6 @@ def build_lca_index(runtmp):
         db.insert(ss)
 
     return db
-
-
-def build_lca_index_save_load(runtmp):
-    db = build_lca_index(runtmp)
-    outfile = runtmp.output('db.lca.json')
-    db.save(outfile)
-
-    return sourmash.load_file_as_index(outfile)
 
 
 def build_lca_index_save_load(runtmp):
@@ -472,94 +465,101 @@ def test_gather_threshold_5(index_obj):
 
 
 def create_basic_counter_gather(runtmp):
-    "build a basic CounterGather class"
-    from sourmash.index import CounterGather
+    "Construct a CounterGather class."
     return CounterGather
 
 
-def create_linear_index_as_counter_gather(runtmp):
-    "test CounterGather API from LinearIndex"
+class CounterGather_LinearIndex:
+    """
+    Provides an (inefficient) CounterGather-style class, for
+    protocol testing purposes.
+    """
+    def __init__(self, orig_query_mh):
+        "Constructor - take a FracMinHash that is the original query."
+        if orig_query_mh.scaled == 0:
+            raise ValueError
 
-    class LinearIndexWrapper:
-        def __init__(self, orig_query_mh):
-            if orig_query_mh.scaled == 0:
-                raise ValueError
+        # Index object used to actually track matches.
+        self.idx = LinearIndex()
+        self.orig_query_mh = orig_query_mh.copy().flatten()
+        self.query_started = 0
+        self.scaled = orig_query_mh.scaled
+        self.locations = {}
 
-            self.idx = LinearIndex()
-            self.orig_query_mh = orig_query_mh.copy().flatten()
-            self.query_started = 0
-            self.scaled = orig_query_mh.scaled
-            self.locations = {}
+    def add(self, ss, *, location=None, require_overlap=True):
+        "Insert potential match."
+        if self.query_started:
+            raise ValueError("cannot add more signatures to counter after peek/consume")
 
-        def add(self, ss, *, location=None, require_overlap=True):
-            if self.query_started:
-                raise ValueError("cannot add more signatures to counter after peek/consume")
+        # skip duplicates
+        md5 = ss.md5sum()
+        if md5 in self.locations:
+            return
 
-            add_mh = ss.minhash.flatten()
-            overlap = self.orig_query_mh.count_common(add_mh, downsample=True)
+        # confirm that this match has an overlap...
+        add_mh = ss.minhash.flatten()
+        overlap = self.orig_query_mh.count_common(add_mh, downsample=True)
 
-            if overlap:
-                self.downsample(add_mh.scaled)
-            elif require_overlap:
-                raise ValueError("no overlap between query and signature!?")
+        # ...figure out what scaled we are operating at now...
+        if overlap:
+            self.downsample(add_mh.scaled)
+        elif require_overlap:
+            raise ValueError("no overlap between query and signature!?")
 
-            self.idx.insert(ss)
+        # ...and add to the Index, while also tracking location!
+        self.idx.insert(ss)
+        self.locations[md5] = location
 
-            md5 = ss.md5sum()
-            self.locations[md5] = location
+    def downsample(self, scaled):
+        "Track highest scaled across all possible matches."
+        if scaled > self.scaled:
+            self.scaled = scaled
+        return self.scaled
 
-        def downsample(self, scaled):
-            "Track highest scaled across all possible matches."
-            if scaled > self.scaled:
-                self.scaled = scaled
-            return self.scaled
+    def peek(self, cur_query_mh, *, threshold_bp=0):
+        """
+        Find best match to current query within this CounterGather object.
+        """
+        self.query_started = 1
+        cur_query_mh = cur_query_mh.flatten()
+        scaled = self.downsample(cur_query_mh.scaled)
+        cur_query_mh = cur_query_mh.downsample(scaled=scaled)
 
-        def peek(self, cur_query_mh, *, threshold_bp=0):
-            self.query_started = 1
-            cur_query_mh = cur_query_mh.flatten()
-            scaled = self.downsample(cur_query_mh.scaled)
-            cur_query_mh = cur_query_mh.downsample(scaled=scaled)
+        # no match? exit.
+        if not self.orig_query_mh or not cur_query_mh:
+            return []
 
-            if not self.orig_query_mh or not cur_query_mh:
-                return []
+        # verify current query is a subset of the original.
+        if cur_query_mh.contained_by(self.orig_query_mh, downsample=True) < 1:
+            raise ValueError("current query not a subset of original query")
 
-            if cur_query_mh.contained_by(self.orig_query_mh, downsample=True) < 1:
-                raise ValueError("current query not a subset of original query")
+        # did we get a match?
+        res = self.idx.peek(cur_query_mh, threshold_bp=threshold_bp)
+        if not res:
+            return []
+        sr, intersect_mh = res
 
-            res = self.idx.peek(cur_query_mh, threshold_bp=threshold_bp)
-            if not res:
-                return []
-            sr, intersect_mh = res
+        from sourmash.index import IndexSearchResult
+        match = sr.signature
+        md5 = match.md5sum()
+        location = self.locations[md5]
+        new_sr = IndexSearchResult(sr.score, match, location)
+        return new_sr, intersect_mh
 
-            from sourmash.index import IndexSearchResult
-            match = sr.signature
-            md5 = match.md5sum()
-            location = self.locations[md5]
-            new_sr = IndexSearchResult(sr.score, match, location)
-            return new_sr, intersect_mh
-
-        def consume(self, *args, **kwargs):
-            self.query_started = 1
-            return self.idx.consume(*args, **kwargs)
-
-    return LinearIndexWrapper
-
-
-def create_counter_gather_lca(runtmp):
-    from sourmash.index import CounterGather_LCA
-    return CounterGather_LCA
+    def consume(self, *args, **kwargs):
+        self.query_started = 1
+        return self.idx.consume(*args, **kwargs)
 
 
-@pytest.fixture(params=[create_basic_counter_gather,
-                        create_linear_index_as_counter_gather,
-                        create_counter_gather_lca,
+@pytest.fixture(params=[CounterGather,
+                        CounterGather_LinearIndex,
                         ]
 )
-def counter_gather_constructor(request, runtmp):
+def counter_gather_constructor(request):
     build_fn = request.param
 
     # build on demand
-    return build_fn(runtmp)
+    return build_fn
 
 
 def _consume_all(query_mh, counter, threshold_bp=0):
@@ -915,7 +915,6 @@ def test_counter_gather_exact_match(counter_gather_constructor):
     query_ss = SourmashSignature(query_mh, name='query')
 
     # load up the counter; provide a location override, too.
-    # @CTB split out into a separate test?
     counter = counter_gather_constructor(query_ss.minhash)
     counter.add(query_ss, location='somewhere over the rainbow')
 
@@ -926,6 +925,34 @@ def test_counter_gather_exact_match(counter_gather_constructor):
     assert sr.score == 1.0
     assert sr.signature == query_ss
     assert sr.location == 'somewhere over the rainbow'
+
+
+def test_counter_gather_multiple_identical_matches(counter_gather_constructor):
+    # test multiple identical matches being inserted, with only one return
+    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
+    query_mh.add_many(range(0, 20))
+    query_ss = SourmashSignature(query_mh, name='query')
+
+    # create counter...
+    counter = counter_gather_constructor(query_ss.minhash)
+
+    # now add multiple identical matches.
+    match_mh = query_mh.copy_and_clear()
+    match_mh.add_many(range(5, 15))
+
+    for name in 'match1', 'match2', 'match3':
+        match_ss = SourmashSignature(match_mh, name=name)
+        counter.add(match_ss, location=name)
+
+    results = _consume_all(query_ss.minhash, counter)
+    assert len(results) == 1
+
+    sr, overlap_count = results[0]
+    assert sr.score == 0.5
+    assert overlap_count == 10
+
+    # any one of the three is valid
+    assert sr.location in ('match1', 'match2', 'match3')
 
 
 def test_counter_gather_add_after_peek(counter_gather_constructor):
@@ -997,7 +1024,7 @@ def test_counter_gather_num_query(counter_gather_constructor):
     query_ss = SourmashSignature(query_mh, name='query')
 
     with pytest.raises(ValueError):
-        counter = counter_gather_constructor(query_ss.minhash)
+        counter_gather_constructor(query_ss.minhash)
 
 
 def test_counter_gather_empty_cur_query(counter_gather_constructor):
