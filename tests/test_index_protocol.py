@@ -11,6 +11,7 @@ from sourmash import SourmashSignature
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             LazyLinearIndex, MultiIndex,
                             StandaloneManifestIndex)
+from sourmash.index import CounterGather
 from sourmash.index.sqlite_index import SqliteIndex
 from sourmash.index.revindex import RevIndex
 from sourmash.sbt import SBT, GraphFactory
@@ -119,14 +120,6 @@ def build_lca_index(runtmp):
         db.insert(ss)
 
     return db
-
-
-def build_lca_index_save_load(runtmp):
-    db = build_lca_index(runtmp)
-    outfile = runtmp.output('db.lca.json')
-    db.save(outfile)
-
-    return sourmash.load_file_as_index(outfile)
 
 
 def build_lca_index_save_load(runtmp):
@@ -557,11 +550,6 @@ class CounterGather_LinearIndex:
         self.query_started = 1
         return self.idx.consume(*args, **kwargs)
 
-
-from sourmash.index import CounterGather
-def create_linear_index_as_counter_gather(runtmp):
-    "test CounterGather API from LinearIndex"
-    return CounterGather_LinearIndex
 
 @pytest.fixture(params=[CounterGather,
                         CounterGather_LinearIndex,
@@ -1036,7 +1024,7 @@ def test_counter_gather_num_query(counter_gather_constructor):
     query_ss = SourmashSignature(query_mh, name='query')
 
     with pytest.raises(ValueError):
-        counter = counter_gather_constructor(query_ss.minhash)
+        counter_gather_constructor(query_ss.minhash)
 
 
 def test_counter_gather_empty_cur_query(counter_gather_constructor):

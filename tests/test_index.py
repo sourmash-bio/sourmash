@@ -8,7 +8,6 @@ import zipfile
 import shutil
 
 import sourmash
-from sourmash import index
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             make_jaccard_search_query, CounterGather,
