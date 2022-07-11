@@ -721,8 +721,8 @@ class CounterGather:
         self.scaled = query_mh.scaled
 
         # track matching signatures & their locations
-        self.siglist = []
-        self.locations = []
+        self.siglist = {}
+        self.locations = {}
 
         # ...and overlaps with query
         self.counter = Counter()
@@ -738,11 +738,11 @@ class CounterGather:
         # upon insertion, count & track overlap with the specific query.
         overlap = self.orig_query_mh.count_common(ss.minhash, True)
         if overlap:
-            i = len(self.siglist)
+            md5 = ss.md5sum()
 
-            self.counter[i] = overlap
-            self.siglist.append(ss)
-            self.locations.append(location)
+            self.counter[md5] = overlap
+            self.siglist[md5] = ss
+            self.locations[md5] = location
 
             # note: scaled will be max of all matches.
             self.downsample(ss.minhash.scaled)

@@ -1574,9 +1574,9 @@ def test_counter_gather_test_consume():
     pprint.pprint(counter.siglist)
     pprint.pprint(counter.locations)
 
-    assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
-    assert counter.locations == ['loc a', 'loc b', 'loc c']
-    assert list(counter.counter.items()) == [(0, 10), (1, 8), (2, 4)]
+    assert set(counter.siglist.values()) == set([match_ss_1, match_ss_2, match_ss_3])
+    assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
+    assert list(counter.counter.values()) == [10, 8, 4]
 
     ## round 1
 
