@@ -425,6 +425,32 @@ def test_api_create_insert_two_then_scale():
     assert len(lca_db._hashval_to_idx) == len(combined_mins)
 
 
+def test_api_create_insert_two_then_scale_then_add():
+    # construct database, THEN downsample, then add another
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+    ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                      ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss)
+
+    # downsample everything to 5000
+    lca_db.downsample_scaled(5000)
+
+    # insert another after downsample
+    lca_db.insert(ss2)
+
+    # now test -
+    ss.minhash = ss.minhash.downsample(scaled=5000)
+    ss2.minhash = ss2.minhash.downsample(scaled=5000)
+
+    # & check...
+    combined_mins = set(ss.minhash.hashes.keys())
+    combined_mins.update(set(ss2.minhash.hashes.keys()))
+    assert len(lca_db._hashval_to_idx) == len(combined_mins)
+
+
 def test_api_create_insert_scale_two():
     # downsample while constructing database
     ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
