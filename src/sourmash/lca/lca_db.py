@@ -460,7 +460,7 @@ class LCA_Database(Index):
         max_hash = _get_max_hash_for_scaled(scaled)
 
         # filter out all hashes over max_hash in value.
-        new_hashvals = defaultdict(set)
+        new_hashvals = {}
         for k, v in self._hashval_to_idx.items():
             if k < max_hash:
                 new_hashvals[k] = v
