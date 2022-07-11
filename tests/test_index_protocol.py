@@ -472,97 +472,106 @@ def test_gather_threshold_5(index_obj):
 
 
 def create_basic_counter_gather(runtmp):
-    "build a basic CounterGather class"
-    from sourmash.index import CounterGather
+    "Construct a CounterGather class."
     return CounterGather
 
 
+class CounterGather_LinearIndex:
+    """
+    Provides an (inefficient) CounterGather-style class, for
+    protocol testing purposes.
+    """
+    def __init__(self, orig_query_mh):
+        "Constructor - take a FracMinHash that is the original query."
+        if orig_query_mh.scaled == 0:
+            raise ValueError
+
+        # Index object used to actually track matches.
+        self.idx = LinearIndex()
+        self.orig_query_mh = orig_query_mh.copy().flatten()
+        self.query_started = 0
+        self.scaled = orig_query_mh.scaled
+        self.locations = {}
+
+    def add(self, ss, *, location=None, require_overlap=True):
+        "Insert potential match."
+        if self.query_started:
+            raise ValueError("cannot add more signatures to counter after peek/consume")
+
+        # skip duplicates
+        md5 = ss.md5sum()
+        if md5 in self.locations:
+            return
+
+        # confirm that this match has an overlap...
+        add_mh = ss.minhash.flatten()
+        overlap = self.orig_query_mh.count_common(add_mh, downsample=True)
+
+        # ...figure out what scaled we are operating at now...
+        if overlap:
+            self.downsample(add_mh.scaled)
+        elif require_overlap:
+            raise ValueError("no overlap between query and signature!?")
+
+        # ...and add to the Index, while also tracking location!
+        self.idx.insert(ss)
+        self.locations[md5] = location
+
+    def downsample(self, scaled):
+        "Track highest scaled across all possible matches."
+        if scaled > self.scaled:
+            self.scaled = scaled
+        return self.scaled
+
+    def peek(self, cur_query_mh, *, threshold_bp=0):
+        """
+        Find best match to current query within this CounterGather object.
+        """
+        self.query_started = 1
+        cur_query_mh = cur_query_mh.flatten()
+        scaled = self.downsample(cur_query_mh.scaled)
+        cur_query_mh = cur_query_mh.downsample(scaled=scaled)
+
+        # no match? exit.
+        if not self.orig_query_mh or not cur_query_mh:
+            return []
+
+        # verify current query is a subset of the original.
+        if cur_query_mh.contained_by(self.orig_query_mh, downsample=True) < 1:
+            raise ValueError("current query not a subset of original query")
+
+        # did we get a match?
+        res = self.idx.peek(cur_query_mh, threshold_bp=threshold_bp)
+        if not res:
+            return []
+        sr, intersect_mh = res
+
+        from sourmash.index import IndexSearchResult
+        match = sr.signature
+        md5 = match.md5sum()
+        location = self.locations[md5]
+        new_sr = IndexSearchResult(sr.score, match, location)
+        return new_sr, intersect_mh
+
+    def consume(self, *args, **kwargs):
+        self.query_started = 1
+        return self.idx.consume(*args, **kwargs)
+
+
+from sourmash.index import CounterGather
 def create_linear_index_as_counter_gather(runtmp):
     "test CounterGather API from LinearIndex"
+    return CounterGather_LinearIndex
 
-    class LinearIndexWrapper:
-        def __init__(self, orig_query_mh):
-            if orig_query_mh.scaled == 0:
-                raise ValueError
-
-            self.idx = LinearIndex()
-            self.orig_query_mh = orig_query_mh.copy().flatten()
-            self.query_started = 0
-            self.scaled = orig_query_mh.scaled
-            self.locations = {}
-
-        def add(self, ss, *, location=None, require_overlap=True):
-            if self.query_started:
-                raise ValueError("cannot add more signatures to counter after peek/consume")
-
-            # skip duplicates
-            md5 = ss.md5sum()
-            if md5 in self.locations:
-                return
-
-            add_mh = ss.minhash.flatten()
-            overlap = self.orig_query_mh.count_common(add_mh, downsample=True)
-
-            if overlap:
-                self.downsample(add_mh.scaled)
-            elif require_overlap:
-                raise ValueError("no overlap between query and signature!?")
-
-            self.idx.insert(ss)
-            self.locations[md5] = location
-
-        def downsample(self, scaled):
-            "Track highest scaled across all possible matches."
-            if scaled > self.scaled:
-                self.scaled = scaled
-            return self.scaled
-
-        def peek(self, cur_query_mh, *, threshold_bp=0):
-            self.query_started = 1
-            cur_query_mh = cur_query_mh.flatten()
-            scaled = self.downsample(cur_query_mh.scaled)
-            cur_query_mh = cur_query_mh.downsample(scaled=scaled)
-
-            if not self.orig_query_mh or not cur_query_mh:
-                return []
-
-            if cur_query_mh.contained_by(self.orig_query_mh, downsample=True) < 1:
-                raise ValueError("current query not a subset of original query")
-
-            res = self.idx.peek(cur_query_mh, threshold_bp=threshold_bp)
-            if not res:
-                return []
-            sr, intersect_mh = res
-
-            from sourmash.index import IndexSearchResult
-            match = sr.signature
-            md5 = match.md5sum()
-            location = self.locations[md5]
-            new_sr = IndexSearchResult(sr.score, match, location)
-            return new_sr, intersect_mh
-
-        def consume(self, *args, **kwargs):
-            self.query_started = 1
-            return self.idx.consume(*args, **kwargs)
-
-    return LinearIndexWrapper
-
-
-def create_counter_gather_lca(runtmp):
-    from sourmash.index import CounterGather_LCA
-    return CounterGather_LCA
-
-
-@pytest.fixture(params=[create_basic_counter_gather,
-                        create_linear_index_as_counter_gather,
-                        create_counter_gather_lca,
+@pytest.fixture(params=[CounterGather,
+                        CounterGather_LinearIndex,
                         ]
 )
-def counter_gather_constructor(request, runtmp):
+def counter_gather_constructor(request):
     build_fn = request.param
 
     # build on demand
-    return build_fn(runtmp)
+    return build_fn
 
 
 def _consume_all(query_mh, counter, threshold_bp=0):
