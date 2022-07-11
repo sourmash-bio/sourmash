@@ -558,13 +558,97 @@ class CounterGather_LinearIndex:
         return self.idx.consume(*args, **kwargs)
 
 
+class CounterGather_LCA:
+    # @CTB
+    def __init__(self, mh):
+        from sourmash.lca.lca_db import LCA_Database
+        if mh.scaled == 0:
+            raise ValueError("must use scaled MinHash")
+
+        self.orig_query_mh = mh
+        lca_db = LCA_Database(mh.ksize, mh.scaled, mh.moltype)
+        self.db = lca_db
+        self.siglist = []
+        self.locations = {}
+        self.query_started = 0
+
+    def add(self, ss, *, location=None, require_overlap=True):
+        if self.query_started:
+            raise ValueError("cannot add more signatures to counter after peek/consume")
+
+        overlap = self.orig_query_mh.count_common(ss.minhash, True)
+        if overlap:
+            self.downsample(ss.minhash.scaled)
+        elif require_overlap:
+            raise ValueError("no overlap between query and signature!?")
+
+        self.db.insert(ss)
+        self.siglist.append(ss)
+        #self.locations.append(location)
+
+        md5 = ss.md5sum()
+        self.locations[md5] = location
+
+    def downsample(self, scaled):
+        "Track highest scaled across all possible matches."
+        if scaled > self.db.scaled:
+            self.db.downsample_scaled(scaled)
+        return self.db.scaled
+
+    def peek(self, query_mh, *, threshold_bp=0):
+        from sourmash import SourmashSignature
+
+        self.query_started = 1
+        scaled = self.downsample(query_mh.scaled)
+        query_mh = query_mh.downsample(scaled=scaled)
+
+        if not self.orig_query_mh or not query_mh:
+            return []
+
+        if query_mh.contained_by(self.orig_query_mh, downsample=True) < 1:
+            raise ValueError("current query not a subset of original query")
+
+        query_ss = SourmashSignature(query_mh)
+
+        # returns search_result, intersect_mh
+        try:
+            result = self.db.gather(query_ss, threshold_bp=threshold_bp)
+        except ValueError:
+            result = None
+
+        if not result:
+            return []
+
+        sr = result[0]
+        cont = sr.score
+        match = sr.signature
+
+        match_mh = sr.signature.minhash
+        scaled = max(query_mh.scaled, match_mh.scaled)
+        match_mh = match_mh.downsample(scaled=scaled).flatten()
+        query_mh = query_mh.downsample(scaled=scaled)
+        intersect_mh = match_mh & query_mh
+
+        md5 = sr.signature.md5sum()
+        location = self.locations[md5]
+
+        from sourmash.index import IndexSearchResult
+        new_sr = IndexSearchResult(cont, match, location)
+        return [new_sr, intersect_mh]
+
+    def consume(self, intersect_mh):
+        self.query_started = 1
+
+
 from sourmash.index import CounterGather
 def create_linear_index_as_counter_gather(runtmp):
     "test CounterGather API from LinearIndex"
     return CounterGather_LinearIndex
 
+
 @pytest.fixture(params=[CounterGather,
                         CounterGather_LinearIndex,
+                        CounterGather_LCA,
                         ]
 )
 def counter_gather_constructor(request):
