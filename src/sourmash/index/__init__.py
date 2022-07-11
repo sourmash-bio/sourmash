@@ -38,7 +38,6 @@ import os
 import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
-from collections import defaultdict
 
 from sourmash.search import (make_jaccard_search_query, make_gather_query,
                              calc_threshold_from_bp)

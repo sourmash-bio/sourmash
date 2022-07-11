@@ -8,7 +8,7 @@ Michael Crusoe.
 The basic build environment needed below can be created as follows:
 
 ```
-conda create -y -n sourmash-rc python=3.8 pip cxx-compiler make twine tox tox-conda "setuptools<60" setuptools_scm
+conda create -y -n sourmash-rc python=3.8 pip cxx-compiler make twine tox tox-conda setuptools setuptools_scm
 ```
 
 Then activate it with `conda activate sourmash-rc`.
@@ -53,7 +53,7 @@ git push --tags origin
 
 3\. Test the release candidate. Bonus: repeat on macOS:
 ```
-python -m pip install -U virtualenv wheel tox-setuptools-version
+python -m pip install -U virtualenv wheel tox-setuptools-version build
 
 cd ..
 python -m venv testenv1

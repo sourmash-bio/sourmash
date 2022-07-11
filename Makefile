@@ -16,7 +16,7 @@ install: all
 	$(PYTHON) setup.py install
 
 dist: FORCE
-	$(PYTHON) setup.py sdist
+	$(PYTHON) -m build --sdist
 
 test:
 	tox -e py38
