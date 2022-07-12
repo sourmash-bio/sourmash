@@ -168,11 +168,11 @@ def test_linear_index_gather_subj_has_abundance():
     linear = LinearIndex()
     linear.insert(ss)
 
-    results = list(linear.best_containment(qs, threshold=0))
-    assert len(results) == 1
+    result = linear.best_containment(qs, threshold=0)
+    assert result
 
     # note: gather returns _original_ signature, not flattened
-    assert results[0].signature == ss
+    assert result.signature == ss
 
 
 def test_index_search_subj_scaled_is_lower():
@@ -463,9 +463,11 @@ def test_linear_gather_threshold_1():
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 1
 
-    results = linear.best_containment(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = linear.best_containment(SourmashSignature(new_mh))
+    assert result
+
+    # it's a namedtuple, so we can unpack like a tuple.
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig == sig2
     assert name is None
@@ -480,9 +482,9 @@ def test_linear_gather_threshold_1():
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 4
 
-    results = linear.best_containment(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = linear.best_containment(SourmashSignature(new_mh))
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig == sig2
     assert name is None
@@ -519,17 +521,18 @@ def test_linear_gather_threshold_5():
         new_mh.add_hash(mins.pop())
 
     # should get a result with no threshold (any match at all is returned)
-    results = linear.best_containment(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = linear.best_containment(SourmashSignature(new_mh))
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig == sig2
     assert name == 'foo'
 
     # now, check with a threshold_bp that should be meet-able.
-    results = linear.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = linear.best_containment(SourmashSignature(new_mh),
+                                     threshold_bp=5000)
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig == sig2
     assert name == 'foo'
@@ -1115,16 +1118,16 @@ def test_multi_index_gather():
                            None)
     lidx = lidx.select(ksize=31)
 
-    matches = lidx.best_containment(ss2)
-    assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][2] == 'A'
+    match = lidx.best_containment(ss2)
+    assert match
+    assert match.score == 1.0
+    assert match.location == 'A'
 
-    matches = lidx.best_containment(ss47)
-    assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][1] == ss47
-    assert matches[0][2] == sig47     # no source override
+    match = lidx.best_containment(ss47)
+    assert match
+    assert match.score == 1.0
+    assert match.signature == ss47
+    assert match.location == sig47     # no source override
 
 
 def test_multi_index_signatures():
@@ -1787,15 +1790,15 @@ def test_revindex_gather():
     lidx.insert(ss47)
     lidx.insert(ss63)
 
-    matches = lidx.best_containment(ss2)
-    assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][1] == ss2
+    match = lidx.best_containment(ss2)
+    assert match
+    assert match.score == 1.0
+    assert match.signature == ss2
 
-    matches = lidx.best_containment(ss47)
-    assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][1] == ss47
+    match = lidx.best_containment(ss47)
+    assert match
+    assert match.score == 1.0
+    assert match.signature == ss47
 
 
 def test_revindex_gather_ignore():

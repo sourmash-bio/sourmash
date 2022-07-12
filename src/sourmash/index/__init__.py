@@ -109,7 +109,7 @@ class Index(ABC):
 
         search_fn follows the protocol in JaccardSearch objects.
 
-        Returns a list.
+        Generator. Returns 0 or more IndexSearchResult objects.
         """
         # first: is this query compatible with this search?
         search_fn.check_is_compatible(query)
@@ -196,7 +196,7 @@ class Index(ABC):
                     yield IndexSearchResult(score, subj, location)
 
     def search_abund(self, query, *, threshold=None, **kwargs):
-        """Return set of matches with angular similarity above 'threshold'.
+        """Return list of IndexSearchResult with angular similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
         """
@@ -224,7 +224,7 @@ class Index(ABC):
     def search(self, query, *, threshold=None,
                do_containment=False, do_max_containment=False,
                best_only=False, **kwargs):
-        """Return set of matches with similarity above 'threshold'.
+        """Return list of IndexSearchResult with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
 
@@ -240,22 +240,22 @@ class Index(ABC):
         threshold = float(threshold)
 
         search_obj = make_jaccard_search_query(do_containment=do_containment,
-                                               do_max_containment=do_max_containment,
+                                        do_max_containment=do_max_containment,
                                                best_only=best_only,
                                                threshold=threshold)
 
         # do the actual search:
-        matches = []
-
-        for sr in self.find(search_obj, query, **kwargs):
-            matches.append(sr)
+        matches = list(self.find(search_obj, query, **kwargs))
 
         # sort!
         matches.sort(key=lambda x: -x.score)
         return matches
 
     def prefetch(self, query, threshold_bp, **kwargs):
-        "Return all matches with minimum overlap."
+        """Return all matches with minimum overlap.
+
+        Generator. Returns 0 or more IndexSearchResult namedtuples.
+        """
         if not self:            # empty database? quit.
             raise ValueError("no signatures to search")
 
@@ -269,16 +269,19 @@ class Index(ABC):
             yield sr
 
     def best_containment(self, query, threshold_bp=None, **kwargs):
-        "Return the match with the best Jaccard containment in the Index."
+        """Return the match with the best Jaccard containment in the Index.
+
+        Returns an IndexSearchResult namedtuple or None.
+        """
 
         results = self.prefetch(query, threshold_bp, best_only=True, **kwargs)
         results = sorted(results,
                          key=lambda x: (-x.score, x.signature.md5sum()))
 
         try:
-            return [next(iter(results))]
+            return next(iter(results))
         except StopIteration:
-            return []
+            return None
 
     def peek(self, query_mh, *, threshold_bp=0):
         """Mimic CounterGather.peek() on top of Index.
@@ -300,16 +303,15 @@ class Index(ABC):
 
         if not result:
             return []
-        sr = result[0]
 
         # if matches, calculate intersection & return.
-        match_mh = sr.signature.minhash
+        match_mh = result.signature.minhash
         scaled = max(query_mh.scaled, match_mh.scaled)
         match_mh = match_mh.downsample(scaled=scaled).flatten()
         query_mh = query_mh.downsample(scaled=scaled)
         intersect_mh = match_mh & query_mh
 
-        return [sr, intersect_mh]
+        return [result, intersect_mh]
 
     def consume(self, intersect_mh):
         "Mimic CounterGather.consume on top of Index. Yes, this is backwards."

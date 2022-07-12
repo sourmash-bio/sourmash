@@ -335,10 +335,10 @@ def test_api_create_gather():
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lca_db.insert(ss)
 
-    results = lca_db.best_containment(ss, threshold_bp=0)
-    print(results)
-    assert len(results) == 1
-    (similarity, match, filename) = results[0]
+    result = lca_db.best_containment(ss, threshold_bp=0)
+    print(result)
+    assert result
+    (similarity, match, filename) = result
     assert match.minhash == ss.minhash
 
 
@@ -682,8 +682,8 @@ def test_search_db_scaled_lt_sig_scaled():
 
     results = db.search(sig, threshold=.01, ignore_abundance=True)
     print(results)
-    assert results[0][0] == 1.0
-    match = results[0][1]
+    assert results[0].score == 1.0
+    match = results[0].signature
 
     orig_sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
     assert orig_sig.minhash.jaccard(match.minhash, downsample=True) == 1.0
@@ -694,8 +694,8 @@ def test_gather_db_scaled_gt_sig_scaled():
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
     sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
 
-    results = db.best_containment(sig, threshold=.01, ignore_abundance=True)
-    match_sig = results[0][1]
+    result = db.best_containment(sig, threshold=.01, ignore_abundance=True)
+    match_sig = result[1]
 
     sig.minhash = sig.minhash.downsample(scaled=10000)
     assert sig.minhash == match_sig.minhash
@@ -707,8 +707,8 @@ def test_gather_db_scaled_lt_sig_scaled():
     sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
     sig.minhash = sig.minhash.downsample(scaled=100000)
 
-    results = db.best_containment(sig, threshold=.01, ignore_abundance=True)
-    match_sig = results[0][1]
+    result = db.best_containment(sig, threshold=.01, ignore_abundance=True)
+    match_sig = result[1]
 
     match_sig.minhash = match_sig.minhash.downsample(scaled=100000)
     assert sig.minhash == match_sig.minhash
@@ -2386,9 +2386,9 @@ def test_lca_index_empty(runtmp, lca_db_format):
     lca_db_filename = c.output(f'xxx.lca.{lca_db_format}')
     db, ksize, scaled = lca_utils.load_single_database(lca_db_filename)
 
-    results = db.best_containment(sig63)
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = db.best_containment(sig63)
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig.minhash == sig63.minhash
     assert name == lca_db_filename
@@ -2425,9 +2425,9 @@ def test_lca_gather_threshold_1():
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 1
 
-    results = db.best_containment(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = db.best_containment(SourmashSignature(new_mh))
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig.minhash == sig2.minhash
     assert name == None
@@ -2442,9 +2442,9 @@ def test_lca_gather_threshold_1():
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 4
 
-    results = db.best_containment(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = db.best_containment(SourmashSignature(new_mh))
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig.minhash == sig2.minhash
     assert name == None
@@ -2485,17 +2485,17 @@ def test_lca_gather_threshold_5():
         new_mh.add_hash(mins.pop())
 
     # should get a result with no threshold (any match at all is returned)
-    results = db.best_containment(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = db.best_containment(SourmashSignature(new_mh))
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig.minhash == sig2.minhash
     assert name == None
 
     # now, check with a threshold_bp that should be meet-able.
-    results = db.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = db.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig.minhash == sig2.minhash
     assert name == None
@@ -2518,10 +2518,10 @@ def test_gather_multiple_return():
 
     # now, run gather. how many results do we get, and are they in the
     # right order?
-    results = db.best_containment(sig63)
-    print(len(results))
-    assert len(results) == 1
-    assert results[0][0] == 1.0
+    result = db.best_containment(sig63)
+    print(result)
+    assert result
+    assert result.score == 1.0
 
 
 def test_lca_db_protein_build():
@@ -2546,8 +2546,8 @@ def test_lca_db_protein_build():
     results = db.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db.best_containment(sig2)
-    assert results[0][0] == 1.0
+    result = db.best_containment(sig2)
+    assert result.score == 1.0
 
 
 @utils.in_tempdir
@@ -2582,8 +2582,8 @@ def test_lca_db_protein_save_load(c):
     results = db2.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db2.best_containment(sig2)
-    assert results[0][0] == 1.0
+    result = db2.best_containment(sig2)
+    assert result.score == 1.0
 
 
 def test_lca_db_protein_command_index(runtmp, lca_db_format):
@@ -2618,8 +2618,8 @@ def test_lca_db_protein_command_index(runtmp, lca_db_format):
     results = db2.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db2.best_containment(sig2)
-    assert results[0][0] == 1.0
+    result = db2.best_containment(sig2)
+    assert result.score == 1.0
 
 
 @utils.in_thisdir
@@ -2659,8 +2659,8 @@ def test_lca_db_hp_build():
     results = db.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db.best_containment(sig2)
-    assert results[0][0] == 1.0
+    result = db.best_containment(sig2)
+    assert result.score == 1.0
 
 
 @utils.in_tempdir
@@ -2693,8 +2693,8 @@ def test_lca_db_hp_save_load(c):
     results = db2.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db2.best_containment(sig2)
-    assert results[0][0] == 1.0
+    result = db2.best_containment(sig2)
+    assert result.score == 1.0
 
 
 def test_lca_db_hp_command_index(runtmp, lca_db_format):
@@ -2729,8 +2729,8 @@ def test_lca_db_hp_command_index(runtmp, lca_db_format):
     results = db2.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db2.best_containment(sig2)
-    assert results[0][0] == 1.0
+    result = db2.best_containment(sig2)
+    assert result.score == 1.0
 
 
 @utils.in_thisdir
@@ -2770,8 +2770,8 @@ def test_lca_db_dayhoff_build():
     results = db.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db.best_containment(sig2)
-    assert results[0][0] == 1.0
+    result = db.best_containment(sig2)
+    assert result.score == 1.0
 
 
 @utils.in_tempdir
@@ -2804,8 +2804,8 @@ def test_lca_db_dayhoff_save_load(c):
     results = db2.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db2.best_containment(sig2)
-    assert results[0][0] == 1.0
+    result = db2.best_containment(sig2)
+    assert result.score == 1.0
 
 
 def test_lca_db_dayhoff_command_index(runtmp, lca_db_format):
@@ -2840,8 +2840,8 @@ def test_lca_db_dayhoff_command_index(runtmp, lca_db_format):
     results = db2.search(sig1, threshold=0.0)
     assert len(results) == 2
 
-    results = db2.best_containment(sig2)
-    assert results[0][0] == 1.0
+    result = db2.best_containment(sig2)
+    assert result.score == 1.0
 
 
 @utils.in_thisdir

@@ -366,22 +366,22 @@ def test_index_prefetch(index_obj):
 
 
 def test_index_best_containment(index_obj):
-    # test basic gather
+    # test basic containment search
     ss2, ss47, ss63 = _load_three_sigs()
 
-    matches = index_obj.best_containment(ss2)
-    assert len(matches) == 1
-    assert matches[0].score == 1.0
-    assert matches[0].signature.minhash == ss2.minhash
+    match = index_obj.best_containment(ss2)
+    assert match
+    assert match.score == 1.0
+    assert match.signature.minhash == ss2.minhash
 
-    matches = index_obj.best_containment(ss47)
-    assert len(matches) == 1
-    assert matches[0].score == 1.0
-    assert matches[0].signature.minhash == ss47.minhash
+    match = index_obj.best_containment(ss47)
+    assert match
+    assert match.score == 1.0
+    assert match.signature.minhash == ss47.minhash
 
 
 def test_index_best_containment_threshold_1(index_obj):
-    # test gather() method, in some detail
+    # test best_containment() method, in some detail
     ss2, ss47, ss63 = _load_three_sigs()
 
     # now construct query signatures with specific numbers of hashes --
@@ -399,9 +399,9 @@ def test_index_best_containment_threshold_1(index_obj):
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 1
 
-    results = index_obj.best_containment(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = index_obj.best_containment(SourmashSignature(new_mh))
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig.minhash == ss2.minhash
 
@@ -415,9 +415,9 @@ def test_index_best_containment_threshold_1(index_obj):
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 4
 
-    results = index_obj.best_containment(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = index_obj.best_containment(SourmashSignature(new_mh))
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig.minhash == ss2.minhash
 
@@ -445,16 +445,16 @@ def test_best_containment_threshold_5(index_obj):
         new_mh.add_hash(mins.pop())
 
     # should get a result with no threshold (any match at all is returned)
-    results = index_obj.best_containment(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = index_obj.best_containment(SourmashSignature(new_mh))
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig.minhash == ss2.minhash
 
     # now, check with a threshold_bp that should be meet-able.
-    results = index_obj.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = index_obj.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig.minhash == ss2.minhash
 
@@ -612,17 +612,16 @@ class CounterGather_LCA:
         if not result:
             return []
 
-        sr = result[0]
-        cont = sr.score
-        match = sr.signature
+        cont = result.score
+        match = result.signature
 
-        match_mh = sr.signature.minhash
+        match_mh = result.signature.minhash
         scaled = max(query_mh.scaled, match_mh.scaled)
         match_mh = match_mh.downsample(scaled=scaled).flatten()
         query_mh = query_mh.downsample(scaled=scaled)
         intersect_mh = match_mh & query_mh
 
-        md5 = sr.signature.md5sum()
+        md5 = result.signature.md5sum()
         location = self.locations[md5]
 
         from sourmash.index import IndexSearchResult
