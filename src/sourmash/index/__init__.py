@@ -792,11 +792,11 @@ class CounterGather:
             raise ValueError("current query not a subset of original query")
 
         # are we setting a threshold?
-        threshold, n_threshold_hashes = calc_threshold_from_bp(threshold_bp,
-                                                               scaled,
-                                                             len(cur_query_mh))
-        # is it too high to ever match? if so, exit.
-        if threshold > 1.0:
+        try:
+            x = calc_threshold_from_bp(threshold_bp, scaled, len(cur_query_mh))
+            threshold, n_threshold_hashes = x
+        except ValueError:
+            # too high to ever match => exit
             return []
 
         # Find the best match using the internal Counter.

@@ -20,6 +20,9 @@ def calc_threshold_from_bp(threshold_bp, scaled, query_size):
     n_threshold_hashes = 0
 
     if threshold_bp:
+        if threshold_bp < 0:
+            raise TypeError("threshold_bp must be non-negative")
+
         # if we have a threshold_bp of N, then that amounts to N/scaled
         # hashes:
         n_threshold_hashes = float(threshold_bp) / scaled
@@ -27,6 +30,9 @@ def calc_threshold_from_bp(threshold_bp, scaled, query_size):
         # that then requires the following containment:
         threshold = n_threshold_hashes / query_size
 
+        # is it too high to ever match?
+        if threshold > 1.0:
+            raise ValueError("requested threshold_bp is unattainable with this query")
     return threshold, n_threshold_hashes
 
 
@@ -72,21 +78,7 @@ def make_containment_query(query_mh, threshold_bp, *, best_only=True):
         raise TypeError("query signature must be calculated with scaled")
 
     # are we setting a threshold?
-    threshold = 0
-    if threshold_bp:
-        if threshold_bp < 0:
-            raise TypeError("threshold_bp must be non-negative")
-
-        # if we have a threshold_bp of N, then that amounts to N/scaled
-        # hashes:
-        n_threshold_hashes = threshold_bp / scaled
-
-        # that then requires the following containment:
-        threshold = n_threshold_hashes / len(query_mh)
-
-        # is it too high to ever match? if so, exit.
-        if threshold > 1.0:
-            raise ValueError("requested threshold_bp is unattainable with this query")
+    threshold, _ = calc_threshold_from_bp(threshold_bp, scaled, len(query_mh))
 
     if best_only:
         search_obj = JaccardSearchBestOnly(SearchType.CONTAINMENT,
