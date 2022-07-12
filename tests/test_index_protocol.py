@@ -365,22 +365,22 @@ def test_index_prefetch(index_obj):
     assert results[1].signature.minhash == ss63.minhash
 
 
-def test_index_gather(index_obj):
+def test_index_best_containment(index_obj):
     # test basic gather
     ss2, ss47, ss63 = _load_three_sigs()
 
-    matches = index_obj.gather(ss2)
+    matches = index_obj.best_containment(ss2)
     assert len(matches) == 1
     assert matches[0].score == 1.0
     assert matches[0].signature.minhash == ss2.minhash
 
-    matches = index_obj.gather(ss47)
+    matches = index_obj.best_containment(ss47)
     assert len(matches) == 1
     assert matches[0].score == 1.0
     assert matches[0].signature.minhash == ss47.minhash
 
 
-def test_index_gather_threshold_1(index_obj):
+def test_index_best_containment_threshold_1(index_obj):
     # test gather() method, in some detail
     ss2, ss47, ss63 = _load_three_sigs()
 
@@ -393,13 +393,13 @@ def test_index_gather_threshold_1(index_obj):
     # query with empty hashes
     assert not new_mh
     with pytest.raises(ValueError):
-        index_obj.gather(SourmashSignature(new_mh))
+        index_obj.best_containment(SourmashSignature(new_mh))
 
     # add one hash
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 1
 
-    results = index_obj.gather(SourmashSignature(new_mh))
+    results = index_obj.best_containment(SourmashSignature(new_mh))
     assert len(results) == 1
     containment, match_sig, name = results[0]
     assert containment == 1.0
@@ -407,7 +407,7 @@ def test_index_gather_threshold_1(index_obj):
 
     # check with a threshold -> should be no results.
     with pytest.raises(ValueError):
-        index_obj.gather(SourmashSignature(new_mh), threshold_bp=5000)
+        index_obj.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
 
     # add three more hashes => length of 4
     new_mh.add_hash(mins.pop())
@@ -415,7 +415,7 @@ def test_index_gather_threshold_1(index_obj):
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 4
 
-    results = index_obj.gather(SourmashSignature(new_mh))
+    results = index_obj.best_containment(SourmashSignature(new_mh))
     assert len(results) == 1
     containment, match_sig, name = results[0]
     assert containment == 1.0
@@ -423,10 +423,10 @@ def test_index_gather_threshold_1(index_obj):
 
     # check with a too-high threshold -> should be no results.
     with pytest.raises(ValueError):
-        index_obj.gather(SourmashSignature(new_mh), threshold_bp=5000)
+        index_obj.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
 
 
-def test_gather_threshold_5(index_obj):
+def test_best_containment_threshold_5(index_obj):
     # test gather() method, in some detail
     ss2, ss47, ss63 = _load_three_sigs()
 
@@ -445,14 +445,14 @@ def test_gather_threshold_5(index_obj):
         new_mh.add_hash(mins.pop())
 
     # should get a result with no threshold (any match at all is returned)
-    results = index_obj.gather(SourmashSignature(new_mh))
+    results = index_obj.best_containment(SourmashSignature(new_mh))
     assert len(results) == 1
     containment, match_sig, name = results[0]
     assert containment == 1.0
     assert match_sig.minhash == ss2.minhash
 
     # now, check with a threshold_bp that should be meet-able.
-    results = index_obj.gather(SourmashSignature(new_mh), threshold_bp=5000)
+    results = index_obj.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
     assert len(results) == 1
     containment, match_sig, name = results[0]
     assert containment == 1.0
@@ -605,7 +605,7 @@ class CounterGather_LCA:
 
         # returns search_result, intersect_mh
         try:
-            result = self.db.gather(query_ss, threshold_bp=threshold_bp)
+            result = self.db.best_containment(query_ss, threshold_bp=threshold_bp)
         except ValueError:
             result = None
 

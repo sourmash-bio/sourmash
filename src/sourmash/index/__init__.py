@@ -259,24 +259,26 @@ class Index(ABC):
         if not self:            # empty database? quit.
             raise ValueError("no signatures to search")
 
+        # default best_only to False
+        best_only = kwargs.get('best_only', False)
+
         search_fn = make_containment_query(query.minhash, threshold_bp,
-                                           best_only=False)
+                                           best_only=best_only)
 
         for sr in self.find(search_fn, query, **kwargs):
             yield sr
 
-    def gather(self, query, threshold_bp=None, **kwargs):
+    def best_containment(self, query, threshold_bp=None, **kwargs):
         "Return the match with the best Jaccard containment in the Index."
 
-        results = []
-        for result in self.prefetch(query, threshold_bp, **kwargs):
-            results.append(result)
+        results = self.prefetch(query, threshold_bp, best_only=True, **kwargs)
+        results = sorted(results,
+                         key=lambda x: (-x.score, x.signature.md5sum()))
 
-        # sort results by best score.
-        results.sort(reverse=True,
-                     key=lambda x: (x.score, x.signature.md5sum()))
-
-        return results[:1]
+        try:
+            return [next(iter(results))]
+        except StopIteration:
+            return []
 
     def peek(self, query_mh, *, threshold_bp=0):
         """Mimic CounterGather.peek() on top of Index.
@@ -292,15 +294,15 @@ class Index(ABC):
 
         # run query!
         try:
-            result = self.gather(query_ss, threshold_bp=threshold_bp)
+            result = self.best_containment(query_ss, threshold_bp=threshold_bp)
         except ValueError:
             result = None
 
         if not result:
             return []
+        sr = result[0]
 
         # if matches, calculate intersection & return.
-        sr = result[0]
         match_mh = sr.signature.minhash
         scaled = max(query_mh.scaled, match_mh.scaled)
         match_mh = match_mh.downsample(scaled=scaled).flatten()

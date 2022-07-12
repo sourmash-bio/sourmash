@@ -830,13 +830,13 @@ def test_sbt_gather_threshold_1():
     # query with empty hashes
     assert not new_mh
     with pytest.raises(ValueError):
-        tree.gather(SourmashSignature(new_mh))
+        tree.best_containment(SourmashSignature(new_mh))
 
     # add one hash
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 1
 
-    results = tree.gather(SourmashSignature(new_mh))
+    results = tree.best_containment(SourmashSignature(new_mh))
     assert len(results) == 1
     containment, match_sig, name = results[0]
     assert containment == 1.0
@@ -845,7 +845,7 @@ def test_sbt_gather_threshold_1():
 
     # check with a threshold -> should be no results.
     with pytest.raises(ValueError):
-        tree.gather(SourmashSignature(new_mh), threshold_bp=5000)
+        tree.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
 
     # add three more hashes => length of 4
     new_mh.add_hash(mins.pop())
@@ -853,7 +853,7 @@ def test_sbt_gather_threshold_1():
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 4
 
-    results = tree.gather(SourmashSignature(new_mh))
+    results = tree.best_containment(SourmashSignature(new_mh))
     assert len(results) == 1
     containment, match_sig, name = results[0]
     assert containment == 1.0
@@ -863,7 +863,7 @@ def test_sbt_gather_threshold_1():
     # check with a too-high threshold -> should be no results.
     print('len mh', len(new_mh))
     with pytest.raises(ValueError):
-        tree.gather(SourmashSignature(new_mh), threshold_bp=5000)
+        tree.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
 
 
 def test_sbt_gather_threshold_5():
@@ -894,7 +894,7 @@ def test_sbt_gather_threshold_5():
         new_mh.add_hash(mins.pop())
 
     # should get a result with no threshold (any match at all is returned)
-    results = tree.gather(SourmashSignature(new_mh))
+    results = tree.best_containment(SourmashSignature(new_mh))
     assert len(results) == 1
     containment, match_sig, name = results[0]
     assert containment == 1.0
@@ -902,7 +902,7 @@ def test_sbt_gather_threshold_5():
     assert name is None
 
     # now, check with a threshold_bp that should be meet-able.
-    results = tree.gather(SourmashSignature(new_mh), threshold_bp=5000)
+    results = tree.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
     assert len(results) == 1
     containment, match_sig, name = results[0]
     assert containment == 1.0
@@ -931,7 +931,7 @@ def test_gather_single_return(c):
 
     # now, run gather. how many results do we get, and are they in the
     # right order?
-    results = tree.gather(sig63)
+    results = tree.best_containment(sig63)
     print(len(results))
     assert len(results) == 1
     assert results[0][0] == 1.0
@@ -1015,7 +1015,7 @@ def test_sbt_protein_command_index(runtmp):
                          do_containment=False, best_only=False)
     assert len(results) == 2
 
-    results = db2.gather(sig2)
+    results = db2.best_containment(sig2)
     assert results[0][0] == 1.0
     assert results[0][2] == db2._location
     assert results[0][2] == db_out
@@ -1083,7 +1083,7 @@ def test_sbt_hp_command_index(c):
                          do_containment=False, best_only=False)
     assert len(results) == 2
 
-    results = db2.gather(sig2)
+    results = db2.best_containment(sig2)
     assert results[0][0] == 1.0
     assert results[0][2] == db2._location
     assert results[0][2] == db_out
@@ -1130,7 +1130,7 @@ def test_sbt_dayhoff_command_index(c):
                          do_containment=False, best_only=False)
     assert len(results) == 2
 
-    results = db2.gather(sig2)
+    results = db2.best_containment(sig2)
     assert results[0][0] == 1.0
     assert results[0][2] == db2._location
     assert results[0][2] == db_out

@@ -168,7 +168,7 @@ def test_linear_index_gather_subj_has_abundance():
     linear = LinearIndex()
     linear.insert(ss)
 
-    results = list(linear.gather(qs, threshold=0))
+    results = list(linear.best_containment(qs, threshold=0))
     assert len(results) == 1
 
     # note: gather returns _original_ signature, not flattened
@@ -457,13 +457,13 @@ def test_linear_gather_threshold_1():
     # query with empty hashes
     assert not new_mh
     with pytest.raises(ValueError):
-        linear.gather(SourmashSignature(new_mh))
+        linear.best_containment(SourmashSignature(new_mh))
 
     # add one hash
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 1
 
-    results = linear.gather(SourmashSignature(new_mh))
+    results = linear.best_containment(SourmashSignature(new_mh))
     assert len(results) == 1
     containment, match_sig, name = results[0]
     assert containment == 1.0
@@ -472,7 +472,7 @@ def test_linear_gather_threshold_1():
 
     # check with a threshold -> should be no results.
     with pytest.raises(ValueError):
-        linear.gather(SourmashSignature(new_mh), threshold_bp=5000)
+        linear.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
 
     # add three more hashes => length of 4
     new_mh.add_hash(mins.pop())
@@ -480,7 +480,7 @@ def test_linear_gather_threshold_1():
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 4
 
-    results = linear.gather(SourmashSignature(new_mh))
+    results = linear.best_containment(SourmashSignature(new_mh))
     assert len(results) == 1
     containment, match_sig, name = results[0]
     assert containment == 1.0
@@ -489,7 +489,7 @@ def test_linear_gather_threshold_1():
 
     # check with a too-high threshold -> should be no results.
     with pytest.raises(ValueError):
-        linear.gather(SourmashSignature(new_mh), threshold_bp=5000)
+        linear.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
 
 
 def test_linear_gather_threshold_5():
@@ -519,7 +519,7 @@ def test_linear_gather_threshold_5():
         new_mh.add_hash(mins.pop())
 
     # should get a result with no threshold (any match at all is returned)
-    results = linear.gather(SourmashSignature(new_mh))
+    results = linear.best_containment(SourmashSignature(new_mh))
     assert len(results) == 1
     containment, match_sig, name = results[0]
     assert containment == 1.0
@@ -527,7 +527,7 @@ def test_linear_gather_threshold_5():
     assert name == 'foo'
 
     # now, check with a threshold_bp that should be meet-able.
-    results = linear.gather(SourmashSignature(new_mh), threshold_bp=5000)
+    results = linear.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
     assert len(results) == 1
     containment, match_sig, name = results[0]
     assert containment == 1.0
@@ -1097,7 +1097,7 @@ def test_multi_index_search():
 
 
 def test_multi_index_gather():
-    # test MultiIndex.gather
+    # test MultiIndex.best_containment
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -1115,12 +1115,12 @@ def test_multi_index_gather():
                            None)
     lidx = lidx.select(ksize=31)
 
-    matches = lidx.gather(ss2)
+    matches = lidx.best_containment(ss2)
     assert len(matches) == 1
     assert matches[0][0] == 1.0
     assert matches[0][2] == 'A'
 
-    matches = lidx.gather(ss47)
+    matches = lidx.best_containment(ss47)
     assert len(matches) == 1
     assert matches[0][0] == 1.0
     assert matches[0][1] == ss47
@@ -1773,7 +1773,7 @@ def test_revindex_index_search():
 
 
 def test_revindex_gather():
-    # check that RevIndex.gather works.
+    # check that RevIndex.best_containment works.
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
@@ -1787,12 +1787,12 @@ def test_revindex_gather():
     lidx.insert(ss47)
     lidx.insert(ss63)
 
-    matches = lidx.gather(ss2)
+    matches = lidx.best_containment(ss2)
     assert len(matches) == 1
     assert matches[0][0] == 1.0
     assert matches[0][1] == ss2
 
-    matches = lidx.gather(ss47)
+    matches = lidx.best_containment(ss47)
     assert len(matches) == 1
     assert matches[0][0] == 1.0
     assert matches[0][1] == ss47
