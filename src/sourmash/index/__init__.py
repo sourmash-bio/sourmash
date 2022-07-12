@@ -39,7 +39,8 @@ import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
 
-from sourmash.search import (make_jaccard_search_query, make_gather_query,
+from sourmash.search import (make_jaccard_search_query,
+                             make_containment_query,
                              calc_threshold_from_bp)
 from sourmash.manifest import CollectionManifest
 from sourmash.logging import debug_literal
@@ -258,8 +259,8 @@ class Index(ABC):
         if not self:            # empty database? quit.
             raise ValueError("no signatures to search")
 
-        search_fn = make_gather_query(query.minhash, threshold_bp,
-                                      best_only=False)
+        search_fn = make_containment_query(query.minhash, threshold_bp,
+                                           best_only=False)
 
         for sr in self.find(search_fn, query, **kwargs):
             yield sr

@@ -62,8 +62,8 @@ def make_jaccard_search_query(*,
     return search_obj
 
 
-def make_gather_query(query_mh, threshold_bp, *, best_only=True):
-    "Make a search object for gather."
+def make_containment_query(query_mh, threshold_bp, *, best_only=True):
+    "Make a search object for containment, with threshold_bp."
     if not query_mh:
         raise ValueError("query is empty!?")
 
