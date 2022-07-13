@@ -10,13 +10,16 @@ import sourmash
 from sourmash import SourmashSignature
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             LazyLinearIndex, MultiIndex,
-                            StandaloneManifestIndex)
+                            StandaloneManifestIndex,
+                            IndexSearchResult)
 from sourmash.index import CounterGather
 from sourmash.index.sqlite_index import SqliteIndex
 from sourmash.index.revindex import RevIndex
 from sourmash.sbt import SBT, GraphFactory
 from sourmash.manifest import CollectionManifest, BaseCollectionManifest
 from sourmash.lca.lca_db import LCA_Database, load_single_database
+from sourmash.minhash import (flatten_and_intersect_scaled,
+                              flatten_and_downsample_scaled)
 
 import sourmash_tst_utils as utils
 
@@ -521,11 +524,11 @@ class CounterGather_LinearIndex:
         Find best match to current query within this CounterGather object.
         """
         self.query_started = 1
-        cur_query_mh = cur_query_mh.flatten()
-        scaled = self.downsample(cur_query_mh.scaled)
-        cur_query_mh = cur_query_mh.downsample(scaled=scaled)
 
-        # no match? exit.
+        scaled = self.downsample(cur_query_mh.scaled)
+        cur_query_mh = flatten_and_downsample_scaled(cur_query_mh, scaled)
+
+        # no hashes remaining? exit.
         if not self.orig_query_mh or not cur_query_mh:
             return []
 
@@ -539,12 +542,11 @@ class CounterGather_LinearIndex:
             return []
         sr, intersect_mh = res
 
-        from sourmash.index import IndexSearchResult
+        # got match - replace location & return.
         match = sr.signature
         md5 = match.md5sum()
         location = self.locations[md5]
-        new_sr = IndexSearchResult(sr.score, match, location)
-        return new_sr, intersect_mh
+        return IndexSearchResult(sr.score, match, location), intersect_mh
 
     def consume(self, *args, **kwargs):
         self.query_started = 1
@@ -615,27 +617,17 @@ class CounterGather_LCA:
         cont = result.score
         match = result.signature
 
-        match_mh = result.signature.minhash
-        scaled = max(query_mh.scaled, match_mh.scaled)
-        match_mh = match_mh.downsample(scaled=scaled).flatten()
-        query_mh = query_mh.downsample(scaled=scaled)
-        intersect_mh = match_mh & query_mh
+        intersect_mh = flatten_and_intersect_scaled(result.signature.minhash,
+                                                    query_mh)
 
         md5 = result.signature.md5sum()
         location = self.locations[md5]
 
-        from sourmash.index import IndexSearchResult
         new_sr = IndexSearchResult(cont, match, location)
         return [new_sr, intersect_mh]
 
     def consume(self, intersect_mh):
         self.query_started = 1
-
-
-from sourmash.index import CounterGather
-def create_linear_index_as_counter_gather(runtmp):
-    "test CounterGather API from LinearIndex"
-    return CounterGather_LinearIndex
 
 
 @pytest.fixture(params=[CounterGather,

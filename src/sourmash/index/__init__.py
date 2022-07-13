@@ -45,6 +45,9 @@ from sourmash.search import (make_jaccard_search_query,
 from sourmash.manifest import CollectionManifest
 from sourmash.logging import debug_literal
 from sourmash.signature import load_signatures, save_signatures
+from sourmash.minhash import (flatten_and_downsample_scaled,
+                              flatten_and_downsample_num,
+                              flatten_and_intersect_scaled)
 
 # generic return tuple for Index.search and Index.gather
 IndexSearchResult = namedtuple('Result', 'score, signature, location')
@@ -125,50 +128,19 @@ class Index(ABC):
             query_scaled = query_mh.scaled
 
             def prepare_subject(subj_mh):
-                assert subj_mh.scaled
-                if subj_mh.track_abundance:
-                    subj_mh = subj_mh.flatten()
-
-                # downsample subject to highest scaled
-                subj_scaled = subj_mh.scaled
-                if subj_scaled < query_scaled:
-                    return subj_mh.downsample(scaled=query_scaled)
-                else:
-                    return subj_mh
+                return flatten_and_downsample_scaled(subj_mh, query_scaled)
 
             def prepare_query(query_mh, subj_mh):
-                assert subj_mh.scaled
-
-                # downsample query to highest scaled
-                subj_scaled = subj_mh.scaled
-                if subj_scaled > query_scaled:
-                    return query_mh.downsample(scaled=subj_scaled)
-                else:
-                    return query_mh
+                return flatten_and_downsample_scaled(query_mh, subj_mh.scaled)
 
         else:                   # num
             query_num = query_mh.num
 
             def prepare_subject(subj_mh):
-                assert subj_mh.num
-                if subj_mh.track_abundance:
-                    subj_mh = subj_mh.flatten()
-
-                # downsample subject to smallest num
-                subj_num = subj_mh.num
-                if subj_num > query_num:
-                    return subj_mh.downsample(num=query_num)
-                else:
-                    return subj_mh
+                return flatten_and_downsample_num(subj_mh, query_num)
 
             def prepare_query(query_mh, subj_mh):
-                assert subj_mh.num
-                # downsample query to smallest num
-                subj_num = subj_mh.num
-                if subj_num < query_num:
-                    return query_mh.downsample(num=subj_num)
-                else:
-                    return query_mh
+                return flatten_and_downsample_num(query_mh, subj_mh.num)
 
         # now, do the search!
         for subj, location in self.signatures_with_location():
@@ -288,7 +260,7 @@ class Index(ABC):
 
         This is implemented for situations where we don't want to use
         'prefetch' functionality. It is a light wrapper around the
-        'gather'/search-by-containment method.
+        'best_containment(...)'.
         """
         from sourmash import SourmashSignature
 
@@ -305,11 +277,8 @@ class Index(ABC):
             return []
 
         # if matches, calculate intersection & return.
-        match_mh = result.signature.minhash
-        scaled = max(query_mh.scaled, match_mh.scaled)
-        match_mh = match_mh.downsample(scaled=scaled).flatten()
-        query_mh = query_mh.downsample(scaled=scaled)
-        intersect_mh = match_mh & query_mh
+        intersect_mh = flatten_and_intersect_scaled(result.signature.minhash,
+                                                    query_mh)
 
         return [result, intersect_mh]
 
