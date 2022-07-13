@@ -103,6 +103,39 @@ def translate_codon(codon):
         raise ValueError(e.message)
 
 
+def flatten_and_downsample_scaled(mh, *scaled_vals):
+    "Flatten MinHash object and downsample to max of scaled values."
+    assert mh.scaled
+    assert all( (x > 0 for x in scaled_vals) )
+
+    mh = mh.flatten()
+    scaled = max(scaled_vals)
+    if scaled > mh.scaled:
+        return mh.downsample(scaled=scaled)
+    return mh
+
+
+def flatten_and_downsample_num(mh, *num_vals):
+    "Flatten MinHash object and downsample to min of num values."
+    assert mh.num
+    assert all( (x > 0 for x in num_vals) )
+
+    mh = mh.flatten()
+    num = min(num_vals)
+    if num < mh.num:
+        return mh.downsample(num=num)
+    return mh
+
+
+def flatten_and_intersect_scaled(mh1, mh2):
+    "Flatten and downsample two scaled MinHash objs, then return intersection."
+    scaled = max(mh1.scaled, mh2.scaled)
+    mh1 = mh1.flatten().downsample(scaled=scaled)
+    mh2 = mh2.flatten().downsample(scaled=scaled)
+
+    return mh1 & mh2
+
+
 class _HashesWrapper(Mapping):
     "A read-only view of the hashes contained by a MinHash object."
     def __init__(self, h):
