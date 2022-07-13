@@ -1578,7 +1578,11 @@ def test_counter_gather_test_consume():
 
     assert set(counter.signatures()) == set([match_ss_1, match_ss_2, match_ss_3])
     assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
-    assert list(counter.counter.values()) == [10, 8, 4]
+    pprint.pprint(counter.counter.most_common())
+    assert list(counter.counter.most_common()) == \
+        [('26d4943627b33c446f37be1f5baf8d46', 10),
+         ('f51cedec90ea666e0ebc11aa274eca61', 8),
+         ('f331f8279113d77e42ab8efca8f9cc17', 4)]
 
     ## round 1
 
@@ -1591,7 +1595,10 @@ def test_counter_gather_test_consume():
     counter.consume(intersect_mh)
     assert set(counter.signatures()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
     assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
-    # @CTB assert list(counter.counter.most_common()) == [5, 2, 4]
+    pprint.pprint(counter.counter.most_common())
+    assert list(counter.counter.most_common()) == \
+        [('f51cedec90ea666e0ebc11aa274eca61', 5),
+         ('f331f8279113d77e42ab8efca8f9cc17', 4)]
 
     ### round 2
 
@@ -1604,7 +1611,10 @@ def test_counter_gather_test_consume():
     counter.consume(intersect_mh)
     assert set(counter.signatures()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
     assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
-    # @CTB assert list(counter.counter.items()) == [(2, 2)]
+
+    pprint.pprint(counter.counter.most_common())
+    assert list(counter.counter.most_common()) == \
+        [('f331f8279113d77e42ab8efca8f9cc17', 2)]
 
     ## round 3
 
@@ -1617,7 +1627,8 @@ def test_counter_gather_test_consume():
     counter.consume(intersect_mh)
     assert set(counter.signatures()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
     assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
-    # @CTB assert list(counter.counter.items()) == []
+    pprint.pprint(counter.counter.most_common())
+    assert list(counter.counter.most_common()) == []
 
     ## round 4 - nothing left!
 
@@ -1628,7 +1639,7 @@ def test_counter_gather_test_consume():
     counter.consume(intersect_mh)
     assert set(counter.signatures()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
     assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
-    # @CTB assert list(counter.counter.items()) == []
+    assert list(counter.counter.most_common()) == []
 
 
 def test_lazy_index_1():
