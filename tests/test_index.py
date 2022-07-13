@@ -1565,7 +1565,7 @@ def test_counter_gather_test_consume():
     match_ss_3 = SourmashSignature(match_mh_3, name='match3')
 
     # load up the counter
-    counter = CounterGather(query_ss.minhash)
+    counter = CounterGather(query_ss)
     counter.add(match_ss_1, location='loc a')
     counter.add(match_ss_2, location='loc b')
     counter.add(match_ss_3, location='loc c')

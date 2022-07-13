@@ -300,7 +300,7 @@ class Index(ABC):
         prefetch_query.minhash = prefetch_query.minhash.flatten()
 
         # find all matches and construct a CounterGather object.
-        counter = CounterGather(prefetch_query.minhash)
+        counter = CounterGather(prefetch_query)
         for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
             counter.add(result.signature, location=result.location)
 
@@ -696,8 +696,9 @@ class CounterGather:
     is used to quickly find the best match when 'peek' is called, but
     other implementations are possible ;).
     """
-    def __init__(self, query_mh):
+    def __init__(self, query):
         "Constructor - takes a query FracMinHash."
+        query_mh = query.minhash
         if not query_mh.scaled:
             raise ValueError('gather requires scaled signatures')
 
