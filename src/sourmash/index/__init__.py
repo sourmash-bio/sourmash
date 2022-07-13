@@ -300,7 +300,7 @@ class Index(ABC):
         prefetch_query.minhash = prefetch_query.minhash.flatten()
 
         # find all matches and construct a CounterGather object.
-        counter = CounterGather(prefetch_query)
+        counter = CounterGather(prefetch_query, threshold_bp=threshold_bp)
         for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
             counter.add(result.signature, location=result.location)
 
@@ -696,7 +696,7 @@ class CounterGather:
     is used to quickly find the best match when 'peek' is called, but
     other implementations are possible ;).
     """
-    def __init__(self, query):
+    def __init__(self, query, *, threshold_bp=0):
         "Constructor - takes a query FracMinHash."
         query_mh = query.minhash
         if not query_mh.scaled:
@@ -715,6 +715,9 @@ class CounterGather:
 
         # fence to make sure we do add matches once query has started.
         self.query_started = 0
+
+        # save threshold_bp
+        self.threshold_bp = threshold_bp
 
     def add(self, ss, *, location=None, require_overlap=True):
         "Add this signature in as a potential match."
@@ -748,6 +751,9 @@ class CounterGather:
 
     def peek(self, cur_query_mh, *, threshold_bp=0):
         "Get next 'gather' result for this database, w/o changing counters."
+        if threshold_bp:
+            assert self.threshold_bp == threshold_bp, (self.threshold_bp,
+                                                       threshold_bp)
         self.query_started = 1
 
         # empty? nothing to search.
@@ -839,7 +845,7 @@ class CounterGather:
             n_sub += 1
             if intersect_count:
                 counter[dataset_id] -= intersect_count
-                if counter[dataset_id] == 0:
+                if counter[dataset_id] < self.threshold_bp:
                     del counter[dataset_id]
 
         print(f'XXX n_sub={n_sub}')
