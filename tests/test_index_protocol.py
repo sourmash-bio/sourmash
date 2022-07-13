@@ -513,6 +513,10 @@ class CounterGather_LinearIndex:
         self.idx.insert(ss)
         self.locations[md5] = location
 
+    def signatures(self):
+        "Yield all signatures"
+        return self.idx.signatures()
+
     def downsample(self, scaled):
         "Track highest scaled across all possible matches."
         if scaled > self.scaled:
@@ -568,6 +572,7 @@ class CounterGather_LCA:
         self.query_started = 0
 
     def add(self, ss, *, location=None, require_overlap=True):
+        "Add this signature into the counter."
         if self.query_started:
             raise ValueError("cannot add more signatures to counter after peek/consume")
 
@@ -583,6 +588,11 @@ class CounterGather_LCA:
 
         md5 = ss.md5sum()
         self.locations[md5] = location
+
+    def signatures(self):
+        "Yield all signatures."
+        for ss in self.siglist:
+            yield ss
 
     def downsample(self, scaled):
         "Track highest scaled across all possible matches."
@@ -640,6 +650,36 @@ def counter_gather_constructor(request):
 
     # build on demand
     return build_fn
+
+
+def test_counter_get_signatures(counter_gather_constructor):
+    # test .signatures() method
+    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
+    query_mh.add_many(range(0, 20))
+    query_ss = SourmashSignature(query_mh, name='query')
+
+    match_mh_1 = query_mh.copy_and_clear()
+    match_mh_1.add_many(range(0, 10))
+    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+
+    match_mh_2 = query_mh.copy_and_clear()
+    match_mh_2.add_many(range(10, 15))
+    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
+
+    match_mh_3 = query_mh.copy_and_clear()
+    match_mh_3.add_many(range(15, 17))
+    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
+
+    counter = counter_gather_constructor(query_ss.minhash)
+    counter.add(match_ss_1)
+    counter.add(match_ss_2)
+    counter.add(match_ss_3)
+
+    siglist = list(counter.signatures())
+    assert len(siglist) == 3
+    assert match_ss_1 in siglist
+    assert match_ss_2 in siglist
+    assert match_ss_3 in siglist
 
 
 def _consume_all(query_mh, counter, threshold_bp=0):

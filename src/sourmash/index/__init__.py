@@ -740,6 +740,11 @@ class CounterGather:
             self.scaled = scaled
         return self.scaled
 
+    def signatures(self):
+        "Return all signatures."
+        for ss in self.siglist.values():
+            yield ss
+
     def peek(self, cur_query_mh, *, threshold_bp=0):
         "Get next 'gather' result for this database, w/o changing counters."
         self.query_started = 1

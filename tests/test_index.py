@@ -1573,10 +1573,10 @@ def test_counter_gather_test_consume():
     ### ok, dig into actual counts...
     import pprint
     pprint.pprint(counter.counter)
-    pprint.pprint(counter.siglist)
+    pprint.pprint(list(counter.signatures()))
     pprint.pprint(counter.locations)
 
-    assert set(counter.siglist.values()) == set([match_ss_1, match_ss_2, match_ss_3])
+    assert set(counter.signatures()) == set([match_ss_1, match_ss_2, match_ss_3])
     assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
     assert list(counter.counter.values()) == [10, 8, 4]
 
@@ -1589,7 +1589,7 @@ def test_counter_gather_test_consume():
     assert cur_query == query_ss.minhash
 
     counter.consume(intersect_mh)
-    assert set(counter.siglist.values()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
+    assert set(counter.signatures()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
     assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
     # @CTB assert list(counter.counter.most_common()) == [5, 2, 4]
 
@@ -1602,7 +1602,7 @@ def test_counter_gather_test_consume():
     assert cur_query != query_ss.minhash
 
     counter.consume(intersect_mh)
-    assert set(counter.siglist.values()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
+    assert set(counter.signatures()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
     assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
     # @CTB assert list(counter.counter.items()) == [(2, 2)]
 
@@ -1615,7 +1615,7 @@ def test_counter_gather_test_consume():
     assert cur_query != query_ss.minhash
 
     counter.consume(intersect_mh)
-    assert set(counter.siglist.values()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
+    assert set(counter.signatures()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
     assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
     # @CTB assert list(counter.counter.items()) == []
 
@@ -1626,7 +1626,7 @@ def test_counter_gather_test_consume():
     assert not results
 
     counter.consume(intersect_mh)
-    assert set(counter.siglist.values()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
+    assert set(counter.signatures()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
     assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
     # @CTB assert list(counter.counter.items()) == []
 
