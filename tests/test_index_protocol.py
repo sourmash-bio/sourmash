@@ -559,7 +559,11 @@ class CounterGather_LinearIndex:
 
 
 class CounterGather_LCA:
-    # @CTB
+    """
+    Provides an alternative implementation of a CounterGather-style class,
+    based on LCA_Datbase. This is currently just for protocol
+    and API testing purposes.
+    """
     def __init__(self, query):
         from sourmash.lca.lca_db import LCA_Database
 
@@ -571,7 +575,7 @@ class CounterGather_LCA:
         lca_db = LCA_Database(query_mh.ksize, query_mh.scaled,
                               query_mh.moltype)
         self.db = lca_db
-        self.siglist = []
+        self.siglist = {}
         self.locations = {}
         self.query_started = 0
 
@@ -587,15 +591,14 @@ class CounterGather_LCA:
             raise ValueError("no overlap between query and signature!?")
 
         self.db.insert(ss)
-        self.siglist.append(ss)
-        #self.locations.append(location)
 
         md5 = ss.md5sum()
+        self.siglist[md5] = ss
         self.locations[md5] = location
 
     def signatures(self):
         "Yield all signatures."
-        for ss in self.siglist:
+        for ss in self.siglist.values():
             yield ss
 
     def downsample(self, scaled):
@@ -605,6 +608,7 @@ class CounterGather_LCA:
         return self.db.scaled
 
     def peek(self, query_mh, *, threshold_bp=0):
+        "Return next possible match."
         from sourmash import SourmashSignature
 
         self.query_started = 1
