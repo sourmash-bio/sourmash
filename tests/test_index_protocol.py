@@ -1037,6 +1037,45 @@ def test_counter_gather_2(counter_gather_constructor):
         assert size == exp_size
 
 
+def test_counter_gather_3_threshold(counter_gather_constructor):
+    # check basic set of gather results on semi-real data,
+    # generated via CounterGather; add a threshold.
+    testdata_combined = utils.get_test_data('gather/combined.sig')
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_ss = sourmash.load_one_signature(testdata_combined, ksize=21)
+    subject_sigs = [ (sourmash.load_one_signature(t, ksize=21), t)
+                     for t in testdata_sigs ]
+
+    # load up the counter
+    assert query_ss.minhash.scaled == 10000
+    counter = counter_gather_constructor(query_ss)
+    counter.threshold_bp = 600000
+    for ss, loc in subject_sigs:
+        counter.add(ss, location=loc)
+
+    results = _consume_all(query_ss.minhash, counter, threshold_bp=600000)
+
+    # same as test_counter_gather_2, but with low matches removed.
+    expected = (['NC_003198.1', 487],
+                ['NC_000853.1', 192],
+                ['NC_011978.1', 169],
+                ['NC_002163.1', 157],
+                ['NC_003197.2', 152],
+                ['NC_009486.1', 92],
+                ['NC_006905.1', 76],
+                )
+    assert len(results) == len(expected)
+
+    for (sr, size), (exp_name, exp_size) in zip(results, expected):
+        sr_name = sr.signature.name.split()[0]
+        print(sr_name, size)
+
+        assert sr_name == exp_name
+        assert size == exp_size
+
+
 def test_counter_gather_exact_match(counter_gather_constructor):
     # query == match
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
