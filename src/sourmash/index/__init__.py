@@ -751,9 +751,8 @@ class CounterGather:
 
     def peek(self, cur_query_mh, *, threshold_bp=0):
         "Get next 'gather' result for this database, w/o changing counters."
-        if threshold_bp:
-            assert self.threshold_bp == threshold_bp, (self.threshold_bp,
-                                                       threshold_bp)
+        assert self.threshold_bp == threshold_bp, (self.threshold_bp,
+                                                   threshold_bp)
         self.query_started = 1
 
         # empty? nothing to search.
@@ -846,6 +845,8 @@ class CounterGather:
             if intersect_count:
                 counter[dataset_id] -= intersect_count
                 if counter[dataset_id] < self.threshold_bp:
+                    print('ZZZ', counter[dataset_id], self.threshold_bp)
+                    assert 0
                     del counter[dataset_id]
 
         print(f'XXX n_sub={n_sub}')
