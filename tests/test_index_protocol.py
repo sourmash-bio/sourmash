@@ -822,6 +822,7 @@ def test_counter_gather_1_c_with_threshold(counter_gather_constructor):
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
+    counter.threshold_bp = 3     # @CTB
     counter.add(match_ss_1)
     counter.add(match_ss_2)
     counter.add(match_ss_3)
@@ -1232,6 +1233,7 @@ def test_counter_gather_big_threshold(counter_gather_constructor):
 
     # load up the counter
     counter = counter_gather_constructor(query_ss)
+    counter.threshold_bp = 30
     counter.add(match_ss_1)
 
     # impossible threshold:

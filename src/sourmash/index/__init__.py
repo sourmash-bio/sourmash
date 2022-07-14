@@ -814,12 +814,16 @@ class CounterGather:
         """Remove the given hashes from this counter.
 
         This maintains the information necessary for counter.most_common()
-        to work.x
+        to work.
         """
         self.query_started = 1
 
         if not intersect_mh:
             return
+
+        x = calc_threshold_from_bp(self.threshold_bp, self.scaled,
+                                   len(intersect_mh))
+        threshold, n_threshold_hashes = x
 
         siglist = self.siglist
         counter = self.counter
@@ -844,9 +848,10 @@ class CounterGather:
             n_sub += 1
             if intersect_count:
                 counter[dataset_id] -= intersect_count
-                if counter[dataset_id] < self.threshold_bp:
-                    print('ZZZ', counter[dataset_id], self.threshold_bp)
-                    assert 0
+                val = counter[dataset_id]
+                if val == 0 or val < n_threshold_hashes:
+                    print('ZZZ', counter[dataset_id], self.threshold_bp,
+                          n_threshold_hashes)
                     del counter[dataset_id]
 
         print(f'XXX n_sub={n_sub}')
