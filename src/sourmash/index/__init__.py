@@ -695,6 +695,10 @@ class CounterGather:
     This particular implementation maintains a collections.Counter that
     is used to quickly find the best match when 'peek' is called, but
     other implementations are possible ;).
+
+    Note that redundant matches (SourmashSignature objects) with
+    duplicate md5s are collapsed inside the class, because we use the
+    md5sum as a key into the dictionary used to store matches.
     """
     def __init__(self, query):
         "Constructor - takes a query SourmashSignature."
