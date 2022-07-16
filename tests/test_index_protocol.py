@@ -561,7 +561,7 @@ class CounterGather_LinearIndex:
 class CounterGather_LCA:
     """
     Provides an alternative implementation of a CounterGather-style class,
-    based on LCA_Datbase. This is currently just for protocol
+    based on LCA_Database. This is currently just for protocol
     and API testing purposes.
     """
     def __init__(self, query):
