@@ -700,7 +700,7 @@ class CounterGather:
     duplicate md5s are collapsed inside the class, because we use the
     md5sum as a key into the dictionary used to store matches.
     """
-    def __init__(self, query):
+    def __init__(self, query, *, threshold_bp=0):
         "Constructor - takes a query SourmashSignature."
         query_mh = query.minhash
         if not query_mh.scaled:
