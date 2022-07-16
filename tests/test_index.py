@@ -1642,6 +1642,38 @@ def test_counter_gather_test_consume():
     assert list(counter.counter.most_common()) == []
 
 
+def test_counter_gather_identical_md5sum():
+    # open-box testing of CounterGather.consume(...)
+    # check what happens with identical matches w/different names
+    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
+    query_mh.add_many(range(0, 20))
+    query_ss = SourmashSignature(query_mh, name='query')
+
+    match_mh_1 = query_mh.copy_and_clear()
+    match_mh_1.add_many(range(0, 10))
+    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+
+    # same as match_mh_1
+    match_mh_2 = query_mh.copy_and_clear()
+    match_mh_2.add_many(range(0, 10))
+    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
+
+    # identical md5sum
+    assert match_ss_1.md5sum() == match_ss_2.md5sum()
+
+    # load up the counter
+    counter = CounterGather(query_ss)
+    counter.add(match_ss_1, location='loc a')
+    counter.add(match_ss_2, location='loc b')
+
+    assert len(counter.siglist) == 1
+    stored_match = list(counter.siglist.values()).pop()
+    assert stored_match.name == 'match2'
+    # CTB note: this behavior may be changed freely, as the protocol
+    # tests simply specify that _one_ of the identical matches is
+    # returned. See test_counter_gather_multiple_identical_matches.
+
+
 def test_lazy_index_1():
     # test some basic features of LazyLinearIndex
     sig2 = utils.get_test_data('2.fa.sig')

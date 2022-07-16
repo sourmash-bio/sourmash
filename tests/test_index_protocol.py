@@ -478,7 +478,7 @@ class CounterGather_LinearIndex:
     protocol testing purposes.
     """
     def __init__(self, orig_query):
-        "Constructor - take a FracMinHash that is the original query."
+        "Constructor - take a SourmashSignature that is the original query."
         orig_query_mh = orig_query.minhash
         if orig_query_mh.scaled == 0:
             raise ValueError
@@ -561,7 +561,7 @@ class CounterGather_LinearIndex:
 class CounterGather_LCA:
     """
     Provides an alternative implementation of a CounterGather-style class,
-    based on LCA_Datbase. This is currently just for protocol
+    based on LCA_Database. This is currently just for protocol
     and API testing purposes.
     """
     def __init__(self, query):
