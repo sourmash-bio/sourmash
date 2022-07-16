@@ -478,7 +478,7 @@ class CounterGather_LinearIndex:
     protocol testing purposes.
     """
     def __init__(self, orig_query):
-        "Constructor - take a FracMinHash that is the original query."
+        "Constructor - take a SourmashSignature that is the original query."
         orig_query_mh = orig_query.minhash
         if orig_query_mh.scaled == 0:
             raise ValueError

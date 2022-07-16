@@ -260,7 +260,7 @@ class Index(ABC):
 
         This is implemented for situations where we don't want to use
         'prefetch' functionality. It is a light wrapper around the
-        'best_containment(...)'.
+        'best_containment(...)' method.
         """
         from sourmash import SourmashSignature
 
@@ -697,7 +697,7 @@ class CounterGather:
     other implementations are possible ;).
     """
     def __init__(self, query):
-        "Constructor - takes a query FracMinHash."
+        "Constructor - takes a query SourmashSignature."
         query_mh = query.minhash
         if not query_mh.scaled:
             raise ValueError('gather requires scaled signatures')
