@@ -11,6 +11,25 @@ from .signature import SourmashSignature, MinHash
 from .sketchcomparison import FracMinHashComparison, NumMinHashComparison
 
 
+def calc_threshold_from_bp(threshold_bp, scaled, query_size):
+    """
+    Convert threshold_bp (threshold in estimated bp) to
+    fraction of query & minimum number of hashes needed.
+    """
+    threshold = 0.0
+    n_threshold_hashes = 0
+
+    if threshold_bp:
+        # if we have a threshold_bp of N, then that amounts to N/scaled
+        # hashes:
+        n_threshold_hashes = float(threshold_bp) / scaled
+
+        # that then requires the following containment:
+        threshold = n_threshold_hashes / query_size
+
+    return threshold, n_threshold_hashes
+
+
 class SearchType(Enum):
     JACCARD = 1
     CONTAINMENT = 2
@@ -621,7 +640,7 @@ def _find_best(counters, query, threshold_bp):
 
     # find the best score across multiple counters, without consuming
     for counter in counters:
-        result = counter.peek(query.minhash, threshold_bp)
+        result = counter.peek(query.minhash, threshold_bp=threshold_bp)
         if result:
             (sr, intersect_mh) = result
 
