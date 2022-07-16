@@ -39,11 +39,15 @@ import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
 
-from sourmash.search import (make_jaccard_search_query, make_gather_query,
+from sourmash.search import (make_jaccard_search_query,
+                             make_containment_query,
                              calc_threshold_from_bp)
 from sourmash.manifest import CollectionManifest
 from sourmash.logging import debug_literal
 from sourmash.signature import load_signatures, save_signatures
+from sourmash.minhash import (flatten_and_downsample_scaled,
+                              flatten_and_downsample_num,
+                              flatten_and_intersect_scaled)
 
 # generic return tuple for Index.search and Index.gather
 IndexSearchResult = namedtuple('Result', 'score, signature, location')
@@ -108,7 +112,7 @@ class Index(ABC):
 
         search_fn follows the protocol in JaccardSearch objects.
 
-        Returns a list.
+        Generator. Returns 0 or more IndexSearchResult objects.
         """
         # first: is this query compatible with this search?
         search_fn.check_is_compatible(query)
@@ -124,50 +128,19 @@ class Index(ABC):
             query_scaled = query_mh.scaled
 
             def prepare_subject(subj_mh):
-                assert subj_mh.scaled
-                if subj_mh.track_abundance:
-                    subj_mh = subj_mh.flatten()
-
-                # downsample subject to highest scaled
-                subj_scaled = subj_mh.scaled
-                if subj_scaled < query_scaled:
-                    return subj_mh.downsample(scaled=query_scaled)
-                else:
-                    return subj_mh
+                return flatten_and_downsample_scaled(subj_mh, query_scaled)
 
             def prepare_query(query_mh, subj_mh):
-                assert subj_mh.scaled
-
-                # downsample query to highest scaled
-                subj_scaled = subj_mh.scaled
-                if subj_scaled > query_scaled:
-                    return query_mh.downsample(scaled=subj_scaled)
-                else:
-                    return query_mh
+                return flatten_and_downsample_scaled(query_mh, subj_mh.scaled)
 
         else:                   # num
             query_num = query_mh.num
 
             def prepare_subject(subj_mh):
-                assert subj_mh.num
-                if subj_mh.track_abundance:
-                    subj_mh = subj_mh.flatten()
-
-                # downsample subject to smallest num
-                subj_num = subj_mh.num
-                if subj_num > query_num:
-                    return subj_mh.downsample(num=query_num)
-                else:
-                    return subj_mh
+                return flatten_and_downsample_num(subj_mh, query_num)
 
             def prepare_query(query_mh, subj_mh):
-                assert subj_mh.num
-                # downsample query to smallest num
-                subj_num = subj_mh.num
-                if subj_num < query_num:
-                    return query_mh.downsample(num=subj_num)
-                else:
-                    return query_mh
+                return flatten_and_downsample_num(query_mh, subj_mh.num)
 
         # now, do the search!
         for subj, location in self.signatures_with_location():
@@ -195,7 +168,7 @@ class Index(ABC):
                     yield IndexSearchResult(score, subj, location)
 
     def search_abund(self, query, *, threshold=None, **kwargs):
-        """Return set of matches with angular similarity above 'threshold'.
+        """Return list of IndexSearchResult with angular similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
         """
@@ -223,7 +196,7 @@ class Index(ABC):
     def search(self, query, *, threshold=None,
                do_containment=False, do_max_containment=False,
                best_only=False, **kwargs):
-        """Return set of matches with similarity above 'threshold'.
+        """Return list of IndexSearchResult with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
 
@@ -239,50 +212,55 @@ class Index(ABC):
         threshold = float(threshold)
 
         search_obj = make_jaccard_search_query(do_containment=do_containment,
-                                               do_max_containment=do_max_containment,
+                                        do_max_containment=do_max_containment,
                                                best_only=best_only,
                                                threshold=threshold)
 
         # do the actual search:
-        matches = []
-
-        for sr in self.find(search_obj, query, **kwargs):
-            matches.append(sr)
+        matches = list(self.find(search_obj, query, **kwargs))
 
         # sort!
         matches.sort(key=lambda x: -x.score)
         return matches
 
     def prefetch(self, query, threshold_bp, **kwargs):
-        "Return all matches with minimum overlap."
+        """Return all matches with minimum overlap.
+
+        Generator. Returns 0 or more IndexSearchResult namedtuples.
+        """
         if not self:            # empty database? quit.
             raise ValueError("no signatures to search")
 
-        search_fn = make_gather_query(query.minhash, threshold_bp,
-                                      best_only=False)
+        # default best_only to False
+        best_only = kwargs.get('best_only', False)
+
+        search_fn = make_containment_query(query.minhash, threshold_bp,
+                                           best_only=best_only)
 
         for sr in self.find(search_fn, query, **kwargs):
             yield sr
 
-    def gather(self, query, threshold_bp=None, **kwargs):
-        "Return the match with the best Jaccard containment in the Index."
+    def best_containment(self, query, threshold_bp=None, **kwargs):
+        """Return the match with the best Jaccard containment in the Index.
 
-        results = []
-        for result in self.prefetch(query, threshold_bp, **kwargs):
-            results.append(result)
+        Returns an IndexSearchResult namedtuple or None.
+        """
 
-        # sort results by best score.
-        results.sort(reverse=True,
-                     key=lambda x: (x.score, x.signature.md5sum()))
+        results = self.prefetch(query, threshold_bp, best_only=True, **kwargs)
+        results = sorted(results,
+                         key=lambda x: (-x.score, x.signature.md5sum()))
 
-        return results[:1]
+        try:
+            return next(iter(results))
+        except StopIteration:
+            return None
 
     def peek(self, query_mh, *, threshold_bp=0):
         """Mimic CounterGather.peek() on top of Index.
 
         This is implemented for situations where we don't want to use
         'prefetch' functionality. It is a light wrapper around the
-        'gather'/search-by-containment method.
+        'best_containment(...)' method.
         """
         from sourmash import SourmashSignature
 
@@ -291,7 +269,7 @@ class Index(ABC):
 
         # run query!
         try:
-            result = self.gather(query_ss, threshold_bp=threshold_bp)
+            result = self.best_containment(query_ss, threshold_bp=threshold_bp)
         except ValueError:
             result = None
 
@@ -299,14 +277,10 @@ class Index(ABC):
             return []
 
         # if matches, calculate intersection & return.
-        sr = result[0]
-        match_mh = sr.signature.minhash
-        scaled = max(query_mh.scaled, match_mh.scaled)
-        match_mh = match_mh.downsample(scaled=scaled).flatten()
-        query_mh = query_mh.downsample(scaled=scaled)
-        intersect_mh = match_mh & query_mh
+        intersect_mh = flatten_and_intersect_scaled(result.signature.minhash,
+                                                    query_mh)
 
-        return [sr, intersect_mh]
+        return [result, intersect_mh]
 
     def consume(self, intersect_mh):
         "Mimic CounterGather.consume on top of Index. Yes, this is backwards."
@@ -326,7 +300,7 @@ class Index(ABC):
         prefetch_query.minhash = prefetch_query.minhash.flatten()
 
         # find all matches and construct a CounterGather object.
-        counter = CounterGather(prefetch_query.minhash)
+        counter = CounterGather(prefetch_query)
         for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
             counter.add(result.signature, location=result.location)
 
@@ -721,9 +695,14 @@ class CounterGather:
     This particular implementation maintains a collections.Counter that
     is used to quickly find the best match when 'peek' is called, but
     other implementations are possible ;).
+
+    Note that redundant matches (SourmashSignature objects) with
+    duplicate md5s are collapsed inside the class, because we use the
+    md5sum as a key into the dictionary used to store matches.
     """
-    def __init__(self, query_mh):
-        "Constructor - takes a query FracMinHash."
+    def __init__(self, query):
+        "Constructor - takes a query SourmashSignature."
+        query_mh = query.minhash
         if not query_mh.scaled:
             raise ValueError('gather requires scaled signatures')
 
@@ -732,8 +711,8 @@ class CounterGather:
         self.scaled = query_mh.scaled
 
         # use these to track loaded matches & their locations
-        self.siglist = []
-        self.locations = []
+        self.siglist = {}
+        self.locations = {}
 
         # ...and also track overlaps with the progressive query
         self.counter = Counter()
@@ -749,11 +728,11 @@ class CounterGather:
         # upon insertion, count & track overlap with the specific query.
         overlap = self.orig_query_mh.count_common(ss.minhash, True)
         if overlap:
-            i = len(self.siglist)
+            md5 = ss.md5sum()
 
-            self.counter[i] = overlap
-            self.siglist.append(ss)
-            self.locations.append(location)
+            self.counter[md5] = overlap
+            self.siglist[md5] = ss
+            self.locations[md5] = location
 
             # note: scaled will be max of all matches.
             self.downsample(ss.minhash.scaled)
@@ -765,6 +744,11 @@ class CounterGather:
         if scaled > self.scaled:
             self.scaled = scaled
         return self.scaled
+
+    def signatures(self):
+        "Return all signatures."
+        for ss in self.siglist.values():
+            yield ss
 
     def peek(self, cur_query_mh, *, threshold_bp=0):
         "Get next 'gather' result for this database, w/o changing counters."
@@ -789,11 +773,11 @@ class CounterGather:
             raise ValueError("current query not a subset of original query")
 
         # are we setting a threshold?
-        threshold, n_threshold_hashes = calc_threshold_from_bp(threshold_bp,
-                                                               scaled,
-                                                             len(cur_query_mh))
-        # is it too high to ever match? if so, exit.
-        if threshold > 1.0:
+        try:
+            x = calc_threshold_from_bp(threshold_bp, scaled, len(cur_query_mh))
+            threshold, n_threshold_hashes = x
+        except ValueError:
+            # too high to ever match => exit
             return []
 
         # Find the best match using the internal Counter.

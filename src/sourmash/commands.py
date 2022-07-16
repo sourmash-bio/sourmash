@@ -733,9 +733,9 @@ def gather(args):
                 else:
                     raise       # re-raise other errors, if no picklist.
 
-            save_prefetch.add_many(counter.siglist)
+            save_prefetch.add_many(counter.signatures())
             # subtract found hashes as we can.
-            for found_sig in counter.siglist:
+            for found_sig in counter.signatures():
                 noident_mh.remove_many(found_sig.minhash)
 
                 # optionally calculate and save prefetch csv
@@ -935,7 +935,7 @@ def multigather(args):
             counters = []
             for db in databases:
                 counter = db.counter_gather(prefetch_query, args.threshold_bp)
-                for found_sig in counter.siglist:
+                for found_sig in counter.signatures():
                     noident_mh.remove_many(found_sig.minhash)
                 counters.append(counter)
 

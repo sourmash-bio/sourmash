@@ -1,13 +1,12 @@
 "Tests for search.py code."
 
-# CTB TODO: test search protocol with mock class?
-
 import pytest
 import numpy as np
 import sourmash_tst_utils as utils
 
 from sourmash import search, SourmashSignature, MinHash, load_one_signature
-from sourmash.search import (make_jaccard_search_query, make_gather_query,
+from sourmash.search import (make_jaccard_search_query,
+                             make_containment_query,
                              SearchResult, PrefetchResult, GatherResult)
 from sourmash.index import LinearIndex
 
@@ -129,35 +128,35 @@ def test_collect_best_only():
     assert search_obj.threshold == 1.0
 
 
-def test_make_gather_query():
-    # test basic make_gather_query call
+def test_make_containment_query():
+    # test basic make_containment_query call
     mh = MinHash(n=0, ksize=31, scaled=1000)
 
     for i in range(100):
         mh.add_hash(i)
 
-    search_obj = make_gather_query(mh, 5e4)
+    search_obj = make_containment_query(mh, 5e4)
 
     assert search_obj.score_fn == search_obj.score_containment
     assert search_obj.require_scaled
     assert search_obj.threshold == 0.5
 
 
-def test_make_gather_query_no_threshold():
-    # test basic make_gather_query call
+def test_make_containment_query_no_threshold():
+    # test basic make_containment_query call
     mh = MinHash(n=0, ksize=31, scaled=1000)
 
     for i in range(100):
         mh.add_hash(i)
 
-    search_obj = make_gather_query(mh, None)
+    search_obj = make_containment_query(mh, None)
 
     assert search_obj.score_fn == search_obj.score_containment
     assert search_obj.require_scaled
     assert search_obj.threshold == 0
 
 
-def test_make_gather_query_num_minhash():
+def test_make_containment_query_num_minhash():
     # will fail on non-scaled minhash
     mh = MinHash(n=500, ksize=31)
 
@@ -165,12 +164,12 @@ def test_make_gather_query_num_minhash():
         mh.add_hash(i)
 
     with pytest.raises(TypeError) as exc:
-        search_obj = make_gather_query(mh, 5e4)
+        search_obj = make_containment_query(mh, 5e4)
 
     assert str(exc.value) == "query signature must be calculated with scaled"
 
 
-def test_make_gather_query_empty_minhash():
+def test_make_containment_query_empty_minhash():
     # will fail on non-scaled minhash
     mh = MinHash(n=0, ksize=31, scaled=1000)
 
@@ -178,12 +177,12 @@ def test_make_gather_query_empty_minhash():
         mh.add_hash(i)
 
     with pytest.raises(TypeError) as exc:
-        search_obj = make_gather_query(mh, -1)
+        search_obj = make_containment_query(mh, -1)
 
     assert str(exc.value) == "threshold_bp must be non-negative"
 
 
-def test_make_gather_query_high_threshold():
+def test_make_containment_query_high_threshold():
     # will fail on non-scaled minhash
     mh = MinHash(n=0, ksize=31, scaled=1000)
 
@@ -192,7 +191,7 @@ def test_make_gather_query_high_threshold():
 
     # effective threshold > 1; raise ValueError
     with pytest.raises(ValueError):
-        search_obj = make_gather_query(mh, 200000)
+        search_obj = make_containment_query(mh, 200000)
 
 
 class FakeIndex(LinearIndex):
@@ -223,8 +222,8 @@ def test_index_search_passthru():
     idx.search(query, threshold=0.0, this_kw_arg=5)
 
 
-def test_index_gather_passthru():
-    # check that kwargs are passed through from 'gather' to 'find'
+def test_index_containment_passthru():
+    # check that kwargs are passed through from 'search' to 'find'
     query = None
 
     def validate_kwarg_passthru(search_fn, query, args, kwargs):

@@ -168,11 +168,11 @@ def test_linear_index_gather_subj_has_abundance():
     linear = LinearIndex()
     linear.insert(ss)
 
-    results = list(linear.gather(qs, threshold=0))
-    assert len(results) == 1
+    result = linear.best_containment(qs, threshold=0)
+    assert result
 
     # note: gather returns _original_ signature, not flattened
-    assert results[0].signature == ss
+    assert result.signature == ss
 
 
 def test_index_search_subj_scaled_is_lower():
@@ -457,22 +457,24 @@ def test_linear_gather_threshold_1():
     # query with empty hashes
     assert not new_mh
     with pytest.raises(ValueError):
-        linear.gather(SourmashSignature(new_mh))
+        linear.best_containment(SourmashSignature(new_mh))
 
     # add one hash
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 1
 
-    results = linear.gather(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = linear.best_containment(SourmashSignature(new_mh))
+    assert result
+
+    # it's a namedtuple, so we can unpack like a tuple.
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig == sig2
     assert name is None
 
     # check with a threshold -> should be no results.
     with pytest.raises(ValueError):
-        linear.gather(SourmashSignature(new_mh), threshold_bp=5000)
+        linear.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
 
     # add three more hashes => length of 4
     new_mh.add_hash(mins.pop())
@@ -480,16 +482,16 @@ def test_linear_gather_threshold_1():
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 4
 
-    results = linear.gather(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = linear.best_containment(SourmashSignature(new_mh))
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig == sig2
     assert name is None
 
     # check with a too-high threshold -> should be no results.
     with pytest.raises(ValueError):
-        linear.gather(SourmashSignature(new_mh), threshold_bp=5000)
+        linear.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
 
 
 def test_linear_gather_threshold_5():
@@ -519,17 +521,18 @@ def test_linear_gather_threshold_5():
         new_mh.add_hash(mins.pop())
 
     # should get a result with no threshold (any match at all is returned)
-    results = linear.gather(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = linear.best_containment(SourmashSignature(new_mh))
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig == sig2
     assert name == 'foo'
 
     # now, check with a threshold_bp that should be meet-able.
-    results = linear.gather(SourmashSignature(new_mh), threshold_bp=5000)
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = linear.best_containment(SourmashSignature(new_mh),
+                                     threshold_bp=5000)
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig == sig2
     assert name == 'foo'
@@ -1097,7 +1100,7 @@ def test_multi_index_search():
 
 
 def test_multi_index_gather():
-    # test MultiIndex.gather
+    # test MultiIndex.best_containment
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -1115,16 +1118,16 @@ def test_multi_index_gather():
                            None)
     lidx = lidx.select(ksize=31)
 
-    matches = lidx.gather(ss2)
-    assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][2] == 'A'
+    match = lidx.best_containment(ss2)
+    assert match
+    assert match.score == 1.0
+    assert match.location == 'A'
 
-    matches = lidx.gather(ss47)
-    assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][1] == ss47
-    assert matches[0][2] == sig47     # no source override
+    match = lidx.best_containment(ss47)
+    assert match
+    assert match.score == 1.0
+    assert match.signature == ss47
+    assert match.location == sig47     # no source override
 
 
 def test_multi_index_signatures():
@@ -1562,7 +1565,7 @@ def test_counter_gather_test_consume():
     match_ss_3 = SourmashSignature(match_mh_3, name='match3')
 
     # load up the counter
-    counter = CounterGather(query_ss.minhash)
+    counter = CounterGather(query_ss)
     counter.add(match_ss_1, location='loc a')
     counter.add(match_ss_2, location='loc b')
     counter.add(match_ss_3, location='loc c')
@@ -1570,12 +1573,16 @@ def test_counter_gather_test_consume():
     ### ok, dig into actual counts...
     import pprint
     pprint.pprint(counter.counter)
-    pprint.pprint(counter.siglist)
+    pprint.pprint(list(counter.signatures()))
     pprint.pprint(counter.locations)
 
-    assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
-    assert counter.locations == ['loc a', 'loc b', 'loc c']
-    assert list(counter.counter.items()) == [(0, 10), (1, 8), (2, 4)]
+    assert set(counter.signatures()) == set([match_ss_1, match_ss_2, match_ss_3])
+    assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
+    pprint.pprint(counter.counter.most_common())
+    assert list(counter.counter.most_common()) == \
+        [('26d4943627b33c446f37be1f5baf8d46', 10),
+         ('f51cedec90ea666e0ebc11aa274eca61', 8),
+         ('f331f8279113d77e42ab8efca8f9cc17', 4)]
 
     ## round 1
 
@@ -1586,9 +1593,12 @@ def test_counter_gather_test_consume():
     assert cur_query == query_ss.minhash
 
     counter.consume(intersect_mh)
-    assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
-    assert counter.locations == ['loc a', 'loc b', 'loc c']
-    assert list(counter.counter.items()) == [(1, 5), (2, 4)]
+    assert set(counter.signatures()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
+    assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
+    pprint.pprint(counter.counter.most_common())
+    assert list(counter.counter.most_common()) == \
+        [('f51cedec90ea666e0ebc11aa274eca61', 5),
+         ('f331f8279113d77e42ab8efca8f9cc17', 4)]
 
     ### round 2
 
@@ -1599,9 +1609,12 @@ def test_counter_gather_test_consume():
     assert cur_query != query_ss.minhash
 
     counter.consume(intersect_mh)
-    assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
-    assert counter.locations == ['loc a', 'loc b', 'loc c']
-    assert list(counter.counter.items()) == [(2, 2)]
+    assert set(counter.signatures()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
+    assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
+
+    pprint.pprint(counter.counter.most_common())
+    assert list(counter.counter.most_common()) == \
+        [('f331f8279113d77e42ab8efca8f9cc17', 2)]
 
     ## round 3
 
@@ -1612,9 +1625,10 @@ def test_counter_gather_test_consume():
     assert cur_query != query_ss.minhash
 
     counter.consume(intersect_mh)
-    assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
-    assert counter.locations == ['loc a', 'loc b', 'loc c']
-    assert list(counter.counter.items()) == []
+    assert set(counter.signatures()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
+    assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
+    pprint.pprint(counter.counter.most_common())
+    assert list(counter.counter.most_common()) == []
 
     ## round 4 - nothing left!
 
@@ -1623,9 +1637,41 @@ def test_counter_gather_test_consume():
     assert not results
 
     counter.consume(intersect_mh)
-    assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
-    assert counter.locations == ['loc a', 'loc b', 'loc c']
-    assert list(counter.counter.items()) == []
+    assert set(counter.signatures()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
+    assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
+    assert list(counter.counter.most_common()) == []
+
+
+def test_counter_gather_identical_md5sum():
+    # open-box testing of CounterGather.consume(...)
+    # check what happens with identical matches w/different names
+    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
+    query_mh.add_many(range(0, 20))
+    query_ss = SourmashSignature(query_mh, name='query')
+
+    match_mh_1 = query_mh.copy_and_clear()
+    match_mh_1.add_many(range(0, 10))
+    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+
+    # same as match_mh_1
+    match_mh_2 = query_mh.copy_and_clear()
+    match_mh_2.add_many(range(0, 10))
+    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
+
+    # identical md5sum
+    assert match_ss_1.md5sum() == match_ss_2.md5sum()
+
+    # load up the counter
+    counter = CounterGather(query_ss)
+    counter.add(match_ss_1, location='loc a')
+    counter.add(match_ss_2, location='loc b')
+
+    assert len(counter.siglist) == 1
+    stored_match = list(counter.siglist.values()).pop()
+    assert stored_match.name == 'match2'
+    # CTB note: this behavior may be changed freely, as the protocol
+    # tests simply specify that _one_ of the identical matches is
+    # returned. See test_counter_gather_multiple_identical_matches.
 
 
 def test_lazy_index_1():
@@ -1773,7 +1819,7 @@ def test_revindex_index_search():
 
 
 def test_revindex_gather():
-    # check that RevIndex.gather works.
+    # check that RevIndex.best_containment works.
     sig2 = utils.get_test_data("2.fa.sig")
     sig47 = utils.get_test_data("47.fa.sig")
     sig63 = utils.get_test_data("63.fa.sig")
@@ -1787,15 +1833,15 @@ def test_revindex_gather():
     lidx.insert(ss47)
     lidx.insert(ss63)
 
-    matches = lidx.gather(ss2)
-    assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][1] == ss2
+    match = lidx.best_containment(ss2)
+    assert match
+    assert match.score == 1.0
+    assert match.signature == ss2
 
-    matches = lidx.gather(ss47)
-    assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][1] == ss47
+    match = lidx.best_containment(ss47)
+    assert match
+    assert match.score == 1.0
+    assert match.signature == ss47
 
 
 def test_revindex_gather_ignore():
