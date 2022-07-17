@@ -753,6 +753,26 @@ class CounterGather:
         for ss in self.siglist.values():
             yield ss
 
+    @property
+    def union_found(self):
+        """Return a MinHash containing all found hashes in the query.
+
+        This calculates the union of the found matches, intersected
+        with the original query.
+        """
+        orig_query_mh = self.orig_query_mh
+
+        # create empty MinHash from orig query
+        found_mh = orig_query_mh.copy_and_clear()
+
+        # for each match, intersect match with query & then add to found_mh.
+        for ss in self.siglist.values():
+            intersect_mh = flatten_and_intersect_scaled(ss.minhash,
+                                                        orig_query_mh)
+            found_mh.add_many(intersect_mh)
+
+        return found_mh
+
     def peek(self, cur_query_mh, *, threshold_bp=0):
         "Get next 'gather' result for this database, w/o changing counters."
         assert self.threshold_bp == threshold_bp, (self.threshold_bp,

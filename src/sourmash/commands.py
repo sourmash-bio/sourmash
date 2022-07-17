@@ -722,6 +722,7 @@ def gather(args):
             scaled = query_mh.scaled
 
         counters = []
+        ident_mh = noident_mh.copy_and_clear()
         for db in databases:
             counter = None
             try:
@@ -734,13 +735,16 @@ def gather(args):
                     raise       # re-raise other errors, if no picklist.
 
             save_prefetch.add_many(counter.signatures())
-            # subtract found hashes as we can.
-            for found_sig in counter.signatures():
-                noident_mh.remove_many(found_sig.minhash)
 
-                # optionally calculate and save prefetch csv
-                if prefetch_csvout_fp:
-                    assert scaled
+            # update found/not found hashes from the union/intersection of
+            # found.
+            union_found = counter.union_found
+            ident_mh.add_many(union_found)
+            noident_mh.remove_many(union_found)
+
+                # optionally calculate and output prefetch info to csv
+            if prefetch_csvout_fp:
+                for found_sig in counter.signatures():
                     # calculate intersection stats and info
                     prefetch_result = PrefetchResult(prefetch_query, found_sig, cmp_scaled=scaled, 
                                                      threshold_bp=args.threshold_bp, estimate_ani_ci=args.estimate_ani_ci)
@@ -762,6 +766,7 @@ def gather(args):
         counters = databases
         # we can't track unidentified hashes w/o prefetch
         noident_mh = None
+        ident_mh = None
 
     ## ok! now do gather -
 
@@ -775,6 +780,7 @@ def gather(args):
                                   threshold_bp=args.threshold_bp,
                                   ignore_abundance=args.ignore_abundance,
                                   noident_mh=noident_mh,
+                                  ident_mh=ident_mh,
                                   estimate_ani_ci=args.estimate_ani_ci)
 
     for result, weighted_missed in gather_iter:
@@ -930,14 +936,18 @@ def multigather(args):
             counters = []
             prefetch_query = query.copy()
             prefetch_query.minhash = prefetch_query.minhash.flatten()
+            ident_mh = prefetch_query.minhash.copy_and_clear()
             noident_mh = prefetch_query.minhash.to_mutable()
 
             counters = []
             for db in databases:
                 counter = db.counter_gather(prefetch_query, args.threshold_bp)
-                for found_sig in counter.signatures():
-                    noident_mh.remove_many(found_sig.minhash)
                 counters.append(counter)
+
+                # track found/not found hashes
+                union_found = counter.union_found
+                noident_mh.remove_many(union_found)
+                ident_mh.add_many(union_found)
 
             found = []
             weighted_missed = 1
@@ -946,7 +956,8 @@ def multigather(args):
             gather_iter = GatherDatabases(query, counters,
                                           threshold_bp=args.threshold_bp,
                                           ignore_abundance=args.ignore_abundance,
-                                          noident_mh=noident_mh)
+                                          noident_mh=noident_mh,
+                                          ident_mh=ident_mh)
             for result, weighted_missed in gather_iter:
                 if not len(found):                # first result? print header.
                     if is_abundance:
