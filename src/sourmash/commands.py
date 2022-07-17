@@ -661,6 +661,7 @@ def categorize(args):
 
 def gather(args):
     from .search import GatherDatabases, format_bp
+    from .minhash import flatten_and_intersect_scaled
 
     set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
@@ -722,6 +723,7 @@ def gather(args):
             scaled = query_mh.scaled
 
         counters = []
+        ident_mh = noident_mh.copy_and_clear()
         for db in databases:
             counter = None
             try:
@@ -738,7 +740,10 @@ def gather(args):
             for found_sig in counter.signatures():
                 noident_mh.remove_many(found_sig.minhash)
 
-                # optionally calculate and save prefetch csv
+                intersect_mh = flatten_and_intersect_scaled(found_sig.minhash, prefetch_query.minhash)
+                ident_mh.add_many(intersect_mh)
+
+                # optionally calculate and output prefetch info to csv
                 if prefetch_csvout_fp:
                     assert scaled
                     # calculate intersection stats and info
@@ -762,6 +767,7 @@ def gather(args):
         counters = databases
         # we can't track unidentified hashes w/o prefetch
         noident_mh = None
+        ident_mh = None
 
     ## ok! now do gather -
 
@@ -775,6 +781,7 @@ def gather(args):
                                   threshold_bp=args.threshold_bp,
                                   ignore_abundance=args.ignore_abundance,
                                   noident_mh=noident_mh,
+                                  ident_mh=ident_mh,
                                   estimate_ani_ci=args.estimate_ani_ci)
 
     for result, weighted_missed in gather_iter:

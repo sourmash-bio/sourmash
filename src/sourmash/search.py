@@ -2,6 +2,7 @@
 Code for searching collections of signatures.
 """
 import csv
+import time
 import numpy as np
 from enum import Enum
 import numpy as np
@@ -654,7 +655,7 @@ class GatherDatabases:
     "Iterator object for doing gather/min-set-cov."
 
     def __init__(self, query, counters, *,
-                 threshold_bp=0, ignore_abundance=False, noident_mh=None, estimate_ani_ci=False):
+                 threshold_bp=0, ignore_abundance=False, noident_mh=None, ident_mh=None, estimate_ani_ci=False):
         # track original query information for later usage?
         track_abundance = query.minhash.track_abundance and not ignore_abundance
         self.orig_query = query
@@ -672,11 +673,19 @@ class GatherDatabases:
 
         # adjust for not found...
         if noident_mh is None:  # create empty
+            print('ZZZ noident_mh is empty')
             noident_mh = query_mh.copy_and_clear()
         self.noident_mh = noident_mh.to_frozen()
 
-        query_mh = query_mh.to_mutable()
-        query_mh.remove_many(noident_mh)
+        if ident_mh is None:
+            query_mh = query_mh.to_mutable()
+            print(f'XXX removing: {len(noident_mh)} from {len(query_mh)}')
+            start = time.time()
+            query_mh.remove_many(noident_mh)
+            end = time.time()
+            print(f'XXX time: {end - start :.1f}')
+        else:
+            query_mh = ident_mh.to_mutable()
 
         orig_query_mh = query_mh.flatten()
         query.minhash = orig_query_mh.to_mutable()
