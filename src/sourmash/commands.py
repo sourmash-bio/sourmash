@@ -661,7 +661,6 @@ def categorize(args):
 
 def gather(args):
     from .search import GatherDatabases, format_bp
-    from .minhash import flatten_and_intersect_scaled
 
     set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
@@ -736,16 +735,16 @@ def gather(args):
                     raise       # re-raise other errors, if no picklist.
 
             save_prefetch.add_many(counter.signatures())
-            # subtract found hashes as we can.
-            for found_sig in counter.signatures():
-                noident_mh.remove_many(found_sig.minhash)
 
-                intersect_mh = flatten_and_intersect_scaled(found_sig.minhash, prefetch_query.minhash)
-                ident_mh.add_many(intersect_mh)
+            # update found/not found hashes from the union/intersection of
+            # found.
+            union_found = counter.union_found
+            ident_mh.add_many(union_found)
+            noident_mh.remove_many(union_found)
 
                 # optionally calculate and output prefetch info to csv
-                if prefetch_csvout_fp:
-                    assert scaled
+            if prefetch_csvout_fp:
+                for found_sig in counter.signatures():
                     # calculate intersection stats and info
                     prefetch_result = PrefetchResult(prefetch_query, found_sig, cmp_scaled=scaled, 
                                                      threshold_bp=args.threshold_bp, estimate_ani_ci=args.estimate_ani_ci)
