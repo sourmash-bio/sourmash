@@ -936,14 +936,18 @@ def multigather(args):
             counters = []
             prefetch_query = query.copy()
             prefetch_query.minhash = prefetch_query.minhash.flatten()
+            ident_mh = prefetch_query.minhash.copy_and_clear()
             noident_mh = prefetch_query.minhash.to_mutable()
 
             counters = []
             for db in databases:
                 counter = db.counter_gather(prefetch_query, args.threshold_bp)
-                for found_sig in counter.signatures():
-                    noident_mh.remove_many(found_sig.minhash)
                 counters.append(counter)
+
+                # track found/not found hashes
+                union_found = counter.union_found
+                noident_mh.remove_many(union_found)
+                ident_mh.add_many(union_found)
 
             found = []
             weighted_missed = 1
@@ -952,7 +956,8 @@ def multigather(args):
             gather_iter = GatherDatabases(query, counters,
                                           threshold_bp=args.threshold_bp,
                                           ignore_abundance=args.ignore_abundance,
-                                          noident_mh=noident_mh)
+                                          noident_mh=noident_mh,
+                                          ident_mh=ident_mh)
             for result, weighted_missed in gather_iter:
                 if not len(found):                # first result? print header.
                     if is_abundance:
