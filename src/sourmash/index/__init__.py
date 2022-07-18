@@ -828,8 +828,8 @@ class CounterGather:
         match_mh = match.minhash.downsample(scaled=scaled).flatten()
         intersect_mh = cur_query_mh & match_mh
 
-        md5 = match.md5sum()
-        location = self.locations[md5]
+        # update location for search result
+        location = self.locations[dataset_id]
 
         # build result & return intersection
         return (IndexSearchResult(cont, match, location), intersect_mh)
@@ -857,7 +857,6 @@ class CounterGather:
         # Prepare counter for finding the next match by decrementing
         # all hashes found in the current match in other datasets;
         # remove empty datasets from counter, too.
-        n_sub = 0
         keys = list(counter)
         for dataset_id in keys:
             # CTB: note, remaining_mh may not be at correct scaled here.
@@ -869,16 +868,11 @@ class CounterGather:
             remaining_mh = siglist[dataset_id].minhash
             intersect_count = intersect_mh.count_common(remaining_mh,
                                                         downsample=True)
-            n_sub += 1
             if intersect_count:
                 counter[dataset_id] -= intersect_count
                 val = counter[dataset_id]
                 if val == 0 or val < n_threshold_hashes:
-                    print('ZZZ', counter[dataset_id], self.threshold_bp,
-                          n_threshold_hashes)
                     del counter[dataset_id]
-
-        print(f'XXX n_sub={n_sub}')
 
 
 class MultiIndex(Index):
