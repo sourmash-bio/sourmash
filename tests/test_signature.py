@@ -439,17 +439,7 @@ def test_containment_ANI():
     print("\nss1 contained by ss2", s1_cont_s2)
     print("ss2 contained by ss1", s2_cont_s1)
 
-     # first, assess as-is. ANI should be None, bc 2.fa.sig size is inaccurate
-    assert s1_cont_s2.ani == s2_cont_s1.ani == None
-
-    # since size is inaccurate on 2.fa.sig, need to override to be able to get ani
-    s1_cont_s2.size_is_inaccurate = False
-    s2_cont_s1.size_is_inaccurate = False
-    
-    print("\nmh1 contained by mh2", s1_cont_s2)
-    print("mh2 contained by mh1", s2_cont_s1)
-
-    assert (round(s1_cont_s2.ani,3), s1_cont_s2.ani_low, s1_cont_s2.ani_high) == (1.0,1.0,1.0)#(1.0, None, None)
+    assert (round(s1_cont_s2.ani,3), s1_cont_s2.ani_low, s1_cont_s2.ani_high) == (1.0,1.0,1.0)
     assert (round(s2_cont_s1.ani,3), round(s2_cont_s1.ani_low,3), round(s2_cont_s1.ani_high,3)) == (0.966, 0.965, 0.967)
 
     s1_mc_s2 = ss1.max_containment_ani(ss2, estimate_ci =True)
@@ -543,14 +533,6 @@ def test_jaccard_ANI():
 
     s1_jani_s2 = ss1.jaccard_ani(ss2)
     s2_jani_s1 = ss2.jaccard_ani(ss1)
-
-    # first, assess as-is. ANI should be 0, bc 2.fa.sig size is inaccurate
-    assert s1_jani_s2 == s2_jani_s1
-    assert (s1_jani_s2.ani, s1_jani_s2.p_nothing_in_common, s1_jani_s2.jaccard_error) == (None, 0.0, 3.891666770716877e-07)
-
-    # since size is inaccurate on 2.fa.sig, need to override to be able to get ani
-    s1_jani_s2.size_is_inaccurate = False
-    s2_jani_s1.size_is_inaccurate = False
 
     assert s1_jani_s2 == s2_jani_s1
     assert (s1_jani_s2.ani, s1_jani_s2.p_nothing_in_common, s1_jani_s2.jaccard_error) == (0.9783711630110239, 0.0, 3.891666770716877e-07)

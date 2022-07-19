@@ -21,14 +21,14 @@
     };
 
     mach-nix = {
-      url = "github:DavHau/mach-nix/3.4.0";
+      url = "github:DavHau/mach-nix/3.5.0";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "utils";
       inputs.pypi-deps-db.follows = "pypi-deps-db";
     };
 
     pypi-deps-db = {
-      url = "github:DavHau/mach-nix/3.4.0";
+      url = "github:DavHau/mach-nix/3.5.0";
     };
   };
 
@@ -67,13 +67,24 @@
           };
           sourmash = mach-nix-wrapper.buildPythonPackage {
             src = ./.;
-            version = "4.3.0";
+            pname = "sourmash";
+            version = "4.4.0";
+            requirements = ''
+              screed>=1.0.5
+              cffi>=1.14.0
+              numpy
+              matplotlib
+              scipy
+              deprecation>=2.0.6
+              cachetools<6,>=4
+              bitstring<4,>=3.1.9
+            '';
             requirementsExtra = ''
-              setuptools >= 48, <60
+              setuptools
               milksnake
               setuptools_scm[toml] >= 4, <6
             '';
-            SETUPTOOLS_SCM_PRETEND_VERSION = "4.3.0";
+            SETUPTOOLS_SCM_PRETEND_VERSION = "4.4.0";
             DYLD_LIBRARY_PATH = "${self.packages.${system}.lib}/lib";
             NO_BUILD = "1";
           };
