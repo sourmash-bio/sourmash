@@ -190,6 +190,22 @@ Note that there will also be releases associated with the Rust `core`
 package, which is versioned differently than `sourmash`.  These will
 be of the form `rXX.YY.ZZ`, e.g. `r0.9.0`. Please just ignore them :)
 
+Draft release notes can be created with `git log --oneline
+v4.4.1..latest`, but should then be edited manually. We suggest
+putting PRs in the following categories:
+
+```
+Major new features:
+
+Minor new features:
+
+Bug fixes:
+
+Cleanup and documentation fixes:
+
+Developer updates:
+```
+
 ## Conda-forge
 
 The [sourmash-minimal feedstock](https://github.com/conda-forge/sourmash-minimal-feedstock/)
