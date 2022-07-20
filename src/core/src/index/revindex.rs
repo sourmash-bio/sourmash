@@ -6,6 +6,7 @@ use getset::{CopyGetters, Getters, Setters};
 use log::{debug, info};
 use nohash_hasher::BuildNoHashHasher;
 use serde::{Deserialize, Serialize};
+use typed_builder::TypedBuilder;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -568,7 +569,7 @@ impl RevIndex {
     }
 }
 
-#[derive(CopyGetters, Getters, Setters, Serialize, Deserialize, Debug)]
+#[derive(TypedBuilder, CopyGetters, Getters, Setters, Serialize, Deserialize, Debug)]
 pub struct GatherResult {
     #[getset(get_copy = "pub")]
     intersect_bp: usize,
