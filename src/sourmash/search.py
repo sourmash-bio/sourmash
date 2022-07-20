@@ -235,8 +235,8 @@ class BaseResult:
         # could define in PrefetchResult instead, same reasoning as above
         self.query_abundance = self.mh1.track_abundance
         self.match_abundance = self.mh2.track_abundance
-        self.query_n_hashes = len(self.mh1.hashes)
-        self.match_n_hashes = len(self.mh2.hashes)
+        self.query_n_hashes = len(self.mh1)
+        self.match_n_hashes = len(self.mh2)
 
     @property
     def pass_threshold(self):
