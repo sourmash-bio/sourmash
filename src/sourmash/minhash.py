@@ -970,7 +970,7 @@ class MinHash(RustObject):
         if not self.scaled:
             raise TypeError("can only approximate unique_dataset_hashes for scaled MinHashes")
         # TODO: replace set_size with HLL estimate when that gets implemented
-        return len(self.hashes) * self.scaled # + (self.ksize - 1) for bp estimation
+        return len(self) * self.scaled # + (self.ksize - 1) for bp estimation
 
     def size_is_accurate(self, relative_error=0.20, confidence=0.95):
         """
