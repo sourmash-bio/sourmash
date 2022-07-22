@@ -6,6 +6,8 @@ class MinHash - core MinHash class.
 class FrozenMinHash - read-only MinHash class.
 """
 from __future__ import unicode_literals, division
+import functools
+
 from .distance_utils import jaccard_to_distance, containment_to_distance, set_size_chernoff
 from .logging import notify
 
@@ -66,6 +68,21 @@ def _get_scaled_for_max_hash(max_hash):
         int(round(get_minhash_max_hash() / max_hash, 0)),
         MINHASH_MAX_HASH
     )
+
+
+def cached_property(fun):
+    """A memoize decorator for class properties."""
+    @functools.wraps(fun)
+    def get(self):
+        try:
+            return self._cache[fun]
+        except AttributeError:
+            self._cache = {}
+        except KeyError:
+            pass
+        ret = self._cache[fun] = fun(self)
+        return ret
+    return property(get)
 
 
 def to_bytes(s):
@@ -970,6 +987,7 @@ class MinHash(RustObject):
         if not self.scaled:
             raise TypeError("can only approximate unique_dataset_hashes for scaled MinHashes")
         # TODO: replace set_size with HLL estimate when that gets implemented
+        print('XXX', type(self))
         return len(self) * self.scaled # + (self.ksize - 1) for bp estimation
 
     def size_is_accurate(self, relative_error=0.20, confidence=0.95):
@@ -1075,6 +1093,19 @@ class FrozenMinHash(MinHash):
             MinHash.set_abundances(self, mins)
         else:
             MinHash.add_many(self, mins)
+
+    @cached_property
+    def unique_dataset_hashes(self):
+        if not self.scaled:
+            raise TypeError("can only approximate unique_dataset_hashes for scaled MinHashes")
+        print('YYY', type(self))
+        # TODO: replace set_size with HLL estimate when that gets implemented
+        return super(FrozenMinHash, self).unique_dataset_hashes
+
+    @cached_property
+    def hashes(self):
+        print('YYY2', type(self))
+        return super(FrozenMinHash, self).hashes
 
     def __copy__(self):
         return self
