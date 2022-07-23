@@ -36,9 +36,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip-v2-${{ hashFiles('**/setup.cfg') }}
+          key: ${{ runner.os }}-pip-v3-${{ hashFiles('**/setup.cfg') }}
           restore-keys: |
-            ${{ runner.os }}-pip-v2-
+            ${{ runner.os }}-pip-v3-
 
       - name: Install dependencies
         run: |
@@ -65,9 +65,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: .tox/
-          key: ${{ runner.os }}-tox-v2-${{ hashFiles('**/setup.cfg') }}
+          key: ${{ runner.os }}-tox-v3-${{ hashFiles('**/setup.cfg') }}
           restore-keys: |
-            ${{ runner.os }}-tox-v2-
+            ${{ runner.os }}-tox-v3-
 
       - name: Test with tox
         run: tox
