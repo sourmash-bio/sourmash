@@ -91,9 +91,9 @@ license = { text = "BSD 3-Clause License" }
 [project.urls]
 "Homepage" = "https://sourmash.bio/"
 "Documentation" = "https://sourmash.readthedocs.io"
-"CI" = "https://github.com/dib-lab/sourmash/actions"
-"Source" = "https://github.com/dib-lab/sourmash"
-"Tracker" = "https://github.com/dib-lab/sourmash/issues"
+"CI" = "https://github.com/sourmash-bio/sourmash/actions"
+"Source" = "https://github.com/sourmash-bio/sourmash"
+"Tracker" = "https://github.com/sourmash-bio/sourmash/issues"
 
 [project.scripts]
 "sourmash" = "sourmash.__main__:main"
