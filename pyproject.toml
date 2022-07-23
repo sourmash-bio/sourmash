@@ -10,7 +10,7 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = "sourmash"
-description = "tools for comparing DNA sequences with MinHash sketches"
+description = "tools for comparing biological sequences with k-mer sketches"
 readme = "README.md"
 
 authors = [
