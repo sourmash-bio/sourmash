@@ -481,8 +481,8 @@ def test_GatherResult():
     assert res.match_md5 == ss4763.md5sum()
     assert res.query_n_hashes == len(ss47.minhash)
     assert res.match_n_hashes == len(ss4763.minhash)
-    assert res.query_bp == ss47.minhash.covered_bp
-    assert res.match_bp == ss4763.minhash.covered_bp
+    assert res.query_bp == ss47.minhash.unique_dataset_hashes
+    assert res.match_bp == ss4763.minhash.unique_dataset_hashes
     assert res.md5 == ss4763.md5sum()
     assert res.name == ss4763.name
     assert res.match_filename == ss4763.filename
