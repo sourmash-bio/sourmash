@@ -18,7 +18,7 @@ install: all
 dist: FORCE
 	$(PYTHON) -m build --sdist
 
-test:
+test: .PHONY
 	tox -e py38
 	cargo test
 
