@@ -5,6 +5,8 @@ from functools import partial
 import time
 import multiprocessing
 
+from sourmash.sketchcomparison import FracMinHashComparison
+
 from .logging import notify
 from sourmash.np_utils import to_memmap
 
@@ -27,6 +29,8 @@ def compare_serial(siglist, ignore_abundance, *, downsample=False, return_ani=Fa
     import numpy as np
 
     n = len(siglist)
+    jaccard_ani_untrustworthy = False
+    potential_false_negatives = False
 
     # Combinations makes all unique sets of pairs, e.g. (A, B) but not (B, A)
     iterator = itertools.combinations(range(n), 2)
@@ -35,13 +39,22 @@ def compare_serial(siglist, ignore_abundance, *, downsample=False, return_ani=Fa
 
     for i, j in iterator:
         if return_ani:
-            ani = siglist[i].jaccard_ani(siglist[j],downsample=downsample).ani
+            ani_result = siglist[i].jaccard_ani(siglist[j],downsample=downsample)
+            if not potential_false_negatives and ani_result.p_exceeds_threshold:
+                potential_false_negatives = True
+            if not jaccard_ani_untrustworthy and ani_result.je_exceeds_threshold:
+                jaccard_ani_untrustworthy = True
+            ani = ani_result.ani
             if ani == None:
                 ani = 0.0
             similarities[i][j] = similarities[j][i] = ani
         else:
             similarities[i][j] = similarities[j][i] = siglist[i].similarity(siglist[j], ignore_abundance=ignore_abundance, downsample=downsample)
 
+    if jaccard_ani_untrustworthy:
+        notify("WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons.")
+    if potential_false_negatives:
+        notify("WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this.")
     return similarities
 
 
@@ -57,6 +70,7 @@ def compare_serial_containment(siglist, *, downsample=False, return_ani=False):
     import numpy as np
 
     n = len(siglist)
+    potential_false_negatives = False
 
     containments = np.ones((n, n))
     for i in range(n):
@@ -64,13 +78,19 @@ def compare_serial_containment(siglist, *, downsample=False, return_ani=False):
             if i == j:
                 containments[i][j] = 1
             elif return_ani:
-                ani = siglist[j].containment_ani(siglist[i], downsample=downsample).ani
+                ani_result = siglist[j].containment_ani(siglist[i], downsample=downsample)
+                ani = ani_result.ani
+                if not potential_false_negatives and ani_result.p_exceeds_threshold:
+                    potential_false_negatives = True
                 if ani == None:
                     ani = 0.0
                 containments[i][j] = ani
             else:
                 containments[i][j] = siglist[j].contained_by(siglist[i],
                                                          downsample=downsample)
+
+    if potential_false_negatives:
+        notify("WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this.")
 
     return containments
 
@@ -87,7 +107,7 @@ def compare_serial_max_containment(siglist, *, downsample=False, return_ani=Fals
     import numpy as np
 
     n = len(siglist)
-
+    potential_false_negatives = False
     # Combinations makes all unique sets of pairs, e.g. (A, B) but not (B, A)
     iterator = itertools.combinations(range(n), 2)
 
@@ -95,13 +115,55 @@ def compare_serial_max_containment(siglist, *, downsample=False, return_ani=Fals
 
     for i, j in iterator:
         if return_ani:
-            ani = siglist[j].max_containment_ani(siglist[i], downsample=downsample).ani
+            ani_result = siglist[j].max_containment_ani(siglist[i], downsample=downsample)
+            ani = ani_result.ani
+            if not potential_false_negatives and ani_result.p_exceeds_threshold:
+                potential_false_negatives = True
             if ani == None:
                 ani = 0.0
             containments[i][j] = containments[j][i] = ani
         else:
             containments[i][j] = containments[j][i] = siglist[j].max_containment(siglist[i],
                                                         downsample=downsample)
+    if potential_false_negatives:
+        notify("WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this.")
+
+    return containments
+
+
+def compare_serial_avg_containment(siglist, *, downsample=False, return_ani=False):
+    """Compare all combinations of signatures and return a matrix
+    of avg_containments. Processes combinations serially on a single
+    process. Best to only use when there are few signatures.
+
+    :param list siglist: list of signatures to compare
+    :param boolean downsample by scaled if True
+    :return: np.array similarity matrix
+    """
+    import numpy as np
+
+    n = len(siglist)
+    potential_false_negatives = False
+    # Combinations makes all unique sets of pairs, e.g. (A, B) but not (B, A)
+    iterator = itertools.combinations(range(n), 2)
+
+    containments = np.ones((n, n))
+
+    for i, j in iterator:
+        if return_ani:
+            cmp = FracMinHashComparison(siglist[j].minhash, siglist[i].minhash)
+            ani = cmp.avg_containment_ani
+            if ani == None:
+                ani = 0.0
+            if not potential_false_negatives and cmp.potential_false_negative:
+                potential_false_negatives = True
+            containments[i][j] = containments[j][i] = ani
+        else:
+            containments[i][j] = containments[j][i] = siglist[j].avg_containment(siglist[i],
+                                                        downsample=downsample)
+
+    if potential_false_negatives:
+        notify("WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this.")
 
     return containments
 

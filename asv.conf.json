@@ -1,7 +1,7 @@
 {
     "version": 1,
     "project": "sourmash",
-    "project_url": "https://github.com/dib-lab/sourmash",
+    "project_url": "https://github.com/sourmash-bio/sourmash",
     "repo": ".",
     "branches": ["latest"],
     "dvcs": "git",

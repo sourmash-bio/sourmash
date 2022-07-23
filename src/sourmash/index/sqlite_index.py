@@ -141,7 +141,7 @@ def load_sqlite_index(filename, *, request_manifest=False):
         is_lca_db = True
         debug_literal("load_sqlite_index: it's got a lineage table!")
 
-    if internal_d['SqliteManifest']:
+    if 'SqliteManifest' in internal_d:
         v = internal_d['SqliteManifest']
         if v != '1.0':
             raise IndexNotSupported
@@ -599,6 +599,17 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         return cls(conn)
 
     @classmethod
+    def create_or_open(cls, filename):
+        "Connect to 'filename' and create tables if not exist."
+        conn = sqlite3.connect(filename)
+        cursor = conn.cursor()
+        try:
+            cls._create_tables(cursor)
+        except sqlite3.OperationalError:
+            pass
+        return cls(conn)
+
+    @classmethod
     def load_from_manifest(cls, manifest, *, dbfile=":memory:", append=False):
         "Create a new sqlite manifest from an existing manifest object."
         return cls._create_manifest_from_rows(manifest.rows, location=dbfile,
@@ -645,6 +656,10 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         UNIQUE(internal_location, md5sum)
         )
         """)
+
+    def add_row(self, row):
+        c = self.conn.cursor()
+        self._insert_row(c, row)
 
     def _insert_row(self, cursor, row, *, call_is_from_index=False):
         "Insert a new manifest row."
@@ -698,6 +713,21 @@ class SqliteCollectionManifest(BaseCollectionManifest):
         # self.rows is a generator, so can't use 'len'
         self._num_rows = sum(1 for _ in self.rows)
         return self._num_rows
+
+    def __iadd__(self, other):
+        c = self.conn.cursor()
+        for row in other.rows:
+            self._insert_row(c, row)
+        return self
+
+    def __add__(self, other):
+        new_mf = self.create(":memory:")
+        new_mf += self
+        new_mf += other
+        return new_mf
+
+    def close(self):
+        self.conn.commit()
 
     def _make_select(self):
         """Build a set of SQL SELECT conditions and matching value tuple

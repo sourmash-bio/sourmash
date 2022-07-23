@@ -33,6 +33,18 @@ from sourmash.sourmash_args import load_pathlist_from_file
 from sourmash_tst_utils import SourmashCommandFailed
 
 
+def test_citation_file():
+    import yaml
+
+    thisdir = os.path.dirname(__file__)
+    citation_file = os.path.join(thisdir, '../CITATION.cff')
+
+    with open(citation_file) as fp:
+        x = yaml.safe_load(fp)
+
+    assert x['title'] == "sourmash: a library for MinHash sketching of DNA", x
+
+
 def test_run_sourmash():
     status, out, err = utils.runscript('sourmash', [], fail_ok=True)
     assert status != 0                    # no args provided, ok ;)
@@ -516,6 +528,46 @@ def test_compare_max_containment(c):
 
 
 @utils.in_tempdir
+def test_compare_avg_containment(c):
+    import numpy
+
+    testdata_glob = utils.get_test_data('scaled/*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    c.run_sourmash('compare', '--avg-containment', '-k', '31',
+                   '--csv', 'output.csv', *testdata_sigs)
+
+    # load the matrix output of compare --containment
+    with open(c.output('output.csv'), 'rt') as fp:
+        r = iter(csv.reader(fp))
+        headers = next(r)
+
+        mat = numpy.zeros((len(headers), len(headers)))
+        for i, row in enumerate(r):
+            for j, val in enumerate(row):
+                mat[i][j] = float(val)
+
+        print(mat)
+
+    # load in all the input signatures
+    idx_to_sig = dict()
+    for idx, filename in enumerate(testdata_sigs):
+        ss = sourmash.load_one_signature(filename, ksize=31)
+        idx_to_sig[idx] = ss
+
+    # check explicit containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            ss_j = idx_to_sig[j]
+            containment = ss_j.avg_containment(ss_i)
+            containment = round(containment, 3)
+            mat_val = round(mat[i][j], 3)
+
+            assert containment == mat_val, (i, j)
+
+
+@utils.in_tempdir
 def test_compare_max_containment_and_containment(c):
     testdata_glob = utils.get_test_data('scaled/*.sig')
     testdata_sigs = glob.glob(testdata_glob)
@@ -526,7 +578,35 @@ def test_compare_max_containment_and_containment(c):
                        '--csv', 'output.csv', *testdata_sigs)
 
     print(c.last_result.err)
-    assert "ERROR: cannot specify both --containment and --max-containment!" in c.last_result.err
+    assert "ERROR: cannot specify more than one containment argument!" in c.last_result.err
+
+
+@utils.in_tempdir
+def test_compare_avg_containment_and_containment(c):
+    testdata_glob = utils.get_test_data('scaled/*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('compare', '--avg-containment', '-k', '31',
+                       '--containment',
+                       '--csv', 'output.csv', *testdata_sigs)
+
+    print(c.last_result.err)
+    assert "ERROR: cannot specify more than one containment argument!" in c.last_result.err
+
+
+@utils.in_tempdir
+def test_compare_avg_containment_and_max_containment(c):
+    testdata_glob = utils.get_test_data('scaled/*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('compare', '--avg-containment', '-k', '31',
+                       '--max-containment',
+                       '--csv', 'output.csv', *testdata_sigs)
+
+    print(c.last_result.err)
+    assert "ERROR: cannot specify more than one containment argument!" in c.last_result.err
 
 
 @utils.in_tempdir
@@ -538,7 +618,7 @@ def test_compare_containment_abund_flatten(c):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert 'NOTE: --containment, --max-containment, and --estimate-ani ignore signature abundances.' in \
+    assert 'NOTE: --containment, --max-containment, --avg-containment, and --estimate-ani ignore signature abundances.' in \
         c.last_result.err
 
 
@@ -551,7 +631,7 @@ def test_compare_ani_abund_flatten(c):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert 'NOTE: --containment, --max-containment, and --estimate-ani ignore signature abundances.' in \
+    assert 'NOTE: --containment, --max-containment, --avg-containment, and --estimate-ani ignore signature abundances.' in \
         c.last_result.err
 
 
@@ -564,7 +644,7 @@ def test_compare_containment_require_scaled(c):
         c.run_sourmash('compare', '--containment', '-k', '31', s47, s63,
                        fail_ok=True)
 
-    assert 'must use scaled signatures with --containment and --max-containment' in \
+    assert 'must use scaled signatures with --containment, --max-containment, and --avg-containment' in \
         c.last_result.err
     assert c.last_result.status != 0
 
@@ -1495,7 +1575,7 @@ def test_search_containment_s10_no_max(run):
 
 
 def test_search_max_containment_s10_pairwise(runtmp):
-    # check --containment for s10/s10-small
+    # check --max-containment for s10/s10-small
     q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
     q2 = utils.get_test_data('scaled/genome-s10-small.fa.gz.sig')
 
@@ -5372,6 +5452,8 @@ def test_search_ani_jaccard_error_too_high(c):
         #assert row['ani'] == "0.9987884602947684"
         assert row['ani'] == ''
 
+    assert "WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons." in c.last_result.err
+
 
 @utils.in_tempdir
 def test_searchabund_no_ani(c):
@@ -5446,7 +5528,7 @@ def test_search_ani_containment(c):
 def test_search_ani_containment_fail(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', testdata1, testdata2)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=10', testdata1, testdata2)
 
     c.run_sourmash('search', '--containment', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
     print(c.last_result.status, c.last_result.out, c.last_result.err)
@@ -5459,11 +5541,11 @@ def test_search_ani_containment_fail(c):
         row = next(reader)
         print(row)
         assert search_result_names == list(row.keys())
-        assert float(row['similarity']) == 0.9556701030927836 
+        assert round(float(row['similarity']), 3) == 0.967
         assert row['ani'] == ""
-    
-    assert "WARNING: Cannot estimate ANI because size estimation for at least one of these sketches may be inaccurate." in c.last_result.err
 
+    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons." in c.last_result.err
+    
 
 @utils.in_tempdir
 def test_search_ani_containment_estimate_ci(c):
@@ -5602,16 +5684,15 @@ def test_search_jaccard_ani_downsample(c):
         row = next(reader)
         print(row)
         assert round(float(row['similarity']), 3) == round(0.6634517766497462, 3)
-        #downsampled is too small, so ANI is 0. can get from dist, though
-        assert row['ani'] == ""
+        assert round(float(row['ani']), 3) == 0.993
 
     #downsample manually and assert same ANI
     ss47_ds = signature.load_one_signature(ds_sig47)
     print("SCALED:", ss47_ds.minhash.scaled, ss4763.minhash.scaled)
     ani_info = ss47_ds.jaccard_ani(ss4763, downsample=True)
     print(ani_info)
-    assert ani_info.ani == None
-    assert (1 - round(ani_info.dist, 3)) == round(0.992530907924384, 3)
+    assert round(ani_info.ani,3) == 0.993
+    assert (1 - round(ani_info.dist, 3)) == 0.993
 
 
 def test_gather_ani_csv(runtmp, linear_gather, prefetch_gather):
@@ -5753,6 +5834,10 @@ def test_compare_containment_ani(c):
 
                 assert containment_ani == mat_val #, (i, j)
 
+    print(c.last_result.err)
+    print(c.last_result.out)
+    assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
+
 
 @utils.in_tempdir
 def test_compare_jaccard_ani(c):
@@ -5801,6 +5886,66 @@ def test_compare_jaccard_ani(c):
 
                 assert jaccard_ani == mat_val #, (i, j)
 
+    print(c.last_result.err)
+    print(c.last_result.out)
+    assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
+
+
+@utils.in_tempdir
+def test_compare_jaccard_ani_jaccard_error_too_high(c):
+    import numpy
+    testdata1 = utils.get_test_data('short.fa')
+    sig1 = c.output('short.fa.sig')
+    testdata2 = utils.get_test_data('short2.fa')
+    sig2 = c.output('short2.fa.sig')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', '-o', sig1, testdata1)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', '-o', sig2, testdata2)
+    testdata_sigs = [sig1, sig2]
+
+    c.run_sourmash('compare', '-k', '31', '--estimate-ani', '--csv', 'output.csv', 'short.fa.sig', 'short2.fa.sig')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+
+    # load the matrix output of compare --estimate-ani
+    with open(c.output('output.csv'), 'rt') as fp:
+        r = iter(csv.reader(fp))
+        headers = next(r)
+
+        mat = numpy.zeros((len(headers), len(headers)))
+        for i, row in enumerate(r):
+            for j, val in enumerate(row):
+                mat[i][j] = float(val)
+
+        print(mat)
+
+    # load in all the input signatures
+    idx_to_sig = dict()
+    for idx, filename in enumerate(testdata_sigs):
+        ss = sourmash.load_one_signature(filename, ksize=31)
+        idx_to_sig[idx] = ss
+
+    # check explicit containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            mat_val = round(mat[i][j], 3)
+            print(mat_val)
+            if i == j:
+                assert 1 == mat_val
+            else:
+                ss_j = idx_to_sig[j]
+                jaccard_ani = ss_j.jaccard_ani(ss_i).ani
+                if jaccard_ani is not None:
+                    jaccard_ani = round(jaccard_ani, 3)
+                else:
+                    jaccard_ani = 0.0
+                print(jaccard_ani)
+
+                assert jaccard_ani == mat_val #, (i, j)
+
+
+    assert "WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons." in c.last_result.err
+
 
 @utils.in_tempdir
 def test_compare_max_containment_ani(c):
@@ -5848,6 +5993,61 @@ def test_compare_max_containment_ani(c):
 
                 assert containment_ani == mat_val, (i, j)
 
+    print(c.last_result.err)
+    print(c.last_result.out)
+    assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
+
+
+@utils.in_tempdir
+def test_compare_avg_containment_ani(c):
+    import numpy
+
+    sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
+    testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
+
+    c.run_sourmash('compare', '--avg-containment', '-k', '31',
+                   '--estimate-ani', '--csv', 'output.csv', *testdata_sigs)
+
+    # load the matrix output of compare --max-containment --estimate-ani
+    with open(c.output('output.csv'), 'rt') as fp:
+        r = iter(csv.reader(fp))
+        headers = next(r)
+
+        mat = numpy.zeros((len(headers), len(headers)))
+        for i, row in enumerate(r):
+            for j, val in enumerate(row):
+                mat[i][j] = float(val)
+
+        print(mat)
+
+    # load in all the input signatures
+    idx_to_sig = dict()
+    for idx, filename in enumerate(testdata_sigs):
+        ss = sourmash.load_one_signature(filename, ksize=31)
+        idx_to_sig[idx] = ss
+
+    # check explicit avg containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            mat_val = round(mat[i][j], 3)
+            print(mat_val)
+            if i == j:
+                assert 1 == mat_val
+            else:
+                ss_j = idx_to_sig[j]
+                containment_ani = ss_j.avg_containment_ani(ss_i)
+                if containment_ani is not None:
+                    containment_ani = round(containment_ani, 3)
+                else:
+                    containment_ani = 0.0
+
+                assert containment_ani == mat_val, (i, j)
+
+    print(c.last_result.err)
+    print(c.last_result.out)
+    assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
+
 
 @utils.in_tempdir
 def test_compare_ANI_require_scaled(c):
@@ -5858,7 +6058,7 @@ def test_compare_ANI_require_scaled(c):
     with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('compare', '--containment', '--estimate-ani', '-k', '31', s47, s63,
                        fail_ok=True)
-    assert 'must use scaled signatures with --containment and --max-containment' in \
+    assert 'must use scaled signatures with --containment, --max-containment, and --avg-containment' in \
         c.last_result.err
     assert c.last_result.status != 0
 

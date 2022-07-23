@@ -65,10 +65,10 @@ def load_singletons_and_count(filenames, ksize, scaled, ignore_abundance):
     total_n = len(filenames)
     for filename in filenames:
         n += 1
-        mi = MultiIndex.load_from_path(filename)
-        mi = mi.select(ksize=ksize)
+        idx = sourmash_args.load_file_as_index(filename)
+        idx = idx.select(ksize=ksize)
 
-        for query_sig, query_filename in mi.signatures_with_location():
+        for query_sig, query_filename in idx.signatures_with_location():
             notify(u'\r\033[K', end=u'')
             notify(f'... loading {query_sig} (file {n} of {total_n})',
                    total_n, end='\r')

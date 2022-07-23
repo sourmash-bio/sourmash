@@ -70,6 +70,11 @@ def lca_db_format(request):
     return request.param
 
 
+@pytest.fixture(params=['csv', 'sql'])
+def manifest_db_format(request):
+    return request.param
+
+
 # --- BEGIN - Only run tests using a particular fixture --- #
 # Cribbed from: http://pythontesting.net/framework/pytest/pytest-run-tests-using-particular-fixture/
 def pytest_collection_modifyitems(items, config):

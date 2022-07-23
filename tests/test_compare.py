@@ -7,7 +7,7 @@ import pytest
 import sourmash
 from sourmash.compare import (compare_all_pairs, compare_parallel,
                               compare_serial, compare_serial_containment,
-                              compare_serial_max_containment)
+                              compare_serial_max_containment, compare_serial_avg_containment)
 import sourmash_tst_utils as utils
 
 
@@ -81,8 +81,8 @@ def test_compare_serial_jaccardANI(scaled_siglist, ignore_abundance):
     print(jANI)
     
     true_jaccard_ANI = np.array(
-           [[1., 0., 0., 0.],
-           [0., 1., 0.96973012, 0.99262776],
+           [[1., 0.978, 0., 0.],
+           [0.978, 1., 0.96973012, 0.99262776],
            [0., 0.96973012, 1., 0.97697011],
            [0., 0.99262776, 0.97697011, 1.]])
 
@@ -93,8 +93,8 @@ def test_compare_parallel_jaccardANI(scaled_siglist, ignore_abundance):
     jANI = compare_parallel(scaled_siglist, ignore_abundance, downsample=False, n_jobs=2, return_ani=True)
 
     true_jaccard_ANI = np.array(
-           [[1., 0., 0., 0.],
-           [0., 1., 0.96973012, 0.99262776],
+           [[1., 0.978, 0., 0.],
+           [0.978, 1., 0.96973012, 0.99262776],
            [0., 0.96973012, 1., 0.97697011],
            [0., 0.99262776, 0.97697011, 1.]])
 
@@ -112,21 +112,39 @@ def test_compare_serial_containmentANI(scaled_siglist):
     print(containment_ANI)
 
     true_containment_ANI = np.array(
-        [[1, 0., 0., 0.],
-        [0., 1., 0.97715525, 1.],
+        [[1, 0.966, 0., 0.],
+        [1, 1., 0.97715525, 1.],
         [0., 0.96377054, 1., 0.97678608],
         [0., 0.98667513, 0.97715525, 1.]])
 
     np.testing.assert_array_almost_equal(containment_ANI, true_containment_ANI, decimal=3)
+
+
+def test_compare_serial_maxcontainmentANI(scaled_siglist):
 
     # check max_containment ANI
     max_containment_ANI = compare_serial_max_containment(scaled_siglist, return_ani=True)
     print(max_containment_ANI)
 
     true_max_containment_ANI = np.array(
-        [[1., 0., 0., 0.],
-        [0., 1., 0.97715525, 1.],
+        [[1., 1., 0., 0.],
+        [1., 1., 0.97715525, 1.],
         [0., 0.97715525, 1., 0.97715525],
         [0., 1., 0.97715525, 1.]])
 
     np.testing.assert_array_almost_equal(max_containment_ANI, true_max_containment_ANI, decimal=3)
+
+
+def test_compare_serial_avg_containmentANI(scaled_siglist):
+
+    # check avg_containment ANI
+    avg_containment_ANI = compare_serial_avg_containment(scaled_siglist, return_ani=True)
+    print(avg_containment_ANI)
+
+    true_avg_containment_ANI = np.array(
+        [[1., 0.983, 0., 0.],
+        [0.983, 1., 0.97046289, 0.99333757],
+        [0., 0.97046289, 1., 0.97697067],
+        [0., 0.99333757, 0.97697067, 1.]])
+
+    np.testing.assert_array_almost_equal(avg_containment_ANI, true_avg_containment_ANI, decimal=3)

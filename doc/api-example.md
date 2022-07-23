@@ -241,7 +241,7 @@ ValueError: invalid DNA character in input k-mer: NTGCGAGTGTTGAAGTTCGGCGGTACATCA
 For protein sequences, sourmash does not currently do any invalid
 character detection; k-mers are hashed as they are, and can only be
 matched by an identical k-mer (with the same invalid character).
-(Please [file an issue](https://github.com/dib-lab/sourmash/issues) if
+(Please [file an issue](https://github.com/sourmash-bio/sourmash/issues) if
 you'd like us to change this!)
 ```
 >>> K = 7

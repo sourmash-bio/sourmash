@@ -243,18 +243,16 @@ Example output:
 
 ### `sourmash search` - search for signatures in collections or databases
 
-The `search` subcommand searches a collection of signatures or SBTs for
-matches to the query signature.  It can search for matches with either
+The `search` subcommand searches a collection of signatures
+(in any of the [formats supported by sourmash](#storing-and-searching-signatures))
+for matches to the query signature.  It can search for matches with either
 high [Jaccard similarity](https://en.wikipedia.org/wiki/Jaccard_index)
 or containment; the default is to use Jaccard similarity, unless
 `--containment` is specified.  `-o/--output` will create a CSV file
 containing the matches.
 
-`search` will load all of provided signatures into memory, which can
-be slow and somewhat memory intensive for large collections.  You can
-use `sourmash index` to create a Sequence Bloom Tree (SBT) that can
-be quickly searched on disk; this is [the same format in which we provide
-GenBank and other databases](databases.md).
+`search` makes use of [indexed databases](#loading-many-signatures) to
+decrease search time and memory where possible.
 
 Usage:
 ```
@@ -295,10 +293,10 @@ will be abundance weighted (unless `--ignore-abundances` is
 specified).  `-o/--output` will create a CSV file containing the
 matches.
 
-`gather`, like `search`, will load all of provided signatures into
-memory.  You can use `sourmash index` to create a Sequence Bloom Tree
-(SBT) that can be quickly searched on disk; this is
-[the same format in which we provide GenBank and other databases](databases.md).
+`gather`, like `search`, works with any of the
+[signature collection formats supported by sourmash](#storing-and-searching-signatures)
+and will make use of [indexed databases](#loading-many-signatures) to
+decrease search time and memory where possible.
 
 Usage:
 ```
@@ -1436,6 +1434,24 @@ sourmash database.
 `sourmash sig check` is particularly useful when working with large
 collections of signatures and identifiers.
 
+### `sourmash signature collect` - collect manifests across databases
+
+Collect manifests from across (many) files and merge into a single
+standalone manifest.
+
+For example,
+```
+sourmash sig collect tests/test-data/gather/GCF*.sig -o mf.sqlmf
+```
+will load all of the `GCF` signatures and build a manifest file `mf.sqlmf`
+that contains references to all of the signatures, but not the signatures
+themselves.
+This manifest file can be loaded directly from the command line by sourmash.
+
+`sourmash sig collect` defaults to outputting SQLite manifests. It is
+particularly useful when working with large collections of signatures and
+identifiers, and has command line options for merging and updating manifests.
+
 ## Advanced command-line usage
 
 ### Loading signatures and databases
@@ -1689,7 +1705,7 @@ signatures that were just created.
 
 ### Using manifests to explicitly refer to collections of files
 
-(sourmash v4.4.0 and later)
+(sourmash v4.4 and later)
 
 Manifests are metadata catalogs of signatures that are used for
 signature selection and loading. They are used extensively by sourmash
@@ -1698,52 +1714,28 @@ pattern matching.
 
 Manifests can _also_ be used externally (via the command-line), and
 may be useful for organizing large collections of signatures. They can
-be generated with `sourmash sig manifest` as well as `sourmash sig check`.
+be generated with the `sig collect`, `sig manifest`, and `sig check`
+subcommands.
 
-Suppose you have a large collection of signature (`.sig` or `.sig.gz`
-files) under a directory. You can create a manifest file for them like so:
+Suppose you have a large collection of signatures (`.sig` or `.sig.gz`
+files) in a location (e.g., under a directory, or in a zip file). You
+can create a manifest file for them like so:
 ```
-sourmash sig manifest <dir> -o <dir>/manifest.csv
+sourmash sig collect <dir> <zipfile> -o manifest.sqlmf
 ```
-and then use the manifest directly for sourmash operations:
+and then use the manifest directly for sourmash operations, for example:
 ```
-sourmash sig fileinfo <dir>/manifest.csv
+sourmash sig fileinfo manifest.sqlmf
 ```
-This manifest can be used as a database target for most sourmash
-operations - search, gather, etc.  Note that manifests for directories
-must be placed within (and loaded from) the directory from which the
-manifest was generated; the specific manifest filename does not
-matter.
+This manifest contains _references_ to the signatures (but not the
+signatures themselves) and can then be used as a database target for most
+sourmash operations - search, gather, etc.
 
-A more advanced and slightly tricky way to use explicit manifest files
-is with lists of files.  If you create a file with a path list
-containing the locations of loadable sourmash collections, you can run
-`sourmash sig manifest pathlist.txt -o mf.csv` to generate a manifest
-of all of the files.  The resulting manifest in `mf.csv` can then be
-loaded directly.  This is very handy when you have many sourmash
-signatures, or large signature files.  The tricky part in doing this
-is that the manifest will store the same paths listed in the pathlist
-file - whether they are relative or absolute paths - and these paths
-must be resolvable by sourmash from the current working directory.
-This makes explicit manifests built from pathlist files less portable
-within or across systems than the other sourmash collections, which
-are all relocatable.
-
-For example, if you create a pathlist file `paths.txt` containing the
-following:
-```
-/path/to/zipfile.zip
-local_directory/some_signature.sig.gz
-local_dir2/
-```
-and then run:
-```
-sourmash sig manifest paths.txt -o mf.csv
-```
-you will be able to use `mf.csv` as a database for `sourmash search`
-and `sourmash gather` commands.  But, because it contains two relative paths,
-you will only be able to use it _from the directory that contains those
-two relative paths_.
+Note that `sig collect` will generate manifests containing the
+pathnames given to it - so if you use relative paths, the references
+will be relative to the working directory in which `sig collect` was
+run.  You can use `sig collect --abspath` to rewrite the paths
+into absolute paths.
 
 **Our advice:** We suggest using zip file collections for most
 situations; we primarily recommend using explicit manifests for

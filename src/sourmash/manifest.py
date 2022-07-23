@@ -78,14 +78,16 @@ class BaseCollectionManifest:
             row['signature'] = None
             manifest_list.append(row)
 
-        return cls(manifest_list)
+        return CollectionManifest(manifest_list)
 
     @classmethod
     def load_from_sql(cls, filename):
         from sourmash.index.sqlite_index import load_sqlite_index
         db = load_sqlite_index(filename, request_manifest=True)
-        if db:
+        if db is not None:
             return db.manifest
+
+        return None
 
     def write_to_filename(self, filename, *, database_format='csv',
                           ok_if_exists=False):
@@ -207,7 +209,7 @@ class CollectionManifest(BaseCollectionManifest):
     """
     An in-memory manifest that simply stores the rows in a list.
     """
-    def __init__(self, rows):
+    def __init__(self, rows=[]):
         "Initialize from an iterable of metadata dictionaries."
         self.rows = []
         self._md5_set = set()
@@ -218,6 +220,9 @@ class CollectionManifest(BaseCollectionManifest):
     def load_from_manifest(cls, manifest, **kwargs):
         "Load this manifest from another manifest object."
         return cls(manifest.rows)
+
+    def add_row(self, row):
+        self._add_rows([row])
 
     def _add_rows(self, rows):
         self.rows.extend(rows)
