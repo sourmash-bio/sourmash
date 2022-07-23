@@ -68,7 +68,7 @@
           sourmash = mach-nix-wrapper.buildPythonPackage {
             src = ./.;
             pname = "sourmash";
-            version = "4.4.0";
+            version = "4.4.2";
             requirements = ''
               screed>=1.0.5
               cffi>=1.14.0
@@ -80,11 +80,12 @@
               bitstring<4,>=3.1.9
             '';
             requirementsExtra = ''
-              setuptools
+              setuptools >= 61
               milksnake
               setuptools_scm[toml] >= 4, <6
+              wheel >= 0.29.0
             '';
-            SETUPTOOLS_SCM_PRETEND_VERSION = "4.4.0";
+            SETUPTOOLS_SCM_PRETEND_VERSION = "4.4.2";
             DYLD_LIBRARY_PATH = "${self.packages.${system}.lib}/lib";
             NO_BUILD = "1";
           };
