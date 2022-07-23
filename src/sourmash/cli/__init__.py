@@ -123,7 +123,7 @@ def get_parser():
         if dirpath in alias:
             usage += '        sourmash {gd:s} --help\n'.format(gd=alias[dirpath])
 
-    desc = 'Compute, compare, manipulate, and analyze MinHash sketches of DNA sequences.\n\nUsage instructions:\n' + usage
+    desc = 'Create, compare, and manipulate k-mer sketches of biological sequences.\n\nUsage instructions:\n' + usage
     parser = SourmashParser(prog='sourmash', description=desc, formatter_class=RawDescriptionHelpFormatter, usage=SUPPRESS)
     parser._optionals.title = 'Options'
     parser.add_argument('-v', '--version', action='version', version='sourmash '+ sourmash.VERSION)
