@@ -4,7 +4,6 @@ on:
   push:
     branches: [latest]
     tags: v*
-  pull_request:
   schedule:
     - cron: "0 0 * * *" # daily
 
@@ -15,23 +14,23 @@ jobs:
     strategy:
       matrix:
         build: [
-          linux-x86_64,
-          macos-x86_64,
-          macos-arm64,
+          linux-aarch64,
+          linux-ppc64le,
+          linux-s390x,
         ]
         include:
-          - build: linux-x86_64
+          - build: linux-aarch64
             os: ubuntu-20.04
-            arch: x86_64
+            arch: aarch64
             macos_target: ''
-          - build: macos-x86_64
-            os: macos-latest
-            arch: x86_64
-            macos_target: 'MACOSX_DEPLOYMENT_TARGET=10.11 CARGO_BUILD_TARGET=x86_64-apple-darwin'
-          - build: macos-arm64
-            os: macos-latest
-            arch: arm64
-            macos_target: 'MACOSX_DEPLOYMENT_TARGET=11 CARGO_BUILD_TARGET=aarch64-apple-darwin'
+          - build: linux-ppc64le
+            os: ubuntu-20.04
+            arch: ppc64le
+            macos_target: ''
+          - build: linux-s390x
+            os: ubuntu-20.04
+            arch: s390x
+            macos_target: ''
       fail-fast: false
 
     steps:
@@ -43,6 +42,27 @@ jobs:
         name: Install Python
         with:
           python-version: '3.9'
+
+      # Added due to weird error when building inside docker container
+      # for other platforms...
+      # https://github.com/JonasAlfredsson/docker-nginx-certbot/issues/30
+      - name: Set Swap Space
+        if: runner.os == 'Linux'
+        uses: pierotofy/set-swap-space@v1.0
+        with:
+          swap-size-gb: 10
+      - run: |
+          # Workaround for https://github.com/rust-lang/cargo/issues/8719
+          sudo mkdir -p /var/lib/docker
+          sudo mount -t tmpfs -o size=10G none /var/lib/docker
+          sudo systemctl restart docker
+        if: runner.os == 'Linux'
+
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: all
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.8.1

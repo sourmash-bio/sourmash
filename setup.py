@@ -46,7 +46,7 @@ def build_native(spec):
         target = "release"
 
     if NO_BUILD:
-        dylib = lambda: find_dylib("sourmash", os.environ["DYLD_LIBRARY_PATH"])
+        dylib = lambda: find_dylib_no_build("sourmash", os.environ["DYLD_LIBRARY_PATH"])
         header_filename = lambda: "include/sourmash.h"
     else:
         build = spec.add_external_build(cmd=cmd, path=".")

@@ -11,6 +11,31 @@ from .signature import SourmashSignature, MinHash
 from .sketchcomparison import FracMinHashComparison, NumMinHashComparison
 
 
+def calc_threshold_from_bp(threshold_bp, scaled, query_size):
+    """
+    Convert threshold_bp (threshold in estimated bp) to
+    fraction of query & minimum number of hashes needed.
+    """
+    threshold = 0.0
+    n_threshold_hashes = 0
+
+    if threshold_bp:
+        if threshold_bp < 0:
+            raise TypeError("threshold_bp must be non-negative")
+
+        # if we have a threshold_bp of N, then that amounts to N/scaled
+        # hashes:
+        n_threshold_hashes = float(threshold_bp) / scaled
+
+        # that then requires the following containment:
+        threshold = n_threshold_hashes / query_size
+
+        # is it too high to ever match?
+        if threshold > 1.0:
+            raise ValueError("requested threshold_bp is unattainable with this query")
+    return threshold, n_threshold_hashes
+
+
 class SearchType(Enum):
     JACCARD = 1
     CONTAINMENT = 2
@@ -43,8 +68,8 @@ def make_jaccard_search_query(*,
     return search_obj
 
 
-def make_gather_query(query_mh, threshold_bp, *, best_only=True):
-    "Make a search object for gather."
+def make_containment_query(query_mh, threshold_bp, *, best_only=True):
+    "Make a search object for containment, with threshold_bp."
     if not query_mh:
         raise ValueError("query is empty!?")
 
@@ -53,21 +78,7 @@ def make_gather_query(query_mh, threshold_bp, *, best_only=True):
         raise TypeError("query signature must be calculated with scaled")
 
     # are we setting a threshold?
-    threshold = 0
-    if threshold_bp:
-        if threshold_bp < 0:
-            raise TypeError("threshold_bp must be non-negative")
-
-        # if we have a threshold_bp of N, then that amounts to N/scaled
-        # hashes:
-        n_threshold_hashes = threshold_bp / scaled
-
-        # that then requires the following containment:
-        threshold = n_threshold_hashes / len(query_mh)
-
-        # is it too high to ever match? if so, exit.
-        if threshold > 1.0:
-            raise ValueError("requested threshold_bp is unattainable with this query")
+    threshold, _ = calc_threshold_from_bp(threshold_bp, scaled, len(query_mh))
 
     if best_only:
         search_obj = JaccardSearchBestOnly(SearchType.CONTAINMENT,
@@ -178,6 +189,7 @@ class BaseResult:
     threshold_bp: int = None
     cmp_scaled: int = None
     write_cols: list = None
+    potential_false_negative: bool = False
 
     def init_result(self):
         self.mh1 = self.query.minhash
@@ -192,12 +204,14 @@ class BaseResult:
         self.cmp_scaled = self.cmp.cmp_scaled
         self.query_scaled = self.mh1.scaled
         self.match_scaled = self.mh2.scaled
+        self.size_may_be_inaccurate = self.cmp.size_may_be_inaccurate
 
     def build_numminhashcomparison(self, cmp_num=None):
         self.cmp = NumMinHashComparison(self.mh1, self.mh2, cmp_num=cmp_num, ignore_abundance=self.ignore_abundance)
         self.cmp_num = self.cmp.cmp_num
         self.query_num = self.mh1.num
         self.match_num = self.mh2.num
+        self.size_may_be_inaccurate = self.cmp.size_may_be_inaccurate
 
     def get_cmpinfo(self):
         # grab signature /minhash metadata
@@ -221,8 +235,8 @@ class BaseResult:
         # could define in PrefetchResult instead, same reasoning as above
         self.query_abundance = self.mh1.track_abundance
         self.match_abundance = self.mh2.track_abundance
-        self.query_n_hashes = len(self.mh1.hashes)
-        self.match_n_hashes = len(self.mh2.hashes)
+        self.query_n_hashes = len(self.mh1)
+        self.match_n_hashes = len(self.mh2)
 
     @property
     def pass_threshold(self):
@@ -324,6 +338,7 @@ class SearchResult(BaseResult):
                 self.ani_high = self.cmp.max_containment_ani_high
         elif self.searchtype == SearchType.JACCARD:
             self.cmp.estimate_jaccard_ani(jaccard=self.similarity)
+            self.jaccard_ani_untrustworthy = self.cmp.jaccard_ani_untrustworthy
             self.ani = self.cmp.jaccard_ani
         # this can be set from any of the above
         self.potential_false_negative = self.cmp.potential_false_negative
@@ -621,7 +636,7 @@ def _find_best(counters, query, threshold_bp):
 
     # find the best score across multiple counters, without consuming
     for counter in counters:
-        result = counter.peek(query.minhash, threshold_bp)
+        result = counter.peek(query.minhash, threshold_bp=threshold_bp)
         if result:
             (sr, intersect_mh) = result
 
@@ -643,7 +658,7 @@ class GatherDatabases:
     "Iterator object for doing gather/min-set-cov."
 
     def __init__(self, query, counters, *,
-                 threshold_bp=0, ignore_abundance=False, noident_mh=None, estimate_ani_ci=False):
+                 threshold_bp=0, ignore_abundance=False, noident_mh=None, ident_mh=None, estimate_ani_ci=False):
         # track original query information for later usage?
         track_abundance = query.minhash.track_abundance and not ignore_abundance
         self.orig_query = query
@@ -664,8 +679,11 @@ class GatherDatabases:
             noident_mh = query_mh.copy_and_clear()
         self.noident_mh = noident_mh.to_frozen()
 
-        query_mh = query_mh.to_mutable()
-        query_mh.remove_many(noident_mh)
+        if ident_mh is None:
+            query_mh = query_mh.to_mutable()
+            query_mh.remove_many(noident_mh)
+        else:
+            query_mh = ident_mh.to_mutable()
 
         orig_query_mh = query_mh.flatten()
         query.minhash = orig_query_mh.to_mutable()

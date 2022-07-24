@@ -16,9 +16,9 @@ install: all
 	$(PYTHON) setup.py install
 
 dist: FORCE
-	$(PYTHON) setup.py sdist
+	$(PYTHON) -m build --sdist
 
-test:
+test: .PHONY
 	tox -e py38
 	cargo test
 

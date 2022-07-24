@@ -12,6 +12,7 @@ class BaseMinHashComparison:
     mh1: MinHash
     mh2: MinHash
     ignore_abundance: bool = False # optionally ignore abundances
+    jaccard_ani_untrustworthy: bool = False
 
     def downsample_and_handle_ignore_abundance(self, cmp_num=None, cmp_scaled=None):
         """
@@ -68,8 +69,7 @@ class BaseMinHashComparison:
     @property
     def cosine_similarity(self):
         return self.angular_similarity
-
-
+    
 @dataclass
 class NumMinHashComparison(BaseMinHashComparison):
     """Class for standard comparison between two num minhashes"""
@@ -80,6 +80,10 @@ class NumMinHashComparison(BaseMinHashComparison):
         if self.cmp_num is None: # record the num we're doing this comparison on
             self.cmp_num = min(self.mh1.num, self.mh2.num)
         self.check_compatibility_and_downsample(cmp_num=self.cmp_num)
+
+    @property
+    def size_may_be_inaccurate(self):
+        return False # not using size estimation, can ignore
 
 @dataclass
 class FracMinHashComparison(BaseMinHashComparison):
@@ -101,6 +105,14 @@ class FracMinHashComparison(BaseMinHashComparison):
     @property
     def pass_threshold(self):
         return self.total_unique_intersect_hashes >= self.threshold_bp
+
+    @property
+    def size_may_be_inaccurate(self):
+        # if either size estimation may be inaccurate
+        # NOTE: do we want to do this at original scaled instead?
+        if not self.mh1_cmp.size_is_accurate() or not self.mh2_cmp.size_is_accurate():
+            return True
+        return False
 
     @property
     def total_unique_intersect_hashes(self):
@@ -172,8 +184,13 @@ class FracMinHashComparison(BaseMinHashComparison):
 
     @property
     def avg_containment_ani(self):
-        "Returns single average_containment_ani value."
-        return self.mh1_cmp.avg_containment_ani(self.mh2_cmp)
+        "Returns single average_containment_ani value. Sets self.potential_false_negative internally."
+        self.estimate_mh1_containment_ani()
+        self.estimate_mh2_containment_ani()
+        if any([self.mh1_containment_ani is None, self.mh2_containment_ani is None]):
+            return None
+        else:
+            return (self.mh1_containment_ani + self.mh2_containment_ani)/2
 
     def estimate_all_containment_ani(self):
         "Estimate all containment ANI values."

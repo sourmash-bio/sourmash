@@ -103,6 +103,39 @@ def translate_codon(codon):
         raise ValueError(e.message)
 
 
+def flatten_and_downsample_scaled(mh, *scaled_vals):
+    "Flatten MinHash object and downsample to max of scaled values."
+    assert mh.scaled
+    assert all( (x > 0 for x in scaled_vals) )
+
+    mh = mh.flatten()
+    scaled = max(scaled_vals)
+    if scaled > mh.scaled:
+        return mh.downsample(scaled=scaled)
+    return mh
+
+
+def flatten_and_downsample_num(mh, *num_vals):
+    "Flatten MinHash object and downsample to min of num values."
+    assert mh.num
+    assert all( (x > 0 for x in num_vals) )
+
+    mh = mh.flatten()
+    num = min(num_vals)
+    if num < mh.num:
+        return mh.downsample(num=num)
+    return mh
+
+
+def flatten_and_intersect_scaled(mh1, mh2):
+    "Flatten and downsample two scaled MinHash objs, then return intersection."
+    scaled = max(mh1.scaled, mh2.scaled)
+    mh1 = mh1.flatten().downsample(scaled=scaled)
+    mh2 = mh2.flatten().downsample(scaled=scaled)
+
+    return mh1 & mh2
+
+
 class _HashesWrapper(Mapping):
     "A read-only view of the hashes contained by a MinHash object."
     def __init__(self, h):
@@ -711,8 +744,6 @@ class MinHash(RustObject):
             raise TypeError("can only calculate containment for scaled MinHashes")
         if not len(self):
             return 0.0
-        if not self.size_is_accurate() or not other.size_is_accurate():
-            notify("WARNING: size estimation for at least one of these sketches may be inaccurate.")
         return self.count_common(other, downsample) / len(self)
         # with bias factor
         #return self.count_common(other, downsample) / (len(self) * (1- (1-1/self.scaled)^(len(self)*self.scaled)))
@@ -973,9 +1004,9 @@ class MinHash(RustObject):
         if not self.scaled:
             raise TypeError("can only approximate unique_dataset_hashes for scaled MinHashes")
         # TODO: replace set_size with HLL estimate when that gets implemented
-        return len(self.hashes) * self.scaled # + (self.ksize - 1) for bp estimation
+        return len(self) * self.scaled # + (self.ksize - 1) for bp estimation
 
-    def size_is_accurate(self, relative_error=0.05, confidence=0.95):
+    def size_is_accurate(self, relative_error=0.20, confidence=0.95):
         """
         Computes the probability that the estimate: sketch_size * scaled deviates from the true
         set_size by more than relative_error. This relies on the fact that the sketch_size
@@ -983,6 +1014,8 @@ class MinHash(RustObject):
         bounds are used.
         Returns True if probability is greater than or equal to the desired confidence.
         """
+        if not self.scaled:
+            raise TypeError("Error: can only estimate dataset size for scaled MinHashes")
         if any([not (0 <= relative_error <= 1), not (0 <= confidence <= 1)]):
             raise ValueError("Error: relative error and confidence values must be between 0 and 1.")
         # to do: replace unique_dataset_hashes with HLL estimation when it gets implemented 

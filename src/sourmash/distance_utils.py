@@ -25,14 +25,12 @@ def check_prob_threshold(val, threshold=1e-3):
     """
     exceeds_threshold = False
     if threshold is not None and val > threshold:
-        notify("WARNING: These sketches may have no hashes in common based on chance alone.")
         exceeds_threshold = True
     return val, exceeds_threshold
 
 def check_jaccard_error(val, threshold=1e-4):
     exceeds_threshold = False
     if threshold is not None and val > threshold:
-        notify(f"WARNING: Error on Jaccard distance point estimate is too high ({val :.4f}).")
         exceeds_threshold = True
     return val, exceeds_threshold
 
@@ -56,7 +54,6 @@ class ANIResult:
     @property
     def ani(self):
         if self.size_is_inaccurate:
-            notify("WARNING: Cannot estimate ANI because size estimation for at least one of these sketches may be inaccurate.")
             return None
         return 1 - self.dist
 
@@ -80,10 +77,6 @@ class jaccardANIResult(ANIResult):
     def ani(self):
         # if jaccard error is too high (exceeds threshold), do not trust ANI estimate
         if self.je_exceeds_threshold or self.size_is_inaccurate:
-            if self.size_is_inaccurate:
-                notify("WARNING: Cannot estimate ANI because size estimation for at least one of these sketches may be inaccurate.")
-            if self.je_exceeds_threshold:
-                notify("WARNING: Cannot estimate ANI because jaccard estimation for these sketches is inaccurate.")
             return None
         return 1 - self.dist
 
@@ -235,10 +228,10 @@ def containment_to_distance(
     """
     sol1, sol2, point_estimate = None, None, None
     n_unique_kmers = handle_seqlen_nkmers(ksize, sequence_len_bp = sequence_len_bp, n_unique_kmers=n_unique_kmers)
-    if containment <= 0.0001:
-#        point_estimate = 1.0
+    if containment == 0:
+        #point_estimate = 1.0
         point_estimate = sol1 = sol2 = 1.0
-    elif containment >= 0.9999:
+    elif containment == 1:
         #point_estimate = 0.0
         point_estimate = sol1 = sol2 = 0.0
     else:
@@ -325,10 +318,10 @@ def jaccard_to_distance(
     """
     error_lower_bound = None
     n_unique_kmers = handle_seqlen_nkmers(ksize, sequence_len_bp=sequence_len_bp, n_unique_kmers=n_unique_kmers)
-    if jaccard <= 0.0001:
+    if jaccard == 0:
         point_estimate = 1.0
         error_lower_bound = 0.0
-    elif jaccard >= 0.9999:
+    elif jaccard == 1:
         point_estimate = 0.0
         error_lower_bound = 0.0
     else:

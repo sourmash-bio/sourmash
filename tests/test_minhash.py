@@ -2830,16 +2830,6 @@ def test_containment_ANI():
     print("\nmh1 contained by mh2", m1_cont_m2)
     print("mh2 contained by mh1", m2_cont_m1)
 
-     # first, assess as-is. ANI should be None, bc 2.fa.sig size is inaccurate
-    assert m1_cont_m2.ani == m2_cont_m1.ani == None
-
-    # since size is inaccurate on 2.fa.sig, need to override to be able to get ani
-    m1_cont_m2.size_is_inaccurate = False
-    m2_cont_m1.size_is_inaccurate = False
-    
-    print("\nmh1 contained by mh2", m1_cont_m2)
-    print("mh2 contained by mh1", m2_cont_m1)
-
     assert (round(m1_cont_m2.ani,3), m1_cont_m2.ani_low, m1_cont_m2.ani_high) == (1.0, 1.0, 1.0)
     assert (round(m2_cont_m1.ani,3), round(m2_cont_m1.ani_low,3), round(m2_cont_m1.ani_high,3)) == (0.966, 0.965, 0.967)
 
@@ -2927,14 +2917,6 @@ def test_jaccard_ANI():
 
     m1_jani_m2 = mh1.jaccard_ani(mh2)
     m2_jani_m1 = mh2.jaccard_ani(mh1)
-
-    # first, assess as-is. ANI should be 0, bc 2.fa.sig size is inaccurate
-    assert m1_jani_m2 == m2_jani_m1
-    assert (m1_jani_m2.ani, m1_jani_m2.p_nothing_in_common, m1_jani_m2.jaccard_error) == (None, 0.0, 3.891666770716877e-07)
-
-    # since size is inaccurate on 2.fa.sig, need to override to be able to get ani
-    m1_jani_m2.size_is_inaccurate = False
-    m2_jani_m1.size_is_inaccurate = False
 
     assert m1_jani_m2 == m2_jani_m1
     assert (m1_jani_m2.ani, m1_jani_m2.p_nothing_in_common, m1_jani_m2.jaccard_error) == (0.9783711630110239, 0.0, 3.891666770716877e-07)
@@ -3043,9 +3025,10 @@ def test_minhash_set_size_estimate_is_accurate():
     f2 = utils.get_test_data('2+63.fa.sig')
     mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
     mh2 = sourmash.load_one_signature(f2).minhash
-
-    # check accuracy using default thresholds (rel_err= 0.5, confidence=0.95)
-    assert mh1.size_is_accurate() == False
+    mh1_ds = mh1.downsample(scaled=10000)
+    # check accuracy using default thresholds (rel_err= 0.2, confidence=0.95)
+    assert mh1.size_is_accurate() == True
+    assert mh1_ds.size_is_accurate() == False
     assert mh2.size_is_accurate() == True
 
     # change rel err
@@ -3054,7 +3037,7 @@ def test_minhash_set_size_estimate_is_accurate():
 
     # change prob
     assert mh1.size_is_accurate(confidence=0.5) == True
-    assert mh2.size_is_accurate(confidence=1) == False
+    assert mh1.size_is_accurate(confidence=1) == False
 
     # check that relative error and confidence must be between 0 and 1
     with pytest.raises(ValueError) as exc:
@@ -3073,23 +3056,34 @@ def test_minhash_set_size_estimate_is_accurate():
 def test_minhash_ani_inaccurate_size_est():
     f1 = utils.get_test_data('2.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')
-    f3 = utils.get_test_data('47+63.fa.sig')
     mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
     mh2 = sourmash.load_one_signature(f2).minhash
-    mh3 = sourmash.load_one_signature(f3).minhash
+    # downsample
+    mh1_ds = mh1.downsample(scaled=10000)
+    mh2_ds = mh2.downsample(scaled=10000)
 
-    assert mh1.size_is_accurate() == False
+    assert mh1.size_is_accurate(relative_error=0.05, confidence=0.95) == False
+    assert mh1.size_is_accurate() == True
+    assert mh1_ds.size_is_accurate() == False
     assert mh2.size_is_accurate() == True
-    assert mh3.size_is_accurate() == True
 
-    assert mh1.jaccard_ani(mh2).ani == None
-    assert round(mh2.jaccard_ani(mh3).ani, 3) == 0.987
+    assert round(mh1.jaccard_ani(mh2).ani, 3) == 0.978
 
-    m1_ca_m2 = mh1.containment_ani(mh2)
-    assert m1_ca_m2.ani == None
-    assert m1_ca_m2.size_is_inaccurate == True
+    m2_ca_m1 = mh2.containment_ani(mh1)
+    assert round(m2_ca_m1.ani, 3) == 0.966
+    assert m2_ca_m1.size_is_inaccurate == False
 
-    m2_ca_m3 = mh2.containment_ani(mh3)
-    print(m2_ca_m3)
-    assert round(m2_ca_m3.ani,3) == 0.987
-    assert m2_ca_m3.size_is_inaccurate == False
+    m1_ca_m2_ds = mh1_ds.containment_ani(mh2_ds)
+    print(m1_ca_m2_ds)
+    assert m1_ca_m2_ds.ani == None #0.987
+    assert m1_ca_m2_ds.size_is_inaccurate == True
+
+
+def test_size_num_fail():
+    f1 = utils.get_test_data('num/47.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+
+    with pytest.raises(TypeError) as exc:
+        mh1.size_is_accurate()
+    print(str(exc))
+    assert "Error: can only estimate dataset size for scaled MinHashes" in str(exc)
