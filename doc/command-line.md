@@ -588,13 +588,11 @@ To produce multiple output types from the same command, add the types into the
 ### `sourmash tax genome` - classify a genome using `gather` results
 
 `sourmash tax genome` reports likely classification for each query,
- based on `gather` matches. Since `gather` matches are non-overlapping
-
- By default, classification requires at least 10% of the query to be matched.
- Thus, if 10% of the query was matched to a species, the
- species-level classification can be reported. However, if 7% of the query was
- matched to one species, and an additional 5% matched to a different species in
- the same genus, the genus-level classification will be reported.
+ based on `gather` matches. By default, classification requires at least 10%
+ of the query to be matched. Thus, if 10% of the query was matched to a species,
+ the species-level classification can be reported. However, if 7% of the query
+ was matched to one species, and an additional 5% matched to a different species
+ in the same genus, the genus-level classification will be reported.
 
 `sourmash tax genome` can use an ANI threshold (`--ani-threshold`) instead of a
  containment threshold. This works the same way as the containment threshold

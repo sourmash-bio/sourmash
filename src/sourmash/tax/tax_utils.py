@@ -200,7 +200,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
     sum_uniq_to_query = defaultdict(lambda: defaultdict(float))
     sum_uniq_bp = defaultdict(lambda: defaultdict(float))
     query_info = {}
-    ksize,scaled,query_nhashes=None,None,None
+    ksize, scaled, query_nhashes=None, None, None
 
     for row in gather_results:
         # get essential gather info
@@ -283,7 +283,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
             total_f_classified = 0.0
             total_bp_classified = 0
             for lineage, fraction in sumgather_items:
-                query_ani=None
+                query_ani = None
                 if fraction > 1:
                     raise ValueError(f"The tax summary of query '{query_name}' is {fraction}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
                 elif fraction == 0:
