@@ -97,14 +97,13 @@ class FSStorage(Storage):
 class ZipStorage(RustObject, Storage):
 
     __dealloc_func__ = lib.zipstorage_free
-    __inner = None
 
     def __init__(self, path, *, mode="r"):
-        path = os.path.abspath(path)
         if mode == "w":
             self.__inner = _RwZipStorage(path)
         else:
             self.__inner = None
+            path = os.path.abspath(path)
             self._objptr = rustcall(lib.zipstorage_new, to_bytes(path), len(path))
 
     @staticmethod

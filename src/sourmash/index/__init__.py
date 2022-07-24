@@ -44,19 +44,19 @@ from collections import defaultdict
 from typing import NamedTuple, Optional, TypedDict, TYPE_CHECKING
 import weakref
 
-from ..search import (make_jaccard_search_query,
-                      make_gather_query
-                      calc_threshold_from_bp)
-from ..manifest import CollectionManifest
-from ..logging import debug_literal
-from ..signature import load_signatures, save_signatures
-from .._lowlevel import ffi, lib
-from ..utils import RustObject, rustcall, decode_str, encode_str
-from .. import SourmashSignature
-from ..picklist import SignaturePicklist
-from ..minhash import (flatten_and_downsample_scaled,
-                       flatten_and_downsample_num,
-                       flatten_and_intersect_scaled)
+from sourmash.search import (make_jaccard_search_query,
+                             make_containment_query,
+                             calc_threshold_from_bp)
+from sourmash.manifest import CollectionManifest
+from sourmash.logging import debug_literal
+from sourmash.signature import load_signatures, save_signatures
+from sourmash._lowlevel import ffi, lib
+from sourmash.utils import RustObject, rustcall, decode_str, encode_str
+from sourmash import SourmashSignature
+from sourmash.picklist import SignaturePicklist
+from sourmash.minhash import (flatten_and_downsample_scaled,
+                              flatten_and_downsample_num,
+                              flatten_and_intersect_scaled)
 
 if TYPE_CHECKING:
     from typing_extensions import Unpack
