@@ -468,10 +468,9 @@ The sourmash `tax` or `taxonomy` commands integrate taxonomic
  taxonomic rank. For example, if the gather results for a metagenome
  include results for 30 different strains of a given species, we can sum
  the fraction uniquely matched to each strain to obtain the fraction
- uniquely matched to this species. Note that this summarization can
- also take into account abundance weighting; see
- [classifying signatures](classifying-signatures.md) for more
- information.
+ uniquely matched to this species. Alternatively, taxonomic summarization
+ can take into account abundance weighting; see
+ [classifying signatures](classifying-signatures.md) for more information.
 
 As with all reference-based analysis, results can be affected by the
  completeness of the reference database. However, summarizing taxonomic
@@ -589,11 +588,17 @@ To produce multiple output types from the same command, add the types into the
 ### `sourmash tax genome` - classify a genome using `gather` results
 
 `sourmash tax genome` reports likely classification for each query,
- based on `gather` matches. By default, classification requires at least 10% of
- the query to be matched. Thus, if 10% of the query was matched to a species, the
- species-level classification can be reported. However, if 7% of the query was
- matched to one species, and an additional 5% matched to a different species in
- the same genus, the genus-level classification will be reported.
+ based on `gather` matches. By default, classification requires at least 10%
+ of the query to be matched. Thus, if 10% of the query was matched to a species,
+ the species-level classification can be reported. However, if 7% of the query
+ was matched to one species, and an additional 5% matched to a different species
+ in the same genus, the genus-level classification will be reported.
+
+`sourmash tax genome` can use an ANI threshold (`--ani-threshold`) instead of a
+ containment threshold. This works the same way as the containment threshold
+ (and indeed, is using the same underlying information). Note that for DNA k-mers,
+ k=21 ANI is most similar to alignment-based ANI values, and ANI values should only
+ be compared if they were generated using the same ksize.
 
 Optionally, `genome` can instead report classifications at a desired `rank`,
  regardless of match threshold (`--rank` argument, e.g. `--rank species`).

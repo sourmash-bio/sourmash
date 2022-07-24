@@ -99,7 +99,7 @@ def metagenome(args):
     seen_perfect = set()
     for rank in sourmash.lca.taxlist(include_strain=False):
         try:
-            summarized_gather[rank], seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
+            summarized_gather[rank], seen_perfect, _ = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
                                                                 keep_full_identifiers=args.keep_full_identifiers,
                                                                 keep_identifier_versions = args.keep_identifier_versions,
                                                                 seen_perfect = seen_perfect)
@@ -179,12 +179,14 @@ def genome(args):
         sys.exit(-1)
 
     # if --rank is specified, classify to that rank
+    estimate_query_ani = True
     if args.rank:
         try:
-            best_at_rank, seen_perfect = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
+            best_at_rank, seen_perfect, estimate_query_ani = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
                                                      keep_full_identifiers=args.keep_full_identifiers,
                                                      keep_identifier_versions = args.keep_identifier_versions,
-                                                     best_only=True, seen_perfect=seen_perfect)
+                                                     best_only=True, seen_perfect=seen_perfect, estimate_query_ani=True)
+
         except ValueError as exc:
             error(f"ERROR: {str(exc)}")
             sys.exit(-1)
@@ -194,27 +196,30 @@ def genome(args):
             status = 'nomatch'
             if sg.query_name in matched_queries:
                 continue
-            if sg.fraction <= args.containment_threshold:
+            if args.ani_threshold and sg.query_ani_at_rank < args.ani_threshold:
+                status="below_threshold"
+                notify(f"WARNING: classifying query {sg.query_name} at desired rank {args.rank} does not meet query ANI/AAI threshold {args.ani_threshold}")
+            elif sg.fraction <= args.containment_threshold: # should this just be less than?
                 status="below_threshold"
                 notify(f"WARNING: classifying query {sg.query_name} at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
             else:
                 status="match"
-            classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename, sg.f_weighted_at_rank, sg.bp_match_at_rank)
+            classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename, sg.f_weighted_at_rank, sg.bp_match_at_rank, sg.query_ani_at_rank)
             classifications[args.rank].append(classif)
             matched_queries.add(sg.query_name)
             if "krona" in args.output_format:
                 lin_list = display_lineage(sg.lineage).split(';')
                 krona_results.append((sg.fraction, *lin_list))
     else:
-        # classify to the match that passes the containment threshold.
+        # classify to the rank/match that passes the containment threshold.
         # To do - do we want to store anything for this match if nothing >= containment threshold?
         for rank in tax_utils.ascending_taxlist(include_strain=False):
             # gets best_at_rank for all queries in this gather_csv
             try:
-                best_at_rank, seen_perfect = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                         keep_full_identifiers=args.keep_full_identifiers,
-                                                         keep_identifier_versions = args.keep_identifier_versions,
-                                                         best_only=True, seen_perfect=seen_perfect)
+                best_at_rank, seen_perfect, estimate_query_ani = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
+                                                                                                keep_full_identifiers=args.keep_full_identifiers,
+                                                                                                keep_identifier_versions = args.keep_identifier_versions,
+                                                                                                best_only=True, seen_perfect=seen_perfect, estimate_query_ani=estimate_query_ani)
             except ValueError as exc:
                 error(f"ERROR: {str(exc)}")
                 sys.exit(-1)
@@ -223,18 +228,26 @@ def genome(args):
                 status = 'nomatch'
                 if sg.query_name in matched_queries:
                     continue
-                if sg.fraction >= args.containment_threshold:
+                if sg.query_ani_at_rank is not None and args.ani_threshold and sg.query_ani_at_rank >= args.ani_threshold:
+                    status="match"
+                elif sg.fraction >= args.containment_threshold:
                     status = "match"
-                    classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename, sg.f_weighted_at_rank, sg.bp_match_at_rank)
+                if status == "match":
+                    classif = ClassificationResult(query_name=sg.query_name, status=status, rank=sg.rank,
+                                                    fraction=sg.fraction, lineage=sg.lineage,
+                                                    query_md5=sg.query_md5, query_filename=sg.query_filename,
+                                                    f_weighted_at_rank=sg.f_weighted_at_rank, bp_match_at_rank=sg.bp_match_at_rank,
+                                                    query_ani_at_rank= sg.query_ani_at_rank)
                     classifications[sg.rank].append(classif)
                     matched_queries.add(sg.query_name)
                     continue
-                if rank == "superkingdom" and status == "nomatch":
+                elif rank == "superkingdom" and status == "nomatch":
                     status="below_threshold"
                     classif = ClassificationResult(query_name=sg.query_name, status=status,
                                                    rank="", fraction=0, lineage="",
                                                    query_md5=sg.query_md5, query_filename=sg.query_filename,
-                                                   f_weighted_at_rank=sg.f_weighted_at_rank, bp_match_at_rank=sg.bp_match_at_rank)
+                                                   f_weighted_at_rank=sg.f_weighted_at_rank, bp_match_at_rank=sg.bp_match_at_rank, 
+                                                   query_ani_at_rank=sg.query_ani_at_rank)
                     classifications[sg.rank].append(classif)
 
     if not any([classifications, krona_results]):
