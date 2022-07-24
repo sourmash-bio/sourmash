@@ -87,6 +87,7 @@ def _selection_as_rust(selection: Selection):
         if v is not None:
             if key == "ksize":
                 rustcall(lib.selection_set_ksize, ptr, v)
+
             elif key == "moltype":
                 hash_function = None
                 if v.lower() == "dna":
@@ -97,19 +98,28 @@ def _selection_as_rust(selection: Selection):
                     hash_function = lib.HASH_FUNCTIONS_MURMUR64_DAYHOFF
                 elif v.lower() == "hp":
                     hash_function = lib.HASH_FUNCTIONS_MURMUR64_HP
+
                 rustcall(lib.selection_set_moltype, ptr, hash_function)
+
             elif key == "num":
-                ...
+                raise NotImplementedError("num")
+
             elif key == "scaled":
-                ...
+                raise NotImplementedError("scaled")
+
             elif key ==  "containment":
-                ...
+                raise NotImplementedError("containment")
+
             elif key == "abund":
                 rustcall(lib.selection_set_abund, ptr, bool(v))
+
             elif key == "picklist":
-                ...
+                picklist_ptr = v._as_rust()
+                rustcall(lib.selection_set_picklist, ptr, picklist_ptr)
+
             else:
                 raise KeyError(f"Unsupported key {key} for Selection in rust")
+
     return ptr
 
 class Index(ABC):
