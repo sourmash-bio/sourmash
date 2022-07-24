@@ -592,7 +592,9 @@ pub struct GatherResult {
     #[getset(get = "pub")]
     name: String,
 
+    #[getset(get = "pub")]
     md5: String,
+
     match_: Signature,
     f_match_orig: f64,
     unique_intersect_bp: usize,
