@@ -114,7 +114,7 @@ def test_metagenome_summary_csv_out(runtmp):
     assert os.path.exists(csvout)
 
     sum_gather_results = [x.rstrip() for x in open(csvout)]
-    assert f"saving `csv_summary` output to {csvout}" in runtmp.last_result.err
+    assert f"saving 'csv_summary' output to {csvout}" in runtmp.last_result.err
     assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in sum_gather_results[0]
     assert 'test1,superkingdom,0.2042281611487834,d__Bacteria,md5,test1.sig,0.13080306238801107,1024000' in  sum_gather_results[1]
     assert 'test1,superkingdom,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000' in sum_gather_results[2]
@@ -158,7 +158,7 @@ def test_metagenome_krona_tsv_out(runtmp):
 
     assert runtmp.last_result.status == 0
     assert os.path.exists(csvout)
-    assert f"saving `krona` output to {csvout}" in runtmp.last_result.err
+    assert f"saving 'krona' output to {csvout}" in runtmp.last_result.err
 
     gn_krona_results = [x.rstrip().split('\t') for x in open(csvout)]
     print("species krona results: \n", gn_krona_results)
@@ -188,7 +188,7 @@ def test_metagenome_lineage_summary_out(runtmp):
 
     assert runtmp.last_result.status == 0
     assert os.path.exists(csvout)
-    assert f"saving `lineage_summary` output to {csvout}" in runtmp.last_result.err
+    assert f"saving 'lineage_summary' output to {csvout}" in runtmp.last_result.err
 
     gn_lineage_summary = [x.rstrip().split('\t') for x in open(csvout)]
     print("species lineage summary results: \n", gn_lineage_summary)
@@ -737,7 +737,7 @@ def test_genome_rank_csv_0(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert f"saving `classification` output to {csvout}" in runtmp.last_result.err
+    assert f"saving 'classification' output to {csvout}" in runtmp.last_result.err
     assert c.last_result.status == 0
     cl_results = [x.rstrip() for x in open(csvout)]
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in cl_results[0]
@@ -764,7 +764,7 @@ def test_genome_rank_krona(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert f"saving `krona` output to {csvout}" in runtmp.last_result.err
+    assert f"saving 'krona' output to {csvout}" in runtmp.last_result.err
     assert c.last_result.status == 0
     kr_results = [x.rstrip().split('\t') for x in open(csvout)]
     print(kr_results)
@@ -1500,7 +1500,7 @@ def test_annotate_0(runtmp):
 
     lin_gather_results = [x.rstrip() for x in open(csvout)]
     print("\n".join(lin_gather_results))
-    assert f"saving `annotate` output to {csvout}" in runtmp.last_result.err
+    assert f"saving 'annotate' output to {csvout}" in runtmp.last_result.err
 
     assert "lineage" in lin_gather_results[0]
     assert "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in lin_gather_results[1]
@@ -1528,7 +1528,7 @@ def test_annotate_0_db(runtmp):
 
     lin_gather_results = [x.rstrip() for x in open(csvout)]
     print("\n".join(lin_gather_results))
-    assert f"saving `annotate` output to {csvout}" in runtmp.last_result.err
+    assert f"saving 'annotate' output to {csvout}" in runtmp.last_result.err
 
     assert "lineage" in lin_gather_results[0]
     assert "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in lin_gather_results[1]

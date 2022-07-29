@@ -51,7 +51,7 @@ def make_outfile(base, output_type, *, output_dir = ""):
     fname = base+ext
     if output_dir:
         fname = os.path.join(output_dir, fname)
-    notify(f"saving `{output_type}` output to {fname}.")
+    notify(f"saving '{output_type}' output to {fname}.")
     return fname, limit_float_decimals
 
 
