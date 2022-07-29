@@ -437,6 +437,9 @@ def write_human_summary(summarized_gather, out_fp, display_rank):
     # how do we get query_ani_at_rank to be nonzero?
     header = SummarizedGatherResult._fields
 
+    out_fp.write("sample name    proportion   lineage\n")
+    out_fp.write("-----------    ----------   -------\n")
+
     for rank, rank_results in summarized_gather.items():
         if rank == display_rank:
             rank_results = list(rank_results)
@@ -445,12 +448,12 @@ def write_human_summary(summarized_gather, out_fp, display_rank):
             for res in rank_results:
                 rD = res._asdict()
                 rD['fraction'] = f'{res.fraction:.3f}'
-                rD['f_weighted_at_rank'] = f'{res.f_weighted_at_rank:.3f}'
+                rD['f_weighted_at_rank'] = f'{res.f_weighted_at_rank*100:>4.1f}%'
                 rD['lineage'] = display_lineage(res.lineage)
                 if rD['lineage'] == "":
                     rD['lineage'] = "unclassified"
 
-                out_fp.write("{query_name}  {f_weighted_at_rank}  {lineage}\n".format(**rD))
+                out_fp.write("{query_name:<15s}   {f_weighted_at_rank}     {lineage}\n".format(**rD))
 
 
 def write_lineage_csv(summarized_gather, csv_fp, display_rank):
