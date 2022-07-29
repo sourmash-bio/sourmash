@@ -1295,7 +1295,7 @@ or equal to 2, and less than or equal to 5.
 
 For example,
 ```
-sourmash signature -m 2 *.sig
+sourmash signature filter -m 2 *.sig
 ```
 
 will output new signatures containing only hashes that occur two or
