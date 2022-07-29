@@ -8,12 +8,12 @@ The 'tax metagenome' command reads in metagenome gather result CSVs and
 summarizes by taxonomic lineage.
 
 The default output format consists of four columns,
- `query_name,rank,fraction,lineage`, where `fraction` is the fraction
+ 'query_name,rank,fraction,lineage', where 'fraction' is the fraction
  of the query matched to that reported rank and lineage. The summarization
  is reported for each taxonomic rank.
 
 Alternatively, you can output results at a specific rank (e.g. species)
-in `krona` or `lineage_summary` formats.
+in 'krona' or 'lineage_summary' formats.
 
 Please see the 'tax metagenome' documentation for more details:
   https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-metagenome-summarize-metagenome-content-from-gather-results
@@ -80,7 +80,7 @@ def subparser(subparsers):
 def main(args):
     import sourmash
     if not args.gather_csv and not args.from_file:
-        raise ValueError(f"No gather CSVs found! Please input via `-g` or `--from-file`.")
+        raise ValueError(f"No gather CSVs found! Please input via '-g' or '--from-file'.")
     if len(args.output_format) > 1:
         if args.output_base == "-":
             raise TypeError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")

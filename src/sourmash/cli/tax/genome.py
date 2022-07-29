@@ -13,15 +13,15 @@ You can specify an alternate classification threshold or force classification by
 taxonomic rank instead, e.g. at species or genus-level.
 
 The default output format consists of five columns,
- `query_name,status,rank,fraction,lineage`, where `fraction` is the fraction
- of the query matched to the reported rank and lineage. The `status` column
+ 'query_name,status,rank,fraction,lineage', where 'fraction' is the fraction
+ of the query matched to the reported rank and lineage. The 'status' column
  provides additional information on the classification, and can be:
-  - `match` - this query was classified
-  - `nomatch`- this query could not be classified
-  - `below_threshold` - this query was classified at the specified rank,
+  - 'match' - this query was classified
+  - 'nomatch'- this query could not be classified
+  - 'below_threshold' - this query was classified at the specified rank,
      but the query fraction matched was below the containment threshold
 
-Optionally, you can report classifications in `krona` format, but note
+Optionally, you can report classifications in 'krona' format, but note
 that this forces classification by rank, rather than containment threshold.
 
 Please see the 'tax genome' documentation for more details:
@@ -92,7 +92,7 @@ def subparser(subparsers):
 def main(args):
     import sourmash
     if not args.gather_csv and not args.from_file:
-        raise ValueError(f"No gather CSVs found! Please input via `-g` or `--from-file`.")
+        raise ValueError(f"No gather CSVs found! Please input via '-g' or '--from-file'.")
     if len(args.output_format) > 1:
         if args.output_base == "-":
             raise TypeError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")
