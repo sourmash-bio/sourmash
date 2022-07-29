@@ -363,7 +363,7 @@ def test_metagenome_multiple_taxonomy_files_missing(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert "of 6, missed 2 lineage assignments." in c.last_result.err
+    assert "of 6 gather results, missed 2 lineage assignments." in c.last_result.err
     assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'multtest,superkingdom,0.204,d__Bacteria,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.131,1024000' in c.last_result.out
     assert 'multtest,superkingdom,0.796,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.869,3990000' in c.last_result.out
@@ -390,7 +390,6 @@ def test_metagenome_multiple_taxonomy_files(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert "of 6, missed 0 lineage assignments." in c.last_result.err
     assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'multtest,superkingdom,0.204,Bacteria,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.131,1024000' in c.last_result.out
     assert 'multtest,superkingdom,0.051,Eukaryota,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.245,258000' in c.last_result.out
@@ -414,7 +413,7 @@ def test_metagenome_empty_gather_results(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax)
 
-    assert f'Cannot read gather results from {g_csv}. Is file empty?' in str(exc.value)
+    assert f"Cannot read gather results from '{g_csv}'. Is file empty?" in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
@@ -434,7 +433,7 @@ def test_metagenome_bad_gather_header(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'metagenome', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
-    assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
+    assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
@@ -565,7 +564,7 @@ def test_metagenome_gather_duplicate_query_force(runtmp):
     assert c.last_result.status == 0
     assert '--force is set, ignoring duplicate query.' in c.last_result.err
     assert 'No gather results loaded from ' in c.last_result.err
-    assert 'loaded results from 1 gather CSVs' in c.last_result.err
+    assert 'loaded 4 results total from 1 gather CSVs' in c.last_result.err
     assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'test1,superkingdom,0.204,d__Bacteria,md5,test1.sig,0.131,1024000' in c.last_result.out
     assert 'test1,superkingdom,0.796,unclassified,md5,test1.sig,0.869,3990000' in c.last_result.out
@@ -624,7 +623,7 @@ def test_genome_empty_gather_results(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax)
 
-    assert f'Cannot read gather results from {g_csv}. Is file empty?' in str(exc.value)
+    assert f"Cannot read gather results from '{g_csv}'. Is file empty?" in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
@@ -644,7 +643,7 @@ def test_genome_bad_gather_header(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'genome', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
-    assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
+    assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
@@ -910,7 +909,7 @@ def test_genome_gather_from_file_duplicate_query_force(runtmp):
     assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
     assert '--force is set, ignoring duplicate query.' in c.last_result.err
     assert 'No gather results loaded from ' in c.last_result.err
-    assert 'loaded results from 1 gather CSVs' in c.last_result.err
+    assert 'loaded 4 results total from 1 gather CSVs' in c.last_result.err
 
 
 def test_genome_gather_cli_and_from_file(runtmp):
@@ -1222,7 +1221,7 @@ def test_genome_empty_gather_results_single(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == -1
-    assert f'Cannot read gather results from {empty_tax}. Is file empty?' in str(exc.value)
+    assert f"Cannot read gather results from '{empty_tax}'. Is file empty?" in str(exc.value)
     assert 'Exiting.' in c.last_result.err
 
 
@@ -1300,7 +1299,7 @@ def test_genome_empty_gather_results_with_csv_force(runtmp):
 
     assert c.last_result.status == 0
     assert '--force is set. Attempting to continue to next set of gather results.' in c.last_result.err
-    assert 'loaded results from 1 gather CSVs' in c.last_result.err
+    assert 'loaded 4 results total from 1 gather CSVs' in c.last_result.err
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
 
@@ -1550,7 +1549,7 @@ def test_annotate_empty_gather_results(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'annotate', '-g', g_csv, '--taxonomy-csv', tax)
 
-    assert f'Cannot read gather results from {g_csv}. Is file empty?' in str(exc.value)
+    assert f"Cannot read gather results from '{g_csv}'. Is file empty?" in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
@@ -1570,7 +1569,7 @@ def test_annotate_bad_gather_header(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'annotate', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
-    assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
+    assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
     assert runtmp.last_result.status == -1
 
 

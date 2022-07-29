@@ -169,7 +169,7 @@ def test_load_gather_results_bad_header(runtmp):
 
     with pytest.raises(ValueError) as exc:
         gather_results, header = load_gather_results(bad_g_csv)
-    assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
+    assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
 
 
 def test_load_gather_results_empty(runtmp):
@@ -181,7 +181,7 @@ def test_load_gather_results_empty(runtmp):
 
     with pytest.raises(ValueError) as exc:
         gather_results, header = load_gather_results(empty_csv)
-    assert f'Cannot read gather results from {empty_csv}. Is file empty?' in str(exc.value)
+    assert f"Cannot read gather results from '{empty_csv}'. Is file empty?" in str(exc.value)
 
 
 def test_load_taxonomy_csv():
@@ -282,10 +282,8 @@ def test_find_missing_identities():
     gA_tax = ("gA", "a;b;c")
     taxD = make_mini_taxonomy([gA_tax])
 
-    n, ids = find_missing_identities(g_res, taxD)
-    print("n_missing: ", n)
+    ids = find_missing_identities(g_res, taxD)
     print("ids_missing: ", ids)
-    assert n == 1
     assert ids == {"gB"}
 
 

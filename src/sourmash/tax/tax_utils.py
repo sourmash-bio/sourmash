@@ -83,7 +83,9 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     return gather_csvs
 
 
-def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=EssentialGatherColnames, seen_queries=None, force=False):
+def load_gather_results(gather_csv, *, delimiter=',',
+                        essential_colnames=EssentialGatherColnames,
+                        seen_queries=None, force=False):
     "Load a single gather csv"
     if not seen_queries:
         seen_queries=set()
@@ -95,11 +97,11 @@ def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=Essenti
         header = r.fieldnames
         # check for empty file
         if not header:
-            raise ValueError(f'Cannot read gather results from {gather_csv}. Is file empty?')
+            raise ValueError(f"Cannot read gather results from '{gather_csv}'. Is file empty?")
 
-        #check for critical column names used by summarize_gather_at
+        # check for critical column names used by summarize_gather_at
         if not set(essential_colnames).issubset(header):
-            raise ValueError(f'Not all required gather columns are present in {gather_csv}.')
+            raise ValueError(f"Not all required gather columns are present in '{gather_csv}'.")
 
         for n, row in enumerate(r):
             query_name = row['query_name']
@@ -113,7 +115,7 @@ def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=Essenti
                         gather_queries.add(query_name)
                     continue
                 else:
-                    raise ValueError(f"Gather query {query_name} was found in more than one CSV. Cannot load from {gather_csv}.")
+                    raise ValueError(f"Gather query {query_name} was found in more than one CSV. Cannot load from '{gather_csv}'.")
             else:
                 gather_results.append(row)
             # add query name to the gather_queries from this CSV
@@ -123,7 +125,7 @@ def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=Essenti
     if not gather_results:
         raise ValueError(f'No gather results loaded from {gather_csv}.')
     else:
-        notify(f'loaded {len(gather_results)} gather results.')
+        notify(f"loaded {len(gather_results)} gather results from '{gather_csv}'.")
     return gather_results, header, gather_queries
 
 
@@ -154,19 +156,19 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
                 raise
 
         # check for match identites in these gather_results not found in lineage spreadsheets
-        n_missed, ident_missed = find_missing_identities(these_results, tax_assign)
-        if n_missed:
+        ident_missed = find_missing_identities(these_results, tax_assign)
+        if ident_missed:
             notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
             if fail_on_missing_taxonomy:
                 raise ValueError('Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
 
-            total_missed += n_missed
+            total_missed += len(ident_missed)
             all_ident_missed.update(ident_missed)
         # add these results to gather_results
         gather_results += these_results
 
     num_gather_csvs_loaded = n+1 - n_ignored
-    notify(f'loaded results from {str(num_gather_csvs_loaded)} gather CSVs')
+    notify(f'loaded {len(gather_results)} results total from {str(num_gather_csvs_loaded)} gather CSVs')
 
     return gather_results, all_ident_missed, total_missed, header
 
@@ -319,17 +321,16 @@ def find_missing_identities(gather_results, tax_assign):
     Identify match ids/accessions from gather results
     that are not present in taxonomic assignments.
     """
-    n_missed = 0
     ident_missed= set()
     for row in gather_results:
         match_ident = row['name']
         match_ident = get_ident(match_ident)
         if match_ident not in tax_assign:
-            n_missed += 1
             ident_missed.add(match_ident)
 
-    notify(f'of {len(gather_results)}, missed {n_missed} lineage assignments.')
-    return n_missed, ident_missed
+    if ident_missed:
+        notify(f'of {len(gather_results)} gather results, missed {len(ident_missed)} lineage assignments.')
+    return ident_missed
 
 
 # pass ranks; have ranks=[default_ranks]
