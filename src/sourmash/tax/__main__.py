@@ -114,6 +114,14 @@ def metagenome(args):
         with FileOutputCSV(summary_outfile) as out_fp:
             tax_utils.write_summary(summarized_gather, out_fp, limit_float_decimals=limit_float)
 
+    # write summarized output in human-readable format
+    if "human" in args.output_format:
+        summary_outfile, limit_float = make_outfile(args.output_base, "human", output_dir=args.output_dir)
+
+        # @CTB not a CSV! fixme!
+        with FileOutputCSV(summary_outfile) as out_fp:
+            tax_utils.write_human_summary(summarized_gather, out_fp, args.rank or "species")
+
     # if lineage summary table
     if "lineage_summary" in args.output_format:
         lineage_outfile, limit_float = make_outfile(args.output_base, "lineage_summary", output_dir=args.output_dir)

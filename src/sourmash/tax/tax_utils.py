@@ -429,6 +429,30 @@ def write_summary(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=Fa
             w.writerow(rD)
 
 
+def write_human_summary(summarized_gather, out_fp, display_rank):
+    '''
+    Write human-readable taxonomy-summarized gather results for each rank.
+    '''
+    # query_name,fraction,lineage,f_weighted_at_rank,query_ani_at_rank
+    # how do we get query_ani_at_rank to be nonzero?
+    header = SummarizedGatherResult._fields
+
+    for rank, rank_results in summarized_gather.items():
+        if rank == display_rank:
+            rank_results = list(rank_results)
+            rank_results.sort(key=lambda res: -res.f_weighted_at_rank)
+
+            for res in rank_results:
+                rD = res._asdict()
+                rD['fraction'] = f'{res.fraction:.3f}'
+                rD['f_weighted_at_rank'] = f'{res.f_weighted_at_rank:.3f}'
+                rD['lineage'] = display_lineage(res.lineage)
+                if rD['lineage'] == "":
+                    rD['lineage'] = "unclassified"
+
+                out_fp.write("{query_name}  {f_weighted_at_rank}  {lineage}\n".format(**rD))
+
+
 def write_classifications(classifications, csv_fp, *, sep=',', limit_float_decimals=False):
     '''
     Write taxonomy-classifed gather results.
