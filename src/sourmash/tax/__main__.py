@@ -281,6 +281,12 @@ def genome(args):
         with FileOutputCSV(krona_outfile) as out_fp:
             tax_utils.write_krona(args.rank, krona_results, out_fp)
 
+    if "lineage_csv" in args.output_format:
+        lineage_outfile, _ = make_outfile(args.output_base, "lineage", output_dir=args.output_dir)
+        with FileOutputCSV(lineage_outfile) as out_fp:
+            tax_utils.write_lineage_csv(classifications, out_fp,
+                                        args.rank or "species")
+
 
 def annotate(args):
     """

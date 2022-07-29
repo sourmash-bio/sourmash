@@ -453,6 +453,28 @@ def write_human_summary(summarized_gather, out_fp, display_rank):
                 out_fp.write("{query_name}  {f_weighted_at_rank}  {lineage}\n".format(**rD))
 
 
+def write_lineage_csv(summarized_gather, csv_fp, display_rank):
+    '''
+    Write a lineage-CSV format file.
+    '''
+    ranks = lca_utils.taxlist(include_strain=False)
+    header = ['ident', *ranks]
+    w = csv.DictWriter(csv_fp, header)
+    w.writeheader()
+    for rank, rank_results in summarized_gather.items():
+        if rank != display_rank:
+            continue
+
+        for res in rank_results:
+            d = {}
+            d[rank] = ""
+            for rank, name in res.lineage:
+                d[rank] = name
+
+            d['ident'] = res.query_name
+            w.writerow(d)
+
+
 def write_classifications(classifications, csv_fp, *, sep=',', limit_float_decimals=False):
     '''
     Write taxonomy-classifed gather results.
