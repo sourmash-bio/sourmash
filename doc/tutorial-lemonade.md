@@ -2,10 +2,12 @@
 
 C. Titus Brown, Taylor Reiter, and Tessa Pierce
 
+July 2022
+
 Based on a tutorial developed for MBL STAMPS 2022.
 
 You'll need 5 GB of disk space and 5 GB of RAM in order to run this tutorial.
-It will take about 30 minutes of comput time to execute all the commands.
+It will take about 30 minutes of compute time to execute all the commands.
 
 ---
 
@@ -294,33 +296,18 @@ found 24 matches total;
 the recovered matches hit 43.5% of the abundance-weighted query
 ```
 
-::::warning
-Question 1: what "interesting" features do you note about the MAG matches?
-::::spoiler Some answers:
+Here we see a few interesting things -
+
 (1) The three MAG matches are all ~100% present in the metagenome.
 (2) They are all at high abundance in the metagenome, because assembly needs genomes to be ~5x or more in abundance in order to work!
 (3) Because they're at high abundance and 100% present, they account for _a lot_ of the metagenome!
-::::
 
-::::warning
-Question 2: we found 22 matches with the first gather, and we found 24 matches this time, using three MAGs. All three MAGs are found; shouldn't we have _25_ matches?
+What's the remaining 50%? There are several answers -
 
-What is the likely reason we have 24 matches, instead of 25?
-::::spoiler Answer
-It turns out the MAGs partially overlap some genomes in GTDB!
-```
-sourmash search MAG2.fasta.sig matches.zip --threshold=0
-```
-::::
-
-::::warning
-Question 3: why do we not get to 100% classification of the metagenome?
-::::spoiler Answers
 (1) most of the constitutent genomes aren't in the reference database;
 (2) not everything in the metagenome is high enough coverage to bin into MAGs;
 (3) not everything in the metagenome is bacterial or archaeal, and we didn't do viral or eukaryotic binning;
 (4) some of what's in the metagenome k-mers may simply be erroneous (although with abundance weighting, this is likely to be a small chunk of things)
-::::
 
 ## Classify the taxonomy of the MAGs; update metagenome classification
 
@@ -340,32 +327,7 @@ done | parallel
 ```
 (This will take about a minute.)
 
-::::success
-What are we doing with all the for loop stuff!?
-::::spoiler
-Well, we've got three genomes to classify, and not a lot of time to do it in! So the for loop etc above does the following:
-* for each of the three MAGs,
-* extract the prefix (MAG1, MAG2, MAG3),
-* create a sourmash command to search them against GTDB,
-* and then use [GNU parallel](https://www.gnu.org/software/parallel/) to run all three commands at the same time.
-
-If we didn't want to be fancy and fast, we could have just typed out:
-```
-sourmash gather MAG1.fasta.sig \
-        gtdb-rs207.genomic-reps.dna.k31.zip \
-        --threshold-bp=5000 \
-        -o MAG1.x.gtdb.csv
-sourmash gather MAG2.fasta.sig \
-        gtdb-rs207.genomic-reps.dna.k31.zip \
-        --threshold-bp=5000 \
-        -o MAG2.x.gtdb.csv
-sourmash gather MAG3.fasta.sig \
-        gtdb-rs207.genomic-reps.dna.k31.zip \
-        --threshold-bp=5000 \
-        -o MAG3.x.gtdb.csv
-```
-but every time I type more than two commands like this, I make a mistake (and you will too!); and it's nice to run things fast, innit??
-::::
+Here, we're using a for loop and [GNU parallel](https://www.gnu.org/software/parallel/) to classify the three genomes in parallel.
 
 If you scan the results quickly, you'll see that one MAG has matches in genus Prosthecochloris, another MAG has matches to Chlorobaculum, and one has matches to Candidatus Moranbacteria.
 
@@ -377,7 +339,17 @@ sourmash tax genome -g MAG*.x.gtdb.csv \
 ```
 This is an extremely liberal ANI threshold, incidentally; in reality you'd probably want to do something more stringent, as at least one of these is probably a new species.
 
-Now let's produce a lineage spreadsheet:
+You should see:
+```
+>sample name    proportion   lineage
+>-----------    ----------   -------
+>MAG3_1             5.3%     d__Bacteria;p__Bacteroidota;c__Chlorobia;o__Chlorobiales;f__Chlorobiaceae;g__Prosthecochloris;s__Prosthecochloris vibrioformis
+>MAG2_1             5.0%     d__Bacteria;p__Bacteroidota;c__Chlorobia;o__Chlorobiales;f__Chlorobiaceae;g__Chlorobaculum;s__Chlorobaculum parvum_B
+>MAG1_1             1.1%     d__Bacteria;p__Patescibacteria;c__Paceibacteria;o__Moranbacterales;f__UBA1568;g__JAAXTX01;s__JAAXTX01 sp013334245
+```
+The proportion here is the fraction of k-mers in the MAG that are annotated.
+
+Now let's turn this into a lineage spreadsheet:
 ```
 sourmash tax genome -g MAG*.x.gtdb.csv \
     -t gtdb-rs207.taxonomy.sqldb -F lineage_csv \
@@ -398,7 +370,7 @@ g__Chlorobaculum,s__Chlorobaculum parvum_B
 g__Prosthecochloris,s__Prosthecochloris vibrioformis
 ```
 
-Now we can re-classify the metagenome using the combined information:
+And if we re-classify the metagenome using the combined information, we see:
 ```
 sourmash tax metagenome -g SRR8859675.x.gtdb+MAGS.csv \
     -t gtdb-rs207.taxonomy.sqldb MAGs.lineage.csv \
@@ -408,29 +380,19 @@ Now only 56.5% remains unclassified, which is much better than before!
 
 ## Interlude: where we are and what we've done so far
 
-::::success
 To recap, we've done the following:
-* analyze a metagenome's composition against 65,000 GTDB genomes, using 31-mers;
+* analyzed a metagenome's composition against 65,000 GTDB genomes, using 31-mers;
 * found that a disappointingly small fraction of the metagenome can be identified this way.
 * incorporated MAGs built from the metagenome into this analysis, bumping up the classification rate to ~45%;
 * added taxonomic output to both sets of analyses.
 ::::
 
-## How much of the metagenome is assembled??
 
 ATLAS only bins bacterial and archaeal genomes, so we wouldn't expect much in the way of viral or eukaryotic genomes to be binned.
 
 But... how much even _assembles_?
 
 Let's pick a few of the matching genomes out from GTDB and evaluate how many of the k-mers from that genome match to the unassembled metagenome, and then how many of them match to the assembled contigs.
-
-::::info
-Make sure you're in the `smash` conda environment:
-```
-conda activate # get back to base environment
-conda activate smash # activate sourmash environment
-```
-::::
 
 First, download the contigs:
 ```
@@ -450,23 +412,9 @@ sourmash sig cat matches.zip --include GCA_016938795.1 -o GCA_016938795.sig
 
 ### Evaluate containment of known genomes in reads vs assembly
 
-::::info
-If you want to just start here, you can download the files needed for the below sourmash searches like so:
+```{note}
+If you want to just start here, you can download the files needed for the below sourmash searches from [this link](https://github.com/mblstamps/stamps2022/raw/main/kmers_and_sourmash/assembly-loss-files.zip).
 ```
-mkdir -p ~/kmers
-cd ~/kmers
-
-wget https://github.com/mblstamps/stamps2022/raw/main/kmers_and_sourmash/assembly-loss-files.zip
-unzip -o assembly-loss-files.zip
-```
-
-You may also need to do
-```
-conda activate base
-conda activate smash
-```
-before running sourmash.
-::::
 
 Now do a containment search of this genome against both the unassembled metagenome and the assembled (but unbinned) contigs -
 ```
@@ -484,19 +432,18 @@ where the first match (at 23.3% containment) is to the metagenome. (You'll note 
 
 The second match is to the assembled contigs, and it's 4.7%. That means ~19% of the k-mers that match to this GTDB genome are present in the unassembled metagenome, but are lost during the assembly process.
 
-Why? Any ideas?
-::::success
-::::spoiler Some thoughts and answers
+Why? 
+
+Some thoughts and answers
+
 It _could_ be that the GTDB genome is full of errors, and those errors are shared with the metagenome, and assembly is squashing those errors. Yay!
 
-But this is extremely unlikely... This GTDB genome is entirely independent from this sample...
+But this is extremely unlikely... This GTDB genome was built and validated entirely independently from this sample...
 
 It's much more likely (IMO) that one of two things is happening:
-(1) this sample contains _several_ strain variants of this genome, and assembly is squashing the strain variation, because that's what assembly does.
-(2) this sample is at low abundance in the metagenome, and assembly can only recover parts of it.
 
-Which do you think is more likely in this scenario?
-::::
+(1) this sample is at low abundance in the metagenome, and assembly can only recover parts of it.
+(2) this sample contains _several_ strain variants of this genome, and assembly is squashing the strain variation, because that's what assembly does.
 
 Note, you can try the above with another one of the top gather matches and you'll see it's *entirely* lost in the process of assembly -
 ```
@@ -505,13 +452,12 @@ sourmash search --containment GCF_004138165.sig \
     SRR8859675*.sig* \
     --ignore-abund --threshold=0
 ```
-why, do you think?
 
 ## Summary and concluding thoughts
 
 Above, we demonstrated a _reference-based_ analysis of shotgun metagenome data using sourmash.
 
-We then _updated our references_ from the MAGS produced by the assembly and binning tutorial on Monday, which increased our classification rate substantially.
+We then _updated our references_ from the MAGS produced from assembly and binning tutorial, which increased our classification rate substantially.
 
 Last but not least, we looked at the loss of k-mer information due to metagenome assembly.
 
