@@ -835,15 +835,14 @@ def test_genome_rank_human_output(runtmp):
     assert outp[2] == 'test1              5.7%     d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri'
 
 
-def test_genome_rank_lineage_csv(runtmp):
+def test_genome_rank_lineage_csv_output(runtmp):
     # test basic genome - output csv
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
-    cl_csv = csv_base + ".krona.tsv"
-    csvout = runtmp.output(cl_csv)
+    csvout = runtmp.output(csv_base)
     outdir = os.path.dirname(csvout)
     print("csvout: ", csvout)
 
@@ -855,12 +854,16 @@ def test_genome_rank_lineage_csv(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert f"saving 'krona' output to '{csvout}'" in runtmp.last_result.err
+    assert f"saving 'lineage_csv' output to '{csvout}'" in runtmp.last_result.err
     assert c.last_result.status == 0
-    kr_results = [x.rstrip().split('\t') for x in open(csvout)]
-    print(kr_results)
-    assert ['fraction', 'superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species']  == kr_results[0]
-    assert ['0.0885520542481053', 'd__Bacteria', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Prevotella', 's__Prevotella copri'] == kr_results[1]
+    with open(csvout) as fp:
+        outp = fp.readlines()
+
+    assert len(outp) == 2
+    outp = [ x.strip() for x in outp ]
+
+    assert outp[0] == 'ident,superkingdom,phylum,class,order,family,genus,species'
+    assert outp[1] == 'test1,d__Bacteria,p__Bacteroidota,c__Bacteroidia,o__Bacteroidales,f__Bacteroidaceae,g__Prevotella,s__Prevotella copri'
 
 
 def test_genome_gather_from_file_rank(runtmp):
