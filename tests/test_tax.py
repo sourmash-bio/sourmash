@@ -199,6 +199,36 @@ def test_metagenome_lineage_summary_out(runtmp):
     assert ['unclassified', '0.7957718388512166']  == gn_lineage_summary[4]
 
 
+def test_metagenome_human_format_out(runtmp):
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+    lin_csv = csv_base + ".lineage_summary.tsv"
+    csvout = runtmp.output(lin_csv)
+    outdir = os.path.dirname(csvout)
+    print("csvout: ", csvout)
+
+    runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                        '-o', csv_base, '--output-format', 'human', '--rank',
+                        'genus', '--output-dir', outdir)
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+    assert f"saving 'lineage_summary' output to '{csvout}'" in runtmp.last_result.err
+
+    gn_lineage_summary = [x.rstrip().split('\t') for x in open(csvout)]
+    print("species lineage summary results: \n", gn_lineage_summary)
+    assert ['lineage', 'test1'] == gn_lineage_summary[0]
+    assert ['d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola', '0.027522935779816515'] == gn_lineage_summary[1]
+    assert ['d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella', '0.0885520542481053'] == gn_lineage_summary[2]
+    assert ['d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia', '0.08815317112086159'] == gn_lineage_summary[3]
+    assert ['unclassified', '0.7957718388512166']  == gn_lineage_summary[4]
+
+
 def test_metagenome_no_taxonomy_fail(runtmp):
     c = runtmp
     g_csv = utils.get_test_data('tax/test1.gather.csv')
@@ -759,6 +789,67 @@ def test_genome_rank_krona(runtmp):
     c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
                    '--rank', 'species', '-o', csv_base, '--containment-threshold', '0',
                    '--output-format', 'krona', '--output-dir', outdir)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert f"saving 'krona' output to '{csvout}'" in runtmp.last_result.err
+    assert c.last_result.status == 0
+    kr_results = [x.rstrip().split('\t') for x in open(csvout)]
+    print(kr_results)
+    assert ['fraction', 'superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species']  == kr_results[0]
+    assert ['0.0885520542481053', 'd__Bacteria', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Prevotella', 's__Prevotella copri'] == kr_results[1]
+
+
+def test_genome_rank_human_output(runtmp):
+    # test basic genome - output csv
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+    csvout = runtmp.output(csv_base)
+    outdir = os.path.dirname(csvout)
+    print("csvout: ", csvout)
+
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--rank', 'species', '-o', csv_base, '--containment-threshold', '0',
+                   '--output-format', 'human', '--output-dir', outdir)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert f"saving 'human' output to '{csvout}'" in runtmp.last_result.err
+    assert c.last_result.status == 0
+
+    with open(csvout) as fp:
+        outp = fp.readlines()
+
+    assert len(outp) == 3
+    outp = [ x.strip() for x in outp ]
+
+    assert outp[0] == 'sample name    proportion   lineage'
+    assert outp[1] == '-----------    ----------   -------'
+    assert outp[2] == 'test1              5.7%     d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri'
+
+
+def test_genome_rank_lineage_csv(runtmp):
+    # test basic genome - output csv
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+    cl_csv = csv_base + ".krona.tsv"
+    csvout = runtmp.output(cl_csv)
+    outdir = os.path.dirname(csvout)
+    print("csvout: ", csvout)
+
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--rank', 'species', '-o', csv_base, '--containment-threshold', '0',
+                   '--output-format', 'lineage_csv', '--output-dir', outdir)
 
     print(c.last_result.status)
     print(c.last_result.out)
