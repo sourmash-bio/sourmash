@@ -5,26 +5,25 @@ C. Titus Brown, Taylor Reiter, and Tessa Pierce
 Based on a tutorial developed for MBL STAMPS 2022.
 
 You'll need 5 GB of disk space and 5 GB of RAM in order to run this tutorial.
-It will take about 30 minutes.
+It will take about 30 minutes of comput time to execute all the commands.
 
 ---
 
-In this tutorial, we'll use sourmash to analyze the composition of a metagenome, both genomically and taxonomically. We'll also classify our MAGs from Monday's assembly-and-binning lecture, and integrate them into our analysis.
+```{contents}
+   :depth: 2
+```
 
-We'll be working entirely at the shell prompt, because the shell is excellent at dealing with long running processes and large data sets.
+In this tutorial, we'll use sourmash to analyze the composition of a metagenome, both genomically and taxonomically. We'll also use sourmash to classify some MAGs and integrate them into our analysis.
 
 ## Install sourmash
 
 First, we need to install the software! We'll use conda/mamba to do this.
 
-The below command installs [sourmash](sourmash.readthedocs.io/) and [GNU parallel](https://www.gnu.org/software/parallel/).
+The below command installs [sourmash](http://sourmash.readthedocs.io/) and [GNU parallel](https://www.gnu.org/software/parallel/).
 
-First run:
+Run:
 ```
-# leave whatever environment you're in
-conda activate base
-
-# now create a new environment
+# create a new environment
 mamba create -n smash -y -c conda-forge -c bioconda sourmash parallel
 ```
 to install the software, and then run
@@ -34,19 +33,13 @@ conda activate smash
 ```
 to activate the conda environment so you can run the software.
 
-::::info
-Victory conditions: your prompt should now start with
-`(smash) stamps2022@149.165.154.81:~$ `
+```{note}
+Victory conditions: your prompt should start with
+`(smash)  `
 and you should now be able to run `sourmash` and have it output usage information!!
-::::
+```
 
 ## Create a working subdirectory
-
-::::info
-`conda` environments are software environments, and are very different from _directories_.
-
-Directories contain files. They are distinct from environments: you can use one conda environment and work in many directories, or be in a single directory and switch between multiple conda environments, or mix and match as needed.
-::::
 
 Make a directory named `kmers` and change into it.
 
@@ -55,20 +48,11 @@ mkdir ~/kmers
 cd ~/kmers
 ```
 
-::::warning
-If you log out or get disconnected in the middle of the tutorial, you'll need to run the following two commands to pick up again:
-```
-cd ~/kmers
-
-conda activate smash
-```
-::::
-
 ## Download a database and a taxonomy spreadsheet.
 
-We're going to start by doing a reference-based _compositional analysis_ of the lemonade metagenome from [Taylor Reiter's tutorial on assembly and binning](https://github.com/mblstamps/stamps2022/blob/main/assembly_and_binning/tutorial_assembly_and_binning.md).
+We're going to start by doing a reference-based _compositional analysis_ of the lemonade metagenome from [Taylor Reiter's STAMPS 2022 tutorial on assembly and binning](https://github.com/mblstamps/stamps2022/blob/main/assembly_and_binning/tutorial_assembly_and_binning.md).
 
-For this purpose, we're going to need a database of known genomes. We'll use the GTDB genomic representatives database, containing ~65,000 genomes, for today - that's because it's smaller than the full GTDB database (~320,000) or Genbank (~1.3m), and hence faster. But you can download and use those on your own, if you like!
+For this purpose, we're going to need a database of known genomes. We'll use the GTDB genomic representatives database, containing ~65,000 genomes - that's because it's smaller than the full GTDB database (~320,000) or Genbank (~1.3m), and hence faster. But you can download and use those on your own, if you like!
 
 You can find the link to a prepared GTDB RS207 database for k=31 on the [the sourmash prepared databases page](https://sourmash.readthedocs.io/en/latest/databases.html). Let's download it to the current directory:
 
@@ -80,14 +64,6 @@ This will create a 1.7 GB file:
 ```
 ls -lh gtdb-rs207.genomic-reps.dna.k31.zip
 ```
-::::warning
-If it downloaded to `download`, you can run:
-```
-mv download gtdb-rs207.genomic-reps.dna.k31.zip
-```
-to rename it
-::::
-
 and you can examine the contents with sourmash `sig summarize`:
 ```
 sourmash sig summarize gtdb-rs207.genomic-reps.dna.k31.zip
@@ -137,7 +113,7 @@ Let's index the taxonomy database using SQLite, for faster access later on:
 sourmash tax prepare -t gtdb-rs207.taxonomy.csv \
     -o gtdb-rs207.taxonomy.sqldb -F sql
 ```
-This creates a file `gtdb-rs207.taxonomy.sqldb` that contains all the information in the CSV file, but which is faster to use than the CSV file.
+This creates a file `gtdb-rs207.taxonomy.sqldb` that contains all the information in the CSV file, but which is faster to load than the CSV file.
 
 ## Download and prepare sample reads
 
@@ -161,9 +137,10 @@ sourmash sketch dna -p k=31,abund SRR8859675*.gz \
 Here we're telling sourmash to sketch at k=31, and to track k-mer multiplicity (with 'abund'). We sketch _both_ metagenome files together into a single signature named `SRR8859675` and stored in the file `SRR8859675.sig.gz`.
 
 When we run this, we should see:
->calculated 1 signature for 3452142 sequences taken from 2 files
 
-so that's how many reads there are in these two files!
+>`calculated 1 signature for 3452142 sequences taken from 2 files`
+
+which tells you how many reads there are in these two files!
 
 If you look at the resulting files,
 ```
@@ -188,14 +165,6 @@ sourmash gather SRR8859675.sig.gz gtdb-rs207.genomic-reps.dna.k31.zip --save-mat
 ```
 Here we are saving the matching genome sketches to `matches.zip` so we can rerun the analysis if we like.
 
-::::warning
-What takes so long?
-
-Here, sourmash is looking for an estimated overlap of 100,000 k-mers (or more) between the metagenome and each of 65,000 genomes. It just takes a hot minute, is all.
-
-(Yes, we can make it much faster, and yes, we're working on it. But 6 minutes isn't really _that_ long, is it?)
-::::
-
 The results will look like this:
 ```
 overlap     p_query p_match avg_abund
@@ -216,21 +185,19 @@ which we discussed a little bit in lecture. Just to revisit,
 * the fourth column is the estimated abundance of this genome in the metagenome.
 
 The other interesting number is here:
->the recovered matches hit 5.3% of the abundance-weighted query
+>`the recovered matches hit 5.3% of the abundance-weighted query`
 
-which tells you that you should expect 5.3% of the metagenome reads to map to these 22 reference genomes.
+which tells you that you should expect about 5.3% of the metagenome reads to map to these 22 reference genomes.
 
-::::success
+```{note}
 You can try running gather without abundance weighting:
-```
-sourmash gather SRR8859675.sig.gz matches.zip \
-    --ignore-abundance
-```
+
+`sourmash gather SRR8859675.sig.gz matches.zip --ignore-abundance`
+
 How does the output differ?
 
-::::spoiler Answer(s)
 The main number that changes bigly is:
->the recovered matches hit 2.4% of the query (unweighted)
+>`the recovered matches hit 2.4% of the query (unweighted)`
 
 which represents the proportion of _unique_ kmers in the metagenome that are not found in any genome.
 
@@ -241,21 +208,12 @@ This is (approximately) the following number:
 
 Interestingly, this is the _only_ number in this entire tutorial that is essentially impossible to estimate any way other than with k-mers.
 
-This number is also a big underestimate of the "true" number for the metagenome - we'll explain more later :).
-::::
-
-::::warning
-### GTDB subset vs entire
-We're using only a small subset of GTDB here, but we could do this against all of Genbank fairly easily. It would "just" require more CPU time and more memory ;). See [sourmash gather benchmarks x genbank](https://github.com/dib-lab/2020-paper-sourmash-gather/issues/47#issue-1204856050) for some details on resource usage for searching all of Genbank microbial!
-
-This is really what sourmash is designed for - searching ridiculously large databases. (There are no other tools that we're aware of that can handle all of genbank, although the field is evolving rapidly!)
-
-Check out [ganon](https://academic.oup.com/bioinformatics/article/36/Supplement_1/i12/5870470), [AGAMEMNON](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02610-4), and [KMCP](https://www.biorxiv.org/content/10.1101/2022.03.07.482835v2.full) for some cool software that does similar things with k-mers!
-::::
+This number is also a big underestimate of the "true" number for the metagenome - we'll explain more later :)
+```
 
 ## Build a taxonomic summary of the metagenome
 
-We can use these genomes to build a taxonomic summary of the metagenome using [sourmash tax metagenome](https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-subcommands-for-integrating-taxonomic-information-into-gather-results) like so:
+We can use these matching genomes to build a taxonomic summary of the metagenome using [sourmash tax metagenome](https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-subcommands-for-integrating-taxonomic-information-into-gather-results) like so:
 
 ```
 # rerun gather, save the results to a CSV

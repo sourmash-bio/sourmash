@@ -2,7 +2,7 @@
 
 ## The first three tutorials!
 
-These tutorials are both command line tutorials that should work on Mac OS
+These tutorials are command line tutorials that should work on Mac OS
 X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 * [The first sourmash tutorial - making signatures, comparing, and searching](tutorial-basic.md)
