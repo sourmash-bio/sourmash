@@ -203,8 +203,7 @@ def test_metagenome_human_format_out(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
-    lin_csv = csv_base + ".lineage_summary.tsv"
-    csvout = runtmp.output(lin_csv)
+    csvout = runtmp.output(csv_base)
     outdir = os.path.dirname(csvout)
     print("csvout: ", csvout)
 
@@ -218,15 +217,20 @@ def test_metagenome_human_format_out(runtmp):
 
     assert runtmp.last_result.status == 0
     assert os.path.exists(csvout)
-    assert f"saving 'lineage_summary' output to '{csvout}'" in runtmp.last_result.err
+    assert f"saving 'human' output to '{csvout}'" in runtmp.last_result.err
 
-    gn_lineage_summary = [x.rstrip().split('\t') for x in open(csvout)]
-    print("species lineage summary results: \n", gn_lineage_summary)
-    assert ['lineage', 'test1'] == gn_lineage_summary[0]
-    assert ['d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola', '0.027522935779816515'] == gn_lineage_summary[1]
-    assert ['d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella', '0.0885520542481053'] == gn_lineage_summary[2]
-    assert ['d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia', '0.08815317112086159'] == gn_lineage_summary[3]
-    assert ['unclassified', '0.7957718388512166']  == gn_lineage_summary[4]
+    with open(csvout) as fp:
+        outp = fp.readlines()
+
+    assert len(outp) == 6
+    outp = [ x.strip() for x in outp ]
+
+    assert outp[0] == 'sample name    proportion   lineage'
+    assert outp[1] == '-----------    ----------   -------'
+    assert outp[2] == 'test1             86.9%     unclassified'
+    assert outp[3] == 'test1              5.8%     d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia'
+    assert outp[4] == 'test1              5.7%     d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella'
+    assert outp[5] == 'test1              1.6%     d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola'
 
 
 def test_metagenome_no_taxonomy_fail(runtmp):
