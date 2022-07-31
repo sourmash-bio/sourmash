@@ -275,16 +275,25 @@ def genome(args):
             tax_utils.write_human_summary(classifications, out_fp, args.rank or "species")
 
     if "krona" in args.output_format:
+        # classifications only at a single rank
+        assert len(classifications) == 1
+        if args.rank:
+            assert args.rank in classifications
+
         krona_outfile, limit_float = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
         with FileOutputCSV(krona_outfile) as out_fp:
             tax_utils.write_krona(args.rank, krona_results, out_fp)
 
     if "lineage_csv" in args.output_format:
+        # should only classify at a single rank
+        assert len(classifications) == 1
+        if args.rank:
+            assert args.rank in classifications
+
         lineage_outfile, _ = make_outfile(args.output_base, "lineage_csv",
                                           output_dir=args.output_dir)
         with FileOutputCSV(lineage_outfile) as out_fp:
-            tax_utils.write_lineage_csv(classifications, out_fp,
-                                        args.rank or "species")
+            tax_utils.write_lineage_csv(classifications, out_fp)
 
 
 def annotate(args):

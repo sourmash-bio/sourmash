@@ -474,7 +474,7 @@ def write_human_summary(summarized_gather, out_fp, display_rank):
             out_fp.write("{query_name:<15s}   {f_weighted_at_rank}     {lineage}\n".format(**rD))
 
 
-def write_lineage_csv(summarized_gather, csv_fp, display_rank):
+def write_lineage_csv(summarized_gather, csv_fp):
     '''
     Write a lineage-CSV format file.
     '''
@@ -483,9 +483,6 @@ def write_lineage_csv(summarized_gather, csv_fp, display_rank):
     w = csv.DictWriter(csv_fp, header)
     w.writeheader()
     for rank, rank_results in summarized_gather.items():
-        if rank != display_rank:
-            continue
-
         for res in rank_results:
             d = {}
             d[rank] = ""
