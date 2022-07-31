@@ -1623,6 +1623,39 @@ def test_genome_ani_lemonade_classify(runtmp):
     assert 'MAG3_1,d__Bacteria,p__Bacteroidota,c__Chlorobia,o__Chlorobiales,f__Chlorobiaceae,g__Prosthecochloris,s__Prosthecochloris vibrioformis' in output
 
 
+def test_metagenome_no_gather_csv(runtmp):
+    # test tax metagenome with no -g
+    taxonomy_file = utils.get_test_data('tax/lemonade-MAG3.x.gtdb.matches.tax.csv')
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('tax', 'metagenome', '-t', taxonomy_file)
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+
+def test_genome_no_gather_csv(runtmp):
+    # test tax genome with no -g
+    taxonomy_file = utils.get_test_data('tax/lemonade-MAG3.x.gtdb.matches.tax.csv')
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('tax', 'genome', '-t', taxonomy_file)
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+
+def test_annotate_no_gather_csv(runtmp):
+    # test tax enome with no -g
+    taxonomy_file = utils.get_test_data('tax/lemonade-MAG3.x.gtdb.matches.tax.csv')
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('tax', 'annotate', '-t', taxonomy_file)
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+
 def test_annotate_0(runtmp):
     # test annotate
     c = runtmp
