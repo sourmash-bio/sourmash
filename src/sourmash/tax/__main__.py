@@ -7,7 +7,7 @@ import os
 from collections import defaultdict
 
 import sourmash
-from ..sourmash_args import FileOutputCSV
+from ..sourmash_args import FileOutputCSV, FileOutput
 from sourmash.logging import set_quiet, error, notify
 from sourmash.lca.lca_utils import display_lineage
 
@@ -118,8 +118,7 @@ def metagenome(args):
     if "human" in args.output_format:
         summary_outfile, limit_float = make_outfile(args.output_base, "human", output_dir=args.output_dir)
 
-        # @CTB not a CSV! fixme!
-        with FileOutputCSV(summary_outfile) as out_fp:
+        with FileOutput(summary_outfile) as out_fp:
             tax_utils.write_human_summary(summarized_gather, out_fp, args.rank or "species")
 
     # if lineage summary table
@@ -272,8 +271,7 @@ def genome(args):
     if "human" in args.output_format:
         summary_outfile, limit_float = make_outfile(args.output_base, "human", output_dir=args.output_dir)
 
-        # @CTB not a CSV! fixme!
-        with FileOutputCSV(summary_outfile) as out_fp:
+        with FileOutput(summary_outfile) as out_fp:
             tax_utils.write_human_summary(classifications, out_fp, args.rank or "species")
 
     if "krona" in args.output_format:
