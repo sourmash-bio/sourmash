@@ -13,7 +13,9 @@ The default output format consists of four columns,
  is reported for each taxonomic rank.
 
 Alternatively, you can output results at a specific rank (e.g. species)
-in 'krona' or 'lineage_summary' formats.
+in 'krona', 'lineage_summary', and 'human' formats.
+
+Use '-F human' to display human-readable output.
 
 Please see the 'tax metagenome' documentation for more details:
   https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-metagenome-summarize-metagenome-content-from-gather-results

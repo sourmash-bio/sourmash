@@ -7,10 +7,11 @@ usage="""
 The 'tax genome' command reads in genome gather result CSVs and reports likely
 classification for each query genome.
 
-By default, classification uses a containment threshold of 0.1, meaning at least
-10 percent of the query was covered by matches with the reported taxonomic rank and lineage.
-You can specify an alternate classification threshold or force classification by
-taxonomic rank instead, e.g. at species or genus-level.
+By default, classification uses a containment threshold of 0.1,
+meaning at least 10 percent of the query was covered by matches with
+the reported taxonomic rank and lineage.  You can specify an alternate
+classification threshold or force classification by taxonomic rank
+instead, e.g. at species or genus-level.
 
 The default output format consists of five columns,
  'query_name,status,rank,fraction,lineage', where 'fraction' is the fraction
@@ -20,6 +21,8 @@ The default output format consists of five columns,
   - 'nomatch'- this query could not be classified
   - 'below_threshold' - this query was classified at the specified rank,
      but the query fraction matched was below the containment threshold
+
+Use '-F human' to display human-readable output instead.
 
 Optionally, you can report classifications in 'krona' format, but note
 that this forces classification by rank, rather than containment threshold.
