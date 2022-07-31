@@ -353,7 +353,7 @@ Now let's turn this into a lineage spreadsheet:
 ```
 sourmash tax genome -g MAG*.x.gtdb.csv \
     -t gtdb-rs207.taxonomy.sqldb -F lineage_csv \
-    --ani 0.8 -o MAGs.lineage.csv
+    --ani 0.8 -o MAGs
 ```
 This will produce a file `MAGs.lineage.csv`; let's take a look:
 ```
