@@ -31,23 +31,25 @@ metagenome -g <gather_csv> [<gather_csv> ... ] -t [<taxonomy_csv> ...]    - summ
 sourmash taxonomy metagenome -h
 '''
 
+_output_type_to_ext = {
+    'csv_summary': '.summarized.csv',
+    'classification': '.classifications.csv',
+    'krona': '.krona.tsv',
+    'lineage_summary': '.lineage_summary.tsv',
+    'annotate': '.with-lineages.csv',
+    'human': '.human.txt',
+    'lineage_csv': '.lineage.csv',
+    }
+
 # some utils
 def make_outfile(base, output_type, *, output_dir = ""):
     limit_float_decimals=False
     if base == "-":
         limit_float_decimals=True
         return base, limit_float_decimals
-    ext=""
-    if output_type == 'csv_summary':
-        ext = '.summarized.csv'
-    elif output_type == 'classification':
-        ext = '.classifications.csv'
-    elif output_type == 'krona':
-        ext = '.krona.tsv'
-    elif output_type == 'lineage_summary':
-        ext = '.lineage_summary.tsv'
-    elif output_type == 'annotate':
-        ext = '.with-lineages.csv'
+
+    ext = _output_type_to_ext[output_type]
+
     fname = base+ext
     if output_dir:
         fname = os.path.join(output_dir, fname)

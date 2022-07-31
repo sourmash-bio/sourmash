@@ -203,7 +203,7 @@ def test_metagenome_human_format_out(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
-    csvout = runtmp.output(csv_base)
+    csvout = runtmp.output(csv_base + '.human.txt')
     outdir = os.path.dirname(csvout)
     print("csvout: ", csvout)
 
@@ -813,7 +813,7 @@ def test_genome_rank_human_output(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
-    csvout = runtmp.output(csv_base)
+    csvout = runtmp.output(csv_base + '.human.txt')
     outdir = os.path.dirname(csvout)
     print("csvout: ", csvout)
 
@@ -846,7 +846,7 @@ def test_genome_rank_lineage_csv_output(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
-    csvout = runtmp.output(csv_base)
+    csvout = runtmp.output(csv_base + '.lineage.csv')
     outdir = os.path.dirname(csvout)
     print("csvout: ", csvout)
 
@@ -1672,6 +1672,7 @@ def test_annotate_0(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
+    assert os.path.exists(csvout)
 
     lin_gather_results = [x.rstrip() for x in open(csvout)]
     print("\n".join(lin_gather_results))
