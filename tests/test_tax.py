@@ -1579,6 +1579,50 @@ def test_genome_ani_oldgather(runtmp):
     assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,' in c.last_result.out
 
 
+def test_genome_ani_lemonade_classify(runtmp):
+    # test a complete MAG classification with lemonade MAG from STAMPS 2022
+    # (real data!)
+    c = runtmp
+
+    ## first run gather
+    genome = utils.get_test_data('tax/lemonade-MAG3.sig.gz')
+    matches = utils.get_test_data('tax/lemonade-MAG3.x.gtdb.matches.zip')
+
+    c.run_sourmash('gather', genome, matches,
+                   '--threshold-bp=5000', '-o', 'gather.csv')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+
+    saved_gather_file = utils.get_test_data('tax/lemonade-MAG3.x.gtdb.csv')
+    saved_gather = open(saved_gather_file).read()
+
+    this_gather_file = c.output('gather.csv')
+    this_gather = open(this_gather_file).read()
+
+    # may need to regenerate if gather output format changes!
+    assert saved_gather == this_gather
+
+    ## now run 'tax genome' with human output
+    taxonomy_file = utils.get_test_data('tax/lemonade-MAG3.x.gtdb.matches.tax.csv')
+    c.run_sourmash('tax', 'genome', '-g', this_gather_file, '-t', taxonomy_file,
+                   '--ani', '0.8', '-F', 'human')
+
+    output = c.last_result.out
+    assert 'MAG3_1             5.3%     91.0%  d__Bacteria;p__Bacteroidota;c__Chlorobia;o__Chlorobiales;f__Chlorobiaceae;g__Prosthecochloris;s__Prosthecochloris vibrioformis' in output
+
+    # aaand classify to lineage_csv
+    c.run_sourmash('tax', 'genome', '-g', this_gather_file, '-t', taxonomy_file,
+                   '--ani', '0.8', '-F', 'lineage_csv')
+
+    output = c.last_result.out
+    assert 'ident,superkingdom,phylum,class,order,family,genus,species' in output
+    assert 'MAG3_1,d__Bacteria,p__Bacteroidota,c__Chlorobia,o__Chlorobiales,f__Chlorobiaceae,g__Prosthecochloris,s__Prosthecochloris vibrioformis' in output
+
+
 def test_annotate_0(runtmp):
     # test annotate
     c = runtmp
