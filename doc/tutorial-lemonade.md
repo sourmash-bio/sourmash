@@ -385,8 +385,6 @@ To recap, we've done the following:
 * found that a disappointingly small fraction of the metagenome can be identified this way.
 * incorporated MAGs built from the metagenome into this analysis, bumping up the classification rate to ~45%;
 * added taxonomic output to both sets of analyses.
-::::
-
 
 ATLAS only bins bacterial and archaeal genomes, so we wouldn't expect much in the way of viral or eukaryotic genomes to be binned.
 
