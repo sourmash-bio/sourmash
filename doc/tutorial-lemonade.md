@@ -1,6 +1,6 @@
 # Analyzing the genomic and taxonomic composition of an environmental genome using GTDB and sample-specific MAGs with sourmash
 
-C. Titus Brown, Taylor Reiter, and Tessa Pierce
+C. Titus Brown, Taylor Reiter, and Tessa Pierce Ward
 
 July 2022
 

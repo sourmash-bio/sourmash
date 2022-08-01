@@ -461,8 +461,8 @@ def write_human_summary(summarized_gather, out_fp, display_rank):
 
 
     if found_ANI:
-        out_fp.write("sample name    proportion   ANI    lineage\n")
-        out_fp.write("-----------    ----------   ---    -------\n")
+        out_fp.write("sample name    proportion   cANI   lineage\n")
+        out_fp.write("-----------    ----------   ----   -------\n")
 
         for rD in results:
             out_fp.write("{query_name:<15s}   {f_weighted_at_rank}     {query_ani_at_rank}  {lineage}\n".format(**rD))
