@@ -129,7 +129,7 @@ wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR885/005/SRR8859675/SRR8859675_1.fastq
 wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR885/005/SRR8859675/SRR8859675_2.fastq.gz
 ```
 
-Now we're going to prepare the metagenome for use with sourmash by converting it into a _signature files_ containing _sketches_ of the k-mers in the metagenome. This is the step that "shreds" all of the reads into k-mers of size 31, and then does further data reduction by [sketching](https://en.wikipedia.org/wiki/Streaming_algorithm) the resulting k-mers.
+Now we're going to prepare the metagenome for use with sourmash by converting it into a _signature file_ containing _sketches_ of the k-mers in the metagenome. This is the step that "shreds" all of the reads into k-mers of size 31, and then does further data reduction by [sketching](https://en.wikipedia.org/wiki/Streaming_algorithm) the resulting k-mers.
 
 To build a signature file, we run `sourmash sketch dna` like so:
 ```
@@ -179,12 +179,12 @@ overlap     p_query p_match avg_abund
 found 22 matches total;
 the recovered matches hit 5.3% of the abundance-weighted query
 ```
-which we discussed a little bit in lecture. Just to revisit,
+In this output:
 * the last column is the name of the matching GTDB genome
-* the first column is the estimated overlap between the metagenome and that genome, in number of k-mers
+* the first column is the estimated overlap between the metagenome and that genome, in base pairs (estimated from shared k-mers)
 * the second column, `p_query` is the percentage of metagenome k-mers (weighted by multiplicity) that match to the genome; this will approximate the percentage of _metagenome reads_ that will map to this genome, if you map.
 * the third column, `p_match`, is the percentage of the genome k-mers that are matched by the metagenome; this will approximate the percentage of _genome bases_ that will be covered by mapped reads;
-* the fourth column is the estimated abundance of this genome in the metagenome.
+* the fourth column is the estimated mean abundance of this genome in the metagenome.
 
 The other interesting number is here:
 >`the recovered matches hit 5.3% of the abundance-weighted query`
@@ -231,9 +231,11 @@ At the bottom, we have a script to plot the resulting taxonomy using [metacoder]
 
 ![metacoder output](https://raw.githubusercontent.com/mblstamps/stamps2022/main/kmers_and_sourmash/metacoder_gather.png)
 
-## Interlude: why reference based analyses are problematic for environmental metagenomes.
+## Interlude: why reference-based analyses are problematic for environmental metagenomes
 
-During the lecture, I showed you some preliminary data suggesting that really only a few types of metagenomes have high classification rates against Genbank. This is an environmental metagenome, and you can see that we're estimating only 5.3% of it will map to GTDB reference genomes!
+Reference-based metagenome classification is highly dependent on the organisms present in our reference databases.
+For well-studied environments, such as human-associated microbiomes, your classification percentage is likely to be quite high.
+In contrast, this is an environmental metagenome, and you can see that we're estimating only 5.3% of it will map to GTDB reference genomes!
 
 Wow, that's **terrible**! Our taxonomic and/or functional analysis will be based on only 1/20th of the data!
 
@@ -242,7 +244,7 @@ What could we do to improve that?? There are two basic options -
 (1) Use a more complete reference database, like the entire GTDB, or Genbank. This will only get you so far, unfortunately. (See exercises at end.)
 (2) Assemble and bin the metagenome to produce new reference genomes!
 
-There are other things you could think about doing here, too, but these are probably the "easiest" options. And what's super cool is that we've already _done_ the second one. So can we include that in the analysis??
+There are other things you could think about doing here, too, but these are probably the "easiest" options. And what's super cool is that we did the second one as part of [Taylor Reiter's STAMPS 2022 tutorial on assembly and binning](https://github.com/mblstamps/stamps2022/blob/main/assembly_and_binning/tutorial_assembly_and_binning.md). So can we include that in the analysis??
 
 Yes, yes we can! We can integrate the three MAGs that Taylor generated during her tutorial into the sourmash analysis.
 
@@ -331,7 +333,7 @@ Here, we're using a for loop and [GNU parallel](https://www.gnu.org/software/par
 
 If you scan the results quickly, you'll see that one MAG has matches in genus Prosthecochloris, another MAG has matches to Chlorobaculum, and one has matches to Candidatus Moranbacteria.
 
-Let's classify them "officially" using sourmash and an average nucleotide identify threshold of 0.8 -
+Let's classify them "officially" using sourmash and an average nucleotide identity threshold of 0.8 -
 ```
 sourmash tax genome -g MAG*.x.gtdb.csv \
     -t gtdb-rs207.taxonomy.sqldb -F human \
@@ -455,7 +457,7 @@ sourmash search --containment GCF_004138165.sig \
 
 Above, we demonstrated a _reference-based_ analysis of shotgun metagenome data using sourmash.
 
-We then _updated our references_ from the MAGS produced from assembly and binning tutorial, which increased our classification rate substantially.
+We then _updated our references_ using the MAGs produced from assembly and binning tutorial, which increased our classification rate substantially.
 
 Last but not least, we looked at the loss of k-mer information due to metagenome assembly.
 
@@ -465,4 +467,4 @@ A few points:
 
 * We would have gotten slightly different results using k=21 or k=51; more of the metagenome would have been classified with k=21, while the classification results would have been more closely specific to genomes with k=51;
 * sourmash is a nice one-stop-shop tool for doing this, but you could have gotten similar results by using other tools.
-* Next steps here could include mapping reads to the genomes we found, and/or doing functional analysis on the matching genes and genomes. We'll talk more about functional analysis this afternoon!
+* Next steps here could include mapping reads to the genomes we found, and/or doing functional analysis on the matching genes and genomes.
