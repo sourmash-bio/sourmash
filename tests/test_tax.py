@@ -1642,7 +1642,7 @@ def test_genome_no_gather_csv(runtmp):
 
 
 def test_annotate_no_gather_csv(runtmp):
-    # test tax enome with no -g
+    # test tax annotate with no -g
     taxonomy_file = utils.get_test_data('tax/lemonade-MAG3.x.gtdb.matches.tax.csv')
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'annotate', '-t', taxonomy_file)
