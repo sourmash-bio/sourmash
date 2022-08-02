@@ -403,6 +403,8 @@ def format_for_krona(rank, summarized_gather):
 
 def write_krona(rank, krona_results, out_fp, *, sep='\t'):
     'write krona output'
+    # CTB: do we want to optionally allow restriction to a specific rank
+    # & above?
     header = make_krona_header(rank)
     tsv_output = csv.writer(out_fp, delimiter='\t')
     tsv_output.writerow(header)
@@ -431,15 +433,14 @@ def write_summary(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=Fa
 
 def write_human_summary(summarized_gather, out_fp, display_rank):
     '''
-    Write human-readable taxonomy-summarized gather results for each rank.
+    Write human-readable taxonomy-summarized gather results for a specific rank.
     '''
-    # query_name,fraction,lineage,f_weighted_at_rank,query_ani_at_rank
-    # how do we get query_ani_at_rank to be nonzero?
     header = SummarizedGatherResult._fields
 
     found_ANI = False
     results = [] 
     for rank, rank_results in summarized_gather.items():
+        # only show results for a specified rank.
         if rank == display_rank:
             rank_results = list(rank_results)
             rank_results.sort(key=lambda res: -res.f_weighted_at_rank)
@@ -476,7 +477,7 @@ def write_human_summary(summarized_gather, out_fp, display_rank):
 
 def write_lineage_csv(summarized_gather, csv_fp):
     '''
-    Write a lineage-CSV format file.
+    Write a lineage-CSV format file suitable for use with sourmash tax ... -t.
     '''
     ranks = lca_utils.taxlist(include_strain=False)
     header = ['ident', *ranks]
