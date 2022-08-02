@@ -114,7 +114,7 @@ def test_metagenome_summary_csv_out(runtmp):
     assert os.path.exists(csvout)
 
     sum_gather_results = [x.rstrip() for x in open(csvout)]
-    assert f"saving `csv_summary` output to {csvout}" in runtmp.last_result.err
+    assert f"saving 'csv_summary' output to '{csvout}'" in runtmp.last_result.err
     assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in sum_gather_results[0]
     assert 'test1,superkingdom,0.2042281611487834,d__Bacteria,md5,test1.sig,0.13080306238801107,1024000' in  sum_gather_results[1]
     assert 'test1,superkingdom,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000' in sum_gather_results[2]
@@ -158,7 +158,7 @@ def test_metagenome_krona_tsv_out(runtmp):
 
     assert runtmp.last_result.status == 0
     assert os.path.exists(csvout)
-    assert f"saving `krona` output to {csvout}" in runtmp.last_result.err
+    assert f"saving 'krona' output to '{csvout}'" in runtmp.last_result.err
 
     gn_krona_results = [x.rstrip().split('\t') for x in open(csvout)]
     print("species krona results: \n", gn_krona_results)
@@ -188,7 +188,7 @@ def test_metagenome_lineage_summary_out(runtmp):
 
     assert runtmp.last_result.status == 0
     assert os.path.exists(csvout)
-    assert f"saving `lineage_summary` output to {csvout}" in runtmp.last_result.err
+    assert f"saving 'lineage_summary' output to '{csvout}'" in runtmp.last_result.err
 
     gn_lineage_summary = [x.rstrip().split('\t') for x in open(csvout)]
     print("species lineage summary results: \n", gn_lineage_summary)
@@ -197,6 +197,40 @@ def test_metagenome_lineage_summary_out(runtmp):
     assert ['d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella', '0.0885520542481053'] == gn_lineage_summary[2]
     assert ['d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia', '0.08815317112086159'] == gn_lineage_summary[3]
     assert ['unclassified', '0.7957718388512166']  == gn_lineage_summary[4]
+
+
+def test_metagenome_human_format_out(runtmp):
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+    csvout = runtmp.output(csv_base + '.human.txt')
+    outdir = os.path.dirname(csvout)
+    print("csvout: ", csvout)
+
+    runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                        '-o', csv_base, '--output-format', 'human', '--rank',
+                        'genus', '--output-dir', outdir)
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+    assert f"saving 'human' output to '{csvout}'" in runtmp.last_result.err
+
+    with open(csvout) as fp:
+        outp = fp.readlines()
+
+    assert len(outp) == 6
+    outp = [ x.strip() for x in outp ]
+
+    assert outp[0] == 'sample name    proportion   lineage'
+    assert outp[1] == '-----------    ----------   -------'
+    assert outp[2] == 'test1             86.9%     unclassified'
+    assert outp[3] == 'test1              5.8%     d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia'
+    assert outp[4] == 'test1              5.7%     d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella'
+    assert outp[5] == 'test1              1.6%     d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola'
 
 
 def test_metagenome_no_taxonomy_fail(runtmp):
@@ -363,7 +397,7 @@ def test_metagenome_multiple_taxonomy_files_missing(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert "of 6, missed 2 lineage assignments." in c.last_result.err
+    assert "of 6 gather results, missed 2 lineage assignments." in c.last_result.err
     assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'multtest,superkingdom,0.204,d__Bacteria,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.131,1024000' in c.last_result.out
     assert 'multtest,superkingdom,0.796,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.869,3990000' in c.last_result.out
@@ -390,7 +424,6 @@ def test_metagenome_multiple_taxonomy_files(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert "of 6, missed 0 lineage assignments." in c.last_result.err
     assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'multtest,superkingdom,0.204,Bacteria,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.131,1024000' in c.last_result.out
     assert 'multtest,superkingdom,0.051,Eukaryota,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.245,258000' in c.last_result.out
@@ -414,7 +447,7 @@ def test_metagenome_empty_gather_results(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax)
 
-    assert f'Cannot read gather results from {g_csv}. Is file empty?' in str(exc.value)
+    assert f"Cannot read gather results from '{g_csv}'. Is file empty?" in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
@@ -434,7 +467,7 @@ def test_metagenome_bad_gather_header(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'metagenome', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
-    assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
+    assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
@@ -565,7 +598,7 @@ def test_metagenome_gather_duplicate_query_force(runtmp):
     assert c.last_result.status == 0
     assert '--force is set, ignoring duplicate query.' in c.last_result.err
     assert 'No gather results loaded from ' in c.last_result.err
-    assert 'loaded results from 1 gather CSVs' in c.last_result.err
+    assert 'loaded 4 results total from 1 gather CSVs' in c.last_result.err
     assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'test1,superkingdom,0.204,d__Bacteria,md5,test1.sig,0.131,1024000' in c.last_result.out
     assert 'test1,superkingdom,0.796,unclassified,md5,test1.sig,0.869,3990000' in c.last_result.out
@@ -624,7 +657,7 @@ def test_genome_empty_gather_results(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax)
 
-    assert f'Cannot read gather results from {g_csv}. Is file empty?' in str(exc.value)
+    assert f"Cannot read gather results from '{g_csv}'. Is file empty?" in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
@@ -644,7 +677,7 @@ def test_genome_bad_gather_header(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'genome', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
-    assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
+    assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
@@ -738,7 +771,7 @@ def test_genome_rank_csv_0(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert f"saving `classification` output to {csvout}" in runtmp.last_result.err
+    assert f"saving 'classification' output to '{csvout}'" in runtmp.last_result.err
     assert c.last_result.status == 0
     cl_results = [x.rstrip() for x in open(csvout)]
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in cl_results[0]
@@ -765,12 +798,76 @@ def test_genome_rank_krona(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert f"saving `krona` output to {csvout}" in runtmp.last_result.err
+    assert f"saving 'krona' output to '{csvout}'" in runtmp.last_result.err
     assert c.last_result.status == 0
     kr_results = [x.rstrip().split('\t') for x in open(csvout)]
     print(kr_results)
     assert ['fraction', 'superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species']  == kr_results[0]
     assert ['0.0885520542481053', 'd__Bacteria', 'p__Bacteroidota', 'c__Bacteroidia', 'o__Bacteroidales', 'f__Bacteroidaceae', 'g__Prevotella', 's__Prevotella copri'] == kr_results[1]
+
+
+def test_genome_rank_human_output(runtmp):
+    # test basic genome - output csv
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+    csvout = runtmp.output(csv_base + '.human.txt')
+    outdir = os.path.dirname(csvout)
+    print("csvout: ", csvout)
+
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--rank', 'species', '-o', csv_base, '--containment-threshold', '0',
+                   '--output-format', 'human', '--output-dir', outdir)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert f"saving 'human' output to '{csvout}'" in runtmp.last_result.err
+    assert c.last_result.status == 0
+
+    with open(csvout) as fp:
+        outp = fp.readlines()
+
+    assert len(outp) == 3
+    outp = [ x.strip() for x in outp ]
+
+    assert outp[0] == 'sample name    proportion   lineage'
+    assert outp[1] == '-----------    ----------   -------'
+    assert outp[2] == 'test1              5.7%     d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri'
+
+
+def test_genome_rank_lineage_csv_output(runtmp):
+    # test basic genome - output csv
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+    csvout = runtmp.output(csv_base + '.lineage.csv')
+    outdir = os.path.dirname(csvout)
+    print("csvout: ", csvout)
+
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--rank', 'species', '-o', csv_base, '--containment-threshold', '0',
+                   '--output-format', 'lineage_csv', '--output-dir', outdir)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert f"saving 'lineage_csv' output to '{csvout}'" in runtmp.last_result.err
+    assert c.last_result.status == 0
+    with open(csvout) as fp:
+        outp = fp.readlines()
+
+    assert len(outp) == 2
+    outp = [ x.strip() for x in outp ]
+
+    assert outp[0] == 'ident,superkingdom,phylum,class,order,family,genus,species'
+    assert outp[1] == 'test1,d__Bacteria,p__Bacteroidota,c__Bacteroidia,o__Bacteroidales,f__Bacteroidaceae,g__Prevotella,s__Prevotella copri'
 
 
 def test_genome_gather_from_file_rank(runtmp):
@@ -910,7 +1007,7 @@ def test_genome_gather_from_file_duplicate_query_force(runtmp):
     assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
     assert '--force is set, ignoring duplicate query.' in c.last_result.err
     assert 'No gather results loaded from ' in c.last_result.err
-    assert 'loaded results from 1 gather CSVs' in c.last_result.err
+    assert 'loaded 4 results total from 1 gather CSVs' in c.last_result.err
 
 
 def test_genome_gather_cli_and_from_file(runtmp):
@@ -1222,7 +1319,7 @@ def test_genome_empty_gather_results_single(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == -1
-    assert f'Cannot read gather results from {empty_tax}. Is file empty?' in str(exc.value)
+    assert f"Cannot read gather results from '{empty_tax}'. Is file empty?" in str(exc.value)
     assert 'Exiting.' in c.last_result.err
 
 
@@ -1300,7 +1397,7 @@ def test_genome_empty_gather_results_with_csv_force(runtmp):
 
     assert c.last_result.status == 0
     assert '--force is set. Attempting to continue to next set of gather results.' in c.last_result.err
-    assert 'loaded results from 1 gather CSVs' in c.last_result.err
+    assert 'loaded 4 results total from 1 gather CSVs' in c.last_result.err
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
 
@@ -1482,6 +1579,79 @@ def test_genome_ani_oldgather(runtmp):
     assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,' in c.last_result.out
 
 
+def test_genome_ani_lemonade_classify(runtmp):
+    # test a complete MAG classification with lemonade MAG from STAMPS 2022
+    # (real data!)
+    c = runtmp
+
+    ## first run gather
+    genome = utils.get_test_data('tax/lemonade-MAG3.sig.gz')
+    matches = utils.get_test_data('tax/lemonade-MAG3.x.gtdb.matches.zip')
+
+    c.run_sourmash('gather', genome, matches,
+                   '--threshold-bp=5000', '-o', 'gather.csv')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+
+    this_gather_file = c.output('gather.csv')
+    this_gather = open(this_gather_file).readlines()
+
+    assert len(this_gather) == 4
+
+    ## now run 'tax genome' with human output
+    taxonomy_file = utils.get_test_data('tax/lemonade-MAG3.x.gtdb.matches.tax.csv')
+    c.run_sourmash('tax', 'genome', '-g', this_gather_file, '-t', taxonomy_file,
+                   '--ani', '0.8', '-F', 'human')
+
+    output = c.last_result.out
+    assert 'MAG3_1             5.3%     91.0%  d__Bacteria;p__Bacteroidota;c__Chlorobia;o__Chlorobiales;f__Chlorobiaceae;g__Prosthecochloris;s__Prosthecochloris vibrioformis' in output
+
+    # aaand classify to lineage_csv
+    c.run_sourmash('tax', 'genome', '-g', this_gather_file, '-t', taxonomy_file,
+                   '--ani', '0.8', '-F', 'lineage_csv')
+
+    output = c.last_result.out
+    assert 'ident,superkingdom,phylum,class,order,family,genus,species' in output
+    assert 'MAG3_1,d__Bacteria,p__Bacteroidota,c__Chlorobia,o__Chlorobiales,f__Chlorobiaceae,g__Prosthecochloris,s__Prosthecochloris vibrioformis' in output
+
+
+def test_metagenome_no_gather_csv(runtmp):
+    # test tax metagenome with no -g
+    taxonomy_file = utils.get_test_data('tax/lemonade-MAG3.x.gtdb.matches.tax.csv')
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('tax', 'metagenome', '-t', taxonomy_file)
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+
+def test_genome_no_gather_csv(runtmp):
+    # test tax genome with no -g
+    taxonomy_file = utils.get_test_data('tax/lemonade-MAG3.x.gtdb.matches.tax.csv')
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('tax', 'genome', '-t', taxonomy_file)
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+
+def test_annotate_no_gather_csv(runtmp):
+    # test tax annotate with no -g
+    taxonomy_file = utils.get_test_data('tax/lemonade-MAG3.x.gtdb.matches.tax.csv')
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('tax', 'annotate', '-t', taxonomy_file)
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+
 def test_annotate_0(runtmp):
     # test annotate
     c = runtmp
@@ -1498,10 +1668,11 @@ def test_annotate_0(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
+    assert os.path.exists(csvout)
 
     lin_gather_results = [x.rstrip() for x in open(csvout)]
     print("\n".join(lin_gather_results))
-    assert f"saving `annotate` output to {csvout}" in runtmp.last_result.err
+    assert f"saving 'annotate' output to '{csvout}'" in runtmp.last_result.err
 
     assert "lineage" in lin_gather_results[0]
     assert "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in lin_gather_results[1]
@@ -1529,7 +1700,7 @@ def test_annotate_0_db(runtmp):
 
     lin_gather_results = [x.rstrip() for x in open(csvout)]
     print("\n".join(lin_gather_results))
-    assert f"saving `annotate` output to {csvout}" in runtmp.last_result.err
+    assert f"saving 'annotate' output to '{csvout}'" in runtmp.last_result.err
 
     assert "lineage" in lin_gather_results[0]
     assert "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in lin_gather_results[1]
@@ -1550,7 +1721,7 @@ def test_annotate_empty_gather_results(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'annotate', '-g', g_csv, '--taxonomy-csv', tax)
 
-    assert f'Cannot read gather results from {g_csv}. Is file empty?' in str(exc.value)
+    assert f"Cannot read gather results from '{g_csv}'. Is file empty?" in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
@@ -1570,7 +1741,7 @@ def test_annotate_bad_gather_header(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'annotate', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
-    assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
+    assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
