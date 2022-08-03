@@ -1150,8 +1150,7 @@ then the merged signature will have the sum of all abundances across
 the individual signatures.  The `--flatten` flag will override this
 behavior and allow merging of mixtures by removing all abundances.
 
-Note: `merge` only creates one output file, with one signature in it,
-in the JSON `.sig` format.
+Note: `merge` only creates one output file, with one signature in it.
 
 ### `sourmash signature rename` - rename a signature
 
@@ -1182,8 +1181,7 @@ will subtract all of the hashes in `file2.sig` and `file3.sig` from
 To use `subtract` on signatures calculated with
 `-p abund`, you must specify `--flatten`.
 
-Note: `subtract` only creates one output file, with one signature in it,
-in the JSON `.sig` format.
+Note: `subtract` only creates one output file, with one signature in it.
 
 ### `sourmash signature intersect` - intersect two (or more) signatures
 
@@ -1314,8 +1312,7 @@ sourmash signature import filename.msh.json -o imported.sig
 ```
 will import the contents of `filename.msh.json` into `imported.sig`.
 
-Note: `import` only creates one output file, with one signature in it,
-in the JSON `.sig` format.
+Note: `import` only creates one output file, with one signature in it.
 
 ### `sourmash signature export` - export signatures to mash.
 
