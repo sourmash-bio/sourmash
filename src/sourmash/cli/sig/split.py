@@ -1,4 +1,4 @@
-"""concatenate signature files"""
+"""split signature files"""
 
 usage="""
 
