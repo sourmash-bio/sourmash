@@ -952,11 +952,8 @@ def multigather(args):
             counters = []
             prefetch_query = query.copy()
             if prefetch_query.minhash.track_abundance:
-                # CTB: here we explicitly do not make a full copy, b/c speed.
-                # @CTB
-                prefetch_query = prefetch_query.to_mutable()
-                prefetch_query.minhash = prefetch_query.minhash.flatten()
-                prefetch_query = prefetch_query.to_frozen()
+                with prefetch_query.update() as prefetch_query:
+                    prefetch_query.minhash = prefetch_query.minhash.flatten()
 
             ident_mh = prefetch_query.minhash.copy_and_clear()
             noident_mh = prefetch_query.minhash.to_mutable()

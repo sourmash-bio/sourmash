@@ -226,10 +226,8 @@ class SourmashSignature(RustObject):
         )
 
     def __copy__(self):
-        mh = self.minhash
-        mh = mh.to_frozen()
         a = SourmashSignature(
-            mh,
+            self.minhash,
             name=self.name,
             filename=self.filename,
         )
@@ -249,7 +247,8 @@ class SourmashSignature(RustObject):
 
     def into_frozen(self):
         "Freeze this signature, preventing attribute changes."
-        assert isinstance(self.minhash, FrozenMinHash)
+        # this will always be the case b/c minhash property returns FrozenMH:
+        # assert isinstance(self.minhash, FrozenMinHash)
         self.__class__ = FrozenSourmashSignature
 
 
@@ -287,23 +286,7 @@ class FrozenSourmashSignature(SourmashSignature):
         return self
 
     def to_mutable(self):
-        """Turn this object into a mutable object, without copying
-        or altering the MinHash. Use 'update()' context manager instead
-        where possible.
-
-        Using this can lead to bugs, where you have a FrozenSourmashSignature
-        that gets referenced with a new name, and then the new name is
-        made mutable, which also makes the old named object also mutable.
-        Ick.
-
-        So, this is dangerous and should only be used in instances where
-        (1) we're getting rid of the object soon after,
-        (2) it is critical for speed reasons b/c you don't want to copy
-        the minhash container.
-
-        Typically in case (2) you should immediately reassign .minhash to
-        avoid bugs.
-        """
+        "Turn this object into a mutable object."
         mut = SourmashSignature.__new__(SourmashSignature)
         state_tup = self.__getstate__()
         mut.__setstate__(state_tup)
@@ -317,22 +300,19 @@ class FrozenSourmashSignature(SourmashSignature):
     def update(self):
         """Make a mutable copy of this signature for modification, then freeze.
 
-        This is a context manager version of:
+        This is a context manager that implements:
 
         new_sig = this_sig.copy()
-        new_sig.into_mutable()
+        new_sig.to_mutable()
         # modify new_sig
         new_sig.into_frozen()
 
         This could be made more efficient by _not_ copying the signature,
         but that is non-intuitive and leads to hard-to-find bugs.
         """
-        self.__class__ = SourmashSignature
-        yield self
-        self.__class__ = FrozenSourmashSignature
-        #new_copy = self.to_mutable()
-        #yield new_copy
-        #new_copy.into_frozen()
+        new_copy = self.to_mutable()
+        yield new_copy
+        new_copy.into_frozen()
 
 
 def _detect_input_type(data):
