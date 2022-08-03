@@ -295,7 +295,7 @@ class Index(ABC):
         implementations need only return an object that meets the
         public `CounterGather` interface, of course.
         """
-        # build a flat query
+        # build a flat query that can be modified
         prefetch_query = query.to_mutable()
         prefetch_query.minhash = prefetch_query.minhash.flatten()
 

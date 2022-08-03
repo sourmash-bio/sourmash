@@ -299,6 +299,7 @@ class FrozenSourmashSignature(SourmashSignature):
     @contextlib.contextmanager
     def update(self):
         "Briefly make this a mutable SourmashSignature, then freeze it."
+        # @CTB do we want to make a new copy here??
         new_copy = self.to_mutable()
         yield new_copy
         new_copy.into_frozen()

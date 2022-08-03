@@ -132,18 +132,18 @@ def compare(args):
     if is_scaled:
         max_scaled = max(s.minhash.scaled for s in siglist)
         new_siglist = []
-        for ss in siglist:
+        for s in siglist:
             if not size_may_be_inaccurate and not s.minhash.size_is_accurate():
                 size_may_be_inaccurate = True
-            if ss.minhash.scaled != max_scaled:
+            if s.minhash.scaled != max_scaled:
                 if not printed_scaled_msg:
                     notify(f'downsampling to scaled value of {format(max_scaled)}')
                     printed_scaled_msg = True
-                with ss.update() as new_ss:
-                    new_ss.minhash = ss.minhash.downsample(scaled=max_scaled)
-                new_siglist.append(new_ss)
+                with s.update() as s:
+                    s.minhash = s.minhash.downsample(scaled=max_scaled)
+                new_siglist.append(s)
             else:
-                new_siglist.append(ss)
+                new_siglist.append(s)
         siglist = new_siglist
 
     if len(siglist) == 0:
@@ -721,9 +721,8 @@ def gather(args):
         notify("Starting prefetch sweep across databases.")
         prefetch_query = query.copy()
         if prefetch_query.minhash.track_abundance:
-            prefetch_query = prefetch_query.to_mutable()
-            prefetch_query.minhash = prefetch_query.minhash.flatten()
-            prefetch_query = prefetch_query.to_frozen()
+            with prefetch_query.update() as prefetch_query:
+                prefetch_query.minhash = prefetch_query.minhash.flatten()
 
         noident_mh = prefetch_query.minhash.to_mutable()
         save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
@@ -933,7 +932,6 @@ def multigather(args):
         for query in sourmash_args.load_file_as_signatures(queryfile,
                                                        ksize=args.ksize,
                                                        select_moltype=moltype):
-            query.into_frozen()
             notify(f'loaded query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})')
 
             # verify signature was computed right.
