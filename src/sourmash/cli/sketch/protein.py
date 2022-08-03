@@ -37,10 +37,6 @@ def subparser(subparsers):
         help='signature license. Currently only CC0 is supported.'
     )
     subparser.add_argument(
-        '--check-sequence', action='store_true',
-        help='complain if input sequence is invalid'
-    )
-    subparser.add_argument(
         '-p', '--param-string', default=[],
         help='signature parameters to use.', action='append',
     )
@@ -67,7 +63,8 @@ def subparser(subparsers):
         'specified name'
     )
     file_args.add_argument(
-        '--outdir', help='output computed signatures to this directory'
+        '--output-dir', '--outdir',
+        help='output computed signatures to this directory',
     )
     file_args.add_argument(
         '--singleton', action='store_true',

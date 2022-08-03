@@ -2,13 +2,13 @@
 
 usage="""
 
-    sourmash sig cat *.sig -o combined.sig
+### `sourmash signature cat` - concatenate multiple signatures together
 
-sourmash sig cat concatenates signature files.
+Concatenate signature files.
 
 For example,
 
-    sourmash signature cat file1.sig file2.sig -o all.sig
+sourmash signature cat file1.sig file2.sig -o all.sig
 
 will combine all signatures in `file1.sig` and `file2.sig` and put them
 in the file `all.sig`.
@@ -16,7 +16,7 @@ in the file `all.sig`.
 """
 
 from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
-                                add_picklist_args)
+                                add_picklist_args, add_pattern_args)
 
 
 def subparser(subparsers):
@@ -45,6 +45,7 @@ def subparser(subparsers):
     )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
+    add_pattern_args(subparser)
     add_picklist_args(subparser)
 
 

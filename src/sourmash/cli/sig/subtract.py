@@ -18,8 +18,7 @@ will subtract all of the hashes in `file2.sig` and `file3.sig` from
 To use `subtract` on signatures calculated with
 `-p abund`, you must specify `--flatten`.
 
-Note: `subtract` only creates one output file, with one signature in it,
-in the JSON `.sig` format.
+Note: `subtract` only creates one output file, with one signature in it.
 
 """
 
@@ -41,6 +40,10 @@ def subparser(subparsers):
     subparser.add_argument(
         '--flatten', action='store_true',
         help='remove abundance from signatures before subtracting'
+    )
+    subparser.add_argument(
+        '-A', '--abundances-from', metavar='FILE',
+        help='intersect with & take abundances from this signature'
     )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)

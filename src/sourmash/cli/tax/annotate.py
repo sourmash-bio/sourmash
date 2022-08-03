@@ -7,7 +7,7 @@ usage="""
 The 'tax annotate' command reads in gather results CSVs and annotates them
  with taxonomic information.
 
-By default, `tax annotate` produces a gather CSV with an additional `lineage`
+By default, 'tax annotate' produces a gather CSV with an additional 'lineage'
  column containing the taxonomic information for each database match.
 
 Please see the 'tax annotate' documentation for more details:
@@ -63,5 +63,5 @@ def subparser(subparsers):
 def main(args):
     import sourmash
     if not args.gather_csv and not args.from_file:
-        raise ValueError(f"No gather CSVs found! Please input via `-g` or `--from-file`.")
+        raise ValueError(f"No gather CSVs found! Please input via '-g' or '--from-file'.")
     return sourmash.tax.__main__.annotate(args)

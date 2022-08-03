@@ -4,9 +4,11 @@
 
 Read more about the [computational requirements, here.](requirements.md)
 
-## Prepared search database
+## Prepared search databases
 
 We offer a number of [prepared search databases.](databases.md)
+
+You can read about the supported database formats [here.](databases-advanced.md)
 
 ## Other MinHash implementations for DNA
 
@@ -115,6 +117,17 @@ see [this stackoverflow answer](https://stackoverflow.com/a/34294056)
 or [this sourmash issue comment](https://github.com/sourmash-bio/sourmash/issues/254#issuecomment-304274590).
 
 Newer versions of matplotlib do not seem to have this problem.
+
+```{toctree}
+---
+hidden:
+---
+README.md
+legacy-databases.md
+databases-advanced.md
+plotting-compare.ipynb
+sourmash-sketch.md
+```
 
 [0]:https://github.com/marbl/Mash
 [1]:https://github.com/edawson/rkmh

@@ -59,6 +59,12 @@ def subparser(subparsers):
         '--fail-on-missing-taxonomy', action='store_true',
         help='fail quickly if taxonomy is not available for an identifier',
     )
+    subparser.add_argument(
+        '-F', '--database-format',
+        help="format of output database; default is 'json')",
+        default='json',
+        choices=['json', 'sql'],
+    )
 
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)

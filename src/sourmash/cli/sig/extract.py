@@ -33,12 +33,12 @@ will extract the same signature, which has an accession number of
 
 As of sourmash 4.2.0, `extract` also supports picklists, a feature by
 which you can select signatures based on values in a CSV file. See
-[Using picklists to subset large collections of signatures](#using-picklists-to-subset-large-collections-of-signatures), below.
+[the command line docs](https://sourmash.readthedocs.io/en/latest/command-line.html) for more information.
 
 """
 
 from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
-                                add_picklist_args)
+                                add_picklist_args, add_pattern_args)
 
 
 def subparser(subparsers):
@@ -71,6 +71,7 @@ def subparser(subparsers):
     )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
+    add_pattern_args(subparser)
     add_picklist_args(subparser)
 
 
