@@ -39,6 +39,8 @@ import math
 
 import pytest
 
+import screed
+
 import sourmash
 from sourmash.minhash import (
     MinHash,
@@ -63,6 +65,33 @@ import sourmash_tst_utils as utils
 scaled50 = _get_scaled_for_max_hash(50)
 scaled100 = _get_scaled_for_max_hash(100)
 scaled5000 = _get_scaled_for_max_hash(5000)
+
+
+def _kmers_from_all_coding_frames(sequence, ksize):
+    """Mimic the internal rust code for translation of DNA into aa.
+
+    For each frame, yield all fwd k-mers, then all reverse k-mers
+    from that frame. Then do next frame.
+    """
+    seqrc = screed.rc(sequence)
+
+    for frame in (0, 1, 2):
+        # get forward k-mers
+        for start in range(0, len(sequence) - ksize + 1 - frame, 3):
+            kmer = sequence[start + frame:start + frame + ksize]
+            yield kmer
+
+        # get rc k-mers
+        for start in range(0, len(seqrc) - ksize + 1 - frame, 3):
+            kmer = seqrc[start + frame:start + frame + ksize]
+            yield kmer
+
+
+def _hash_fwd_only(mh_translate, seq):
+    "Return the first hashval only, for coding frame +1."
+    assert len(seq) == mh_translate.ksize*3
+    xx = mh_translate.seq_to_hashes(seq)[0]
+    return xx
 
 
 def test_basic_dna(track_abundance):
@@ -132,6 +161,21 @@ def test_contained_requires_scaled_2(track_abundance):
         mh1.max_containment(mh2)
 
 
+def test_contained_requires_scaled_3(track_abundance):
+    # test that avg_containment requires scaled signatures
+    mh1 = MinHash(1, 4, track_abundance=track_abundance)
+    mh2 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_sequence('ATGC')
+    mh2.add_sequence('ATGC')
+
+    with pytest.raises(TypeError):
+        mh2.avg_containment(mh1)
+
+    with pytest.raises(TypeError):
+        mh1.avg_containment(mh2)
+
+
 def test_bytes_dna(track_abundance):
     mh = MinHash(1, 4, track_abundance=track_abundance)
     mh.add_sequence('ATGC')
@@ -147,6 +191,86 @@ def test_bytes_dna(track_abundance):
     print(a, b)
     assert list(a) == list(b)
     assert len(b) == 1
+
+def test_add_long_seqs_force():
+    # Test for (All kmers are invalid)
+
+    mh = sourmash.minhash.MinHash(n = 0, ksize=21, scaled =10, seed = 42)
+    seq = "ACGTN" * 100000
+    hashes = mh.seq_to_hashes(seq, force = True)
+    assert(len(mh.hashes) == 0)
+
+
+def test_seq_to_hashes(track_abundance):
+    mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1, track_abundance=track_abundance)
+    seq = "ATGAGAGACGATAGACAGATGACC"
+    mh.add_sequence(seq)
+
+    golden_hashes = mh.hashes
+    
+    # New seq to hashes without adding to the sketch
+    new_hashes = mh.seq_to_hashes(seq)
+
+    assert set(golden_hashes) == set(new_hashes)
+
+
+def test_seq_to_hashes_protein_1(track_abundance, dayhoff):
+    mh = MinHash(10, 2, True, dayhoff=dayhoff, hp=False, track_abundance=track_abundance)
+    prot_seq = "AGYYG"
+
+    mh.add_protein(prot_seq)
+
+    golden_hashes = mh.hashes
+
+    # New seq to hashes without adding to the sketch
+    new_hashes = mh.seq_to_hashes(prot_seq, is_protein = True)
+
+    assert set(golden_hashes) == set(new_hashes)
+
+def test_seq_to_hashes_protein_2(track_abundance):
+    mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1, track_abundance=track_abundance)
+    seq = "ATGAGAGACGATAGACAGATGACC"
+
+    with pytest.raises(ValueError):
+        mh.seq_to_hashes(seq, is_protein = True)
+
+
+def test_seq_to_hashes_translated(track_abundance):
+    mh_protein = MinHash(10, 2, is_protein=True, track_abundance=track_abundance)
+    seq = "ACTGAC"
+    mh_protein.add_sequence(seq)
+
+    golden_hashes = mh_protein.hashes
+
+    # New seq to hashes without adding to the sketch
+    new_hashes = mh_protein.seq_to_hashes(seq)
+
+    assert set(golden_hashes) == set(new_hashes)
+
+
+def test_seq_to_hashes_bad_kmers_as_zeroes_1():
+    mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1)
+    seq = "ATGAGAGACGATAGACAGATGACN"
+    
+    # New seq to hashes without adding to the sketch
+    hashes = mh.seq_to_hashes(seq, force=True, bad_kmers_as_zeroes=True)
+
+    assert len(hashes) == len(seq) - 21 + 1
+
+
+def test_seq_to_hashes_bad_kmers_as_zeroes_2():
+    mh = sourmash.minhash.MinHash(n=0, ksize=21, scaled=1)
+    seq = "ATGAGAGACGATAGACAGATGACN"
+    
+    with pytest.raises(ValueError):
+        hashes = mh.seq_to_hashes(seq, bad_kmers_as_zeroes=True)
+
+
+def test_seq_to_hashes_translated_short():
+    mh = MinHash(0, 2, True, dayhoff=True, hp=False, scaled = 1)
+    hashes = mh.seq_to_hashes("ACTGA")
+
+    assert(len(hashes) == 0)
 
 
 def test_bytes_protein_dayhoff(track_abundance, dayhoff):
@@ -231,6 +355,31 @@ def test_dayhoff(track_abundance):
     assert mh_protein.hashes != mh_dayhoff.hashes
 
 
+def test_dayhoff_2(track_abundance):
+    mh = MinHash(0, 7, scaled=1, dayhoff=True, track_abundance=1)
+
+    # first, check protein -> dayhoff hashes via minhash
+    mh.add_protein('CADHIFC')
+    assert len(mh) == 1
+    hashval = list(mh.hashes)[0]
+    assert hashval == hash_murmur('abcdefa')
+
+    # also check seq_to_hashes
+    hashes = list(mh.seq_to_hashes('CADHIFC', is_protein=True))
+    assert hashval == hashes[0]
+
+    # do we handle stop codons properly?
+    mh = mh.copy_and_clear()
+    mh.add_protein('CADHIF*')
+    assert len(mh) == 1
+    hashval = list(mh.hashes)[0]
+    assert hashval == hash_murmur('abcdef*')
+
+    # again, check seq_to_hashes
+    hashes = list(mh.seq_to_hashes('CADHIF*', is_protein=True))
+    assert hashval == hashes[0]
+
+
 def test_hp(track_abundance):
     # verify that we can hash to hp-encoded protein/aa sequences
     mh_hp = MinHash(10, 2, is_protein=True,
@@ -246,6 +395,29 @@ def test_hp(track_abundance):
 
     assert len(mh_protein.hashes) == 2
     assert mh_protein.hashes != mh_hp.hashes
+
+
+def test_hp_2(track_abundance):
+    mh = MinHash(0, 3, scaled=1, hp=True, track_abundance=track_abundance)
+
+    mh.add_protein('ANA')
+    assert len(mh) == 1
+    hashval = list(mh.hashes)[0]
+    assert hashval == hash_murmur('hph')
+
+    # also check seq_to_hashes
+    hashes = list(mh.seq_to_hashes('ANA', is_protein=True))
+    assert hashval == hashes[0]
+
+    mh = mh.copy_and_clear()
+    mh.add_protein('AN*')
+    assert len(mh) == 1
+    hashval = list(mh.hashes)[0]
+    assert hashval == hash_murmur('hp*')
+
+    # also check seq_to_hashes
+    hashes = list(mh.seq_to_hashes('AN*', is_protein=True))
+    assert hashval == hashes[0]
 
 
 def test_protein_short(track_abundance):
@@ -407,6 +579,30 @@ def test_mh_similarity_downsample_angular_value():
     # with ignore_abundance, will be equal to jaccard
     jaccard = a.similarity(b, downsample=True, ignore_abundance=True)
     assert jaccard == 4. / 6.
+
+def test_mh_angular_similarity_fail():
+    # raise TypeError if calling angular_similarity directly and
+    # one or both sketches do not have abundance info
+    a = MinHash(0, 20, scaled=scaled50, track_abundance=True)
+    b = MinHash(0, 20, scaled=scaled50, track_abundance=False)
+    a_values = { 1:5, 3:3, 5:2, 8:2}
+    b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
+
+    a.set_abundances(a_values)
+    b.add_many(b_values.keys())
+
+    # one sketch lacks track_abundance
+    with pytest.raises(TypeError) as exc:
+        a.angular_similarity(b)
+    print(str(exc))
+    assert "Error: Angular (cosine) similarity requires both sketches to track hash abundance." in str(exc)
+    # both sketches lack track abundance
+    a = MinHash(0, 20, scaled=scaled50, track_abundance=False)
+    a.add_many(a_values.keys())
+    with pytest.raises(TypeError) as exc:
+        a.angular_similarity(b)
+    print(str(exc))
+    assert "Error: Angular (cosine) similarity requires both sketches to track hash abundance." in str(exc)
 
 
 def test_mh_similarity_downsample_true(track_abundance):
@@ -1520,6 +1716,108 @@ def test_flatten():
     assert len(mh2) == 3
 
 
+def test_inflate():
+    # test behavior of inflate function
+    scaled = _get_scaled_for_max_hash(35)
+    mh = MinHash(0, 4, track_abundance=False, scaled=scaled)
+    mh2 = MinHash(0, 4, track_abundance=True, scaled=scaled)
+    assert mh._max_hash == 35
+
+    mh.add_hash(10)
+    mh.add_hash(20)
+    mh.add_hash(30)
+
+    assert mh.hashes[10] == 1
+    assert mh.hashes[20] == 1
+    assert mh.hashes[30] == 1
+
+    mh2.add_hash(10)
+    mh2.add_hash(10)
+    mh2.add_hash(10)
+    mh2.add_hash(20)
+    mh2.add_hash(20)
+    mh2.add_hash(30)
+    mh2.add_hash(30)
+    mh2.add_hash(30)
+
+    assert mh2.hashes[10] == 3
+    assert mh2.hashes[20] == 2
+    assert mh2.hashes[30] == 3
+
+    mh3 = mh.inflate(mh2)
+
+    assert mh3.hashes[10] == 3
+    assert mh3.hashes[20] == 2
+    assert mh3.hashes[30] == 3
+
+
+def test_inflate_error():
+    # test behavior of inflate function with 'self' as an abund sketch
+    scaled = _get_scaled_for_max_hash(35)
+    mh = MinHash(0, 4, track_abundance=True, scaled=scaled)
+    mh2 = MinHash(0, 4, track_abundance=True, scaled=scaled)
+    assert mh._max_hash == 35
+
+    mh.add_hash(10)
+    mh.add_hash(20)
+    mh.add_hash(30)
+
+    assert mh.hashes[10] == 1
+    assert mh.hashes[20] == 1
+    assert mh.hashes[30] == 1
+
+    mh2.add_hash(10)
+    mh2.add_hash(10)
+    mh2.add_hash(10)
+    mh2.add_hash(20)
+    mh2.add_hash(20)
+    mh2.add_hash(30)
+    mh2.add_hash(30)
+    mh2.add_hash(30)
+
+    assert mh2.hashes[10] == 3
+    assert mh2.hashes[20] == 2
+    assert mh2.hashes[30] == 3
+
+    with pytest.raises(ValueError) as exc:
+        mh = mh.inflate(mh2)
+
+    assert "inflate operates on a flat MinHash and takes a MinHash object with track_abundance=True" in str(exc.value)
+
+
+def test_inflate_not_a_subset():
+    # test behavior of inflate function when 'from_mh' is not a subset.
+    scaled = _get_scaled_for_max_hash(35)
+    mh = MinHash(0, 4, track_abundance=False, scaled=scaled)
+    mh2 = MinHash(0, 4, track_abundance=True, scaled=scaled)
+    assert mh._max_hash == 35
+
+    mh.add_hash(10)
+    mh.add_hash(20)
+    mh.add_hash(30)
+
+    assert mh.hashes[10] == 1
+    assert mh.hashes[20] == 1
+    assert mh.hashes[30] == 1
+
+    mh2.add_hash(10)
+    mh2.add_hash(10)
+    mh2.add_hash(10)
+    mh2.add_hash(30)
+    mh2.add_hash(30)
+    mh2.add_hash(30)
+
+    assert mh2.hashes[10] == 3
+    assert 20 not in mh2.hashes
+    assert mh2.hashes[30] == 3
+
+    mh3 = mh.inflate(mh2)
+
+    assert mh3.hashes[10] == 3
+    assert 20 not in mh3.hashes # should intersect, in this case.
+    assert mh3.hashes[30] == 3
+
+
 def test_add_kmer(track_abundance):
     # test add_kmer method
     mh1 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
@@ -2016,6 +2314,43 @@ def test_max_containment_equal():
     assert mh2.max_containment(mh1) == 1
 
 
+def test_avg_containment():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh2.add_many((1, 5))
+
+    assert mh1.contained_by(mh2) == 1/4
+    assert mh2.contained_by(mh1) == 1/2
+    assert mh1.avg_containment(mh2) == 0.375
+    assert mh2.avg_containment(mh1) == 0.375
+
+
+def test_avg_containment_empty():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+
+    assert mh1.contained_by(mh2) == 0
+    assert mh2.contained_by(mh1) == 0
+    assert mh1.avg_containment(mh2) == 0
+    assert mh2.avg_containment(mh1) == 0
+
+
+def test_avg_containment_equal():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh2.add_many((1, 2, 3, 4))
+
+    assert mh1.contained_by(mh2) == 1
+    assert mh2.contained_by(mh1) == 1
+    assert mh1.avg_containment(mh2) == 1
+    assert mh2.avg_containment(mh1) == 1
+
 def test_frozen_and_mutable_1(track_abundance):
     # mutable minhashes -> mutable minhashes creates new copy
     mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
@@ -2050,3 +2385,705 @@ def test_frozen_and_mutable_3(track_abundance):
     mh3.add_hash(12)
     assert 12 not in mh2.hashes
     assert 12 not in mh1.hashes
+
+
+def test_dna_kmers():
+    # test seq_to_hashes for dna -> dna
+    mh = MinHash(0, ksize=31, scaled=1) # DNA
+    seq = "ATGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGCAAATGCAGAACGTTTTCTGCGTGTTGCCGATATTCTGGAAAGCAATGCCAGGCAGGGGCAGGTGGCCACCGTCCTCTCTGCCCCCGCCAAAATCACCAACCACCTGGTGGCGATGATTGAAAAAACCATTAGCGGCCAGGATGCTTTACCCAATATCAGCGATGCCGAACGTATTTTTGCCGAACTTTTGACGGGACTCGCCGCCGCCCAGCCGGGGTTCCCGCTGGCGCAATTGAAAACTTTCGTCGATCAGGAATTTGCCCAAATAAAACATGTCCTGCATGGCATTAGTTTGTTGGGGCAGTGCCCGGATAGCATCAACGCTGCGCTGATTTGCCGTGGCGAGAAAATGTCGATCGCCATTATGGCCGGCGTATTAGAAGCGCGCGGTCACAACGTTACTGTTATCGATCCGGTCGAAAAACTGCTGGCAGTGGGGCATTACCTCGAATCTACCGTCGATATTGCTGAGTCCACCCGCCGTATTGCGGCAAGCCGCATTCCGGCTGATCACATGGTGCTGAT"
+
+    # first calculate seq to hashes
+    hashes = mh.seq_to_hashes(seq)
+
+    # then calculate all hashes for the sequence
+    mh.add_sequence(seq)
+
+    # identical?
+    assert set(hashes) == set(mh.hashes)
+
+    # k-mer by k-mer?
+    for i in range(0, len(seq) - 31 + 1):
+        # calculate each k-mer
+        kmer = seq[i:i+31]
+
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+        single_mh.add_sequence(kmer)
+        assert len(single_mh) == 1
+
+        # also calculate via seq_to_hashes
+        hashvals = mh.seq_to_hashes(kmer)
+        assert len(hashvals) == 1
+        hashval = hashvals[0]
+
+        # confirm it all matches
+        assert hashval == list(single_mh.hashes)[0]
+        assert hashval == hashes[i]
+
+
+def test_dna_kmers_2():
+    # test kmers_and_hashes for dna -> dna
+    mh = MinHash(0, ksize=31, scaled=1) # DNA
+    seq = "ATGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGCAAATGCAGAACGTTTTCTGCGTGTTGCCGATATTCTGGAAAGCAATGCCAGGCAGGGGCAGGTGGCCACCGTCCTCTCTGCCCCCGCCAAAATCACCAACCACCTGGTGGCGATGATTGAAAAAACCATTAGCGGCCAGGATGCTTTACCCAATATCAGCGATGCCGAACGTATTTTTGCCGAACTTTTGACGGGACTCGCCGCCGCCCAGCCGGGGTTCCCGCTGGCGCAATTGAAAACTTTCGTCGATCAGGAATTTGCCCAAATAAAACATGTCCTGCATGGCATTAGTTTGTTGGGGCAGTGCCCGGATAGCATCAACGCTGCGCTGATTTGCCGTGGCGAGAAAATGTCGATCGCCATTATGGCCGGCGTATTAGAAGCGCGCGGTCACAACGTTACTGTTATCGATCCGGTCGAAAAACTGCTGGCAGTGGGGCATTACCTCGAATCTACCGTCGATATTGCTGAGTCCACCCGCCGTATTGCGGCAAGCCGCATTCCGGCTGATCACATGGTGCTGAT"
+
+    # k-mer by k-mer?
+    for kmer, hashval in mh.kmers_and_hashes(seq):
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+        single_mh.add_sequence(kmer)
+        assert len(single_mh) == 1
+
+        # confirm it all matches
+        assert hashval == list(single_mh.hashes)[0]
+
+
+def test_dna_kmers_3_bad_dna():
+    # test kmers_and_hashes for dna -> dna, with some bad k-mers in there
+    mh = MinHash(0, ksize=31, scaled=1) # DNA
+    seq = "NTGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGCAAATGCAGAACGTTTTCTGCGTGTTGCCGATATTCTGGAAAGCAATGCCAGGCAGGGGCAGGTGGCCACCGTCCTCTCTGCCCCCGCCAAAATCACCAACCACCTGGTGGCGATGATTGAAAAAACCATTAGCGGCCAGGATGCTTTACCCAATATCAGCGATGCCGAACGTATTTTTGCCGAACTTTTGACGGGACTCGCCGCCGCCCAGCCGGGGTTCCCGCTGGCGCAATTGAAAACTTTCGTCGATCAGGAATTTGCCCAAATAAAACATGTCCTGCATGGCATTAGTTTGTTGGGGCAGTGCCCGGATAGCATCAACGCTGCGCTGATTTGCCGTGGCGAGAAAATGTCGATCGCCATTATGGCCGGCGTATTAGAAGCGCGCGGTCACAACGTTACTGTTATCGATCCGGTCGAAAAACTGCTGGCAGTGGGGCATTACCTCGAATCTACCGTCGATATTGCTGAGTCCACCCGCCGTATTGCGGCAAGCCGCATTCCGGCTGATCACATGGTGCTGAT"
+
+    with pytest.raises(ValueError) as exc:
+        list(mh.kmers_and_hashes(seq))
+
+    assert "invalid DNA character in input k-mer: NTGCGAGTGT" in str(exc)
+
+
+def test_dna_kmers_4_bad_dna():
+    # test kmers_and_hashes for bad dna -> dna, using force
+    mh = MinHash(0, ksize=31, scaled=1) # DNA
+    seq = "NTGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGCAAATGCAGAACGTTTTCTGCGTGTTGCCGATATTCTGGAAAGCAATGCCAGGCAGGGGCAGGTGGCCACCGTCCTCTCTGCCCCCGCCAAAATCACCAACCACCTGGTGGCGATGATTGAAAAAACCATTAGCGGCCAGGATGCTTTACCCAATATCAGCGATGCCGAACGTATTTTTGCCGAACTTTTGACGGGACTCGCCGCCGCCCAGCCGGGGTTCCCGCTGGCGCAATTGAAAACTTTCGTCGATCAGGAATTTGCCCAAATAAAACATGTCCTGCATGGCATTAGTTTGTTGGGGCAGTGCCCGGATAGCATCAACGCTGCGCTGATTTGCCGTGGCGAGAAAATGTCGATCGCCATTATGGCCGGCGTATTAGAAGCGCGCGGTCACAACGTTACTGTTATCGATCCGGTCGAAAAACTGCTGGCAGTGGGGCATTACCTCGAATCTACCGTCGATATTGCTGAGTCCACCCGCCGTATTGCGGCAAGCCGCATTCCGGCTGATCACATGGTGCTGAT"
+
+    # k-mer by k-mer?
+    found_bad_kmer = False
+    for kmer, hashval in mh.kmers_and_hashes(seq, force=True):
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+
+        if hashval == None:
+            assert kmer == seq[:31] # first k-mer is baaaaad.
+            found_bad_kmer = True
+            continue
+
+        # if the below code raises an exception, it's because the above
+        # 'if' statement was not triggered (but should have been :)
+        single_mh.add_sequence(kmer)
+        assert len(single_mh) == 1
+        assert hashval == list(single_mh.hashes)[0]
+
+    assert found_bad_kmer, "there is one bad k-mer in here"
+
+
+def test_protein_kmers():
+    # test seq_to_hashes for protein -> protein
+    mh = MinHash(0, ksize=7, is_protein=True, scaled=1)
+    seq = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
+
+    # first calculate seq to hashes
+    hashes = mh.seq_to_hashes(seq, is_protein=True)
+
+    # then calculate all hashes for the sequence
+    mh.add_protein(seq)
+
+    # identical?
+    assert set(hashes) == set(mh.hashes)
+
+    # k-mer by k-mer?
+    for i in range(0, len(seq) - 7 + 1):
+        # calculate each k-mer
+        kmer = seq[i:i+7]
+
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+        single_mh.add_protein(kmer)
+        assert len(single_mh) == 1
+
+        # also calculate via seq_to_hashes
+        hashvals = mh.seq_to_hashes(kmer, is_protein=True)
+        assert len(hashvals) == 1
+        hashval = hashvals[0]
+
+        # confirm it all matches
+        assert hashval == list(single_mh.hashes)[0]
+        assert hashval == hashes[i]
+
+
+def test_protein_kmers_2():
+    # test kmers_and_hashes for protein -> protein
+    mh = MinHash(0, ksize=7, is_protein=True, scaled=1)
+    seq = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
+
+    # k-mer by k-mer?
+    for kmer, hashval in mh.kmers_and_hashes(seq, is_protein=True):
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+        single_mh.add_protein(kmer)
+        assert len(single_mh) == 1
+
+        # confirm it all matches
+        assert hashval == list(single_mh.hashes)[0]
+
+
+def test_dayhoff_kmers():
+    # test seq_to_hashes for protein -> dayhoff
+    mh = MinHash(0, ksize=7, dayhoff=True, scaled=1)
+    seq = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
+
+    # first calculate seq to hashes
+    hashes = mh.seq_to_hashes(seq, is_protein=True)
+
+    # then calculate all hashes for the sequence
+    mh.add_protein(seq)
+
+    # identical?
+    assert set(hashes) == set(mh.hashes)
+
+    # k-mer by k-mer?
+    for i in range(0, len(seq) - 7 + 1):
+        # calculate each k-mer
+        kmer = seq[i:i+7]
+
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+        single_mh.add_protein(kmer)
+        assert len(single_mh) == 1
+
+        # also calculate via seq_to_hashes
+        hashvals = mh.seq_to_hashes(kmer, is_protein=True)
+        assert len(hashvals) == 1
+        hashval = hashvals[0]
+
+        # confirm it all matches
+        assert hashval == list(single_mh.hashes)[0]
+        assert hashval == hashes[i]
+
+
+def test_dayhoff_kmers_2():
+    # test kmers_and_hashes for protein -> dayhoff
+    mh = MinHash(0, ksize=7, dayhoff=True, scaled=1)
+    seq = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
+
+    # k-mer by k-mer?
+    for kmer, hashval in mh.kmers_and_hashes(seq, is_protein=True):
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+        single_mh.add_protein(kmer)
+        assert len(single_mh) == 1
+
+        # confirm it all matches
+        assert hashval == list(single_mh.hashes)[0]
+
+
+def test_hp_kmers():
+    # test hashes_to_seq for protein -> hp
+    mh = MinHash(0, ksize=7, hp=True, scaled=1)
+    seq = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
+
+    # first calculate seq to hashes
+    hashes = mh.seq_to_hashes(seq, is_protein=True)
+
+    # then calculate all hashes for the sequence
+    mh.add_protein(seq)
+
+    # identical?
+    assert set(hashes) == set(mh.hashes)
+
+    # k-mer by k-mer?
+    for i in range(0, len(seq) - 7 + 1):
+        # calculate each k-mer
+        kmer = seq[i:i+7]
+
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+        single_mh.add_protein(kmer)
+        assert len(single_mh) == 1
+
+        # also calculate via seq_to_hashes
+        hashvals = mh.seq_to_hashes(kmer, is_protein=True)
+        assert len(hashvals) == 1
+        hashval = hashvals[0]
+
+        # confirm it all matches
+        assert hashval == list(single_mh.hashes)[0]
+        assert hashval == hashes[i]
+
+
+def test_hp_kmers_2():
+    # test kmers_and_hashes for protein -> hp
+    mh = MinHash(0, ksize=7, hp=True, scaled=1)
+    seq = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
+
+    # k-mer by k-mer?
+    for kmer, hashval in mh.kmers_and_hashes(seq, is_protein=True):
+        # add to minhash obj
+        single_mh = mh.copy_and_clear()
+        single_mh.add_protein(kmer)
+        assert len(single_mh) == 1
+
+        # confirm it all matches
+        assert hashval == list(single_mh.hashes)[0]
+
+
+def test_translate_protein_hashes():
+    # test seq_to_hashes for dna -> protein
+    mh = MinHash(0, ksize=7, is_protein=True, scaled=1)
+    mh_translate = mh.copy()
+    dna = "atggttaaagtttatgccccggcttccagtgccaatatgagcgtcgggtttgatgtgctcggggcggcggtgacacctgttgatggtgcattgctcggagatgtagtcacggttgaggcggcagagacattcagtctcaacaacctcggacgctttgccgataagctgccgtcagaaccacgggaaaatatcgtttatcagtgctgggagcgtttttgccaggaactgggtaagcaaattccagtggcgatgaccctggaaaagaatatgccgatcggttcgggcttaggctccagtgcctgttcggtggtcgcggcgctgatggcgatgaatgaacactgcggcaagccgcttaatgacactcgtttgctggctttgatgggcgagctggaaggccgtatctccggcagcattcattacgacaacgtggcaccgtgttttctcggtggtatgcagttgatgatcgaagaaaacgacatcatcagccagcaagtgccagggtttgatgagtggctgtgggtgctggcgtatccggggattaaagtctcgacggcagaagccagggctattttaccggcgcagtatcgccgccaggattgcattgcgcacgggcgacatctggcaggcttcattcacgcctgctattcccgtcagcctgagcttgccgcgaagctgatgaaagatgttatcgctgaaccctaccgtgaacggttactgccaggcttccggcaggcgcggcaggcggtcgcggaaatcggcgcggtagcgagcggtatctccggctccggcccgaccttgttcgctctgtgtgacaagccggaaaccgcccagcgcgttgccgactggttgggtaagaactacctgcaaaatcaggaaggttttgttcatatttgccggctggatacggcgggcgcacgagtactggaaaactaa"
+    prot = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
+
+    hashes_translate = mh_translate.seq_to_hashes(dna)
+    hashes_prot = mh_translate.seq_to_hashes(prot, is_protein=True)
+
+    # one is a subset of other, b/c of six frame translation
+    assert set(hashes_prot).issubset(set(hashes_translate))
+    assert not set(hashes_translate).issubset(set(hashes_prot))
+
+
+def test_translate_protein_hashes_2():
+    # test kmers_and_hashes for dna -> protein
+    mh_translate = MinHash(0, ksize=7, is_protein=True, scaled=1)
+
+    dna = "atggttaaagtttatgccccggcttccagtgccaatatgagcgtcgggtttgatgtgctcggggcggcggtgacacctgttgatggtgcattgctcggagatgtagtcacggttgaggcggcagagacattcagtctcaacaacctcggacgctttgccgataagctgccgtcagaaccacgggaaaatatcgtttatcagtgctgggagcgtttttgccaggaactgggtaagcaaattccagtggcgatgaccctggaaaagaatatgccgatcggttcgggcttaggctccagtgcctgttcggtggtcgcggcgctgatggcgatgaatgaacactgcggcaagccgcttaatgacactcgtttgctggctttgatgggcgagctggaaggccgtatctccggcagcattcattacgacaacgtggcaccgtgttttctcggtggtatgcagttgatgatcgaagaaaacgacatcatcagccagcaagtgccagggtttgatgagtggctgtgggtgctggcgtatccggggattaaagtctcgacggcagaagccagggctattttaccggcgcagtatcgccgccaggattgcattgcgcacgggcgacatctggcaggcttcattcacgcctgctattcccgtcagcctgagcttgccgcgaagctgatgaaagatgttatcgctgaaccctaccgtgaacggttactgccaggcttccggcaggcgcggcaggcggtcgcggaaatcggcgcggtagcgagcggtatctccggctccggcccgaccttgttcgctctgtgtgacaagccggaaaccgcccagcgcgttgccgactggttgggtaagaactacctgcaaaatcaggaaggttttgttcatatttgccggctggatacggcgggcgcacgagtactggaaaactaa".upper()
+
+    # does everything match? check!
+    k_and_h = list(mh_translate.kmers_and_hashes(dna))
+    for idx, kmer in enumerate(_kmers_from_all_coding_frames(dna, 21)):
+        k, h = k_and_h[idx]
+
+        assert kmer == k
+        assert _hash_fwd_only(mh_translate, kmer) == h
+
+
+def test_translate_hp_hashes():
+    # test seq_to_hashes for dna -> protein -> hp
+    mh = MinHash(0, ksize=7, hp=True, scaled=1)
+    mh_translate = mh.copy()
+    dna = "atggttaaagtttatgccccggcttccagtgccaatatgagcgtcgggtttgatgtgctcggggcggcggtgacacctgttgatggtgcattgctcggagatgtagtcacggttgaggcggcagagacattcagtctcaacaacctcggacgctttgccgataagctgccgtcagaaccacgggaaaatatcgtttatcagtgctgggagcgtttttgccaggaactgggtaagcaaattccagtggcgatgaccctggaaaagaatatgccgatcggttcgggcttaggctccagtgcctgttcggtggtcgcggcgctgatggcgatgaatgaacactgcggcaagccgcttaatgacactcgtttgctggctttgatgggcgagctggaaggccgtatctccggcagcattcattacgacaacgtggcaccgtgttttctcggtggtatgcagttgatgatcgaagaaaacgacatcatcagccagcaagtgccagggtttgatgagtggctgtgggtgctggcgtatccggggattaaagtctcgacggcagaagccagggctattttaccggcgcagtatcgccgccaggattgcattgcgcacgggcgacatctggcaggcttcattcacgcctgctattcccgtcagcctgagcttgccgcgaagctgatgaaagatgttatcgctgaaccctaccgtgaacggttactgccaggcttccggcaggcgcggcaggcggtcgcggaaatcggcgcggtagcgagcggtatctccggctccggcccgaccttgttcgctctgtgtgacaagccggaaaccgcccagcgcgttgccgactggttgggtaagaactacctgcaaaatcaggaaggttttgttcatatttgccggctggatacggcgggcgcacgagtactggaaaactaa"
+    prot = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
+
+    hashes_translate = mh_translate.seq_to_hashes(dna)
+    hashes_prot = mh_translate.seq_to_hashes(prot, is_protein=True)
+
+    # one is a subset of other, b/c of six frame translation
+    assert set(hashes_prot).issubset(set(hashes_translate))
+    assert not set(hashes_translate).issubset(set(hashes_prot))
+
+
+def test_translate_hp_hashes_2():
+    # test kmers_and_hashes for dna -> protein -> hp
+    mh_translate = MinHash(0, ksize=7, hp=True, scaled=1)
+    dna = "atggttaaagtttatgccccggcttccagtgccaatatgagcgtcgggtttgatgtgctcggggcggcggtgacacctgttgatggtgcattgctcggagatgtagtcacggttgaggcggcagagacattcagtctcaacaacctcggacgctttgccgataagctgccgtcagaaccacgggaaaatatcgtttatcagtgctgggagcgtttttgccaggaactgggtaagcaaattccagtggcgatgaccctggaaaagaatatgccgatcggttcgggcttaggctccagtgcctgttcggtggtcgcggcgctgatggcgatgaatgaacactgcggcaagccgcttaatgacactcgtttgctggctttgatgggcgagctggaaggccgtatctccggcagcattcattacgacaacgtggcaccgtgttttctcggtggtatgcagttgatgatcgaagaaaacgacatcatcagccagcaagtgccagggtttgatgagtggctgtgggtgctggcgtatccggggattaaagtctcgacggcagaagccagggctattttaccggcgcagtatcgccgccaggattgcattgcgcacgggcgacatctggcaggcttcattcacgcctgctattcccgtcagcctgagcttgccgcgaagctgatgaaagatgttatcgctgaaccctaccgtgaacggttactgccaggcttccggcaggcgcggcaggcggtcgcggaaatcggcgcggtagcgagcggtatctccggctccggcccgaccttgttcgctctgtgtgacaagccggaaaccgcccagcgcgttgccgactggttgggtaagaactacctgcaaaatcaggaaggttttgttcatatttgccggctggatacggcgggcgcacgagtactggaaaactaa"
+    dna = dna.upper()
+
+    # does everything match? check!
+    k_and_h = list(mh_translate.kmers_and_hashes(dna))
+    for idx, kmer in enumerate(_kmers_from_all_coding_frames(dna, 21)):
+        k, h = k_and_h[idx]
+
+        assert kmer == k
+        assert _hash_fwd_only(mh_translate, kmer) == h
+
+
+def test_translate_dayhoff_hashes():
+    # test seq_to_hashes for dna -> protein -> dayhoff
+    mh = MinHash(0, ksize=7, dayhoff=True, scaled=1)
+    mh_translate = mh.copy()
+    dna = "atggttaaagtttatgccccggcttccagtgccaatatgagcgtcgggtttgatgtgctcggggcggcggtgacacctgttgatggtgcattgctcggagatgtagtcacggttgaggcggcagagacattcagtctcaacaacctcggacgctttgccgataagctgccgtcagaaccacgggaaaatatcgtttatcagtgctgggagcgtttttgccaggaactgggtaagcaaattccagtggcgatgaccctggaaaagaatatgccgatcggttcgggcttaggctccagtgcctgttcggtggtcgcggcgctgatggcgatgaatgaacactgcggcaagccgcttaatgacactcgtttgctggctttgatgggcgagctggaaggccgtatctccggcagcattcattacgacaacgtggcaccgtgttttctcggtggtatgcagttgatgatcgaagaaaacgacatcatcagccagcaagtgccagggtttgatgagtggctgtgggtgctggcgtatccggggattaaagtctcgacggcagaagccagggctattttaccggcgcagtatcgccgccaggattgcattgcgcacgggcgacatctggcaggcttcattcacgcctgctattcccgtcagcctgagcttgccgcgaagctgatgaaagatgttatcgctgaaccctaccgtgaacggttactgccaggcttccggcaggcgcggcaggcggtcgcggaaatcggcgcggtagcgagcggtatctccggctccggcccgaccttgttcgctctgtgtgacaagccggaaaccgcccagcgcgttgccgactggttgggtaagaactacctgcaaaatcaggaaggttttgttcatatttgccggctggatacggcgggcgcacgagtactggaaaactaa"
+    prot = "MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRFADKLPSEPRENIVYQCWERFCQELGKQIPVAMTLEKNMPIGSGLGSSACSVVAALMAMNEHCGKPLNDTRLLALMGELEGRISGSIHYDNVAPCFLGGMQLMIEENDIISQQVPGFDEWLWVLAYPGIKVSTAEARAILPAQYRRQDCIAHGRHLAGFIHACYSRQPELAAKLMKDVIAEPYRERLLPGFRQARQAVAEIGAVASGISGSGPTLFALCDKPETAQRVADWLGKNYLQNQEGFVHICRLDTAGARVLEN*"
+
+    hashes_translate = mh_translate.seq_to_hashes(dna)
+    hashes_prot = mh_translate.seq_to_hashes(prot, is_protein=True)
+
+    # one is a subset of other, b/c of six frame translation
+    assert set(hashes_prot).issubset(set(hashes_translate))
+    assert not set(hashes_translate).issubset(set(hashes_prot))
+
+
+def test_translate_dayhoff_hashes_2():
+    # test kmers_and_hashes for dna -> protein -> dayhoff
+    mh_translate = MinHash(0, ksize=7, dayhoff=True, scaled=1)
+    dna = "atggttaaagtttatgccccggcttccagtgccaatatgagcgtcgggtttgatgtgctcggggcggcggtgacacctgttgatggtgcattgctcggagatgtagtcacggttgaggcggcagagacattcagtctcaacaacctcggacgctttgccgataagctgccgtcagaaccacgggaaaatatcgtttatcagtgctgggagcgtttttgccaggaactgggtaagcaaattccagtggcgatgaccctggaaaagaatatgccgatcggttcgggcttaggctccagtgcctgttcggtggtcgcggcgctgatggcgatgaatgaacactgcggcaagccgcttaatgacactcgtttgctggctttgatgggcgagctggaaggccgtatctccggcagcattcattacgacaacgtggcaccgtgttttctcggtggtatgcagttgatgatcgaagaaaacgacatcatcagccagcaagtgccagggtttgatgagtggctgtgggtgctggcgtatccggggattaaagtctcgacggcagaagccagggctattttaccggcgcagtatcgccgccaggattgcattgcgcacgggcgacatctggcaggcttcattcacgcctgctattcccgtcagcctgagcttgccgcgaagctgatgaaagatgttatcgctgaaccctaccgtgaacggttactgccaggcttccggcaggcgcggcaggcggtcgcggaaatcggcgcggtagcgagcggtatctccggctccggcccgaccttgttcgctctgtgtgacaagccggaaaccgcccagcgcgttgccgactggttgggtaagaactacctgcaaaatcaggaaggttttgttcatatttgccggctggatacggcgggcgcacgagtactggaaaactaa"
+    dna = dna.upper()
+
+    # does everything match? check!
+    k_and_h = list(mh_translate.kmers_and_hashes(dna))
+    for idx, kmer in enumerate(_kmers_from_all_coding_frames(dna, 21)):
+        k, h = k_and_h[idx]
+
+        assert kmer == k
+        assert _hash_fwd_only(mh_translate, kmer) == h
+
+
+def test_containment(track_abundance):
+    "basic containment test. note: containment w/abundance ignores abundance."
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    assert mh1.contained_by(mh2) == 1/4
+    assert mh2.contained_by(mh1) == 1/2
+
+
+def test_sum_abundances(track_abundance):
+    "test sum_abundances"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    if track_abundance:
+        assert mh1.sum_abundances == 6
+        assert mh2.sum_abundances == 6
+    else:
+        assert mh1.sum_abundances == None
+        assert mh2.sum_abundances == None
+
+
+def test_mean_abundance(track_abundance):
+    "test mean_abundance"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    if track_abundance:
+        assert mh1.mean_abundance == 1.5
+        assert mh2.mean_abundance == 3
+    else:
+        assert not mh1.mean_abundance
+        assert not mh2.mean_abundance
+
+
+def test_median_abundance(track_abundance):
+    "test median_abundance"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    if track_abundance:
+        assert mh1.median_abundance == 1.5
+        assert mh2.median_abundance == 3
+    else:
+        assert not mh1.median_abundance
+        assert not mh2.median_abundance
+
+
+def test_std_abundance(track_abundance):
+    "test std_abundance"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    if track_abundance:
+        assert mh1.std_abundance == 0.5
+        assert mh2.std_abundance == 0.0
+    else:
+        assert not mh1.std_abundance
+        assert not mh2.std_abundance
+
+
+def test_unique_dataset_hashes(track_abundance):
+    "test total_hashes approximation"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(4, 21, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+
+    assert mh1.unique_dataset_hashes == 4
+    with pytest.raises(TypeError) as exc:
+        mh2.unique_dataset_hashes
+    assert "can only approximate unique_dataset_hashes for scaled MinHashes" in str(exc)
+
+
+def test_containment_ANI():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+
+    m1_cont_m2 = mh1.containment_ani(mh2, estimate_ci =True)
+    m2_cont_m1 = mh2.containment_ani(mh1, estimate_ci =True)
+    print("\nmh1 contained by mh2", m1_cont_m2)
+    print("mh2 contained by mh1", m2_cont_m1)
+
+    assert (round(m1_cont_m2.ani,3), m1_cont_m2.ani_low, m1_cont_m2.ani_high) == (1.0, 1.0, 1.0)
+    assert (round(m2_cont_m1.ani,3), round(m2_cont_m1.ani_low,3), round(m2_cont_m1.ani_high,3)) == (0.966, 0.965, 0.967)
+
+    m1_mc_m2 = mh1.max_containment_ani(mh2, estimate_ci =True)
+    m2_mc_m1 = mh2.max_containment_ani(mh1, estimate_ci =True)
+    print("mh1 max containment", m1_mc_m2)
+    print("mh2 max containment", m2_mc_m1)
+    m1_mc_m2.size_is_inaccurate = False
+    m2_mc_m1.size_is_inaccurate = False
+    assert m1_mc_m2 == m2_mc_m1
+    assert (round(m1_mc_m2.ani, 3), round(m1_mc_m2.ani_low, 3), round(m1_mc_m2.ani_high, 3)) == (1.0,1.0,1.0)
+
+
+def test_containment_ANI_precalc_containment():
+    f1 = utils.get_test_data('47+63.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+    # precalc containments and assert same results
+    s1c = mh1.contained_by(mh2)
+    s2c = mh2.contained_by(mh1)
+    mc = max(s1c, s2c)
+
+    assert mh1.containment_ani(mh2, estimate_ci=True) ==  mh1.containment_ani(mh2, containment=s1c, estimate_ci=True)
+    assert mh2.containment_ani(mh1) ==  mh2.containment_ani(mh1, containment=s2c)
+    assert mh1.max_containment_ani(mh2) ==  mh2.max_containment_ani(mh1)
+    assert mh1.max_containment_ani(mh2) ==  mh1.max_containment_ani(mh2, max_containment=mc)
+    assert mh1.max_containment_ani(mh2) ==  mh2.max_containment_ani(mh1, max_containment=mc)
+
+
+def test_avg_containment_ani():
+    f1 = utils.get_test_data('47+63.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+    # check average_containment_ani
+    ac_m1 = mh1.avg_containment_ani(mh2)
+    ac_m2 = mh2.avg_containment_ani(mh1)
+    assert ac_m1 == ac_m2 == (mh1.containment_ani(mh2).ani + mh2.containment_ani(mh1).ani)/2 
+
+
+def test_containment_ANI_downsample():
+    f2 = utils.get_test_data('2+63.fa.sig')
+    f3 = utils.get_test_data('47+63.fa.sig')
+    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+    mh3 = sourmash.load_one_signature(f3, ksize=31).minhash
+    # check that downsampling works properly
+    print(mh2.scaled)
+    mh2 = mh2.downsample(scaled=1100)
+    assert mh2.scaled != mh3.scaled
+    ds_s3c = mh2.containment_ani(mh3, downsample=True)
+    ds_s4c = mh3.containment_ani(mh2, downsample=True)
+    mc_w_ds_1 =  mh2.max_containment_ani(mh3, downsample=True)
+    mc_w_ds_2 =  mh3.max_containment_ani(mh2, downsample=True)
+    print(ds_s3c)
+    with pytest.raises(ValueError) as e:
+        mh2.containment_ani(mh3)
+        assert "ValueError: mismatch in scaled; comparison fail" in e
+
+    with pytest.raises(ValueError) as e:
+        mh2.max_containment_ani(mh3)
+        assert "ValueError: mismatch in scaled; comparison fail" in e
+
+    mh3 = mh3.downsample(scaled=1100)
+    assert mh2.scaled == mh3.scaled
+    ds_s3c_manual = mh2.containment_ani(mh3)
+    ds_s4c_manual = mh3.containment_ani(mh2)
+    ds_mc_manual =  mh2.max_containment_ani(mh3)
+    assert ds_s3c == ds_s3c_manual
+    assert ds_s4c == ds_s4c_manual
+    assert mc_w_ds_1 == mc_w_ds_2 == ds_mc_manual
+
+    ac_m2 = mh2.avg_containment_ani(mh3)
+    ac_m3 = mh3.avg_containment_ani(mh2)
+    assert ac_m2 == ac_m3 == (ds_s3c.ani + ds_s4c.ani)/2
+
+
+def test_jaccard_ANI():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2).minhash
+
+    print("\nJACCARD_ANI", mh1.jaccard_ani(mh2))
+
+    m1_jani_m2 = mh1.jaccard_ani(mh2)
+    m2_jani_m1 = mh2.jaccard_ani(mh1)
+
+    assert m1_jani_m2 == m2_jani_m1
+    assert (m1_jani_m2.ani, m1_jani_m2.p_nothing_in_common, m1_jani_m2.jaccard_error) == (0.9783711630110239, 0.0, 3.891666770716877e-07)
+
+
+def test_jaccard_ANI_untrustworthy():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2).minhash
+
+    print("\nJACCARD_ANI", mh1.jaccard_ani(mh2))
+
+    m1_jani_m2 = mh1.jaccard_ani(mh2, err_threshold=1e-7)
+
+    # since size is inaccurate on 2.fa.sig, need to override to be able to get ani
+    m1_jani_m2.size_is_inaccurate = False
+
+    assert m1_jani_m2.ani == None
+    assert m1_jani_m2.je_exceeds_threshold==True
+    assert m1_jani_m2.je_threshold == 1e-7
+
+
+def test_jaccard_ANI_precalc_jaccard():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2).minhash
+    # precalc jaccard and assert same result
+    jaccard = mh1.jaccard(mh2)
+    print("\nJACCARD_ANI", mh1.jaccard_ani(mh2,jaccard=jaccard))
+
+    assert mh1.jaccard_ani(mh2) == mh1.jaccard_ani(mh2, jaccard=jaccard) == mh2.jaccard_ani(mh1, jaccard=jaccard)
+    wrong_jaccard = jaccard - 0.1
+    assert mh1.jaccard_ani(mh2) != mh1.jaccard_ani(mh2, jaccard=wrong_jaccard)
+
+
+def test_jaccard_ANI_downsample():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2).minhash
+
+    print(mh1.scaled)
+    mh1 = mh1.downsample(scaled=2000)
+    assert mh1.scaled != mh2.scaled
+    with pytest.raises(ValueError) as e:
+        mh1.jaccard_ani(mh2)
+        assert "ValueError: mismatch in scaled; comparison fail" in e
+
+    ds_s1c = mh1.jaccard_ani(mh2, downsample=True)
+    ds_s2c = mh2.jaccard_ani(mh1, downsample=True)
+
+    mh2 = mh2.downsample(scaled=2000)
+    assert mh1.scaled == mh2.scaled
+    ds_j_manual = mh1.jaccard_ani(mh2)
+    assert ds_s1c == ds_s2c == ds_j_manual
+
+def test_containment_ani_ci_tiny_testdata():
+    """
+    tiny test data to trigger the following:
+    WARNING: Cannot estimate ANI confidence intervals from containment. Do your sketches contain enough hashes?
+    Error: varN <0.0!
+    """
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 3, 4))
+    mh2.add_many((1, 2, 3, 4))
+
+    m2_cani_m1 = mh2.containment_ani(mh1, estimate_ci=True)
+    print(m2_cani_m1)
+    assert m2_cani_m1.ani == None
+    m2_cani_m1.size_is_inaccurate = False
+    assert m2_cani_m1.ani == 0.986394259982259
+    assert m2_cani_m1.ani_low == None
+    assert m2_cani_m1.ani_high == None
+
+
+def test_ANI_num_fail():
+    f1 = utils.get_test_data('num/47.fa.sig')
+    f2 = utils.get_test_data('num/63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+
+    with pytest.raises(TypeError) as exc:
+        mh1.containment_ani(mh2)
+    print(str(exc))
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+    with pytest.raises(TypeError) as exc:
+        mh2.containment_ani(mh1, estimate_ci =True)
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+    with pytest.raises(TypeError) as exc:
+        mh1.max_containment_ani(mh2)
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+    with pytest.raises(TypeError) as exc:
+        mh1.avg_containment_ani(mh2)
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+    with pytest.raises(TypeError) as exc:
+        mh1.jaccard_ani(mh2)
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+
+
+def test_minhash_set_size_estimate_is_accurate():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2).minhash
+    mh1_ds = mh1.downsample(scaled=10000)
+    # check accuracy using default thresholds (rel_err= 0.2, confidence=0.95)
+    assert mh1.size_is_accurate() == True
+    assert mh1_ds.size_is_accurate() == False
+    assert mh2.size_is_accurate() == True
+
+    # change rel err
+    assert mh1.size_is_accurate(relative_error=0.5) == True
+    assert mh2.size_is_accurate(relative_error=0.0001) == False
+
+    # change prob
+    assert mh1.size_is_accurate(confidence=0.5) == True
+    assert mh1.size_is_accurate(confidence=1) == False
+
+    # check that relative error and confidence must be between 0 and 1
+    with pytest.raises(ValueError) as exc:
+        mh2.size_is_accurate(relative_error=-1)
+    assert "Error: relative error and confidence values must be between 0 and 1." in str(exc)
+
+    with pytest.raises(ValueError) as exc:
+        mh2.size_is_accurate(confidence=-1)
+    assert "Error: relative error and confidence values must be between 0 and 1." in str(exc)
+
+    with pytest.raises(ValueError) as exc:
+        mh2.size_is_accurate(relative_error=-1, confidence=-1)
+    assert "Error: relative error and confidence values must be between 0 and 1." in str(exc)
+
+
+def test_minhash_ani_inaccurate_size_est():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2).minhash
+    # downsample
+    mh1_ds = mh1.downsample(scaled=10000)
+    mh2_ds = mh2.downsample(scaled=10000)
+
+    assert mh1.size_is_accurate(relative_error=0.05, confidence=0.95) == False
+    assert mh1.size_is_accurate() == True
+    assert mh1_ds.size_is_accurate() == False
+    assert mh2.size_is_accurate() == True
+
+    assert round(mh1.jaccard_ani(mh2).ani, 3) == 0.978
+
+    m2_ca_m1 = mh2.containment_ani(mh1)
+    assert round(m2_ca_m1.ani, 3) == 0.966
+    assert m2_ca_m1.size_is_inaccurate == False
+
+    m1_ca_m2_ds = mh1_ds.containment_ani(mh2_ds)
+    print(m1_ca_m2_ds)
+    assert m1_ca_m2_ds.ani == None #0.987
+    assert m1_ca_m2_ds.size_is_inaccurate == True
+
+
+def test_size_num_fail():
+    f1 = utils.get_test_data('num/47.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+
+    with pytest.raises(TypeError) as exc:
+        mh1.size_is_accurate()
+    print(str(exc))
+    assert "Error: can only estimate dataset size for scaled MinHashes" in str(exc)

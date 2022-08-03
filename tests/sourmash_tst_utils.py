@@ -159,6 +159,12 @@ class TempDirectory(object):
             return False
 
 
+class SourmashCommandFailed(Exception):
+    def __init__(self, msg):
+        Exception.__init__(self, msg)
+        self.message = msg 
+
+
 class RunnerContext(object):
     """
     I am a RunnerContext object from sourmash_tst_utils.
@@ -186,7 +192,7 @@ class RunnerContext(object):
         self.last_result = runscript('sourmash', args, **kwargs)
 
         if self.last_result.status:
-            raise ValueError(self)
+            raise SourmashCommandFailed(self.last_result.err)
 
         return self.last_result
     sourmash = run_sourmash

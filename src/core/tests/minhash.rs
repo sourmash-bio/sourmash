@@ -2,14 +2,16 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
-use sourmash::encodings::HashFunctions;
-use sourmash::signature::{Signature, SigsTrait};
-use sourmash::sketch::minhash::{max_hash_for_scaled, KmerMinHash, KmerMinHashBTree};
-use sourmash::sketch::Sketch;
-
 use proptest::collection::vec;
 use proptest::num::u64;
 use proptest::proptest;
+use sourmash::encodings::HashFunctions;
+use sourmash::signature::SeqToHashes;
+use sourmash::signature::{Signature, SigsTrait};
+use sourmash::sketch::minhash::{
+    max_hash_for_scaled, scaled_for_max_hash, KmerMinHash, KmerMinHashBTree,
+};
+use sourmash::sketch::Sketch;
 
 // TODO: use f64::EPSILON when we bump MSRV
 const EPSILON: f64 = 0.01;
@@ -251,7 +253,8 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
     assert_eq!(c.count_common(&a, true).unwrap(), d.count_common(&b, true).unwrap());
 
     let mut e = a.downsample_max_hash(100).unwrap();
-    let mut f = b.downsample_max_hash(100).unwrap();
+    let scaled = scaled_for_max_hash(100);
+    let mut f = b.downsample_scaled(scaled).unwrap();
 
     // Can't compare different scaled without explicit downsample
     assert!(c.similarity(&e, false, false).is_err());
@@ -327,7 +330,8 @@ fn prop_merge(seq1 in "[ACGT]{6,100}", seq2 in "[ACGT]{6,200}") {
     assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
 
     let mut e = a.downsample_max_hash(100).unwrap();
-    let mut f = b.downsample_max_hash(100).unwrap();
+    let scaled = scaled_for_max_hash(100);
+    let mut f = b.downsample_scaled(scaled).unwrap();
 
     assert!((e.similarity(&c, false, true).unwrap() - f.similarity(&d, false, true).unwrap()).abs() < EPSILON);
     assert!((e.similarity(&c, true, true).unwrap() - f.similarity(&d, true, true).unwrap()).abs() < EPSILON);
@@ -709,4 +713,53 @@ fn load_save_minhash_dna(seq in "ACGTN{0,1000}") {
     assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < EPSILON);
     assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
 }
+}
+
+proptest! {
+#[test]
+fn seq_to_hashes(seq in "ACGTGTAGCTAGACACTGACTGACTGAC") {
+
+    let scaled = 1;
+    let mut mh = KmerMinHash::new(scaled, 21, HashFunctions::murmur64_DNA, 42, true, 0);
+    mh.add_sequence(seq.as_bytes(), false)?; // .unwrap();
+
+    let mut hashes: Vec<u64> = Vec::new();
+
+    for hash_value in SeqToHashes::new(seq.as_bytes(), mh.ksize(), false, false, mh.hash_function(), mh.seed()){
+        match hash_value{
+            Ok(0) => continue,
+            Ok(x) => hashes.push(x),
+            Err(_) => (),
+        }
+    }
+
+    mh.mins().sort_unstable();
+    hashes.sort_unstable();
+    assert_eq!(mh.mins(), hashes);
+
+}
+
+#[test]
+fn seq_to_hashes_2(seq in "QRMTHINK") {
+
+    let scaled = 1;
+    let mut mh = KmerMinHash::new(scaled, 3, HashFunctions::murmur64_protein, 42, true, 0);
+    mh.add_protein(seq.as_bytes())?; // .unwrap();
+
+    let mut hashes: Vec<u64> = Vec::new();
+
+    for hash_value in SeqToHashes::new(seq.as_bytes(), mh.ksize(), false, true, mh.hash_function(), mh.seed()){
+        match hash_value{
+            Ok(0) => continue,
+            Ok(x) => hashes.push(x),
+            Err(_) => (),
+        }
+    }
+
+    mh.mins().sort_unstable();
+    hashes.sort_unstable();
+    assert_eq!(mh.mins(), hashes);
+
+}
+
 }

@@ -1,8 +1,6 @@
 """subtract one or more signatures"""
 
-import sys
-
-from sourmash.cli.utils import add_moltype_args, add_ksize_arg
+from sourmash.cli.utils import (add_moltype_args, add_ksize_arg)
 
 
 def subparser(subparsers):
@@ -20,6 +18,10 @@ def subparser(subparsers):
     subparser.add_argument(
         '--flatten', action='store_true',
         help='remove abundance from signatures before subtracting'
+    )
+    subparser.add_argument(
+        '-A', '--abundances-from', metavar='FILE',
+        help='intersect with & take abundances from this signature'
     )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)

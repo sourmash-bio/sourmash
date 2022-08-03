@@ -113,7 +113,7 @@ def classify(args):
 
     # set up output
     csvfp = csv.writer(sys.stdout)
-    notify("outputting classifications to {}", args.output)
+    notify(f"outputting classifications to {args.output}")
     with sourmash_args.FileOutputCSV(args.output) as outfp:
         csvfp = csv.writer(outfp)
 
@@ -128,8 +128,7 @@ def classify(args):
             for query_sig in load_file_as_signatures(query_filename,
                                                      ksize=ksize):
                 notify(u'\r\033[K', end=u'')
-                notify('... classifying {} (file {} of {})', query_sig,
-                       n, total_n, end='\r')
+                notify(f'... classifying {query_sig} (file {n} of {total_n})', end='\r')
                 debug('classifying', query_sig)
                 total_count += 1
 
@@ -154,7 +153,7 @@ def classify(args):
                 csvfp.writerow(row)
 
         notify(u'\r\033[K', end=u'')
-        notify('classified {} signatures total', total_count)
+        notify(f'classified {total_count} signatures total')
 
 
 if __name__ == '__main__':

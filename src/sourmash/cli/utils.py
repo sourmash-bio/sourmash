@@ -1,6 +1,8 @@
 from glob import glob
 import os
 import argparse
+from sourmash.logging import notify
+from sourmash.sourmash_args import check_scaled_bounds, check_num_bounds
 
 
 def add_moltype_args(parser):
@@ -15,20 +17,20 @@ def add_moltype_args(parser):
 
     parser.add_argument(
         '--dayhoff', dest='dayhoff', action='store_true',
-        help='build Dayhoff-encoded amino acid signatures'
+        help='choose Dayhoff-encoded amino acid signatures'
     )
     parser.add_argument(
         '--no-dayhoff', dest='dayhoff', action='store_false',
-        help='do not build Dayhoff-encoded amino acid signatures')
+        help='do not choose Dayhoff-encoded amino acid signatures')
     parser.set_defaults(dayhoff=False)
 
     parser.add_argument(
         '--hp', '--hydrophobic-polar', dest='hp', action='store_true',
-        help='build hydrophobic-polar-encoded amino acid signatures'
+        help='choose hydrophobic-polar-encoded amino acid signatures'
     )
     parser.add_argument(
         '--no-hp', '--no-hydrophobic-polar', dest='hp', action='store_false',
-        help='do not build hydrophobic-polar-encoded amino acid signatures')
+        help='do not choose hydrophobic-polar-encoded amino acid signatures')
     parser.set_defaults(hp=False)
 
     parser.add_argument(
@@ -65,10 +67,14 @@ def range_limited_float_type(arg):
     return f
 
 
-def add_tax_threshold_arg(parser, default=0.1):
+def add_tax_threshold_arg(parser, containment_default=0.1, ani_default=None):
     parser.add_argument(
-        '--containment-threshold', default=default, type=range_limited_float_type,
-        help=f'minimum containment threshold for classification; default={default}'
+        '--containment-threshold', default=containment_default, type=range_limited_float_type,
+        help=f'minimum containment threshold for classification; default={containment_default}',
+    )
+    parser.add_argument(
+        '--ani-threshold', '--aai-threshold', default=ani_default, type=range_limited_float_type,
+        help=f'minimum ANI threshold (nucleotide gather) or AAI threshold (protein gather) for classification; default={ani_default}',
     )
 
 
@@ -83,6 +89,19 @@ def add_picklist_args(parser):
     )
 
 
+def add_pattern_args(parser):
+    parser.add_argument(
+        '--include-db-pattern',
+        default=None,
+        help='search only signatures that match this pattern in name, filename, or md5'
+    )
+    parser.add_argument(
+        '--exclude-db-pattern',
+        default=None,
+        help='search only signatures that do not match this pattern in name, filename, or md5'
+    )
+
+
 def opfilter(path):
     return not path.startswith('__') and path not in ['utils']
 
@@ -93,3 +112,17 @@ def command_list(dirpath):
     basenames = [os.path.splitext(path)[0] for path in filenames if not path.startswith('__')]
     basenames = filter(opfilter, basenames)
     return sorted(basenames)
+
+
+def add_scaled_arg(parser, default=None):
+    parser.add_argument(
+        '--scaled', metavar='FLOAT', type=check_scaled_bounds,
+        help='scaled value should be between 100 and 1e6'
+    )
+
+
+def add_num_arg(parser, default=0):
+    parser.add_argument(
+        '-n', '--num-hashes', '--num', metavar='N', type=check_num_bounds, default=default,
+        help='num value should be between 50 and 50000'
+    )
