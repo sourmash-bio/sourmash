@@ -33,7 +33,7 @@ will extract the same signature, which has an accession number of
 
 As of sourmash 4.2.0, `extract` also supports picklists, a feature by
 which you can select signatures based on values in a CSV file. See
-[Using picklists to subset large collections of signatures](#using-picklists-to-subset-large-collections-of-signatures), below.
+[the command line docs](https://sourmash.readthedocs.io/en/latest/command-line.html) for more information.
 
 """
 

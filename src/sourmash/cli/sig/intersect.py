@@ -1,4 +1,4 @@
-"""intersect one or more signatures"""
+"""intersect two or more signatures"""
 
 usage="""
 
@@ -17,9 +17,6 @@ will output the intersection of all the hashes in those three files to
 The `intersect` command flattens all signatures, i.e. the abundances
 in any signatures will be ignored and the output signature will have
 `track_abundance` turned off.
-
-Note: `intersect` only creates one output file, with one signature in it,
-in the JSON `.sig` format.
 
 """
 
