@@ -613,3 +613,36 @@ def test_jaccard_ANI_downsample():
     assert ss1.minhash.scaled == ss2.minhash.scaled
     ds_j_manual = ss1.jaccard_ani(ss2)
     assert ds_s1c == ds_s2c == ds_j_manual
+
+
+def test_frozen_signature_update_1(track_abundance):
+    # setting .name should fail on a FrozenSourmashSignature
+    e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add_kmer("AT" * 10)
+    ss = SourmashSignature(e, name='foo').to_frozen()
+
+    with pytest.raises(ValueError):
+        ss.name = 'foo2'
+
+
+def test_frozen_signature_update_2(track_abundance):
+    # setting .minhash should fail on a FrozenSourmashSignature
+    e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add_kmer("AT" * 10)
+    e2 = e.copy_and_clear()
+    ss = SourmashSignature(e, name='foo').to_frozen()
+
+    with pytest.raises(ValueError):
+        ss.minhash = e2
+
+
+def test_frozen_signature_update_3(track_abundance):
+    # setting .name should fail on a FrozenSourmashSignature
+    e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add_kmer("AT" * 10)
+    ss = SourmashSignature(e, name='foo').to_frozen()
+
+    with ss.update() as ss2:
+        ss2.name = 'foo2'
+
+    assert ss2.name == 'foo2'

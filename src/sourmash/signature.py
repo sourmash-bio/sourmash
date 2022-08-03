@@ -286,7 +286,13 @@ class FrozenSourmashSignature(SourmashSignature):
         return self
 
     def to_mutable(self):
-        "Return a mutable copy of this signature."
+        """Turn this object into a mutable object, without copying
+        or altering MinHash.
+
+        This is dangerous and should only be used in instances where
+        (1) we're getting rid of the object soon after,
+        (2) it is critical for speed reasons.
+        """
         mut = SourmashSignature.__new__(SourmashSignature)
         state_tup = self.__getstate__()
         mut.__setstate__(state_tup)
@@ -298,8 +304,18 @@ class FrozenSourmashSignature(SourmashSignature):
 
     @contextlib.contextmanager
     def update(self):
-        "Briefly make this a mutable SourmashSignature, then freeze it."
-        # @CTB do we want to make a new copy here??
+        """Make a mutable copy of this signature for modification, then freeze.
+
+        This is a context manager version of:
+
+        new_sig = this_sig.copy()
+        new_sig.into_mutable()
+        # modify new_sig
+        new_sig.into_frozen()
+
+        This could be made more efficient by _not_ copying the signature,
+        but that is non-intuitive and leads to hard-to-find bugs.
+        """
         new_copy = self.to_mutable()
         yield new_copy
         new_copy.into_frozen()

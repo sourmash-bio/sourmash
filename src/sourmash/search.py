@@ -682,6 +682,9 @@ class GatherDatabases:
             query_mh = ident_mh.to_mutable()
 
         orig_query_mh = query_mh.flatten()
+
+        # NOTE: here we immediately replace query.minhash after making 'query'
+        # mutable, to 'orig_query.minhash' doesn't get changed.
         query = query.to_mutable()
         query.minhash = orig_query_mh
 
