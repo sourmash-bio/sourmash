@@ -637,7 +637,7 @@ def test_frozen_signature_update_2(track_abundance):
 
 
 def test_frozen_signature_update_3(track_abundance):
-    # setting .name should fail on a FrozenSourmashSignature
+    # setting .minhash should fail on a FrozenSourmashSignature
     e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add_kmer("AT" * 10)
     ss = SourmashSignature(e, name='foo').to_frozen()

@@ -249,6 +249,7 @@ class SourmashSignature(RustObject):
 
     def into_frozen(self):
         "Freeze this signature, preventing attribute changes."
+        assert isinstance(self.minhash, FrozenMinHash)
         self.__class__ = FrozenSourmashSignature
 
 
@@ -287,11 +288,21 @@ class FrozenSourmashSignature(SourmashSignature):
 
     def to_mutable(self):
         """Turn this object into a mutable object, without copying
-        or altering MinHash.
+        or altering the MinHash. Use 'update()' context manager instead
+        where possible.
 
-        This is dangerous and should only be used in instances where
+        Using this can lead to bugs, where you have a FrozenSourmashSignature
+        that gets referenced with a new name, and then the new name is
+        made mutable, which also makes the old named object also mutable.
+        Ick.
+
+        So, this is dangerous and should only be used in instances where
         (1) we're getting rid of the object soon after,
-        (2) it is critical for speed reasons.
+        (2) it is critical for speed reasons b/c you don't want to copy
+        the minhash container.
+
+        Typically in case (2) you should immediately reassign .minhash to
+        avoid bugs.
         """
         mut = SourmashSignature.__new__(SourmashSignature)
         state_tup = self.__getstate__()
@@ -316,9 +327,12 @@ class FrozenSourmashSignature(SourmashSignature):
         This could be made more efficient by _not_ copying the signature,
         but that is non-intuitive and leads to hard-to-find bugs.
         """
-        new_copy = self.to_mutable()
-        yield new_copy
-        new_copy.into_frozen()
+        self.__class__ = SourmashSignature
+        yield self
+        self.__class__ = FrozenSourmashSignature
+        #new_copy = self.to_mutable()
+        #yield new_copy
+        #new_copy.into_frozen()
 
 
 def _detect_input_type(data):

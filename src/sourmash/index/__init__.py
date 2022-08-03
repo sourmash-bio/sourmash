@@ -297,7 +297,7 @@ class Index(ABC):
         """
         # build a flat query that can be modified. NOTE: here we immediately
         # replace the .minhash object so that the original 'query.minhash'
-        # does not get modified.
+        # does not get modified. #@CTB
         prefetch_query = query.to_mutable()
         prefetch_query.minhash = prefetch_query.minhash.flatten()
 
