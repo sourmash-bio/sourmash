@@ -18,28 +18,7 @@ The `intersect` command flattens all signatures, i.e. the abundances
 in any signatures will be ignored and the output signature will have
 `track_abundance` turned off.
 
-"""
-
-usage="""
-
-### `sourmash signature intersect` - intersect two (or more) signatures
-
-Output the intersection of the hash values in multiple signature files.
-
-For example,
-
-
-sourmash signature intersect file1.sig file2.sig file3.sig -o intersect.sig
-
-will output the intersection of all the hashes in those three files to
-`intersect.sig`.
-
-The `intersect` command flattens all signatures, i.e. the abundances
-in any signatures will be ignored and the output signature will have
-`track_abundance` turned off.
-
-Note: `intersect` only creates one output file, with one signature in it,
-in the JSON `.sig` format.
+Note: `intersect` only creates one output file, with one signature in it.
 
 """
 
