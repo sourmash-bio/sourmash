@@ -507,9 +507,9 @@ def search(args):
     if query.minhash.track_abundance:
         if args.ignore_abundance:
             if query.minhash.track_abundance:
-            # abund sketch + ignore abundance => flatten sketch.
-            with query.update() as query:
-                query.minhash = query.minhash.flatten()
+                # abund sketch + ignore abundance => flatten sketch.
+                with query.update() as query:
+                    query.minhash = query.minhash.flatten()
         elif args.containment or args.max_containment:
             # abund sketch + keep abundance => no containment searches
             notify("ERROR: cannot do containment searches on an abund signature; maybe specify --ignore-abundance?")

@@ -452,7 +452,6 @@ def test_api_create_insert_two_then_scale_then_add():
     combined_mins = set(ss.minhash.hashes.keys())
     combined_mins.update(set(ss2.minhash.hashes.keys()))
     assert len(lca_db._hashval_to_idx) == len(combined_mins)
->>>>>>> ecac6eb0ee9dcdb62ee13a4dc55d8332b57c1351
 
 
 def test_api_create_insert_scale_two():

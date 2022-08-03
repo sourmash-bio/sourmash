@@ -654,6 +654,7 @@ def rename(args):
                                                 pattern=pattern_search)
 
     for sigobj, sigloc in loader:
+        sigobj = sigobj.to_mutable()
         sigobj._name = args.name
         save_sigs.add(sigobj)
 
@@ -824,10 +825,9 @@ def flatten(args):
             if args.name not in ss.name:
                 continue        # skip
 
-        for ss in siglist:
-            ss = ss.to_mutable()
-            ss.minhash = ss.minhash.flatten()
-            save_sigs.add(ss)
+        ss = ss.to_mutable()
+        ss.minhash = ss.minhash.flatten()
+        save_sigs.add(ss)
 
     save_sigs.close()
 
@@ -868,7 +868,8 @@ def downsample(args):
                                                 yield_all_files=args.force,
                                                 force=args.force)
     for ss, sigloc in loader:
-        mh = ss.minhash
+        sigobj = ss.to_mutable()
+        mh = sigobj.minhash
 
         if args.scaled:
             # downsample scaled to scaled? straightforward.
@@ -897,37 +898,9 @@ def downsample(args):
                 mh_new = mh.copy()
                 _set_num_scaled(mh_new, args.num_hashes, 0)
 
-        for sigobj in siglist:
-            sigobj = sigobj.to_mutable()
-            mh = sigobj.minhash
 
-            notify('loading and downsampling signature from {}...', sigfile, end='\r')
-            if args.scaled:
-                if mh.scaled:
-                    mh_new = mh.downsample(scaled=args.scaled)
-                else:                         # try to turn a num into a scaled
-                    # first check: can we?
-                    max_hash = _get_max_hash_for_scaled(args.scaled)
-                    mins = mh.hashes
-                    if max(mins) < max_hash:
-                        raise ValueError("this num MinHash does not have enough hashes to convert it into a scaled MinHash.")
-
-                    mh_new = mh.copy()
-                    _set_num_scaled(mh_new, 0, args.scaled)
-            elif args.num:
-                if mh.num:
-                    mh_new = mh.downsample(num=args.num)
-                else:                         # try to turn a scaled into a num
-                    # first check: can we?
-                    if len(mh) < args.num:
-                        raise ValueError("this scaled MinHash has only {} hashes")
-
-                    mh_new = mh.copy()
-                    _set_num_scaled(mh_new, args.num, 0)
-
-            sigobj.minhash = mh_new
-
-            save_sigs.add(sigobj)
+        sigobj.minhash = mh_new
+        save_sigs.add(sigobj)
 
     save_sigs.close()
 

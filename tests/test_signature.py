@@ -516,6 +516,8 @@ def test_containment_ANI_downsample():
     ss3 = sourmash.load_one_signature(f3, ksize=31)
     # check that downsampling works properly
     print(ss2.minhash.scaled)
+
+    ss2 = ss2.to_mutable()
     ss2.minhash = ss2.minhash.downsample(scaled=2000)
     assert ss2.minhash.scaled != ss3.minhash.scaled
     ds_s3c = ss2.containment_ani(ss3, downsample=True)
@@ -531,6 +533,7 @@ def test_containment_ANI_downsample():
         ss2.max_containment_ani(ss3)
         assert "ValueError: mismatch in scaled; comparison fail" in e
 
+    ss3 = ss3.to_mutable()
     ss3.minhash = ss3.minhash.downsample(scaled=2000)
     assert ss2.minhash.scaled == ss3.minhash.scaled
     ds_s3c_manual = ss2.containment_ani(ss3)
@@ -595,6 +598,7 @@ def test_jaccard_ANI_downsample():
     ss2 = sourmash.load_one_signature(f2)
 
     print(ss1.minhash.scaled)
+    ss1 = ss1.to_mutable()
     ss1.minhash = ss1.minhash.downsample(scaled=2000)
     assert ss1.minhash.scaled != ss2.minhash.scaled
     with pytest.raises(ValueError) as e:
@@ -604,6 +608,7 @@ def test_jaccard_ANI_downsample():
     ds_s1c = ss1.jaccard_ani(ss2, downsample=True)
     ds_s2c = ss2.jaccard_ani(ss1, downsample=True)
 
+    ss2 = ss2.to_mutable()
     ss2.minhash = ss2.minhash.downsample(scaled=2000)
     assert ss1.minhash.scaled == ss2.minhash.scaled
     ds_j_manual = ss1.jaccard_ani(ss2)
