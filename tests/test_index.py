@@ -269,6 +269,7 @@ def test_linear_index_search_abund_downsample_query():
     ss63 = sourmash.load_one_signature(sig63)
 
     # forcibly downsample ss47 for the purpose of this test :)
+    ss47 = ss47.to_mutable()
     ss47.minhash = ss63.minhash.downsample(scaled=2000)
     assert ss63.minhash.scaled != ss47.minhash.scaled
 
@@ -291,6 +292,7 @@ def test_linear_index_search_abund_downsample_subj():
     ss63 = sourmash.load_one_signature(sig63)
 
     # forcibly downsample ss63 for the purpose of this test :)
+    ss63 = ss63.to_mutable()
     ss63.minhash = ss63.minhash.downsample(scaled=2000)
     assert ss63.minhash.scaled != ss47.minhash.scaled
 

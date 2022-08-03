@@ -425,7 +425,7 @@ def test_api_create_insert_two_then_scale():
     # & check...
     combined_mins = set(minhash.hashes.keys())
     combined_mins.update(set(minhash2.hashes.keys()))
-    assert len(lca_db.hashval_to_idx) == len(combined_mins)
+    assert len(lca_db._hashval_to_idx) == len(combined_mins)
 
 
 def test_api_create_insert_two_then_scale_then_add():
@@ -445,7 +445,10 @@ def test_api_create_insert_two_then_scale_then_add():
     lca_db.insert(ss2)
 
     # now test -
+    ss = ss.to_mutable()
     ss.minhash = ss.minhash.downsample(scaled=5000)
+
+    ss2 = ss2.to_mutable()
     ss2.minhash = ss2.minhash.downsample(scaled=5000)
 
     # & check...
@@ -475,7 +478,7 @@ def test_api_create_insert_scale_two():
     # & check...
     combined_mins = set(minhash.hashes.keys())
     combined_mins.update(set(minhash2.hashes.keys()))
-    assert len(lca_db.hashval_to_idx) == len(combined_mins)
+    assert len(lca_db._hashval_to_idx) == len(combined_mins)
 
 
 def test_load_single_db():
