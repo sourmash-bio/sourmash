@@ -192,6 +192,7 @@ class MinHash(RustObject):
         self,
         n,
         ksize,
+        *,
         is_protein=False,
         dayhoff=False,
         hp=False,
@@ -319,12 +320,12 @@ class MinHash(RustObject):
         a = MinHash(
             self.num,
             self.ksize,
-            self.is_protein,
-            self.dayhoff,
-            self.hp,
-            self.track_abundance,
-            self.seed,
-            self._max_hash,
+            is_protein=self.is_protein,
+            dayhoff=self.dayhoff,
+            hp=self.hp,
+            track_abundance=self.track_abundance,
+            seed=self.seed,
+            max_hash=self._max_hash,
         )
         return a
 
@@ -653,8 +654,10 @@ class MinHash(RustObject):
 
         # end checks! create new object:
         a = MinHash(
-            num, self.ksize, self.is_protein, self.dayhoff, self.hp,
-            self.track_abundance, self.seed, max_hash
+            num, self.ksize,
+            is_protein=self.is_protein, dayhoff=self.dayhoff, hp=self.hp,
+            track_abundance=self.track_abundance, seed=self.seed,
+            max_hash=max_hash
         )
         # copy over hashes:
         if self.track_abundance:
@@ -669,8 +672,9 @@ class MinHash(RustObject):
         if self.track_abundance:
             # create new object:
             a = MinHash(
-                self.num, self.ksize, self.is_protein, self.dayhoff, self.hp,
-                False, self.seed, self._max_hash
+                self.num, self.ksize,
+                is_protein=self.is_protein, dayhoff=self.dayhoff, hp=self.hp,
+                track_abundance=False, seed=self.seed, max_hash=self._max_hash
             )
             a.add_many(self)
 
