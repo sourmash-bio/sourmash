@@ -39,7 +39,8 @@ similarity   match
 """
 
 from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
-                                add_picklist_args, add_scaled_arg)
+                                add_picklist_args, add_scaled_arg,
+                                add_pattern_args)
 
 
 def subparser(subparsers):
@@ -54,6 +55,10 @@ def subparser(subparsers):
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
+    )
+    subparser.add_argument(
+        '-d', '--debug', action='store_true',
+        help='output debug information'
     )
     subparser.add_argument(
         '--threshold', metavar='T', default=0.08, type=float,
@@ -80,6 +85,10 @@ def subparser(subparsers):
         help='score based on max containment rather than similarity'
     )
     subparser.add_argument(
+        '--estimate-ani-ci', action='store_true',
+        help='for containment searches, also output confidence intervals for ANI estimates'
+    )
+    subparser.add_argument(
         '--ignore-abundance', action='store_true',
         help='do NOT use k-mer abundances if present; note: has no effect if '
         '--containment or --max-containment is specified'
@@ -95,6 +104,7 @@ def subparser(subparsers):
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
+    add_pattern_args(subparser)
     add_scaled_arg(subparser, 0)
 
 

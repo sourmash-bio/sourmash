@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::encodings::{aa_to_dayhoff, aa_to_hp, revcomp, to_aa, HashFunctions, VALID};
-use crate::index::storage::ToWriter;
+use crate::prelude::*;
 use crate::sketch::Sketch;
 use crate::Error;
 use crate::HashIntoType;
@@ -179,6 +179,7 @@ pub struct SeqToHashes {
 
     prot_configured: bool,
     aa_seq: Vec<u8>,
+    translate_iter_step: usize,
 }
 
 impl SeqToHashes {
@@ -198,12 +199,11 @@ impl SeqToHashes {
         }
 
         // By setting _max_index to 0, the iterator will return None and exit
-        let _max_index: usize;
-        if seq.len() >= ksize {
-            _max_index = seq.len() - ksize + 1;
+        let _max_index = if seq.len() >= ksize {
+            seq.len() - ksize + 1
         } else {
-            _max_index = 0;
-        }
+            0
+        };
 
         SeqToHashes {
             // Here we convert the sequence to upper case
@@ -223,17 +223,26 @@ impl SeqToHashes {
             dna_last_position_check: 0,
             prot_configured: false,
             aa_seq: Vec::new(),
+            translate_iter_step: 0,
         }
     }
 }
+
+/*
+Iterator that return a kmer hash for all modes except translate.
+In translate mode:
+    - all the frames are processed at once and converted to hashes.
+    - all the hashes are stored in `hashes_buffer`
+    - after processing all the kmers, `translate_iter_step` is incremented
+      per iteration to iterate over all the indeces of the `hashes_buffer`.
+    - the iterator will die once `translate_iter_step` == length(hashes_buffer)
+More info https://github.com/sourmash-bio/sourmash/pull/1946
+*/
 
 impl Iterator for SeqToHashes {
     type Item = Result<u64, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // TODO: Remove the hashes buffer
-        // Priority for flushing the hashes buffer
-
         if (self.kmer_index < self.max_index) || !self.hashes_buffer.is_empty() {
             // Processing DNA or Translated DNA
             if !self.is_protein {
@@ -291,18 +300,17 @@ impl Iterator for SeqToHashes {
                     let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed);
                     self.kmer_index += 1;
                     Some(Ok(hash))
-                } else if self.hashes_buffer.is_empty() {
+                } else if self.hashes_buffer.is_empty() && self.translate_iter_step == 0 {
                     // Processing protein by translating DNA
-                    // TODO: make it a real iterator not a buffer
+                    // TODO: Implement iterator over frames instead of hashes_buffer.
 
-                    // Three frames
-                    for i in 0..3 {
+                    for frame_number in 0..3 {
                         let substr: Vec<u8> = self
                             .sequence
                             .iter()
                             .cloned()
-                            .skip(i)
-                            .take(self.sequence.len() - i)
+                            .skip(frame_number)
+                            .take(self.sequence.len() - frame_number)
                             .collect();
 
                         let aa = to_aa(
@@ -321,8 +329,8 @@ impl Iterator for SeqToHashes {
                             .dna_rc
                             .iter()
                             .cloned()
-                            .skip(i)
-                            .take(self.dna_rc.len() - i)
+                            .skip(frame_number)
+                            .take(self.dna_rc.len() - frame_number)
                             .collect();
                         let aa_rc = to_aa(
                             &rc_substr,
@@ -336,11 +344,16 @@ impl Iterator for SeqToHashes {
                             self.hashes_buffer.push(hash);
                         });
                     }
-                    self.kmer_index = self.max_index;
-                    Some(Ok(self.hashes_buffer.remove(0)))
+                    Some(Ok(0))
                 } else {
-                    let first_element: u64 = self.hashes_buffer.remove(0);
-                    Some(Ok(first_element))
+                    if self.translate_iter_step == self.hashes_buffer.len() {
+                        self.hashes_buffer.clear();
+                        self.kmer_index = self.max_index;
+                        return Some(Ok(0));
+                    }
+                    let curr_idx = self.translate_iter_step;
+                    self.translate_iter_step += 1;
+                    Some(Ok(self.hashes_buffer[curr_idx]))
                 }
             } else {
                 // Processing protein
@@ -609,9 +622,9 @@ impl Signature {
         if #[cfg(feature = "parallel")] {
             self.signatures
                 .par_iter_mut()
-                .for_each(|sketch| {
-                    sketch.add_sequence(&seq, force).unwrap(); }
-                );
+                .try_for_each(|sketch| {
+                    sketch.add_sequence(seq, force) }
+                )?;
         } else {
             for sketch in self.signatures.iter_mut(){
                 sketch.add_sequence(seq, force)?;
@@ -628,7 +641,7 @@ impl Signature {
             self.signatures
                 .par_iter_mut()
                 .try_for_each(|sketch| {
-                    sketch.add_protein(&seq) }
+                    sketch.add_protein(seq) }
                 )?;
         } else {
             self.signatures

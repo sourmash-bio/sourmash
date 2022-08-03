@@ -161,6 +161,21 @@ def test_contained_requires_scaled_2(track_abundance):
         mh1.max_containment(mh2)
 
 
+def test_contained_requires_scaled_3(track_abundance):
+    # test that avg_containment requires scaled signatures
+    mh1 = MinHash(1, 4, track_abundance=track_abundance)
+    mh2 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_sequence('ATGC')
+    mh2.add_sequence('ATGC')
+
+    with pytest.raises(TypeError):
+        mh2.avg_containment(mh1)
+
+    with pytest.raises(TypeError):
+        mh1.avg_containment(mh2)
+
+
 def test_bytes_dna(track_abundance):
     mh = MinHash(1, 4, track_abundance=track_abundance)
     mh.add_sequence('ATGC')
@@ -200,7 +215,7 @@ def test_seq_to_hashes(track_abundance):
 
 
 def test_seq_to_hashes_protein_1(track_abundance, dayhoff):
-    mh = MinHash(10, 2, True, dayhoff=dayhoff, hp=False, track_abundance=track_abundance)
+    mh = MinHash(10, 2, is_protein=True, dayhoff=dayhoff, hp=False, track_abundance=track_abundance)
     prot_seq = "AGYYG"
 
     mh.add_protein(prot_seq)
@@ -252,7 +267,7 @@ def test_seq_to_hashes_bad_kmers_as_zeroes_2():
 
 
 def test_seq_to_hashes_translated_short():
-    mh = MinHash(0, 2, True, dayhoff=True, hp=False, scaled = 1)
+    mh = MinHash(0, 2, is_protein=True, dayhoff=True, hp=False, scaled = 1)
     hashes = mh.seq_to_hashes("ACTGA")
 
     assert(len(hashes) == 0)
@@ -260,7 +275,7 @@ def test_seq_to_hashes_translated_short():
 
 def test_bytes_protein_dayhoff(track_abundance, dayhoff):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 2, True, dayhoff=dayhoff, hp=False,
+    mh = MinHash(10, 2, is_protein=True, dayhoff=dayhoff, hp=False,
                  track_abundance=track_abundance)
 
     expected_moltype = 'protein'
@@ -277,7 +292,7 @@ def test_bytes_protein_dayhoff(track_abundance, dayhoff):
 
 def test_protein_dayhoff(track_abundance, dayhoff):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 2, True, dayhoff=dayhoff, hp=False, track_abundance=track_abundance)
+    mh = MinHash(10, 2, is_protein=True, dayhoff=dayhoff, hp=False, track_abundance=track_abundance)
     mh.add_protein('AGYYG')
 
     assert len(mh.hashes) == 4
@@ -285,7 +300,7 @@ def test_protein_dayhoff(track_abundance, dayhoff):
 
 def test_bytes_protein_hp(track_abundance, hp):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 2, True, dayhoff=False, hp=hp, track_abundance=track_abundance)
+    mh = MinHash(10, 2, is_protein=True, dayhoff=False, hp=hp, track_abundance=track_abundance)
     expected_moltype = 'protein'
     if hp:
         expected_moltype = 'hp'
@@ -303,7 +318,7 @@ def test_bytes_protein_hp(track_abundance, hp):
 
 def test_protein_hp(track_abundance, hp):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 2, True, dayhoff=False, hp=hp, track_abundance=track_abundance)
+    mh = MinHash(10, 2, is_protein=True, dayhoff=False, hp=hp, track_abundance=track_abundance)
     mh.add_protein('AGYYG')
 
     if hp:
@@ -407,7 +422,7 @@ def test_hp_2(track_abundance):
 
 def test_protein_short(track_abundance):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 9, True, track_abundance=track_abundance)
+    mh = MinHash(10, 9, is_protein=True, track_abundance=track_abundance)
     mh.add_protein('AG')
 
     assert len(mh.hashes) == 0, mh.hashes
@@ -564,6 +579,30 @@ def test_mh_similarity_downsample_angular_value():
     # with ignore_abundance, will be equal to jaccard
     jaccard = a.similarity(b, downsample=True, ignore_abundance=True)
     assert jaccard == 4. / 6.
+
+def test_mh_angular_similarity_fail():
+    # raise TypeError if calling angular_similarity directly and
+    # one or both sketches do not have abundance info
+    a = MinHash(0, 20, scaled=scaled50, track_abundance=True)
+    b = MinHash(0, 20, scaled=scaled50, track_abundance=False)
+    a_values = { 1:5, 3:3, 5:2, 8:2}
+    b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
+
+    a.set_abundances(a_values)
+    b.add_many(b_values.keys())
+
+    # one sketch lacks track_abundance
+    with pytest.raises(TypeError) as exc:
+        a.angular_similarity(b)
+    print(str(exc))
+    assert "Error: Angular (cosine) similarity requires both sketches to track hash abundance." in str(exc)
+    # both sketches lack track abundance
+    a = MinHash(0, 20, scaled=scaled50, track_abundance=False)
+    a.add_many(a_values.keys())
+    with pytest.raises(TypeError) as exc:
+        a.angular_similarity(b)
+    print(str(exc))
+    assert "Error: Angular (cosine) similarity requires both sketches to track hash abundance." in str(exc)
 
 
 def test_mh_similarity_downsample_true(track_abundance):
@@ -778,17 +817,17 @@ def test_mh_count_common(track_abundance):
 
 
 def test_mh_count_common_diff_protein(track_abundance):
-    a = MinHash(20, 5, False, track_abundance=track_abundance)
-    b = MinHash(20, 5, True, track_abundance=track_abundance)
+    a = MinHash(20, 5, is_protein=False, track_abundance=track_abundance)
+    b = MinHash(20, 5, is_protein=True, track_abundance=track_abundance)
 
     with pytest.raises(ValueError):
         a.count_common(b)
 
 
 def test_mh_count_common_diff_maxhash(track_abundance):
-    a = MinHash(0, 5, False, track_abundance=track_abundance,
+    a = MinHash(0, 5, is_protein=False, track_abundance=track_abundance,
                 scaled=_get_scaled_for_max_hash(1))
-    b = MinHash(0, 5, True, track_abundance=track_abundance,
+    b = MinHash(0, 5, is_protein=True, track_abundance=track_abundance,
                 scaled=_get_scaled_for_max_hash(2))
 
     with pytest.raises(ValueError):
@@ -796,8 +835,8 @@ def test_mh_count_common_diff_maxhash(track_abundance):
 
 
 def test_mh_count_common_diff_seed(track_abundance):
-    a = MinHash(20, 5, False, track_abundance=track_abundance, seed=1)
-    b = MinHash(20, 5, True, track_abundance=track_abundance, seed=2)
+    a = MinHash(20, 5, is_protein=False, track_abundance=track_abundance, seed=1)
+    b = MinHash(20, 5, is_protein=True, track_abundance=track_abundance, seed=2)
 
     with pytest.raises(ValueError):
         a.count_common(b)
@@ -1052,8 +1091,8 @@ def test_mh_inplace_concat(track_abundance):
 
 
 def test_mh_merge_diff_protein(track_abundance):
-    a = MinHash(20, 5, False, track_abundance=track_abundance)
-    b = MinHash(20, 5, True, track_abundance=track_abundance)
+    a = MinHash(20, 5, is_protein=False, track_abundance=track_abundance)
+    b = MinHash(20, 5, is_protein=True, track_abundance=track_abundance)
 
     with pytest.raises(ValueError):
         a.merge(b)
@@ -1068,8 +1107,8 @@ def test_mh_merge_diff_ksize(track_abundance):
 
 
 def test_mh_similarity_diff_protein(track_abundance):
-    a = MinHash(20, 5, False, track_abundance=track_abundance)
-    b = MinHash(20, 5, True, track_abundance=track_abundance)
+    a = MinHash(20, 5, is_protein=False, track_abundance=track_abundance)
+    b = MinHash(20, 5, is_protein=True, track_abundance=track_abundance)
 
     with pytest.raises(ValueError):
         a.similarity(b)
@@ -1103,8 +1142,8 @@ def test_mh_compare_diff_max_hash(track_abundance):
 
 
 def test_mh_concat_diff_protein(track_abundance):
-    a = MinHash(20, 5, False, track_abundance=track_abundance)
-    b = MinHash(20, 5, True, track_abundance=track_abundance)
+    a = MinHash(20, 5, is_protein=False, track_abundance=track_abundance)
+    b = MinHash(20, 5, is_protein=True, track_abundance=track_abundance)
 
     with pytest.raises(ValueError):
         a += b
@@ -1172,7 +1211,7 @@ def test_murmur():
 
 
 def test_abundance_simple():
-    a = MinHash(20, 5, False, track_abundance=True)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
 
     a.add_sequence('AAAAA')
     assert list(a.hashes) == [2110480117637990133]
@@ -1184,7 +1223,7 @@ def test_abundance_simple():
 
 
 def test_add_hash_with_abundance():
-    a = MinHash(20, 5, False, track_abundance=True)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
 
     a.add_hash_with_abundance(10, 1)
     assert a.hashes == {10: 1}
@@ -1197,7 +1236,7 @@ def test_add_hash_with_abundance():
 
 
 def test_add_hash_with_abundance_2():
-    a = MinHash(20, 5, False, track_abundance=False)
+    a = MinHash(20, 5, is_protein=False, track_abundance=False)
 
     with pytest.raises(RuntimeError) as e:
         a.add_hash_with_abundance(10, 1)
@@ -1206,7 +1245,7 @@ def test_add_hash_with_abundance_2():
 
 
 def test_clear():
-    a = MinHash(20, 5, False, track_abundance=True)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
 
     a.add_hash(10)
     assert a.hashes == {10: 1}
@@ -1216,7 +1255,7 @@ def test_clear():
 
 
 def test_clear_2():
-    a = MinHash(20, 5, False, track_abundance=False)
+    a = MinHash(20, 5, is_protein=False, track_abundance=False)
 
     a.add_hash(10)
     assert list(a.hashes) == [10]
@@ -1226,8 +1265,8 @@ def test_clear_2():
 
 
 def test_abundance_simple_2():
-    a = MinHash(20, 5, False, track_abundance=True)
-    b = MinHash(20, 5, False, track_abundance=True)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
+    b = MinHash(20, 5, is_protein=False, track_abundance=True)
 
     a.add_sequence('AAAAA')
     assert list(a.hashes) == [2110480117637990133]
@@ -1242,8 +1281,8 @@ def test_abundance_simple_2():
 
 
 def test_abundance_count_common():
-    a = MinHash(20, 5, False, track_abundance=True)
-    b = MinHash(20, 5, False, track_abundance=False)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
+    b = MinHash(20, 5, is_protein=False, track_abundance=False)
 
     a.add_sequence('AAAAA')
     a.add_sequence('AAAAA')
@@ -1312,8 +1351,8 @@ def test_set_abundance_2():
 
 def test_set_abundance_clear():
     # on empty minhash, clear should have no effect
-    a = MinHash(20, 5, False, track_abundance=True)
-    b = MinHash(20, 5, False, track_abundance=True)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
+    b = MinHash(20, 5, is_protein=False, track_abundance=True)
 
     a.set_abundances({1: 3, 2: 4}, clear=True)
     b.set_abundances({1: 3, 2: 4}, clear=False)
@@ -1323,7 +1362,7 @@ def test_set_abundance_clear():
 
 def test_set_abundance_clear_2():
     # default should be clear=True
-    a = MinHash(20, 5, False, track_abundance=True)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
 
     a.add_hash(10)
     assert a.hashes == {10: 1}
@@ -1333,7 +1372,7 @@ def test_set_abundance_clear_2():
 
 
 def test_set_abundance_clear_3():
-    a = MinHash(20, 5, False, track_abundance=True)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
 
     a.add_hash(10)
     assert a.hashes == {10: 1}
@@ -1345,7 +1384,7 @@ def test_set_abundance_clear_3():
 def test_set_abundance_clear_4():
     # setting the abundance of an already set hash should add
     # the abundances together
-    a = MinHash(20, 5, False, track_abundance=True)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
 
     a.set_abundances({20: 2, 10: 1}, clear=False)   # should also sort the hashes
     assert a.hashes == {10: 1, 20: 2}
@@ -1713,7 +1752,7 @@ def test_inflate():
 
 
 def test_inflate_error():
-    # test behavior of inflate function
+    # test behavior of inflate function with 'self' as an abund sketch
     scaled = _get_scaled_for_max_hash(35)
     mh = MinHash(0, 4, track_abundance=True, scaled=scaled)
     mh2 = MinHash(0, 4, track_abundance=True, scaled=scaled)
@@ -1744,6 +1783,39 @@ def test_inflate_error():
         mh = mh.inflate(mh2)
 
     assert "inflate operates on a flat MinHash and takes a MinHash object with track_abundance=True" in str(exc.value)
+
+
+def test_inflate_not_a_subset():
+    # test behavior of inflate function when 'from_mh' is not a subset.
+    scaled = _get_scaled_for_max_hash(35)
+    mh = MinHash(0, 4, track_abundance=False, scaled=scaled)
+    mh2 = MinHash(0, 4, track_abundance=True, scaled=scaled)
+    assert mh._max_hash == 35
+
+    mh.add_hash(10)
+    mh.add_hash(20)
+    mh.add_hash(30)
+
+    assert mh.hashes[10] == 1
+    assert mh.hashes[20] == 1
+    assert mh.hashes[30] == 1
+
+    mh2.add_hash(10)
+    mh2.add_hash(10)
+    mh2.add_hash(10)
+    mh2.add_hash(30)
+    mh2.add_hash(30)
+    mh2.add_hash(30)
+
+    assert mh2.hashes[10] == 3
+    assert 20 not in mh2.hashes
+    assert mh2.hashes[30] == 3
+
+    mh3 = mh.inflate(mh2)
+
+    assert mh3.hashes[10] == 3
+    assert 20 not in mh3.hashes # should intersect, in this case.
+    assert mh3.hashes[30] == 3
 
 
 def test_add_kmer(track_abundance):
@@ -2242,6 +2314,43 @@ def test_max_containment_equal():
     assert mh2.max_containment(mh1) == 1
 
 
+def test_avg_containment():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh2.add_many((1, 5))
+
+    assert mh1.contained_by(mh2) == 1/4
+    assert mh2.contained_by(mh1) == 1/2
+    assert mh1.avg_containment(mh2) == 0.375
+    assert mh2.avg_containment(mh1) == 0.375
+
+
+def test_avg_containment_empty():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+
+    assert mh1.contained_by(mh2) == 0
+    assert mh2.contained_by(mh1) == 0
+    assert mh1.avg_containment(mh2) == 0
+    assert mh2.avg_containment(mh1) == 0
+
+
+def test_avg_containment_equal():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh2.add_many((1, 2, 3, 4))
+
+    assert mh1.contained_by(mh2) == 1
+    assert mh2.contained_by(mh1) == 1
+    assert mh1.avg_containment(mh2) == 1
+    assert mh2.avg_containment(mh1) == 1
+
 def test_frozen_and_mutable_1(track_abundance):
     # mutable minhashes -> mutable minhashes creates new copy
     mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
@@ -2602,3 +2711,379 @@ def test_translate_dayhoff_hashes_2():
 
         assert kmer == k
         assert _hash_fwd_only(mh_translate, kmer) == h
+
+
+def test_containment(track_abundance):
+    "basic containment test. note: containment w/abundance ignores abundance."
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    assert mh1.contained_by(mh2) == 1/4
+    assert mh2.contained_by(mh1) == 1/2
+
+
+def test_sum_abundances(track_abundance):
+    "test sum_abundances"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    if track_abundance:
+        assert mh1.sum_abundances == 6
+        assert mh2.sum_abundances == 6
+    else:
+        assert mh1.sum_abundances == None
+        assert mh2.sum_abundances == None
+
+
+def test_mean_abundance(track_abundance):
+    "test mean_abundance"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    if track_abundance:
+        assert mh1.mean_abundance == 1.5
+        assert mh2.mean_abundance == 3
+    else:
+        assert not mh1.mean_abundance
+        assert not mh2.mean_abundance
+
+
+def test_median_abundance(track_abundance):
+    "test median_abundance"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    if track_abundance:
+        assert mh1.median_abundance == 1.5
+        assert mh2.median_abundance == 3
+    else:
+        assert not mh1.median_abundance
+        assert not mh2.median_abundance
+
+
+def test_std_abundance(track_abundance):
+    "test std_abundance"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    if track_abundance:
+        assert mh1.std_abundance == 0.5
+        assert mh2.std_abundance == 0.0
+    else:
+        assert not mh1.std_abundance
+        assert not mh2.std_abundance
+
+
+def test_unique_dataset_hashes(track_abundance):
+    "test total_hashes approximation"
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(4, 21, track_abundance=track_abundance)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+
+    assert mh1.unique_dataset_hashes == 4
+    with pytest.raises(TypeError) as exc:
+        mh2.unique_dataset_hashes
+    assert "can only approximate unique_dataset_hashes for scaled MinHashes" in str(exc)
+
+
+def test_containment_ANI():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+
+    m1_cont_m2 = mh1.containment_ani(mh2, estimate_ci =True)
+    m2_cont_m1 = mh2.containment_ani(mh1, estimate_ci =True)
+    print("\nmh1 contained by mh2", m1_cont_m2)
+    print("mh2 contained by mh1", m2_cont_m1)
+
+    assert (round(m1_cont_m2.ani,3), m1_cont_m2.ani_low, m1_cont_m2.ani_high) == (1.0, 1.0, 1.0)
+    assert (round(m2_cont_m1.ani,3), round(m2_cont_m1.ani_low,3), round(m2_cont_m1.ani_high,3)) == (0.966, 0.965, 0.967)
+
+    m1_mc_m2 = mh1.max_containment_ani(mh2, estimate_ci =True)
+    m2_mc_m1 = mh2.max_containment_ani(mh1, estimate_ci =True)
+    print("mh1 max containment", m1_mc_m2)
+    print("mh2 max containment", m2_mc_m1)
+    m1_mc_m2.size_is_inaccurate = False
+    m2_mc_m1.size_is_inaccurate = False
+    assert m1_mc_m2 == m2_mc_m1
+    assert (round(m1_mc_m2.ani, 3), round(m1_mc_m2.ani_low, 3), round(m1_mc_m2.ani_high, 3)) == (1.0,1.0,1.0)
+
+
+def test_containment_ANI_precalc_containment():
+    f1 = utils.get_test_data('47+63.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+    # precalc containments and assert same results
+    s1c = mh1.contained_by(mh2)
+    s2c = mh2.contained_by(mh1)
+    mc = max(s1c, s2c)
+
+    assert mh1.containment_ani(mh2, estimate_ci=True) ==  mh1.containment_ani(mh2, containment=s1c, estimate_ci=True)
+    assert mh2.containment_ani(mh1) ==  mh2.containment_ani(mh1, containment=s2c)
+    assert mh1.max_containment_ani(mh2) ==  mh2.max_containment_ani(mh1)
+    assert mh1.max_containment_ani(mh2) ==  mh1.max_containment_ani(mh2, max_containment=mc)
+    assert mh1.max_containment_ani(mh2) ==  mh2.max_containment_ani(mh1, max_containment=mc)
+
+
+def test_avg_containment_ani():
+    f1 = utils.get_test_data('47+63.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+    # check average_containment_ani
+    ac_m1 = mh1.avg_containment_ani(mh2)
+    ac_m2 = mh2.avg_containment_ani(mh1)
+    assert ac_m1 == ac_m2 == (mh1.containment_ani(mh2).ani + mh2.containment_ani(mh1).ani)/2 
+
+
+def test_containment_ANI_downsample():
+    f2 = utils.get_test_data('2+63.fa.sig')
+    f3 = utils.get_test_data('47+63.fa.sig')
+    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+    mh3 = sourmash.load_one_signature(f3, ksize=31).minhash
+    # check that downsampling works properly
+    print(mh2.scaled)
+    mh2 = mh2.downsample(scaled=1100)
+    assert mh2.scaled != mh3.scaled
+    ds_s3c = mh2.containment_ani(mh3, downsample=True)
+    ds_s4c = mh3.containment_ani(mh2, downsample=True)
+    mc_w_ds_1 =  mh2.max_containment_ani(mh3, downsample=True)
+    mc_w_ds_2 =  mh3.max_containment_ani(mh2, downsample=True)
+    print(ds_s3c)
+    with pytest.raises(ValueError) as e:
+        mh2.containment_ani(mh3)
+        assert "ValueError: mismatch in scaled; comparison fail" in e
+
+    with pytest.raises(ValueError) as e:
+        mh2.max_containment_ani(mh3)
+        assert "ValueError: mismatch in scaled; comparison fail" in e
+
+    mh3 = mh3.downsample(scaled=1100)
+    assert mh2.scaled == mh3.scaled
+    ds_s3c_manual = mh2.containment_ani(mh3)
+    ds_s4c_manual = mh3.containment_ani(mh2)
+    ds_mc_manual =  mh2.max_containment_ani(mh3)
+    assert ds_s3c == ds_s3c_manual
+    assert ds_s4c == ds_s4c_manual
+    assert mc_w_ds_1 == mc_w_ds_2 == ds_mc_manual
+
+    ac_m2 = mh2.avg_containment_ani(mh3)
+    ac_m3 = mh3.avg_containment_ani(mh2)
+    assert ac_m2 == ac_m3 == (ds_s3c.ani + ds_s4c.ani)/2
+
+
+def test_jaccard_ANI():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2).minhash
+
+    print("\nJACCARD_ANI", mh1.jaccard_ani(mh2))
+
+    m1_jani_m2 = mh1.jaccard_ani(mh2)
+    m2_jani_m1 = mh2.jaccard_ani(mh1)
+
+    assert m1_jani_m2 == m2_jani_m1
+    assert (m1_jani_m2.ani, m1_jani_m2.p_nothing_in_common, m1_jani_m2.jaccard_error) == (0.9783711630110239, 0.0, 3.891666770716877e-07)
+
+
+def test_jaccard_ANI_untrustworthy():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2).minhash
+
+    print("\nJACCARD_ANI", mh1.jaccard_ani(mh2))
+
+    m1_jani_m2 = mh1.jaccard_ani(mh2, err_threshold=1e-7)
+
+    # since size is inaccurate on 2.fa.sig, need to override to be able to get ani
+    m1_jani_m2.size_is_inaccurate = False
+
+    assert m1_jani_m2.ani == None
+    assert m1_jani_m2.je_exceeds_threshold==True
+    assert m1_jani_m2.je_threshold == 1e-7
+
+
+def test_jaccard_ANI_precalc_jaccard():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2).minhash
+    # precalc jaccard and assert same result
+    jaccard = mh1.jaccard(mh2)
+    print("\nJACCARD_ANI", mh1.jaccard_ani(mh2,jaccard=jaccard))
+
+    assert mh1.jaccard_ani(mh2) == mh1.jaccard_ani(mh2, jaccard=jaccard) == mh2.jaccard_ani(mh1, jaccard=jaccard)
+    wrong_jaccard = jaccard - 0.1
+    assert mh1.jaccard_ani(mh2) != mh1.jaccard_ani(mh2, jaccard=wrong_jaccard)
+
+
+def test_jaccard_ANI_downsample():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2).minhash
+
+    print(mh1.scaled)
+    mh1 = mh1.downsample(scaled=2000)
+    assert mh1.scaled != mh2.scaled
+    with pytest.raises(ValueError) as e:
+        mh1.jaccard_ani(mh2)
+        assert "ValueError: mismatch in scaled; comparison fail" in e
+
+    ds_s1c = mh1.jaccard_ani(mh2, downsample=True)
+    ds_s2c = mh2.jaccard_ani(mh1, downsample=True)
+
+    mh2 = mh2.downsample(scaled=2000)
+    assert mh1.scaled == mh2.scaled
+    ds_j_manual = mh1.jaccard_ani(mh2)
+    assert ds_s1c == ds_s2c == ds_j_manual
+
+def test_containment_ani_ci_tiny_testdata():
+    """
+    tiny test data to trigger the following:
+    WARNING: Cannot estimate ANI confidence intervals from containment. Do your sketches contain enough hashes?
+    Error: varN <0.0!
+    """
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 3, 4))
+    mh2.add_many((1, 2, 3, 4))
+
+    m2_cani_m1 = mh2.containment_ani(mh1, estimate_ci=True)
+    print(m2_cani_m1)
+    assert m2_cani_m1.ani == None
+    m2_cani_m1.size_is_inaccurate = False
+    assert m2_cani_m1.ani == 0.986394259982259
+    assert m2_cani_m1.ani_low == None
+    assert m2_cani_m1.ani_high == None
+
+
+def test_ANI_num_fail():
+    f1 = utils.get_test_data('num/47.fa.sig')
+    f2 = utils.get_test_data('num/63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
+
+    with pytest.raises(TypeError) as exc:
+        mh1.containment_ani(mh2)
+    print(str(exc))
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+    with pytest.raises(TypeError) as exc:
+        mh2.containment_ani(mh1, estimate_ci =True)
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+    with pytest.raises(TypeError) as exc:
+        mh1.max_containment_ani(mh2)
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+    with pytest.raises(TypeError) as exc:
+        mh1.avg_containment_ani(mh2)
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+    with pytest.raises(TypeError) as exc:
+        mh1.jaccard_ani(mh2)
+    assert "Error: can only calculate ANI for scaled MinHashes" in str(exc)
+
+
+def test_minhash_set_size_estimate_is_accurate():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2).minhash
+    mh1_ds = mh1.downsample(scaled=10000)
+    # check accuracy using default thresholds (rel_err= 0.2, confidence=0.95)
+    assert mh1.size_is_accurate() == True
+    assert mh1_ds.size_is_accurate() == False
+    assert mh2.size_is_accurate() == True
+
+    # change rel err
+    assert mh1.size_is_accurate(relative_error=0.5) == True
+    assert mh2.size_is_accurate(relative_error=0.0001) == False
+
+    # change prob
+    assert mh1.size_is_accurate(confidence=0.5) == True
+    assert mh1.size_is_accurate(confidence=1) == False
+
+    # check that relative error and confidence must be between 0 and 1
+    with pytest.raises(ValueError) as exc:
+        mh2.size_is_accurate(relative_error=-1)
+    assert "Error: relative error and confidence values must be between 0 and 1." in str(exc)
+
+    with pytest.raises(ValueError) as exc:
+        mh2.size_is_accurate(confidence=-1)
+    assert "Error: relative error and confidence values must be between 0 and 1." in str(exc)
+
+    with pytest.raises(ValueError) as exc:
+        mh2.size_is_accurate(relative_error=-1, confidence=-1)
+    assert "Error: relative error and confidence values must be between 0 and 1." in str(exc)
+
+
+def test_minhash_ani_inaccurate_size_est():
+    f1 = utils.get_test_data('2.fa.sig')
+    f2 = utils.get_test_data('2+63.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+    mh2 = sourmash.load_one_signature(f2).minhash
+    # downsample
+    mh1_ds = mh1.downsample(scaled=10000)
+    mh2_ds = mh2.downsample(scaled=10000)
+
+    assert mh1.size_is_accurate(relative_error=0.05, confidence=0.95) == False
+    assert mh1.size_is_accurate() == True
+    assert mh1_ds.size_is_accurate() == False
+    assert mh2.size_is_accurate() == True
+
+    assert round(mh1.jaccard_ani(mh2).ani, 3) == 0.978
+
+    m2_ca_m1 = mh2.containment_ani(mh1)
+    assert round(m2_ca_m1.ani, 3) == 0.966
+    assert m2_ca_m1.size_is_inaccurate == False
+
+    m1_ca_m2_ds = mh1_ds.containment_ani(mh2_ds)
+    print(m1_ca_m2_ds)
+    assert m1_ca_m2_ds.ani == None #0.987
+    assert m1_ca_m2_ds.size_is_inaccurate == True
+
+
+def test_size_num_fail():
+    f1 = utils.get_test_data('num/47.fa.sig')
+    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
+
+    with pytest.raises(TypeError) as exc:
+        mh1.size_is_accurate()
+    print(str(exc))
+    assert "Error: can only estimate dataset size for scaled MinHashes" in str(exc)

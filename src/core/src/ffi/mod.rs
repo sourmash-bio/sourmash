@@ -8,9 +8,11 @@ pub mod utils;
 
 pub mod cmd;
 pub mod hyperloglog;
+pub mod index;
 pub mod minhash;
 pub mod nodegraph;
 pub mod signature;
+pub mod storage;
 
 use std::ffi::CStr;
 use std::os::raw::c_char;

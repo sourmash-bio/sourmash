@@ -1,5 +1,39 @@
 """
 Utility functions for sourmash CLI commands.
+
+The sourmash_args submodule contains functions that help with various
+command-line functions. Library functions in this module often directly
+send output to stdout/stderr in support of the CLI, and/or call
+sys.exit to exit.
+
+argparse functionality:
+
+* check_scaled_bounds(args) -- check that --scaled is reasonable
+* check_num_bounds(args) -- check that --num is reasonable
+* get_moltype(args) -- verify that moltype selected is legit
+* calculate_moltype(args) -- confirm that only one moltype was selected
+* load_picklist(args) -- create a SignaturePicklist from --picklist args
+* report_picklist(args, picklist) -- report on picklist value usage/matches
+* load_include_exclude_db_patterns(args) -- load --include-db-pattern / --exclude-db-pattern
+* apply_picklist_and_pattern(db, ...) -- subselect db on picklist and pattern
+
+signature/database loading functionality:
+
+* load_query_signature(filename, ...) -- load a single signature for query
+* traverse_find_sigs(filenames, ...) -- find all .sig and .sig.gz files
+* load_dbs_and_sigs(filenames, query, ...) -- load databases & signatures
+* load_file_as_index(filename, ...) -- load a sourmash.Index class
+* load_file_as_signatures(filename, ...) -- load a list of signatures
+* load_pathlist_from_file(filename) -- load a list of paths from a file
+* load_many_signatures(locations) -- load many signatures from many files
+* get_manifest(idx) -- retrieve or build a manifest from an Index
+* class SignatureLoadingProgress - signature loading progress bar
+
+signature and file output functionality:
+
+* SaveSignaturesToLocation(filename) - bulk signature output
+* class FileOutput - file output context manager that deals w/stdout well
+* class FileOutputCSV - file output context manager for CSV files
 """
 import sys
 import os
@@ -7,6 +41,7 @@ from enum import Enum
 import traceback
 import gzip
 from io import StringIO
+import re
 
 import screed
 import sourmash
@@ -18,6 +53,7 @@ import sourmash.exceptions
 from .logging import notify, error, debug_literal
 
 from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
+from .index.sqlite_index import load_sqlite_index, SqliteIndex
 from . import signature as sigmod
 from .picklist import SignaturePicklist, PickStyle
 from .manifest import CollectionManifest
@@ -91,14 +127,14 @@ def load_picklist(args):
     if args.picklist:
         try:
             picklist = SignaturePicklist.from_picklist_args(args.picklist)
+
+            notify(f"picking column '{picklist.column_name}' of type '{picklist.coltype}' from '{picklist.pickfile}'")
+
+            n_empty_val, dup_vals = picklist.load(picklist.pickfile, picklist.column_name)
         except ValueError as exc:
             error("ERROR: could not load picklist.")
             error(str(exc))
             sys.exit(-1)
-
-        notify(f"picking column '{picklist.column_name}' of type '{picklist.coltype}' from '{picklist.pickfile}'")
-
-        n_empty_val, dup_vals = picklist.load(picklist.pickfile, picklist.column_name)
 
         notify(f"loaded {len(picklist.pickset)} distinct values into picklist.")
         if n_empty_val:
@@ -122,6 +158,46 @@ def report_picklist(args, picklist):
         if args.picklist_require_all:
             error("ERROR: failing because --picklist-require-all was set")
             sys.exit(-1)
+
+
+def load_include_exclude_db_patterns(args):
+    if args.picklist and (args.include_db_pattern or args.exclude_db_pattern):
+        error("ERROR: --picklist and --include-db-pattern/--exclude cannot be used together.")
+        sys.exit(-1)
+
+    if args.include_db_pattern and args.exclude_db_pattern:
+        error("ERROR: --include-db-pattern and --exclude-db-pattern cannot be used together.")
+        sys.exit(-1)
+
+    if args.include_db_pattern:
+        pattern = re.compile(args.include_db_pattern, re.IGNORECASE)
+        search_pattern = lambda vals: any(pattern.search(val) for val in vals)
+    elif args.exclude_db_pattern:
+        pattern = re.compile(args.exclude_db_pattern, re.IGNORECASE)
+        search_pattern = lambda vals: all(not pattern.search(val) for val in vals)
+    else:
+        search_pattern = None
+
+    return search_pattern
+
+
+def apply_picklist_and_pattern(db, picklist, pattern):
+    assert not (picklist and pattern)
+    if picklist:
+        db = db.select(picklist=picklist)
+    elif pattern:
+        manifest = db.manifest
+        if manifest is None:
+            error(f"ERROR on filename '{db.location}'.")
+            error("--include-db-pattern/--exclude-db-pattern require a manifest.")
+            sys.exit(-1)
+
+        manifest = manifest.filter_on_columns(pattern,
+                                              ["name", "filename", "md5"])
+        pattern_picklist = manifest.to_picklist()
+        db = db.select(picklist=pattern_picklist)
+
+    return db
 
 
 def load_query_signature(filename, ksize, select_moltype, select_md5=None):
@@ -205,7 +281,7 @@ def traverse_find_sigs(filenames, yield_all_files=False):
 
 
 def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
-                      cache_size=None, picklist=None):
+                      cache_size=None, picklist=None, pattern=None):
     """
     Load one or more SBTs, LCAs, and/or collections of signatures.
 
@@ -247,8 +323,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
             notify(f"no compatible signatures found in '{filename}'")
             sys.exit(-1)
 
-        if picklist:
-            db = db.select(picklist=picklist)
+        db = apply_picklist_and_pattern(db, picklist, pattern)
 
         databases.append(db)
 
@@ -282,9 +357,18 @@ def _load_stdin(filename, **kwargs):
     "Load collection from .sig file streamed in via stdin"
     db = None
     if filename == '-':
-        db = LinearIndex.load(sys.stdin)
+        # load as LinearIndex, then pass into MultiIndex to generate a
+        # manifest.
+        lidx = LinearIndex.load(sys.stdin, filename='-')
+        db = MultiIndex.load((lidx,), (None,), parent="-")
 
     return db
+
+
+def _load_standalone_manifest(filename, **kwargs):
+    from sourmash.index import StandaloneManifestIndex
+    idx = StandaloneManifestIndex.load(filename)
+    return idx
 
 
 def _multiindex_load_from_pathlist(filename, **kwargs):
@@ -320,19 +404,31 @@ def _load_revindex(filename, **kwargs):
     return db
 
 
+def _load_sqlite_db(filename, **kwargs):
+    return load_sqlite_index(filename)
+
+
 def _load_zipfile(filename, **kwargs):
     "Load collection from a .zip file."
     db = None
     if filename.endswith('.zip'):
         traverse_yield_all = kwargs['traverse_yield_all']
-        db = ZipFileLinearIndex.load(filename,
-                                     traverse_yield_all=traverse_yield_all)
+        try:
+            db = ZipFileLinearIndex.load(filename,
+                                         traverse_yield_all=traverse_yield_all)
+        except FileNotFoundError as exc:
+            # turn this into a ValueError => proper exception handling by
+            # _load_database.
+            raise ValueError(exc)
+
     return db
 
 
 # all loader functions, in order.
 _loader_functions = [
     ("load from stdin", _load_stdin),
+    ("load collection from sqlitedb", _load_sqlite_db),
+    ("load from standalone manifest", _load_standalone_manifest),
     ("load from path (file or directory)", _multiindex_load_from_path),
     ("load from file list", _multiindex_load_from_pathlist),
     ("load SBT", _load_sbt),
@@ -354,7 +450,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     # but nothing else.
     for n, (desc, load_fn) in enumerate(_loader_functions):
         try:
-            debug_literal(f"_load_databases: trying loader fn {n} {desc}")
+            debug_literal(f"_load_databases: trying loader fn {n} '{desc}'")
             db = load_fn(filename,
                          traverse_yield_all=traverse_yield_all,
                          cache_size=cache_size)
@@ -364,6 +460,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
 
         if db is not None:
             loaded = True
+            debug_literal("_load_databases: success!")
             break
 
     # check to see if it's a FASTA/FASTQ record (i.e. screed loadable)
@@ -414,6 +511,7 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
                             picklist=None,
                             yield_all_files=False,
                             progress=None,
+                            pattern=None,
                             _use_manifest=True):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
@@ -430,6 +528,8 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
     yield_all_files=True, will attempt to load all files.
 
     Applies selector function if select_moltype, ksize or picklist are given.
+
+    'pattern' is a function that returns True on matching values.
     """
     if progress:
         progress.notify(filename)
@@ -440,7 +540,11 @@ def load_file_as_signatures(filename, *, select_moltype=None, ksize=None,
     if not _use_manifest and db.manifest:
         db.manifest = None
 
-    db = db.select(moltype=select_moltype, ksize=ksize, picklist=picklist)
+    db = db.select(moltype=select_moltype, ksize=ksize)
+
+    # apply pattern search & picklist
+    db = apply_picklist_and_pattern(db, picklist, pattern)
+
     loader = db.signatures()
 
     if progress is not None:
@@ -469,7 +573,7 @@ def load_pathlist_from_file(filename):
     return file_list
 
 
-class FileOutput(object):
+class FileOutput:
     """A context manager for file outputs that handles sys.stdout gracefully.
 
     Usage:
@@ -505,7 +609,8 @@ class FileOutput(object):
         return self.fp
 
     def close(self):
-        self.fp.close()
+        if self.fp is not None: # in case of stdout
+            self.fp.close()
 
     def __enter__(self):
         return self.open()
@@ -516,6 +621,7 @@ class FileOutput(object):
             self.fp.close()
 
         return False
+
 
 class FileOutputCSV(FileOutput):
     """A context manager for CSV file outputs.
@@ -549,7 +655,7 @@ class FileOutputCSV(FileOutput):
         return self.fp
 
 
-class SignatureLoadingProgress(object):
+class SignatureLoadingProgress:
     """A wrapper for signature loading progress reporting.
 
     Instantiate this class once, and then pass it to load_file_as_signatures
@@ -613,7 +719,8 @@ class SignatureLoadingProgress(object):
 
 
 def load_many_signatures(locations, progress, *, yield_all_files=False,
-                         ksize=None, moltype=None, picklist=None, force=False):
+                         ksize=None, moltype=None, picklist=None, force=False,
+                         pattern=None):
     """
     Load many signatures from multiple files, with progress indicators.
 
@@ -630,9 +737,9 @@ def load_many_signatures(locations, progress, *, yield_all_files=False,
         try:
             # open index,
             idx = load_file_as_index(loc, yield_all_files=yield_all_files)
+            idx = idx.select(ksize=ksize, moltype=moltype)
 
-            # select on parameters as desired,
-            idx = idx.select(ksize=ksize, moltype=moltype, picklist=picklist)
+            idx = apply_picklist_and_pattern(idx, picklist, pattern)
 
             # start up iterator,
             loader = idx.signatures_with_location()
@@ -660,9 +767,63 @@ def load_many_signatures(locations, progress, *, yield_all_files=False,
     notify(f"loaded {len(progress)} signatures total, from {n_files} files")
 
 
+def get_manifest(idx, *, require=True, rebuild=False):
+    """
+    Retrieve a manifest for this idx, loaded with `load_file_as_index`.
+
+    Even if a manifest exists and `rebuild` is True, rebuild the manifest.
+    If a manifest does not exist or `rebuild` is True, try to build one.
+    If a manifest cannot be built and `require` is True, error exit.
+
+    In the case where `require=False` and a manifest cannot be built,
+    may return None. Otherwise always returns a manifest.
+    """
+    from sourmash.index import CollectionManifest
+
+    m = idx.manifest
+
+    # has one, and don't want to rebuild? easy! return!
+    if m is not None and not rebuild:
+        debug_literal("get_manifest: found manifest")
+        return m
+
+    debug_literal(f"get_manifest: no manifest found / rebuild={rebuild}")
+
+    # need to build one...
+    try:
+        notify("Generating a manifest...")
+        m = CollectionManifest.create_manifest(idx._signatures_with_internal(),
+                                               include_signature=False)
+        debug_literal("get_manifest: rebuilt manifest.")
+    except NotImplementedError:
+        if require:
+            error(f"ERROR: manifests cannot be generated for {idx.location}")
+            sys.exit(-1)
+        else:
+            debug_literal("get_manifest: cannot build manifest, not req'd")
+            return None
+
+    return m
+
 #
 # enum and classes for saving signatures progressively
 #
+
+def _get_signatures_from_rust(siglist):
+    for ss in siglist:
+        try:
+            ss.md5sum()
+            yield ss
+        except sourmash.exceptions.Panic:
+            # this deals with a disconnect between the way Rust
+            # and Python handle signatures; Python expects one
+            # minhash (and hence one md5sum) per signature, while
+            # Rust supports multiple. For now, go through serializing
+            # and deserializing the signature! See issue #1167 for more.
+            json_str = sourmash.save_signatures([ss])
+            for ss in sourmash.load_signatures(json_str):
+                yield ss
+
 
 class _BaseSaveSignaturesToLocation:
     "Base signature saving class. Track location (if any) and count."
@@ -743,6 +904,36 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
             sigmod.save_signatures([ss], fp, compression=1)
 
 
+class SaveSignatures_SqliteIndex(_BaseSaveSignaturesToLocation):
+    "Save signatures within a directory, using md5sum names."
+    def __init__(self, location):
+        super().__init__(location)
+        self.location = location
+        self.idx = None
+        self.cursor = None
+
+    def __repr__(self):
+        return f"SaveSignatures_SqliteIndex('{self.location}')"
+
+    def close(self):
+        self.idx.commit()
+        self.cursor.execute('VACUUM')
+        self.idx.close()
+
+    def open(self):
+        self.idx = SqliteIndex.create(self.location, append=True)
+        self.cursor = self.idx.cursor()
+
+    def add(self, add_sig):
+        for ss in _get_signatures_from_rust([add_sig]):
+            super().add(ss)
+            self.idx.insert(ss, cursor=self.cursor, commit=False)
+
+            # commit every 1000 signatures.
+            if self.count % 1000 == 0:
+                self.idx.commit()
+
+
 class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
     "Save signatures to a .sig JSON file."
     def __init__(self, location):
@@ -810,7 +1001,7 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         if os.path.exists(self.location):
             do_create = False
 
-        storage = ZipStorage(self.location)
+        storage = ZipStorage(self.location, mode="w")
         if not storage.subdir:
             storage.subdir = 'signatures'
 
@@ -838,38 +1029,40 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         except KeyError:
             return False
 
-    def add(self, ss):
+    def add(self, add_sig):
         if not self.storage:
             raise ValueError("this output is not open")
 
-        super().add(ss)
+        for ss in _get_signatures_from_rust([add_sig]):
+            buf = sigmod.save_signatures([ss], compression=1)
+            md5 = ss.md5sum()
 
-        buf = sigmod.save_signatures([ss], compression=1)
-        md5 = ss.md5sum()
+            storage = self.storage
+            path = f'{storage.subdir}/{md5}.sig.gz'
+            location = storage.save(path, buf)
 
-        storage = self.storage
-        path = f'{storage.subdir}/{md5}.sig.gz'
-        location = storage.save(path, buf)
-
-        # update manifest
-        row = CollectionManifest.make_manifest_row(ss, location,
-                                                   include_signature=False)
-        self.manifest_rows.append(row)
+            # update manifest
+            row = CollectionManifest.make_manifest_row(ss, location,
+                                                       include_signature=False)
+            self.manifest_rows.append(row)
+            super().add(ss)
 
 
 class SigFileSaveType(Enum):
+    NO_OUTPUT = 0
     SIGFILE = 1
     SIGFILE_GZ = 2
     DIRECTORY = 3
     ZIPFILE = 4
-    NO_OUTPUT = 5
+    SQLITEDB = 5
 
 _save_classes = {
+    SigFileSaveType.NO_OUTPUT: SaveSignatures_NoOutput,
     SigFileSaveType.SIGFILE: SaveSignatures_SigFile,
     SigFileSaveType.SIGFILE_GZ: SaveSignatures_SigFile,
     SigFileSaveType.DIRECTORY: SaveSignatures_Directory,
     SigFileSaveType.ZIPFILE: SaveSignatures_ZipFile,
-    SigFileSaveType.NO_OUTPUT: SaveSignatures_NoOutput
+    SigFileSaveType.SQLITEDB: SaveSignatures_SqliteIndex,
 }
 
 
@@ -886,6 +1079,8 @@ def SaveSignaturesToLocation(filename, *, force_type=None):
             save_type = SigFileSaveType.SIGFILE_GZ
         elif filename.endswith('.zip'):
             save_type = SigFileSaveType.ZIPFILE
+        elif filename.endswith('.sqldb'):
+            save_type = SigFileSaveType.SQLITEDB
         else:
             # default to SIGFILE intentionally!
             save_type = SigFileSaveType.SIGFILE

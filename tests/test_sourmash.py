@@ -12,6 +12,8 @@ import csv
 import pytest
 import sys
 import zipfile
+import random
+from sourmash.search import SearchResult,GatherResult
 
 import sourmash_tst_utils as utils
 
@@ -29,6 +31,18 @@ from sourmash import signature
 from sourmash import VERSION
 from sourmash.sourmash_args import load_pathlist_from_file
 from sourmash_tst_utils import SourmashCommandFailed
+
+
+def test_citation_file():
+    import yaml
+
+    thisdir = os.path.dirname(__file__)
+    citation_file = os.path.join(thisdir, '../CITATION.cff')
+
+    with open(citation_file) as fp:
+        x = yaml.safe_load(fp)
+
+    assert x['title'] == "sourmash: a library for MinHash sketching of DNA", x
 
 
 def test_run_sourmash():
@@ -514,6 +528,46 @@ def test_compare_max_containment(c):
 
 
 @utils.in_tempdir
+def test_compare_avg_containment(c):
+    import numpy
+
+    testdata_glob = utils.get_test_data('scaled/*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    c.run_sourmash('compare', '--avg-containment', '-k', '31',
+                   '--csv', 'output.csv', *testdata_sigs)
+
+    # load the matrix output of compare --containment
+    with open(c.output('output.csv'), 'rt') as fp:
+        r = iter(csv.reader(fp))
+        headers = next(r)
+
+        mat = numpy.zeros((len(headers), len(headers)))
+        for i, row in enumerate(r):
+            for j, val in enumerate(row):
+                mat[i][j] = float(val)
+
+        print(mat)
+
+    # load in all the input signatures
+    idx_to_sig = dict()
+    for idx, filename in enumerate(testdata_sigs):
+        ss = sourmash.load_one_signature(filename, ksize=31)
+        idx_to_sig[idx] = ss
+
+    # check explicit containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            ss_j = idx_to_sig[j]
+            containment = ss_j.avg_containment(ss_i)
+            containment = round(containment, 3)
+            mat_val = round(mat[i][j], 3)
+
+            assert containment == mat_val, (i, j)
+
+
+@utils.in_tempdir
 def test_compare_max_containment_and_containment(c):
     testdata_glob = utils.get_test_data('scaled/*.sig')
     testdata_sigs = glob.glob(testdata_glob)
@@ -524,7 +578,35 @@ def test_compare_max_containment_and_containment(c):
                        '--csv', 'output.csv', *testdata_sigs)
 
     print(c.last_result.err)
-    assert "ERROR: cannot specify both --containment and --max-containment!" in c.last_result.err
+    assert "ERROR: cannot specify more than one containment argument!" in c.last_result.err
+
+
+@utils.in_tempdir
+def test_compare_avg_containment_and_containment(c):
+    testdata_glob = utils.get_test_data('scaled/*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('compare', '--avg-containment', '-k', '31',
+                       '--containment',
+                       '--csv', 'output.csv', *testdata_sigs)
+
+    print(c.last_result.err)
+    assert "ERROR: cannot specify more than one containment argument!" in c.last_result.err
+
+
+@utils.in_tempdir
+def test_compare_avg_containment_and_max_containment(c):
+    testdata_glob = utils.get_test_data('scaled/*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('compare', '--avg-containment', '-k', '31',
+                       '--max-containment',
+                       '--csv', 'output.csv', *testdata_sigs)
+
+    print(c.last_result.err)
+    assert "ERROR: cannot specify more than one containment argument!" in c.last_result.err
 
 
 @utils.in_tempdir
@@ -536,7 +618,20 @@ def test_compare_containment_abund_flatten(c):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert 'NOTE: --containment and --max-containment ignore signature abundances.' in \
+    assert 'NOTE: --containment, --max-containment, --avg-containment, and --estimate-ani ignore signature abundances.' in \
+        c.last_result.err
+
+
+@utils.in_tempdir
+def test_compare_ani_abund_flatten(c):
+    s47 = utils.get_test_data('track_abund/47.fa.sig')
+    s63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    c.run_sourmash('compare', '--estimate-ani', '-k', '31', s47, s63)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert 'NOTE: --containment, --max-containment, --avg-containment, and --estimate-ani ignore signature abundances.' in \
         c.last_result.err
 
 
@@ -549,7 +644,7 @@ def test_compare_containment_require_scaled(c):
         c.run_sourmash('compare', '--containment', '-k', '31', s47, s63,
                        fail_ok=True)
 
-    assert 'must use scaled signatures with --containment and --max-containment' in \
+    assert 'must use scaled signatures with --containment, --max-containment, and --avg-containment' in \
         c.last_result.err
     assert c.last_result.status != 0
 
@@ -693,29 +788,23 @@ def test_plot_override_labeltext_fail(runtmp):
 
 @utils.in_tempdir
 def test_plot_reordered_labels_csv(c):
-    files = utils.get_test_data('demo/*.sig')
-    files = glob.glob(files)
-    files.sort()
-    assert len(files) == 7
+    ss2 = utils.get_test_data('2.fa.sig')
+    ss47 = utils.get_test_data('47.fa.sig')
+    ss63 = utils.get_test_data('63.fa.sig')
 
-    c.run_sourmash('compare', '-o', 'cmp', *files)
+    c.run_sourmash('compare', '-k', '31', '-o', 'cmp', ss2, ss47, ss63)
     c.run_sourmash('plot', 'cmp', '--csv', 'neworder.csv')
 
-    with open(c.output('neworder.csv'), 'rt') as fp:
-        out_mat = fp.readlines()
+    with open(c.output('neworder.csv'), newline="") as fp:
+        r = csv.DictReader(fp)
 
-    # turns out to be hard to guarantee output order, so... just make sure
-    # matrix labels are in different order than inputs!
+        akker_vals = set()
+        for row in r:
+            akker_vals.add(row['CP001071.1 Akkermansia muciniphila ATCC BAA-835, complete genome'])
 
-    header = out_mat[0].strip().split(',')
-
-    files = [ os.path.basename(x)[:-4] + '.fastq.gz' for x in files ]
-
-    print(files)
-    print(header)
-
-    assert set(files) == set(header) # same file names...
-    assert files != header           # ...different order.
+        assert '1.0' in akker_vals
+        assert '0.0' in akker_vals
+        assert len(akker_vals) == 2
 
 
 def test_plot_subsample_1(runtmp):
@@ -830,6 +919,45 @@ def test_search_ignore_abundance(runtmp):
 
     # Make sure results are different!
     assert out1 != out2
+
+
+def test_search_abund_subj_flat(runtmp):
+    # test Index.search_abund requires an abund subj
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('search', sig47, sig63)
+
+    assert "'search_abund' requires subject signatures with abundance information" in str(exc.value)
+
+
+def test_search_abund_csv(runtmp):
+    # test search with abundance signatures, look at CSV output
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    runtmp.sourmash('sketch', 'dna', '-p','k=31,scaled=1,abund', testdata1, testdata2)
+
+    runtmp.sourmash('search', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
+    out1 = runtmp.last_result.out
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '1 matches' in runtmp.last_result.out
+    assert '82.7%' in runtmp.last_result.out
+
+    with open(runtmp.output('xxx.csv'), newline="") as fp:
+        r = csv.DictReader(fp)
+        row = next(r)
+
+        print(row)
+
+        assert float(row['similarity']) == 0.8266277454288367
+        assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
+        assert row['filename'].endswith('short2.fa.sig')
+        assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
+        assert row['query_filename'].endswith('short.fa')
+        assert row['query_name'] == ''
+        assert row['query_md5'] == '9191284a'
+        assert row['filename'] == 'short2.fa.sig', row['filename']
 
 
 @utils.in_tempdir
@@ -1002,7 +1130,7 @@ def test_compare_no_choose_molecule_fail(runtmp):
     testdata2 = utils.get_test_data('short2.fa')
 
     runtmp.sourmash('sketch', 'dna', '-p', 'k=30,num=500',testdata1)
-    
+
     runtmp.sourmash('sketch', 'protein', '-p', 'k=30,num=500', testdata2)
 
     with pytest.raises(SourmashCommandFailed):
@@ -1242,7 +1370,7 @@ def test_do_sourmash_sbt_move_and_search_output(runtmp):
                                         ['search', '../short.fa.sig',
                                         'zzz.sbt.json', '-o', 'foo'],
                                         in_directory=newpath)
-    
+
     outfile = open(os.path.join(newpath, 'foo'))
     output = outfile.read()
     print(output)
@@ -1325,6 +1453,83 @@ def test_search_containment(runtmp):
     assert '95.6%' in runtmp.last_result.out
 
 
+def test_search_containment_abund(runtmp):
+    "Construct some signatures with abund, make sure that containment complains"
+
+    # build minhashes
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=True)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=True)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    # build signatures
+    x = sourmash.SourmashSignature(mh1, name='a')
+    y = sourmash.SourmashSignature(mh2, name='b')
+
+    # save!
+    with open(runtmp.output('a.sig'), 'wt') as fp:
+        sourmash.save_signatures([x], fp)
+    with open(runtmp.output('b.sig'), 'wt') as fp:
+        sourmash.save_signatures([y], fp)
+
+    # run sourmash search --containment
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('search', 'a.sig', 'b.sig', '-o', 'xxx.csv',
+                        '--containment')
+
+    assert "ERROR: cannot do containment searches on an abund signature; maybe specify --ignore-abundance?" in str(exc)
+
+    # run sourmash search --max-containment
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('search', 'a.sig', 'b.sig', '-o', 'xxx.csv',
+                        '--max-containment')
+
+    assert "ERROR: cannot do containment searches on an abund signature; maybe specify --ignore-abundance?" in str(exc)
+
+
+def test_search_containment_abund_ignore(runtmp):
+    "Construct some signatures with abund, check containment + ignore abund"
+
+    # build minhashes
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=True)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=True)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh1.add_many((1, 2))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+    mh2.add_many((1, 5))
+
+    # build signatures
+    x = sourmash.SourmashSignature(mh1, name='a')
+    y = sourmash.SourmashSignature(mh2, name='b')
+
+    # save!
+    with open(runtmp.output('a.sig'), 'wt') as fp:
+        sourmash.save_signatures([x], fp)
+    with open(runtmp.output('b.sig'), 'wt') as fp:
+        sourmash.save_signatures([y], fp)
+
+    # run sourmash search
+    runtmp.sourmash('search', 'a.sig', 'b.sig', '-o', 'xxx.csv',
+                    '--containment', '--ignore-abundance')
+
+    # check results
+    with open(runtmp.output('xxx.csv'), 'rt') as fp:
+        r = csv.DictReader(fp)
+        row = next(r)
+        similarity = row['similarity']
+        print(f'search output: similarity is {similarity}')
+    print(mh1.contained_by(mh2))
+
+    assert float(similarity) == mh1.contained_by(mh2)
+    assert float(similarity) == 0.25
+
+
 def test_search_containment_sbt(runtmp):
     # search with --containment in an SBT
     testdata1 = utils.get_test_data('short.fa')
@@ -1370,12 +1575,12 @@ def test_search_containment_s10_no_max(run):
 
 
 def test_search_max_containment_s10_pairwise(runtmp):
-    # check --containment for s10/s10-small
+    # check --max-containment for s10/s10-small
     q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
     q2 = utils.get_test_data('scaled/genome-s10-small.fa.gz.sig')
 
     runtmp.sourmash('search', q1, q2,'--max-containment')
-    
+
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
     assert '1 matches' in runtmp.last_result.out
     assert '100.0%' in runtmp.last_result.out
@@ -1544,7 +1749,7 @@ def test_search_2(runtmp):
     testdata3 = utils.get_test_data('short3.fa')
 
     runtmp.sourmash('sketch','dna','-p','k=31,num=500', testdata1, testdata2, testdata3)
-   
+
     runtmp.sourmash('search', 'short.fa.sig', 'short2.fa.sig', 'short3.fa.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
@@ -1672,7 +1877,7 @@ def test_search_metagenome(runtmp):
     cmd = ['index', 'gcf_all']
     cmd.extend(testdata_sigs)
     cmd.extend(['-k', '21'])
-    
+
     runtmp.sourmash(*cmd)
 
     assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
@@ -1718,6 +1923,7 @@ def test_search_metagenome_traverse_check_csv(runtmp):
         prefix_len = len(testdata_dir)
         r = csv.DictReader(fp)
         for row in r:
+            print(row)
             filename = row['filename']
             assert filename.startswith(testdata_dir), filename
             # should have full path to file sig was loaded from
@@ -1919,6 +2125,44 @@ def test_search_with_picklist_exclude(runtmp):
     assert "32.2%       NC_006905.1 Salmonella" in out
 
 
+def test_search_with_pattern_include(runtmp):
+    # test 'sourmash search' with --include-db-pattern
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+
+    runtmp.sourmash('search', metag_sig, *gcf_sigs, '--containment',
+                    '-k', '21', '--include', "thermotoga")
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+    assert "3 matches:" in out
+    assert "13.1%       NC_000853.1 Thermotoga" in out
+    assert "13.0%       NC_009486.1 Thermotoga" in out
+    assert "12.8%       NC_011978.1 Thermotoga" in out
+
+
+def test_search_with_pattern_exclude(runtmp):
+    # test 'sourmash search' with --exclude-db-pattern
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+
+    runtmp.sourmash('search', metag_sig, *gcf_sigs, '--containment',
+                    '-k', '21', '--exclude', "thermotoga")
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+    assert "9 matches; showing first 3:" in out
+    assert "33.2%       NC_003198.1 Salmonella" in out
+    assert "33.1%       NC_003197.2 Salmonella" in out
+    assert "32.2%       NC_006905.1 Salmonella" in out
+
+
 def test_mash_csv_to_sig(runtmp):
     testdata1 = utils.get_test_data('short.fa.msh.dump')
     testdata2 = utils.get_test_data('short.fa')
@@ -2033,7 +2277,7 @@ def test_do_sourmash_sbt_search_downsample(runtmp):
     testdata2 = utils.get_test_data('short2.fa')
 
     runtmp.sourmash('sketch', 'dna', '-p', 'k=31,scaled=10', testdata1, testdata2)
-    
+
     testdata1 = utils.get_test_data('short.fa')
 
     runtmp.sourmash('sketch','dna','-p','k=31,scaled=5', '-o', 'query.sig', testdata1)
@@ -2629,6 +2873,42 @@ def test_compare_with_picklist_exclude(runtmp):
     assert "NC_011294.1 Sal..." in out
 
 
+def test_compare_with_pattern_include(runtmp):
+    # test 'sourmash compare' with --include-db-pattern
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+
+    runtmp.sourmash('compare', *gcf_sigs,
+                    '-k', '21', '--include', "thermotoga")
+
+    err = runtmp.last_result.err
+    out = runtmp.last_result.out
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "NC_009486.1 The..." in out
+    assert "NC_000853.1 The..." in out
+    assert "NC_011978.1 The..." in out
+
+
+def test_compare_with_pattern_exclude(runtmp):
+    # test 'sourmash compare' with picklists - exclude
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+
+    runtmp.sourmash('compare', *gcf_sigs,
+                    '-k', '21', '--exclude', "thermotoga")
+
+    err = runtmp.last_result.err
+    out = runtmp.last_result.out
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "NC_004631.1 Sal..." in out
+    assert "NC_006905.1 Sal..." in out
+    assert "NC_003198.1 Sal..." in out
+    assert "NC_002163.1 Cam..." in out
+    assert "NC_011294.1 Sal..." in out
+
+
 def test_gather(runtmp, linear_gather, prefetch_gather):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
@@ -2744,6 +3024,67 @@ def test_gather_multiple_sbts_save_prefetch(runtmp, linear_gather):
     print(runtmp.last_result.err)
 
     assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
+    assert os.path.exists(runtmp.output('out.zip'))
+
+
+def test_gather_multiple_sbts_save_prefetch_csv(runtmp, linear_gather):
+    # test --save-prefetch-csv with multiple databases
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    runtmp.sourmash('sketch','dna', '-p', 'scaled=10', testdata1, testdata2)
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2)
+
+    runtmp.sourmash('index', 'zzz', 'short.fa.sig', '-k', '31')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('index', 'zzz2', 'short2.fa.sig', '-k', '31')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', 'zzz2', '-o', 'foo.csv', '--save-prefetch-csv', 'prefetch.csv', '--threshold-bp=1', linear_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
+    assert os.path.exists(runtmp.output('prefetch.csv'))
+    with open(runtmp.output('prefetch.csv')) as f:
+        output = f.read()
+        print((output,))
+        assert '870,0.925531914893617,0.9666666666666667' in output
+
+
+def test_gather_multiple_sbts_save_prefetch_and_prefetch_csv(runtmp, linear_gather):
+    # test --save-prefetch-csv with multiple databases
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    runtmp.sourmash('sketch','dna', '-p', 'scaled=10', testdata1, testdata2)
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2)
+
+    runtmp.sourmash('index', 'zzz', 'short.fa.sig', '-k', '31')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('index', 'zzz2', 'short2.fa.sig', '-k', '31')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', 'zzz2', '-o', 'foo.csv', '--save-prefetch', 'out.zip', '--save-prefetch-csv', 'prefetch.csv', '--threshold-bp=1', linear_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
+    assert os.path.exists(runtmp.output('prefetch.csv'))
+    with open(runtmp.output('prefetch.csv')) as f:
+        output = f.read()
+        print((output,))
+        assert '870,0.925531914893617,0.9666666666666667' in output
     assert os.path.exists(runtmp.output('out.zip'))
 
 
@@ -3036,7 +3377,7 @@ def test_multigather_check_scaled_bounds_more_than_maximum(c):
 
     cmd = 'multigather --query {} --db gcf_all -k 21 --scaled 1e9 --threshold-bp=0'.format(query_sig)
     cmd = cmd.split(' ')
-    
+
     c.run_sourmash(*cmd)
 
     assert "WARNING: scaled value should be <= 1e6. Continuing anyway." in c.last_result.err
@@ -3416,7 +3757,7 @@ def test_gather_metagenome_traverse_check_csv(runtmp, linear_gather, prefetch_ga
         r = csv.DictReader(fp)
         for row in r:
             filename = row['filename']
-            assert filename.startswith(copy_testdata)
+            assert filename.startswith(copy_testdata), filename
             # should have full path to file sig was loaded from
             assert len(filename) > prefix_len
 
@@ -3640,6 +3981,45 @@ def test_gather_query_downsample_explicit(runtmp, linear_gather, prefetch_gather
                 'NC_003197.2' in runtmp.last_result.out))
 
 
+def test_gather_downsample_multiple(runtmp, linear_gather, prefetch_gather):
+    # test multiple different downsamplings in gather code
+    query_sig = utils.get_test_data('GCF_000006945.2-s500.sig')
+
+    # load in the hashes and do split them into four bins, randomly.
+    ss = sourmash.load_one_signature(query_sig)
+    hashes = list(ss.minhash.hashes)
+
+    random.seed(a=1)            # fix seed so test is reproducible
+    random.shuffle(hashes)
+
+    # split into 4 bins:
+    mh_bins = [ ss.minhash.copy_and_clear() for i in range(4) ]
+    for i, hashval in enumerate(hashes):
+        mh_bins[i % 4].add_hash(hashval)
+
+    # downsample with different scaleds; initial scaled is 500, note.
+    mh_bins[0] = mh_bins[0].downsample(scaled=750)
+    mh_bins[1] = mh_bins[1].downsample(scaled=600)
+    mh_bins[2] = mh_bins[2].downsample(scaled=1000)
+    mh_bins[3] = mh_bins[3].downsample(scaled=650)
+
+    gathersigs = []
+    for i in range(4):
+        binsig = signature.SourmashSignature(mh_bins[i], name=f"bin{i}")
+
+        with open(runtmp.output(f"bin{i}.sig"), "wb") as fp:
+            sourmash.save_signatures([binsig], fp)
+
+        gathersigs.append(f"bin{i}.sig")
+
+    runtmp.sourmash('gather', '-k', '31', linear_gather, prefetch_gather, query_sig, *gathersigs)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "WARNING: final scaled was 1000, vs query scaled of 500" in runtmp.last_result.out
+
+
 def test_gather_with_picklist(runtmp, linear_gather, prefetch_gather):
     # test 'sourmash gather' with picklists
     gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
@@ -3678,6 +4058,52 @@ def test_gather_with_picklist_exclude(runtmp, linear_gather, prefetch_gather):
     print(err)
     assert "for given picklist, found 9 matches by excluding 9 distinct values" in err
     # these are the different ksizes
+
+    out = runtmp.last_result.out
+    print(out)
+    assert "found 9 matches total;" in out
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 Salmonella enterica subsp..." in out
+    assert "1.6 Mbp       10.7%  100.0%    NC_002163.1 Campylobacter jejuni subs..." in out
+    assert "4.8 Mbp       10.4%   31.3%    NC_003197.2 Salmonella enterica subsp..." in out
+    assert "4.7 Mbp        5.2%   16.1%    NC_006905.1 Salmonella enterica subsp..." in out
+    assert "4.7 Mbp        4.0%   12.6%    NC_011080.1 Salmonella enterica subsp..." in out
+    assert "4.6 Mbp        2.9%    9.2%    NC_011274.1 Salmonella enterica subsp..." in out
+    assert "4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp..." in out
+    assert "4.7 Mbp        0.5%    1.5%    NC_011294.1 Salmonella enterica subsp..." in out
+    assert "4.5 Mbp        0.1%    0.4%    NC_004631.1 Salmonella enterica subsp..." in out
+
+
+def test_gather_with_pattern_include(runtmp, linear_gather, prefetch_gather):
+    # test 'sourmash gather' with --include-db-pattern
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs, '--threshold-bp=0',
+                    '-k', '21', '--include', "thermotoga",
+                    linear_gather, prefetch_gather)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+    assert "found 3 matches total;" in out
+    assert "1.9 Mbp       13.1%  100.0%    NC_000853.1 Thermotoga" in out
+    assert "1.9 Mbp       11.5%   89.9%    NC_011978.1 Thermotoga" in out
+    assert "1.9 Mbp        6.3%   48.4%    NC_009486.1 Thermotoga" in out
+
+
+def test_gather_with_pattern_exclude(runtmp, linear_gather, prefetch_gather):
+    # test 'sourmash gather' with --exclude
+    gcf_sigs = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    metag_sig = utils.get_test_data('gather/combined.sig')
+
+    runtmp.sourmash('gather', metag_sig, *gcf_sigs, '--threshold-bp=0',
+                    '-k', '21', '--exclude', "thermotoga",
+                    linear_gather, prefetch_gather)
+
+    err = runtmp.last_result.err
+    print(err)
 
     out = runtmp.last_result.out
     print(out)
@@ -3868,6 +4294,8 @@ def test_gather_abund_1_1(runtmp, linear_gather, prefetch_gather):
     assert '50.4%   80.0%       1.9    tests/test-data/genome-s11.fa.gz' in out
     assert 'genome-s12.fa.gz' not in out
 
+    assert "the recovered matches hit 100.0% of the abundance-weighted query" in out
+
 
 def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
     c = runtmp
@@ -3903,6 +4331,7 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
     assert '91.0%  100.0%      14.5    tests/test-data/genome-s10.fa.gz' in out
     assert '9.0%   80.0%       1.9    tests/test-data/genome-s11.fa.gz' in out
     assert 'genome-s12.fa.gz' not in out
+    assert "the recovered matches hit 100.0% of the abundance-weighted query" in out
 
     # check the calculations behind the above output by looking into
     # the CSV.
@@ -3970,6 +4399,7 @@ def test_gather_abund_10_1_ignore_abundance(runtmp, linear_gather, prefetch_gath
 
     print(out)
     print(err)
+    assert "the recovered matches hit 100.0% of the query (unweighted)" in out
 
     # when we project s10x10-s11 (r2+r3), 10:1 abundance,
     # onto s10 and s11 genomes with gather --ignore-abundance, we get:
@@ -4020,6 +4450,36 @@ def test_gather_output_unassigned_with_abundance(runtmp, prefetch_gather, linear
             assert nomatch_mh.hashes[hashval] == abund
 
 
+def test_multigather_output_unassigned_with_abundance(runtmp):
+    c = runtmp
+    query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+    against = utils.get_test_data('gather-abund/genome-s10.fa.gz.sig')
+
+    cmd = 'multigather --query {} --db {}'.format(query, against).split()
+    c.run_sourmash(*cmd)
+
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert os.path.exists(c.output('r3.fa.unassigned.sig'))
+
+    nomatch = sourmash.load_one_signature(c.output('r3.fa.unassigned.sig'))
+    assert nomatch.minhash.track_abundance
+
+    query_ss = sourmash.load_one_signature(query)
+    against_ss = sourmash.load_one_signature(against)
+
+    # unassigned should have nothing that is in the database
+    nomatch_mh = nomatch.minhash
+    for hashval in against_ss.minhash.hashes:
+        assert hashval not in nomatch_mh.hashes
+
+    # unassigned should have abundances from original query, if not in database
+    for hashval, abund in query_ss.minhash.hashes.items():
+        if hashval not in against_ss.minhash.hashes:
+            assert nomatch_mh.hashes[hashval] == abund
+
+
 def test_sbt_categorize(runtmp):
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
@@ -4036,6 +4496,7 @@ def test_sbt_categorize(runtmp):
     args = ['index', '--dna', '-k', '21', 'zzz', '1.sig', '2.sig']
     runtmp.sourmash(*args)
 
+
     # categorize all of the ones that were copied to 'location'
     args = ['categorize', 'zzz', '.',
             '--ksize', '21', '--dna', '--csv', 'out.csv']
@@ -4050,7 +4511,7 @@ def test_sbt_categorize(runtmp):
 
     out_csv = open(runtmp.output('out.csv')).read()
     print(out_csv)
-    assert './4.sig,genome-s10+s11,genome-s10,0.504' in out_csv
+    assert '4.sig,genome-s10+s11,genome-s10,0.504' in out_csv
 
 
 def test_sbt_categorize_ignore_abundance_1(runtmp):
@@ -4881,3 +5342,731 @@ def test_gather_scaled_1(runtmp, linear_gather, prefetch_gather):
 
     assert "1.0 kbp      100.0%  100.0%" in runtmp.last_result.out
     assert "found 1 matches total;" in runtmp.last_result.out
+
+
+def test_standalone_manifest_search(runtmp):
+    # test loading/searching a manifest file from the command line.
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    dirname = runtmp.output('somedir')
+    os.mkdir(dirname)
+    subdir = runtmp.output('somedir/subdir')
+    os.mkdir(subdir)
+    shutil.copyfile(sig47, os.path.join(dirname, '47.fa.sig'))
+    shutil.copyfile(sig63, os.path.join(subdir, '63.fa.sig'))
+
+    # for now, the output manifest must be within top level dir for
+    # CLI stuff to work properly.
+    mf = os.path.join(dirname, 'mf.csv')
+
+    # build manifest...
+    runtmp.sourmash('sig', 'manifest', dirname, '-o', mf)
+
+    # ...and now use for a search!
+    runtmp.sourmash('search', sig47, mf)
+
+    out = runtmp.last_result.out
+    print(out)
+    print(runtmp.last_result.err)
+
+    assert "100.0%       NC_009665.1 Shewanella baltica OS185, complete genome" in out
+
+
+def test_standalone_manifest_search_fail(runtmp):
+    # test loading/searching a manifest file from the command line; should
+    # fail if manifest is not located within tld.
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    dirname = runtmp.output('somedir')
+    os.mkdir(dirname)
+    subdir = runtmp.output('somedir/subdir')
+    os.mkdir(subdir)
+    shutil.copyfile(sig47, os.path.join(dirname, '47.fa.sig'))
+    shutil.copyfile(sig63, os.path.join(subdir, '63.fa.sig'))
+
+    # for now, the output manifest must be within top level dir for
+    # CLI stuff to work properly. here we intentionally break this,
+    # for testing purposes.
+    mf = runtmp.output('mf.csv')
+
+    # build manifest...
+    runtmp.sourmash('sig', 'manifest', dirname, '-o', mf)
+
+    # ...and now use for a search!
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('search', sig47, mf)
+
+
+@utils.in_tempdir
+def test_search_ani_jaccard(c):
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig4763 = utils.get_test_data('47+63.fa.sig')
+
+    c.run_sourmash('search', sig47, sig4763, '-o', 'xxx.csv')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    search_result_names = SearchResult.search_write_cols
+
+    csv_file = c.output('xxx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert search_result_names == list(row.keys())
+        assert float(row['similarity']) == 0.6564798376870403
+        assert row['filename'].endswith('47+63.fa.sig')
+        assert row['md5'] == '491c0a81b2cfb0188c0d3b46837c2f42'
+        assert row['query_filename'].endswith('47.fa')
+        assert row['query_name'] == 'NC_009665.1 Shewanella baltica OS185, complete genome'
+        assert row['query_md5'] == '09a08691'
+        assert row['ani'] == "0.992530907924384"
+
+
+@utils.in_tempdir
+def test_search_ani_jaccard_error_too_high(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', testdata1, testdata2)
+
+    c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    search_result_names = SearchResult.search_write_cols
+
+    csv_file = c.output('xxx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert search_result_names == list(row.keys())
+        assert float(row['similarity']) == 0.9288577154308617
+        assert row['filename'].endswith('short2.fa.sig')
+        assert row['md5'] == 'bf752903d635b1eb83c53fe4aae951db'
+        assert row['query_filename'].endswith('short.fa')
+        assert row['query_name'] == ''
+        assert row['query_md5'] == '9191284a'
+        #assert row['ani'] == "0.9987884602947684"
+        assert row['ani'] == ''
+
+    assert "WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons." in c.last_result.err
+
+
+@utils.in_tempdir
+def test_searchabund_no_ani(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=10,abund', testdata1, testdata2)
+
+    c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    csv_file = c.output('xxx.csv')
+    search_result_names = SearchResult.search_write_cols
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert search_result_names == list(row.keys())
+        assert float(row['similarity']) == 0.8224046424612483
+        assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
+        assert row['filename'].endswith('short2.fa.sig')
+        assert row['query_filename'].endswith('short.fa')
+        assert row['query_name'] == ''
+        assert row['query_md5'] == 'b5cc464c'
+        assert row['ani'] == "" # do we want empty column to appear??
+
+
+@utils.in_tempdir
+def test_search_ani_containment(c):
+    testdata1 = utils.get_test_data('2+63.fa.sig')
+    testdata2 = utils.get_test_data('47+63.fa.sig')
+
+    c.run_sourmash('search', '--containment', testdata1, testdata2, '-o', 'xxx.csv')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    search_result_names = SearchResult.search_write_cols
+
+    csv_file = c.output('xxx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert search_result_names == list(row.keys())
+        assert float(row['similarity']) == 0.6597808288197506 
+        assert row['filename'].endswith('47+63.fa.sig')
+        assert row['md5'] == '491c0a81b2cfb0188c0d3b46837c2f42'
+        assert row['query_name'] == ''
+        assert row['query_md5'] == '832a45e8'
+        assert row['ani'] == "0.9866751346467802"
+
+    # search other direction
+    c.run_sourmash('search', '--containment', testdata2, testdata1, '-o', 'xxxx.csv')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    csv_file = c.output('xxxx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert search_result_names == list(row.keys())
+        assert float(row['similarity']) == 0.6642150646715699
+        assert row['filename'].endswith('2+63.fa.sig')
+        assert row['md5'] == '832a45e85bdca6eaef5d73047e3e6321'
+        assert row['query_name'] == ''
+        assert row['query_md5'] == '491c0a81'
+        assert row['ani'] == "0.9868883523107224"
+
+
+@utils.in_tempdir
+def test_search_ani_containment_fail(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=10', testdata1, testdata2)
+
+    c.run_sourmash('search', '--containment', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    search_result_names = SearchResult.search_write_cols
+    csv_file = c.output('xxx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert search_result_names == list(row.keys())
+        assert round(float(row['similarity']), 3) == 0.967
+        assert row['ani'] == ""
+
+    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons." in c.last_result.err
+    
+
+@utils.in_tempdir
+def test_search_ani_containment_estimate_ci(c):
+    testdata1 = utils.get_test_data('2+63.fa.sig')
+    testdata2 = utils.get_test_data('47+63.fa.sig')
+
+    c.run_sourmash('search', '--containment', testdata1, testdata2, '-o', 'xxx.csv', '--estimate-ani-ci')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    search_result_names_ci = SearchResult.search_write_cols_ci
+    csv_file = c.output('xxx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert search_result_names_ci == list(row.keys())
+        assert float(row['similarity']) == 0.6597808288197506 
+        assert row['filename'].endswith('47+63.fa.sig')
+        assert row['md5'] == '491c0a81b2cfb0188c0d3b46837c2f42'
+        assert row['query_name'] == ''
+        assert row['query_md5'] == '832a45e8'
+        assert row['ani'] == "0.9866751346467802"
+        assert row['ani_low'] == "0.9861576758035308"
+        assert row['ani_high'] == "0.9871770716451368"
+
+    # search other direction
+    c.run_sourmash('search', '--containment', testdata2, testdata1, '-o', 'xxxx.csv', '--estimate-ani-ci')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    csv_file = c.output('xxxx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert search_result_names_ci == list(row.keys())
+        assert float(row['similarity']) == 0.6642150646715699
+        assert row['filename'].endswith('2+63.fa.sig')
+        assert row['md5'] == '832a45e85bdca6eaef5d73047e3e6321'
+        assert row['query_name'] == ''
+        assert row['query_md5'] == '491c0a81'
+        assert row['ani'] == "0.9868883523107224"
+        assert row['ani_low'] == "0.986374049720872"
+        assert row['ani_high'] == "0.9873870188726516"
+
+
+@utils.in_tempdir
+def test_search_ani_max_containment(c):
+    testdata1 = utils.get_test_data('2+63.fa.sig')
+    testdata2 = utils.get_test_data('47+63.fa.sig')
+
+    c.run_sourmash('search', '--max-containment', testdata1, testdata2, '-o', 'xxx.csv')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    csv_file = c.output('xxx.csv')
+    search_result_names = SearchResult.search_write_cols
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert search_result_names == list(row.keys())
+        assert float(row['similarity']) == 0.6642150646715699
+        assert row['filename'].endswith('47+63.fa.sig')
+        assert row['md5'] == '491c0a81b2cfb0188c0d3b46837c2f42'
+        assert row['query_name'] == ''
+        assert row['query_md5'] == '832a45e8'
+        assert row['ani'] == "0.9868883523107224"
+
+
+@utils.in_tempdir
+def test_search_ani_max_containment_estimate_ci(c):
+    testdata1 = utils.get_test_data('2+63.fa.sig')
+    testdata2 = utils.get_test_data('47+63.fa.sig')
+
+    c.run_sourmash('search', '--max-containment', testdata1, testdata2, '-o', 'xxx.csv', '--estimate-ani-ci')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    csv_file = c.output('xxx.csv')
+    search_result_names_ci = SearchResult.search_write_cols_ci
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert search_result_names_ci == list(row.keys())
+        assert float(row['similarity']) == 0.6642150646715699
+        assert row['filename'].endswith('47+63.fa.sig')
+        assert row['md5'] == '491c0a81b2cfb0188c0d3b46837c2f42'
+        assert row['query_name'] == ''
+        assert row['query_md5'] == '832a45e8'
+        assert row['ani'] == "0.9868883523107224"
+        assert row['ani_low'] == "0.986374049720872"
+        assert row['ani_high'] == "0.9873870188726516"
+
+
+@utils.in_tempdir
+def test_search_jaccard_ani_downsample(c):
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig4763 = utils.get_test_data('47+63.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47)
+    ss4763 = sourmash.load_one_signature(sig4763)
+    print(f"SCALED: sig1: {ss47.minhash.scaled}, sig2: {ss4763.minhash.scaled}")
+
+    c.run_sourmash('search', sig47, sig4763, '-o', 'xxx.csv')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    search_result_names = SearchResult.search_write_cols
+    search_result_names_ci = SearchResult.search_write_cols_ci
+
+    csv_file = c.output('xxx.csv')
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert search_result_names == list(row.keys())
+        assert search_result_names_ci != list(row.keys())
+        assert float(row['similarity']) == 0.6564798376870403
+        assert row['filename'].endswith('47+63.fa.sig')
+        assert row['md5'] == '491c0a81b2cfb0188c0d3b46837c2f42'
+        assert row['query_filename'].endswith('47.fa')
+        assert row['query_name'] == 'NC_009665.1 Shewanella baltica OS185, complete genome'
+        assert row['query_md5'] == '09a08691'
+        assert row['ani'] == "0.992530907924384"
+
+    # downsample one and check similarity and ANI
+    ds_sig47 = c.output("ds_sig47.sig")
+    c.run_sourmash('sig', "downsample", sig47, "--scaled", "2000", '-o', ds_sig47)
+    c.run_sourmash('search', ds_sig47, sig4763, '-o', 'xxx.csv')
+#
+    csv_file = c.output('xxx.csv')
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert round(float(row['similarity']), 3) == round(0.6634517766497462, 3)
+        assert round(float(row['ani']), 3) == 0.993
+
+    #downsample manually and assert same ANI
+    ss47_ds = signature.load_one_signature(ds_sig47)
+    print("SCALED:", ss47_ds.minhash.scaled, ss4763.minhash.scaled)
+    ani_info = ss47_ds.jaccard_ani(ss4763, downsample=True)
+    print(ani_info)
+    assert round(ani_info.ani,3) == 0.993
+    assert (1 - round(ani_info.dist, 3)) == 0.993
+
+
+def test_gather_ani_csv(runtmp, linear_gather, prefetch_gather):
+    testdata1 = utils.get_test_data('63.fa.sig')
+    testdata2 = utils.get_test_data('47+63.fa.sig')
+
+    runtmp.sourmash('index', '-k', '31', 'zzz', testdata2)
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('gather', testdata1, 'zzz', '-o', 'foo.csv', '--threshold-bp=1', linear_gather, prefetch_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    csv_file = runtmp.output('foo.csv')
+    gather_result_names = GatherResult.gather_write_cols
+    gather_result_names_ci = GatherResult.gather_write_cols_ci
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert gather_result_names == list(row.keys())
+        assert gather_result_names_ci != list(row.keys())
+        assert float(row['intersect_bp']) == 5238000.0
+        assert float(row['unique_intersect_bp']) == 5238000.0
+        assert float(row['remaining_bp']) == 0.0
+        assert float(row['f_orig_query']) == 1.0
+        assert float(row['f_unique_to_query']) == 1.0
+        assert float(row['f_match']) == 0.6642150646715699
+        assert row['filename'] == 'zzz'
+        assert row['md5'] == '491c0a81b2cfb0188c0d3b46837c2f42'
+        assert row['gather_result_rank'] == '0'
+        assert row['query_md5'] == '38729c63'
+        assert row['query_bp'] == '5238000'
+        assert row['query_containment_ani']== '1.0'
+        assert round(float(row['match_containment_ani']), 3) == 0.987
+        assert round(float(row['average_containment_ani']), 3) ==  0.993
+        assert round(float(row['max_containment_ani']),3) == 1.0
+        assert row['potential_false_negative'] == 'False'
+
+
+def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '--name-from-first', testdata1, testdata2)
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', '--name-from-first', testdata2)
+
+    runtmp.sourmash('index', '-k', '31', 'zzz', 'short.fa.sig', 'short2.fa.sig')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', '-o', 'foo.csv', '--threshold-bp=1', '--estimate-ani-ci', linear_gather, prefetch_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    csv_file = runtmp.output('foo.csv')
+
+    gather_result_names = GatherResult.gather_write_cols_ci
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert gather_result_names == list(row.keys())
+        assert float(row['intersect_bp']) == 910
+        assert float(row['unique_intersect_bp']) == 910
+        assert float(row['remaining_bp']) == 0
+        assert float(row['f_orig_query']) == 1.0
+        assert float(row['f_unique_to_query']) == 1.0
+        assert float(row['f_match']) == 1.0
+        assert row['filename'] == 'zzz'
+        assert row['name'] == 'tr1 4'
+        assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
+        assert row['gather_result_rank'] == '0'
+        assert row['query_filename'].endswith('short2.fa')
+        assert row['query_name'] == 'tr1 4'
+        assert row['query_md5'] == 'c9d5a795'
+        assert row['query_bp'] == '910'
+        assert row['query_containment_ani']== ''
+        assert row['query_containment_ani_low']== ''
+        assert row['query_containment_ani_high']== ''
+        assert row['match_containment_ani'] == ''
+        assert row['match_containment_ani_low'] == ''
+        assert row['match_containment_ani_high'] == ''
+        assert row['average_containment_ani'] == ''
+        assert row['max_containment_ani'] ==''
+        assert row['potential_false_negative'] == 'False'
+
+
+@utils.in_tempdir
+def test_compare_containment_ani(c):
+    import numpy
+
+    sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
+    testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
+
+    c.run_sourmash('compare', '--containment', '-k', '31',
+                   '--ani', '--csv', 'output.csv', *testdata_sigs)
+
+    # load the matrix output of compare --containment --estimate-ani
+    with open(c.output('output.csv'), 'rt') as fp:
+        r = iter(csv.reader(fp))
+        headers = next(r)
+
+        mat = numpy.zeros((len(headers), len(headers)))
+        for i, row in enumerate(r):
+            for j, val in enumerate(row):
+                mat[i][j] = float(val)
+
+        print(mat)
+
+    # load in all the input signatures
+    idx_to_sig = dict()
+    for idx, filename in enumerate(testdata_sigs):
+        ss = sourmash.load_one_signature(filename, ksize=31)
+        idx_to_sig[idx] = ss
+
+    # check explicit containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            mat_val = round(mat[i][j], 3)
+            print(mat_val)
+            if i == j:
+                assert 1 == mat_val
+            else:
+                ss_j = idx_to_sig[j]
+                containment_ani = ss_j.containment_ani(ss_i).ani
+                if containment_ani is not None:
+                    containment_ani = round(containment_ani, 3)
+                else:
+                    containment_ani = 0.0
+                mat_val = round(mat[i][j], 3)
+
+                assert containment_ani == mat_val #, (i, j)
+
+    print(c.last_result.err)
+    print(c.last_result.out)
+    assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
+
+
+@utils.in_tempdir
+def test_compare_jaccard_ani(c):
+    import numpy
+
+    sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
+    testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
+
+    c.run_sourmash('compare', '-k', '31', '--estimate-ani',
+                         '--csv', 'output.csv', *testdata_sigs)
+
+    # load the matrix output of compare --estimate-ani
+    with open(c.output('output.csv'), 'rt') as fp:
+        r = iter(csv.reader(fp))
+        headers = next(r)
+
+        mat = numpy.zeros((len(headers), len(headers)))
+        for i, row in enumerate(r):
+            for j, val in enumerate(row):
+                mat[i][j] = float(val)
+
+        print(mat)
+
+    # load in all the input signatures
+    idx_to_sig = dict()
+    for idx, filename in enumerate(testdata_sigs):
+        ss = sourmash.load_one_signature(filename, ksize=31)
+        idx_to_sig[idx] = ss
+
+    # check explicit containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            mat_val = round(mat[i][j], 3)
+            print(mat_val)
+            if i == j:
+                assert 1 == mat_val
+            else:
+                ss_j = idx_to_sig[j]
+                jaccard_ani = ss_j.jaccard_ani(ss_i).ani
+                if jaccard_ani is not None:
+                    jaccard_ani = round(jaccard_ani, 3)
+                else:
+                    jaccard_ani = 0.0
+                print(jaccard_ani)
+
+                assert jaccard_ani == mat_val #, (i, j)
+
+    print(c.last_result.err)
+    print(c.last_result.out)
+    assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
+
+
+@utils.in_tempdir
+def test_compare_jaccard_ani_jaccard_error_too_high(c):
+    import numpy
+    testdata1 = utils.get_test_data('short.fa')
+    sig1 = c.output('short.fa.sig')
+    testdata2 = utils.get_test_data('short2.fa')
+    sig2 = c.output('short2.fa.sig')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', '-o', sig1, testdata1)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', '-o', sig2, testdata2)
+    testdata_sigs = [sig1, sig2]
+
+    c.run_sourmash('compare', '-k', '31', '--estimate-ani', '--csv', 'output.csv', 'short.fa.sig', 'short2.fa.sig')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+
+    # load the matrix output of compare --estimate-ani
+    with open(c.output('output.csv'), 'rt') as fp:
+        r = iter(csv.reader(fp))
+        headers = next(r)
+
+        mat = numpy.zeros((len(headers), len(headers)))
+        for i, row in enumerate(r):
+            for j, val in enumerate(row):
+                mat[i][j] = float(val)
+
+        print(mat)
+
+    # load in all the input signatures
+    idx_to_sig = dict()
+    for idx, filename in enumerate(testdata_sigs):
+        ss = sourmash.load_one_signature(filename, ksize=31)
+        idx_to_sig[idx] = ss
+
+    # check explicit containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            mat_val = round(mat[i][j], 3)
+            print(mat_val)
+            if i == j:
+                assert 1 == mat_val
+            else:
+                ss_j = idx_to_sig[j]
+                jaccard_ani = ss_j.jaccard_ani(ss_i).ani
+                if jaccard_ani is not None:
+                    jaccard_ani = round(jaccard_ani, 3)
+                else:
+                    jaccard_ani = 0.0
+                print(jaccard_ani)
+
+                assert jaccard_ani == mat_val #, (i, j)
+
+
+    assert "WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons." in c.last_result.err
+
+
+@utils.in_tempdir
+def test_compare_max_containment_ani(c):
+    import numpy
+    
+    sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
+    testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
+
+    c.run_sourmash('compare', '--max-containment', '-k', '31',
+                   '--estimate-ani', '--csv', 'output.csv', *testdata_sigs)
+
+    # load the matrix output of compare --max-containment --estimate-ani
+    with open(c.output('output.csv'), 'rt') as fp:
+        r = iter(csv.reader(fp))
+        headers = next(r)
+
+        mat = numpy.zeros((len(headers), len(headers)))
+        for i, row in enumerate(r):
+            for j, val in enumerate(row):
+                mat[i][j] = float(val)
+
+        print(mat)
+
+    # load in all the input signatures
+    idx_to_sig = dict()
+    for idx, filename in enumerate(testdata_sigs):
+        ss = sourmash.load_one_signature(filename, ksize=31)
+        idx_to_sig[idx] = ss
+
+    # check explicit containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            mat_val = round(mat[i][j], 3)
+            print(mat_val)
+            if i == j:
+                assert 1 == mat_val
+            else:
+                ss_j = idx_to_sig[j]
+                containment_ani = ss_j.max_containment_ani(ss_i).ani
+                if containment_ani is not None:
+                    containment_ani = round(containment_ani, 3)
+                else:
+                    containment_ani = 0.0
+
+                assert containment_ani == mat_val, (i, j)
+
+    print(c.last_result.err)
+    print(c.last_result.out)
+    assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
+
+
+@utils.in_tempdir
+def test_compare_avg_containment_ani(c):
+    import numpy
+
+    sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
+    testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
+
+    c.run_sourmash('compare', '--avg-containment', '-k', '31',
+                   '--estimate-ani', '--csv', 'output.csv', *testdata_sigs)
+
+    # load the matrix output of compare --max-containment --estimate-ani
+    with open(c.output('output.csv'), 'rt') as fp:
+        r = iter(csv.reader(fp))
+        headers = next(r)
+
+        mat = numpy.zeros((len(headers), len(headers)))
+        for i, row in enumerate(r):
+            for j, val in enumerate(row):
+                mat[i][j] = float(val)
+
+        print(mat)
+
+    # load in all the input signatures
+    idx_to_sig = dict()
+    for idx, filename in enumerate(testdata_sigs):
+        ss = sourmash.load_one_signature(filename, ksize=31)
+        idx_to_sig[idx] = ss
+
+    # check explicit avg containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            mat_val = round(mat[i][j], 3)
+            print(mat_val)
+            if i == j:
+                assert 1 == mat_val
+            else:
+                ss_j = idx_to_sig[j]
+                containment_ani = ss_j.avg_containment_ani(ss_i)
+                if containment_ani is not None:
+                    containment_ani = round(containment_ani, 3)
+                else:
+                    containment_ani = 0.0
+
+                assert containment_ani == mat_val, (i, j)
+
+    print(c.last_result.err)
+    print(c.last_result.out)
+    assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
+
+
+@utils.in_tempdir
+def test_compare_ANI_require_scaled(c):
+    s47 = utils.get_test_data('num/47.fa.sig')
+    s63 = utils.get_test_data('num/63.fa.sig')
+
+    # containment and estimate ANI will give this error
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('compare', '--containment', '--estimate-ani', '-k', '31', s47, s63,
+                       fail_ok=True)
+    assert 'must use scaled signatures with --containment, --max-containment, and --avg-containment' in \
+        c.last_result.err
+    assert c.last_result.status != 0
+
+    # jaccard + estimate ANI will give this error
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('compare', '--estimate-ani', '-k', '31', s47, s63,
+                       fail_ok=True)
+
+    assert 'must use scaled signatures with --estimate-ani' in \
+        c.last_result.err
+    assert c.last_result.status != 0

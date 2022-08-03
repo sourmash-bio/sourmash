@@ -42,6 +42,10 @@ def subparser(subparsers):
         '--flatten', action='store_true',
         help='remove abundance from signatures before subtracting'
     )
+    subparser.add_argument(
+        '-A', '--abundances-from', metavar='FILE',
+        help='intersect with & take abundances from this signature'
+    )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
 

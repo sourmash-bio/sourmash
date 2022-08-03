@@ -62,7 +62,7 @@ mod test {
         a.add_sequence(seq, false).unwrap();
 
         for (_, kmer, _) in CanonicalKmers::new(seq, &rc, 10) {
-            b.push(&kmer, 0);
+            b.push(kmer, 0);
         }
 
         let b_hashes = b.to_vec();
@@ -99,7 +99,7 @@ mod test {
         a.add_sequence(seq, false).unwrap();
 
         for (_, kmer, _) in CanonicalKmers::new(seq, &rc, 10) {
-            b.push(&kmer, 0);
+            b.push(kmer, 0);
         }
 
         let c = KmerMinHash::from(b);

@@ -27,7 +27,7 @@ sourmash compare file1.sig [ file2.sig ... ]
 """
 
 from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
-                                add_picklist_args)
+                                add_picklist_args, add_pattern_args)
 
 
 def subparser(subparsers):
@@ -59,6 +59,14 @@ def subparser(subparsers):
         help='calculate max containment instead of similarity'
     )
     subparser.add_argument(
+        '--avg-containment', '--average-containment', action='store_true',
+        help='calculate average containment instead of similarity'
+    )
+    subparser.add_argument(
+        '--estimate-ani', '--ANI', '--ani', action='store_true',
+        help='return ANI estimated from jaccard, containment, average containment, or max containment; see https://doi.org/10.1101/2022.01.11.475870'
+    )
+    subparser.add_argument(
         '--from-file',
         help='a text file containing a list of files to load signatures from'
     )
@@ -75,6 +83,7 @@ def subparser(subparsers):
         '-p', '--processes', metavar='N', type=int, default=None,
         help='Number of processes to use to calculate similarity')
     add_picklist_args(subparser)
+    add_pattern_args(subparser)
 
 
 def main(args):
