@@ -2161,11 +2161,11 @@ def test_tax_grep_search_shew(runtmp):
     lines = [ x.strip() for x in out.splitlines() ]
     assert lines[0] == 'ident'
     assert lines[1] == 'GCF_000017325.1'
-    assert lines[-1] == 'GCF_000021665.1'
-    assert len(lines) == 7
+    assert lines[2] == 'GCF_000021665.1'
+    assert len(lines) == 3
 
     assert "searching 1 taxonomy files for 'Shew'" in err
-    assert 'found 6 matches; saved identifiers to picklist' in err
+    assert 'found 2 matches; saved identifiers to picklist' in err
 
 # test output to file
 # test output + picklist

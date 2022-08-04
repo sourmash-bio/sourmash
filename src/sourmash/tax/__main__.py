@@ -5,6 +5,7 @@ import sys
 import csv
 import os
 from collections import defaultdict
+import re
 
 import sourmash
 from ..sourmash_args import FileOutputCSV, FileOutput
@@ -377,22 +378,39 @@ def prepare(args):
 
 def grep(args):
     # add -v, -i, --count
-    term = args.search_term
+    term = args.pattern
     tax_assign = MultiLineageDB.load(args.taxonomy_csv)
 
     notify(f"searching {len(args.taxonomy_csv)} taxonomy files for '{term}'")
 
-    match_ident = []
+    # build the search pattern
+    pattern = args.pattern
+    if args.ignore_case:
+        pattern = re.compile(pattern, re.IGNORECASE)
+    else:
+        pattern = re.compile(pattern)
+
+    if args.invert_match:
+        search_pattern = lambda val: not pattern.search(val)
+    else:
+        search_pattern = lambda val: pattern.search(val)
+
+    match_ident = set()
     for ident, lineage in tax_assign.items():
         for (rank, name) in lineage:
-            if term in name:
-                match_ident.append(ident)
+            if args.rank is None or args.rank == rank:
+                if search_pattern(name):
+                    match_ident.add(ident)
+                    continue
+
+    # CTB: should we output full lineages? probably...
+    # CTB: interesting, note that taxonomy CSVs can be picklists!
 
     with FileOutputCSV(args.output) as fp:
         w = csv.writer(fp)
 
         w.writerow(['ident'])
-        for ident in match_ident:
+        for ident in sorted(match_ident):
             w.writerow([ident])
 
     notify(f"found {len(match_ident)} matches; saved identifiers to picklist file '{args.output}'")
