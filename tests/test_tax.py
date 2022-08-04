@@ -2137,3 +2137,13 @@ def test_tax_prepare_sqlite_no_lineage():
 
     with pytest.raises(ValueError):
         db = tax_utils.MultiLineageDB.load([sqldb])
+
+
+def test_tax_grep_exists(runtmp):
+    # test that 'tax grep' exists
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('tax', 'grep')
+
+    err = runtmp.last_result.err
+    assert 'usage:' in err

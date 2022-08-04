@@ -375,6 +375,10 @@ def prepare(args):
     notify("done!")
 
 
+def grep(args):
+    notify('hello world.')
+
+
 def main(arglist=None):
     args = sourmash.cli.get_parser().parse_args(arglist)
     submod = getattr(sourmash.cli.sig, args.subcmd)
