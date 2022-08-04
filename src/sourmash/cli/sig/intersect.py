@@ -16,7 +16,9 @@ will output the intersection of all the hashes in those three files to
 
 The `intersect` command flattens all signatures, i.e. the abundances
 in any signatures will be ignored and the output signature will have
-`track_abundance` turned off.
+`track_abundance` turned off. See `sourmash signature flatten` for more details.
+
+Note: `intersect` only creates one output file, with one signature in it.
 
 """
 
