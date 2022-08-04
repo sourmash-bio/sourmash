@@ -265,7 +265,7 @@ def test_do_basic_compare_using_rna_arg(c):
 
 def test_do_basic_compare_using_nucleotide_arg(runtmp):
     # try doing a basic compare using --nucleotide instead of --dna/--rna
-    c=runtmp
+    c = runtmp
     import numpy
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
@@ -1864,7 +1864,7 @@ def test_index_metagenome_fromfile_no_cmdline_sig(c):
     print(out)
     print(c.last_result.err)
 
-    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
+    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in out
     assert '12 matches; showing first 3:' in out
 
 
@@ -1887,7 +1887,7 @@ def test_search_metagenome(runtmp):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in runtmp.last_result.out
+    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
     assert '12 matches; showing first 3:' in runtmp.last_result.out
 
 
@@ -1901,7 +1901,7 @@ def test_search_metagenome_traverse(runtmp):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in runtmp.last_result.out
+    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
     assert '13 matches; showing first 3:' in runtmp.last_result.out
 
 
@@ -1929,7 +1929,7 @@ def test_search_metagenome_traverse_check_csv(runtmp):
             # should have full path to file sig was loaded from
             assert len(filename) > prefix_len
 
-    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in runtmp.last_result.out
+    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
     assert '13 matches; showing first 3:' in runtmp.last_result.out
 
 
@@ -2049,7 +2049,7 @@ def test_search_metagenome_downsample_containment(runtmp):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in runtmp.last_result.out
+    assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
     assert '12 matches; showing first 3:' in runtmp.last_result.out
 
 
@@ -2073,9 +2073,9 @@ def test_search_metagenome_downsample_index(c):
                    '--containment')
     print(c)
 
-    assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in str(
+    assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in str(
         c)
-    assert ' 29.7%       NC_003197.2 Salmonella enterica subsp. enterica serovar T...' in str(
+    assert ' 29.7%       NC_003197.2 Salmonella enterica subsp. enterica serovar T' in str(
         c)
     assert '12 matches; showing first 3:' in str(c)
 
@@ -3230,9 +3230,9 @@ def test_gather_metagenome(runtmp):
     assert 'found 12 matches total' in runtmp.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
     assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
-                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_003198.1 Salmonella enterica subsp' in runtmp.last_result.out))
     assert all(('4.7 Mbp        0.5%    1.5%' in runtmp.last_result.out,
-                'NC_011294.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_011294.1 Salmonella enterica subs' in runtmp.last_result.out))
 
 
 @utils.in_tempdir
@@ -3264,7 +3264,7 @@ def test_gather_metagenome_num_results(c):
     assert '(truncated gather because --num-results=10)' in out
     assert 'the recovered matches hit 99.4% of the query' in out
     assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                'NC_003198.1 Salmonella enterica subsp...' in out))
+                'NC_003198.1 Salmonella enterica subsp' in out))
     assert '4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp' in out
 
 
@@ -3292,7 +3292,7 @@ def test_gather_metagenome_threshold_bp(runtmp):
     assert 'found less than 2.0 Mbp in common. => exiting' in runtmp.last_result.err
     assert 'the recovered matches hit 33.2% of the query' in runtmp.last_result.out
     assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
-                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_003198.1 Salmonella enterica subsp' in runtmp.last_result.out))
 
 
 def test_multigather_metagenome(runtmp):
@@ -3317,13 +3317,13 @@ def test_multigather_metagenome(runtmp):
     assert 'found 12 matches total' in runtmp.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
     assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
-                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_003198.1 Salmonella enterica subsp' in runtmp.last_result.out))
     assert all(('4.7 Mbp        0.5%    1.5%' in runtmp.last_result.out,
-                'NC_011294.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_011294.1 Salmonella enterica subsp' in runtmp.last_result.out))
 
 
-@utils.in_tempdir
-def test_multigather_check_scaled_bounds_negative(c):
+def test_multigather_check_scaled_bounds_negative(runtmp):
+    c = runtmp
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3342,8 +3342,8 @@ def test_multigather_check_scaled_bounds_negative(c):
     assert "ERROR: scaled value must be positive" in str(exc.value)
 
 
-@utils.in_tempdir
-def test_multigather_check_scaled_bounds_less_than_minimum(c):
+def test_multigather_check_scaled_bounds_less_than_minimum(runtmp):
+    c = runtmp
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3363,8 +3363,8 @@ def test_multigather_check_scaled_bounds_less_than_minimum(c):
     assert "WARNING: scaled value should be >= 100. Continuing anyway." in str(exc.value)
 
 
-@utils.in_tempdir
-def test_multigather_check_scaled_bounds_more_than_maximum(c):
+def test_multigather_check_scaled_bounds_more_than_maximum(runtmp):
+    c = runtmp
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3383,9 +3383,9 @@ def test_multigather_check_scaled_bounds_more_than_maximum(c):
     assert "WARNING: scaled value should be <= 1e6. Continuing anyway." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_multigather_metagenome_query_from_file(c):
+def test_multigather_metagenome_query_from_file(runtmp):
     # test multigather --query-from-file
+    c = runtmp
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3415,9 +3415,9 @@ def test_multigather_metagenome_query_from_file(c):
     assert 'found 12 matches total' in out
     assert 'the recovered matches hit 100.0% of the query' in out
     assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                'NC_003198.1 Salmonella enterica subsp...' in out))
+                'NC_003198.1 Salmonella enterica subsp' in out))
     assert all(('4.7 Mbp        0.5%    1.5%' in out,
-                'NC_011294.1 Salmonella enterica subsp...' in out))
+                'NC_011294.1 Salmonella enterica subsp' in out))
 
 
 @utils.in_tempdir
@@ -3447,13 +3447,13 @@ def test_multigather_metagenome_query_with_sbt(c):
     assert 'conducted gather searches on 12 signatures' in err
     assert 'the recovered matches hit 100.0% of the query' in out
     assert all(('4.7 Mbp      100.0%  100.0%'  in out,
-                'NC_011080.1 Salmonella enterica subsp...' in out))
+                'NC_011080.1 Salmonella enterica subsp' in out))
     assert all(('4.5 Mbp      100.0%  100.0%' in out,
-                'NC_004631.1 Salmonella enterica subsp...' in out))
+                'NC_004631.1 Salmonella enterica subsp' in out))
     assert all (('1.6 Mbp      100.0%  100.0%' in out,
-                 'NC_002163.1 Campylobacter jejuni subs...' in out))
+                 'NC_002163.1 Campylobacter jejuni subs' in out))
     assert all(('1.9 Mbp      100.0%  100.0%' in out,
-                'NC_000853.1 Thermotoga maritima MSB8 ...' in out))
+                'NC_000853.1 Thermotoga maritima MSB8 ' in out))
 
 
 @utils.in_tempdir
@@ -3505,9 +3505,9 @@ def test_multigather_metagenome_query_on_lca_db(c):
     assert 'conducted gather searches on 2 signatures' in err
     assert 'the recovered matches hit 100.0% of the query' in out
     assert all(('5.1 Mbp      100.0%  100.0%'  in out,
-                'NC_009665.1 Shewanella baltica OS185,...' in out))
+                'NC_009665.1 Shewanella baltica OS185,' in out))
     assert all(('5.5 Mbp      100.0%  100.0%' in out,
-                'NC_011663.1 Shewanella baltica OS223,...' in out))
+                'NC_011663.1 Shewanella baltica OS223,' in out))
 
 
 @utils.in_tempdir
@@ -3540,17 +3540,17 @@ def test_multigather_metagenome_query_with_sbt_addl_query(c):
     assert 'the recovered matches hit 100.0% of the query' in out
     #check for matches to some of the sbt signatures
     assert all(('4.7 Mbp      100.0%  100.0%'  in out,
-                'NC_011080.1 Salmonella enterica subsp...' in out))
+                'NC_011080.1 Salmonella enterica subsp' in out))
     assert all(('4.5 Mbp      100.0%  100.0%' in out,
-                'NC_004631.1 Salmonella enterica subsp...' in out))
+                'NC_004631.1 Salmonella enterica subsp' in out))
     assert all (('1.6 Mbp      100.0%  100.0%' in out,
-                 'NC_002163.1 Campylobacter jejuni subs...' in out))
+                 'NC_002163.1 Campylobacter jejuni subs' in out))
     assert all(('1.9 Mbp      100.0%  100.0%' in out,
-                'NC_000853.1 Thermotoga maritima MSB8 ...' in out))
+                'NC_000853.1 Thermotoga maritima MSB8 ' in out))
 
     #check additional query sig
     assert all(('4.9 Mbp      100.0%  100.0%' in out,
-                'NC_003198.1 Salmonella enterica subsp...' in out))
+                'NC_003198.1 Salmonella enterica subsp' in out))
 
 
 @utils.in_tempdir
@@ -3588,17 +3588,17 @@ def test_multigather_metagenome_sbt_query_from_file_with_addl_query(c):
     assert 'the recovered matches hit 100.0% of the query' in out
     #check for matches to some of the sbt signatures
     assert all(('4.7 Mbp      100.0%  100.0%'  in out,
-                'NC_011080.1 Salmonella enterica subsp...' in out))
+                'NC_011080.1 Salmonella enterica subsp' in out))
     assert all(('4.5 Mbp      100.0%  100.0%' in out,
-                'NC_004631.1 Salmonella enterica subsp...' in out))
+                'NC_004631.1 Salmonella enterica subsp' in out))
     assert all (('1.6 Mbp      100.0%  100.0%' in out,
-                 'NC_002163.1 Campylobacter jejuni subs...' in out))
+                 'NC_002163.1 Campylobacter jejuni subs' in out))
     assert all(('1.9 Mbp      100.0%  100.0%' in out,
-                'NC_000853.1 Thermotoga maritima MSB8 ...' in out))
+                'NC_000853.1 Thermotoga maritima MSB8 ' in out))
 
     #check additional query sig
     assert all(('4.9 Mbp      100.0%  100.0%' in out,
-                'NC_003198.1 Salmonella enterica subsp...' in out))
+                'NC_003198.1 Salmonella enterica subsp' in out))
 
 
 @utils.in_tempdir
@@ -3696,12 +3696,12 @@ def test_multigather_metagenome_query_from_file_with_addl_query(c):
     assert 'found 12 matches total' in out
     assert 'the recovered matches hit 100.0% of the query' in out
     assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                'NC_003198.1 Salmonella enterica subsp...' in out))
+                'NC_003198.1 Salmonella enterica subsp' in out))
     assert all(('4.7 Mbp        0.5%    1.5%' in out,
-                'NC_011294.1 Salmonella enterica subsp...' in out))
+                'NC_011294.1 Salmonella enterica subsp' in out))
 
     # second gather query
-    assert '4.9 Mbp      100.0%  100.0%    NC_003198.1 Salmonella enterica subsp...' in out
+    assert '4.9 Mbp      100.0%  100.0%    NC_003198.1 Salmonella enterica subsp' in out
     assert 'found 1 matches total;' in out
     assert 'the recovered matches hit 100.0% of the query' in out
 
@@ -3726,9 +3726,9 @@ def test_gather_metagenome_traverse(runtmp, linear_gather, prefetch_gather):
     assert 'found 12 matches total' in runtmp.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
     assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
-                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_003198.1 Salmonella enterica subsp' in runtmp.last_result.out))
     assert all(('4.7 Mbp        0.5%    1.5%' in runtmp.last_result.out,
-                'NC_011294.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_011294.1 Salmonella enterica subsp' in runtmp.last_result.out))
 
 
 def test_gather_metagenome_traverse_check_csv(runtmp, linear_gather, prefetch_gather):
@@ -3764,9 +3764,9 @@ def test_gather_metagenome_traverse_check_csv(runtmp, linear_gather, prefetch_ga
     assert 'found 12 matches total' in runtmp.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
     assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
-                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_003198.1 Salmonella enterica subsp' in runtmp.last_result.out))
     assert all(('4.7 Mbp        0.5%    1.5%' in runtmp.last_result.out,
-                'NC_011294.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_011294.1 Salmonella enterica subsp' in runtmp.last_result.out))
 
 
 @utils.in_tempdir
@@ -3782,7 +3782,7 @@ def test_gather_traverse_incompatible(c):
     c.run_sourmash("gather", scaled_sig, c.output('searchme'))
     print(c.last_result.out)
     print(c.last_result.err)
-    assert "5.2 Mbp      100.0%  100.0%    NC_009665.1 Shewanella baltica OS185,..." in c.last_result.out
+    assert "5.2 Mbp      100.0%  100.0%    NC_009665.1 Shewanella baltica OS185," in c.last_result.out
 
 
 def test_gather_metagenome_output_unassigned(runtmp):
@@ -3799,7 +3799,7 @@ def test_gather_metagenome_output_unassigned(runtmp):
     assert 'found 1 matches total' in runtmp.last_result.out
     assert 'the recovered matches hit 33.2% of the query' in runtmp.last_result.out
     assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
-                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_003198.1 Salmonella enterica subsp' in runtmp.last_result.out))
 
     # now examine unassigned
     testdata2_glob = utils.get_test_data('gather/GCF_000009505.1*.sig')
@@ -3828,9 +3828,9 @@ def test_gather_metagenome_output_unassigned_none(runtmp):
     assert 'found 12 matches total' in runtmp.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
     assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
-                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_003198.1 Salmonella enterica subsp' in runtmp.last_result.out))
     assert all(('4.5 Mbp        0.1%    0.4%' in runtmp.last_result.out,
-                'NC_004631.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_004631.1 Salmonella enterica subsp' in runtmp.last_result.out))
 
     # now examine unassigned
     assert not os.path.exists(runtmp.output('unassigned.sig'))
@@ -4062,15 +4062,15 @@ def test_gather_with_picklist_exclude(runtmp, linear_gather, prefetch_gather):
     out = runtmp.last_result.out
     print(out)
     assert "found 9 matches total;" in out
-    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 Salmonella enterica subsp..." in out
-    assert "1.6 Mbp       10.7%  100.0%    NC_002163.1 Campylobacter jejuni subs..." in out
-    assert "4.8 Mbp       10.4%   31.3%    NC_003197.2 Salmonella enterica subsp..." in out
-    assert "4.7 Mbp        5.2%   16.1%    NC_006905.1 Salmonella enterica subsp..." in out
-    assert "4.7 Mbp        4.0%   12.6%    NC_011080.1 Salmonella enterica subsp..." in out
-    assert "4.6 Mbp        2.9%    9.2%    NC_011274.1 Salmonella enterica subsp..." in out
-    assert "4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp..." in out
-    assert "4.7 Mbp        0.5%    1.5%    NC_011294.1 Salmonella enterica subsp..." in out
-    assert "4.5 Mbp        0.1%    0.4%    NC_004631.1 Salmonella enterica subsp..." in out
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 Salmonella enterica subsp" in out
+    assert "1.6 Mbp       10.7%  100.0%    NC_002163.1 Campylobacter jejuni subs" in out
+    assert "4.8 Mbp       10.4%   31.3%    NC_003197.2 Salmonella enterica subsp" in out
+    assert "4.7 Mbp        5.2%   16.1%    NC_006905.1 Salmonella enterica subsp" in out
+    assert "4.7 Mbp        4.0%   12.6%    NC_011080.1 Salmonella enterica subsp" in out
+    assert "4.6 Mbp        2.9%    9.2%    NC_011274.1 Salmonella enterica subsp" in out
+    assert "4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp" in out
+    assert "4.7 Mbp        0.5%    1.5%    NC_011294.1 Salmonella enterica subsp" in out
+    assert "4.5 Mbp        0.1%    0.4%    NC_004631.1 Salmonella enterica subsp" in out
 
 
 def test_gather_with_pattern_include(runtmp, linear_gather, prefetch_gather):
@@ -4108,15 +4108,15 @@ def test_gather_with_pattern_exclude(runtmp, linear_gather, prefetch_gather):
     out = runtmp.last_result.out
     print(out)
     assert "found 9 matches total;" in out
-    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 Salmonella enterica subsp..." in out
-    assert "1.6 Mbp       10.7%  100.0%    NC_002163.1 Campylobacter jejuni subs..." in out
-    assert "4.8 Mbp       10.4%   31.3%    NC_003197.2 Salmonella enterica subsp..." in out
-    assert "4.7 Mbp        5.2%   16.1%    NC_006905.1 Salmonella enterica subsp..." in out
-    assert "4.7 Mbp        4.0%   12.6%    NC_011080.1 Salmonella enterica subsp..." in out
-    assert "4.6 Mbp        2.9%    9.2%    NC_011274.1 Salmonella enterica subsp..." in out
-    assert "4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp..." in out
-    assert "4.7 Mbp        0.5%    1.5%    NC_011294.1 Salmonella enterica subsp..." in out
-    assert "4.5 Mbp        0.1%    0.4%    NC_004631.1 Salmonella enterica subsp..." in out
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 Salmonella enterica subsp" in out
+    assert "1.6 Mbp       10.7%  100.0%    NC_002163.1 Campylobacter jejuni subs" in out
+    assert "4.8 Mbp       10.4%   31.3%    NC_003197.2 Salmonella enterica subsp" in out
+    assert "4.7 Mbp        5.2%   16.1%    NC_006905.1 Salmonella enterica subsp" in out
+    assert "4.7 Mbp        4.0%   12.6%    NC_011080.1 Salmonella enterica subsp" in out
+    assert "4.6 Mbp        2.9%    9.2%    NC_011274.1 Salmonella enterica subsp" in out
+    assert "4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp" in out
+    assert "4.7 Mbp        0.5%    1.5%    NC_011294.1 Salmonella enterica subsp" in out
+    assert "4.5 Mbp        0.1%    0.4%    NC_004631.1 Salmonella enterica subsp" in out
 
 
 def test_gather_save_matches(runtmp, linear_gather, prefetch_gather):
@@ -4640,7 +4640,7 @@ def test_sbt_categorize_multiple_ksizes_moltypes(runtmp):
 
 
 def test_watch_check_num_bounds_negative(runtmp):
-    c=runtmp
+    c = runtmp
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     shutil.copyfile(testdata1, c.output('1.sig'))
@@ -4654,7 +4654,7 @@ def test_watch_check_num_bounds_negative(runtmp):
 
 
 def test_watch_check_num_bounds_less_than_minimum(runtmp):
-    c=runtmp
+    c = runtmp
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     shutil.copyfile(testdata1, c.output('1.sig'))
@@ -4667,7 +4667,7 @@ def test_watch_check_num_bounds_less_than_minimum(runtmp):
 
 
 def test_watch_check_num_bounds_more_than_maximum(runtmp):
-    c=runtmp
+    c = runtmp
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     shutil.copyfile(testdata1, c.output('1.sig'))
