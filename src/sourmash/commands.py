@@ -5,6 +5,7 @@ import csv
 import os
 import os.path
 import sys
+import shutil
 
 import screed
 from .compare import (compare_all_pairs, compare_serial_containment,
@@ -20,6 +21,12 @@ from .search import prefetch_database, PrefetchResult
 from .index import LazyLinearIndex
 
 WATERMARK_SIZE = 10000
+
+def _get_screen_width():
+    # default fallback is 80x24
+    (col, rows) = shutil.get_terminal_size()
+
+    return col
 
 
 def compare(args):
@@ -798,6 +805,7 @@ def gather(args):
                                   ident_mh=ident_mh,
                                   estimate_ani_ci=args.estimate_ani_ci)
 
+    screen_width = _get_screen_width()
     for result, weighted_missed in gather_iter:
         if not len(found):                # first result? print header.
             if is_abundance:
@@ -813,14 +821,15 @@ def gather(args):
         # print interim result & save in `found` list for later use
         pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
         pct_genome = '{:.1f}%'.format(result.f_match*100)
-        name = result.match._display_name(40)
 
         if is_abundance:
+            name = result.match._display_name(screen_width - 41)
             average_abund ='{:.1f}'.format(result.average_abund)
             print_results('{:9}   {:>7} {:>7} {:>9}    {}',
                       format_bp(result.intersect_bp), pct_query, pct_genome,
                       average_abund, name)
         else:
+            name = result.match._display_name(screen_width - 31)
             print_results('{:9}   {:>7} {:>7}    {}',
                       format_bp(result.intersect_bp), pct_query, pct_genome,
                       name)
@@ -828,7 +837,6 @@ def gather(args):
 
         if args.num_results and len(found) >= args.num_results:
             break
-
 
     # report on thresholding -
     if gather_iter.query:
@@ -977,6 +985,8 @@ def multigather(args):
                                           ignore_abundance=args.ignore_abundance,
                                           noident_mh=noident_mh,
                                           ident_mh=ident_mh)
+
+            screen_width = _get_screen_width()
             for result, weighted_missed in gather_iter:
                 if not len(found):                # first result? print header.
                     if is_abundance:
@@ -992,14 +1002,15 @@ def multigather(args):
                 # print interim result & save in a list for later use
                 pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
                 pct_genome = '{:.1f}%'.format(result.f_match*100)
-                name = result.match._display_name(40)
 
                 if is_abundance:
+                    name = result.match._display_name(screen_width - 41)
                     average_abund ='{:.1f}'.format(result.average_abund)
                     print_results('{:9}   {:>7} {:>7} {:>9}    {}',
                               format_bp(result.intersect_bp), pct_query, pct_genome,
                               average_abund, name)
                 else:
+                    name = result.match._display_name(screen_width - 31)
                     print_results('{:9}   {:>7} {:>7}    {}',
                               format_bp(result.intersect_bp), pct_query, pct_genome,
                               name)
