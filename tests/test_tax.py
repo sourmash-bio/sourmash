@@ -2147,3 +2147,25 @@ def test_tax_grep_exists(runtmp):
 
     err = runtmp.last_result.err
     assert 'usage:' in err
+
+
+def test_tax_grep_search_shew(runtmp):
+    # test 'tax grep Shew'
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'grep', 'Shew', '-t', taxfile)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    lines = [ x.strip() for x in out.splitlines() ]
+    assert lines[0] == 'ident'
+    assert lines[1] == 'GCF_000017325.1'
+    assert lines[-1] == 'GCF_000021665.1'
+    assert len(lines) == 7
+
+    assert "searching 1 taxonomy files for 'Shew'" in err
+    assert 'found 6 matches; saved identifiers to picklist' in err
+
+# test output to file
+# test output + picklist

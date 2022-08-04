@@ -376,7 +376,26 @@ def prepare(args):
 
 
 def grep(args):
-    notify('hello world.')
+    # add -v, -i, --count
+    term = args.search_term
+    tax_assign = MultiLineageDB.load(args.taxonomy_csv)
+
+    notify(f"searching {len(args.taxonomy_csv)} taxonomy files for '{term}'")
+
+    match_ident = []
+    for ident, lineage in tax_assign.items():
+        for (rank, name) in lineage:
+            if term in name:
+                match_ident.append(ident)
+
+    with FileOutputCSV(args.output) as fp:
+        w = csv.writer(fp)
+
+        w.writerow(['ident'])
+        for ident in match_ident:
+            w.writerow([ident])
+
+    notify(f"found {len(match_ident)} matches; saved identifiers to picklist file '{args.output}'")
 
 
 def main(arglist=None):

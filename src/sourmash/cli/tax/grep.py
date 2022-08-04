@@ -30,8 +30,8 @@ def subparser(subparsers):
         help='database lineages'
     )
     subparser.add_argument(
-        '-o', '--output', required=True,
-        help='output file',
+        '-o', '--output', default='-',
+        help='output file (defaults to stdout)',
     )
     subparser.add_argument(
         '-f', '--force', action = 'store_true',
