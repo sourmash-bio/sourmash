@@ -1214,7 +1214,7 @@ def prefetch(args):
         notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
         query_mh = query_mh.downsample(scaled=args.scaled)
 
-    notify(f"all sketches will be downsampled to scaled={query_mh.scaled}")
+    notify(f"query sketch has scaled={query_mh.scaled}; will be dynamically downsampled as needed.")
     common_scaled = query_mh.scaled
 
     # empty?
