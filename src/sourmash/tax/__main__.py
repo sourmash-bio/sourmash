@@ -383,7 +383,9 @@ def grep(args):
 
     notify(f"searching {len(args.taxonomy_csv)} taxonomy files for '{term}'")
     if args.invert_match:
-        notify(f"-v/--invert-match specified; returning only lineages that do not match.")
+        notify("-v/--invert-match specified; returning only lineages that do not match.")
+    if args.rank:
+        notify(f"limiting matches to {args.rank} level")
 
     # build the search pattern
     pattern = args.pattern

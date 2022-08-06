@@ -2238,7 +2238,7 @@ def test_tax_grep_search_shew_out_use_picklist(runtmp):
 
 
 def test_tax_grep_search_shew_invert(runtmp):
-    # test 'tax grep Shew'
+    # test 'tax grep -v Shew'
     taxfile = utils.get_test_data('tax/test.taxonomy.csv')
 
     runtmp.sourmash('tax', 'grep', '-v', 'Shew', '-t', taxfile)
@@ -2257,3 +2257,33 @@ def test_tax_grep_search_shew_invert(runtmp):
 
     assert "searching 1 taxonomy files for 'Shew'" in err
     assert 'found 4 matches; saved identifiers to picklist' in err
+
+    all_names = set([ x[0] for x in lines ])
+    assert 'GCF_000017325.1' not in all_names
+    assert 'GCF_000021665.1' not in all_names
+
+
+def test_tax_grep_search_shew_invert_select_phylum(runtmp):
+    # test 'tax grep -v Shew -r phylum'
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'grep', '-v', 'Shew', '-t', taxfile, '-r', 'phylum')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert "-v/--invert-match specified; returning only lineages that do not match." in err
+    assert "limiting matches to phylum"
+
+    lines = [ x.strip() for x in out.splitlines() ]
+    lines = [ x.split(',') for x in lines ]
+    assert lines[0][0] == 'ident'
+    assert len(lines) == 7
+
+    assert "searching 1 taxonomy files for 'Shew'" in err
+    assert 'found 6 matches; saved identifiers to picklist' in err
+
+    all_names = set([ x[0] for x in lines ])
+    assert 'GCF_000017325.1' in all_names
+    assert 'GCF_000021665.1' in all_names
+
