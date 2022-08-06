@@ -5,6 +5,7 @@ import os
 import csv
 from collections import namedtuple, defaultdict
 from collections import abc
+import gzip
 
 from sourmash import sqlite_utils
 from sourmash.exceptions import IndexNotSupported
@@ -641,7 +642,16 @@ class LineageDB(abc.Mapping):
         if os.path.isdir(filename):
             raise ValueError(f"'{filename}' is a directory")
 
-        with open(filename, newline='') as fp:
+        xopen = open
+        try:
+            with gzip.open(filename, 'r') as fp:
+                # succesful open/read? use gzip
+                fp.read(1)
+                xopen = gzip.open
+        except gzip.BadGzipFile:
+            pass
+
+        with xopen(filename, 'rt', newline='') as fp:
             r = csv.DictReader(fp, delimiter=delimiter)
             header = r.fieldnames
             if not header:
