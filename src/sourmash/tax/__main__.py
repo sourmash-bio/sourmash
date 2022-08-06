@@ -382,6 +382,8 @@ def grep(args):
     tax_assign = MultiLineageDB.load(args.taxonomy_csv)
 
     notify(f"searching {len(args.taxonomy_csv)} taxonomy files for '{term}'")
+    if args.invert_match:
+        notify(f"-v/--invert-match specified; returning only lineages that do not match.")
 
     # build the search pattern
     pattern = args.pattern
@@ -400,7 +402,7 @@ def grep(args):
 
     if args.invert_match:
         def search_pattern(l, r):
-            return find_pattern(l, r)
+            return not find_pattern(l, r)
     else:
         search_pattern = find_pattern
 

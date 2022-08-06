@@ -2246,12 +2246,14 @@ def test_tax_grep_search_shew_invert(runtmp):
     out = runtmp.last_result.out
     err = runtmp.last_result.err
 
+    assert "-v/--invert-match specified; returning only lineages that do not match." in err
+
     lines = [ x.strip() for x in out.splitlines() ]
     lines = [ x.split(',') for x in lines ]
     assert lines[0][0] == 'ident'
-    assert lines[1][0] == 'GCF_000017325.1'
-    assert lines[2][0] == 'GCF_000021665.1'
-    assert len(lines) == 3
+    assert lines[1][0] == 'GCF_001881345.1'
+    assert lines[2][0] == 'GCF_003471795.1'
+    assert len(lines) == 5
 
     assert "searching 1 taxonomy files for 'Shew'" in err
-    assert 'found 2 matches; saved identifiers to picklist' in err
+    assert 'found 4 matches; saved identifiers to picklist' in err
