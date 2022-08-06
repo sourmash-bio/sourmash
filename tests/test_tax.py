@@ -2185,9 +2185,10 @@ def test_tax_grep_search_shew(runtmp):
     err = runtmp.last_result.err
 
     lines = [ x.strip() for x in out.splitlines() ]
-    assert lines[0] == 'ident'
-    assert lines[1] == 'GCF_000017325.1'
-    assert lines[2] == 'GCF_000021665.1'
+    lines = [ x.split(',') for x in lines ]
+    assert lines[0][0] == 'ident'
+    assert lines[1][0] == 'GCF_000017325.1'
+    assert lines[2][0] == 'GCF_000021665.1'
     assert len(lines) == 3
 
     assert "searching 1 taxonomy files for 'Shew'" in err
@@ -2204,9 +2205,10 @@ def test_tax_grep_search_shew_out(runtmp):
 
     out = open(runtmp.output('pick.csv')).read()
     lines = [ x.strip() for x in out.splitlines() ]
-    assert lines[0] == 'ident'
-    assert lines[1] == 'GCF_000017325.1'
-    assert lines[2] == 'GCF_000021665.1'
+    lines = [ x.split(',') for x in lines ]
+    assert lines[0][0] == 'ident'
+    assert lines[1][0] == 'GCF_000017325.1'
+    assert lines[2][0] == 'GCF_000021665.1'
     assert len(lines) == 3
 
     assert "searching 1 taxonomy files for 'Shew'" in err
@@ -2233,3 +2235,23 @@ def test_tax_grep_search_shew_out_use_picklist(runtmp):
     assert len(names) == 2
     assert 'GCF_000017325.1' in names
     assert 'GCF_000021665.1' in names
+
+
+def test_tax_grep_search_shew_invert(runtmp):
+    # test 'tax grep Shew'
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'grep', '-v', 'Shew', '-t', taxfile)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    lines = [ x.strip() for x in out.splitlines() ]
+    lines = [ x.split(',') for x in lines ]
+    assert lines[0][0] == 'ident'
+    assert lines[1][0] == 'GCF_000017325.1'
+    assert lines[2][0] == 'GCF_000021665.1'
+    assert len(lines) == 3
+
+    assert "searching 1 taxonomy files for 'Shew'" in err
+    assert 'found 2 matches; saved identifiers to picklist' in err

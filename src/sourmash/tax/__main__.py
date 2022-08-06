@@ -390,18 +390,24 @@ def grep(args):
     else:
         pattern = re.compile(pattern)
 
-    if args.invert_match:
-        search_pattern = lambda val: not pattern.search(val)
-    else:
-        search_pattern = lambda val: pattern.search(val)
-
-    match_ident = set()
-    for ident, lineage in tax_assign.items():
+    # determine if lineage matches.
+    def find_pattern(lineage, select_rank):
         for (rank, name) in lineage:
-            if args.rank is None or args.rank == rank:
-                if search_pattern(name):
-                    match_ident.add(ident)
-                    continue
+            if select_rank is None or rank == select_rank:
+                if pattern.search(name):
+                    return True
+        return False
+
+    if args.invert_match:
+        def search_pattern(l, r):
+            return find_pattern(l, r)
+    else:
+        search_pattern = find_pattern
+
+    match_ident = []
+    for ident, lineage in tax_assign.items():
+        if search_pattern(lineage, args.rank):
+            match_ident.append((ident, lineage))
 
     # CTB: should we output full lineages? probably...
     # CTB: interesting, note that taxonomy CSVs can be picklists!
@@ -409,9 +415,9 @@ def grep(args):
     with FileOutputCSV(args.output) as fp:
         w = csv.writer(fp)
 
-        w.writerow(['ident'])
-        for ident in sorted(match_ident):
-            w.writerow([ident])
+        w.writerow(['ident'] + list(sourmash.lca.taxlist(include_strain=False)))
+        for ident, lineage in sorted(match_ident):
+            w.writerow([ident] + [ x.name for x in lineage ])
 
     notify(f"found {len(match_ident)} matches; saved identifiers to picklist file '{args.output}'")
 
