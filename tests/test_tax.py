@@ -4,6 +4,7 @@ Tests for the 'sourmash tax' command line and high level API.
 import os
 import csv
 import pytest
+import gzip
 
 import sourmash
 import sourmash_tst_utils as utils
@@ -1966,6 +1967,30 @@ def test_tax_prepare_3_db_to_csv(runtmp):
                         '-o', taxout, '-F', 'csv')
     assert os.path.exists(taxout)
     with open(taxout) as fp:
+        print(fp.read())
+
+    db1 = tax_utils.MultiLineageDB.load([taxcsv],
+                                        keep_full_identifiers=False,
+                                        keep_identifier_versions=False)
+
+    db2 = tax_utils.MultiLineageDB.load([taxout])
+    db3 = tax_utils.MultiLineageDB.load([taxdb],
+                                        keep_full_identifiers=False,
+                                        keep_identifier_versions=False)
+    assert set(db1) == set(db2)
+    assert set(db1) == set(db3)
+
+
+def test_tax_prepare_3_db_to_csv_gz(runtmp):
+    # SQL -> CSV; same assignments
+    taxcsv = utils.get_test_data('tax/test.taxonomy.csv')
+    taxdb = utils.get_test_data('tax/test.taxonomy.db')
+    taxout = runtmp.output('out.csv.gz')
+
+    runtmp.run_sourmash('tax', 'prepare', '-t', taxdb,
+                        '-o', taxout, '-F', 'csv')
+    assert os.path.exists(taxout)
+    with gzip.open(taxout, 'rt') as fp:
         print(fp.read())
 
     db1 = tax_utils.MultiLineageDB.load([taxcsv],
