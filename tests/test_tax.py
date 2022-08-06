@@ -5,6 +5,7 @@ import os
 import csv
 import pytest
 
+import sourmash
 import sourmash_tst_utils as utils
 from sourmash.tax import tax_utils
 from sourmash_tst_utils import SourmashCommandFailed
@@ -2167,5 +2168,43 @@ def test_tax_grep_search_shew(runtmp):
     assert "searching 1 taxonomy files for 'Shew'" in err
     assert 'found 2 matches; saved identifiers to picklist' in err
 
-# test output to file
-# test output + picklist
+
+def test_tax_grep_search_shew_out(runtmp):
+    # test 'tax grep Shew', save result to a file
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'grep', 'Shew', '-t', taxfile, '-o', 'pick.csv')
+
+    err = runtmp.last_result.err
+
+    out = open(runtmp.output('pick.csv')).read()
+    lines = [ x.strip() for x in out.splitlines() ]
+    assert lines[0] == 'ident'
+    assert lines[1] == 'GCF_000017325.1'
+    assert lines[2] == 'GCF_000021665.1'
+    assert len(lines) == 3
+
+    assert "searching 1 taxonomy files for 'Shew'" in err
+    assert 'found 2 matches; saved identifiers to picklist' in err
+
+
+def test_tax_grep_search_shew_out_use_picklist(runtmp):
+    # test 'tax grep Shew', output to a picklist, use picklist
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+    dbfile = utils.get_test_data('tax/gtdb-tax-grep.sigs.zip')
+
+    runtmp.sourmash('tax', 'grep', 'Shew', '-t', taxfile, '-o', 'pick.csv')
+
+    runtmp.sourmash('sig', 'cat', dbfile, '--picklist',
+                    'pick.csv:ident:ident', '-o', 'pick-out.zip')
+
+    all_sigs = sourmash.load_file_as_index(dbfile)
+    assert len(all_sigs) == 3
+
+    pick_sigs = sourmash.load_file_as_index(runtmp.output('pick-out.zip'))
+    assert len(pick_sigs) == 2
+
+    names = [ ss.name.split()[0] for ss in pick_sigs.signatures() ]
+    assert len(names) == 2
+    assert 'GCF_000017325.1' in names
+    assert 'GCF_000021665.1' in names
