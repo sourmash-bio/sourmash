@@ -377,6 +377,8 @@ def prepare(args):
 
 
 def grep(args):
+    # check multiple tax files, sqldb @CTB
+
     term = args.pattern
     tax_assign = MultiLineageDB.load(args.taxonomy_csv)
     # force? @CTB
