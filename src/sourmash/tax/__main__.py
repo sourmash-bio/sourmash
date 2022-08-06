@@ -377,9 +377,11 @@ def prepare(args):
 
 
 def grep(args):
-    # add -v, -i, --count
     term = args.pattern
     tax_assign = MultiLineageDB.load(args.taxonomy_csv)
+    # force? @CTB
+
+    silent = args.silent or args.count
 
     notify(f"searching {len(args.taxonomy_csv)} taxonomy files for '{term}'")
     if args.invert_match:
@@ -413,17 +415,18 @@ def grep(args):
         if search_pattern(lineage, args.rank):
             match_ident.append((ident, lineage))
 
-    # CTB: should we output full lineages? probably...
-    # CTB: interesting, note that taxonomy CSVs can be picklists!
+    if silent:
+        notify(f"found {len(match_ident)} matches.")
+        notify("(no matches will be saved because of --silent/--count")
+    else:
+        with FileOutputCSV(args.output) as fp:
+            w = csv.writer(fp)
 
-    with FileOutputCSV(args.output) as fp:
-        w = csv.writer(fp)
+            w.writerow(['ident'] + list(sourmash.lca.taxlist(include_strain=False)))
+            for ident, lineage in sorted(match_ident):
+                w.writerow([ident] + [ x.name for x in lineage ])
 
-        w.writerow(['ident'] + list(sourmash.lca.taxlist(include_strain=False)))
-        for ident, lineage in sorted(match_ident):
-            w.writerow([ident] + [ x.name for x in lineage ])
-
-    notify(f"found {len(match_ident)} matches; saved identifiers to picklist file '{args.output}'")
+        notify(f"found {len(match_ident)} matches; saved identifiers to picklist file '{args.output}'")
 
 
 def main(arglist=None):

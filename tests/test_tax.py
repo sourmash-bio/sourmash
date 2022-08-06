@@ -2287,3 +2287,17 @@ def test_tax_grep_search_shew_invert_select_phylum(runtmp):
     assert 'GCF_000017325.1' in all_names
     assert 'GCF_000021665.1' in all_names
 
+
+def test_tax_grep_search_shew_count(runtmp):
+    # test 'tax grep Shew --count'
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'grep', 'Shew', '-t', taxfile, '-c')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert not out.strip()
+
+    assert "searching 1 taxonomy files for 'Shew'" in err
+    assert not 'found 2 matches; saved identifiers to picklist' in err
