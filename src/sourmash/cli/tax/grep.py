@@ -4,13 +4,13 @@ usage="""
 
     sourmash tax grep <term> --taxonomy-csv <taxonomy_file> [ ... ]
 
-@@
-The 'tax prepare' command reads in one or more taxonomy databases
-and saves them into a new database. It can be used to combine databases
-in the desired order, as well as output different database formats.
+`sourmash tax grep` searches taxonomies for matching strings,
+optionally restricting the string search to a specific taxonomic rank.
+It creates new files containing matching taxonomic entries; these new
+files can serve as taxonomies and can also be used as picklists.
 
-Please see the 'tax prepare' documentation for more details:
-  https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-prepare-prepare-and-or-combine-taxonomy-files
+Please see the 'tax grep' documentation for more details:
+  https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-grep-subset-taxonomies-and-create-picklists-based-on-taxonomy-string-matches
 """
 
 import sourmash
