@@ -2235,6 +2235,52 @@ def test_tax_grep_search_shew_out(runtmp):
     assert 'found 2 matches; saved identifiers to picklist' in err
 
 
+def test_tax_grep_search_shew_sqldb_out(runtmp):
+    # test 'tax grep Shew' on a sqldb, save result to a file
+    taxfile = utils.get_test_data('tax/test.taxonomy.db')
+
+    runtmp.sourmash('tax', 'grep', 'Shew', '-t', taxfile, '-o', 'pick.csv')
+
+    err = runtmp.last_result.err
+
+    out = open(runtmp.output('pick.csv')).read()
+    lines = [ x.strip() for x in out.splitlines() ]
+    lines = [ x.split(',') for x in lines ]
+    assert lines[0][0] == 'ident'
+    assert lines[1][0] == 'GCF_000017325'
+    assert lines[2][0] == 'GCF_000021665'
+    assert len(lines) == 3
+
+    assert "searching 1 taxonomy files for 'Shew'" in err
+    assert 'found 2 matches; saved identifiers to picklist' in err
+
+
+def test_tax_grep_search_shew_lowercase(runtmp):
+    # test 'tax grep shew' (lowercase), save result to a file
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'grep', 'shew', '-t', taxfile, '-o', 'pick.csv')
+
+    err = runtmp.last_result.err
+    assert "searching 1 taxonomy files for 'shew'" in err
+    assert 'found 0 matches; saved identifiers to picklist' in err
+
+    runtmp.sourmash('tax', 'grep', '-i', 'shew',
+                    '-t', taxfile, '-o', 'pick.csv')
+
+    err = runtmp.last_result.err
+    assert "searching 1 taxonomy files for 'shew'" in err
+    assert 'found 2 matches; saved identifiers to picklist' in err
+
+    out = open(runtmp.output('pick.csv')).read()
+    lines = [ x.strip() for x in out.splitlines() ]
+    lines = [ x.split(',') for x in lines ]
+    assert lines[0][0] == 'ident'
+    assert lines[1][0] == 'GCF_000017325.1'
+    assert lines[2][0] == 'GCF_000021665.1'
+    assert len(lines) == 3
+
+
 def test_tax_grep_search_shew_out_use_picklist(runtmp):
     # test 'tax grep Shew', output to a picklist, use picklist
     taxfile = utils.get_test_data('tax/test.taxonomy.csv')
@@ -2308,6 +2354,21 @@ def test_tax_grep_search_shew_invert_select_phylum(runtmp):
     assert 'GCF_000021665.1' in all_names
 
 
+def test_tax_grep_search_shew_invert_select_bad_rank(runtmp):
+    # test 'tax grep -v Shew -r badrank' - should fail
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('tax', 'grep', '-v', 'Shew', '-t', taxfile,
+                        '-r', 'badrank')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(err)
+    assert 'error: argument -r/--rank: invalid choice:' in err
+
+
 def test_tax_grep_search_shew_count(runtmp):
     # test 'tax grep Shew --count'
     taxfile = utils.get_test_data('tax/test.taxonomy.csv')
@@ -2321,12 +2382,6 @@ def test_tax_grep_search_shew_count(runtmp):
 
     assert "searching 1 taxonomy files for 'Shew'" in err
     assert not 'found 2 matches; saved identifiers to picklist' in err
-
-# @CTB: test -i
-# @CTB: test regexp
-# @CTB: test sqldb
-# @CTB: test multiple tax
-# @CTB: test invalid rank
 
 
 def test_tax_grep_multiple_csv(runtmp):

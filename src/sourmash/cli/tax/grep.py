@@ -21,7 +21,14 @@ def subparser(subparsers):
     subparser = subparsers.add_parser('grep', usage=usage)
     subparser.add_argument('pattern')
     subparser.add_argument('-r', '--rank',
-                           help="search only this rank")
+                           help="search only this rank",
+                           choices=['superkingdom',
+                                    'phylum',
+                                    'class',
+                                    'order',
+                                    'family',
+                                    'genus',
+                                    'species'])
     subparser.add_argument(
         '-v', '--invert-match',
         help="select non-matching lineages",
