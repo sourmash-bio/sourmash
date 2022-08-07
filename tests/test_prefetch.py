@@ -39,7 +39,7 @@ def test_prefetch_basic(runtmp, linear_gather):
     assert "WARNING: no output(s) specified! Nothing will be saved from this prefetch!" in c.last_result.err
     assert "selecting specified query k=31" in c.last_result.err
     assert "loaded query: NC_009665.1 Shewanella baltica... (k=31, DNA)" in c.last_result.err
-    assert "all sketches will be downsampled to scaled=1000" in c.last_result.err
+    assert "query sketch has scaled=1000; will be dynamically downsampled as needed" in c.last_result.err
 
     assert "total of 2 matching signatures." in c.last_result.err
     assert "of 5177 distinct query hashes, 5177 were found in matches above threshold." in c.last_result.err
@@ -141,7 +141,7 @@ def test_prefetch_query_abund(runtmp, linear_gather):
     assert "WARNING: no output(s) specified! Nothing will be saved from this prefetch!" in c.last_result.err
     assert "selecting specified query k=31" in c.last_result.err
     assert "loaded query: NC_009665.1 Shewanella baltica... (k=31, DNA)" in c.last_result.err
-    assert "all sketches will be downsampled to scaled=1000" in c.last_result.err
+    assert "query sketch has scaled=1000; will be dynamically downsampled as needed" in c.last_result.err
 
     assert "total of 2 matching signatures." in c.last_result.err
     assert "of 5177 distinct query hashes, 5177 were found in matches above threshold." in c.last_result.err
@@ -167,7 +167,7 @@ def test_prefetch_subj_abund(runtmp, linear_gather):
     assert "WARNING: no output(s) specified! Nothing will be saved from this prefetch!" in c.last_result.err
     assert "selecting specified query k=31" in c.last_result.err
     assert "loaded query: NC_009665.1 Shewanella baltica... (k=31, DNA)" in c.last_result.err
-    assert "all sketches will be downsampled to scaled=1000" in c.last_result.err
+    assert "query sketch has scaled=1000; will be dynamically downsampled as needed" in c.last_result.err
 
     assert "total of 2 matching signatures." in c.last_result.err
     assert "of 5177 distinct query hashes, 5177 were found in matches above threshold." in c.last_result.err
@@ -454,7 +454,7 @@ def test_prefetch_db_fromfile(runtmp, linear_gather):
     assert "WARNING: no output(s) specified! Nothing will be saved from this prefetch!" in c.last_result.err
     assert "selecting specified query k=31" in c.last_result.err
     assert "loaded query: NC_009665.1 Shewanella baltica... (k=31, DNA)" in c.last_result.err
-    assert "all sketches will be downsampled to scaled=1000" in c.last_result.err
+    assert "query sketch has scaled=1000; will be dynamically downsampled as needed" in c.last_result.err
 
     assert "total of 2 matching signatures." in c.last_result.err
     assert "of 5177 distinct query hashes, 5177 were found in matches above threshold." in c.last_result.err
