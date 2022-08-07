@@ -91,6 +91,7 @@ information; these are grouped under the `sourmash tax` and
 * `tax metagenome` - summarize metagenome gather results at each taxonomic rank.
 * `tax genome`     - summarize single-genome gather results and report most likely classification.
 * `tax annotate`   - annotate gather results with lineage information (no summarization or classification).
+* `tax grep` - subset taxonomies and create picklists based on taxonomy string matches.
 
 `sourmash lca` commands:
 
@@ -706,18 +707,23 @@ To produce multiple output types from the same command, add the types into the
  for each database match to gather output. Do not summarize or classify.
  Note that this is not required for either `summarize` or `classify`.
 
-By default, `annotate` uses the name of each input gather csv to write an updated
- version with lineages information. For example, annotating `sample1.gather.csv`
- would produce `sample1.gather.with-lineages.csv`
+By default, `annotate` uses the name of each input gather csv to write
+an updated version with lineages information. For example, annotating
+`sample1.gather.csv` would produce `sample1.gather.with-lineages.csv`.
 
+This will produce an annotated gather CSV, `Sb47+63_gather_x_gtdbrs202_k31.with-lineages.csv`:
 ```
 sourmash tax annotate
     --gather-csv Sb47+63_gather_x_gtdbrs202_k31.csv \
     --taxonomy gtdb-rs202.taxonomy.v2.csv
 ```
-> This will produce an annotated gather CSV, `Sb47+63_gather_x_gtdbrs202_k31.with-lineages.csv`
 
 ### `sourmash tax prepare` - prepare and/or combine taxonomy files
+
+@CTB prepare can combine? test, document.
+
+`sourmash tax prepare` prepares taxonomy files for other `sourmash tax`
+commands.
 
 All `sourmash tax` commands must be given one or more taxonomy files as
 parameters to the `--taxonomy` argument. These files can be either CSV
@@ -742,6 +748,53 @@ can be set to CSV like so:
 ```
 sourmash tax prepare --taxonomy file1.csv file2.db -o tax.csv -F csv
 ```
+
+### `sourmash tax grep` - subset taxonomies and create picklists based on taxonomy string matches
+
+(`sourmash tax grep` is a new command as of sourmash v4.5.0.)
+
+`sourmash tax grep` searches taxonomies for matching strings,
+optionally restricting the string search to a specific taxonomic rank.
+It creates new files containing matching taxonomic entries; these new
+files can serve as taxonomies and can also be used as
+[picklists to restrict database matches](#using-picklists-to-subset-large-collections-of-signatures).
+
+Usage:
+```
+sourmash tax grep <pattern> -t <taxonomy-db> [<taxonomy-db> ...]
+```
+where `pattern` is a regular expression; see Python's
+[Regular Expression HOWTO for details on supported regexp features](https://docs.python.org/3/howto/regex.html#regex-howto).
+
+For example,
+```
+sourmash tax grep Shew -t gtdb-rs207.taxonomy.sqldb -o shew-picklist.csv
+```
+will search for a string match to `Shew` within the entire GTDB RS207
+taxonomy, and will output a subset taxonomy in `shew-picklist.csv`.
+This picklist can be used with the GTDB
+RS207 databases like so:
+```
+sourmash search query.sig gtdb-rs207.genomic.k31.zip \
+    --picklist shew-picklist.csv:ident:ident
+```
+
+
+`tax grep` can also restrict string matching to a specific taxonomic rank
+with `-r/--rank`; for examplem
+```
+sourmash tax grep Shew -t gtdb-rs207.taxonomy.sqldb \
+    -o shew-picklist.csv -r genus
+```
+will restrict matches to the rank of genus. Available ranks are
+superkingdom, phylum, class, order, family, genus, and species.
+
+`tax grep` also takes several standard grep arguments, including `-i`
+to ignore case and `-v` to output only taxonomic lineages that do
+_not_ match the pattern.
+
+Currently only CSV output is supported; use `sourmash tax prepare` to
+convert CSV output from `tax grep` into a sqlite3 taxonomy database.
 
 ## `sourmash lca` subcommands for in-memory taxonomy integration
 

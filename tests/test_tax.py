@@ -2301,3 +2301,9 @@ def test_tax_grep_search_shew_count(runtmp):
 
     assert "searching 1 taxonomy files for 'Shew'" in err
     assert not 'found 2 matches; saved identifiers to picklist' in err
+
+# @CTB: test -i
+# @CTB: test regexp
+# @CTB: test sqldb
+# @CTB: test multiple tax
+# @CTB: test invalid rank
