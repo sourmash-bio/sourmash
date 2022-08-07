@@ -2327,3 +2327,55 @@ def test_tax_grep_search_shew_count(runtmp):
 # @CTB: test sqldb
 # @CTB: test multiple tax
 # @CTB: test invalid rank
+
+
+def test_tax_grep_multiple_csv(runtmp):
+    # grep on multiple CSVs
+    tax1 = utils.get_test_data('tax/test.taxonomy.csv')
+    tax2 = utils.get_test_data('tax/protozoa_genbank_lineage.csv')
+
+    taxout = runtmp.output('out.csv')
+
+    runtmp.sourmash('tax', 'grep', "Toxo|Gamma",
+                    '-t', tax1, tax2,
+                    '-o', taxout)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert not out
+    assert "found 4 matches" in err
+
+    lines = open(taxout).readlines()
+    assert len(lines) == 5
+
+    names = set([ x.split(',')[0] for x in lines ])
+    assert 'GCA_000256725' in names
+    assert 'GCF_000017325.1' in names
+    assert 'GCF_000021665.1' in names
+    assert 'GCF_001881345.1' in names
+
+
+def test_tax_grep_duplicate_csv(runtmp):
+    # grep on duplicates => should collapse to uniques on identifiers
+    tax1 = utils.get_test_data('tax/test.taxonomy.csv')
+
+    taxout = runtmp.output('out.csv')
+
+    runtmp.sourmash('tax', 'grep', "Gamma",
+                    '-t', tax1, tax1,
+                    '-o', taxout)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert not out
+    assert "found 3 matches" in err
+
+    lines = open(taxout).readlines()
+    assert len(lines) == 4
+
+    names = set([ x.split(',')[0] for x in lines ])
+    assert 'GCF_000017325.1' in names
+    assert 'GCF_000021665.1' in names
+    assert 'GCF_001881345.1' in names
