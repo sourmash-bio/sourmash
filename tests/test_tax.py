@@ -1798,6 +1798,26 @@ def test_tax_prepare_1_csv_to_csv(runtmp, keep_identifiers, keep_versions):
     assert set(db1) == set(db2)
 
 
+def test_tax_prepare_1_combine_csv(runtmp):
+    # multiple CSVs to a single combined CSV
+    tax1 = utils.get_test_data('tax/test.taxonomy.csv')
+    tax2 = utils.get_test_data('tax/protozoa_genbank_lineage.csv')
+
+    taxout = runtmp.output('out.csv')
+
+    runtmp.sourmash('tax', 'prepare', '-t', tax1, tax2, '-F', 'csv',
+                    '-o', taxout)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert not out
+    assert "...loaded 8 entries" in err
+
+    out = open(taxout).readlines()
+    assert len(out) == 9
+
+
 def test_tax_prepare_1_csv_to_csv_empty_ranks(runtmp, keep_identifiers, keep_versions):
     # CSV -> CSV; same assignments, even when trailing ranks are empty
     tax = utils.get_test_data('tax/test-empty-ranks.taxonomy.csv')

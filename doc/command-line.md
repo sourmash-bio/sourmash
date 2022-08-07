@@ -720,8 +720,6 @@ sourmash tax annotate
 
 ### `sourmash tax prepare` - prepare and/or combine taxonomy files
 
-@CTB prepare can combine? test, document.
-
 `sourmash tax prepare` prepares taxonomy files for other `sourmash tax`
 commands.
 
