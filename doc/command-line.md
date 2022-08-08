@@ -791,7 +791,7 @@ superkingdom, phylum, class, order, family, genus, and species.
 to ignore case and `-v` to output only taxonomic lineages that do
 _not_ match the pattern.
 
-Currently only CSV output is supported; use `sourmash tax prepare` to
+Currently only CSV output (optionally gzipped) is supported; use `sourmash tax prepare` to
 convert CSV output from `tax grep` into a sqlite3 taxonomy database.
 
 ## `sourmash lca` subcommands for in-memory taxonomy integration
