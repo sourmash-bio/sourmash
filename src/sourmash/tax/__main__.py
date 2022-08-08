@@ -5,6 +5,7 @@ import sys
 import csv
 import os
 from collections import defaultdict
+import re
 
 import sourmash
 from ..sourmash_args import FileOutputCSV, FileOutput
@@ -373,6 +374,59 @@ def prepare(args):
         sys.exit(-1)
 
     notify("done!")
+
+
+def grep(args):
+    term = args.pattern
+    tax_assign = MultiLineageDB.load(args.taxonomy_csv,
+                                     force=args.force)
+
+    silent = args.silent or args.count
+
+    notify(f"searching {len(args.taxonomy_csv)} taxonomy files for '{term}'")
+    if args.invert_match:
+        notify("-v/--invert-match specified; returning only lineages that do not match.")
+    if args.rank:
+        notify(f"limiting matches to {args.rank} level")
+
+    # build the search pattern
+    pattern = args.pattern
+    if args.ignore_case:
+        pattern = re.compile(pattern, re.IGNORECASE)
+    else:
+        pattern = re.compile(pattern)
+
+    # determine if lineage matches.
+    def find_pattern(lineage, select_rank):
+        for (rank, name) in lineage:
+            if select_rank is None or rank == select_rank:
+                if pattern.search(name):
+                    return True
+        return False
+
+    if args.invert_match:
+        def search_pattern(l, r):
+            return not find_pattern(l, r)
+    else:
+        search_pattern = find_pattern
+
+    match_ident = []
+    for ident, lineage in tax_assign.items():
+        if search_pattern(lineage, args.rank):
+            match_ident.append((ident, lineage))
+
+    if silent:
+        notify(f"found {len(match_ident)} matches.")
+        notify("(no matches will be saved because of --silent/--count")
+    else:
+        with FileOutputCSV(args.output) as fp:
+            w = csv.writer(fp)
+
+            w.writerow(['ident'] + list(sourmash.lca.taxlist(include_strain=False)))
+            for ident, lineage in sorted(match_ident):
+                w.writerow([ident] + [ x.name for x in lineage ])
+
+        notify(f"found {len(match_ident)} matches; saved identifiers to picklist file '{args.output}'")
 
 
 def main(arglist=None):
