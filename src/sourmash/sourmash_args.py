@@ -663,7 +663,7 @@ class FileOutputCSV(FileOutput):
 
 
 @contextlib.contextmanager
-def FileInputCSV(filename, *, encoding='utf-8', default_zip_name=None):
+def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None):
     """A context manager for reading in CSV files in gzip, zip or text format.
 
     Assumes comma delimiter, and uses csv.DictReader.
@@ -674,11 +674,11 @@ def FileInputCSV(filename, *, encoding='utf-8', default_zip_name=None):
     """
     fp = None
 
-    # first, try to load 'default_zip_name' from a zipfile:
-    if default_zip_name:
+    # first, try to load 'default_csv_name' from a zipfile:
+    if default_csv_name:
         try:
             with zipfile.ZipFile(filename, 'r') as zip_fp:
-                zi = zip_fp.getinfo(default_zip_name)
+                zi = zip_fp.getinfo(default_csv_name)
                 with zip_fp.open(zi) as fp:
                     textfp = TextIOWrapper(fp,
                                            encoding=encoding,

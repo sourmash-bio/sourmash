@@ -643,7 +643,7 @@ class LineageDB(abc.Mapping):
             raise ValueError(f"'{filename}' is a directory")
 
         with sourmash_args.FileInputCSV(filename,
-                               default_zip_name="SOURMASH-TAXONOMY.csv") as r:
+                              default_csv_name="SOURMASH-TAXONOMY.csv") as r:
 
             header = r.fieldnames
             if not header:
