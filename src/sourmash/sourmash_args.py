@@ -41,7 +41,7 @@ import csv
 from enum import Enum
 import traceback
 import gzip
-from io import StringIO
+from io import StringIO, TextIOWrapper
 import re
 import zipfile
 import contextlib
@@ -680,7 +680,10 @@ def FileInputCSV(filename, *, encoding='utf-8', default_zip_name=None):
             with zipfile.ZipFile(filename, 'r') as zip_fp:
                 zi = zip_fp.getinfo(default_zip_name)
                 with zip_fp.open(zi) as fp:
-                    r = csv.DictReader(fp)
+                    textfp = TextIOWrapper(fp,
+                                           encoding=encoding,
+                                           newline="")
+                    r = csv.DictReader(textfp)
                     yield r
 
             return

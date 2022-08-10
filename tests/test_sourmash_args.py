@@ -606,3 +606,4 @@ def test_fileinput_csv_2_zip(runtmp):
     with sourmash_args.FileInputCSV(zf_file, default_zip_name='XYZ.csv') as r:
         rows = list(r)
         assert len(rows) == 6
+        print(rows)
