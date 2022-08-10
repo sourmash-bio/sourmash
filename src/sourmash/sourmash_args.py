@@ -661,6 +661,22 @@ class FileOutputCSV(FileOutput):
         return self.fp
 
 
+class _DictReader_with_version:
+    def __init__(self, textfp):
+        self.version_info = []
+        ch = textfp.buffer.peek(1)
+        ch = ch.decode('utf-8')
+        if ch.startswith('#'):
+            line = textfp.readline()
+            assert line.startswith('# ')
+            self.version_info = line[2:].strip().split(': ', 2)
+
+        self.reader = csv.DictReader(textfp)
+
+    def __iter__(self):
+        for row in self.reader:
+            yield row
+
 
 @contextlib.contextmanager
 def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None):
@@ -683,7 +699,7 @@ def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None):
                     textfp = TextIOWrapper(fp,
                                            encoding=encoding,
                                            newline="")
-                    r = csv.DictReader(textfp)
+                    r = _DictReader_with_version(textfp)
                     yield r
 
             return
@@ -694,7 +710,7 @@ def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None):
     try:
         with gzip.open(filename, "rt", newline="", encoding=encoding) as fp:
             fp.buffer.peek(1)          # force exception if not a gzip file
-            r = csv.DictReader(fp)
+            r = _DictReader_with_version(fp)
             yield r
         return
     except gzip.BadGzipFile:
@@ -704,7 +720,7 @@ def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None):
 
     # neither zip nor gz; regular file!
     with open(filename, 'rt', newline="", encoding=encoding) as fp:
-        r = csv.DictReader(fp)
+        r = _DictReader_with_version(fp)
         yield r
 
 

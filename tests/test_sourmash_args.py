@@ -607,3 +607,15 @@ def test_fileinput_csv_2_zip(runtmp):
         rows = list(r)
         assert len(rows) == 6
         print(rows)
+
+
+def test_fileinput_csv_3_load_manifest():
+    # test loading a zipfile collection with a manifest
+    testfile = utils.get_test_data('prot/all.zip')
+
+    with sourmash_args.FileInputCSV(testfile, default_csv_name='SOURMASH-MANIFEST.csv') as r:
+
+        rows = list(r)
+        assert len(rows) == 8
+
+        assert r.version_info == ['SOURMASH-MANIFEST-VERSION', '1.0']
