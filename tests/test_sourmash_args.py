@@ -565,3 +565,44 @@ def test_pattern_5():
 
     with pytest.raises(SystemExit):
         pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
+
+
+def test_fileinput_csv_1_plain():
+    # test basic CSV input
+
+    testfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    with sourmash_args.FileInputCSV(testfile) as r:
+        rows = list(r)
+        assert len(rows) == 6
+
+
+def test_fileinput_csv_2_gz(runtmp):
+    # test basic CSV input from gz file
+
+    testfile = utils.get_test_data('tax/test.taxonomy.csv')
+    gzfile = runtmp.output('test.csv.gz')
+
+    with gzip.open(gzfile, 'wt') as outfp:
+        with open(testfile, 'rt', newline='') as infp:
+            outfp.write(infp.read())
+
+    with sourmash_args.FileInputCSV(gzfile) as r:
+        rows = list(r)
+        assert len(rows) == 6
+
+
+def test_fileinput_csv_2_zip(runtmp):
+    # test CSV input from zip file, with component filename
+
+    testfile = utils.get_test_data('tax/test.taxonomy.csv')
+    zf_file = runtmp.output('test.zip')
+
+    with zipfile.ZipFile(zf_file, 'w') as outzip:
+        with open(testfile, 'rb') as infp:
+            with outzip.open('XYZ.csv', 'w') as outfp:
+                outfp.write(infp.read())
+
+    with sourmash_args.FileInputCSV(zf_file, default_zip_name='XYZ.csv') as r:
+        rows = list(r)
+        assert len(rows) == 6

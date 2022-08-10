@@ -37,11 +37,14 @@ signature and file output functionality:
 """
 import sys
 import os
+import csv
 from enum import Enum
 import traceback
 import gzip
 from io import StringIO
 import re
+import zipfile
+import contextlib
 
 import screed
 import sourmash
@@ -651,8 +654,55 @@ class FileOutputCSV(FileOutput):
     def open(self):
         if self.filename == '-' or self.filename is None:
             return sys.stdout
-        self.fp = open(self.filename, 'w', newline='')
+        if self.filename.endswith('.gz'):
+            self.fp = gzip.open(self.filename, 'wb', newline='')
+        else:
+            self.fp = open(self.filename, 'w', newline='')
         return self.fp
+
+
+
+@contextlib.contextmanager
+def FileInputCSV(filename, *, encoding='utf-8', default_zip_name=None):
+    """A context manager for reading in CSV files in gzip, zip or text format.
+
+    Assumes comma delimiter, and uses csv.DictReader.
+
+    Note: does not support stdin.
+
+    @CTB: pass in fp?
+    """
+    fp = None
+
+    # first, try to load 'default_zip_name' from a zipfile:
+    if default_zip_name:
+        try:
+            with zipfile.ZipFile(filename, 'r') as zip_fp:
+                zi = zip_fp.getinfo(default_zip_name)
+                with zip_fp.open(zi) as fp:
+                    r = csv.DictReader(fp)
+                    yield r
+
+            return
+        except (zipfile.BadZipFile, KeyError):
+            pass
+
+    # ok, not a zip file - try .gz:
+    try:
+        with gzip.open(filename, "rt", newline="", encoding=encoding) as fp:
+            fp.buffer.peek(1)          # force exception if not a gzip file
+            r = csv.DictReader(fp)
+            yield r
+        return
+    except gzip.BadGzipFile:
+        pass
+    except:
+        print(traceback.format_exc())
+
+    # neither zip nor gz; regular file!
+    with open(filename, 'rt', newline="", encoding=encoding) as fp:
+        r = csv.DictReader(fp)
+        yield r
 
 
 class SignatureLoadingProgress:
