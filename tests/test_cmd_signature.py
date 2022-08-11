@@ -5,6 +5,7 @@ import csv
 import shutil
 import os
 import glob
+import gzip
 
 import pytest
 import screed
@@ -18,9 +19,14 @@ from sourmash_tst_utils import SourmashCommandFailed
 ## command line tests
 
 
-def _write_file(runtmp, basename, lines):
+def _write_file(runtmp, basename, lines, *, gz=False):
     loc = runtmp.output(basename)
-    with open(loc, 'wt') as fp:
+    if gz:
+        xopen = gzip.open
+    else:
+        xopen = open
+
+    with xopen(loc, 'wt') as fp:
         fp.write("\n".join(lines))
     return loc
 
@@ -72,6 +78,36 @@ def test_sig_merge_1_fromfile_picklist(runtmp):
     from_file = _write_file(runtmp, 'list.txt', [sig47, sig63])
     picklist = _write_file(runtmp, 'pl.csv',
                            ['md5short', '09a08691', '38729c63'])
+
+    c.run_sourmash('signature', 'merge', '--from-file', from_file,
+                   '--picklist', f'{picklist}:md5short:md5short')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_merge_sig = sourmash.load_one_signature(sig47and63)
+    actual_merge_sig = sourmash.load_one_signature(out)
+
+    print(test_merge_sig.minhash)
+    print(actual_merge_sig.minhash)
+    print(out)
+
+    assert actual_merge_sig.minhash == test_merge_sig.minhash
+
+
+def test_sig_merge_1_fromfile_picklist_gz(runtmp):
+    # test with --from-file and gzipped picklist
+    c = runtmp
+
+    # merge of 47 & 63 should be union of mins
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    sig47and63 = utils.get_test_data('47+63.fa.sig')
+
+    from_file = _write_file(runtmp, 'list.txt', [sig47, sig63])
+    picklist = _write_file(runtmp, 'pl.csv',
+                           ['md5short', '09a08691', '38729c63'],
+                           gz=True)
 
     c.run_sourmash('signature', 'merge', '--from-file', from_file,
                    '--picklist', f'{picklist}:md5short:md5short')
