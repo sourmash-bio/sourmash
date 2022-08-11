@@ -4417,6 +4417,38 @@ def test_sig_check_1(runtmp):
     assert 31 in ksizes
 
 
+def test_sig_check_1_gz(runtmp):
+    # basic check functionality with gzipped picklist
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+    picklist_gz = runtmp.output('salmonella.csv.gz')
+
+    with gzip.open(picklist_gz, "w") as outfp:
+        with open(picklist, "rb") as infp:
+            outfp.write(infp.read())
+
+    runtmp.sourmash('sig', 'check', *sigfiles,
+                    "--picklist", "salmonella.csv.gz::manifest",
+                    "-m", "mf.csv")
+
+    out_mf = runtmp.output('mf.csv')
+    assert os.path.exists(out_mf)
+
+    # all should match.
+    with open(out_mf, newline='') as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 24
+
+    idx = sourmash.load_file_as_index(out_mf)
+    siglist = list(idx.signatures())
+    assert len(siglist) == 24
+    ksizes = set([ ss.minhash.ksize for ss in siglist ])
+    assert len(ksizes) == 3
+    assert 11 in ksizes
+    assert 21 in ksizes
+    assert 31 in ksizes
+
+
 def test_sig_check_1_nofail(runtmp):
     # basic check functionality with --fail-if-missing
     sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
