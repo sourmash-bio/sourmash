@@ -7,6 +7,7 @@ import gzip
 import zipfile
 import io
 import contextlib
+import csv
 
 import sourmash_tst_utils as utils
 import sourmash
@@ -577,6 +578,16 @@ def test_fileinput_csv_1_plain():
         assert len(rows) == 6
 
 
+def test_fileinput_csv_1_no_such_file(runtmp):
+    # test fail to load file
+
+    noexistfile = runtmp.output('does-not-exist.csv')
+
+    with pytest.raises(FileNotFoundError):
+        with sourmash_args.FileInputCSV(noexistfile) as r:
+            pass
+
+
 def test_fileinput_csv_2_gz(runtmp):
     # test basic CSV input from gz file
 
@@ -590,6 +601,33 @@ def test_fileinput_csv_2_gz(runtmp):
     with sourmash_args.FileInputCSV(gzfile) as r:
         rows = list(r)
         assert len(rows) == 6
+
+
+def test_fileinput_csv_2_gz_not_csv(runtmp):
+    # test basic CSV input from gz file that's not CSV - works
+
+    gzfile = runtmp.output('test.csv.gz')
+
+    with gzip.open(gzfile, 'wt') as outfp:
+        outfp.write("hello world!")
+
+    with sourmash_args.FileInputCSV(gzfile) as r:
+        assert r.fieldnames == ['hello world!']
+
+
+def test_fileinput_csv_2_gz_bad_version_header(runtmp):
+    # test basic CSV input from gz file with bad version header
+    # currently this works; not clear to me how it should fail :grin:
+
+    gzfile = runtmp.output('test.csv.gz')
+
+    with gzip.open(gzfile, 'wt') as outfp:
+        outfp.write("# excelsior\nhello world!")
+
+    with sourmash_args.FileInputCSV(gzfile) as r:
+        assert r.fieldnames == ['hello world!']
+        print(r.version_info)
+        assert r.version_info == ['excelsior']
 
 
 def test_fileinput_csv_2_zip(runtmp):
@@ -610,7 +648,8 @@ def test_fileinput_csv_2_zip(runtmp):
 
 
 def test_fileinput_csv_3_load_manifest():
-    # test loading a zipfile collection with a manifest
+    # test loading a manifest from a zipfile collection, using
+    # FileInputCSV.
     testfile = utils.get_test_data('prot/all.zip')
 
     with sourmash_args.FileInputCSV(testfile, default_csv_name='SOURMASH-MANIFEST.csv') as r:
@@ -619,3 +658,40 @@ def test_fileinput_csv_3_load_manifest():
         assert len(rows) == 8
 
         assert r.version_info == ['SOURMASH-MANIFEST-VERSION', '1.0']
+
+
+def test_fileinput_csv_3_load_manifest_no_default():
+    # test loading a manifest from a zipfile collection, using
+    # FileInputCSV, but with no default_csv_name - should fail
+    testfile = utils.get_test_data('prot/all.zip')
+
+    with pytest.raises(csv.Error):
+        with sourmash_args.FileInputCSV(testfile) as r:
+            print(r.fieldnames)
+
+
+def test_fileinput_csv_3_load_manifest_zipfile_obj():
+    # test loading a manifest from an open zipfile obj, using
+    # FileInputCSV.
+    testfile = utils.get_test_data('prot/all.zip')
+
+    with zipfile.ZipFile(testfile, "r") as zf:
+        with sourmash_args.FileInputCSV(testfile,
+                                     default_csv_name='SOURMASH-MANIFEST.csv',
+                                     zipfile_obj=zf) as r:
+            rows = list(r)
+            assert len(rows) == 8
+
+            assert r.version_info == ['SOURMASH-MANIFEST-VERSION', '1.0']
+
+
+def test_fileinput_csv_3_load_manifest_zipfile_obj_no_defualt():
+    # test loading a manifest from an open zipfile obj, using
+    # FileInputCSV, but with no default csv name => should fail.
+    testfile = utils.get_test_data('prot/all.zip')
+
+    with zipfile.ZipFile(testfile, "r") as zf:
+        with pytest.raises(ValueError):
+            with sourmash_args.FileInputCSV(testfile,
+                                            zipfile_obj=zf) as r:
+                pass
