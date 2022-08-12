@@ -669,7 +669,7 @@ class _DictReader_with_version:
 
     The version is stored as a 2-tuple in the 'version_info' attribute.
     """
-    def __init__(self, textfp):
+    def __init__(self, textfp, *, delimiter=','):
         self.version_info = []
 
         # is there a '#' in the raw buffer pos 0?
@@ -690,7 +690,7 @@ class _DictReader_with_version:
             self.version_info = line[2:].strip().split(': ', 2)
 
         # build a DictReader from the remaining stream
-        self.reader = csv.DictReader(textfp)
+        self.reader = csv.DictReader(textfp, delimiter=delimiter)
         self.fieldnames = self.reader.fieldnames
 
     def __iter__(self):
@@ -700,7 +700,7 @@ class _DictReader_with_version:
 
 @contextlib.contextmanager
 def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None,
-                 zipfile_obj=None):
+                 zipfile_obj=None, delimiter=','):
     """A context manager for reading in CSV files in gzip, zip or text format.
 
     Assumes comma delimiter, and uses csv.DictReader.
@@ -724,7 +724,7 @@ def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None,
                     textfp = TextIOWrapper(fp,
                                            encoding=encoding,
                                            newline="")
-                    r = _DictReader_with_version(textfp)
+                    r = _DictReader_with_version(textfp, delimiter=delimiter)
                     yield r
             except (zipfile.BadZipFile, KeyError):
                 pass # uh oh, we were given a zipfile_obj and it FAILED.
@@ -739,7 +739,7 @@ def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None,
                         textfp = TextIOWrapper(fp,
                                                encoding=encoding,
                                                newline="")
-                        r = _DictReader_with_version(textfp)
+                        r = _DictReader_with_version(textfp, delimiter=delimiter)
                         yield r
 
                 # if we got this far with no exceptions, we found
@@ -754,7 +754,7 @@ def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None,
     try:
         with gzip.open(filename, "rt", newline="", encoding=encoding) as fp:
             fp.buffer.peek(1)          # force exception if not a gzip file
-            r = _DictReader_with_version(fp)
+            r = _DictReader_with_version(fp, delimiter=delimiter)
             yield r
         return
     except gzip.BadGzipFile:
@@ -762,7 +762,7 @@ def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None,
 
     # neither zip nor gz; regular file!
     with open(filename, 'rt', newline="", encoding=encoding) as fp:
-        r = _DictReader_with_version(fp)
+        r = _DictReader_with_version(fp, delimiter=delimiter)
         yield r
 
 
