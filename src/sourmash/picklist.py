@@ -152,7 +152,8 @@ class SignaturePicklist:
         n_empty_val = 0
         dup_vals = set()
 
-        # @CTB support default picklist name(s)? could support manifest... or?
+        # CTB: not clear to me what a good "default" name would be for a
+        # picklist CSV inside a zip (default_csv_name). Maybe manifest?
         with sourmash_args.FileInputCSV(pickfile) as r:
             self.pickfile = pickfile
             if not r.fieldnames:
