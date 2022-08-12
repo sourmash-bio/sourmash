@@ -707,7 +707,11 @@ def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None,
 
     Note: does not support stdin.
 
-    @CTB: pass in fp?
+    Note: it seems surprisingly hard to write code that generically handles
+    any file handle being passed in; the manifest loading code, in particular,
+    uses ZipStorage.load => StringIO obj, which doesn't support peek etc.
+    So for now, this context manager is focused on situations where it owns
+    the file handle (opens/closes the file).
     """
     fp = None
 
