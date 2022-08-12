@@ -27,7 +27,7 @@ def load_taxonomy_assignments(filename, *, delimiter=',', start_column=2,
     lineage tuples.
     """
     # parse spreadsheet!
-    # CTB note: can't easily switch to InputFileCSV, because of
+    # CTB note: can't easily switch to FileInputCSV, because of
     # janky way we do/don't handle headers here. See issue #2198.
     fp = open(filename, newline='')
     r = csv.reader(fp, delimiter=delimiter)
