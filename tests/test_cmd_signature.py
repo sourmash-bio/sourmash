@@ -3362,6 +3362,29 @@ def test_sig_describe_2_csv(runtmp):
         assert n == 2
 
 
+def test_sig_describe_2_csv_gz(runtmp):
+    # output info in CSV spreadsheet, gzipped
+    c = runtmp
+
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    c.run_sourmash('sig', 'describe', sig47, sig63, '--csv', 'out.csv.gz')
+
+    expected_md5 = ['09a08691ce52952152f0e866a59f6261',
+                    '38729c6374925585db28916b82a6f513']
+
+    with gzip.open(c.output('out.csv.gz'), 'rt', newline="") as fp:
+        r = csv.DictReader(fp)
+
+        n = 0
+
+        for row, md5 in zip(r, expected_md5):
+            assert row['md5'] == md5
+            n += 1
+
+        assert n == 2
+
+
 def test_sig_describe_2_csv_abund(runtmp):
     # output info in CSV spreadsheet, for abund sig
     c = runtmp
