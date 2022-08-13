@@ -642,7 +642,8 @@ class LineageDB(abc.Mapping):
         if os.path.isdir(filename):
             raise ValueError(f"'{filename}' is a directory")
 
-        with sourmash_args.FileInputCSV(filename) as r:
+        with sourmash_args.FileInputCSV(filename,
+                                default_csv_name='SOURMASH-TAXONOMY.csv') as r:
             header = r.fieldnames
             if not header:
                 raise ValueError(f'cannot read taxonomy assignments from {filename}')
