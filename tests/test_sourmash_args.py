@@ -1,6 +1,7 @@
 """
 Tests for functions in sourmash_args module.
 """
+import sys
 import os
 import pytest
 import gzip
@@ -695,3 +696,51 @@ def test_fileinput_csv_3_load_manifest_zipfile_obj_no_defualt():
             with sourmash_args.FileInputCSV(testfile,
                                             zipfile_obj=zf) as r:
                 pass
+
+
+def test_fileoutput_csv_1(runtmp):
+    # test basic behavior
+    outfile = runtmp.output('xxx.csv')
+
+    with sourmash_args.FileOutputCSV(outfile) as fp:
+        w = csv.writer(fp)
+        w.writerow(['a', 'b', 'c'])
+        w.writerow(['x', 'y', 'z'])
+
+    with open(outfile, newline="") as fp:
+        r = csv.DictReader(fp)
+        rows = list(r)
+        assert len(rows) == 1
+        row = rows[0]
+        assert row['a'] == 'x'
+        assert row['b'] == 'y'
+        assert row['c'] == 'z'
+
+
+def test_fileoutput_csv_1_gz(runtmp):
+    # test basic behavior => gz
+    outfile = runtmp.output('xxx.csv.gz')
+
+    with sourmash_args.FileOutputCSV(outfile) as fp:
+        w = csv.writer(fp)
+        w.writerow(['a', 'b', 'c'])
+        w.writerow(['x', 'y', 'z'])
+
+    with gzip.open(outfile, 'rt') as fp:
+        r = csv.DictReader(fp)
+        rows = list(r)
+        assert len(rows) == 1
+        row = rows[0]
+        assert row['a'] == 'x'
+        assert row['b'] == 'y'
+        assert row['c'] == 'z'
+
+
+def test_fileoutput_csv_2_stdout():
+    # test '-' and 'None' go to sys.stdout
+
+    with sourmash_args.FileOutputCSV('-') as fp:
+        assert fp == sys.stdout
+
+    with sourmash_args.FileOutputCSV(None) as fp:
+        assert fp == sys.stdout

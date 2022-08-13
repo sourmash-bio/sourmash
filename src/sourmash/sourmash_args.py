@@ -655,7 +655,7 @@ class FileOutputCSV(FileOutput):
         if self.filename == '-' or self.filename is None:
             return sys.stdout
         if self.filename.endswith('.gz'):
-            self.fp = gzip.open(self.filename, 'wb', newline='')
+            self.fp = gzip.open(self.filename, 'wt', newline='')
         else:
             self.fp = open(self.filename, 'w', newline='')
         return self.fp
