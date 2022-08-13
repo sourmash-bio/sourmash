@@ -1229,7 +1229,7 @@ def prefetch(args):
     csvout_fp = None
     csvout_w = None
     if args.output:
-        csvout_fp = FileOutput(args.output, 'wt').open()
+        csvout_fp = FileOutputCSV(args.output).open()
 
     # track & maybe save matches progressively
     matches_out = SaveSignaturesToLocation(args.save_matches)
