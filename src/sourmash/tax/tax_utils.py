@@ -642,9 +642,7 @@ class LineageDB(abc.Mapping):
         if os.path.isdir(filename):
             raise ValueError(f"'{filename}' is a directory")
 
-        with sourmash_args.FileInputCSV(filename,
-                              default_csv_name="SOURMASH-TAXONOMY.csv") as r:
-
+        with sourmash_args.FileInputCSV(filename) as r:
             header = r.fieldnames
             if not header:
                 raise ValueError(f'cannot read taxonomy assignments from {filename}')
@@ -1034,7 +1032,7 @@ class MultiLineageDB(abc.Mapping):
                 try:
                     this_tax_assign = LineageDB.load(location, **kwargs)
                     loaded = True
-                except ValueError as exc:
+                except (ValueError, csv.Error) as exc:
                     # for the last loader, just pass along ValueError...
                     raise ValueError(f"cannot read taxonomy assignments from '{location}': {str(exc)}")
 
