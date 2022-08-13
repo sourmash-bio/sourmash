@@ -723,7 +723,7 @@ def gather(args):
         prefetch_csvout_fp = None
         prefetch_csvout_w = None
         if args.save_prefetch_csv:
-            prefetch_csvout_fp = FileOutput(args.save_prefetch_csv, 'wt').open()
+            prefetch_csvout_fp = FileOutputCSV(args.save_prefetch_csv).open()
 
             query_mh = prefetch_query.minhash
             scaled = query_mh.scaled

@@ -3151,6 +3151,36 @@ def test_gather_multiple_sbts_save_prefetch_csv(runtmp, linear_gather):
         assert '870,0.925531914893617,0.9666666666666667' in output
 
 
+def test_gather_multiple_sbts_save_prefetch_csv_gz(runtmp, linear_gather):
+    # test --save-prefetch-csv to a .gz file, with multiple databases
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    runtmp.sourmash('sketch','dna', '-p', 'scaled=10', testdata1, testdata2)
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2)
+
+    runtmp.sourmash('index', 'zzz', 'short.fa.sig', '-k', '31')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('index', 'zzz2', 'short2.fa.sig', '-k', '31')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', 'zzz2', '-o', 'foo.csv', '--save-prefetch-csv', 'prefetch.csv.gz', '--threshold-bp=1', linear_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
+    assert os.path.exists(runtmp.output('prefetch.csv.gz'))
+    with gzip.open(runtmp.output('prefetch.csv.gz'), 'rt', newline="") as f:
+        output = f.read()
+        print((output,))
+        assert '870,0.925531914893617,0.9666666666666667' in output
+
+
 def test_gather_multiple_sbts_save_prefetch_and_prefetch_csv(runtmp, linear_gather):
     # test --save-prefetch-csv with multiple databases
     testdata1 = utils.get_test_data('short.fa')
