@@ -323,6 +323,8 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
             notify(str(exc))
             if fail_on_empty_database:
                 sys.exit(-1)
+            else:
+                db = LinearIndex([])
 
         # 'select' returns nothing => all signatures filtered out. fail!
         if not db:
@@ -338,6 +340,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
     # calc num loaded/num selected info & display.
     sum_signatures = sum([ len(db) for db in databases ])
 
+    notify("--")
     notify(f"loaded {total_signatures_loaded} total signatures from {len(databases)} locations.")
     notify(f"after selecting signatures compatible with search, {sum_signatures} remain.")
 
