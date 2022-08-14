@@ -298,12 +298,13 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
 
     databases = []
     for filename in filenames:
-        notify(f'loading from {filename}...', end='\r')
+        notify(f"loading from '{filename}'...", end='\r')
 
         try:
             db = _load_database(filename, False, cache_size=cache_size)
         except ValueError as e:
             # cannot load database!
+            notify(f"ERROR on loading from '{filename}':")
             notify(str(e))
             sys.exit(-1)
 
@@ -346,7 +347,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
         # @CTB should this be subject to fail_on_empty_databases?
         # @CTB test me.
         notify('** ERROR: no signatures or databases loaded?')
-        #sys.exit(-1)
+        sys.exit(-1)
 
     return databases
 
