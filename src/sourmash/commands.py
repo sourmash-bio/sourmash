@@ -496,7 +496,8 @@ def search(args):
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
                                                 not is_containment,
                                                 picklist=picklist,
-                                                pattern=pattern_search)
+                                                pattern=pattern_search,
+                                                fail_on_empty_database=args.fail_on_empty_database)
 
     # handle signatures with abundance
     if query.minhash.track_abundance:
@@ -905,7 +906,8 @@ def multigather(args):
     # need a query to get ksize, moltype for db loading
     query = next(iter(sourmash_args.load_file_as_signatures(inp_files[0], ksize=args.ksize, select_moltype=moltype)))
 
-    databases = sourmash_args.load_dbs_and_sigs(args.db, query, False)
+    databases = sourmash_args.load_dbs_and_sigs(args.db, query, False,
+                                                fail_on_empty_database=args.fail_on_empty_database)
 
     # run gather on all the queries.
     n=0
