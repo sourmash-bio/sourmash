@@ -2002,7 +2002,8 @@ def test_search_check_scaled_bounds_more_than_maximum(runtmp):
 # explanation: you cannot downsample a scaled SBT to match a scaled
 # signature, so make sure that when you try such a search, it fails!
 # (you *can* downsample a signature to match an SBT.)
-def test_search_metagenome_downsample(runtmp):
+def test_search_metagenome_sbt_downsample_fail(runtmp):
+    # test downsample on SBT => failure, with --fail-on-empty-databases
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -2016,18 +2017,41 @@ def test_search_metagenome_downsample(runtmp):
 
     assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
 
-    cmd = 'search {} gcf_all -k 21 --scaled 100000'.format(query_sig)
-
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('search', query_sig, 'gcf_all', '-k', '21', '--scaled', '100000')
-
-    assert runtmp.last_result.status == -1
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
+    assert runtmp.last_result.status == -1
     assert "ERROR: cannot use 'gcf_all' for this query." in runtmp.last_result.err
     assert "search scaled value 100000 is less than database scaled value of 10000" in runtmp.last_result.err
+
+
+def test_search_metagenome_sbt_downsample_nofail(runtmp):
+    # test downsample on SBT => failure but ok with --no-fail-on-empty-database
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+
+    runtmp.sourmash(*cmd)
+
+    assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
+
+    runtmp.sourmash('search', query_sig, 'gcf_all', '-k', '21', '--scaled', '100000', '--no-fail-on-empty-database')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert "ERROR: cannot use 'gcf_all' for this query." in runtmp.last_result.err
+    assert "search scaled value 100000 is less than database scaled value of 10000" in runtmp.last_result.err
+    assert "0 matches:" in runtmp.last_result.out
 
 
 def test_search_metagenome_downsample_containment(runtmp):

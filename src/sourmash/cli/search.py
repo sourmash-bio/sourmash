@@ -102,11 +102,11 @@ def subparser(subparsers):
         help='select the signature with this md5 as query'
     )
     subparser.add_argument(
-        '--fail-on-empty-database', action='store_false',
+        '--fail-on-empty-database', action='store_true',
         help='stop at databases that contain no compatible signatures'
     )
     subparser.add_argument(
-        '--no-fail-on-empty-database', action='store_true',
+        '--no-fail-on-empty-database', action='store_false',
         dest='fail_on_empty_database',
         help='continue past databases that contain no compatible signatures'
     )

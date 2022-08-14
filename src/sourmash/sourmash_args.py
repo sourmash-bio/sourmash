@@ -323,6 +323,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
             notify(f"ERROR: cannot use '{filename}' for this query.")
             notify(str(exc))
             if fail_on_empty_database:
+                print('XXX')
                 sys.exit(-1)
             else:
                 db = LinearIndex([])
