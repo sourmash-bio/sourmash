@@ -498,10 +498,6 @@ def search(args):
                                                 picklist=picklist,
                                                 pattern=pattern_search)
 
-    if not len(databases):
-        error('Nothing found to search!')
-        sys.exit(-1)
-
     # handle signatures with abundance
     if query.minhash.track_abundance:
         if args.ignore_abundance:
@@ -703,10 +699,6 @@ def gather(args):
                                                 cache_size=cache_size,
                                                 picklist=picklist,
                                                 pattern=pattern_search)
-
-    if not len(databases):
-        error('Nothing found to search!')
-        sys.exit(-1)
 
     if args.linear:             # force linear traversal?
         databases = [ LazyLinearIndex(db) for db in databases ]
@@ -912,10 +904,6 @@ def multigather(args):
     query = next(iter(sourmash_args.load_file_as_signatures(inp_files[0], ksize=args.ksize, select_moltype=moltype)))
 
     databases = sourmash_args.load_dbs_and_sigs(args.db, query, False)
-
-    if not len(databases):
-        error('Nothing found to search!')
-        sys.exit(-1)
 
     # run gather on all the queries.
     n=0
