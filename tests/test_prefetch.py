@@ -425,7 +425,7 @@ def test_prefetch_no_num_subj(runtmp, linear_gather):
     print(c.last_result.err)
 
     assert c.last_result.status != 0
-    assert "ERROR in prefetch: no compatible signatures in any databases?!" in c.last_result.err
+    assert "ERROR in prefetch: after picklists and patterns, no signatures to search!?" in c.last_result.err
 
 
 def test_prefetch_db_fromfile(runtmp, linear_gather):

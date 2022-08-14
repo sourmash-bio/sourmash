@@ -288,7 +288,6 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
 
     'select' on compatibility with query, and apply picklists & patterns.
     """
-    total_signatures_loaded = 0
     query_mh = query.minhash
 
     # set selection parameter for containment
@@ -297,7 +296,8 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
         containment = False
 
     databases = []
-    sum_signatures = 0
+    total_signatures_loaded = 0
+    sum_signatures_after_select = 0
     for filename in filenames:
         notify(f"loading from '{filename}'...", end='\r')
 
@@ -333,7 +333,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
             if fail_on_empty_database:
                 sys.exit(-1)
 
-        sum_signatures += len(db)
+        sum_signatures_after_select += len(db)
 
         # last but not least, apply picklist!
         db = apply_picklist_and_pattern(db, picklist, pattern)
@@ -343,9 +343,9 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
     # display num loaded/num selected
     notify("--")
     notify(f"loaded {total_signatures_loaded} total signatures from {len(databases)} locations.")
-    notify(f"after selecting signatures compatible with search, {sum_signatures} remain.")
+    notify(f"after selecting signatures compatible with search, {sum_signatures_after_select} remain.")
 
-    if sum_signatures:
+    if sum_signatures_after_select:
         print('')
     else:
         # @CTB should this be subject to fail_on_empty_databases?

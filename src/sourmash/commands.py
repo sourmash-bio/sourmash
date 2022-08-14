@@ -734,6 +734,7 @@ def gather(args):
                     # catch "no signatures to search" ValueError from filtering
                     continue
                 else:
+                    # @CTB test me?
                     raise       # re-raise other errors, if no picklist.
 
             save_prefetch.add_many(counter.signatures())
@@ -1236,10 +1237,13 @@ def prefetch(args):
 
     did_a_search = False        # track whether we did _any_ search at all!
     size_may_be_inaccurate = False
+    total_signatures_loaded = 0
+    sum_signatures_after_select = 0
     for dbfilename in args.databases:
-        notify(f"loading signatures from '{dbfilename}'")
+        notify(f"loading signatures from '{dbfilename}'", end='\r')
 
         db = sourmash_args.load_file_as_index(dbfilename)
+        total_signatures_loaded += len(db)
 
         # force linear traversal?
         if args.linear:
@@ -1247,6 +1251,8 @@ def prefetch(args):
 
         db = db.select(ksize=ksize, moltype=moltype,
                        containment=True, scaled=True)
+
+        sum_signatures_after_select += len(db)
 
         db = sourmash_args.apply_picklist_and_pattern(db, picklist,
                                                       pattern_search)
@@ -1300,10 +1306,15 @@ def prefetch(args):
         # delete db explicitly ('cause why not)
         del db
 
+    notify("--")
+    notify(f"loaded {total_signatures_loaded} total signatures from {len(args.databases)} locations.")
+    notify(f"after selecting signatures compatible with search, {sum_signatures_after_select} remain.")
+
     if not did_a_search:
-        notify("ERROR in prefetch: no compatible signatures in any databases?!")
+        notify("ERROR in prefetch: after picklists and patterns, no signatures to search!?")
         sys.exit(-1)
 
+    notify("--")
     notify(f"total of {matches_out.count} matching signatures.")
     matches_out.close()
 
