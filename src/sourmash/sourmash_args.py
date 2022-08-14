@@ -281,16 +281,17 @@ def traverse_find_sigs(filenames, yield_all_files=False):
 
 
 def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
-                      cache_size=None, picklist=None, pattern=None):
+                      cache_size=None, picklist=None, pattern=None,
+                      fail_on_empty_database=False):
     """
-    Load one or more SBTs, LCAs, and/or collections of signatures.
+    Load one or more Index objects to search - databases, etc.
 
-    Check for compatibility with query.
-
-    This is basically a user-focused wrapping of _load_databases.
+    'select' on compatibility with query, and apply picklists & patterns.
     """
+    total_signatures_loaded = 0
     query_mh = query.minhash
 
+    # set selection parameter for containment
     containment = True
     if is_similarity_query:
         containment = False
@@ -306,6 +307,9 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
             notify(str(e))
             sys.exit(-1)
 
+        total_signatures_loaded += len(db)
+
+        # get compatible signatures - moltype/ksize/num/scaled
         try:
             db = db.select(moltype=query_mh.moltype,
                            ksize=query_mh.ksize,
@@ -316,37 +320,30 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
             # incompatible collection specified!
             notify(f"ERROR: cannot use '{filename}' for this query.")
             notify(str(exc))
-            sys.exit(-1)
+            if fail_on_empty_database:
+                sys.exit(-1)
 
         # 'select' returns nothing => all signatures filtered out. fail!
         if not db:
             notify(f"no compatible signatures found in '{filename}'")
-            sys.exit(-1)
+            if fail_on_empty_database:
+                sys.exit(-1)
 
+        # last but not least, apply picklist!
         db = apply_picklist_and_pattern(db, picklist, pattern)
 
         databases.append(db)
 
-    # calc num loaded info.
-    n_signatures = 0
-    n_databases = 0
-    for db in databases:
-        if db.is_database:
-            n_databases += 1
-        else:
-            n_signatures += len(db)
+    # calc num loaded/num selected info & display.
+    sum_signatures = sum([ len(db) for db in databases ])
 
-    notify(' '*79, end='\r')
-    if n_signatures and n_databases:
-        notify(f'loaded {n_signatures} signatures and {n_databases} databases total.')
-    elif n_signatures and not n_databases:
-        notify(f'loaded {n_signatures} signatures.')
-    elif n_databases and not n_signatures:
-        notify(f'loaded {n_databases} databases.')
+    notify(f"loaded {total_signatures_loaded} total signatures from {len(databases)} locations.")
+    notify(f"after selecting signatures compatible with search, {sum_signatures} remain.")
 
     if databases:
         print('')
     else:
+        # @CTB should this be subject to fail_on_empty_databases?
         notify('** ERROR: no signatures or databases loaded?')
         sys.exit(-1)
 

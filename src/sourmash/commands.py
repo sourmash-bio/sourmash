@@ -698,7 +698,9 @@ def gather(args):
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
                                                 cache_size=cache_size,
                                                 picklist=picklist,
-                                                pattern=pattern_search)
+                                                pattern=pattern_search,
+                                                fail_on_empty_database=args.fail_on_empty_database)
+
 
     if args.linear:             # force linear traversal?
         databases = [ LazyLinearIndex(db) for db in databases ]
