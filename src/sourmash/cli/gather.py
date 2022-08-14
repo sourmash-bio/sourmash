@@ -144,7 +144,7 @@ def subparser(subparsers):
         dest='fail_on_empty_database',
         help='continue past databases that contain no compatible signatures'
     )
-    subparser.set_defaults(fail_on_empty_database=False)
+    subparser.set_defaults(fail_on_empty_database=True)
 
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
