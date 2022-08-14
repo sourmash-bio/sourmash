@@ -3957,7 +3957,11 @@ def test_gather_query_downsample(runtmp, linear_gather, prefetch_gather):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert 'loaded 12 signatures' in runtmp.last_result.err
+    err = runtmp.last_result.err
+
+    assert 'loaded 36 total signatures from 12 locations.' in err
+    assert 'after selecting signatures compatible with search, 12 remain.' in err
+
     assert all(('4.9 Mbp      100.0%  100.0%' in runtmp.last_result.out,
                 'NC_003197.2' in runtmp.last_result.out))
 
@@ -3976,7 +3980,11 @@ def test_gather_query_downsample_explicit(runtmp, linear_gather, prefetch_gather
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert 'loaded 12 signatures' in runtmp.last_result.err
+    err = runtmp.last_result.err
+
+    assert 'loaded 36 total signatures from 12 locations.' in err
+    assert 'after selecting signatures compatible with search, 12 remain.' in err
+
     assert all(('4.9 Mbp      100.0%  100.0%' in runtmp.last_result.out,
                 'NC_003197.2' in runtmp.last_result.out))
 
