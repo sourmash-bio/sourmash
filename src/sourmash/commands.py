@@ -496,11 +496,8 @@ def search(args):
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
                                                 not is_containment,
                                                 picklist=picklist,
-                                                pattern=pattern_search)
-
-    if not len(databases):
-        error('Nothing found to search!')
-        sys.exit(-1)
+                                                pattern=pattern_search,
+                                                fail_on_empty_database=args.fail_on_empty_database)
 
     # handle signatures with abundance
     if query.minhash.track_abundance:
@@ -702,11 +699,9 @@ def gather(args):
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
                                                 cache_size=cache_size,
                                                 picklist=picklist,
-                                                pattern=pattern_search)
+                                                pattern=pattern_search,
+                                                fail_on_empty_database=args.fail_on_empty_database)
 
-    if not len(databases):
-        error('Nothing found to search!')
-        sys.exit(-1)
 
     if args.linear:             # force linear traversal?
         databases = [ LazyLinearIndex(db) for db in databases ]
@@ -735,11 +730,8 @@ def gather(args):
             try:
                 counter = db.counter_gather(prefetch_query, args.threshold_bp)
             except ValueError:
-                if picklist or pattern_search:
-                    # catch "no signatures to search" ValueError from filtering
-                    continue
-                else:
-                    raise       # re-raise other errors, if no picklist.
+                # catch "no signatures to search" ValueError if empty db.
+                continue
 
             save_prefetch.add_many(counter.signatures())
 
@@ -911,11 +903,8 @@ def multigather(args):
     # need a query to get ksize, moltype for db loading
     query = next(iter(sourmash_args.load_file_as_signatures(inp_files[0], ksize=args.ksize, select_moltype=moltype)))
 
-    databases = sourmash_args.load_dbs_and_sigs(args.db, query, False)
-
-    if not len(databases):
-        error('Nothing found to search!')
-        sys.exit(-1)
+    databases = sourmash_args.load_dbs_and_sigs(args.db, query, False,
+                                                fail_on_empty_database=args.fail_on_empty_database)
 
     # run gather on all the queries.
     n=0
@@ -949,7 +938,11 @@ def multigather(args):
 
             counters = []
             for db in databases:
-                counter = db.counter_gather(prefetch_query, args.threshold_bp)
+                try:
+                    counter = db.counter_gather(prefetch_query, args.threshold_bp)
+                except ValueError:
+                    # catch "no signatures to search" ValueError if empty db.
+                    continue
                 counters.append(counter)
 
                 # track found/not found hashes
@@ -1244,10 +1237,13 @@ def prefetch(args):
 
     did_a_search = False        # track whether we did _any_ search at all!
     size_may_be_inaccurate = False
+    total_signatures_loaded = 0
+    sum_signatures_after_select = 0
     for dbfilename in args.databases:
-        notify(f"loading signatures from '{dbfilename}'")
+        notify(f"loading signatures from '{dbfilename}'", end='\r')
 
         db = sourmash_args.load_file_as_index(dbfilename)
+        total_signatures_loaded += len(db)
 
         # force linear traversal?
         if args.linear:
@@ -1255,6 +1251,8 @@ def prefetch(args):
 
         db = db.select(ksize=ksize, moltype=moltype,
                        containment=True, scaled=True)
+
+        sum_signatures_after_select += len(db)
 
         db = sourmash_args.apply_picklist_and_pattern(db, picklist,
                                                       pattern_search)
@@ -1308,10 +1306,15 @@ def prefetch(args):
         # delete db explicitly ('cause why not)
         del db
 
+    notify("--")
+    notify(f"loaded {total_signatures_loaded} total signatures from {len(args.databases)} locations.")
+    notify(f"after selecting signatures compatible with search, {sum_signatures_after_select} remain.")
+
     if not did_a_search:
-        notify("ERROR in prefetch: no compatible signatures in any databases?!")
+        notify("ERROR in prefetch: after picklists and patterns, no signatures to search!?")
         sys.exit(-1)
 
+    notify("--")
     notify(f"total of {matches_out.count} matching signatures.")
     matches_out.close()
 

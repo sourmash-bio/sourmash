@@ -2055,7 +2055,8 @@ def test_search_check_scaled_bounds_more_than_maximum(runtmp):
 # explanation: you cannot downsample a scaled SBT to match a scaled
 # signature, so make sure that when you try such a search, it fails!
 # (you *can* downsample a signature to match an SBT.)
-def test_search_metagenome_downsample(runtmp):
+def test_search_metagenome_sbt_downsample_fail(runtmp):
+    # test downsample on SBT => failure, with --fail-on-empty-databases
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -2069,18 +2070,41 @@ def test_search_metagenome_downsample(runtmp):
 
     assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
 
-    cmd = 'search {} gcf_all -k 21 --scaled 100000'.format(query_sig)
-
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('search', query_sig, 'gcf_all', '-k', '21', '--scaled', '100000')
-
-    assert runtmp.last_result.status == -1
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
+    assert runtmp.last_result.status == -1
     assert "ERROR: cannot use 'gcf_all' for this query." in runtmp.last_result.err
     assert "search scaled value 100000 is less than database scaled value of 10000" in runtmp.last_result.err
+
+
+def test_search_metagenome_sbt_downsample_nofail(runtmp):
+    # test downsample on SBT => failure but ok with --no-fail-on-empty-database
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+
+    runtmp.sourmash(*cmd)
+
+    assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
+
+    runtmp.sourmash('search', query_sig, 'gcf_all', '-k', '21', '--scaled', '100000', '--no-fail-on-empty-database')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert "ERROR: cannot use 'gcf_all' for this query." in runtmp.last_result.err
+    assert "search scaled value 100000 is less than database scaled value of 10000" in runtmp.last_result.err
+    assert "0 matches:" in runtmp.last_result.out
 
 
 def test_search_metagenome_downsample_containment(runtmp):
@@ -2214,6 +2238,40 @@ def test_search_with_pattern_exclude(runtmp):
     assert "33.2%       NC_003198.1 Salmonella" in out
     assert "33.1%       NC_003197.2 Salmonella" in out
     assert "32.2%       NC_006905.1 Salmonella" in out
+
+
+def test_search_empty_db_fail(runtmp):
+    # search should fail on empty db with --fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('search', query, against, against2, '-k', '51')
+
+
+    err = runtmp.last_result.err
+    assert "no compatible signatures found in " in err
+
+
+def test_search_empty_db_nofail(runtmp):
+    # search should not fail on empty db with --no-fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    runtmp.sourmash('search', query, against, against2, '-k', '51',
+                    '--no-fail-on-empty-data')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+    print(out)
+    print(err)
+
+    assert "no compatible signatures found in " in err
+    assert "ksize on this database is 31; this is different from requested ksize of 51" in err
+    assert "loaded 50 total signatures from 2 locations" in err
+    assert "after selecting signatures compatible with search, 0 remain." in err
 
 
 def test_mash_csv_to_sig(runtmp):
@@ -4081,7 +4139,11 @@ def test_gather_query_downsample(runtmp, linear_gather, prefetch_gather):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert 'loaded 12 signatures' in runtmp.last_result.err
+    err = runtmp.last_result.err
+
+    assert 'loaded 36 total signatures from 12 locations.' in err
+    assert 'after selecting signatures compatible with search, 12 remain.' in err
+
     assert all(('4.9 Mbp      100.0%  100.0%' in runtmp.last_result.out,
                 'NC_003197.2' in runtmp.last_result.out))
 
@@ -4100,7 +4162,11 @@ def test_gather_query_downsample_explicit(runtmp, linear_gather, prefetch_gather
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert 'loaded 12 signatures' in runtmp.last_result.err
+    err = runtmp.last_result.err
+
+    assert 'loaded 36 total signatures from 12 locations.' in err
+    assert 'after selecting signatures compatible with search, 12 remain.' in err
+
     assert all(('4.9 Mbp      100.0%  100.0%' in runtmp.last_result.out,
                 'NC_003197.2' in runtmp.last_result.out))
 
@@ -4574,6 +4640,41 @@ def test_gather_output_unassigned_with_abundance(runtmp, prefetch_gather, linear
             assert nomatch_mh.hashes[hashval] == abund
 
 
+def test_gather_empty_db_fail(runtmp, linear_gather, prefetch_gather):
+    # gather should fail on empty db with --fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('gather', query, against, against2, '-k', '51',
+                        linear_gather, prefetch_gather)
+
+
+    err = runtmp.last_result.err
+    assert "no compatible signatures found in " in err
+
+
+def test_gather_empty_db_nofail(runtmp, prefetch_gather, linear_gather):
+    # gather should not fail on empty db with --no-fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    runtmp.sourmash('gather', query, against, against2, '-k', '51',
+                    '--no-fail-on-empty-data',
+                    linear_gather, prefetch_gather)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+    print(out)
+    print(err)
+
+    assert "no compatible signatures found in " in err
+    assert "ksize on this database is 31; this is different from requested ksize of 51" in err
+    assert "loaded 50 total signatures from 2 locations" in err
+    assert "after selecting signatures compatible with search, 0 remain." in err
+
 def test_multigather_output_unassigned_with_abundance(runtmp):
     c = runtmp
     query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
@@ -4603,6 +4704,41 @@ def test_multigather_output_unassigned_with_abundance(runtmp):
         if hashval not in against_ss.minhash.hashes:
             assert nomatch_mh.hashes[hashval] == abund
 
+
+def test_multigather_empty_db_fail(runtmp):
+    # multigather should fail on empty db with --fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('multigather', '--query', query,
+                        '--db', against, against2, '-k', '51')
+
+    err = runtmp.last_result.err
+    assert "no compatible signatures found in " in err
+
+
+def test_multigather_empty_db_nofail(runtmp):
+    # multigather should not fail on empty db with --no-fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    runtmp.sourmash('multigather', '--query', query,
+                    '--db', against, against2, '-k', '51',
+                    '--no-fail-on-empty-data')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+    print(out)
+    print(err)
+
+    assert "no compatible signatures found in " in err
+    assert "ksize on this database is 31; this is different from requested ksize of 51" in err
+    assert "conducted gather searches on 0 signatures" in err
+    assert "loaded 50 total signatures from 2 locations" in err
+    assert "after selecting signatures compatible with search, 0 remain." in err
 
 def test_sbt_categorize(runtmp):
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')

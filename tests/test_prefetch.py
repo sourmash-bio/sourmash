@@ -42,6 +42,10 @@ def test_prefetch_basic(runtmp, linear_gather):
     assert "loaded query: NC_009665.1 Shewanella baltica... (k=31, DNA)" in c.last_result.err
     assert "query sketch has scaled=1000; will be dynamically downsampled as needed" in c.last_result.err
 
+    err = c.last_result.err
+    assert "loaded 5 total signatures from 3 locations." in err
+    assert "after selecting signatures compatible with search, 3 remain." in err
+
     assert "total of 2 matching signatures." in c.last_result.err
     assert "of 5177 distinct query hashes, 5177 were found in matches above threshold." in c.last_result.err
     assert "a total of 0 query hashes remain unmatched." in c.last_result.err
@@ -453,7 +457,7 @@ def test_prefetch_no_num_subj(runtmp, linear_gather):
     print(c.last_result.err)
 
     assert c.last_result.status != 0
-    assert "ERROR in prefetch: no compatible signatures in any databases?!" in c.last_result.err
+    assert "ERROR in prefetch: after picklists and patterns, no signatures to search!?" in c.last_result.err
 
 
 def test_prefetch_db_fromfile(runtmp, linear_gather):
