@@ -327,8 +327,9 @@ def test_do_traverse_directory_compare_force(c):
     assert 'genome-s11.fa.gz' in c.last_result.out
 
 
-@utils.in_tempdir
-def test_do_compare_output_csv(c):
+def test_do_compare_output_csv(runtmp):
+    # test 'sourmash compare --csv'
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -336,6 +337,33 @@ def test_do_compare_output_csv(c):
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx')
 
     with open(c.output('xxx')) as fp:
+        r = iter(csv.reader(fp))
+        row = next(r)
+        print(row)
+        row = next(r)
+        print(row)
+        assert float(row[0]) == 1.0
+        assert float(row[1]) == 0.93
+        row = next(r)
+        assert float(row[0]) == 0.93
+        assert float(row[1]) == 1.0
+
+        # exactly three lines
+        with pytest.raises(StopIteration) as e:
+            next(r)
+
+
+def test_do_compare_output_csv_gz(runtmp):
+    # test 'sourmash compare --csv' with a .gz file
+    c = runtmp
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig',
+                   '--csv', 'xxx.gz')
+
+    with gzip.open(c.output('xxx.gz'), 'rt', newline='') as fp:
         r = iter(csv.reader(fp))
         row = next(r)
         print(row)
@@ -786,8 +814,10 @@ def test_plot_override_labeltext_fail(runtmp):
     assert '3 labels != matrix size, exiting' in runtmp.last_result.err
 
 
-@utils.in_tempdir
-def test_plot_reordered_labels_csv(c):
+def test_plot_reordered_labels_csv(runtmp):
+    # test 'plot --csv'
+    c = runtmp
+
     ss2 = utils.get_test_data('2.fa.sig')
     ss47 = utils.get_test_data('47.fa.sig')
     ss63 = utils.get_test_data('63.fa.sig')
@@ -796,6 +826,29 @@ def test_plot_reordered_labels_csv(c):
     c.run_sourmash('plot', 'cmp', '--csv', 'neworder.csv')
 
     with open(c.output('neworder.csv'), newline="") as fp:
+        r = csv.DictReader(fp)
+
+        akker_vals = set()
+        for row in r:
+            akker_vals.add(row['CP001071.1 Akkermansia muciniphila ATCC BAA-835, complete genome'])
+
+        assert '1.0' in akker_vals
+        assert '0.0' in akker_vals
+        assert len(akker_vals) == 2
+
+
+def test_plot_reordered_labels_csv_gz(runtmp):
+    # test 'plot --csv' with a .gz output
+    c = runtmp
+
+    ss2 = utils.get_test_data('2.fa.sig')
+    ss47 = utils.get_test_data('47.fa.sig')
+    ss63 = utils.get_test_data('63.fa.sig')
+
+    c.run_sourmash('compare', '-k', '31', '-o', 'cmp', ss2, ss47, ss63)
+    c.run_sourmash('plot', 'cmp', '--csv', 'neworder.csv.gz')
+
+    with gzip.open(c.output('neworder.csv.gz'), 'rt', newline="") as fp:
         r = csv.DictReader(fp)
 
         akker_vals = set()
@@ -2988,6 +3041,7 @@ def test_gather(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_csv(runtmp, linear_gather, prefetch_gather):
+    # test 'gather -o csvfile'
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -3007,6 +3061,46 @@ def test_gather_csv(runtmp, linear_gather, prefetch_gather):
     csv_file = runtmp.output('foo.csv')
 
     with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert float(row['intersect_bp']) == 910
+        assert float(row['unique_intersect_bp']) == 910
+        assert float(row['remaining_bp']) == 0
+        assert float(row['f_orig_query']) == 1.0
+        assert float(row['f_unique_to_query']) == 1.0
+        assert float(row['f_match']) == 1.0
+        assert row['filename'] == 'zzz'
+        assert row['name'] == 'tr1 4'
+        assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
+        assert row['gather_result_rank'] == '0'
+        assert row['query_filename'].endswith('short2.fa')
+        assert row['query_name'] == 'tr1 4'
+        assert row['query_md5'] == 'c9d5a795'
+        assert row['query_bp'] == '910'
+
+
+def test_gather_csv_gz(runtmp, linear_gather, prefetch_gather):
+    # test 'gather -o csvfile.gz'
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '--name-from-first', testdata1, testdata2)
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', '--name-from-first', testdata2)
+
+    runtmp.sourmash('index', '-k', '31', 'zzz', 'short.fa.sig', 'short2.fa.sig')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', '-o', 'foo.csv.gz', '--threshold-bp=1', linear_gather, prefetch_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    csv_file = runtmp.output('foo.csv.gz')
+
+    with gzip.open(csv_file, "rt", newline="") as fp:
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
@@ -3110,6 +3204,36 @@ def test_gather_multiple_sbts_save_prefetch_csv(runtmp, linear_gather):
     assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
     assert os.path.exists(runtmp.output('prefetch.csv'))
     with open(runtmp.output('prefetch.csv')) as f:
+        output = f.read()
+        print((output,))
+        assert '870,0.925531914893617,0.9666666666666667' in output
+
+
+def test_gather_multiple_sbts_save_prefetch_csv_gz(runtmp, linear_gather):
+    # test --save-prefetch-csv to a .gz file, with multiple databases
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    runtmp.sourmash('sketch','dna', '-p', 'scaled=10', testdata1, testdata2)
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2)
+
+    runtmp.sourmash('index', 'zzz', 'short.fa.sig', '-k', '31')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('index', 'zzz2', 'short2.fa.sig', '-k', '31')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', 'zzz2', '-o', 'foo.csv', '--save-prefetch-csv', 'prefetch.csv.gz', '--threshold-bp=1', linear_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
+    assert os.path.exists(runtmp.output('prefetch.csv.gz'))
+    with gzip.open(runtmp.output('prefetch.csv.gz'), 'rt', newline="") as f:
         output = f.read()
         print((output,))
         assert '870,0.925531914893617,0.9666666666666667' in output

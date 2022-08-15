@@ -718,7 +718,7 @@ def gather(args):
         prefetch_csvout_fp = None
         prefetch_csvout_w = None
         if args.save_prefetch_csv:
-            prefetch_csvout_fp = FileOutput(args.save_prefetch_csv, 'wt').open()
+            prefetch_csvout_fp = FileOutputCSV(args.save_prefetch_csv).open()
 
             query_mh = prefetch_query.minhash
             scaled = query_mh.scaled
@@ -1222,7 +1222,7 @@ def prefetch(args):
     csvout_fp = None
     csvout_w = None
     if args.output:
-        csvout_fp = FileOutput(args.output, 'wt').open()
+        csvout_fp = FileOutputCSV(args.output).open()
 
     # track & maybe save matches progressively
     matches_out = SaveSignaturesToLocation(args.save_matches)
