@@ -4,6 +4,7 @@ Tests for 'sourmash sig collect'
 import pytest
 import shutil
 import os.path
+import gzip
 
 import sourmash
 from sourmash.manifest import BaseCollectionManifest
@@ -42,6 +43,63 @@ def test_sig_collect_1_zipfile(runtmp, manifest_db_format):
     md5_list = [ row['md5'] for row in manifest.rows ]
     assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
     assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+
+def test_sig_collect_1_zipfile_csv_gz(runtmp):
+    # collect a manifest from a .zip file, save to csv.gz
+    protzip = utils.get_test_data('prot/protein.zip')
+
+    runtmp.sourmash('sig', 'collect', protzip, '-o', 'mf.csv.gz',
+                    '-F', 'csv')
+
+    manifest_fn = runtmp.output('mf.csv.gz')
+
+    # gzip, yes?
+    print('XXX', manifest_fn)
+    with gzip.open(manifest_fn, 'rt', newline='') as fp:
+        fp.read()
+
+    manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+
+def test_sig_collect_1_zipfile_csv_gz_roundtrip(runtmp):
+    # collect a manifest from a .zip file, save to csv.gz; then load again
+    protzip = utils.get_test_data('prot/protein.zip')
+
+    runtmp.sourmash('sig', 'collect', protzip, '-o', 'mf.csv.gz',
+                    '-F', 'csv')
+
+    manifest_fn = runtmp.output('mf.csv.gz')
+
+    # gzip, yes?
+    print('XXX', manifest_fn)
+    with gzip.open(manifest_fn, 'rt', newline='') as fp:
+        fp.read()
+
+    manifest = BaseCollectionManifest.load_from_filename(manifest_fn)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+    # can we read a csv.gz?
+    runtmp.sourmash('sig', 'collect', 'mf.csv.gz', '-o', 'mf2.csv',
+                    '-F', 'csv')
+
+    manifest_fn2 = runtmp.output('mf2.csv')
+    manifest2 = BaseCollectionManifest.load_from_filename(manifest_fn2)
+
+    assert len(manifest2) == 2
+    md5_list = [ row['md5'] for row in manifest2.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
 
 
 def test_sig_collect_2_exists_fail(runtmp, manifest_db_format):
@@ -127,7 +185,7 @@ def test_sig_collect_2_exists_csv_merge_sql(runtmp):
 
     ext = 'csv'
 
-    # save as sql...
+    # save as csv...
     runtmp.sourmash('sig', 'collect', protzip, '-o', f'mf.{ext}',
                     '-F', 'csv')
 

@@ -4,6 +4,7 @@ Tests for functions in taxonomy submodule.
 
 import pytest
 from os.path import basename
+import gzip
 
 import sourmash_tst_utils as utils
 
@@ -187,6 +188,22 @@ def test_load_gather_results_empty(runtmp):
 def test_load_taxonomy_csv():
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     tax_assign = MultiLineageDB.load([taxonomy_csv])
+    print("taxonomy assignments: \n", tax_assign)
+    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1']
+    assert len(tax_assign) == 6 # should have read 6 rows
+
+
+def test_load_taxonomy_csv_gzip(runtmp):
+    # test loading a gzipped taxonomy csv file
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    tax_gz = runtmp.output('tax.csv.gz')
+
+    with gzip.open(tax_gz, 'wt') as outfp:
+        with open(taxonomy_csv, 'rt') as infp:
+            data = infp.read()
+        outfp.write(data)
+
+    tax_assign = MultiLineageDB.load([tax_gz])
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1']
     assert len(tax_assign) == 6 # should have read 6 rows

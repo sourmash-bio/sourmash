@@ -1366,9 +1366,8 @@ def check(args):
         # go through the input file and pick out missing rows.
         n_input = 0
         n_output = 0
-        with open(pickfile, newline='') as csvfp:
-            r = csv.DictReader(csvfp)
 
+        with sourmash_args.FileInputCSV(pickfile) as r:
             with open(args.output_missing, "w", newline='') as outfp:
                 w = csv.DictWriter(outfp, fieldnames=r.fieldnames)
                 w.writeheader()
