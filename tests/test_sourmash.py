@@ -4482,6 +4482,41 @@ def test_gather_output_unassigned_with_abundance(runtmp, prefetch_gather, linear
             assert nomatch_mh.hashes[hashval] == abund
 
 
+def test_gather_empty_db_fail(runtmp, linear_gather, prefetch_gather):
+    # gather should fail on empty db with --fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('gather', query, against, against2, '-k', '51',
+                        linear_gather, prefetch_gather)
+
+
+    err = runtmp.last_result.err
+    assert "no compatible signatures found in " in err
+
+
+def test_gather_empty_db_nofail(runtmp, prefetch_gather, linear_gather):
+    # gather should not fail on empty db with --no-fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    runtmp.sourmash('gather', query, against, against2, '-k', '51',
+                    '--no-fail-on-empty-data',
+                    linear_gather, prefetch_gather)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+    print(out)
+    print(err)
+
+    assert "no compatible signatures found in " in err
+    assert "ksize on this database is 31; this is different from requested ksize of 51" in err
+    assert "loaded 50 total signatures from 2 locations" in err
+    assert "after selecting signatures compatible with search, 0 remain." in err
+
 def test_multigather_output_unassigned_with_abundance(runtmp):
     c = runtmp
     query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
@@ -4511,6 +4546,41 @@ def test_multigather_output_unassigned_with_abundance(runtmp):
         if hashval not in against_ss.minhash.hashes:
             assert nomatch_mh.hashes[hashval] == abund
 
+
+def test_multigather_empty_db_fail(runtmp):
+    # multigather should fail on empty db with --fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('multigather', '--query', query,
+                        '--db', against, against2, '-k', '51')
+
+    err = runtmp.last_result.err
+    assert "no compatible signatures found in " in err
+
+
+def test_multigather_empty_db_nofail(runtmp):
+    # multigather should not fail on empty db with --no-fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    runtmp.sourmash('multigather', '--query', query,
+                    '--db', against, against2, '-k', '51',
+                    '--no-fail-on-empty-data')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+    print(out)
+    print(err)
+
+    assert "no compatible signatures found in " in err
+    assert "ksize on this database is 31; this is different from requested ksize of 51" in err
+    assert "conducted gather searches on 0 signatures" in err
+    assert "loaded 50 total signatures from 2 locations" in err
+    assert "after selecting signatures compatible with search, 0 remain." in err
 
 def test_sbt_categorize(runtmp):
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')

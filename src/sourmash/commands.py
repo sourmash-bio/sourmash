@@ -938,7 +938,11 @@ def multigather(args):
 
             counters = []
             for db in databases:
-                counter = db.counter_gather(prefetch_query, args.threshold_bp)
+                try:
+                    counter = db.counter_gather(prefetch_query, args.threshold_bp)
+                except ValueError:
+                    # catch "no signatures to search" ValueError if empty db.
+                    continue
                 counters.append(counter)
 
                 # track found/not found hashes
