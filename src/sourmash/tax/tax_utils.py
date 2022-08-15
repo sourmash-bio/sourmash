@@ -7,7 +7,7 @@ from collections import namedtuple, defaultdict
 from collections import abc
 import gzip
 
-from sourmash import sqlite_utils
+from sourmash import sqlite_utils, sourmash_args
 from sourmash.exceptions import IndexNotSupported
 from sourmash.distance_utils import containment_to_distance
 
@@ -642,17 +642,7 @@ class LineageDB(abc.Mapping):
         if os.path.isdir(filename):
             raise ValueError(f"'{filename}' is a directory")
 
-        xopen = open
-        try:
-            with gzip.open(filename, 'r') as fp:
-                # succesful open/read? use gzip
-                fp.read(1)
-                xopen = gzip.open
-        except gzip.BadGzipFile:
-            pass
-
-        with xopen(filename, 'rt', newline='') as fp:
-            r = csv.DictReader(fp, delimiter=delimiter)
+        with sourmash_args.FileInputCSV(filename) as r:
             header = r.fieldnames
             if not header:
                 raise ValueError(f'cannot read taxonomy assignments from {filename}')
@@ -1042,7 +1032,7 @@ class MultiLineageDB(abc.Mapping):
                 try:
                     this_tax_assign = LineageDB.load(location, **kwargs)
                     loaded = True
-                except ValueError as exc:
+                except (ValueError, csv.Error) as exc:
                     # for the last loader, just pass along ValueError...
                     raise ValueError(f"cannot read taxonomy assignments from '{location}': {str(exc)}")
 

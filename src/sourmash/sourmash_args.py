@@ -37,11 +37,14 @@ signature and file output functionality:
 """
 import sys
 import os
+import csv
 from enum import Enum
 import traceback
 import gzip
-from io import StringIO
+from io import StringIO, TextIOWrapper
 import re
+import zipfile
+import contextlib
 
 import screed
 import sourmash
@@ -651,8 +654,120 @@ class FileOutputCSV(FileOutput):
     def open(self):
         if self.filename == '-' or self.filename is None:
             return sys.stdout
-        self.fp = open(self.filename, 'w', newline='')
+        if self.filename.endswith('.gz'):
+            self.fp = gzip.open(self.filename, 'wt', newline='')
+        else:
+            self.fp = open(self.filename, 'w', newline='')
         return self.fp
+
+
+class _DictReader_with_version:
+    """A version of csv.DictReader that allows a comment line with a version,
+    e.g.
+
+    # SOURMASH-MANIFEST-VERSION: 1.0
+
+    The version is stored as a 2-tuple in the 'version_info' attribute.
+    """
+    def __init__(self, textfp, *, delimiter=','):
+        self.version_info = []
+
+        # is there a '#' in the raw buffer pos 0?
+        ch = textfp.buffer.peek(1)
+
+        try:
+            ch = ch.decode('utf-8')
+        except UnicodeDecodeError:
+            raise csv.Error("unable to read CSV file")
+
+        # yes - read a line from the text buffer => parse
+        if ch.startswith('#'):
+            line = textfp.readline()
+            assert line.startswith('# '), line
+
+            # note, this can set version_info to lots of different things.
+            # revisit later, I guess. CTB.
+            self.version_info = line[2:].strip().split(': ', 2)
+
+        # build a DictReader from the remaining stream
+        self.reader = csv.DictReader(textfp, delimiter=delimiter)
+        self.fieldnames = self.reader.fieldnames
+
+    def __iter__(self):
+        for row in self.reader:
+            yield row
+
+
+@contextlib.contextmanager
+def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None,
+                 zipfile_obj=None, delimiter=','):
+    """A context manager for reading in CSV files in gzip, zip or text format.
+
+    Assumes comma delimiter, and uses csv.DictReader.
+
+    Note: does not support stdin.
+
+    Note: it seems surprisingly hard to write code that generically handles
+    any file handle being passed in; the manifest loading code, in particular,
+    uses ZipStorage.load => StringIO obj, which doesn't support peek etc.
+    So for now, this context manager is focused on situations where it owns
+    the file handle (opens/closes the file).
+    """
+    fp = None
+
+    if zipfile_obj and not default_csv_name:
+        raise ValueError("must provide default_csv_name with a zipfile_obj")
+
+    # first, try to load 'default_csv_name' from a zipfile:
+    if default_csv_name:
+        # were we given a zipfile obj?
+        if zipfile_obj:
+            try:
+                zi = zipfile_obj.getinfo(default_csv_name)
+                with zipfile_obj.open(zi) as fp:
+                    textfp = TextIOWrapper(fp,
+                                           encoding=encoding,
+                                           newline="")
+                    r = _DictReader_with_version(textfp, delimiter=delimiter)
+                    yield r
+            except (zipfile.BadZipFile, KeyError):
+                pass # uh oh, we were given a zipfile_obj and it FAILED.
+
+            # no matter what, if given zipfile_obj don't try .gz or regular csv
+            return
+        else:
+            try:
+                with zipfile.ZipFile(filename, 'r') as zip_fp:
+                    zi = zip_fp.getinfo(default_csv_name)
+                    with zip_fp.open(zi) as fp:
+                        textfp = TextIOWrapper(fp,
+                                               encoding=encoding,
+                                               newline="")
+                        r = _DictReader_with_version(textfp, delimiter=delimiter)
+                        yield r
+
+                # if we got this far with no exceptions, we found
+                # the CSV in the zip file. exit generator!
+                return
+            except (zipfile.BadZipFile, KeyError):
+                # no zipfile_obj => it's ok to continue onwards to .gz
+                # and regular CSV.
+                pass
+
+    # ok, not a zip file - try .gz:
+    try:
+        with gzip.open(filename, "rt", newline="", encoding=encoding) as fp:
+            fp.buffer.peek(1)          # force exception if not a gzip file
+            r = _DictReader_with_version(fp, delimiter=delimiter)
+            yield r
+        return
+    except gzip.BadGzipFile:
+        pass
+
+    # neither zip nor gz; regular file!
+    with open(filename, 'rt', newline="", encoding=encoding) as fp:
+        r = _DictReader_with_version(fp, delimiter=delimiter)
+        yield r
 
 
 class SignatureLoadingProgress:
