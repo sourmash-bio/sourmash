@@ -2187,6 +2187,40 @@ def test_search_with_pattern_exclude(runtmp):
     assert "32.2%       NC_006905.1 Salmonella" in out
 
 
+def test_search_empty_db_fail(runtmp):
+    # search should fail on empty db with --fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('search', query, against, against2, '-k', '51')
+
+
+    err = runtmp.last_result.err
+    assert "no compatible signatures found in " in err
+
+
+def test_search_empty_db_nofail(runtmp):
+    # search should not fail on empty db with --no-fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    runtmp.sourmash('search', query, against, against2, '-k', '51',
+                    '--no-fail-on-empty-data')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+    print(out)
+    print(err)
+
+    assert "no compatible signatures found in " in err
+    assert "ksize on this database is 31; this is different from requested ksize of 51" in err
+    assert "loaded 50 total signatures from 2 locations" in err
+    assert "after selecting signatures compatible with search, 0 remain." in err
+
+
 def test_mash_csv_to_sig(runtmp):
     testdata1 = utils.get_test_data('short.fa.msh.dump')
     testdata2 = utils.get_test_data('short.fa')
