@@ -571,13 +571,29 @@ removed), `md5`, `md5prefix8`, and `md5short`.  Generally the `md5`
 and derived values are used to reference signatures found some other
 way with sourmash, while the identifiers are more broadly useful.
 
-metatypes.
+There are also four special column types that can be used without a column
+name: `gather`, `prefetch`, `search`, and `manifest`. These take the
+CSV output of the respective sourmash commands as inputs for picklists,
+so that you can use prefetch to generate a picklist and then use that
+picklist with `--picklist prefetch_out.csv.gz::prefetch`.
 
-picklist on SBT/LCA vs ZipFileLinearIndex.
+### Differing internal behavior 
 
-using manifests as picklists.
+Picklists behave differently with different `Index` classes.
 
-using taxonomy as picklists.
+For indexed databases like SBT and LCA, the search is done _first_, and
+then only those results that match the picklist are selected.
+
+For linear search databases like `ZipFileLinearIndex` or standalone
+manifests, picklists are _first_ used to subselect the desired
+signatures, and then only those signatures are searched.
+
+So, performance can vary widely, but the results should be the same.
+
+### Taxonomy / lineage spreadsheets as picklists
+
+Note that lineage CSV spreadsheets as consumed by `sourmash tax` commands,
+and as output by `sourmash tax grep`, can be used as `ident` picklists.
 
 ## Similarity matrices with `sourmash compare`
 
