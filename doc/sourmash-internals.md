@@ -1,0 +1,334 @@
+## Signatures and sketches
+
+Default signature format is stored as JSON, gzipped. Read by Rust.
+
+Complication with multiple sketches per signature.
+
+Right now signatures are 1:1 with sketches.
+
+### Scaled (FracMinHash) sketches support similarity and containment
+
+downsampling - mostly done dynamically
+
+### Num (MinHash) sketches support Jaccard similarity
+
+less well supported; see issue @@.
+
+downsampling may need to be done manually.
+
+## K-mer sizes
+
+## Molecule types - DNA, protein, Dayhoff, and hydrophobic-polar
+
+sourmash supports four different sequence encodings, which we refer to
+as "molecule: DNA (`--dna`), protein (`--protein`), Dayhoff,
+(`--dayhoff`), and hydrophobic-polar (`--hp`).
+
+All FracMinHash sketches have exactly one molecule type, and can only
+be compared to the same molecule type (and ksize).
+
+DNA moltype sketches can be constructed from DNA input sequences using
+`sourmash sketch dna`.
+
+Protein, Dayhoff, and HP moltype sketches can be constructed from
+protein input sequences using `sourmash sketch protein`, or from DNA
+input sequences using `sourmash sketch translate`; `translate` will
+translate in all six reading frames (see also @orpheum).  By default
+protein sketches will be created; dayhoff sketches can be created by
+including `dayhoff` in the param string, e.g. `sourmash sketch protein
+-p dayhoff`, and hydrophobic-polar sketches can be built with `hp` in
+the param string.
+
+## Manifests
+
+sourmash makes extensive use of signature manifests to support
+rapid selection and lazy loading of signatures based on signature
+metadata (name, ksize, moltype, etc.) See @@this blog post for 
+some of the motivation.
+
+Manifests are an internal format that is not meant to be particularly
+human readable, but the CSV format can be loaded into a spreadsheet
+program if you're curious :).
+
+If in a zipfile (`.zip`) or SBT zipfile (`.sbt.zip`), manifests must
+be named `SOURMASH-MANIFEST.csv`. They can also be stored directly on
+disk in CSV/gzipped CSV, or in a sqlite database; see
+`sourmash sig manifest`, `sourmash sig check`, and `sourmash sig collect`
+for manifest creation, management, and export utilities.
+
+Where signatures are stored individually in `Index` collections,
+e.g. in a zipfile, manifests may be stored alongside them; for other
+subclasses of `Index` such as the inverted indices, manifests are
+generated dynamically by the class itself.
+
+Currently (sourmash 4.x) manifests do not contain information about the
+hash seed or ... This will be fixed in future, see @@issue.
+
+Manifests are very flexible and, especially when stored in a sqlite
+database, can be extremely performant for organizing hundreds of
+thousands to millions of sketches.  Please see `StandaloneManifestIndex`
+for a lazy-loading `Index` class that supports such massive-scale
+organization.
+
+## Index implementations
+
+The `Index` class and its various subclasses (in `sourmash.index`) are
+containers that provide an API for organizing, selecting, and
+searching (potentially) large numbers of signatures.
+
+Loading and saving of `Index` objects is handled separately from the
+class: loading can be done in Python via the
+`sourmash.load_file_as_index(...)` method, while creation and/or
+updating of `Index` objects is done via
+`sourmash.sourmash_args.SaveSignaturesToLocation(...)`.  These are the
+same APIs used by the command-line functionality.
+
+There are quite a few different `Index` subclasses and they all have
+distinct features.  We have a high-level guide to which collection
+type to use @@here in command-line.
+
+Conceptually, `Index` classes are either organized around storing
+individual signatures often with metadata that permits loading,
+selecting, and/or searching them more efficiently
+(e.g. `ZipFileLinearIndex` and `SBTs`); or they store signatures
+as inverted indices (`LCA_Database` and `SqliteIndex`) that permit
+certain kinds of fast queries.
+
+### In-memory storage and search.
+
+The simplest way to handle collections of signatures is to load them
+into memory, but it is also the least performant and most memory
+intensive mechanism!
+
+`LinearIndex` and `MultiIndex` both support sketches loaded from
+JSON files; both will load the sketches once and then keep them in
+memory.  `LinearIndex` does not use manifests while `MultiIndex` builds
+a manifest as it loads the sketches.
+
+Note that `MultiIndex` is the class used to load signatures from
+pathlists, directory hierarchies, and so on; because it stores
+sketches in memory, this can incur a significant memory penalty (see
+issue @@).  Therefore where possible we suggest building a standalone
+manifest (`StandaloneManifestIndex`) to do lazy loading from the disk
+instead; you can use `sourmash sig collect` to do this.
+
+### Zipfile collections
+
+`ZipFileLinearIndex` stores signature files in a zip file with an
+accompanying manifest.  This is the most versatile and compressed
+option for working with large collections of sketches - it supports
+rapid selection and loading of specific sketches from disk, and can
+store and search any mixture of sketch types (ksize, molecule type,
+scaled values, etc.)
+
+By default, `ZipFileLinearIndex` stores one signature (equiv. one
+sketch) in each member file in the zip archive. Each signature is
+stored uncompressed. The accompanying manifest stores the full member
+file path in `internal_location`, so that sketches can be retrieved
+directly.
+
+Searching a `ZipFileLinearIndex` is done linearly, as implied by the
+name. This is fine for `gather` but if you are doing repeated queries
+with `search` you may want to use an SBT or LCA database instead; see
+below.
+
+In the future we expect to parallelize searching `ZipFileLinearIndex`
+files in Rust; see @@greyhound.
+
+`ZipFileLinearIndex` does support zip files without manifests as well
+as multiple signatures in a single file; this was originally intended
+to support simply zipping entire directory hierarchies into a zipfile.
+However, this slows down performance and is not recommended.  If you
+have an existing zipfile (or really any collection of signatures) and
+you want to turn them into a proper `ZipFileLinearIndex`, you can use
+`sig cat <collection(s)> -o combined.zip` to create a
+`ZipFileLinearIndex` file named `combined.zip` that will have a
+manifest and signatures broken out into individual files.
+
+### Sequence Bloom Trees (SBTs)
+
+Sequence Bloom Trees (SBTs; @@link) provide a faster (but more memory
+intensive) on-disk storage and search mechanism.  In brief, SBTs implement
+a binary tree organization of an arbitrary number of signatures; each
+internal node is a Bloom filter containing all of the hashes for the
+nodes below them. This permits potentially rapid elimination of
+irrelevant nodes on search.
+
+SBTs are restricted to storing and searching sketches with the
+same/single k-mer size and molecule type, as well as either a single
+num value or a single scaled value.
+
+We suggest using SBTs when you are doing multiple Jaccard search or
+containment searches with genomes via `sourmash search`.
+
+### Lowest common ancestor (LCA) databases
+
+The `LCA_Database` index class stores signatures in an inverted index,
+where a Python dictionary is used to link individual hashes back to
+signatures and/or taxonomic lineages. This supports the individualized
+hash analyses used in the `lca` submodule.
+
+LCA databases only support a single ksize, moltype, and scaled. They
+can only be used with FracMinHash (scaled) sketches.
+
+The default `LCA_Database` class is serialized via JSON, and loads
+everything into memory when requested. The load time incurs a
+significant latency penalty when used from the command line, as well
+as having a potentially large memory footprint; this makes it
+difficult to use the default `LCA_Database` for very large databases,
+e.g. genbank bacteria.
+
+The newer `LCA_SqliteDatabase` (based on `SqliteIndex`, described
+below) also supports LCA-style queries, and is stored on disk, is fast to
+load, and uses very little memory. The tradeoff is that the underlying
+sqlite database can be quite large.  `LCA_SqliteDatabase` should also
+support rapid concurrent access (see issue @@).
+
+Both types of LCA database can be constructed with `sourmash lca index`.
+
+### SqliteIndex
+
+The `SqliteIndex` storage class uses sqlite3 to store hashes and
+sketch information for search and retrieval. (@@see blog post) These
+are fast, low-memory, on-disk databases, with the tradeoff that they
+can be quite large.  This is probably currently the best solution for
+concurrent access to sketches via e.g. a Web server (see issue@).
+
+`SqliteIndex` can only contain FracMinHash sketches and can only store
+sketches with the same scaled parameter. However, it can store 
+multiple ksizes and moltypes as long as the same scaled is used.
+
+`SqliteIndex` objects can be constructed using `sourmash sig cat
+... -o filename.sqldb`.
+
+### Standalone manifests
+
+The `StandaloneManifestIndex` class loads standalone manifests generated
+by `sourmash sig collect`. They support rapid selection and lazy loading
+on potentially extremely large collections of signatures.
+
+The underlying mechanism uses the `internal_location` field of
+manifests to point to the container file. When particular sketches are
+requested, the container file is loaded into an `Index` object with
+`sourmash.load_file_as_index` and the `md5` values of the requested
+sketches are used as a picklist to retrieve the desired signatures.
+
+Thus, while standalone manifests can point at any kind of container,
+including JSON files or LCA databases, they are most efficient when
+`internal_location` points at a file with either a single sketch in
+it, or a manifest that supports direct loading of sketches. Therefore,
+we suggest using standalone manifest indices.
+
+Note that searching a standalone manifest is currently done through a
+linear iteration, and does not use any features of indexed containers
+such as SBTs or LCAs.  This is fine for `gather` with the default
+approach, but is probably suboptimal for a `search`.
+
+## Speeding up `gather` and `search`
+
+The basics - gather/prefetch, vs search.
+
+Repeated gathers and searches.
+
+Using prefetch explicitly.
+
+### Using a higher scaled value
+
+### 
+
+## Taxonomy and assigning lineages
+
+All sourmash taxonomy handling is done within the `lca` and `tax`
+subcommands (CLI) and submodules (Python).
+
+In the case of the `lca` subcommands, the taxonomic information is
+incorporated into the LCA database construction (see the `lca index`
+command), while the `tax` subcommands load taxonomic information
+on demand from taxonomy databases (CSVs or databases).
+
+sourmash anchors all taxonomy to identifiers, and uses the signature
+name to do so - this is the name as set by the `--name` parameter to
+`sourmash sketch`, and output by `sourmash sig describe` as the
+`signature:` field.
+
+### Identifier handling
+
+sourmash prefers identifiers to be the first space-separated token in
+the signature name.  This token can contain any alphanumeric letters
+other than space (@@ctb check me), and should contain at most one
+period.  The version of the identifier will be the 
+
+So, for example, for a signature name of
+
+```
+CP001941.1 Aciduliprofundum boonei T469, complete genome
+```
+the identifier would be `CP001941.1` and the version would be 1.
+There are no other constraints placed on the identifier, and
+versions are not handled in any special way other than as below.
+
+The `lca index` and `tax` commands both support some modified
+identifier handling in sourmash 3.x and 4.x, but in the future, we
+plan to deprecate these as they mostly cause confusion and internal
+complexity.
+
+The two modifiers are:
+
+* `--keep-full-identifiers` will use the entire signature
+name instead of just the first space-separated token. It is by default
+off (set to false).
+
+* `--keep-identifier-versions` turns on keeping the full identifier,
+including what is after the first period. It is by default on (set to
+True) @@ctb check me. When it is off (False), identifiers are stripped
+of their version on load.
+
+### Taxonomies, or lineage spreadsheets
+
+sourmash supports arbitrary (free) taxonomies, and new taxonomic
+lineages can be created and used internally as long as they
+are provided in the appropriate spreadsheet format.
+
+You can also mix and match taxonomies as you need; for example, it is
+entirely legitimate in sourmash-land to combine the GTDB taxonomy for
+bacterial and archaeal sequence classification, with the NCBI taxonomy
+for eukaryotic and viral sequence classification.  (You probably don't
+want to mix and match within superkingdoms, though!)
+
+As of sourmash v4, lineage spreadsheets should contain columns for
+superkingdom, phylum, class, order, family, genus, and species.  Some
+commands may also support a 'strain' column, although this is
+inconsistently handled within sourmash internally.
+
+For spreadsheet organization, `lca index` expects the columns to be
+present in order from superkingdom on down, while the `tax`
+subcommands use CSV column headers instead.  We are planning to
+consolidate around the `tax` subcommand handling in the future (@@ctb
+issue).
+
+@@link to example spreadsheets, talk about how to extract.
+
+### `LCA_SqliteDatabase` - a special case
+
+The `LCA_SqliteDatabase` index class can serve multiple purposes: as
+an index of sketches (for regular search and gather); as a taxonomy
+database for use with the `tax` subcommands; and as an LCA database
+for use with the `lca` subcommands.
+
+When used as a taxonomy database, an `LCA_SqliteDatabase` file
+contains the same SQL tables as a sqlite taxonomy database.
+
+When used as an LCA database, an `LCA_SqliteDatabase` dynamically loads
+the taxonomic lineages from the sqlite database and applies them to the
+individual hashes, permitting the same kind of hash-to-lineage query
+capability as the `LCA_Database`.
+
+## Picklists
+
+picklist types and handling
+
+metatypes.
+
+using manifests as picklists.
+
+using taxonomy as picklists.
