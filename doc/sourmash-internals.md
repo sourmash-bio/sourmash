@@ -19,25 +19,96 @@ but we are always happy to add to it - [just ask in an issue!](@@)
 
 ## Signatures and sketches
 
-Default signature format is stored as JSON, gzipped. Read by Rust.
+sourmash operates on sketches. Each sketch is a collection of hashes.
+Each sketch is contained in a signature.
 
-Complication with multiple sketches per signature.
+Internally, sketches (class `MinHash`) contain the following information:
+* a set of hashes;
+* an optional abundance for each hash (when `track_abund` is True);
+* a seed;
+* a k-mer size;
+* a molecule type;
+* either a `num` (for MinHash) or a `scaled` value (for FracMinHash);
 
-Right now signatures are 1:1 with sketches.
+Signature objects (class `SourmashSignature`) contain a sketch (property `.minhash`) as well as additional information:
+* an optional `name`
+* an optional `filename`
+* a license (currently must be CC0);
+* an `md5sum(...)` method that returns a hash of the sketch.
+
+For now, we tend to refer to signatures and sketches interchangeably,
+because they are almost entirely 1:1 in the code base (but see issue
+@@).
+
+The default signature interchange/serialization format is JSON, optionally
+gzipped. This format is written and read by Rust code.
+
+In general, a lot of effort in sourmash is spent managing collections of
+signatures _before_ actually doing comparisons with them; see manifests,
+and `Index` objects, below.
+
+### Making sketches
+
+Sketches are produced by hashing k-mers with murmurhash and then
+keeping either the lowest `num` hashes (for MinHashes sketches) or
+keeping all hashes below `2**64 / scaled` (for FracMinHash sketches).
+
+The default MinHash sketches use parameters so that they are
+compatible with mash sketches.
+
+See utils/compute-dna-mh-another-way.py @@ for details on how k-mers are
+hashed.
+
+Note that if hashes are produced some other way (with a different hash
+function) or from some source other than DNA, sourmash can still work
+with them; only `sourmash sketch` does input checking.
+
+### Compatibility checking
+
+The point of the signatures and sketches is to enable certain kinds of
+rapid comparisons - Jaccard similarity and overlap analysis,
+specifically. However, these comparisons can only be done between
+compatible sketches.
+
+Here, "compatible" means -
+* the same MurmurHash seed (default 42);
+* the same k-mer size/ksize (see k-mer sizes, below);
+* the same molecule type (see molecule types, below);
+* the same `num` or `scaled` (although see downsampling discussion @@, and below)
+
+sourmash uses selectors (`Index.select(...)`) to select sketches with
+compatible ksizes, molecule types, and sketch types.
 
 ### Scaled (FracMinHash) sketches support similarity and containment
 
-@paper ref
+Per our discussion in @paper ref, FracMinHash sketches can always be compared
+by downsampling to the max of the two scaled values.  (This is not always
+true of sketches stored in indexed collections, e.g. SBTs; see @@ #1799.)
 
-downsampling - mostly done dynamically.  How it works with index classes. #1799
+In practice, sourmash does all necessary downsampling dynamically, but
+returns the original sketches. This means that (for example) you can
+do a low-resolution/high-scaled large scale search by specifying a
+high scaled value, and then do a higher resolution comparison with
+only the highly similar matches the results to do a more refined (see
+below, Speeding up `gather` and `search`.)
 
 ### Num (MinHash) sketches support Jaccard similarity
 
-less well supported; see issue @@.
+"Regular" MinHash (or "num MinHash") sketches are implemented the same
+way as in mash.  However, they are less well supported in sourmash,
+because they don't offer the same opportunities for metagenome
+analysis.  (See issue @@.)
 
-downsampling may need to be done manually.
+Num MinHash sketches can always be compared by downsampling to a
+common `num` value. This may need to be done manually using `sourmash
+sig downsample`, however.
 
 ## K-mer sizes
+
+There is no explicit restriction on k-mer sizes built into sourmash.
+
+For highly specific genome and metagenome comparisons, we typically
+use k=21, k=31, or k=51. @@more links.
 
 ## Molecule types - DNA, protein, Dayhoff, and hydrophobic-polar
 
@@ -322,7 +393,7 @@ below. In practice this means that you can provide additional
 collections of signatures via the command line without building a
 combined index of all your signatures. It also means that the only
 reason to choose different collections/containers is for
-optimization - you should select the conatiners that help you achieve
+optimization - you should select the containers that help you achieve
 the desired performance characteristics for your search
 (i.e. the right memory/time/disk space tradeoffs).
 
