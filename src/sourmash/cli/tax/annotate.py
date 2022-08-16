@@ -23,7 +23,7 @@ def subparser(subparsers):
                                       aliases=['annotate'],
                                       usage=usage)
     subparser.add_argument(
-        '-g', '--gather-csv', nargs='*', default = [],
+        '-g', '--gather-csv', action="extend", nargs='*', default = [],
         help='CSV output files from sourmash gather'
     )
     subparser.add_argument(
@@ -36,7 +36,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-t', '--taxonomy-csv', '--taxonomy', metavar='FILE',
-        nargs="+", required=True,
+        nargs='*', action='extend', required=True,
         help='database lineages CSV'
     )
     subparser.add_argument(
