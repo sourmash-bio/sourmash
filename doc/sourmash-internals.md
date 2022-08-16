@@ -485,7 +485,8 @@ name to do so - this is the name as set by the `--name` parameter to
 sourmash prefers identifiers to be the first space-separated token in
 the signature name.  This token can contain any alphanumeric letters
 other than space (@@ctb check me), and should contain at most one
-period.  The version of the identifier will be the 
+period.  The version of the identifier will be the component after
+the period.
 
 So, for example, for a signature name of
 
@@ -554,7 +555,21 @@ capability as the `LCA_Database`.
 
 ## Picklists
 
-picklist types and handling.
+Picklists are a generic mechanism used to select a (potentially small)
+subset of signatures for search/display.
+
+The general idea of picklists is that you create a list of signatures
+you're interested in - by name, or identifier, or md5sum - and then
+supply that list in a csvfile on the command line via `--picklist`.
+For example, `--picklist list.csv:colname:ident` would load the
+values in the column named `colname` in the file `list.csv` as identifiers
+to be used to restrict the search.
+
+The support picklist column types are `name`, `ident`
+(space-delimieted identifier), `identprefix` (identifier with version
+removed), `md5`, `md5prefix8`, and `md5short`.  Generally the `md5`
+and derived values are used to reference signatures found some other
+way with sourmash, while the identifiers are more broadly useful.
 
 metatypes.
 
