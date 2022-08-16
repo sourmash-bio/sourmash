@@ -15,7 +15,8 @@ This document is a brain dump intended for expert users and sourmash
 developers who want to understand how, why, and when to use various
 sourmash features. It is unlikely ever to be comprehensive, so the
 information you are interested in may not yet exist in this document,
-but we are always happy to add to it - [just ask in an issue!](@@)
+but we are always happy to add to it -
+[just ask in an issue!](https://github.com/sourmash-bio/sourmash/issues)
 
 ## Signatures and sketches
 
@@ -37,8 +38,7 @@ Signature objects (class `SourmashSignature`) contain a sketch (property `.minha
 * an `md5sum(...)` method that returns a hash of the sketch.
 
 For now, we tend to refer to signatures and sketches interchangeably,
-because they are almost entirely 1:1 in the code base (but see issue
-@@).
+because they are almost entirely 1:1 in the code base (but see [sourmash#616](https://github.com/sourmash-bio/sourmash/issues/616)).
 
 The default signature interchange/serialization format is JSON, optionally
 gzipped. This format is written and read by Rust code.
@@ -56,7 +56,7 @@ keeping all hashes below `2**64 / scaled` (for FracMinHash sketches).
 The default MinHash sketches use parameters so that they are
 compatible with mash sketches.
 
-See utils/compute-dna-mh-another-way.py @@ for details on how k-mers are
+See [utils/compute-dna-mh-another-way.py](https://github.com/sourmash-bio/sourmash/blob/latest/utils/compute-dna-mh-another-way.py) for details on how k-mers are
 hashed.
 
 Note that if hashes are produced some other way (with a different hash
@@ -74,16 +74,16 @@ Here, "compatible" means -
 * the same MurmurHash seed (default 42);
 * the same k-mer size/ksize (see k-mer sizes, below);
 * the same molecule type (see molecule types, below);
-* the same `num` or `scaled` (although see downsampling discussion @@, and below)
+* the same `num` or `scaled` (although see [this downsampling discussion](api-example.md#downsampling-signatures), and the next two sections);
 
 sourmash uses selectors (`Index.select(...)`) to select sketches with
 compatible ksizes, molecule types, and sketch types.
 
 ### Scaled (FracMinHash) sketches support similarity and containment
 
-Per our discussion in @paper ref, FracMinHash sketches can always be compared
+Per our discussion in [Irber et al., 2022](https://www.biorxiv.org/content/10.1101/2022.01.11.475838v2), FracMinHash sketches can always be compared
 by downsampling to the max of the two scaled values.  (This is not always
-true of sketches stored in indexed collections, e.g. SBTs; see @@ #1799.)
+true of sketches stored in indexed collections, e.g. SBTs; see [sourmash#1799](https://github.com/sourmash-bio/sourmash/issues/1799).)
 
 In practice, sourmash does all necessary downsampling dynamically, but
 returns the original sketches. This means that (for example) you can
@@ -97,7 +97,7 @@ below, Speeding up `gather` and `search`.)
 "Regular" MinHash (or "num MinHash") sketches are implemented the same
 way as in mash.  However, they are less well supported in sourmash,
 because they don't offer the same opportunities for metagenome
-analysis.  (See issue @@.)
+analysis.  (See also [sourmash#1354](https://github.com/sourmash-bio/sourmash/issues/1354).)
 
 Num MinHash sketches can always be compared by downsampling to a
 common `num` value. This may need to be done manually using `sourmash
@@ -108,7 +108,7 @@ sig downsample`, however.
 There is no explicit restriction on k-mer sizes built into sourmash.
 
 For highly specific genome and metagenome comparisons, we typically
-use k=21, k=31, or k=51. @@more links.
+use k=21, k=31, or k=51. For a longer discussion, see [Assembly Free Analysis with K-mers](https://github.com/mblstamps/stamps2022/blob/main/kmers_and_sourmash/2022-stamps-assembly-free%20class.pdf) from STAMPS 2022.
 
 ## Molecule types - DNA, protein, Dayhoff, and hydrophobic-polar
 
@@ -154,7 +154,7 @@ subclasses of `Index` such as the inverted indices, manifests are
 generated dynamically by the class itself.
 
 Currently (sourmash 4.x) manifests do not contain information about the
-hash seed or ... This will be fixed in future, see @@issue.
+hash seed or sketch license. This will be fixed in the future - see [sourmash#1849](https://github.com/sourmash-bio/sourmash/issues/1849).
 
 Manifests are very flexible and, especially when stored in a sqlite
 database, can be extremely performant for organizing hundreds of
@@ -180,7 +180,7 @@ same APIs used by the command-line functionality.
 
 There are quite a few different `Index` subclasses and they all have
 distinct features.  We have a high-level guide to which collection
-type to use @@here in command-line.
+type to use [here](command-line.md#loading-many-signatures).
 
 Conceptually, `Index` classes are either organized around storing
 individual signatures often with metadata that permits loading,
@@ -212,7 +212,7 @@ a manifest as it loads the sketches.
 Note that `MultiIndex` is the class used to load signatures from
 pathlists, directory hierarchies, and so on; because it stores
 sketches in memory, this can incur a significant memory penalty (see
-issue @@).  Therefore where possible we suggest building a standalone
+[sourmash#1899](https://github.com/sourmash-bio/sourmash/issues/1899)).  Therefore where possible we suggest building a standalone
 manifest (`StandaloneManifestIndex`) to do lazy loading from the disk
 instead; you can use `sourmash sig collect` to do this.
 
@@ -237,7 +237,7 @@ with `search` you may want to use an SBT or LCA database instead; see
 below.
 
 In the future we expect to parallelize searching `ZipFileLinearIndex`
-files in Rust; see @@greyhound.
+files in Rust; see [sourmash#1752](https://github.com/sourmash-bio/sourmash/issues/1752).
 
 `ZipFileLinearIndex` does support zip files without manifests as well
 as multiple signatures in a single file; this was originally intended
@@ -251,12 +251,13 @@ manifest and signatures broken out into individual files.
 
 ### Sequence Bloom Trees (SBTs)
 
-Sequence Bloom Trees (SBTs; @@link) provide a faster (but more memory
-intensive) on-disk storage and search mechanism.  In brief, SBTs implement
-a binary tree organization of an arbitrary number of signatures; each
-internal node is a Bloom filter containing all of the hashes for the
-nodes below them. This permits potentially rapid elimination of
-irrelevant nodes on search.
+Sequence Bloom Trees (SBTs; see
+[the Kingsford Lab page for details](http://www.cs.cmu.edu/~ckingsf/software/bloomtree/))
+provide a faster (but more memory intensive) on-disk storage and
+search mechanism.  In brief, SBTs implement a binary tree organization
+of an arbitrary number of signatures; each internal node is a Bloom
+filter containing all of the hashes for the nodes below them. This
+permits potentially rapid elimination of irrelevant nodes on search.
 
 SBTs are restricted to storing and searching sketches with the
 same/single k-mer size and molecule type, as well as either a single
@@ -286,17 +287,19 @@ The newer `LCA_SqliteDatabase` (based on `SqliteIndex`, described
 below) also supports LCA-style queries, and is stored on disk, is fast to
 load, and uses very little memory. The tradeoff is that the underlying
 sqlite database can be quite large.  `LCA_SqliteDatabase` should also
-support rapid concurrent access (see issue @@).
+support rapid concurrent access (see [sourmash#909](https://github.com/sourmash-bio/sourmash/issues/909)).
 
 Both types of LCA database can be constructed with `sourmash lca index`.
 
 ### SqliteIndex
 
 The `SqliteIndex` storage class uses sqlite3 to store hashes and
-sketch information for search and retrieval. (@@see blog post) These
-are fast, low-memory, on-disk databases, with the tradeoff that they
-can be quite large.  This is probably currently the best solution for
-concurrent access to sketches via e.g. a Web server (see issue@).
+sketch information for search and retrieval; see
+[this blog post](http://ivory.idyll.org/blog/2022-storing-ulong-in-sqlite-sourmash.html)
+for background information and details. These are fast, low-memory,
+on-disk databases, with the tradeoff that they can be quite large.
+This is probably currently the best solution for concurrent access to
+sketches via e.g. a Web server (see issue@).
 
 `SqliteIndex` can only contain FracMinHash sketches and can only store
 sketches with the same scaled parameter. However, it can store 
@@ -349,14 +352,15 @@ or a standalone manifest index (generated with `sourmash sig
 collect`). This is because the signatures from pathlists are loaded
 into memory (see `MultiIndex`, above) it is generally a bad idea to
 use them - they may be slow to load and may consume a lot of
-memory. They also do not support good loading error messages
-(@@example/issue).
+memory. They also do not support good loading error messages;
+see [sourmash#1414](https://github.com/sourmash-bio/sourmash/issues/1414).
 
 ### Extensions for outputting index classes
 
 Most commands that support saving signatures will save them in a
-variety of formats, based on the extension provided (see @@exceptions
-issue for exceptions).  The supported extensions are -
+variety of formats, based on the extension provided (see
+[sourmash#1890](https://github.com/sourmash-bio/sourmash/issues/1890)
+for exceptions). The supported extensions are -
 
 * `.zip` for `ZipFileLinearIndex`
 * `.sqldb` for `SqliteIndex`
@@ -371,7 +375,7 @@ recognized.
 There are two primary search commands in sourmash: `gather` and
 `search`.
 
-`gather` calculates a minimum metagenome cover as discussed in @@. It
+`gather` calculates a minimum metagenome cover as discussed in [Irber et al., 2022](https://www.biorxiv.org/content/10.1101/2022.01.11.475838v2). It
 is mostly intended for querying a database with a metagenome, although
 it can be used with genome queries, as well. It depends on overlap
 analyses and can only be used with FracMinHash sketches.
@@ -425,7 +429,7 @@ the matches for rapid min-set-cov analysis. This single pass across the
 database is called a "prefetch", and it is also implemented in the
 `prefetch` subcommand.
 
-With this single pass approach, benchmarks (@@ link) show that a
+With this single pass approach, benchmarks - [sourmash#2014](https://github.com/sourmash-bio/sourmash/issues/2014) - show that a
 linearly searchable database is performant enough to be used with
 `gather`.  We therefore suggest using a `ZipFileLinearIndex` container
 with gather, or in cases where low-memory concurrency is desired, a
@@ -433,11 +437,12 @@ with gather, or in cases where low-memory concurrency is desired, a
 
 ### Using `prefetch` and `gather` together
 
-If you want to use `prefetch` independently of `gather`, you can
-use the prefetch output as a picklist passed into gather - see picklists,
-below@@.  This can be useful when you want to experiment with different
-threshold parameters for `gather` - first, do a very sensitive/low-threshold
-search with `prefetch` and save the results to a CSV file with `-o`, 
+If you want to use `prefetch` independently of `gather`, you can use
+the prefetch output as a picklist passed into gather - see
+[picklists](#picklists), below.  This can be useful when you want to
+experiment with different threshold parameters for `gather` - first,
+do a very sensitive/low-threshold search with `prefetch` and save the
+results to a CSV file with `-o`,
 
 Repeated gathers and searches.
 
@@ -506,12 +511,11 @@ The two modifiers are:
 
 * `--keep-full-identifiers` will use the entire signature
 name instead of just the first space-separated token. It is by default
-off (set to false).
+off (set to False).
 
 * `--keep-identifier-versions` turns on keeping the full identifier,
-including what is after the first period. It is by default on (set to
-True) @@ctb check me. When it is off (False), identifiers are stripped
-of their version on load.
+including what is after the first period. It is by default off (set to
+False), stripping identifiers of their version on load. When it is on (True), identifiers are not stripped of their version on load.
 
 ### Taxonomies, or lineage spreadsheets
 
@@ -533,8 +537,7 @@ inconsistently handled within sourmash internally.
 For spreadsheet organization, `lca index` expects the columns to be
 present in order from superkingdom on down, while the `tax`
 subcommands use CSV column headers instead.  We are planning to
-consolidate around the `tax` subcommand handling in the future (@@ctb
-issue).
+consolidate around the `tax` subcommand handling in the future (see [sourmash#2198](https://github.com/sourmash-bio/sourmash/issues/2198)).
 
 @@link to example spreadsheets, talk about how to extract.
 
@@ -581,18 +584,21 @@ picklist with `--picklist prefetch_out.csv.gz::prefetch`.
 
 Picklists behave differently with different `Index` classes.
 
-For indexed databases like SBT and LCA, the search is done _first_, and
-then only those results that match the picklist are selected.
+For indexed databases like SBT, LCA, and `SqliteIndex`, the search is
+done _first_, and then only those results that match the picklist are
+selected.
 
 For linear search databases like `ZipFileLinearIndex` or standalone
 manifests, picklists are _first_ used to subselect the desired
-signatures, and then only those signatures are searched.
+signatures, and only those signatures are searched.
 
-So, performance can vary widely, but the results should be the same.
+This means that picklists can dramatically speed up searches on some
+`Index` types, but won't affect performance on others. But
+the results will be the same.
 
 ### Taxonomy / lineage spreadsheets as picklists
 
-Note that lineage CSV spreadsheets as consumed by `sourmash tax` commands,
+Note that lineage CSV spreadsheets, as consumed by `sourmash tax` commands
 and as output by `sourmash tax grep`, can be used as `ident` picklists.
 
 ## Similarity matrices with `sourmash compare`
@@ -624,5 +630,7 @@ space for prefetch results and manifests in particular!
 All sourmash commands that take in a CSV (via manifest, or picklist,
 or taxonomy) will autodetect a gzipped CSV based on content (the file
 does not need to end with `.gz`). The one exception is manifests,
-where the CSV needs to end with `.gz` to be loaded as a gzipped CSV
-(but see issue @@).
+where the CSV needs to end with `.gz` to be loaded as a gzipped CSV;
+see
+[sourmash#2214](https://github.com/sourmash-bio/sourmash/issues/2214)
+for an issue to fix this.
