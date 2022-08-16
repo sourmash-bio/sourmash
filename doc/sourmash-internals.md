@@ -1,3 +1,22 @@
+# A guide to the internals of sourmash
+
+```{contents} Contents
+:depth: 3
+```
+
+sourmash was created in 2015, and has been repeatedly reorganized,
+refactored, and optimized to support ever larger databases, faster
+queries, and new use cases. We've also regularly added new
+functionality and features.  So sourmash can be pretty complicated
+internally, and our user-facing documentation only covers a fraction
+of its potential!
+
+This document is a brain dump intended for expert users and sourmash
+developers who want to understand how, why, and when to use various
+sourmash features. It is unlikely ever to be comprehensive, so the
+information you are interested in may not yet exist in this document,
+but we are always happy to add to it - [just ask in an issue!](@@)
+
 ## Signatures and sketches
 
 Default signature format is stored as JSON, gzipped. Read by Rust.
@@ -8,7 +27,9 @@ Right now signatures are 1:1 with sketches.
 
 ### Scaled (FracMinHash) sketches support similarity and containment
 
-downsampling - mostly done dynamically
+@paper ref
+
+downsampling - mostly done dynamically.  How it works with index classes. #1799
 
 ### Num (MinHash) sketches support Jaccard similarity
 
@@ -76,6 +97,9 @@ The `Index` class and its various subclasses (in `sourmash.index`) are
 containers that provide an API for organizing, selecting, and
 searching (potentially) large numbers of signatures.
 
+`sourmash sig summarize` is a good way to determine what type of `Index`
+class is used to handle a collection.
+
 Loading and saving of `Index` objects is handled separately from the
 class: loading can be done in Python via the
 `sourmash.load_file_as_index(...)` method, while creation and/or
@@ -93,6 +117,15 @@ selecting, and/or searching them more efficiently
 (e.g. `ZipFileLinearIndex` and `SBTs`); or they store signatures
 as inverted indices (`LCA_Database` and `SqliteIndex`) that permit
 certain kinds of fast queries.
+
+Unless otherwise noted, the `Index` classes below can be loaded
+concurrently in "read only" mode - that is, you should build the
+collection _once_, and then use it from multiple processes. We
+currently do not test for or support concurrent read/write. Note also
+that (generally speaking) memory footprints will be additive, so
+loading the same `LCA_Database` twice will consume twice the memory.
+(If you're interested in concurrency, we suggest using the sqlite
+containers - see `SqliteIndex`.)
 
 ### In-memory storage and search.
 
@@ -224,9 +257,116 @@ linear iteration, and does not use any features of indexed containers
 such as SBTs or LCAs.  This is fine for `gather` with the default
 approach, but is probably suboptimal for a `search`.
 
+### Pathlists and `--from-file`
+
+All (or most) sourmash commands natively support taking in lists of
+signature collections via pathlists, `--from-file`, or paths to
+directories. This is useful for situations where you have thousands of
+signature files and don't want to provide them explicitly on the
+command line; you can simply put a list of the files in a text file,
+and pass it in directly (or use `--from-file` to pass it in).
+
+Both pathlists and files passed to `--from-file` contain a list of
+paths to be loaded; relatives paths will be interpreted relative to
+the current working directory of sourmash.  Pathlists should be
+universally available on sourmash commands.  When `--from-file` is
+available for a command, sourmash will behave as if the file paths in
+the file were provided on the command line.
+
+We suggest avoiding pathlists. Instead, we suggest using `--from-file`
+or a standalone manifest index (generated with `sourmash sig
+collect`). This is because the signatures from pathlists are loaded
+into memory (see `MultiIndex`, above) it is generally a bad idea to
+use them - they may be slow to load and may consume a lot of
+memory. They also do not support good loading error messages
+(@@example/issue).
+
+### Extensions for outputting index classes
+
+Most commands that support saving signatures will save them in a
+variety of formats, based on the extension provided (see @@exceptions
+issue for exceptions).  The supported extensions are -
+
+* `.zip` for `ZipFileLinearIndex`
+* `.sqldb` for `SqliteIndex`
+* `.sig` or `.sig.gz` for JSON/gzipped JSON
+* `dirname/` to save in a directory hierarchy
+
+The default signature save format is JSON, if the extension is not
+recognized.
+
 ## Speeding up `gather` and `search`
 
-The basics - gather/prefetch, vs search.
+There are two primary search commands in sourmash: `gather` and
+`search`.
+
+`gather` calculates a minimum metagenome cover as discussed in @@. It
+is mostly intended for querying a database with a metagenome, although
+it can be used with genome queries, as well. It depends on overlap
+analyses and can only be used with FracMinHash sketches.
+
+`search` does a straight Jaccard similarity search on MinHash and
+FracMinHash sketches (or, with `--containment`, a containment search
+on FracMinHash sketches). It is typically used to find matches to a
+query genome sketch in a large database of sketches.
+
+The `prefetch` command does a containment search and is intended for
+power users; it is a standalone implementation of the prefetch
+algorithm discussed below for `gather`.  It only works with FracMinHash
+sketches.
+
+Note that all of these commands work with any and all `Index`
+collection/container types, and will return the same results however
+the collections are organized - see the "online behavior" section,
+below. In practice this means that you can provide additional
+collections of signatures via the command line without building a
+combined index of all your signatures. It also means that the only
+reason to choose different collections/containers is for
+optimization - you should select the conatiners that help you achieve
+the desired performance characteristics for your search
+(i.e. the right memory/time/disk space tradeoffs).
+
+### Running `search` many times on the same database
+
+`search` typically is used to search a large database of sketches for
+all similarity or containment matches above a threshold. Depending on
+the query and the database, certain kinds of database indices may make
+search much faster, especially when only a few matches are expected.
+
+If you are doing many searches against the same database, indexing the
+database as an SBT (with `sourmash index`) or as a `SqliteIndex`/sqldb
+database is likely to provide a significant speed increase, albeit
+with increased memory usage (SBT) or increased disk space (sqldb).
+
+Conversely, `ZipFileLinearIndex` and the default `LCA_Database` are likely
+to be poor choices for many searches - the former only supports linear
+searches, and the latter needs to be loaded from disk and deserialized each
+time.
+
+### Running `gather` once
+
+`gather` is typically used to search a metagenome against a large
+database of sketches, as part of finding a minimum set cover. This can
+be quite slow! Our current implementation (as of sourmash vXX, @pull
+request) does a single pass across the database to find all matches
+with an overlap above the provided threshold, and then organizes
+the matches for rapid min-set-cov analysis. This single pass across the
+database is called a "prefetch", and it is also implemented in the
+`prefetch` subcommand.
+
+With this single pass approach, benchmarks (@@ link) show that a
+linearly searchable database is performant enough to be used with
+`gather`.  We therefore suggest using a `ZipFileLinearIndex` container
+with gather, or in cases where low-memory concurrency is desired, a
+`SqliteIndex` container.
+
+### Using `prefetch` and `gather` together
+
+If you want to use `prefetch` independently of `gather`, you can
+use the prefetch output as a picklist passed into gather - see picklists,
+below@@.  This can be useful when you want to experiment with different
+threshold parameters for `gather` - first, do a very sensitive/low-threshold
+search with `prefetch` and save the results to a CSV file with `-o`, 
 
 Repeated gathers and searches.
 
@@ -234,7 +374,25 @@ Using prefetch explicitly.
 
 ### Using a higher scaled value
 
-### 
+With FracMinHash sketches, you can downsample the query to make both
+`search` and `gather` _much_ faster.  A good rule of thumb is to use a
+scaled value that is about 5x smaller than the minimum overlap to
+detect; so, if you want to be able to detect 50kb of similarity, you
+can use a scaled value of 10,000. Conversely, the default scaled value
+of 1,000 (for DNA sketches) should robustly detect overlaps of 5kb.
+
+You can supply `--scaled` to `gather` and `prefetch` to dynamically
+downsample the query FracMinHash. For `search` you will need to use
+`sourmash sig downsample` to generate a downsampled sketch.
+
+### Running `gather` many times - `multigather`
+
+In situations where loading the search database is slow (e.g.
+`LCA_Database` or zipfiles with very large manifests), the `sourmash
+multigather` command supports many queries against many databases.
+
+(We don't particularly suggest using `multigather`; we would prefer
+to make search databases faster. But it's there! :)
 
 ## Taxonomy and assigning lineages
 
@@ -325,10 +483,44 @@ capability as the `LCA_Database`.
 
 ## Picklists
 
-picklist types and handling
+picklist types and handling.
 
 metatypes.
+
+picklist on SBT/LCA vs ZipFileLinearIndex.
 
 using manifests as picklists.
 
 using taxonomy as picklists.
+
+## Similarity matrices with `sourmash compare`
+
+## ANI
+
+## Online and streaming
+
+n+1 problem
+
+## Formats natively understood by sourmash
+
+sourmash should always autodetect the format of a collection or
+database, in most cases based on its content (and not its
+filename). Please file a bug report if this doesn't work for you!
+
+`sourmash sig summarize` is a good way to examine the properties of a
+signature collection.
+
+### Reading and writing gzipped CSV files
+
+(As of sourmash v4.5)
+
+When a CSV filename is specified (e.g. `sourmash gather ... -o
+mygather.csv`), you can always provide a name that ends with `.gz` to
+produce a gzip-compressed file instead. This can save quite a bit of
+space for prefetch results and manifests in particular!
+
+All sourmash commands that take in a CSV (via manifest, or picklist,
+or taxonomy) will autodetect a gzipped CSV based on content (the file
+does not need to end with `.gz`). The one exception is manifests,
+where the CSV needs to end with `.gz` to be loaded as a gzipped CSV
+(but see issue @@).

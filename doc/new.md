@@ -69,6 +69,7 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 * [Genbank and GTDB databases and taxonomy files](databases.md)
 * [Python examples using the API](api-example.md)
 * [Publications about sourmash](publications.md)
+* [A guide to the internals of sourmash](sourmash-internals.md)
 
 ## Developing and extending sourmash
 
