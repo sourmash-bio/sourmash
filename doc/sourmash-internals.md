@@ -125,18 +125,21 @@ DNA moltype sketches can be constructed from DNA input sequences using
 Protein, Dayhoff, and HP moltype sketches can be constructed from
 protein input sequences using `sourmash sketch protein`, or from DNA
 input sequences using `sourmash sketch translate`; `translate` will
-translate in all six reading frames (see also @orpheum).  By default
-protein sketches will be created; dayhoff sketches can be created by
-including `dayhoff` in the param string, e.g. `sourmash sketch protein
--p dayhoff`, and hydrophobic-polar sketches can be built with `hp` in
-the param string.
+translate in all six reading frames (see also
+[orpheum](https://github.com/czbiohub/orpheum) from
+[Botvinnik et al., 2021](https://www.biorxiv.org/content/10.1101/2021.07.09.450799v1)).
+By default protein sketches will be created; dayhoff sketches can be
+created by including `dayhoff` in the param string, e.g. `sourmash
+sketch protein -p dayhoff`, and hydrophobic-polar sketches can be
+built with `hp` in the param string.
 
 ## Manifests
 
-sourmash makes extensive use of signature manifests to support
-rapid selection and lazy loading of signatures based on signature
-metadata (name, ksize, moltype, etc.) See @@this blog post for 
-some of the motivation.
+sourmash makes extensive use of signature manifests to support rapid
+selection and lazy loading of signatures based on signature metadata
+(name, ksize, moltype, etc.) See
+[Blog post: Scaling sourmash to millions of samples](http://ivory.idyll.org/blog/2021-sourmash-scaling-to-millions.html)
+for some of the motivation.
 
 Manifests are an internal format that is not meant to be particularly
 human readable, but the CSV format can be loaded into a spreadsheet
@@ -299,7 +302,7 @@ sketch information for search and retrieval; see
 for background information and details. These are fast, low-memory,
 on-disk databases, with the tradeoff that they can be quite large.
 This is probably currently the best solution for concurrent access to
-sketches via e.g. a Web server (see issue@).
+sketches via e.g. a Web server (see also [sourmash#909](https://github.com/sourmash-bio/sourmash/issues/909)).
 
 `SqliteIndex` can only contain FracMinHash sketches and can only store
 sketches with the same scaled parameter. However, it can store 
@@ -422,8 +425,7 @@ time.
 
 `gather` is typically used to search a metagenome against a large
 database of sketches, as part of finding a minimum set cover. This can
-be quite slow! Our current implementation (as of sourmash vXX, @pull
-request) does a single pass across the database to find all matches
+be quite slow! Our current implementation (as of sourmash 4.1.0, [pull request sourmash#1370](https://github.com/sourmash-bio/sourmash/pull/1370)) does a single pass across the database to find all matches
 with an overlap above the provided threshold, and then organizes
 the matches for rapid min-set-cov analysis. This single pass across the
 database is called a "prefetch", and it is also implemented in the
