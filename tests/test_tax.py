@@ -437,6 +437,32 @@ def test_metagenome_multiple_taxonomy_files(runtmp):
     assert 'multtest,class,0.116,Bacteria;Bacteroidetes;Bacteroidia,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.073,582000' in c.last_result.out
 
 
+def test_metagenome_multiple_taxonomy_files_multiple_taxonomy_args(runtmp):
+    c = runtmp
+    # pass in mult tax files using mult tax arguments
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    protozoa_genbank = utils.get_test_data('tax/protozoa_genbank_lineage.csv')
+    bacteria_refseq  = utils.get_test_data('tax/bacteria_refseq_lineage.csv')
+
+    # gather against mult databases
+    g_csv = utils.get_test_data('tax/test1_x_gtdbrs202_genbank_euks.gather.csv')
+
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', taxonomy_csv, '-t', protozoa_genbank, '-t', bacteria_refseq)
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
+    assert 'multtest,superkingdom,0.204,Bacteria,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.131,1024000' in c.last_result.out
+    assert 'multtest,superkingdom,0.051,Eukaryota,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.245,258000' in c.last_result.out
+    assert 'multtest,superkingdom,0.744,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.624,3732000' in c.last_result.out
+    assert 'multtest,phylum,0.116,Bacteria;Bacteroidetes,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.073,582000' in c.last_result.out
+    assert 'multtest,phylum,0.088,Bacteria;Proteobacteria,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.058,442000' in c.last_result.out
+    assert 'multtest,phylum,0.051,Eukaryota;Apicomplexa,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.245,258000' in c.last_result.out
+    assert 'multtest,phylum,0.744,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.624,3732000' in c.last_result.out
+    assert 'multtest,class,0.116,Bacteria;Bacteroidetes;Bacteroidia,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.073,582000' in c.last_result.out
+
+
 def test_metagenome_empty_gather_results(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
@@ -1207,6 +1233,41 @@ def test_genome_missing_taxonomy_ignore_rank(runtmp):
     assert "The following are missing from the taxonomy information: GCF_001881345" in c.last_result.err
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'test1,below_threshold,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
+
+
+def test_genome_multiple_taxonomy_files(runtmp):
+    c = runtmp
+    # write temp taxonomy with missing entry
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    subset_csv = runtmp.output("subset_taxonomy.csv")
+    with open(subset_csv, 'w') as subset:
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [tax[0]] + tax[2:] # remove the best match (1st tax entry)
+        subset.write("\n".join(tax))
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    # using mult -t args
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', subset_csv, '-t', taxonomy_csv)
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "The following are missing from the taxonomy information: GCF_001881345" not in c.last_result.err
+    assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
+    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,' in c.last_result.out
+    # using single -t arg
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', subset_csv, taxonomy_csv)
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "The following are missing from the taxonomy information: GCF_001881345" not in c.last_result.err
+    assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
+    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,' in c.last_result.out
+
 
 def test_genome_missing_taxonomy_fail_threshold(runtmp):
     c = runtmp
