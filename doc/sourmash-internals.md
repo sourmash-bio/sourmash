@@ -52,6 +52,10 @@ and `Index` objects, below.
 Sketches are produced by hashing k-mers with murmurhash and then
 keeping either the lowest `num` hashes (for MinHashes sketches) or
 keeping all hashes below `2**64 / scaled` (for FracMinHash sketches).
+This has the effect of selecting approximately one hash for every
+`scaled` k-mers - so, when sketching a set of 100,000 distinct k-mers,
+a scaled value of 1,000 would yield approximately 100 hashes to be
+retained in the sketch.
 
 The default MinHash sketches use parameters so that they are
 compatible with mash sketches.
