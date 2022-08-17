@@ -640,7 +640,7 @@ def test_metagenome_gather_duplicate_filename(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
 
-    c.run_sourmash('tax', 'metagenome', '--gather-csv', g_res, g_res, '--taxonomy-csv', taxonomy_csv)
+    c.run_sourmash('tax', 'metagenome', '--gather-csv', g_res, '-g', g_res, '--taxonomy-csv', taxonomy_csv)
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -948,7 +948,7 @@ def test_genome_gather_duplicate_filename(runtmp):
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
 
-    c.run_sourmash('tax', 'genome', '--gather-csv', g_res, g_res, '--taxonomy-csv', taxonomy_csv,
+    c.run_sourmash('tax', 'genome', '--gather-csv', g_res, '-g', g_res, '--taxonomy-csv', taxonomy_csv,
                    '--rank', 'species', '--containment-threshold', '0')
 
     print(c.last_result.status)
@@ -1208,6 +1208,29 @@ def test_genome_missing_taxonomy_ignore_threshold(runtmp):
 
     assert c.last_result.status == 0
     assert "The following are missing from the taxonomy information: GCF_001881345" in c.last_result.err
+    assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
+    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
+
+
+def test_genome_missing_taxonomy_recover_with_second_tax_file(runtmp):
+    c = runtmp
+    # write temp taxonomy with missing entry
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    subset_csv = runtmp.output("subset_taxonomy.csv")
+    with open(subset_csv, 'w') as subset:
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [tax[0]] + tax[2:] # remove the best match (1st tax entry)
+        subset.write("\n".join(tax))
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', subset_csv, '-t', taxonomy_csv, '--containment-threshold', '0')
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "The following are missing from the taxonomy information: GCF_001881345" not in c.last_result.err
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
 
@@ -1826,6 +1849,24 @@ def test_annotate_empty_tax_lineage_input(runtmp):
 
     assert runtmp.last_result.status != 0
     assert "cannot read taxonomy assignments from" in str(exc.value)
+
+
+def test_annotate_empty_tax_lineage_input_recover_with_second_taxfile(runtmp):
+    tax_empty = runtmp.output('t.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    with open(tax_empty, "w") as fp:
+        fp.write("")
+    print("t_csv: ", tax_empty)
+
+    runtmp.run_sourmash('tax', 'annotate', '-g', g_csv, '-t', tax_empty, '--taxonomy-csv', tax,'--force')
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
 
 
 def test_tax_prepare_1_csv_to_csv(runtmp, keep_identifiers, keep_versions):
