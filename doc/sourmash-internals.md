@@ -603,9 +603,15 @@ the results will be the same.
 Note that lineage CSV spreadsheets, as consumed by `sourmash tax` commands
 and as output by `sourmash tax grep`, can be used as `ident` picklists.
 
-## Similarity matrices with `sourmash compare`
-
 ## ANI
+
+estimated from k-mers
+
+containment preferred
+
+ani variability, point at issue
+
+minimum size for ani calculation
 
 ## Online and streaming
 
