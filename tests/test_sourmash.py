@@ -5659,8 +5659,8 @@ def test_standalone_manifest_search_fail(runtmp):
         runtmp.sourmash('search', sig47, mf)
 
 
-@utils.in_tempdir
-def test_search_ani_jaccard(c):
+def test_search_ani_jaccard(runtmp):
+    c = runtmp
     sig47 = utils.get_test_data('47.fa.sig')
     sig4763 = utils.get_test_data('47+63.fa.sig')
 
@@ -5685,8 +5685,8 @@ def test_search_ani_jaccard(c):
         assert row['ani'] == "0.992530907924384"
 
 
-@utils.in_tempdir
-def test_search_ani_jaccard_error_too_high(c):
+def test_search_ani_jaccard_error_too_high(runtmp):
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', testdata1, testdata2)
@@ -5715,8 +5715,8 @@ def test_search_ani_jaccard_error_too_high(c):
     assert "WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_searchabund_no_ani(c):
+def test_searchabund_no_ani(runtmp):
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=10,abund', testdata1, testdata2)
@@ -5741,8 +5741,8 @@ def test_searchabund_no_ani(c):
         assert row['ani'] == "" # do we want empty column to appear??
 
 
-@utils.in_tempdir
-def test_search_ani_containment(c):
+def test_search_ani_containment(runtmp):
+    c = runtmp
     testdata1 = utils.get_test_data('2+63.fa.sig')
     testdata2 = utils.get_test_data('47+63.fa.sig')
 
@@ -5784,8 +5784,8 @@ def test_search_ani_containment(c):
         assert row['ani'] == "0.9868883523107224"
 
 
-@utils.in_tempdir
-def test_search_ani_containment_fail(c):
+def test_search_ani_containment_fail(runtmp):
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=10', testdata1, testdata2)
@@ -5807,8 +5807,10 @@ def test_search_ani_containment_fail(c):
     assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons." in c.last_result.err
     
 
-@utils.in_tempdir
-def test_search_ani_containment_estimate_ci(c):
+def test_search_ani_containment_estimate_ci(runtmp):
+    # test ANI confidence intervals, based on (asymmetric) containment
+
+    c = runtmp
     testdata1 = utils.get_test_data('2+63.fa.sig')
     testdata2 = utils.get_test_data('47+63.fa.sig')
 
@@ -5829,8 +5831,8 @@ def test_search_ani_containment_estimate_ci(c):
         assert row['query_name'] == ''
         assert row['query_md5'] == '832a45e8'
         assert row['ani'] == "0.9866751346467802"
-        assert row['ani_low'] == "0.9861576758035308"
-        assert row['ani_high'] == "0.9871770716451368"
+        assert row['ani_low'] == "0.9861559138341189"
+        assert row['ani_high'] == "0.9871787293232042"
 
     # search other direction
     c.run_sourmash('search', '--containment', testdata2, testdata1, '-o', 'xxxx.csv', '--estimate-ani-ci')
@@ -5849,12 +5851,12 @@ def test_search_ani_containment_estimate_ci(c):
         assert row['query_name'] == ''
         assert row['query_md5'] == '491c0a81'
         assert row['ani'] == "0.9868883523107224"
-        assert row['ani_low'] == "0.986374049720872"
-        assert row['ani_high'] == "0.9873870188726516"
+        assert row['ani_low'] == "0.9863757952722036"
+        assert row['ani_high'] == "0.9873853776786775"
 
 
-@utils.in_tempdir
-def test_search_ani_max_containment(c):
+def test_search_ani_max_containment(runtmp):
+    c = runtmp
     testdata1 = utils.get_test_data('2+63.fa.sig')
     testdata2 = utils.get_test_data('47+63.fa.sig')
 
@@ -5877,8 +5879,10 @@ def test_search_ani_max_containment(c):
         assert row['ani'] == "0.9868883523107224"
 
 
-@utils.in_tempdir
-def test_search_ani_max_containment_estimate_ci(c):
+def test_search_ani_max_containment_estimate_ci(runtmp):
+    # test ANI confidence intervals, based on (symmetric) max-containment
+
+    c = runtmp
     testdata1 = utils.get_test_data('2+63.fa.sig')
     testdata2 = utils.get_test_data('47+63.fa.sig')
 
@@ -5903,8 +5907,9 @@ def test_search_ani_max_containment_estimate_ci(c):
         assert row['ani_high'] == "0.9873870188726516"
 
 
-@utils.in_tempdir
-def test_search_jaccard_ani_downsample(c):
+def test_search_jaccard_ani_downsample(runtmp):
+    c = runtmp
+
     sig47 = utils.get_test_data('47.fa.sig')
     sig4763 = utils.get_test_data('47+63.fa.sig')
     ss47 = sourmash.load_one_signature(sig47)
@@ -6047,8 +6052,9 @@ def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
         assert row['potential_false_negative'] == 'False'
 
 
-@utils.in_tempdir
-def test_compare_containment_ani(c):
+def test_compare_containment_ani(runtmp):
+    c = runtmp
+
     import numpy
 
     sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
@@ -6099,8 +6105,9 @@ def test_compare_containment_ani(c):
     assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_jaccard_ani(c):
+def test_compare_jaccard_ani(runtmp):
+    c = runtmp
+
     import numpy
 
     sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
@@ -6151,8 +6158,9 @@ def test_compare_jaccard_ani(c):
     assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_jaccard_ani_jaccard_error_too_high(c):
+def test_compare_jaccard_ani_jaccard_error_too_high(runtmp):
+    c = runtmp
+
     import numpy
     testdata1 = utils.get_test_data('short.fa')
     sig1 = c.output('short.fa.sig')
@@ -6207,8 +6215,9 @@ def test_compare_jaccard_ani_jaccard_error_too_high(c):
     assert "WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_max_containment_ani(c):
+def test_compare_max_containment_ani(runtmp):
+    c = runtmp
+
     import numpy
     
     sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
@@ -6258,8 +6267,9 @@ def test_compare_max_containment_ani(c):
     assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_avg_containment_ani(c):
+def test_compare_avg_containment_ani(runtmp):
+    c = runtmp
+
     import numpy
 
     sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
@@ -6309,8 +6319,9 @@ def test_compare_avg_containment_ani(c):
     assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_ANI_require_scaled(c):
+def test_compare_ANI_require_scaled(runtmp):
+    c = runtmp
+
     s47 = utils.get_test_data('num/47.fa.sig')
     s63 = utils.get_test_data('num/63.fa.sig')
 
