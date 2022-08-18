@@ -250,7 +250,7 @@ for matches to the query signature.  It can search for matches with either
 high [Jaccard similarity](https://en.wikipedia.org/wiki/Jaccard_index)
 or containment; the default is to use Jaccard similarity, unless
 `--containment` is specified.  `-o/--output` will create a CSV file
-containing all of the matches.
+containing all of the matches with respective similarity or containment score.
 
 `search` makes use of [indexed databases](#loading-many-signatures) to
 decrease search time and memory where possible.
