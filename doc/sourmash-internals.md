@@ -107,6 +107,10 @@ Num MinHash sketches can always be compared by downsampling to a
 common `num` value. This may need to be done manually using `sourmash
 sig downsample`, however.
 
+### Conversion between Scaled (FracMinHash) and Num (MinHash) signatures with `downsample`
+
+As discussed in the previous sections, it is possible to adjust the `scaled` and `num` values to compare two FracMinHash signatures or two Num MinHash signatures. However, it is also possible to covert between the `scaled` and `num` signatures with the `sourmash sig downsample` command. For more details, review [command line](https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-signature-downsample-decrease-the-size-of-a-signature) document.
+
 ## K-mer sizes
 
 There is no explicit restriction on k-mer sizes built into sourmash.
