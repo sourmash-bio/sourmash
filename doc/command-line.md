@@ -282,7 +282,7 @@ similarity   match
 * `--max-containment` - find matches using the max containment index rather than Jaccard similarity;
 * `-t/--threshold` - lower threshold for matching; defaults to 0.08;
 * `--best-only` - find and report only the best match;
-* `-n/--num-results` - number of matches to report to stdout; defaults to 3;
+* `-n/--num-results` - number of matches to report to stdout; defaults to 3; 0 to report all;
 
 Match information can be saved to a CSV file with `-o/--output`; with
 `-o`, all matches above the threshold will be saved, not just those
