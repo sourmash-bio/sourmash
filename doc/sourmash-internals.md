@@ -20,8 +20,10 @@ but we are always happy to add to it -
 
 ## Signatures and sketches
 
-sourmash operates on sketches. Each sketch is a collection of hashes.
-Each sketch is contained in a signature.
+sourmash operates on sketches. Each sketch is a collection of hashes,
+which are in turn built from k-mers by applying a hash function
+(currently always murmurhash) and a filtering function.  Each sketch
+is contained in a signature wrapper that contains some metadata.
 
 Internally, sketches (class `MinHash`) contain the following information:
 * a set of hashes;
@@ -70,7 +72,7 @@ with them; only `sourmash sketch` does input checking.
 ### Compatibility checking
 
 The point of the signatures and sketches is to enable certain kinds of
-rapid comparisons - Jaccard similarity and overlap analysis,
+rapid comparisons - Jaccard similarity and number of overlapping k-mers,
 specifically. However, these comparisons can only be done between
 compatible sketches.
 
@@ -580,7 +582,7 @@ values in the column named `colname` in the file `list.csv` as identifiers
 to be used to restrict the search.
 
 The support picklist column types are `name`, `ident`
-(space-delimieted identifier), `identprefix` (identifier with version
+(space-delimited identifier), `identprefix` (identifier with version
 removed), `md5`, `md5prefix8`, and `md5short`.  Generally the `md5`
 and derived values are used to reference signatures found some other
 way with sourmash, while the identifiers are more broadly useful.
