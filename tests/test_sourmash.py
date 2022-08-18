@@ -1821,7 +1821,7 @@ def test_search_3(runtmp):
     runtmp.sourmash('search', '-n', '1', 'short.fa.sig', 'short2.fa.sig', 'short3.fa.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
-    assert '2 matches; showing first 1' in runtmp.last_result.out
+    assert '2 matches above threshold 0.080; showing first 1:' in runtmp.last_result.out
 
 
 def test_search_4(runtmp):
@@ -1889,7 +1889,7 @@ def test_index_metagenome_fromfile(c):
     print(c.last_result.err)
 
     assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
-    assert '12 matches; showing first 3:' in out
+    assert '12 matches above threshold 0.080; showing first 3:' in out
 
 @utils.in_tempdir
 def test_index_metagenome_fromfile_no_cmdline_sig(c):
@@ -1918,7 +1918,7 @@ def test_index_metagenome_fromfile_no_cmdline_sig(c):
     print(c.last_result.err)
 
     assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in out
-    assert '12 matches; showing first 3:' in out
+    assert '12 matches above threshold 0.080; showing first 3:' in out
 
 
 def test_search_metagenome(runtmp):
@@ -1941,7 +1941,7 @@ def test_search_metagenome(runtmp):
     print(runtmp.last_result.err)
 
     assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
-    assert '12 matches; showing first 3:' in runtmp.last_result.out
+    assert '12 matches above threshold 0.080; showing first 3:' in runtmp.last_result.out
 
 
 def test_search_metagenome_traverse(runtmp):
@@ -1955,7 +1955,7 @@ def test_search_metagenome_traverse(runtmp):
     print(runtmp.last_result.err)
 
     assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
-    assert '13 matches; showing first 3:' in runtmp.last_result.out
+    assert '13 matches above threshold 0.080; showing first 3:' in runtmp.last_result.out
 
 
 def test_search_metagenome_traverse_check_csv(runtmp):
@@ -1983,7 +1983,7 @@ def test_search_metagenome_traverse_check_csv(runtmp):
             assert len(filename) > prefix_len
 
     assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
-    assert '13 matches; showing first 3:' in runtmp.last_result.out
+    assert '13 matches above threshold 0.080; showing first 3:' in runtmp.last_result.out
 
 
 @utils.in_thisdir
@@ -2127,7 +2127,7 @@ def test_search_metagenome_downsample_containment(runtmp):
     print(runtmp.last_result.err)
 
     assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
-    assert '12 matches; showing first 3:' in runtmp.last_result.out
+    assert '12 matches above threshold 0.080; showing first 3:' in runtmp.last_result.out
 
 
 @utils.in_tempdir
@@ -2154,7 +2154,7 @@ def test_search_metagenome_downsample_index(c):
         c)
     assert ' 29.7%       NC_003197.2 Salmonella enterica subsp. enterica serovar T' in str(
         c)
-    assert '12 matches; showing first 3:' in str(c)
+    assert '12 matches above threshold 0.080; showing first 3:' in str(c)
 
 
 def test_search_with_picklist(runtmp):
@@ -2196,7 +2196,7 @@ def test_search_with_picklist_exclude(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "9 matches; showing first 3:" in out
+    assert "9 matches above threshold 0.080; showing first 3:" in out
     assert "33.2%       NC_003198.1 Salmonella" in out
     assert "33.1%       NC_003197.2 Salmonella" in out
     assert "32.2%       NC_006905.1 Salmonella" in out
@@ -2234,7 +2234,7 @@ def test_search_with_pattern_exclude(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "9 matches; showing first 3:" in out
+    assert "9 matches above threshold 0.080; showing first 3:" in out
     assert "33.2%       NC_003198.1 Salmonella" in out
     assert "33.1%       NC_003197.2 Salmonella" in out
     assert "32.2%       NC_006905.1 Salmonella" in out
@@ -5322,7 +5322,7 @@ def test_index_matches_search_with_picklist_exclude(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "10 matches; showing first 3:" in out
+    assert "10 matches above threshold 0.080; showing first 3:" in out
     assert "100.0%       -" in out
     assert "33.2%       NC_003198.1 Salmonella" in out
     assert "33.1%       NC_003197.2 Salmonella" in out
@@ -5564,7 +5564,7 @@ def test_gather_with_prefetch_picklist_5_search(runtmp):
     out = runtmp.last_result.out
     print(out)
 
-    assert "12 matches; showing first 3:" in out
+    assert "12 matches above threshold 0.080; showing first 3:" in out
     assert " 33.2%       NC_003198.1 Salmonella enterica subsp." in out
 
     # now, do a gather with the results

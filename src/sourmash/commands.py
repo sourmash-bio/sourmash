@@ -538,10 +538,10 @@ def search(args):
         args.num_results = 1
 
     if not args.num_results or n_matches <= args.num_results:
-        print_results('{} matches:'.format(len(results)))
+        print_results(f'{len(results)} matches:')
     else:
-        print_results('{} matches; showing first {}:',
-               len(results), args.num_results)
+        print_results(f'{len(results)} matches above threshold {args.threshold:0.3f}; showing first {args.num_results}:')
+
         n_matches = args.num_results
 
     size_may_be_inaccurate = False

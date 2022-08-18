@@ -74,7 +74,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-n', '--num-results', default=3, type=int, metavar='N',
-        help='number of results to report'
+        help='number of results to display to user; 0 to report all'
     )
     subparser.add_argument(
         '--containment', action='store_true',
