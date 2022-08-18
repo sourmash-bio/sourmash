@@ -1371,7 +1371,7 @@ def test_do_sourmash_sbt_search_check_bug(runtmp):
 
     runtmp.sourmash('search', testdata1, 'zzz')
 
-    assert '1 matches:' in runtmp.last_result.out
+    assert '1 matches' in runtmp.last_result.out
 
     tree = load_sbt_index(runtmp.output('zzz.sbt.zip'))
     assert tree._nodes[0].metadata['min_n_below'] == 431
@@ -1390,7 +1390,7 @@ def test_do_sourmash_sbt_search_empty_sig(runtmp):
 
     runtmp.sourmash('search', testdata1, 'zzz')
 
-    assert '1 matches:' in runtmp.last_result.out
+    assert '1 matches' in runtmp.last_result.out
 
     tree = load_sbt_index(runtmp.output('zzz.sbt.zip'))
     assert tree._nodes[0].metadata['min_n_below'] == 1
@@ -1834,9 +1834,19 @@ def test_search_4(runtmp):
     runtmp.sourmash('search', '-n', '0', 'short.fa.sig', 'short2.fa.sig', 'short3.fa.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
-    assert '2 matches:' in runtmp.last_result.out
+    assert '2 matches above threshold 0.080:' in runtmp.last_result.out
     assert 'short2.fa' in runtmp.last_result.out
     assert 'short3.fa' in runtmp.last_result.out
+
+
+def test_search_5_num_results(runtmp):
+    query = utils.get_test_data('gather/combined.sig')
+    against = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+
+    runtmp.sourmash('search', '-n', '5', query, *against)
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '12 matches above threshold 0.080; showing first 5:' in runtmp.last_result.out
 
 
 def test_index_check_scaled_bounds_negative(runtmp):
@@ -2104,7 +2114,7 @@ def test_search_metagenome_sbt_downsample_nofail(runtmp):
     assert runtmp.last_result.status == 0
     assert "ERROR: cannot use 'gcf_all' for this query." in runtmp.last_result.err
     assert "search scaled value 100000 is less than database scaled value of 10000" in runtmp.last_result.err
-    assert "0 matches:" in runtmp.last_result.out
+    assert "0 matches" in runtmp.last_result.out
 
 
 def test_search_metagenome_downsample_containment(runtmp):
@@ -2174,7 +2184,7 @@ def test_search_with_picklist(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "3 matches:" in out
+    assert "3 matches" in out
     assert "13.1%       NC_000853.1 Thermotoga" in out
     assert "13.0%       NC_009486.1 Thermotoga" in out
     assert "12.8%       NC_011978.1 Thermotoga" in out
@@ -2215,7 +2225,7 @@ def test_search_with_pattern_include(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "3 matches:" in out
+    assert "3 matches" in out
     assert "13.1%       NC_000853.1 Thermotoga" in out
     assert "13.0%       NC_009486.1 Thermotoga" in out
     assert "12.8%       NC_011978.1 Thermotoga" in out
@@ -2285,7 +2295,7 @@ def test_mash_csv_to_sig(runtmp):
     runtmp.sourmash('search', '-k', '31', 'short.fa.sig', 'xxx.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
-    assert '1 matches:' in runtmp.last_result.out
+    assert '1 matches' in runtmp.last_result.out
     assert '100.0%       short.fa' in runtmp.last_result.out
 
 
@@ -5281,7 +5291,7 @@ def test_index_matches_search_with_picklist(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "3 matches:" in out
+    assert "3 matches" in out
     assert "13.1%       NC_000853.1 Thermotoga" in out
     assert "13.0%       NC_009486.1 Thermotoga" in out
     assert "12.8%       NC_011978.1 Thermotoga" in out

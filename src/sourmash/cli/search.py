@@ -61,7 +61,7 @@ def subparser(subparsers):
         help='output debug information'
     )
     subparser.add_argument(
-        '--threshold', metavar='T', default=0.08, type=float,
+        '-t', '--threshold', metavar='T', default=0.08, type=float,
         help='minimum threshold for reporting matches; default=0.08'
     )
     subparser.add_argument(

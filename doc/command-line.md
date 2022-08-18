@@ -250,31 +250,45 @@ for matches to the query signature.  It can search for matches with either
 high [Jaccard similarity](https://en.wikipedia.org/wiki/Jaccard_index)
 or containment; the default is to use Jaccard similarity, unless
 `--containment` is specified.  `-o/--output` will create a CSV file
-containing the matches.
+containing all of the matches.
 
 `search` makes use of [indexed databases](#loading-many-signatures) to
 decrease search time and memory where possible.
 
 Usage:
 ```
-sourmash search query.sig [ list of signatures or SBTs ]
+sourmash search query.sig <signatures or databases>
 ```
 
 Example output:
 
 ```
-49 matches; showing first 20:
+% sourmash search tests/test-data/47.fa.sig gtdb-rs207.genomic-reps.dna.k31.zip
+
+...
+--
+loaded 65703 total signatures from 1 locations.
+after selecting signatures compatible with search, 65703 remain.
+
+2 matches above threshold 0.080:
 similarity   match
 ----------   -----
- 75.4%       NZ_JMGW01000001.1 Escherichia coli 1-176-05_S4_C2 e117605...
- 72.2%       NZ_GG774190.1 Escherichia coli MS 196-1 Scfld2538, whole ...
- 71.4%       NZ_JMGU01000001.1 Escherichia coli 2-011-08_S3_C2 e201108...
- 70.1%       NZ_JHRU01000001.1 Escherichia coli strain 100854 100854_1...
- 69.0%       NZ_JH659569.1 Escherichia coli M919 supercont2.1, whole g...
-...    
+ 32.3%       GCF_900456975.1 Shewanella baltica strain=NCTC10735, 5088...
+ 14.0%       GCF_002838165.1 Shewanella sp. Pdp11 strain=Pdp11, ASM283...
 ```
 
-Note, as of sourmash 4.2.0, `search` supports `--picklist`, to
+`search` takes a number of command line options -
+* `--containment` - find matches using the containment index rather than Jaccard similarity;
+* `--max-containment` - find matches using the max containment index rather than Jaccard similarity;
+* `-t/--threshold` - lower threshold for matching; defaults to 0.08;
+* `--best-only` - find and report only the best match;
+* `-n/--num-results` - number of matches to report to stdout; defaults to 3;
+
+Match information can be saved to a CSV file with `-o/--output`; with
+`-o`, all matches above the threshold will be saved, not just those
+printed to stdout (which are limited to `-n/--num-results`).
+
+As of sourmash 4.2.0, `search` supports `--picklist`, to
 [select a subset of signatures to search, based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
 can be used to search only a small subset of a large collection, or to
 exclude a few signatures from a collection, without modifying the
