@@ -92,7 +92,7 @@ true of sketches stored in indexed collections, e.g. SBTs; see [sourmash#1799](h
 In practice, sourmash does all necessary downsampling dynamically, but
 returns the original sketches. This means that (for example) you can
 do a low-resolution/high-scaled large scale search by specifying a
-high scaled value, and then do a higher resolution comparison with
+high `scaled` value, and then do a higher resolution comparison with
 only the highly similar matches the results to do a more refined (see
 below, Speeding up `gather` and `search`.)
 
@@ -135,7 +135,7 @@ translate in all six reading frames (see also
 By default protein sketches will be created; dayhoff sketches can be
 created by including `dayhoff` in the param string, e.g. `sourmash
 sketch protein -p dayhoff`, and hydrophobic-polar sketches can be
-built with `hp` in the param string.
+built with `hp` in the param string, e.g. `sourmash sketch protein -p hp`.
 
 ## Manifests
 
@@ -430,7 +430,7 @@ time.
 `gather` is typically used to search a metagenome against a large
 database of sketches, as part of finding a minimum set cover. This can
 be quite slow! Our current implementation (as of sourmash 4.1.0, [pull request sourmash#1370](https://github.com/sourmash-bio/sourmash/pull/1370)) does a single pass across the database to find all matches
-with an overlap above the provided threshold, and then organizes
+with a Jaccard similarity or containment above the provided threshold, and then organizes
 the matches for rapid min-set-cov analysis. This single pass across the
 database is called a "prefetch", and it is also implemented in the
 `prefetch` subcommand.
