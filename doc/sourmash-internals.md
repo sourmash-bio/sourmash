@@ -91,10 +91,10 @@ true of sketches stored in indexed collections, e.g. SBTs; see [sourmash#1799](h
 
 In practice, sourmash does all necessary downsampling dynamically, but
 returns the original sketches. This means that (for example) you can
-do a low-resolution/high-scaled large scale search by specifying a
-high `scaled` value, and then do a higher resolution comparison with
-only the highly similar matches the results to do a more refined (see
-below, Speeding up `gather` and `search`.)
+do a low-resolution/high-scaled search quickly by specifying a
+high `scaled` value, and then use a higher resolution comparison with
+the resulting matches for a more refined and accurate analysis (see
+below, [Speeding up `gather` and `search`](#speeding-up-gather-and-search).)
 
 ### Num (MinHash) sketches support Jaccard similarity
 
@@ -112,13 +112,14 @@ sig downsample`, however.
 There is no explicit restriction on k-mer sizes built into sourmash.
 
 For highly specific genome and metagenome comparisons, we typically
-use k=21, k=31, or k=51. For a longer discussion, see [Assembly Free Analysis with K-mers](https://github.com/mblstamps/stamps2022/blob/main/kmers_and_sourmash/2022-stamps-assembly-free%20class.pdf) from STAMPS 2022.
+use k=21, k=31, or k=51. For a longer discussion, see [Assembly Free Analysis with K-mers](https://github.com/mblstamps/stamps2022/blob/main/kmers_and_sourmash/2022-stamps-assembly-free%20class.pdf) from STAMPS 2022
+and a more general overview at [Using sourmash:a practical guide](using-sourmash-a-guide.md).
 
 ## Molecule types - DNA, protein, Dayhoff, and hydrophobic-polar
 
 sourmash supports four different sequence encodings, which we refer to
-as "molecule: DNA (`--dna`), protein (`--protein`), Dayhoff,
-(`--dayhoff`), and hydrophobic-polar (`--hp`).
+as "molecule": DNA (`--dna`), protein (`--protein`), [Dayhoff encoding](https://en.wikipedia.org/wiki/Margaret_Oakley_Dayhoff#Table_of_Dayhoff_encoding_of_amino_acids), 
+(`--dayhoff`), and [hydrophobic-polar](sourmash-sketch.md#protein-encodings) (`--hp`).
 
 All FracMinHash sketches have exactly one molecule type, and can only
 be compared to the same molecule type (and ksize).
@@ -149,16 +150,16 @@ Manifests are an internal format that is not meant to be particularly
 human readable, but the CSV format can be loaded into a spreadsheet
 program if you're curious :).
 
-If in a zipfile (`.zip`) or SBT zipfile (`.sbt.zip`), manifests must
+If a collection of signatures is in a zipfile (`.zip`) or SBT zipfile (`.sbt.zip`), manifests must
 be named `SOURMASH-MANIFEST.csv`. They can also be stored directly on
 disk in CSV/gzipped CSV, or in a sqlite database; see
 `sourmash sig manifest`, `sourmash sig check`, and `sourmash sig collect`
 for manifest creation, management, and export utilities.
 
 Where signatures are stored individually in `Index` collections,
-e.g. in a zipfile, manifests may be stored alongside them; for other
-subclasses of `Index` such as the inverted indices, manifests are
-generated dynamically by the class itself.
+e.g. as separate files in a zipfile, manifests may be stored alongside
+them; for other subclasses of `Index` such as the inverted indices,
+manifests are generated dynamically by the class itself.
 
 Currently (sourmash 4.x) manifests do not contain information about the
 hash seed or sketch license. This will be fixed in the future - see [sourmash#1849](https://github.com/sourmash-bio/sourmash/issues/1849).
@@ -384,8 +385,8 @@ There are two primary search commands in sourmash: `gather` and
 
 `gather` calculates a minimum metagenome cover as discussed in [Irber et al., 2022](https://www.biorxiv.org/content/10.1101/2022.01.11.475838v2). It
 is mostly intended for querying a database with a metagenome, although
-it can be used with genome queries, as well. It depends on overlap
-analyses and can only be used with FracMinHash sketches.
+it can be used with genome queries, as well. This approach relies on overlaps
+between genomes and metagenomes and can only be used with FracMinHash sketches.
 
 `search` does a straight Jaccard similarity search on MinHash and
 FracMinHash sketches (or, with `--containment`, a containment search
