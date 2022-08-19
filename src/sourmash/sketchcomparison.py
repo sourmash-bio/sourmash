@@ -194,13 +194,13 @@ class FracMinHashComparison(BaseMinHashComparison):
 
     def estimate_all_containment_ani(self):
         "Estimate all containment ANI values."
-        self.estimate_mh1_containment_ani()
-        self.estimate_mh2_containment_ani()
-        if any([self.mh1_containment_ani is None, self.mh2_containment_ani is None]):
+        self.estimate_ani_from_mh1_containment_in_mh2()
+        self.estimate_ani_from_mh2_containment_in_mh1()
+        if any([self.ani_from_mh1_containment_in_mh2 is None, self.ani_from_mh2_containment_in_mh1 is None]):
 #            self.estimate_max_containment_ani()
             self.max_containment_ani = None
         else:
-            self.max_containment_ani = max([self.mh1_containment_ani, self.mh2_containment_ani])
+            self.max_containment_ani = max([self.ani_from_mh1_containment_in_mh2, self.ani_from_mh2_containment_in_mh1])
 
     def weighted_intersection(self, from_mh=None, from_abundD={}):
          # map abundances to all intersection hashes.
