@@ -5794,7 +5794,7 @@ def test_search_ani_containment(runtmp):
         assert row['query_md5'] == '491c0a81'
         assert row['ani'] == "0.9868883523107224"
 
-        
+
 def test_search_ani_containment_asymmetry(runtmp):
     # test contained_by asymmetries, viz #2215
     query_sig = utils.get_test_data('47.fa.sig')
