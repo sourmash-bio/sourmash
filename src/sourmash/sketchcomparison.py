@@ -124,10 +124,10 @@ class FracMinHashComparison(BaseMinHashComparison):
         return len(self.intersect_mh) * self.cmp_scaled # + (ksize-1) #for bp estimation
 
     @property
-    def mh1_containment(self):
+    def mh1_containment_in_mh2(self):
         return self.mh1_cmp.contained_by(self.mh2_cmp)
 
-    def estimate_mh1_containment_ani(self, containment = None):
+    def estimate_ani_from_mh1_containment_in_mh2(self, containment = None):
         # build result once
         m1_cani = self.mh1_cmp.containment_ani(self.mh2_cmp,
                                             containment=containment,
@@ -135,30 +135,30 @@ class FracMinHashComparison(BaseMinHashComparison):
                                             estimate_ci=self.estimate_ani_ci)
 #                                            prob_threshold=self.pfn_threshold)
         # propagate params
-        self.mh1_containment_ani = m1_cani.ani
+        self.ani_from_mh1_containment_in_mh2 = m1_cani.ani
         if m1_cani.p_exceeds_threshold:
             # only update if True
             self.potential_false_negative = True
         if self.estimate_ani_ci:
-            self.mh1_containment_ani_low = m1_cani.ani_low
-            self.mh1_containment_ani_high = m1_cani.ani_high
+            self.ani_from_mh1_containment_in_mh2_low = m1_cani.ani_low
+            self.ani_from_mh1_containment_in_mh2_high = m1_cani.ani_high
 
     @property
-    def mh2_containment(self):
+    def mh2_containment_in_mh1(self):
         return self.mh2_cmp.contained_by(self.mh1_cmp)
 
-    def estimate_mh2_containment_ani(self, containment=None):
+    def estimate_ani_from_mh2_containment_in_mh1(self, containment=None):
         m2_cani =  self.mh2_cmp.containment_ani(self.mh1_cmp,
                                             containment=containment,
                                             confidence=self.ani_confidence,
                                             estimate_ci=self.estimate_ani_ci)
 #                                            prob_threshold=self.pfn_threshold)
-        self.mh2_containment_ani = m2_cani.ani
+        self.ani_from_mh2_containment_in_mh1 = m2_cani.ani
         if m2_cani.p_exceeds_threshold:
             self.potential_false_negative = True
         if self.estimate_ani_ci:
-            self.mh2_containment_ani_low = m2_cani.ani_low
-            self.mh2_containment_ani_high = m2_cani.ani_high
+            self.ani_from_mh2_containment_in_mh1_low = m2_cani.ani_low
+            self.ani_from_mh2_containment_in_mh1_high = m2_cani.ani_high
     
     @property
     def max_containment(self):
@@ -185,12 +185,12 @@ class FracMinHashComparison(BaseMinHashComparison):
     @property
     def avg_containment_ani(self):
         "Returns single average_containment_ani value. Sets self.potential_false_negative internally."
-        self.estimate_mh1_containment_ani()
-        self.estimate_mh2_containment_ani()
-        if any([self.mh1_containment_ani is None, self.mh2_containment_ani is None]):
+        self.estimate_ani_from_mh1_containment_in_mh2()
+        self.estimate_ani_from_mh2_containment_in_mh1()
+        if any([self.ani_from_mh1_containment_in_mh2 is None, self.ani_from_mh2_containment_in_mh1 is None]):
             return None
         else:
-            return (self.mh1_containment_ani + self.mh2_containment_ani)/2
+            return (self.ani_from_mh1_containment_in_mh2 + self.ani_from_mh2_containment_in_mh1)/2
 
     def estimate_all_containment_ani(self):
         "Estimate all containment ANI values."
