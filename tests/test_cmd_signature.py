@@ -3596,7 +3596,7 @@ def test_import_mash_csv_to_sig(runtmp):
 
     print("RUNTEMP", runtmp)
 
-    assert '1 matches:' in runtmp.last_result.out
+    assert '1 matches' in runtmp.last_result.out
     assert '100.0%       short.fa' in runtmp.last_result.out
 
 
