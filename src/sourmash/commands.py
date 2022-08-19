@@ -538,10 +538,10 @@ def search(args):
         args.num_results = 1
 
     if not args.num_results or n_matches <= args.num_results:
-        print_results('{} matches:'.format(len(results)))
+        print_results(f'{len(results)} matches above threshold {args.threshold:0.3f}:')
     else:
-        print_results('{} matches; showing first {}:',
-               len(results), args.num_results)
+        print_results(f'{len(results)} matches above threshold {args.threshold:0.3f}; showing first {args.num_results}:')
+
         n_matches = args.num_results
 
     size_may_be_inaccurate = False
@@ -587,6 +587,7 @@ def search(args):
         notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons.")
     if jaccard_ani_untrustworthy:
         notify("WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons.")
+
 
 def categorize(args):
     "Use a database to find the best match to many signatures."
