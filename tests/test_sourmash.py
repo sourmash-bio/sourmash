@@ -13,14 +13,15 @@ import pytest
 import sys
 import zipfile
 import random
-from sourmash.search import SearchResult,GatherResult
 
 import sourmash_tst_utils as utils
 
 import sourmash
-from sourmash import MinHash
+from sourmash import MinHash, sourmash_args
 from sourmash.sbt import SBT, Node
 from sourmash.sbtmh import SigLeaf, load_sbt_index
+from sourmash.search import SearchResult, GatherResult
+
 try:
     import matplotlib
     matplotlib.use('Agg')
@@ -5792,6 +5793,26 @@ def test_search_ani_containment(runtmp):
         assert row['query_name'] == ''
         assert row['query_md5'] == '491c0a81'
         assert row['ani'] == "0.9868883523107224"
+
+        
+def test_search_ani_containment_asymmetry(runtmp):
+    # test contained_by asymmetries, viz #2215
+    query_sig = utils.get_test_data('47.fa.sig')
+    merged_sig = utils.get_test_data('47-63-merge.sig')
+
+    runtmp.sourmash('search', query_sig, merged_sig, '-o',
+                    'query-in-merged.csv', '--containment')
+    runtmp.sourmash('search', merged_sig, query_sig, '-o',
+                    'merged-in-query.csv', '--containment')
+
+    with sourmash_args.FileInputCSV(runtmp.output('query-in-merged.csv')) as r:
+        query_in_merged = list(r)[0]
+
+    with sourmash_args.FileInputCSV(runtmp.output('merged-in-query.csv')) as r:
+        merged_in_query = list(r)[0]
+
+    assert query_in_merged['ani'] == '1.0'
+    assert merged_in_query['ani'] == '0.9865155060423993'
 
 
 def test_search_ani_containment_fail(runtmp):
