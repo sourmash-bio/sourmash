@@ -1,4 +1,5 @@
 import os
+import sys
 
 from hypothesis import settings, Verbosity
 import pytest
@@ -7,7 +8,7 @@ import matplotlib.pyplot as plt
 plt.rcParams.update({'figure.max_open_warning': 0})
 
 from sourmash_tst_utils import TempDirectory, RunnerContext
-
+sys.stdout = sys.stderr
 
 @pytest.fixture
 def runtmp():
