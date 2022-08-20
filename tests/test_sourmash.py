@@ -1,7 +1,6 @@
 """
 Tests for the 'sourmash' command line.
 """
-import argparse
 import os
 import gzip
 import shutil
@@ -10,7 +9,6 @@ import glob
 import json
 import csv
 import pytest
-import sys
 import zipfile
 import random
 import numpy
@@ -171,9 +169,10 @@ def test_do_serial_compare(c):
     assert (cmp_out == cmp_calc).all()
 
 
-@utils.in_tempdir
-def test_do_compare_parallel(c):
+def test_compare_parallel(runtmp):
     # try doing a compare parallel
+    c = runtmp
+
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
 
@@ -286,8 +285,9 @@ def test_do_basic_compare_using_nucleotide_arg(runtmp):
     assert (cmp_out == cmp_calc).all()
 
 
-@utils.in_tempdir
-def test_do_compare_quiet(c):
+def test_compare_quiet(runtmp):
+    # test 'compare -q' has no output
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -324,7 +324,7 @@ def test_do_traverse_directory_compare_force(c):
     assert 'genome-s11.fa.gz' in c.last_result.out
 
 
-def test_do_compare_output_csv(runtmp):
+def test_compare_output_csv(runtmp):
     # test 'sourmash compare --csv'
     c = runtmp
     testdata1 = utils.get_test_data('short.fa')
@@ -350,7 +350,7 @@ def test_do_compare_output_csv(runtmp):
             next(r)
 
 
-def test_do_compare_output_csv_gz(runtmp):
+def test_compare_output_csv_gz(runtmp):
     # test 'sourmash compare --csv' with a .gz file
     c = runtmp
     testdata1 = utils.get_test_data('short.fa')
@@ -377,8 +377,9 @@ def test_do_compare_output_csv_gz(runtmp):
             next(r)
 
 
-@utils.in_tempdir
-def test_do_compare_downsample(c):
+def test_compare_downsample(runtmp):
+    # test 'compare' with --downsample
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=200', testdata1)
 
@@ -396,8 +397,9 @@ def test_do_compare_downsample(c):
         assert lines[2].startswith('0.6666')
 
 
-@utils.in_tempdir
-def test_do_compare_output_multiple_k(c):
+def test_compare_output_multiple_k(runtmp):
+    # test 'compare' when given multiple k-mer sizes -> should fail
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', testdata1)
@@ -414,8 +416,10 @@ def test_do_compare_output_multiple_k(c):
     assert '(saw k-mer sizes 21, 31)' in c.last_result.err
 
 
-@utils.in_tempdir
-def test_do_compare_output_multiple_moltype(c):
+def test_compare_output_multiple_moltype(runtmp):
+    # 'compare' should fail when given multiple moltypes
+    c = runtmp
+
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'dna', '-p', 'k=21,num=500', testdata1)
@@ -430,8 +434,9 @@ def test_do_compare_output_multiple_moltype(c):
     assert 'multiple molecule types loaded;' in c.last_result.err
 
 
-@utils.in_tempdir
-def test_do_compare_dayhoff(c):
+def test_compare_dayhoff(runtmp):
+    # test 'compare' works with dayhoff moltype
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', '--dayhoff', testdata1)
@@ -451,8 +456,9 @@ min similarity in matrix: 0.940'''.splitlines()
     assert c.last_result.status == 0
 
 
-@utils.in_tempdir
-def test_do_compare_hp(c):
+def test_compare_hp(runtmp):
+    # test that 'compare' works with --hp moltype
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', '--hp', testdata1)
@@ -584,23 +590,9 @@ def test_compare_avg_containment(runtmp):
     c.run_sourmash('compare', '--avg-containment', '-k', '31',
                    '--csv', 'output.csv', *testdata_sigs)
 
-    # load the matrix output of compare --containment
-    with open(c.output('output.csv'), 'rt') as fp:
-        r = iter(csv.reader(fp))
-        headers = next(r)
-
-        mat = numpy.zeros((len(headers), len(headers)))
-        for i, row in enumerate(r):
-            for j, val in enumerate(row):
-                mat[i][j] = float(val)
-
-        print(mat)
-
-    # load in all the input signatures
-    idx_to_sig = dict()
-    for idx, filename in enumerate(testdata_sigs):
-        ss = sourmash.load_one_signature(filename, ksize=31)
-        idx_to_sig[idx] = ss
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
 
     # check explicit containment against output of compare
     for i in range(len(idx_to_sig)):
@@ -6126,23 +6118,9 @@ def test_compare_containment_ani(runtmp):
     c.run_sourmash('compare', '--containment', '-k', '31',
                    '--ani', '--csv', 'output.csv', *testdata_sigs)
 
-    # load the matrix output of compare --containment --estimate-ani
-    with open(c.output('output.csv'), 'rt') as fp:
-        r = iter(csv.reader(fp))
-        headers = next(r)
-
-        mat = numpy.zeros((len(headers), len(headers)))
-        for i, row in enumerate(r):
-            for j, val in enumerate(row):
-                mat[i][j] = float(val)
-
-        print(mat)
-
-    # load in all the input signatures
-    idx_to_sig = dict()
-    for idx, filename in enumerate(testdata_sigs):
-        ss = sourmash.load_one_signature(filename, ksize=31)
-        idx_to_sig[idx] = ss
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
 
     # check explicit containment against output of compare
     for i in range(len(idx_to_sig)):
@@ -6178,23 +6156,9 @@ def test_compare_containment_ani_asymmetry(runtmp):
     c.run_sourmash('compare', '--containment', '-k', '31',
                    '--ani', '--csv', 'output.csv', *testdata_sigs)
 
-    # load the matrix output of compare --containment --estimate-ani
-    with open(c.output('output.csv'), 'rt') as fp:
-        r = iter(csv.reader(fp))
-        headers = next(r)
-
-        mat = numpy.zeros((len(headers), len(headers)))
-        for i, row in enumerate(r):
-            for j, val in enumerate(row):
-                mat[i][j] = float(val)
-
-        print(mat)
-
-    # load in all the input signatures
-    idx_to_sig = dict()
-    for idx, filename in enumerate(testdata_sigs):
-        ss = sourmash.load_one_signature(filename, ksize=31)
-        idx_to_sig[idx] = ss
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
 
     # check explicit containment against output of compare
     for i in range(len(idx_to_sig)):
@@ -6228,25 +6192,11 @@ def test_compare_jaccard_ani(runtmp):
     c.run_sourmash('compare', '-k', '31', '--estimate-ani',
                          '--csv', 'output.csv', *testdata_sigs)
 
-    # load the matrix output of compare --estimate-ani
-    with open(c.output('output.csv'), 'rt') as fp:
-        r = iter(csv.reader(fp))
-        headers = next(r)
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
 
-        mat = numpy.zeros((len(headers), len(headers)))
-        for i, row in enumerate(r):
-            for j, val in enumerate(row):
-                mat[i][j] = float(val)
-
-        print(mat)
-
-    # load in all the input signatures
-    idx_to_sig = dict()
-    for idx, filename in enumerate(testdata_sigs):
-        ss = sourmash.load_one_signature(filename, ksize=31)
-        idx_to_sig[idx] = ss
-
-    # check explicit containment against output of compare
+    # check explicit calculations against output of compare
     for i in range(len(idx_to_sig)):
         ss_i = idx_to_sig[i]
         for j in range(len(idx_to_sig)):
@@ -6284,24 +6234,9 @@ def test_compare_jaccard_ani_jaccard_error_too_high(runtmp):
     c.run_sourmash('compare', '-k', '31', '--estimate-ani', '--csv', 'output.csv', 'short.fa.sig', 'short2.fa.sig')
     print(c.last_result.status, c.last_result.out, c.last_result.err)
 
-
-    # load the matrix output of compare --estimate-ani
-    with open(c.output('output.csv'), 'rt') as fp:
-        r = iter(csv.reader(fp))
-        headers = next(r)
-
-        mat = numpy.zeros((len(headers), len(headers)))
-        for i, row in enumerate(r):
-            for j, val in enumerate(row):
-                mat[i][j] = float(val)
-
-        print(mat)
-
-    # load in all the input signatures
-    idx_to_sig = dict()
-    for idx, filename in enumerate(testdata_sigs):
-        ss = sourmash.load_one_signature(filename, ksize=31)
-        idx_to_sig[idx] = ss
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
 
     # check explicit containment against output of compare
     for i in range(len(idx_to_sig)):
@@ -6335,23 +6270,9 @@ def test_compare_max_containment_ani(runtmp):
     c.run_sourmash('compare', '--max-containment', '-k', '31',
                    '--estimate-ani', '--csv', 'output.csv', *testdata_sigs)
 
-    # load the matrix output of compare --max-containment --estimate-ani
-    with open(c.output('output.csv'), 'rt') as fp:
-        r = iter(csv.reader(fp))
-        headers = next(r)
-
-        mat = numpy.zeros((len(headers), len(headers)))
-        for i, row in enumerate(r):
-            for j, val in enumerate(row):
-                mat[i][j] = float(val)
-
-        print(mat)
-
-    # load in all the input signatures
-    idx_to_sig = dict()
-    for idx, filename in enumerate(testdata_sigs):
-        ss = sourmash.load_one_signature(filename, ksize=31)
-        idx_to_sig[idx] = ss
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
 
     # check explicit containment against output of compare
     for i in range(len(idx_to_sig)):
@@ -6386,23 +6307,9 @@ def test_compare_avg_containment_ani(runtmp):
     c.run_sourmash('compare', '--avg-containment', '-k', '31',
                    '--estimate-ani', '--csv', 'output.csv', *testdata_sigs)
 
-    # load the matrix output of compare --avg-containment --estimate-ani
-    with open(c.output('output.csv'), 'rt') as fp:
-        r = iter(csv.reader(fp))
-        headers = next(r)
-
-        mat = numpy.zeros((len(headers), len(headers)))
-        for i, row in enumerate(r):
-            for j, val in enumerate(row):
-                mat[i][j] = float(val)
-
-        print(mat)
-
-    # load in all the input signatures
-    idx_to_sig = dict()
-    for idx, filename in enumerate(testdata_sigs):
-        ss = sourmash.load_one_signature(filename, ksize=31)
-        idx_to_sig[idx] = ss
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
 
     # check explicit avg containment against output of compare
     for i in range(len(idx_to_sig)):
