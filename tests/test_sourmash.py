@@ -5002,8 +5002,6 @@ def test_watch_coverage(runtmp):
 
 
 def test_storage_convert(runtmp):
-    import pytest
-
     testdata = utils.get_test_data('v2.sbt.json')
     shutil.copyfile(testdata, runtmp.output('v2.sbt.json'))
     shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
@@ -5014,7 +5012,7 @@ def test_storage_convert(runtmp):
 
     args = ['storage', 'convert', '-b', 'ipfs', testsbt]
     with pytest.raises(SourmashCommandFailed):
-        runtmp.run(*args)
+        runtmp.sourmash(*args)
 
     if runtmp.last_result.status:
         if "ipfshttpclient.ConnectionError" in runtmp.last_result.err:
