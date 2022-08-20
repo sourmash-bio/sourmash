@@ -1,26 +1,10 @@
-#[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
-use wasm_bindgen::prelude::*;
-
 use getset::{CopyGetters, Getters, Setters};
 use typed_builder::TypedBuilder;
 
 use crate::encodings::HashFunctions;
-use crate::index::MHBT;
 use crate::signature::Signature;
 use crate::sketch::minhash::{max_hash_for_scaled, KmerMinHashBTree};
 use crate::sketch::Sketch;
-use crate::Error;
-
-pub fn prepare(index_path: &str) -> Result<(), Error> {
-    let mut index = MHBT::from_path(index_path)?;
-
-    // TODO equivalent to fill_internal in python
-    //unimplemented!();
-
-    index.save_file(index_path, None)?;
-
-    Ok(())
-}
 
 impl Signature {
     pub fn from_params(params: &ComputeParameters) -> Signature {
@@ -36,7 +20,6 @@ impl Signature {
 }
 
 #[allow(dead_code)]
-#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[derive(TypedBuilder, CopyGetters, Getters, Setters)]
 pub struct ComputeParameters {
     #[getset(get = "pub", set = "pub")]

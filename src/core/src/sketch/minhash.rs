@@ -17,9 +17,6 @@ use crate::signature::SigsTrait;
 use crate::sketch::hyperloglog::HyperLogLog;
 use crate::Error;
 
-#[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
-use wasm_bindgen::prelude::*;
-
 pub fn max_hash_for_scaled(scaled: u64) -> u64 {
     match scaled {
         0 => 0,
@@ -35,7 +32,6 @@ pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
     }
 }
 
-#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[derive(Debug, TypedBuilder)]
 pub struct KmerMinHash {
     num: u32,
@@ -189,20 +185,17 @@ impl KmerMinHash {
         track_abundance: bool,
         num: u32,
     ) -> KmerMinHash {
-        let mins: Vec<u64>;
-        let abunds: Option<Vec<u64>>;
-
-        if num > 0 {
-            mins = Vec::with_capacity(num as usize);
+        let mins = if num > 0 {
+            Vec::with_capacity(num as usize)
         } else {
-            mins = Vec::with_capacity(1000);
-        }
+            Vec::with_capacity(1000)
+        };
 
-        if track_abundance {
-            abunds = Some(Vec::with_capacity(mins.capacity()));
+        let abunds = if track_abundance {
+            Some(Vec::with_capacity(mins.capacity()))
         } else {
-            abunds = None
-        }
+            None
+        };
 
         let max_hash = max_hash_for_scaled(scaled);
 
@@ -439,19 +432,8 @@ impl KmerMinHash {
             let mut self_iter = self.mins.iter();
             let mut other_iter = other.mins.iter();
 
-            let mut self_abunds_iter: Option<std::slice::Iter<'_, u64>>;
-            if let Some(ref mut abunds) = self.abunds {
-                self_abunds_iter = Some(abunds.iter());
-            } else {
-                self_abunds_iter = None;
-            }
-
-            let mut other_abunds_iter: Option<std::slice::Iter<'_, u64>>;
-            if let Some(ref abunds) = other.abunds {
-                other_abunds_iter = Some(abunds.iter());
-            } else {
-                other_abunds_iter = None;
-            }
+            let mut self_abunds_iter = self.abunds.as_mut().map(|a| a.iter());
+            let mut other_abunds_iter = other.abunds.as_ref().map(|a| a.iter());
 
             let mut self_value = self_iter.next();
             let mut other_value = other_iter.next();
@@ -792,6 +774,12 @@ impl KmerMinHash {
 
         hll
     }
+
+    // create a downsampled copy of self
+    pub fn downsample_scaled(&self, scaled: u64) -> Result<KmerMinHash, Error> {
+        let max_hash = max_hash_for_scaled(scaled);
+        self.downsample_max_hash(max_hash)
+    }
 }
 
 impl SigsTrait for KmerMinHash {
@@ -939,7 +927,6 @@ mod test {
 //#############
 // A MinHash implementation for low scaled or large cardinalities
 
-#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[derive(Debug, TypedBuilder)]
 pub struct KmerMinHashBTree {
     num: u32,
@@ -1536,6 +1523,12 @@ impl KmerMinHashBTree {
             new_mh.add_many(&self.mins())?;
         }
         Ok(new_mh)
+    }
+
+    // create a downsampled copy of self
+    pub fn downsample_scaled(&self, scaled: u64) -> Result<KmerMinHashBTree, Error> {
+        let max_hash = max_hash_for_scaled(scaled);
+        self.downsample_max_hash(max_hash)
     }
 
     pub fn to_vec_abunds(&self) -> Vec<(u64, u64)> {

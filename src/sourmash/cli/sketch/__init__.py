@@ -10,6 +10,7 @@ from . import protein
 from . import protein as aa
 from . import protein as prot
 from . import translate
+from . import fromfile
 from ..utils import command_list
 from argparse import SUPPRESS, RawDescriptionHelpFormatter
 import os

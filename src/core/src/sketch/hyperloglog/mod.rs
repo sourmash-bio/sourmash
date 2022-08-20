@@ -16,7 +16,7 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use serde::{Deserialize, Serialize};
 
 use crate::encodings::HashFunctions;
-use crate::index::sbt::Update;
+use crate::prelude::*;
 use crate::signature::SigsTrait;
 use crate::sketch::KmerMinHash;
 use crate::Error;
@@ -25,7 +25,7 @@ use crate::HashIntoType;
 pub mod estimators;
 use estimators::CounterType;
 
-#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HyperLogLog {
     registers: Vec<CounterType>,
     p: usize,

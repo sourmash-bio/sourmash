@@ -29,7 +29,7 @@ that depend on sourmash, e.g. specifying `sourmash >=3,<4` for
 software that is tested with sourmash 3.x. Read on for details!
 
 Upgrading major versions (to sourmash 4.0, for example) will often involve
-more work; see the [next section](#upgrading-versions) for more
+more work; see the [next section](#upgrading-major-versions) for more
 our suggested process.
 
 ### Semantic versioning
@@ -103,8 +103,8 @@ and our intent is that it will support as-yet unreleased versions of Python 3.x
 For future versions of sourmash, we plan to follow the
 [Numpy NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html)
 proposal for Python version support. For example, this
-would mean that we would drop support for Python 3.7 on December 26,
-2021.
+would mean that we would drop support for Python 3.8 on April 14,
+2023.
 
 ### Rust API
 
@@ -148,7 +148,7 @@ If you use sourmash from the command line, there are a few major changes in 4.0 
 
 First, **`sourmash compute` is deprecated in favor of [`sourmash sketch`](sourmash-sketch.md)**, which provides quite a bit more flexibility in creating signatures.
 
-Second, **`sourmash index` will now save databases in the Zip format (`.sbt.zip`) instead of the old JSON+subdirectory format** (see [updated docs](command-line.md#sourmash-index-build-an-sbt-index-of-signatures)). You can revert to the old behavior by explicitly specifying the `.sbt.json` filename for output when running `sourmash index`.
+Second, **`sourmash index` will now save databases in the Zip format (`.sbt.zip`) instead of the old JSON+subdirectory format** (see [updated docs](command-line.md#sourmash-index---build-an-sbt-index-of-signatures)). You can revert to the old behavior by explicitly specifying the `.sbt.json` filename for output when running `sourmash index`.
 
 Third, all sourmash commands that operate on signatures should now be able to directly read from lists of signatures in signature files, SBT databases, LCA databases, directories, and files containing lists of filenames (see [updated docs](command-line.md#advanced-command-line-usage)).
 

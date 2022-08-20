@@ -52,7 +52,13 @@ typedef struct SourmashKmerMinHash SourmashKmerMinHash;
 
 typedef struct SourmashNodegraph SourmashNodegraph;
 
+typedef struct SourmashRevIndex SourmashRevIndex;
+
+typedef struct SourmashSearchResult SourmashSearchResult;
+
 typedef struct SourmashSignature SourmashSignature;
+
+typedef struct SourmashZipStorage SourmashZipStorage;
 
 /**
  * Represents a string.
@@ -235,6 +241,14 @@ void kmerminhash_remove_many(SourmashKmerMinHash *ptr,
 
 uint64_t kmerminhash_seed(const SourmashKmerMinHash *ptr);
 
+const uint64_t *kmerminhash_seq_to_hashes(SourmashKmerMinHash *ptr,
+                                          const char *sequence,
+                                          uintptr_t insize,
+                                          bool force,
+                                          bool bad_kmers_as_zeroes,
+                                          bool is_protein,
+                                          uintptr_t *size);
+
 void kmerminhash_set_abundances(SourmashKmerMinHash *ptr,
                                 const uint64_t *hashes_ptr,
                                 const uint64_t *abunds_ptr,
@@ -293,6 +307,51 @@ void nodegraph_update_mh(SourmashNodegraph *ptr, const SourmashKmerMinHash *optr
 SourmashNodegraph *nodegraph_with_tables(uintptr_t ksize,
                                          uintptr_t starting_size,
                                          uintptr_t n_tables);
+
+void revindex_free(SourmashRevIndex *ptr);
+
+const SourmashSearchResult *const *revindex_gather(const SourmashRevIndex *ptr,
+                                                   const SourmashSignature *sig_ptr,
+                                                   double threshold,
+                                                   bool _do_containment,
+                                                   bool _ignore_abundance,
+                                                   uintptr_t *size);
+
+uint64_t revindex_len(const SourmashRevIndex *ptr);
+
+SourmashRevIndex *revindex_new_with_paths(const SourmashStr *const *search_sigs_ptr,
+                                          uintptr_t insigs,
+                                          const SourmashKmerMinHash *template_ptr,
+                                          uintptr_t threshold,
+                                          const SourmashKmerMinHash *const *queries_ptr,
+                                          uintptr_t inqueries,
+                                          bool keep_sigs);
+
+SourmashRevIndex *revindex_new_with_sigs(const SourmashSignature *const *search_sigs_ptr,
+                                         uintptr_t insigs,
+                                         const SourmashKmerMinHash *template_ptr,
+                                         uintptr_t threshold,
+                                         const SourmashKmerMinHash *const *queries_ptr,
+                                         uintptr_t inqueries);
+
+uint64_t revindex_scaled(const SourmashRevIndex *ptr);
+
+const SourmashSearchResult *const *revindex_search(const SourmashRevIndex *ptr,
+                                                   const SourmashSignature *sig_ptr,
+                                                   double threshold,
+                                                   bool do_containment,
+                                                   bool _ignore_abundance,
+                                                   uintptr_t *size);
+
+SourmashSignature **revindex_signatures(const SourmashRevIndex *ptr, uintptr_t *size);
+
+SourmashStr searchresult_filename(const SourmashSearchResult *ptr);
+
+void searchresult_free(SourmashSearchResult *ptr);
+
+double searchresult_score(const SourmashSearchResult *ptr);
+
+SourmashSignature *searchresult_signature(const SourmashSearchResult *ptr);
 
 void signature_add_protein(SourmashSignature *ptr, const char *sequence);
 
@@ -398,5 +457,24 @@ void sourmash_str_free(SourmashStr *s);
 SourmashStr sourmash_str_from_cstr(const char *s);
 
 char sourmash_translate_codon(const char *codon);
+
+SourmashStr **zipstorage_filenames(const SourmashZipStorage *ptr, uintptr_t *size);
+
+void zipstorage_free(SourmashZipStorage *ptr);
+
+SourmashStr **zipstorage_list_sbts(const SourmashZipStorage *ptr, uintptr_t *size);
+
+const uint8_t *zipstorage_load(const SourmashZipStorage *ptr,
+                               const char *path_ptr,
+                               uintptr_t insize,
+                               uintptr_t *size);
+
+SourmashZipStorage *zipstorage_new(const char *ptr, uintptr_t insize);
+
+SourmashStr zipstorage_path(const SourmashZipStorage *ptr);
+
+void zipstorage_set_subdir(SourmashZipStorage *ptr, const char *path_ptr, uintptr_t insize);
+
+SourmashStr zipstorage_subdir(const SourmashZipStorage *ptr);
 
 #endif /* SOURMASH_H_INCLUDED */

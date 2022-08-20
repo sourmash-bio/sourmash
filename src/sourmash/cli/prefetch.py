@@ -1,7 +1,8 @@
 """search a signature against dbs, find all overlaps"""
 
 from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
-                                add_picklist_args)
+                                add_picklist_args, add_scaled_arg,
+                                add_pattern_args)
 
 
 def subparser(subparsers):
@@ -23,7 +24,6 @@ def subparser(subparsers):
     subparser.add_argument(
         '--no-linear', dest="linear", action='store_false',
     )
-
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
@@ -55,16 +55,18 @@ def subparser(subparsers):
         'specified file'
     )
     subparser.add_argument(
-        '--scaled', metavar='FLOAT', type=float, default=None,
-        help='downsample signatures to the specified scaled factor'
-    )
-    subparser.add_argument(
         '--md5', default=None,
         help='select the signature with this md5 as query'
+    )
+    subparser.add_argument(
+        '--estimate-ani-ci', action='store_true',
+        help='also output confidence intervals for ANI estimates'
     )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
+    add_pattern_args(subparser)
+    add_scaled_arg(subparser, 0)
 
 
 def main(args):

@@ -62,7 +62,7 @@ def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True,
 
     # re-order labels along rows, top to bottom
     idx1 = Z1['leaves']
-    reordered_labels = [ labeltext[i] for i in reversed(idx1) ]
+    reordered_labels = [ labeltext[i] for i in idx1 ]
 
     # reorder D by the clustering in the dendrogram
     D = D[idx1, :]

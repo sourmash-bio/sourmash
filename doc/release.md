@@ -8,7 +8,7 @@ Michael Crusoe.
 The basic build environment needed below can be created as follows:
 
 ```
-conda create -y -n sourmash-rc python=3.8 pip cxx-compiler make twine tox tox-conda
+conda create -y -n sourmash-rc python=3.8 pip cxx-compiler make twine tox tox-conda setuptools setuptools_scm
 ```
 
 Then activate it with `conda activate sourmash-rc`.
@@ -16,6 +16,9 @@ Then activate it with `conda activate sourmash-rc`.
 You will also need a Rust installation (see
 [Development Environment](developer.md)); be sure to update it to the
 latest version with `rustup update`.
+
+Your conda version will need to be at least `v4.9.0`. You can check your
+conda version with `conda --version` and update with `conda update conda`.
 
 ## Testing a release
 
@@ -29,7 +32,7 @@ and also check if the [rendered docs] are updated.
 1\. The below should be done in a clean checkout:
 ```
 cd $(mktemp -d)
-git clone git@github.com:sourmash-bio/sourmash.git
+git clone https://github.com/sourmash-bio/sourmash
 cd sourmash
 ```
 
@@ -37,12 +40,12 @@ cd sourmash
 You might want to check [the releases page] for next version number,
 or you can run `make last-tag` and check the output.
 ```
-new_version=3.0.0
+new_version=4.X.X
 rc=rc1
 ```
 and then tag the release candidate with the new version number prefixed by the letter 'v':
 ```
-git tag -a v${new_version}${rc}
+git tag -a v${new_version}${rc} -m "${new_version} release candidate ${rc}"
 git push --tags origin
 ```
 
@@ -50,7 +53,7 @@ git push --tags origin
 
 3\. Test the release candidate. Bonus: repeat on macOS:
 ```
-python -m pip install -U setuptools pip virtualenv wheel
+python -m pip install -U virtualenv wheel tox-setuptools-version build
 
 cd ..
 python -m venv testenv1
@@ -64,7 +67,6 @@ cd testenv1
 source bin/activate
 git clone --depth 1 --branch v${new_version}${rc} https://github.com/sourmash-bio/sourmash.git
 cd sourmash
-python -m pip install -U setuptools pip wheel setuptools_scm
 python -m pip install -r requirements.txt
 make test
 
@@ -73,7 +75,7 @@ make test
 cd ../../testenv2
 deactivate
 source bin/activate
-python -m pip install -U setuptools pip wheel setuptools_scm
+python -m pip install setuptools_scm build
 python -m pip install -e git+https://github.com/sourmash-bio/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
 cd src/sourmash
 make test
@@ -86,9 +88,8 @@ cp dist/sourmash*tar.gz ../../../testenv3/
 cd ../../../testenv3/
 deactivate
 source bin/activate
-python -m pip install -U setuptools pip wheel setuptools_scm
 python -m pip install sourmash*tar.gz
-python -m pip install pytest
+python -m pip install pytest build
 tar xzf sourmash-${new_version}${rc}.tar.gz
 cd sourmash-${new_version}${rc}
 python -m pip install -r requirements.txt
@@ -110,7 +111,6 @@ Test the PyPI release in a new virtualenv:
 cd ../../testenv4
 deactivate
 source bin/activate
-python -m pip install -U setuptools pip wheel
 # install as much as possible from non-test server!
 python -m pip install screed pytest numpy matplotlib scipy bam2fasta deprecation cffi
 python -m pip install -i https://test.pypi.org/simple --pre sourmash
@@ -122,6 +122,11 @@ sourmash info  # should print "sourmash version ${new_version}${rc}"
 5\. Do any final testing:
 
  * check that the binder demo notebook is up to date
+
+6\. Wait for GitHub Actions to finish running on the release candidate tag.
+
+NOTE: If you delete the rc tag before the rc wheels are done building, they
+may get added to the wrong release.
 
 ## How to make a final release
 
@@ -169,6 +174,7 @@ twine will correctly determine the version from the filenames.
 
 4\. Once the wheels are uploaded, publish the new release on PyPI (requires an authorized account).
 ```
+cd ..
 make dist
 twine upload dist/sourmash-${new_version}.tar.gz
 ```
@@ -183,6 +189,22 @@ with the tag you pushed. Copy and paste in the release notes.
 Note that there will also be releases associated with the Rust `core`
 package, which is versioned differently than `sourmash`.  These will
 be of the form `rXX.YY.ZZ`, e.g. `r0.9.0`. Please just ignore them :)
+
+Draft release notes can be created with `git log --oneline
+v4.4.1..latest`, but should then be edited manually. We suggest
+putting PRs in the following categories:
+
+```
+Major new features:
+
+Minor new features:
+
+Bug fixes:
+
+Cleanup and documentation fixes:
+
+Developer updates:
+```
 
 ## Conda-forge
 
@@ -212,6 +234,15 @@ prepared in the previous section to be available for installation,
 and tests are going to fail in Bioconda before that.
 
 An example PR for [`3.4.0`](https://github.com/bioconda/bioconda-recipes/pull/23171).
+
+## Double check everything:
+
+```
+- [ ] [PyPI page](https://pypi.org/project/sourmash/) updated
+- [ ] Zenodo DOI successfully minted upon new github release - [see search results](https://zenodo.org/search?page=1&size=20&q=sourmash)
+- [ ] `pip install sourmash` installs the correct version
+- [ ] `mamba create -n smash-release -y sourmash` installs the correct version
+```
 
 ## Announce it!
 

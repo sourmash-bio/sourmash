@@ -36,7 +36,7 @@ STORAGES = {
 NodePos = namedtuple("NodePos", ["pos", "node"])
 
 
-class GraphFactory(object):
+class GraphFactory:
     """Build new nodegraphs (Bloom filters) of a specific (fixed) size.
 
     Parameters
@@ -183,16 +183,16 @@ class SBT(Index):
                     yield ss
 
     def _signatures_with_internal(self):
-        """Return an iterator of tuples (ss, location, internal_location).
+        """Return an iterator of tuples (ss, storage_path, internal_location).
 
         Note: does not limit signatures to subsets.
         """
         for k in self.leaves():
             ss = k.data
-            yield ss, self.location, k._path
+            yield ss, k._path
 
     def select(self, ksize=None, moltype=None, num=0, scaled=0,
-               containment=False, picklist=None):
+               containment=False, abund=None, picklist=None):
         """Make sure this database matches the requested requirements.
 
         Will always raise ValueError if a requirement cannot be met.
@@ -243,6 +243,9 @@ class SBT(Index):
             # we can downsample SBTs for containment operations.
             if scaled > db_mh.scaled and not containment:
                 raise ValueError(f"search scaled value {scaled} is less than database scaled value of {db_mh.scaled}")
+
+        if abund:
+            raise ValueError("SBT indices do not support sketches with abund=True")
 
         if picklist is not None:
             self.picklists.append(picklist)
@@ -622,7 +625,7 @@ class SBT(Index):
             kind = "Zip"
             if not path.endswith('.sbt.zip'):
                 path += '.sbt.zip'
-            storage = ZipStorage(path)
+            storage = ZipStorage(path, mode="w")
             backend = "FSStorage"
 
             assert path[-8:] == '.sbt.zip'
@@ -667,7 +670,10 @@ class SBT(Index):
 
         nodes = {}
         leaves = {}
-        total_nodes = len(self)
+
+        internal_nodes = set(self._nodes).union(self._missing_nodes)
+        total_nodes = len(self) + len(internal_nodes)
+
         manifest_rows = []
         for n, (i, node) in enumerate(self):
             if node is None:
@@ -717,7 +723,7 @@ class SBT(Index):
                     manifest_rows.append(row)
 
             if n % 100 == 0:
-                notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
+                notify(f"{format(n+1)} of {format(total_nodes)} nodes saved", end='\r')
 
         # now, save the index file and manifests.
         #
@@ -769,7 +775,7 @@ class SBT(Index):
             with open(index_filename, 'wb') as tree_fp:
                 tree_fp.write(tree_data)
 
-        notify("Finished saving SBT index, available at {0}\n".format(index_filename))
+        notify(f"Finished saving SBT index, available at {format(index_filename)}\n")
 
         return path
 
@@ -828,8 +834,12 @@ class SBT(Index):
         sbt_fn = os.path.join(dirname, sbt_name)
         if not sbt_fn.endswith('.sbt.json') and tempfile is None:
             sbt_fn += '.sbt.json'
-        with open(sbt_fn) as fp:
-            jnodes = json.load(fp)
+
+        try:
+            with open(sbt_fn) as fp:
+                jnodes = json.load(fp)
+        except NotADirectoryError as exc:
+            raise ValueError(str(exc))
 
         if tempfile is not None:
             tempfile.close()
@@ -1184,8 +1194,7 @@ class SBT(Index):
                 debug("processed {}, in queue {}", processed, len(queue), sep='\r')
 
     def __len__(self):
-        internal_nodes = set(self._nodes).union(self._missing_nodes)
-        return len(internal_nodes) + len(self._leaves)
+        return len(self._leaves)
 
     def print_dot(self):
         print("""
@@ -1281,7 +1290,7 @@ class SBT(Index):
         return self
 
 
-class Node(object):
+class Node:
     "Internal node of SBT."
 
     def __init__(self, factory, name=None, path=None, storage=None):
@@ -1340,7 +1349,7 @@ class Node(object):
             parent.metadata['min_n_below'] = min_n_below
 
 
-class Leaf(object):
+class Leaf:
     def __init__(self, metadata, data=None, name=None, storage=None, path=None):
         self.metadata = metadata
 
@@ -1433,6 +1442,8 @@ def convert_cmd(name, backend):
     backend = options.pop(0)
     backend = backend.lower().strip("'")
 
+    kwargs = {}
+
     if options:
       print(options)
       options = options[0].split(')')
@@ -1447,6 +1458,7 @@ def convert_cmd(name, backend):
         backend = RedisStorage
     elif backend.lower() in ('zip', 'zipstorage'):
         backend = ZipStorage
+        kwargs['mode'] = 'w'
     elif backend.lower() in ('fs', 'fsstorage'):
         backend = FSStorage
         if options:
@@ -1462,6 +1474,6 @@ def convert_cmd(name, backend):
     else:
         error('backend not recognized: {}'.format(backend))
 
-    with backend(*options) as storage:
+    with backend(*options, **kwargs) as storage:
         sbt = SBT.load(name, leaf_loader=SigLeaf.load)
         sbt.save(name, storage=storage)

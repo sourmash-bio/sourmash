@@ -7,6 +7,9 @@ The top level CLI is defined in ../__init__.py. This module defines the CLI for
 from . import metagenome
 from . import genome
 from . import annotate
+from . import prepare
+from . import grep
+
 from ..utils import command_list
 from argparse import SUPPRESS, RawDescriptionHelpFormatter
 import os

@@ -6,23 +6,26 @@ import glob
 import os
 import zipfile
 import shutil
-import copy
 
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.index import (LinearIndex, ZipFileLinearIndex,
                             make_jaccard_search_query, CounterGather,
-                            LazyLinearIndex, MultiIndex)
-from sourmash.sbt import SBT, GraphFactory, Leaf
-from sourmash.sbtmh import SigLeaf
+                            LazyLinearIndex, MultiIndex,
+                            StandaloneManifestIndex)
+from sourmash.index.revindex import RevIndex
+from sourmash.sbt import SBT, GraphFactory
 from sourmash import sourmash_args
 from sourmash.search import JaccardSearch, SearchType
 from sourmash.picklist import SignaturePicklist, PickStyle
+from sourmash_tst_utils import SourmashCommandFailed
+from sourmash.manifest import CollectionManifest
 
 import sourmash_tst_utils as utils
 
 
 def test_simple_index(n_children):
+    # test basic SBT functionality
     factory = GraphFactory(5, 100, 3)
     root = SBT(factory, d=n_children)
 
@@ -85,85 +88,8 @@ def test_simple_index(n_children):
         assert tree_found == set(linear_found)
 
 
-def test_linear_index_search():
-    sig2 = utils.get_test_data('2.fa.sig')
-    sig47 = utils.get_test_data('47.fa.sig')
-    sig63 = utils.get_test_data('63.fa.sig')
-
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
-
-    lidx = LinearIndex()
-    lidx.insert(ss2)
-    lidx.insert(ss47)
-    lidx.insert(ss63)
-
-    # now, search for sig2
-    sr = lidx.search(ss2, threshold=1.0)
-    print([s[1].name for s in sr])
-    assert len(sr) == 1
-    assert sr[0][1] == ss2
-
-    # search for sig47 with lower threshold; search order not guaranteed.
-    sr = lidx.search(ss47, threshold=0.1)
-    print([s[1].name for s in sr])
-    assert len(sr) == 2
-    sr.sort(key=lambda x: -x[0])
-    assert sr[0][1] == ss47
-    assert sr[1][1] == ss63
-
-    # search for sig63 with lower threshold; search order not guaranteed.
-    sr = lidx.search(ss63, threshold=0.1)
-    print([s[1].name for s in sr])
-    assert len(sr) == 2
-    sr.sort(key=lambda x: -x[0])
-    assert sr[0][1] == ss63
-    assert sr[1][1] == ss47
-
-    # search for sig63 with high threshold => 1 match
-    sr = lidx.search(ss63, threshold=0.8)
-    print([s[1].name for s in sr])
-    assert len(sr) == 1
-    sr.sort(key=lambda x: -x[0])
-    assert sr[0][1] == ss63
-
-
-def test_linear_index_prefetch():
-    # prefetch does basic things right:
-    sig2 = utils.get_test_data('2.fa.sig')
-    sig47 = utils.get_test_data('47.fa.sig')
-    sig63 = utils.get_test_data('63.fa.sig')
-
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
-
-    lidx = LinearIndex()
-    lidx.insert(ss2)
-    lidx.insert(ss47)
-    lidx.insert(ss63)
-
-    # search for ss2
-    results = []
-    for result in lidx.prefetch(ss2, threshold_bp=0):
-        results.append(result)
-
-    assert len(results) == 1
-    assert results[0].signature == ss2
-
-    # search for ss47 - expect two results
-    results = []
-    for result in lidx.prefetch(ss47, threshold_bp=0):
-        results.append(result)
-
-    assert len(results) == 2
-    assert results[0].signature == ss47
-    assert results[1].signature == ss63
-
-
 def test_linear_index_prefetch_empty():
-    # check that an exception is raised upon for an empty database
+    # check that an exception is raised upon for an empty LinearIndex
     sig2 = utils.get_test_data('2.fa.sig')
     ss2 = sourmash.load_one_signature(sig2, ksize=31)
 
@@ -214,33 +140,8 @@ def test_linear_index_prefetch_lazy():
     assert "don't touch me!" in str(e.value)
 
 
-def test_linear_index_gather():
-    sig2 = utils.get_test_data('2.fa.sig')
-    sig47 = utils.get_test_data('47.fa.sig')
-    sig63 = utils.get_test_data('63.fa.sig')
-
-    ss2 = sourmash.load_one_signature(sig2, ksize=31)
-    ss47 = sourmash.load_one_signature(sig47)
-    ss63 = sourmash.load_one_signature(sig63)
-
-    lidx = LinearIndex()
-    lidx.insert(ss2)
-    lidx.insert(ss47)
-    lidx.insert(ss63)
-
-    matches = lidx.gather(ss2)
-    assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][1] == ss2
-
-    matches = lidx.gather(ss47)
-    assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][1] == ss47
-
-
 def test_linear_index_search_subj_has_abundance():
-    # check that signatures in the index are flattened appropriately.
+    # check that search signatures in the index are flattened appropriately.
     queryfile = utils.get_test_data('47.fa.sig')
     subjfile = utils.get_test_data('track_abund/47.fa.sig')
 
@@ -257,7 +158,7 @@ def test_linear_index_search_subj_has_abundance():
 
 
 def test_linear_index_gather_subj_has_abundance():
-    # check that signatures in the index are flattened appropriately.
+    # check that target signatures in the index are flattened appropriately.
     queryfile = utils.get_test_data('47.fa.sig')
     subjfile = utils.get_test_data('track_abund/47.fa.sig')
 
@@ -267,15 +168,16 @@ def test_linear_index_gather_subj_has_abundance():
     linear = LinearIndex()
     linear.insert(ss)
 
-    results = list(linear.gather(qs, threshold=0))
-    assert len(results) == 1
+    result = linear.best_containment(qs, threshold=0)
+    assert result
 
     # note: gather returns _original_ signature, not flattened
-    assert results[0].signature == ss
+    assert result.signature == ss
 
 
 def test_index_search_subj_scaled_is_lower():
-    # check that subject sketches are appropriately downsampled
+    # check that subject sketches are appropriately downsampled for scaled
+    # sketches.
     sigfile = utils.get_test_data('scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz')
     ss = sourmash.load_one_signature(sigfile)
 
@@ -297,7 +199,8 @@ def test_index_search_subj_scaled_is_lower():
 
 
 def test_index_search_subj_num_is_lower():
-    # check that subject sketches are appropriately downsampled
+    # check that subject sketches are appropriately downsampled for num
+    # sketches
     sigfile = utils.get_test_data('num/47.fa.sig')
     ss = sourmash.load_one_signature(sigfile, ksize=31)
 
@@ -319,7 +222,7 @@ def test_index_search_subj_num_is_lower():
 
 
 def test_index_search_query_num_is_lower():
-    # check that query sketches are appropriately downsampled
+    # check that query sketches are appropriately downsampled for num.
     sigfile = utils.get_test_data('num/47.fa.sig')
     qs = sourmash.load_one_signature(sigfile, ksize=31)
 
@@ -357,8 +260,52 @@ def test_linear_index_search_abund():
     assert results[1].signature == ss63
 
 
+def test_linear_index_search_abund_downsample_query():
+    # test Index.search_abund with query with higher scaled
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    # forcibly downsample ss47 for the purpose of this test :)
+    ss47.minhash = ss63.minhash.downsample(scaled=2000)
+    assert ss63.minhash.scaled != ss47.minhash.scaled
+
+    lidx = LinearIndex()
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    results = list(lidx.search_abund(ss47, threshold=0))
+    assert len(results) == 2
+    assert results[0].signature == ss47
+    assert results[1].signature == ss63
+
+
+def test_linear_index_search_abund_downsample_subj():
+    # test Index.search_abund with subj with higher scaled
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    # forcibly downsample ss63 for the purpose of this test :)
+    ss63.minhash = ss63.minhash.downsample(scaled=2000)
+    assert ss63.minhash.scaled != ss47.minhash.scaled
+
+    lidx = LinearIndex()
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    results = list(lidx.search_abund(ss47, threshold=0))
+    assert len(results) == 2
+    assert results[0].signature == ss47
+    assert results[1].signature == ss63
+
+
 def test_linear_index_search_abund_requires_threshold():
-    # test Index.search_abund
+    # test that Index.search_abund requires a 'threshold'
     sig47 = utils.get_test_data('track_abund/47.fa.sig')
     sig63 = utils.get_test_data('track_abund/63.fa.sig')
 
@@ -376,7 +323,7 @@ def test_linear_index_search_abund_requires_threshold():
 
 
 def test_linear_index_search_abund_query_flat():
-    # test Index.search_abund
+    # test that Index.search_abund requires an abund query sig
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('track_abund/63.fa.sig')
 
@@ -394,7 +341,7 @@ def test_linear_index_search_abund_query_flat():
 
 
 def test_linear_index_search_abund_subj_flat():
-    # test Index.search_abund
+    # test Index.search_abund requires an abund subj
     sig47 = utils.get_test_data('track_abund/47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
 
@@ -412,6 +359,7 @@ def test_linear_index_search_abund_subj_flat():
 
 
 def test_linear_index_save(runtmp):
+    # test save output from LinearIndex => JSON
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -442,6 +390,7 @@ def test_linear_index_save(runtmp):
 
 
 def test_linear_index_load(runtmp):
+    # test .load class method of LinearIndex
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -449,8 +398,6 @@ def test_linear_index_load(runtmp):
     ss2 = sourmash.load_one_signature(sig2, ksize=31)
     ss47 = sourmash.load_one_signature(sig47)
     ss63 = sourmash.load_one_signature(sig63)
-
-    from sourmash import save_signatures
 
     filename = runtmp.output('foo')
     with open(filename, 'wt') as fp:
@@ -464,6 +411,7 @@ def test_linear_index_load(runtmp):
 
 
 def test_linear_index_save_load(runtmp):
+    # LinearIndex save/load round trip
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -509,22 +457,24 @@ def test_linear_gather_threshold_1():
     # query with empty hashes
     assert not new_mh
     with pytest.raises(ValueError):
-        linear.gather(SourmashSignature(new_mh))
+        linear.best_containment(SourmashSignature(new_mh))
 
     # add one hash
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 1
 
-    results = linear.gather(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = linear.best_containment(SourmashSignature(new_mh))
+    assert result
+
+    # it's a namedtuple, so we can unpack like a tuple.
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig == sig2
     assert name is None
 
     # check with a threshold -> should be no results.
     with pytest.raises(ValueError):
-        linear.gather(SourmashSignature(new_mh), threshold_bp=5000)
+        linear.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
 
     # add three more hashes => length of 4
     new_mh.add_hash(mins.pop())
@@ -532,16 +482,16 @@ def test_linear_gather_threshold_1():
     new_mh.add_hash(mins.pop())
     assert len(new_mh) == 4
 
-    results = linear.gather(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = linear.best_containment(SourmashSignature(new_mh))
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig == sig2
     assert name is None
 
     # check with a too-high threshold -> should be no results.
     with pytest.raises(ValueError):
-        linear.gather(SourmashSignature(new_mh), threshold_bp=5000)
+        linear.best_containment(SourmashSignature(new_mh), threshold_bp=5000)
 
 
 def test_linear_gather_threshold_5():
@@ -571,24 +521,25 @@ def test_linear_gather_threshold_5():
         new_mh.add_hash(mins.pop())
 
     # should get a result with no threshold (any match at all is returned)
-    results = linear.gather(SourmashSignature(new_mh))
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = linear.best_containment(SourmashSignature(new_mh))
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig == sig2
     assert name == 'foo'
 
     # now, check with a threshold_bp that should be meet-able.
-    results = linear.gather(SourmashSignature(new_mh), threshold_bp=5000)
-    assert len(results) == 1
-    containment, match_sig, name = results[0]
+    result = linear.best_containment(SourmashSignature(new_mh),
+                                     threshold_bp=5000)
+    assert result
+    containment, match_sig, name = result
     assert containment == 1.0
     assert match_sig == sig2
     assert name == 'foo'
 
 
 def test_linear_index_multik_select():
-    # this loads three ksizes, 21/31/51
+    # test that LinearIndx can load multiple (three) ksizes, 21/31/51
     sig2 = utils.get_test_data('2.fa.sig')
     siglist = sourmash.load_file_as_signatures(sig2)
 
@@ -636,7 +587,7 @@ def test_linear_index_moltype_select():
 
 
 def test_linear_index_picklist_select():
-    # test select with a picklist
+    # test LinearIndex.select with a picklist
 
     # this loads three ksizes, 21/31/51
     sig2 = utils.get_test_data('2.fa.sig')
@@ -685,8 +636,9 @@ def test_linear_index_picklist_select_exclude():
     assert ksizes == set([21,51])
 
 
-@utils.in_tempdir
-def test_index_same_md5sum_fsstorage(c):
+def test_index_same_md5sum_fsstorage(runtmp):
+    # check SBT directory 'save' with two signatures that have identical md5
+    c = runtmp
     testdata1 = utils.get_test_data('img/2706795855.sig')
     testdata2 = utils.get_test_data('img/638277004.sig')
 
@@ -699,8 +651,9 @@ def test_index_same_md5sum_fsstorage(c):
     assert len(glob.glob(storage + "/*")) == 4
 
 
-@utils.in_tempdir
-def test_index_same_md5sum_sbt_zipstorage(c):
+def test_index_same_md5sum_sbt_zipstorage(runtmp):
+    # check SBT zipfile 'save' with two signatures w/identical md5
+    c = runtmp
     testdata1 = utils.get_test_data('img/2706795855.sig')
     testdata2 = utils.get_test_data('img/638277004.sig')
 
@@ -715,98 +668,117 @@ def test_index_same_md5sum_sbt_zipstorage(c):
     assert len([f for f in zout.namelist() if f.startswith(".sbt.zzz/")]) == 5
 
 
-@utils.in_thisdir
-def test_zipfile_protein_command_search(c):
+def test_zipfile_does_not_exist(runtmp):
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('sig', 'describe', 'no-exist.zip')
+
+    # old behavior, pre PR #1777
+    assert 'FileNotFoundError: SOURMASH-MANIFEST.csv' not in str(exc)
+    assert not os.path.exists(runtmp.output('no-exist.zip'))
+
+    # correct behavior
+    assert "ERROR: Error while reading signatures from 'no-exist.zip'." in str(exc)
+
+
+def test_zipfile_protein_command_search(runtmp):
     # test command-line search/gather of zipfile with protein sigs
+    c = runtmp
+
     sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/protein.zip')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out)
     assert 'found 1 matches total' in c.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
 
 
-@utils.in_thisdir
-def test_zipfile_hp_command_search(c):
+def test_zipfile_hp_command_search(runtmp):
     # test command-line search/gather of zipfile with hp sigs
+    c = runtmp
+
     sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/hp.zip')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
 
 
-@utils.in_thisdir
-def test_zipfile_dayhoff_command_search(c):
+def test_zipfile_dayhoff_command_search(runtmp):
     # test command-line search/gather of zipfile with dayhoff sigs
+    c = runtmp
+
     sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/dayhoff.zip')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
 
 
-@utils.in_thisdir
-def test_zipfile_protein_command_search_combined(c):
+def test_zipfile_protein_command_search_combined(runtmp):
     # test command-line search/gather of combined zipfile with protein sigs
+    c = runtmp
+
     sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/all.zip')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out)
     assert 'found 1 matches total' in c.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
 
 
-@utils.in_thisdir
-def test_zipfile_hp_command_search_combined(c):
+def test_zipfile_hp_command_search_combined(runtmp):
     # test command-line search/gather of combined zipfile with hp sigs
+    c = runtmp
+
     sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/all.zip')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
 
 
-@utils.in_thisdir
-def test_zipfile_dayhoff_command_search_combined(c):
+def test_zipfile_dayhoff_command_search_combined(runtmp):
     # test command-line search/gather of combined zipfile with dayhoff sigs
+    c = runtmp
+
     sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/all.zip')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
 
 
-@utils.in_thisdir
-def test_zipfile_dayhoff_command_search_protein(c):
+def test_zipfile_dayhoff_command_search_protein(runtmp):
     # test command-line search/gather of protein sigs in zipfile
+    c = runtmp
+
     # with dayhoff query
     sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/protein.zip')
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
 
     print(c.last_result.out)
@@ -867,8 +839,7 @@ def test_zipfile_API_signatures_traverse_yield_all(use_manifest):
     assert len(zipidx) == 8
 
     # confirm that there are 12 files in there total, incl build.sh and dirs
-    zf = zipidx.zf
-    allfiles = [ zi.filename for zi in zf.infolist() ]
+    allfiles = zipidx.storage._filenames()
     print(allfiles)
     assert len(allfiles) == 13
 
@@ -885,20 +856,89 @@ def test_zipfile_API_signatures_traverse_yield_all_select(use_manifest):
     assert len(zipidx) == 2
 
 
+def test_zipfile_API_signatures_traverse_yield_all_manifest():
+    # check that manifest len is correct
+    zipfile_db = utils.get_test_data('prot/all.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, traverse_yield_all=True,
+                                     use_manifest=True)
+    assert len(zipidx) == 8, len(zipidx)
+    assert len(zipidx.manifest) == 8, len(zipidx.manifest)
+
+    zipidx = zipidx.select(moltype='DNA')
+    siglist = list(zipidx.signatures())
+    assert len(siglist) == 2
+    assert len(zipidx) == 2
+    assert len(zipidx.manifest) == 2
+
+
 def test_zipfile_API_signatures_select(use_manifest):
     # include dna-sig.noext
     zipfile_db = utils.get_test_data('prot/all.zip')
 
     zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(moltype='DNA')
+
     zipidx = zipidx.select(moltype='DNA')
     siglist = list(zipidx.signatures())
 
     if use_manifest:
         assert len(siglist) == 2
         assert len(zipidx) == 2
+        assert len(ziplist_pre) == 2
     else:
         assert len(siglist) == 1
         assert len(zipidx) == 1
+        assert len(ziplist_pre) == 1
+
+
+def test_zipfile_API_signatures_select_abund_false(use_manifest):
+    # check for abund=False (all signatures match b/c can convert)
+    zipfile_db = utils.get_test_data('track_abund/track_abund.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(abund=False)
+
+    zipidx = zipidx.select(abund=False)
+    siglist = list(zipidx.signatures())
+
+    assert len(siglist) == 2
+    assert len(zipidx) == 2
+    assert len(ziplist_pre) == 2
+
+
+def test_zipfile_API_signatures_select_abund_true(use_manifest):
+    # find all abund=True (all signatures match, b/c abund)
+    zipfile_db = utils.get_test_data('track_abund/track_abund.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(abund=True)
+
+    zipidx = zipidx.select(abund=True)
+    siglist = list(zipidx.signatures())
+
+    assert len(siglist) == 2
+    assert len(zipidx) == 2
+    assert len(ziplist_pre) == 2
+
+
+def test_zipfile_API_signatures_select_abund_none(use_manifest):
+    # find all abund=None (all signatures match, b/c no selection criteria)
+    zipfile_db = utils.get_test_data('track_abund/track_abund.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(abund=None)
+
+    zipidx = zipidx.select(abund=None)
+    siglist = list(zipidx.signatures())
+
+    assert len(siglist) == 2
+    assert len(zipidx) == 2
+    assert len(ziplist_pre) == 2
 
 
 def test_zipfile_API_signatures_select_twice(use_manifest):
@@ -906,6 +946,10 @@ def test_zipfile_API_signatures_select_twice(use_manifest):
     zipfile_db = utils.get_test_data('prot/all.zip')
 
     zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
+    ziplist_pre = LinearIndex(zipidx.signatures())
+    ziplist_pre = ziplist_pre.select(moltype='DNA')
+    ziplist_pre = ziplist_pre.select(ksize=31)
+
     zipidx = zipidx.select(moltype='DNA')
     zipidx = zipidx.select(ksize=31)
     siglist = list(zipidx.signatures())
@@ -913,12 +957,15 @@ def test_zipfile_API_signatures_select_twice(use_manifest):
     if use_manifest:
         assert len(siglist) == 2
         assert len(zipidx) == 2
+        assert len(ziplist_pre) == 2
     else:
         assert len(siglist) == 1
         assert len(zipidx) == 1
+        assert len(ziplist_pre) == 1
 
 
 def test_zipfile_API_save():
+    # ZipFileLinearIndex.save is not implemented.
     zipfile_db = utils.get_test_data('prot/all.zip')
 
     zipidx = ZipFileLinearIndex.load(zipfile_db)
@@ -928,6 +975,7 @@ def test_zipfile_API_save():
 
 
 def test_zipfile_API_insert():
+    # ZipFileLinearIndex.insert is not implemented.
     zipfile_db = utils.get_test_data('prot/all.zip')
 
     zipidx = ZipFileLinearIndex.load(zipfile_db)
@@ -938,6 +986,7 @@ def test_zipfile_API_insert():
 
 
 def test_zipfile_API_location(use_manifest):
+    # test ZipFileLinearIndex.location property
     zipfile_db = utils.get_test_data('prot/all.zip')
 
     zipidx = ZipFileLinearIndex.load(zipfile_db, use_manifest=use_manifest)
@@ -946,6 +995,7 @@ def test_zipfile_API_location(use_manifest):
 
 
 def test_zipfile_load_file_as_signatures(use_manifest):
+    # make sure that ZipFileLinearIndex.signatures works, and is generator
     from types import GeneratorType
 
     zipfile_db = utils.get_test_data('prot/all.zip')
@@ -964,6 +1014,7 @@ def test_zipfile_load_file_as_signatures(use_manifest):
 
 
 def test_zipfile_load_file_as_signatures_traverse_yield_all(use_manifest):
+    # test with --force, which loads all files
     from types import GeneratorType
 
     zipfile_db = utils.get_test_data('prot/all.zip')
@@ -979,9 +1030,10 @@ def test_zipfile_load_file_as_signatures_traverse_yield_all(use_manifest):
     assert len(sigs) == 8
 
 
-@utils.in_tempdir
-def test_zipfile_load_database_fail_if_not_zip(c):
+def test_zipfile_load_database_fail_if_not_zip(runtmp):
     # fail _load_database if not .zip
+    c = runtmp
+
     zipfile_db = utils.get_test_data('prot/all.zip')
     badname = c.output('xyz.nada')
     shutil.copyfile(zipfile_db, badname)
@@ -993,6 +1045,7 @@ def test_zipfile_load_database_fail_if_not_zip(c):
 
 
 def test_multi_index_search():
+    # test MultiIndex.search
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -1006,7 +1059,8 @@ def test_multi_index_search():
     lidx3 = LinearIndex.load(sig63)
 
     # create MultiIndex with source location override
-    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'],
+                           None)
     lidx = lidx.select(ksize=31)
 
     # now, search for sig2
@@ -1046,6 +1100,7 @@ def test_multi_index_search():
 
 
 def test_multi_index_gather():
+    # test MultiIndex.best_containment
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -1059,22 +1114,24 @@ def test_multi_index_gather():
     lidx3 = LinearIndex.load(sig63)
 
     # create MultiIndex with source location override
-    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'],
+                           None)
     lidx = lidx.select(ksize=31)
 
-    matches = lidx.gather(ss2)
-    assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][2] == 'A'
+    match = lidx.best_containment(ss2)
+    assert match
+    assert match.score == 1.0
+    assert match.location == 'A'
 
-    matches = lidx.gather(ss47)
-    assert len(matches) == 1
-    assert matches[0][0] == 1.0
-    assert matches[0][1] == ss47
-    assert matches[0][2] == sig47     # no source override
+    match = lidx.best_containment(ss47)
+    assert match
+    assert match.score == 1.0
+    assert match.signature == ss47
+    assert match.location == sig47     # no source override
 
 
 def test_multi_index_signatures():
+    # test MultiIndex.signatures
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -1088,7 +1145,8 @@ def test_multi_index_signatures():
     lidx3 = LinearIndex.load(sig63)
 
     # create MultiIndex with source location override
-    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = MultiIndex.load([lidx1, lidx2, lidx3], ['A', None, 'C'],
+                           None)
     lidx = lidx.select(ksize=31)
 
     siglist = list(lidx.signatures())
@@ -1098,26 +1156,76 @@ def test_multi_index_signatures():
     assert ss63 in siglist
 
 
-def test_multi_index_load_from_path():
+def test_multi_index_create():
+    # test MultiIndex constructor
+    mi = MultiIndex(None, None, prepend_location=False)
+    assert len(mi) == 0
+
+
+def test_multi_index_create_prepend():
+    # test MultiIndex constructor - location must be specified if
+    # 'prepend_location is True
+    with pytest.raises(ValueError):
+        mi = MultiIndex(None, None, prepend_location=True)
+
+
+def test_multi_index_load_from_directory():
+    # test MultiIndex loading from a directory. The full paths to the
+    # signature files should be available via 'signatures_with_location()'
     dirname = utils.get_test_data('prot/protein')
-    mi = MultiIndex.load_from_path(dirname, force=False)
+    mi = MultiIndex.load_from_directory(dirname, force=False)
+
+    assert mi.location == dirname
 
     sigs = list(mi.signatures())
     assert len(sigs) == 2
 
+    # check to make sure that full paths to expected sig files are returned
+    locs = [ x[1] for x in mi.signatures_with_location() ]
 
-def test_multi_index_load_from_path_2():
+    endings = ('GCA_001593925.1_ASM159392v1_protein.faa.gz.sig',
+               'GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+    for loc in locs:
+        found = False
+        for end in endings:
+            if loc.endswith(end):
+                found = True
+        assert found, f"could not find full filename in locations for {end}"
+
+    # also check internal locations and parent value --
+    assert mi.parent.endswith('prot/protein')
+
+    ilocs = [ x[1] for x in mi._signatures_with_internal() ]
+    assert endings[0] in ilocs, ilocs
+    assert endings[1] in ilocs, ilocs
+
+
+def test_multi_index_load_from_directory_2():
     # only load .sig files, currently; not the databases under that directory.
     dirname = utils.get_test_data('prot')
-    mi = MultiIndex.load_from_path(dirname, force=False)
+    mi = MultiIndex.load_from_directory(dirname, force=False)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 7
 
 
-@utils.in_tempdir
-def test_multi_index_load_from_path_3(c):
-    # check that force works ok on a directory
+def test_multi_index_load_from_directory_3_simple_bad_file(runtmp):
+    # check that force=False fails properly when confronted with non-JSON
+    # files.
+    c = runtmp
+
+    with open(runtmp.output('badsig.sig'), 'wt') as fp:
+        fp.write('bad content.')
+
+    with pytest.raises(ValueError):
+        mi = MultiIndex.load_from_directory(runtmp.location, force=False)
+
+
+def test_multi_index_load_from_directory_3(runtmp):
+    # check that force=False fails properly when confronted with non-JSON
+    # files that are legit sourmash files...
+    c = runtmp
+
     dirname = utils.get_test_data('prot')
 
     count = 0
@@ -1129,13 +1237,15 @@ def test_multi_index_load_from_path_3(c):
             shutil.copyfile(fullname, copyto)
             count += 1
 
-    with pytest.raises(sourmash.exceptions.SourmashError):
-        mi = MultiIndex.load_from_path(c.location, force=False)
+    with pytest.raises(ValueError):
+        mi = MultiIndex.load_from_directory(c.location, force=False)
 
 
-@utils.in_tempdir
-def test_multi_index_load_from_path_3_yield_all_true(c):
+def test_multi_index_load_from_directory_3_yield_all_true(runtmp):
     # check that force works ok on a directory w/force=True
+    # Note here that only .sig/.sig.gz files are loaded.
+    c = runtmp
+
     dirname = utils.get_test_data('prot')
 
     count = 0
@@ -1147,15 +1257,16 @@ def test_multi_index_load_from_path_3_yield_all_true(c):
             shutil.copyfile(fullname, copyto)
             count += 1
 
-    mi = MultiIndex.load_from_path(c.location, force=True)
+    mi = MultiIndex.load_from_directory(c.location, force=True)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 8
 
 
-@utils.in_tempdir
-def test_multi_index_load_from_path_3_yield_all_true_subdir(c):
-    # check that force works ok on subdirectories
+def test_multi_index_load_from_directory_3_yield_all_true_subdir(runtmp):
+    # check that force works ok on subdirectories.
+    # Note here that only .sig/.sig.gz files are loaded.
+    c = runtmp
     dirname = utils.get_test_data('prot')
 
     target_dir = c.output("some_subdir")
@@ -1170,15 +1281,19 @@ def test_multi_index_load_from_path_3_yield_all_true_subdir(c):
             shutil.copyfile(fullname, copyto)
             count += 1
 
-    mi = MultiIndex.load_from_path(c.location, force=True)
+    mi = MultiIndex.load_from_directory(c.location, force=True)
+
+    locations = set([ row['internal_location'] for row in mi.manifest.rows ])
+    print(locations)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 8
 
 
-@utils.in_tempdir
-def test_multi_index_load_from_path_3_sig_gz(c):
+def test_multi_index_load_from_directory_3_sig_gz(runtmp):
     # check that we find .sig.gz files, too
+    c = runtmp
+
     dirname = utils.get_test_data('prot')
 
     count = 0
@@ -1192,17 +1307,20 @@ def test_multi_index_load_from_path_3_sig_gz(c):
             shutil.copyfile(fullname, copyto)
             count += 1
 
-    mi = MultiIndex.load_from_path(c.location, force=False)
+    mi = MultiIndex.load_from_directory(c.location, force=False)
+
+    assert mi.location == c.location
 
     sigs = list(mi.signatures())
     assert len(sigs) == 6
 
 
-@utils.in_tempdir
-def test_multi_index_load_from_path_3_check_traverse_fn(c):
+def test_multi_index_load_from_directory_3_check_traverse_fn(runtmp):
     # test the actual traverse function... eventually this test can be
     # removed, probably, as we consolidate functionality and test MultiIndex
     # better.
+    c = runtmp
+
     dirname = utils.get_test_data('prot')
     files = list(sourmash_args.traverse_find_sigs([dirname]))
     assert len(files) == 7, files
@@ -1211,20 +1329,40 @@ def test_multi_index_load_from_path_3_check_traverse_fn(c):
     assert len(files) == 20, files # if this fails, check for extra files!
 
 
-def test_multi_index_load_from_path_no_exist():
+def test_multi_index_load_from_directory_no_exist():
+    # raise ValueError on files that don't exist in load_from_directory
     dirname = utils.get_test_data('does-not-exist')
     with pytest.raises(ValueError):
-        mi = MultiIndex.load_from_path(dirname, force=True)
+        mi = MultiIndex.load_from_directory(dirname, force=True)
+
+
+def test_multi_index_load_from_file_path():
+    # test that MultiIndex.load_from_path works fine
+    sig2 = utils.get_test_data('2.fa.sig')
+
+    mi = MultiIndex.load_from_path(sig2)
+    assert len(mi) == 3
+    assert mi.location == sig2
+
+
+def test_multi_index_load_from_file_path_no_exist():
+    # test that load_from_path fails on non-existent files
+    filename = utils.get_test_data('does-not-exist')
+    with pytest.raises(ValueError):
+        mi = MultiIndex.load_from_directory(filename, force=True)
 
 
 def test_multi_index_load_from_pathlist_no_exist():
+    # test that load_from_pathlist fails on non-existent files
     dirname = utils.get_test_data('does-not-exist')
     with pytest.raises(ValueError):
         mi = MultiIndex.load_from_pathlist(dirname)
 
 
-@utils.in_tempdir
-def test_multi_index_load_from_pathlist_1(c):
+def test_multi_index_load_from_pathlist_1(runtmp):
+    # test functionality of MultiIndex.load_from_pathlist with .sig files
+    c = runtmp
+
     dirname = utils.get_test_data('prot')
     files = list(sourmash_args.traverse_find_sigs([dirname]))
     assert len(files) == 7, files
@@ -1238,11 +1376,16 @@ def test_multi_index_load_from_pathlist_1(c):
     sigs = list(mi.signatures())
     assert len(sigs) == 7
 
+    assert mi.location == file_list
 
-@utils.in_tempdir
-def test_multi_index_load_from_pathlist_2(c):
+
+def test_multi_index_load_from_pathlist_2(runtmp):
+    # create a pathlist file with _all_ files under dir, and try to load it.
+    # this will fail on one of several CSV or .sh files in there.
+
     # CTB note: if you create extra files under this directory,
     # it will fail :)
+    c = runtmp
     dirname = utils.get_test_data('prot')
     files = list(sourmash_args.traverse_find_sigs([dirname], True))
     assert len(files) == 20, files # check there aren't extra files in here!
@@ -1252,13 +1395,17 @@ def test_multi_index_load_from_pathlist_2(c):
     with open(file_list, 'wt') as fp:
         print("\n".join(files), file=fp)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as exc:
         mi = MultiIndex.load_from_pathlist(file_list)
 
+    print(str(exc))
+    assert 'Error while reading signatures from' in str(exc)
 
-@utils.in_tempdir
-def test_multi_index_load_from_pathlist_3_zipfile(c):
+
+def test_multi_index_load_from_pathlist_3_zipfile(runtmp):
     # can we load zipfiles in a pathlist? yes please.
+    c = runtmp
+
     zipfile = utils.get_test_data('prot/all.zip')
 
     file_list = c.output('filelist.txt')
@@ -1295,6 +1442,7 @@ class JaccardSearchBestOnly_ButIgnore(JaccardSearch):
 
 
 def test_linear_index_gather_ignore():
+    # do we properly ignore exact matches in 'search' for LinearIndex?
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -1325,6 +1473,7 @@ def test_linear_index_gather_ignore():
 
 
 def test_lca_index_gather_ignore():
+    # do we properly ignore exact matches in gather on an LCA DB?
     from sourmash.lca import LCA_Database
 
     sig2 = utils.get_test_data('2.fa.sig')
@@ -1360,6 +1509,7 @@ def test_lca_index_gather_ignore():
 
 
 def test_sbt_index_gather_ignore():
+    # do we properly ignore exact matches in gather on an SBT?
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -1394,81 +1544,10 @@ def test_sbt_index_gather_ignore():
     assert not is_found(ss2, results)
     assert is_found(ss63, results)
 
-###
-### CounterGather tests
-###
 
-
-def _consume_all(query_mh, counter, threshold_bp=0):
-    results = []
-    query_mh = query_mh.to_mutable()
-
-    last_intersect_size = None
-    while 1:
-        result = counter.peek(query_mh, threshold_bp)
-        if not result:
-            break
-
-        sr, intersect_mh = result
-        print(sr.signature.name, len(intersect_mh))
-        if last_intersect_size:
-            assert len(intersect_mh) <= last_intersect_size
-
-        last_intersect_size = len(intersect_mh)
-
-        counter.consume(intersect_mh)
-        query_mh.remove_many(intersect_mh.hashes)
-
-        results.append((sr, len(intersect_mh)))
-
-    return results
-
-
-def test_counter_gather_1():
-    # check a contrived set of non-overlapping gather results,
-    # generated via CounterGather
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
-
-    match_mh_1 = query_mh.copy_and_clear()
-    match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
-
-    match_mh_2 = query_mh.copy_and_clear()
-    match_mh_2.add_many(range(10, 15))
-    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
-
-    match_mh_3 = query_mh.copy_and_clear()
-    match_mh_3.add_many(range(15, 17))
-    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    counter.add(match_ss_1)
-    counter.add(match_ss_2)
-    counter.add(match_ss_3)
-
-    results = _consume_all(query_ss.minhash, counter)
-
-    expected = (['match1', 10],
-                ['match2', 5],
-                ['match3', 2],)
-    assert len(results) == len(expected), results
-
-    for (sr, size), (exp_name, exp_size) in zip(results, expected):
-        sr_name = sr.signature.name.split()[0]
-
-        assert sr_name == exp_name
-        assert size == exp_size
-
-
-def test_counter_gather_1_b():
-    # check a contrived set of somewhat-overlapping gather results,
-    # generated via CounterGather. Here the overlaps are structured
-    # so that the gather results are the same as those in
-    # test_counter_gather_1(), even though the overlaps themselves are
-    # larger.
+def test_counter_gather_test_consume():
+    # open-box testing of CounterGather.consume(...)
+    # (see test_index_protocol.py for generic CounterGather tests.)
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
     query_mh.add_many(range(0, 20))
     query_ss = SourmashSignature(query_mh, name='query')
@@ -1486,484 +1565,24 @@ def test_counter_gather_1_b():
     match_ss_3 = SourmashSignature(match_mh_3, name='match3')
 
     # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    counter.add(match_ss_1)
-    counter.add(match_ss_2)
-    counter.add(match_ss_3)
-
-    results = _consume_all(query_ss.minhash, counter)
-
-    expected = (['match1', 10],
-                ['match2', 5],
-                ['match3', 2],)
-    assert len(results) == len(expected), results
-
-    for (sr, size), (exp_name, exp_size) in zip(results, expected):
-        sr_name = sr.signature.name.split()[0]
-
-        assert sr_name == exp_name
-        assert size == exp_size
-
-
-def test_counter_gather_1_c_with_threshold():
-    # check a contrived set of somewhat-overlapping gather results,
-    # generated via CounterGather. Here the overlaps are structured
-    # so that the gather results are the same as those in
-    # test_counter_gather_1(), even though the overlaps themselves are
-    # larger.
-    # use a threshold, here.
-
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
-
-    match_mh_1 = query_mh.copy_and_clear()
-    match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
-
-    match_mh_2 = query_mh.copy_and_clear()
-    match_mh_2.add_many(range(7, 15))
-    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
-
-    match_mh_3 = query_mh.copy_and_clear()
-    match_mh_3.add_many(range(13, 17))
-    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    counter.add(match_ss_1)
-    counter.add(match_ss_2)
-    counter.add(match_ss_3)
-
-    results = _consume_all(query_ss.minhash, counter,
-                           threshold_bp=3)
-
-    expected = (['match1', 10],
-                ['match2', 5])
-    assert len(results) == len(expected), results
-
-    for (sr, size), (exp_name, exp_size) in zip(results, expected):
-        sr_name = sr.signature.name.split()[0]
-
-        assert sr_name == exp_name
-        assert size == exp_size
-
-
-def test_counter_gather_1_d_diff_scaled():
-    # test as above, but with different scaled.
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
-
-    match_mh_1 = query_mh.copy_and_clear().downsample(scaled=10)
-    match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
-
-    match_mh_2 = query_mh.copy_and_clear().downsample(scaled=20)
-    match_mh_2.add_many(range(7, 15))
-    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
-
-    match_mh_3 = query_mh.copy_and_clear().downsample(scaled=30)
-    match_mh_3.add_many(range(13, 17))
-    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    counter.add(match_ss_1)
-    counter.add(match_ss_2)
-    counter.add(match_ss_3)
-
-    results = _consume_all(query_ss.minhash, counter)
-
-    expected = (['match1', 10],
-                ['match2', 5],
-                ['match3', 2],)
-    assert len(results) == len(expected), results
-
-    for (sr, size), (exp_name, exp_size) in zip(results, expected):
-        sr_name = sr.signature.name.split()[0]
-
-        assert sr_name == exp_name
-        assert size == exp_size
-
-
-def test_counter_gather_1_d_diff_scaled_query():
-    # test as above, but with different scaled for QUERY.
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
-
-    match_mh_1 = query_mh.copy_and_clear().downsample(scaled=10)
-    match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
-
-    match_mh_2 = query_mh.copy_and_clear().downsample(scaled=20)
-    match_mh_2.add_many(range(7, 15))
-    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
-
-    match_mh_3 = query_mh.copy_and_clear().downsample(scaled=30)
-    match_mh_3.add_many(range(13, 17))
-    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
-
-    # downsample query now -
-    query_ss = SourmashSignature(query_mh.downsample(scaled=100), name='query')
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    counter.add(match_ss_1)
-    counter.add(match_ss_2)
-    counter.add(match_ss_3)
-
-    results = _consume_all(query_ss.minhash, counter)
-
-    expected = (['match1', 10],
-                ['match2', 5],
-                ['match3', 2],)
-    assert len(results) == len(expected), results
-
-    for (sr, size), (exp_name, exp_size) in zip(results, expected):
-        sr_name = sr.signature.name.split()[0]
-
-        assert sr_name == exp_name
-        assert size == exp_size
-
-
-def test_counter_gather_1_e_abund_query():
-    # test as above, but abund query
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1, track_abundance=1)
-    query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
-
-    match_mh_1 = query_mh.copy_and_clear().flatten()
-    match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
-
-    match_mh_2 = query_mh.copy_and_clear().flatten()
-    match_mh_2.add_many(range(7, 15))
-    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
-
-    match_mh_3 = query_mh.copy_and_clear().flatten()
-    match_mh_3.add_many(range(13, 17))
-    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    counter.add(match_ss_1)
-    counter.add(match_ss_2)
-    counter.add(match_ss_3)
-
-    # must flatten before peek!
-    results = _consume_all(query_ss.minhash.flatten(), counter)
-
-    expected = (['match1', 10],
-                ['match2', 5],
-                ['match3', 2],)
-    assert len(results) == len(expected), results
-
-    for (sr, size), (exp_name, exp_size) in zip(results, expected):
-        sr_name = sr.signature.name.split()[0]
-
-        assert sr_name == exp_name
-        assert size == exp_size
-
-
-def test_counter_gather_1_f_abund_match():
-    # test as above, but abund query
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1, track_abundance=1)
-    query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh.flatten(), name='query')
-
-    match_mh_1 = query_mh.copy_and_clear()
-    match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
-
-    match_mh_2 = query_mh.copy_and_clear()
-    match_mh_2.add_many(range(7, 15))
-    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
-
-    match_mh_3 = query_mh.copy_and_clear()
-    match_mh_3.add_many(range(13, 17))
-    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    counter.add(match_ss_1)
-    counter.add(match_ss_2)
-    counter.add(match_ss_3)
-
-    # must flatten before peek!
-    results = _consume_all(query_ss.minhash.flatten(), counter)
-
-    expected = (['match1', 10],
-                ['match2', 5],
-                ['match3', 2],)
-    assert len(results) == len(expected), results
-
-    for (sr, size), (exp_name, exp_size) in zip(results, expected):
-        sr_name = sr.signature.name.split()[0]
-
-        assert sr_name == exp_name
-        assert size == exp_size
-
-
-def test_counter_gather_2():
-    # check basic set of gather results on semi-real data,
-    # generated via CounterGather
-    testdata_combined = utils.get_test_data('gather/combined.sig')
-    testdata_glob = utils.get_test_data('gather/GCF*.sig')
-    testdata_sigs = glob.glob(testdata_glob)
-
-    query_ss = sourmash.load_one_signature(testdata_combined, ksize=21)
-    subject_sigs = [ (sourmash.load_one_signature(t, ksize=21), t)
-                     for t in testdata_sigs ]
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    for ss, loc in subject_sigs:
-        counter.add(ss, loc)
-
-    results = _consume_all(query_ss.minhash, counter)
-
-    expected = (['NC_003198.1', 487],
-                ['NC_000853.1', 192],
-                ['NC_011978.1', 169],
-                ['NC_002163.1', 157],
-                ['NC_003197.2', 152],
-                ['NC_009486.1', 92],
-                ['NC_006905.1', 76],
-                ['NC_011080.1', 59],
-                ['NC_011274.1', 42],
-                ['NC_006511.1', 31],
-                ['NC_011294.1', 7],
-                ['NC_004631.1', 2])
-    assert len(results) == len(expected)
-
-    for (sr, size), (exp_name, exp_size) in zip(results, expected):
-        sr_name = sr.signature.name.split()[0]
-        print(sr_name, size)
-
-        assert sr_name == exp_name
-        assert size == exp_size
-
-
-def test_counter_gather_exact_match():
-    # query == match
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    counter.add(query_ss, 'somewhere over the rainbow')
-
-    results = _consume_all(query_ss.minhash, counter)
-    assert len(results) == 1
-    (sr, intersect_mh) = results[0]
-
-    assert sr.score == 1.0
-    assert sr.signature == query_ss
-    assert sr.location == 'somewhere over the rainbow'
-
-
-def test_counter_gather_add_after_peek():
-    # cannot add after peek or consume
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    counter.add(query_ss, 'somewhere over the rainbow')
-
-    counter.peek(query_ss.minhash)
-
-    with pytest.raises(ValueError):
-        counter.add(query_ss, "try again")
-
-
-def test_counter_gather_add_after_consume():
-    # cannot add after peek or consume
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    counter.add(query_ss, 'somewhere over the rainbow')
-
-    counter.consume(query_ss.minhash)
-
-    with pytest.raises(ValueError):
-        counter.add(query_ss, "try again")
-
-
-def test_counter_gather_consume_empty_intersect():
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    counter.add(query_ss, 'somewhere over the rainbow')
-
-    # nothing really happens here :laugh:, just making sure there's no error
-    counter.consume(query_ss.minhash.copy_and_clear())
-
-
-def test_counter_gather_empty_initial_query():
-    # check empty initial query
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_ss = SourmashSignature(query_mh, name='query')
-
-    match_mh_1 = query_mh.copy_and_clear()
-    match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    counter.add(match_ss_1, require_overlap=False)
-
-    assert counter.peek(query_ss.minhash) == []
-
-
-def test_counter_gather_num_query():
-    # check num query
-    query_mh = sourmash.MinHash(n=500, ksize=31)
-    query_mh.add_many(range(0, 10))
-    query_ss = SourmashSignature(query_mh, name='query')
-
-    with pytest.raises(ValueError):
-        counter = CounterGather(query_ss.minhash)
-
-
-def test_counter_gather_empty_cur_query():
-    # test empty cur query
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    counter.add(query_ss, 'somewhere over the rainbow')
-
-    cur_query_mh = query_ss.minhash.copy_and_clear()
-    results = _consume_all(cur_query_mh, counter)
-    assert results == []
-
-
-def test_counter_gather_add_num_matchy():
-    # test add num query
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
-
-    match_mh = sourmash.MinHash(n=500, ksize=31)
-    match_mh.add_many(range(0, 20))
-    match_ss = SourmashSignature(match_mh, name='query')
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    with pytest.raises(ValueError):
-        counter.add(match_ss, 'somewhere over the rainbow')
-
-
-def test_counter_gather_bad_cur_query():
-    # test cur query that is not subset of original query
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    counter.add(query_ss, 'somewhere over the rainbow')
-
-    cur_query_mh = query_ss.minhash.copy_and_clear()
-    cur_query_mh.add_many(range(20, 30))
-    with pytest.raises(ValueError):
-        counter.peek(cur_query_mh)
-
-
-def test_counter_gather_add_no_overlap():
-    # check adding match with no overlap w/query
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 10))
-    query_ss = SourmashSignature(query_mh, name='query')
-
-    match_mh_1 = query_mh.copy_and_clear()
-    match_mh_1.add_many(range(10, 20))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    with pytest.raises(ValueError):
-        counter.add(match_ss_1)
-
-    assert counter.peek(query_ss.minhash) == []
-
-
-def test_counter_gather_big_threshold():
-    # check 'peek' with a huge threshold
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
-
-    match_mh_1 = query_mh.copy_and_clear()
-    match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    counter.add(match_ss_1)
-
-    # impossible threshold:
-    threshold_bp=30*query_ss.minhash.scaled
-    results = counter.peek(query_ss.minhash, threshold_bp=threshold_bp)
-    assert results == []
-
-
-def test_counter_gather_empty_counter():
-    # check empty counter
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_ss = SourmashSignature(query_mh, name='query')
-
-    # empty counter!
-    counter = CounterGather(query_ss.minhash)
-
-    assert counter.peek(query_ss.minhash) == []
-
-
-def test_counter_gather_3_test_consume():
-    # open-box testing of consume(...)
-    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
-    query_mh.add_many(range(0, 20))
-    query_ss = SourmashSignature(query_mh, name='query')
-
-    match_mh_1 = query_mh.copy_and_clear()
-    match_mh_1.add_many(range(0, 10))
-    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
-
-    match_mh_2 = query_mh.copy_and_clear()
-    match_mh_2.add_many(range(7, 15))
-    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
-
-    match_mh_3 = query_mh.copy_and_clear()
-    match_mh_3.add_many(range(13, 17))
-    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
-
-    # load up the counter
-    counter = CounterGather(query_ss.minhash)
-    counter.add(match_ss_1, 'loc a')
-    counter.add(match_ss_2, 'loc b')
-    counter.add(match_ss_3, 'loc c')
+    counter = CounterGather(query_ss)
+    counter.add(match_ss_1, location='loc a')
+    counter.add(match_ss_2, location='loc b')
+    counter.add(match_ss_3, location='loc c')
 
     ### ok, dig into actual counts...
     import pprint
     pprint.pprint(counter.counter)
-    pprint.pprint(counter.siglist)
+    pprint.pprint(list(counter.signatures()))
     pprint.pprint(counter.locations)
 
-    assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
-    assert counter.locations == ['loc a', 'loc b', 'loc c']
-    assert list(counter.counter.items()) == [(0, 10), (1, 8), (2, 4)]
+    assert set(counter.signatures()) == set([match_ss_1, match_ss_2, match_ss_3])
+    assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
+    pprint.pprint(counter.counter.most_common())
+    assert list(counter.counter.most_common()) == \
+        [('26d4943627b33c446f37be1f5baf8d46', 10),
+         ('f51cedec90ea666e0ebc11aa274eca61', 8),
+         ('f331f8279113d77e42ab8efca8f9cc17', 4)]
 
     ## round 1
 
@@ -1974,9 +1593,12 @@ def test_counter_gather_3_test_consume():
     assert cur_query == query_ss.minhash
 
     counter.consume(intersect_mh)
-    assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
-    assert counter.locations == ['loc a', 'loc b', 'loc c']
-    assert list(counter.counter.items()) == [(1, 5), (2, 4)]
+    assert set(counter.signatures()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
+    assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
+    pprint.pprint(counter.counter.most_common())
+    assert list(counter.counter.most_common()) == \
+        [('f51cedec90ea666e0ebc11aa274eca61', 5),
+         ('f331f8279113d77e42ab8efca8f9cc17', 4)]
 
     ### round 2
 
@@ -1987,9 +1609,12 @@ def test_counter_gather_3_test_consume():
     assert cur_query != query_ss.minhash
 
     counter.consume(intersect_mh)
-    assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
-    assert counter.locations == ['loc a', 'loc b', 'loc c']
-    assert list(counter.counter.items()) == [(2, 2)]
+    assert set(counter.signatures()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
+    assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
+
+    pprint.pprint(counter.counter.most_common())
+    assert list(counter.counter.most_common()) == \
+        [('f331f8279113d77e42ab8efca8f9cc17', 2)]
 
     ## round 3
 
@@ -2000,9 +1625,10 @@ def test_counter_gather_3_test_consume():
     assert cur_query != query_ss.minhash
 
     counter.consume(intersect_mh)
-    assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
-    assert counter.locations == ['loc a', 'loc b', 'loc c']
-    assert list(counter.counter.items()) == []
+    assert set(counter.signatures()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
+    assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
+    pprint.pprint(counter.counter.most_common())
+    assert list(counter.counter.most_common()) == []
 
     ## round 4 - nothing left!
 
@@ -2011,9 +1637,41 @@ def test_counter_gather_3_test_consume():
     assert not results
 
     counter.consume(intersect_mh)
-    assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
-    assert counter.locations == ['loc a', 'loc b', 'loc c']
-    assert list(counter.counter.items()) == []
+    assert set(counter.signatures()) == set([ match_ss_1, match_ss_2, match_ss_3 ])
+    assert list(sorted(counter.locations.values())) == ['loc a', 'loc b', 'loc c']
+    assert list(counter.counter.most_common()) == []
+
+
+def test_counter_gather_identical_md5sum():
+    # open-box testing of CounterGather.consume(...)
+    # check what happens with identical matches w/different names
+    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
+    query_mh.add_many(range(0, 20))
+    query_ss = SourmashSignature(query_mh, name='query')
+
+    match_mh_1 = query_mh.copy_and_clear()
+    match_mh_1.add_many(range(0, 10))
+    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+
+    # same as match_mh_1
+    match_mh_2 = query_mh.copy_and_clear()
+    match_mh_2.add_many(range(0, 10))
+    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
+
+    # identical md5sum
+    assert match_ss_1.md5sum() == match_ss_2.md5sum()
+
+    # load up the counter
+    counter = CounterGather(query_ss)
+    counter.add(match_ss_1, location='loc a')
+    counter.add(match_ss_2, location='loc b')
+
+    assert len(counter.siglist) == 1
+    stored_match = list(counter.siglist.values()).pop()
+    assert stored_match.name == 'match2'
+    # CTB note: this behavior may be changed freely, as the protocol
+    # tests simply specify that _one_ of the identical matches is
+    # returned. See test_counter_gather_multiple_identical_matches.
 
 
 def test_lazy_index_1():
@@ -2094,16 +1752,9 @@ def test_lazy_index_4_bool():
     assert lazy
 
 
-def test_lazy_index_5_len():
-    # test some basic features of LazyLinearIndex
-    lidx = LinearIndex()
-    lazy = LazyLinearIndex(lidx)
-
-    with pytest.raises(NotImplementedError):
-        len(lazy)
-
-
 def test_lazy_index_wraps_multi_index_location():
+    # check that 'location' works fine when MultiIndex is wrapped by
+    # LazyLinearIndex.
     sigdir = utils.get_test_data('prot/protein/')
     sigzip = utils.get_test_data('prot/protein.zip')
     siglca = utils.get_test_data('prot/protein.lca.json.gz')
@@ -2112,7 +1763,7 @@ def test_lazy_index_wraps_multi_index_location():
     db_paths = (sigdir, sigzip, siglca, sigsbt)
     dbs = [ sourmash.load_file_as_index(db_path) for db_path in db_paths ]
 
-    mi = MultiIndex.load(dbs, db_paths)
+    mi = MultiIndex.load(dbs, db_paths, None)
     lazy = LazyLinearIndex(mi)
 
     mi2 = mi.select(moltype='protein')
@@ -2121,3 +1772,354 @@ def test_lazy_index_wraps_multi_index_location():
     for (ss_tup, ss_lazy_tup) in zip(mi2.signatures_with_location(),
                                      lazy2.signatures_with_location()):
         assert ss_tup == ss_lazy_tup
+
+def test_revindex_index_search():
+    # confirm that RevIndex works
+    sig2 = utils.get_test_data("2.fa.sig")
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = RevIndex(template=ss2.minhash)
+    lidx.insert(ss2)
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    # now, search for sig2
+    sr = lidx.search(ss2, threshold=1.0)
+    print([s[1].name for s in sr])
+    assert len(sr) == 1
+    assert sr[0][1] == ss2
+
+    # search for sig47 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss47, threshold=0.1)
+    print([s[1].name for s in sr])
+    assert len(sr) == 2
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss47
+    assert sr[1][1] == ss63
+
+    # search for sig63 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss63, threshold=0.1)
+    print([s[1].name for s in sr])
+    assert len(sr) == 2
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss63
+    assert sr[1][1] == ss47
+
+    # search for sig63 with high threshold => 1 match
+    sr = lidx.search(ss63, threshold=0.8)
+    print([s[1].name for s in sr])
+    assert len(sr) == 1
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss63
+
+
+def test_revindex_gather():
+    # check that RevIndex.best_containment works.
+    sig2 = utils.get_test_data("2.fa.sig")
+    sig47 = utils.get_test_data("47.fa.sig")
+    sig63 = utils.get_test_data("63.fa.sig")
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = RevIndex(template=ss2.minhash)
+    lidx.insert(ss2)
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    match = lidx.best_containment(ss2)
+    assert match
+    assert match.score == 1.0
+    assert match.signature == ss2
+
+    match = lidx.best_containment(ss47)
+    assert match
+    assert match.score == 1.0
+    assert match.signature == ss47
+
+
+def test_revindex_gather_ignore():
+    # check that RevIndex gather ignores things properly.
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss63 = sourmash.load_one_signature(sig63, ksize=31)
+
+    # construct an index...
+    lidx = RevIndex(template=ss2.minhash, signatures=[ss2, ss47, ss63])
+
+    # ...now search with something that should ignore sig47, the exact match.
+    search_fn = JaccardSearchBestOnly_ButIgnore([ss47])
+
+    results = list(lidx.find(search_fn, ss47))
+    results = [ ss.signature for ss in results ]
+
+    def is_found(ss, xx):
+        for q in xx:
+            print(ss, ss.similarity(q))
+            if ss.similarity(q) == 1.0:
+                return True
+        return False
+
+    assert not is_found(ss47, results)
+    assert not is_found(ss2, results)
+    assert is_found(ss63, results)
+
+
+def test_standalone_manifest_signatures(runtmp):
+    # build a StandaloneManifestIndex and test 'signatures' method.
+
+    ## first, build a manifest in memory using MultiIndex
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx1 = LinearIndex.load(sig47)
+    lidx2 = LinearIndex.load(sig63)
+
+    mi = MultiIndex.load([lidx1, lidx2], [sig47, sig63], "")
+
+    ## got a manifest! ok, now test out StandaloneManifestIndex
+    mm = StandaloneManifestIndex(mi.manifest, None)
+
+    siglist = [ ss for ss in mm.signatures() ]
+    assert len(siglist) == 2
+    assert ss47 in siglist
+    assert ss63 in siglist
+
+
+def test_standalone_manifest_signatures_prefix(runtmp):
+    # try out 'prefix' for StandaloneManifestIndex
+
+    ## first, build a manifest in memory using MultiIndex
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx1 = LinearIndex.load(sig47)
+    lidx2 = LinearIndex.load(sig63)
+    mi = MultiIndex.load([lidx1, lidx2], [sig47, sig63], "")
+
+    # ok, now remove the abspath prefix from iloc
+    for row in mi.manifest.rows:
+        row['internal_location'] = os.path.basename(row['internal_location'])
+
+    ## this should succeed!
+    mm = StandaloneManifestIndex(mi.manifest, None,
+                                 prefix=utils.get_test_data(''))
+
+    assert len(list(mm.signatures())) == 2
+
+
+def test_standalone_manifest_signatures_prefix_fail(runtmp):
+    # give StandaloneManifest the wrong prefix
+
+    ## first, build a manifest in memory using MultiIndex
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx1 = LinearIndex.load(sig47)
+    lidx2 = LinearIndex.load(sig63)
+    print('XXX', lidx1.location)
+
+    mi = MultiIndex.load([lidx1, lidx2], [sig47, sig63], "")
+
+    # remove prefix from manifest
+    for row in mi.manifest.rows:
+        row['internal_location'] = os.path.basename(row['internal_location'])
+
+    ## got a manifest! ok, now test out StandaloneManifestIndex
+    mm = StandaloneManifestIndex(mi.manifest, None, prefix='foo')
+
+    # should fail
+    with pytest.raises(ValueError) as exc:
+        list(mm.signatures())
+
+    assert "Error while reading signatures from 'foo/47.fa.sig'" in str(exc)
+
+
+def test_standalone_manifest_load_from_dir(runtmp):
+    # test loading a mf with relative directory paths from test-data
+    mf = utils.get_test_data('scaled/mf.csv')
+    idx = sourmash.load_file_as_index(mf)
+
+    siglist = list(idx.signatures())
+    assert len(siglist) == 15
+
+    assert idx                  # should be 'True'
+    assert len(idx) == 15
+
+    with pytest.raises(NotImplementedError):
+        idx.insert()
+
+    with pytest.raises(NotImplementedError):
+        idx.save('foo')
+
+    assert idx.location == mf
+
+
+def test_standalone_manifest_lazy_load(runtmp):
+    # check that it's actually doing lazy loading
+    orig_sig47 = utils.get_test_data('47.fa.sig')
+    sig47 = runtmp.output('47.fa.sig')
+
+    # build an external manifest
+    shutil.copyfile(orig_sig47, sig47)
+
+    # this is an abspath to sig47
+    runtmp.sourmash('sig', 'manifest', sig47, '-o', 'mf.csv')
+
+    # should work to get signatures:
+    idx = StandaloneManifestIndex.load(runtmp.output('mf.csv'))
+
+    siglist = list(idx.signatures())
+    assert len(siglist) == 1
+
+    # now remove!
+    os.unlink(sig47)
+
+    # can still access manifest...
+    assert len(idx) == 1
+
+    # ...but we should get an error when we call signatures.
+    with pytest.raises(ValueError):
+        list(idx.signatures())
+
+    # but put it back, and all is forgiven. yay!
+    shutil.copyfile(orig_sig47, sig47)
+    x = list(idx.signatures())
+    assert len(x) == 1
+
+
+def test_standalone_manifest_lazy_load_2_prefix(runtmp):
+    # check that it's actually doing lazy loading; supply explicit prefix
+    orig_sig47 = utils.get_test_data('47.fa.sig')
+    sig47 = runtmp.output('47.fa.sig')
+
+    # build an external manifest
+    # note, here use a relative path to 47.fa.sig; the manifest will contain
+    # just '47.fa.sig' as the location
+    shutil.copyfile(orig_sig47, sig47)
+    runtmp.sourmash('sig', 'manifest', '47.fa.sig', '-o', 'mf.csv')
+
+    # should work to get signatures:
+    idx = StandaloneManifestIndex.load(runtmp.output('mf.csv'),
+                                       prefix=runtmp.output(''))
+
+    siglist = list(idx.signatures())
+    assert len(siglist) == 1
+
+    # now remove!
+    os.unlink(sig47)
+
+    # can still access manifest...
+    assert len(idx) == 1
+
+    # ...but we should get an error when we call signatures.
+    with pytest.raises(ValueError):
+        list(idx.signatures())
+
+    # but put it back, and all is forgiven. yay!
+    shutil.copyfile(orig_sig47, sig47)
+    x = list(idx.signatures())
+    assert len(x) == 1
+
+
+def test_standalone_manifest_search(runtmp):
+    # test a straight up 'search'
+    query_sig = utils.get_test_data('scaled/genome-s12.fa.gz.sig')
+    mf = utils.get_test_data('scaled/mf.csv')
+
+    runtmp.sourmash('search', query_sig, mf)
+
+    out = runtmp.last_result.out
+    print(out)
+    assert '100.0%       d84ef28f' in out
+
+
+def test_standalone_manifest_prefetch_lazy(runtmp):
+    # check that prefetch is actually doing lazy loading on manifest index.
+    orig_sig47 = utils.get_test_data('47.fa.sig')
+    sig47 = runtmp.output('47.fa.sig')
+    orig_sig2 = utils.get_test_data('2.fa.sig')
+    sig2 = runtmp.output('2.fa.sig')
+    orig_sig63 = utils.get_test_data('63.fa.sig')
+    sig63 = runtmp.output('63.fa.sig')
+
+    shutil.copyfile(orig_sig47, sig47)
+    runtmp.sourmash('sig', 'manifest', sig47, '-o', 'mf1.csv')
+    shutil.copyfile(orig_sig2, sig2)
+    runtmp.sourmash('sig', 'manifest', sig2, '-o', 'mf2.csv')
+    shutil.copyfile(orig_sig63, sig63)
+    runtmp.sourmash('sig', 'manifest', sig63, '-o', 'mf3.csv')
+
+    # combine the manifests, manually for now...
+    mf1 = CollectionManifest.load_from_filename(runtmp.output('mf1.csv'))
+    assert len(mf1) == 1
+
+    mf2 = CollectionManifest.load_from_filename(runtmp.output('mf2.csv'))
+    assert len(mf2) == 3
+
+    mf3 = CollectionManifest.load_from_filename(runtmp.output('mf3.csv'))
+    assert len(mf3) == 1
+
+    mf = mf1 + mf2 + mf3
+    assert len(mf) == 5
+
+    mf.write_to_filename(runtmp.output('mf.csv'))
+
+    # ok! now, remove the last signature, 'sig63'.
+    os.unlink(sig63)
+
+    # ...but loading the manifest should still work.
+    idx = StandaloneManifestIndex.load(runtmp.output('mf.csv'))
+
+    # double check - third load will fail. this relies on load order :shrug:.
+    sig_iter = iter(idx.signatures())
+    ss = next(sig_iter)
+    print(ss)
+    assert '47.fa' in ss.filename
+
+    for i in range(3):
+        ss = next(sig_iter)
+        print(i, ss)
+        assert '2.fa' in ss.filename
+
+    with pytest.raises(ValueError) as exc:
+        ss = next(sig_iter)
+    assert 'Error while reading signatures from' in str(exc)
+    assert '63.fa.sig' in str(exc)
+
+    # ok! now test prefetch... should get one match legit, to 47,
+    # and then no matches to 2, and then error.
+
+    ss47 = sourmash.load_one_signature(sig47)
+    idx = idx.select(ksize=31)
+    g = idx.prefetch(ss47, threshold_bp=0)
+
+    # first value:
+    sr = next(g)
+    assert sr.signature == ss47
+
+    # second value should raise error.
+    with pytest.raises(ValueError) as exc:
+        sr = next(g)
+
+    assert 'Error while reading signatures from' in str(exc)
+    assert '63.fa.sig' in str(exc)
