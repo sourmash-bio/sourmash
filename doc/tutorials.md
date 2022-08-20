@@ -1,19 +1,21 @@
 # sourmash tutorials and notebooks
 
-## The first two tutorials!
+## The first three tutorials!
 
-These tutorials are both command line tutorials that should work on Mac OS
+These tutorials are command line tutorials that should work on Mac OS
 X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 * [The first sourmash tutorial - making signatures, comparing, and searching](tutorial-basic.md)
 
 * [Using sourmash LCA to do taxonomic classification](tutorials-lca.md)
 
+* [Analyzing the genomic and taxonomic composition of an environmental genome using GTDB and sample-specific MAGs with sourmash](tutorial-lemonade.md)
+
 ## Background and details
 
 These next three tutorials are all notebooks that you can view, run
 yourself, or run interactively online via the
-[binder](http://mybinder.org) service.
+[binder](https://mybinder.org) service.
 
 * [An introduction to k-mers for genome comparison and analysis](kmers-and-minhash.md)
 

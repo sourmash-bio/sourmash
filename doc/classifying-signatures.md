@@ -57,7 +57,7 @@ genomes based on greedy partitioning. Essentially, it takes a query
 metagenome and searches the database for the most highly contained
 genome; it then subtracts that match from the metagenome, and repeats.
 At the end it reports how much of the metagenome remains unknown.  The
-[basic sourmash tutorial](tutorial-basic.md#what-s-in-my-metagenome)
+[basic sourmash tutorial](tutorial-basic.md#whats-in-my-metagenome)
 has some sample output from using gather with GenBank.  See Appendix A at
 the bottom of this page for more technical details.
 
@@ -160,6 +160,26 @@ SBT or LCA databases currently; you have to provide lists of signature
 files to `sourmash search` and `sourmash compare`.  sourmash will
 provide a warning if you run `sourmash search` on an LCA or SBT with
 an abundance-weighted query, and automatically apply `--ignore-abundance`.
+
+### Estimating ANI from FracMinHash comparisons.
+
+As of v4.4, `sourmash` can estimate Average Nucleotide Identity (ANI)
+between two FracMinHash ("scaled") sketches. `sourmash compare` can now
+produce a matrix of ANI values estimated from Jaccard, Containment,
+or Max Containment by specifiing `--ani` (optionally along with search type,
+e.g. `--containment`). `sourmash search`, `sourmash prefetch`, and
+`sourmash gather` will now output ANI estimates to output csvs.
+
+Note that while ANI can be estimated from either the Jaccard Index or
+the Containment Index, ANI from Containment is preferable (more accurate).
+For `sourmash search`, `sourmash prefetch`, and `sourmash gather`, you can
+optionally return confidence intervals around containment-derived ANI estimates,
+which take into account the impact of the scaling factor (via `--estimate-ani-ci`).
+
+For details on ANI estimation, please see our preprint "Debiasing FracMinHash and
+deriving confidence intervals for mutation rates across a wide range of evolutionary
+distances," [here](https://www.biorxiv.org/content/10.1101/2022.01.11.475870v2),
+Hera et al., 2022.
 
 ## What commands should I use?
 

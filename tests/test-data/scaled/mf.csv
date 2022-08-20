@@ -1,0 +1,17 @@
+# SOURMASH-MANIFEST-VERSION: 1.0
+internal_location,md5,md5short,ksize,moltype,num,scaled,n_hashes,with_abundance,name,filename
+all.lca.json,455c2f95f2d0a95e176870659119f170,455c2f95,31,DNA,0,10000,93,0,,
+all.lca.json,684aa226f843eaa7e1e40fc5603d5f2a,684aa226,31,DNA,0,10000,48,0,,
+all.lca.json,7f7835d2dd27ba703e843eee4757f3c2,7f7835d2,31,DNA,0,10000,8,0,,
+all.lca.json,7ffcfaa4027d4153a991b6bd78cf39fe,7ffcfaa4,31,DNA,0,10000,45,0,,
+all.lca.json,d84ef28f610b1783f801734699cf7e40,d84ef28f,31,DNA,0,10000,45,0,,
+genome-s10+s11.fa.gz.sig,455c2f95f2d0a95e176870659119f170,455c2f95,31,DNA,0,10000,93,0,,../genome-s10+s11.fa.gz
+genome-s11.fa.gz.sig,7ffcfaa4027d4153a991b6bd78cf39fe,7ffcfaa4,31,DNA,0,10000,45,0,,../genome-s11.fa.gz
+all.sbt.zip,684aa226f843eaa7e1e40fc5603d5f2a,684aa226,31,DNA,0,10000,48,0,,../genome-s10.fa.gz
+all.sbt.zip,7f7835d2dd27ba703e843eee4757f3c2,7f7835d2,31,DNA,0,10000,8,0,,../genome-s10-small.fa.gz
+all.sbt.zip,7ffcfaa4027d4153a991b6bd78cf39fe,7ffcfaa4,31,DNA,0,10000,45,0,,../genome-s11.fa.gz
+all.sbt.zip,455c2f95f2d0a95e176870659119f170,455c2f95,31,DNA,0,10000,93,0,,../genome-s10+s11.fa.gz
+all.sbt.zip,d84ef28f610b1783f801734699cf7e40,d84ef28f,31,DNA,0,10000,45,0,,../genome-s12.fa.gz
+genome-s10-small.fa.gz.sig,7f7835d2dd27ba703e843eee4757f3c2,7f7835d2,31,DNA,0,10000,8,0,,../genome-s10-small.fa.gz
+genome-s12.fa.gz.sig,d84ef28f610b1783f801734699cf7e40,d84ef28f,31,DNA,0,10000,45,0,,../genome-s12.fa.gz
+genome-s10.fa.gz.sig,684aa226f843eaa7e1e40fc5603d5f2a,684aa226,31,DNA,0,10000,48,0,,../genome-s10.fa.gz

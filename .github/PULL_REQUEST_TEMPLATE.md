@@ -8,8 +8,10 @@ Please also be sure to note here if file formats, command-line
 interface, and/or the top-level sourmash API will change because of
 this PR.
 
-If you are a new contributor, please provide
-[your ORCID](https://orcid.org).  If you don't have one, please
+If you are a new contributor, please add your name and
+[your ORCID](https://orcid.org) to the `pyproject.toml` author list
+(maintaining alphabetical order by last name).
+If you don't have an ORCID, please
 [register for one](https://orcid.org/register).
 
 Once the items above are done, and all checks pass, request a review!

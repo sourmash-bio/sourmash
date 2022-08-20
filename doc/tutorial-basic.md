@@ -305,7 +305,7 @@ and `gather`; see `sourmash index`, above, [the LCA tutorial][4], or
 
 [0]:http://ivory.idyll.org/blog/2016-sourmash-sbt-more.html
 [1]:databases.md
-[2]:https://www.ncbi.nlm.nih.gov/pubmed/233877
+[2]:https://pubmed.ncbi.nlm.nih.gov/23387867/
 [3]:index.md
 [4]:tutorials-lca.md
 [5]:sourmash-collections.md
