@@ -170,6 +170,37 @@ def test_compare_serial(runtmp):
     assert (cmp_out == cmp_calc).all()
 
 
+def test_compare_serial_distance(runtmp):
+    # try doing a compare serially, with --distance output
+    c = runtmp
+
+    testsigs = utils.get_test_data('genome-s1*.sig')
+    testsigs = glob.glob(testsigs)
+
+    c.run_sourmash('compare', '-o', 'cmp', '-k', '21', '--dna', *testsigs,
+                   '--distance')
+
+    cmp_outfile = c.output('cmp')
+    assert os.path.exists(cmp_outfile)
+    cmp_out = numpy.load(cmp_outfile)
+
+    sigs = []
+    for fn in testsigs:
+        sigs.append(sourmash.load_one_signature(fn, ksize=21,
+                                                select_moltype='dna'))
+
+    cmp_calc = numpy.zeros([len(sigs), len(sigs)])
+    for i, si in enumerate(sigs):
+        for j, sj in enumerate(sigs):
+            cmp_calc[i][j] = 1 - si.similarity(sj)
+
+        sigs = []
+        for fn in testsigs:
+            sigs.append(sourmash.load_one_signature(fn, ksize=21,
+                                                    select_moltype='dna'))
+    assert (cmp_out == cmp_calc).all()
+
+
 def test_compare_parallel(runtmp):
     # try doing a compare parallel
     c = runtmp
