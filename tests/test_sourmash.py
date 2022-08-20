@@ -140,9 +140,10 @@ def test_load_pathlist_from_file_duplicate(c):
     assert len(check) == 1
 
 
-@utils.in_tempdir
-def test_do_serial_compare(c):
-    # try doing a compare serial
+def test_compare_serial(runtmp):
+    # try doing a compare serially
+    c = runtmp
+
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
 
@@ -200,9 +201,9 @@ def test_compare_parallel(runtmp):
     assert (cmp_out == cmp_calc).all()
 
 
-@utils.in_tempdir
-def test_do_serial_compare_with_from_file(c):
+def test_compare_do_serial_compare_with_from_file(runtmp):
     # try doing a compare serial
+    c = runtmp
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
 
@@ -235,9 +236,10 @@ def test_do_serial_compare_with_from_file(c):
     assert numpy.array_equal(numpy.sort(cmp_out.flat), numpy.sort(cmp_calc.flat))
 
 
-@utils.in_tempdir
-def test_do_basic_compare_using_rna_arg(c):
+def test_compare_do_basic_compare_using_rna_arg(runtmp):
     # try doing a basic compare using --rna instead of --dna
+    c = runtmp
+
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
 
@@ -260,7 +262,7 @@ def test_do_basic_compare_using_rna_arg(c):
     assert (cmp_out == cmp_calc).all()
 
 
-def test_do_basic_compare_using_nucleotide_arg(runtmp):
+def test_compare_do_basic_using_nucleotide_arg(runtmp):
     # try doing a basic compare using --nucleotide instead of --dna/--rna
     c = runtmp
     testsigs = utils.get_test_data('genome-s1*.sig')
@@ -298,8 +300,10 @@ def test_compare_quiet(runtmp):
     assert not c.last_result.out
     assert not c.last_result.err
 
-@utils.in_tempdir
-def test_do_traverse_directory_compare(c):
+
+def test_compare_do_traverse_directory(runtmp):
+    # test 'compare' on a directory
+    c = runtmp
     c.run_sourmash('compare', '-k 21',
                    '--dna', utils.get_test_data('compare'))
     print(c.last_result.out)
@@ -307,8 +311,9 @@ def test_do_traverse_directory_compare(c):
     assert 'genome-s11.fa.gz' in c.last_result.out
 
 
-@utils.in_tempdir
-def test_do_traverse_directory_compare_force(c):
+def test_compare_do_traverse_directory_compare_force(runtmp):
+    # test 'compare' on a directory, with -f
+    c = runtmp
     sig1 = utils.get_test_data('compare/genome-s10.fa.gz.sig')
     sig2 = utils.get_test_data('compare/genome-s11.fa.gz.sig')
     newdir = c.output('newdir')
