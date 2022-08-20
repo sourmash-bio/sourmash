@@ -6219,6 +6219,44 @@ def test_compare_containment_ani_asymmetry(runtmp):
     print(c.last_result.out)
 
 
+def test_compare_containment_ani_asymmetry_distance(runtmp):
+    # very specifically test asymmetry of ANI in containment matrices ;)
+    # ...calculated with --distance
+    c = runtmp
+
+    sigfiles = ["47.fa.sig", "47-63-merge.sig"]
+    testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
+
+    c.run_sourmash('compare', '--containment', '-k', '31', '--distance-matrix',
+                   '--ani', '--csv', 'output.csv', *testdata_sigs)
+
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
+
+    # check explicit containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            mat_val = round(mat[i][j], 6)
+            print(mat_val)
+            if i == j:
+                assert 0 == mat_val
+            else:
+                ss_j = idx_to_sig[j]
+                containment_ani = 1 - ss_j.containment_ani(ss_i).ani
+                if containment_ani is not None:
+                    containment_ani = round(containment_ani, 6)
+                else:
+                    containment_ani = 1
+                mat_val = round(mat[i][j], 6)
+
+                assert containment_ani == mat_val #, (i, j)
+
+    print(c.last_result.err)
+    print(c.last_result.out)
+
+
 def test_compare_jaccard_ani(runtmp):
     c = runtmp
 
