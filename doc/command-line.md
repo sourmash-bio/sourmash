@@ -210,7 +210,8 @@ sourmash compare file1.sig [ file2.sig ... ]
 
 Options:
 
-* `--output` -- save the distance matrix to this file (as a numpy binary matrix)
+* `--output` -- save the output matrix to this file (as a numpy binary matrix).
+* `--distance-matrix` -- create and output a distance matrix, instead of a similarity matrix.
 * `--ksize` -- do the comparisons at this k-mer size.
 * `--containment` -- calculate containment instead of similarity; `C(i, j) = size(i intersection j) / size(i)`
 * `--ani` -- output estimates of Average Nucleotide Identity (ANI) instead of Jaccard similarity or containment.
@@ -238,7 +239,7 @@ ANI output matrix will be asymmetric as discussed above.
 ### `sourmash plot` - cluster and visualize comparisons of many signatures
 
 The `plot` subcommand produces two plots -- a dendrogram and a
-dendrogram+matrix -- from a distance matrix created by `sourmash compare
+dendrogram+matrix -- from a matrix created by `sourmash compare
 --output <matrix>`.  The default output is two PNG files.
 
 Usage:
