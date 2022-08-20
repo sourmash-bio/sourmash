@@ -472,18 +472,11 @@ min similarity in matrix: 0.940'''.splitlines()
     assert c.last_result.status == 0
 
 
-def test_compare_containment(runtmp):
-    # test compare --containment
-    c = runtmp
+def _load_compare_matrix_and_sigs(compare_csv, sigfiles, *, ksize=31):
+    # load in the output of 'compare' together with sigs
 
-    testdata_glob = utils.get_test_data('gather/GCF*.sig')
-    testdata_sigs = glob.glob(testdata_glob)
-
-    c.run_sourmash('compare', '--containment', '-k', '31',
-                   '--csv', 'output.csv', *testdata_sigs)
-
-    # load the matrix output of compare --containment
-    with open(c.output('output.csv'), 'rt') as fp:
+    # load compare CSV
+    with open(compare_csv, 'rt', newline="") as fp:
         r = iter(csv.reader(fp))
         headers = next(r)
 
@@ -496,9 +489,26 @@ def test_compare_containment(runtmp):
 
     # load in all the input signatures
     idx_to_sig = dict()
-    for idx, filename in enumerate(testdata_sigs):
-        ss = sourmash.load_one_signature(filename, ksize=31)
+    for idx, filename in enumerate(sigfiles):
+        ss = sourmash.load_one_signature(filename, ksize=ksize)
         idx_to_sig[idx] = ss
+
+    return mat, idx_to_sig
+
+
+def test_compare_containment(runtmp):
+    # test compare --containment
+    c = runtmp
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    c.run_sourmash('compare', '--containment', '-k', '31',
+                   '--csv', 'output.csv', *testdata_sigs)
+
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
 
     # check explicit containment against output of compare
     for i in range(len(idx_to_sig)):
@@ -506,6 +516,32 @@ def test_compare_containment(runtmp):
         for j in range(len(idx_to_sig)):
             ss_j = idx_to_sig[j]
             containment = ss_j.contained_by(ss_i)
+            containment = round(containment, 3)
+            mat_val = round(mat[i][j], 3)
+
+            assert containment == mat_val, (i, j)
+
+
+def test_compare_containment_distance(runtmp):
+    # test compare --containment --distance-matrix
+    c = runtmp
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    c.run_sourmash('compare', '--containment', '--distance-matrix', '-k', '31',
+                   '--csv', 'output.csv', *testdata_sigs)
+
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
+
+    # check explicit containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            ss_j = idx_to_sig[j]
+            containment = 1 - ss_j.contained_by(ss_i)
             containment = round(containment, 3)
             mat_val = round(mat[i][j], 3)
 
@@ -522,23 +558,9 @@ def test_compare_max_containment(runtmp):
     c.run_sourmash('compare', '--max-containment', '-k', '31',
                    '--csv', 'output.csv', *testdata_sigs)
 
-    # load the matrix output of compare --max-containment
-    with open(c.output('output.csv'), 'rt') as fp:
-        r = iter(csv.reader(fp))
-        headers = next(r)
-
-        mat = numpy.zeros((len(headers), len(headers)))
-        for i, row in enumerate(r):
-            for j, val in enumerate(row):
-                mat[i][j] = float(val)
-
-        print(mat)
-
-    # load in all the input signatures
-    idx_to_sig = dict()
-    for idx, filename in enumerate(testdata_sigs):
-        ss = sourmash.load_one_signature(filename, ksize=31)
-        idx_to_sig[idx] = ss
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
 
     # check explicit containment against output of compare
     for i in range(len(idx_to_sig)):
@@ -6095,6 +6117,7 @@ def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
 
 
 def test_compare_containment_ani(runtmp):
+    # test compare --containment --ani
     c = runtmp
 
     sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
