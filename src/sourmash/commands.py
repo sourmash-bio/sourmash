@@ -171,7 +171,9 @@ def compare(args):
 
     # if distance matrix desired, switch to 1-similarity
     if args.distance_matrix:
-        similarity = 1 - similarity
+        matrix = 1 - similarity
+    else:
+        matrix = similarity
 
     if len(siglist) < 30:
         for i, ss in enumerate(siglist):
@@ -179,12 +181,12 @@ def compare(args):
             name_num = '{}-{}'.format(i, str(ss))
             if len(name_num) > 20:
                 name_num = name_num[:17] + '...'
-            print_results('{:20s}\t{}'.format(name_num, similarity[i, :, ],))
+            print_results('{:20s}\t{}'.format(name_num, matrix[i, :, ],))
 
     if args.distance_matrix:
-        print_results('max distance in matrix: {:.3f}', numpy.max(similarity))
+        print_results('max distance in matrix: {:.3f}', numpy.max(matrix))
     else:
-        print_results('min similarity in matrix: {:.3f}', numpy.min(similarity))
+        print_results('min similarity in matrix: {:.3f}', numpy.min(matrix))
 
     # shall we output a matrix to stdout?
     if args.output:
@@ -195,7 +197,7 @@ def compare(args):
 
         notify(f'saving comparison matrix to: {args.output}')
         with open(args.output, 'wb') as fp:
-            numpy.save(fp, similarity)
+            numpy.save(fp, matrix)
 
     # output CSV?
     if args.csv:
@@ -206,7 +208,7 @@ def compare(args):
             for i in range(len(labeltext)):
                 y = []
                 for j in range(len(labeltext)):
-                    y.append('{}'.format(similarity[i][j]))
+                    y.append(str(matrix[i][j]))
                 w.writerow(y)
 
     if size_may_be_inaccurate:
