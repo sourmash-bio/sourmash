@@ -1,29 +1,14 @@
-#[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
-use wasm_bindgen::prelude::*;
-
 use getset::{CopyGetters, Getters, Setters};
 use typed_builder::TypedBuilder;
 
-use crate::index::MHBT;
+use crate::encodings::HashFunctions;
 use crate::signature::Signature;
-use crate::sketch::minhash::{max_hash_for_scaled, HashFunctions, KmerMinHashBTree};
+use crate::sketch::minhash::{max_hash_for_scaled, KmerMinHashBTree};
 use crate::sketch::Sketch;
-use crate::Error;
-
-pub fn prepare(index_path: &str) -> Result<(), Error> {
-    let mut index = MHBT::from_path(index_path)?;
-
-    // TODO equivalent to fill_internal in python
-    //unimplemented!();
-
-    index.save_file(index_path, None)?;
-
-    Ok(())
-}
 
 impl Signature {
     pub fn from_params(params: &ComputeParameters) -> Signature {
-        let template = build_template(&params);
+        let template = build_template(params);
 
         Signature::builder()
             .hash_function("0.murmur64")
@@ -35,7 +20,6 @@ impl Signature {
 }
 
 #[allow(dead_code)]
-#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[derive(TypedBuilder, CopyGetters, Getters, Setters)]
 pub struct ComputeParameters {
     #[getset(get = "pub", set = "pub")]
@@ -61,30 +45,6 @@ pub struct ComputeParameters {
     #[getset(get_copy = "pub", set = "pub")]
     #[builder(default = false)]
     singleton: bool,
-
-    #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default = 0usize)]
-    count_valid_reads: usize,
-
-    #[getset(get = "pub", set = "pub")]
-    #[builder(default = None)]
-    barcodes_file: Option<String>, // TODO: check
-
-    #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default = 1500usize)]
-    line_count: usize,
-
-    #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default = None)]
-    rename_10x_barcodes: Option<bool>, // TODO: check
-
-    #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default = None)]
-    write_barcode_meta_csv: Option<bool>, // TODO: check
-
-    #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default = None)]
-    save_fastas: Option<bool>, // TODO: check
 
     #[getset(get_copy = "pub", set = "pub")]
     #[builder(default = 0u64)]
@@ -135,10 +95,6 @@ pub struct ComputeParameters {
     license: String,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default = false)]
-    input_is_10x: bool,
-
-    #[getset(get_copy = "pub", set = "pub")]
     #[builder(default = 2usize)]
     processes: usize,
 }
@@ -150,7 +106,7 @@ impl Default for ComputeParameters {
 }
 
 pub fn build_template(params: &ComputeParameters) -> Vec<Sketch> {
-    let max_hash = max_hash_for_scaled(params.scaled).unwrap_or(0);
+    let max_hash = max_hash_for_scaled(params.scaled);
 
     params
         .ksizes

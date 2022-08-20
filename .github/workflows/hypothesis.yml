@@ -4,7 +4,6 @@ on:
   push:
     branches: [latest]
   pull_request:
-    branches: [latest]
   schedule:
     - cron: "0 0 * * *" # daily
 
@@ -12,24 +11,19 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-
-      - name: Set up Python 3.7
-        uses: actions/setup-python@v1
+      - uses: actions/checkout@v3
         with:
-          python-version: "3.7"
+          fetch-depth: 0
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e .[test]
+          pip install tox
 
       - name: Run Hypothesis tests
-        run: |
-          python -m pytest --cov=. --cov-report=xml --run-hypothesis --hypothesis-show-statistics --hypothesis-profile ci
-
-      - name: Upload coverage to Codecov  
-        uses: codecov/codecov-action@v1
-        with:
-            file: ./coverage.xml
-            fail_ci_if_error: true
+        run: tox -e hypothesis,coverage

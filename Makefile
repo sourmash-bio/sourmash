@@ -9,37 +9,39 @@ build: .PHONY
 
 clean:
 	$(PYTHON) setup.py clean --all
-	rm -f sourmash/*.so
+	rm -f src/sourmash/*.so
 	cd doc && make clean
 
 install: all
 	$(PYTHON) setup.py install
 
 dist: FORCE
-	$(PYTHON) setup.py sdist
+	$(PYTHON) -m build --sdist
 
-test: all
-	$(PYTHON) -m pip install -e '.[test]'
-	$(PYTHON) -m pytest
+test: .PHONY
+	tox -e py38
 	cargo test
 
-doc: build .PHONY
-	cd doc && make html
+doc: .PHONY
+	tox -e docs
 
 include/sourmash.h: src/core/src/lib.rs \
+                    src/core/src/ffi/hyperloglog.rs \
                     src/core/src/ffi/minhash.rs \
                     src/core/src/ffi/signature.rs \
                     src/core/src/ffi/nodegraph.rs \
+                    src/core/src/ffi/index/mod.rs \
+                    src/core/src/ffi/index/revindex.rs \
+                    src/core/src/ffi/storage.rs \
                     src/core/src/errors.rs
 	cd src/core && \
-	RUSTUP_TOOLCHAIN=nightly cbindgen -c cbindgen.toml . -o ../../$@
+	RUSTC_BOOTSTRAP=1 cbindgen -c cbindgen.toml . -o ../../$@
 
 coverage: all
-	$(PYTHON) setup.py build_ext -i
-	$(PYTHON) -m pytest --cov=. --cov-report term-missing
+	tox -e coverage
 
 benchmark:
-	asv continuous latest `git rev-parse HEAD`
+	tox -e asv
 	cargo bench
 
 check:

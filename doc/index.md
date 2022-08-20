@@ -12,7 +12,8 @@ available databases](databases.md).
 
 sourmash also includes k-mer based taxonomic exploration and
 classification routines for genome and metagenome analysis. These
-routines can use the NCBI taxonomy but do not depend on it in any way.
+routines can use the NCBI and GTDB taxonomies but do not depend on them
+specifically.
 
 We have [several tutorials](tutorials.md) available! Start with
 [Making signatures, comparing, and searching](tutorial-basic.md).
@@ -23,12 +24,16 @@ Please also see the `mash` [software](http://mash.readthedocs.io/en/latest/) and
 [paper (Ondov et al., 2016)](http://dx.doi.org/10.1186/s13059-016-0997-x) for
 background information on how and why MinHash works.
 
-**Questions? Thoughts?** Ask us on the [sourmash issue tracker](https://github.com/dib-lab/sourmash/issues/)!
+**Questions? Thoughts?** Ask us on the [sourmash issue tracker](https://github.com/sourmash-bio/sourmash/issues/)!
+
+**Want to migrate to sourmash v4?** sourmash v4 is now available, and
+has a number of incompatibilites with v2 and v3. Please see 
+[our migration guide](support.md#migrating-from-sourmash-v3x-to-sourmash-v4x)!
 
 ----
 
 To use sourmash, you must be comfortable with the UNIX command line;
-programmers may find the [Python library and API](api.rst) useful as well.
+programmers may find the [Python library and API](api.md) useful as well.
 
 If you use sourmash, please cite us!
 
@@ -62,19 +67,19 @@ be stored, searched, explored, and taxonomically annotated.
 
 * `sourmash` also has a simple Python API for interacting with signatures,
   including support for online updating and querying of signatures
-  (see [the API docs](api.rst)).
+  (see [the API docs](api.md)).
 
 * `sourmash` relies on an underlying Rust core for performance.
 
-* `sourmash` is developed [on GitHub](https://github.com/dib-lab/sourmash)
+* `sourmash` is developed [on GitHub](https://github.com/sourmash-bio/sourmash)
   and is **freely and openly available** under the BSD 3-clause license.
-  Please see [the README](https://github.com/dib-lab/sourmash/blob/latest/README.md)
+  Please see [the README](https://github.com/sourmash-bio/sourmash/blob/latest/README.md)
   for more information on development, support, and contributing.
 
 You can take a look at sourmash analyses on real data
-[in a saved Jupyter notebook](https://github.com/dib-lab/sourmash/blob/latest/doc/sourmash-examples.ipynb),
+[in a saved Jupyter notebook](https://github.com/sourmash-bio/sourmash/blob/latest/doc/sourmash-examples.ipynb),
 and experiment with it yourself
-[interactively in a Jupyter Notebook](https://mybinder.org/v2/gh/dib-lab/sourmash/latest?filepath=doc%2Fsourmash-examples.ipynb)
+[interactively in a Jupyter Notebook](https://mybinder.org/v2/gh/sourmash-bio/sourmash/latest?filepath=doc%2Fsourmash-examples.ipynb)
 at [mybinder.org](http://mybinder.org).
 
 ## Installing sourmash
@@ -89,7 +94,7 @@ or conda:
 $ conda install -c conda-forge -c bioconda sourmash
 ```
 
-Please see [the README file in github.com/dib-lab/sourmash](https://github.com/dib-lab/sourmash/blob/latest/README.md)
+Please see [the README file in github.com/sourmash-bio/sourmash](https://github.com/sourmash-bio/sourmash/blob/latest/README.md)
 for more information.
 
 ## Memory and speed
@@ -98,8 +103,8 @@ sourmash has relatively small disk and memory requirements compared to
 many other software programs used for genome search and taxonomic
 classification.
 
-`sourmash search` and `sourmash gather` can be used to search all
-genbank microbial genomes ([using our prepared databases](databases.md)
+`sourmash search` and `sourmash gather` can be used to search 100k
+genbank microbial genomes ([using our prepared databases](databases.md))
 with about 20 GB of disk and in under 1 GB of RAM.
 Typically a search for a single genome takes about 30 seconds on a laptop.
 
@@ -134,7 +139,7 @@ versions!
 **sourmash cannot find matches across large evolutionary distances.**
 
 sourmash seems to work well to search and compare data sets for
-matches at the species and genus level, but does not have much
+nucleotide matches at the species and genus level, but does not have much
 sensitivity beyond that.  (It seems to be particularly good at
 strain-level analysis.)  You should use protein-based analyses
 to do searches across larger evolutionary distances.
@@ -151,9 +156,12 @@ to signature size when using 'scaled' signatures.
 The sourmash logo was designed by Stéfanie Fares Sabbag,
 with feedback from Clara Barcelos,
 Taylor Reiter and Luiz Irber.
+
 <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img
 alt="Creative Commons License" style="border-width:0"
-src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a><br />The logo
+src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a><br />
+
+The logo
 is licensed under a <a rel="license"
 href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons
 Attribution-ShareAlike 4.0 International License</a>.
@@ -161,7 +169,9 @@ Attribution-ShareAlike 4.0 International License</a>.
 ## Contents:
 
 ```{toctree}
-:maxdepth: 2
+---
+maxdepth: 2
+---
 
 command-line
 tutorials

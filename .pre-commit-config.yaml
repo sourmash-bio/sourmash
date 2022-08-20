@@ -1,0 +1,71 @@
+default_language_version:
+  python: python3
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v3.2.0
+  hooks:
+  - id: check-ast
+#  - id: check-builtin-literals
+  - id: check-docstring-first
+  - id: check-merge-conflict
+  - id: check-yaml
+  - id: check-toml
+  - id: debug-statements
+#  - id: end-of-file-fixer
+#    exclude: 'tests/test-data'
+#  - id: trailing-whitespace
+#    exclude: 'tests/test-data'
+#- repo: https://github.com/asottile/pyupgrade
+#  rev: v2.7.2
+#  hooks:
+#  - id: pyupgrade
+#- repo: https://github.com/pre-commit/mirrors-isort
+#  rev: v5.4.2
+#  hooks:
+#  - id: isort
+#    additional_dependencies: [toml]
+
+# format using black
+# when the full codebase is black, use it directly;
+#  while it isn't, let's use darker to format new/changed code
+-   repo: https://github.com/akaihola/darker
+    rev: 1.2.1
+    hooks:
+    -   id: darker
+#- repo: https://github.com/psf/black
+#  rev: 20.8b1
+#  hooks:
+#  - id: black
+#    args:
+#    - --safe
+#    language_version: python3.8
+#- repo: https://github.com/asottile/blacken-docs
+#  rev: v1.8.0
+#  hooks:
+#  - id: blacken-docs
+#    additional_dependencies:
+#    - black==19.10b0
+#    language_version: python3.8
+
+#- repo: https://github.com/asottile/add-trailing-comma
+#  rev: v2.0.1
+#  hooks:
+#  - id: add-trailing-comma
+#- repo: https://github.com/pre-commit/pygrep-hooks
+#  rev: v1.6.0
+#  hooks:
+#  - id: rst-backticks
+#- repo: https://github.com/asottile/setup-cfg-fmt
+#  rev: v1.11.0
+#  hooks:
+#  - id: setup-cfg-fmt
+#    args:
+#    - --min-py3-version
+#    - '3.7'
+#- repo: https://gitlab.com/pycqa/flake8
+#  rev: 3.8.3
+#  hooks:
+#  - id: flake8
+#    additional_dependencies:
+#    - flake8-bugbear == 20.1.2
+#    language_version: python3.8

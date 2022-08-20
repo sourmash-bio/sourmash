@@ -1,15 +1,20 @@
 header = "/* c bindings to the sourmash library */"
 include_guard = "SOURMASH_H_INCLUDED"
 language = "C"
+style = "type"
 
 [parse]
 clean = true
 
 [parse.expand]
 crates = ["sourmash"]
+features = []
 
 [enum]
 rename_variants = "QualifiedScreamingSnakeCase"
 
 [export]
 exclude = ["HLL", "NoHashHasher", "HashIntersection"]
+
+[fn]
+sort_by = "Name"

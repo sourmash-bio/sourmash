@@ -2,22 +2,23 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
-use sourmash::signature::{Signature, SigsTrait};
-use sourmash::sketch::minhash::{
-    max_hash_for_scaled, HashFunctions, KmerMinHash, KmerMinHashBTree,
-};
-use sourmash::sketch::Sketch;
-
 use proptest::collection::vec;
 use proptest::num::u64;
 use proptest::proptest;
+use sourmash::encodings::HashFunctions;
+use sourmash::signature::SeqToHashes;
+use sourmash::signature::{Signature, SigsTrait};
+use sourmash::sketch::minhash::{
+    max_hash_for_scaled, scaled_for_max_hash, KmerMinHash, KmerMinHashBTree,
+};
+use sourmash::sketch::Sketch;
 
 // TODO: use f64::EPSILON when we bump MSRV
 const EPSILON: f64 = 0.01;
 
 #[test]
 fn throws_error() {
-    let mut mh = KmerMinHash::new(1, 4, HashFunctions::murmur64_DNA, 42, 0, false);
+    let mut mh = KmerMinHash::new(0, 4, HashFunctions::murmur64_DNA, 42, false, 1);
 
     assert!(
         mh.add_sequence(b"ATGR", false).is_err(),
@@ -27,8 +28,8 @@ fn throws_error() {
 
 #[test]
 fn merge() {
-    let mut a = KmerMinHash::new(20, 10, HashFunctions::murmur64_DNA, 42, 0, false);
-    let mut b = KmerMinHash::new(20, 10, HashFunctions::murmur64_DNA, 42, 0, false);
+    let mut a = KmerMinHash::new(0, 10, HashFunctions::murmur64_DNA, 42, false, 20);
+    let mut b = KmerMinHash::new(0, 10, HashFunctions::murmur64_DNA, 42, false, 20);
 
     a.add_sequence(b"TGCCGCCCAGCA", false).unwrap();
     b.add_sequence(b"TGCCGCCCAGCA", false).unwrap();
@@ -54,20 +55,20 @@ fn merge() {
 
 #[test]
 fn invalid_dna() {
-    let mut a = KmerMinHash::new(20, 3, HashFunctions::murmur64_DNA, 42, 0, false);
+    let mut a = KmerMinHash::new(0, 3, HashFunctions::murmur64_DNA, 42, false, 20);
 
     a.add_sequence(b"AAANNCCCTN", true).unwrap();
     assert_eq!(a.mins().len(), 3);
 
-    let mut b = KmerMinHash::new(20, 3, HashFunctions::murmur64_DNA, 42, 0, false);
+    let mut b = KmerMinHash::new(0, 3, HashFunctions::murmur64_DNA, 42, false, 20);
     b.add_sequence(b"NAAA", true).unwrap();
     assert_eq!(b.mins().len(), 1);
 }
 
 #[test]
 fn similarity() -> Result<(), Box<dyn std::error::Error>> {
-    let mut a = KmerMinHash::new(5, 20, HashFunctions::murmur64_hp, 42, 0, true);
-    let mut b = KmerMinHash::new(5, 20, HashFunctions::murmur64_hp, 42, 0, true);
+    let mut a = KmerMinHash::new(0, 20, HashFunctions::murmur64_hp, 42, true, 5);
+    let mut b = KmerMinHash::new(0, 20, HashFunctions::murmur64_hp, 42, true, 5);
 
     a.add_hash(1);
     b.add_hash(1);
@@ -81,8 +82,8 @@ fn similarity() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn similarity_2() -> Result<(), Box<dyn std::error::Error>> {
-    let mut a = KmerMinHash::new(5, 5, HashFunctions::murmur64_DNA, 42, 0, true);
-    let mut b = KmerMinHash::new(5, 5, HashFunctions::murmur64_DNA, 42, 0, true);
+    let mut a = KmerMinHash::new(0, 5, HashFunctions::murmur64_DNA, 42, true, 5);
+    let mut b = KmerMinHash::new(0, 5, HashFunctions::murmur64_DNA, 42, true, 5);
 
     a.add_sequence(b"ATGGA", false)?;
     a.add_sequence(b"GGACA", false)?;
@@ -101,8 +102,8 @@ fn similarity_2() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn similarity_3() -> Result<(), Box<dyn std::error::Error>> {
-    let mut a = KmerMinHash::new(5, 20, HashFunctions::murmur64_dayhoff, 42, 0, true);
-    let mut b = KmerMinHash::new(5, 20, HashFunctions::murmur64_dayhoff, 42, 0, true);
+    let mut a = KmerMinHash::new(0, 20, HashFunctions::murmur64_dayhoff, 42, true, 5);
+    let mut b = KmerMinHash::new(0, 20, HashFunctions::murmur64_dayhoff, 42, true, 5);
 
     a.add_hash(1);
     a.add_hash(1);
@@ -125,8 +126,8 @@ fn similarity_3() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn dayhoff() {
-    let mut a = KmerMinHash::new(10, 6, HashFunctions::murmur64_dayhoff, 42, 0, false);
-    let mut b = KmerMinHash::new(10, 6, HashFunctions::murmur64_protein, 42, 0, false);
+    let mut a = KmerMinHash::new(0, 6, HashFunctions::murmur64_dayhoff, 42, false, 10);
+    let mut b = KmerMinHash::new(0, 6, HashFunctions::murmur64_protein, 42, false, 10);
 
     a.add_sequence(b"ACTGAC", false).unwrap();
     b.add_sequence(b"ACTGAC", false).unwrap();
@@ -137,8 +138,8 @@ fn dayhoff() {
 
 #[test]
 fn hp() {
-    let mut a = KmerMinHash::new(10, 6, HashFunctions::murmur64_hp, 42, 0, false);
-    let mut b = KmerMinHash::new(10, 6, HashFunctions::murmur64_protein, 42, 0, false);
+    let mut a = KmerMinHash::new(0, 6, HashFunctions::murmur64_hp, 42, false, 10);
+    let mut b = KmerMinHash::new(0, 6, HashFunctions::murmur64_protein, 42, false, 10);
 
     a.add_sequence(b"ACTGAC", false).unwrap();
     b.add_sequence(b"ACTGAC", false).unwrap();
@@ -149,14 +150,14 @@ fn hp() {
 
 #[test]
 fn max_for_scaled() {
-    assert_eq!(max_hash_for_scaled(100), Some(184467440737095520));
+    assert_eq!(max_hash_for_scaled(100), 184467440737095520);
 }
 
 proptest! {
 #[test]
 fn oracle_mins(hashes in vec(u64::ANY, 1..10000)) {
-    let mut a = KmerMinHash::new(1000, 21, HashFunctions::murmur64_protein, 42, 0, true);
-    let mut b = KmerMinHashBTree::new(1000, 21, HashFunctions::murmur64_protein, 42, 0, true);
+    let mut a = KmerMinHash::new(0, 21, HashFunctions::murmur64_protein, 42, true, 1000);
+    let mut b = KmerMinHashBTree::new(0, 21, HashFunctions::murmur64_protein, 42, true, 1000);
 
     let mut c: KmerMinHash = Default::default();
     c.set_hash_function(HashFunctions::murmur64_protein).unwrap();
@@ -198,12 +199,12 @@ fn oracle_mins(hashes in vec(u64::ANY, 1..10000)) {
 proptest! {
 #[test]
 fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
-    let max_hash = max_hash_for_scaled(100).unwrap();
-    let mut a = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
-    let mut b = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let scaled = 100;
+    let mut a = KmerMinHash::new(scaled, 6, HashFunctions::murmur64_DNA, 42, true, 0);
+    let mut b = KmerMinHashBTree::new(scaled, 6, HashFunctions::murmur64_DNA, 42, true, 0);
 
-    let mut c = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
-    let mut d = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let mut c = KmerMinHash::new(scaled, 6, HashFunctions::murmur64_DNA, 42, true, 0);
+    let mut d = KmerMinHashBTree::new(scaled, 6, HashFunctions::murmur64_DNA, 42, true, 0);
 
     let mut to_remove = vec![];
     for hash in &hashes {
@@ -234,7 +235,7 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
     assert_eq!(a.num(), b.num());
     assert_eq!(a.seed(), b.seed());
     assert_eq!(a.ksize(), b.ksize());
-    assert_eq!(a.max_hash(), b.max_hash());
+    assert_eq!(a.scaled(), b.scaled());
     assert_eq!(a.track_abundance(), b.track_abundance());
     assert_eq!(a.hash_function(), b.hash_function());
 
@@ -252,7 +253,8 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
     assert_eq!(c.count_common(&a, true).unwrap(), d.count_common(&b, true).unwrap());
 
     let mut e = a.downsample_max_hash(100).unwrap();
-    let mut f = b.downsample_max_hash(100).unwrap();
+    let scaled = scaled_for_max_hash(100);
+    let mut f = b.downsample_scaled(scaled).unwrap();
 
     // Can't compare different scaled without explicit downsample
     assert!(c.similarity(&e, false, false).is_err());
@@ -299,12 +301,12 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
 proptest! {
 #[test]
 fn prop_merge(seq1 in "[ACGT]{6,100}", seq2 in "[ACGT]{6,200}") {
-    let max_hash = max_hash_for_scaled(10).unwrap();
-    let mut a = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
-    let mut b = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let scaled: u64 = 10;
+    let mut a = KmerMinHash::new(scaled, 6, HashFunctions::murmur64_DNA, 42, true, 0);
+    let mut b = KmerMinHashBTree::new(scaled, 6, HashFunctions::murmur64_DNA, 42, true, 0);
 
-    let mut c = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
-    let mut d = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let mut c = KmerMinHash::new(scaled, 6, HashFunctions::murmur64_DNA, 42, true, 0);
+    let mut d = KmerMinHashBTree::new(scaled, 6, HashFunctions::murmur64_DNA, 42, true, 0);
 
     a.add_sequence(seq1.as_bytes(), false).unwrap();
     b.add_sequence(seq1.as_bytes(), false).unwrap();
@@ -328,7 +330,8 @@ fn prop_merge(seq1 in "[ACGT]{6,100}", seq2 in "[ACGT]{6,200}") {
     assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
 
     let mut e = a.downsample_max_hash(100).unwrap();
-    let mut f = b.downsample_max_hash(100).unwrap();
+    let scaled = scaled_for_max_hash(100);
+    let mut f = b.downsample_scaled(scaled).unwrap();
 
     assert!((e.similarity(&c, false, true).unwrap() - f.similarity(&d, false, true).unwrap()).abs() < EPSILON);
     assert!((e.similarity(&c, true, true).unwrap() - f.similarity(&d, true, true).unwrap()).abs() < EPSILON);
@@ -551,12 +554,12 @@ fn load_save_minhash_sketches_abund() {
 
 #[test]
 fn merge_empty_scaled() {
-    let max_hash = max_hash_for_scaled(10).unwrap();
-    let mut a = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
-    let mut b = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let scaled = 10;
+    let mut a = KmerMinHash::new(scaled, 6, HashFunctions::murmur64_DNA, 42, true, 0);
+    let mut b = KmerMinHashBTree::new(scaled, 6, HashFunctions::murmur64_DNA, 42, true, 0);
 
-    let c = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
-    let d = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let c = KmerMinHash::new(scaled, 6, HashFunctions::murmur64_DNA, 42, true, 0);
+    let d = KmerMinHashBTree::new(scaled, 6, HashFunctions::murmur64_DNA, 42, true, 0);
 
     a.merge(&c).unwrap();
     b.merge(&d).unwrap();
@@ -577,9 +580,9 @@ fn merge_empty_scaled() {
 
 #[test]
 fn check_errors() {
-    let max_hash = max_hash_for_scaled(10).unwrap();
-    let mut a = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, false);
-    let mut b = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, false);
+    let scaled = 10;
+    let mut a = KmerMinHash::new(scaled, 6, HashFunctions::murmur64_DNA, 42, false, 0);
+    let mut b = KmerMinHashBTree::new(scaled, 6, HashFunctions::murmur64_DNA, 42, false, 0);
 
     // sequence too short: OK
     assert!(a.add_sequence(b"AC", false).is_ok());
@@ -604,22 +607,22 @@ fn check_errors() {
     assert!(a.set_hash_function(HashFunctions::murmur64_DNA).is_ok());
     assert!(b.set_hash_function(HashFunctions::murmur64_DNA).is_ok());
 
-    let c = KmerMinHash::new(0, 7, HashFunctions::murmur64_DNA, 42, max_hash, true);
-    let d = KmerMinHashBTree::new(0, 7, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let c = KmerMinHash::new(scaled, 7, HashFunctions::murmur64_DNA, 42, true, 0);
+    let d = KmerMinHashBTree::new(scaled, 7, HashFunctions::murmur64_DNA, 42, true, 0);
 
     // different ksize
     assert!(a.check_compatible(&c).is_err());
     assert!(b.check_compatible(&d).is_err());
 
-    let c = KmerMinHash::new(0, 6, HashFunctions::murmur64_protein, 42, max_hash, true);
-    let d = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_protein, 42, max_hash, true);
+    let c = KmerMinHash::new(scaled, 6, HashFunctions::murmur64_protein, 42, true, 0);
+    let d = KmerMinHashBTree::new(scaled, 6, HashFunctions::murmur64_protein, 42, true, 0);
 
     // different hash_function
     assert!(a.check_compatible(&c).is_err());
     assert!(b.check_compatible(&d).is_err());
 
-    let c = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 31, max_hash, true);
-    let d = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 31, max_hash, true);
+    let c = KmerMinHash::new(scaled, 6, HashFunctions::murmur64_DNA, 31, true, 0);
+    let d = KmerMinHashBTree::new(scaled, 6, HashFunctions::murmur64_DNA, 31, true, 0);
 
     // different seed
     assert!(a.check_compatible(&c).is_err());
@@ -631,9 +634,9 @@ fn check_errors() {
 proptest! {
 #[test]
 fn load_save_minhash_dayhoff(seq in "FLYS*CWLPGQRMTHINKVADER{0,1000}") {
-    let max_hash = max_hash_for_scaled(10).unwrap();
-    let mut a = KmerMinHash::new(0, 3, HashFunctions::murmur64_dayhoff, 42, max_hash, true);
-    let mut b = KmerMinHashBTree::new(0, 3, HashFunctions::murmur64_dayhoff, 42, max_hash, true);
+    let scaled = 10;
+    let mut a = KmerMinHash::new(scaled, 3, HashFunctions::murmur64_dayhoff, 42, true, 0);
+    let mut b = KmerMinHashBTree::new(scaled, 3, HashFunctions::murmur64_dayhoff, 42, true, 0);
 
     a.add_protein(seq.as_bytes()).unwrap();
     b.add_protein(seq.as_bytes()).unwrap();
@@ -659,9 +662,9 @@ fn load_save_minhash_dayhoff(seq in "FLYS*CWLPGQRMTHINKVADER{0,1000}") {
 proptest! {
 #[test]
 fn load_save_minhash_hp(seq in "FLYS*CWLPGQRMTHINKVADER{0,1000}") {
-    let max_hash = max_hash_for_scaled(10).unwrap();
-    let mut a = KmerMinHash::new(0, 3, HashFunctions::murmur64_hp, 42, max_hash, true);
-    let mut b = KmerMinHashBTree::new(0, 3, HashFunctions::murmur64_hp, 42, max_hash, true);
+    let scaled = 10;
+    let mut a = KmerMinHash::new(scaled, 3, HashFunctions::murmur64_hp, 42, true, 0);
+    let mut b = KmerMinHashBTree::new(scaled, 3, HashFunctions::murmur64_hp, 42, true, 0);
 
     a.add_protein(seq.as_bytes()).unwrap();
     b.add_protein(seq.as_bytes()).unwrap();
@@ -687,9 +690,9 @@ fn load_save_minhash_hp(seq in "FLYS*CWLPGQRMTHINKVADER{0,1000}") {
 proptest! {
 #[test]
 fn load_save_minhash_dna(seq in "ACGTN{0,1000}") {
-    let max_hash = max_hash_for_scaled(10).unwrap();
-    let mut a = KmerMinHash::new(0, 21, HashFunctions::murmur64_DNA, 42, max_hash, true);
-    let mut b = KmerMinHashBTree::new(0, 21, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let scaled = 10;
+    let mut a = KmerMinHash::new(scaled, 21, HashFunctions::murmur64_DNA, 42, true, 0);
+    let mut b = KmerMinHashBTree::new(scaled, 21, HashFunctions::murmur64_DNA, 42, true, 0);
 
     a.add_sequence(seq.as_bytes(), true).unwrap();
     b.add_sequence(seq.as_bytes(), true).unwrap();
@@ -710,4 +713,53 @@ fn load_save_minhash_dna(seq in "ACGTN{0,1000}") {
     assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < EPSILON);
     assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
 }
+}
+
+proptest! {
+#[test]
+fn seq_to_hashes(seq in "ACGTGTAGCTAGACACTGACTGACTGAC") {
+
+    let scaled = 1;
+    let mut mh = KmerMinHash::new(scaled, 21, HashFunctions::murmur64_DNA, 42, true, 0);
+    mh.add_sequence(seq.as_bytes(), false)?; // .unwrap();
+
+    let mut hashes: Vec<u64> = Vec::new();
+
+    for hash_value in SeqToHashes::new(seq.as_bytes(), mh.ksize(), false, false, mh.hash_function(), mh.seed()){
+        match hash_value{
+            Ok(0) => continue,
+            Ok(x) => hashes.push(x),
+            Err(_) => (),
+        }
+    }
+
+    mh.mins().sort_unstable();
+    hashes.sort_unstable();
+    assert_eq!(mh.mins(), hashes);
+
+}
+
+#[test]
+fn seq_to_hashes_2(seq in "QRMTHINK") {
+
+    let scaled = 1;
+    let mut mh = KmerMinHash::new(scaled, 3, HashFunctions::murmur64_protein, 42, true, 0);
+    mh.add_protein(seq.as_bytes())?; // .unwrap();
+
+    let mut hashes: Vec<u64> = Vec::new();
+
+    for hash_value in SeqToHashes::new(seq.as_bytes(), mh.ksize(), false, true, mh.hash_function(), mh.seed()){
+        match hash_value{
+            Ok(0) => continue,
+            Ok(x) => hashes.push(x),
+            Err(_) => (),
+        }
+    }
+
+    mh.mins().sort_unstable();
+    hashes.sort_unstable();
+    assert_eq!(mh.mins(), hashes);
+
+}
+
 }

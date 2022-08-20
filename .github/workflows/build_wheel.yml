@@ -1,0 +1,77 @@
+name: cibuildwheel
+
+on:
+  push:
+    branches: [latest]
+    tags: v*
+  pull_request:
+  schedule:
+    - cron: "0 0 * * *" # daily
+
+jobs:
+  build_wheels:
+    name: Build wheels for ${{ matrix.os }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [
+          linux-x86_64,
+          macos-x86_64,
+          macos-arm64,
+        ]
+        include:
+          - build: linux-x86_64
+            os: ubuntu-20.04
+            arch: x86_64
+            macos_target: ''
+          - build: macos-x86_64
+            os: macos-latest
+            arch: x86_64
+            macos_target: 'MACOSX_DEPLOYMENT_TARGET=10.11 CARGO_BUILD_TARGET=x86_64-apple-darwin'
+          - build: macos-arm64
+            os: macos-latest
+            arch: arm64
+            macos_target: 'MACOSX_DEPLOYMENT_TARGET=11 CARGO_BUILD_TARGET=aarch64-apple-darwin'
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v4
+        name: Install Python
+        with:
+          python-version: '3.9'
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.9.0
+        env:
+          CIBW_ENVIRONMENT_MACOS: ${{ matrix.macos_target }}
+          CIBW_ARCHS_LINUX: ${{ matrix.arch }}
+          CIBW_ARCHS_MACOS: ${{ matrix.arch }}
+
+      - uses: actions/upload-artifact@v3
+        with:
+          path: './wheelhouse/sourmash*.whl'
+
+  release:
+    name: Publish wheels
+    runs-on: ubuntu-20.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build_wheels
+
+    steps:
+      - name: Fetch wheels from artifacts
+        id: fetch_artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: 'wheels/'
+
+      # if it matches a Python release tag, upload to github releases
+      # TODO: In the future, use the create-release and upload-release-assets actions
+      - name: Release
+        uses: fnkr/github-action-ghr@v1
+        env:
+          GHR_PATH: ${{steps.fetch_artifacts.outputs.download-path}}/artifact
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

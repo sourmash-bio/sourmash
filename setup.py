@@ -1,92 +1,69 @@
 import os
-from setuptools import setup, find_packages
 import sys
+
+from setuptools import setup
 
 
 DEBUG_BUILD = os.environ.get("SOURMASH_DEBUG") == "1"
+NO_BUILD = os.environ.get("NO_BUILD") == "1"
+
+
+def find_dylib_no_build(name, paths):
+    to_find = None
+    if sys.platform == 'darwin':
+        to_find = f'lib{name}.dylib'
+    elif sys.platform == 'win32':
+        to_find = f'{name}.dll'
+    else:
+        to_find = f'lib{name}.so'
+
+    for path in paths.split(":"):
+        for filename in os.listdir(path):
+            if filename == to_find:
+                return os.path.join(path, filename)
+
+        raise LookupError('dylib %r not found' % name)
+
+
+def find_dylib(build, target):
+    cargo_target = os.environ.get("CARGO_BUILD_TARGET")
+    if cargo_target:
+        in_path = "target/%s/%s" % (cargo_target, target)
+    else:
+        in_path = "target/%s" % target
+    return build.find_dylib("sourmash", in_path=in_path)
 
 
 def build_native(spec):
-    cmd = ["cargo", "build", "--manifest-path", "src/core/Cargo.toml", "--lib"]
+    cmd = ["cargo", "build",
+           "--manifest-path", "src/core/Cargo.toml",
+            # "--features", "parallel",
+           "--lib"]
 
     target = "debug"
     if not DEBUG_BUILD:
         cmd.append("--release")
         target = "release"
 
-    build = spec.add_external_build(cmd=cmd, path=".")
+    if NO_BUILD:
+        dylib = lambda: find_dylib_no_build("sourmash", os.environ["DYLD_LIBRARY_PATH"])
+        header_filename = lambda: "include/sourmash.h"
+    else:
+        build = spec.add_external_build(cmd=cmd, path=".")
+        dylib = lambda: find_dylib(build, target)
+        header_filename=lambda: build.find_header("sourmash.h", in_path="include")
 
     rtld_flags = ["NOW"]
     if sys.platform == "darwin":
         rtld_flags.append("NODELETE")
     spec.add_cffi_module(
         module_path="sourmash._lowlevel",
-        dylib=lambda: build.find_dylib("sourmash", in_path="target/%s" % target),
-        header_filename=lambda: build.find_header("sourmash.h", in_path="include"),
+        dylib=dylib,
+        header_filename=header_filename,
         rtld_flags=rtld_flags,
     )
 
-
-CLASSIFIERS = [
-    "Environment :: Console",
-    "Environment :: MacOS X",
-    "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: BSD License",
-    "Natural Language :: English",
-    "Operating System :: POSIX :: Linux",
-    "Operating System :: MacOS :: MacOS X",
-    "Programming Language :: Rust",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Topic :: Scientific/Engineering :: Bio-Informatics",
-]
-
-CLASSIFIERS.append("Development Status :: 5 - Production/Stable")
-
-with open("README.md", "r") as readme:
-    LONG_DESCRIPTION = readme.read()
-
-SETUP_METADATA = {
-    "name": "sourmash",
-    "description": "tools for comparing DNA sequences with MinHash sketches",
-    "long_description": LONG_DESCRIPTION,
-    "long_description_content_type": "text/markdown",
-    "url": "https://github.com/dib-lab/sourmash",
-    "author": "C. Titus Brown",
-    "author_email": "titus@idyll.org",
-    "license": "BSD 3-clause",
-    "packages": find_packages(exclude=["tests", "benchmarks"]),
-    "entry_points": {'console_scripts': [
-        'sourmash = sourmash.__main__:main'
-        ]
-    },
-    "install_requires": ['screed>=0.9', 'cffi>=1.14.0', 'numpy',
-                         'matplotlib', 'scipy', 'deprecation>=2.0.6',
-                         'cachetools >=4,<5'],
-    "setup_requires": [
-        "setuptools>=38.6.0",
-        "milksnake",
-        "setuptools_scm>=3.2.0",
-        "setuptools_scm_git_archive",
-    ],
-    "use_scm_version": {
-        "write_to": "sourmash/version.py",
-        "git_describe_command": "git describe --dirty --tags --long --match v* --first-parent"
-    },
-    "zip_safe": False,
-    "platforms": "any",
-    "extras_require": {
-        'test' : ['pytest', 'pytest-cov', 'recommonmark', 'hypothesis'],
-        'demo' : ['jupyter', 'jupyter_client', 'ipython'],
-        'doc' : ['sphinx', 'myst-parser[sphinx]', 'alabaster',
-                 "sphinxcontrib-napoleon", "nbsphinx",
-                 "ipython"],
-        '10x': ['bam2fasta==1.0.4'],
-        'storage': ["ipfshttpclient>=0.4.13", "redis"]
-    },
-    "include_package_data": True,
-    "classifiers": CLASSIFIERS,
-    "milksnake_tasks": [build_native],
-}
-
-setup(**SETUP_METADATA)
+setup(
+  milksnake_tasks=[build_native],
+  package_dir={"": "src"},
+)

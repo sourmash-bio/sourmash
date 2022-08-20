@@ -1,6 +1,10 @@
+import os
 import random
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 
+from sourmash.sbt_storage import ZipStorage
 from sourmash.minhash import MinHash
 
 
@@ -48,11 +52,11 @@ class TimeMinHashSuite:
         mh = self.mh
         mh.add_many(list(range(1000)))
 
-    def time_compare(self):
+    def time_similarity(self):
         mh = self.mh
         other_mh = self.populated_mh
         for i in range(500):
-            mh.compare(other_mh)
+            mh.similarity(other_mh)
 
     def time_count_common(self):
         mh = self.mh
@@ -139,3 +143,60 @@ class PeakmemMinAbundanceSuite(PeakmemMinHashSuite):
     def setup(self):
         PeakmemMinHashSuite.setup(self)
         self.mh = MinHash(500, 21, track_abundance=True)
+
+####################
+
+class TimeZipStorageSuite:
+
+    def setup(self):
+        import zipfile
+        self.zipfile = NamedTemporaryFile()
+
+        with zipfile.ZipFile(self.zipfile, mode='w',
+                          compression=zipfile.ZIP_STORED) as storage:
+            for i in range(100_000):
+                # just so we have lots of entries
+                storage.writestr(str(i), b"0")
+            # one big-ish entry
+            storage.writestr("sig1", b"9" * 1_000_000)
+
+    def time_load_from_zipstorage(self):
+        with ZipStorage(self.zipfile.name) as storage:
+            for i in range(20):
+                storage.load("sig1")
+
+    def time_load_small_from_zipstorage(self):
+        with ZipStorage(self.zipfile.name) as storage:
+            for i in range(20):
+                storage.load("99999")
+
+    def teardown(self):
+        self.zipfile.close()
+
+
+class PeakmemZipStorageSuite:
+    def setup(self):
+        import zipfile
+        self.zipfile = NamedTemporaryFile()
+
+        with zipfile.ZipFile(self.zipfile, mode='w',
+                          compression=zipfile.ZIP_STORED) as storage:
+            for i in range(100_000):
+                # just so we have lots of entries
+                storage.writestr(str(i), b"0")
+            # one big-ish entry
+            storage.writestr("sig1", b"9" * 1_000_000)
+
+
+    def peakmem_load_from_zipstorage(self):
+        with ZipStorage(self.zipfile.name) as storage:
+            for i in range(20):
+                storage.load("sig1")
+
+    def peakmem_load_small_from_zipstorage(self):
+        with ZipStorage(self.zipfile.name) as storage:
+            for i in range(20):
+                storage.load("99999")
+
+    def teardown(self):
+        self.zipfile.close()
