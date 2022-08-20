@@ -13,6 +13,7 @@ import pytest
 import sys
 import zipfile
 import random
+import numpy
 
 import sourmash_tst_utils as utils
 
@@ -144,7 +145,6 @@ def test_load_pathlist_from_file_duplicate(c):
 @utils.in_tempdir
 def test_do_serial_compare(c):
     # try doing a compare serial
-    import numpy
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
 
@@ -174,7 +174,6 @@ def test_do_serial_compare(c):
 @utils.in_tempdir
 def test_do_compare_parallel(c):
     # try doing a compare parallel
-    import numpy
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
 
@@ -205,7 +204,6 @@ def test_do_compare_parallel(c):
 @utils.in_tempdir
 def test_do_serial_compare_with_from_file(c):
     # try doing a compare serial
-    import numpy
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
 
@@ -241,7 +239,6 @@ def test_do_serial_compare_with_from_file(c):
 @utils.in_tempdir
 def test_do_basic_compare_using_rna_arg(c):
     # try doing a basic compare using --rna instead of --dna
-    import numpy
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
 
@@ -267,7 +264,6 @@ def test_do_basic_compare_using_rna_arg(c):
 def test_do_basic_compare_using_nucleotide_arg(runtmp):
     # try doing a basic compare using --nucleotide instead of --dna/--rna
     c = runtmp
-    import numpy
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
 
@@ -476,9 +472,9 @@ min similarity in matrix: 0.940'''.splitlines()
     assert c.last_result.status == 0
 
 
-@utils.in_tempdir
-def test_compare_containment(c):
-    import numpy
+def test_compare_containment(runtmp):
+    # test compare --containment
+    c = runtmp
 
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
@@ -516,17 +512,17 @@ def test_compare_containment(c):
             assert containment == mat_val, (i, j)
 
 
-@utils.in_tempdir
-def test_compare_max_containment(c):
-    import numpy
+def test_compare_max_containment(runtmp):
+    # test compare --max-containment
 
+    c = runtmp
     testdata_glob = utils.get_test_data('scaled/*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
     c.run_sourmash('compare', '--max-containment', '-k', '31',
                    '--csv', 'output.csv', *testdata_sigs)
 
-    # load the matrix output of compare --containment
+    # load the matrix output of compare --max-containment
     with open(c.output('output.csv'), 'rt') as fp:
         r = iter(csv.reader(fp))
         headers = next(r)
@@ -556,9 +552,9 @@ def test_compare_max_containment(c):
             assert containment == mat_val, (i, j)
 
 
-@utils.in_tempdir
-def test_compare_avg_containment(c):
-    import numpy
+def test_compare_avg_containment(runtmp):
+    # test compare --avg-containment
+    c = runtmp
 
     testdata_glob = utils.get_test_data('scaled/*.sig')
     testdata_sigs = glob.glob(testdata_glob)
@@ -596,8 +592,10 @@ def test_compare_avg_containment(c):
             assert containment == mat_val, (i, j)
 
 
-@utils.in_tempdir
-def test_compare_max_containment_and_containment(c):
+def test_compare_max_containment_and_containment(runtmp):
+    # make sure that can't specify both --max-containment and --containment
+    c = runtmp
+
     testdata_glob = utils.get_test_data('scaled/*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -610,8 +608,10 @@ def test_compare_max_containment_and_containment(c):
     assert "ERROR: cannot specify more than one containment argument!" in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_avg_containment_and_containment(c):
+def test_compare_avg_containment_and_containment(runtmp):
+    # make sure that can't specify both --avg-containment and --containment
+    c = runtmp
+
     testdata_glob = utils.get_test_data('scaled/*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -624,8 +624,10 @@ def test_compare_avg_containment_and_containment(c):
     assert "ERROR: cannot specify more than one containment argument!" in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_avg_containment_and_max_containment(c):
+def test_compare_avg_containment_and_max_containment(runtmp):
+    # make sure that can't specify both --avg-containment and --max-containment
+    c = runtmp
+
     testdata_glob = utils.get_test_data('scaled/*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -638,8 +640,10 @@ def test_compare_avg_containment_and_max_containment(c):
     assert "ERROR: cannot specify more than one containment argument!" in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_containment_abund_flatten(c):
+def test_compare_containment_abund_flatten_warning(runtmp):
+    # check warning message about ignoring abund signatures
+
+    c  = runtmp
     s47 = utils.get_test_data('track_abund/47.fa.sig')
     s63 = utils.get_test_data('track_abund/63.fa.sig')
 
@@ -651,8 +655,10 @@ def test_compare_containment_abund_flatten(c):
         c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_ani_abund_flatten(c):
+def test_compare_ani_abund_flatten(runtmp):
+    # check warning message about ignoring abund signatures
+
+    c = runtmp
     s47 = utils.get_test_data('track_abund/47.fa.sig')
     s63 = utils.get_test_data('track_abund/63.fa.sig')
 
@@ -664,8 +670,10 @@ def test_compare_ani_abund_flatten(c):
         c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_containment_require_scaled(c):
+def test_compare_containment_require_scaled(runtmp):
+    # check warning message about scaled signatures & containment
+    c = runtmp
+
     s47 = utils.get_test_data('num/47.fa.sig')
     s63 = utils.get_test_data('num/63.fa.sig')
 
@@ -678,8 +686,10 @@ def test_compare_containment_require_scaled(c):
     assert c.last_result.status != 0
 
 
-@utils.in_tempdir
-def test_do_plot_comparison(c):
+def test_do_plot_comparison(runtmp):
+    # make sure 'plot' outputs files ;)
+    c = runtmp
+
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
@@ -737,7 +747,6 @@ def test_do_plot_comparison_4_output_dir(c):
 
 @utils.in_tempdir
 def test_do_plot_comparison_5_force(c):
-    import numpy
     D = numpy.zeros([2, 2])
     D[0, 0] = 5
     with open(c.output('cmp'), 'wb') as fp:
@@ -753,7 +762,6 @@ def test_do_plot_comparison_5_force(c):
 
 @utils.in_tempdir
 def test_do_plot_comparison_4_fail_not_distance(c):
-    import numpy
     D = numpy.zeros([2, 2])
     D[0, 0] = 5
     with open(c.output('cmp'), 'wb') as fp:
@@ -1107,16 +1115,18 @@ def test_gather_csv_output_filename_bug(runtmp, linear_gather, prefetch_gather):
         assert row['filename'] == lca_db_1
 
 
-@utils.in_tempdir
-def test_compare_no_such_file(c):
+def test_compare_no_such_file(runtmp):
+    # 'compare' fails on nonexistent files
+    c = runtmp
     with pytest.raises(SourmashCommandFailed) as e:
         c.run_sourmash('compare', 'nosuchfile.sig')
 
     assert "Error while reading signatures from 'nosuchfile.sig'." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_no_such_file_force(c):
+def test_compare_no_such_file_force(runtmp):
+    # can still run compare on nonexistent with -f
+    c = runtmp
     with pytest.raises(SourmashCommandFailed) as e:
         c.run_sourmash('compare', 'nosuchfile.sig', '-f')
 
@@ -1124,8 +1134,9 @@ def test_compare_no_such_file_force(c):
     assert "Error while reading signatures from 'nosuchfile.sig'."
 
 
-@utils.in_tempdir
-def test_compare_no_matching_sigs(c):
+def test_compare_no_matching_sigs(runtmp):
+    # compare fails when no sketches found with desired ksize
+    c = runtmp
     query = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
     with pytest.raises(SourmashCommandFailed) as exc:
@@ -6086,8 +6097,6 @@ def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
 def test_compare_containment_ani(runtmp):
     c = runtmp
 
-    import numpy
-
     sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
     testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
 
@@ -6140,8 +6149,6 @@ def test_compare_containment_ani_asymmetry(runtmp):
     # very specifically test asymmetry of ANI in containment matrices ;)
     c = runtmp
 
-    import numpy
-
     sigfiles = ["47.fa.sig", "47-63-merge.sig"]
     testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
 
@@ -6191,8 +6198,6 @@ def test_compare_containment_ani_asymmetry(runtmp):
 
 def test_compare_jaccard_ani(runtmp):
     c = runtmp
-
-    import numpy
 
     sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
     testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
@@ -6245,7 +6250,6 @@ def test_compare_jaccard_ani(runtmp):
 def test_compare_jaccard_ani_jaccard_error_too_high(runtmp):
     c = runtmp
 
-    import numpy
     testdata1 = utils.get_test_data('short.fa')
     sig1 = c.output('short.fa.sig')
     testdata2 = utils.get_test_data('short2.fa')
@@ -6302,8 +6306,6 @@ def test_compare_jaccard_ani_jaccard_error_too_high(runtmp):
 def test_compare_max_containment_ani(runtmp):
     c = runtmp
 
-    import numpy
-    
     sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
     testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
 
@@ -6352,9 +6354,8 @@ def test_compare_max_containment_ani(runtmp):
 
 
 def test_compare_avg_containment_ani(runtmp):
+    # test compare --avg-containment --ani
     c = runtmp
-
-    import numpy
 
     sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
     testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
@@ -6362,7 +6363,7 @@ def test_compare_avg_containment_ani(runtmp):
     c.run_sourmash('compare', '--avg-containment', '-k', '31',
                    '--estimate-ani', '--csv', 'output.csv', *testdata_sigs)
 
-    # load the matrix output of compare --max-containment --estimate-ani
+    # load the matrix output of compare --avg-containment --estimate-ani
     with open(c.output('output.csv'), 'rt') as fp:
         r = iter(csv.reader(fp))
         headers = next(r)
@@ -6404,6 +6405,7 @@ def test_compare_avg_containment_ani(runtmp):
 
 
 def test_compare_ANI_require_scaled(runtmp):
+    # check that compare with containment requires scaled sketches
     c = runtmp
 
     s47 = utils.get_test_data('num/47.fa.sig')
