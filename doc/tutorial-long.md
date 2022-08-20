@@ -1,11 +1,5 @@
 # Quick Insights from Sequencing Data with sourmash
 
-## Getting started
-
-Access the [ANGUS tutorial](https://angus.readthedocs.io/en/2019/sourmash.html) online.
-
-[Create / log into](jetstream/boot.html) an m1.medium Jetstream instance. 
-
 ## Objectives
 1. Discuss k-mers and their utility
 2. Compare RNA-seq samples quickly

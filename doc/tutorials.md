@@ -25,7 +25,7 @@ yourself, or run interactively online via the
 
 ## More information
 
-For more information on sequencing data with sourmash, check out our [ANGUS tutorial.](angus-tutorial.md)
+For more information on analyzing sequencing data with sourmash, check out our [longer tutorial](tutorial-long.md).
 
 If you are a Python programmer, you might also be interested in our [API examples](api-example.md) as well as a short guide to [Using the `LCA_Database` API.](using-LCA-database-API.ipynb)
 
@@ -47,7 +47,7 @@ tutorials-lca
 kmers-and-minhash
 sourmash-examples
 sourmash-collections
-angus-tutorial
+tutorial-long
 api-example
 using-LCA-database-API
 other-languages
