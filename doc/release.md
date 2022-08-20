@@ -3,17 +3,12 @@
 These are adapted from the khmer release docs, originally written by
 Michael Crusoe.
 
-Remember to update release numbers/RC in:
-
-* this document
-
 ## Required build environment
 
 The basic build environment needed below can be created as follows:
 
 ```
-conda create -y -n sourmash-rc python=3.7 pip cxx-compiler make \
-    htslib pysam twine
+conda create -y -n sourmash-rc python=3.8 pip cxx-compiler make twine tox tox-conda setuptools setuptools_scm
 ```
 
 Then activate it with `conda activate sourmash-rc`.
@@ -22,9 +17,12 @@ You will also need a Rust installation (see
 [Development Environment](developer.md)); be sure to update it to the
 latest version with `rustup update`.
 
+Your conda version will need to be at least `v4.9.0`. You can check your
+conda version with `conda --version` and update with `conda update conda`.
+
 ## Testing a release
 
-0\. First things first: check if Read the Docs is building properly for master.
+0\. First things first: check if Read the Docs is building properly for `latest`.
 The build on [Read the Docs] should be passing,
 and also check if the [rendered docs] are updated.
 
@@ -34,7 +32,7 @@ and also check if the [rendered docs] are updated.
 1\. The below should be done in a clean checkout:
 ```
 cd $(mktemp -d)
-git clone git@github.com:dib-lab/sourmash.git
+git clone https://github.com/sourmash-bio/sourmash
 cd sourmash
 ```
 
@@ -42,20 +40,20 @@ cd sourmash
 You might want to check [the releases page] for next version number,
 or you can run `make last-tag` and check the output.
 ```
-new_version=3.0.0
+new_version=4.X.X
 rc=rc1
 ```
 and then tag the release candidate with the new version number prefixed by the letter 'v':
 ```
-git tag -a v${new_version}${rc}
+git tag -a v${new_version}${rc} -m "${new_version} release candidate ${rc}"
 git push --tags origin
 ```
 
-[the releases page]: https://github.com/dib-lab/sourmash/releases
+[the releases page]: https://github.com/sourmash-bio/sourmash/releases
 
 3\. Test the release candidate. Bonus: repeat on macOS:
 ```
-python -m pip install -U setuptools pip virtualenv wheel
+python -m pip install -U virtualenv wheel tox-setuptools-version build
 
 cd ..
 python -m venv testenv1
@@ -67,9 +65,8 @@ python -m venv testenv4
 
 cd testenv1
 source bin/activate
-git clone --depth 1 --branch v${new_version}${rc} https://github.com/dib-lab/sourmash.git
+git clone --depth 1 --branch v${new_version}${rc} https://github.com/sourmash-bio/sourmash.git
 cd sourmash
-python -m pip install -U setuptools pip wheel
 python -m pip install -r requirements.txt
 make test
 
@@ -78,8 +75,8 @@ make test
 cd ../../testenv2
 deactivate
 source bin/activate
-python -m pip install -U setuptools pip wheel
-python -m pip install -e git+https://github.com/dib-lab/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
+python -m pip install setuptools_scm build
+python -m pip install -e git+https://github.com/sourmash-bio/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
 cd src/sourmash
 make test
 make dist
@@ -91,9 +88,8 @@ cp dist/sourmash*tar.gz ../../../testenv3/
 cd ../../../testenv3/
 deactivate
 source bin/activate
-python -m pip install -U setuptools pip wheel
 python -m pip install sourmash*tar.gz
-python -m pip install pytest
+python -m pip install pytest build
 tar xzf sourmash-${new_version}${rc}.tar.gz
 cd sourmash-${new_version}${rc}
 python -m pip install -r requirements.txt
@@ -115,9 +111,8 @@ Test the PyPI release in a new virtualenv:
 cd ../../testenv4
 deactivate
 source bin/activate
-python -m pip install -U setuptools pip wheel
 # install as much as possible from non-test server!
-python -m pip install screed pytest numpy matplotlib scipy khmer ijson bam2fasta deprecation cffi
+python -m pip install screed pytest numpy matplotlib scipy bam2fasta deprecation cffi
 python -m pip install -i https://test.pypi.org/simple --pre sourmash
 sourmash info  # should print "sourmash version ${new_version}${rc}"
 ```
@@ -127,7 +122,11 @@ sourmash info  # should print "sourmash version ${new_version}${rc}"
 5\. Do any final testing:
 
  * check that the binder demo notebook is up to date
- * check wheels from GitHub releases
+
+6\. Wait for GitHub Actions to finish running on the release candidate tag.
+
+NOTE: If you delete the rc tag before the rc wheels are done building, they
+may get added to the wrong release.
 
 ## How to make a final release
 
@@ -149,8 +148,16 @@ git push --tags origin
 git push --delete origin v${new_version}${rc}
 ```
 
-3\. Upload wheels from GitHub Releases to PyPI (once [Travis is finished building them](https://travis-ci.com/github/dib-lab/sourmash/)).  You can manually download
-all the files from [the releases page], or, if you have [`hub`](https://hub.github.com/), you can use that to download the packages.
+3\. Upload wheels from GitHub Releases to PyPI
+
+[GitHub Actions will automatically build wheels and upload them to GitHub Releases](https://github.com/sourmash-bio/sourmash/actions?query=workflow%3Acibuildwheel).
+This will take about 45 minutes, or more. After they're built, they must be
+copied over to PyPI manually.
+
+You can do this in two ways: you can manually download all the files
+from [the releases page], or, if you have
+[`hub`](https://hub.github.com/), you can use that to download the
+packages.
 
 Download the wheels with hub:
 ```
@@ -159,20 +166,45 @@ hub release download v${new_version}
 ```
 or download them manually.
 
-Then, upload them to PyPI like so:
+Once you have them downloaded, upload them to PyPI like so:
 ```
 twine upload *.whl
 ```
 twine will correctly determine the version from the filenames.
 
-4\. Publish the new release on PyPI (requires an authorized account).
+4\. Once the wheels are uploaded, publish the new release on PyPI (requires an authorized account).
 ```
+cd ..
 make dist
 twine upload dist/sourmash-${new_version}.tar.gz
 ```
 
-5\. Add the release on GitHub, using the tag you just pushed.
-Name it 'version X.Y.Z', and copy and paste in the release notes.
+(This should be done *after* the wheels are available, because some of
+the conda package build steps require the source dist and are automatically
+triggered when a new version shows up on PyPI.)
+
+5\. Edit the release on GitHub; there will already be one associated
+with the tag you pushed. Copy and paste in the release notes.
+
+Note that there will also be releases associated with the Rust `core`
+package, which is versioned differently than `sourmash`.  These will
+be of the form `rXX.YY.ZZ`, e.g. `r0.9.0`. Please just ignore them :)
+
+Draft release notes can be created with `git log --oneline
+v4.4.1..latest`, but should then be edited manually. We suggest
+putting PRs in the following categories:
+
+```
+Major new features:
+
+Minor new features:
+
+Bug fixes:
+
+Cleanup and documentation fixes:
+
+Developer updates:
+```
 
 ## Conda-forge
 
@@ -203,12 +235,22 @@ and tests are going to fail in Bioconda before that.
 
 An example PR for [`3.4.0`](https://github.com/bioconda/bioconda-recipes/pull/23171).
 
+## Double check everything:
+
+```
+- [ ] [PyPI page](https://pypi.org/project/sourmash/) updated
+- [ ] Zenodo DOI successfully minted upon new github release - [see search results](https://zenodo.org/search?page=1&size=20&q=sourmash)
+- [ ] `pip install sourmash` installs the correct version
+- [ ] `mamba create -n smash-release -y sourmash` installs the correct version
+```
+
 ## Announce it!
 
 If a bioinformatics software is released and no one tweets, is it really released?
 
 Examples:
 
+- [3.4.1](https://twitter.com/ctitusbrown/status/1286652952828993537)
 - [3.4.0](https://twitter.com/luizirber/status/1283157954598858752)
 - [3.3.0](https://twitter.com/ctitusbrown/status/1257418140729868291)
 - [3.2.0](https://twitter.com/luizirber/status/1221923762523623425)
@@ -219,10 +261,3 @@ Examples:
 - [2.1.0](https://twitter.com/luizirber/status/1166910335120314369)
 - [2.0.1](https://twitter.com/luizirber/status/1136786447518711808)
 - [2.0.0](https://twitter.com/luizirber/status/1108846466502520832)
-
-## To test on a blank Ubuntu system
-
-```
-apt-cache update && apt-get -y install python-dev libfreetype6-dev && \
-python -m pip install sourmash[test]
-```

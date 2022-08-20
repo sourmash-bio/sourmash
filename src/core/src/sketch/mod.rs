@@ -1,17 +1,17 @@
+pub mod hyperloglog;
 pub mod minhash;
-pub mod nodegraph;
 
-pub mod ukhs;
+pub mod nodegraph;
 
 use serde::{Deserialize, Serialize};
 
+use crate::sketch::hyperloglog::HyperLogLog;
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
-use crate::sketch::ukhs::FlatUKHS;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Sketch {
     MinHash(KmerMinHash),
     LargeMinHash(KmerMinHashBTree),
-    UKHS(FlatUKHS), // FIXME
+    HyperLogLog(HyperLogLog),
 }

@@ -35,6 +35,7 @@ enum SourmashErrorCode {
   SOURMASH_ERROR_CODE_INVALID_HASH_FUNCTION = 1104,
   SOURMASH_ERROR_CODE_READ_DATA = 1201,
   SOURMASH_ERROR_CODE_STORAGE = 1202,
+  SOURMASH_ERROR_CODE_HLL_PRECISION_BOUNDS = 1301,
   SOURMASH_ERROR_CODE_IO = 100001,
   SOURMASH_ERROR_CODE_UTF8_ERROR = 100002,
   SOURMASH_ERROR_CODE_PARSE_INT = 100003,
@@ -45,11 +46,19 @@ typedef uint32_t SourmashErrorCode;
 
 typedef struct SourmashComputeParameters SourmashComputeParameters;
 
+typedef struct SourmashHyperLogLog SourmashHyperLogLog;
+
 typedef struct SourmashKmerMinHash SourmashKmerMinHash;
 
 typedef struct SourmashNodegraph SourmashNodegraph;
 
+typedef struct SourmashRevIndex SourmashRevIndex;
+
+typedef struct SourmashSearchResult SourmashSearchResult;
+
 typedef struct SourmashSignature SourmashSignature;
+
+typedef struct SourmashZipStorage SourmashZipStorage;
 
 /**
  * Represents a string.
@@ -115,6 +124,40 @@ bool computeparams_track_abundance(const SourmashComputeParameters *ptr);
 
 uint64_t hash_murmur(const char *kmer, uint64_t seed);
 
+void hll_add_hash(SourmashHyperLogLog *ptr, uint64_t hash);
+
+void hll_add_sequence(SourmashHyperLogLog *ptr, const char *sequence, uintptr_t insize, bool force);
+
+uintptr_t hll_cardinality(const SourmashHyperLogLog *ptr);
+
+double hll_containment(const SourmashHyperLogLog *ptr, const SourmashHyperLogLog *optr);
+
+void hll_free(SourmashHyperLogLog *ptr);
+
+SourmashHyperLogLog *hll_from_buffer(const char *ptr, uintptr_t insize);
+
+SourmashHyperLogLog *hll_from_path(const char *filename);
+
+uintptr_t hll_intersection_size(const SourmashHyperLogLog *ptr, const SourmashHyperLogLog *optr);
+
+uintptr_t hll_ksize(const SourmashHyperLogLog *ptr);
+
+uintptr_t hll_matches(const SourmashHyperLogLog *ptr, const SourmashKmerMinHash *mh_ptr);
+
+void hll_merge(SourmashHyperLogLog *ptr, const SourmashHyperLogLog *optr);
+
+SourmashHyperLogLog *hll_new(void);
+
+void hll_save(const SourmashHyperLogLog *ptr, const char *filename);
+
+double hll_similarity(const SourmashHyperLogLog *ptr, const SourmashHyperLogLog *optr);
+
+const uint8_t *hll_to_buffer(const SourmashHyperLogLog *ptr, uintptr_t *size);
+
+void hll_update_mh(SourmashHyperLogLog *ptr, const SourmashKmerMinHash *optr);
+
+SourmashHyperLogLog *hll_with_error_rate(double error_rate, uintptr_t ksize);
+
 void kmerminhash_add_from(SourmashKmerMinHash *ptr, const SourmashKmerMinHash *other);
 
 void kmerminhash_add_hash(SourmashKmerMinHash *ptr, uint64_t h);
@@ -158,7 +201,12 @@ void kmerminhash_hash_function_set(SourmashKmerMinHash *ptr, HashFunctions hash_
 
 bool kmerminhash_hp(const SourmashKmerMinHash *ptr);
 
-uint64_t kmerminhash_intersection(const SourmashKmerMinHash *ptr, const SourmashKmerMinHash *other);
+SourmashKmerMinHash *kmerminhash_intersection(const SourmashKmerMinHash *ptr,
+                                              const SourmashKmerMinHash *other);
+
+uint64_t kmerminhash_intersection_union_size(const SourmashKmerMinHash *ptr,
+                                             const SourmashKmerMinHash *other,
+                                             uint64_t *union_size);
 
 bool kmerminhash_is_compatible(const SourmashKmerMinHash *ptr, const SourmashKmerMinHash *other);
 
@@ -174,16 +222,16 @@ SourmashStr kmerminhash_md5sum(const SourmashKmerMinHash *ptr);
 
 void kmerminhash_merge(SourmashKmerMinHash *ptr, const SourmashKmerMinHash *other);
 
-SourmashKmerMinHash *kmerminhash_new(uint32_t n,
+SourmashKmerMinHash *kmerminhash_new(uint64_t scaled,
                                      uint32_t k,
-                                     bool prot,
-                                     bool dayhoff,
-                                     bool hp,
+                                     HashFunctions hash_function,
                                      uint64_t seed,
-                                     uint64_t mx,
-                                     bool track_abundance);
+                                     bool track_abundance,
+                                     uint32_t n);
 
 uint32_t kmerminhash_num(const SourmashKmerMinHash *ptr);
+
+void kmerminhash_remove_from(SourmashKmerMinHash *ptr, const SourmashKmerMinHash *other);
 
 void kmerminhash_remove_hash(SourmashKmerMinHash *ptr, uint64_t h);
 
@@ -192,6 +240,14 @@ void kmerminhash_remove_many(SourmashKmerMinHash *ptr,
                              uintptr_t insize);
 
 uint64_t kmerminhash_seed(const SourmashKmerMinHash *ptr);
+
+const uint64_t *kmerminhash_seq_to_hashes(SourmashKmerMinHash *ptr,
+                                          const char *sequence,
+                                          uintptr_t insize,
+                                          bool force,
+                                          bool bad_kmers_as_zeroes,
+                                          bool is_protein,
+                                          uintptr_t *size);
 
 void kmerminhash_set_abundances(SourmashKmerMinHash *ptr,
                                 const uint64_t *hashes_ptr,
@@ -251,6 +307,51 @@ void nodegraph_update_mh(SourmashNodegraph *ptr, const SourmashKmerMinHash *optr
 SourmashNodegraph *nodegraph_with_tables(uintptr_t ksize,
                                          uintptr_t starting_size,
                                          uintptr_t n_tables);
+
+void revindex_free(SourmashRevIndex *ptr);
+
+const SourmashSearchResult *const *revindex_gather(const SourmashRevIndex *ptr,
+                                                   const SourmashSignature *sig_ptr,
+                                                   double threshold,
+                                                   bool _do_containment,
+                                                   bool _ignore_abundance,
+                                                   uintptr_t *size);
+
+uint64_t revindex_len(const SourmashRevIndex *ptr);
+
+SourmashRevIndex *revindex_new_with_paths(const SourmashStr *const *search_sigs_ptr,
+                                          uintptr_t insigs,
+                                          const SourmashKmerMinHash *template_ptr,
+                                          uintptr_t threshold,
+                                          const SourmashKmerMinHash *const *queries_ptr,
+                                          uintptr_t inqueries,
+                                          bool keep_sigs);
+
+SourmashRevIndex *revindex_new_with_sigs(const SourmashSignature *const *search_sigs_ptr,
+                                         uintptr_t insigs,
+                                         const SourmashKmerMinHash *template_ptr,
+                                         uintptr_t threshold,
+                                         const SourmashKmerMinHash *const *queries_ptr,
+                                         uintptr_t inqueries);
+
+uint64_t revindex_scaled(const SourmashRevIndex *ptr);
+
+const SourmashSearchResult *const *revindex_search(const SourmashRevIndex *ptr,
+                                                   const SourmashSignature *sig_ptr,
+                                                   double threshold,
+                                                   bool do_containment,
+                                                   bool _ignore_abundance,
+                                                   uintptr_t *size);
+
+SourmashSignature **revindex_signatures(const SourmashRevIndex *ptr, uintptr_t *size);
+
+SourmashStr searchresult_filename(const SourmashSearchResult *ptr);
+
+void searchresult_free(SourmashSearchResult *ptr);
+
+double searchresult_score(const SourmashSearchResult *ptr);
+
+SourmashSignature *searchresult_signature(const SourmashSearchResult *ptr);
 
 void signature_add_protein(SourmashSignature *ptr, const char *sequence);
 
@@ -356,5 +457,24 @@ void sourmash_str_free(SourmashStr *s);
 SourmashStr sourmash_str_from_cstr(const char *s);
 
 char sourmash_translate_codon(const char *codon);
+
+SourmashStr **zipstorage_filenames(const SourmashZipStorage *ptr, uintptr_t *size);
+
+void zipstorage_free(SourmashZipStorage *ptr);
+
+SourmashStr **zipstorage_list_sbts(const SourmashZipStorage *ptr, uintptr_t *size);
+
+const uint8_t *zipstorage_load(const SourmashZipStorage *ptr,
+                               const char *path_ptr,
+                               uintptr_t insize,
+                               uintptr_t *size);
+
+SourmashZipStorage *zipstorage_new(const char *ptr, uintptr_t insize);
+
+SourmashStr zipstorage_path(const SourmashZipStorage *ptr);
+
+void zipstorage_set_subdir(SourmashZipStorage *ptr, const char *path_ptr, uintptr_t insize);
+
+SourmashStr zipstorage_subdir(const SourmashZipStorage *ptr);
 
 #endif /* SOURMASH_H_INCLUDED */

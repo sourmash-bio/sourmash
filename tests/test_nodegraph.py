@@ -4,7 +4,7 @@ import pytest
 
 from sourmash.nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
 
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 
 
 def test_nodegraph_to_khmer_basic():

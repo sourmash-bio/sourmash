@@ -37,7 +37,7 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
-    'sphinxcontrib.napoleon',
+#    'sphinx.ext.napoleon',
     'nbsphinx',
     'IPython.sphinxext.ipython_console_highlighting',
     'myst_parser'
@@ -74,7 +74,7 @@ version = '.'.join(release.split('.')[:2])
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -124,7 +124,11 @@ html_theme = 'alabaster'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {}
+html_theme_options = {
+    'logo': 'logo.png',
+    'logo_name': True,
+    'description': 'Quickly search, compare, and analyze genomic and metagenomic data sets'
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
@@ -165,7 +169,7 @@ html_static_path = ['_static']
 #html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-html_sidebars = {'*': ['navigation.html', 'relations.html',
+html_sidebars = {'*': ['about.html', 'navigation.html', 'relations.html',
                        'sourcelink.html', 'searchbox.html']}
 
 # Additional templates that should be rendered to pages, maps page names to
@@ -297,4 +301,5 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
-autodoc_mock_imports = ["sourmash._minhash"]
+autodoc_mock_imports = ["sourmash.minhash"]
+myst_heading_anchors = 3

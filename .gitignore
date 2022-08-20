@@ -18,10 +18,10 @@ sourmash.egg-info
 .coverage
 .pytest_cache
 .python-version
-sourmash/version.py
+src/sourmash/version.py
 *.DS_Store
 .tox
-sourmash/_lowlevel*.py
+src/sourmash/_lowlevel*.py
 .env
 Pipfile
 Pipfile.lock
@@ -32,3 +32,10 @@ Cargo.lock
 pkg/
 wasm-pack.log
 .hypothesis
+
+# IDEs
+.vscode/
+
+# nix
+.direnv/
+result

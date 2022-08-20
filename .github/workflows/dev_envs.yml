@@ -1,0 +1,70 @@
+name: "Dev env instructions"
+on:
+  pull_request:
+  push:
+    branches: [latest]
+jobs:
+  nix:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Cache nix store
+      id: cache-nix
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.nix-portable/store
+          ~/bin/nix-portable
+        key: nix-${{ hashFiles('shell.nix') }}-${{ hashFiles('nix/**') }}-v009
+
+    - name: Install nix-portable
+      if: steps.cache-nix.outputs.cache-hit != 'true'
+      run: |
+        mkdir ~/bin
+        wget -qO ~/bin/nix-portable https://github.com/DavHau/nix-portable/releases/download/v009/nix-portable
+        chmod +x ~/bin/nix-portable
+
+    - run: ~/bin/nix-portable nix-shell --command "tox -e py39"
+
+    - run: ~/bin/nix-portable nix run . -- --version
+
+  mamba:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: cache conda
+      uses: actions/cache@v3
+      env:
+        CACHE_NUMBER: 0
+      with:
+        path: ~/conda_pkgs_dir
+        key:
+          ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
+
+    - name: setup conda
+      uses: conda-incubator/setup-miniconda@35d1405e78aa3f784fe3ce9a2eb378d5eeb62169
+      with:
+        auto-update-conda: true
+        python-version: 3.9
+        channels: conda-forge,bioconda
+        miniforge-variant: Mambaforge
+        miniforge-version: latest
+        use-mamba: true
+        mamba-version: "*"
+        activate-environment: sourmash_dev
+        auto-activate-base: false
+        use-only-tar-bz2: true
+
+    - name: install dependencies
+      shell: bash -l {0}
+      run: mamba install tox-conda rust git compilers pandoc
+
+    - name: run tests for 3.9
+      shell: bash -l {0}
+      run: tox -e py39

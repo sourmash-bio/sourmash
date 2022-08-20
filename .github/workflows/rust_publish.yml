@@ -10,7 +10,7 @@ jobs:
     name: Check if wasm-pack builds a valid package for the sourmash crate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -18,18 +18,20 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: install
-          args: --force wasm-pack --version 0.8.1
+          args: --force wasm-pack --version 0.10.0
       - name: run wasm-pack
-        run: wasm-pack build src/core -d ../../pkg
+        run: |
+          wasm-pack build src/core -d ../../pkg
 
       - name: Prepare node for NPM publishing
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: 12
           registry-url: https://registry.npmjs.org/
 
       - name: Publish to NPM
-        run: '(cd pkg && npm publish)'
+        working-directory: pkg
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -38,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v1
+        uses: actions/checkout@v3
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1

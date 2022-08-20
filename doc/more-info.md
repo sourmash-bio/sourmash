@@ -2,11 +2,13 @@
 
 ## Computational requirements
 
-Read more about the [compute requirements, here.](requirements.md)
+Read more about the [computational requirements, here.](requirements.md)
 
-## Prepared search database
+## Prepared search databases
 
 We offer a number of [prepared search databases.](databases.md)
+
+You can read about the supported database formats [here.](databases-advanced.md)
 
 ## Other MinHash implementations for DNA
 
@@ -91,8 +93,10 @@ for samples.
 ## Interoperability with mash
 
 
-The default sketches computed by sourmash and mash are comparable, but
-we are still [working on ways to convert the file formats][11]
+The hashing functions used by sourmash and mash are the same, but we
+are still [working on ways to convert the file formats][11]. Please
+keep an eye on `sourmash signature import` and `sourmash signature
+export`!
 
 ## Developing sourmash
 
@@ -110,15 +114,26 @@ tries to connect to X11 to use the Tkinter backend.
 
 The solution is to force the use of the 'Agg' backend in matplotlib;
 see [this stackoverflow answer](https://stackoverflow.com/a/34294056)
-or [this sourmash issue comment](https://github.com/dib-lab/sourmash/issues/254#issuecomment-304274590).
+or [this sourmash issue comment](https://github.com/sourmash-bio/sourmash/issues/254#issuecomment-304274590).
 
 Newer versions of matplotlib do not seem to have this problem.
+
+```{toctree}
+---
+hidden:
+---
+README.md
+legacy-databases.md
+databases-advanced.md
+plotting-compare.ipynb
+sourmash-sketch.md
+```
 
 [0]:https://github.com/marbl/Mash
 [1]:https://github.com/edawson/rkmh
 [2]:https://github.com/lskatz/mashtree/blob/master/README.md
 [3]:https://github.com/onecodex/finch-rs
-[4]:https://github.com/dib-lab/sourmash/blob/master/utils/compute-dna-mh-another-way.py
+[4]:https://github.com/sourmash-bio/sourmash/blob/latest/utils/compute-dna-mh-another-way.py
 [5]:http://ivory.idyll.org/blog/2016-sourmash.html
 [6]:http://ivory.idyll.org/blog/2016-sourmash-signatures.html
 [7]:http://ivory.idyll.org/blog/2016-sourmash-sbt.html

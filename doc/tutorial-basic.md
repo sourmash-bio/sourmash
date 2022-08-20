@@ -3,9 +3,11 @@
 This tutorial should run without modification on Linux or Mac OS X,
 under [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 
-You'll need about 5 GB of free disk space,
-and about 5 GB of RAM to search GenBank.  The tutorial should take about
-20 minutes total to run.
+You'll need about 5 GB of free disk space, and about 5 GB of RAM to
+search GenBank.  The tutorial should take about 20 minutes total to
+run. In fact, we have successfully tested it on
+[binder.pangeo.io](https://binder.pangeo.io/v2/gh/binder-examples/r-conda/master?urlpath=urlpath%3Drstudio)
+if you want to give it a try!
 
 ## Install miniconda
 
@@ -56,8 +58,8 @@ Download some reads and a reference genome:
 ```
 mkdir ~/data
 cd ~/data
-wget https://s3.amazonaws.com/public.ged.msu.edu/ecoli_ref-5m.fastq.gz
-wget https://s3.amazonaws.com/public.ged.msu.edu/ecoliMG1655.fa.gz
+curl -L https://osf.io/ruanf/download -o ecoliMG1655.fa.gz
+curl -L https://osf.io/q472x/download -o ecoli_ref-5m.fastq.gz
 ```
 
 Compute a scaled signature from our reads:
@@ -66,7 +68,7 @@ Compute a scaled signature from our reads:
 mkdir ~/sourmash
 cd ~/sourmash
 
-sourmash compute --scaled 10000 ~/data/ecoli_ref*.fastq.gz -o ecoli-reads.sig -k 31
+sourmash sketch dna -p scaled=10000,k=31 ~/data/ecoli_ref*.fastq.gz -o ecoli-reads.sig
 ```
 
 ## Compare reads to assemblies
@@ -76,33 +78,35 @@ Use case: how much of the read content is contained in the reference genome?
 Build a signature for an E. coli genome:
 
 ```
-sourmash compute --scaled 1000 -k 31 ~/data/ecoliMG1655.fa.gz -o ecoli-genome.sig
+sourmash sketch dna -p scaled=1000,k=31 ~/data/ecoliMG1655.fa.gz -o ecoli-genome.sig
 ```
 
 and now evaluate *containment*, that is, what fraction of the read content is
 contained in the genome:
 
 ```
-sourmash search -k 31 ecoli-reads.sig ecoli-genome.sig --containment
+sourmash search ecoli-reads.sig ecoli-genome.sig --containment
 ```
 
 and you should see:
 
 ```
-# running sourmash subcommand: search
-loaded query: /home/ubuntu/data/ecoli_ref-5m... (k=31, DNA)
-loaded 1 signatures from ecoli-genome.sig
+
+select query k=31 automatically.
+loaded query: /home/jovyan/data/ecoli_ref-5m... (k=31, DNA)
+loaded 1 signatures.
+
 1 matches:
 similarity   match
 ----------   -----
- 10.6%       /home/ubuntu/data/ecoliMG1655.fa.gz
+ 31.0%       /home/jovyan/data/ecoliMG1655.fa.gz
 ```
 
 
-Try the reverse - why is it bigger?
+Try the reverse, too!
 
 ```
-sourmash search -k 31 ecoli-genome.sig ecoli-reads.sig --containment
+sourmash search ecoli-genome.sig ecoli-reads.sig --containment
 ```
 
 ## Make and search a database quickly.
@@ -117,7 +121,7 @@ Let's grab a sample collection of 50 E. coli genomes and unpack it --
 mkdir ecoli_many_sigs
 cd ecoli_many_sigs
 
-curl -O -L https://github.com/dib-lab/sourmash/raw/master/data/eschericia-sigs.tar.gz
+curl -O -L https://github.com/sourmash-bio/sourmash/raw/latest/data/eschericia-sigs.tar.gz
 
 tar xzf eschericia-sigs.tar.gz
 rm eschericia-sigs.tar.gz
@@ -135,13 +139,13 @@ ls ecoli_many_sigs
 Let's turn this into an easily-searchable database with `sourmash index` --
 
 ```
-sourmash index -k 31 ecolidb ecoli_many_sigs/*.sig
+sourmash index ecolidb ecoli_many_sigs/*.sig
 ```
 
 and now we can search!
 
 ```
-sourmash search ecoli-genome.sig ecolidb.sbt.json -n 20
+sourmash search ecoli-genome.sig ecolidb.sbt.zip -n 20
 ```
 
 You should see output like this:
@@ -213,7 +217,7 @@ curl -L -o genbank-k31.lca.json.gz https://osf.io/4f8n3/download
 
 Next, run the 'gather' command to see what's in your ecoli genome --
 ```
-sourmash gather -k 31 ecoli-genome.sig genbank-k31.lca.json.gz
+sourmash gather ecoli-genome.sig genbank-k31.lca.json.gz
 ```
 
 and you should get:
@@ -226,7 +230,7 @@ loaded 1 databases.
 
 overlap     p_query p_match
 ---------   ------- -------
-4.9 Mbp      100.0%  100.0%    AP009048.1 Escherichia coli str. K-12...
+4.9 Mbp      100.0%  100.0%    LRDF01000001.1 Escherichia coli strai...
 
 found 1 matches total;
 the recovered matches hit 100.0% of the query
@@ -242,7 +246,7 @@ from the
 [Shakya et al. 2013 mock metagenome paper.][2]
 
 ```
-wget https://github.com/dib-lab/sourmash/raw/master/doc/_static/shakya-unaligned-contigs.sig
+wget https://github.com/sourmash-bio/sourmash/raw/latest/doc/_static/shakya-unaligned-contigs.sig
 sourmash gather -k 31 shakya-unaligned-contigs.sig genbank-k31.lca.json.gz
 ```
 
@@ -287,11 +291,11 @@ the recovered matches hit 73.1% of the query
 
 If you use the `-o` flag, gather will write out a csv that contains additional information. The column headers and their meanings are:  
 
-+ intersect_bp: the approximate number of base pairs in common between the query and the match  
-+ f_orig_query: fraction of original query; the fraction of the original query that is contained within the match  
-+ f_match: fraction of match; the fraction of the match that is contained within the query  
-+ f_unique_to_query: fraction unique to query; the fraction of the query that uniquely overlaps with the match  
-+ f_unique_weighted: fraction unique to query weighted by abundance; fraction unique to query, weighted by abundance in the query     
++ `intersect_bp`: the approximate number of base pairs in common between the query and the match  
++ `f_orig_query`: fraction of original query; the fraction of the original query that is contained within the match  
++ `f_match`: fraction of match; the fraction of the match that is contained within the query  
++ `f_unique_to_query`: fraction unique to query; the fraction of the query that uniquely overlaps with the match  
++ `f_unique_weighted`: fraction unique to query weighted by abundance; fraction unique to query, weighted by abundance in the query     
 
 It is straightforward to build your own databases for use with `search`
 and `gather`; see `sourmash index`, above, [the LCA tutorial][4], or
@@ -301,7 +305,7 @@ and `gather`; see `sourmash index`, above, [the LCA tutorial][4], or
 
 [0]:http://ivory.idyll.org/blog/2016-sourmash-sbt-more.html
 [1]:databases.md
-[2]:https://www.ncbi.nlm.nih.gov/pubmed/233877
+[2]:https://pubmed.ncbi.nlm.nih.gov/23387867/
 [3]:index.md
 [4]:tutorials-lca.md
 [5]:sourmash-collections.md

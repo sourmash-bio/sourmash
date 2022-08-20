@@ -1,81 +1,37 @@
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, BTreeSet, HashMap};
-use std::convert::TryFrom;
+use std::collections::{BTreeMap, BTreeSet};
 use std::f64::consts::PI;
 use std::fmt::Write;
 use std::iter::{Iterator, Peekable};
 use std::str;
 use std::sync::Mutex;
 
-use once_cell::sync::Lazy;
 use serde::de::Deserializer;
 use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::_hash_murmur;
+use crate::encodings::HashFunctions;
 use crate::signature::SigsTrait;
+use crate::sketch::hyperloglog::HyperLogLog;
 use crate::Error;
 
-#[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
-use wasm_bindgen::prelude::*;
-
-#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
-#[allow(non_camel_case_types)]
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[repr(u32)]
-pub enum HashFunctions {
-    murmur64_DNA = 1,
-    murmur64_protein = 2,
-    murmur64_dayhoff = 3,
-    murmur64_hp = 4,
-}
-
-impl std::fmt::Display for HashFunctions {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                HashFunctions::murmur64_DNA => "dna",
-                HashFunctions::murmur64_protein => "protein",
-                HashFunctions::murmur64_dayhoff => "dayhoff",
-                HashFunctions::murmur64_hp => "hp",
-            }
-        )
-    }
-}
-
-impl TryFrom<&str> for HashFunctions {
-    type Error = Error;
-
-    fn try_from(moltype: &str) -> Result<Self, Self::Error> {
-        match moltype.to_lowercase().as_ref() {
-            "dna" => Ok(HashFunctions::murmur64_DNA),
-            "dayhoff" => Ok(HashFunctions::murmur64_dayhoff),
-            "hp" => Ok(HashFunctions::murmur64_hp),
-            "protein" => Ok(HashFunctions::murmur64_protein),
-            _ => unimplemented!(),
-        }
-    }
-}
-
-pub fn max_hash_for_scaled(scaled: u64) -> Option<u64> {
+pub fn max_hash_for_scaled(scaled: u64) -> u64 {
     match scaled {
-        0 => None,
-        1 => Some(u64::max_value()),
-        _ => Some((u64::max_value() as f64 / scaled as f64) as u64),
+        0 => 0,
+        1 => u64::max_value(),
+        _ => (u64::max_value() as f64 / scaled as f64) as u64,
     }
 }
 
 pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
     match max_hash {
         0 => 0,
-        _ => u64::max_value() / max_hash,
+        _ => (u64::max_value() as f64 / max_hash as f64) as u64,
     }
 }
 
-#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[derive(Debug, TypedBuilder)]
 pub struct KmerMinHash {
     num: u32,
@@ -203,7 +159,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             (mins, Some(abunds))
         } else {
             let mut values: Vec<_> = tmpsig.mins.into_iter().collect();
-            values.sort();
+            values.sort_unstable();
             (values, None)
         };
 
@@ -222,27 +178,26 @@ impl<'de> Deserialize<'de> for KmerMinHash {
 
 impl KmerMinHash {
     pub fn new(
-        num: u32,
+        scaled: u64,
         ksize: u32,
         hash_function: HashFunctions,
         seed: u64,
-        max_hash: u64,
         track_abundance: bool,
+        num: u32,
     ) -> KmerMinHash {
-        let mins: Vec<u64>;
-        let abunds: Option<Vec<u64>>;
-
-        if num > 0 {
-            mins = Vec::with_capacity(num as usize);
+        let mins = if num > 0 {
+            Vec::with_capacity(num as usize)
         } else {
-            mins = Vec::with_capacity(1000);
-        }
+            Vec::with_capacity(1000)
+        };
 
-        if track_abundance {
-            abunds = Some(Vec::with_capacity(mins.capacity()));
+        let abunds = if track_abundance {
+            Some(Vec::with_capacity(mins.capacity()))
         } else {
-            abunds = None
-        }
+            None
+        };
+
+        let max_hash = max_hash_for_scaled(scaled);
 
         KmerMinHash {
             num,
@@ -264,16 +219,12 @@ impl KmerMinHash {
         self.hash_function == HashFunctions::murmur64_protein
     }
 
-    fn is_dna(&self) -> bool {
-        self.hash_function == HashFunctions::murmur64_DNA
-    }
-
-    pub fn seed(&self) -> u64 {
-        self.seed
-    }
-
     pub fn max_hash(&self) -> u64 {
         self.max_hash
+    }
+
+    pub fn scaled(&self) -> u64 {
+        scaled_for_max_hash(self.max_hash)
     }
 
     pub fn clear(&mut self) {
@@ -369,7 +320,7 @@ impl KmerMinHash {
         }
 
         if abundance == 0 {
-            // well, don't add it.
+            self.remove_hash(hash);
             return;
         }
 
@@ -457,6 +408,13 @@ impl KmerMinHash {
         };
     }
 
+    pub fn remove_from(&mut self, other: &KmerMinHash) -> Result<(), Error> {
+        for min in &other.mins {
+            self.remove_hash(*min);
+        }
+        Ok(())
+    }
+
     pub fn remove_many(&mut self, hashes: &[u64]) -> Result<(), Error> {
         for min in hashes {
             self.remove_hash(*min);
@@ -474,19 +432,8 @@ impl KmerMinHash {
             let mut self_iter = self.mins.iter();
             let mut other_iter = other.mins.iter();
 
-            let mut self_abunds_iter: Option<std::slice::Iter<'_, u64>>;
-            if let Some(ref mut abunds) = self.abunds {
-                self_abunds_iter = Some(abunds.iter());
-            } else {
-                self_abunds_iter = None;
-            }
-
-            let mut other_abunds_iter: Option<std::slice::Iter<'_, u64>>;
-            if let Some(ref abunds) = other.abunds {
-                other_abunds_iter = Some(abunds.iter());
-            } else {
-                other_abunds_iter = None;
-            }
+            let mut self_abunds_iter = self.abunds.as_mut().map(|a| a.iter());
+            let mut other_abunds_iter = other.abunds.as_ref().map(|a| a.iter());
 
             let mut self_value = self_iter.next();
             let mut other_value = other_iter.next();
@@ -621,52 +568,64 @@ impl KmerMinHash {
     pub fn intersection(&self, other: &KmerMinHash) -> Result<(Vec<u64>, u64), Error> {
         self.check_compatible(other)?;
 
-        let mut combined_mh = KmerMinHash::new(
-            self.num,
-            self.ksize,
-            self.hash_function,
-            self.seed,
-            self.max_hash,
-            self.abunds.is_some(),
-        );
+        if self.num != 0 {
+            // Intersection for regular MinHash sketches
+            let mut combined_mh = KmerMinHash::new(
+                self.scaled(),
+                self.ksize,
+                self.hash_function,
+                self.seed,
+                self.abunds.is_some(),
+                self.num,
+            );
 
-        combined_mh.merge(&self)?;
-        combined_mh.merge(&other)?;
+            combined_mh.merge(self)?;
+            combined_mh.merge(other)?;
 
-        let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
+            let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
 
-        // TODO: there is probably a way to avoid this Vec here,
-        // and pass the it1 as left in it2.
-        let i1: Vec<u64> = it1.cloned().collect();
-        let it2 = Intersection::new(i1.iter(), combined_mh.mins.iter());
+            // TODO: there is probably a way to avoid this Vec here,
+            // and pass the it1 as left in it2.
+            let i1: Vec<u64> = it1.cloned().collect();
+            let it2 = Intersection::new(i1.iter(), combined_mh.mins.iter());
 
-        let common: Vec<u64> = it2.cloned().collect();
-        Ok((common, combined_mh.mins.len() as u64))
+            let common: Vec<u64> = it2.cloned().collect();
+            Ok((common, combined_mh.mins.len() as u64))
+        } else {
+            Ok(intersection(self.mins.iter(), other.mins.iter()))
+        }
     }
 
+    // FIXME: intersection_size and count_common should be the same?
+    // (for scaled minhashes)
     pub fn intersection_size(&self, other: &KmerMinHash) -> Result<(u64, u64), Error> {
         self.check_compatible(other)?;
 
-        let mut combined_mh = KmerMinHash::new(
-            self.num,
-            self.ksize,
-            self.hash_function,
-            self.seed,
-            self.max_hash,
-            self.abunds.is_some(),
-        );
+        if self.num != 0 {
+            // Intersection for regular MinHash sketches
+            let mut combined_mh = KmerMinHash::new(
+                self.scaled(),
+                self.ksize,
+                self.hash_function,
+                self.seed,
+                self.abunds.is_some(),
+                self.num,
+            );
 
-        combined_mh.merge(&self)?;
-        combined_mh.merge(&other)?;
+            combined_mh.merge(self)?;
+            combined_mh.merge(other)?;
 
-        let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
+            let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
 
-        // TODO: there is probably a way to avoid this Vec here,
-        // and pass the it1 as left in it2.
-        let i1: Vec<u64> = it1.cloned().collect();
-        let it2 = Intersection::new(i1.iter(), combined_mh.mins.iter());
+            // TODO: there is probably a way to avoid this Vec here,
+            // and pass the it1 as left in it2.
+            let i1: Vec<u64> = it1.cloned().collect();
+            let it2 = Intersection::new(i1.iter(), combined_mh.mins.iter());
 
-        Ok((it2.count() as u64, combined_mh.mins.len() as u64))
+            Ok((it2.count() as u64, combined_mh.mins.len() as u64))
+        } else {
+            Ok(intersection_size(self.mins.iter(), other.mins.iter()))
+        }
     }
 
     // calculate Jaccard similarity, ignoring abundance.
@@ -744,9 +703,9 @@ impl KmerMinHash {
             let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
             first.similarity(&downsampled_mh, ignore_abundance, false)
         } else if ignore_abundance || self.abunds.is_none() || other.abunds.is_none() {
-            self.jaccard(&other)
+            self.jaccard(other)
         } else {
-            self.angular_similarity(&other)
+            self.angular_similarity(other)
         }
     }
 
@@ -756,10 +715,6 @@ impl KmerMinHash {
 
     pub fn hp(&self) -> bool {
         self.hash_function == HashFunctions::murmur64_hp
-    }
-
-    pub fn hash_function(&self) -> HashFunctions {
-        self.hash_function
     }
 
     pub fn mins(&self) -> Vec<u64> {
@@ -776,13 +731,15 @@ impl KmerMinHash {
 
     // create a downsampled copy of self
     pub fn downsample_max_hash(&self, max_hash: u64) -> Result<KmerMinHash, Error> {
+        let scaled = scaled_for_max_hash(max_hash);
+
         let mut new_mh = KmerMinHash::new(
-            self.num,
+            scaled,
             self.ksize,
             self.hash_function,
             self.seed,
-            max_hash, // old max_hash => max_hash arg
             self.abunds.is_some(),
+            self.num,
         );
         if self.abunds.is_some() {
             new_mh.add_many_with_abund(&self.to_vec_abunds())?;
@@ -807,6 +764,22 @@ impl KmerMinHash {
                 .collect()
         }
     }
+
+    pub fn as_hll(&self) -> HyperLogLog {
+        let mut hll = HyperLogLog::with_error_rate(0.01, self.ksize()).unwrap();
+
+        for h in &self.mins {
+            hll.add_hash(*h)
+        }
+
+        hll
+    }
+
+    // create a downsampled copy of self
+    pub fn downsample_scaled(&self, scaled: u64) -> Result<KmerMinHash, Error> {
+        let max_hash = max_hash_for_scaled(scaled);
+        self.downsample_max_hash(max_hash)
+    }
 }
 
 impl SigsTrait for KmerMinHash {
@@ -820,6 +793,18 @@ impl SigsTrait for KmerMinHash {
 
     fn ksize(&self) -> usize {
         self.ksize as usize
+    }
+
+    fn seed(&self) -> u64 {
+        self.seed
+    }
+
+    fn hash_function(&self) -> HashFunctions {
+        self.hash_function
+    }
+
+    fn add_hash(&mut self, hash: u64) {
+        self.add_hash_with_abundance(hash, 1);
     }
 
     fn check_compatible(&self, other: &KmerMinHash) -> Result<(), Error> {
@@ -845,122 +830,6 @@ impl SigsTrait for KmerMinHash {
         if self.seed != other.seed {
             return Err(Error::MismatchSeed);
         }
-        Ok(())
-    }
-
-    fn add_sequence(&mut self, seq: &[u8], force: bool) -> Result<(), Error> {
-        let ksize = self.ksize as usize;
-        let len = seq.len();
-
-        if len < ksize {
-            return Ok(());
-        };
-
-        // Here we convert the sequence to upper case and
-        // pre-calculate the reverse complement for the full sequence...
-        let sequence = seq.to_ascii_uppercase();
-        let rc = revcomp(&sequence);
-
-        if self.is_dna() {
-            let mut last_position_check = 0;
-
-            let mut is_valid_kmer = |i| {
-                for j in std::cmp::max(i, last_position_check)..i + ksize {
-                    if !VALID[sequence[j] as usize] {
-                        return false;
-                    }
-                    last_position_check += 1;
-                }
-                true
-            };
-
-            for i in 0..=len - ksize {
-                // ... and then while moving the k-mer window forward for the sequence
-                // we move another window backwards for the RC.
-                //   For a ksize = 3, and a sequence AGTCGT (len = 6):
-                //                   +-+---------+---------------+-------+
-                //   seq      RC     |i|i + ksize|len - ksize - i|len - i|
-                //  AGTCGT   ACGACT  +-+---------+---------------+-------+
-                //  +->         +->  |0|    2    |       3       |   6   |
-                //   +->       +->   |1|    3    |       2       |   5   |
-                //    +->     +->    |2|    4    |       1       |   4   |
-                //     +->   +->     |3|    5    |       0       |   3   |
-                //                   +-+---------+---------------+-------+
-                // (leaving this table here because I had to draw to
-                //  get the indices correctly)
-
-                let kmer = &sequence[i..i + ksize];
-
-                if !is_valid_kmer(i) {
-                    if !force {
-                        // throw error if DNA is not valid
-                        return Err(Error::InvalidDNA {
-                            message: String::from_utf8(kmer.to_vec()).unwrap(),
-                        });
-                    }
-
-                    continue; // skip invalid k-mer
-                }
-
-                let krc = &rc[len - ksize - i..len - i];
-                self.add_word(std::cmp::min(kmer, krc));
-            }
-        } else {
-            // protein
-            let aa_ksize = self.ksize / 3;
-
-            for i in 0..3 {
-                let substr: Vec<u8> = sequence
-                    .iter()
-                    .cloned()
-                    .skip(i)
-                    .take(sequence.len() - i)
-                    .collect();
-                let aa = to_aa(&substr, self.dayhoff(), self.hp()).unwrap();
-
-                aa.windows(aa_ksize as usize).for_each(|n| self.add_word(n));
-
-                let rc_substr: Vec<u8> = rc.iter().cloned().skip(i).take(rc.len() - i).collect();
-                let aa_rc = to_aa(&rc_substr, self.dayhoff(), self.hp()).unwrap();
-
-                aa_rc
-                    .windows(aa_ksize as usize)
-                    .for_each(|n| self.add_word(n));
-            }
-        }
-
-        Ok(())
-    }
-
-    fn add_protein(&mut self, seq: &[u8]) -> Result<(), Error> {
-        let ksize = (self.ksize / 3) as usize;
-        let len = seq.len();
-
-        if len < ksize {
-            return Ok(());
-        }
-
-        if let HashFunctions::murmur64_protein = self.hash_function {
-            for aa_kmer in seq.windows(ksize) {
-                self.add_word(&aa_kmer);
-            }
-            return Ok(());
-        }
-
-        let aa_seq: Vec<_> = match self.hash_function {
-            HashFunctions::murmur64_dayhoff => seq.iter().cloned().map(aa_to_dayhoff).collect(),
-            HashFunctions::murmur64_hp => seq.iter().cloned().map(aa_to_hp).collect(),
-            invalid => {
-                return Err(Error::InvalidHashFunction {
-                    function: format!("{}", invalid),
-                })
-            }
-        };
-
-        for aa_kmer in aa_seq.windows(ksize) {
-            self.add_word(aa_kmer);
-        }
-
         Ok(())
     }
 }
@@ -1005,300 +874,59 @@ impl<T: Ord, I: Iterator<Item = T>> Iterator for Intersection<T, I> {
     }
 }
 
-const COMPLEMENT: [u8; 256] = {
-    let mut lookup = [0; 256];
-    lookup[b'A' as usize] = b'T';
-    lookup[b'C' as usize] = b'G';
-    lookup[b'G' as usize] = b'C';
-    lookup[b'T' as usize] = b'A';
-    lookup[b'N' as usize] = b'N';
-    lookup
-};
-
-#[inline]
-fn revcomp(seq: &[u8]) -> Vec<u8> {
-    seq.iter()
-        .rev()
-        .map(|nt| COMPLEMENT[*nt as usize])
-        .collect()
+struct Union<T, I: Iterator<Item = T>> {
+    iter: Peekable<I>,
+    other: Peekable<I>,
 }
 
-static CODONTABLE: Lazy<HashMap<&'static str, u8>> = Lazy::new(|| {
-    [
-        // F
-        ("TTT", b'F'),
-        ("TTC", b'F'),
-        // L
-        ("TTA", b'L'),
-        ("TTG", b'L'),
-        // S
-        ("TCT", b'S'),
-        ("TCC", b'S'),
-        ("TCA", b'S'),
-        ("TCG", b'S'),
-        ("TCN", b'S'),
-        // Y
-        ("TAT", b'Y'),
-        ("TAC", b'Y'),
-        // *
-        ("TAA", b'*'),
-        ("TAG", b'*'),
-        // *
-        ("TGA", b'*'),
-        // C
-        ("TGT", b'C'),
-        ("TGC", b'C'),
-        // W
-        ("TGG", b'W'),
-        // L
-        ("CTT", b'L'),
-        ("CTC", b'L'),
-        ("CTA", b'L'),
-        ("CTG", b'L'),
-        ("CTN", b'L'),
-        // P
-        ("CCT", b'P'),
-        ("CCC", b'P'),
-        ("CCA", b'P'),
-        ("CCG", b'P'),
-        ("CCN", b'P'),
-        // H
-        ("CAT", b'H'),
-        ("CAC", b'H'),
-        // Q
-        ("CAA", b'Q'),
-        ("CAG", b'Q'),
-        // R
-        ("CGT", b'R'),
-        ("CGC", b'R'),
-        ("CGA", b'R'),
-        ("CGG", b'R'),
-        ("CGN", b'R'),
-        // I
-        ("ATT", b'I'),
-        ("ATC", b'I'),
-        ("ATA", b'I'),
-        // M
-        ("ATG", b'M'),
-        // T
-        ("ACT", b'T'),
-        ("ACC", b'T'),
-        ("ACA", b'T'),
-        ("ACG", b'T'),
-        ("ACN", b'T'),
-        // N
-        ("AAT", b'N'),
-        ("AAC", b'N'),
-        // K
-        ("AAA", b'K'),
-        ("AAG", b'K'),
-        // S
-        ("AGT", b'S'),
-        ("AGC", b'S'),
-        // R
-        ("AGA", b'R'),
-        ("AGG", b'R'),
-        // V
-        ("GTT", b'V'),
-        ("GTC", b'V'),
-        ("GTA", b'V'),
-        ("GTG", b'V'),
-        ("GTN", b'V'),
-        // A
-        ("GCT", b'A'),
-        ("GCC", b'A'),
-        ("GCA", b'A'),
-        ("GCG", b'A'),
-        ("GCN", b'A'),
-        // D
-        ("GAT", b'D'),
-        ("GAC", b'D'),
-        // E
-        ("GAA", b'E'),
-        ("GAG", b'E'),
-        // G
-        ("GGT", b'G'),
-        ("GGC", b'G'),
-        ("GGA", b'G'),
-        ("GGG", b'G'),
-        ("GGN", b'G'),
-    ]
-    .iter()
-    .cloned()
-    .collect()
-});
+impl<T: Ord, I: Iterator<Item = T>> Iterator for Union<T, I> {
+    type Item = T;
 
-// Dayhoff table from
-// Peris, P., López, D., & Campos, M. (2008).
-// IgTM: An algorithm to predict transmembrane domains and topology in
-// proteins. BMC Bioinformatics, 9(1), 1029–11.
-// http://doi.org/10.1186/1471-2105-9-367
-//
-// Original source:
-// Dayhoff M. O., Schwartz R. M., Orcutt B. C. (1978).
-// A model of evolutionary change in proteins,
-// in Atlas of Protein Sequence and Structure,
-// ed Dayhoff M. O., editor.
-// (Washington, DC: National Biomedical Research Foundation; ), 345–352.
-//
-// | Amino acid    | Property              | Dayhoff |
-// |---------------|-----------------------|---------|
-// | C             | Sulfur polymerization | a       |
-// | A, G, P, S, T | Small                 | b       |
-// | D, E, N, Q    | Acid and amide        | c       |
-// | H, K, R       | Basic                 | d       |
-// | I, L, M, V    | Hydrophobic           | e       |
-// | F, W, Y       | Aromatic              | f       |
-static DAYHOFFTABLE: Lazy<HashMap<u8, u8>> = Lazy::new(|| {
-    [
-        // a
-        (b'C', b'a'),
-        // b
-        (b'A', b'b'),
-        (b'G', b'b'),
-        (b'P', b'b'),
-        (b'S', b'b'),
-        (b'T', b'b'),
-        // c
-        (b'D', b'c'),
-        (b'E', b'c'),
-        (b'N', b'c'),
-        (b'Q', b'c'),
-        // d
-        (b'H', b'd'),
-        (b'K', b'd'),
-        (b'R', b'd'),
-        // e
-        (b'I', b'e'),
-        (b'L', b'e'),
-        (b'M', b'e'),
-        (b'V', b'e'),
-        // e
-        (b'F', b'f'),
-        (b'W', b'f'),
-        (b'Y', b'f'),
-    ]
-    .iter()
-    .cloned()
-    .collect()
-});
+    fn next(&mut self) -> Option<T> {
+        let res = match (self.iter.peek(), self.other.peek()) {
+            (Some(ref left_key), Some(ref right_key)) => left_key.cmp(right_key),
+            (None, Some(_)) => {
+                return self.other.next();
+            }
+            (Some(_), None) => {
+                return self.iter.next();
+            }
+            _ => return None,
+        };
 
-// HP Hydrophobic/hydrophilic mapping
-// From: Phillips, R., Kondev, J., Theriot, J. (2008).
-// Physical Biology of the Cell. New York: Garland Science, Taylor & Francis Group. ISBN: 978-0815341635
-
-//
-// | Amino acid                            | HP
-// |---------------------------------------|---------|
-// | A, F, G, I, L, M, P, V, W, Y          | h       |
-// | N, C, S, T, D, E, R, H, K, Q          | p       |
-static HPTABLE: Lazy<HashMap<u8, u8>> = Lazy::new(|| {
-    [
-        // h
-        (b'A', b'h'),
-        (b'F', b'h'),
-        (b'G', b'h'),
-        (b'I', b'h'),
-        (b'L', b'h'),
-        (b'M', b'h'),
-        (b'P', b'h'),
-        (b'V', b'h'),
-        (b'W', b'h'),
-        (b'Y', b'h'),
-        // p
-        (b'N', b'p'),
-        (b'C', b'p'),
-        (b'S', b'p'),
-        (b'T', b'p'),
-        (b'D', b'p'),
-        (b'E', b'p'),
-        (b'R', b'p'),
-        (b'H', b'p'),
-        (b'K', b'p'),
-        (b'Q', b'p'),
-    ]
-    .iter()
-    .cloned()
-    .collect()
-});
-
-#[inline]
-pub(crate) fn translate_codon(codon: &[u8]) -> Result<u8, Error> {
-    if codon.len() == 1 {
-        return Ok(b'X');
-    }
-
-    if codon.len() == 2 {
-        let mut v = codon.to_vec();
-        v.push(b'N');
-        match CODONTABLE.get(str::from_utf8(v.as_slice()).unwrap()) {
-            Some(aa) => return Ok(*aa),
-            None => return Ok(b'X'),
+        match res {
+            Ordering::Less => self.iter.next(),
+            Ordering::Greater => self.other.next(),
+            Ordering::Equal => {
+                self.other.next();
+                self.iter.next()
+            }
         }
     }
+}
 
-    if codon.len() == 3 {
-        match CODONTABLE.get(str::from_utf8(codon).unwrap()) {
-            Some(aa) => return Ok(*aa),
-            None => return Ok(b'X'),
+#[cfg(test)]
+mod test {
+    use super::Union;
+
+    #[test]
+    fn test_union() {
+        let v1 = [1u64, 2, 4, 10];
+        let v2 = [1u64, 3, 4, 9];
+
+        let union: Vec<u64> = Union {
+            iter: v1.iter().peekable(),
+            other: v2.iter().peekable(),
         }
-    }
-
-    Err(Error::InvalidCodonLength {
-        message: format!("{}", codon.len()),
-    })
-}
-
-#[inline]
-pub(crate) fn aa_to_dayhoff(aa: u8) -> u8 {
-    match DAYHOFFTABLE.get(&aa) {
-        Some(letter) => *letter,
-        None => b'X',
+        .cloned()
+        .collect();
+        assert_eq!(union, [1, 2, 3, 4, 9, 10]);
     }
 }
-
-pub(crate) fn aa_to_hp(aa: u8) -> u8 {
-    match HPTABLE.get(&aa) {
-        Some(letter) => *letter,
-        None => b'X',
-    }
-}
-
-#[inline]
-fn to_aa(seq: &[u8], dayhoff: bool, hp: bool) -> Result<Vec<u8>, Error> {
-    let mut converted: Vec<u8> = Vec::with_capacity(seq.len() / 3);
-
-    for chunk in seq.chunks(3) {
-        if chunk.len() < 3 {
-            break;
-        }
-
-        let residue = translate_codon(chunk)?;
-        if dayhoff {
-            converted.push(aa_to_dayhoff(residue) as u8);
-        } else if hp {
-            converted.push(aa_to_hp(residue) as u8);
-        } else {
-            converted.push(residue);
-        }
-    }
-
-    Ok(converted)
-}
-
-const VALID: [bool; 256] = {
-    let mut lookup = [false; 256];
-    lookup[b'A' as usize] = true;
-    lookup[b'C' as usize] = true;
-    lookup[b'G' as usize] = true;
-    lookup[b'T' as usize] = true;
-    lookup
-};
 
 //#############
 // A MinHash implementation for low scaled or large cardinalities
 
-#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[derive(Debug, TypedBuilder)]
 pub struct KmerMinHashBTree {
     num: u32,
@@ -1453,12 +1081,12 @@ impl<'de> Deserialize<'de> for KmerMinHashBTree {
 
 impl KmerMinHashBTree {
     pub fn new(
-        num: u32,
+        scaled: u64,
         ksize: u32,
         hash_function: HashFunctions,
         seed: u64,
-        max_hash: u64,
         track_abundance: bool,
+        num: u32,
     ) -> KmerMinHashBTree {
         let mins = Default::default();
 
@@ -1467,6 +1095,8 @@ impl KmerMinHashBTree {
         } else {
             None
         };
+
+        let max_hash = max_hash_for_scaled(scaled);
 
         KmerMinHashBTree {
             num,
@@ -1489,16 +1119,12 @@ impl KmerMinHashBTree {
         self.hash_function == HashFunctions::murmur64_protein
     }
 
-    fn is_dna(&self) -> bool {
-        self.hash_function == HashFunctions::murmur64_DNA
-    }
-
-    pub fn seed(&self) -> u64 {
-        self.seed
-    }
-
     pub fn max_hash(&self) -> u64 {
         self.max_hash
+    }
+
+    pub fn scaled(&self) -> u64 {
+        scaled_for_max_hash(self.max_hash)
     }
 
     pub fn clear(&mut self) {
@@ -1572,10 +1198,6 @@ impl KmerMinHashBTree {
             *data = Some(format!("{:x}", md5_ctx.compute()));
         }
         data.clone().unwrap()
-    }
-
-    pub fn add_hash(&mut self, hash: u64) {
-        self.add_hash_with_abundance(hash, 1);
     }
 
     pub fn add_hash_with_abundance(&mut self, hash: u64, abundance: u64) {
@@ -1676,7 +1298,7 @@ impl KmerMinHashBTree {
 
                 for hash in &self.mins {
                     *new_abunds.entry(*hash).or_insert(0) +=
-                        abunds.get(&hash).unwrap_or(&0) + oabunds.get(&hash).unwrap_or(&0);
+                        abunds.get(hash).unwrap_or(&0) + oabunds.get(hash).unwrap_or(&0);
                 }
                 self.abunds = Some(new_abunds)
             }
@@ -1733,54 +1355,63 @@ impl KmerMinHashBTree {
     pub fn intersection(&self, other: &KmerMinHashBTree) -> Result<(Vec<u64>, u64), Error> {
         self.check_compatible(other)?;
 
-        let mut combined_mh = KmerMinHashBTree::new(
-            self.num,
-            self.ksize,
-            self.hash_function,
-            self.seed,
-            self.max_hash,
-            self.abunds.is_some(),
-        );
+        if self.num != 0 {
+            let mut combined_mh = KmerMinHashBTree::new(
+                self.scaled(),
+                self.ksize,
+                self.hash_function,
+                self.seed,
+                self.abunds.is_some(),
+                self.num,
+            );
 
-        combined_mh.merge(&self)?;
-        combined_mh.merge(&other)?;
+            combined_mh.merge(self)?;
+            combined_mh.merge(other)?;
 
-        let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
+            let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
 
-        // TODO: there is probably a way to avoid this Vec here,
-        // and pass the it1 as left in it2.
-        let i1: Vec<u64> = it1.cloned().collect();
-        let i2: Vec<u64> = combined_mh.mins.iter().cloned().collect();
-        let it2 = Intersection::new(i1.iter(), i2.iter());
+            // TODO: there is probably a way to avoid this Vec here,
+            // and pass the it1 as left in it2.
+            let i1: Vec<u64> = it1.cloned().collect();
+            let i2: Vec<u64> = combined_mh.mins.iter().cloned().collect();
+            let it2 = Intersection::new(i1.iter(), i2.iter());
 
-        let common: Vec<u64> = it2.cloned().collect();
-        Ok((common, combined_mh.mins.len() as u64))
+            let common: Vec<u64> = it2.cloned().collect();
+            Ok((common, combined_mh.mins.len() as u64))
+        } else {
+            // Intersection for scaled MinHash sketches
+            Ok(intersection(self.mins.iter(), other.mins.iter()))
+        }
     }
 
     pub fn intersection_size(&self, other: &KmerMinHashBTree) -> Result<(u64, u64), Error> {
         self.check_compatible(other)?;
 
-        let mut combined_mh = KmerMinHashBTree::new(
-            self.num,
-            self.ksize,
-            self.hash_function,
-            self.seed,
-            self.max_hash,
-            self.abunds.is_some(),
-        );
+        if self.num != 0 {
+            let mut combined_mh = KmerMinHashBTree::new(
+                self.scaled(),
+                self.ksize,
+                self.hash_function,
+                self.seed,
+                self.abunds.is_some(),
+                self.num,
+            );
 
-        combined_mh.merge(&self)?;
-        combined_mh.merge(&other)?;
+            combined_mh.merge(self)?;
+            combined_mh.merge(other)?;
 
-        let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
+            let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
 
-        // TODO: there is probably a way to avoid this Vec here,
-        // and pass the it1 as left in it2.
-        let i1: Vec<u64> = it1.cloned().collect();
-        let i2: Vec<u64> = combined_mh.mins.iter().cloned().collect();
-        let it2 = Intersection::new(i1.iter(), i2.iter());
+            // TODO: there is probably a way to avoid this Vec here,
+            // and pass the it1 as left in it2.
+            let i1: Vec<u64> = it1.cloned().collect();
+            let i2: Vec<u64> = combined_mh.mins.iter().cloned().collect();
+            let it2 = Intersection::new(i1.iter(), i2.iter());
 
-        Ok((it2.count() as u64, combined_mh.mins.len() as u64))
+            Ok((it2.count() as u64, combined_mh.mins.len() as u64))
+        } else {
+            Ok(intersection_size(self.mins.iter(), other.mins.iter()))
+        }
     }
 
     // calculate Jaccard similarity, ignoring abundance.
@@ -1811,7 +1442,7 @@ impl KmerMinHashBTree {
         let b_sq: u64 = other_abunds.values().map(|a| (a * a)).sum();
 
         for (hash, value) in abunds.iter() {
-            if let Some(oa) = other_abunds.get(&hash) {
+            if let Some(oa) = other_abunds.get(hash) {
                 prod += value * oa
             }
         }
@@ -1842,9 +1473,9 @@ impl KmerMinHashBTree {
             let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
             first.similarity(&downsampled_mh, ignore_abundance, false)
         } else if ignore_abundance || self.abunds.is_none() || other.abunds.is_none() {
-            self.jaccard(&other)
+            self.jaccard(other)
         } else {
-            self.angular_similarity(&other)
+            self.angular_similarity(other)
         }
     }
 
@@ -1869,22 +1500,22 @@ impl KmerMinHashBTree {
     }
 
     pub fn abunds(&self) -> Option<Vec<u64>> {
-        if let Some(abunds) = &self.abunds {
-            Some(abunds.values().cloned().collect())
-        } else {
-            None
-        }
+        self.abunds
+            .as_ref()
+            .map(|abunds| abunds.values().cloned().collect())
     }
 
     // create a downsampled copy of self
     pub fn downsample_max_hash(&self, max_hash: u64) -> Result<KmerMinHashBTree, Error> {
+        let scaled = scaled_for_max_hash(max_hash);
+
         let mut new_mh = KmerMinHashBTree::new(
-            self.num,
+            scaled,
             self.ksize,
             self.hash_function,
             self.seed,
-            max_hash, // old max_hash => max_hash arg
             self.abunds.is_some(),
+            self.num,
         );
         if self.abunds.is_some() {
             new_mh.add_many_with_abund(&self.to_vec_abunds())?;
@@ -1892,6 +1523,12 @@ impl KmerMinHashBTree {
             new_mh.add_many(&self.mins())?;
         }
         Ok(new_mh)
+    }
+
+    // create a downsampled copy of self
+    pub fn downsample_scaled(&self, scaled: u64) -> Result<KmerMinHashBTree, Error> {
+        let max_hash = max_hash_for_scaled(scaled);
+        self.downsample_max_hash(max_hash)
     }
 
     pub fn to_vec_abunds(&self) -> Vec<(u64, u64)> {
@@ -1920,6 +1557,18 @@ impl SigsTrait for KmerMinHashBTree {
         self.ksize as usize
     }
 
+    fn seed(&self) -> u64 {
+        self.seed
+    }
+
+    fn hash_function(&self) -> HashFunctions {
+        self.hash_function
+    }
+
+    fn add_hash(&mut self, hash: u64) {
+        self.add_hash_with_abundance(hash, 1);
+    }
+
     fn check_compatible(&self, other: &KmerMinHashBTree) -> Result<(), Error> {
         /*
         if self.num != other.num {
@@ -1945,141 +1594,23 @@ impl SigsTrait for KmerMinHashBTree {
         }
         Ok(())
     }
-
-    fn add_sequence(&mut self, seq: &[u8], force: bool) -> Result<(), Error> {
-        let ksize = self.ksize as usize;
-        let len = seq.len();
-
-        if len < ksize {
-            return Ok(());
-        };
-
-        // Here we convert the sequence to upper case and
-        // pre-calculate the reverse complement for the full sequence...
-        let sequence = seq.to_ascii_uppercase();
-        let rc = revcomp(&sequence);
-
-        if self.is_dna() {
-            let mut last_position_check = 0;
-
-            let mut is_valid_kmer = |i| {
-                for j in std::cmp::max(i, last_position_check)..i + ksize {
-                    if !VALID[sequence[j] as usize] {
-                        return false;
-                    }
-                    last_position_check += 1;
-                }
-                true
-            };
-
-            for i in 0..=len - ksize {
-                // ... and then while moving the k-mer window forward for the sequence
-                // we move another window backwards for the RC.
-                //   For a ksize = 3, and a sequence AGTCGT (len = 6):
-                //                   +-+---------+---------------+-------+
-                //   seq      RC     |i|i + ksize|len - ksize - i|len - i|
-                //  AGTCGT   ACGACT  +-+---------+---------------+-------+
-                //  +->         +->  |0|    2    |       3       |   6   |
-                //   +->       +->   |1|    3    |       2       |   5   |
-                //    +->     +->    |2|    4    |       1       |   4   |
-                //     +->   +->     |3|    5    |       0       |   3   |
-                //                   +-+---------+---------------+-------+
-                // (leaving this table here because I had to draw to
-                //  get the indices correctly)
-
-                let kmer = &sequence[i..i + ksize];
-
-                if !is_valid_kmer(i) {
-                    if !force {
-                        // throw error if DNA is not valid
-                        return Err(Error::InvalidDNA {
-                            message: String::from_utf8(kmer.to_vec()).unwrap(),
-                        });
-                    }
-
-                    continue; // skip invalid k-mer
-                }
-
-                let krc = &rc[len - ksize - i..len - i];
-                self.add_word(std::cmp::min(kmer, krc));
-            }
-        } else {
-            // protein
-            let aa_ksize = self.ksize / 3;
-
-            for i in 0..3 {
-                let substr: Vec<u8> = sequence
-                    .iter()
-                    .cloned()
-                    .skip(i)
-                    .take(sequence.len() - i)
-                    .collect();
-                let aa = to_aa(&substr, self.dayhoff(), self.hp()).unwrap();
-
-                aa.windows(aa_ksize as usize).for_each(|n| self.add_word(n));
-
-                let rc_substr: Vec<u8> = rc.iter().cloned().skip(i).take(rc.len() - i).collect();
-                let aa_rc = to_aa(&rc_substr, self.dayhoff(), self.hp()).unwrap();
-
-                aa_rc
-                    .windows(aa_ksize as usize)
-                    .for_each(|n| self.add_word(n));
-            }
-        }
-
-        Ok(())
-    }
-
-    fn add_protein(&mut self, seq: &[u8]) -> Result<(), Error> {
-        let ksize = (self.ksize / 3) as usize;
-        let len = seq.len();
-
-        if len < ksize {
-            return Ok(());
-        }
-
-        if let HashFunctions::murmur64_protein = self.hash_function {
-            for aa_kmer in seq.windows(ksize) {
-                self.add_word(&aa_kmer);
-            }
-            return Ok(());
-        }
-
-        let aa_seq: Vec<_> = match self.hash_function {
-            HashFunctions::murmur64_dayhoff => seq.iter().cloned().map(aa_to_dayhoff).collect(),
-            HashFunctions::murmur64_hp => seq.iter().cloned().map(aa_to_hp).collect(),
-            invalid => {
-                return Err(Error::InvalidHashFunction {
-                    function: format!("{}", invalid),
-                })
-            }
-        };
-
-        for aa_kmer in aa_seq.windows(ksize) {
-            self.add_word(aa_kmer);
-        }
-
-        Ok(())
-    }
 }
 
 impl From<KmerMinHashBTree> for KmerMinHash {
     fn from(other: KmerMinHashBTree) -> KmerMinHash {
         let mut new_mh = KmerMinHash::new(
-            other.num(),
+            other.scaled(),
             other.ksize() as u32,
             other.hash_function(),
             other.seed(),
-            other.max_hash(),
             other.track_abundance(),
+            other.num(),
         );
 
         let mins = other.mins.into_iter().collect();
-        let abunds = if let Some(abunds) = other.abunds {
-            Some(abunds.values().cloned().collect())
-        } else {
-            None
-        };
+        let abunds = other
+            .abunds
+            .map(|abunds| abunds.values().cloned().collect());
 
         new_mh.mins = mins;
         new_mh.abunds = abunds;
@@ -2091,24 +1622,110 @@ impl From<KmerMinHashBTree> for KmerMinHash {
 impl From<KmerMinHash> for KmerMinHashBTree {
     fn from(other: KmerMinHash) -> KmerMinHashBTree {
         let mut new_mh = KmerMinHashBTree::new(
-            other.num(),
+            other.scaled(),
             other.ksize() as u32,
             other.hash_function(),
             other.seed(),
-            other.max_hash(),
             other.track_abundance(),
+            other.num(),
         );
 
         let mins: BTreeSet<u64> = other.mins.into_iter().collect();
-        let abunds = if let Some(abunds) = other.abunds {
-            Some(mins.iter().cloned().zip(abunds.into_iter()).collect())
-        } else {
-            None
-        };
+        let abunds = other
+            .abunds
+            .map(|abunds| mins.iter().cloned().zip(abunds.into_iter()).collect());
 
         new_mh.mins = mins;
         new_mh.abunds = abunds;
 
         new_mh
     }
+}
+
+fn intersection<'a>(
+    me_iter: impl Iterator<Item = &'a u64>,
+    other_iter: impl Iterator<Item = &'a u64>,
+) -> (Vec<u64>, u64) {
+    let mut me = me_iter.peekable();
+    let mut other = other_iter.peekable();
+    let mut common: Vec<u64> = vec![];
+    let mut union_size = 0;
+
+    loop {
+        match (me.peek(), other.peek()) {
+            (Some(ref left_key), Some(ref right_key)) => {
+                let res = left_key.cmp(right_key);
+                match res {
+                    Ordering::Less => {
+                        me.next();
+                        union_size += 1;
+                    }
+                    Ordering::Greater => {
+                        other.next();
+                        union_size += 1;
+                    }
+                    Ordering::Equal => {
+                        other.next();
+                        common.push(***left_key);
+                        me.next();
+                        union_size += 1;
+                    }
+                };
+            }
+            (None, Some(_)) => {
+                other.next();
+                union_size += 1;
+            }
+            (Some(_), None) => {
+                me.next();
+                union_size += 1;
+            }
+            _ => break,
+        };
+    }
+    (common, union_size as u64)
+}
+
+fn intersection_size<'a>(
+    me_iter: impl Iterator<Item = &'a u64>,
+    other_iter: impl Iterator<Item = &'a u64>,
+) -> (u64, u64) {
+    let mut me = me_iter.peekable();
+    let mut other = other_iter.peekable();
+    let mut common = 0;
+    let mut union_size = 0;
+
+    loop {
+        match (me.peek(), other.peek()) {
+            (Some(ref left_key), Some(ref right_key)) => {
+                let res = left_key.cmp(right_key);
+                match res {
+                    Ordering::Less => {
+                        me.next();
+                        union_size += 1;
+                    }
+                    Ordering::Greater => {
+                        other.next();
+                        union_size += 1;
+                    }
+                    Ordering::Equal => {
+                        other.next();
+                        me.next();
+                        common += 1;
+                        union_size += 1;
+                    }
+                };
+            }
+            (None, Some(_)) => {
+                other.next();
+                union_size += 1;
+            }
+            (Some(_), None) => {
+                me.next();
+                union_size += 1;
+            }
+            _ => break,
+        };
+    }
+    (common as u64, union_size as u64)
 }
