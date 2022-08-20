@@ -9,7 +9,7 @@ from enum import Enum
 
 from .logging import error
 from . import MinHash
-from .minhash import to_bytes
+from .minhash import to_bytes, FrozenMinHash
 from ._lowlevel import ffi, lib
 from .utils import RustObject, rustcall, decode_str
 
@@ -42,7 +42,7 @@ class SourmashSignature(RustObject):
 
     @property
     def minhash(self):
-        return MinHash._from_objptr(
+        return FrozenMinHash._from_objptr(
             self._methodcall(lib.signature_first_mh)
         )
 
@@ -142,9 +142,45 @@ class SourmashSignature(RustObject):
         return self.minhash.similarity(other.minhash, ignore_abundance=True,
                                        downsample=False)
 
+    def jaccard_ani(self, other, *, downsample=False, jaccard=None, prob_threshold=1e-3, err_threshold=1e-4):
+        "Use jaccard to estimate ANI between two FracMinHash signatures."
+        return self.minhash.jaccard_ani(other.minhash, downsample=downsample,
+                                        jaccard=jaccard, prob_threshold=prob_threshold,
+                                        err_threshold=err_threshold)
+
     def contained_by(self, other, downsample=False):
         "Compute containment by the other signature. Note: ignores abundance."
-        return self.minhash.contained_by(other.minhash, downsample)
+        return self.minhash.contained_by(other.minhash, downsample=downsample)
+
+    def containment_ani(self, other, *, downsample=False, containment=None, confidence=0.95, estimate_ci=False):
+        "Use containment to estimate ANI between two FracMinHash signatures."
+        return self.minhash.containment_ani(other.minhash, downsample=downsample,
+                                        containment=containment, confidence=confidence,
+                                        estimate_ci=estimate_ci)
+
+    def max_containment(self, other, downsample=False):
+        "Compute max containment w/other signature. Note: ignores abundance."
+        return self.minhash.max_containment(other.minhash, downsample=downsample)
+
+    def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False):
+        "Use max containment to estimate ANI between two FracMinHash signatures."
+        return self.minhash.max_containment_ani(other.minhash, downsample=downsample,
+                                                max_containment=max_containment, confidence=confidence,
+                                                estimate_ci=estimate_ci)
+
+    def avg_containment(self, other, downsample=False):
+        """
+        Calculate average containment.
+        Note: this is average of the containments, *not* count_common/ avg_denom
+        """
+        return self.minhash.avg_containment(other.minhash, downsample=downsample)
+
+    def avg_containment_ani(self, other, *, downsample=False):
+        """
+        Calculate average containment ANI.
+        Note: this is average of the containment ANI's, *not* ANI using count_common/ avg_denom
+        """
+        return self.minhash.avg_containment_ani(other.minhash, downsample=downsample)
 
     def add_sequence(self, sequence, force=False):
         self._methodcall(lib.signature_add_sequence, to_bytes(sequence), force)
@@ -188,6 +224,17 @@ class SourmashSignature(RustObject):
             ),
         )
 
+    def __copy__(self):
+        mh = self.minhash
+        mh = mh.to_frozen()
+        a = SourmashSignature(
+            mh,
+            name=self.name,
+            filename=self.filename,
+        )
+        return a
+
+    copy = __copy__
 
 def _detect_input_type(data):
     """\
@@ -248,7 +295,7 @@ def load_signatures(
     input_type = _detect_input_type(data)
     if input_type == SigInput.UNKNOWN:
         if do_raise:
-            raise Exception("Error in parsing signature; quitting. Cannot open file or invalid signature")
+            raise ValueError("Error in parsing signature; quitting. Cannot open file or invalid signature")
         return
 
     size = ffi.new("uintptr_t *")

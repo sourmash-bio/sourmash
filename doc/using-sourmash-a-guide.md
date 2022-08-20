@@ -8,7 +8,7 @@ So! You've installed sourmash, run a few of the tutorials and commands,
 and now you actually want to *use* it.  This guide is here to answer some
 of your questions, and explain why we can't answer others.
 
-(If you have additional questions, please [file an issue!](https://github.com/dib-lab/sourmash/issues))
+(If you have additional questions, please [file an issue!](https://github.com/sourmash-bio/sourmash/issues))
 
 ## What k-mer size(s) should I use?
 
@@ -189,7 +189,7 @@ built and searched directly from the command line.
 
 Reverse indexed or LCA databases are *in-memory* databases that, once
 loaded from disk, support fast search and gather across 10s of thousands
-of signatures.  They can be created using `sourmash lca index` ([docs](command-line.md#sourmash-lca-index-build-an-lca-database))
+of signatures.  They can be created using `sourmash lca index` ([docs](command-line.md#sourmash-lca-index---build-an-lca-database))
 
 LCA databases are currently stored in JSON files (that can be gzipped).
 As these files get larger, the time required to load them from disk
@@ -198,7 +198,7 @@ can be substantial.
 LCA databases are also currently (sourmash 2.0-4.0) the only databases
 that support the inclusion of taxonomic information in the database,
 and there is an associated collection of commands
-[under `sourmash lca`](command.md#sourmash-lca-subcommands-for-taxonomic-classification).
+[under `sourmash lca`](command-line.md#sourmash-lca-subcommands-for-in-memory-taxonomy-integration).
 However, they can also be used as regular indexed databases for search
 and gather as above.
 

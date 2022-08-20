@@ -6,7 +6,7 @@ use std::slice;
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use fixedbitset::FixedBitSet;
 
-use crate::index::sbt::Update;
+use crate::prelude::*;
 use crate::sketch::minhash::KmerMinHash;
 use crate::Error;
 use crate::HashIntoType;
@@ -202,7 +202,7 @@ impl Nodegraph {
                 let len = size_of::<u32>() * slice.len();
                 slice::from_raw_parts(slice.as_ptr() as *const u8, len)
             };
-            wtr.write_all(&buf)?;
+            wtr.write_all(buf)?;
             // Replace when byteorder PR is released
 
             if rem != 0 {
@@ -241,22 +241,19 @@ impl Nodegraph {
             let byte_size = tablesize / 8 + 1;
 
             let rem = byte_size % 4;
-            let blocks: Vec<u32> = if rem == 0 {
+            let blocks: Vec<u32> = {
                 let mut blocks = vec![0; byte_size / 4];
                 rdr.read_u32_into::<LittleEndian>(&mut blocks)?;
-                blocks
-            } else {
-                let mut blocks = vec![0; byte_size / 4];
-                rdr.read_u32_into::<LittleEndian>(&mut blocks)?;
-
-                let mut values = [0u8; 4];
-                for item in values.iter_mut().take(rem) {
-                    let byte = rdr.read_u8().expect("error reading bins");
-                    *item = byte;
+                if rem != 0 {
+                    let mut values = [0u8; 4];
+                    for item in values.iter_mut().take(rem) {
+                        let byte = rdr.read_u8().expect("error reading bins");
+                        *item = byte;
+                    }
+                    let mut block = vec![0u32; 1];
+                    LittleEndian::read_u32_into(&values, &mut block);
+                    blocks.push(block[0]);
                 }
-                let mut block = vec![0u32; 1];
-                LittleEndian::read_u32_into(&values, &mut block);
-                blocks.push(block[0]);
                 blocks
             };
 
@@ -274,7 +271,7 @@ impl Nodegraph {
 
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Nodegraph, Error> {
         let mut reader = io::BufReader::new(File::open(path)?);
-        Ok(Nodegraph::from_reader(&mut reader)?)
+        Nodegraph::from_reader(&mut reader)
     }
 
     pub fn tablesizes(&self) -> Vec<u64> {
@@ -312,7 +309,7 @@ impl Nodegraph {
             .zip(&other.bs)
             .map(|(bs, bs_other)| bs.intersection(bs_other).count())
             .sum();
-        let size: usize = self.bs.iter().map(|bs| bs.len()).sum();
+        let size: usize = self.bs.iter().map(|bs| bs.count_ones(..)).sum();
         result as f64 / size as f64
     }
 }
@@ -418,7 +415,7 @@ mod test {
 
     #[test]
     fn load_compressed() {
-        let mut reader = BufReader::new(&COMPRESSED_RAW_DATA[..]);
+        let mut reader = BufReader::new(COMPRESSED_RAW_DATA);
 
         let ng: Nodegraph = Nodegraph::from_reader(&mut reader).expect("Loading error");
         assert_eq!(ng.tablesizes(), &[19, 17, 13, 11, 7, 5]);
@@ -436,6 +433,24 @@ mod test {
 
         assert_eq!(ng.get(801084876663808), 1);
         assert_eq!(ng.unique_kmers(), 1);
+    }
+
+    #[test]
+    fn containment() {
+        let mut ng1: Nodegraph = Nodegraph::new(&[31], 3);
+        let mut ng2: Nodegraph = Nodegraph::new(&[31], 3);
+
+        (0..20).for_each(|i| {
+            if i % 2 == 0 {
+                ng1.count(i);
+            };
+            ng2.count(i);
+        });
+
+        assert_eq!(ng1.containment(&ng2), 1.0);
+        assert_eq!(ng1.similarity(&ng2), 0.5);
+        assert_eq!(ng1.unique_kmers(), 10);
+        assert_eq!(ng2.unique_kmers(), 20);
     }
 
     #[test]
@@ -468,7 +483,7 @@ mod test {
 
     #[test]
     fn binary_repr_load() {
-        let mut reader = BufReader::new(&RAW_DATA[..]);
+        let mut reader = BufReader::new(RAW_DATA);
         let khmer_ng: Nodegraph = Nodegraph::from_reader(&mut reader).expect("Loading error");
         assert_eq!(khmer_ng.tablesizes(), &[19, 17, 13, 11, 7, 5]);
         assert_eq!(khmer_ng.ksize(), 3);

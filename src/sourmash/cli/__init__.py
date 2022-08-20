@@ -26,6 +26,7 @@ from . import index
 from . import migrate
 from . import multigather
 from . import plot
+from . import prefetch
 from . import sbt_combine
 from . import search
 from . import watch
@@ -36,6 +37,7 @@ from . import sig
 from . import sig as signature
 from . import sketch
 from . import storage
+from . import tax
 
 
 class SourmashParser(ArgumentParser):
@@ -50,7 +52,7 @@ class SourmashParser(ArgumentParser):
         if cls._citation_printed:
             return
         from sourmash.logging import notify
-        notify("\n== This is sourmash version {version}. ==", version=sourmash.VERSION)
+        notify(f"\n== This is sourmash version {sourmash.VERSION}. ==")
         notify("== Please cite Brown and Irber (2016), doi:10.21105/joss.00027. ==\n")
         cls._citation_printed = True
 
@@ -91,6 +93,7 @@ class SourmashParser(ArgumentParser):
 
 def get_parser():
     module_descs = {
+        'tax': 'Integrate taxonomy information based on "gather" results',
         'lca': 'Taxonomic operations',
         'sketch': 'Create signatures',
         'sig': 'Manipulate signature files',
@@ -120,7 +123,7 @@ def get_parser():
         if dirpath in alias:
             usage += '        sourmash {gd:s} --help\n'.format(gd=alias[dirpath])
 
-    desc = 'Compute, compare, manipulate, and analyze MinHash sketches of DNA sequences.\n\nUsage instructions:\n' + usage
+    desc = 'Create, compare, and manipulate k-mer sketches of biological sequences.\n\nUsage instructions:\n' + usage
     parser = SourmashParser(prog='sourmash', description=desc, formatter_class=RawDescriptionHelpFormatter, usage=SUPPRESS)
     parser._optionals.title = 'Options'
     parser.add_argument('-v', '--version', action='version', version='sourmash '+ sourmash.VERSION)

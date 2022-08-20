@@ -101,7 +101,7 @@ def classify(args):
     notify('finding query signatures...')
     inp_files = list(args.query)
     if args.query_from_file:
-        more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
+        more_files = sourmash_args.load_pathlist_from_file(args.query_from_file)
         inp_files.extend(more_files)
 
     if not check_files_exist(*inp_files):
@@ -113,8 +113,8 @@ def classify(args):
 
     # set up output
     csvfp = csv.writer(sys.stdout)
-    notify("outputting classifications to {}", args.output)
-    with sourmash_args.FileOutput(args.output, 'wt') as outfp:
+    notify(f"outputting classifications to {args.output}")
+    with sourmash_args.FileOutputCSV(args.output) as outfp:
         csvfp = csv.writer(outfp)
 
         csvfp.writerow(['ID','status'] + list(lca_utils.taxlist()))
@@ -128,8 +128,7 @@ def classify(args):
             for query_sig in load_file_as_signatures(query_filename,
                                                      ksize=ksize):
                 notify(u'\r\033[K', end=u'')
-                notify('... classifying {} (file {} of {})', query_sig,
-                       n, total_n, end='\r')
+                notify(f'... classifying {query_sig} (file {n} of {total_n})', end='\r')
                 debug('classifying', query_sig)
                 total_count += 1
 
@@ -142,7 +141,7 @@ def classify(args):
                 debug(lineage)
 
                 # output each classification to the spreadsheet
-                row = [query_sig.name, status]
+                row = [str(query_sig), status]
                 row += lca_utils.zip_lineage(lineage)
 
                 # when outputting to stdout, make output intelligible
@@ -151,7 +150,7 @@ def classify(args):
                 csvfp.writerow(row)
 
         notify(u'\r\033[K', end=u'')
-        notify('classified {} signatures total', total_count)
+        notify(f'classified {total_count} signatures total')
 
 
 if __name__ == '__main__':
