@@ -268,11 +268,11 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.48.0
+          toolchain: 1.56.1
           override: true
 
       - name: check if README matches MSRV defined here
-        run: grep '1.48.0' src/core/README.md
+        run: grep '1.56.1' src/core/README.md
 
       - name: Set up Python 3.8
         uses: actions/setup-python@v4
