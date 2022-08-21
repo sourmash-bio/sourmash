@@ -1,5 +1,8 @@
 # Quick Insights from Sequencing Data with sourmash
 
+Note: this tutorial was developed for and first presented at
+[ANGUS 2019](https://angus.readthedocs.io/en/2019/sourmash.html).
+
 ## Objectives
 1. Discuss k-mers and their utility
 2. Compare RNA-seq samples quickly
@@ -52,8 +55,7 @@ k-mers are most useful when they're *long*, because then they're *specific*. Tha
 
 Essentially, *long k-mers are species specific*. Check out this figure from the [MetaPalette paper](http://msystems.asm.org/content/1/3/e00020-16):
 
-<center><img src="_static/kmers-metapalette.png" width="90%"></center>  
-<br>
+![](_static/kmers-metapalette.png)
 
 Here, Koslicki and Falush show that k-mer similarity works to group microbes by genus, at k=40\. If you go longer (say k=50) then you get only very little similarity between different species.
 
@@ -153,10 +155,10 @@ Finally, calculate a signature from the trimmed reads.
 sourmash compute -k 21,31,51 --scaled 2000 --track-abundance -o ERR458584.khmer.sig ERR458584.khmer.fq.gz
 ```
 
-[![qc](_static/Sourmash_flow_diagrams_QC.thumb.png)](_static/Sourmash_flow_diagrams_QC.png)
+![qc](_static/Sourmash_flow_diagrams_QC.png)
 
 
-[![compute](_static/Sourmash_flow_diagrams_compute.thumb.png)](_static/Sourmash_flow_diagrams_compute.png)
+![compute](_static/Sourmash_flow_diagrams_compute.png)
 
 We can prepare signatures like this for any sequencing data file! For the rest of the 
 tutorial, we have prepared signatures for each sequencing data set we will be working
@@ -204,8 +206,7 @@ Lastly, we plot the comparison matrix.
 sourmash plot --labels schurch_compare_matrix
 ```
 
-<center><img src="_static/schurch_comp.matrix.png" width="100%"></center>  
-<br>
+![](_static/schurch_comp.matrix.png)
 
 We see there are two major blocks of similar samples, which makes sense given that we have
 WT and SNF2 knockout samples. However, we also see that some of our samples are outliers!
@@ -305,7 +306,7 @@ curl -L https://osf.io/frdz5/download -o ecoli_ref-5m.fastq.gz
 sourmash compute  -k 31 --scaled 2000 ~/sourmash_data/ecoli_ref-5m.fastq.gz -o ecoli-reads.sig
 ```
 
-[![search](_static/Sourmash_flow_diagrams_search.thumb.png)](_static/Sourmash_flow_diagrams_search.png)
+![search](_static/Sourmash_flow_diagrams_search.png)
 
 Build a signature for an E. coli genome:
 
@@ -375,9 +376,6 @@ Let's turn this into an easily-searchable database with `sourmash index` --
 ```
 sourmash index -k 31 ecolidb ecoli_many_sigs/*.sig
 ```
-What does the database look like and how does the search work?
-
-![](_static/SBT.png)
 
 One point to make with this is that the search can quickly narrow down
 which signatures match your query, without losing any matches.  It's a

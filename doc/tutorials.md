@@ -48,6 +48,7 @@ kmers-and-minhash
 sourmash-examples
 sourmash-collections
 tutorial-long
+tutorial-lemonade
 api-example
 using-LCA-database-API
 other-languages
