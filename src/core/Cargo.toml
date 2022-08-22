@@ -47,7 +47,7 @@ twox-hash = "1.6.0"
 vec-collections = "0.3.4"
 piz = "0.4.0"
 memmap2 = "0.5.0"
-ouroboros = "0.15.0"
+ouroboros = "0.15.3"
 
 [dev-dependencies]
 assert_matches = "1.3.0"
