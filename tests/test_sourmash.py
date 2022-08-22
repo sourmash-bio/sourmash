@@ -5011,14 +5011,18 @@ def test_storage_convert(runtmp):
     original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
     args = ['storage', 'convert', '-b', 'ipfs', testsbt]
-    with pytest.raises(SourmashCommandFailed):
+    try:
         runtmp.sourmash(*args)
+    except SourmashCommandFailed:
+        pass
 
     if runtmp.last_result.status:
         if "ipfshttpclient.ConnectionError" in runtmp.last_result.err:
             raise pytest.xfail('ipfs probably not running')
         if "No module named 'ipfshttpclient'" in runtmp.last_result.err:
             raise pytest.xfail('ipfshttpclient module not installed')
+
+    print("NO FAIL; KEEP ON GOING!")
 
 
     ipfs = SBT.load(testsbt, leaf_loader=SigLeaf.load)
@@ -5038,6 +5042,8 @@ def test_storage_convert(runtmp):
     assert len(original) == len(tar)
     assert all(n1[1].name == n2[1].name
                 for (n1, n2) in zip(sorted(original), sorted(tar)))
+
+    print("it all worked!!")
 
 
 def test_storage_convert_identity(runtmp):
