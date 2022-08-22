@@ -17,11 +17,6 @@ conda:
   environment: doc/environment.yml
 
 python:
-  # NOTE: doc/environment.yml specifies python=3.10, which is needed
-  # b/c of a pip problem; see
-  # https://github.com/sourmash-bio/sourmash/issues/2139
-  # this 'version' setting is effectively ignored, AFAICT. -- CTB 7/24/22
-  version: 3.8
   install:
     - method: pip
       path: .
