@@ -2,6 +2,8 @@
 //!
 //! A signature is a collection of sketches for a genomic dataset.
 
+use core::iter::FusedIterator;
+
 use std::fs::File;
 use std::io;
 use std::iter::Iterator;
@@ -657,6 +659,92 @@ impl Signature {
         }
 
         Ok(())
+    }
+
+    pub fn iter_mut(&mut self) -> IterMut<'_> {
+        let length = self.signatures.len();
+        IterMut {
+            iter: self.signatures.iter_mut(),
+            length,
+        }
+    }
+
+    pub fn iter<'a>(&'a mut self) -> Iter<'a> {
+        let length = self.signatures.len();
+        Iter {
+            iter: self.signatures.iter(),
+            length,
+        }
+    }
+}
+
+pub struct IterMut<'a> {
+    iter: std::slice::IterMut<'a, Sketch>,
+    length: usize,
+}
+
+impl<'a> IntoIterator for &'a mut Signature {
+    type Item = &'a mut Sketch;
+    type IntoIter = IterMut<'a>;
+
+    fn into_iter(self) -> IterMut<'a> {
+        self.iter_mut()
+    }
+}
+
+impl<'a> Iterator for IterMut<'a> {
+    type Item = &'a mut Sketch;
+
+    fn next(&mut self) -> Option<&'a mut Sketch> {
+        if self.length == 0 {
+            None
+        } else {
+            self.length -= 1;
+            self.iter.next()
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.length, Some(self.length))
+    }
+}
+
+pub struct Iter<'a> {
+    iter: std::slice::Iter<'a, Sketch>,
+    length: usize,
+}
+
+impl<'a> Iterator for Iter<'a> {
+    type Item = &'a Sketch;
+
+    fn next(&mut self) -> Option<&'a Sketch> {
+        if self.length == 0 {
+            None
+        } else {
+            self.length -= 1;
+            self.iter.next()
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.length, Some(self.length))
+    }
+}
+
+impl FusedIterator for Iter<'_> {}
+
+impl ExactSizeIterator for Iter<'_> {
+    fn len(&self) -> usize {
+        self.length
+    }
+}
+
+impl Clone for Iter<'_> {
+    fn clone(&self) -> Self {
+        Iter {
+            iter: self.iter.clone(),
+            length: self.length,
+        }
     }
 }
 
