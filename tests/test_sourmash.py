@@ -5002,41 +5002,49 @@ def test_watch_coverage(runtmp):
     assert 'FOUND: genome-s10, at 1.000' in runtmp.last_result.out
 
 
-def test_storage_convert():
-    import pytest
+def test_storage_convert(runtmp):
+    testdata = utils.get_test_data('v2.sbt.json')
+    shutil.copyfile(testdata, runtmp.output('v2.sbt.json'))
+    shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
+                    runtmp.output('.sbt.v2'))
+    testsbt = runtmp.output('v2.sbt.json')
 
-    with utils.TempDirectory() as location:
-        testdata = utils.get_test_data('v2.sbt.json')
-        shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
-        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
-                        os.path.join(location, '.sbt.v2'))
-        testsbt = os.path.join(location, 'v2.sbt.json')
+    original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+    args = ['storage', 'convert', '-b', 'ipfs', testsbt]
+    try:
+        runtmp.sourmash(*args)
+    except SourmashCommandFailed:
+        pass
 
-        args = ['storage', 'convert', '-b', 'ipfs', testsbt]
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location, fail_ok=True)
-        if not status and "ipfs.exceptions.ConnectionError" in err:
+    if runtmp.last_result.status:
+        if "ipfshttpclient.ConnectionError" in runtmp.last_result.err:
             raise pytest.xfail('ipfs probably not running')
+        if "No module named 'ipfshttpclient'" in runtmp.last_result.err:
+            raise pytest.xfail('ipfshttpclient module not installed')
 
-        ipfs = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+    print("NO FAIL; KEEP ON GOING!")
 
-        assert len(original) == len(ipfs)
-        assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original), sorted(ipfs)))
 
-        args = ['storage', 'convert',
-                '-b', """'ZipStorage("{}")'""".format(
-                    os.path.join(location, 'v2.sbt.zip')),
-                testsbt]
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
-        tar = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+    ipfs = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        assert len(original) == len(tar)
-        assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original), sorted(tar)))
+    assert len(original) == len(ipfs)
+    assert all(n1[1].name == n2[1].name
+                for (n1, n2) in zip(sorted(original), sorted(ipfs)))
+
+    args = ['storage', 'convert',
+            '-b', """'ZipStorage("{}")'""".format(
+                runtmp.output('v2.sbt.zip')),
+            testsbt]
+    runtmp.sourmash(*args)
+
+    tar = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+    assert len(original) == len(tar)
+    assert all(n1[1].name == n2[1].name
+                for (n1, n2) in zip(sorted(original), sorted(tar)))
+
+    print("it all worked!!")
 
 
 def test_storage_convert_identity(runtmp):
