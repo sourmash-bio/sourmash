@@ -1371,7 +1371,7 @@ def test_do_sourmash_sbt_search_check_bug(runtmp):
 
     runtmp.sourmash('search', testdata1, 'zzz')
 
-    assert '1 matches:' in runtmp.last_result.out
+    assert '1 matches' in runtmp.last_result.out
 
     tree = load_sbt_index(runtmp.output('zzz.sbt.zip'))
     assert tree._nodes[0].metadata['min_n_below'] == 431
@@ -1390,7 +1390,7 @@ def test_do_sourmash_sbt_search_empty_sig(runtmp):
 
     runtmp.sourmash('search', testdata1, 'zzz')
 
-    assert '1 matches:' in runtmp.last_result.out
+    assert '1 matches' in runtmp.last_result.out
 
     tree = load_sbt_index(runtmp.output('zzz.sbt.zip'))
     assert tree._nodes[0].metadata['min_n_below'] == 1
@@ -1821,7 +1821,7 @@ def test_search_3(runtmp):
     runtmp.sourmash('search', '-n', '1', 'short.fa.sig', 'short2.fa.sig', 'short3.fa.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
-    assert '2 matches; showing first 1' in runtmp.last_result.out
+    assert '2 matches above threshold 0.080; showing first 1:' in runtmp.last_result.out
 
 
 def test_search_4(runtmp):
@@ -1834,9 +1834,19 @@ def test_search_4(runtmp):
     runtmp.sourmash('search', '-n', '0', 'short.fa.sig', 'short2.fa.sig', 'short3.fa.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
-    assert '2 matches:' in runtmp.last_result.out
+    assert '2 matches above threshold 0.080:' in runtmp.last_result.out
     assert 'short2.fa' in runtmp.last_result.out
     assert 'short3.fa' in runtmp.last_result.out
+
+
+def test_search_5_num_results(runtmp):
+    query = utils.get_test_data('gather/combined.sig')
+    against = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+
+    runtmp.sourmash('search', '-n', '5', query, *against)
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '12 matches above threshold 0.080; showing first 5:' in runtmp.last_result.out
 
 
 def test_index_check_scaled_bounds_negative(runtmp):
@@ -1889,7 +1899,7 @@ def test_index_metagenome_fromfile(c):
     print(c.last_result.err)
 
     assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
-    assert '12 matches; showing first 3:' in out
+    assert '12 matches above threshold 0.080; showing first 3:' in out
 
 @utils.in_tempdir
 def test_index_metagenome_fromfile_no_cmdline_sig(c):
@@ -1918,7 +1928,7 @@ def test_index_metagenome_fromfile_no_cmdline_sig(c):
     print(c.last_result.err)
 
     assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in out
-    assert '12 matches; showing first 3:' in out
+    assert '12 matches above threshold 0.080; showing first 3:' in out
 
 
 def test_search_metagenome(runtmp):
@@ -1941,7 +1951,7 @@ def test_search_metagenome(runtmp):
     print(runtmp.last_result.err)
 
     assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
-    assert '12 matches; showing first 3:' in runtmp.last_result.out
+    assert '12 matches above threshold 0.080; showing first 3:' in runtmp.last_result.out
 
 
 def test_search_metagenome_traverse(runtmp):
@@ -1955,7 +1965,7 @@ def test_search_metagenome_traverse(runtmp):
     print(runtmp.last_result.err)
 
     assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
-    assert '13 matches; showing first 3:' in runtmp.last_result.out
+    assert '13 matches above threshold 0.080; showing first 3:' in runtmp.last_result.out
 
 
 def test_search_metagenome_traverse_check_csv(runtmp):
@@ -1983,7 +1993,7 @@ def test_search_metagenome_traverse_check_csv(runtmp):
             assert len(filename) > prefix_len
 
     assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
-    assert '13 matches; showing first 3:' in runtmp.last_result.out
+    assert '13 matches above threshold 0.080; showing first 3:' in runtmp.last_result.out
 
 
 @utils.in_thisdir
@@ -2104,7 +2114,7 @@ def test_search_metagenome_sbt_downsample_nofail(runtmp):
     assert runtmp.last_result.status == 0
     assert "ERROR: cannot use 'gcf_all' for this query." in runtmp.last_result.err
     assert "search scaled value 100000 is less than database scaled value of 10000" in runtmp.last_result.err
-    assert "0 matches:" in runtmp.last_result.out
+    assert "0 matches" in runtmp.last_result.out
 
 
 def test_search_metagenome_downsample_containment(runtmp):
@@ -2127,7 +2137,7 @@ def test_search_metagenome_downsample_containment(runtmp):
     print(runtmp.last_result.err)
 
     assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
-    assert '12 matches; showing first 3:' in runtmp.last_result.out
+    assert '12 matches above threshold 0.080; showing first 3:' in runtmp.last_result.out
 
 
 @utils.in_tempdir
@@ -2154,7 +2164,7 @@ def test_search_metagenome_downsample_index(c):
         c)
     assert ' 29.7%       NC_003197.2 Salmonella enterica subsp. enterica serovar T' in str(
         c)
-    assert '12 matches; showing first 3:' in str(c)
+    assert '12 matches above threshold 0.080; showing first 3:' in str(c)
 
 
 def test_search_with_picklist(runtmp):
@@ -2174,7 +2184,7 @@ def test_search_with_picklist(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "3 matches:" in out
+    assert "3 matches" in out
     assert "13.1%       NC_000853.1 Thermotoga" in out
     assert "13.0%       NC_009486.1 Thermotoga" in out
     assert "12.8%       NC_011978.1 Thermotoga" in out
@@ -2196,7 +2206,7 @@ def test_search_with_picklist_exclude(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "9 matches; showing first 3:" in out
+    assert "9 matches above threshold 0.080; showing first 3:" in out
     assert "33.2%       NC_003198.1 Salmonella" in out
     assert "33.1%       NC_003197.2 Salmonella" in out
     assert "32.2%       NC_006905.1 Salmonella" in out
@@ -2215,7 +2225,7 @@ def test_search_with_pattern_include(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "3 matches:" in out
+    assert "3 matches" in out
     assert "13.1%       NC_000853.1 Thermotoga" in out
     assert "13.0%       NC_009486.1 Thermotoga" in out
     assert "12.8%       NC_011978.1 Thermotoga" in out
@@ -2234,7 +2244,7 @@ def test_search_with_pattern_exclude(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "9 matches; showing first 3:" in out
+    assert "9 matches above threshold 0.080; showing first 3:" in out
     assert "33.2%       NC_003198.1 Salmonella" in out
     assert "33.1%       NC_003197.2 Salmonella" in out
     assert "32.2%       NC_006905.1 Salmonella" in out
@@ -2285,7 +2295,7 @@ def test_mash_csv_to_sig(runtmp):
     runtmp.sourmash('search', '-k', '31', 'short.fa.sig', 'xxx.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
-    assert '1 matches:' in runtmp.last_result.out
+    assert '1 matches' in runtmp.last_result.out
     assert '100.0%       short.fa' in runtmp.last_result.out
 
 
@@ -4991,41 +5001,49 @@ def test_watch_coverage(runtmp):
     assert 'FOUND: genome-s10, at 1.000' in runtmp.last_result.out
 
 
-def test_storage_convert():
-    import pytest
+def test_storage_convert(runtmp):
+    testdata = utils.get_test_data('v2.sbt.json')
+    shutil.copyfile(testdata, runtmp.output('v2.sbt.json'))
+    shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
+                    runtmp.output('.sbt.v2'))
+    testsbt = runtmp.output('v2.sbt.json')
 
-    with utils.TempDirectory() as location:
-        testdata = utils.get_test_data('v2.sbt.json')
-        shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
-        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
-                        os.path.join(location, '.sbt.v2'))
-        testsbt = os.path.join(location, 'v2.sbt.json')
+    original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+    args = ['storage', 'convert', '-b', 'ipfs', testsbt]
+    try:
+        runtmp.sourmash(*args)
+    except SourmashCommandFailed:
+        pass
 
-        args = ['storage', 'convert', '-b', 'ipfs', testsbt]
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location, fail_ok=True)
-        if not status and "ipfs.exceptions.ConnectionError" in err:
+    if runtmp.last_result.status:
+        if "ipfshttpclient.ConnectionError" in runtmp.last_result.err:
             raise pytest.xfail('ipfs probably not running')
+        if "No module named 'ipfshttpclient'" in runtmp.last_result.err:
+            raise pytest.xfail('ipfshttpclient module not installed')
 
-        ipfs = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+    print("NO FAIL; KEEP ON GOING!")
 
-        assert len(original) == len(ipfs)
-        assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original), sorted(ipfs)))
 
-        args = ['storage', 'convert',
-                '-b', """'ZipStorage("{}")'""".format(
-                    os.path.join(location, 'v2.sbt.zip')),
-                testsbt]
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
-        tar = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+    ipfs = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        assert len(original) == len(tar)
-        assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original), sorted(tar)))
+    assert len(original) == len(ipfs)
+    assert all(n1[1].name == n2[1].name
+                for (n1, n2) in zip(sorted(original), sorted(ipfs)))
+
+    args = ['storage', 'convert',
+            '-b', """'ZipStorage("{}")'""".format(
+                runtmp.output('v2.sbt.zip')),
+            testsbt]
+    runtmp.sourmash(*args)
+
+    tar = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+    assert len(original) == len(tar)
+    assert all(n1[1].name == n2[1].name
+                for (n1, n2) in zip(sorted(original), sorted(tar)))
+
+    print("it all worked!!")
 
 
 def test_storage_convert_identity(runtmp):
@@ -5281,7 +5299,7 @@ def test_index_matches_search_with_picklist(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "3 matches:" in out
+    assert "3 matches" in out
     assert "13.1%       NC_000853.1 Thermotoga" in out
     assert "13.0%       NC_009486.1 Thermotoga" in out
     assert "12.8%       NC_011978.1 Thermotoga" in out
@@ -5322,7 +5340,7 @@ def test_index_matches_search_with_picklist_exclude(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "10 matches; showing first 3:" in out
+    assert "10 matches above threshold 0.080; showing first 3:" in out
     assert "100.0%       -" in out
     assert "33.2%       NC_003198.1 Salmonella" in out
     assert "33.1%       NC_003197.2 Salmonella" in out
@@ -5564,7 +5582,7 @@ def test_gather_with_prefetch_picklist_5_search(runtmp):
     out = runtmp.last_result.out
     print(out)
 
-    assert "12 matches; showing first 3:" in out
+    assert "12 matches above threshold 0.080; showing first 3:" in out
     assert " 33.2%       NC_003198.1 Salmonella enterica subsp." in out
 
     # now, do a gather with the results
