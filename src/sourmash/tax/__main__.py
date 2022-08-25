@@ -5,9 +5,10 @@ import sys
 import csv
 import os
 from collections import defaultdict
+import re
 
 import sourmash
-from ..sourmash_args import FileOutputCSV
+from ..sourmash_args import FileOutputCSV, FileOutput
 from sourmash.logging import set_quiet, error, notify
 from sourmash.lca.lca_utils import display_lineage
 
@@ -31,27 +32,29 @@ metagenome -g <gather_csv> [<gather_csv> ... ] -t [<taxonomy_csv> ...]    - summ
 sourmash taxonomy metagenome -h
 '''
 
+_output_type_to_ext = {
+    'csv_summary': '.summarized.csv',
+    'classification': '.classifications.csv',
+    'krona': '.krona.tsv',
+    'lineage_summary': '.lineage_summary.tsv',
+    'annotate': '.with-lineages.csv',
+    'human': '.human.txt',
+    'lineage_csv': '.lineage.csv',
+    }
+
 # some utils
 def make_outfile(base, output_type, *, output_dir = ""):
     limit_float_decimals=False
     if base == "-":
         limit_float_decimals=True
         return base, limit_float_decimals
-    ext=""
-    if output_type == 'csv_summary':
-        ext = '.summarized.csv'
-    elif output_type == 'classification':
-        ext = '.classifications.csv'
-    elif output_type == 'krona':
-        ext = '.krona.tsv'
-    elif output_type == 'lineage_summary':
-        ext = '.lineage_summary.tsv'
-    elif output_type == 'annotate':
-        ext = '.with-lineages.csv'
+
+    ext = _output_type_to_ext[output_type]
+
     fname = base+ext
     if output_dir:
         fname = os.path.join(output_dir, fname)
-    notify(f"saving `{output_type}` output to {fname}.")
+    notify(f"saving '{output_type}' output to '{fname}'.")
     return fname, limit_float_decimals
 
 
@@ -113,6 +116,13 @@ def metagenome(args):
         summary_outfile, limit_float = make_outfile(args.output_base, "csv_summary", output_dir=args.output_dir)
         with FileOutputCSV(summary_outfile) as out_fp:
             tax_utils.write_summary(summarized_gather, out_fp, limit_float_decimals=limit_float)
+
+    # write summarized output in human-readable format
+    if "human" in args.output_format:
+        summary_outfile, limit_float = make_outfile(args.output_base, "human", output_dir=args.output_dir)
+
+        with FileOutput(summary_outfile) as out_fp:
+            tax_utils.write_human_summary(summarized_gather, out_fp, args.rank or "species")
 
     # if lineage summary table
     if "lineage_summary" in args.output_format:
@@ -260,10 +270,33 @@ def genome(args):
         with FileOutputCSV(summary_outfile) as out_fp:
             tax_utils.write_classifications(classifications, out_fp, limit_float_decimals=limit_float)
 
+    # write summarized output in human-readable format
+    if "human" in args.output_format:
+        summary_outfile, limit_float = make_outfile(args.output_base, "human", output_dir=args.output_dir)
+
+        with FileOutput(summary_outfile) as out_fp:
+            tax_utils.write_human_summary(classifications, out_fp, args.rank or "species")
+
     if "krona" in args.output_format:
+        # classifications only at a single rank
+        assert len(classifications) == 1
+        if args.rank:
+            assert args.rank in classifications
+
         krona_outfile, limit_float = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
         with FileOutputCSV(krona_outfile) as out_fp:
             tax_utils.write_krona(args.rank, krona_results, out_fp)
+
+    if "lineage_csv" in args.output_format:
+        # should only classify at a single rank
+        assert len(classifications) == 1
+        if args.rank:
+            assert args.rank in classifications
+
+        lineage_outfile, _ = make_outfile(args.output_base, "lineage_csv",
+                                          output_dir=args.output_dir)
+        with FileOutputCSV(lineage_outfile) as out_fp:
+            tax_utils.write_lineage_csv(classifications, out_fp)
 
 
 def annotate(args):
@@ -341,6 +374,59 @@ def prepare(args):
         sys.exit(-1)
 
     notify("done!")
+
+
+def grep(args):
+    term = args.pattern
+    tax_assign = MultiLineageDB.load(args.taxonomy_csv,
+                                     force=args.force)
+
+    silent = args.silent or args.count
+
+    notify(f"searching {len(args.taxonomy_csv)} taxonomy files for '{term}'")
+    if args.invert_match:
+        notify("-v/--invert-match specified; returning only lineages that do not match.")
+    if args.rank:
+        notify(f"limiting matches to {args.rank} level")
+
+    # build the search pattern
+    pattern = args.pattern
+    if args.ignore_case:
+        pattern = re.compile(pattern, re.IGNORECASE)
+    else:
+        pattern = re.compile(pattern)
+
+    # determine if lineage matches.
+    def find_pattern(lineage, select_rank):
+        for (rank, name) in lineage:
+            if select_rank is None or rank == select_rank:
+                if pattern.search(name):
+                    return True
+        return False
+
+    if args.invert_match:
+        def search_pattern(l, r):
+            return not find_pattern(l, r)
+    else:
+        search_pattern = find_pattern
+
+    match_ident = []
+    for ident, lineage in tax_assign.items():
+        if search_pattern(lineage, args.rank):
+            match_ident.append((ident, lineage))
+
+    if silent:
+        notify(f"found {len(match_ident)} matches.")
+        notify("(no matches will be saved because of --silent/--count")
+    else:
+        with FileOutputCSV(args.output) as fp:
+            w = csv.writer(fp)
+
+            w.writerow(['ident'] + list(sourmash.lca.taxlist(include_strain=False)))
+            for ident, lineage in sorted(match_ident):
+                w.writerow([ident] + [ x.name for x in lineage ])
+
+        notify(f"found {len(match_ident)} matches; saved identifiers to picklist file '{args.output}'")
 
 
 def main(arglist=None):

@@ -5,8 +5,9 @@ import os
 import csv
 from collections import namedtuple, defaultdict
 from collections import abc
+import gzip
 
-from sourmash import sqlite_utils
+from sourmash import sqlite_utils, sourmash_args
 from sourmash.exceptions import IndexNotSupported
 from sourmash.distance_utils import containment_to_distance
 
@@ -83,7 +84,9 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     return gather_csvs
 
 
-def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=EssentialGatherColnames, seen_queries=None, force=False):
+def load_gather_results(gather_csv, *, delimiter=',',
+                        essential_colnames=EssentialGatherColnames,
+                        seen_queries=None, force=False):
     "Load a single gather csv"
     if not seen_queries:
         seen_queries=set()
@@ -95,11 +98,11 @@ def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=Essenti
         header = r.fieldnames
         # check for empty file
         if not header:
-            raise ValueError(f'Cannot read gather results from {gather_csv}. Is file empty?')
+            raise ValueError(f"Cannot read gather results from '{gather_csv}'. Is file empty?")
 
-        #check for critical column names used by summarize_gather_at
+        # check for critical column names used by summarize_gather_at
         if not set(essential_colnames).issubset(header):
-            raise ValueError(f'Not all required gather columns are present in {gather_csv}.')
+            raise ValueError(f"Not all required gather columns are present in '{gather_csv}'.")
 
         for n, row in enumerate(r):
             query_name = row['query_name']
@@ -113,7 +116,7 @@ def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=Essenti
                         gather_queries.add(query_name)
                     continue
                 else:
-                    raise ValueError(f"Gather query {query_name} was found in more than one CSV. Cannot load from {gather_csv}.")
+                    raise ValueError(f"Gather query {query_name} was found in more than one CSV. Cannot load from '{gather_csv}'.")
             else:
                 gather_results.append(row)
             # add query name to the gather_queries from this CSV
@@ -123,7 +126,7 @@ def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=Essenti
     if not gather_results:
         raise ValueError(f'No gather results loaded from {gather_csv}.')
     else:
-        notify(f'loaded {len(gather_results)} gather results.')
+        notify(f"loaded {len(gather_results)} gather results from '{gather_csv}'.")
     return gather_results, header, gather_queries
 
 
@@ -154,19 +157,19 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
                 raise
 
         # check for match identites in these gather_results not found in lineage spreadsheets
-        n_missed, ident_missed = find_missing_identities(these_results, tax_assign)
-        if n_missed:
+        ident_missed = find_missing_identities(these_results, tax_assign)
+        if ident_missed:
             notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
             if fail_on_missing_taxonomy:
                 raise ValueError('Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
 
-            total_missed += n_missed
+            total_missed += len(ident_missed)
             all_ident_missed.update(ident_missed)
         # add these results to gather_results
         gather_results += these_results
 
     num_gather_csvs_loaded = n+1 - n_ignored
-    notify(f'loaded results from {str(num_gather_csvs_loaded)} gather CSVs')
+    notify(f'loaded {len(gather_results)} results total from {str(num_gather_csvs_loaded)} gather CSVs')
 
     return gather_results, all_ident_missed, total_missed, header
 
@@ -319,17 +322,16 @@ def find_missing_identities(gather_results, tax_assign):
     Identify match ids/accessions from gather results
     that are not present in taxonomic assignments.
     """
-    n_missed = 0
     ident_missed= set()
     for row in gather_results:
         match_ident = row['name']
         match_ident = get_ident(match_ident)
         if match_ident not in tax_assign:
-            n_missed += 1
             ident_missed.add(match_ident)
 
-    notify(f'of {len(gather_results)}, missed {n_missed} lineage assignments.')
-    return n_missed, ident_missed
+    if ident_missed:
+        notify(f'of {len(gather_results)} gather results, missed {len(ident_missed)} lineage assignments.')
+    return ident_missed
 
 
 # pass ranks; have ranks=[default_ranks]
@@ -402,6 +404,8 @@ def format_for_krona(rank, summarized_gather):
 
 def write_krona(rank, krona_results, out_fp, *, sep='\t'):
     'write krona output'
+    # CTB: do we want to optionally allow restriction to a specific rank
+    # & above?
     header = make_krona_header(rank)
     tsv_output = csv.writer(out_fp, delimiter='\t')
     tsv_output.writerow(header)
@@ -426,6 +430,69 @@ def write_summary(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=Fa
             if rD['lineage'] == "":
                 rD['lineage'] = "unclassified"
             w.writerow(rD)
+
+
+def write_human_summary(summarized_gather, out_fp, display_rank):
+    '''
+    Write human-readable taxonomy-summarized gather results for a specific rank.
+    '''
+    header = SummarizedGatherResult._fields
+
+    found_ANI = False
+    results = [] 
+    for rank, rank_results in summarized_gather.items():
+        # only show results for a specified rank.
+        if rank == display_rank:
+            rank_results = list(rank_results)
+            rank_results.sort(key=lambda res: -res.f_weighted_at_rank)
+
+            for res in rank_results:
+                rD = res._asdict()
+                rD['fraction'] = f'{res.fraction:.3f}'
+                rD['f_weighted_at_rank'] = f"{res.f_weighted_at_rank*100:>4.1f}%"
+                if rD['query_ani_at_rank'] is not None:
+                    found_ANI = True
+                    rD['query_ani_at_rank'] = f"{res.query_ani_at_rank*100:>3.1f}%"
+                else:
+                    rD['query_ani_at_rank'] = '-    '
+                rD['lineage'] = display_lineage(res.lineage)
+                if rD['lineage'] == "":
+                    rD['lineage'] = "unclassified"
+
+                results.append(rD)
+
+
+    if found_ANI:
+        out_fp.write("sample name    proportion   cANI   lineage\n")
+        out_fp.write("-----------    ----------   ----   -------\n")
+
+        for rD in results:
+            out_fp.write("{query_name:<15s}   {f_weighted_at_rank}     {query_ani_at_rank}  {lineage}\n".format(**rD))
+    else:
+        out_fp.write("sample name    proportion   lineage\n")
+        out_fp.write("-----------    ----------   -------\n")
+
+        for rD in results:
+            out_fp.write("{query_name:<15s}   {f_weighted_at_rank}     {lineage}\n".format(**rD))
+
+
+def write_lineage_csv(summarized_gather, csv_fp):
+    '''
+    Write a lineage-CSV format file suitable for use with sourmash tax ... -t.
+    '''
+    ranks = lca_utils.taxlist(include_strain=False)
+    header = ['ident', *ranks]
+    w = csv.DictWriter(csv_fp, header)
+    w.writeheader()
+    for rank, rank_results in summarized_gather.items():
+        for res in rank_results:
+            d = {}
+            d[rank] = ""
+            for rank, name in res.lineage:
+                d[rank] = name
+
+            d['ident'] = res.query_name
+            w.writerow(d)
 
 
 def write_classifications(classifications, csv_fp, *, sep=',', limit_float_decimals=False):
@@ -575,8 +642,7 @@ class LineageDB(abc.Mapping):
         if os.path.isdir(filename):
             raise ValueError(f"'{filename}' is a directory")
 
-        with open(filename, newline='') as fp:
-            r = csv.DictReader(fp, delimiter=delimiter)
+        with sourmash_args.FileInputCSV(filename) as r:
             header = r.fieldnames
             if not header:
                 raise ValueError(f'cannot read taxonomy assignments from {filename}')
@@ -865,7 +931,10 @@ class MultiLineageDB(abc.Mapping):
             # we need a file handle; open file.
             fp = filename_or_fp
             if is_filename:
-                fp = open(filename_or_fp, 'w', newline="")
+                if filename_or_fp.endswith('.gz'):
+                    fp = gzip.open(filename_or_fp, 'wt', newline="")
+                else:
+                    fp = open(filename_or_fp, 'w', newline="")
 
             try:
                 self._save_csv(fp)
@@ -963,7 +1032,7 @@ class MultiLineageDB(abc.Mapping):
                 try:
                     this_tax_assign = LineageDB.load(location, **kwargs)
                     loaded = True
-                except ValueError as exc:
+                except (ValueError, csv.Error) as exc:
                     # for the last loader, just pass along ValueError...
                     raise ValueError(f"cannot read taxonomy assignments from '{location}': {str(exc)}")
 

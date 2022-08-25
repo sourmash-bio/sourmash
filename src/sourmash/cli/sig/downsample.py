@@ -1,11 +1,37 @@
 """downsample one or more signatures"""
 
+usage="""
+
+### `sourmash signature downsample` - decrease the size of a signature
+
+Downsample one or more signatures.
+
+With `downsample`, you can --
+
+* increase the `scaled` value for a signature created with `-p scaled=SCALED`, shrinking it in size;
+* decrease the `num` value for a traditional num MinHash, shrinking it in size;
+* try to convert a `scaled` signature to a `num` signature;
+* try to convert a `num` signature to a `scaled` signature.
+
+For example,
+
+sourmash signature downsample file1.sig file2.sig --scaled 100000 -o downsampled.sig
+
+will output each signature, downsampled to a scaled value of 100000, to
+`downsampled.sig`; and
+
+sourmash signature downsample --num 500 scaled_file.sig -o downsampled.sig
+
+will try to convert a scaled MinHash to a num MinHash.
+
+"""
+
 from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
                                 add_picklist_args, add_num_arg)
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('downsample')
+    subparser = subparsers.add_parser('downsample', description=__doc__, usage=usage)
     subparser.add_argument('signatures', nargs="*")
     subparser.add_argument(
         '--scaled', type=int, default=0,

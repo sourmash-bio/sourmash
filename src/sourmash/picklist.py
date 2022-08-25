@@ -142,6 +142,8 @@ class SignaturePicklist:
 
     def load(self, pickfile, column_name, *, allow_empty=False):
         "load pickset, return num empty vals, and set of duplicate vals."
+        from . import sourmash_args
+
         pickset = self.init()
 
         if not os.path.exists(pickfile) or not os.path.isfile(pickfile):
@@ -149,17 +151,11 @@ class SignaturePicklist:
 
         n_empty_val = 0
         dup_vals = set()
-        with open(pickfile, newline='') as csvfile:
+
+        # CTB: not clear to me what a good "default" name would be for a
+        # picklist CSV inside a zip (default_csv_name). Maybe manifest?
+        with sourmash_args.FileInputCSV(pickfile) as r:
             self.pickfile = pickfile
-            x = csvfile.readline()
-
-            # skip leading comment line in case there's a manifest header
-            if not x or x[0] == '#':
-                pass
-            else:
-                csvfile.seek(0)
-
-            r = csv.DictReader(csvfile)
             if not r.fieldnames:
                 if not allow_empty:
                     raise ValueError(f"empty or improperly formatted pickfile '{pickfile}'")

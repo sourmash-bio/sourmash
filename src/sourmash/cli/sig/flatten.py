@@ -1,11 +1,29 @@
 """remove abundances"""
 
+usage="""
+
+### `sourmash signature flatten` - remove abundance information from signatures
+
+Flatten the specified signature(s), removing abundances and setting
+track_abundance to False.
+
+For example,
+
+sourmash signature flatten *.sig -o flattened.sig
+
+will remove all abundances from all of the .sig files in the current
+directory.
+
+The `flatten` command accepts the same selectors as `extract`.
+
+"""
+
 from sourmash.cli.utils import (add_moltype_args, add_ksize_arg,
                                 add_picklist_args)
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('flatten')
+    subparser = subparsers.add_parser('flatten', description=__doc__, usage=usage)
     subparser.add_argument('signatures', nargs='*')
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
