@@ -1012,6 +1012,8 @@ class MultiLineageDB(abc.Mapping):
     @classmethod
     def load(cls, locations, **kwargs):
         "Load one or more taxonomies from the given location(s)"
+        force = kwargs.get('force', False)
+
         if isinstance(locations, str):
             raise TypeError("'locations' should be a list, not a string")
 
@@ -1034,12 +1036,14 @@ class MultiLineageDB(abc.Mapping):
                     loaded = True
                 except (ValueError, csv.Error) as exc:
                     # for the last loader, just pass along ValueError...
-                    raise ValueError(f"cannot read taxonomy assignments from '{location}': {str(exc)}")
+                    if not force:
+                        raise ValueError(f"cannot read taxonomy assignments from '{location}': {str(exc)}")
 
             # nothing loaded, goodbye!
-            if not loaded:
+            if not loaded and not force:
                 raise ValueError(f"cannot read taxonomy assignments from '{location}'")
 
-            tax_assign.add(this_tax_assign)
+            if loaded:
+                tax_assign.add(this_tax_assign)
 
         return tax_assign
