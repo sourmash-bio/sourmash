@@ -31,9 +31,6 @@ index objects, using manifests. All signatures are kept in memory.
 StandaloneManifestIndex - load manifests directly, and do lazy loading of
 signatures on demand. No signatures are kept in memory.
 
-LazyLoadedIndex - selection on manifests with loading of index on demand.
-(Consider using StandaloneManifestIndex instead.)
-
 CounterGather - an ancillary class returned by the 'counter_gather()' method.
 """
 
@@ -41,12 +38,16 @@ import os
 import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
-from collections import defaultdict
 
-from ..search import make_jaccard_search_query, make_gather_query
-from ..manifest import CollectionManifest
-from ..logging import debug_literal
-from ..signature import load_signatures, save_signatures
+from sourmash.search import (make_jaccard_search_query,
+                             make_containment_query,
+                             calc_threshold_from_bp)
+from sourmash.manifest import CollectionManifest
+from sourmash.logging import debug_literal
+from sourmash.signature import load_signatures, save_signatures
+from sourmash.minhash import (flatten_and_downsample_scaled,
+                              flatten_and_downsample_num,
+                              flatten_and_intersect_scaled)
 
 # generic return tuple for Index.search and Index.gather
 IndexSearchResult = namedtuple('Result', 'score, signature, location')
@@ -111,7 +112,7 @@ class Index(ABC):
 
         search_fn follows the protocol in JaccardSearch objects.
 
-        Returns a list.
+        Generator. Returns 0 or more IndexSearchResult objects.
         """
         # first: is this query compatible with this search?
         search_fn.check_is_compatible(query)
@@ -127,50 +128,19 @@ class Index(ABC):
             query_scaled = query_mh.scaled
 
             def prepare_subject(subj_mh):
-                assert subj_mh.scaled
-                if subj_mh.track_abundance:
-                    subj_mh = subj_mh.flatten()
-
-                # downsample subject to highest scaled
-                subj_scaled = subj_mh.scaled
-                if subj_scaled < query_scaled:
-                    return subj_mh.downsample(scaled=query_scaled)
-                else:
-                    return subj_mh
+                return flatten_and_downsample_scaled(subj_mh, query_scaled)
 
             def prepare_query(query_mh, subj_mh):
-                assert subj_mh.scaled
-
-                # downsample query to highest scaled
-                subj_scaled = subj_mh.scaled
-                if subj_scaled > query_scaled:
-                    return query_mh.downsample(scaled=subj_scaled)
-                else:
-                    return query_mh
+                return flatten_and_downsample_scaled(query_mh, subj_mh.scaled)
 
         else:                   # num
             query_num = query_mh.num
 
             def prepare_subject(subj_mh):
-                assert subj_mh.num
-                if subj_mh.track_abundance:
-                    subj_mh = subj_mh.flatten()
-
-                # downsample subject to smallest num
-                subj_num = subj_mh.num
-                if subj_num > query_num:
-                    return subj_mh.downsample(num=query_num)
-                else:
-                    return subj_mh
+                return flatten_and_downsample_num(subj_mh, query_num)
 
             def prepare_query(query_mh, subj_mh):
-                assert subj_mh.num
-                # downsample query to smallest num
-                subj_num = subj_mh.num
-                if subj_num < query_num:
-                    return query_mh.downsample(num=subj_num)
-                else:
-                    return query_mh
+                return flatten_and_downsample_num(query_mh, subj_mh.num)
 
         # now, do the search!
         for subj, location in self.signatures_with_location():
@@ -198,7 +168,7 @@ class Index(ABC):
                     yield IndexSearchResult(score, subj, location)
 
     def search_abund(self, query, *, threshold=None, **kwargs):
-        """Return set of matches with angular similarity above 'threshold'.
+        """Return list of IndexSearchResult with angular similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
         """
@@ -226,7 +196,7 @@ class Index(ABC):
     def search(self, query, *, threshold=None,
                do_containment=False, do_max_containment=False,
                best_only=False, **kwargs):
-        """Return set of matches with similarity above 'threshold'.
+        """Return list of IndexSearchResult with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
 
@@ -242,46 +212,56 @@ class Index(ABC):
         threshold = float(threshold)
 
         search_obj = make_jaccard_search_query(do_containment=do_containment,
-                                               do_max_containment=do_max_containment,
+                                        do_max_containment=do_max_containment,
                                                best_only=best_only,
                                                threshold=threshold)
 
         # do the actual search:
-        matches = []
-
-        for sr in self.find(search_obj, query, **kwargs):
-            matches.append(sr)
+        matches = list(self.find(search_obj, query, **kwargs))
 
         # sort!
         matches.sort(key=lambda x: -x.score)
         return matches
 
     def prefetch(self, query, threshold_bp, **kwargs):
-        "Return all matches with minimum overlap."
+        """Return all matches with minimum overlap.
+
+        Generator. Returns 0 or more IndexSearchResult namedtuples.
+        """
         if not self:            # empty database? quit.
             raise ValueError("no signatures to search")
 
-        search_fn = make_gather_query(query.minhash, threshold_bp,
-                                      best_only=False)
+        # default best_only to False
+        best_only = kwargs.get('best_only', False)
+
+        search_fn = make_containment_query(query.minhash, threshold_bp,
+                                           best_only=best_only)
 
         for sr in self.find(search_fn, query, **kwargs):
             yield sr
 
-    def gather(self, query, threshold_bp=None, **kwargs):
-        "Return the match with the best Jaccard containment in the Index."
+    def best_containment(self, query, threshold_bp=None, **kwargs):
+        """Return the match with the best Jaccard containment in the Index.
 
-        results = []
-        for result in self.prefetch(query, threshold_bp, **kwargs):
-            results.append(result)
+        Returns an IndexSearchResult namedtuple or None.
+        """
 
-        # sort results by best score.
-        results.sort(reverse=True,
-                     key=lambda x: (x.score, x.signature.md5sum()))
+        results = self.prefetch(query, threshold_bp, best_only=True, **kwargs)
+        results = sorted(results,
+                         key=lambda x: (-x.score, x.signature.md5sum()))
 
-        return results[:1]
+        try:
+            return next(iter(results))
+        except StopIteration:
+            return None
 
-    def peek(self, query_mh, threshold_bp=0):
-        "Mimic CounterGather.peek() on top of Index. Yes, this is backwards."
+    def peek(self, query_mh, *, threshold_bp=0):
+        """Mimic CounterGather.peek() on top of Index.
+
+        This is implemented for situations where we don't want to use
+        'prefetch' functionality. It is a light wrapper around the
+        'best_containment(...)' method.
+        """
         from sourmash import SourmashSignature
 
         # build a signature to use with self.gather...
@@ -289,7 +269,7 @@ class Index(ABC):
 
         # run query!
         try:
-            result = self.gather(query_ss, threshold_bp=threshold_bp)
+            result = self.best_containment(query_ss, threshold_bp=threshold_bp)
         except ValueError:
             result = None
 
@@ -297,14 +277,10 @@ class Index(ABC):
             return []
 
         # if matches, calculate intersection & return.
-        sr = result[0]
-        match_mh = sr.signature.minhash
-        scaled = max(query_mh.scaled, match_mh.scaled)
-        match_mh = match_mh.downsample(scaled=scaled).flatten()
-        query_mh = query_mh.downsample(scaled=scaled)
-        intersect_mh = match_mh & query_mh
+        intersect_mh = flatten_and_intersect_scaled(result.signature.minhash,
+                                                    query_mh)
 
-        return [sr, intersect_mh]
+        return [result, intersect_mh]
 
     def consume(self, intersect_mh):
         "Mimic CounterGather.consume on top of Index. Yes, this is backwards."
@@ -324,9 +300,9 @@ class Index(ABC):
         prefetch_query.minhash = prefetch_query.minhash.flatten()
 
         # find all matches and construct a CounterGather object.
-        counter = CounterGather(prefetch_query.minhash)
+        counter = CounterGather(prefetch_query)
         for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
-            counter.add(result.signature, result.location)
+            counter.add(result.signature, location=result.location)
 
         # tada!
         return counter
@@ -462,7 +438,7 @@ class LazyLinearIndex(Index):
       signatures are actually requested (hence, 'lazy').
     * this class stores the provided index 'db' in memory. If you need
       a class that does lazy loading of signatures from disk and does not
-      store signatures in memory, see LazyLoadedIndex.
+      store signatures in memory, see StandaloneManifestIndex.
     * if you want efficient manifest-based selection, consider
       MultiIndex (signatures in memory).
     """
@@ -491,7 +467,8 @@ class LazyLinearIndex(Index):
             return False
 
     def __len__(self):
-        raise NotImplementedError
+        db = self.db.select(**self.selection_dict)
+        return len(db)
 
     def insert(self, node):
         raise NotImplementedError
@@ -554,7 +531,7 @@ class ZipFileLinearIndex(Index):
         "Load a manifest if one exists"
         try:
             manifest_data = self.storage.load('SOURMASH-MANIFEST.csv')
-        except KeyError:
+        except (KeyError, FileNotFoundError):
             self.manifest = None
         else:
             debug_literal(f'found manifest on load for {self.storage.path}')
@@ -616,18 +593,16 @@ class ZipFileLinearIndex(Index):
 
         Note: does not limit signatures to subsets.
         """
-        zf = self.storage.zipfile
-
         # list all the files, without using the Storage interface; currently,
         # 'Storage' does not provide a way to list all the files, so :shrug:.
-        for zipinfo in zf.infolist():
+        for filename in self.storage._filenames():
             # should we load this file? if it ends in .sig OR we are forcing:
-            if zipinfo.filename.endswith('.sig') or \
-               zipinfo.filename.endswith('.sig.gz') or \
+            if filename.endswith('.sig') or \
+               filename.endswith('.sig.gz') or \
                self.traverse_yield_all:
-                fp = zf.open(zipinfo)
-                for ss in load_signatures(fp):
-                    yield ss, zipinfo.filename
+                sig_data = self.storage.load(filename)
+                for ss in load_signatures(sig_data):
+                    yield ss, filename
 
     def signatures(self):
         "Load all signatures in the zip file."
@@ -652,10 +627,10 @@ class ZipFileLinearIndex(Index):
             # if no manifest here, break Storage class encapsulation
             # and go for all the files. (This is necessary to support
             # ad-hoc zipfiles that have no manifests.)
-            for zipinfo in storage.zipfile.infolist():
+            for filename in storage._filenames():
                 # should we load this file? if it ends in .sig OR force:
-                if zipinfo.filename.endswith('.sig') or \
-                   zipinfo.filename.endswith('.sig.gz') or \
+                if filename.endswith('.sig') or \
+                   filename.endswith('.sig.gz') or \
                    self.traverse_yield_all:
                     if selection_dict:
                         select = lambda x: select_signature(x,
@@ -663,7 +638,7 @@ class ZipFileLinearIndex(Index):
                     else:
                         select = lambda x: True
 
-                    data = self.storage.load(zipinfo.filename)
+                    data = self.storage.load(filename)
                     for ss in load_signatures(data):
                         if select(ss):
                             yield ss
@@ -705,13 +680,29 @@ class ZipFileLinearIndex(Index):
 
 
 class CounterGather:
-    """
-    Track and summarize matches for efficient 'gather' protocol.  This
-    could be used downstream of prefetch (for example).
+    """This is an ancillary class that is used to implement "fast
+    gather", post-prefetch. It tracks and summarize matches for
+    efficient min-set-cov/'gather'.
 
-    The public interface is `peek(...)` and `consume(...)` only.
+    The class constructor takes a query MinHash that must be scaled, and
+    then takes signatures that have overlaps with the query (via 'add').
+
+    After all overlapping signatures have been loaded, the 'peek'
+    method is then used at each stage of the 'gather' procedure to
+    find the best match, and the 'consume' method is used to remove
+    a match from this counter.
+
+    This particular implementation maintains a collections.Counter that
+    is used to quickly find the best match when 'peek' is called, but
+    other implementations are possible ;).
+
+    Note that redundant matches (SourmashSignature objects) with
+    duplicate md5s are collapsed inside the class, because we use the
+    md5sum as a key into the dictionary used to store matches.
     """
-    def __init__(self, query_mh):
+    def __init__(self, query):
+        "Constructor - takes a query SourmashSignature."
+        query_mh = query.minhash
         if not query_mh.scaled:
             raise ValueError('gather requires scaled signatures')
 
@@ -719,17 +710,17 @@ class CounterGather:
         self.orig_query_mh = query_mh.copy().flatten()
         self.scaled = query_mh.scaled
 
-        # track matching signatures & their locations
-        self.siglist = []
-        self.locations = []
+        # use these to track loaded matches & their locations
+        self.siglist = {}
+        self.locations = {}
 
-        # ...and overlaps with query
+        # ...and also track overlaps with the progressive query
         self.counter = Counter()
 
-        # cannot add matches once query has started.
+        # fence to make sure we do add matches once query has started.
         self.query_started = 0
 
-    def add(self, ss, location=None, require_overlap=True):
+    def add(self, ss, *, location=None, require_overlap=True):
         "Add this signature in as a potential match."
         if self.query_started:
             raise ValueError("cannot add more signatures to counter after peek/consume")
@@ -737,11 +728,11 @@ class CounterGather:
         # upon insertion, count & track overlap with the specific query.
         overlap = self.orig_query_mh.count_common(ss.minhash, True)
         if overlap:
-            i = len(self.siglist)
+            md5 = ss.md5sum()
 
-            self.counter[i] = overlap
-            self.siglist.append(ss)
-            self.locations.append(location)
+            self.counter[md5] = overlap
+            self.siglist[md5] = ss
+            self.locations[md5] = location
 
             # note: scaled will be max of all matches.
             self.downsample(ss.minhash.scaled)
@@ -752,26 +743,36 @@ class CounterGather:
         "Track highest scaled across all possible matches."
         if scaled > self.scaled:
             self.scaled = scaled
+        return self.scaled
 
-    def calc_threshold(self, threshold_bp, scaled, query_size):
-        # CTB: this code doesn't need to be in this class.
-        threshold = 0.0
-        n_threshold_hashes = 0
+    def signatures(self):
+        "Return all signatures."
+        for ss in self.siglist.values():
+            yield ss
 
-        if threshold_bp:
-            # if we have a threshold_bp of N, then that amounts to N/scaled
-            # hashes:
-            n_threshold_hashes = float(threshold_bp) / scaled
+    @property
+    def union_found(self):
+        """Return a MinHash containing all found hashes in the query.
 
-            # that then requires the following containment:
-            threshold = n_threshold_hashes / query_size
+        This calculates the union of the found matches, intersected
+        with the original query.
+        """
+        orig_query_mh = self.orig_query_mh
 
-        return threshold, n_threshold_hashes
+        # create empty MinHash from orig query
+        found_mh = orig_query_mh.copy_and_clear()
 
-    def peek(self, cur_query_mh, threshold_bp=0):
+        # for each match, intersect match with query & then add to found_mh.
+        for ss in self.siglist.values():
+            intersect_mh = flatten_and_intersect_scaled(ss.minhash,
+                                                        orig_query_mh)
+            found_mh.add_many(intersect_mh)
+
+        return found_mh
+
+    def peek(self, cur_query_mh, *, threshold_bp=0):
         "Get next 'gather' result for this database, w/o changing counters."
         self.query_started = 1
-        scaled = cur_query_mh.scaled
 
         # empty? nothing to search.
         counter = self.counter
@@ -781,25 +782,25 @@ class CounterGather:
         siglist = self.siglist
         assert siglist
 
-        self.downsample(scaled)
-        scaled = self.scaled
+        scaled = self.downsample(cur_query_mh.scaled)
         cur_query_mh = cur_query_mh.downsample(scaled=scaled)
 
         if not cur_query_mh:             # empty query? quit.
             return []
 
+        # CTB: could probably remove this check unless debug requested.
         if cur_query_mh.contained_by(self.orig_query_mh, downsample=True) < 1:
             raise ValueError("current query not a subset of original query")
 
         # are we setting a threshold?
-        threshold, n_threshold_hashes = self.calc_threshold(threshold_bp,
-                                                            scaled,
-                                                            len(cur_query_mh))
-        # is it too high to ever match? if so, exit.
-        if threshold > 1.0:
+        try:
+            x = calc_threshold_from_bp(threshold_bp, scaled, len(cur_query_mh))
+            threshold, n_threshold_hashes = x
+        except ValueError:
+            # too high to ever match => exit
             return []
 
-        # Find the best match -
+        # Find the best match using the internal Counter.
         most_common = counter.most_common()
         dataset_id, match_size = most_common[0]
 
@@ -807,12 +808,13 @@ class CounterGather:
         if match_size < n_threshold_hashes:
             return []
 
-        ## at this point, we must have a legitimate match above threshold!
+        ## at this point, we have a legitimate match above threshold!
 
         # pull match and location.
         match = siglist[dataset_id]
 
         # calculate containment
+        # CTB: this check is probably redundant with intersect_mh calc, below.
         cont = cur_query_mh.contained_by(match.minhash, downsample=True)
         assert cont
         assert cont >= threshold
@@ -826,7 +828,7 @@ class CounterGather:
         return (IndexSearchResult(cont, match, location), intersect_mh)
 
     def consume(self, intersect_mh):
-        "Remove the given hashes from this counter."
+        "Maintain the internal counter by removing the given hashes."
         self.query_started = 1
 
         if not intersect_mh:
@@ -868,6 +870,15 @@ class MultiIndex(Index):
 
     Note: this is an in-memory collection, and does not do lazy loading:
     all signatures are loaded upon instantiation and kept in memory.
+
+    There are a variety of loading functions:
+    * `load` takes a list of already-loaded Index objects,
+      together with a list of their locations.
+    * `load_from_directory` traverses a directory to load files within.
+    * `load_from_path` takes an arbitrary pathname and tries to load it
+      as a directory, or as a .sig file.
+    * `load_from_pathlist` takes a text file full of pathnames and tries
+      to load them all.
 
     Concrete class; signatures held in memory; builds and uses manifests.
     """
@@ -1050,113 +1061,6 @@ class MultiIndex(Index):
                           prepend_location=self.prepend_location)
 
 
-class LazyLoadedIndex(Index):
-    """Given an index location and a manifest, do select only on the manifest
-    until signatures are actually requested, and only then load the index.
-
-    This class is useful when you have an index object that consume
-    memory when it is loaded (e.g. JSON signature files, or LCA
-    databases) and you want to avoid keeping them in memory.  The
-    downside of using this class is that it will load the signatures
-    from disk every time they are needed (e.g. 'find(...)', 'signatures()').
-
-    Wrapper class; signatures dynamically loaded from disk; uses manifests.
-
-    CTB: This may be redundant with StandaloneManifestIndex.
-    """
-    def __init__(self, filename, manifest):
-        "Create an Index with given filename and manifest."
-        self.filename = filename
-        self.manifest = manifest
-
-    @property
-    def location(self):
-        "the 'location' attribute for this index will be the filename."
-        return self.filename
-
-    def signatures(self):
-        "yield all signatures from the manifest."
-        if not len(self):
-            # nothing in manifest? done!
-            return []
-
-        # ok - something in manifest, let's go get those signatures!
-        picklist = self.manifest.to_picklist()
-        idx = sourmash.load_file_as_index(self.location)
-
-        # convert remaining manifest into picklist
-        # CTB: one optimization down the road is, for storage-backed
-        # Index objects, to just reach in and get the signatures directly,
-        # without going through 'select'. Still, this is nice for abstraction
-        # because we don't need to care what the index is - it'll work on
-        # anything. It just might be a bit slower.
-        idx = idx.select(picklist=picklist)
-
-        # extract signatures.
-        for ss in idx.signatures():
-            yield ss
-
-    def find(self, *args, **kwargs):
-        """Run find after loading and selecting; this provides 'search',
-        "'gather', and 'prefetch' functionality, which are built on 'find'.
-        """
-        if not len(self):
-            # nothing in manifest? done!
-            return []
-
-        # ok - something in manifest, let's go get those signatures!
-        picklist = self.manifest.to_picklist()
-        idx = sourmash.load_file_as_index(self.location)
-
-        # convert remaining manifest into picklist
-        # CTB: one optimization down the road is, for storage-backed
-        # Index objects, to just reach in and get the signatures directly,
-        # without going through 'select'. Still, this is nice for abstraction
-        # because we don't need to care what the index is - it'll work on
-        # anything. It just might be a bit slower.
-        idx = idx.select(picklist=picklist)
-
-        for x in idx.find(*args, **kwargs):
-            yield x
-
-    def __len__(self):
-        "track index size based on the manifest."
-        return len(self.manifest)
-
-    def __bool__(self):
-        return bool(self.manifest)
-
-    @classmethod
-    def load(cls, location):
-        """Load index from given location, but retain only the manifest.
-
-        Fail if no manifest.
-        """
-        idx = sourmash.load_file_as_index(location)
-        manifest = idx.manifest
-
-        if not idx.manifest:
-            raise ValueError(f"no manifest on index at {location}")
-
-        del idx
-        # NOTE: index is not retained outside this scope, just location.
-
-        return cls(location, manifest)
-
-    def insert(self, *args):
-        raise NotImplementedError
-
-    def save(self, *args):
-        raise NotImplementedError
-
-    def select(self, **kwargs):
-        "Run 'select' on manifest, return new object with new manifest."
-        manifest = self.manifest
-        new_manifest = manifest.select_to_manifest(**kwargs)
-
-        return LazyLoadedIndex(self.filename, new_manifest)
-
-
 class StandaloneManifestIndex(Index):
     """Load a standalone manifest as an Index.
 
@@ -1176,11 +1080,6 @@ class StandaloneManifestIndex(Index):
     prefix.
 
     StandaloneManifestIndex does _not_ store signatures in memory.
-
-    This class overlaps in concept with LazyLoadedIndex and behaves
-    identically when a manifest contains only rows from a single
-    on-disk Index object.  However, unlike LazyLoadedIndex, this class
-    can be used to reference multiple on-disk Index objects.
 
     This class also overlaps in concept with MultiIndex when
     MultiIndex.load_from_pathlist is used to load other Index
@@ -1207,8 +1106,7 @@ class StandaloneManifestIndex(Index):
         if not os.path.isfile(location):
             raise ValueError(f"provided manifest location '{location}' is not a file")
 
-        with open(location, newline='') as fp:
-            m = CollectionManifest.load_from_csv(fp)
+        m = CollectionManifest.load_from_filename(location)
 
         if prefix is None:
             prefix = os.path.dirname(location)
@@ -1240,19 +1138,11 @@ class StandaloneManifestIndex(Index):
         manifest in this class.
         """
         # collect all internal locations
-        iloc_to_rows = defaultdict(list)
-        for row in self.manifest.rows:
-            iloc = row['internal_location']
-            iloc_to_rows[iloc].append(row)
-
-        # iterate over internal locations, selecting relevant sigs
-        for iloc, iloc_rows in iloc_to_rows.items():
-            # prepend with prefix?
+        picklist = self.manifest.to_picklist()
+        for iloc in self.manifest.locations():
+            # prepend location with prefix?
             if not iloc.startswith('/') and self.prefix:
                 iloc = os.path.join(self.prefix, iloc)
-
-            sub_mf = CollectionManifest(iloc_rows)
-            picklist = sub_mf.to_picklist()
 
             idx = sourmash.load_file_as_index(iloc)
             idx = idx.select(picklist=picklist)

@@ -161,6 +161,26 @@ files to `sourmash search` and `sourmash compare`.  sourmash will
 provide a warning if you run `sourmash search` on an LCA or SBT with
 an abundance-weighted query, and automatically apply `--ignore-abundance`.
 
+### Estimating ANI from FracMinHash comparisons.
+
+As of v4.4, `sourmash` can estimate Average Nucleotide Identity (ANI)
+between two FracMinHash ("scaled") sketches. `sourmash compare` can now
+produce a matrix of ANI values estimated from Jaccard, Containment,
+or Max Containment by specifiing `--ani` (optionally along with search type,
+e.g. `--containment`). `sourmash search`, `sourmash prefetch`, and
+`sourmash gather` will now output ANI estimates to output csvs.
+
+Note that while ANI can be estimated from either the Jaccard Index or
+the Containment Index, ANI from Containment is preferable (more accurate).
+For `sourmash search`, `sourmash prefetch`, and `sourmash gather`, you can
+optionally return confidence intervals around containment-derived ANI estimates,
+which take into account the impact of the scaling factor (via `--estimate-ani-ci`).
+
+For details on ANI estimation, please see our preprint "Debiasing FracMinHash and
+deriving confidence intervals for mutation rates across a wide range of evolutionary
+distances," [here](https://www.biorxiv.org/content/10.1101/2022.01.11.475870v2),
+Hera et al., 2022.
+
 ## What commands should I use?
 
 It's not always easy to figure that out, we know! We're thinking about

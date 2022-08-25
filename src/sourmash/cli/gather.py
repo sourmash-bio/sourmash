@@ -131,6 +131,21 @@ def subparser(subparsers):
         '--prefetch', dest="prefetch", action='store_true',
         help="use prefetch before gather; see documentation",
     )
+    subparser.add_argument(
+        '--estimate-ani-ci', action='store_true',
+        help='also output confidence intervals for ANI estimates'
+    )
+    subparser.add_argument(
+        '--fail-on-empty-database', action='store_true',
+        help='stop at databases that contain no compatible signatures'
+    )
+    subparser.add_argument(
+        '--no-fail-on-empty-database', action='store_false',
+        dest='fail_on_empty_database',
+        help='continue past databases that contain no compatible signatures'
+    )
+    subparser.set_defaults(fail_on_empty_database=True)
+
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
     add_picklist_args(subparser)

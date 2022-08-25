@@ -5,6 +5,14 @@ import os
 import csv
 from collections import namedtuple, defaultdict
 from collections import abc
+import gzip
+
+from sourmash import sqlite_utils, sourmash_args
+from sourmash.exceptions import IndexNotSupported
+from sourmash.distance_utils import containment_to_distance
+
+import sqlite3
+
 
 __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
            'load_gather_results', 'check_and_load_gather_csvs',
@@ -18,9 +26,9 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
 from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
 
-QueryInfo = namedtuple("QueryInfo", "query_md5, query_filename, query_bp")
-SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank")
-ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank")
+QueryInfo = namedtuple("QueryInfo", "query_md5, query_filename, query_bp, query_hashes")
+SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
+ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
 
 # Essential Gather column names that must be in gather_csv to allow `tax` summarization
 EssentialGatherColnames = ('query_name', 'name', 'f_unique_weighted', 'f_unique_to_query', 'unique_intersect_bp', 'remaining_bp', 'query_md5', 'query_filename')
@@ -76,7 +84,9 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     return gather_csvs
 
 
-def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=EssentialGatherColnames, seen_queries=None, force=False):
+def load_gather_results(gather_csv, *, delimiter=',',
+                        essential_colnames=EssentialGatherColnames,
+                        seen_queries=None, force=False):
     "Load a single gather csv"
     if not seen_queries:
         seen_queries=set()
@@ -88,11 +98,11 @@ def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=Essenti
         header = r.fieldnames
         # check for empty file
         if not header:
-            raise ValueError(f'Cannot read gather results from {gather_csv}. Is file empty?')
+            raise ValueError(f"Cannot read gather results from '{gather_csv}'. Is file empty?")
 
-        #check for critical column names used by summarize_gather_at
+        # check for critical column names used by summarize_gather_at
         if not set(essential_colnames).issubset(header):
-            raise ValueError(f'Not all required gather columns are present in {gather_csv}.')
+            raise ValueError(f"Not all required gather columns are present in '{gather_csv}'.")
 
         for n, row in enumerate(r):
             query_name = row['query_name']
@@ -106,7 +116,7 @@ def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=Essenti
                         gather_queries.add(query_name)
                     continue
                 else:
-                    raise ValueError(f"Gather query {query_name} was found in more than one CSV. Cannot load from {gather_csv}.")
+                    raise ValueError(f"Gather query {query_name} was found in more than one CSV. Cannot load from '{gather_csv}'.")
             else:
                 gather_results.append(row)
             # add query name to the gather_queries from this CSV
@@ -116,7 +126,7 @@ def load_gather_results(gather_csv, *, delimiter=',', essential_colnames=Essenti
     if not gather_results:
         raise ValueError(f'No gather results loaded from {gather_csv}.')
     else:
-        notify(f'loaded {len(gather_results)} gather results.')
+        notify(f"loaded {len(gather_results)} gather results from '{gather_csv}'.")
     return gather_results, header, gather_queries
 
 
@@ -147,19 +157,19 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
                 raise
 
         # check for match identites in these gather_results not found in lineage spreadsheets
-        n_missed, ident_missed = find_missing_identities(these_results, tax_assign)
-        if n_missed:
+        ident_missed = find_missing_identities(these_results, tax_assign)
+        if ident_missed:
             notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
             if fail_on_missing_taxonomy:
                 raise ValueError('Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
 
-            total_missed += n_missed
+            total_missed += len(ident_missed)
             all_ident_missed.update(ident_missed)
         # add these results to gather_results
         gather_results += these_results
 
     num_gather_csvs_loaded = n+1 - n_ignored
-    notify(f'loaded results from {str(num_gather_csvs_loaded)} gather CSVs')
+    notify(f'loaded {len(gather_results)} results total from {str(num_gather_csvs_loaded)} gather CSVs')
 
     return gather_results, all_ident_missed, total_missed, header
 
@@ -182,7 +192,8 @@ def find_match_lineage(match_ident, tax_assign, *, skip_idents = [],
 def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                         keep_full_identifiers=False,
                         keep_identifier_versions=False, best_only=False,
-                        seen_perfect=set()):
+                        seen_perfect=set(),
+                        estimate_query_ani=False):
     """
     Summarize gather results at specified taxonomic rank
     """
@@ -192,6 +203,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
     sum_uniq_to_query = defaultdict(lambda: defaultdict(float))
     sum_uniq_bp = defaultdict(lambda: defaultdict(float))
     query_info = {}
+    ksize, scaled, query_nhashes=None, None, None
 
     for row in gather_results:
         # get essential gather info
@@ -202,12 +214,26 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
         query_md5 = row['query_md5']
         query_filename = row['query_filename']
         # get query_bp
-        if query_name not in query_info.keys():
-            query_bp = unique_intersect_bp + int(row['remaining_bp'])
+        if query_name not in query_info.keys(): #REMOVING THIS AFFECTS GATHER RESULTS!!! BUT query bp should always be same for same query? bug?
+            if "query_nhashes" in row.keys():
+                query_nhashes = int(row["query_nhashes"])
+            if "query_bp" in row.keys():
+                query_bp = int(row["query_bp"])
+            else:
+                query_bp = unique_intersect_bp + int(row['remaining_bp'])
+        
         # store query info
-        query_info[query_name] = QueryInfo(query_md5=query_md5, query_filename=query_filename, query_bp=query_bp)
+        query_info[query_name] = QueryInfo(query_md5=query_md5, query_filename=query_filename, query_bp=query_bp, query_hashes = query_nhashes)
+        
+        if estimate_query_ani and (not ksize or not scaled): # just need to set these once. BUT, if we have these, should we check for compatibility when loading the gather file?
+            if "ksize" in row.keys():
+                ksize = int(row['ksize'])
+                scaled = int(row['scaled'])
+            else:
+                estimate_query_ani=False
+                notify("WARNING: Please run gather with sourmash >= 4.4 to estimate query ANI at rank. Continuing without ANI...")
+        
         match_ident = row['name']
-
 
         # 100% match? are we looking at something in the database?
         if f_unique_to_query >= 1.0 and query_name not in seen_perfect: # only want to notify once, not for each rank
@@ -219,9 +245,9 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
 
         # get lineage for match
         lineage = find_match_lineage(match_ident, tax_assign,
-                                     skip_idents=skip_idents,
-                             keep_full_identifiers=keep_full_identifiers,
-                             keep_identifier_versions=keep_identifier_versions)
+                                    skip_idents=skip_idents,
+                                    keep_full_identifiers=keep_full_identifiers,
+                                    keep_identifier_versions=keep_identifier_versions)
         # ident was in skip_idents
         if not lineage:
             continue
@@ -240,6 +266,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
         qInfo = query_info[query_name]
         sumgather_items = list(lineage_weights.items())
         sumgather_items.sort(key = lambda x: -x[1])
+        query_ani = None
         if best_only:
             lineage, fraction = sumgather_items[0]
             if fraction > 1:
@@ -248,13 +275,18 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                 continue
             f_weighted_at_rank = sum_uniq_weighted[query_name][lineage]
             bp_intersect_at_rank = sum_uniq_bp[query_name][lineage]
-            sres = SummarizedGatherResult(query_name, rank, fraction, lineage, qInfo.query_md5, qInfo.query_filename, f_weighted_at_rank, bp_intersect_at_rank)
+            if estimate_query_ani:
+                query_ani = containment_to_distance(fraction, ksize, scaled,
+                                                    n_unique_kmers= qInfo.query_hashes, sequence_len_bp= qInfo.query_bp).ani
+            sres = SummarizedGatherResult(query_name, rank, fraction, lineage, qInfo.query_md5,
+                                          qInfo.query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
             sum_uniq_to_query_sorted.append(sres)
         else:
             total_f_weighted= 0.0
             total_f_classified = 0.0
             total_bp_classified = 0
             for lineage, fraction in sumgather_items:
+                query_ani = None
                 if fraction > 1:
                     raise ValueError(f"The tax summary of query '{query_name}' is {fraction}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
                 elif fraction == 0:
@@ -264,19 +296,25 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                 total_f_weighted += f_weighted_at_rank
                 bp_intersect_at_rank = int(sum_uniq_bp[query_name][lineage])
                 total_bp_classified += bp_intersect_at_rank
-                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_intersect_at_rank)
+                if estimate_query_ani:
+                    query_ani = containment_to_distance(fraction, ksize, scaled,
+                                                        n_unique_kmers=qInfo.query_hashes, sequence_len_bp=qInfo.query_bp).ani
+                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5,
+                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
                 sum_uniq_to_query_sorted.append(sres)
 
             # record unclassified
             lineage = ()
+            query_ani = None
             fraction = 1.0 - total_f_classified
             if fraction > 0:
                 f_weighted_at_rank = 1.0 - total_f_weighted
                 bp_intersect_at_rank = qInfo.query_bp - total_bp_classified
-                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_intersect_at_rank)
+                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5,
+                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
                 sum_uniq_to_query_sorted.append(sres)
 
-    return sum_uniq_to_query_sorted, seen_perfect
+    return sum_uniq_to_query_sorted, seen_perfect, estimate_query_ani
 
 
 def find_missing_identities(gather_results, tax_assign):
@@ -284,17 +322,16 @@ def find_missing_identities(gather_results, tax_assign):
     Identify match ids/accessions from gather results
     that are not present in taxonomic assignments.
     """
-    n_missed = 0
     ident_missed= set()
     for row in gather_results:
         match_ident = row['name']
         match_ident = get_ident(match_ident)
         if match_ident not in tax_assign:
-            n_missed += 1
             ident_missed.add(match_ident)
 
-    notify(f'of {len(gather_results)}, missed {n_missed} lineage assignments.')
-    return n_missed, ident_missed
+    if ident_missed:
+        notify(f'of {len(gather_results)} gather results, missed {len(ident_missed)} lineage assignments.')
+    return ident_missed
 
 
 # pass ranks; have ranks=[default_ranks]
@@ -367,6 +404,8 @@ def format_for_krona(rank, summarized_gather):
 
 def write_krona(rank, krona_results, out_fp, *, sep='\t'):
     'write krona output'
+    # CTB: do we want to optionally allow restriction to a specific rank
+    # & above?
     header = make_krona_header(rank)
     tsv_output = csv.writer(out_fp, delimiter='\t')
     tsv_output.writerow(header)
@@ -391,6 +430,69 @@ def write_summary(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=Fa
             if rD['lineage'] == "":
                 rD['lineage'] = "unclassified"
             w.writerow(rD)
+
+
+def write_human_summary(summarized_gather, out_fp, display_rank):
+    '''
+    Write human-readable taxonomy-summarized gather results for a specific rank.
+    '''
+    header = SummarizedGatherResult._fields
+
+    found_ANI = False
+    results = [] 
+    for rank, rank_results in summarized_gather.items():
+        # only show results for a specified rank.
+        if rank == display_rank:
+            rank_results = list(rank_results)
+            rank_results.sort(key=lambda res: -res.f_weighted_at_rank)
+
+            for res in rank_results:
+                rD = res._asdict()
+                rD['fraction'] = f'{res.fraction:.3f}'
+                rD['f_weighted_at_rank'] = f"{res.f_weighted_at_rank*100:>4.1f}%"
+                if rD['query_ani_at_rank'] is not None:
+                    found_ANI = True
+                    rD['query_ani_at_rank'] = f"{res.query_ani_at_rank*100:>3.1f}%"
+                else:
+                    rD['query_ani_at_rank'] = '-    '
+                rD['lineage'] = display_lineage(res.lineage)
+                if rD['lineage'] == "":
+                    rD['lineage'] = "unclassified"
+
+                results.append(rD)
+
+
+    if found_ANI:
+        out_fp.write("sample name    proportion   cANI   lineage\n")
+        out_fp.write("-----------    ----------   ----   -------\n")
+
+        for rD in results:
+            out_fp.write("{query_name:<15s}   {f_weighted_at_rank}     {query_ani_at_rank}  {lineage}\n".format(**rD))
+    else:
+        out_fp.write("sample name    proportion   lineage\n")
+        out_fp.write("-----------    ----------   -------\n")
+
+        for rD in results:
+            out_fp.write("{query_name:<15s}   {f_weighted_at_rank}     {lineage}\n".format(**rD))
+
+
+def write_lineage_csv(summarized_gather, csv_fp):
+    '''
+    Write a lineage-CSV format file suitable for use with sourmash tax ... -t.
+    '''
+    ranks = lca_utils.taxlist(include_strain=False)
+    header = ['ident', *ranks]
+    w = csv.DictWriter(csv_fp, header)
+    w.writeheader()
+    for rank, rank_results in summarized_gather.items():
+        for res in rank_results:
+            d = {}
+            d[rank] = ""
+            for rank, name in res.lineage:
+                d[rank] = name
+
+            d['ident'] = res.query_name
+            w.writerow(d)
 
 
 def write_classifications(classifications, csv_fp, *, sep=',', limit_float_decimals=False):
@@ -540,8 +642,7 @@ class LineageDB(abc.Mapping):
         if os.path.isdir(filename):
             raise ValueError(f"'{filename}' is a directory")
 
-        with open(filename, newline='') as fp:
-            r = csv.DictReader(fp, delimiter=delimiter)
+        with sourmash_args.FileInputCSV(filename) as r:
             header = r.fieldnames
             if not header:
                 raise ValueError(f'cannot read taxonomy assignments from {filename}')
@@ -622,15 +723,27 @@ class LineageDB(abc.Mapping):
 
 class LineageDB_Sqlite(abc.Mapping):
     """
-    A LineageDB based on a sqlite3 database with a 'taxonomy' table.
+    A LineageDB based on a sqlite3 database with a 'sourmash_taxonomy' table.
     """
     # NOTE: 'order' is a reserved name in sql, so we have to use 'order_'.
     columns = ('superkingdom', 'phylum', 'order_', 'class', 'family',
                'genus', 'species', 'strain')
+    table_name = 'sourmash_taxonomy'
 
-    def __init__(self, conn):
+    def __init__(self, conn, *, table_name=None):
         self.conn = conn
 
+        # provide for legacy support for pre-sourmash_internal days...
+        if table_name is not None:
+            self.table_name = table_name
+
+        # check that the right table is there.
+        c = conn.cursor()
+        try:
+            c.execute(f'SELECT * FROM {self.table_name} LIMIT 1')
+        except (sqlite3.DatabaseError, sqlite3.OperationalError):
+            raise ValueError("not a taxonomy database")
+            
         # check: can we do a 'select' on the right table?
         self.__len__()
         c = conn.cursor()
@@ -638,7 +751,7 @@ class LineageDB_Sqlite(abc.Mapping):
         # get available ranks...
         ranks = set()
         for column, rank in zip(self.columns, taxlist(include_strain=True)):
-            query = f'SELECT COUNT({column}) FROM taxonomy WHERE {column} IS NOT NULL AND {column} != ""'
+            query = f'SELECT COUNT({column}) FROM {self.table_name} WHERE {column} IS NOT NULL AND {column} != ""'
             c.execute(query)
             cnt, = c.fetchone()
             if cnt:
@@ -649,14 +762,35 @@ class LineageDB_Sqlite(abc.Mapping):
 
     @classmethod
     def load(cls, location):
-        "load taxonomy information from a sqlite3 database"
-        import sqlite3
+        "load taxonomy information from an existing sqlite3 database"
+        conn = sqlite_utils.open_sqlite_db(location)
+        if not conn:
+            raise ValueError("not a sqlite taxonomy database")
+
+        table_name = None
+        c = conn.cursor()
         try:
-            conn = sqlite3.connect(location)
-            db = cls(conn)
-        except sqlite3.DatabaseError:
-            raise ValueError("not a sqlite database")
-        return db
+            info = sqlite_utils.get_sourmash_internal(c)
+        except sqlite3.OperationalError:
+            info = {}
+
+        if 'SqliteLineage' in info:
+            if info['SqliteLineage'] != '1.0':
+                raise IndexNotSupported
+
+            table_name = 'sourmash_taxonomy'
+        else:
+            # legacy support for old taxonomy DB, pre sourmash_internal.
+            try:
+                c.execute('SELECT * FROM taxonomy LIMIT 1')
+                table_name = 'taxonomy'
+            except sqlite3.OperationalError:
+                pass
+
+        if table_name is None:
+            raise ValueError("not a sqlite taxonomy database")
+
+        return cls(conn, table_name=table_name)
 
     def _make_tup(self, row):
         "build a tuple of LineagePairs for this sqlite row"
@@ -666,7 +800,7 @@ class LineageDB_Sqlite(abc.Mapping):
     def __getitem__(self, ident):
         "Retrieve lineage for identifer"
         c = self.cursor
-        c.execute('SELECT superkingdom, phylum, class, order_, family, genus, species, strain FROM taxonomy WHERE ident=?', (ident,))
+        c.execute(f'SELECT superkingdom, phylum, class, order_, family, genus, species, strain FROM {self.table_name} WHERE ident=?', (ident,))
 
         # retrieve names list...
         names = c.fetchone()
@@ -687,7 +821,7 @@ class LineageDB_Sqlite(abc.Mapping):
     def __len__(self):
         "Return number of rows"
         c = self.conn.cursor()
-        c.execute('SELECT COUNT(DISTINCT ident) FROM taxonomy')
+        c.execute(f'SELECT COUNT(DISTINCT ident) FROM {self.table_name}')
         nrows, = c.fetchone()
         return nrows
 
@@ -695,7 +829,7 @@ class LineageDB_Sqlite(abc.Mapping):
         "Return all identifiers"
         # create new cursor so as to allow other operations
         c = self.conn.cursor()
-        c.execute('SELECT DISTINCT ident FROM taxonomy')
+        c.execute(f'SELECT DISTINCT ident FROM {self.table_name}')
 
         for ident, in c:
             yield ident
@@ -704,10 +838,11 @@ class LineageDB_Sqlite(abc.Mapping):
         "return all items in the sqlite database"
         c = self.conn.cursor()
 
-        c.execute('SELECT DISTINCT ident, superkingdom, phylum, class, order_, family, genus, species, strain FROM taxonomy')
+        c.execute(f'SELECT DISTINCT ident, superkingdom, phylum, class, order_, family, genus, species, strain FROM {self.table_name}')
 
         for ident, *names in c:
             yield ident, self._make_tup(names)
+
 
 class MultiLineageDB(abc.Mapping):
     "A wrapper for (dynamically) combining multiple lineage databases."
@@ -796,7 +931,10 @@ class MultiLineageDB(abc.Mapping):
             # we need a file handle; open file.
             fp = filename_or_fp
             if is_filename:
-                fp = open(filename_or_fp, 'w', newline="")
+                if filename_or_fp.endswith('.gz'):
+                    fp = gzip.open(filename_or_fp, 'wt', newline="")
+                else:
+                    fp = open(filename_or_fp, 'w', newline="")
 
             try:
                 self._save_csv(fp)
@@ -805,15 +943,23 @@ class MultiLineageDB(abc.Mapping):
                 if is_filename:
                     fp.close()
 
-    def _save_sqlite(self, filename):
-        import sqlite3
-        db = sqlite3.connect(filename)
+    def _save_sqlite(self, filename, *, conn=None):
+        from sourmash import sqlite_utils
+
+        if conn is None:
+            db = sqlite3.connect(filename)
+        else:
+            assert not filename
+            db = conn
 
         cursor = db.cursor()
         try:
+            sqlite_utils.add_sourmash_internal(cursor, 'SqliteLineage', '1.0')
+
+            # CTB: could add 'IF NOT EXIST' here; would need tests, too.
             cursor.execute("""
 
-        CREATE TABLE taxonomy (
+        CREATE TABLE sourmash_taxonomy (
             ident TEXT NOT NULL,
             superkingdom TEXT,
             phylum TEXT,
@@ -831,7 +977,7 @@ class MultiLineageDB(abc.Mapping):
             raise ValueError(f"taxonomy table already exists in '{filename}'")
 
         # follow up and create index
-        cursor.execute("CREATE UNIQUE INDEX taxonomy_ident ON taxonomy(ident);")
+        cursor.execute("CREATE UNIQUE INDEX sourmash_taxonomy_ident ON sourmash_taxonomy(ident);")
         for ident, tax in self.items():
             x = [ident, *[ t.name for t in tax ]]
 
@@ -840,7 +986,7 @@ class MultiLineageDB(abc.Mapping):
             while len(x) < 9:
                 x.append('')
 
-            cursor.execute('INSERT INTO taxonomy (ident, superkingdom, phylum, class, order_, family, genus, species, strain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', x)
+            cursor.execute('INSERT INTO sourmash_taxonomy (ident, superkingdom, phylum, class, order_, family, genus, species, strain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', x)
 
         db.commit()
 
@@ -886,7 +1032,7 @@ class MultiLineageDB(abc.Mapping):
                 try:
                     this_tax_assign = LineageDB.load(location, **kwargs)
                     loaded = True
-                except ValueError as exc:
+                except (ValueError, csv.Error) as exc:
                     # for the last loader, just pass along ValueError...
                     raise ValueError(f"cannot read taxonomy assignments from '{location}': {str(exc)}")
 

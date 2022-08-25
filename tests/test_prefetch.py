@@ -3,12 +3,22 @@ Tests for `sourmash prefetch` command-line and API functionality.
 """
 import os
 import csv
+import gzip
 import pytest
 import glob
+import random
+from sourmash.search import PrefetchResult
 
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash_tst_utils import SourmashCommandFailed
+from sourmash import signature
+
+
+def approx_eq(val1, val2):
+    if val1 == "":
+        return val1 == val2
+    return round(float(val1), 3) == round(float(val2), 3)
 
 
 def test_prefetch_basic(runtmp, linear_gather):
@@ -30,7 +40,11 @@ def test_prefetch_basic(runtmp, linear_gather):
     assert "WARNING: no output(s) specified! Nothing will be saved from this prefetch!" in c.last_result.err
     assert "selecting specified query k=31" in c.last_result.err
     assert "loaded query: NC_009665.1 Shewanella baltica... (k=31, DNA)" in c.last_result.err
-    assert "all sketches will be downsampled to scaled=1000" in c.last_result.err
+    assert "query sketch has scaled=1000; will be dynamically downsampled as needed" in c.last_result.err
+
+    err = c.last_result.err
+    assert "loaded 5 total signatures from 3 locations." in err
+    assert "after selecting signatures compatible with search, 3 remain." in err
 
     assert "total of 2 matching signatures." in c.last_result.err
     assert "of 5177 distinct query hashes, 5177 were found in matches above threshold." in c.last_result.err
@@ -132,7 +146,7 @@ def test_prefetch_query_abund(runtmp, linear_gather):
     assert "WARNING: no output(s) specified! Nothing will be saved from this prefetch!" in c.last_result.err
     assert "selecting specified query k=31" in c.last_result.err
     assert "loaded query: NC_009665.1 Shewanella baltica... (k=31, DNA)" in c.last_result.err
-    assert "all sketches will be downsampled to scaled=1000" in c.last_result.err
+    assert "query sketch has scaled=1000; will be dynamically downsampled as needed" in c.last_result.err
 
     assert "total of 2 matching signatures." in c.last_result.err
     assert "of 5177 distinct query hashes, 5177 were found in matches above threshold." in c.last_result.err
@@ -158,7 +172,7 @@ def test_prefetch_subj_abund(runtmp, linear_gather):
     assert "WARNING: no output(s) specified! Nothing will be saved from this prefetch!" in c.last_result.err
     assert "selecting specified query k=31" in c.last_result.err
     assert "loaded query: NC_009665.1 Shewanella baltica... (k=31, DNA)" in c.last_result.err
-    assert "all sketches will be downsampled to scaled=1000" in c.last_result.err
+    assert "query sketch has scaled=1000; will be dynamically downsampled as needed" in c.last_result.err
 
     assert "total of 2 matching signatures." in c.last_result.err
     assert "of 5177 distinct query hashes, 5177 were found in matches above threshold." in c.last_result.err
@@ -188,6 +202,34 @@ def test_prefetch_csv_out(runtmp, linear_gather):
     with open(csvout, 'rt', newline="") as fp:
         r = csv.DictReader(fp)
         for (row, expected) in zip(r, expected_intersect_bp):
+            print(row)
+            assert int(row['intersect_bp']) == expected
+
+
+def test_prefetch_csv_gz_out(runtmp, linear_gather):
+    c = runtmp
+
+    # test a basic prefetch, with CSV output to a .gz file
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    csvout = c.output('out.csv.gz')
+
+    c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
+                   '-o', csvout, linear_gather)
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    expected_intersect_bp = [2529000, 5177000]
+    with gzip.open(csvout, 'rt', newline="") as fp:
+        r = csv.DictReader(fp)
+        for (row, expected) in zip(r, expected_intersect_bp):
+            print(row)
             assert int(row['intersect_bp']) == expected
 
 
@@ -415,7 +457,7 @@ def test_prefetch_no_num_subj(runtmp, linear_gather):
     print(c.last_result.err)
 
     assert c.last_result.status != 0
-    assert "ERROR in prefetch: no compatible signatures in any databases?!" in c.last_result.err
+    assert "ERROR in prefetch: after picklists and patterns, no signatures to search!?" in c.last_result.err
 
 
 def test_prefetch_db_fromfile(runtmp, linear_gather):
@@ -444,7 +486,7 @@ def test_prefetch_db_fromfile(runtmp, linear_gather):
     assert "WARNING: no output(s) specified! Nothing will be saved from this prefetch!" in c.last_result.err
     assert "selecting specified query k=31" in c.last_result.err
     assert "loaded query: NC_009665.1 Shewanella baltica... (k=31, DNA)" in c.last_result.err
-    assert "all sketches will be downsampled to scaled=1000" in c.last_result.err
+    assert "query sketch has scaled=1000; will be dynamically downsampled as needed" in c.last_result.err
 
     assert "total of 2 matching signatures." in c.last_result.err
     assert "of 5177 distinct query hashes, 5177 were found in matches above threshold." in c.last_result.err
@@ -525,6 +567,47 @@ def test_prefetch_downsample_scaled(runtmp, linear_gather):
 
     assert c.last_result.status == 0
     assert "downsampling query from scaled=1000 to 10000" in c.last_result.err
+
+
+
+
+def test_prefetch_downsample_multiple(runtmp, linear_gather):
+    # test multiple different downsamplings in prefetch code
+    query_sig = utils.get_test_data('GCF_000006945.2-s500.sig')
+
+    # load in the hashes and do split them into four bins, randomly.
+    ss = sourmash.load_one_signature(query_sig)
+    hashes = list(ss.minhash.hashes)
+
+    random.seed(a=1)            # fix seed so test is reproducible
+    random.shuffle(hashes)
+
+    # split into 4 bins:
+    mh_bins = [ ss.minhash.copy_and_clear() for i in range(4) ]
+    for i, hashval in enumerate(hashes):
+        mh_bins[i % 4].add_hash(hashval)
+
+    # downsample with different scaleds; initial scaled is 500, note.
+    mh_bins[0] = mh_bins[0].downsample(scaled=750)
+    mh_bins[1] = mh_bins[1].downsample(scaled=600)
+    mh_bins[2] = mh_bins[2].downsample(scaled=1000)
+    mh_bins[3] = mh_bins[3].downsample(scaled=650)
+
+    gathersigs = []
+    for i in range(4):
+        binsig = signature.SourmashSignature(mh_bins[i], name=f"bin{i}")
+
+        with open(runtmp.output(f"bin{i}.sig"), "wb") as fp:
+            sourmash.save_signatures([binsig], fp)
+
+        gathersigs.append(f"bin{i}.sig")
+
+    runtmp.sourmash('prefetch', linear_gather, query_sig, *gathersigs)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "final scaled value (max across query and all matches) is 1000" in runtmp.last_result.err
 
 
 def test_prefetch_empty(runtmp, linear_gather):
@@ -669,3 +752,90 @@ def test_prefetch_output_with_abundance(runtmp, prefetch_gather, linear_gather):
     assert os.path.exists(c.output('nomatch-hash.sig'))
     ss = list(sourmash.load_file_as_signatures(c.output('nomatch-hash.sig')))[0]
     assert ss.minhash.track_abundance
+
+
+def test_prefetch_ani_csv_out(runtmp, linear_gather):
+    c = runtmp
+
+    # test a basic prefetch, with CSV output
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    csvout = c.output('out.csv')
+
+    c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
+                   '-o', csvout, linear_gather)
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    prefetch_result_names = PrefetchResult.prefetch_write_cols
+    exp1 = {'q_ani': '0.9771552502238963','m_ani': '0.9767860811200507',
+                      'ac_ani': '0.9769706656719734','mc_ani': '0.9771552502238963',
+                      'pfn': 'False'}
+    exp2 = {'q_ani': '1.0','m_ani': '1.0',
+                      'ac_ani': '1.0','mc_ani': '1.0',
+                      'pfn': 'False'}
+    expected_ani_vals = [exp1, exp2]
+    with open(csvout, 'rt', newline="") as fp:
+        r = csv.DictReader(fp)
+        for (row, expected) in zip(r, expected_ani_vals):
+            print(row)
+            assert prefetch_result_names == list(row.keys())
+            assert approx_eq(row['query_containment_ani'], expected['q_ani'])
+            assert approx_eq(row['match_containment_ani'], expected['m_ani'])
+            assert approx_eq(row['max_containment_ani'], expected['mc_ani'])
+            assert approx_eq(row['average_containment_ani'], expected['ac_ani'])
+            assert row['potential_false_negative'] == expected['pfn']
+
+
+def test_prefetch_ani_csv_out_estimate_ci(runtmp, linear_gather):
+    c = runtmp
+
+    # test a basic prefetch, with CSV output
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    csvout = c.output('out.csv')
+
+    c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
+                   '-o', csvout, linear_gather, '--estimate-ani-ci')
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert os.path.exists(csvout)
+    prefetch_result_names_ci = PrefetchResult.prefetch_write_cols_ci
+
+    exp1 = {'q_ani': '0.9771552502238963','m_ani': '0.9767860811200507',
+            'q_ani_low': "0.9762537506990911", 'q_ani_high': "0.9780336875157754",
+            'm_ani_low': "0.9758801604653301", "m_ani_high": "0.9776692390768575",
+            'ac_ani': '0.9769706656719734','mc_ani': '0.9771552502238963',
+            'pfn': 'False'}
+    exp2 = {'q_ani': '1.0','m_ani': '1.0',
+            'q_ani_low': "1.0", 'q_ani_high': "1.0",
+            'm_ani_low': "1.0", "m_ani_high": "1.0",
+                      'ac_ani': '1.0','mc_ani': '1.0',
+                      'pfn': 'False'}
+
+    expected_ani_vals = [exp1, exp2]
+    with open(csvout, 'rt', newline="") as fp:
+        r = csv.DictReader(fp)
+        for (row, expected) in zip(r, expected_ani_vals):
+            print(row)
+            assert prefetch_result_names_ci == list(row.keys())
+            assert approx_eq(row['query_containment_ani'],expected['q_ani'])
+            assert approx_eq(row['query_containment_ani_low'], expected['q_ani_low'])
+            assert approx_eq(row['query_containment_ani_high'], expected['q_ani_high'])
+            assert approx_eq(row['match_containment_ani'], expected['m_ani'])
+            assert approx_eq(row['match_containment_ani_low'], expected['m_ani_low'])
+            assert approx_eq(row['match_containment_ani_high'], expected['m_ani_high'])
+            assert approx_eq(row['max_containment_ani'], expected['mc_ani'])
+            assert approx_eq(row['average_containment_ani'], expected['ac_ani'])
+            assert row['potential_false_negative'] == expected['pfn']

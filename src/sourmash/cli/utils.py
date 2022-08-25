@@ -17,20 +17,20 @@ def add_moltype_args(parser):
 
     parser.add_argument(
         '--dayhoff', dest='dayhoff', action='store_true',
-        help='build Dayhoff-encoded amino acid signatures'
+        help='choose Dayhoff-encoded amino acid signatures'
     )
     parser.add_argument(
         '--no-dayhoff', dest='dayhoff', action='store_false',
-        help='do not build Dayhoff-encoded amino acid signatures')
+        help='do not choose Dayhoff-encoded amino acid signatures')
     parser.set_defaults(dayhoff=False)
 
     parser.add_argument(
         '--hp', '--hydrophobic-polar', dest='hp', action='store_true',
-        help='build hydrophobic-polar-encoded amino acid signatures'
+        help='choose hydrophobic-polar-encoded amino acid signatures'
     )
     parser.add_argument(
         '--no-hp', '--no-hydrophobic-polar', dest='hp', action='store_false',
-        help='do not build hydrophobic-polar-encoded amino acid signatures')
+        help='do not choose hydrophobic-polar-encoded amino acid signatures')
     parser.set_defaults(hp=False)
 
     parser.add_argument(
@@ -67,10 +67,14 @@ def range_limited_float_type(arg):
     return f
 
 
-def add_tax_threshold_arg(parser, default=0.1):
+def add_tax_threshold_arg(parser, containment_default=0.1, ani_default=None):
     parser.add_argument(
-        '--containment-threshold', default=default, type=range_limited_float_type,
-        help=f'minimum containment threshold for classification; default={default}'
+        '--containment-threshold', default=containment_default, type=range_limited_float_type,
+        help=f'minimum containment threshold for classification; default={containment_default}',
+    )
+    parser.add_argument(
+        '--ani-threshold', '--aai-threshold', default=ani_default, type=range_limited_float_type,
+        help=f'minimum ANI threshold (nucleotide gather) or AAI threshold (protein gather) for classification; default={ani_default}',
     )
 
 

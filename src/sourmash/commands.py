@@ -5,10 +5,11 @@ import csv
 import os
 import os.path
 import sys
+import shutil
 
 import screed
 from .compare import (compare_all_pairs, compare_serial_containment,
-                      compare_serial_max_containment)
+                      compare_serial_max_containment, compare_serial_avg_containment)
 from . import MinHash
 from .sbtmh import load_sbt_index, create_sbt_index
 from . import signature as sig
@@ -16,10 +17,16 @@ from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
 from .sourmash_args import (FileOutput, FileOutputCSV,
                             SaveSignaturesToLocation)
-from .search import prefetch_database, PrefetchResult, calculate_prefetch_info
+from .search import prefetch_database, PrefetchResult
 from .index import LazyLinearIndex
 
 WATERMARK_SIZE = 10000
+
+def _get_screen_width():
+    # default fallback is 80x24
+    (col, rows) = shutil.get_terminal_size()
+
+    return col
 
 
 def compare(args):
@@ -42,6 +49,7 @@ def compare(args):
     siglist = []
     ksizes = set()
     moltypes = set()
+    size_may_be_inaccurate = False
     for filename in inp_files:
         notify(f"loading '{filename}'", end='\r')
         loaded = sourmash_args.load_file_as_signatures(filename,
@@ -98,29 +106,41 @@ def compare(args):
         sys.exit(-1)
 
     is_containment = False
-    if args.containment or args.max_containment:
+    if args.containment or args.max_containment or args.avg_containment:
         is_containment = True
 
-        if args.containment and args.max_containment:
-            notify("ERROR: cannot specify both --containment and --max-containment!")
+        containment_args = [args.containment, args.max_containment, args.avg_containment]
+        if sum(containment_args) > 1:
+            notify("ERROR: cannot specify more than one containment argument!")
             sys.exit(-1)
 
     # complain if --containment and not is_scaled
     if is_containment and not is_scaled:
-        error('must use scaled signatures with --containment and --max-containment')
+        error('must use scaled signatures with --containment, --max-containment, and --avg-containment')
+        sys.exit(-1)
+
+    # complain if --ani and not is_scaled
+    return_ani = False
+    if args.estimate_ani:
+        return_ani = True
+
+    if return_ani and not is_scaled:
+        error('must use scaled signatures with --estimate-ani')
         sys.exit(-1)
 
     # notify about implicit --ignore-abundance:
-    if is_containment:
+    if is_containment or return_ani:
         track_abundances = any(( s.minhash.track_abundance for s in siglist ))
         if track_abundances:
-            notify('NOTE: --containment and --max-containment ignore signature abundances.')
+            notify('NOTE: --containment, --max-containment, --avg-containment, and --estimate-ani ignore signature abundances.')
 
     # if using --scaled, downsample appropriately
     printed_scaled_msg = False
     if is_scaled:
         max_scaled = max(s.minhash.scaled for s in siglist)
         for s in siglist:
+            if not size_may_be_inaccurate and not s.minhash.size_is_accurate():
+                size_may_be_inaccurate = True
             if s.minhash.scaled != max_scaled:
                 if not printed_scaled_msg:
                     notify(f'downsampling to scaled value of {format(max_scaled)}')
@@ -140,12 +160,14 @@ def compare(args):
 
     labeltext = [str(item) for item in siglist]
     if args.containment:
-        similarity = compare_serial_containment(siglist)
+        similarity = compare_serial_containment(siglist, return_ani=return_ani)
     elif args.max_containment:
-        similarity = compare_serial_max_containment(siglist)
+        similarity = compare_serial_max_containment(siglist, return_ani=return_ani)
+    elif args.avg_containment:
+        similarity = compare_serial_avg_containment(siglist, return_ani=return_ani)
     else:
         similarity = compare_all_pairs(siglist, args.ignore_abundance,
-                                       n_jobs=args.processes)
+                                       n_jobs=args.processes, return_ani=return_ani)
 
     if len(siglist) < 30:
         for i, E in enumerate(siglist):
@@ -178,6 +200,9 @@ def compare(args):
                 for j in range(len(labeltext)):
                     y.append('{}'.format(similarity[i][j]))
                 w.writerow(y)
+
+    if size_may_be_inaccurate:
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will be set to 0 for these comparisons.")
 
 
 def plot(args):
@@ -441,7 +466,7 @@ def search(args):
     from .search import (search_databases_with_flat_query,
                          search_databases_with_abund_query)
 
-    set_quiet(args.quiet)
+    set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
     pattern_search = sourmash_args.load_include_exclude_db_patterns(args)
@@ -471,11 +496,8 @@ def search(args):
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
                                                 not is_containment,
                                                 picklist=picklist,
-                                                pattern=pattern_search)
-
-    if not len(databases):
-        error('Nothing found to search!')
-        sys.exit(-1)
+                                                pattern=pattern_search,
+                                                fail_on_empty_database=args.fail_on_empty_database)
 
     # handle signatures with abundance
     if query.minhash.track_abundance:
@@ -492,30 +514,38 @@ def search(args):
 
     # do the actual search
     if query.minhash.track_abundance:
-        results = search_databases_with_abund_query(query, databases,
-                                   threshold=args.threshold,
-                                   do_containment=args.containment,
-                                   do_max_containment=args.max_containment,
-                                   best_only=args.best_only,
-                                   unload_data=True)
+        try:
+            results = search_databases_with_abund_query(query, databases,
+                                       threshold=args.threshold,
+                                       do_containment=args.containment,
+                                       do_max_containment=args.max_containment,
+                                       best_only=args.best_only,
+                                       unload_data=True)
+        except TypeError as exc:
+            error(f"ERROR: {str(exc)}")
+            sys.exit(-1)
     else:
         results = search_databases_with_flat_query(query, databases,
                                    threshold=args.threshold,
                                    do_containment=args.containment,
                                    do_max_containment=args.max_containment,
                                    best_only=args.best_only,
-                                   unload_data=True)
+                                   unload_data=True,
+                                   estimate_ani_ci=args.estimate_ani_ci)
 
     n_matches = len(results)
     if args.best_only:
         args.num_results = 1
 
     if not args.num_results or n_matches <= args.num_results:
-        print_results('{} matches:'.format(len(results)))
+        print_results(f'{len(results)} matches above threshold {args.threshold:0.3f}:')
     else:
-        print_results('{} matches; showing first {}:',
-               len(results), args.num_results)
+        print_results(f'{len(results)} matches above threshold {args.threshold:0.3f}; showing first {args.num_results}:')
+
         n_matches = args.num_results
+
+    size_may_be_inaccurate = False
+    jaccard_ani_untrustworthy = False
 
     # output!
     print_results("similarity   match")
@@ -524,23 +554,23 @@ def search(args):
         pct = '{:.1f}%'.format(sr.similarity*100)
         name = sr.match._display_name(60)
         print_results('{:>6}       {}', pct, name)
+        if sr.cmp_scaled is not None:
+            if not size_may_be_inaccurate and sr.size_may_be_inaccurate:
+                size_may_be_inaccurate = True
+            if not is_containment and sr.cmp.jaccard_ani_untrustworthy:
+                jaccard_ani_untrustworthy = True
 
     if args.best_only:
         notify("** reporting only one match because --best-only was set")
 
+    writer = None
     if args.output:
-        fieldnames = ['similarity', 'name', 'filename', 'md5',
-                      'query_filename', 'query_name', 'query_md5']
-
         with FileOutputCSV(args.output) as fp:
-            w = csv.DictWriter(fp, fieldnames=fieldnames)
-
-            w.writeheader()
             for sr in results:
-                d = dict(sr._asdict())
-                del d['match']
-                del d['query']
-                w.writerow(d)
+                # if this is the first result we're writing, initialize the csv, return writer
+                if writer is None:
+                    writer = sr.init_dictwriter(fp)
+                sr.write(writer)
 
     # save matching signatures upon request
     if args.save_matches:
@@ -552,6 +582,11 @@ def search(args):
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
+
+    if size_may_be_inaccurate:
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons.")
+    if jaccard_ani_untrustworthy:
+        notify("WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons.")
 
 
 def categorize(args):
@@ -649,7 +684,7 @@ def gather(args):
         error('query signature needs to be created with --scaled')
         sys.exit(-1)
 
-    if args.scaled:
+    if args.scaled and args.scaled != query.minhash.scaled:
         notify(f'downsampling query from scaled={query.minhash.scaled} to {int(args.scaled)}')
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
@@ -665,15 +700,14 @@ def gather(args):
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
                                                 cache_size=cache_size,
                                                 picklist=picklist,
-                                                pattern=pattern_search)
+                                                pattern=pattern_search,
+                                                fail_on_empty_database=args.fail_on_empty_database)
 
-    if not len(databases):
-        error('Nothing found to search!')
-        sys.exit(-1)
 
     if args.linear:             # force linear traversal?
         databases = [ LazyLinearIndex(db) for db in databases ]
 
+    size_may_be_inaccurate = False
     if args.prefetch:           # note: on by default!
         notify("Starting prefetch sweep across databases.")
         prefetch_query = query.copy()
@@ -681,49 +715,42 @@ def gather(args):
         noident_mh = prefetch_query.minhash.to_mutable()
         save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
         save_prefetch.open()
-        # set up prefetch CSV output, write headers, etc.
+        # set up prefetch CSV output
         prefetch_csvout_fp = None
         prefetch_csvout_w = None
         if args.save_prefetch_csv:
-            fieldnames = ['intersect_bp', 'jaccard',
-                          'max_containment', 'f_query_match', 'f_match_query',
-                          'match_filename', 'match_name', 'match_md5', 'match_bp',
-                          'query_filename', 'query_name', 'query_md5', 'query_bp']
-
-            prefetch_csvout_fp = FileOutput(args.save_prefetch_csv, 'wt').open()
-            prefetch_csvout_w = csv.DictWriter(prefetch_csvout_fp, fieldnames=fieldnames)
-            prefetch_csvout_w.writeheader()
+            prefetch_csvout_fp = FileOutputCSV(args.save_prefetch_csv).open()
 
             query_mh = prefetch_query.minhash
             scaled = query_mh.scaled
 
         counters = []
+        ident_mh = noident_mh.copy_and_clear()
         for db in databases:
             counter = None
             try:
                 counter = db.counter_gather(prefetch_query, args.threshold_bp)
             except ValueError:
-                if picklist or pattern_search:
-                    # catch "no signatures to search" ValueError from filtering
-                    continue
-                else:
-                    raise       # re-raise other errors, if no picklist.
+                # catch "no signatures to search" ValueError if empty db.
+                continue
 
-            save_prefetch.add_many(counter.siglist)
-            # subtract found hashes as we can.
-            for found_sig in counter.siglist:
-                noident_mh.remove_many(found_sig.minhash)
+            save_prefetch.add_many(counter.signatures())
 
-                # optionally calculate and save prefetch csv
-                if prefetch_csvout_fp:
-                    assert scaled
+            # update found/not found hashes from the union/intersection of
+            # found.
+            union_found = counter.union_found
+            ident_mh.add_many(union_found)
+            noident_mh.remove_many(union_found)
+
+                # optionally calculate and output prefetch info to csv
+            if prefetch_csvout_fp:
+                for found_sig in counter.signatures():
                     # calculate intersection stats and info
-                    prefetch_result = calculate_prefetch_info(prefetch_query, found_sig, scaled, args.threshold_bp)
-                    # remove match and query signatures; write result to prefetch csv
-                    d = dict(prefetch_result._asdict())
-                    del d['match']
-                    del d['query']
-                    prefetch_csvout_w.writerow(d)
+                    prefetch_result = PrefetchResult(prefetch_query, found_sig, cmp_scaled=scaled, 
+                                                     threshold_bp=args.threshold_bp, estimate_ani_ci=args.estimate_ani_ci)
+                    if prefetch_csvout_w is None:
+                        prefetch_csvout_w = prefetch_result.init_dictwriter(prefetch_csvout_fp)
+                    prefetch_result.write(prefetch_csvout_w)
 
             counters.append(counter)
 
@@ -739,6 +766,7 @@ def gather(args):
         counters = databases
         # we can't track unidentified hashes w/o prefetch
         noident_mh = None
+        ident_mh = None
 
     ## ok! now do gather -
 
@@ -746,11 +774,16 @@ def gather(args):
     weighted_missed = 1
     is_abundance = query.minhash.track_abundance and not args.ignore_abundance
     orig_query_mh = query.minhash
+    if not orig_query_mh.size_is_accurate():
+        size_may_be_inaccurate = True
     gather_iter = GatherDatabases(query, counters,
                                   threshold_bp=args.threshold_bp,
                                   ignore_abundance=args.ignore_abundance,
-                                  noident_mh=noident_mh)
+                                  noident_mh=noident_mh,
+                                  ident_mh=ident_mh,
+                                  estimate_ani_ci=args.estimate_ani_ci)
 
+    screen_width = _get_screen_width()
     for result, weighted_missed in gather_iter:
         if not len(found):                # first result? print header.
             if is_abundance:
@@ -766,14 +799,15 @@ def gather(args):
         # print interim result & save in `found` list for later use
         pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
         pct_genome = '{:.1f}%'.format(result.f_match*100)
-        name = result.match._display_name(40)
 
         if is_abundance:
+            name = result.match._display_name(screen_width - 41)
             average_abund ='{:.1f}'.format(result.average_abund)
             print_results('{:9}   {:>7} {:>7} {:>9}    {}',
                       format_bp(result.intersect_bp), pct_query, pct_genome,
                       average_abund, name)
         else:
+            name = result.match._display_name(screen_width - 31)
             print_results('{:9}   {:>7} {:>7}    {}',
                       format_bp(result.intersect_bp), pct_query, pct_genome,
                       name)
@@ -781,7 +815,6 @@ def gather(args):
 
         if args.num_results and len(found) >= args.num_results:
             break
-
 
     # report on thresholding -
     if gather_iter.query:
@@ -803,21 +836,13 @@ def gather(args):
         print_results(f'WARNING: final scaled was {gather_iter.scaled}, vs query scaled of {query.minhash.scaled}')
 
     # save CSV?
+    w = None
     if found and args.output:
-        fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
-                      'f_unique_to_query', 'f_unique_weighted',
-                      'average_abund', 'median_abund', 'std_abund', 'name',
-                      'filename', 'md5', 'f_match_orig', 'unique_intersect_bp',
-                      'gather_result_rank', 'remaining_bp',
-                      'query_filename', 'query_name', 'query_md5', 'query_bp']
-
         with FileOutputCSV(args.output) as fp:
-            w = csv.DictWriter(fp, fieldnames=fieldnames)
-            w.writeheader()
             for result in found:
-                d = dict(result._asdict())
-                del d['match']                 # actual signature not in CSV.
-                w.writerow(d)
+                if w is None:
+                    w = result.init_dictwriter(fp)
+                result.write(w)
 
     # save matching signatures?
     if found and args.save_matches:
@@ -849,6 +874,8 @@ def gather(args):
     if picklist:
         sourmash_args.report_picklist(args, picklist)
 
+    if size_may_be_inaccurate:
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons.")
     # DONE w/gather function.
 
 
@@ -877,14 +904,12 @@ def multigather(args):
     # need a query to get ksize, moltype for db loading
     query = next(iter(sourmash_args.load_file_as_signatures(inp_files[0], ksize=args.ksize, select_moltype=moltype)))
 
-    databases = sourmash_args.load_dbs_and_sigs(args.db, query, False)
-
-    if not len(databases):
-        error('Nothing found to search!')
-        sys.exit(-1)
+    databases = sourmash_args.load_dbs_and_sigs(args.db, query, False,
+                                                fail_on_empty_database=args.fail_on_empty_database)
 
     # run gather on all the queries.
     n=0
+    size_may_be_inaccurate = False
     for queryfile in inp_files:
         # load the query signature(s) & figure out all the things
         for query in sourmash_args.load_file_as_signatures(queryfile,
@@ -897,7 +922,7 @@ def multigather(args):
                 error('query signature needs to be created with --scaled; skipping')
                 continue
 
-            if args.scaled:
+            if args.scaled and args.scaled != query.minhash.scaled:
                 notify(f'downsampling query from scaled={query.minhash.scaled} to {int(args.scaled)}')
                 query.minhash = query.minhash.downsample(scaled=args.scaled)
 
@@ -909,14 +934,22 @@ def multigather(args):
             counters = []
             prefetch_query = query.copy()
             prefetch_query.minhash = prefetch_query.minhash.flatten()
+            ident_mh = prefetch_query.minhash.copy_and_clear()
             noident_mh = prefetch_query.minhash.to_mutable()
 
             counters = []
             for db in databases:
-                counter = db.counter_gather(prefetch_query, args.threshold_bp)
-                for found_sig in counter.siglist:
-                    noident_mh.remove_many(found_sig.minhash)
+                try:
+                    counter = db.counter_gather(prefetch_query, args.threshold_bp)
+                except ValueError:
+                    # catch "no signatures to search" ValueError if empty db.
+                    continue
                 counters.append(counter)
+
+                # track found/not found hashes
+                union_found = counter.union_found
+                noident_mh.remove_many(union_found)
+                ident_mh.add_many(union_found)
 
             found = []
             weighted_missed = 1
@@ -925,7 +958,10 @@ def multigather(args):
             gather_iter = GatherDatabases(query, counters,
                                           threshold_bp=args.threshold_bp,
                                           ignore_abundance=args.ignore_abundance,
-                                          noident_mh=noident_mh)
+                                          noident_mh=noident_mh,
+                                          ident_mh=ident_mh)
+
+            screen_width = _get_screen_width()
             for result, weighted_missed in gather_iter:
                 if not len(found):                # first result? print header.
                     if is_abundance:
@@ -941,18 +977,23 @@ def multigather(args):
                 # print interim result & save in a list for later use
                 pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
                 pct_genome = '{:.1f}%'.format(result.f_match*100)
-                name = result.match._display_name(40)
 
                 if is_abundance:
+                    name = result.match._display_name(screen_width - 41)
                     average_abund ='{:.1f}'.format(result.average_abund)
                     print_results('{:9}   {:>7} {:>7} {:>9}    {}',
                               format_bp(result.intersect_bp), pct_query, pct_genome,
                               average_abund, name)
                 else:
+                    name = result.match._display_name(screen_width - 31)
                     print_results('{:9}   {:>7} {:>7}    {}',
                               format_bp(result.intersect_bp), pct_query, pct_genome,
                               name)
                 found.append(result)
+
+                # check for size estimation accuracy, which impacts ANI estimation
+                if not size_may_be_inaccurate and result.size_may_be_inaccurate:
+                    size_may_be_inaccurate = True
 
             # report on thresholding -
             if gather_iter.query.minhash:
@@ -978,20 +1019,12 @@ def multigather(args):
             output_base = os.path.basename(query_filename)
             output_csv = output_base + '.csv'
 
-            fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
-                          'f_unique_to_query', 'f_unique_weighted',
-                          'average_abund', 'median_abund', 'std_abund', 'name',
-                          'filename', 'md5', 'f_match_orig',
-                          'unique_intersect_bp', 'gather_result_rank',
-                          'remaining_bp', 'query_filename', 'query_name',
-                          'query_md5', 'query_bp']
+            w = None
             with FileOutputCSV(output_csv) as fp:
-                w = csv.DictWriter(fp, fieldnames=fieldnames)
-                w.writeheader()
                 for result in found:
-                    d = dict(result._asdict())
-                    del d['match']      # actual signature not output to CSV!
-                    w.writerow(d)
+                    if w is None:
+                        w = result.init_dictwriter(fp)
+                        result.write(w)
 
             output_matches = output_base + '.matches.sig'
             with open(output_matches, 'wt') as fp:
@@ -1024,6 +1057,8 @@ def multigather(args):
 
         # fini, next query!
     notify(f'\nconducted gather searches on {n} signatures')
+    if size_may_be_inaccurate:
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons.")
 
 
 def watch(args):
@@ -1169,11 +1204,11 @@ def prefetch(args):
     if query_mh.track_abundance:
         query_mh = query_mh.flatten()
 
-    if args.scaled:
+    if args.scaled and args.scaled != query_mh.scaled:
         notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
         query_mh = query_mh.downsample(scaled=args.scaled)
 
-    notify(f"all sketches will be downsampled to scaled={query_mh.scaled}")
+    notify(f"query sketch has scaled={query_mh.scaled}; will be dynamically downsampled as needed.")
     common_scaled = query_mh.scaled
 
     # empty?
@@ -1188,14 +1223,7 @@ def prefetch(args):
     csvout_fp = None
     csvout_w = None
     if args.output:
-        fieldnames = ['intersect_bp', 'jaccard',
-                      'max_containment', 'f_query_match', 'f_match_query',
-                      'match_filename', 'match_name', 'match_md5', 'match_bp',
-                      'query_filename', 'query_name', 'query_md5', 'query_bp']
-
-        csvout_fp = FileOutput(args.output, 'wt').open()
-        csvout_w = csv.DictWriter(csvout_fp, fieldnames=fieldnames)
-        csvout_w.writeheader()
+        csvout_fp = FileOutputCSV(args.output).open()
 
     # track & maybe save matches progressively
     matches_out = SaveSignaturesToLocation(args.save_matches)
@@ -1209,10 +1237,14 @@ def prefetch(args):
     noident_mh = query_mh.to_mutable()
 
     did_a_search = False        # track whether we did _any_ search at all!
+    size_may_be_inaccurate = False
+    total_signatures_loaded = 0
+    sum_signatures_after_select = 0
     for dbfilename in args.databases:
-        notify(f"loading signatures from '{dbfilename}'")
+        notify(f"loading signatures from '{dbfilename}'", end='\r')
 
         db = sourmash_args.load_file_as_index(dbfilename)
+        total_signatures_loaded += len(db)
 
         # force linear traversal?
         if args.linear:
@@ -1221,6 +1253,8 @@ def prefetch(args):
         db = db.select(ksize=ksize, moltype=moltype,
                        containment=True, scaled=True)
 
+        sum_signatures_after_select += len(db)
+
         db = sourmash_args.apply_picklist_and_pattern(db, picklist,
                                                       pattern_search)
 
@@ -1228,7 +1262,7 @@ def prefetch(args):
             notify(f"...no compatible signatures in '{dbfilename}'; skipping")
             continue
 
-        for result in prefetch_database(query, db, args.threshold_bp):
+        for result in prefetch_database(query, db, args.threshold_bp, estimate_ani_ci= args.estimate_ani_ci):
             match = result.match
 
             # ensure we're all on the same page wrt scaled resolution:
@@ -1249,10 +1283,9 @@ def prefetch(args):
 
             # output match info as we go
             if csvout_fp:
-                d = dict(result._asdict())
-                del d['match']                 # actual signatures not in CSV.
-                del d['query']
-                csvout_w.writerow(d)
+                if csvout_w is None:
+                    csvout_w = result.init_dictwriter(csvout_fp)
+                result.write(csvout_w)
 
             # output match signatures as we go (maybe)
             matches_out.add(match)
@@ -1260,6 +1293,10 @@ def prefetch(args):
             if matches_out.count % 10 == 0:
                 notify(f"total of {matches_out.count} matching signatures so far.",
                        end="\r")
+
+            # keep track of inaccurate size estimation
+            if not size_may_be_inaccurate and result.size_may_be_inaccurate:
+                size_may_be_inaccurate = True
 
         did_a_search = True
 
@@ -1270,10 +1307,15 @@ def prefetch(args):
         # delete db explicitly ('cause why not)
         del db
 
+    notify("--")
+    notify(f"loaded {total_signatures_loaded} total signatures from {len(args.databases)} locations.")
+    notify(f"after selecting signatures compatible with search, {sum_signatures_after_select} remain.")
+
     if not did_a_search:
-        notify("ERROR in prefetch: no compatible signatures in any databases?!")
+        notify("ERROR in prefetch: after picklists and patterns, no signatures to search!?")
         sys.exit(-1)
 
+    notify("--")
     notify(f"total of {matches_out.count} matching signatures.")
     matches_out.close()
 
@@ -1321,5 +1363,8 @@ def prefetch(args):
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
+
+    if size_may_be_inaccurate:
+        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons.")
 
     return 0

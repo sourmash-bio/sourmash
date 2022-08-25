@@ -3,7 +3,7 @@ Functions implementing the 'sketch' subcommands and related functions.
 """
 import sys
 import os
-from collections import defaultdict
+from collections import defaultdict, Counter
 import csv
 import shlex
 
@@ -18,6 +18,7 @@ from .command_compute import (_compute_individual, _compute_merged,
 from sourmash import sourmash_args
 from sourmash.sourmash_args import check_scaled_bounds, check_num_bounds
 from sourmash.sig.__main__ import _summarize_manifest, _SketchInfo
+from sourmash.manifest import CollectionManifest
 
 DEFAULTS = dict(
     dna='k=31,scaled=1000,noabund',
@@ -84,7 +85,7 @@ def _parse_params_str(params_str):
     return moltype, params
 
 
-class _signatures_for_sketch_factory(object):
+class _signatures_for_sketch_factory:
     "Build sigs on demand, based on args input to 'sketch'."
     def __init__(self, params_str_list, default_moltype):
         # first, set up defaults per-moltype
@@ -145,16 +146,17 @@ class _signatures_for_sketch_factory(object):
             if self.mult_ksize_by_3 and not def_dna:
                 ksizes = [ k*3 for k in ksizes ]
 
-            make_param = lambda ksizes: ComputeParameters(ksizes,
-                                            params_d.get('seed', def_seed),
-                                            def_protein,
-                                            def_dayhoff,
-                                            def_hp,
-                                            def_dna,
-                                            params_d.get('num', def_num),
-                                            params_d.get('track_abundance',
-                                                         def_abund),
-                                            params_d.get('scaled', def_scaled))
+            make_param = lambda ksizes: ComputeParameters(
+                                            ksizes=ksizes,
+                                            seed=params_d.get('seed', def_seed),
+                                            protein=def_protein,
+                                            dayhoff=def_dayhoff,
+                                            hp=def_hp,
+                                            dna=def_dna,
+                                            num_hashes=params_d.get('num', def_num),
+                                            track_abundance=params_d.get('track_abundance',
+                                                                         def_abund),
+                                            scaled=params_d.get('scaled', def_scaled))
 
             if split_ksizes:
                 for ksize in ksizes:
@@ -349,6 +351,39 @@ def _compute_sigs(to_build, output, *, check_sequence=False):
     notify(f"saved {len(save_sigs)} signature(s) to '{save_sigs.location}'. Note: signature license is CC0.")
 
 
+def _output_csv_info(filename, sigs_to_build):
+    "output information about what signatures to build, in CSV format"
+    output_n = 0
+    with sourmash_args.FileOutputCSV(filename) as csv_fp:
+        w = csv.DictWriter(csv_fp, fieldnames=['filename', 'sketchtype',
+                                               'output_index', 'name',
+                                               'param_strs'])
+        w.writeheader()
+
+        output_n = 0
+        for (name, filename), param_objs in sigs_to_build.items():
+            param_strs = []
+
+            # should all be the same!
+            if param_objs[0].dna:
+                assert all( ( p.dna for p in param_objs ) )
+                sketchtype = "dna"
+            else:
+                assert not any( ( p.dna for p in param_objs ) )
+                sketchtype = "protein"
+
+            for p in param_objs:
+                param_strs.append(p.to_param_str())
+
+            row = dict(filename=filename, sketchtype=sketchtype,
+                       param_strs="-p " + " -p ".join(param_strs),
+                       name=name, output_index=output_n)
+
+            w.writerow(row)
+
+            output_n += 1
+
+
 def fromfile(args):
     if args.license != 'CC0':
         error('error: sourmash only supports CC0-licensed signatures. sorry!')
@@ -360,30 +395,6 @@ def fromfile(args):
             error(f"** Not overwriting/appending.")
             error(f"** Use --force-output-already-exists if you want to overwrite/append.")
             sys.exit(-1)
-
-    # load manifests from '--already-done' databases => turn into
-    # ComputeParameters objects, indexed by name.
-
-    already_done = defaultdict(list)
-    for filename in args.already_done:
-        idx = sourmash.load_file_as_index(filename)
-        manifest = idx.manifest
-        assert manifest
-
-        # for each manifest row,
-        for row in manifest.rows:
-            name = row['name']
-            if not name:
-                continue
-
-            # build a ComputeParameters object for later comparison
-            p = ComputeParameters.from_manifest_row(row)
-
-            # add to list for this name
-            already_done[name].append(p)
-
-    if args.already_done:
-        notify(f"Loaded {len(already_done)} pre-existing names from manifest(s)")
 
     # now, create the set of desired sketch specs.
     try:
@@ -404,26 +415,19 @@ def fromfile(args):
             error("** ERROR: cannot set 'seed' in 'sketch fromfile'")
             sys.exit(-1)
 
-    #
-    # the big loop - cross-product all of the names in the input CSV file
-    # with the sketch spec(s) provided on the command line, figure out
-    # which ones do not yet exist, and record them to be calculated.
-    #
+    # cross-product all of the names in the input CSV file
+    # with the sketch spec(s) provided on the command line.
 
     to_build = defaultdict(list)
-    missing = defaultdict(list)
-    all_names = set()
-    missing_count = 0
-    total_sigs = 0
+    all_names = {}
+>>>>>>> 536d39d1ad52c42984e8d21a40684e4c70e3c0e8
     total_rows = 0
     skipped_sigs = 0
     n_missing_name = 0
     n_duplicate_name = 0
 
     for csvfile in args.csvs:
-        with open(csvfile, newline="") as fp:
-            r = csv.DictReader(fp)
-
+        with sourmash_args.FileInputCSV(csvfile) as r:
             for row in r:
                 name = row['name']
                 if not name:
@@ -436,28 +440,8 @@ def fromfile(args):
 
                 if name in all_names:
                     n_duplicate_name += 1
-                    continue    # CTB tortured logic...
-
-                all_names.add(name)
-
-                # CTB split off into a separate loop?
-                plist = already_done[name]
-                for p in build_params:
-                    total_sigs += 1
-
-                    # does this signature already exist?
-                    if p not in plist:
-                        # nope - figure out genome/proteome needed
-                        filename = genome if p.dna else proteome
-
-                        if filename:
-                            # add to build list
-                            to_build[(name, filename)].append(p)
-                        else:
-                            missing[name].append(p)
-                            missing_count += 1
-                    else:
-                        skipped_sigs += 1
+                else:
+                    all_names[name] = (genome, proteome)
 
     fail_exit = False
     if n_duplicate_name:
@@ -471,28 +455,69 @@ def fromfile(args):
     if fail_exit:
         sys.exit(-1)
 
-    ## done! we now have 'to_build' which contains the things we can build,
-    ## and 'missing', which contains anything we cannot build. Report!
+    # load manifests from '--already-done' databases => turn into
+    # ComputeParameters objects, indexed by name.
 
-    notify(f"Read {total_rows} rows, requesting that {total_sigs} signatures be built.")
-
-    from sourmash.manifest import CollectionManifest
+    already_done = defaultdict(list)
     already_done_rows = []
-
     for filename in args.already_done:
         idx = sourmash.load_file_as_index(filename)
         manifest = idx.manifest
         assert manifest
 
+        # for each manifest row,
         for row in manifest.rows:
             name = row['name']
-            if name in all_names:
+            if name:
+                # build a ComputeParameters object for later comparison
                 p = ComputeParameters.from_manifest_row(row)
-                if p in build_params:
-                    already_done_rows.append(row)
 
-    notify(f"collected {len(already_done_rows)} rows for already-done signatures.")
+                # add to list for this name
+                already_done[name].append(p)
+
+                # matching name? check if we already have sig. if so, store!
+                if name in all_names:
+                    if p in build_params:
+                        already_done_rows.append(row)
+
     already_done_manifest = CollectionManifest(already_done_rows)
+    if args.already_done:
+        notify(f"Loaded {len(already_done)} pre-existing names from manifest(s)")
+        notify(f"collected {len(already_done_rows)} rows for already-done signatures.")
+
+    ## now check which are already done and track only those that are
+    ## need to be done.
+
+    total_sigs = 0
+    missing = defaultdict(list)
+    missing_count = 0
+    for name, (genome, proteome) in all_names.items():
+        plist = already_done.get(name, [])
+
+        # check list of already done against build parameters
+        for p in build_params:
+            total_sigs += 1
+
+            # does this signature already exist?
+            if p not in plist:
+                # nope - figure out genome/proteome needed
+                filename = genome if p.dna else proteome
+                filetype = 'genome' if p.dna else 'proteome'
+
+                if filename:
+                    # add to build list
+                    to_build[(name, filename)].append(p)
+                else:
+                    notify(f"WARNING: fromfile entry '{name}' is missing a {filetype}")
+                    missing[name].append(p)
+                    missing_count += 1
+            else:
+                skipped_sigs += 1
+
+    ## we now have 'to_build' which contains the things we can build,
+    ## and 'missing', which contains anything we cannot build. Report!
+
+    notify(f"Read {total_rows} rows, requesting that {total_sigs} signatures be built.")
 
     if already_done_manifest:
         info_d = _summarize_manifest(already_done_manifest)
@@ -531,28 +556,21 @@ def fromfile(args):
     else:
         notify(f"** we found no pre-existing signatures that match.")
 
-    ## now, onward ho - do we build anything, or output stuff, or ...?
+    ## first, print out a summary of to_build:
 
     print_results('---')
     print_results("summary of sketches to build:")
 
-    from collections import Counter
     counter = Counter()
     build_info_d = {}
     for filename, param_objs in to_build.items():
         for p in param_objs:
-            moltype = None
-            if p.dna: moltype = 'DNA'
-            elif p.protein: moltype = 'protein'
-            elif p.hp: moltype = 'hp'
-            elif p.dayhoff: moltype = 'dayhoff'
-            else: assert 0
-
+            moltype = p.moltype
             assert len(p.ksizes) == 1
             ksize = p.ksizes[0]
             if not p.dna: ksize //= 3
 
-            ski = _SketchInfo(ksize=ksize, moltype=moltype,
+            ski = _SketchInfo(ksize=ksize, moltype=p.moltype,
                               scaled=p.scaled, num=p.num_hashes,
                               abund=p.track_abundance)
             counter[ski] += 1
@@ -567,46 +585,13 @@ def fromfile(args):
 
     print_results('---')
 
+    ## now, onward ho - do we build anything, or output stuff, or just exit?
+
     if args.output_signatures:                   # actually compute
         _compute_sigs(to_build, args.output_signatures,
                       check_sequence=args.check_sequence)
 
     if args.output_csv_info: # output info necessary to construct
-        output_n = 0
-        csv_obj = sourmash_args.FileOutputCSV(args.output_csv_info)
-        csv_fp = csv_obj.open()
-        w = csv.DictWriter(csv_fp, fieldnames=['filename', 'sketchtype',
-                                               'output_index', 'name',
-                                               'param_strs'])
-        w.writeheader()
+        _output_csv_info(args.output_csv_info, to_build)
 
-        output_n = 0
-        for (name, filename), param_objs in to_build.items():
-            param_strs = []
-            is_dna = None
-
-            for p in param_objs:
-                if p.dna:
-                    assert is_dna != False
-                    is_dna = True
-                else:
-                    is_dna = False
-                    assert is_dna != True
-                param_strs.append(p.to_param_str())
-
-            assert is_dna is not None
-            sketchtype = "dna" if is_dna else "protein"
-
-            row = dict(filename=filename,
-                       sketchtype=sketchtype,
-                       param_strs="-p " + " -p ".join(param_strs),
-                       name=name,
-                       output_index=output_n)
-
-            w.writerow(row)
-
-            output_n += 1
-
-        csv_obj.close()
-
-    notify(f"** {total_sigs} total requested; built {total_sigs - skipped_sigs}, skipped {skipped_sigs}")
+    notify(f"** {total_sigs} total requested; output {total_sigs - skipped_sigs}, skipped {skipped_sigs}")

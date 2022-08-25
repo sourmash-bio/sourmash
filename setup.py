@@ -8,7 +8,7 @@ DEBUG_BUILD = os.environ.get("SOURMASH_DEBUG") == "1"
 NO_BUILD = os.environ.get("NO_BUILD") == "1"
 
 
-def find_dylib(name, paths):
+def find_dylib_no_build(name, paths):
     to_find = None
     if sys.platform == 'darwin':
         to_find = f'lib{name}.dylib'
@@ -25,6 +25,15 @@ def find_dylib(name, paths):
         raise LookupError('dylib %r not found' % name)
 
 
+def find_dylib(build, target):
+    cargo_target = os.environ.get("CARGO_BUILD_TARGET")
+    if cargo_target:
+        in_path = "target/%s/%s" % (cargo_target, target)
+    else:
+        in_path = "target/%s" % target
+    return build.find_dylib("sourmash", in_path=in_path)
+
+
 def build_native(spec):
     cmd = ["cargo", "build",
            "--manifest-path", "src/core/Cargo.toml",
@@ -37,11 +46,11 @@ def build_native(spec):
         target = "release"
 
     if NO_BUILD:
-        dylib = lambda: find_dylib("sourmash", os.environ["DYLD_LIBRARY_PATH"])
+        dylib = lambda: find_dylib_no_build("sourmash", os.environ["DYLD_LIBRARY_PATH"])
         header_filename = lambda: "include/sourmash.h"
     else:
         build = spec.add_external_build(cmd=cmd, path=".")
-        dylib=lambda: build.find_dylib("sourmash", in_path="target/%s" % target)
+        dylib = lambda: find_dylib(build, target)
         header_filename=lambda: build.find_header("sourmash.h", in_path="include")
 
     rtld_flags = ["NOW"]

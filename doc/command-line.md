@@ -91,6 +91,7 @@ information; these are grouped under the `sourmash tax` and
 * `tax metagenome` - summarize metagenome gather results at each taxonomic rank.
 * `tax genome`     - summarize single-genome gather results and report most likely classification.
 * `tax annotate`   - annotate gather results with lineage information (no summarization or classification).
+* `tax grep` - subset taxonomies and create picklists based on taxonomy string matches.
 
 `sourmash lca` commands:
 
@@ -136,12 +137,13 @@ The `sketch translate` command reads in **DNA sequences**, translates them in al
 
 The `sketch fromfile` command takes in a CSV file containing the
 locations of genomes and proteomes, and outputs all of the requested
-sketches. It primarily intended for large-scale database construction.
+sketches. It is primarily intended for large-scale database construction.
+(`fromfile` is a new command as of sourmash v4.4.0.)
 
 All of the `sourmash sketch` commands take FASTA or FASTQ sequences as
 input; input data can be uncompressed, compressed with gzip, or
-compressed with bzip2. The output will be one or more JSON signature
-files that can be used with the other sourmash commands.
+compressed with bzip2. The output will be one or more signature files
+that can be used by other sourmash commands.
 
 Please see
 [the `sourmash sketch` documentation page](sourmash-sketch.md) for
@@ -242,39 +244,51 @@ Example output:
 
 ### `sourmash search` - search for signatures in collections or databases
 
-The `search` subcommand searches a collection of signatures or SBTs for
-matches to the query signature.  It can search for matches with either
+The `search` subcommand searches a collection of signatures
+(in any of the [formats supported by sourmash](#storing-and-searching-signatures))
+for matches to the query signature.  It can search for matches with either
 high [Jaccard similarity](https://en.wikipedia.org/wiki/Jaccard_index)
 or containment; the default is to use Jaccard similarity, unless
 `--containment` is specified.  `-o/--output` will create a CSV file
-containing the matches.
+containing all of the matches with respective similarity or containment score.
 
-`search` will load all of provided signatures into memory, which can
-be slow and somewhat memory intensive for large collections.  You can
-use `sourmash index` to create a Sequence Bloom Tree (SBT) that can
-be quickly searched on disk; this is [the same format in which we provide
-GenBank and other databases](databases.md).
+`search` makes use of [indexed databases](#loading-many-signatures) to
+decrease search time and memory where possible.
 
 Usage:
 ```
-sourmash search query.sig [ list of signatures or SBTs ]
+sourmash search query.sig <signatures or databases>
 ```
 
 Example output:
 
 ```
-49 matches; showing first 20:
+% sourmash search tests/test-data/47.fa.sig gtdb-rs207.genomic-reps.dna.k31.zip
+
+...
+--
+loaded 65703 total signatures from 1 locations.
+after selecting signatures compatible with search, 65703 remain.
+
+2 matches above threshold 0.080:
 similarity   match
 ----------   -----
- 75.4%       NZ_JMGW01000001.1 Escherichia coli 1-176-05_S4_C2 e117605...
- 72.2%       NZ_GG774190.1 Escherichia coli MS 196-1 Scfld2538, whole ...
- 71.4%       NZ_JMGU01000001.1 Escherichia coli 2-011-08_S3_C2 e201108...
- 70.1%       NZ_JHRU01000001.1 Escherichia coli strain 100854 100854_1...
- 69.0%       NZ_JH659569.1 Escherichia coli M919 supercont2.1, whole g...
-...    
+ 32.3%       GCF_900456975.1 Shewanella baltica strain=NCTC10735, 5088...
+ 14.0%       GCF_002838165.1 Shewanella sp. Pdp11 strain=Pdp11, ASM283...
 ```
 
-Note, as of sourmash 4.2.0, `search` supports `--picklist`, to
+`search` takes a number of command line options -
+* `--containment` - find matches using the containment index rather than Jaccard similarity;
+* `--max-containment` - find matches using the max containment index rather than Jaccard similarity;
+* `-t/--threshold` - lower threshold for matching; defaults to 0.08;
+* `--best-only` - find and report only the best match;
+* `-n/--num-results` - number of matches to report to stdout; defaults to 3; 0 to report all;
+
+Match information can be saved to a CSV file with `-o/--output`; with
+`-o`, all matches above the threshold will be saved, not just those
+printed to stdout (which are limited to `-n/--num-results`).
+
+As of sourmash 4.2.0, `search` supports `--picklist`, to
 [select a subset of signatures to search, based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
 can be used to search only a small subset of a large collection, or to
 exclude a few signatures from a collection, without modifying the
@@ -294,10 +308,10 @@ will be abundance weighted (unless `--ignore-abundances` is
 specified).  `-o/--output` will create a CSV file containing the
 matches.
 
-`gather`, like `search`, will load all of provided signatures into
-memory.  You can use `sourmash index` to create a Sequence Bloom Tree
-(SBT) that can be quickly searched on disk; this is
-[the same format in which we provide GenBank and other databases](databases.md).
+`gather`, like `search`, works with any of the
+[signature collection formats supported by sourmash](#storing-and-searching-signatures)
+and will make use of [indexed databases](#loading-many-signatures) to
+decrease search time and memory where possible.
 
 Usage:
 ```
@@ -469,10 +483,9 @@ The sourmash `tax` or `taxonomy` commands integrate taxonomic
  taxonomic rank. For example, if the gather results for a metagenome
  include results for 30 different strains of a given species, we can sum
  the fraction uniquely matched to each strain to obtain the fraction
- uniquely matched to this species. Note that this summarization can
- also take into account abundance weighting; see
- [classifying signatures](classifying-signatures.md) for more
- information.
+ uniquely matched to this species. Alternatively, taxonomic summarization
+ can take into account abundance weighting; see
+ [classifying signatures](classifying-signatures.md) for more information.
 
 As with all reference-based analysis, results can be affected by the
  completeness of the reference database. However, summarizing taxonomic
@@ -590,11 +603,17 @@ To produce multiple output types from the same command, add the types into the
 ### `sourmash tax genome` - classify a genome using `gather` results
 
 `sourmash tax genome` reports likely classification for each query,
- based on `gather` matches. By default, classification requires at least 10% of
- the query to be matched. Thus, if 10% of the query was matched to a species, the
- species-level classification can be reported. However, if 7% of the query was
- matched to one species, and an additional 5% matched to a different species in
- the same genus, the genus-level classification will be reported.
+ based on `gather` matches. By default, classification requires at least 10%
+ of the query to be matched. Thus, if 10% of the query was matched to a species,
+ the species-level classification can be reported. However, if 7% of the query
+ was matched to one species, and an additional 5% matched to a different species
+ in the same genus, the genus-level classification will be reported.
+
+`sourmash tax genome` can use an ANI threshold (`--ani-threshold`) instead of a
+ containment threshold. This works the same way as the containment threshold
+ (and indeed, is using the same underlying information). Note that for DNA k-mers,
+ k=21 ANI is most similar to alignment-based ANI values, and ANI values should only
+ be compared if they were generated using the same ksize.
 
 Optionally, `genome` can instead report classifications at a desired `rank`,
  regardless of match threshold (`--rank` argument, e.g. `--rank species`).
@@ -702,18 +721,21 @@ To produce multiple output types from the same command, add the types into the
  for each database match to gather output. Do not summarize or classify.
  Note that this is not required for either `summarize` or `classify`.
 
-By default, `annotate` uses the name of each input gather csv to write an updated
- version with lineages information. For example, annotating `sample1.gather.csv`
- would produce `sample1.gather.with-lineages.csv`
+By default, `annotate` uses the name of each input gather csv to write
+an updated version with lineages information. For example, annotating
+`sample1.gather.csv` would produce `sample1.gather.with-lineages.csv`.
 
+This will produce an annotated gather CSV, `Sb47+63_gather_x_gtdbrs202_k31.with-lineages.csv`:
 ```
 sourmash tax annotate
     --gather-csv Sb47+63_gather_x_gtdbrs202_k31.csv \
     --taxonomy gtdb-rs202.taxonomy.v2.csv
 ```
-> This will produce an annotated gather CSV, `Sb47+63_gather_x_gtdbrs202_k31.with-lineages.csv`
 
 ### `sourmash tax prepare` - prepare and/or combine taxonomy files
+
+`sourmash tax prepare` prepares taxonomy files for other `sourmash tax`
+commands.
 
 All `sourmash tax` commands must be given one or more taxonomy files as
 parameters to the `--taxonomy` argument. These files can be either CSV
@@ -727,7 +749,7 @@ database. It can be used to combine multiple taxonomies into a single file,
 as well as change formats between CSV and sqlite3.
 
 The following command will take in two taxonomy files and combine them into
-a single taxonomy sqlite database.
+a single taxonomy SQLite database.
 
 ```
 sourmash tax prepare --taxonomy file1.csv file2.csv -o tax.db
@@ -738,6 +760,53 @@ can be set to CSV like so:
 ```
 sourmash tax prepare --taxonomy file1.csv file2.db -o tax.csv -F csv
 ```
+
+### `sourmash tax grep` - subset taxonomies and create picklists based on taxonomy string matches
+
+(`sourmash tax grep` is a new command as of sourmash v4.5.0.)
+
+`sourmash tax grep` searches taxonomies for matching strings,
+optionally restricting the string search to a specific taxonomic rank.
+It creates new files containing matching taxonomic entries; these new
+files can serve as taxonomies and can also be used as
+[picklists to restrict database matches](#using-picklists-to-subset-large-collections-of-signatures).
+
+Usage:
+```
+sourmash tax grep <pattern> -t <taxonomy-db> [<taxonomy-db> ...]
+```
+where `pattern` is a regular expression; see Python's
+[Regular Expression HOWTO for details on supported regexp features](https://docs.python.org/3/howto/regex.html#regex-howto).
+
+For example,
+```
+sourmash tax grep Shew -t gtdb-rs207.taxonomy.sqldb -o shew-picklist.csv
+```
+will search for a string match to `Shew` within the entire GTDB RS207
+taxonomy, and will output a subset taxonomy in `shew-picklist.csv`.
+This picklist can be used with the GTDB
+RS207 databases like so:
+```
+sourmash search query.sig gtdb-rs207.genomic.k31.zip \
+    --picklist shew-picklist.csv:ident:ident
+```
+
+
+`tax grep` can also restrict string matching to a specific taxonomic rank
+with `-r/--rank`; for examplem
+```
+sourmash tax grep Shew -t gtdb-rs207.taxonomy.sqldb \
+    -o shew-picklist.csv -r genus
+```
+will restrict matches to the rank of genus. Available ranks are
+superkingdom, phylum, class, order, family, genus, and species.
+
+`tax grep` also takes several standard grep arguments, including `-i`
+to ignore case and `-v` to output only taxonomic lineages that do
+_not_ match the pattern.
+
+Currently only CSV output (optionally gzipped) is supported; use `sourmash tax prepare` to
+convert CSV output from `tax grep` into a sqlite3 taxonomy database.
 
 ## `sourmash lca` subcommands for in-memory taxonomy integration
 
@@ -930,6 +999,15 @@ As of sourmash 4.2.0, `lca index` supports `--picklist`, to
 [select a subset of signatures based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
 can be used to index a subset of a large collection, or to
 exclude a few signatures from an index being built from a large collection.
+
+As of sourmash 4.4.0, `lca index` can produce an _on disk_ LCA
+database using SQLite. To prepare such a database, use
+`sourmash lca index ... -F sql`.
+
+All sourmash commands work with either type of LCA database (the
+default JSON database, and the SQLite version). SQLite databases are
+larger than JSON databases on disk but are typically much faster
+to load and search, and use much less memory.
 
 ### `sourmash lca rankinfo` - examine an LCA database
 
@@ -1137,8 +1215,7 @@ then the merged signature will have the sum of all abundances across
 the individual signatures.  The `--flatten` flag will override this
 behavior and allow merging of mixtures by removing all abundances.
 
-Note: `merge` only creates one output file, with one signature in it,
-in the JSON `.sig` format.
+Note: `merge` only creates one output file, with one signature in it.
 
 ### `sourmash signature rename` - rename a signature
 
@@ -1169,8 +1246,7 @@ will subtract all of the hashes in `file2.sig` and `file3.sig` from
 To use `subtract` on signatures calculated with
 `-p abund`, you must specify `--flatten`.
 
-Note: `subtract` only creates one output file, with one signature in it,
-in the JSON `.sig` format.
+Note: `subtract` only creates one output file, with one signature in it.
 
 ### `sourmash signature intersect` - intersect two (or more) signatures
 
@@ -1282,7 +1358,7 @@ or equal to 2, and less than or equal to 5.
 
 For example,
 ```
-sourmash signature -m 2 *.sig
+sourmash signature filter -m 2 *.sig
 ```
 
 will output new signatures containing only hashes that occur two or
@@ -1301,8 +1377,7 @@ sourmash signature import filename.msh.json -o imported.sig
 ```
 will import the contents of `filename.msh.json` into `imported.sig`.
 
-Note: `import` only creates one output file, with one signature in it,
-in the JSON `.sig` format.
+Note: `import` only creates one output file, with one signature in it.
 
 ### `sourmash signature export` - export signatures to mash.
 
@@ -1399,6 +1474,14 @@ iterating over the signatures in the input file. This can be slow for
 large collections. Use `--no-rebuild-manifest` to load an existing
 manifest if it is available.
 
+As of sourmash 4.4.0, `sig manifest` can produce a manifest in a fast
+on-disk format (a SQLite database). SQLite manifests can be _much_
+faster when working with very large collections of signatures.
+To produce a SQLite manifest, use `sourmash sig manifest ... -F sql`.
+
+All sourmash commands that work with manifests will accept both
+CSV and SQLite manifest files.
+
 ### `sourmash signature check` - compare picklists and manifests
 
 Compare picklists and manifests across databases, and optionally output matches
@@ -1417,6 +1500,24 @@ sourmash database.
 
 `sourmash sig check` is particularly useful when working with large
 collections of signatures and identifiers.
+
+### `sourmash signature collect` - collect manifests across databases
+
+Collect manifests from across (many) files and merge into a single
+standalone manifest.
+
+For example,
+```
+sourmash sig collect tests/test-data/gather/GCF*.sig -o mf.sqlmf
+```
+will load all of the `GCF` signatures and build a manifest file `mf.sqlmf`
+that contains references to all of the signatures, but not the signatures
+themselves.
+This manifest file can be loaded directly from the command line by sourmash.
+
+`sourmash sig collect` defaults to outputting SQLite manifests. It is
+particularly useful when working with large collections of signatures and
+identifiers, and has command line options for merging and updating manifests.
 
 ## Advanced command-line usage
 
@@ -1452,7 +1553,7 @@ Briefly,
 
 None of these commands currently support searching, comparing, or indexing
 signatures with multiple ksizes or moltypes at the same time; you need
-to pick the ksize and moltype to use for your search. Where possible,
+to pick the ksize and moltype to use for your query. Where possible,
 scaled values will be made compatible.
 
 ### Selecting signatures 
@@ -1549,9 +1650,10 @@ In addition to `sig extract`, the following commands support
 ### Storing (and searching) signatures
   
 Backing up a little, there are many ways to store and search
-signatures. `sourmash` supports storing and loading signatures from JSON
-files, directories, lists of files, Zip files, and indexed databases.
-These can all be used interchangeably for sourmash operations.
+signatures. `sourmash` supports storing and loading signatures from
+JSON files, directories, lists of files, Zip files, custom indexed
+databases, and SQLite databases.  These can all be used
+interchangeably for most sourmash operations.
 
 The simplest is one signature in a single JSON file. You can also put
 many signatures in a single JSON file, either by building them that
@@ -1567,7 +1669,7 @@ signatures from zip files.  You can create a compressed collection of
 signatures using `zip -r collection.zip *.sig` and then specify
 `collections.zip` on the command line.
 
-### Saving signatures, more generally
+### Choosing signature output formats
 
 (sourmash v4.1 and later)
 
@@ -1583,6 +1685,7 @@ This behavior is triggered by the requested output filename --
 * to save to gzipped JSON signature files, use `.sig.gz`;
 * to save to a Zip file collection, use `.zip`;
 * to save signature files to a directory, use a name ending in `/`; the directory will be created if it doesn't exist;
+* to save to a SQLite database, use `.sqldb` (as of sourmash v4.4.0).
 
 If none of these file extensions is detected, output will be written
 in the JSON `.sig` format, either to the provided output filename or
@@ -1592,6 +1695,10 @@ All of these save formats can be loaded by sourmash commands.
 
 **We strongly suggest using .zip files to store signatures: they are fast,
 small, and fully supported by all the sourmash commands.**
+
+For more detailed information on database formats and performance
+tradeoffs, please see [the advanced usage information for
+databases!](databases-advanced.md)
 
 ### Loading many signatures
 
@@ -1614,21 +1721,35 @@ Indexed databases can make searching signatures much faster. SBT
 databases are low memory and disk-intensive databases that allow for
 fast searches using a tree structure, while LCA databases are higher
 memory and (after a potentially significant load time) are quite fast.
+SQLite databases (new in sourmash v4.4.0) are typically larger on disk
+than SBTs and LCAs, but in turn are fast to load and support very low
+memory search.
 
 (LCA databases also directly permit taxonomic searches using `sourmash lca`
 functions.)
 
 Commands that take multiple signatures or collections of signatures
-will also work with databases.
+will also work with indexed databases.
 
-One limitation of indexed databases is that both SBT and LCA database
-can only contain one "type" of signature (one ksize/one moltype at one
-scaled value). If the database signature type is incompatible with the
-other signatures, sourmash will complain appropriately.
+One limitation of indexed databases is that they are all restricted in
+to certain kinds of signatures. Both SBT and LCA databases can only
+contain one "type" of signature (one ksize/one moltype at one scaled
+value). SQLite databases can contain multiple ksizes and moltypes, but
+only at one scaled value. If the database signature type is
+incompatible with the other signatures, sourmash will complain
+appropriately.
 
 In contrast, signature files, zip collections, and directory
 hierarchies can contain many different types of signatures, and
 compatible ones will be selected automatically.
+
+Use the `sourmash index` command to create an SBT.
+
+Use the `sourmash lca index` command to create an LCA database; the
+database can be saved in JSON or SQL format with `-F json` or `-F sql`.
+
+Use `sourmash sig cat <list of signatures> -o <output>.sqldb` to create
+a SQLite indexed database.
 
 ### Combining search databases on the command line
 
@@ -1651,7 +1772,7 @@ signatures that were just created.
 
 ### Using manifests to explicitly refer to collections of files
 
-(sourmash v4.4.0 and later)
+(sourmash v4.4 and later)
 
 Manifests are metadata catalogs of signatures that are used for
 signature selection and loading. They are used extensively by sourmash
@@ -1660,52 +1781,28 @@ pattern matching.
 
 Manifests can _also_ be used externally (via the command-line), and
 may be useful for organizing large collections of signatures. They can
-be generated with `sourmash sig manifest` as well as `sourmash sig check`.
+be generated with the `sig collect`, `sig manifest`, and `sig check`
+subcommands.
 
-Suppose you have a large collection of signature (`.sig` or `.sig.gz`
-files) under a directory. You can create a manifest file for them like so:
+Suppose you have a large collection of signatures (`.sig` or `.sig.gz`
+files) in a location (e.g., under a directory, or in a zip file). You
+can create a manifest file for them like so:
 ```
-sourmash sig manifest <dir> -o <dir>/manifest.csv
+sourmash sig collect <dir> <zipfile> -o manifest.sqlmf
 ```
-and then use the manifest directly for sourmash operations:
+and then use the manifest directly for sourmash operations, for example:
 ```
-sourmash sig fileinfo <dir>/manifest.csv
+sourmash sig fileinfo manifest.sqlmf
 ```
-This manifest can be used as a database target for most sourmash
-operations - search, gather, etc.  Note that manifests for directories
-must be placed within (and loaded from) the directory from which the
-manifest was generated; the specific manifest filename does not
-matter.
+This manifest contains _references_ to the signatures (but not the
+signatures themselves) and can then be used as a database target for most
+sourmash operations - search, gather, etc.
 
-A more advanced and slightly tricky way to use explicit manifest files
-is with lists of files.  If you create a file with a path list
-containing the locations of loadable sourmash collections, you can run
-`sourmash sig manifest pathlist.txt -o mf.csv` to generate a manifest
-of all of the files.  The resulting manifest in `mf.csv` can then be
-loaded directly.  This is very handy when you have many sourmash
-signatures, or large signature files.  The tricky part in doing this
-is that the manifest will store the same paths listed in the pathlist
-file - whether they are relative or absolute paths - and these paths
-must be resolvable by sourmash from the current working directory.
-This makes explicit manifests built from pathlist files less portable
-within or across systems than the other sourmash collections, which
-are all relocatable.
-
-For example, if you create a pathlist file `paths.txt` containing the
-following:
-```
-/path/to/zipfile.zip
-local_directory/some_signature.sig.gz
-local_dir2/
-```
-and then run:
-```
-sourmash sig manifest paths.txt -o mf.csv
-```
-you will be able to use `mf.csv` as a database for `sourmash search`
-and `sourmash gather` commands.  But, because it contains two relative paths,
-you will only be able to use it _from the directory that contains those
-two relative paths_.
+Note that `sig collect` will generate manifests containing the
+pathnames given to it - so if you use relative paths, the references
+will be relative to the working directory in which `sig collect` was
+run.  You can use `sig collect --abspath` to rewrite the paths
+into absolute paths.
 
 **Our advice:** We suggest using zip file collections for most
 situations; we primarily recommend using explicit manifests for

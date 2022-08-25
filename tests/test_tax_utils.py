@@ -1,8 +1,10 @@
 """
 Tests for functions in taxonomy submodule.
 """
+
 import pytest
 from os.path import basename
+import gzip
 
 import sourmash_tst_utils as utils
 
@@ -22,9 +24,11 @@ from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import LineagePair
 
 # utility functions for testing
-def make_mini_gather_results(g_infolist):
+def make_mini_gather_results(g_infolist, include_ksize_and_scaled=False):
     # make mini gather_results
     min_header = ["query_name", "name", "match_ident", "f_unique_to_query", "query_md5", "query_filename", "f_unique_weighted", "unique_intersect_bp", "remaining_bp"]
+    if include_ksize_and_scaled:
+        min_header.extend(['ksize', 'scaled'])
     gather_results = []
     for g_info in g_infolist:
         inf = dict(zip(min_header, g_info))
@@ -166,7 +170,7 @@ def test_load_gather_results_bad_header(runtmp):
 
     with pytest.raises(ValueError) as exc:
         gather_results, header = load_gather_results(bad_g_csv)
-    assert f'Not all required gather columns are present in {bad_g_csv}.' in str(exc.value)
+    assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
 
 
 def test_load_gather_results_empty(runtmp):
@@ -178,12 +182,28 @@ def test_load_gather_results_empty(runtmp):
 
     with pytest.raises(ValueError) as exc:
         gather_results, header = load_gather_results(empty_csv)
-    assert f'Cannot read gather results from {empty_csv}. Is file empty?' in str(exc.value)
+    assert f"Cannot read gather results from '{empty_csv}'. Is file empty?" in str(exc.value)
 
 
 def test_load_taxonomy_csv():
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     tax_assign = MultiLineageDB.load([taxonomy_csv])
+    print("taxonomy assignments: \n", tax_assign)
+    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1']
+    assert len(tax_assign) == 6 # should have read 6 rows
+
+
+def test_load_taxonomy_csv_gzip(runtmp):
+    # test loading a gzipped taxonomy csv file
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    tax_gz = runtmp.output('tax.csv.gz')
+
+    with gzip.open(tax_gz, 'wt') as outfp:
+        with open(taxonomy_csv, 'rt') as infp:
+            data = infp.read()
+        outfp.write(data)
+
+    tax_assign = MultiLineageDB.load([tax_gz])
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1']
     assert len(tax_assign) == 6 # should have read 6 rows
@@ -279,10 +299,8 @@ def test_find_missing_identities():
     gA_tax = ("gA", "a;b;c")
     taxD = make_mini_taxonomy([gA_tax])
 
-    n, ids = find_missing_identities(g_res, taxD)
-    print("n_missing: ", n)
+    ids = find_missing_identities(g_res, taxD)
     print("ids_missing: ", ids)
-    assert n == 1
     assert ids == {"gB"}
 
 
@@ -299,7 +317,7 @@ def test_summarize_gather_at_0():
     taxD = make_mini_taxonomy([gA_tax,gB_tax])
 
     # run summarize_gather_at and check results!
-    sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res)
+    sk_sum, _, _ = summarize_gather_at("superkingdom", taxD, g_res)
 
     # superkingdom
     assert len(sk_sum) == 1
@@ -314,7 +332,7 @@ def test_summarize_gather_at_0():
     assert sk_sum[0].bp_match_at_rank == 100
 
     # phylum
-    phy_sum, _ = summarize_gather_at("phylum", taxD, g_res)
+    phy_sum, _, _ = summarize_gather_at("phylum", taxD, g_res)
     print("phylum summarized gather: ", phy_sum[0])
     assert len(phy_sum) == 1
     assert phy_sum[0].query_name == "queryA"
@@ -326,7 +344,7 @@ def test_summarize_gather_at_0():
     assert phy_sum[0].f_weighted_at_rank == 1.0
     assert phy_sum[0].bp_match_at_rank == 100
     # class
-    cl_sum, _ = summarize_gather_at("class", taxD, g_res)
+    cl_sum, _, _ = summarize_gather_at("class", taxD, g_res)
     assert len(cl_sum) == 2
     print("class summarized gather: ", cl_sum)
     assert cl_sum[0].query_name == "queryA"
@@ -351,30 +369,36 @@ def test_summarize_gather_at_0():
 def test_summarize_gather_at_1():
     """test two matches, diff f_unique_to_query"""
     # make mini gather_results
-    gA = ["queryA", "gA","0.5","0.6", "queryA_md5", "queryA.sig", '0.5', '60', '40']
-    gB = ["queryA", "gB","0.3","0.1", "queryA_md5", "queryA.sig", '0.1', '10', '90']
-    g_res = make_mini_gather_results([gA,gB])
+    ksize=31
+    scaled=10
+    gA = ["queryA", "gA","0.5","0.6", "queryA_md5", "queryA.sig", '0.5', '60', '40', ksize, scaled]
+    gB = ["queryA", "gB","0.3","0.1", "queryA_md5", "queryA.sig", '0.1', '10', '90', ksize, scaled]
+    g_res = make_mini_gather_results([gA,gB], include_ksize_and_scaled=True)
 
     # make mini taxonomy
     gA_tax = ("gA", "a;b;c")
     gB_tax = ("gB", "a;b;d")
     taxD = make_mini_taxonomy([gA_tax,gB_tax])
     # run summarize_gather_at and check results!
-    sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res)
+    sk_sum, _, _ = summarize_gather_at("superkingdom", taxD, g_res, estimate_query_ani=True)
 
     # superkingdom
     assert len(sk_sum) == 2
-    print("superkingdom summarized gather: ", sk_sum[0])
+    print("\nsuperkingdom summarized gather 0: ", sk_sum[0])
     assert sk_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),)
     assert sk_sum[0].fraction == 0.7
     assert sk_sum[0].bp_match_at_rank == 70
+    print("superkingdom summarized gather 1: ", sk_sum[1])
     assert sk_sum[1].lineage == ()
     assert round(sk_sum[1].fraction, 1) == 0.3
     assert sk_sum[1].bp_match_at_rank == 30
+    assert sk_sum[0].query_ani_at_rank == 0.9885602934376099
+    assert sk_sum[1].query_ani_at_rank == None
 
     # phylum
-    phy_sum, _ = summarize_gather_at("phylum", taxD, g_res)
-    print("phylum summarized gather: ", phy_sum[0])
+    phy_sum, _, _ = summarize_gather_at("phylum", taxD, g_res, estimate_query_ani=False)
+    print("phylum summarized gather 0: ", phy_sum[0])
+    print("phylum summarized gather 1: ", phy_sum[1])
     assert len(phy_sum) == 2
     assert phy_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),LineagePair(rank='phylum', name='b'))
     assert phy_sum[0].fraction == 0.7
@@ -383,8 +407,10 @@ def test_summarize_gather_at_1():
     assert phy_sum[1].lineage == ()
     assert round(phy_sum[1].fraction, 1) == 0.3
     assert phy_sum[1].bp_match_at_rank == 30
+    assert phy_sum[0].query_ani_at_rank == None
+    assert phy_sum[1].query_ani_at_rank == None
     # class
-    cl_sum, _ = summarize_gather_at("class", taxD, g_res)
+    cl_sum, _, _ = summarize_gather_at("class", taxD, g_res, estimate_query_ani=True)
     assert len(cl_sum) == 3
     print("class summarized gather: ", cl_sum)
     assert cl_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),
@@ -393,6 +419,7 @@ def test_summarize_gather_at_1():
     assert cl_sum[0].fraction == 0.6
     assert cl_sum[0].f_weighted_at_rank == 0.5
     assert cl_sum[0].bp_match_at_rank == 60
+    assert cl_sum[0].query_ani_at_rank == 0.9836567776983505
 
     assert cl_sum[1].rank == 'class'
     assert cl_sum[1].lineage == (LineagePair(rank='superkingdom', name='a'),
@@ -401,8 +428,10 @@ def test_summarize_gather_at_1():
     assert cl_sum[1].fraction == 0.1
     assert cl_sum[1].f_weighted_at_rank == 0.1
     assert cl_sum[1].bp_match_at_rank == 10
+    assert cl_sum[1].query_ani_at_rank == 0.9284145445194744
     assert cl_sum[2].lineage == ()
     assert round(cl_sum[2].fraction, 1) == 0.3
+    assert cl_sum[2].query_ani_at_rank == None
 
 
 def test_summarize_gather_at_perfect_match():
@@ -418,7 +447,7 @@ def test_summarize_gather_at_perfect_match():
     taxD = make_mini_taxonomy([gA_tax,gB_tax])
 
     # run summarize_gather_at and check results!
-    sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res)
+    sk_sum, _, _ = summarize_gather_at("superkingdom", taxD, g_res)
     # superkingdom
     assert len(sk_sum) == 1
     print("superkingdom summarized gather: ", sk_sum[0])
@@ -440,16 +469,16 @@ def test_summarize_gather_at_over100percent_f_unique_to_query():
 
     # run summarize_gather_at and check results!
     with pytest.raises(ValueError) as exc:
-        sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res)
+        sk_sum, _, _ = summarize_gather_at("superkingdom", taxD, g_res)
     assert "The tax summary of query 'queryA' is 1.1, which is > 100% of the query!!" in str(exc)
 
     # phylum
     with pytest.raises(ValueError) as exc:
-        phy_sum, _ = summarize_gather_at("phylum", taxD, g_res)
+        phy_sum, _, _ = summarize_gather_at("phylum", taxD, g_res)
     assert "The tax summary of query 'queryA' is 1.1, which is > 100% of the query!!" in str(exc)
 
     # class
-    cl_sum, _ = summarize_gather_at("class", taxD, g_res)
+    cl_sum, _, _ = summarize_gather_at("class", taxD, g_res)
     assert len(cl_sum) == 2
     print("class summarized gather: ", cl_sum)
     assert cl_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),
@@ -477,7 +506,7 @@ def test_summarize_gather_at_missing_ignore():
     taxD = make_mini_taxonomy([gA_tax])
 
     # run summarize_gather_at and check results!
-    sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res, skip_idents=['gB'])
+    sk_sum, _, _ = summarize_gather_at("superkingdom", taxD, g_res, skip_idents=['gB'])
     # superkingdom
     assert len(sk_sum) == 2
     print("superkingdom summarized gather: ", sk_sum[0])
@@ -489,7 +518,7 @@ def test_summarize_gather_at_missing_ignore():
     assert sk_sum[1].bp_match_at_rank == 50
 
     # phylum
-    phy_sum, _ = summarize_gather_at("phylum", taxD, g_res, skip_idents=['gB'])
+    phy_sum, _, _ = summarize_gather_at("phylum", taxD, g_res, skip_idents=['gB'])
     print("phylum summarized gather: ", phy_sum[0])
     assert len(phy_sum) == 2
     assert phy_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),LineagePair(rank='phylum', name='b'))
@@ -499,7 +528,7 @@ def test_summarize_gather_at_missing_ignore():
     assert phy_sum[1].fraction == 0.5
     assert phy_sum[1].bp_match_at_rank == 50
     # class
-    cl_sum, _ = summarize_gather_at("class", taxD, g_res, skip_idents=['gB'])
+    cl_sum, _, _ = summarize_gather_at("class", taxD, g_res, skip_idents=['gB'])
     assert len(cl_sum) == 2
     print("class summarized gather: ", cl_sum)
     assert cl_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),
@@ -525,39 +554,45 @@ def test_summarize_gather_at_missing_fail():
 
     # run summarize_gather_at and check results!
     with pytest.raises(ValueError) as exc:
-        sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res)
+        sk_sum, _, _ = summarize_gather_at("superkingdom", taxD, g_res)
     assert "ident gB is not in the taxonomy database." in str(exc.value)
 
 
 def test_summarize_gather_at_best_only_0():
     """test two matches, diff f_unique_to_query"""
     # make mini gather_results
-    gA = ["queryA", "gA","0.5","0.6", "queryA_md5", "queryA.sig", '0.5', '60', '40']
-    gB = ["queryA", "gB","0.3","0.1", "queryA_md5", "queryA.sig", '0.5', '10', '90']
-    g_res = make_mini_gather_results([gA,gB])
+    ksize =31
+    scaled=10
+    gA = ["queryA", "gA","0.5","0.6", "queryA_md5", "queryA.sig", '0.5', '60', '40', ksize, scaled]
+    gB = ["queryA", "gB","0.3","0.1", "queryA_md5", "queryA.sig", '0.5', '10', '90', ksize, scaled]
+    g_res = make_mini_gather_results([gA,gB],include_ksize_and_scaled=True)
 
     # make mini taxonomy
     gA_tax = ("gA", "a;b;c")
     gB_tax = ("gB", "a;b;d")
     taxD = make_mini_taxonomy([gA_tax,gB_tax])
     # run summarize_gather_at and check results!
-    sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res, best_only=True)
+    sk_sum, _, _ = summarize_gather_at("superkingdom", taxD, g_res, best_only=True,estimate_query_ani=True)
     # superkingdom
     assert len(sk_sum) == 1
     print("superkingdom summarized gather: ", sk_sum[0])
     assert sk_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),)
     assert sk_sum[0].fraction == 0.7
     assert sk_sum[0].bp_match_at_rank == 70
+    print("superk ANI:",sk_sum[0].query_ani_at_rank)
+    assert sk_sum[0].query_ani_at_rank == 0.9885602934376099
 
     # phylum
-    phy_sum, _ = summarize_gather_at("phylum", taxD, g_res, best_only=True)
+    phy_sum, _, _ = summarize_gather_at("phylum", taxD, g_res, best_only=True,estimate_query_ani=True)
     print("phylum summarized gather: ", phy_sum[0])
     assert len(phy_sum) == 1
     assert phy_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),LineagePair(rank='phylum', name='b'))
     assert phy_sum[0].fraction == 0.7
     assert phy_sum[0].bp_match_at_rank == 70
+    print("phy ANI:",phy_sum[0].query_ani_at_rank)
+    assert phy_sum[0].query_ani_at_rank == 0.9885602934376099
     # class
-    cl_sum, _ = summarize_gather_at("class", taxD, g_res, best_only=True)
+    cl_sum, _, _ = summarize_gather_at("class", taxD, g_res, best_only=True, estimate_query_ani=True)
     assert len(cl_sum) == 1
     print("class summarized gather: ", cl_sum)
     assert cl_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),
@@ -565,6 +600,8 @@ def test_summarize_gather_at_best_only_0():
                                  LineagePair(rank='class', name='c'))
     assert cl_sum[0].fraction == 0.6
     assert cl_sum[0].bp_match_at_rank == 60
+    print("cl ANI:",cl_sum[0].query_ani_at_rank)
+    assert cl_sum[0].query_ani_at_rank == 0.9836567776983505
 
 
 def test_summarize_gather_at_best_only_equal_choose_first():
@@ -581,7 +618,7 @@ def test_summarize_gather_at_best_only_equal_choose_first():
 
     # run summarize_gather_at and check results!
     # class
-    cl_sum, _ = summarize_gather_at("class", taxD, g_res, best_only=True)
+    cl_sum, _, _ = summarize_gather_at("class", taxD, g_res, best_only=True)
     assert len(cl_sum) == 1
     print("class summarized gather: ", cl_sum)
     assert cl_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),
@@ -597,12 +634,14 @@ def test_write_summary_csv(runtmp):
     sum_gather = {'superkingdom': [SummarizedGatherResult(query_name='queryA', rank='superkingdom', fraction=1.0,
                                                           query_md5='queryA_md5', query_filename='queryA.sig',
                                                           f_weighted_at_rank=1.0, bp_match_at_rank=100,
-                                                          lineage=(LineagePair(rank='superkingdom', name='a'),))],
+                                                          lineage=(LineagePair(rank='superkingdom', name='a'),),
+                                                          query_ani_at_rank=None)],
                   'phylum':  [SummarizedGatherResult(query_name='queryA', rank='phylum', fraction=1.0,
                                                      query_md5='queryA_md5', query_filename='queryA.sig',
                                                      f_weighted_at_rank=1.0, bp_match_at_rank=100,
                                                      lineage=(LineagePair(rank='superkingdom', name='a'),
-                                                              LineagePair(rank='phylum', name='b')))]}
+                                                              LineagePair(rank='phylum', name='b')),
+                                                     query_ani_at_rank=None)]}
 
     outs= runtmp.output("outsum.csv")
     with open(outs, 'w') as out_fp:
@@ -610,9 +649,9 @@ def test_write_summary_csv(runtmp):
 
     sr = [x.rstrip().split(',') for x in open(outs, 'r')]
     print("gather_summary_results_from_file: \n", sr)
-    assert ['query_name', 'rank', 'fraction', 'lineage', 'query_md5', 'query_filename', 'f_weighted_at_rank', 'bp_match_at_rank'] == sr[0]
-    assert ['queryA', 'superkingdom', '1.0', 'a', 'queryA_md5', 'queryA.sig', '1.0', '100'] == sr[1]
-    assert ['queryA', 'phylum', '1.0', 'a;b', 'queryA_md5', 'queryA.sig', '1.0', '100'] == sr[2]
+    assert ['query_name', 'rank', 'fraction', 'lineage', 'query_md5', 'query_filename', 'f_weighted_at_rank', 'bp_match_at_rank', 'query_ani_at_rank'] == sr[0]
+    assert ['queryA', 'superkingdom', '1.0', 'a', 'queryA_md5', 'queryA.sig', '1.0', '100', ''] == sr[1]
+    assert ['queryA', 'phylum', '1.0', 'a;b', 'queryA_md5', 'queryA.sig', '1.0', '100',''] == sr[2]
 
 
 def test_write_classification(runtmp):
@@ -620,7 +659,8 @@ def test_write_classification(runtmp):
     classif = ClassificationResult('queryA', 'match', 'phylum', 1.0,
                                     (LineagePair(rank='superkingdom', name='a'),
                                      LineagePair(rank='phylum', name='b')),
-                                     'queryA_md5', 'queryA.sig', 1.0, 100)
+                                     'queryA_md5', 'queryA.sig', 1.0, 100,
+                                     query_ani_at_rank=None)
 
     classification = {'phylum': [classif]}
 
@@ -630,8 +670,8 @@ def test_write_classification(runtmp):
 
     sr = [x.rstrip().split(',') for x in open(outs, 'r')]
     print("gather_classification_results_from_file: \n", sr)
-    assert ['query_name', 'status', 'rank', 'fraction', 'lineage', 'query_md5', 'query_filename', 'f_weighted_at_rank', 'bp_match_at_rank'] == sr[0]
-    assert ['queryA', 'match', 'phylum', '1.0', 'a;b', 'queryA_md5', 'queryA.sig', '1.0', '100'] == sr[1]
+    assert ['query_name', 'status', 'rank', 'fraction', 'lineage', 'query_md5', 'query_filename', 'f_weighted_at_rank', 'bp_match_at_rank', 'query_ani_at_rank'] == sr[0]
+    assert ['queryA', 'match', 'phylum', '1.0', 'a;b', 'queryA_md5', 'queryA.sig', '1.0', '100', ''] == sr[1]
 
 
 def test_make_krona_header_0():
@@ -672,7 +712,7 @@ def test_aggregate_by_lineage_at_rank_by_query():
     taxD = make_mini_taxonomy([gA_tax,gB_tax])
 
     # aggregate by lineage at rank
-    sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res)
+    sk_sum, _, _ = summarize_gather_at("superkingdom", taxD, g_res)
     print("superkingdom summarized gather results:", sk_sum)
     assert len(sk_sum) ==4
     assert sk_sum[0].query_name == "queryA"
@@ -701,7 +741,7 @@ def test_aggregate_by_lineage_at_rank_by_query():
     assert num_queries == 2
     assert query_names == ['queryA', 'queryB']
 
-    phy_sum, _ = summarize_gather_at("phylum", taxD, g_res)
+    phy_sum, _, _ = summarize_gather_at("phylum", taxD, g_res)
     print("phylum summary:", phy_sum, ']\n')
     phy_lin_sum, query_names, num_queries = aggregate_by_lineage_at_rank(phy_sum, by_query=True)
     print("phylum lineage summary:", phy_lin_sum, '\n')
@@ -725,13 +765,13 @@ def test_format_for_krona_0():
     taxD = make_mini_taxonomy([gA_tax,gB_tax])
 
     # check krona format and check results!
-    sk_sum, _ = summarize_gather_at("superkingdom", taxD, g_res)
+    sk_sum, _, _ = summarize_gather_at("superkingdom", taxD, g_res)
     print("superkingdom summarized gather results:", sk_sum)
     krona_res = format_for_krona("superkingdom", {"superkingdom": sk_sum})
     print("krona_res: ", krona_res)
     assert krona_res == [(1.0, 'a')]
 
-    phy_sum, _ = summarize_gather_at("phylum", taxD, g_res)
+    phy_sum, _, _ = summarize_gather_at("phylum", taxD, g_res)
     krona_res = format_for_krona("phylum", {"phylum": phy_sum})
     print("krona_res: ", krona_res)
     assert krona_res == [(1.0, 'a', 'b')]
@@ -753,7 +793,7 @@ def test_format_for_krona_1():
     sum_res = {}
     #for rank in lca_utils.taxlist(include_strain=False):
     for rank in ['superkingdom', 'phylum', 'class']:
-        sum_res[rank], _ = summarize_gather_at(rank, taxD, g_res)
+        sum_res[rank], _, _ = summarize_gather_at(rank, taxD, g_res)
     print('summarized gather: ', sum_res)
     # check krona format
     sk_krona = format_for_krona("superkingdom", sum_res)
@@ -783,7 +823,7 @@ def test_format_for_krona_best_only():
     sum_res = {}
     #for rank in lca_utils.taxlist(include_strain=False):
     for rank in ['superkingdom', 'phylum', 'class']:
-        sum_res[rank], _ = summarize_gather_at(rank, taxD, g_res, best_only=True)
+        sum_res[rank], _, _ = summarize_gather_at(rank, taxD, g_res, best_only=True)
     print('summarized gather: ', sum_res)
     # check krona format
     sk_krona = format_for_krona("superkingdom", sum_res)
@@ -816,21 +856,25 @@ def test_combine_sumgather_csvs_by_lineage(runtmp):
     sum_gather1 = {'superkingdom': [SummarizedGatherResult(query_name='queryA', rank='superkingdom', fraction=0.5,
                                                           query_md5='queryA_md5', query_filename='queryA.sig',
                                                           f_weighted_at_rank=1.0, bp_match_at_rank=100,
-                                                          lineage=(LineagePair(rank='superkingdom', name='a'),))],
+                                                          lineage=(LineagePair(rank='superkingdom', name='a'),),
+                                                          query_ani_at_rank=None)],
                   'phylum':  [SummarizedGatherResult(query_name='queryA', rank='phylum', fraction=0.5,
                                                      query_md5='queryA_md5', query_filename='queryA.sig',
                                                      f_weighted_at_rank=0.5, bp_match_at_rank=50,
                                                      lineage=(LineagePair(rank='superkingdom', name='a'),
-                                                              LineagePair(rank='phylum', name='b')))]}
+                                                              LineagePair(rank='phylum', name='b')),
+                                                     query_ani_at_rank=None)]}
     sum_gather2 = {'superkingdom': [SummarizedGatherResult(query_name='queryB', rank='superkingdom', fraction=0.7,
                                                           query_md5='queryB_md5', query_filename='queryB.sig',
                                                           f_weighted_at_rank=0.7, bp_match_at_rank=70,
-                                                          lineage=(LineagePair(rank='superkingdom', name='a'),))],
+                                                          lineage=(LineagePair(rank='superkingdom', name='a'),),
+                                                          query_ani_at_rank=None)],
                   'phylum':  [SummarizedGatherResult(query_name='queryB', rank='phylum', fraction=0.7,
                                                      query_md5='queryB_md5', query_filename='queryB.sig',
                                                      f_weighted_at_rank=0.7, bp_match_at_rank=70,
                                                      lineage=(LineagePair(rank='superkingdom', name='a'),
-                                                              LineagePair(rank='phylum', name='c')))]}
+                                                              LineagePair(rank='phylum', name='c')),
+                                                     query_ani_at_rank=None)]}
 
     # write summarized gather results csvs
     sg1= runtmp.output("sample1.csv")
@@ -903,21 +947,25 @@ def test_combine_sumgather_csvs_by_lineage_improper_rank(runtmp):
     sum_gather1 = {'superkingdom': [SummarizedGatherResult(query_name='queryA', rank='superkingdom', fraction=0.5,
                                                           query_md5='queryA_md5', query_filename='queryA.sig',
                                                           f_weighted_at_rank=0.5, bp_match_at_rank=50,
-                                                          lineage=(LineagePair(rank='superkingdom', name='a'),))],
+                                                          lineage=(LineagePair(rank='superkingdom', name='a'),),
+                                                          query_ani_at_rank=None)],
                   'phylum':  [SummarizedGatherResult(query_name='queryA', rank='phylum', fraction=0.5,
                                                      query_md5='queryA_md5', query_filename='queryA.sig',
                                                      f_weighted_at_rank=0.5, bp_match_at_rank=50,
                                                      lineage=(LineagePair(rank='superkingdom', name='a'),
-                                                              LineagePair(rank='phylum', name='b')))]}
+                                                              LineagePair(rank='phylum', name='b')),
+                                                     query_ani_at_rank=None)]}
     sum_gather2 = {'superkingdom': [SummarizedGatherResult(query_name='queryB', rank='superkingdom', fraction=0.7,
                                                           query_md5='queryB_md5', query_filename='queryB.sig',
                                                           f_weighted_at_rank=0.7, bp_match_at_rank=70,
-                                                          lineage=(LineagePair(rank='superkingdom', name='a'),))],
+                                                          lineage=(LineagePair(rank='superkingdom', name='a'),),
+                                                          query_ani_at_rank=None)],
                   'phylum':  [SummarizedGatherResult(query_name='queryB', rank='phylum', fraction=0.7,
                                                      query_md5='queryB_md5', query_filename='queryB.sig',
                                                      f_weighted_at_rank=0.7, bp_match_at_rank=70,
                                                      lineage=(LineagePair(rank='superkingdom', name='a'),
-                                                              LineagePair(rank='phylum', name='c')))]}
+                                                              LineagePair(rank='phylum', name='c')),
+                                                     query_ani_at_rank=None)]}
 
     # write summarized gather results csvs
     sg1= runtmp.output("sample1.csv")
@@ -965,6 +1013,17 @@ def test_tax_multi_load_files(runtmp):
     # file does not exist
     with pytest.raises(ValueError):
         MultiLineageDB.load([runtmp.output('no-such-file')])
+
+
+def test_tax_sql_load_new_file(runtmp):
+    # test loading a newer-format sql file with sourmash_internals table
+    taxonomy_db = utils.get_test_data('sqlite/test.taxonomy.db')
+
+    db = MultiLineageDB.load([taxonomy_db])
+    print(list(db.keys()))
+    assert len(db) == 6
+    assert 'strain' not in db.available_ranks
+    assert db['GCF_001881345'][0].rank == 'superkingdom'
 
 
 def test_tax_multi_load_files_shadowed(runtmp):

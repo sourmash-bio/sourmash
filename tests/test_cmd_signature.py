@@ -5,6 +5,7 @@ import csv
 import shutil
 import os
 import glob
+import gzip
 
 import pytest
 import screed
@@ -18,9 +19,14 @@ from sourmash_tst_utils import SourmashCommandFailed
 ## command line tests
 
 
-def _write_file(runtmp, basename, lines):
+def _write_file(runtmp, basename, lines, *, gz=False):
     loc = runtmp.output(basename)
-    with open(loc, 'wt') as fp:
+    if gz:
+        xopen = gzip.open
+    else:
+        xopen = open
+
+    with xopen(loc, 'wt') as fp:
         fp.write("\n".join(lines))
     return loc
 
@@ -72,6 +78,36 @@ def test_sig_merge_1_fromfile_picklist(runtmp):
     from_file = _write_file(runtmp, 'list.txt', [sig47, sig63])
     picklist = _write_file(runtmp, 'pl.csv',
                            ['md5short', '09a08691', '38729c63'])
+
+    c.run_sourmash('signature', 'merge', '--from-file', from_file,
+                   '--picklist', f'{picklist}:md5short:md5short')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_merge_sig = sourmash.load_one_signature(sig47and63)
+    actual_merge_sig = sourmash.load_one_signature(out)
+
+    print(test_merge_sig.minhash)
+    print(actual_merge_sig.minhash)
+    print(out)
+
+    assert actual_merge_sig.minhash == test_merge_sig.minhash
+
+
+def test_sig_merge_1_fromfile_picklist_gz(runtmp):
+    # test with --from-file and gzipped picklist
+    c = runtmp
+
+    # merge of 47 & 63 should be union of mins
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    sig47and63 = utils.get_test_data('47+63.fa.sig')
+
+    from_file = _write_file(runtmp, 'list.txt', [sig47, sig63])
+    picklist = _write_file(runtmp, 'pl.csv',
+                           ['md5short', '09a08691', '38729c63'],
+                           gz=True)
 
     c.run_sourmash('signature', 'merge', '--from-file', from_file,
                    '--picklist', f'{picklist}:md5short:md5short')
@@ -208,7 +244,7 @@ def test_sig_merge_3_abund_ab_ok(c):
 
     c.run_sourmash('sig', 'merge', sig47abund, sig63abund)
     actual_merge_sig = sourmash.load_one_signature(c.last_result.out)
-    # @CTB: should check that this merge did what we think it should do!
+    # CTB: should check that this merge did what we think it should do!
 
 
 @utils.in_tempdir
@@ -1625,6 +1661,45 @@ def test_sig_extract_7_no_ksize(c):
     siglist = list(siglist)
 
     assert len(siglist) == 3
+
+
+def test_sig_extract_8_empty_picklist_fail(runtmp):
+    # what happens with an empty picklist?
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # make empty picklist
+    picklist_csv = runtmp.output('pick.csv')
+    with open(picklist_csv, 'w', newline='') as csvfp:
+        pass
+
+    picklist_arg = f"{picklist_csv}:md5full:md5"
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist', picklist_arg)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    assert "empty or improperly formatted pickfile" in err
+
+
+def test_sig_extract_8_nofile_picklist_fail(runtmp):
+    # what happens when picklist file does not exist?
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    # picklist file does not exist
+    picklist_csv = runtmp.output('pick.csv')
+    picklist_arg = f"{picklist_csv}:md5full:md5"
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'extract', sig47, sig63, '--picklist', picklist_arg)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    assert "must exist and be a regular file" in err
 
 
 def test_sig_extract_8_picklist_md5(runtmp):
@@ -3245,6 +3320,25 @@ def test_sig_describe_empty(c):
     assert 'source file: ** no name **' in c.last_result.out
 
 
+def test_sig_describe_sqldb(runtmp):
+    # make a sqldb and run fileinfo on it
+    gcf_all = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    sqldb = runtmp.output('some.sqldb')
+
+    runtmp.sourmash('sig', 'cat', '-k', '31', *gcf_all, '-o', sqldb)
+
+    runtmp.sourmash('sig', 'describe', sqldb)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert 'md5: 4289d4241be8573145282352215ca3c4' in out
+    assert 'md5: 85c3aeec6457c0b1d210472ddeb67714' in out
+
+
 def test_sig_describe_2_csv(runtmp):
     # output info in CSV spreadsheet
     c = runtmp
@@ -3257,6 +3351,29 @@ def test_sig_describe_2_csv(runtmp):
                     '38729c6374925585db28916b82a6f513']
 
     with open(c.output('out.csv'), 'rt') as fp:
+        r = csv.DictReader(fp)
+
+        n = 0
+
+        for row, md5 in zip(r, expected_md5):
+            assert row['md5'] == md5
+            n += 1
+
+        assert n == 2
+
+
+def test_sig_describe_2_csv_gz(runtmp):
+    # output info in CSV spreadsheet, gzipped
+    c = runtmp
+
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    c.run_sourmash('sig', 'describe', sig47, sig63, '--csv', 'out.csv.gz')
+
+    expected_md5 = ['09a08691ce52952152f0e866a59f6261',
+                    '38729c6374925585db28916b82a6f513']
+
+    with gzip.open(c.output('out.csv.gz'), 'rt', newline="") as fp:
         r = csv.DictReader(fp)
 
         n = 0
@@ -3479,7 +3596,7 @@ def test_import_mash_csv_to_sig(runtmp):
 
     print("RUNTEMP", runtmp)
 
-    assert '1 matches:' in runtmp.last_result.out
+    assert '1 matches' in runtmp.last_result.out
     assert '100.0%       short.fa' in runtmp.last_result.out
 
 
@@ -3491,6 +3608,70 @@ def test_sig_manifest_1_zipfile(runtmp):
     manifest_fn = runtmp.output('SOURMASH-MANIFEST.csv')
     with open(manifest_fn, newline='') as csvfp:
         manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+
+def test_sig_manifest_1_zipfile_csv_gz(runtmp):
+    # make a gzipped manifest from a .zip file
+    protzip = utils.get_test_data('prot/protein.zip')
+    runtmp.sourmash('sig', 'manifest', protzip,
+                    '-o', 'SOURMASH-MANIFEST.csv.gz')
+
+    manifest_fn = runtmp.output('SOURMASH-MANIFEST.csv.gz')
+    with gzip.open(manifest_fn, "rt", newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+
+def test_sig_manifest_1_zipfile_already_exists(runtmp):
+    # make a manifest from a .zip file; f
+    protzip = utils.get_test_data('prot/protein.zip')
+
+    mf_csv = runtmp.output('mf.csv')
+    with open(mf_csv, "w") as fp:
+        fp.write("hello, world")
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'manifest', protzip, '-o', 'mf.csv')
+
+
+def test_sig_manifest_1_zipfile_already_exists_force(runtmp):
+    # make a manifest from a .zip file
+    protzip = utils.get_test_data('prot/protein.zip')
+
+    mf_csv = runtmp.output('mf.csv')
+    with open(mf_csv, "w") as fp:
+        fp.write("hello, world")
+
+    runtmp.sourmash('sig', 'manifest', protzip, '-o', 'mf.csv', '-f')
+
+    with open(mf_csv, newline='') as csvfp:
+        manifest = CollectionManifest.load_from_csv(csvfp)
+
+    assert len(manifest) == 2
+    md5_list = [ row['md5'] for row in manifest.rows ]
+    assert '16869d2c8a1d29d1c8e56f5c561e585e' in md5_list
+    assert '120d311cc785cc9d0df9dc0646b2b857' in md5_list
+
+
+def test_sig_manifest_1_zipfile_already_exists_sql(runtmp):
+    # make a manifest from a .zip file
+    protzip = utils.get_test_data('prot/protein.zip')
+
+    mf_csv = runtmp.output('mf.mfsql')
+    runtmp.sourmash('sig', 'manifest', protzip, '-o', 'mf.mfsql', '-F', 'sql')
+    runtmp.sourmash('sig', 'manifest', protzip, '-o', 'mf.mfsql', '-F', 'sql',
+                    '-f')
+
+    manifest = CollectionManifest.load_from_filename(mf_csv)
 
     assert len(manifest) == 2
     md5_list = [ row['md5'] for row in manifest.rows ]
@@ -3649,6 +3830,62 @@ def test_sig_manifest_7_allzip_3(runtmp):
     assert len(manifest) == 8
     filenames = set( row['internal_location'] for row in manifest.rows )
     assert 'dna-sig.noext' in filenames
+
+
+def test_sig_manifest_8_sqldb(runtmp):
+    # make a sqldb and then run sig manifest on it.
+    gcf_all = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    sqldb = runtmp.output('some.sqldb')
+
+    runtmp.sourmash('sig', 'cat', '-k', '31', *gcf_all, '-o', sqldb)
+
+    # need to use '--no-rebuild-manifest' with 'sig manifest' on sqldb,
+    # because it has a manifest but not the _signatures_with_internal
+    # method to rebuild one ;)
+
+    # so, this should fail...
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sig', 'manifest', sqldb, '-o', 'mf.csv')
+
+    # ...and this should succeed:
+    runtmp.sourmash('sig', 'manifest', sqldb, '-o', 'mf.csv',
+                    '--no-rebuild')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert 'manifest contains 12 signatures total.' in err
+    assert "wrote manifest to 'mf.csv'" in err
+
+    mf = CollectionManifest.load_from_filename(runtmp.output('mf.csv'))
+    assert len(mf) == 12
+
+
+def test_sig_manifest_8_sqldb_out(runtmp):
+    # make a zip and run manifest out on it to make a sql format manifest.
+    gcf_all = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    zipfile = runtmp.output('some.zip')
+
+    runtmp.sourmash('sig', 'cat', '-k', '31', *gcf_all, '-o', zipfile)
+
+    # ...and this should succeed:
+    runtmp.sourmash('sig', 'manifest', zipfile, '-o', 'mf.sqldb',
+                    '-F', 'sql')
+
+    err = runtmp.last_result.err
+    print(err)
+
+    out = runtmp.last_result.out
+    print(out)
+
+    assert 'manifest contains 12 signatures total.' in err
+    assert "wrote manifest to 'mf.sqldb'" in err
+
+    mf = CollectionManifest.load_from_filename(runtmp.output('mf.sqldb'))
+    assert len(mf) == 12
 
 
 def test_sig_kmers_1_dna(runtmp):
@@ -4219,6 +4456,92 @@ def test_sig_check_1(runtmp):
     assert 31 in ksizes
 
 
+def test_sig_check_1_mf_csv_gz(runtmp):
+    # basic check functionality, with gzipped manifest output
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    runtmp.sourmash('sig', 'check', *sigfiles,
+                    "--picklist", f"{picklist}::manifest",
+                    "-m", "mf.csv.gz")
+
+    out_mf = runtmp.output('mf.csv.gz')
+    assert os.path.exists(out_mf)
+
+    # all should match.
+    with gzip.open(out_mf, "rt", newline='') as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 24
+
+    idx = sourmash.load_file_as_index(out_mf)
+    siglist = list(idx.signatures())
+    assert len(siglist) == 24
+    ksizes = set([ ss.minhash.ksize for ss in siglist ])
+    assert len(ksizes) == 3
+    assert 11 in ksizes
+    assert 21 in ksizes
+    assert 31 in ksizes
+
+
+def test_sig_check_1_gz(runtmp):
+    # basic check functionality with gzipped picklist
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+    picklist_gz = runtmp.output('salmonella.csv.gz')
+
+    with gzip.open(picklist_gz, "w") as outfp:
+        with open(picklist, "rb") as infp:
+            outfp.write(infp.read())
+
+    runtmp.sourmash('sig', 'check', *sigfiles,
+                    "--picklist", "salmonella.csv.gz::manifest",
+                    "-m", "mf.csv")
+
+    out_mf = runtmp.output('mf.csv')
+    assert os.path.exists(out_mf)
+
+    # all should match.
+    with open(out_mf, newline='') as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 24
+
+    idx = sourmash.load_file_as_index(out_mf)
+    siglist = list(idx.signatures())
+    assert len(siglist) == 24
+    ksizes = set([ ss.minhash.ksize for ss in siglist ])
+    assert len(ksizes) == 3
+    assert 11 in ksizes
+    assert 21 in ksizes
+    assert 31 in ksizes
+
+
+def test_sig_check_1_nofail(runtmp):
+    # basic check functionality with --fail-if-missing
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    runtmp.sourmash('sig', 'check', *sigfiles,
+                    "--picklist", f"{picklist}::manifest",
+                    "-m", "mf.csv", '--fail-if-missing')
+
+    out_mf = runtmp.output('mf.csv')
+    assert os.path.exists(out_mf)
+
+    # all should match.
+    with open(out_mf, newline='') as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 24
+
+    idx = sourmash.load_file_as_index(out_mf)
+    siglist = list(idx.signatures())
+    assert len(siglist) == 24
+    ksizes = set([ ss.minhash.ksize for ss in siglist ])
+    assert len(ksizes) == 3
+    assert 11 in ksizes
+    assert 21 in ksizes
+    assert 31 in ksizes
+
+
 def test_sig_check_1_no_picklist(runtmp):
     # basic check functionality
     sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
@@ -4286,6 +4609,57 @@ def test_sig_check_1_diff_col_name(runtmp):
         mf = CollectionManifest.load_from_csv(fp)
     assert len(mf) == 24
 
+    # internal locations should match
+    sigfile_set = set(sigfiles)
+    for row in mf.rows:
+        assert row['internal_location'] in sigfile_set
+
+    idx = sourmash.load_file_as_index(out_mf)
+    siglist = list(idx.signatures())
+    assert len(siglist) == 24
+    ksizes = set([ ss.minhash.ksize for ss in siglist ])
+    assert len(ksizes) == 3
+    assert 11 in ksizes
+    assert 21 in ksizes
+    assert 31 in ksizes
+
+    # should be one non-matching picklist row
+    with open(missing_csv, newline='') as fp:
+        rows = list(csv.reader(fp))
+    assert len(rows) == 2       # header row + data row
+    assert rows[1][0] == 'NOT THERE'
+
+
+def test_sig_check_1_diff_col_name_zip(runtmp):
+    # 'sig check' with 'name2' column instead of default name, on a zip file
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist-diffcolumn.csv')
+
+    # first create a zip db
+    runtmp.sourmash('sig', 'cat', *sigfiles, '-o', 'gcf.zip')
+
+    # now run against this zip
+    runtmp.sourmash('sig', 'check', 'gcf.zip',
+                    "--picklist", f"{picklist}:name2:name",
+                    "-o", "missing.csv",
+                    '-m', 'mf.csv')
+
+    out_mf = runtmp.output('mf.csv')
+    assert os.path.exists(out_mf)
+
+    missing_csv = runtmp.output('missing.csv')
+    assert os.path.exists(missing_csv)
+
+    # should be 24 matching manifest rows
+    with open(out_mf, newline='') as fp:
+        mf = CollectionManifest.load_from_csv(fp)
+    assert len(mf) == 24
+
+    # internal locations should all point to zip
+    ilocs = set(( row['internal_location'] for row in mf.rows ))
+    assert len(ilocs) == 1
+
+    # can we get 'em?
     idx = sourmash.load_file_as_index(out_mf)
     siglist = list(idx.signatures())
     assert len(siglist) == 24
@@ -4345,6 +4719,31 @@ def test_sig_check_1_ksize(runtmp):
     with open(out_mf, newline='') as fp:
         mf = CollectionManifest.load_from_csv(fp)
     assert len(mf) == 8
+
+    idx = sourmash.load_file_as_index(out_mf)
+    siglist = list(idx.signatures())
+    assert len(siglist) == 8
+    ksizes = set([ ss.minhash.ksize for ss in siglist ])
+    assert len(ksizes) == 1
+    assert 31 in ksizes
+
+
+def test_sig_check_1_ksize_output_sql(runtmp):
+    # basic check functionality with selection for ksize
+    sigfiles = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+    picklist = utils.get_test_data('gather/salmonella-picklist.csv')
+
+    runtmp.sourmash('sig', 'check', *sigfiles, '-k', '31',
+                    "--picklist", f"{picklist}::manifest",
+                    "-m", "mf.mfsql", "-F", "sql")
+
+    out_mf = runtmp.output('mf.mfsql')
+    assert os.path.exists(out_mf)
+
+    # 8 of the 24 should match.
+    mf = CollectionManifest.load_from_filename(out_mf)
+    assert len(mf) == 8
+    assert mf.conn              # check that it's a sqlite manifest! hacky...
 
     idx = sourmash.load_file_as_index(out_mf)
     siglist = list(idx.signatures())
@@ -4444,7 +4843,7 @@ def test_sig_check_2_output_missing_exclude(runtmp):
     assert "** ERROR: Cannot use an 'exclude' picklist with '-o/--output-missing'" in str(exc)
 
 
-def test_check_3_no_manifest(runtmp):
+def test_sig_check_3_no_manifest(runtmp):
     # fail check when no manifest, by default
     sbt = utils.get_test_data('v6.sbt.zip')
     picklist = utils.get_test_data('v6.sbt.zip.mf.csv')
@@ -4460,7 +4859,7 @@ def test_check_3_no_manifest(runtmp):
     assert "sig check requires a manifest by default, but no manifest present." in err
 
 
-def test_check_3_no_manifest_ok(runtmp):
+def test_sig_check_3_no_manifest_ok(runtmp):
     # generate manifest if --no-require-manifest
     sbt = utils.get_test_data('v6.sbt.zip')
     picklist = utils.get_test_data('v6.sbt.zip.mf.csv')

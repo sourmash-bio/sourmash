@@ -445,6 +445,7 @@ def test_manifest_row_to_compute_parameters_1():
     assert not p.protein
     assert not p.dayhoff
     assert not p.hp
+    assert p.moltype == 'DNA'
     assert p.num_hashes == 0
     assert p.scaled == 1000
     assert p.ksizes == [21]
@@ -461,6 +462,7 @@ def test_manifest_row_to_compute_parameters_2():
     p = ComputeParameters.from_manifest_row(row)
     assert not p.dna
     assert p.protein
+    assert p.moltype == 'protein'
     assert not p.dayhoff
     assert not p.hp
     assert p.num_hashes == 0
@@ -480,6 +482,7 @@ def test_manifest_row_to_compute_parameters_3():
     assert not p.dna
     assert not p.protein
     assert p.dayhoff
+    assert p.moltype == 'dayhoff'
     assert not p.hp
     assert p.num_hashes == 0
     assert p.scaled == 200
@@ -499,11 +502,20 @@ def test_manifest_row_to_compute_parameters_4():
     assert not p.protein
     assert not p.dayhoff
     assert p.hp
+    assert p.moltype == 'hp'
     assert p.num_hashes == 0
     assert p.scaled == 200
     assert p.ksizes == [96]
     assert not p.track_abundance
     assert p.seed == 42
+
+
+def test_bad_compute_parameters():
+    p = ComputeParameters(ksizes=[31], seed=42, dna=0, protein=0, dayhoff=0,
+                          hp=0, num_hashes=0, track_abundance=True, scaled=1000)
+    with pytest.raises(AssertionError):
+        p.moltype
+
 
 ### command line tests
 
@@ -1538,7 +1550,34 @@ def test_fromfile_dna(runtmp):
     ss = siglist[0]
     assert ss.name == 'GCA_903797575 Salmonella enterica'
     assert ss.minhash.moltype == 'DNA'
-    assert "** 1 total requested; built 1, skipped 0" in runtmp.last_result.err
+    assert "** 1 total requested; output 1, skipped 0" in runtmp.last_result.err
+
+
+def test_fromfile_dna_csv_gz(runtmp):
+    # test with a gzipped csv
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    # gzip the CSV file
+    with open(runtmp.output('sketch_fromfile/salmonella.csv'), 'rb') as infp:
+        with gzip.open(runtmp.output('salmonella.csv.gz'), 'w') as outfp:
+            outfp.write(infp.read())
+
+    runtmp.sourmash('sketch', 'fromfile', 'salmonella.csv.gz',
+                    '-o', 'out.zip', '-p', 'dna')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(runtmp.output('out.zip'))
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    siglist = list(idx.signatures())
+
+    assert len(siglist) == 1
+    ss = siglist[0]
+    assert ss.name == 'GCA_903797575 Salmonella enterica'
+    assert ss.minhash.moltype == 'DNA'
+    assert "** 1 total requested; output 1, skipped 0" in runtmp.last_result.err
 
 
 def test_fromfile_dna_empty(runtmp):
@@ -1581,7 +1620,7 @@ def test_fromfile_dna_check_sequence_succeed(runtmp):
     ss = siglist[0]
     assert ss.name == 'GCA_903797575 Salmonella enterica'
     assert ss.minhash.moltype == 'DNA'
-    assert "** 1 total requested; built 1, skipped 0" in runtmp.last_result.err
+    assert "** 1 total requested; output 1, skipped 0" in runtmp.last_result.err
 
 
 def test_fromfile_dna_check_sequence_fail(runtmp):
@@ -1629,7 +1668,49 @@ def test_fromfile_dna_and_protein(runtmp):
     dna_sig = dna_sig[0]
     assert dna_sig.name == 'GCA_903797575 Salmonella enterica'
 
-    assert "** 2 total requested; built 2, skipped 0" in runtmp.last_result.err
+    assert "** 2 total requested; output 2, skipped 0" in runtmp.last_result.err
+
+
+def test_fromfile_dna_and_protein_and_hp_and_dayhoff(runtmp):
+    # does it run and produce DNA _and_ protein signatures?
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    runtmp.sourmash('sketch', 'fromfile', 'sketch_fromfile/salmonella.csv',
+                    '-o', 'out.zip', '-p', 'dna', '-p', 'dna,k=25',
+                    '-p', 'protein',
+                    '-p', 'hp', '-p', 'dayhoff')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert os.path.exists(runtmp.output('out.zip'))
+    idx = sourmash.load_file_as_index(runtmp.output('out.zip'))
+    siglist = list(idx.signatures())
+
+    assert len(siglist) == 5
+
+    prot_sig = [ ss for ss in siglist if ss.minhash.moltype == 'protein' ]
+    assert len(prot_sig) == 1
+    prot_sig = prot_sig[0]
+    assert prot_sig.name == 'GCA_903797575 Salmonella enterica'
+
+    prot_sig = [ ss for ss in siglist if ss.minhash.moltype == 'hp' ]
+    assert len(prot_sig) == 1
+    prot_sig = prot_sig[0]
+    assert prot_sig.name == 'GCA_903797575 Salmonella enterica'
+
+    prot_sig = [ ss for ss in siglist if ss.minhash.moltype == 'dayhoff' ]
+    assert len(prot_sig) == 1
+    prot_sig = prot_sig[0]
+    assert prot_sig.name == 'GCA_903797575 Salmonella enterica'
+
+    dna_sig = [ ss for ss in siglist if ss.minhash.moltype == 'DNA' ]
+    assert len(dna_sig) == 2
+    dna_sig = dna_sig[0]
+    assert dna_sig.name == 'GCA_903797575 Salmonella enterica'
+
+    assert "** 5 total requested; output 5, skipped 0" in runtmp.last_result.err
 
 
 def test_fromfile_dna_and_protein_noname(runtmp):
@@ -1651,7 +1732,7 @@ def test_fromfile_dna_and_protein_noname(runtmp):
 
 
 def test_fromfile_dna_and_protein_dup_name(runtmp):
-    # nothing in the name column
+    # duplicate names
     test_inp = utils.get_test_data('sketch_fromfile')
     shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
 
@@ -1762,7 +1843,7 @@ def test_fromfile_force_overwrite(runtmp):
     assert len(siglist) == 2
     names = list(set([ ss.name for ss in siglist ]))
     assert names[0] == 'GCA_903797575 Salmonella enterica'
-    assert "** 1 total requested; built 1, skipped 0" in runtmp.last_result.err
+    assert "** 1 total requested; output 1, skipped 0" in runtmp.last_result.err
 
 
 def test_fromfile_need_params(runtmp):
@@ -1792,7 +1873,7 @@ def test_fromfile_seed_not_allowed(runtmp):
 
 
 def test_fromfile_license_not_allowed(runtmp):
-    # check that we cannot adjust 'seed'
+    # check that license is CC0
     test_inp = utils.get_test_data('sketch_fromfile')
     shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
 
@@ -1901,7 +1982,7 @@ def test_fromfile_dna_and_protein_partly_already_exists(runtmp):
     assert 'Read 2 rows, requesting that 4 signatures be built.' in err
     assert '** 2 new signatures to build from 2 files;' in err
     assert "** 2 already exist, so skipping those." in err
-    assert "** 4 total requested; built 2, skipped 2" in err
+    assert "** 4 total requested; output 2, skipped 2" in err
 
 
 def test_fromfile_dna_and_protein_already_exists_noname(runtmp):
@@ -1925,4 +2006,4 @@ def test_fromfile_dna_and_protein_already_exists_noname(runtmp):
     assert 'Loaded 0 pre-existing names from manifest(s)' in err
     assert 'Read 1 rows, requesting that 2 signatures be built.' in err
     assert '** 2 new signatures to build from 2 files;' in err
-    assert '** 2 total requested; built 2, skipped 0' in err
+    assert '** 2 total requested; output 2, skipped 0' in err

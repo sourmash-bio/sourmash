@@ -3,11 +3,15 @@ Manifests for collections of signatures.
 """
 import csv
 import ast
+import gzip
+import os.path
+from abc import abstractmethod
+import itertools
 
 from sourmash.picklist import SignaturePicklist
 
 
-class CollectionManifest:
+class BaseCollectionManifest:
     """
     Signature metadata for a collection of signatures.
 
@@ -25,40 +29,25 @@ class CollectionManifest:
                      'scaled', 'n_hashes', 'with_abundance',
                      'name', 'filename')
 
-    def __init__(self, rows):
-        "Initialize from an iterable of metadata dictionaries."
-        self.rows = ()
-        self._md5_set = set()
-
-        self._add_rows(rows)
-
-    def _add_rows(self, rows):
-        self.rows += tuple(rows)
-
-        # maintain a fast lookup table for md5sums
-        md5set = self._md5_set
-        for row in self.rows:
-            md5set.add(row['md5'])
-
-    def __iadd__(self, other):
-        self._add_rows(other.rows)
-        return self
-
-    def __add__(self, other):
-        return CollectionManifest(self.rows + other.rows)
-
-    def __bool__(self):
-        return bool(self.rows)
-
-    def __len__(self):
-        return len(self.rows)
-
-    def __eq__(self, other):
-        return self.rows == other.rows
+    @classmethod
+    @abstractmethod
+    def load_from_manifest(cls, manifest, **kwargs):
+        "Load this manifest from another manifest object."
 
     @classmethod
     def load_from_filename(cls, filename):
-        with open(filename, newline="") as fp:
+        # SQLite db?
+        db = cls.load_from_sql(filename)
+        if db is not None:
+            return db
+
+        # not a SQLite db?
+        if filename.endswith('.gz'):
+            xopen = gzip.open
+        else:
+            xopen = open
+
+        with xopen(filename, 'rt', newline="") as fp:
             return cls.load_from_csv(fp)
 
     @classmethod
@@ -95,11 +84,31 @@ class CollectionManifest:
             row['signature'] = None
             manifest_list.append(row)
 
-        return cls(manifest_list)
+        return CollectionManifest(manifest_list)
 
-    def write_to_filename(self, filename):
-        with open(filename, "w", newline="") as fp:
-            return self.write_to_csv(fp, write_header=True)
+    @classmethod
+    def load_from_sql(cls, filename):
+        from sourmash.index.sqlite_index import load_sqlite_index
+        db = load_sqlite_index(filename, request_manifest=True)
+        if db is not None:
+            return db.manifest
+
+        return None
+
+    def write_to_filename(self, filename, *, database_format='csv',
+                          ok_if_exists=False):
+        if database_format == 'csv':
+            from .sourmash_args import FileOutputCSV
+            if ok_if_exists or not os.path.exists(filename):
+                with FileOutputCSV(filename) as fp:
+                    return self.write_to_csv(fp, write_header=True)
+            elif os.path.exists(filename) and not ok_if_exists:
+                raise Exception("output manifest already exists")
+
+        elif database_format == 'sql':
+            from sourmash.index.sqlite_index import SqliteCollectionManifest
+            SqliteCollectionManifest.load_from_manifest(self, dbfile=filename,
+                                                        append=ok_if_exists)
 
     @classmethod
     def write_csv_header(cls, fp):
@@ -110,7 +119,8 @@ class CollectionManifest:
 
     def write_to_csv(self, fp, write_header=False):
         "write manifest CSV to specified file handle"
-        w = csv.DictWriter(fp, fieldnames=self.required_keys)
+        w = csv.DictWriter(fp, fieldnames=self.required_keys,
+                           extrasaction='ignore')
 
         if write_header:
             self.write_csv_header(fp)
@@ -154,10 +164,108 @@ class CollectionManifest:
         """
         manifest_list = []
         for ss, location in locations_iter:
-            row = cls.make_manifest_row(ss, location, include_signature=True)
+            row = cls.make_manifest_row(ss, location,
+                                        include_signature=include_signature)
             manifest_list.append(row)
 
         return cls(manifest_list)
+
+    ## implement me
+    @abstractmethod
+    def __add__(self, other):
+        "Add two manifests"
+
+    @abstractmethod
+    def __bool__(self):
+        "Test if manifest is empty"
+
+    @abstractmethod
+    def __len__(self):
+        "Get number of entries in manifest"
+
+    @abstractmethod
+    def __eq__(self, other):
+        "Check for equality of manifest based on rows"
+
+    @abstractmethod
+    def select_to_manifest(self, **kwargs):
+        "Select compatible signatures"
+
+    @abstractmethod
+    def filter_rows(self, row_filter_fn):
+        "Filter rows based on a pattern matching function."
+
+    @abstractmethod
+    def filter_on_columns(self, col_filter_fn, col_names):
+        "Filter on column values."
+
+    @abstractmethod
+    def locations(self):
+        "Return a list of distinct locations"
+
+    @abstractmethod
+    def __contains__(self, ss):
+        "Determine if a particular SourmashSignature is in this manifest."
+
+    @abstractmethod
+    def to_picklist(self):
+        "Convert manifest to a picklist."
+
+
+class CollectionManifest(BaseCollectionManifest):
+    """
+    An in-memory manifest that simply stores the rows in a list.
+    """
+    def __init__(self, rows=[]):
+        "Initialize from an iterable of metadata dictionaries."
+        self.rows = []
+        self._md5_set = set()
+
+        self._add_rows(rows)
+
+    @classmethod
+    def load_from_manifest(cls, manifest, **kwargs):
+        "Load this manifest from another manifest object."
+        return cls(manifest.rows)
+
+    def add_row(self, row):
+        self._add_rows([row])
+
+    def _add_rows(self, rows):
+        self.rows.extend(rows)
+
+        # maintain a fast check for md5sums for __contains__ check.
+        md5set = self._md5_set
+        for row in self.rows:
+            md5set.add(row['md5'])
+
+    def __iadd__(self, other):
+        self._add_rows(other.rows)
+        return self
+
+    def __add__(self, other):
+        mf = CollectionManifest(self.rows)
+        mf._add_rows(other.rows)
+        return mf
+
+    def __bool__(self):
+        return bool(self.rows)
+
+    def __len__(self):
+        return len(self.rows)
+
+    def __eq__(self, other):
+        "Check equality on a row-by-row basis. May fail on out-of-order rows."
+        for (a, b) in itertools.zip_longest(self.rows, other.rows):
+            if a is None or b is None:
+                return False
+
+            # ignore non-required keys.
+            for k in self.required_keys:
+                if a[k] != b[k]:
+                    return False
+
+        return True
 
     def _select(self, *, ksize=None, moltype=None, scaled=0, num=0,
                 containment=False, abund=None, picklist=None):

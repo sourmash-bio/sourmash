@@ -13,7 +13,8 @@ import screed
 import sourmash
 from sourmash.sourmash_args import FileOutput
 
-from sourmash.logging import set_quiet, error, notify, print_results, debug
+from sourmash.logging import (set_quiet, error, notify, print_results, debug,
+                              debug_literal)
 from sourmash import sourmash_args
 from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.manifest import CollectionManifest
@@ -39,6 +40,8 @@ subtract <signature> <other_sig> [...]    - subtract one or more signatures
 import [ ... ]                            - import a mash or other signature
 export <signature>                        - export a signature, e.g. to mash
 overlap <signature1> <signature2>         - see detailed comparison of sigs
+check <locations> --picklist ...          - check picklist against (many) sigs
+collect <locations> -o manifest.sqlmf     - collect sigs metadata into manifest
 
 ** Use '-h' to get subcommand-specific help, e.g.
 
@@ -51,12 +54,15 @@ def _check_abundance_compatibility(sig1, sig2):
         raise ValueError("incompatible signatures: track_abundance is {} in first sig, {} in second".format(sig1.minhash.track_abundance, sig2.minhash.track_abundance))
 
 
-def _extend_signatures_with_from_file(args):
+def _extend_signatures_with_from_file(args, *, target_attr='signatures'):
     # extend input signatures with --from-file
     if args.from_file:
         more_files = sourmash_args.load_pathlist_from_file(args.from_file)
-        args.signatures = list(args.signatures)
-        args.signatures.extend(more_files)
+
+        sigs = list(getattr(args, target_attr))
+        sigs.extend(more_files)
+        setattr(args, target_attr, sigs)
+
 
 def _set_num_scaled(mh, num, scaled):
     "set num and scaled values on a MinHash object"
@@ -301,11 +307,11 @@ def manifest(args):
     manifest = sourmash_args.get_manifest(loader, require=True,
                                           rebuild=rebuild)
 
-    with open(args.output, "w", newline='') as csv_fp:
-        manifest.write_to_csv(csv_fp, write_header=True)
-
+    manifest.write_to_filename(args.output,
+                               database_format=args.manifest_format,
+                               ok_if_exists=args.force)
     notify(f"manifest contains {len(manifest)} signatures total.")
-    notify(f"wrote manifest to '{args.output}'")
+    notify(f"wrote manifest to '{args.output}' ({args.manifest_format})")
 
 
 def overlap(args):
@@ -1318,7 +1324,7 @@ def check(args):
     else:
         debug("sig check: manifest required")
 
-    total_manifest_rows = []
+    total_manifest_rows = CollectionManifest([])
 
     # start loading!
     total_rows_examined = 0
@@ -1335,10 +1341,18 @@ def check(args):
             sys.exit(-1)
 
         # has manifest, or ok to build (require_manifest=False) - continue!
-        manifest = sourmash_args.get_manifest(idx, require=True)
-        manifest_rows = manifest._select(picklist=picklist)
-        total_rows_examined += len(manifest)
-        total_manifest_rows += manifest_rows
+        new_manifest = sourmash_args.get_manifest(idx, require=True)
+        sub_manifest = new_manifest.select_to_manifest(picklist=picklist)
+        total_rows_examined += len(new_manifest)
+
+        # rewrite locations so that each signature can be found by filename
+        # of its container; this follows `sig collect` logic.
+        rows = []
+        for row in sub_manifest.rows:
+            row['internal_location'] = filename
+            total_manifest_rows.add_row(row)
+
+        debug_literal(f"examined {len(new_manifest)} new rows, found {len(sub_manifest)} matching rows")
 
     notify(f"loaded {total_rows_examined} signatures.")
 
@@ -1352,9 +1366,8 @@ def check(args):
         # go through the input file and pick out missing rows.
         n_input = 0
         n_output = 0
-        with open(pickfile, newline='') as csvfp:
-            r = csv.DictReader(csvfp)
 
+        with sourmash_args.FileInputCSV(pickfile) as r:
             with open(args.output_missing, "w", newline='') as outfp:
                 w = csv.DictWriter(outfp, fieldnames=r.fieldnames)
                 w.writeheader()
@@ -1370,16 +1383,109 @@ def check(args):
 
     # save manifest of matching!
     if args.save_manifest_matching and total_manifest_rows:
-        mf = CollectionManifest(total_manifest_rows)
-        with open(args.save_manifest_matching, 'w', newline="") as fp:
-            mf.write_to_csv(fp, write_header=True)
+        mf = total_manifest_rows
+        mf.write_to_filename(args.save_manifest_matching,
+                             database_format=args.manifest_format)
         notify(f"wrote {len(mf)} matching manifest rows to '{args.save_manifest_matching}'")
     elif args.save_manifest_matching:
         notify(f"(not saving matching manifest to '{args.save_manifest_matching}' because no matches)")
 
-    if args.fail_if_missing:
+    if args.fail_if_missing and n_missing:
         error("** ERROR: missing values, and --fail-if-missing requested. Exiting.")
         sys.exit(-1)
+
+
+def collect(args):
+    "Collect signature metadata across many locations, save to manifest"
+    # TODO:
+    # test what happens with directories :)
+    set_quiet(False, args.debug)
+
+    if os.path.exists(args.output):
+        if args.merge_previous:
+            pass
+        else:
+            error(f"ERROR: '{args.output}' already exists!")
+            error(f"ERROR: please remove it, or use --merge-previous to merge")
+            sys.exit(-1)
+    elif args.merge_previous:
+        notify(f"WARNING: --merge-previous specified, but output file '{args.output}' does not already exist?")
+
+    # load previous manifest for --merge-previous. This gets tricky with
+    # mismatched manifest types, which we forbid.
+    try:
+        if args.manifest_format == 'sql':
+            # create on-disk manifest
+            from sourmash.index.sqlite_index import SqliteCollectionManifest
+
+            if args.merge_previous:
+                collected_mf = SqliteCollectionManifest.create_or_open(args.output)
+            else:
+                collected_mf = SqliteCollectionManifest.create(args.output)
+        else:
+            # create in-memory manifest that will be saved as CSV
+            assert args.manifest_format == 'csv'
+
+            if args.merge_previous and os.path.exists(args.output):
+                collected_mf = CollectionManifest.load_from_filename(args.output)
+            else:
+                collected_mf = CollectionManifest()
+
+            if not isinstance(collected_mf, CollectionManifest):
+                raise Exception
+    except:
+        error(f"ERROR loading '{args.output}' with --merge-previous. Is it of type {args.manifest_format}?")
+        sys.exit(-1)
+
+    if args.merge_previous:
+        notify(f"merging new locations with {len(collected_mf)} previous rows.")
+
+    # require manifests? yes by default, since generating can be slow.
+    require_manifest = True
+    if args.no_require_manifest:
+        require_manifest = False
+        debug("sig check: manifest will not be required")
+    else:
+        debug("sig check: manifest required")
+
+    n_files = 0
+
+    # load from_file
+    _extend_signatures_with_from_file(args, target_attr='locations')
+
+    # convert to abspath
+    if args.abspath:
+        args.locations = [ os.path.abspath(iloc) for iloc in args.locations ]
+
+    # iterate through, loading all the manifests from all the locations.
+    for n_files, loc in enumerate(args.locations):
+        notify(f"Loading signature information from {loc}.")
+
+        if n_files % 100 == 0:
+            notify(f'... loaded {len(collected_mf)} sigs from {n_files} files')
+        idx = sourmash.load_file_as_index(loc)
+        if idx.manifest is None and require_manifest:
+            error(f"ERROR on location '{loc}'")
+            error(f"sig collect requires a manifest by default, but no manifest present.")
+            error("specify --no-require-manifest to dynamically generate one.")
+            sys.exit(-1)
+
+        mf = sourmash_args.get_manifest(idx)
+
+        rows = []
+        for row in mf.rows:
+            row['internal_location'] = loc
+            collected_mf.add_row(row)
+
+    if args.manifest_format == 'csv':
+        collected_mf.write_to_filename(args.output, database_format='csv',
+                                       ok_if_exists=args.merge_previous)
+    else:
+        collected_mf.close()
+
+    notify(f"saved {len(collected_mf)} manifest rows to '{args.output}'")
+
+    return 0
 
 
 def main(arglist=None):

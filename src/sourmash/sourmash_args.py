@@ -37,11 +37,14 @@ signature and file output functionality:
 """
 import sys
 import os
+import csv
 from enum import Enum
 import traceback
 import gzip
-from io import StringIO
+from io import StringIO, TextIOWrapper
 import re
+import zipfile
+import contextlib
 
 import screed
 import sourmash
@@ -53,6 +56,7 @@ import sourmash.exceptions
 from .logging import notify, error, debug_literal
 
 from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
+from .index.sqlite_index import load_sqlite_index, SqliteIndex
 from . import signature as sigmod
 from .picklist import SignaturePicklist, PickStyle
 from .manifest import CollectionManifest
@@ -126,14 +130,14 @@ def load_picklist(args):
     if args.picklist:
         try:
             picklist = SignaturePicklist.from_picklist_args(args.picklist)
+
+            notify(f"picking column '{picklist.column_name}' of type '{picklist.coltype}' from '{picklist.pickfile}'")
+
+            n_empty_val, dup_vals = picklist.load(picklist.pickfile, picklist.column_name)
         except ValueError as exc:
             error("ERROR: could not load picklist.")
             error(str(exc))
             sys.exit(-1)
-
-        notify(f"picking column '{picklist.column_name}' of type '{picklist.coltype}' from '{picklist.pickfile}'")
-
-        n_empty_val, dup_vals = picklist.load(picklist.pickfile, picklist.column_name)
 
         notify(f"loaded {len(picklist.pickset)} distinct values into picklist.")
         if n_empty_val:
@@ -280,31 +284,37 @@ def traverse_find_sigs(filenames, yield_all_files=False):
 
 
 def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
-                      cache_size=None, picklist=None, pattern=None):
+                      cache_size=None, picklist=None, pattern=None,
+                      fail_on_empty_database=False):
     """
-    Load one or more SBTs, LCAs, and/or collections of signatures.
+    Load one or more Index objects to search - databases, etc.
 
-    Check for compatibility with query.
-
-    This is basically a user-focused wrapping of _load_databases.
+    'select' on compatibility with query, and apply picklists & patterns.
     """
     query_mh = query.minhash
 
+    # set selection parameter for containment
     containment = True
     if is_similarity_query:
         containment = False
 
     databases = []
+    total_signatures_loaded = 0
+    sum_signatures_after_select = 0
     for filename in filenames:
-        notify(f'loading from {filename}...', end='\r')
+        notify(f"loading from '{filename}'...", end='\r')
 
         try:
             db = _load_database(filename, False, cache_size=cache_size)
         except ValueError as e:
             # cannot load database!
+            notify(f"ERROR on loading from '{filename}':")
             notify(str(e))
             sys.exit(-1)
 
+        total_signatures_loaded += len(db)
+
+        # get compatible signatures - moltype/ksize/num/scaled
         try:
             db = db.select(moltype=query_mh.moltype,
                            ksize=query_mh.ksize,
@@ -315,39 +325,29 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
             # incompatible collection specified!
             notify(f"ERROR: cannot use '{filename}' for this query.")
             notify(str(exc))
-            sys.exit(-1)
+            if fail_on_empty_database:
+                sys.exit(-1)
+            else:
+                db = LinearIndex([])
 
         # 'select' returns nothing => all signatures filtered out. fail!
         if not db:
             notify(f"no compatible signatures found in '{filename}'")
-            sys.exit(-1)
+            if fail_on_empty_database:
+                sys.exit(-1)
 
+        sum_signatures_after_select += len(db)
+
+        # last but not least, apply picklist!
         db = apply_picklist_and_pattern(db, picklist, pattern)
 
         databases.append(db)
 
-    # calc num loaded info.
-    n_signatures = 0
-    n_databases = 0
-    for db in databases:
-        if db.is_database:
-            n_databases += 1
-        else:
-            n_signatures += len(db)
-
-    notify(' '*79, end='\r')
-    if n_signatures and n_databases:
-        notify(f'loaded {n_signatures} signatures and {n_databases} databases total.')
-    elif n_signatures and not n_databases:
-        notify(f'loaded {n_signatures} signatures.')
-    elif n_databases and not n_signatures:
-        notify(f'loaded {n_databases} databases.')
-
-    if databases:
-        print('')
-    else:
-        notify('** ERROR: no signatures or databases loaded?')
-        sys.exit(-1)
+    # display num loaded/num selected
+    notify("--")
+    notify(f"loaded {total_signatures_loaded} total signatures from {len(databases)} locations.")
+    notify(f"after selecting signatures compatible with search, {sum_signatures_after_select} remain.")
+    print('')
 
     return databases
 
@@ -403,6 +403,10 @@ def _load_revindex(filename, **kwargs):
     return db
 
 
+def _load_sqlite_db(filename, **kwargs):
+    return load_sqlite_index(filename)
+
+
 def _load_zipfile(filename, **kwargs):
     "Load collection from a .zip file."
     db = None
@@ -422,6 +426,7 @@ def _load_zipfile(filename, **kwargs):
 # all loader functions, in order.
 _loader_functions = [
     ("load from stdin", _load_stdin),
+    ("load collection from sqlitedb", _load_sqlite_db),
     ("load from standalone manifest", _load_standalone_manifest),
     ("load from path (file or directory)", _multiindex_load_from_path),
     ("load from file list", _multiindex_load_from_pathlist),
@@ -567,7 +572,7 @@ def load_pathlist_from_file(filename):
     return file_list
 
 
-class FileOutput(object):
+class FileOutput:
     """A context manager for file outputs that handles sys.stdout gracefully.
 
     Usage:
@@ -645,11 +650,123 @@ class FileOutputCSV(FileOutput):
     def open(self):
         if self.filename == '-' or self.filename is None:
             return sys.stdout
-        self.fp = open(self.filename, 'w', newline='')
+        if self.filename.endswith('.gz'):
+            self.fp = gzip.open(self.filename, 'wt', newline='')
+        else:
+            self.fp = open(self.filename, 'w', newline='')
         return self.fp
 
 
-class SignatureLoadingProgress(object):
+class _DictReader_with_version:
+    """A version of csv.DictReader that allows a comment line with a version,
+    e.g.
+
+    # SOURMASH-MANIFEST-VERSION: 1.0
+
+    The version is stored as a 2-tuple in the 'version_info' attribute.
+    """
+    def __init__(self, textfp, *, delimiter=','):
+        self.version_info = []
+
+        # is there a '#' in the raw buffer pos 0?
+        ch = textfp.buffer.peek(1)
+
+        try:
+            ch = ch.decode('utf-8')
+        except UnicodeDecodeError:
+            raise csv.Error("unable to read CSV file")
+
+        # yes - read a line from the text buffer => parse
+        if ch.startswith('#'):
+            line = textfp.readline()
+            assert line.startswith('# '), line
+
+            # note, this can set version_info to lots of different things.
+            # revisit later, I guess. CTB.
+            self.version_info = line[2:].strip().split(': ', 2)
+
+        # build a DictReader from the remaining stream
+        self.reader = csv.DictReader(textfp, delimiter=delimiter)
+        self.fieldnames = self.reader.fieldnames
+
+    def __iter__(self):
+        for row in self.reader:
+            yield row
+
+
+@contextlib.contextmanager
+def FileInputCSV(filename, *, encoding='utf-8', default_csv_name=None,
+                 zipfile_obj=None, delimiter=','):
+    """A context manager for reading in CSV files in gzip, zip or text format.
+
+    Assumes comma delimiter, and uses csv.DictReader.
+
+    Note: does not support stdin.
+
+    Note: it seems surprisingly hard to write code that generically handles
+    any file handle being passed in; the manifest loading code, in particular,
+    uses ZipStorage.load => StringIO obj, which doesn't support peek etc.
+    So for now, this context manager is focused on situations where it owns
+    the file handle (opens/closes the file).
+    """
+    fp = None
+
+    if zipfile_obj and not default_csv_name:
+        raise ValueError("must provide default_csv_name with a zipfile_obj")
+
+    # first, try to load 'default_csv_name' from a zipfile:
+    if default_csv_name:
+        # were we given a zipfile obj?
+        if zipfile_obj:
+            try:
+                zi = zipfile_obj.getinfo(default_csv_name)
+                with zipfile_obj.open(zi) as fp:
+                    textfp = TextIOWrapper(fp,
+                                           encoding=encoding,
+                                           newline="")
+                    r = _DictReader_with_version(textfp, delimiter=delimiter)
+                    yield r
+            except (zipfile.BadZipFile, KeyError):
+                pass # uh oh, we were given a zipfile_obj and it FAILED.
+
+            # no matter what, if given zipfile_obj don't try .gz or regular csv
+            return
+        else:
+            try:
+                with zipfile.ZipFile(filename, 'r') as zip_fp:
+                    zi = zip_fp.getinfo(default_csv_name)
+                    with zip_fp.open(zi) as fp:
+                        textfp = TextIOWrapper(fp,
+                                               encoding=encoding,
+                                               newline="")
+                        r = _DictReader_with_version(textfp, delimiter=delimiter)
+                        yield r
+
+                # if we got this far with no exceptions, we found
+                # the CSV in the zip file. exit generator!
+                return
+            except (zipfile.BadZipFile, KeyError):
+                # no zipfile_obj => it's ok to continue onwards to .gz
+                # and regular CSV.
+                pass
+
+    # ok, not a zip file - try .gz:
+    try:
+        with gzip.open(filename, "rt", newline="", encoding=encoding) as fp:
+            fp.buffer.peek(1)          # force exception if not a gzip file
+            r = _DictReader_with_version(fp, delimiter=delimiter)
+            yield r
+        return
+    except gzip.BadGzipFile:
+        pass
+
+    # neither zip nor gz; regular file!
+    with open(filename, 'rt', newline="", encoding=encoding) as fp:
+        r = _DictReader_with_version(fp, delimiter=delimiter)
+        yield r
+
+
+class SignatureLoadingProgress:
     """A wrapper for signature loading progress reporting.
 
     Instantiate this class once, and then pass it to load_file_as_signatures
@@ -765,7 +882,6 @@ def get_manifest(idx, *, require=True, rebuild=False):
     """
     Retrieve a manifest for this idx, loaded with `load_file_as_index`.
 
-    If a manifest exists and `rebuild` is False, return the manifest.
     Even if a manifest exists and `rebuild` is True, rebuild the manifest.
     If a manifest does not exist or `rebuild` is True, try to build one.
     If a manifest cannot be built and `require` is True, error exit.
@@ -786,7 +902,7 @@ def get_manifest(idx, *, require=True, rebuild=False):
 
     # need to build one...
     try:
-        debug_literal("get_manifest: rebuilding manifest")
+        notify("Generating a manifest...")
         m = CollectionManifest.create_manifest(idx._signatures_with_internal(),
                                                include_signature=False)
         debug_literal("get_manifest: rebuilt manifest.")
@@ -899,6 +1015,36 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
             sigmod.save_signatures([ss], fp, compression=1)
 
 
+class SaveSignatures_SqliteIndex(_BaseSaveSignaturesToLocation):
+    "Save signatures within a directory, using md5sum names."
+    def __init__(self, location):
+        super().__init__(location)
+        self.location = location
+        self.idx = None
+        self.cursor = None
+
+    def __repr__(self):
+        return f"SaveSignatures_SqliteIndex('{self.location}')"
+
+    def close(self):
+        self.idx.commit()
+        self.cursor.execute('VACUUM')
+        self.idx.close()
+
+    def open(self):
+        self.idx = SqliteIndex.create(self.location, append=True)
+        self.cursor = self.idx.cursor()
+
+    def add(self, add_sig):
+        for ss in _get_signatures_from_rust([add_sig]):
+            super().add(ss)
+            self.idx.insert(ss, cursor=self.cursor, commit=False)
+
+            # commit every 1000 signatures.
+            if self.count % 1000 == 0:
+                self.idx.commit()
+
+
 class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
     "Save signatures to a .sig JSON file."
     def __init__(self, location):
@@ -966,7 +1112,7 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         if os.path.exists(self.location):
             do_create = False
 
-        storage = ZipStorage(self.location)
+        storage = ZipStorage(self.location, mode="w")
         if not storage.subdir:
             storage.subdir = 'signatures'
 
@@ -1014,18 +1160,20 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
 
 
 class SigFileSaveType(Enum):
+    NO_OUTPUT = 0
     SIGFILE = 1
     SIGFILE_GZ = 2
     DIRECTORY = 3
     ZIPFILE = 4
-    NO_OUTPUT = 5
+    SQLITEDB = 5
 
 _save_classes = {
+    SigFileSaveType.NO_OUTPUT: SaveSignatures_NoOutput,
     SigFileSaveType.SIGFILE: SaveSignatures_SigFile,
     SigFileSaveType.SIGFILE_GZ: SaveSignatures_SigFile,
     SigFileSaveType.DIRECTORY: SaveSignatures_Directory,
     SigFileSaveType.ZIPFILE: SaveSignatures_ZipFile,
-    SigFileSaveType.NO_OUTPUT: SaveSignatures_NoOutput
+    SigFileSaveType.SQLITEDB: SaveSignatures_SqliteIndex,
 }
 
 
@@ -1042,6 +1190,8 @@ def SaveSignaturesToLocation(filename, *, force_type=None):
             save_type = SigFileSaveType.SIGFILE_GZ
         elif filename.endswith('.zip'):
             save_type = SigFileSaveType.ZIPFILE
+        elif filename.endswith('.sqldb'):
+            save_type = SigFileSaveType.SQLITEDB
         else:
             # default to SIGFILE intentionally!
             save_type = SigFileSaveType.SIGFILE

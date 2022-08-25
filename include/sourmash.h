@@ -58,6 +58,8 @@ typedef struct SourmashSearchResult SourmashSearchResult;
 
 typedef struct SourmashSignature SourmashSignature;
 
+typedef struct SourmashZipStorage SourmashZipStorage;
+
 /**
  * Represents a string.
  */
@@ -455,5 +457,24 @@ void sourmash_str_free(SourmashStr *s);
 SourmashStr sourmash_str_from_cstr(const char *s);
 
 char sourmash_translate_codon(const char *codon);
+
+SourmashStr **zipstorage_filenames(const SourmashZipStorage *ptr, uintptr_t *size);
+
+void zipstorage_free(SourmashZipStorage *ptr);
+
+SourmashStr **zipstorage_list_sbts(const SourmashZipStorage *ptr, uintptr_t *size);
+
+const uint8_t *zipstorage_load(const SourmashZipStorage *ptr,
+                               const char *path_ptr,
+                               uintptr_t insize,
+                               uintptr_t *size);
+
+SourmashZipStorage *zipstorage_new(const char *ptr, uintptr_t insize);
+
+SourmashStr zipstorage_path(const SourmashZipStorage *ptr);
+
+void zipstorage_set_subdir(SourmashZipStorage *ptr, const char *path_ptr, uintptr_t insize);
+
+SourmashStr zipstorage_subdir(const SourmashZipStorage *ptr);
 
 #endif /* SOURMASH_H_INCLUDED */

@@ -57,7 +57,11 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
-        '--threshold', metavar='T', default=0.08, type=float,
+        '-d', '--debug', action='store_true',
+        help='output debug information'
+    )
+    subparser.add_argument(
+        '-t', '--threshold', metavar='T', default=0.08, type=float,
         help='minimum threshold for reporting matches; default=0.08'
     )
     subparser.add_argument(
@@ -70,7 +74,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-n', '--num-results', default=3, type=int, metavar='N',
-        help='number of results to report'
+        help='number of results to display to user; 0 to report all'
     )
     subparser.add_argument(
         '--containment', action='store_true',
@@ -79,6 +83,10 @@ def subparser(subparsers):
     subparser.add_argument(
         '--max-containment', action='store_true',
         help='score based on max containment rather than similarity'
+    )
+    subparser.add_argument(
+        '--estimate-ani-ci', action='store_true',
+        help='for containment searches, also output confidence intervals for ANI estimates'
     )
     subparser.add_argument(
         '--ignore-abundance', action='store_true',
@@ -93,6 +101,17 @@ def subparser(subparsers):
         '--md5', default=None,
         help='select the signature with this md5 as query'
     )
+    subparser.add_argument(
+        '--fail-on-empty-database', action='store_true',
+        help='stop at databases that contain no compatible signatures'
+    )
+    subparser.add_argument(
+        '--no-fail-on-empty-database', action='store_false',
+        dest='fail_on_empty_database',
+        help='continue past databases that contain no compatible signatures'
+    )
+    subparser.set_defaults(fail_on_empty_database=True)
+
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
     add_picklist_args(subparser)

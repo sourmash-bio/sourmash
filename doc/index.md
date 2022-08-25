@@ -169,7 +169,9 @@ Attribution-ShareAlike 4.0 International License</a>.
 ## Contents:
 
 ```{toctree}
-:maxdepth: 2
+---
+maxdepth: 2
+---
 
 command-line
 tutorials

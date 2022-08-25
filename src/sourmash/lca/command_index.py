@@ -4,6 +4,7 @@ Build a lowest-common-ancestor database with given taxonomy and genome sigs.
 """
 import sys
 import csv
+import os
 from collections import defaultdict
 
 from sourmash import sourmash_args
@@ -26,6 +27,8 @@ def load_taxonomy_assignments(filename, *, delimiter=',', start_column=2,
     lineage tuples.
     """
     # parse spreadsheet!
+    # CTB note: can't easily switch to FileInputCSV, because of
+    # janky way we do/don't handle headers here. See issue #2198.
     fp = open(filename, newline='')
     r = csv.reader(fp, delimiter=delimiter)
     row_headers = ['identifiers']
@@ -155,6 +158,22 @@ def index(args):
     moltype = sourmash_args.calculate_moltype(args, default='DNA')
     picklist = sourmash_args.load_picklist(args)
 
+    db_outfile = args.lca_db_out
+    if args.database_format == 'json':
+        if not (db_outfile.endswith('.lca.json') or \
+                    db_outfile.endswith('.lca.json.gz')):   # logic -> db.save
+            db_outfile += '.lca.json'
+    else:
+        assert args.database_format == 'sql'
+        if not db_outfile.endswith('.lca.sql'):
+                db_outfile += '.lca.sql'
+
+    if os.path.exists(db_outfile):
+        error(f"ERROR: output file {db_outfile} already exists. Not overwriting.")
+        sys.exit(-1)
+
+    notify(f'saving to LCA DB: {format(db_outfile)}')
+
     notify(f'Building LCA database with ksize={args.ksize} scaled={args.scaled} moltype={moltype}.')
 
     # first, load taxonomy spreadsheet
@@ -277,10 +296,10 @@ def index(args):
         sys.exit(1)
 
     # check -- did the signatures we found have any hashes?
-    if not db.hashval_to_idx:
+    if not db.hashvals:
         error('ERROR: no hash values found - are there any signatures?')
         sys.exit(1)
-    notify(f'loaded {len(db.hashval_to_idx)} hashes at ksize={args.ksize} scaled={args.scaled}')
+    notify(f'loaded {len(db.hashvals)} hashes at ksize={args.ksize} scaled={args.scaled}')
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
@@ -295,13 +314,7 @@ def index(args):
     unused_identifiers = set(assignments) - record_used_idents
 
     # now, save!
-    db_outfile = args.lca_db_out
-    if not (db_outfile.endswith('.lca.json') or \
-                db_outfile.endswith('.lca.json.gz')):   # logic -> db.save
-        db_outfile += '.lca.json'
-    notify(f'saving to LCA DB: {format(db_outfile)}')
-
-    db.save(db_outfile)
+    db.save(db_outfile, format=args.database_format)
 
     ## done!
 

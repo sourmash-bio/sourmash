@@ -1,5 +1,5 @@
-"""A library for computing hash sketches from DNA sequences, comparing
-them to each other, and plotting the results.
+"""A library for creating k-mer sketches from biological sequences, comparing
+them to each other, and working with the results.
 
 Public API:
 
@@ -12,7 +12,7 @@ Public API:
 
 Please see https://sourmash.readthedocs.io/en/latest/api.html for API docs.
 
-The sourmash code is available at github.com/dib-lab/sourmash/ under the
+The sourmash code is available at github.com/sourmash-bio/sourmash/ under the
 BSD 3-Clause license.
 """
 from deprecation import deprecated

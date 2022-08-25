@@ -1,3 +1,4 @@
+# note: to invalidate caches, adjust the pip-v? and tox-v? numbers below.
 name: Python tests
 
 on:
@@ -12,17 +13,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-18.04, macos-latest]
+        os: [ubuntu-22.04, macos-latest]
         py: ["3.10", "3.9", "3.8"]
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
       - name: Set up Python ${{ matrix.py }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.py }}
 
@@ -32,12 +33,12 @@ jobs:
           echo "::set-output name=dir::$(pip cache dir)"
 
       - name: pip cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+          key: ${{ runner.os }}-pip-v3-${{ hashFiles('**/setup.cfg') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
+            ${{ runner.os }}-pip-v3-
 
       - name: Install dependencies
         run: |
@@ -45,7 +46,7 @@ jobs:
           pip install tox tox-gh-actions
 
       - name: Set up Pandoc
-        uses: r-lib/actions/setup-pandoc@v1
+        uses: r-lib/actions/setup-pandoc@v2
 
       - name: Set up IPFS
         if: startsWith(runner.os, 'Linux') && (matrix.py == '3.9')
@@ -56,17 +57,17 @@ jobs:
 
       - name: Start Redis
         if: startsWith(runner.os, 'Linux') && (matrix.py == '3.9')
-        uses: supercharge/redis-github-action@4687e0c1d27b144de1dadc32967b7ce7e1227c7f
+        uses: supercharge/redis-github-action@4b67a313c69bc7a90f162e8d810392fffe10d3b5
         with:
           redis-version: 6
 
       - name: tox cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: .tox/
-          key: ${{ runner.os }}-tox-${{ hashFiles('**/setup.py') }}
+          key: ${{ runner.os }}-tox-v3-${{ hashFiles('**/setup.cfg') }}
           restore-keys: |
-            ${{ runner.os }}-tox-
+            ${{ runner.os }}-tox-v3-
 
       - name: Test with tox
         run: tox

@@ -130,17 +130,22 @@ def compute(args):
         _compute_individual(args, signatures_factory)
 
 
-class _signatures_for_compute_factory(object):
+class _signatures_for_compute_factory:
     "Build signatures on demand, based on args input to 'compute'."
     def __init__(self, args):
         self.args = args
 
     def __call__(self):
         args = self.args
-        params = ComputeParameters(args.ksizes, args.seed, args.protein,
-                                   args.dayhoff, args.hp, args.dna,
-                                   args.num_hashes,
-                                   args.track_abundance, args.scaled)
+        params = ComputeParameters(ksizes=args.ksizes,
+                                   seed=args.seed,
+                                   protein=args.protein,
+                                   dayhoff=args.dayhoff,
+                                   hp=args.hp,
+                                   dna=args.dna,
+                                   num_hashes=args.num_hashes,
+                                   track_abundance=args.track_abundance,
+                                   scaled=args.scaled)
         sig = SourmashSignature.from_params(params)
         return [sig]
 
@@ -326,7 +331,17 @@ def save_sigs_to_location(siglist, save_sig):
 class ComputeParameters(RustObject):
     __dealloc_func__ = lib.computeparams_free
 
-    def __init__(self, ksizes, seed, protein, dayhoff, hp, dna, num_hashes, track_abundance, scaled):
+    def __init__(self,
+                 *,
+                 ksizes=(21, 31, 51),
+                 seed=42,
+                 protein=False,
+                 dayhoff=False,
+                 hp=False,
+                 dna=True,
+                 num_hashes=500,
+                 track_abundance=False,
+                 scaled=0):
         self._objptr = lib.computeparams_new()
 
         self.seed = seed
@@ -359,8 +374,15 @@ class ComputeParameters(RustObject):
         else:
             ksize = row['ksize'] * 3
 
-        p = cls([ksize], DEFAULT_MMHASH_SEED, is_protein, is_dayhoff, is_hp, is_dna,
-                row['num'], row['with_abundance'], row['scaled'])
+        p = cls(ksizes=[ksize],
+                seed=DEFAULT_MMHASH_SEED,
+                protein=is_protein,
+                dayhoff=is_dayhoff,
+                hp=is_hp,
+                dna=is_dna,
+                num_hashes=row['num'],
+                track_abundance=row['with_abundance'],
+                scaled=row['scaled'])
 
         return p
 
@@ -405,7 +427,7 @@ class ComputeParameters(RustObject):
         return ",".join(pi)
 
     def __repr__(self):
-        return f"ComputeParameters({self.ksizes}, {self.seed}, {self.protein}, {self.dayhoff}, {self.hp}, {self.dna}, {self.num_hashes}, {self.track_abundance}, {self.scaled})"
+        return f"ComputeParameters(ksizes={self.ksizes}, seed={self.seed}, protein={self.protein}, dayhoff={self.dayhoff}, hp={self.hp}, dna={self.dna}, num_hashes={self.num_hashes}, track_abundance={self.track_abundance}, scaled={self.scaled})"
 
     def __eq__(self, other):
         return (self.ksizes == other.ksizes and
@@ -483,6 +505,16 @@ class ComputeParameters(RustObject):
     @dna.setter
     def dna(self, v):
         return self._methodcall(lib.computeparams_set_dna, v)
+
+    @property
+    def moltype(self):
+        if self.dna: moltype = 'DNA'
+        elif self.protein: moltype = 'protein'
+        elif self.hp: moltype = 'hp'
+        elif self.dayhoff: moltype = 'dayhoff'
+        else: assert 0
+
+        return moltype
 
     @property
     def num_hashes(self):

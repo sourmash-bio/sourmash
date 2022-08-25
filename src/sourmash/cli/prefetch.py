@@ -24,7 +24,6 @@ def subparser(subparsers):
     subparser.add_argument(
         '--no-linear', dest="linear", action='store_false',
     )
-
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
@@ -58,6 +57,10 @@ def subparser(subparsers):
     subparser.add_argument(
         '--md5', default=None,
         help='select the signature with this md5 as query'
+    )
+    subparser.add_argument(
+        '--estimate-ani-ci', action='store_true',
+        help='also output confidence intervals for ANI estimates'
     )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
