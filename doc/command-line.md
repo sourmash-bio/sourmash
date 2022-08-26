@@ -231,7 +231,7 @@ C(A, B) = B.contained_by(A)
 ```
 
 **Note:** The ANI estimate will be calculated based on Jaccard similarity
-by default; however, if `--containment` or `--max-containment` is
+by default; however, if `--containment`, `--max-containment`, or `--avg-containment` is
 specified, those values will be used instead. With `--containment --ani`, the
 ANI output matrix will be asymmetric as discussed above.
 
