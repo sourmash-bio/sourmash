@@ -620,6 +620,62 @@ To produce multiple output types from the same command, add the types into the
  `--output-format` argument, e.g. `--output-format summary krona lineage_summary`
 
 
+#### `kreport` output format
+
+The `kreport` output reports kraken-style `kreport` output, which may be useful for
+comparison with other taxonomic profiling methods. While this format typically
+records the percent of number of reads assigned to taxa, we create ~comparable
+output by reporting the percent of k-mers (abundance-weighted percent containment)
+and the total number of unique k-mers matched.
+
+standard `kreport` columns:
+- `Percent Reads Contained in Taxon`: The cumulative percentage of reads for this taxon and all descendants.
+- `Number of Reads Contained in Taxon`: The cumulative number of reads for this taxon and all descendants.
+- `Number of Reads Assigned to Taxon`: The number of reads assigned directly to this taxon (not a cumulative count of all descendants).
+- `Rank Code`: (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies.
+- `NCBI Taxon ID`: Numerical ID from the NCBI taxonomy database.
+- `Scientific Name`: The scientific name of the taxon.
+
+Example reads-based `kreport` with all columns:
+
+```
+    88.41	2138742	193618	K	2	Bacteria
+    0.16	3852	818	P	201174	  Actinobacteria
+    0.13	3034	0	C	1760	    Actinomycetia
+    0.13	3034	45	O	85009	      Propionibacteriales
+    0.12	2989	1847	F	31957	        Propionibacteriaceae
+    0.05	1142	352	G	1912216	          Cutibacterium
+    0.03	790	790	S	1747	            Cutibacterium acnes
+```
+
+current sourmash `kreport` caveats:
+- `Percent Reads [k-mers] Contained in Taxon`: weighted by k-mer abundance
+- `Number of Reads [bp from k-mers] Contained in Taxon`: NOT WEIGHTED BY ABUNDANCE
+- `Number of Reads Assigned to Taxon` and `NCBI Taxon ID` will not be reported (blank entries).
+- Rows are ordered by rank and then percent containment.
+
+example sourmash `{output-name}.kreport.txt`:
+
+```
+0.13	1024000		D		d__Bacteria
+0.87	3990000		U		unclassified
+0.07	582000		P		p__Bacteroidota
+0.06	442000		P		p__Proteobacteria
+0.07	582000		C		c__Bacteroidia
+0.06	442000		C		c__Gammaproteobacteria
+0.07	582000		O		o__Bacteroidales
+0.06	442000		O		o__Enterobacterales
+0.07	582000		F		f__Bacteroidaceae
+0.06	442000		F		f__Enterobacteriaceae
+0.06	444000		G		g__Prevotella
+0.06	442000		G		g__Escherichia
+0.02	138000		G		g__Phocaeicola
+0.06	444000		S		s__Prevotella copri
+0.06	442000		S		s__Escherichia coli
+0.02	138000		S		s__Phocaeicola vulgatus
+```
+
+
 ### `sourmash tax genome` - classify a genome using `gather` results
 
 `sourmash tax genome` reports likely classification for each query,
