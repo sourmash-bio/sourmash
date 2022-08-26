@@ -435,26 +435,20 @@ def write_summary(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=Fa
 def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
     '''
     Write taxonomy-summarized gather results as kraken-style kreport.
+
     While this format typically records the percent of number of reads assigned to taxa,
-    we can mimic the format by reporting the percent of k-mers (percent containment) and
-    the total number of k-mers matched.
+    we can create comparable output by reporting the percent of k-mers (percent containment)
+    and the total number of k-mers matched.
 
-    standard keport columns:
-    + `Percent Reads [k-mers] Contained in Taxon`: The cumulative percentage of reads for this taxon and all descendants.
-    + `Number of Reads [bp from k-mers] Contained in Taxon`: The cumulative number of reads for this taxon and all descendants.
-    + `Number of Reads Assigned to Taxon`: The number of reads assigned directly to this taxon (not a cumulative count of all descendants).
-    + `Rank Code`: (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies. 
-    + `NCBI Taxon ID`: Numerical ID from the NCBI taxonomy database.
-    + `Scientific Name`: The scientific name of the taxon.
+    standard reads-based `kreport` columns:
+    - `Percent Reads Contained in Taxon`: The cumulative percentage of reads for this taxon and all descendants.
+    - `Number of Reads Contained in Taxon`: The cumulative number of reads for this taxon and all descendants.
+    - `Number of Reads Assigned to Taxon`: The number of reads assigned directly to this taxon (not a cumulative count of all descendants).
+    - `Rank Code`: (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies. 
+    - `NCBI Taxon ID`: Numerical ID from the NCBI taxonomy database.
+    - `Scientific Name`: The scientific name of the taxon.
 
-    Caveats:
-       - `Percent Reads [k-mers] Contained in Taxon`: weighted by k-mer abundance
-       - `Number of Reads [bp from k-mers] Contained in Taxon`: NOT WEIGHTED BY ABUNDANCE 
-       - `Number of Reads Assigned to Taxon` and `NCBI Taxon ID` will not be reported (blank entries).
-
-    In the future, we may wish to report the NCBI taxid when we can (NCBI taxonomy only).
-
-    Example reads-based kreport with all columns:
+    Example reads-based `kreport` with all columns:
     ```
     88.41	2138742	193618	K	2	Bacteria
     0.16	3852	818	P	201174	  Actinobacteria
@@ -464,6 +458,13 @@ def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
     0.05	1142	352	G	1912216	          Cutibacterium
     0.03	790	790	S	1747	            Cutibacterium acnes
     ```
+
+    sourmash `kreport` caveats:
+    - `Percent k-mers Contained in Taxon`: weighted by k-mer abundance
+    - `Estimated bp Contained in Taxon`: NOT WEIGHTED BY ABUNDANCE
+    - `Number of Reads Assigned to Taxon` and `NCBI Taxon ID` will not be reported (blank entries).
+
+    In the future, we may wish to report the NCBI taxid when we can (NCBI taxonomy only).
     '''
     columns = ["percent_containment", "num_bp_contained", "num_bp_assigned", "rank_code", "ncbi_taxid", "sci_name"]
     w = csv.DictWriter(csv_fp, columns, delimiter=sep)
