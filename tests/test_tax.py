@@ -142,6 +142,35 @@ def test_metagenome_summary_csv_out(runtmp):
     assert 'test1,species,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000' in sum_gather_results[22]
 
 
+def test_metagenome_summary_csv_out_empty_gather_force(runtmp):
+    # test multiple -g, empty -g file, and --force
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+    sum_csv = csv_base + ".summarized.csv"
+    csvout = runtmp.output(sum_csv)
+    outdir = os.path.dirname(csvout)
+
+    gather_empty = runtmp.output('g.csv')
+    with open(gather_empty, "w") as fp:
+        fp.write("")
+    print("g_csv: ", gather_empty)
+
+    runtmp.run_sourmash('tax', 'metagenome', '--gather-csv', g_csv, '-g', gather_empty, '--taxonomy-csv', tax, '-o', csv_base, '--output-dir', outdir, '-f')
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    sum_gather_results = [x.rstrip() for x in open(csvout)]
+    assert f"saving 'csv_summary' output to '{csvout}'" in runtmp.last_result.err
+    assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in sum_gather_results[0]
+    assert 'test1,superkingdom,0.2042281611487834,d__Bacteria,md5,test1.sig,0.13080306238801107,1024000' in  sum_gather_results[1]
+
+
 def test_metagenome_krona_tsv_out(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
