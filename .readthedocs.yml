@@ -4,6 +4,11 @@
 
 version: 2
 
+build:
+  os: ubuntu-22.04
+  tools:
+    python: miniconda3-4.7
+
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
   configuration: doc/conf.py
@@ -12,11 +17,6 @@ conda:
   environment: doc/environment.yml
 
 python:
-  # NOTE: doc/environment.yml specifies python=3.10, which is needed
-  # b/c of a pip problem; see
-  # https://github.com/sourmash-bio/sourmash/issues/2139
-  # this 'version' setting is effectively ignored, AFAICT. -- CTB 7/24/22
-  version: 3.8
   install:
     - method: pip
       path: .
