@@ -12,7 +12,7 @@ from sourmash.search import PrefetchResult
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash_tst_utils import SourmashCommandFailed
-from sourmash import signature
+from sourmash import signature, sourmash_args
 
 
 def approx_eq(val1, val2):
@@ -839,3 +839,28 @@ def test_prefetch_ani_csv_out_estimate_ci(runtmp, linear_gather):
             assert approx_eq(row['max_containment_ani'], expected['mc_ani'])
             assert approx_eq(row['average_containment_ani'], expected['ac_ani'])
             assert row['potential_false_negative'] == expected['pfn']
+
+
+def test_prefetch_ani_containment_asymmetry(runtmp):
+    # test contained_by asymmetries, viz #2215
+    query_sig = utils.get_test_data('47.fa.sig')
+    merged_sig = utils.get_test_data('47-63-merge.sig')
+
+    runtmp.sourmash('prefetch', query_sig, merged_sig, '-o',
+                    'query-in-merged.csv')
+    runtmp.sourmash('prefetch', merged_sig, query_sig, '-o',
+                    'merged-in-query.csv')
+
+    with sourmash_args.FileInputCSV(runtmp.output('query-in-merged.csv')) as r:
+        query_in_merged = list(r)[0]
+
+    with sourmash_args.FileInputCSV(runtmp.output('merged-in-query.csv')) as r:
+        merged_in_query = list(r)[0]
+
+    assert query_in_merged['query_containment_ani'] == '1.0'
+    assert query_in_merged['match_containment_ani'] == '0.9865155060423993'
+    assert query_in_merged['average_containment_ani'] == '0.9932577530211997'
+
+    assert merged_in_query['match_containment_ani'] == '1.0'
+    assert merged_in_query['query_containment_ani'] == '0.9865155060423993'
+    assert merged_in_query['average_containment_ani'] == '0.9932577530211997'
