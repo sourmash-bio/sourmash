@@ -110,13 +110,12 @@ def load_gather_results(gather_csv, *, delimiter=',',
             if query_name in seen_queries:
                 if query_name not in gather_queries: #seen already in this CSV? (only want to warn once per query per CSV)
                     notify(f"WARNING: Gather query {query_name} was already loaded from a separate gather CSV. Cannot load duplicate query from CSV {gather_csv}...")
-                if force:
-                    if query_name not in gather_queries:
+                    gather_queries.add(query_name)
+                    if force:
                         notify("--force is set, ignoring duplicate query.")
-                        gather_queries.add(query_name)
-                    continue
-                else:
-                    raise ValueError(f"Gather query {query_name} was found in more than one CSV. Cannot load from '{gather_csv}'.")
+                        continue
+                    else:
+                        raise ValueError(f"Gather query {query_name} was found in more than one CSV. Cannot load from '{gather_csv}'.")
             else:
                 gather_results.append(row)
             # add query name to the gather_queries from this CSV
@@ -430,6 +429,59 @@ def write_summary(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=Fa
             if rD['lineage'] == "":
                 rD['lineage'] = "unclassified"
             w.writerow(rD)
+
+
+def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
+    '''
+    Write taxonomy-summarized gather results as kraken-style kreport.
+    Columns:
+    + `Percent k-mers [reads] Contained in Taxon`: The cumulative percentage of reads for this taxon and all descendants.
+    + `Number of bp [reads] Contained in Taxon`: The cumulative number of reads for this taxon and all descendants.
+    + `Number of bp [reads] Assigned to Taxon`: The number of reads assigned directly to this taxon (not a cumulative count of all descendants).
+    + `Rank Code`: (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies. 
+    + `NCBI Taxon ID`: Numerical ID from the NCBI taxonomy database.
+    + `Scientific Name`: The scientific name of the taxon.
+
+    Example:
+    ```
+    88.41	2138742	193618	K	2	Bacteria
+    0.16	3852	818	P	201174	  Actinobacteria
+    0.13	3034	0	C	1760	    Actinomycetia
+    0.13	3034	45	O	85009	      Propionibacteriales
+    0.12	2989	1847	F	31957	        Propionibacteriaceae
+    0.05	1142	352	G	1912216	          Cutibacterium
+    0.03	790	790	S	1747	            Cutibacterium acnes
+    ```
+    '''
+    columns = ["percent_containment", "num_bp_contained", "num_bp_assigned", "rank_code", "ncbi_taxid", "sci_name"]
+    w = csv.DictWriter(csv_fp, columns, delimiter=sep)
+
+    rankCode = { "superkingdom": "D", "kingdom": "K", "phylum": "P", "class": "C",
+                 "order": "O", "family":"F", "genus": "G", "species": "S"} # , "": "U"
+
+    unclassified_written=False
+    for rank, rank_results in summarized_gather.items():
+        rcode = rankCode[rank]
+        for res in rank_results:
+            # we have unclassified at every rank, i think. Only need to report once here, bc will be the same for all ranks
+            if not res.lineage:
+                rank_sciname = "unclassified"
+                rcode = "U"
+                # if we've already written the unclassified portion, skip and continue to next loop iteration
+                if unclassified_written:
+                    continue
+                else:
+                    unclassified_written=True
+            else:
+                rank_sciname = res.lineage[-1].name
+                print(rank_sciname)
+            # TODO: get NCBI taxid if we can? Only for genbank?
+            kresD = {"rank_code": rcode, "ncbi_taxid": "", "sci_name": rank_sciname,  "num_bp_assigned": ""}
+            # total percent containment, weighted to include abundance info.
+            kresD['percent_containment'] = f'{res.f_weighted_at_rank:.2f}'
+            # num bp contained
+            kresD["num_bp_contained"] = res.bp_match_at_rank
+            w.writerow(kresD)
 
 
 def write_human_summary(summarized_gather, out_fp, display_rank):

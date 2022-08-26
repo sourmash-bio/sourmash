@@ -40,6 +40,7 @@ _output_type_to_ext = {
     'annotate': '.with-lineages.csv',
     'human': '.human.txt',
     'lineage_csv': '.lineage.csv',
+    'kreport': ".kreport.txt",
     }
 
 # some utils
@@ -141,6 +142,13 @@ def metagenome(args):
         krona_outfile, limit_float = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
         with FileOutputCSV(krona_outfile) as out_fp:
             tax_utils.write_krona(args.rank, krona_resultslist, out_fp)
+
+    # write summarized --> kreport output tsv
+    if "kreport" in args.output_format:
+        kreport_outfile, limit_float = make_outfile(args.output_base, "kreport", output_dir=args.output_dir)
+
+        with FileOutputCSV(kreport_outfile) as out_fp:
+            tax_utils.write_kreport(summarized_gather, out_fp)
 
 
 def genome(args):
