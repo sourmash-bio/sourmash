@@ -434,15 +434,26 @@ def write_summary(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=Fa
 def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
     '''
     Write taxonomy-summarized gather results as kraken-style kreport.
-    Columns:
-    + `Percent k-mers [reads] Contained in Taxon`: The cumulative percentage of reads for this taxon and all descendants.
-    + `Number of bp [reads] Contained in Taxon`: The cumulative number of reads for this taxon and all descendants.
-    + `Number of bp [reads] Assigned to Taxon`: The number of reads assigned directly to this taxon (not a cumulative count of all descendants).
+    While this format typically records the percent of number of reads assigned to taxa,
+    we can mimic the format by reporting the percent of k-mers (percent containment) and
+    the total number of k-mers matched.
+
+    standard keport columns:
+    + `Percent Reads [k-mers] Contained in Taxon`: The cumulative percentage of reads for this taxon and all descendants.
+    + `Number of Reads [bp from k-mers] Contained in Taxon`: The cumulative number of reads for this taxon and all descendants.
+    + `Number of Reads Assigned to Taxon`: The number of reads assigned directly to this taxon (not a cumulative count of all descendants).
     + `Rank Code`: (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies. 
     + `NCBI Taxon ID`: Numerical ID from the NCBI taxonomy database.
     + `Scientific Name`: The scientific name of the taxon.
 
-    Example:
+    Caveats:
+       - `Percent Reads [k-mers] Contained in Taxon`: weighted by k-mer abundance
+       - `Number of Reads [bp from k-mers] Contained in Taxon`: NOT WEIGHTED BY ABUNDANCE 
+       - `Number of Reads Assigned to Taxon` and `NCBI Taxon ID` will not be reported (blank entries).
+
+    In the future, we may wish to report the NCBI taxid when we can (NCBI taxonomy only).
+
+    Example reads-based kreport with all columns:
     ```
     88.41	2138742	193618	K	2	Bacteria
     0.16	3852	818	P	201174	  Actinobacteria
@@ -463,7 +474,8 @@ def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
     for rank, rank_results in summarized_gather.items():
         rcode = rankCode[rank]
         for res in rank_results:
-            # we have unclassified at every rank, i think. Only need to report once here, bc will be the same for all ranks
+            # SummarizedGatherResults have an unclassified lineage at every rank, to facilitate reporting at a specific rank.
+            # Here, we only need to report it once, since it will be the same fraction for all ranks
             if not res.lineage:
                 rank_sciname = "unclassified"
                 rcode = "U"
@@ -474,12 +486,10 @@ def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
                     unclassified_written=True
             else:
                 rank_sciname = res.lineage[-1].name
-                print(rank_sciname)
-            # TODO: get NCBI taxid if we can? Only for genbank?
             kresD = {"rank_code": rcode, "ncbi_taxid": "", "sci_name": rank_sciname,  "num_bp_assigned": ""}
-            # total percent containment, weighted to include abundance info.
+            # total percent containment, weighted to include abundance info
             kresD['percent_containment'] = f'{res.f_weighted_at_rank:.2f}'
-            # num bp contained
+            # num bp contained. THIS IS NOT WEIGHTED... do we want to weight??
             kresD["num_bp_contained"] = res.bp_match_at_rank
             w.writerow(kresD)
 
