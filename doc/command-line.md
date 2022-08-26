@@ -49,7 +49,7 @@ Finally, plot a dendrogram: ``` sourmash plot cmp.dist --labels ```
 This will output three files, `cmp.dist.dendro.png`,
 `cmp.dist.matrix.png`, and `cmp.dist.hist.png`, containing a
 clustering & dendrogram of the sequences, a similarity matrix and
-heatmap, and a histogram of the pairwise distances between the three
+heatmap, and a histogram of the pairwise similarities between the three
 genomes.
 
 Matrix:
@@ -75,8 +75,8 @@ There are seven main subcommands: `sketch`, `compare`, `plot`,
 [the tutorial](tutorials.md) for a walkthrough of these commands.
 
 * `sketch` creates signatures.
-* `compare` compares signatures and builds a distance matrix.
-* `plot` plots distance matrices created by `compare`.
+* `compare` compares signatures and builds a similarity matrix.
+* `plot` plots similarity matrices created by `compare`.
 * `search` finds matches to a query signature in a collection of signatures.
 * `gather` finds the best reference genomes for a metagenome, using the provided collection of signatures.
 * `index` builds a fast index for many (thousands) of signatures.
@@ -199,6 +199,10 @@ with `--output` and used with the `sourmash plot` subcommand (or loaded
 with `numpy.load(...)`.  Using `--csv` will output a CSV file that can
 be loaded into other languages than Python, such as R.
 
+As of sourmash 4.4.0, `compare` also supports Average Nucleotide
+Identity (ANI) estimates instead of Jaccard or containment index; use
+`--ani` to enable this.
+
 Usage:
 ```
 sourmash compare file1.sig [ file2.sig ... ]
@@ -206,20 +210,36 @@ sourmash compare file1.sig [ file2.sig ... ]
 
 Options:
 
-* `--output` -- save the distance matrix to this file (as a numpy binary matrix)
+* `--output` -- save the output matrix to this file (as a numpy binary matrix).
+* `--distance-matrix` -- create and output a distance matrix, instead of a similarity matrix.
 * `--ksize` -- do the comparisons at this k-mer size.
 * `--containment` -- calculate containment instead of similarity; `C(i, j) = size(i intersection j) / size(i)`
+* `--ani` -- output estimates of Average Nucleotide Identity (ANI) instead of Jaccard similarity or containment.
 * `--from-file` -- append the list of files in this text file to the input
         signatures.
 * `--ignore-abundance` -- ignore abundances in signatures.
 * `--picklist` -- select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
 
-**Note:** compare by default produces a symmetric similarity matrix that can be used as an input to clustering. With `--containment`, however, this matrix is no longer symmetric and cannot formally be used for clustering.
+**Note:** compare by default produces a symmetric similarity matrix
+that can be used for clustering in downstream tasks. With `--containment`,
+however, this matrix is no longer symmetric and cannot formally be
+used for clustering.
+
+The containment matrix is organized such that the value in row A for column B is the containment of the B'th sketch in the A'th sketch, i.e.
+
+```
+C(A, B) = B.contained_by(A)
+```
+
+**Note:** The ANI estimate will be calculated based on Jaccard similarity
+by default; however, if `--containment`, `--max-containment`, or `--avg-containment` is
+specified, those values will be used instead. With `--containment --ani`, the
+ANI output matrix will be asymmetric as discussed above.
 
 ### `sourmash plot` - cluster and visualize comparisons of many signatures
 
 The `plot` subcommand produces two plots -- a dendrogram and a
-dendrogram+matrix -- from a distance matrix created by `sourmash compare
+dendrogram+matrix -- from a matrix created by `sourmash compare
 --output <matrix>`.  The default output is two PNG files.
 
 Usage:
@@ -250,31 +270,45 @@ for matches to the query signature.  It can search for matches with either
 high [Jaccard similarity](https://en.wikipedia.org/wiki/Jaccard_index)
 or containment; the default is to use Jaccard similarity, unless
 `--containment` is specified.  `-o/--output` will create a CSV file
-containing the matches.
+containing all of the matches with respective similarity or containment score.
 
 `search` makes use of [indexed databases](#loading-many-signatures) to
 decrease search time and memory where possible.
 
 Usage:
 ```
-sourmash search query.sig [ list of signatures or SBTs ]
+sourmash search query.sig <signatures or databases>
 ```
 
 Example output:
 
 ```
-49 matches; showing first 20:
+% sourmash search tests/test-data/47.fa.sig gtdb-rs207.genomic-reps.dna.k31.zip
+
+...
+--
+loaded 65703 total signatures from 1 locations.
+after selecting signatures compatible with search, 65703 remain.
+
+2 matches above threshold 0.080:
 similarity   match
 ----------   -----
- 75.4%       NZ_JMGW01000001.1 Escherichia coli 1-176-05_S4_C2 e117605...
- 72.2%       NZ_GG774190.1 Escherichia coli MS 196-1 Scfld2538, whole ...
- 71.4%       NZ_JMGU01000001.1 Escherichia coli 2-011-08_S3_C2 e201108...
- 70.1%       NZ_JHRU01000001.1 Escherichia coli strain 100854 100854_1...
- 69.0%       NZ_JH659569.1 Escherichia coli M919 supercont2.1, whole g...
-...    
+ 32.3%       GCF_900456975.1 Shewanella baltica strain=NCTC10735, 5088...
+ 14.0%       GCF_002838165.1 Shewanella sp. Pdp11 strain=Pdp11, ASM283...
 ```
 
-Note, as of sourmash 4.2.0, `search` supports `--picklist`, to
+`search` takes a number of command line options -
+* `--containment` - find matches using the containment index rather than Jaccard similarity;
+* `--max-containment` - find matches using the max containment index rather than Jaccard similarity;
+* `-t/--threshold` - lower threshold for matching; defaults to 0.08;
+* `--best-only` - find and report only the best match;
+* `-n/--num-results` - number of matches to report to stdout; defaults to 3; 0 to report all;
+
+Match information can be saved to a CSV file with `-o/--output`; with
+`-o`, all matches above the threshold will be saved, not just those
+printed to stdout (which are limited to `-n/--num-results`).
+
+As of sourmash 4.2.0, `search` supports `--picklist`, to
 [select a subset of signatures to search, based on a CSV file](#using-picklists-to-subset-large-collections-of-signatures). This
 can be used to search only a small subset of a large collection, or to
 exclude a few signatures from a collection, without modifying the
