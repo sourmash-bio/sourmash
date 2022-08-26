@@ -5,8 +5,9 @@ import os
 import csv
 from collections import namedtuple, defaultdict
 from collections import abc
+import gzip
 
-from sourmash import sqlite_utils
+from sourmash import sqlite_utils, sourmash_args
 from sourmash.exceptions import IndexNotSupported
 from sourmash.distance_utils import containment_to_distance
 
@@ -641,8 +642,7 @@ class LineageDB(abc.Mapping):
         if os.path.isdir(filename):
             raise ValueError(f"'{filename}' is a directory")
 
-        with open(filename, newline='') as fp:
-            r = csv.DictReader(fp, delimiter=delimiter)
+        with sourmash_args.FileInputCSV(filename) as r:
             header = r.fieldnames
             if not header:
                 raise ValueError(f'cannot read taxonomy assignments from {filename}')
@@ -931,7 +931,10 @@ class MultiLineageDB(abc.Mapping):
             # we need a file handle; open file.
             fp = filename_or_fp
             if is_filename:
-                fp = open(filename_or_fp, 'w', newline="")
+                if filename_or_fp.endswith('.gz'):
+                    fp = gzip.open(filename_or_fp, 'wt', newline="")
+                else:
+                    fp = open(filename_or_fp, 'w', newline="")
 
             try:
                 self._save_csv(fp)
@@ -1029,7 +1032,7 @@ class MultiLineageDB(abc.Mapping):
                 try:
                     this_tax_assign = LineageDB.load(location, **kwargs)
                     loaded = True
-                except ValueError as exc:
+                except (ValueError, csv.Error) as exc:
                     # for the last loader, just pass along ValueError...
                     raise ValueError(f"cannot read taxonomy assignments from '{location}': {str(exc)}")
 

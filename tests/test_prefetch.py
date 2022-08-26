@@ -3,6 +3,7 @@ Tests for `sourmash prefetch` command-line and API functionality.
 """
 import os
 import csv
+import gzip
 import pytest
 import glob
 import random
@@ -39,7 +40,11 @@ def test_prefetch_basic(runtmp, linear_gather):
     assert "WARNING: no output(s) specified! Nothing will be saved from this prefetch!" in c.last_result.err
     assert "selecting specified query k=31" in c.last_result.err
     assert "loaded query: NC_009665.1 Shewanella baltica... (k=31, DNA)" in c.last_result.err
-    assert "all sketches will be downsampled to scaled=1000" in c.last_result.err
+    assert "query sketch has scaled=1000; will be dynamically downsampled as needed" in c.last_result.err
+
+    err = c.last_result.err
+    assert "loaded 5 total signatures from 3 locations." in err
+    assert "after selecting signatures compatible with search, 3 remain." in err
 
     assert "total of 2 matching signatures." in c.last_result.err
     assert "of 5177 distinct query hashes, 5177 were found in matches above threshold." in c.last_result.err
@@ -141,7 +146,7 @@ def test_prefetch_query_abund(runtmp, linear_gather):
     assert "WARNING: no output(s) specified! Nothing will be saved from this prefetch!" in c.last_result.err
     assert "selecting specified query k=31" in c.last_result.err
     assert "loaded query: NC_009665.1 Shewanella baltica... (k=31, DNA)" in c.last_result.err
-    assert "all sketches will be downsampled to scaled=1000" in c.last_result.err
+    assert "query sketch has scaled=1000; will be dynamically downsampled as needed" in c.last_result.err
 
     assert "total of 2 matching signatures." in c.last_result.err
     assert "of 5177 distinct query hashes, 5177 were found in matches above threshold." in c.last_result.err
@@ -167,7 +172,7 @@ def test_prefetch_subj_abund(runtmp, linear_gather):
     assert "WARNING: no output(s) specified! Nothing will be saved from this prefetch!" in c.last_result.err
     assert "selecting specified query k=31" in c.last_result.err
     assert "loaded query: NC_009665.1 Shewanella baltica... (k=31, DNA)" in c.last_result.err
-    assert "all sketches will be downsampled to scaled=1000" in c.last_result.err
+    assert "query sketch has scaled=1000; will be dynamically downsampled as needed" in c.last_result.err
 
     assert "total of 2 matching signatures." in c.last_result.err
     assert "of 5177 distinct query hashes, 5177 were found in matches above threshold." in c.last_result.err
@@ -195,6 +200,33 @@ def test_prefetch_csv_out(runtmp, linear_gather):
 
     expected_intersect_bp = [2529000, 5177000]
     with open(csvout, 'rt', newline="") as fp:
+        r = csv.DictReader(fp)
+        for (row, expected) in zip(r, expected_intersect_bp):
+            print(row)
+            assert int(row['intersect_bp']) == expected
+
+
+def test_prefetch_csv_gz_out(runtmp, linear_gather):
+    c = runtmp
+
+    # test a basic prefetch, with CSV output to a .gz file
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    csvout = c.output('out.csv.gz')
+
+    c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
+                   '-o', csvout, linear_gather)
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    expected_intersect_bp = [2529000, 5177000]
+    with gzip.open(csvout, 'rt', newline="") as fp:
         r = csv.DictReader(fp)
         for (row, expected) in zip(r, expected_intersect_bp):
             print(row)
@@ -425,7 +457,7 @@ def test_prefetch_no_num_subj(runtmp, linear_gather):
     print(c.last_result.err)
 
     assert c.last_result.status != 0
-    assert "ERROR in prefetch: no compatible signatures in any databases?!" in c.last_result.err
+    assert "ERROR in prefetch: after picklists and patterns, no signatures to search!?" in c.last_result.err
 
 
 def test_prefetch_db_fromfile(runtmp, linear_gather):
@@ -454,7 +486,7 @@ def test_prefetch_db_fromfile(runtmp, linear_gather):
     assert "WARNING: no output(s) specified! Nothing will be saved from this prefetch!" in c.last_result.err
     assert "selecting specified query k=31" in c.last_result.err
     assert "loaded query: NC_009665.1 Shewanella baltica... (k=31, DNA)" in c.last_result.err
-    assert "all sketches will be downsampled to scaled=1000" in c.last_result.err
+    assert "query sketch has scaled=1000; will be dynamically downsampled as needed" in c.last_result.err
 
     assert "total of 2 matching signatures." in c.last_result.err
     assert "of 5177 distinct query hashes, 5177 were found in matches above threshold." in c.last_result.err

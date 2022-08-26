@@ -187,7 +187,7 @@ class RunnerContext(object):
             kwargs['in_directory'] = self.location
 
         cmdlist = ['sourmash']
-        cmdlist.extend(args)
+        cmdlist.extend(( str(x) for x in args))
         self.last_command = " ".join(cmdlist)
         self.last_result = runscript('sourmash', args, **kwargs)
 

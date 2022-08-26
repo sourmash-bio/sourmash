@@ -327,8 +327,9 @@ def test_do_traverse_directory_compare_force(c):
     assert 'genome-s11.fa.gz' in c.last_result.out
 
 
-@utils.in_tempdir
-def test_do_compare_output_csv(c):
+def test_do_compare_output_csv(runtmp):
+    # test 'sourmash compare --csv'
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -336,6 +337,33 @@ def test_do_compare_output_csv(c):
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx')
 
     with open(c.output('xxx')) as fp:
+        r = iter(csv.reader(fp))
+        row = next(r)
+        print(row)
+        row = next(r)
+        print(row)
+        assert float(row[0]) == 1.0
+        assert float(row[1]) == 0.93
+        row = next(r)
+        assert float(row[0]) == 0.93
+        assert float(row[1]) == 1.0
+
+        # exactly three lines
+        with pytest.raises(StopIteration) as e:
+            next(r)
+
+
+def test_do_compare_output_csv_gz(runtmp):
+    # test 'sourmash compare --csv' with a .gz file
+    c = runtmp
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig',
+                   '--csv', 'xxx.gz')
+
+    with gzip.open(c.output('xxx.gz'), 'rt', newline='') as fp:
         r = iter(csv.reader(fp))
         row = next(r)
         print(row)
@@ -786,8 +814,10 @@ def test_plot_override_labeltext_fail(runtmp):
     assert '3 labels != matrix size, exiting' in runtmp.last_result.err
 
 
-@utils.in_tempdir
-def test_plot_reordered_labels_csv(c):
+def test_plot_reordered_labels_csv(runtmp):
+    # test 'plot --csv'
+    c = runtmp
+
     ss2 = utils.get_test_data('2.fa.sig')
     ss47 = utils.get_test_data('47.fa.sig')
     ss63 = utils.get_test_data('63.fa.sig')
@@ -796,6 +826,29 @@ def test_plot_reordered_labels_csv(c):
     c.run_sourmash('plot', 'cmp', '--csv', 'neworder.csv')
 
     with open(c.output('neworder.csv'), newline="") as fp:
+        r = csv.DictReader(fp)
+
+        akker_vals = set()
+        for row in r:
+            akker_vals.add(row['CP001071.1 Akkermansia muciniphila ATCC BAA-835, complete genome'])
+
+        assert '1.0' in akker_vals
+        assert '0.0' in akker_vals
+        assert len(akker_vals) == 2
+
+
+def test_plot_reordered_labels_csv_gz(runtmp):
+    # test 'plot --csv' with a .gz output
+    c = runtmp
+
+    ss2 = utils.get_test_data('2.fa.sig')
+    ss47 = utils.get_test_data('47.fa.sig')
+    ss63 = utils.get_test_data('63.fa.sig')
+
+    c.run_sourmash('compare', '-k', '31', '-o', 'cmp', ss2, ss47, ss63)
+    c.run_sourmash('plot', 'cmp', '--csv', 'neworder.csv.gz')
+
+    with gzip.open(c.output('neworder.csv.gz'), 'rt', newline="") as fp:
         r = csv.DictReader(fp)
 
         akker_vals = set()
@@ -1318,7 +1371,7 @@ def test_do_sourmash_sbt_search_check_bug(runtmp):
 
     runtmp.sourmash('search', testdata1, 'zzz')
 
-    assert '1 matches:' in runtmp.last_result.out
+    assert '1 matches' in runtmp.last_result.out
 
     tree = load_sbt_index(runtmp.output('zzz.sbt.zip'))
     assert tree._nodes[0].metadata['min_n_below'] == 431
@@ -1337,7 +1390,7 @@ def test_do_sourmash_sbt_search_empty_sig(runtmp):
 
     runtmp.sourmash('search', testdata1, 'zzz')
 
-    assert '1 matches:' in runtmp.last_result.out
+    assert '1 matches' in runtmp.last_result.out
 
     tree = load_sbt_index(runtmp.output('zzz.sbt.zip'))
     assert tree._nodes[0].metadata['min_n_below'] == 1
@@ -1768,7 +1821,7 @@ def test_search_3(runtmp):
     runtmp.sourmash('search', '-n', '1', 'short.fa.sig', 'short2.fa.sig', 'short3.fa.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
-    assert '2 matches; showing first 1' in runtmp.last_result.out
+    assert '2 matches above threshold 0.080; showing first 1:' in runtmp.last_result.out
 
 
 def test_search_4(runtmp):
@@ -1781,9 +1834,19 @@ def test_search_4(runtmp):
     runtmp.sourmash('search', '-n', '0', 'short.fa.sig', 'short2.fa.sig', 'short3.fa.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
-    assert '2 matches:' in runtmp.last_result.out
+    assert '2 matches above threshold 0.080:' in runtmp.last_result.out
     assert 'short2.fa' in runtmp.last_result.out
     assert 'short3.fa' in runtmp.last_result.out
+
+
+def test_search_5_num_results(runtmp):
+    query = utils.get_test_data('gather/combined.sig')
+    against = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+
+    runtmp.sourmash('search', '-n', '5', query, *against)
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '12 matches above threshold 0.080; showing first 5:' in runtmp.last_result.out
 
 
 def test_index_check_scaled_bounds_negative(runtmp):
@@ -1836,7 +1899,7 @@ def test_index_metagenome_fromfile(c):
     print(c.last_result.err)
 
     assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
-    assert '12 matches; showing first 3:' in out
+    assert '12 matches above threshold 0.080; showing first 3:' in out
 
 @utils.in_tempdir
 def test_index_metagenome_fromfile_no_cmdline_sig(c):
@@ -1865,7 +1928,7 @@ def test_index_metagenome_fromfile_no_cmdline_sig(c):
     print(c.last_result.err)
 
     assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in out
-    assert '12 matches; showing first 3:' in out
+    assert '12 matches above threshold 0.080; showing first 3:' in out
 
 
 def test_search_metagenome(runtmp):
@@ -1888,7 +1951,7 @@ def test_search_metagenome(runtmp):
     print(runtmp.last_result.err)
 
     assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
-    assert '12 matches; showing first 3:' in runtmp.last_result.out
+    assert '12 matches above threshold 0.080; showing first 3:' in runtmp.last_result.out
 
 
 def test_search_metagenome_traverse(runtmp):
@@ -1902,7 +1965,7 @@ def test_search_metagenome_traverse(runtmp):
     print(runtmp.last_result.err)
 
     assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
-    assert '13 matches; showing first 3:' in runtmp.last_result.out
+    assert '13 matches above threshold 0.080; showing first 3:' in runtmp.last_result.out
 
 
 def test_search_metagenome_traverse_check_csv(runtmp):
@@ -1930,7 +1993,7 @@ def test_search_metagenome_traverse_check_csv(runtmp):
             assert len(filename) > prefix_len
 
     assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
-    assert '13 matches; showing first 3:' in runtmp.last_result.out
+    assert '13 matches above threshold 0.080; showing first 3:' in runtmp.last_result.out
 
 
 @utils.in_thisdir
@@ -2002,7 +2065,8 @@ def test_search_check_scaled_bounds_more_than_maximum(runtmp):
 # explanation: you cannot downsample a scaled SBT to match a scaled
 # signature, so make sure that when you try such a search, it fails!
 # (you *can* downsample a signature to match an SBT.)
-def test_search_metagenome_downsample(runtmp):
+def test_search_metagenome_sbt_downsample_fail(runtmp):
+    # test downsample on SBT => failure, with --fail-on-empty-databases
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -2016,18 +2080,41 @@ def test_search_metagenome_downsample(runtmp):
 
     assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
 
-    cmd = 'search {} gcf_all -k 21 --scaled 100000'.format(query_sig)
-
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('search', query_sig, 'gcf_all', '-k', '21', '--scaled', '100000')
-
-    assert runtmp.last_result.status == -1
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
+    assert runtmp.last_result.status == -1
     assert "ERROR: cannot use 'gcf_all' for this query." in runtmp.last_result.err
     assert "search scaled value 100000 is less than database scaled value of 10000" in runtmp.last_result.err
+
+
+def test_search_metagenome_sbt_downsample_nofail(runtmp):
+    # test downsample on SBT => failure but ok with --no-fail-on-empty-database
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+
+    runtmp.sourmash(*cmd)
+
+    assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
+
+    runtmp.sourmash('search', query_sig, 'gcf_all', '-k', '21', '--scaled', '100000', '--no-fail-on-empty-database')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert "ERROR: cannot use 'gcf_all' for this query." in runtmp.last_result.err
+    assert "search scaled value 100000 is less than database scaled value of 10000" in runtmp.last_result.err
+    assert "0 matches" in runtmp.last_result.out
 
 
 def test_search_metagenome_downsample_containment(runtmp):
@@ -2050,7 +2137,7 @@ def test_search_metagenome_downsample_containment(runtmp):
     print(runtmp.last_result.err)
 
     assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
-    assert '12 matches; showing first 3:' in runtmp.last_result.out
+    assert '12 matches above threshold 0.080; showing first 3:' in runtmp.last_result.out
 
 
 @utils.in_tempdir
@@ -2077,7 +2164,7 @@ def test_search_metagenome_downsample_index(c):
         c)
     assert ' 29.7%       NC_003197.2 Salmonella enterica subsp. enterica serovar T' in str(
         c)
-    assert '12 matches; showing first 3:' in str(c)
+    assert '12 matches above threshold 0.080; showing first 3:' in str(c)
 
 
 def test_search_with_picklist(runtmp):
@@ -2097,7 +2184,7 @@ def test_search_with_picklist(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "3 matches:" in out
+    assert "3 matches" in out
     assert "13.1%       NC_000853.1 Thermotoga" in out
     assert "13.0%       NC_009486.1 Thermotoga" in out
     assert "12.8%       NC_011978.1 Thermotoga" in out
@@ -2119,7 +2206,7 @@ def test_search_with_picklist_exclude(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "9 matches; showing first 3:" in out
+    assert "9 matches above threshold 0.080; showing first 3:" in out
     assert "33.2%       NC_003198.1 Salmonella" in out
     assert "33.1%       NC_003197.2 Salmonella" in out
     assert "32.2%       NC_006905.1 Salmonella" in out
@@ -2138,7 +2225,7 @@ def test_search_with_pattern_include(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "3 matches:" in out
+    assert "3 matches" in out
     assert "13.1%       NC_000853.1 Thermotoga" in out
     assert "13.0%       NC_009486.1 Thermotoga" in out
     assert "12.8%       NC_011978.1 Thermotoga" in out
@@ -2157,10 +2244,44 @@ def test_search_with_pattern_exclude(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "9 matches; showing first 3:" in out
+    assert "9 matches above threshold 0.080; showing first 3:" in out
     assert "33.2%       NC_003198.1 Salmonella" in out
     assert "33.1%       NC_003197.2 Salmonella" in out
     assert "32.2%       NC_006905.1 Salmonella" in out
+
+
+def test_search_empty_db_fail(runtmp):
+    # search should fail on empty db with --fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('search', query, against, against2, '-k', '51')
+
+
+    err = runtmp.last_result.err
+    assert "no compatible signatures found in " in err
+
+
+def test_search_empty_db_nofail(runtmp):
+    # search should not fail on empty db with --no-fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    runtmp.sourmash('search', query, against, against2, '-k', '51',
+                    '--no-fail-on-empty-data')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+    print(out)
+    print(err)
+
+    assert "no compatible signatures found in " in err
+    assert "ksize on this database is 31; this is different from requested ksize of 51" in err
+    assert "loaded 50 total signatures from 2 locations" in err
+    assert "after selecting signatures compatible with search, 0 remain." in err
 
 
 def test_mash_csv_to_sig(runtmp):
@@ -2174,7 +2295,7 @@ def test_mash_csv_to_sig(runtmp):
     runtmp.sourmash('search', '-k', '31', 'short.fa.sig', 'xxx.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
-    assert '1 matches:' in runtmp.last_result.out
+    assert '1 matches' in runtmp.last_result.out
     assert '100.0%       short.fa' in runtmp.last_result.out
 
 
@@ -2930,6 +3051,7 @@ def test_gather(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_csv(runtmp, linear_gather, prefetch_gather):
+    # test 'gather -o csvfile'
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -2949,6 +3071,46 @@ def test_gather_csv(runtmp, linear_gather, prefetch_gather):
     csv_file = runtmp.output('foo.csv')
 
     with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert float(row['intersect_bp']) == 910
+        assert float(row['unique_intersect_bp']) == 910
+        assert float(row['remaining_bp']) == 0
+        assert float(row['f_orig_query']) == 1.0
+        assert float(row['f_unique_to_query']) == 1.0
+        assert float(row['f_match']) == 1.0
+        assert row['filename'] == 'zzz'
+        assert row['name'] == 'tr1 4'
+        assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
+        assert row['gather_result_rank'] == '0'
+        assert row['query_filename'].endswith('short2.fa')
+        assert row['query_name'] == 'tr1 4'
+        assert row['query_md5'] == 'c9d5a795'
+        assert row['query_bp'] == '910'
+
+
+def test_gather_csv_gz(runtmp, linear_gather, prefetch_gather):
+    # test 'gather -o csvfile.gz'
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '--name-from-first', testdata1, testdata2)
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', '--name-from-first', testdata2)
+
+    runtmp.sourmash('index', '-k', '31', 'zzz', 'short.fa.sig', 'short2.fa.sig')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', '-o', 'foo.csv.gz', '--threshold-bp=1', linear_gather, prefetch_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    csv_file = runtmp.output('foo.csv.gz')
+
+    with gzip.open(csv_file, "rt", newline="") as fp:
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
@@ -3052,6 +3214,36 @@ def test_gather_multiple_sbts_save_prefetch_csv(runtmp, linear_gather):
     assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
     assert os.path.exists(runtmp.output('prefetch.csv'))
     with open(runtmp.output('prefetch.csv')) as f:
+        output = f.read()
+        print((output,))
+        assert '870,0.925531914893617,0.9666666666666667' in output
+
+
+def test_gather_multiple_sbts_save_prefetch_csv_gz(runtmp, linear_gather):
+    # test --save-prefetch-csv to a .gz file, with multiple databases
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    runtmp.sourmash('sketch','dna', '-p', 'scaled=10', testdata1, testdata2)
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2)
+
+    runtmp.sourmash('index', 'zzz', 'short.fa.sig', '-k', '31')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('index', 'zzz2', 'short2.fa.sig', '-k', '31')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', 'zzz2', '-o', 'foo.csv', '--save-prefetch-csv', 'prefetch.csv.gz', '--threshold-bp=1', linear_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
+    assert os.path.exists(runtmp.output('prefetch.csv.gz'))
+    with gzip.open(runtmp.output('prefetch.csv.gz'), 'rt', newline="") as f:
         output = f.read()
         print((output,))
         assert '870,0.925531914893617,0.9666666666666667' in output
@@ -3957,7 +4149,11 @@ def test_gather_query_downsample(runtmp, linear_gather, prefetch_gather):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert 'loaded 12 signatures' in runtmp.last_result.err
+    err = runtmp.last_result.err
+
+    assert 'loaded 36 total signatures from 12 locations.' in err
+    assert 'after selecting signatures compatible with search, 12 remain.' in err
+
     assert all(('4.9 Mbp      100.0%  100.0%' in runtmp.last_result.out,
                 'NC_003197.2' in runtmp.last_result.out))
 
@@ -3976,7 +4172,11 @@ def test_gather_query_downsample_explicit(runtmp, linear_gather, prefetch_gather
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert 'loaded 12 signatures' in runtmp.last_result.err
+    err = runtmp.last_result.err
+
+    assert 'loaded 36 total signatures from 12 locations.' in err
+    assert 'after selecting signatures compatible with search, 12 remain.' in err
+
     assert all(('4.9 Mbp      100.0%  100.0%' in runtmp.last_result.out,
                 'NC_003197.2' in runtmp.last_result.out))
 
@@ -4450,6 +4650,41 @@ def test_gather_output_unassigned_with_abundance(runtmp, prefetch_gather, linear
             assert nomatch_mh.hashes[hashval] == abund
 
 
+def test_gather_empty_db_fail(runtmp, linear_gather, prefetch_gather):
+    # gather should fail on empty db with --fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('gather', query, against, against2, '-k', '51',
+                        linear_gather, prefetch_gather)
+
+
+    err = runtmp.last_result.err
+    assert "no compatible signatures found in " in err
+
+
+def test_gather_empty_db_nofail(runtmp, prefetch_gather, linear_gather):
+    # gather should not fail on empty db with --no-fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    runtmp.sourmash('gather', query, against, against2, '-k', '51',
+                    '--no-fail-on-empty-data',
+                    linear_gather, prefetch_gather)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+    print(out)
+    print(err)
+
+    assert "no compatible signatures found in " in err
+    assert "ksize on this database is 31; this is different from requested ksize of 51" in err
+    assert "loaded 50 total signatures from 2 locations" in err
+    assert "after selecting signatures compatible with search, 0 remain." in err
+
 def test_multigather_output_unassigned_with_abundance(runtmp):
     c = runtmp
     query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
@@ -4479,6 +4714,41 @@ def test_multigather_output_unassigned_with_abundance(runtmp):
         if hashval not in against_ss.minhash.hashes:
             assert nomatch_mh.hashes[hashval] == abund
 
+
+def test_multigather_empty_db_fail(runtmp):
+    # multigather should fail on empty db with --fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('multigather', '--query', query,
+                        '--db', against, against2, '-k', '51')
+
+    err = runtmp.last_result.err
+    assert "no compatible signatures found in " in err
+
+
+def test_multigather_empty_db_nofail(runtmp):
+    # multigather should not fail on empty db with --no-fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    runtmp.sourmash('multigather', '--query', query,
+                    '--db', against, against2, '-k', '51',
+                    '--no-fail-on-empty-data')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+    print(out)
+    print(err)
+
+    assert "no compatible signatures found in " in err
+    assert "ksize on this database is 31; this is different from requested ksize of 51" in err
+    assert "conducted gather searches on 0 signatures" in err
+    assert "loaded 50 total signatures from 2 locations" in err
+    assert "after selecting signatures compatible with search, 0 remain." in err
 
 def test_sbt_categorize(runtmp):
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
@@ -4731,41 +5001,49 @@ def test_watch_coverage(runtmp):
     assert 'FOUND: genome-s10, at 1.000' in runtmp.last_result.out
 
 
-def test_storage_convert():
-    import pytest
+def test_storage_convert(runtmp):
+    testdata = utils.get_test_data('v2.sbt.json')
+    shutil.copyfile(testdata, runtmp.output('v2.sbt.json'))
+    shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
+                    runtmp.output('.sbt.v2'))
+    testsbt = runtmp.output('v2.sbt.json')
 
-    with utils.TempDirectory() as location:
-        testdata = utils.get_test_data('v2.sbt.json')
-        shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
-        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
-                        os.path.join(location, '.sbt.v2'))
-        testsbt = os.path.join(location, 'v2.sbt.json')
+    original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+    args = ['storage', 'convert', '-b', 'ipfs', testsbt]
+    try:
+        runtmp.sourmash(*args)
+    except SourmashCommandFailed:
+        pass
 
-        args = ['storage', 'convert', '-b', 'ipfs', testsbt]
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location, fail_ok=True)
-        if not status and "ipfs.exceptions.ConnectionError" in err:
+    if runtmp.last_result.status:
+        if "ipfshttpclient.ConnectionError" in runtmp.last_result.err:
             raise pytest.xfail('ipfs probably not running')
+        if "No module named 'ipfshttpclient'" in runtmp.last_result.err:
+            raise pytest.xfail('ipfshttpclient module not installed')
 
-        ipfs = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+    print("NO FAIL; KEEP ON GOING!")
 
-        assert len(original) == len(ipfs)
-        assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original), sorted(ipfs)))
 
-        args = ['storage', 'convert',
-                '-b', """'ZipStorage("{}")'""".format(
-                    os.path.join(location, 'v2.sbt.zip')),
-                testsbt]
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
-        tar = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+    ipfs = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        assert len(original) == len(tar)
-        assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original), sorted(tar)))
+    assert len(original) == len(ipfs)
+    assert all(n1[1].name == n2[1].name
+                for (n1, n2) in zip(sorted(original), sorted(ipfs)))
+
+    args = ['storage', 'convert',
+            '-b', """'ZipStorage("{}")'""".format(
+                runtmp.output('v2.sbt.zip')),
+            testsbt]
+    runtmp.sourmash(*args)
+
+    tar = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+    assert len(original) == len(tar)
+    assert all(n1[1].name == n2[1].name
+                for (n1, n2) in zip(sorted(original), sorted(tar)))
+
+    print("it all worked!!")
 
 
 def test_storage_convert_identity(runtmp):
@@ -5021,7 +5299,7 @@ def test_index_matches_search_with_picklist(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "3 matches:" in out
+    assert "3 matches" in out
     assert "13.1%       NC_000853.1 Thermotoga" in out
     assert "13.0%       NC_009486.1 Thermotoga" in out
     assert "12.8%       NC_011978.1 Thermotoga" in out
@@ -5062,7 +5340,7 @@ def test_index_matches_search_with_picklist_exclude(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "10 matches; showing first 3:" in out
+    assert "10 matches above threshold 0.080; showing first 3:" in out
     assert "100.0%       -" in out
     assert "33.2%       NC_003198.1 Salmonella" in out
     assert "33.1%       NC_003197.2 Salmonella" in out
@@ -5304,7 +5582,7 @@ def test_gather_with_prefetch_picklist_5_search(runtmp):
     out = runtmp.last_result.out
     print(out)
 
-    assert "12 matches; showing first 3:" in out
+    assert "12 matches above threshold 0.080; showing first 3:" in out
     assert " 33.2%       NC_003198.1 Salmonella enterica subsp." in out
 
     # now, do a gather with the results

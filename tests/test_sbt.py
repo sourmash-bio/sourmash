@@ -1049,7 +1049,7 @@ def test_sbt_protein_command_search(c):
     db_out = utils.get_test_data('prot/protein.sbt.zip')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out)
     assert 'found 1 matches total' in c.last_result.out
@@ -1096,7 +1096,7 @@ def test_sbt_hp_command_search(c):
     db_out = utils.get_test_data('prot/hp.sbt.zip')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
@@ -1143,7 +1143,7 @@ def test_sbt_dayhoff_command_search(c):
     db_out = utils.get_test_data('prot/dayhoff.sbt.zip')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out

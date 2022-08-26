@@ -690,7 +690,7 @@ def test_zipfile_protein_command_search(runtmp):
     db_out = utils.get_test_data('prot/protein.zip')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out)
     assert 'found 1 matches total' in c.last_result.out
@@ -705,7 +705,7 @@ def test_zipfile_hp_command_search(runtmp):
     db_out = utils.get_test_data('prot/hp.zip')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
@@ -720,7 +720,7 @@ def test_zipfile_dayhoff_command_search(runtmp):
     db_out = utils.get_test_data('prot/dayhoff.zip')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
@@ -735,7 +735,7 @@ def test_zipfile_protein_command_search_combined(runtmp):
     db_out = utils.get_test_data('prot/all.zip')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out)
     assert 'found 1 matches total' in c.last_result.out
@@ -750,7 +750,7 @@ def test_zipfile_hp_command_search_combined(runtmp):
     db_out = utils.get_test_data('prot/all.zip')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
@@ -765,7 +765,7 @@ def test_zipfile_dayhoff_command_search_combined(runtmp):
     db_out = utils.get_test_data('prot/all.zip')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out

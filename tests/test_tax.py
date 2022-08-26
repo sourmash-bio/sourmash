@@ -4,7 +4,9 @@ Tests for the 'sourmash tax' command line and high level API.
 import os
 import csv
 import pytest
+import gzip
 
+import sourmash
 import sourmash_tst_utils as utils
 from sourmash.tax import tax_utils
 from sourmash_tst_utils import SourmashCommandFailed
@@ -1796,6 +1798,26 @@ def test_tax_prepare_1_csv_to_csv(runtmp, keep_identifiers, keep_versions):
     assert set(db1) == set(db2)
 
 
+def test_tax_prepare_1_combine_csv(runtmp):
+    # multiple CSVs to a single combined CSV
+    tax1 = utils.get_test_data('tax/test.taxonomy.csv')
+    tax2 = utils.get_test_data('tax/protozoa_genbank_lineage.csv')
+
+    taxout = runtmp.output('out.csv')
+
+    runtmp.sourmash('tax', 'prepare', '-t', tax1, tax2, '-F', 'csv',
+                    '-o', taxout)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert not out
+    assert "...loaded 8 entries" in err
+
+    out = open(taxout).readlines()
+    assert len(out) == 9
+
+
 def test_tax_prepare_1_csv_to_csv_empty_ranks(runtmp, keep_identifiers, keep_versions):
     # CSV -> CSV; same assignments, even when trailing ranks are empty
     tax = utils.get_test_data('tax/test-empty-ranks.taxonomy.csv')
@@ -1979,6 +2001,30 @@ def test_tax_prepare_3_db_to_csv(runtmp):
     assert set(db1) == set(db3)
 
 
+def test_tax_prepare_3_db_to_csv_gz(runtmp):
+    # SQL -> CSV; same assignments
+    taxcsv = utils.get_test_data('tax/test.taxonomy.csv')
+    taxdb = utils.get_test_data('tax/test.taxonomy.db')
+    taxout = runtmp.output('out.csv.gz')
+
+    runtmp.run_sourmash('tax', 'prepare', '-t', taxdb,
+                        '-o', taxout, '-F', 'csv')
+    assert os.path.exists(taxout)
+    with gzip.open(taxout, 'rt') as fp:
+        print(fp.read())
+
+    db1 = tax_utils.MultiLineageDB.load([taxcsv],
+                                        keep_full_identifiers=False,
+                                        keep_identifier_versions=False)
+
+    db2 = tax_utils.MultiLineageDB.load([taxout])
+    db3 = tax_utils.MultiLineageDB.load([taxdb],
+                                        keep_full_identifiers=False,
+                                        keep_identifier_versions=False)
+    assert set(db1) == set(db2)
+    assert set(db1) == set(db3)
+
+
 def test_tax_prepare_2_csv_to_sql_empty_ranks_2(runtmp, keep_identifiers, keep_versions):
     # CSV -> SQL with some empty internal ranks in the taxonomy file
     tax = utils.get_test_data('tax/test-empty-ranks-2.taxonomy.csv')
@@ -2137,3 +2183,254 @@ def test_tax_prepare_sqlite_no_lineage():
 
     with pytest.raises(ValueError):
         db = tax_utils.MultiLineageDB.load([sqldb])
+
+
+def test_tax_grep_exists(runtmp):
+    # test that 'tax grep' exists
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('tax', 'grep')
+
+    err = runtmp.last_result.err
+    assert 'usage:' in err
+
+
+def test_tax_grep_search_shew(runtmp):
+    # test 'tax grep Shew'
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'grep', 'Shew', '-t', taxfile)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    lines = [ x.strip() for x in out.splitlines() ]
+    lines = [ x.split(',') for x in lines ]
+    assert lines[0][0] == 'ident'
+    assert lines[1][0] == 'GCF_000017325.1'
+    assert lines[2][0] == 'GCF_000021665.1'
+    assert len(lines) == 3
+
+    assert "searching 1 taxonomy files for 'Shew'" in err
+    assert 'found 2 matches; saved identifiers to picklist' in err
+
+
+def test_tax_grep_search_shew_out(runtmp):
+    # test 'tax grep Shew', save result to a file
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'grep', 'Shew', '-t', taxfile, '-o', 'pick.csv')
+
+    err = runtmp.last_result.err
+
+    out = open(runtmp.output('pick.csv')).read()
+    lines = [ x.strip() for x in out.splitlines() ]
+    lines = [ x.split(',') for x in lines ]
+    assert lines[0][0] == 'ident'
+    assert lines[1][0] == 'GCF_000017325.1'
+    assert lines[2][0] == 'GCF_000021665.1'
+    assert len(lines) == 3
+
+    assert "searching 1 taxonomy files for 'Shew'" in err
+    assert 'found 2 matches; saved identifiers to picklist' in err
+
+
+def test_tax_grep_search_shew_sqldb_out(runtmp):
+    # test 'tax grep Shew' on a sqldb, save result to a file
+    taxfile = utils.get_test_data('tax/test.taxonomy.db')
+
+    runtmp.sourmash('tax', 'grep', 'Shew', '-t', taxfile, '-o', 'pick.csv')
+
+    err = runtmp.last_result.err
+
+    out = open(runtmp.output('pick.csv')).read()
+    lines = [ x.strip() for x in out.splitlines() ]
+    lines = [ x.split(',') for x in lines ]
+    assert lines[0][0] == 'ident'
+    assert lines[1][0] == 'GCF_000017325'
+    assert lines[2][0] == 'GCF_000021665'
+    assert len(lines) == 3
+
+    assert "searching 1 taxonomy files for 'Shew'" in err
+    assert 'found 2 matches; saved identifiers to picklist' in err
+
+
+def test_tax_grep_search_shew_lowercase(runtmp):
+    # test 'tax grep shew' (lowercase), save result to a file
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'grep', 'shew', '-t', taxfile, '-o', 'pick.csv')
+
+    err = runtmp.last_result.err
+    assert "searching 1 taxonomy files for 'shew'" in err
+    assert 'found 0 matches; saved identifiers to picklist' in err
+
+    runtmp.sourmash('tax', 'grep', '-i', 'shew',
+                    '-t', taxfile, '-o', 'pick.csv')
+
+    err = runtmp.last_result.err
+    assert "searching 1 taxonomy files for 'shew'" in err
+    assert 'found 2 matches; saved identifiers to picklist' in err
+
+    out = open(runtmp.output('pick.csv')).read()
+    lines = [ x.strip() for x in out.splitlines() ]
+    lines = [ x.split(',') for x in lines ]
+    assert lines[0][0] == 'ident'
+    assert lines[1][0] == 'GCF_000017325.1'
+    assert lines[2][0] == 'GCF_000021665.1'
+    assert len(lines) == 3
+
+
+def test_tax_grep_search_shew_out_use_picklist(runtmp):
+    # test 'tax grep Shew', output to a picklist, use picklist
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+    dbfile = utils.get_test_data('tax/gtdb-tax-grep.sigs.zip')
+
+    runtmp.sourmash('tax', 'grep', 'Shew', '-t', taxfile, '-o', 'pick.csv')
+
+    runtmp.sourmash('sig', 'cat', dbfile, '--picklist',
+                    'pick.csv:ident:ident', '-o', 'pick-out.zip')
+
+    all_sigs = sourmash.load_file_as_index(dbfile)
+    assert len(all_sigs) == 3
+
+    pick_sigs = sourmash.load_file_as_index(runtmp.output('pick-out.zip'))
+    assert len(pick_sigs) == 2
+
+    names = [ ss.name.split()[0] for ss in pick_sigs.signatures() ]
+    assert len(names) == 2
+    assert 'GCF_000017325.1' in names
+    assert 'GCF_000021665.1' in names
+
+
+def test_tax_grep_search_shew_invert(runtmp):
+    # test 'tax grep -v Shew'
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'grep', '-v', 'Shew', '-t', taxfile)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert "-v/--invert-match specified; returning only lineages that do not match." in err
+
+    lines = [ x.strip() for x in out.splitlines() ]
+    lines = [ x.split(',') for x in lines ]
+    assert lines[0][0] == 'ident'
+    assert lines[1][0] == 'GCF_001881345.1'
+    assert lines[2][0] == 'GCF_003471795.1'
+    assert len(lines) == 5
+
+    assert "searching 1 taxonomy files for 'Shew'" in err
+    assert 'found 4 matches; saved identifiers to picklist' in err
+
+    all_names = set([ x[0] for x in lines ])
+    assert 'GCF_000017325.1' not in all_names
+    assert 'GCF_000021665.1' not in all_names
+
+
+def test_tax_grep_search_shew_invert_select_phylum(runtmp):
+    # test 'tax grep -v Shew -r phylum'
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'grep', '-v', 'Shew', '-t', taxfile, '-r', 'phylum')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert "-v/--invert-match specified; returning only lineages that do not match." in err
+    assert "limiting matches to phylum"
+
+    lines = [ x.strip() for x in out.splitlines() ]
+    lines = [ x.split(',') for x in lines ]
+    assert lines[0][0] == 'ident'
+    assert len(lines) == 7
+
+    assert "searching 1 taxonomy files for 'Shew'" in err
+    assert 'found 6 matches; saved identifiers to picklist' in err
+
+    all_names = set([ x[0] for x in lines ])
+    assert 'GCF_000017325.1' in all_names
+    assert 'GCF_000021665.1' in all_names
+
+
+def test_tax_grep_search_shew_invert_select_bad_rank(runtmp):
+    # test 'tax grep -v Shew -r badrank' - should fail
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('tax', 'grep', '-v', 'Shew', '-t', taxfile,
+                        '-r', 'badrank')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(err)
+    assert 'error: argument -r/--rank: invalid choice:' in err
+
+
+def test_tax_grep_search_shew_count(runtmp):
+    # test 'tax grep Shew --count'
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'grep', 'Shew', '-t', taxfile, '-c')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert not out.strip()
+
+    assert "searching 1 taxonomy files for 'Shew'" in err
+    assert not 'found 2 matches; saved identifiers to picklist' in err
+
+
+def test_tax_grep_multiple_csv(runtmp):
+    # grep on multiple CSVs
+    tax1 = utils.get_test_data('tax/test.taxonomy.csv')
+    tax2 = utils.get_test_data('tax/protozoa_genbank_lineage.csv')
+
+    taxout = runtmp.output('out.csv')
+
+    runtmp.sourmash('tax', 'grep', "Toxo|Gamma",
+                    '-t', tax1, tax2,
+                    '-o', taxout)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert not out
+    assert "found 4 matches" in err
+
+    lines = open(taxout).readlines()
+    assert len(lines) == 5
+
+    names = set([ x.split(',')[0] for x in lines ])
+    assert 'GCA_000256725' in names
+    assert 'GCF_000017325.1' in names
+    assert 'GCF_000021665.1' in names
+    assert 'GCF_001881345.1' in names
+
+
+def test_tax_grep_duplicate_csv(runtmp):
+    # grep on duplicates => should collapse to uniques on identifiers
+    tax1 = utils.get_test_data('tax/test.taxonomy.csv')
+
+    taxout = runtmp.output('out.csv')
+
+    runtmp.sourmash('tax', 'grep', "Gamma",
+                    '-t', tax1, tax1,
+                    '-o', taxout)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert not out
+    assert "found 3 matches" in err
+
+    lines = open(taxout).readlines()
+    assert len(lines) == 4
+
+    names = set([ x.split(',')[0] for x in lines ])
+    assert 'GCF_000017325.1' in names
+    assert 'GCF_000021665.1' in names
+    assert 'GCF_001881345.1' in names

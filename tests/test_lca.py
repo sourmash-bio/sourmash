@@ -2343,8 +2343,9 @@ def test_compare_csv_real(runtmp):
     assert '0 incompatible at rank species' in runtmp.last_result.err
 
 
-def test_incompat_lca_db_ksize_2(runtmp, lca_db_format):
-    # test on gather - create a database with ksize of 25
+def test_incompat_lca_db_ksize_2_fail(runtmp, lca_db_format):
+    # test on gather - create a database with ksize of 25 => fail
+    # because of incompatibility.
     c = runtmp
     testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
     c.run_sourmash('sketch', 'dna', '-p', 'k=25,scaled=1000', testdata1,
@@ -2361,6 +2362,34 @@ def test_incompat_lca_db_ksize_2(runtmp, lca_db_format):
     # no compatible ksizes.
     with pytest.raises(SourmashCommandFailed) as e:
         c.run_sourmash('gather', utils.get_test_data('lca/TARA_ASE_MAG_00031.sig'), f'test.lca.{lca_db_format}')
+
+    err = c.last_result.err
+    print(err)
+
+    if lca_db_format == 'sql':
+        assert "no compatible signatures found in 'test.lca.sql'" in err
+    else:
+        assert "ERROR: cannot use 'test.lca.json' for this query." in err
+        assert "ksize on this database is 25; this is different from requested ksize of 31"
+
+
+def test_incompat_lca_db_ksize_2_nofail(runtmp, lca_db_format):
+    # test on gather - create a database with ksize of 25, no fail
+    # because of --no-fail-on-empty-databases
+    c = runtmp
+    testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=25,scaled=1000', testdata1,
+                   '-o', 'test_db.sig')
+    print(c)
+
+    c.run_sourmash('lca', 'index', utils.get_test_data('lca/delmont-1.csv',),
+                   f'test.lca.{lca_db_format}', 'test_db.sig',
+                    '-k', '25', '--scaled', '10000',
+                   '-F', lca_db_format)
+    print(c)
+
+    # this should not fail despite mismatched ksize, b/c of --no-fail flag.
+    c.run_sourmash('gather', utils.get_test_data('lca/TARA_ASE_MAG_00031.sig'), f'test.lca.{lca_db_format}', '--no-fail-on-empty-database')
 
     err = c.last_result.err
     print(err)
@@ -2638,7 +2667,7 @@ def test_lca_db_protein_command_search(c):
     db_out = utils.get_test_data('prot/protein.lca.json.gz')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out)
     assert 'found 1 matches total' in c.last_result.out
@@ -2749,7 +2778,7 @@ def test_lca_db_hp_command_search(c):
     db_out = utils.get_test_data('prot/hp.lca.json.gz')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
@@ -2860,7 +2889,7 @@ def test_lca_db_dayhoff_command_search(c):
     db_out = utils.get_test_data('prot/dayhoff.lca.json.gz')
 
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
-    assert '2 matches:' in c.last_result.out
+    assert '2 matches' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
