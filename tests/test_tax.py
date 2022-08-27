@@ -142,6 +142,45 @@ def test_metagenome_summary_csv_out(runtmp):
     assert 'test1,species,0.7957718388512166,unclassified,md5,test1.sig,0.8691969376119889,3990000' in sum_gather_results[22]
 
 
+def test_metagenome_kreport_out(runtmp):
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+    sum_csv = csv_base + ".kreport.txt"
+    csvout = runtmp.output(sum_csv)
+    outdir = os.path.dirname(csvout)
+
+    runtmp.run_sourmash('tax', 'metagenome', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-dir', outdir, '-F', "kreport")
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    kreport_results = [x.rstrip().split('\t') for x in open(csvout)]
+    assert f"saving 'kreport' output to '{csvout}'" in runtmp.last_result.err
+    print(kreport_results)
+    assert ['0.13', '1024000', '', 'D', '', 'd__Bacteria'] == kreport_results[0]
+    assert ['0.87', '3990000', '', 'U', '', 'unclassified'] == kreport_results[1]
+    assert ['0.07', '582000', '', 'P', '', 'p__Bacteroidota'] == kreport_results[2]
+    assert ['0.06', '442000', '', 'P', '', 'p__Proteobacteria'] == kreport_results[3]
+    assert ['0.07', '582000', '', 'C', '', 'c__Bacteroidia'] == kreport_results[4]
+    assert ['0.06', '442000', '', 'C', '', 'c__Gammaproteobacteria'] == kreport_results[5]
+    assert ['0.07', '582000', '', 'O', '', 'o__Bacteroidales'] == kreport_results[6]
+    assert ['0.06', '442000', '', 'O', '', 'o__Enterobacterales'] == kreport_results[7]
+    assert ['0.07', '582000', '', 'F', '', 'f__Bacteroidaceae'] == kreport_results[8]
+    assert ['0.06', '442000', '', 'F', '', 'f__Enterobacteriaceae'] == kreport_results[9]
+    assert ['0.06', '444000', '', 'G', '', 'g__Prevotella']  == kreport_results[10]
+    assert ['0.06', '442000', '', 'G', '', 'g__Escherichia'] == kreport_results[11]
+    assert ['0.02', '138000', '', 'G', '', 'g__Phocaeicola'] == kreport_results[12]
+    assert ['0.06', '444000', '', 'S', '', 's__Prevotella copri'] == kreport_results[13]
+    assert ['0.06', '442000', '', 'S', '', 's__Escherichia coli']== kreport_results[14]
+    assert ['0.02', '138000', '', 'S', '', 's__Phocaeicola vulgatus'] == kreport_results[15]
+
+
+
 def test_metagenome_krona_tsv_out(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
