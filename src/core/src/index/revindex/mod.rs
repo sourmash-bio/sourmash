@@ -2,8 +2,6 @@ pub mod mem_revindex;
 pub mod revindex;
 
 use std::collections::{BTreeSet, HashMap};
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -13,7 +11,7 @@ use rkyv::{Archive, Deserialize, Serialize};
 
 use crate::index::revindex::mem_revindex::GatherResult;
 use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::{max_hash_for_scaled, KmerMinHash};
+use crate::sketch::minhash::{max_hash_for_scaled, KmerMinHash, MinHashOps};
 use crate::sketch::Sketch;
 
 use crate::encodings::Color;
