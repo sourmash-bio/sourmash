@@ -11,7 +11,7 @@ use rkyv::{Archive, Deserialize, Serialize};
 
 use crate::index::revindex::mem_revindex::GatherResult;
 use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::{max_hash_for_scaled, KmerMinHash, MinHashOps};
+use crate::sketch::minhash::{max_hash_for_scaled, FracMinHashOps, KmerMinHash, MinHashOps};
 use crate::sketch::Sketch;
 
 use crate::encodings::Color;
