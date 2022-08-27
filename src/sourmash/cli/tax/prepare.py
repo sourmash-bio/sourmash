@@ -25,7 +25,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-t', '--taxonomy-csv', '--taxonomy', metavar='FILE',
-        nargs="+", required=True,
+        nargs="+", required=True, action="extend", # @CTB
         help='database lineages'
     )
     subparser.add_argument(
