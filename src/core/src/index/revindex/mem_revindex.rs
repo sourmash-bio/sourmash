@@ -14,7 +14,7 @@ use rayon::prelude::*;
 use crate::encodings::{Color, Colors, Idx};
 use crate::index::Index;
 use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::KmerMinHash;
+use crate::sketch::minhash::{KmerMinHash, MinHashOps};
 use crate::sketch::Sketch;
 use crate::Error;
 use crate::HashIntoType;

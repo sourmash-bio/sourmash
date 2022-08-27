@@ -10,7 +10,7 @@ use rocksdb::{ColumnFamilyDescriptor, MergeOperands, Options};
 
 use crate::index::revindex::mem_revindex::GatherResult;
 use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::KmerMinHash;
+use crate::sketch::minhash::{KmerMinHash, MinHashOps};
 use crate::sketch::Sketch;
 
 use crate::index::revindex::prepare_query;

@@ -7,6 +7,7 @@ use crate::ffi::utils::{ForeignObject, SourmashStr};
 use crate::signature::SeqToHashes;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::KmerMinHash;
+use crate::sketch::minhash::MinHashOps;
 
 pub struct SourmashKmerMinHash;
 
