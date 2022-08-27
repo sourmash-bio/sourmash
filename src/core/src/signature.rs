@@ -32,6 +32,16 @@ pub trait SigsTrait {
     fn seed(&self) -> u64;
 
     fn hash_function(&self) -> HashFunctions;
+    fn set_hash_function(&mut self, h: HashFunctions) -> Result<(), Error>;
+    fn is_protein(&self) -> bool {
+        self.hash_function() == HashFunctions::murmur64_protein
+    }
+    fn dayhoff(&self) -> bool {
+        self.hash_function() == HashFunctions::murmur64_dayhoff
+    }
+    fn hp(&self) -> bool {
+        self.hash_function() == HashFunctions::murmur64_hp
+    }
 
     fn add_hash(&mut self, hash: HashIntoType);
 
@@ -118,6 +128,14 @@ impl SigsTrait for Sketch {
             Sketch::MinHash(ref mh) => mh.hash_function(),
             Sketch::LargeMinHash(ref mh) => mh.hash_function(),
             Sketch::HyperLogLog(ref hll) => hll.hash_function(),
+        }
+    }
+
+    fn set_hash_function(&mut self, h: HashFunctions) -> Result<(), Error> {
+        match *self {
+            Sketch::MinHash(ref mut mh) => mh.set_hash_function(h),
+            Sketch::LargeMinHash(ref mut mh) => mh.set_hash_function(h),
+            Sketch::HyperLogLog(ref mut hll) => hll.set_hash_function(h),
         }
     }
 

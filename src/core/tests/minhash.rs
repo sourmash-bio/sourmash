@@ -6,7 +6,7 @@ use proptest::collection::vec;
 use proptest::num::u64;
 use proptest::proptest;
 use sourmash::encodings::HashFunctions;
-use sourmash::prelude::MinHashOps;
+use sourmash::prelude::*;
 use sourmash::signature::SeqToHashes;
 use sourmash::signature::{Signature, SigsTrait};
 use sourmash::sketch::minhash::{

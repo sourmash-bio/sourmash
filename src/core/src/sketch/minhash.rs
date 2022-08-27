@@ -11,13 +11,13 @@ use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
-use crate::_hash_murmur;
 use crate::encodings::HashFunctions;
 use crate::signature::SigsTrait;
 use crate::sketch::hyperloglog::HyperLogLog;
 use crate::Error;
+use crate::{HashIntoType, _hash_murmur};
 
-pub fn max_hash_for_scaled(scaled: u64) -> u64 {
+pub fn max_hash_for_scaled(scaled: u64) -> HashIntoType {
     match scaled {
         0 => 0,
         1 => u64::max_value(),
@@ -25,7 +25,7 @@ pub fn max_hash_for_scaled(scaled: u64) -> u64 {
     }
 }
 
-pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
+pub fn scaled_for_max_hash(max_hash: HashIntoType) -> u64 {
     match max_hash {
         0 => 0,
         _ => (u64::max_value() as f64 / max_hash as f64) as u64,
@@ -33,56 +33,30 @@ pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
 }
 
 pub trait MinHashOps: SigsTrait {
-    fn set_hash_function(&mut self, h: HashFunctions) -> Result<(), Error>;
-    fn is_protein(&self) -> bool {
-        self.hash_function() == HashFunctions::murmur64_protein
-    }
-    fn dayhoff(&self) -> bool {
-        self.hash_function() == HashFunctions::murmur64_dayhoff
-    }
-    fn hp(&self) -> bool {
-        self.hash_function() == HashFunctions::murmur64_hp
-    }
-
-    fn max_hash(&self) -> u64;
-    fn scaled(&self) -> u64 {
-        scaled_for_max_hash(self.max_hash())
-    }
     fn clear(&mut self);
     fn is_empty(&self) -> bool;
-    fn track_abundance(&self) -> bool;
-    fn enable_abundance(&mut self) -> Result<(), Error>;
-    fn disable_abundance(&mut self);
     fn reset_md5sum(&self);
     fn md5sum(&self) -> String;
 
-    fn add_hash_with_abundance(&mut self, hash: u64, abundance: u64);
-    fn set_hash_with_abundance(&mut self, hash: u64, abundance: u64);
+    fn mins(&self) -> Vec<HashIntoType>;
 
     fn add_word(&mut self, word: &[u8]) {
         let hash = _hash_murmur(word, self.seed());
         self.add_hash(hash);
     }
 
-    fn remove_hash(&mut self, hash: u64);
+    fn remove_hash(&mut self, hash: HashIntoType);
 
-    fn remove_many(&mut self, hashes: &[u64]) -> Result<(), Error> {
+    fn remove_many(&mut self, hashes: &[HashIntoType]) -> Result<(), Error> {
         for min in hashes {
             self.remove_hash(*min);
         }
         Ok(())
     }
 
-    fn add_many(&mut self, hashes: &[u64]) -> Result<(), Error> {
+    fn add_many(&mut self, hashes: &[HashIntoType]) -> Result<(), Error> {
         for min in hashes {
             self.add_hash(*min);
-        }
-        Ok(())
-    }
-
-    fn add_many_with_abund(&mut self, hashes: &[(u64, u64)]) -> Result<(), Error> {
-        for item in hashes {
-            self.add_hash_with_abundance(item.0, item.1);
         }
         Ok(())
     }
@@ -94,7 +68,7 @@ pub trait MinHashOps: SigsTrait {
     fn merge(&mut self, other: &KmerMinHash) -> Result<(), Error>;
     fn add_from(&mut self, other: &KmerMinHash) -> Result<(), Error>;
     fn count_common(&self, other: &KmerMinHash, downsample: bool) -> Result<u64, Error>;
-    fn intersection(&self, other: &KmerMinHash) -> Result<(Vec<u64>, u64), Error>;
+    fn intersection(&self, other: &KmerMinHash) -> Result<(Vec<HashIntoType>, u64), Error>;
 
     // FIXME: intersection_size and count_common should be the same?
     // (for scaled minhashes)
@@ -102,10 +76,6 @@ pub trait MinHashOps: SigsTrait {
 
     // calculate Jaccard similarity, ignoring abundance.
     fn jaccard(&self, other: &KmerMinHash) -> Result<f64, Error>;
-
-    // compare two minhashes, with abundance;
-    // calculate their angular similarity.
-    fn angular_similarity(&self, other: &KmerMinHash) -> Result<f64, Error>;
 
     fn similarity(
         &self,
@@ -115,12 +85,89 @@ pub trait MinHashOps: SigsTrait {
     ) -> Result<f64, Error>;
     */
 
-    fn mins(&self) -> Vec<u64>;
-    fn abunds(&self) -> Option<Vec<u64>>;
-
-    fn to_vec_abunds(&self) -> Vec<(u64, u64)>;
-
     fn as_hll(&self) -> HyperLogLog;
+}
+
+pub trait AbundMinHashOps: MinHashOps {
+    fn track_abundance(&self) -> bool;
+    fn enable_abundance(&mut self) -> Result<(), Error>;
+    fn disable_abundance(&mut self);
+    fn add_hash_with_abundance(&mut self, hash: HashIntoType, abundance: u64);
+    fn set_hash_with_abundance(&mut self, hash: HashIntoType, abundance: u64);
+    fn add_many_with_abund(&mut self, hashes: &[(HashIntoType, u64)]) -> Result<(), Error> {
+        for item in hashes {
+            self.add_hash_with_abundance(item.0, item.1);
+        }
+        Ok(())
+    }
+
+    fn abunds(&self) -> Option<Vec<u64>>;
+    fn to_vec_abunds(&self) -> Vec<(HashIntoType, u64)>;
+
+    // compare two minhashes, with abundance;
+    // calculate their angular similarity.
+    fn angular_similarity<A: AbundMinHashOps>(&self, other: &A) -> Result<f64, Error> {
+        // TODO(lirber): bring back compat check once method sig changes
+        //self.check_compatible(other)?;
+
+        // TODO: check which one is smaller, swap around if needed
+        // TODO(lirber): use iters here, instead of allocating new vecs!
+        let abunds = self.to_vec_abunds();
+        let other_abunds = other.to_vec_abunds();
+
+        let mut prod = 0;
+        let mut other_iter = other_abunds.iter();
+        let mut next_hash = other_iter.next();
+        let a_sq: u64 = abunds.iter().map(|(_hash, abund)| (abund * abund)).sum();
+        let b_sq: u64 = other_abunds
+            .iter()
+            .map(|(_hash, abund)| (abund * abund))
+            .sum();
+
+        for (hash, abund) in abunds {
+            while let Some((k, other_abund)) = next_hash {
+                match k.cmp(&hash) {
+                    Ordering::Less => next_hash = other_iter.next(),
+                    Ordering::Equal => {
+                        unsafe {
+                            prod += abund * other_abund;
+                        }
+                        break;
+                    }
+                    Ordering::Greater => break,
+                }
+            }
+        }
+
+        let norm_a = (a_sq as f64).sqrt();
+        let norm_b = (b_sq as f64).sqrt();
+
+        if norm_a == 0. || norm_b == 0. {
+            return Ok(0.0);
+        }
+        let prod = f64::min(prod as f64 / (norm_a * norm_b), 1.);
+        let distance = 2. * prod.acos() / PI;
+        Ok(1. - distance)
+    }
+}
+
+pub trait FracMinHashOps: MinHashOps {
+    fn max_hash(&self) -> HashIntoType;
+    fn scaled(&self) -> u64 {
+        scaled_for_max_hash(self.max_hash())
+    }
+    fn downsample_max_hash(&self, max_hash: HashIntoType) -> Result<Self, Error>
+    where
+        Self: Sized;
+
+    // create a downsampled copy of self
+    fn downsample_scaled(&self, scaled: u64) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        let max_hash = max_hash_for_scaled(scaled);
+        self.downsample_max_hash(max_hash)
+    }
 }
 
 #[derive(Debug, TypedBuilder)]
@@ -320,31 +367,6 @@ impl KmerMinHash {
         self.mins.iter()
     }
 
-    // create a downsampled copy of self
-    pub fn downsample_max_hash(&self, max_hash: u64) -> Result<KmerMinHash, Error> {
-        let scaled = scaled_for_max_hash(max_hash);
-
-        let mut new_mh = KmerMinHash::new(
-            scaled,
-            self.ksize,
-            self.hash_function,
-            self.seed,
-            self.abunds.is_some(),
-            self.num,
-        );
-        if self.abunds.is_some() {
-            new_mh.add_many_with_abund(&self.to_vec_abunds())?;
-        } else {
-            new_mh.add_many(&self.mins)?;
-        }
-        Ok(new_mh)
-    }
-
-    // create a downsampled copy of self
-    pub fn downsample_scaled(&self, scaled: u64) -> Result<KmerMinHash, Error> {
-        let max_hash = max_hash_for_scaled(scaled);
-        self.downsample_max_hash(max_hash)
-    }
     pub fn remove_from(&mut self, other: &KmerMinHash) -> Result<(), Error> {
         for min in &other.mins {
             self.remove_hash(*min);
@@ -554,56 +576,6 @@ impl KmerMinHash {
         }
     }
 
-    // compare two minhashes, with abundance;
-    // calculate their angular similarity.
-    pub fn angular_similarity(&self, other: &KmerMinHash) -> Result<f64, Error> {
-        self.check_compatible(other)?;
-
-        if self.abunds.is_none() || other.abunds.is_none() {
-            // TODO: throw error, we need abundance for this
-            unimplemented!() // @CTB fixme
-        }
-
-        // TODO: check which one is smaller, swap around if needed
-
-        let abunds = self.abunds.as_ref().unwrap();
-        let other_abunds = other.abunds.as_ref().unwrap();
-
-        let mut prod = 0;
-        let mut other_iter = other.mins.iter().enumerate();
-        let mut next_hash = other_iter.next();
-        let a_sq: u64 = abunds.iter().map(|a| (a * a)).sum();
-        let b_sq: u64 = other_abunds.iter().map(|a| (a * a)).sum();
-
-        for (i, hash) in self.mins.iter().enumerate() {
-            while let Some((j, k)) = next_hash {
-                match k.cmp(hash) {
-                    Ordering::Less => next_hash = other_iter.next(),
-                    Ordering::Equal => {
-                        // Calling `get_unchecked` here is safe since
-                        // both `i` and `j` are valid indices
-                        // (`i` and `j` came from valid iterator calls)
-                        unsafe {
-                            prod += abunds.get_unchecked(i) * other_abunds.get_unchecked(j);
-                        }
-                        break;
-                    }
-                    Ordering::Greater => break,
-                }
-            }
-        }
-
-        let norm_a = (a_sq as f64).sqrt();
-        let norm_b = (b_sq as f64).sqrt();
-
-        if norm_a == 0. || norm_b == 0. {
-            return Ok(0.0);
-        }
-        let prod = f64::min(prod as f64 / (norm_a * norm_b), 1.);
-        let distance = 2. * prod.acos() / PI;
-        Ok(1. - distance)
-    }
-
     pub fn similarity(
         &self,
         other: &KmerMinHash,
@@ -617,20 +589,45 @@ impl KmerMinHash {
                 (other, self)
             };
             let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
+            first.check_compatible(&downsampled_mh)?;
             first.similarity(&downsampled_mh, ignore_abundance, false)
         } else if ignore_abundance || self.abunds.is_none() || other.abunds.is_none() {
+            self.check_compatible(other)?;
             self.jaccard(other)
         } else {
+            self.check_compatible(other)?;
             self.angular_similarity(other)
         }
     }
 }
 
-impl MinHashOps for KmerMinHash {
+impl FracMinHashOps for KmerMinHash {
     fn max_hash(&self) -> u64 {
         self.max_hash
     }
 
+    // create a downsampled copy of self
+    fn downsample_max_hash(&self, max_hash: HashIntoType) -> Result<Self, Error> {
+        let scaled = scaled_for_max_hash(max_hash);
+
+        let mut new_mh = KmerMinHash::new(
+            scaled,
+            self.ksize,
+            self.hash_function,
+            self.seed,
+            self.abunds.is_some(),
+            self.num,
+        );
+        if self.abunds.is_some() {
+            new_mh.add_many_with_abund(&self.to_vec_abunds())?;
+        } else {
+            new_mh.add_many(&self.mins)?;
+        }
+        Ok(new_mh)
+    }
+}
+
+impl MinHashOps for KmerMinHash {
     fn clear(&mut self) {
         self.mins.clear();
         if let Some(ref mut abunds) = self.abunds {
@@ -640,41 +637,6 @@ impl MinHashOps for KmerMinHash {
 
     fn is_empty(&self) -> bool {
         self.mins.is_empty()
-    }
-
-    fn set_hash_function(&mut self, h: HashFunctions) -> Result<(), Error> {
-        if self.hash_function == h {
-            return Ok(());
-        }
-
-        if !self.is_empty() {
-            return Err(Error::NonEmptyMinHash {
-                message: "hash_function".into(),
-            });
-        }
-
-        self.hash_function = h;
-        Ok(())
-    }
-
-    fn track_abundance(&self) -> bool {
-        self.abunds.is_some()
-    }
-
-    fn enable_abundance(&mut self) -> Result<(), Error> {
-        if !self.mins.is_empty() {
-            return Err(Error::NonEmptyMinHash {
-                message: "track_abundance=True".into(),
-            });
-        }
-
-        self.abunds = Some(vec![]);
-
-        Ok(())
-    }
-
-    fn disable_abundance(&mut self) {
-        self.abunds = None;
     }
 
     fn reset_md5sum(&self) {
@@ -701,6 +663,54 @@ impl MinHashOps for KmerMinHash {
             *data = Some(format!("{:x}", md5_ctx.compute()));
         }
         data.clone().unwrap()
+    }
+
+    fn remove_hash(&mut self, hash: u64) {
+        if let Ok(pos) = self.mins.binary_search(&hash) {
+            if self.mins[pos] == hash {
+                self.mins.remove(pos);
+                self.reset_md5sum();
+                if let Some(ref mut abunds) = self.abunds {
+                    abunds.remove(pos);
+                }
+            }
+        };
+    }
+
+    fn mins(&self) -> Vec<u64> {
+        self.mins.clone()
+    }
+
+    fn as_hll(&self) -> HyperLogLog {
+        let mut hll = HyperLogLog::with_error_rate(0.01, self.ksize()).unwrap();
+
+        for h in &self.mins {
+            hll.add_hash(*h)
+        }
+
+        hll
+    }
+}
+
+impl AbundMinHashOps for KmerMinHash {
+    fn track_abundance(&self) -> bool {
+        self.abunds.is_some()
+    }
+
+    fn enable_abundance(&mut self) -> Result<(), Error> {
+        if !self.mins.is_empty() {
+            return Err(Error::NonEmptyMinHash {
+                message: "track_abundance=True".into(),
+            });
+        }
+
+        self.abunds = Some(vec![]);
+
+        Ok(())
+    }
+
+    fn disable_abundance(&mut self) {
+        self.abunds = None;
     }
 
     fn add_hash_with_abundance(&mut self, hash: u64, abundance: u64) {
@@ -791,27 +801,11 @@ impl MinHashOps for KmerMinHash {
         }
     }
 
-    fn remove_hash(&mut self, hash: u64) {
-        if let Ok(pos) = self.mins.binary_search(&hash) {
-            if self.mins[pos] == hash {
-                self.mins.remove(pos);
-                self.reset_md5sum();
-                if let Some(ref mut abunds) = self.abunds {
-                    abunds.remove(pos);
-                }
-            }
-        };
-    }
-
-    fn mins(&self) -> Vec<u64> {
-        self.mins.clone()
-    }
-
     fn abunds(&self) -> Option<Vec<u64>> {
         self.abunds.clone()
     }
 
-    fn to_vec_abunds(&self) -> Vec<(u64, u64)> {
+    fn to_vec_abunds(&self) -> Vec<(HashIntoType, u64)> {
         if let Some(abunds) = &self.abunds {
             self.mins
                 .iter()
@@ -825,16 +819,6 @@ impl MinHashOps for KmerMinHash {
                 .zip(std::iter::repeat(1))
                 .collect()
         }
-    }
-
-    fn as_hll(&self) -> HyperLogLog {
-        let mut hll = HyperLogLog::with_error_rate(0.01, self.ksize()).unwrap();
-
-        for h in &self.mins {
-            hll.add_hash(*h)
-        }
-
-        hll
     }
 }
 
@@ -857,6 +841,20 @@ impl SigsTrait for KmerMinHash {
 
     fn hash_function(&self) -> HashFunctions {
         self.hash_function
+    }
+    fn set_hash_function(&mut self, h: HashFunctions) -> Result<(), Error> {
+        if self.hash_function == h {
+            return Ok(());
+        }
+
+        if !self.is_empty() {
+            return Err(Error::NonEmptyMinHash {
+                message: "hash_function".into(),
+            });
+        }
+
+        self.hash_function = h;
+        Ok(())
     }
 
     fn add_hash(&mut self, hash: u64) {
@@ -1310,40 +1308,6 @@ impl KmerMinHashBTree {
         }
     }
 
-    // compare two minhashes, with abundance;
-    // calculate their angular similarity.
-    pub fn angular_similarity(&self, other: &KmerMinHashBTree) -> Result<f64, Error> {
-        self.check_compatible(other)?;
-
-        if self.abunds.is_none() || other.abunds.is_none() {
-            // TODO: throw error, we need abundance for this
-            unimplemented!() // @CTB fixme
-        }
-
-        let abunds = self.abunds.as_ref().unwrap();
-        let other_abunds = other.abunds.as_ref().unwrap();
-
-        let mut prod = 0;
-        let a_sq: u64 = abunds.values().map(|a| (a * a)).sum();
-        let b_sq: u64 = other_abunds.values().map(|a| (a * a)).sum();
-
-        for (hash, value) in abunds.iter() {
-            if let Some(oa) = other_abunds.get(hash) {
-                prod += value * oa
-            }
-        }
-
-        let norm_a = (a_sq as f64).sqrt();
-        let norm_b = (b_sq as f64).sqrt();
-
-        if norm_a == 0. || norm_b == 0. {
-            return Ok(0.0);
-        }
-        let prod = f64::min(prod as f64 / (norm_a * norm_b), 1.);
-        let distance = 2. * prod.acos() / PI;
-        Ok(1. - distance)
-    }
-
     pub fn similarity(
         &self,
         other: &KmerMinHashBTree,
@@ -1357,16 +1321,25 @@ impl KmerMinHashBTree {
                 (other, self)
             };
             let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
+            first.check_compatible(&downsampled_mh)?;
             first.similarity(&downsampled_mh, ignore_abundance, false)
         } else if ignore_abundance || self.abunds.is_none() || other.abunds.is_none() {
+            self.check_compatible(other)?;
             self.jaccard(other)
         } else {
+            self.check_compatible(other)?;
             self.angular_similarity(other)
         }
     }
+}
+
+impl FracMinHashOps for KmerMinHashBTree {
+    fn max_hash(&self) -> u64 {
+        self.max_hash
+    }
 
     // create a downsampled copy of self
-    pub fn downsample_max_hash(&self, max_hash: u64) -> Result<KmerMinHashBTree, Error> {
+    fn downsample_max_hash(&self, max_hash: HashIntoType) -> Result<Self, Error> {
         let scaled = scaled_for_max_hash(max_hash);
 
         let mut new_mh = KmerMinHashBTree::new(
@@ -1384,19 +1357,9 @@ impl KmerMinHashBTree {
         }
         Ok(new_mh)
     }
-
-    // create a downsampled copy of self
-    pub fn downsample_scaled(&self, scaled: u64) -> Result<KmerMinHashBTree, Error> {
-        let max_hash = max_hash_for_scaled(scaled);
-        self.downsample_max_hash(max_hash)
-    }
 }
 
 impl MinHashOps for KmerMinHashBTree {
-    fn max_hash(&self) -> u64 {
-        self.max_hash
-    }
-
     fn clear(&mut self) {
         self.mins.clear();
         if let Some(ref mut abunds) = self.abunds {
@@ -1407,41 +1370,6 @@ impl MinHashOps for KmerMinHashBTree {
 
     fn is_empty(&self) -> bool {
         self.mins.is_empty()
-    }
-
-    fn set_hash_function(&mut self, h: HashFunctions) -> Result<(), Error> {
-        if self.hash_function == h {
-            return Ok(());
-        }
-
-        if !self.is_empty() {
-            return Err(Error::NonEmptyMinHash {
-                message: "hash_function".into(),
-            });
-        }
-
-        self.hash_function = h;
-        Ok(())
-    }
-
-    fn track_abundance(&self) -> bool {
-        self.abunds.is_some()
-    }
-
-    fn enable_abundance(&mut self) -> Result<(), Error> {
-        if !self.mins.is_empty() {
-            return Err(Error::NonEmptyMinHash {
-                message: "track_abundance=True".into(),
-            });
-        }
-
-        self.abunds = Some(Default::default());
-
-        Ok(())
-    }
-
-    fn disable_abundance(&mut self) {
-        self.abunds = None;
     }
 
     fn reset_md5sum(&self) {
@@ -1468,6 +1396,54 @@ impl MinHashOps for KmerMinHashBTree {
             *data = Some(format!("{:x}", md5_ctx.compute()));
         }
         data.clone().unwrap()
+    }
+
+    fn remove_hash(&mut self, hash: u64) {
+        if self.mins.remove(&hash) {
+            self.reset_md5sum();
+            if let Some(ref mut abunds) = self.abunds {
+                abunds.remove(&hash);
+            }
+        }
+        if hash == self.current_max {
+            self.current_max = *self.mins.iter().rev().next().unwrap_or(&0);
+        }
+    }
+
+    fn mins(&self) -> Vec<u64> {
+        self.mins.iter().cloned().collect()
+    }
+
+    fn as_hll(&self) -> HyperLogLog {
+        let mut hll = HyperLogLog::with_error_rate(0.01, self.ksize()).unwrap();
+
+        for h in &self.mins {
+            hll.add_hash(*h)
+        }
+
+        hll
+    }
+}
+
+impl AbundMinHashOps for KmerMinHashBTree {
+    fn track_abundance(&self) -> bool {
+        self.abunds.is_some()
+    }
+
+    fn enable_abundance(&mut self) -> Result<(), Error> {
+        if !self.mins.is_empty() {
+            return Err(Error::NonEmptyMinHash {
+                message: "track_abundance=True".into(),
+            });
+        }
+
+        self.abunds = Some(Default::default());
+
+        Ok(())
+    }
+
+    fn disable_abundance(&mut self) {
+        self.abunds = None;
     }
 
     fn add_hash_with_abundance(&mut self, hash: u64, abundance: u64) {
@@ -1536,22 +1512,6 @@ impl MinHashOps for KmerMinHashBTree {
         }
     }
 
-    fn remove_hash(&mut self, hash: u64) {
-        if self.mins.remove(&hash) {
-            self.reset_md5sum();
-            if let Some(ref mut abunds) = self.abunds {
-                abunds.remove(&hash);
-            }
-        }
-        if hash == self.current_max {
-            self.current_max = *self.mins.iter().rev().next().unwrap_or(&0);
-        }
-    }
-
-    fn mins(&self) -> Vec<u64> {
-        self.mins.iter().cloned().collect()
-    }
-
     fn abunds(&self) -> Option<Vec<u64>> {
         self.abunds
             .as_ref()
@@ -1568,16 +1528,6 @@ impl MinHashOps for KmerMinHashBTree {
                 .zip(std::iter::repeat(1))
                 .collect()
         }
-    }
-
-    fn as_hll(&self) -> HyperLogLog {
-        let mut hll = HyperLogLog::with_error_rate(0.01, self.ksize()).unwrap();
-
-        for h in &self.mins {
-            hll.add_hash(*h)
-        }
-
-        hll
     }
 }
 
@@ -1600,6 +1550,21 @@ impl SigsTrait for KmerMinHashBTree {
 
     fn hash_function(&self) -> HashFunctions {
         self.hash_function
+    }
+
+    fn set_hash_function(&mut self, h: HashFunctions) -> Result<(), Error> {
+        if self.hash_function == h {
+            return Ok(());
+        }
+
+        if !self.is_empty() {
+            return Err(Error::NonEmptyMinHash {
+                message: "hash_function".into(),
+            });
+        }
+
+        self.hash_function = h;
+        Ok(())
     }
 
     fn add_hash(&mut self, hash: u64) {

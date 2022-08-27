@@ -187,6 +187,16 @@ impl SigsTrait for HyperLogLog {
         HashFunctions::murmur64_DNA
     }
 
+    fn set_hash_function(&mut self, h: HashFunctions) -> Result<(), Error> {
+        //TODO support other hash functions
+        if h != HashFunctions::murmur64_DNA {
+            return Err(Error::InvalidHashFunction {
+                function: h.to_string(),
+            });
+        }
+        Ok(())
+    }
+
     fn add_hash(&mut self, hash: HashIntoType) {
         let value = hash >> self.p;
         let index = (hash - (value << self.p)) as usize;
