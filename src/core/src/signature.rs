@@ -22,6 +22,8 @@ use crate::sketch::Sketch;
 use crate::Error;
 use crate::HashIntoType;
 
+// TODO: this is the behavior expected from Sketch, but that name is already
+// used. Sketchable?
 pub trait SigsTrait {
     fn size(&self) -> usize;
     fn to_vec(&self) -> Vec<u64>;
