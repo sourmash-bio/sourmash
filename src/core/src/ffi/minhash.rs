@@ -6,8 +6,7 @@ use crate::encodings::{aa_to_dayhoff, aa_to_hp, translate_codon, HashFunctions};
 use crate::ffi::utils::{ForeignObject, SourmashStr};
 use crate::signature::SeqToHashes;
 use crate::signature::SigsTrait;
-use crate::sketch::minhash::KmerMinHash;
-use crate::sketch::minhash::MinHashOps;
+use crate::sketch::minhash::{AbundMinHashOps, FracMinHashOps, KmerMinHash, MinHashOps};
 
 pub struct SourmashKmerMinHash;
 
