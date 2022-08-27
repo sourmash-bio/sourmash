@@ -264,20 +264,6 @@ pub fn prepare_query(search_sig: &Signature, template: &Sketch) -> Option<KmerMi
     search_mh
 }
 
-pub fn read_paths<P: AsRef<Path>>(
-    paths_file: P,
-) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
-    let paths = BufReader::new(File::open(paths_file)?);
-    Ok(paths
-        .lines()
-        .map(|line| {
-            let mut path = PathBuf::new();
-            path.push(line.unwrap());
-            path
-        })
-        .collect())
-}
-
 #[derive(Debug, PartialEq, Clone, Archive, Serialize, Deserialize, Hash)]
 pub enum Datasets {
     Empty,
