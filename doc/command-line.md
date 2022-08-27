@@ -49,7 +49,7 @@ Finally, plot a dendrogram: ``` sourmash plot cmp.dist --labels ```
 This will output three files, `cmp.dist.dendro.png`,
 `cmp.dist.matrix.png`, and `cmp.dist.hist.png`, containing a
 clustering & dendrogram of the sequences, a similarity matrix and
-heatmap, and a histogram of the pairwise distances between the three
+heatmap, and a histogram of the pairwise similarities between the three
 genomes.
 
 Matrix:
@@ -75,8 +75,8 @@ There are seven main subcommands: `sketch`, `compare`, `plot`,
 [the tutorial](tutorials.md) for a walkthrough of these commands.
 
 * `sketch` creates signatures.
-* `compare` compares signatures and builds a distance matrix.
-* `plot` plots distance matrices created by `compare`.
+* `compare` compares signatures and builds a similarity matrix.
+* `plot` plots similarity matrices created by `compare`.
 * `search` finds matches to a query signature in a collection of signatures.
 * `gather` finds the best reference genomes for a metagenome, using the provided collection of signatures.
 * `index` builds a fast index for many (thousands) of signatures.
@@ -199,6 +199,10 @@ with `--output` and used with the `sourmash plot` subcommand (or loaded
 with `numpy.load(...)`.  Using `--csv` will output a CSV file that can
 be loaded into other languages than Python, such as R.
 
+As of sourmash 4.4.0, `compare` also supports Average Nucleotide
+Identity (ANI) estimates instead of Jaccard or containment index; use
+`--ani` to enable this.
+
 Usage:
 ```
 sourmash compare file1.sig [ file2.sig ... ]
@@ -206,20 +210,36 @@ sourmash compare file1.sig [ file2.sig ... ]
 
 Options:
 
-* `--output` -- save the distance matrix to this file (as a numpy binary matrix)
+* `--output` -- save the output matrix to this file (as a numpy binary matrix).
+* `--distance-matrix` -- create and output a distance matrix, instead of a similarity matrix.
 * `--ksize` -- do the comparisons at this k-mer size.
 * `--containment` -- calculate containment instead of similarity; `C(i, j) = size(i intersection j) / size(i)`
+* `--ani` -- output estimates of Average Nucleotide Identity (ANI) instead of Jaccard similarity or containment.
 * `--from-file` -- append the list of files in this text file to the input
         signatures.
 * `--ignore-abundance` -- ignore abundances in signatures.
 * `--picklist` -- select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
 
-**Note:** compare by default produces a symmetric similarity matrix that can be used as an input to clustering. With `--containment`, however, this matrix is no longer symmetric and cannot formally be used for clustering.
+**Note:** compare by default produces a symmetric similarity matrix
+that can be used for clustering in downstream tasks. With `--containment`,
+however, this matrix is no longer symmetric and cannot formally be
+used for clustering.
+
+The containment matrix is organized such that the value in row A for column B is the containment of the B'th sketch in the A'th sketch, i.e.
+
+```
+C(A, B) = B.contained_by(A)
+```
+
+**Note:** The ANI estimate will be calculated based on Jaccard similarity
+by default; however, if `--containment`, `--max-containment`, or `--avg-containment` is
+specified, those values will be used instead. With `--containment --ani`, the
+ANI output matrix will be asymmetric as discussed above.
 
 ### `sourmash plot` - cluster and visualize comparisons of many signatures
 
 The `plot` subcommand produces two plots -- a dendrogram and a
-dendrogram+matrix -- from a distance matrix created by `sourmash compare
+dendrogram+matrix -- from a matrix created by `sourmash compare
 --output <matrix>`.  The default output is two PNG files.
 
 Usage:
@@ -598,6 +618,62 @@ d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Ente
 
 To produce multiple output types from the same command, add the types into the
  `--output-format` argument, e.g. `--output-format summary krona lineage_summary`
+
+
+#### `kreport` output format
+
+The `kreport` output reports kraken-style `kreport` output, which may be useful for
+comparison with other taxonomic profiling methods. While this format typically
+records the percent of number of reads assigned to taxa, we create ~comparable
+output by reporting the percent of k-mers (abundance-weighted percent containment)
+and the total number of unique k-mers matched.
+
+standard `kreport` columns:
+- `Percent Reads Contained in Taxon`: The cumulative percentage of reads for this taxon and all descendants.
+- `Number of Reads Contained in Taxon`: The cumulative number of reads for this taxon and all descendants.
+- `Number of Reads Assigned to Taxon`: The number of reads assigned directly to this taxon (not a cumulative count of all descendants).
+- `Rank Code`: (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies.
+- `NCBI Taxon ID`: Numerical ID from the NCBI taxonomy database.
+- `Scientific Name`: The scientific name of the taxon.
+
+Example reads-based `kreport` with all columns:
+
+```
+    88.41	2138742	193618	K	2	Bacteria
+    0.16	3852	818	P	201174	  Actinobacteria
+    0.13	3034	0	C	1760	    Actinomycetia
+    0.13	3034	45	O	85009	      Propionibacteriales
+    0.12	2989	1847	F	31957	        Propionibacteriaceae
+    0.05	1142	352	G	1912216	          Cutibacterium
+    0.03	790	790	S	1747	            Cutibacterium acnes
+```
+
+current sourmash `kreport` caveats:
+- `Percent Reads [k-mers] Contained in Taxon`: weighted by k-mer abundance
+- `Number of Reads [bp from k-mers] Contained in Taxon`: NOT WEIGHTED BY ABUNDANCE
+- `Number of Reads Assigned to Taxon` and `NCBI Taxon ID` will not be reported (blank entries).
+- Rows are ordered by rank and then percent containment.
+
+example sourmash `{output-name}.kreport.txt`:
+
+```
+0.13	1024000		D		d__Bacteria
+0.87	3990000		U		unclassified
+0.07	582000		P		p__Bacteroidota
+0.06	442000		P		p__Proteobacteria
+0.07	582000		C		c__Bacteroidia
+0.06	442000		C		c__Gammaproteobacteria
+0.07	582000		O		o__Bacteroidales
+0.06	442000		O		o__Enterobacterales
+0.07	582000		F		f__Bacteroidaceae
+0.06	442000		F		f__Enterobacteriaceae
+0.06	444000		G		g__Prevotella
+0.06	442000		G		g__Escherichia
+0.02	138000		G		g__Phocaeicola
+0.06	444000		S		s__Prevotella copri
+0.06	442000		S		s__Escherichia coli
+0.02	138000		S		s__Phocaeicola vulgatus
+```
 
 
 ### `sourmash tax genome` - classify a genome using `gather` results

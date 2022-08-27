@@ -169,16 +169,26 @@ def compare(args):
         similarity = compare_all_pairs(siglist, args.ignore_abundance,
                                        n_jobs=args.processes, return_ani=return_ani)
 
+    # if distance matrix desired, switch to 1-similarity
+    if args.distance_matrix:
+        matrix = 1 - similarity
+    else:
+        matrix = similarity
+
     if len(siglist) < 30:
-        for i, E in enumerate(siglist):
+        for i, ss in enumerate(siglist):
             # for small matrices, pretty-print some output
-            name_num = '{}-{}'.format(i, str(E))
+            name_num = '{}-{}'.format(i, str(ss))
             if len(name_num) > 20:
                 name_num = name_num[:17] + '...'
-            print_results('{:20s}\t{}'.format(name_num, similarity[i, :, ],))
+            print_results('{:20s}\t{}'.format(name_num, matrix[i, :, ],))
 
-    print_results('min similarity in matrix: {:.3f}', numpy.min(similarity))
-    # shall we output a matrix?
+    if args.distance_matrix:
+        print_results('max distance in matrix: {:.3f}', numpy.max(matrix))
+    else:
+        print_results('min similarity in matrix: {:.3f}', numpy.min(matrix))
+
+    # shall we output a matrix to stdout?
     if args.output:
         labeloutname = args.output + '.labels.txt'
         notify(f'saving labels to: {labeloutname}')
@@ -187,7 +197,7 @@ def compare(args):
 
         notify(f'saving comparison matrix to: {args.output}')
         with open(args.output, 'wb') as fp:
-            numpy.save(fp, similarity)
+            numpy.save(fp, matrix)
 
     # output CSV?
     if args.csv:
@@ -198,11 +208,14 @@ def compare(args):
             for i in range(len(labeltext)):
                 y = []
                 for j in range(len(labeltext)):
-                    y.append('{}'.format(similarity[i][j]))
+                    y.append(str(matrix[i][j]))
                 w.writerow(y)
 
     if size_may_be_inaccurate:
-        notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will be set to 0 for these comparisons.")
+        if args.distance_matrix:
+            notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI distances will be set to 1 for these comparisons.")
+        else:
+            notify("WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will be set to 1 for these comparisons.")
 
 
 def plot(args):
