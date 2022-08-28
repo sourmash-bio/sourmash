@@ -795,6 +795,8 @@ impl Default for Signature {
 
 impl PartialEq for Signature {
     fn eq(&self, other: &Signature) -> bool {
+        use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
+
         let metadata = self.class == other.class
             && self.email == other.email
             && self.hash_function == other.hash_function
@@ -803,14 +805,25 @@ impl PartialEq for Signature {
 
         // TODO: find the right signature
         // as long as we have a matching
-        if let Sketch::MinHash(mh) = &self.signatures[0] {
-            if let Sketch::MinHash(other_mh) = &other.signatures[0] {
-                return metadata && (mh == other_mh);
-            }
-        } else {
-            unimplemented!()
+        match &self.signatures[0] {
+            Sketch::MinHash(mh) => match &other.signatures[0] {
+                Sketch::MinHash(other_mh) => return metadata && (mh == other_mh),
+                Sketch::LargeMinHash(other_mh) => {
+                    // TODO: avoid clone
+                    metadata && (mh == &Into::<KmerMinHash>::into(other_mh.clone()))
+                }
+                Sketch::HyperLogLog(_) => todo!(),
+            },
+            Sketch::LargeMinHash(mh) => match &other.signatures[0] {
+                Sketch::LargeMinHash(other_mh) => return metadata && (mh == other_mh),
+                Sketch::MinHash(other_mh) => {
+                    // TODO: avoid clone
+                    metadata && (mh == &Into::<KmerMinHashBTree>::into(other_mh.clone()))
+                }
+                Sketch::HyperLogLog(_) => todo!(),
+            },
+            Sketch::HyperLogLog(_) => todo!(),
         }
-        metadata
     }
 }
 
