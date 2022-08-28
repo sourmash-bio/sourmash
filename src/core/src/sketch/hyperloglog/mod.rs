@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use crate::encodings::HashFunctions;
 use crate::prelude::*;
 use crate::signature::SigsTrait;
-use crate::sketch::KmerMinHash;
+use crate::sketch::{KmerMinHash, KmerMinHashBTree};
 use crate::Error;
 use crate::HashIntoType;
 
@@ -219,6 +219,15 @@ impl SigsTrait for HyperLogLog {
         } else {
             Ok(())
         }
+    }
+}
+
+impl Update<HyperLogLog> for KmerMinHashBTree {
+    fn update(&self, other: &mut HyperLogLog) -> Result<(), Error> {
+        for h in self.mins() {
+            other.add_hash(h);
+        }
+        Ok(())
     }
 }
 

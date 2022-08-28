@@ -5,7 +5,7 @@ import sys
 from tempfile import NamedTemporaryFile
 
 from ._lowlevel import ffi, lib
-from .minhash import to_bytes, MinHash
+from .minhash import to_bytes, MinHash, FrozenMinHash
 from .utils import RustObject, rustcall, decode_str
 from .exceptions import SourmashError
 
