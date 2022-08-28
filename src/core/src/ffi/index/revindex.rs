@@ -43,7 +43,7 @@ unsafe fn revindex_new_with_paths(
     let template = {
         assert!(!template_ptr.is_null());
         //TODO: avoid clone here
-        Sketch::MinHash(SourmashKmerMinHash::as_rust(template_ptr).clone())
+        Sketch::MinHash(SourmashKmerMinHash::as_rust(template_ptr).clone().into())
     };
 
     let queries_vec: Vec<KmerMinHash>;
@@ -54,7 +54,7 @@ unsafe fn revindex_new_with_paths(
             .iter()
             .map(|mh_ptr|
             // TODO: avoid this clone
-          SourmashKmerMinHash::as_rust(*mh_ptr).clone())
+          SourmashKmerMinHash::as_rust(*mh_ptr).clone().into())
             .collect();
         Some(queries_vec.as_ref())
     };
@@ -90,7 +90,7 @@ unsafe fn revindex_new_with_sigs(
     let template = {
         assert!(!template_ptr.is_null());
         //TODO: avoid clone here
-        Sketch::MinHash(SourmashKmerMinHash::as_rust(template_ptr).clone())
+        Sketch::MinHash(SourmashKmerMinHash::as_rust(template_ptr).clone().into())
     };
 
     let queries_vec: Vec<KmerMinHash>;
@@ -101,7 +101,7 @@ unsafe fn revindex_new_with_sigs(
             .iter()
             .map(|mh_ptr|
             // TODO: avoid this clone
-          SourmashKmerMinHash::as_rust(*mh_ptr).clone())
+          SourmashKmerMinHash::as_rust(*mh_ptr).clone().into())
             .collect();
         Some(queries_vec.as_ref())
     };

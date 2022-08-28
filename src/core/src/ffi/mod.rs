@@ -12,6 +12,7 @@ pub mod index;
 pub mod minhash;
 pub mod nodegraph;
 pub mod signature;
+pub mod sketch;
 pub mod storage;
 
 use std::ffi::CStr;
