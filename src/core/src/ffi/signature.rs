@@ -10,7 +10,6 @@ use crate::sketch::Sketch;
 
 use crate::ffi::cmd::compute::SourmashComputeParameters;
 use crate::ffi::minhash::{MinHash, SourmashKmerMinHash};
-use crate::ffi::sketch::SourmashSketch;
 use crate::ffi::utils::{ForeignObject, SourmashStr};
 
 pub struct SourmashSignature;
