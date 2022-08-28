@@ -6,30 +6,33 @@ use crate::encodings::{aa_to_dayhoff, aa_to_hp, translate_codon, HashFunctions};
 use crate::ffi::utils::{ForeignObject, SourmashStr};
 use crate::signature::SeqToHashes;
 use crate::signature::SigsTrait;
+use crate::sketch::hyperloglog::HyperLogLog;
 use crate::sketch::minhash::{
     AbundMinHashOps, FracMinHashOps, KmerMinHash, KmerMinHashBTree, MinHashOps,
 };
+use crate::sketch::Sketch;
+use crate::Error;
+use crate::HashIntoType;
 
-pub struct SourmashKmerMinHash;
-pub struct SourmashFrozenKmerMinHash;
-
-impl ForeignObject for SourmashFrozenKmerMinHash {
-    type RustObject = KmerMinHash;
+#[derive(Clone)]
+pub enum MinHash {
+    Mutable(KmerMinHashBTree),
+    Frozen(KmerMinHash),
 }
 
+pub struct SourmashKmerMinHash;
+
 #[no_mangle]
-pub unsafe extern "C" fn frozenkmerminhash_to_mutable(
-    ptr: *const SourmashFrozenKmerMinHash,
+pub unsafe extern "C" fn kmerminhash_to_mutable(
+    ptr: *const SourmashKmerMinHash,
 ) -> *mut SourmashKmerMinHash {
-    let mh = SourmashFrozenKmerMinHash::as_rust(ptr);
+    let mh = SourmashKmerMinHash::as_rust(ptr);
 
-    let mh_new = mh.clone().into();
-
-    SourmashKmerMinHash::from_rust(mh_new)
+    SourmashKmerMinHash::from_rust(mh.clone().to_mutable())
 }
 
 impl ForeignObject for SourmashKmerMinHash {
-    type RustObject = KmerMinHashBTree;
+    type RustObject = MinHash;
 }
 
 #[no_mangle]
@@ -43,7 +46,7 @@ pub unsafe extern "C" fn kmerminhash_new(
 ) -> *mut SourmashKmerMinHash {
     let mh = KmerMinHashBTree::new(scaled, k, hash_function, seed, track_abundance, n);
 
-    SourmashKmerMinHash::from_rust(mh)
+    SourmashKmerMinHash::from_rust(MinHash::Mutable(mh))
 }
 
 #[no_mangle]
@@ -54,12 +57,10 @@ pub unsafe extern "C" fn kmerminhash_free(ptr: *mut SourmashKmerMinHash) {
 #[no_mangle]
 pub unsafe extern "C" fn kmerminhash_to_frozen(
     ptr: *const SourmashKmerMinHash,
-) -> *mut SourmashFrozenKmerMinHash {
+) -> *mut SourmashKmerMinHash {
     let mh = SourmashKmerMinHash::as_rust(ptr);
 
-    let mh_new = mh.clone().into();
-
-    SourmashFrozenKmerMinHash::from_rust(mh_new)
+    SourmashKmerMinHash::from_rust(mh.clone().to_frozen())
 }
 
 #[no_mangle]
@@ -500,6 +501,7 @@ unsafe fn kmerminhash_similarity(ptr: *const SourmashKmerMinHash, other: *const 
     mh.similarity(other_mh, ignore_abundance, downsample)
 }
 }
+
 ffi_fn! {
 unsafe fn kmerminhash_angular_similarity(ptr: *const SourmashKmerMinHash, other: *const SourmashKmerMinHash)
                                          -> Result<f64> {
@@ -507,4 +509,392 @@ unsafe fn kmerminhash_angular_similarity(ptr: *const SourmashKmerMinHash, other:
     let other_mh = SourmashKmerMinHash::as_rust(other);
     mh.angular_similarity(other_mh)
 }
+}
+
+impl MinHash {
+    pub fn to_mutable(self) -> MinHash {
+        match self {
+            MinHash::Mutable(mh) => MinHash::Mutable(mh),
+            MinHash::Frozen(mh) => MinHash::Mutable(mh.into()),
+        }
+    }
+
+    pub fn to_frozen(self) -> MinHash {
+        match self {
+            MinHash::Mutable(mh) => MinHash::Frozen(mh.into()),
+            MinHash::Frozen(mh) => MinHash::Frozen(mh),
+        }
+    }
+
+    pub fn num(&self) -> u32 {
+        match self {
+            MinHash::Mutable(mh) => mh.num(),
+            MinHash::Frozen(mh) => mh.num(),
+        }
+    }
+
+    pub fn count_common(&self, other: &MinHash, downsample: bool) -> Result<u64, Error> {
+        match *self {
+            MinHash::Mutable(ref mh) => match other {
+                MinHash::Mutable(ref ot) => mh.count_common(ot, downsample),
+                MinHash::Frozen(ref ot) => {
+                    Into::<KmerMinHash>::into(mh.clone()).count_common(ot, downsample)
+                }
+                _ => Err(Error::MismatchSignatureType),
+            },
+
+            MinHash::Frozen(ref mh) => match other {
+                MinHash::Frozen(ref ot) => mh.count_common(ot, downsample),
+                MinHash::Mutable(ref ot) => {
+                    Into::<KmerMinHashBTree>::into(mh.clone()).count_common(ot, downsample)
+                }
+                _ => Err(Error::MismatchSignatureType),
+            },
+        }
+    }
+
+    pub fn merge(&mut self, other: &MinHash) -> Result<(), Error> {
+        match *self {
+            MinHash::Mutable(ref mut mh) => match other {
+                MinHash::Mutable(ref ot) => mh.merge(ot),
+                MinHash::Frozen(ref ot) => Into::<KmerMinHash>::into(mh.clone()).merge(ot),
+                _ => Err(Error::MismatchSignatureType),
+            },
+
+            MinHash::Frozen(ref mut mh) => match other {
+                MinHash::Frozen(ref ot) => mh.merge(ot),
+                MinHash::Mutable(ref ot) => Into::<KmerMinHashBTree>::into(mh.clone()).merge(ot),
+                _ => Err(Error::MismatchSignatureType),
+            },
+        }
+    }
+
+    pub fn similarity(
+        &self,
+        other: &MinHash,
+        ignore_abundance: bool,
+        downsample: bool,
+    ) -> Result<f64, Error> {
+        match *self {
+            MinHash::Mutable(ref mh) => match other {
+                MinHash::Mutable(ref ot) => mh.similarity(ot, ignore_abundance, downsample),
+                MinHash::Frozen(ref ot) => Into::<KmerMinHash>::into(mh.clone()).similarity(
+                    ot,
+                    ignore_abundance,
+                    downsample,
+                ),
+                _ => Err(Error::MismatchSignatureType),
+            },
+
+            MinHash::Frozen(ref mh) => {
+                match other {
+                    MinHash::Frozen(ref ot) => mh.similarity(ot, ignore_abundance, downsample),
+                    MinHash::Mutable(ref ot) => Into::<KmerMinHashBTree>::into(mh.clone())
+                        .similarity(ot, ignore_abundance, downsample),
+                    _ => Err(Error::MismatchSignatureType),
+                }
+            }
+        }
+    }
+
+    pub fn jaccard(&self, other: &MinHash) -> Result<f64, Error> {
+        match *self {
+            MinHash::Mutable(ref mh) => match other {
+                MinHash::Mutable(ref ot) => mh.jaccard(ot),
+                MinHash::Frozen(ref ot) => Into::<KmerMinHash>::into(mh.clone()).jaccard(ot),
+                _ => Err(Error::MismatchSignatureType),
+            },
+
+            MinHash::Frozen(ref mh) => match other {
+                MinHash::Frozen(ref ot) => mh.jaccard(ot),
+                MinHash::Mutable(ref ot) => Into::<KmerMinHashBTree>::into(mh.clone()).jaccard(ot),
+                _ => Err(Error::MismatchSignatureType),
+            },
+        }
+    }
+
+    pub fn intersection_size(&self, other: &MinHash) -> Result<(u64, u64), Error> {
+        match *self {
+            MinHash::Mutable(ref mh) => match other {
+                MinHash::Mutable(ref ot) => mh.intersection_size(ot),
+                MinHash::Frozen(ref ot) => {
+                    Into::<KmerMinHash>::into(mh.clone()).intersection_size(ot)
+                }
+                _ => Err(Error::MismatchSignatureType),
+            },
+
+            MinHash::Frozen(ref mh) => match other {
+                MinHash::Frozen(ref ot) => mh.intersection_size(ot),
+                MinHash::Mutable(ref ot) => {
+                    Into::<KmerMinHashBTree>::into(mh.clone()).intersection_size(ot)
+                }
+                _ => Err(Error::MismatchSignatureType),
+            },
+        }
+    }
+
+    pub fn intersection(&self, other: &MinHash) -> Result<(Vec<HashIntoType>, u64), Error> {
+        match *self {
+            MinHash::Mutable(ref mh) => match other {
+                MinHash::Mutable(ref ot) => mh.intersection(ot),
+                MinHash::Frozen(ref ot) => Into::<KmerMinHash>::into(mh.clone()).intersection(ot),
+                _ => Err(Error::MismatchSignatureType),
+            },
+
+            MinHash::Frozen(ref mh) => match other {
+                MinHash::Frozen(ref ot) => mh.intersection(ot),
+                MinHash::Mutable(ref ot) => {
+                    Into::<KmerMinHashBTree>::into(mh.clone()).intersection(ot)
+                }
+                _ => Err(Error::MismatchSignatureType),
+            },
+        }
+    }
+
+    pub fn add_from(&mut self, other: &MinHash) -> Result<(), Error> {
+        match *self {
+            MinHash::Mutable(ref mut mh) => match other {
+                MinHash::Mutable(ref ot) => mh.add_from(ot),
+                MinHash::Frozen(ref ot) => Into::<KmerMinHash>::into(mh.clone()).add_from(ot),
+                _ => Err(Error::MismatchSignatureType),
+            },
+
+            MinHash::Frozen(ref mut mh) => match other {
+                MinHash::Frozen(ref ot) => mh.add_from(ot),
+                MinHash::Mutable(ref ot) => Into::<KmerMinHashBTree>::into(mh.clone()).add_from(ot),
+                _ => Err(Error::MismatchSignatureType),
+            },
+        }
+    }
+
+    pub fn remove_from(&mut self, other: &MinHash) -> Result<(), Error> {
+        match *self {
+            MinHash::Mutable(ref mut mh) => match other {
+                MinHash::Mutable(ref ot) => mh.remove_from(ot),
+                MinHash::Frozen(ref ot) => Into::<KmerMinHash>::into(mh.clone()).remove_from(ot),
+                _ => Err(Error::MismatchSignatureType),
+            },
+
+            MinHash::Frozen(ref mut mh) => match other {
+                MinHash::Frozen(ref ot) => mh.remove_from(ot),
+                MinHash::Mutable(ref ot) => {
+                    Into::<KmerMinHashBTree>::into(mh.clone()).remove_from(ot)
+                }
+                _ => Err(Error::MismatchSignatureType),
+            },
+        }
+    }
+}
+
+impl From<MinHash> for Sketch {
+    fn from(mh: MinHash) -> Sketch {
+        match mh {
+            // TODO: avoid clone
+            MinHash::Mutable(mh) => Sketch::LargeMinHash(mh),
+            MinHash::Frozen(mh) => Sketch::MinHash(mh),
+        }
+    }
+}
+
+impl FracMinHashOps for MinHash {
+    fn max_hash(&self) -> HashIntoType {
+        match *self {
+            MinHash::Mutable(ref mh) => mh.max_hash(),
+            MinHash::Frozen(ref mh) => mh.max_hash(),
+        }
+    }
+
+    fn downsample_max_hash(&self, max_hash: HashIntoType) -> Result<Self, Error> {
+        match *self {
+            MinHash::Mutable(ref mh) => Ok(MinHash::Mutable(mh.downsample_max_hash(max_hash)?)),
+            MinHash::Frozen(ref mh) => Ok(MinHash::Frozen(mh.downsample_max_hash(max_hash)?)),
+        }
+    }
+}
+
+impl AbundMinHashOps for MinHash {
+    fn track_abundance(&self) -> bool {
+        match *self {
+            MinHash::Mutable(ref mh) => mh.track_abundance(),
+            MinHash::Frozen(ref mh) => mh.track_abundance(),
+        }
+    }
+
+    fn enable_abundance(&mut self) -> Result<(), Error> {
+        match *self {
+            MinHash::Mutable(ref mut mh) => mh.enable_abundance(),
+            MinHash::Frozen(ref mut mh) => mh.enable_abundance(),
+        }
+    }
+
+    fn disable_abundance(&mut self) {
+        match *self {
+            MinHash::Mutable(ref mut mh) => mh.disable_abundance(),
+            MinHash::Frozen(ref mut mh) => mh.disable_abundance(),
+        }
+    }
+
+    fn add_hash_with_abundance(&mut self, hash: HashIntoType, abundance: u64) {
+        match *self {
+            MinHash::Mutable(ref mut mh) => mh.add_hash_with_abundance(hash, abundance),
+            MinHash::Frozen(ref mut mh) => mh.add_hash_with_abundance(hash, abundance),
+        }
+    }
+
+    fn set_hash_with_abundance(&mut self, hash: HashIntoType, abundance: u64) {
+        match *self {
+            MinHash::Mutable(ref mut mh) => mh.set_hash_with_abundance(hash, abundance),
+            MinHash::Frozen(ref mut mh) => mh.set_hash_with_abundance(hash, abundance),
+        }
+    }
+
+    fn abunds(&self) -> Option<Vec<u64>> {
+        match *self {
+            MinHash::Mutable(ref mh) => mh.abunds(),
+            MinHash::Frozen(ref mh) => mh.abunds(),
+        }
+    }
+
+    fn to_vec_abunds(&self) -> Vec<(HashIntoType, u64)> {
+        match *self {
+            MinHash::Mutable(ref mh) => mh.to_vec_abunds(),
+            MinHash::Frozen(ref mh) => mh.to_vec_abunds(),
+        }
+    }
+}
+
+impl MinHashOps for MinHash {
+    fn clear(&mut self) {
+        match *self {
+            MinHash::Mutable(ref mut mh) => mh.clear(),
+            MinHash::Frozen(ref mut mh) => mh.clear(),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        match *self {
+            MinHash::Mutable(ref mh) => mh.is_empty(),
+            MinHash::Frozen(ref mh) => mh.is_empty(),
+        }
+    }
+
+    fn reset_md5sum(&self) {
+        match *self {
+            MinHash::Mutable(ref mh) => mh.reset_md5sum(),
+            MinHash::Frozen(ref mh) => mh.reset_md5sum(),
+        }
+    }
+
+    fn md5sum(&self) -> String {
+        match *self {
+            MinHash::Mutable(ref mh) => mh.md5sum(),
+            MinHash::Frozen(ref mh) => mh.md5sum(),
+        }
+    }
+
+    fn mins(&self) -> Vec<HashIntoType> {
+        match *self {
+            MinHash::Mutable(ref mh) => mh.mins(),
+            MinHash::Frozen(ref mh) => mh.mins(),
+        }
+    }
+
+    fn remove_hash(&mut self, hash: HashIntoType) {
+        match *self {
+            MinHash::Mutable(ref mut mh) => mh.remove_hash(hash),
+            MinHash::Frozen(ref mut mh) => mh.remove_hash(hash),
+        }
+    }
+
+    fn as_hll(&self) -> HyperLogLog {
+        match *self {
+            MinHash::Mutable(ref mh) => mh.as_hll(),
+            MinHash::Frozen(ref mh) => mh.as_hll(),
+        }
+    }
+}
+
+impl SigsTrait for MinHash {
+    fn size(&self) -> usize {
+        match *self {
+            MinHash::Mutable(ref mh) => mh.size(),
+            MinHash::Frozen(ref mh) => mh.size(),
+        }
+    }
+
+    fn to_vec(&self) -> Vec<u64> {
+        match *self {
+            MinHash::Mutable(ref mh) => mh.to_vec(),
+            MinHash::Frozen(ref mh) => mh.to_vec(),
+        }
+    }
+
+    fn ksize(&self) -> usize {
+        match *self {
+            MinHash::Mutable(ref mh) => mh.ksize(),
+            MinHash::Frozen(ref mh) => mh.ksize(),
+        }
+    }
+
+    fn seed(&self) -> u64 {
+        match *self {
+            MinHash::Mutable(ref mh) => mh.seed(),
+            MinHash::Frozen(ref mh) => mh.seed(),
+        }
+    }
+
+    fn hash_function(&self) -> HashFunctions {
+        match *self {
+            MinHash::Mutable(ref mh) => mh.hash_function(),
+            MinHash::Frozen(ref mh) => mh.hash_function(),
+        }
+    }
+
+    fn set_hash_function(&mut self, h: HashFunctions) -> Result<(), Error> {
+        match *self {
+            MinHash::Mutable(ref mut mh) => mh.set_hash_function(h),
+            MinHash::Frozen(ref mut mh) => mh.set_hash_function(h),
+        }
+    }
+
+    fn add_hash(&mut self, hash: HashIntoType) {
+        match *self {
+            MinHash::Mutable(ref mut mh) => mh.add_hash(hash),
+            MinHash::Frozen(ref mut mh) => mh.add_hash(hash),
+        }
+    }
+
+    fn check_compatible(&self, other: &Self) -> Result<(), Error> {
+        match *self {
+            MinHash::Mutable(ref mh) => match other {
+                MinHash::Mutable(ref ot) => mh.check_compatible(ot),
+                MinHash::Frozen(ref ot) => {
+                    Into::<KmerMinHash>::into(mh.clone()).check_compatible(ot)
+                }
+                _ => Err(Error::MismatchSignatureType),
+            },
+
+            MinHash::Frozen(ref mh) => match other {
+                MinHash::Frozen(ref ot) => mh.check_compatible(ot),
+                MinHash::Mutable(ref ot) => {
+                    Into::<KmerMinHashBTree>::into(mh.clone()).check_compatible(ot)
+                }
+                _ => Err(Error::MismatchSignatureType),
+            },
+        }
+    }
+
+    fn add_sequence(&mut self, seq: &[u8], force: bool) -> Result<(), Error> {
+        match *self {
+            MinHash::Mutable(ref mut mh) => mh.add_sequence(seq, force),
+            MinHash::Frozen(ref mut mh) => mh.add_sequence(seq, force),
+        }
+    }
+
+    fn add_protein(&mut self, seq: &[u8]) -> Result<(), Error> {
+        match *self {
+            MinHash::Mutable(ref mut mh) => mh.add_protein(seq),
+            MinHash::Frozen(ref mut mh) => mh.add_protein(seq),
+        }
+    }
 }

@@ -1055,8 +1055,6 @@ class MinHash(RustObject):
 
 
 class FrozenMinHash(MinHash):
-    __dealloc_func__ = lib.frozenkmerminhash_free
-
     def add_sequence(self, *args, **kwargs):
         raise TypeError('FrozenMinHash does not support modification')
 
@@ -1109,7 +1107,7 @@ class FrozenMinHash(MinHash):
 
     def to_mutable(self):
         "Return a copy of this MinHash that can be changed."
-        new_mh_ptr = self._methodcall(lib.frozenkmerminhash_to_mutable)
+        new_mh_ptr = self._methodcall(lib.kmerminhash_to_mutable)
         return MinHash._from_objptr(new_mh_ptr)
 
     def to_frozen(self):

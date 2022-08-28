@@ -43,14 +43,14 @@ class SourmashSignature(RustObject):
 
     @property
     def minhash(self):
-        return FrozenMinHash._from_objptr(
-            self._methodcall(lib.signature_first_sketch)
-        )
+        return MinHash._from_objptr(
+            self._methodcall(lib.signature_first_mh)
+        ).to_frozen()
 
     @minhash.setter
     def minhash(self, value):
         # TODO: validate value is a MinHash
-        self._methodcall(lib.signature_set_sketch, value._objptr)
+        self._methodcall(lib.signature_set_mh, value._objptr)
 
     def __hash__(self):
         return hash(self.md5sum())

@@ -11,6 +11,7 @@ use crate::signature::Signature;
 use crate::sketch::Sketch;
 
 use crate::ffi::cmd::compute::SourmashComputeParameters;
+use crate::ffi::minhash::{MinHash, SourmashKmerMinHash};
 use crate::ffi::sketch::SourmashSketch;
 use crate::ffi::utils::{ForeignObject, SourmashStr};
 
@@ -117,27 +118,36 @@ unsafe fn signature_set_filename(ptr: *mut SourmashSignature, name: *const c_cha
 }
 
 ffi_fn! {
-unsafe fn signature_set_sketch(ptr: *mut SourmashSignature, other: *const SourmashSketch) ->
-    Result<()> {
+unsafe fn signature_set_mh(
+    ptr: *mut SourmashSignature,
+    other: *const SourmashKmerMinHash,
+) -> Result<()> {
     let sig = SourmashSignature::as_rust_mut(ptr);
-    let sketch = SourmashSketch::as_rust(other);
+    let mh = SourmashKmerMinHash::as_rust(other);
     sig.reset_sketches();
     // TODO(lirber): avoid clone here
-    sig.push(sketch.clone());
+    sig.push(mh.clone().into());
     Ok(())
 }
 }
 
 ffi_fn! {
-unsafe fn signature_first_sketch(ptr: *const SourmashSignature) -> Result<*mut SourmashSketch> {
+unsafe fn signature_first_mh(ptr: *const SourmashSignature) -> Result<*mut SourmashKmerMinHash> {
     let sig = SourmashSignature::as_rust(ptr);
 
-    if let Some(sk) = sig.signatures.get(0) {
-        // TODO(lirber): avoid clone here
-        Ok(SourmashSketch::from_rust(sk.clone()))
-    } else {
-        // TODO: signatures is empty?
-        unimplemented!()
+    match sig.signatures.get(0) {
+        Some(Sketch::LargeMinHash(mh)) => {
+            // TODO(lirber): avoid clone here
+            Ok(SourmashKmerMinHash::from_rust(MinHash::Mutable(mh.clone())))
+        }
+        Some(Sketch::MinHash(mh)) => {
+            // TODO(lirber): avoid clone here
+            Ok(SourmashKmerMinHash::from_rust(MinHash::Frozen(mh.clone().into())))
+        }
+        _ => {
+            // TODO: signatures is empty?
+            unimplemented!()
+        }
     }
 }
 }
