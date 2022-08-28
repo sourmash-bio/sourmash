@@ -1179,6 +1179,13 @@ impl KmerMinHashBTree {
         self.mins.iter()
     }
 
+    pub fn remove_from(&mut self, other: &KmerMinHashBTree) -> Result<(), Error> {
+        for min in &other.mins {
+            self.remove_hash(*min);
+        }
+        Ok(())
+    }
+
     pub fn merge(&mut self, other: &KmerMinHashBTree) -> Result<(), Error> {
         self.check_compatible(other)?;
         let union = self.mins.union(&other.mins);

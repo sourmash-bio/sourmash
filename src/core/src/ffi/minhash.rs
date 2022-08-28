@@ -6,12 +6,30 @@ use crate::encodings::{aa_to_dayhoff, aa_to_hp, translate_codon, HashFunctions};
 use crate::ffi::utils::{ForeignObject, SourmashStr};
 use crate::signature::SeqToHashes;
 use crate::signature::SigsTrait;
-use crate::sketch::minhash::{AbundMinHashOps, FracMinHashOps, KmerMinHash, MinHashOps};
+use crate::sketch::minhash::{
+    AbundMinHashOps, FracMinHashOps, KmerMinHash, KmerMinHashBTree, MinHashOps,
+};
 
 pub struct SourmashKmerMinHash;
+pub struct SourmashFrozenKmerMinHash;
+
+impl ForeignObject for SourmashFrozenKmerMinHash {
+    type RustObject = KmerMinHash;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn frozenkmerminhash_to_mutable(
+    ptr: *const SourmashFrozenKmerMinHash,
+) -> *mut SourmashKmerMinHash {
+    let mh = SourmashFrozenKmerMinHash::as_rust(ptr);
+
+    let mh_new = mh.clone().into();
+
+    SourmashKmerMinHash::from_rust(mh_new)
+}
 
 impl ForeignObject for SourmashKmerMinHash {
-    type RustObject = KmerMinHash;
+    type RustObject = KmerMinHashBTree;
 }
 
 #[no_mangle]
@@ -23,7 +41,7 @@ pub unsafe extern "C" fn kmerminhash_new(
     track_abundance: bool,
     n: u32,
 ) -> *mut SourmashKmerMinHash {
-    let mh = KmerMinHash::new(scaled, k, hash_function, seed, track_abundance, n);
+    let mh = KmerMinHashBTree::new(scaled, k, hash_function, seed, track_abundance, n);
 
     SourmashKmerMinHash::from_rust(mh)
 }
@@ -31,6 +49,17 @@ pub unsafe extern "C" fn kmerminhash_new(
 #[no_mangle]
 pub unsafe extern "C" fn kmerminhash_free(ptr: *mut SourmashKmerMinHash) {
     SourmashKmerMinHash::drop(ptr);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn kmerminhash_to_frozen(
+    ptr: *const SourmashKmerMinHash,
+) -> *mut SourmashFrozenKmerMinHash {
+    let mh = SourmashKmerMinHash::as_rust(ptr);
+
+    let mh_new = mh.clone().into();
+
+    SourmashFrozenKmerMinHash::from_rust(mh_new)
 }
 
 #[no_mangle]

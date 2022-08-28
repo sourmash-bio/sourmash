@@ -644,7 +644,7 @@ class MinHash(RustObject):
 
             # acceptable num value? make sure to set max_hash to 0.
             max_hash = 0
-            
+
         elif scaled is not None:
             # cannot downsample a num MinHash with scaled
             if self.num:
@@ -943,7 +943,7 @@ class MinHash(RustObject):
             abunds = []
 
             for h, v in values.items():
-                hashes.append(h)                
+                hashes.append(h)
                 if v < 0:
                     raise ValueError("Abundance cannot be set to a negative value.")
                 abunds.append(v)
@@ -976,9 +976,8 @@ class MinHash(RustObject):
 
     def to_frozen(self):
         "Return a frozen copy of this MinHash that cannot be changed."
-        new_mh = self.__copy__()
-        new_mh.into_frozen()
-        return new_mh
+        new_mh_ptr = self._methodcall(lib.kmerminhash_to_frozen)
+        return FrozenMinHash._from_objptr(new_mh_ptr)
 
     def into_frozen(self):
         "Freeze this MinHash, preventing any changes."
@@ -1056,6 +1055,8 @@ class MinHash(RustObject):
 
 
 class FrozenMinHash(MinHash):
+    __dealloc_func__ = lib.frozenkmerminhash_free
+
     def add_sequence(self, *args, **kwargs):
         raise TypeError('FrozenMinHash does not support modification')
 
@@ -1108,11 +1109,8 @@ class FrozenMinHash(MinHash):
 
     def to_mutable(self):
         "Return a copy of this MinHash that can be changed."
-        mut = MinHash.__new__(MinHash)
-        state_tup = self.__getstate__()
-
-        mut.__setstate__(state_tup)
-        return mut
+        new_mh_ptr = self._methodcall(lib.frozenkmerminhash_to_mutable)
+        return MinHash._from_objptr(new_mh_ptr)
 
     def to_frozen(self):
         "Return a frozen copy of this MinHash that cannot be changed."
