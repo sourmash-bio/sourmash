@@ -540,7 +540,6 @@ impl MinHash {
                 MinHash::Frozen(ref ot) => {
                     Into::<KmerMinHash>::into(mh.clone()).count_common(ot, downsample)
                 }
-                _ => Err(Error::MismatchSignatureType),
             },
 
             MinHash::Frozen(ref mh) => match other {
@@ -548,7 +547,6 @@ impl MinHash {
                 MinHash::Mutable(ref ot) => {
                     Into::<KmerMinHashBTree>::into(mh.clone()).count_common(ot, downsample)
                 }
-                _ => Err(Error::MismatchSignatureType),
             },
         }
     }
@@ -557,14 +555,12 @@ impl MinHash {
         match *self {
             MinHash::Mutable(ref mut mh) => match other {
                 MinHash::Mutable(ref ot) => mh.merge(ot),
-                MinHash::Frozen(ref ot) => Into::<KmerMinHash>::into(mh.clone()).merge(ot),
-                _ => Err(Error::MismatchSignatureType),
+                MinHash::Frozen(ref ot) => mh.merge(&Into::<KmerMinHashBTree>::into(ot.clone())),
             },
 
             MinHash::Frozen(ref mut mh) => match other {
                 MinHash::Frozen(ref ot) => mh.merge(ot),
-                MinHash::Mutable(ref ot) => Into::<KmerMinHashBTree>::into(mh.clone()).merge(ot),
-                _ => Err(Error::MismatchSignatureType),
+                MinHash::Mutable(ref ot) => mh.merge(&Into::<KmerMinHash>::into(ot.clone())),
             },
         }
     }
@@ -583,7 +579,6 @@ impl MinHash {
                     ignore_abundance,
                     downsample,
                 ),
-                _ => Err(Error::MismatchSignatureType),
             },
 
             MinHash::Frozen(ref mh) => {
@@ -591,7 +586,6 @@ impl MinHash {
                     MinHash::Frozen(ref ot) => mh.similarity(ot, ignore_abundance, downsample),
                     MinHash::Mutable(ref ot) => Into::<KmerMinHashBTree>::into(mh.clone())
                         .similarity(ot, ignore_abundance, downsample),
-                    _ => Err(Error::MismatchSignatureType),
                 }
             }
         }
@@ -602,13 +596,11 @@ impl MinHash {
             MinHash::Mutable(ref mh) => match other {
                 MinHash::Mutable(ref ot) => mh.jaccard(ot),
                 MinHash::Frozen(ref ot) => Into::<KmerMinHash>::into(mh.clone()).jaccard(ot),
-                _ => Err(Error::MismatchSignatureType),
             },
 
             MinHash::Frozen(ref mh) => match other {
                 MinHash::Frozen(ref ot) => mh.jaccard(ot),
                 MinHash::Mutable(ref ot) => Into::<KmerMinHashBTree>::into(mh.clone()).jaccard(ot),
-                _ => Err(Error::MismatchSignatureType),
             },
         }
     }
@@ -620,7 +612,6 @@ impl MinHash {
                 MinHash::Frozen(ref ot) => {
                     Into::<KmerMinHash>::into(mh.clone()).intersection_size(ot)
                 }
-                _ => Err(Error::MismatchSignatureType),
             },
 
             MinHash::Frozen(ref mh) => match other {
@@ -628,7 +619,6 @@ impl MinHash {
                 MinHash::Mutable(ref ot) => {
                     Into::<KmerMinHashBTree>::into(mh.clone()).intersection_size(ot)
                 }
-                _ => Err(Error::MismatchSignatureType),
             },
         }
     }
@@ -638,7 +628,6 @@ impl MinHash {
             MinHash::Mutable(ref mh) => match other {
                 MinHash::Mutable(ref ot) => mh.intersection(ot),
                 MinHash::Frozen(ref ot) => Into::<KmerMinHash>::into(mh.clone()).intersection(ot),
-                _ => Err(Error::MismatchSignatureType),
             },
 
             MinHash::Frozen(ref mh) => match other {
@@ -646,7 +635,6 @@ impl MinHash {
                 MinHash::Mutable(ref ot) => {
                     Into::<KmerMinHashBTree>::into(mh.clone()).intersection(ot)
                 }
-                _ => Err(Error::MismatchSignatureType),
             },
         }
     }
@@ -655,14 +643,12 @@ impl MinHash {
         match *self {
             MinHash::Mutable(ref mut mh) => match other {
                 MinHash::Mutable(ref ot) => mh.add_from(ot),
-                MinHash::Frozen(ref ot) => Into::<KmerMinHash>::into(mh.clone()).add_from(ot),
-                _ => Err(Error::MismatchSignatureType),
+                MinHash::Frozen(ref ot) => mh.add_from(&Into::<KmerMinHashBTree>::into(ot.clone())),
             },
 
             MinHash::Frozen(ref mut mh) => match other {
                 MinHash::Frozen(ref ot) => mh.add_from(ot),
-                MinHash::Mutable(ref ot) => Into::<KmerMinHashBTree>::into(mh.clone()).add_from(ot),
-                _ => Err(Error::MismatchSignatureType),
+                MinHash::Mutable(ref ot) => mh.add_from(&Into::<KmerMinHash>::into(ot.clone())),
             },
         }
     }
@@ -671,16 +657,14 @@ impl MinHash {
         match *self {
             MinHash::Mutable(ref mut mh) => match other {
                 MinHash::Mutable(ref ot) => mh.remove_from(ot),
-                MinHash::Frozen(ref ot) => Into::<KmerMinHash>::into(mh.clone()).remove_from(ot),
-                _ => Err(Error::MismatchSignatureType),
+                MinHash::Frozen(ref ot) => {
+                    mh.remove_from(&Into::<KmerMinHashBTree>::into(ot.clone()))
+                }
             },
 
             MinHash::Frozen(ref mut mh) => match other {
                 MinHash::Frozen(ref ot) => mh.remove_from(ot),
-                MinHash::Mutable(ref ot) => {
-                    Into::<KmerMinHashBTree>::into(mh.clone()).remove_from(ot)
-                }
-                _ => Err(Error::MismatchSignatureType),
+                MinHash::Mutable(ref ot) => mh.remove_from(&Into::<KmerMinHash>::into(ot.clone())),
             },
         }
     }
@@ -689,7 +673,6 @@ impl MinHash {
 impl From<MinHash> for Sketch {
     fn from(mh: MinHash) -> Sketch {
         match mh {
-            // TODO: avoid clone
             MinHash::Mutable(mh) => Sketch::LargeMinHash(mh),
             MinHash::Frozen(mh) => Sketch::MinHash(mh),
         }
@@ -871,7 +854,6 @@ impl SigsTrait for MinHash {
                 MinHash::Frozen(ref ot) => {
                     Into::<KmerMinHash>::into(mh.clone()).check_compatible(ot)
                 }
-                _ => Err(Error::MismatchSignatureType),
             },
 
             MinHash::Frozen(ref mh) => match other {
@@ -879,7 +861,6 @@ impl SigsTrait for MinHash {
                 MinHash::Mutable(ref ot) => {
                     Into::<KmerMinHashBTree>::into(mh.clone()).check_compatible(ot)
                 }
-                _ => Err(Error::MismatchSignatureType),
             },
         }
     }

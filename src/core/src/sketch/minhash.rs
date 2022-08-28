@@ -129,9 +129,7 @@ pub trait AbundMinHashOps: MinHashOps {
                 match k.cmp(&hash) {
                     Ordering::Less => next_hash = other_iter.next(),
                     Ordering::Equal => {
-                        unsafe {
-                            prod += abund * other_abund;
-                        }
+                        prod += abund * other_abund;
                         break;
                     }
                     Ordering::Greater => break,
@@ -786,6 +784,11 @@ impl AbundMinHashOps for KmerMinHash {
     }
 
     fn set_hash_with_abundance(&mut self, hash: u64, abundance: u64) {
+        if abundance == 0 {
+            self.remove_hash(hash);
+            return;
+        }
+
         let mut found = false;
         if let Ok(pos) = self.mins.binary_search(&hash) {
             if self.mins[pos] == hash {
@@ -842,6 +845,7 @@ impl SigsTrait for KmerMinHash {
     fn hash_function(&self) -> HashFunctions {
         self.hash_function
     }
+
     fn set_hash_function(&mut self, h: HashFunctions) -> Result<(), Error> {
         if self.hash_function == h {
             return Ok(());
@@ -1465,7 +1469,7 @@ impl AbundMinHashOps for KmerMinHashBTree {
         }
 
         if abundance == 0 {
-            // well, don't add it.
+            self.remove_hash(hash);
             return;
         }
 
@@ -1510,9 +1514,17 @@ impl AbundMinHashOps for KmerMinHashBTree {
     }
 
     fn set_hash_with_abundance(&mut self, hash: u64, abundance: u64) {
+        if abundance == 0 {
+            self.remove_hash(hash);
+            return;
+        }
+
         if self.mins.contains(&hash) {
             if let Some(ref mut abunds) = self.abunds {
-                abunds.get_mut(&hash).map(|v| *v = abundance);
+                abunds
+                    .entry(hash)
+                    .and_modify(|v| *v = abundance)
+                    .or_insert_with(|| abundance);
             }
         } else {
             self.add_hash_with_abundance(hash, abundance);
