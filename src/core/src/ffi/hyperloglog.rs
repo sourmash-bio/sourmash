@@ -6,7 +6,7 @@ use crate::prelude::*;
 use crate::signature::SigsTrait;
 use crate::sketch::hyperloglog::HyperLogLog;
 
-use crate::ffi::minhash::SourmashKmerMinHash;
+use crate::ffi::minhash::{SourmashFrozenKmerMinHash, SourmashKmerMinHash};
 use crate::ffi::utils::ForeignObject;
 
 pub struct SourmashHyperLogLog;
@@ -110,10 +110,10 @@ unsafe fn hll_merge(
 ffi_fn! {
 unsafe fn hll_update_mh(
     ptr: *mut SourmashHyperLogLog,
-    optr: *const SourmashKmerMinHash,
+    optr: *const SourmashFrozenKmerMinHash,
 ) {
     let hll = SourmashHyperLogLog::as_rust_mut(ptr);
-    let mh = SourmashKmerMinHash::as_rust(optr);
+    let mh = SourmashFrozenKmerMinHash::as_rust(optr);
 
     mh.update(hll)?
 }

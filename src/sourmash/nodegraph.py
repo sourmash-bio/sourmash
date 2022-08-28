@@ -42,8 +42,10 @@ class Nodegraph(RustObject):
     def update(self, other):
         if isinstance(other, Nodegraph):
             return self._methodcall(lib.nodegraph_update, other._objptr)
-        elif isinstance(other, MinHash):
+        elif isinstance(other, FrozenMinHash):
             return self._methodcall(lib.nodegraph_update_mh, other._objptr)
+        elif isinstance(other, MinHash):
+            return self._methodcall(lib.nodegraph_update_mh, other.to_frozen()._objptr)
         else:
             # FIXME: we could take sets here too (or anything that can be
             # converted to a list of ints...)
@@ -79,12 +81,15 @@ class Nodegraph(RustObject):
         return self._methodcall(lib.nodegraph_expected_collisions)
 
     def matches(self, mh):
-        if not isinstance(mh, MinHash):
+        objptr = mh._objptr
+        if isinstance(mh, MinHash):
+            objptr = mh.to_frozen()._objptr
+        elif not isinstance(mh, FrozenMinHash):
             # FIXME: we could take sets here too (or anything that can be
             # converted to a list of ints...)
-            raise ValueError("mh must be a MinHash")
+            raise ValueError("mh must be a FrozenMinHash")
 
-        return self._methodcall(lib.nodegraph_matches, mh._objptr)
+        return self._methodcall(lib.nodegraph_matches, objptr)
 
     def to_khmer_nodegraph(self):
         import khmer

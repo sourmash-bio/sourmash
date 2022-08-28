@@ -9,7 +9,7 @@ use crate::signature::Signature;
 use crate::sketch::Sketch;
 
 use crate::ffi::cmd::compute::SourmashComputeParameters;
-use crate::ffi::minhash::SourmashKmerMinHash;
+use crate::ffi::sketch::SourmashSketch;
 use crate::ffi::utils::{ForeignObject, SourmashStr};
 
 pub struct SourmashSignature;
@@ -115,23 +115,28 @@ unsafe fn signature_set_filename(ptr: *mut SourmashSignature, name: *const c_cha
 }
 
 ffi_fn! {
-unsafe fn signature_push_mh(ptr: *mut SourmashSignature, other: *const SourmashKmerMinHash) ->
+unsafe fn signature_set_sketch(ptr: *mut SourmashSignature, other: *const SourmashSketch) ->
     Result<()> {
     let sig = SourmashSignature::as_rust_mut(ptr);
-    let mh = SourmashKmerMinHash::as_rust(other);
-    sig.push(Sketch::MinHash(mh.clone()));
+    let sketch = SourmashSketch::as_rust(other);
+    sig.reset_sketches();
+    // TODO(lirber): avoid clone here
+    sig.push(sketch.clone());
     Ok(())
 }
 }
 
 ffi_fn! {
-unsafe fn signature_set_mh(ptr: *mut SourmashSignature, other: *const SourmashKmerMinHash) ->
-    Result<()> {
-    let sig = SourmashSignature::as_rust_mut(ptr);
-    let mh = SourmashKmerMinHash::as_rust(other);
-    sig.reset_sketches();
-    sig.push(Sketch::MinHash(mh.clone()));
-    Ok(())
+unsafe fn signature_first_sketch(ptr: *const SourmashSignature) -> Result<*mut SourmashSketch> {
+    let sig = SourmashSignature::as_rust(ptr);
+
+    if let Some(sk) = sig.signatures.get(0) {
+        // TODO(lirber): avoid clone here
+        Ok(SourmashSketch::from_rust(sk.clone()))
+    } else {
+        // TODO: signatures is empty?
+        unimplemented!()
+    }
 }
 }
 
@@ -162,19 +167,6 @@ unsafe fn signature_get_license(ptr: *const SourmashSignature) -> Result<Sourmas
 }
 
 ffi_fn! {
-unsafe fn signature_first_mh(ptr: *const SourmashSignature) -> Result<*mut SourmashKmerMinHash> {
-    let sig = SourmashSignature::as_rust(ptr);
-
-    if let Some(Sketch::MinHash(mh)) = sig.signatures.get(0) {
-        Ok(SourmashKmerMinHash::from_rust(mh.clone()))
-    } else {
-        // TODO: need to select the correct one
-        unimplemented!()
-    }
-}
-}
-
-ffi_fn! {
 unsafe fn signature_eq(ptr: *const SourmashSignature, other: *const SourmashSignature) -> Result<bool> {
     let sig = SourmashSignature::as_rust(ptr);
     let other_sig = SourmashSignature::as_rust(other);
@@ -192,25 +184,12 @@ unsafe fn signature_save_json(ptr: *const SourmashSignature) -> Result<SourmashS
 }
 
 ffi_fn! {
-unsafe fn signature_get_mhs(ptr: *const SourmashSignature, size: *mut usize) -> Result<*mut *mut SourmashKmerMinHash> {
-    let sig = SourmashSignature::as_rust(ptr);
-
-    let output = sig.sketches();
-
-    // FIXME: how to fit this into the ForeignObject trait?
-    let ptr_sigs: Vec<*mut Signature> = output.into_iter().map(|x| {
-      Box::into_raw(Box::new(x)) as *mut Signature
-    }).collect();
-
-    let b = ptr_sigs.into_boxed_slice();
-    *size = b.len();
-
-    Ok(Box::into_raw(b) as *mut *mut SourmashKmerMinHash)
-}
-}
-
-ffi_fn! {
-unsafe fn signatures_save_buffer(ptr: *const *const SourmashSignature, size: usize, compression: u8, osize: *mut usize) -> Result<*const u8> {
+unsafe fn signatures_save_buffer(
+    ptr: *const *const SourmashSignature,
+    size: usize,
+    compression: u8,
+    osize: *mut usize,
+) -> Result<*const u8> {
     // FIXME: review this for ForeignObject
 
     let sigs = {
@@ -218,30 +197,35 @@ unsafe fn signatures_save_buffer(ptr: *const *const SourmashSignature, size: usi
         slice::from_raw_parts(ptr, size)
     };
 
-    let rsigs: Vec<&Signature> = sigs.iter().map(|x| SourmashSignature::as_rust(*x)).collect();
+    let rsigs: Vec<&Signature> = sigs
+        .iter()
+        .map(|x| SourmashSignature::as_rust(*x))
+        .collect();
 
     let mut buffer = vec![];
     {
-      let mut writer = if compression > 0 {
-          let level = match compression {
-            1 => niffler::compression::Level::One,
-            2 => niffler::compression::Level::Two,
-            3 => niffler::compression::Level::Three,
-            4 => niffler::compression::Level::Four,
-            5 => niffler::compression::Level::Five,
-            6 => niffler::compression::Level::Six,
-            7 => niffler::compression::Level::Seven,
-            8 => niffler::compression::Level::Eight,
-            _ => niffler::compression::Level::Nine,
-          };
+        let mut writer = if compression > 0 {
+            let level = match compression {
+                1 => niffler::compression::Level::One,
+                2 => niffler::compression::Level::Two,
+                3 => niffler::compression::Level::Three,
+                4 => niffler::compression::Level::Four,
+                5 => niffler::compression::Level::Five,
+                6 => niffler::compression::Level::Six,
+                7 => niffler::compression::Level::Seven,
+                8 => niffler::compression::Level::Eight,
+                _ => niffler::compression::Level::Nine,
+            };
 
-          niffler::get_writer(Box::new(&mut buffer),
-                              niffler::compression::Format::Gzip,
-                              level)?
-      } else {
-          Box::new(&mut buffer)
-      };
-      serde_json::to_writer(&mut writer, &rsigs)?;
+            niffler::get_writer(
+                Box::new(&mut buffer),
+                niffler::compression::Format::Gzip,
+                level,
+            )?
+        } else {
+            Box::new(&mut buffer)
+        };
+        serde_json::to_writer(&mut writer, &rsigs)?;
     }
 
     let b = buffer.into_boxed_slice();

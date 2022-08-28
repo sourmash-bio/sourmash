@@ -46,6 +46,8 @@ typedef uint32_t SourmashErrorCode;
 
 typedef struct SourmashComputeParameters SourmashComputeParameters;
 
+typedef struct SourmashFrozenKmerMinHash SourmashFrozenKmerMinHash;
+
 typedef struct SourmashHyperLogLog SourmashHyperLogLog;
 
 typedef struct SourmashKmerMinHash SourmashKmerMinHash;
@@ -57,6 +59,8 @@ typedef struct SourmashRevIndex SourmashRevIndex;
 typedef struct SourmashSearchResult SourmashSearchResult;
 
 typedef struct SourmashSignature SourmashSignature;
+
+typedef struct SourmashSketch SourmashSketch;
 
 typedef struct SourmashZipStorage SourmashZipStorage;
 
@@ -122,6 +126,8 @@ void computeparams_set_track_abundance(SourmashComputeParameters *ptr, bool v);
 
 bool computeparams_track_abundance(const SourmashComputeParameters *ptr);
 
+SourmashKmerMinHash *frozenkmerminhash_to_mutable(const SourmashFrozenKmerMinHash *ptr);
+
 uint64_t hash_murmur(const char *kmer, uint64_t seed);
 
 void hll_add_hash(SourmashHyperLogLog *ptr, uint64_t hash);
@@ -154,7 +160,7 @@ double hll_similarity(const SourmashHyperLogLog *ptr, const SourmashHyperLogLog 
 
 const uint8_t *hll_to_buffer(const SourmashHyperLogLog *ptr, uintptr_t *size);
 
-void hll_update_mh(SourmashHyperLogLog *ptr, const SourmashKmerMinHash *optr);
+void hll_update_mh(SourmashHyperLogLog *ptr, const SourmashFrozenKmerMinHash *optr);
 
 SourmashHyperLogLog *hll_with_error_rate(double error_rate, uintptr_t ksize);
 
@@ -262,6 +268,8 @@ double kmerminhash_similarity(const SourmashKmerMinHash *ptr,
 
 void kmerminhash_slice_free(uint64_t *ptr, uintptr_t insize);
 
+SourmashFrozenKmerMinHash *kmerminhash_to_frozen(const SourmashKmerMinHash *ptr);
+
 bool kmerminhash_track_abundance(const SourmashKmerMinHash *ptr);
 
 void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
@@ -286,7 +294,7 @@ const uint64_t *nodegraph_hashsizes(const SourmashNodegraph *ptr, uintptr_t *siz
 
 uintptr_t nodegraph_ksize(const SourmashNodegraph *ptr);
 
-uintptr_t nodegraph_matches(const SourmashNodegraph *ptr, const SourmashKmerMinHash *mh_ptr);
+uintptr_t nodegraph_matches(const SourmashNodegraph *ptr, const SourmashFrozenKmerMinHash *mh_ptr);
 
 SourmashNodegraph *nodegraph_new(void);
 
@@ -302,7 +310,7 @@ const uint8_t *nodegraph_to_buffer(const SourmashNodegraph *ptr,
 
 void nodegraph_update(SourmashNodegraph *ptr, const SourmashNodegraph *optr);
 
-void nodegraph_update_mh(SourmashNodegraph *ptr, const SourmashKmerMinHash *optr);
+void nodegraph_update_mh(SourmashNodegraph *ptr, const SourmashFrozenKmerMinHash *optr);
 
 SourmashNodegraph *nodegraph_with_tables(uintptr_t ksize,
                                          uintptr_t starting_size,
@@ -359,7 +367,7 @@ void signature_add_sequence(SourmashSignature *ptr, const char *sequence, bool f
 
 bool signature_eq(const SourmashSignature *ptr, const SourmashSignature *other);
 
-SourmashKmerMinHash *signature_first_mh(const SourmashSignature *ptr);
+SourmashSketch *signature_first_sketch(const SourmashSignature *ptr);
 
 void signature_free(SourmashSignature *ptr);
 
@@ -369,23 +377,19 @@ SourmashStr signature_get_filename(const SourmashSignature *ptr);
 
 SourmashStr signature_get_license(const SourmashSignature *ptr);
 
-SourmashKmerMinHash **signature_get_mhs(const SourmashSignature *ptr, uintptr_t *size);
-
 SourmashStr signature_get_name(const SourmashSignature *ptr);
 
 uintptr_t signature_len(const SourmashSignature *ptr);
 
 SourmashSignature *signature_new(void);
 
-void signature_push_mh(SourmashSignature *ptr, const SourmashKmerMinHash *other);
-
 SourmashStr signature_save_json(const SourmashSignature *ptr);
 
 void signature_set_filename(SourmashSignature *ptr, const char *name);
 
-void signature_set_mh(SourmashSignature *ptr, const SourmashKmerMinHash *other);
-
 void signature_set_name(SourmashSignature *ptr, const char *name);
+
+void signature_set_sketch(SourmashSignature *ptr, const SourmashSketch *other);
 
 SourmashSignature **signatures_load_buffer(const char *ptr,
                                            uintptr_t insize,
