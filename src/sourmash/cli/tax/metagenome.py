@@ -67,7 +67,7 @@ def subparser(subparsers):
         help='fail quickly if taxonomy is not available for an identifier',
     )
     subparser.add_argument(
-        '-F', '--output-format', default=['csv_summary'], nargs='+', choices=["human", "csv_summary", "krona", "lineage_summary"],
+        '-F', '--output-format', default=['csv_summary'], nargs='+', choices=["human", "csv_summary", "krona", "lineage_summary", "kreport"],
         help='choose output format(s)',
     )
     subparser.add_argument(
