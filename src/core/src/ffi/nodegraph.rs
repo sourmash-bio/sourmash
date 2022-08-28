@@ -5,7 +5,7 @@ use std::slice;
 use crate::prelude::*;
 use crate::sketch::nodegraph::Nodegraph;
 
-use crate::ffi::minhash::SourmashFrozenKmerMinHash;
+use crate::ffi::minhash::{MinHash, SourmashKmerMinHash};
 use crate::ffi::utils::ForeignObject;
 
 pub struct SourmashNodegraph;
@@ -130,11 +130,15 @@ pub unsafe extern "C" fn nodegraph_noccupied(ptr: *const SourmashNodegraph) -> u
 #[no_mangle]
 pub unsafe extern "C" fn nodegraph_matches(
     ptr: *const SourmashNodegraph,
-    mh_ptr: *const SourmashFrozenKmerMinHash,
+    mh_ptr: *const SourmashKmerMinHash,
 ) -> usize {
     let ng = SourmashNodegraph::as_rust(ptr);
-    let mh = SourmashFrozenKmerMinHash::as_rust(mh_ptr);
-    ng.matches(mh)
+    let mh = SourmashKmerMinHash::as_rust(mh_ptr);
+
+    match mh {
+        MinHash::Mutable(mh) => ng.matches(&mh.clone().into()),
+        MinHash::Frozen(mh) => ng.matches(mh),
+    }
 }
 
 #[no_mangle]
@@ -152,12 +156,15 @@ pub unsafe extern "C" fn nodegraph_update(
 #[no_mangle]
 pub unsafe extern "C" fn nodegraph_update_mh(
     ptr: *mut SourmashNodegraph,
-    optr: *const SourmashFrozenKmerMinHash,
+    optr: *const SourmashKmerMinHash,
 ) {
     let ng = SourmashNodegraph::as_rust_mut(ptr);
-    let mh = SourmashFrozenKmerMinHash::as_rust(optr);
+    let mh = SourmashKmerMinHash::as_rust(optr);
 
-    mh.update(ng).unwrap();
+    match mh {
+        MinHash::Mutable(mh) => mh.update(ng).unwrap(),
+        MinHash::Frozen(mh) => mh.update(ng).unwrap(),
+    }
 }
 
 ffi_fn! {
