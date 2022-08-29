@@ -364,6 +364,7 @@ def prepare(args):
     notify("loading taxonomies...")
     try:
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
+                                         force=args.force,
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions)
     except ValueError as exc:
