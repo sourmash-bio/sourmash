@@ -764,7 +764,14 @@ class MinHash(RustObject):
             return 0.0
         total_denom = float(denom *self.scaled) # would be better if hll estimate - see #1798
         bias_factor = 1.0 - (1.0 - 1.0/self.scaled) ** total_denom
-        return self.count_common(other, downsample) / (denom * bias_factor)
+        containment = self.count_common(other, downsample) / (denom * bias_factor)
+        # debiasing containment can lead to vals outside of 0-1 range!?
+        if containment >= 1:
+            return 1
+        elif containment <= 0:
+            return 0
+        else:
+            return containment
 
 
     def containment_ani(self, other, *, downsample=False, containment=None, confidence=0.95, estimate_ci = False, prob_threshold=1e-3):
@@ -779,6 +786,7 @@ class MinHash(RustObject):
             self_mh = self.downsample(scaled=scaled)
             other_mh = other.downsample(scaled=scaled)
         containment = self_mh.contained_by_debiased(other_mh) # recalc debiased containment
+        #containment = self_mh.contained_by(other_mh) # recalc debiased containment
         n_kmers = len(self_mh) * scaled # would be better if hll estimate - see #1798
 
         c_aniresult = containment_to_distance(containment, self_mh.ksize, self_mh.scaled,
@@ -814,8 +822,14 @@ class MinHash(RustObject):
             return 0.0
         total_denom =  float(min_denom * self.scaled) # would be better if hll estimate - see #1798
         bias_factor = 1.0 - (1.0 - 1.0/self.scaled) ** total_denom
-        return self.count_common(other, downsample) / (min_denom * bias_factor)
-
+        max_containment = self.count_common(other, downsample) / (min_denom * bias_factor)
+        # debiasing containment can lead to vals outside of 0-1 range!?
+        if max_containment >= 1:
+            return 1
+        elif max_containment <= 0:
+            return 0
+        else:
+            return max_containment
 
     def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False, prob_threshold=1e-3):  
         "Use max_containment to estimate ANI between two MinHash objects."

@@ -3066,6 +3066,7 @@ def test_jaccard_ANI_downsample():
     ds_j_manual = mh1.jaccard_ani(mh2)
     assert ds_s1c == ds_s2c == ds_j_manual
 
+
 def test_containment_ani_ci_tiny_testdata():
     """
     tiny test data to trigger the following:

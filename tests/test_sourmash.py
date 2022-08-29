@@ -5931,8 +5931,8 @@ def test_search_ani_containment_estimate_ci(runtmp):
         assert row['query_name'] == ''
         assert row['query_md5'] == '832a45e8'
         assert row['ani'] == "0.9866751346467802"
-        assert row['ani_low'] == "0.9861559138341189"
-        assert row['ani_high'] == "0.9871787293232042"
+        assert row['ani_low'] == "0.9861576758035308" #"0.9861559138341189"
+        assert row['ani_high'] == "0.9871770716451368" #"0.9871787293232042"
 
     # search other direction
     c.run_sourmash('search', '--containment', testdata2, testdata1, '-o', 'xxxx.csv', '--estimate-ani-ci')
@@ -5951,8 +5951,8 @@ def test_search_ani_containment_estimate_ci(runtmp):
         assert row['query_name'] == ''
         assert row['query_md5'] == '491c0a81'
         assert row['ani'] == "0.9868883523107224"
-        assert row['ani_low'] == "0.9863757952722036"
-        assert row['ani_high'] == "0.9873853776786775"
+        assert row['ani_low'] == "0.986374049720872" #"0.9863757952722036"
+        assert row['ani_high'] == "0.9873870188726516" #"0.9873853776786775"
 
 
 def test_search_ani_max_containment(runtmp):
