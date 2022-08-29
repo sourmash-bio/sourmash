@@ -745,7 +745,7 @@ class MinHash(RustObject):
         Calculate how much of self is contained by other.
         """
         if not (self.scaled and other.scaled):
-            raise TypeError("can only calculate containment for scaled MinHashes")
+            raise TypeError("Error: can only calculate containment for scaled MinHashes")
         if not len(self):
             return 0.0
         return self.count_common(other, downsample) / len(self)
@@ -758,7 +758,7 @@ class MinHash(RustObject):
         Calculate how much of self is contained by other.
         """
         if not (self.scaled and other.scaled):
-            raise TypeError("can only calculate containment for scaled MinHashes")
+            raise TypeError("Error: can only calculate containment for scaled MinHashes")
         denom = len(self)
         if not denom:
             return 0.0
@@ -795,7 +795,7 @@ class MinHash(RustObject):
         Calculate maximum containment.
         """
         if not (self.scaled and other.scaled):
-            raise TypeError("can only calculate containment for scaled MinHashes")
+            raise TypeError("Error: can only calculate containment for scaled MinHashes")
         min_denom = min((len(self), len(other)))
         if not min_denom:
             return 0.0
@@ -808,7 +808,7 @@ class MinHash(RustObject):
         Calculate maximum containment.
         """
         if not (self.scaled and other.scaled):
-            raise TypeError("can only calculate containment for scaled MinHashes")
+            raise TypeError("Error: can only calculate containment for scaled MinHashes")
         min_denom = min((len(self), len(other)))
         if not min_denom:
             return 0.0
@@ -846,10 +846,23 @@ class MinHash(RustObject):
         Note: this is average of the containments, *not* count_common/ avg_denom
         """
         if not (self.scaled and other.scaled):
-            raise TypeError("can only calculate containment for scaled MinHashes")
+            raise TypeError("Error: can only calculate containment for scaled MinHashes")
 
         c1 = self.contained_by(other, downsample)
         c2 = other.contained_by(self, downsample)
+
+        return (c1 + c2)/2
+
+    def avg_containment_debiased(self, other, downsample=False):
+        """
+        Calculate average containment, debiased.
+        Note: this is average of the containments, *not* count_common/ avg_denom
+        """
+        if not (self.scaled and other.scaled):
+            raise TypeError("Error: can only calculate containment for scaled MinHashes")
+
+        c1 = self.contained_by_debiased(other, downsample)
+        c2 = other.contained_by_debiased(self, downsample)
 
         return (c1 + c2)/2
 
