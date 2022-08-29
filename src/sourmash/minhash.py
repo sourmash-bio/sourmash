@@ -797,7 +797,7 @@ class MinHash(RustObject):
         total_denom =  float(min_denom * self.scaled) # would be better if hll estimate - see #1798
         bias_factor = 1.0 - (1.0 - 1.0/self.scaled) ** total_denom
         max_containment = self.count_common(other, downsample) / (min_denom * bias_factor)
-        # debiasing containment can lead to vals outside of 0-1 range!?
+        # debiasing containment can lead to vals outside of 0-1 range. constrain.
         if max_containment >= 1:
             return 1.0
         elif max_containment <= 0:
