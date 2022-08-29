@@ -682,7 +682,10 @@ class GatherDatabases:
             query_mh = ident_mh.to_mutable()
 
         orig_query_mh = query_mh.flatten()
-        query.minhash = orig_query_mh.to_mutable()
+
+        # query.minhash will be assigned to repeatedly in gather; make mutable.
+        query = query.to_mutable()
+        query.minhash = orig_query_mh
 
         cmp_scaled = query.minhash.scaled    # initialize with resolution of query
 

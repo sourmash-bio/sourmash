@@ -654,6 +654,7 @@ def rename(args):
                                                 pattern=pattern_search)
 
     for sigobj, sigloc in loader:
+        sigobj = sigobj.to_mutable()
         sigobj._name = args.name
         save_sigs.add(sigobj)
 
@@ -782,6 +783,7 @@ def filter(args):
             filtered_mh = mh.copy_and_clear()
             filtered_mh.set_abundances(abunds2)
 
+            ss = ss.to_mutable()
             ss.minhash = filtered_mh
 
             save_sigs.add(ss)
@@ -823,6 +825,7 @@ def flatten(args):
             if args.name not in ss.name:
                 continue        # skip
 
+        ss = ss.to_mutable()
         ss.minhash = ss.minhash.flatten()
         save_sigs.add(ss)
 
@@ -865,7 +868,8 @@ def downsample(args):
                                                 yield_all_files=args.force,
                                                 force=args.force)
     for ss, sigloc in loader:
-        mh = ss.minhash
+        sigobj = ss.to_mutable()
+        mh = sigobj.minhash
 
         if args.scaled:
             # downsample scaled to scaled? straightforward.
@@ -894,10 +898,9 @@ def downsample(args):
                 mh_new = mh.copy()
                 _set_num_scaled(mh_new, args.num_hashes, 0)
 
-        ss.minhash = mh_new
 
-        # save!
-        save_sigs.add(ss)
+        sigobj.minhash = mh_new
+        save_sigs.add(sigobj)
 
     save_sigs.close()
 
