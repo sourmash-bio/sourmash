@@ -853,7 +853,6 @@ def test_genome_empty_tax_lineage_input(runtmp):
         fp.write("")
     print("t_csv: ", tax_empty)
 
-
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax_empty)
 
@@ -2141,6 +2140,43 @@ def test_tax_prepare_1_csv_to_csv_empty_ranks(runtmp, keep_identifiers, keep_ver
     assert set(db1) == set(db2)
 
 
+def test_tax_prepare_1_csv_to_csv_empty_file(runtmp, keep_identifiers, keep_versions):
+    # CSV -> CSV with an empty input file and --force
+    # tests argparse extend
+    tax = utils.get_test_data('tax/test-empty-ranks.taxonomy.csv')
+    tax_empty = runtmp.output('t.csv')
+    taxout = runtmp.output('out.csv')
+
+    with open(tax_empty, "w") as fp:
+        fp.write("")
+    print("t_csv: ", tax_empty)
+
+    args = []
+    if keep_identifiers:
+        args.append('--keep-full-identifiers')
+    if keep_versions:
+        args.append('--keep-identifier-versions')
+
+    # this is an error - can't strip versions if not splitting identifiers
+    if keep_identifiers and not keep_versions:
+        with pytest.raises(SourmashCommandFailed):
+            runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-o',
+                                taxout, '-F', 'csv', *args)
+        return
+
+    runtmp.run_sourmash('tax', 'prepare', '-t', tax, '-t', tax_empty, '-o',
+                        taxout, '-F', 'csv', *args, '--force')
+    assert os.path.exists(taxout)
+
+    db1 = tax_utils.MultiLineageDB.load([tax],
+                                        keep_full_identifiers=keep_identifiers,
+                                        keep_identifier_versions=keep_versions)
+
+    db2 = tax_utils.MultiLineageDB.load([taxout])
+
+    assert set(db1) == set(db2)
+
+
 def test_tax_prepare_1_csv_to_csv_empty_ranks_2(runtmp, keep_identifiers, keep_versions):
     # CSV -> CSV; same assignments for situations with empty internal ranks
     tax = utils.get_test_data('tax/test-empty-ranks-2.taxonomy.csv')
@@ -2468,6 +2504,7 @@ def test_tax_prepare_sqlite_lineage_version(runtmp):
 
     with pytest.raises(IndexNotSupported):
         db = tax_utils.MultiLineageDB.load([taxout])
+
 
 def test_tax_prepare_sqlite_no_lineage():
     # no lineage table at all
