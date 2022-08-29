@@ -772,7 +772,7 @@ class MinHash(RustObject):
             scaled = max(self_mh.scaled, other_mh.scaled)
             self_mh = self.downsample(scaled=scaled)
             other_mh = other.downsample(scaled=scaled)
-        if containment == None:
+        if containment is None:
             containment = self_mh.contained_by(other_mh)
         n_kmers = len(self_mh) * scaled # would be better if hll estimate - see #1798
 
@@ -817,7 +817,7 @@ class MinHash(RustObject):
             scaled = max(self_mh.scaled, other_mh.scaled)
             self_mh = self.downsample(scaled=scaled)
             other_mh = other.downsample(scaled=scaled)
-        if max_containment == None:
+        if max_containment is None:
             max_containment = self_mh.max_containment(other_mh)
         min_n_kmers = min(len(self_mh), len(other_mh))
         n_kmers = min_n_kmers * scaled  # would be better if hll estimate - see #1798
