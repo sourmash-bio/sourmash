@@ -204,15 +204,17 @@ def test_FracMinHashComparison_ignore_abundance(track_abundance):
     cmp = FracMinHashComparison(a, b, cmp_scaled = cmp_scaled, ignore_abundance=True)
     assert cmp.mh1 == a
     assert cmp.mh2 == b
+    assert cmp.mh1_cmp == ds_a
+    assert cmp.mh2_cmp == ds_b
     assert cmp.ignore_abundance == True
     assert cmp.cmp_scaled == cmp_scaled
     assert cmp.ksize == 21
     assert cmp.moltype == "DNA"
-    assert cmp.mh1_containment_in_mh2 == a.contained_by(b)
-    assert cmp.mh2_containment_in_mh1 == b.contained_by(a)
-    assert cmp.avg_containment == b.avg_containment(a)
-    assert cmp.max_containment == a.max_containment(b)
-    assert cmp.jaccard == a.jaccard(b) == b.jaccard(a)
+    assert cmp.mh1_containment_in_mh2 == ds_a.contained_by(ds_b)
+    assert cmp.mh2_containment_in_mh1 == ds_b.contained_by(ds_a)
+    assert cmp.avg_containment == ds_b.avg_containment(ds_a)
+    assert cmp.max_containment == ds_a.max_containment(ds_b)
+    assert cmp.jaccard == ds_a.jaccard(ds_b) == ds_b.jaccard(ds_a)
     intersect_mh = ds_a.flatten().intersection(ds_b.flatten())
     assert cmp.intersect_mh == intersect_mh == ds_b.flatten().intersection(ds_a.flatten())
     assert cmp.total_unique_intersect_hashes == 8
@@ -259,10 +261,10 @@ def test_FracMinHashComparison_fail_threshold(track_abundance):
     assert cmp.cmp_scaled == cmp_scaled
     assert cmp.ksize == 21
     assert cmp.moltype == "DNA"
-    assert cmp.mh1_containment_in_mh2 == a.contained_by(b)
-    assert cmp.mh2_containment_in_mh1 == b.contained_by(a)
-    assert cmp.avg_containment == a.avg_containment(b)
-    assert cmp.max_containment == a.max_containment(b)
+    assert cmp.mh1_containment_in_mh2 == ds_a.contained_by(ds_b)
+    assert cmp.mh2_containment_in_mh1 == ds_b.contained_by(ds_a)
+    assert cmp.avg_containment == ds_a.avg_containment(ds_b)
+    assert cmp.max_containment == ds_a.max_containment(ds_b)
     assert cmp.jaccard == a.jaccard(b) == b.jaccard(a)
     intersect_mh = ds_a.flatten().intersection(ds_b.flatten())
     assert cmp.intersect_mh == intersect_mh == ds_b.flatten().intersection(ds_a.flatten())

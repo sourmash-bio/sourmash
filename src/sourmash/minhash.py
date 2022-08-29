@@ -746,30 +746,17 @@ class MinHash(RustObject):
         """
         if not (self.scaled and other.scaled):
             raise TypeError("Error: can only calculate containment for scaled MinHashes")
-        if not len(self):
-            return 0.0
-        return self.count_common(other, downsample) / len(self)
-        # with bias factor
-        #return self.count_common(other, downsample) / (len(self) * (1- (1-1/self.scaled)^(len(self)*self.scaled)))
-
-
-    def contained_by_debiased(self, other, downsample=False):
-        """
-        Calculate how much of self is contained by other.
-        """
-        if not (self.scaled and other.scaled):
-            raise TypeError("Error: can only calculate containment for scaled MinHashes")
         denom = len(self)
         if not denom:
             return 0.0
         total_denom = float(denom *self.scaled) # would be better if hll estimate - see #1798
         bias_factor = 1.0 - (1.0 - 1.0/self.scaled) ** total_denom
         containment = self.count_common(other, downsample) / (denom * bias_factor)
-        # debiasing containment can lead to vals outside of 0-1 range!?
+        # debiasing containment can lead to vals outside of 0-1 range. constrain.
         if containment >= 1:
-            return 1
+            return 1.0
         elif containment <= 0:
-            return 0
+            return 0.0
         else:
             return containment
 
@@ -785,8 +772,8 @@ class MinHash(RustObject):
             scaled = max(self_mh.scaled, other_mh.scaled)
             self_mh = self.downsample(scaled=scaled)
             other_mh = other.downsample(scaled=scaled)
-        containment = self_mh.contained_by_debiased(other_mh) # recalc debiased containment
-        #containment = self_mh.contained_by(other_mh) # recalc debiased containment
+        if containment == None:
+            containment = self_mh.contained_by(other_mh)
         n_kmers = len(self_mh) * scaled # would be better if hll estimate - see #1798
 
         c_aniresult = containment_to_distance(containment, self_mh.ksize, self_mh.scaled,
@@ -807,29 +794,17 @@ class MinHash(RustObject):
         min_denom = min((len(self), len(other)))
         if not min_denom:
             return 0.0
-
-        return self.count_common(other, downsample) / min_denom
-
-
-    def max_containment_debiased(self, other, downsample=False):
-        """
-        Calculate maximum containment.
-        """
-        if not (self.scaled and other.scaled):
-            raise TypeError("Error: can only calculate containment for scaled MinHashes")
-        min_denom = min((len(self), len(other)))
-        if not min_denom:
-            return 0.0
         total_denom =  float(min_denom * self.scaled) # would be better if hll estimate - see #1798
         bias_factor = 1.0 - (1.0 - 1.0/self.scaled) ** total_denom
         max_containment = self.count_common(other, downsample) / (min_denom * bias_factor)
         # debiasing containment can lead to vals outside of 0-1 range!?
         if max_containment >= 1:
-            return 1
+            return 1.0
         elif max_containment <= 0:
-            return 0
+            return 0.0
         else:
             return max_containment
+
 
     def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False, prob_threshold=1e-3):  
         "Use max_containment to estimate ANI between two MinHash objects."
@@ -842,7 +817,8 @@ class MinHash(RustObject):
             scaled = max(self_mh.scaled, other_mh.scaled)
             self_mh = self.downsample(scaled=scaled)
             other_mh = other.downsample(scaled=scaled)
-        max_containment = self_mh.max_containment_debiased(other_mh) #recalc debiased max containment
+        if max_containment == None:
+            max_containment = self_mh.max_containment(other_mh)
         min_n_kmers = min(len(self_mh), len(other_mh))
         n_kmers = min_n_kmers * scaled  # would be better if hll estimate - see #1798
 
@@ -864,19 +840,6 @@ class MinHash(RustObject):
 
         c1 = self.contained_by(other, downsample)
         c2 = other.contained_by(self, downsample)
-
-        return (c1 + c2)/2
-
-    def avg_containment_debiased(self, other, downsample=False):
-        """
-        Calculate average containment, debiased.
-        Note: this is average of the containments, *not* count_common/ avg_denom
-        """
-        if not (self.scaled and other.scaled):
-            raise TypeError("Error: can only calculate containment for scaled MinHashes")
-
-        c1 = self.contained_by_debiased(other, downsample)
-        c2 = other.contained_by_debiased(self, downsample)
 
         return (c1 + c2)/2
 
