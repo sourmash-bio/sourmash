@@ -774,7 +774,7 @@ class MinHash(RustObject):
             return containment
 
 
-    def containment_ani(self, other, *, downsample=False, containment=None, confidence=0.95, estimate_ci = False, prob_threshold=1e-3):
+    def containment_ani(self, other, *, downsample=False, confidence=0.95, estimate_ci = False, prob_threshold=1e-3):
         "Use self contained by other to estimate ANI between two MinHash objects."
         if not (self.scaled and other.scaled):
             raise TypeError("Error: can only calculate ANI for scaled MinHashes")
@@ -786,7 +786,6 @@ class MinHash(RustObject):
             self_mh = self.downsample(scaled=scaled)
             other_mh = other.downsample(scaled=scaled)
         containment = self_mh.contained_by_debiased(other_mh) # recalc debiased containment
-        #containment = self_mh.contained_by(other_mh) # recalc debiased containment
         n_kmers = len(self_mh) * scaled # would be better if hll estimate - see #1798
 
         c_aniresult = containment_to_distance(containment, self_mh.ksize, self_mh.scaled,
@@ -831,7 +830,7 @@ class MinHash(RustObject):
         else:
             return max_containment
 
-    def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False, prob_threshold=1e-3):  
+    def max_containment_ani(self, other, *, downsample=False, confidence=0.95, estimate_ci=False, prob_threshold=1e-3):
         "Use max_containment to estimate ANI between two MinHash objects."
         if not (self.scaled and other.scaled):
             raise TypeError("Error: can only calculate ANI for scaled MinHashes")

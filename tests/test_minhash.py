@@ -2934,23 +2934,6 @@ def test_containment_ANI():
     assert (round(m1_mc_m2.ani, 3), round(m1_mc_m2.ani_low, 3), round(m1_mc_m2.ani_high, 3)) == (1.0,1.0,1.0)
 
 
-def test_containment_ANI_precalc_containment():
-    f1 = utils.get_test_data('47+63.fa.sig')
-    f2 = utils.get_test_data('2+63.fa.sig')
-    mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
-    mh2 = sourmash.load_one_signature(f2, ksize=31).minhash
-    # precalc containments and assert same results
-    s1c = mh1.contained_by(mh2)
-    s2c = mh2.contained_by(mh1)
-    mc = max(s1c, s2c)
-
-    assert mh1.containment_ani(mh2, estimate_ci=True) ==  mh1.containment_ani(mh2, containment=s1c, estimate_ci=True)
-    assert mh2.containment_ani(mh1) ==  mh2.containment_ani(mh1, containment=s2c)
-    assert mh1.max_containment_ani(mh2) ==  mh2.max_containment_ani(mh1)
-    assert mh1.max_containment_ani(mh2) ==  mh1.max_containment_ani(mh2, max_containment=mc)
-    assert mh1.max_containment_ani(mh2) ==  mh2.max_containment_ani(mh1, max_containment=mc)
-
-
 def test_avg_containment_ani():
     f1 = utils.get_test_data('47+63.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')

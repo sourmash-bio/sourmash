@@ -127,10 +127,9 @@ class FracMinHashComparison(BaseMinHashComparison):
     def mh1_containment_in_mh2(self):
         return self.mh1_cmp.contained_by(self.mh2_cmp)
 
-    def estimate_ani_from_mh1_containment_in_mh2(self, containment = None):
+    def estimate_ani_from_mh1_containment_in_mh2(self):
         # build result once
         m1_cani = self.mh1_cmp.containment_ani(self.mh2_cmp,
-                                            containment=containment,
                                             confidence=self.ani_confidence,
                                             estimate_ci=self.estimate_ani_ci)
 #                                            prob_threshold=self.pfn_threshold)
@@ -147,9 +146,8 @@ class FracMinHashComparison(BaseMinHashComparison):
     def mh2_containment_in_mh1(self):
         return self.mh2_cmp.contained_by(self.mh1_cmp)
 
-    def estimate_ani_from_mh2_containment_in_mh1(self, containment=None):
+    def estimate_ani_from_mh2_containment_in_mh1(self):
         m2_cani =  self.mh2_cmp.containment_ani(self.mh1_cmp,
-                                            containment=containment,
                                             confidence=self.ani_confidence,
                                             estimate_ci=self.estimate_ani_ci)
 #                                            prob_threshold=self.pfn_threshold)
@@ -164,9 +162,8 @@ class FracMinHashComparison(BaseMinHashComparison):
     def max_containment(self):
         return self.mh1_cmp.max_containment(self.mh2_cmp)
 
-    def estimate_max_containment_ani(self, max_containment=None):
+    def estimate_max_containment_ani(self):
         mc_ani_info = self.mh1_cmp.max_containment_ani(self.mh2_cmp,
-                                                max_containment=max_containment,
                                                 confidence=self.ani_confidence,
                                                 estimate_ci=self.estimate_ani_ci)
 #                                                prob_threshold=self.pfn_threshold)

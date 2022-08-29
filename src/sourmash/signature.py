@@ -153,20 +153,20 @@ class SourmashSignature(RustObject):
         "Compute containment by the other signature. Note: ignores abundance."
         return self.minhash.contained_by(other.minhash, downsample=downsample)
 
-    def containment_ani(self, other, *, downsample=False, containment=None, confidence=0.95, estimate_ci=False):
+    def containment_ani(self, other, *, downsample=False, confidence=0.95, estimate_ci=False):
         "Use containment to estimate ANI between two FracMinHash signatures."
         return self.minhash.containment_ani(other.minhash, downsample=downsample,
-                                        containment=containment, confidence=confidence,
+                                        confidence=confidence,
                                         estimate_ci=estimate_ci)
 
     def max_containment(self, other, downsample=False):
         "Compute max containment w/other signature. Note: ignores abundance."
         return self.minhash.max_containment(other.minhash, downsample=downsample)
 
-    def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False):
+    def max_containment_ani(self, other, *, downsample=False, confidence=0.95, estimate_ci=False):
         "Use max containment to estimate ANI between two FracMinHash signatures."
         return self.minhash.max_containment_ani(other.minhash, downsample=downsample,
-                                                max_containment=max_containment, confidence=confidence,
+                                                confidence=confidence,
                                                 estimate_ci=estimate_ci)
 
     def avg_containment(self, other, downsample=False):

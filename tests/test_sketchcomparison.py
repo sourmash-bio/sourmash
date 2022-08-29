@@ -725,17 +725,17 @@ def test_FracMinHashComparison_ANI_provide_similarity(track_abundance):
     b_cont = b.contained_by(a)
     mc = a.max_containment(b)
 
-    cmp.estimate_ani_from_mh1_containment_in_mh2(containment=a_cont)
+    cmp.estimate_ani_from_mh1_containment_in_mh2()
     a_cont_ani_manual = a.containment_ani(b)
     assert cmp.ani_from_mh1_containment_in_mh2 == a_cont_ani_manual.ani
     assert cmp.potential_false_negative == a_cont_ani_manual.p_exceeds_threshold
 
-    cmp.estimate_ani_from_mh2_containment_in_mh1(containment=b_cont)
+    cmp.estimate_ani_from_mh2_containment_in_mh1()
     b_cont_ani_manual = b.containment_ani(a)
     assert cmp.ani_from_mh2_containment_in_mh1 == b_cont_ani_manual.ani
     assert cmp.potential_false_negative == b_cont_ani_manual.p_exceeds_threshold
 
-    cmp.estimate_max_containment_ani(max_containment=mc)
+    cmp.estimate_max_containment_ani()
     mc_ani_manual = a.max_containment_ani(b)
     assert cmp.max_containment_ani == max(a.containment_ani(b).ani, b.containment_ani(a).ani) == mc_ani_manual.ani
     assert cmp.potential_false_negative == mc_ani_manual.p_exceeds_threshold
