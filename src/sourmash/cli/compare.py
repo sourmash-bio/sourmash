@@ -1,4 +1,4 @@
-"""compare sequence signatures made by compute"""
+"""create a similarity matrix comparing many samples"""
 
 usage="""
 
@@ -39,8 +39,6 @@ def subparser(subparsers):
     subparser.add_argument(
         '-q', '--quiet', action='store_true', help='suppress non-error output'
     )
-    add_ksize_arg(subparser)
-    add_moltype_args(subparser)
     subparser.add_argument(
         '-o', '--output', metavar='F',
         help='file to which output will be written; default is terminal '
@@ -82,6 +80,18 @@ def subparser(subparsers):
     subparser.add_argument(
         '-p', '--processes', metavar='N', type=int, default=None,
         help='Number of processes to use to calculate similarity')
+    subparser.add_argument(
+        '--distance-matrix', action='store_true',
+        help='output a distance matrix, instead of a similarity matrix'
+    )
+    subparser.add_argument(
+        '--similarity-matrix', action='store_false',
+        dest='distance_matrix',
+        help='output a similiarty matrix; this is the default',
+    )
+
+    add_ksize_arg(subparser)
+    add_moltype_args(subparser)
     add_picklist_args(subparser)
     add_pattern_args(subparser)
 

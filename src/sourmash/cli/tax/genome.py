@@ -7,21 +7,24 @@ usage="""
 The 'tax genome' command reads in genome gather result CSVs and reports likely
 classification for each query genome.
 
-By default, classification uses a containment threshold of 0.1, meaning at least
-10 percent of the query was covered by matches with the reported taxonomic rank and lineage.
-You can specify an alternate classification threshold or force classification by
-taxonomic rank instead, e.g. at species or genus-level.
+By default, classification uses a containment threshold of 0.1,
+meaning at least 10 percent of the query was covered by matches with
+the reported taxonomic rank and lineage.  You can specify an alternate
+classification threshold or force classification by taxonomic rank
+instead, e.g. at species or genus-level.
 
 The default output format consists of five columns,
- `query_name,status,rank,fraction,lineage`, where `fraction` is the fraction
- of the query matched to the reported rank and lineage. The `status` column
+ 'query_name,status,rank,fraction,lineage', where 'fraction' is the fraction
+ of the query matched to the reported rank and lineage. The 'status' column
  provides additional information on the classification, and can be:
-  - `match` - this query was classified
-  - `nomatch`- this query could not be classified
-  - `below_threshold` - this query was classified at the specified rank,
+  - 'match' - this query was classified
+  - 'nomatch'- this query could not be classified
+  - 'below_threshold' - this query was classified at the specified rank,
      but the query fraction matched was below the containment threshold
 
-Optionally, you can report classifications in `krona` format, but note
+Use '-F human' to display human-readable output instead.
+
+Optionally, you can report classifications in 'krona' format, but note
 that this forces classification by rank, rather than containment threshold.
 
 Please see the 'tax genome' documentation for more details:
@@ -38,7 +41,7 @@ def subparser(subparsers):
                                       aliases=['classify'],
                                       usage=usage)
     subparser.add_argument(
-        '-g', '--gather-csv', nargs='*', default = [],
+        '-g', '--gather-csv', action='extend', nargs='*', default = [],
         help='CSVs output by sourmash gather for this sample'
     )
     subparser.add_argument(
@@ -51,7 +54,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-t', '--taxonomy-csv', '--taxonomy', metavar='FILE',
-        nargs='+', required=True,
+        nargs='*', required=True, action='extend',
         help='database lineages CSV'
     )
     subparser.add_argument(
@@ -79,7 +82,8 @@ def subparser(subparsers):
         help='fail quickly if taxonomy is not available for an identifier',
     )
     subparser.add_argument(
-        '--output-format', default=['csv_summary'], nargs='+', choices=["csv_summary", "krona"],
+        '-F', '--output-format', default=[], nargs='*', action='extend',
+        choices=["csv_summary", "krona", "human", "lineage_csv"],
         help='choose output format(s)',
     )
     subparser.add_argument(
@@ -92,11 +96,15 @@ def subparser(subparsers):
 def main(args):
     import sourmash
     if not args.gather_csv and not args.from_file:
-        raise ValueError(f"No gather CSVs found! Please input via `-g` or `--from-file`.")
+        raise ValueError(f"No gather CSVs found! Please input via '-g' or '--from-file'.")
     if len(args.output_format) > 1:
         if args.output_base == "-":
             raise TypeError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")
     if not args.rank:
         if any(x in ["krona"] for x in args.output_format):
             raise ValueError(f"Rank (--rank) is required for krona output format.")
+    if not args.output_format:
+        # change to "human" for 5.0
+        args.output_format = ["csv_summary"]
+
     return sourmash.tax.__main__.genome(args)

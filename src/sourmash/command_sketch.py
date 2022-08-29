@@ -426,9 +426,7 @@ def fromfile(args):
     n_duplicate_name = 0
 
     for csvfile in args.csvs:
-        with open(csvfile, newline="") as fp:
-            r = csv.DictReader(fp)
-
+        with sourmash_args.FileInputCSV(csvfile) as r:
             for row in r:
                 name = row['name']
                 if not name:

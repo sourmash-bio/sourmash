@@ -235,8 +235,8 @@ class BaseResult:
         # could define in PrefetchResult instead, same reasoning as above
         self.query_abundance = self.mh1.track_abundance
         self.match_abundance = self.mh2.track_abundance
-        self.query_n_hashes = len(self.mh1.hashes)
-        self.match_n_hashes = len(self.mh2.hashes)
+        self.query_n_hashes = len(self.mh1)
+        self.match_n_hashes = len(self.mh2)
 
     @property
     def pass_threshold(self):
@@ -321,13 +321,12 @@ class SearchResult(BaseResult):
         if self.cmp_scaled is None:
             raise TypeError("ANI can only be estimated from scaled signatures.")
         if self.searchtype == SearchType.CONTAINMENT:
-            self.cmp.estimate_mh1_containment_ani()
-            #self.cmp.estimate_mh1_containment_ani(containment = self.similarity)
-            # redo containment with bias factor
-            self.ani = self.cmp.mh1_containment_ani
+            # to use bias factor, don't pass in containment
+            self.cmp.estimate_ani_from_mh2_containment_in_mh1()
+            self.ani = self.cmp.ani_from_mh2_containment_in_mh1
             if self.estimate_ani_ci:
-                self.ani_low = self.cmp.mh1_containment_ani_low
-                self.ani_high = self.cmp.mh1_containment_ani_high
+                self.ani_low = self.cmp.ani_from_mh2_containment_in_mh1_low
+                self.ani_high = self.cmp.ani_from_mh2_containment_in_mh1_high
         elif self.searchtype == SearchType.MAX_CONTAINMENT:
             #self.cmp.estimate_max_containment_ani(max_containment = self.similarity)
             # redo containment with bias factor
@@ -381,8 +380,8 @@ class PrefetchResult(BaseResult):
 
     def estimate_containment_ani(self):
         self.cmp.estimate_all_containment_ani()
-        self.query_containment_ani = self.cmp.mh1_containment_ani
-        self.match_containment_ani = self.cmp.mh2_containment_ani
+        self.query_containment_ani = self.cmp.ani_from_mh1_containment_in_mh2
+        self.match_containment_ani = self.cmp.ani_from_mh2_containment_in_mh1
         self.average_containment_ani = self.cmp.avg_containment_ani
         self.max_containment_ani = self.cmp.max_containment_ani
         self.potential_false_negative = self.cmp.potential_false_negative
@@ -390,16 +389,16 @@ class PrefetchResult(BaseResult):
             self.handle_ani_ci()
 
     def handle_ani_ci(self):
-        self.query_containment_ani_low = self.cmp.mh1_containment_ani_low
-        self.query_containment_ani_high = self.cmp.mh1_containment_ani_high
-        self.match_containment_ani_low = self.cmp.mh2_containment_ani_low
-        self.match_containment_ani_high = self.cmp.mh2_containment_ani_high
+        self.query_containment_ani_low = self.cmp.ani_from_mh1_containment_in_mh2_low
+        self.query_containment_ani_high = self.cmp.ani_from_mh1_containment_in_mh2_high
+        self.match_containment_ani_low = self.cmp.ani_from_mh2_containment_in_mh1_low
+        self.match_containment_ani_high = self.cmp.ani_from_mh2_containment_in_mh1_high
 
     def build_prefetch_result(self):
         # unique prefetch values
         self.jaccard = self.cmp.jaccard
-        self.f_query_match = self.cmp.mh2_containment #db_mh.contained_by(query_mh)
-        self.f_match_query = self.cmp.mh1_containment #query_mh.contained_by(db_mh)
+        self.f_query_match = self.cmp.mh2_containment_in_mh1 #db_mh.contained_by(query_mh)
+        self.f_match_query = self.cmp.mh1_containment_in_mh2 #query_mh.contained_by(db_mh)
         # set write columns for prefetch result
         self.write_cols = self.prefetch_write_cols
         if self.estimate_ani_ci:
@@ -480,10 +479,10 @@ class GatherResult(PrefetchResult):
         self.unique_intersect_bp = self.gather_comparison.total_unique_intersect_hashes
     
         # calculate fraction of subject match with orig query
-        self.f_match_orig = self.cmp.mh2_containment
+        self.f_match_orig = self.cmp.mh2_containment_in_mh1
 
         # calculate fractions wrt first denominator - genome size
-        self.f_match = self.gather_comparison.mh2_containment # unique match containment
+        self.f_match = self.gather_comparison.mh2_containment_in_mh1 # unique match containment
         self.f_orig_query = len(self.cmp.intersect_mh) / self.orig_query_len
         assert self.gather_comparison.intersect_mh.contained_by(self.gather_comparison.mh1_cmp) == 1.0
     
@@ -540,8 +539,8 @@ class GatherResult(PrefetchResult):
         if self.estimate_ani_ci:
             prefetch_cols = self.prefetch_write_cols_ci
         self.jaccard = self.cmp.jaccard
-        self.f_query_match = self.cmp.mh2_containment #db_mh.contained_by(query_mh)
-        self.f_match_query = self.cmp.mh1_containment #query_mh.contained_by(db_mh)
+        self.f_query_match = self.cmp.mh2_containment_in_mh1 #db_mh.contained_by(query_mh)
+        self.f_match_query = self.cmp.mh1_containment_in_mh2 #query_mh.contained_by(db_mh)
         self.prep_prefetch_result()
         return self.to_write(columns=prefetch_cols)
 
@@ -686,7 +685,10 @@ class GatherDatabases:
             query_mh = ident_mh.to_mutable()
 
         orig_query_mh = query_mh.flatten()
-        query.minhash = orig_query_mh.to_mutable()
+
+        # query.minhash will be assigned to repeatedly in gather; make mutable.
+        query = query.to_mutable()
+        query.minhash = orig_query_mh
 
         cmp_scaled = query.minhash.scaled    # initialize with resolution of query
 

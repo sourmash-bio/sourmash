@@ -192,6 +192,7 @@ class MinHash(RustObject):
         self,
         n,
         ksize,
+        *,
         is_protein=False,
         dayhoff=False,
         hp=False,
@@ -319,12 +320,12 @@ class MinHash(RustObject):
         a = MinHash(
             self.num,
             self.ksize,
-            self.is_protein,
-            self.dayhoff,
-            self.hp,
-            self.track_abundance,
-            self.seed,
-            self._max_hash,
+            is_protein=self.is_protein,
+            dayhoff=self.dayhoff,
+            hp=self.hp,
+            track_abundance=self.track_abundance,
+            seed=self.seed,
+            max_hash=self._max_hash,
         )
         return a
 
@@ -653,8 +654,10 @@ class MinHash(RustObject):
 
         # end checks! create new object:
         a = MinHash(
-            num, self.ksize, self.is_protein, self.dayhoff, self.hp,
-            self.track_abundance, self.seed, max_hash
+            num, self.ksize,
+            is_protein=self.is_protein, dayhoff=self.dayhoff, hp=self.hp,
+            track_abundance=self.track_abundance, seed=self.seed,
+            max_hash=max_hash
         )
         # copy over hashes:
         if self.track_abundance:
@@ -669,8 +672,9 @@ class MinHash(RustObject):
         if self.track_abundance:
             # create new object:
             a = MinHash(
-                self.num, self.ksize, self.is_protein, self.dayhoff, self.hp,
-                False, self.seed, self._max_hash
+                self.num, self.ksize,
+                is_protein=self.is_protein, dayhoff=self.dayhoff, hp=self.hp,
+                track_abundance=False, seed=self.seed, max_hash=self._max_hash
             )
             a.add_many(self)
 
@@ -949,8 +953,12 @@ class MinHash(RustObject):
     def to_frozen(self):
         "Return a frozen copy of this MinHash that cannot be changed."
         new_mh = self.__copy__()
-        new_mh.__class__ = FrozenMinHash
+        new_mh.into_frozen()
         return new_mh
+
+    def into_frozen(self):
+        "Freeze this MinHash, preventing any changes."
+        self.__class__ = FrozenMinHash
 
     def inflate(self, from_mh):
         """return a new MinHash object with abundances taken from 'from_mh'
@@ -1004,7 +1012,7 @@ class MinHash(RustObject):
         if not self.scaled:
             raise TypeError("can only approximate unique_dataset_hashes for scaled MinHashes")
         # TODO: replace set_size with HLL estimate when that gets implemented
-        return len(self.hashes) * self.scaled # + (self.ksize - 1) for bp estimation
+        return len(self) * self.scaled # + (self.ksize - 1) for bp estimation
 
     def size_is_accurate(self, relative_error=0.20, confidence=0.95):
         """
@@ -1057,12 +1065,16 @@ class FrozenMinHash(MinHash):
         if num and self.num == num:
             return self
 
-        return MinHash.downsample(self, num=num, scaled=scaled).to_frozen()
+        down_mh = MinHash.downsample(self, num=num, scaled=scaled)
+        down_mh.into_frozen()
+        return down_mh
 
     def flatten(self):
         if not self.track_abundance:
             return self
-        return MinHash.flatten(self).to_frozen()
+        flat_mh = MinHash.flatten(self)
+        flat_mh.into_frozen()
+        return flat_mh
 
     def __iadd__(self, *args, **kwargs):
         raise TypeError('FrozenMinHash does not support modification')
@@ -1086,6 +1098,10 @@ class FrozenMinHash(MinHash):
     def to_frozen(self):
         "Return a frozen copy of this MinHash that cannot be changed."
         return self
+
+    def into_frozen(self):
+        "Freeze this MinHash, preventing any changes."
+        pass
 
     def __setstate__(self, tup):
         "support pickling via __getstate__/__setstate__"

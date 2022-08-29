@@ -215,7 +215,7 @@ def test_seq_to_hashes(track_abundance):
 
 
 def test_seq_to_hashes_protein_1(track_abundance, dayhoff):
-    mh = MinHash(10, 2, True, dayhoff=dayhoff, hp=False, track_abundance=track_abundance)
+    mh = MinHash(10, 2, is_protein=True, dayhoff=dayhoff, hp=False, track_abundance=track_abundance)
     prot_seq = "AGYYG"
 
     mh.add_protein(prot_seq)
@@ -267,7 +267,7 @@ def test_seq_to_hashes_bad_kmers_as_zeroes_2():
 
 
 def test_seq_to_hashes_translated_short():
-    mh = MinHash(0, 2, True, dayhoff=True, hp=False, scaled = 1)
+    mh = MinHash(0, 2, is_protein=True, dayhoff=True, hp=False, scaled = 1)
     hashes = mh.seq_to_hashes("ACTGA")
 
     assert(len(hashes) == 0)
@@ -275,7 +275,7 @@ def test_seq_to_hashes_translated_short():
 
 def test_bytes_protein_dayhoff(track_abundance, dayhoff):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 2, True, dayhoff=dayhoff, hp=False,
+    mh = MinHash(10, 2, is_protein=True, dayhoff=dayhoff, hp=False,
                  track_abundance=track_abundance)
 
     expected_moltype = 'protein'
@@ -292,7 +292,7 @@ def test_bytes_protein_dayhoff(track_abundance, dayhoff):
 
 def test_protein_dayhoff(track_abundance, dayhoff):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 2, True, dayhoff=dayhoff, hp=False, track_abundance=track_abundance)
+    mh = MinHash(10, 2, is_protein=True, dayhoff=dayhoff, hp=False, track_abundance=track_abundance)
     mh.add_protein('AGYYG')
 
     assert len(mh.hashes) == 4
@@ -300,7 +300,7 @@ def test_protein_dayhoff(track_abundance, dayhoff):
 
 def test_bytes_protein_hp(track_abundance, hp):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 2, True, dayhoff=False, hp=hp, track_abundance=track_abundance)
+    mh = MinHash(10, 2, is_protein=True, dayhoff=False, hp=hp, track_abundance=track_abundance)
     expected_moltype = 'protein'
     if hp:
         expected_moltype = 'hp'
@@ -318,7 +318,7 @@ def test_bytes_protein_hp(track_abundance, hp):
 
 def test_protein_hp(track_abundance, hp):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 2, True, dayhoff=False, hp=hp, track_abundance=track_abundance)
+    mh = MinHash(10, 2, is_protein=True, dayhoff=False, hp=hp, track_abundance=track_abundance)
     mh.add_protein('AGYYG')
 
     if hp:
@@ -422,7 +422,7 @@ def test_hp_2(track_abundance):
 
 def test_protein_short(track_abundance):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 9, True, track_abundance=track_abundance)
+    mh = MinHash(10, 9, is_protein=True, track_abundance=track_abundance)
     mh.add_protein('AG')
 
     assert len(mh.hashes) == 0, mh.hashes
@@ -817,17 +817,17 @@ def test_mh_count_common(track_abundance):
 
 
 def test_mh_count_common_diff_protein(track_abundance):
-    a = MinHash(20, 5, False, track_abundance=track_abundance)
-    b = MinHash(20, 5, True, track_abundance=track_abundance)
+    a = MinHash(20, 5, is_protein=False, track_abundance=track_abundance)
+    b = MinHash(20, 5, is_protein=True, track_abundance=track_abundance)
 
     with pytest.raises(ValueError):
         a.count_common(b)
 
 
 def test_mh_count_common_diff_maxhash(track_abundance):
-    a = MinHash(0, 5, False, track_abundance=track_abundance,
+    a = MinHash(0, 5, is_protein=False, track_abundance=track_abundance,
                 scaled=_get_scaled_for_max_hash(1))
-    b = MinHash(0, 5, True, track_abundance=track_abundance,
+    b = MinHash(0, 5, is_protein=True, track_abundance=track_abundance,
                 scaled=_get_scaled_for_max_hash(2))
 
     with pytest.raises(ValueError):
@@ -835,8 +835,8 @@ def test_mh_count_common_diff_maxhash(track_abundance):
 
 
 def test_mh_count_common_diff_seed(track_abundance):
-    a = MinHash(20, 5, False, track_abundance=track_abundance, seed=1)
-    b = MinHash(20, 5, True, track_abundance=track_abundance, seed=2)
+    a = MinHash(20, 5, is_protein=False, track_abundance=track_abundance, seed=1)
+    b = MinHash(20, 5, is_protein=True, track_abundance=track_abundance, seed=2)
 
     with pytest.raises(ValueError):
         a.count_common(b)
@@ -1091,8 +1091,8 @@ def test_mh_inplace_concat(track_abundance):
 
 
 def test_mh_merge_diff_protein(track_abundance):
-    a = MinHash(20, 5, False, track_abundance=track_abundance)
-    b = MinHash(20, 5, True, track_abundance=track_abundance)
+    a = MinHash(20, 5, is_protein=False, track_abundance=track_abundance)
+    b = MinHash(20, 5, is_protein=True, track_abundance=track_abundance)
 
     with pytest.raises(ValueError):
         a.merge(b)
@@ -1107,8 +1107,8 @@ def test_mh_merge_diff_ksize(track_abundance):
 
 
 def test_mh_similarity_diff_protein(track_abundance):
-    a = MinHash(20, 5, False, track_abundance=track_abundance)
-    b = MinHash(20, 5, True, track_abundance=track_abundance)
+    a = MinHash(20, 5, is_protein=False, track_abundance=track_abundance)
+    b = MinHash(20, 5, is_protein=True, track_abundance=track_abundance)
 
     with pytest.raises(ValueError):
         a.similarity(b)
@@ -1142,8 +1142,8 @@ def test_mh_compare_diff_max_hash(track_abundance):
 
 
 def test_mh_concat_diff_protein(track_abundance):
-    a = MinHash(20, 5, False, track_abundance=track_abundance)
-    b = MinHash(20, 5, True, track_abundance=track_abundance)
+    a = MinHash(20, 5, is_protein=False, track_abundance=track_abundance)
+    b = MinHash(20, 5, is_protein=True, track_abundance=track_abundance)
 
     with pytest.raises(ValueError):
         a += b
@@ -1211,7 +1211,7 @@ def test_murmur():
 
 
 def test_abundance_simple():
-    a = MinHash(20, 5, False, track_abundance=True)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
 
     a.add_sequence('AAAAA')
     assert list(a.hashes) == [2110480117637990133]
@@ -1223,7 +1223,7 @@ def test_abundance_simple():
 
 
 def test_add_hash_with_abundance():
-    a = MinHash(20, 5, False, track_abundance=True)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
 
     a.add_hash_with_abundance(10, 1)
     assert a.hashes == {10: 1}
@@ -1236,7 +1236,7 @@ def test_add_hash_with_abundance():
 
 
 def test_add_hash_with_abundance_2():
-    a = MinHash(20, 5, False, track_abundance=False)
+    a = MinHash(20, 5, is_protein=False, track_abundance=False)
 
     with pytest.raises(RuntimeError) as e:
         a.add_hash_with_abundance(10, 1)
@@ -1245,7 +1245,7 @@ def test_add_hash_with_abundance_2():
 
 
 def test_clear():
-    a = MinHash(20, 5, False, track_abundance=True)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
 
     a.add_hash(10)
     assert a.hashes == {10: 1}
@@ -1255,7 +1255,7 @@ def test_clear():
 
 
 def test_clear_2():
-    a = MinHash(20, 5, False, track_abundance=False)
+    a = MinHash(20, 5, is_protein=False, track_abundance=False)
 
     a.add_hash(10)
     assert list(a.hashes) == [10]
@@ -1265,8 +1265,8 @@ def test_clear_2():
 
 
 def test_abundance_simple_2():
-    a = MinHash(20, 5, False, track_abundance=True)
-    b = MinHash(20, 5, False, track_abundance=True)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
+    b = MinHash(20, 5, is_protein=False, track_abundance=True)
 
     a.add_sequence('AAAAA')
     assert list(a.hashes) == [2110480117637990133]
@@ -1281,8 +1281,8 @@ def test_abundance_simple_2():
 
 
 def test_abundance_count_common():
-    a = MinHash(20, 5, False, track_abundance=True)
-    b = MinHash(20, 5, False, track_abundance=False)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
+    b = MinHash(20, 5, is_protein=False, track_abundance=False)
 
     a.add_sequence('AAAAA')
     a.add_sequence('AAAAA')
@@ -1351,8 +1351,8 @@ def test_set_abundance_2():
 
 def test_set_abundance_clear():
     # on empty minhash, clear should have no effect
-    a = MinHash(20, 5, False, track_abundance=True)
-    b = MinHash(20, 5, False, track_abundance=True)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
+    b = MinHash(20, 5, is_protein=False, track_abundance=True)
 
     a.set_abundances({1: 3, 2: 4}, clear=True)
     b.set_abundances({1: 3, 2: 4}, clear=False)
@@ -1362,7 +1362,7 @@ def test_set_abundance_clear():
 
 def test_set_abundance_clear_2():
     # default should be clear=True
-    a = MinHash(20, 5, False, track_abundance=True)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
 
     a.add_hash(10)
     assert a.hashes == {10: 1}
@@ -1372,7 +1372,7 @@ def test_set_abundance_clear_2():
 
 
 def test_set_abundance_clear_3():
-    a = MinHash(20, 5, False, track_abundance=True)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
 
     a.add_hash(10)
     assert a.hashes == {10: 1}
@@ -1384,7 +1384,7 @@ def test_set_abundance_clear_3():
 def test_set_abundance_clear_4():
     # setting the abundance of an already set hash should add
     # the abundances together
-    a = MinHash(20, 5, False, track_abundance=True)
+    a = MinHash(20, 5, is_protein=False, track_abundance=True)
 
     a.set_abundances({20: 2, 10: 1}, clear=False)   # should also sort the hashes
     assert a.hashes == {10: 1, 20: 2}

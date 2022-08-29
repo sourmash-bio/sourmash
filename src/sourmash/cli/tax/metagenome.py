@@ -8,12 +8,14 @@ The 'tax metagenome' command reads in metagenome gather result CSVs and
 summarizes by taxonomic lineage.
 
 The default output format consists of four columns,
- `query_name,rank,fraction,lineage`, where `fraction` is the fraction
+ 'query_name,rank,fraction,lineage', where 'fraction' is the fraction
  of the query matched to that reported rank and lineage. The summarization
  is reported for each taxonomic rank.
 
 Alternatively, you can output results at a specific rank (e.g. species)
-in `krona` or `lineage_summary` formats.
+in 'krona', 'lineage_summary', and 'human' formats.
+
+Use '-F human' to display human-readable output.
 
 Please see the 'tax metagenome' documentation for more details:
   https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-metagenome-summarize-metagenome-content-from-gather-results
@@ -28,7 +30,7 @@ def subparser(subparsers):
                                       aliases=['summarize'],
                                       usage=usage)
     subparser.add_argument(
-        '-g', '--gather-csv', nargs='*', default = [],
+        '-g', '--gather-csv', action="extend", nargs='*', default = [],
         help='CSVs from sourmash gather'
     )
     subparser.add_argument(
@@ -49,7 +51,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-t', '--taxonomy-csv', '--taxonomy', metavar='FILE',
-        nargs='+', required=True,
+        action="extend", nargs='+', required=True,
         help='database lineages CSV'
     )
     subparser.add_argument(
@@ -65,7 +67,8 @@ def subparser(subparsers):
         help='fail quickly if taxonomy is not available for an identifier',
     )
     subparser.add_argument(
-        '--output-format', default=['csv_summary'], nargs='+', choices=["csv_summary", "krona", "lineage_summary"],
+        '-F', '--output-format', default=[], nargs='*', action="extend",
+        choices=["human", "csv_summary", "krona", "lineage_summary",  "kreport"],
         help='choose output format(s)',
     )
     subparser.add_argument(
@@ -80,11 +83,14 @@ def subparser(subparsers):
 def main(args):
     import sourmash
     if not args.gather_csv and not args.from_file:
-        raise ValueError(f"No gather CSVs found! Please input via `-g` or `--from-file`.")
+        raise ValueError(f"No gather CSVs found! Please input via '-g' or '--from-file'.")
     if len(args.output_format) > 1:
         if args.output_base == "-":
             raise TypeError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")
     if not args.rank:
         if any(x in ["krona", "lineage_summary"] for x in args.output_format):
             raise ValueError(f"Rank (--rank) is required for krona and lineage_summary output formats.")
+    if not args.output_format:
+        # change to "human" for 5.0
+        args.output_format = ["csv_summary"]
     return sourmash.tax.__main__.metagenome(args)

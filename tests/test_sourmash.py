@@ -1,7 +1,6 @@
 """
 Tests for the 'sourmash' command line.
 """
-import argparse
 import os
 import gzip
 import shutil
@@ -10,17 +9,18 @@ import glob
 import json
 import csv
 import pytest
-import sys
 import zipfile
 import random
-from sourmash.search import SearchResult,GatherResult
+import numpy
 
 import sourmash_tst_utils as utils
 
 import sourmash
-from sourmash import MinHash
+from sourmash import MinHash, sourmash_args
 from sourmash.sbt import SBT, Node
 from sourmash.sbtmh import SigLeaf, load_sbt_index
+from sourmash.search import SearchResult, GatherResult
+
 try:
     import matplotlib
     matplotlib.use('Agg')
@@ -140,10 +140,10 @@ def test_load_pathlist_from_file_duplicate(c):
     assert len(check) == 1
 
 
-@utils.in_tempdir
-def test_do_serial_compare(c):
-    # try doing a compare serial
-    import numpy
+def test_compare_serial(runtmp):
+    # try doing a compare serially
+    c = runtmp
+
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
 
@@ -170,10 +170,41 @@ def test_do_serial_compare(c):
     assert (cmp_out == cmp_calc).all()
 
 
-@utils.in_tempdir
-def test_do_compare_parallel(c):
+def test_compare_serial_distance(runtmp):
+    # try doing a compare serially, with --distance output
+    c = runtmp
+
+    testsigs = utils.get_test_data('genome-s1*.sig')
+    testsigs = glob.glob(testsigs)
+
+    c.run_sourmash('compare', '-o', 'cmp', '-k', '21', '--dna', *testsigs,
+                   '--distance')
+
+    cmp_outfile = c.output('cmp')
+    assert os.path.exists(cmp_outfile)
+    cmp_out = numpy.load(cmp_outfile)
+
+    sigs = []
+    for fn in testsigs:
+        sigs.append(sourmash.load_one_signature(fn, ksize=21,
+                                                select_moltype='dna'))
+
+    cmp_calc = numpy.zeros([len(sigs), len(sigs)])
+    for i, si in enumerate(sigs):
+        for j, sj in enumerate(sigs):
+            cmp_calc[i][j] = 1 - si.similarity(sj)
+
+        sigs = []
+        for fn in testsigs:
+            sigs.append(sourmash.load_one_signature(fn, ksize=21,
+                                                    select_moltype='dna'))
+    assert (cmp_out == cmp_calc).all()
+
+
+def test_compare_parallel(runtmp):
     # try doing a compare parallel
-    import numpy
+    c = runtmp
+
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
 
@@ -201,10 +232,9 @@ def test_do_compare_parallel(c):
     assert (cmp_out == cmp_calc).all()
 
 
-@utils.in_tempdir
-def test_do_serial_compare_with_from_file(c):
+def test_compare_do_serial_compare_with_from_file(runtmp):
     # try doing a compare serial
-    import numpy
+    c = runtmp
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
 
@@ -237,10 +267,10 @@ def test_do_serial_compare_with_from_file(c):
     assert numpy.array_equal(numpy.sort(cmp_out.flat), numpy.sort(cmp_calc.flat))
 
 
-@utils.in_tempdir
-def test_do_basic_compare_using_rna_arg(c):
+def test_compare_do_basic_compare_using_rna_arg(runtmp):
     # try doing a basic compare using --rna instead of --dna
-    import numpy
+    c = runtmp
+
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
 
@@ -263,10 +293,9 @@ def test_do_basic_compare_using_rna_arg(c):
     assert (cmp_out == cmp_calc).all()
 
 
-def test_do_basic_compare_using_nucleotide_arg(runtmp):
+def test_compare_do_basic_using_nucleotide_arg(runtmp):
     # try doing a basic compare using --nucleotide instead of --dna/--rna
-    c=runtmp
-    import numpy
+    c = runtmp
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
 
@@ -289,8 +318,9 @@ def test_do_basic_compare_using_nucleotide_arg(runtmp):
     assert (cmp_out == cmp_calc).all()
 
 
-@utils.in_tempdir
-def test_do_compare_quiet(c):
+def test_compare_quiet(runtmp):
+    # test 'compare -q' has no output
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -301,8 +331,10 @@ def test_do_compare_quiet(c):
     assert not c.last_result.out
     assert not c.last_result.err
 
-@utils.in_tempdir
-def test_do_traverse_directory_compare(c):
+
+def test_compare_do_traverse_directory(runtmp):
+    # test 'compare' on a directory
+    c = runtmp
     c.run_sourmash('compare', '-k 21',
                    '--dna', utils.get_test_data('compare'))
     print(c.last_result.out)
@@ -310,8 +342,9 @@ def test_do_traverse_directory_compare(c):
     assert 'genome-s11.fa.gz' in c.last_result.out
 
 
-@utils.in_tempdir
-def test_do_traverse_directory_compare_force(c):
+def test_compare_do_traverse_directory_compare_force(runtmp):
+    # test 'compare' on a directory, with -f
+    c = runtmp
     sig1 = utils.get_test_data('compare/genome-s10.fa.gz.sig')
     sig2 = utils.get_test_data('compare/genome-s11.fa.gz.sig')
     newdir = c.output('newdir')
@@ -327,8 +360,9 @@ def test_do_traverse_directory_compare_force(c):
     assert 'genome-s11.fa.gz' in c.last_result.out
 
 
-@utils.in_tempdir
-def test_do_compare_output_csv(c):
+def test_compare_output_csv(runtmp):
+    # test 'sourmash compare --csv'
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -352,8 +386,36 @@ def test_do_compare_output_csv(c):
             next(r)
 
 
-@utils.in_tempdir
-def test_do_compare_downsample(c):
+def test_compare_output_csv_gz(runtmp):
+    # test 'sourmash compare --csv' with a .gz file
+    c = runtmp
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig',
+                   '--csv', 'xxx.gz')
+
+    with gzip.open(c.output('xxx.gz'), 'rt', newline='') as fp:
+        r = iter(csv.reader(fp))
+        row = next(r)
+        print(row)
+        row = next(r)
+        print(row)
+        assert float(row[0]) == 1.0
+        assert float(row[1]) == 0.93
+        row = next(r)
+        assert float(row[0]) == 0.93
+        assert float(row[1]) == 1.0
+
+        # exactly three lines
+        with pytest.raises(StopIteration) as e:
+            next(r)
+
+
+def test_compare_downsample(runtmp):
+    # test 'compare' with --downsample
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=200', testdata1)
 
@@ -371,8 +433,9 @@ def test_do_compare_downsample(c):
         assert lines[2].startswith('0.6666')
 
 
-@utils.in_tempdir
-def test_do_compare_output_multiple_k(c):
+def test_compare_output_multiple_k(runtmp):
+    # test 'compare' when given multiple k-mer sizes -> should fail
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', testdata1)
@@ -389,8 +452,10 @@ def test_do_compare_output_multiple_k(c):
     assert '(saw k-mer sizes 21, 31)' in c.last_result.err
 
 
-@utils.in_tempdir
-def test_do_compare_output_multiple_moltype(c):
+def test_compare_output_multiple_moltype(runtmp):
+    # 'compare' should fail when given multiple moltypes
+    c = runtmp
+
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'dna', '-p', 'k=21,num=500', testdata1)
@@ -405,8 +470,9 @@ def test_do_compare_output_multiple_moltype(c):
     assert 'multiple molecule types loaded;' in c.last_result.err
 
 
-@utils.in_tempdir
-def test_do_compare_dayhoff(c):
+def test_compare_dayhoff(runtmp):
+    # test 'compare' works with dayhoff moltype
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', '--dayhoff', testdata1)
@@ -426,8 +492,9 @@ min similarity in matrix: 0.940'''.splitlines()
     assert c.last_result.status == 0
 
 
-@utils.in_tempdir
-def test_do_compare_hp(c):
+def test_compare_hp(runtmp):
+    # test that 'compare' works with --hp moltype
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', '--hp', testdata1)
@@ -447,18 +514,11 @@ min similarity in matrix: 0.940'''.splitlines()
     assert c.last_result.status == 0
 
 
-@utils.in_tempdir
-def test_compare_containment(c):
-    import numpy
+def _load_compare_matrix_and_sigs(compare_csv, sigfiles, *, ksize=31):
+    # load in the output of 'compare' together with sigs
 
-    testdata_glob = utils.get_test_data('gather/GCF*.sig')
-    testdata_sigs = glob.glob(testdata_glob)
-
-    c.run_sourmash('compare', '--containment', '-k', '31',
-                   '--csv', 'output.csv', *testdata_sigs)
-
-    # load the matrix output of compare --containment
-    with open(c.output('output.csv'), 'rt') as fp:
+    # load compare CSV
+    with open(compare_csv, 'rt', newline="") as fp:
         r = iter(csv.reader(fp))
         headers = next(r)
 
@@ -471,9 +531,26 @@ def test_compare_containment(c):
 
     # load in all the input signatures
     idx_to_sig = dict()
-    for idx, filename in enumerate(testdata_sigs):
-        ss = sourmash.load_one_signature(filename, ksize=31)
+    for idx, filename in enumerate(sigfiles):
+        ss = sourmash.load_one_signature(filename, ksize=ksize)
         idx_to_sig[idx] = ss
+
+    return mat, idx_to_sig
+
+
+def test_compare_containment(runtmp):
+    # test compare --containment
+    c = runtmp
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    c.run_sourmash('compare', '--containment', '-k', '31',
+                   '--csv', 'output.csv', *testdata_sigs)
+
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
 
     # check explicit containment against output of compare
     for i in range(len(idx_to_sig)):
@@ -487,33 +564,45 @@ def test_compare_containment(c):
             assert containment == mat_val, (i, j)
 
 
-@utils.in_tempdir
-def test_compare_max_containment(c):
-    import numpy
+def test_compare_containment_distance(runtmp):
+    # test compare --containment --distance-matrix
+    c = runtmp
 
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    c.run_sourmash('compare', '--containment', '--distance-matrix', '-k', '31',
+                   '--csv', 'output.csv', *testdata_sigs)
+
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
+
+    # check explicit containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            ss_j = idx_to_sig[j]
+            containment = 1 - ss_j.contained_by(ss_i)
+            containment = round(containment, 3)
+            mat_val = round(mat[i][j], 3)
+
+            assert containment == mat_val, (i, j)
+
+
+def test_compare_max_containment(runtmp):
+    # test compare --max-containment
+
+    c = runtmp
     testdata_glob = utils.get_test_data('scaled/*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
     c.run_sourmash('compare', '--max-containment', '-k', '31',
                    '--csv', 'output.csv', *testdata_sigs)
 
-    # load the matrix output of compare --containment
-    with open(c.output('output.csv'), 'rt') as fp:
-        r = iter(csv.reader(fp))
-        headers = next(r)
-
-        mat = numpy.zeros((len(headers), len(headers)))
-        for i, row in enumerate(r):
-            for j, val in enumerate(row):
-                mat[i][j] = float(val)
-
-        print(mat)
-
-    # load in all the input signatures
-    idx_to_sig = dict()
-    for idx, filename in enumerate(testdata_sigs):
-        ss = sourmash.load_one_signature(filename, ksize=31)
-        idx_to_sig[idx] = ss
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
 
     # check explicit containment against output of compare
     for i in range(len(idx_to_sig)):
@@ -527,9 +616,9 @@ def test_compare_max_containment(c):
             assert containment == mat_val, (i, j)
 
 
-@utils.in_tempdir
-def test_compare_avg_containment(c):
-    import numpy
+def test_compare_avg_containment(runtmp):
+    # test compare --avg-containment
+    c = runtmp
 
     testdata_glob = utils.get_test_data('scaled/*.sig')
     testdata_sigs = glob.glob(testdata_glob)
@@ -537,23 +626,9 @@ def test_compare_avg_containment(c):
     c.run_sourmash('compare', '--avg-containment', '-k', '31',
                    '--csv', 'output.csv', *testdata_sigs)
 
-    # load the matrix output of compare --containment
-    with open(c.output('output.csv'), 'rt') as fp:
-        r = iter(csv.reader(fp))
-        headers = next(r)
-
-        mat = numpy.zeros((len(headers), len(headers)))
-        for i, row in enumerate(r):
-            for j, val in enumerate(row):
-                mat[i][j] = float(val)
-
-        print(mat)
-
-    # load in all the input signatures
-    idx_to_sig = dict()
-    for idx, filename in enumerate(testdata_sigs):
-        ss = sourmash.load_one_signature(filename, ksize=31)
-        idx_to_sig[idx] = ss
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
 
     # check explicit containment against output of compare
     for i in range(len(idx_to_sig)):
@@ -567,8 +642,10 @@ def test_compare_avg_containment(c):
             assert containment == mat_val, (i, j)
 
 
-@utils.in_tempdir
-def test_compare_max_containment_and_containment(c):
+def test_compare_max_containment_and_containment(runtmp):
+    # make sure that can't specify both --max-containment and --containment
+    c = runtmp
+
     testdata_glob = utils.get_test_data('scaled/*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -581,8 +658,10 @@ def test_compare_max_containment_and_containment(c):
     assert "ERROR: cannot specify more than one containment argument!" in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_avg_containment_and_containment(c):
+def test_compare_avg_containment_and_containment(runtmp):
+    # make sure that can't specify both --avg-containment and --containment
+    c = runtmp
+
     testdata_glob = utils.get_test_data('scaled/*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -595,8 +674,10 @@ def test_compare_avg_containment_and_containment(c):
     assert "ERROR: cannot specify more than one containment argument!" in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_avg_containment_and_max_containment(c):
+def test_compare_avg_containment_and_max_containment(runtmp):
+    # make sure that can't specify both --avg-containment and --max-containment
+    c = runtmp
+
     testdata_glob = utils.get_test_data('scaled/*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -609,8 +690,10 @@ def test_compare_avg_containment_and_max_containment(c):
     assert "ERROR: cannot specify more than one containment argument!" in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_containment_abund_flatten(c):
+def test_compare_containment_abund_flatten_warning(runtmp):
+    # check warning message about ignoring abund signatures
+
+    c  = runtmp
     s47 = utils.get_test_data('track_abund/47.fa.sig')
     s63 = utils.get_test_data('track_abund/63.fa.sig')
 
@@ -622,8 +705,10 @@ def test_compare_containment_abund_flatten(c):
         c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_ani_abund_flatten(c):
+def test_compare_ani_abund_flatten(runtmp):
+    # check warning message about ignoring abund signatures
+
+    c = runtmp
     s47 = utils.get_test_data('track_abund/47.fa.sig')
     s63 = utils.get_test_data('track_abund/63.fa.sig')
 
@@ -635,8 +720,10 @@ def test_compare_ani_abund_flatten(c):
         c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_containment_require_scaled(c):
+def test_compare_containment_require_scaled(runtmp):
+    # check warning message about scaled signatures & containment
+    c = runtmp
+
     s47 = utils.get_test_data('num/47.fa.sig')
     s63 = utils.get_test_data('num/63.fa.sig')
 
@@ -649,8 +736,10 @@ def test_compare_containment_require_scaled(c):
     assert c.last_result.status != 0
 
 
-@utils.in_tempdir
-def test_do_plot_comparison(c):
+def test_do_plot_comparison(runtmp):
+    # make sure 'plot' outputs files ;)
+    c = runtmp
+
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
@@ -708,7 +797,6 @@ def test_do_plot_comparison_4_output_dir(c):
 
 @utils.in_tempdir
 def test_do_plot_comparison_5_force(c):
-    import numpy
     D = numpy.zeros([2, 2])
     D[0, 0] = 5
     with open(c.output('cmp'), 'wb') as fp:
@@ -724,7 +812,6 @@ def test_do_plot_comparison_5_force(c):
 
 @utils.in_tempdir
 def test_do_plot_comparison_4_fail_not_distance(c):
-    import numpy
     D = numpy.zeros([2, 2])
     D[0, 0] = 5
     with open(c.output('cmp'), 'wb') as fp:
@@ -786,8 +873,10 @@ def test_plot_override_labeltext_fail(runtmp):
     assert '3 labels != matrix size, exiting' in runtmp.last_result.err
 
 
-@utils.in_tempdir
-def test_plot_reordered_labels_csv(c):
+def test_plot_reordered_labels_csv(runtmp):
+    # test 'plot --csv'
+    c = runtmp
+
     ss2 = utils.get_test_data('2.fa.sig')
     ss47 = utils.get_test_data('47.fa.sig')
     ss63 = utils.get_test_data('63.fa.sig')
@@ -796,6 +885,29 @@ def test_plot_reordered_labels_csv(c):
     c.run_sourmash('plot', 'cmp', '--csv', 'neworder.csv')
 
     with open(c.output('neworder.csv'), newline="") as fp:
+        r = csv.DictReader(fp)
+
+        akker_vals = set()
+        for row in r:
+            akker_vals.add(row['CP001071.1 Akkermansia muciniphila ATCC BAA-835, complete genome'])
+
+        assert '1.0' in akker_vals
+        assert '0.0' in akker_vals
+        assert len(akker_vals) == 2
+
+
+def test_plot_reordered_labels_csv_gz(runtmp):
+    # test 'plot --csv' with a .gz output
+    c = runtmp
+
+    ss2 = utils.get_test_data('2.fa.sig')
+    ss47 = utils.get_test_data('47.fa.sig')
+    ss63 = utils.get_test_data('63.fa.sig')
+
+    c.run_sourmash('compare', '-k', '31', '-o', 'cmp', ss2, ss47, ss63)
+    c.run_sourmash('plot', 'cmp', '--csv', 'neworder.csv.gz')
+
+    with gzip.open(c.output('neworder.csv.gz'), 'rt', newline="") as fp:
         r = csv.DictReader(fp)
 
         akker_vals = set()
@@ -1053,16 +1165,18 @@ def test_gather_csv_output_filename_bug(runtmp, linear_gather, prefetch_gather):
         assert row['filename'] == lca_db_1
 
 
-@utils.in_tempdir
-def test_compare_no_such_file(c):
+def test_compare_no_such_file(runtmp):
+    # 'compare' fails on nonexistent files
+    c = runtmp
     with pytest.raises(SourmashCommandFailed) as e:
         c.run_sourmash('compare', 'nosuchfile.sig')
 
     assert "Error while reading signatures from 'nosuchfile.sig'." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_no_such_file_force(c):
+def test_compare_no_such_file_force(runtmp):
+    # can still run compare on nonexistent with -f
+    c = runtmp
     with pytest.raises(SourmashCommandFailed) as e:
         c.run_sourmash('compare', 'nosuchfile.sig', '-f')
 
@@ -1070,8 +1184,9 @@ def test_compare_no_such_file_force(c):
     assert "Error while reading signatures from 'nosuchfile.sig'."
 
 
-@utils.in_tempdir
-def test_compare_no_matching_sigs(c):
+def test_compare_no_matching_sigs(runtmp):
+    # compare fails when no sketches found with desired ksize
+    c = runtmp
     query = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
     with pytest.raises(SourmashCommandFailed) as exc:
@@ -1318,7 +1433,7 @@ def test_do_sourmash_sbt_search_check_bug(runtmp):
 
     runtmp.sourmash('search', testdata1, 'zzz')
 
-    assert '1 matches:' in runtmp.last_result.out
+    assert '1 matches' in runtmp.last_result.out
 
     tree = load_sbt_index(runtmp.output('zzz.sbt.zip'))
     assert tree._nodes[0].metadata['min_n_below'] == 431
@@ -1337,7 +1452,7 @@ def test_do_sourmash_sbt_search_empty_sig(runtmp):
 
     runtmp.sourmash('search', testdata1, 'zzz')
 
-    assert '1 matches:' in runtmp.last_result.out
+    assert '1 matches' in runtmp.last_result.out
 
     tree = load_sbt_index(runtmp.output('zzz.sbt.zip'))
     assert tree._nodes[0].metadata['min_n_below'] == 1
@@ -1768,7 +1883,7 @@ def test_search_3(runtmp):
     runtmp.sourmash('search', '-n', '1', 'short.fa.sig', 'short2.fa.sig', 'short3.fa.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
-    assert '2 matches; showing first 1' in runtmp.last_result.out
+    assert '2 matches above threshold 0.080; showing first 1:' in runtmp.last_result.out
 
 
 def test_search_4(runtmp):
@@ -1781,9 +1896,19 @@ def test_search_4(runtmp):
     runtmp.sourmash('search', '-n', '0', 'short.fa.sig', 'short2.fa.sig', 'short3.fa.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
-    assert '2 matches:' in runtmp.last_result.out
+    assert '2 matches above threshold 0.080:' in runtmp.last_result.out
     assert 'short2.fa' in runtmp.last_result.out
     assert 'short3.fa' in runtmp.last_result.out
+
+
+def test_search_5_num_results(runtmp):
+    query = utils.get_test_data('gather/combined.sig')
+    against = glob.glob(utils.get_test_data('gather/GCF*.sig'))
+
+    runtmp.sourmash('search', '-n', '5', query, *against)
+
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '12 matches above threshold 0.080; showing first 5:' in runtmp.last_result.out
 
 
 def test_index_check_scaled_bounds_negative(runtmp):
@@ -1836,7 +1961,7 @@ def test_index_metagenome_fromfile(c):
     print(c.last_result.err)
 
     assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
-    assert '12 matches; showing first 3:' in out
+    assert '12 matches above threshold 0.080; showing first 3:' in out
 
 @utils.in_tempdir
 def test_index_metagenome_fromfile_no_cmdline_sig(c):
@@ -1864,8 +1989,8 @@ def test_index_metagenome_fromfile_no_cmdline_sig(c):
     print(out)
     print(c.last_result.err)
 
-    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
-    assert '12 matches; showing first 3:' in out
+    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in out
+    assert '12 matches above threshold 0.080; showing first 3:' in out
 
 
 def test_search_metagenome(runtmp):
@@ -1887,8 +2012,8 @@ def test_search_metagenome(runtmp):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in runtmp.last_result.out
-    assert '12 matches; showing first 3:' in runtmp.last_result.out
+    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
+    assert '12 matches above threshold 0.080; showing first 3:' in runtmp.last_result.out
 
 
 def test_search_metagenome_traverse(runtmp):
@@ -1901,8 +2026,8 @@ def test_search_metagenome_traverse(runtmp):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in runtmp.last_result.out
-    assert '13 matches; showing first 3:' in runtmp.last_result.out
+    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
+    assert '13 matches above threshold 0.080; showing first 3:' in runtmp.last_result.out
 
 
 def test_search_metagenome_traverse_check_csv(runtmp):
@@ -1929,8 +2054,8 @@ def test_search_metagenome_traverse_check_csv(runtmp):
             # should have full path to file sig was loaded from
             assert len(filename) > prefix_len
 
-    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in runtmp.last_result.out
-    assert '13 matches; showing first 3:' in runtmp.last_result.out
+    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
+    assert '13 matches above threshold 0.080; showing first 3:' in runtmp.last_result.out
 
 
 @utils.in_thisdir
@@ -2002,7 +2127,8 @@ def test_search_check_scaled_bounds_more_than_maximum(runtmp):
 # explanation: you cannot downsample a scaled SBT to match a scaled
 # signature, so make sure that when you try such a search, it fails!
 # (you *can* downsample a signature to match an SBT.)
-def test_search_metagenome_downsample(runtmp):
+def test_search_metagenome_sbt_downsample_fail(runtmp):
+    # test downsample on SBT => failure, with --fail-on-empty-databases
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -2016,18 +2142,41 @@ def test_search_metagenome_downsample(runtmp):
 
     assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
 
-    cmd = 'search {} gcf_all -k 21 --scaled 100000'.format(query_sig)
-
     with pytest.raises(SourmashCommandFailed):
         runtmp.sourmash('search', query_sig, 'gcf_all', '-k', '21', '--scaled', '100000')
-
-    assert runtmp.last_result.status == -1
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
+    assert runtmp.last_result.status == -1
     assert "ERROR: cannot use 'gcf_all' for this query." in runtmp.last_result.err
     assert "search scaled value 100000 is less than database scaled value of 10000" in runtmp.last_result.err
+
+
+def test_search_metagenome_sbt_downsample_nofail(runtmp):
+    # test downsample on SBT => failure but ok with --no-fail-on-empty-database
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+
+    runtmp.sourmash(*cmd)
+
+    assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
+
+    runtmp.sourmash('search', query_sig, 'gcf_all', '-k', '21', '--scaled', '100000', '--no-fail-on-empty-database')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert "ERROR: cannot use 'gcf_all' for this query." in runtmp.last_result.err
+    assert "search scaled value 100000 is less than database scaled value of 10000" in runtmp.last_result.err
+    assert "0 matches" in runtmp.last_result.out
 
 
 def test_search_metagenome_downsample_containment(runtmp):
@@ -2049,8 +2198,8 @@ def test_search_metagenome_downsample_containment(runtmp):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in runtmp.last_result.out
-    assert '12 matches; showing first 3:' in runtmp.last_result.out
+    assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in runtmp.last_result.out
+    assert '12 matches above threshold 0.080; showing first 3:' in runtmp.last_result.out
 
 
 @utils.in_tempdir
@@ -2073,11 +2222,11 @@ def test_search_metagenome_downsample_index(c):
                    '--containment')
     print(c)
 
-    assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in str(
+    assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T' in str(
         c)
-    assert ' 29.7%       NC_003197.2 Salmonella enterica subsp. enterica serovar T...' in str(
+    assert ' 29.7%       NC_003197.2 Salmonella enterica subsp. enterica serovar T' in str(
         c)
-    assert '12 matches; showing first 3:' in str(c)
+    assert '12 matches above threshold 0.080; showing first 3:' in str(c)
 
 
 def test_search_with_picklist(runtmp):
@@ -2097,7 +2246,7 @@ def test_search_with_picklist(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "3 matches:" in out
+    assert "3 matches" in out
     assert "13.1%       NC_000853.1 Thermotoga" in out
     assert "13.0%       NC_009486.1 Thermotoga" in out
     assert "12.8%       NC_011978.1 Thermotoga" in out
@@ -2119,7 +2268,7 @@ def test_search_with_picklist_exclude(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "9 matches; showing first 3:" in out
+    assert "9 matches above threshold 0.080; showing first 3:" in out
     assert "33.2%       NC_003198.1 Salmonella" in out
     assert "33.1%       NC_003197.2 Salmonella" in out
     assert "32.2%       NC_006905.1 Salmonella" in out
@@ -2138,7 +2287,7 @@ def test_search_with_pattern_include(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "3 matches:" in out
+    assert "3 matches" in out
     assert "13.1%       NC_000853.1 Thermotoga" in out
     assert "13.0%       NC_009486.1 Thermotoga" in out
     assert "12.8%       NC_011978.1 Thermotoga" in out
@@ -2157,10 +2306,44 @@ def test_search_with_pattern_exclude(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "9 matches; showing first 3:" in out
+    assert "9 matches above threshold 0.080; showing first 3:" in out
     assert "33.2%       NC_003198.1 Salmonella" in out
     assert "33.1%       NC_003197.2 Salmonella" in out
     assert "32.2%       NC_006905.1 Salmonella" in out
+
+
+def test_search_empty_db_fail(runtmp):
+    # search should fail on empty db with --fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('search', query, against, against2, '-k', '51')
+
+
+    err = runtmp.last_result.err
+    assert "no compatible signatures found in " in err
+
+
+def test_search_empty_db_nofail(runtmp):
+    # search should not fail on empty db with --no-fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    runtmp.sourmash('search', query, against, against2, '-k', '51',
+                    '--no-fail-on-empty-data')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+    print(out)
+    print(err)
+
+    assert "no compatible signatures found in " in err
+    assert "ksize on this database is 31; this is different from requested ksize of 51" in err
+    assert "loaded 50 total signatures from 2 locations" in err
+    assert "after selecting signatures compatible with search, 0 remain." in err
 
 
 def test_mash_csv_to_sig(runtmp):
@@ -2174,7 +2357,7 @@ def test_mash_csv_to_sig(runtmp):
     runtmp.sourmash('search', '-k', '31', 'short.fa.sig', 'xxx.sig')
 
     print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
-    assert '1 matches:' in runtmp.last_result.out
+    assert '1 matches' in runtmp.last_result.out
     assert '100.0%       short.fa' in runtmp.last_result.out
 
 
@@ -2930,6 +3113,7 @@ def test_gather(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_csv(runtmp, linear_gather, prefetch_gather):
+    # test 'gather -o csvfile'
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -2949,6 +3133,46 @@ def test_gather_csv(runtmp, linear_gather, prefetch_gather):
     csv_file = runtmp.output('foo.csv')
 
     with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print(row)
+        assert float(row['intersect_bp']) == 910
+        assert float(row['unique_intersect_bp']) == 910
+        assert float(row['remaining_bp']) == 0
+        assert float(row['f_orig_query']) == 1.0
+        assert float(row['f_unique_to_query']) == 1.0
+        assert float(row['f_match']) == 1.0
+        assert row['filename'] == 'zzz'
+        assert row['name'] == 'tr1 4'
+        assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
+        assert row['gather_result_rank'] == '0'
+        assert row['query_filename'].endswith('short2.fa')
+        assert row['query_name'] == 'tr1 4'
+        assert row['query_md5'] == 'c9d5a795'
+        assert row['query_bp'] == '910'
+
+
+def test_gather_csv_gz(runtmp, linear_gather, prefetch_gather):
+    # test 'gather -o csvfile.gz'
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '--name-from-first', testdata1, testdata2)
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', '--name-from-first', testdata2)
+
+    runtmp.sourmash('index', '-k', '31', 'zzz', 'short.fa.sig', 'short2.fa.sig')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', '-o', 'foo.csv.gz', '--threshold-bp=1', linear_gather, prefetch_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    csv_file = runtmp.output('foo.csv.gz')
+
+    with gzip.open(csv_file, "rt", newline="") as fp:
         reader = csv.DictReader(fp)
         row = next(reader)
         print(row)
@@ -3052,6 +3276,36 @@ def test_gather_multiple_sbts_save_prefetch_csv(runtmp, linear_gather):
     assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
     assert os.path.exists(runtmp.output('prefetch.csv'))
     with open(runtmp.output('prefetch.csv')) as f:
+        output = f.read()
+        print((output,))
+        assert '870,0.925531914893617,0.9666666666666667' in output
+
+
+def test_gather_multiple_sbts_save_prefetch_csv_gz(runtmp, linear_gather):
+    # test --save-prefetch-csv to a .gz file, with multiple databases
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    runtmp.sourmash('sketch','dna', '-p', 'scaled=10', testdata1, testdata2)
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', testdata2)
+
+    runtmp.sourmash('index', 'zzz', 'short.fa.sig', '-k', '31')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('index', 'zzz2', 'short2.fa.sig', '-k', '31')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', 'zzz2', '-o', 'foo.csv', '--save-prefetch-csv', 'prefetch.csv.gz', '--threshold-bp=1', linear_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert '0.9 kbp      100.0%  100.0%' in runtmp.last_result.out
+    assert os.path.exists(runtmp.output('prefetch.csv.gz'))
+    with gzip.open(runtmp.output('prefetch.csv.gz'), 'rt', newline="") as f:
         output = f.read()
         print((output,))
         assert '870,0.925531914893617,0.9666666666666667' in output
@@ -3230,9 +3484,9 @@ def test_gather_metagenome(runtmp):
     assert 'found 12 matches total' in runtmp.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
     assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
-                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_003198.1 Salmonella enterica subsp' in runtmp.last_result.out))
     assert all(('4.7 Mbp        0.5%    1.5%' in runtmp.last_result.out,
-                'NC_011294.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_011294.1 Salmonella enterica subs' in runtmp.last_result.out))
 
 
 @utils.in_tempdir
@@ -3264,7 +3518,7 @@ def test_gather_metagenome_num_results(c):
     assert '(truncated gather because --num-results=10)' in out
     assert 'the recovered matches hit 99.4% of the query' in out
     assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                'NC_003198.1 Salmonella enterica subsp...' in out))
+                'NC_003198.1 Salmonella enterica subsp' in out))
     assert '4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp' in out
 
 
@@ -3292,7 +3546,7 @@ def test_gather_metagenome_threshold_bp(runtmp):
     assert 'found less than 2.0 Mbp in common. => exiting' in runtmp.last_result.err
     assert 'the recovered matches hit 33.2% of the query' in runtmp.last_result.out
     assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
-                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_003198.1 Salmonella enterica subsp' in runtmp.last_result.out))
 
 
 def test_multigather_metagenome(runtmp):
@@ -3317,13 +3571,13 @@ def test_multigather_metagenome(runtmp):
     assert 'found 12 matches total' in runtmp.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
     assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
-                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_003198.1 Salmonella enterica subsp' in runtmp.last_result.out))
     assert all(('4.7 Mbp        0.5%    1.5%' in runtmp.last_result.out,
-                'NC_011294.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_011294.1 Salmonella enterica subsp' in runtmp.last_result.out))
 
 
-@utils.in_tempdir
-def test_multigather_check_scaled_bounds_negative(c):
+def test_multigather_check_scaled_bounds_negative(runtmp):
+    c = runtmp
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3342,8 +3596,8 @@ def test_multigather_check_scaled_bounds_negative(c):
     assert "ERROR: scaled value must be positive" in str(exc.value)
 
 
-@utils.in_tempdir
-def test_multigather_check_scaled_bounds_less_than_minimum(c):
+def test_multigather_check_scaled_bounds_less_than_minimum(runtmp):
+    c = runtmp
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3363,8 +3617,8 @@ def test_multigather_check_scaled_bounds_less_than_minimum(c):
     assert "WARNING: scaled value should be >= 100. Continuing anyway." in str(exc.value)
 
 
-@utils.in_tempdir
-def test_multigather_check_scaled_bounds_more_than_maximum(c):
+def test_multigather_check_scaled_bounds_more_than_maximum(runtmp):
+    c = runtmp
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3383,9 +3637,9 @@ def test_multigather_check_scaled_bounds_more_than_maximum(c):
     assert "WARNING: scaled value should be <= 1e6. Continuing anyway." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_multigather_metagenome_query_from_file(c):
+def test_multigather_metagenome_query_from_file(runtmp):
     # test multigather --query-from-file
+    c = runtmp
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -3415,9 +3669,9 @@ def test_multigather_metagenome_query_from_file(c):
     assert 'found 12 matches total' in out
     assert 'the recovered matches hit 100.0% of the query' in out
     assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                'NC_003198.1 Salmonella enterica subsp...' in out))
+                'NC_003198.1 Salmonella enterica subsp' in out))
     assert all(('4.7 Mbp        0.5%    1.5%' in out,
-                'NC_011294.1 Salmonella enterica subsp...' in out))
+                'NC_011294.1 Salmonella enterica subsp' in out))
 
 
 @utils.in_tempdir
@@ -3447,13 +3701,13 @@ def test_multigather_metagenome_query_with_sbt(c):
     assert 'conducted gather searches on 12 signatures' in err
     assert 'the recovered matches hit 100.0% of the query' in out
     assert all(('4.7 Mbp      100.0%  100.0%'  in out,
-                'NC_011080.1 Salmonella enterica subsp...' in out))
+                'NC_011080.1 Salmonella enterica subsp' in out))
     assert all(('4.5 Mbp      100.0%  100.0%' in out,
-                'NC_004631.1 Salmonella enterica subsp...' in out))
+                'NC_004631.1 Salmonella enterica subsp' in out))
     assert all (('1.6 Mbp      100.0%  100.0%' in out,
-                 'NC_002163.1 Campylobacter jejuni subs...' in out))
+                 'NC_002163.1 Campylobacter jejuni subs' in out))
     assert all(('1.9 Mbp      100.0%  100.0%' in out,
-                'NC_000853.1 Thermotoga maritima MSB8 ...' in out))
+                'NC_000853.1 Thermotoga maritima MSB8 ' in out))
 
 
 @utils.in_tempdir
@@ -3505,9 +3759,9 @@ def test_multigather_metagenome_query_on_lca_db(c):
     assert 'conducted gather searches on 2 signatures' in err
     assert 'the recovered matches hit 100.0% of the query' in out
     assert all(('5.1 Mbp      100.0%  100.0%'  in out,
-                'NC_009665.1 Shewanella baltica OS185,...' in out))
+                'NC_009665.1 Shewanella baltica OS185,' in out))
     assert all(('5.5 Mbp      100.0%  100.0%' in out,
-                'NC_011663.1 Shewanella baltica OS223,...' in out))
+                'NC_011663.1 Shewanella baltica OS223,' in out))
 
 
 @utils.in_tempdir
@@ -3540,17 +3794,17 @@ def test_multigather_metagenome_query_with_sbt_addl_query(c):
     assert 'the recovered matches hit 100.0% of the query' in out
     #check for matches to some of the sbt signatures
     assert all(('4.7 Mbp      100.0%  100.0%'  in out,
-                'NC_011080.1 Salmonella enterica subsp...' in out))
+                'NC_011080.1 Salmonella enterica subsp' in out))
     assert all(('4.5 Mbp      100.0%  100.0%' in out,
-                'NC_004631.1 Salmonella enterica subsp...' in out))
+                'NC_004631.1 Salmonella enterica subsp' in out))
     assert all (('1.6 Mbp      100.0%  100.0%' in out,
-                 'NC_002163.1 Campylobacter jejuni subs...' in out))
+                 'NC_002163.1 Campylobacter jejuni subs' in out))
     assert all(('1.9 Mbp      100.0%  100.0%' in out,
-                'NC_000853.1 Thermotoga maritima MSB8 ...' in out))
+                'NC_000853.1 Thermotoga maritima MSB8 ' in out))
 
     #check additional query sig
     assert all(('4.9 Mbp      100.0%  100.0%' in out,
-                'NC_003198.1 Salmonella enterica subsp...' in out))
+                'NC_003198.1 Salmonella enterica subsp' in out))
 
 
 @utils.in_tempdir
@@ -3588,17 +3842,17 @@ def test_multigather_metagenome_sbt_query_from_file_with_addl_query(c):
     assert 'the recovered matches hit 100.0% of the query' in out
     #check for matches to some of the sbt signatures
     assert all(('4.7 Mbp      100.0%  100.0%'  in out,
-                'NC_011080.1 Salmonella enterica subsp...' in out))
+                'NC_011080.1 Salmonella enterica subsp' in out))
     assert all(('4.5 Mbp      100.0%  100.0%' in out,
-                'NC_004631.1 Salmonella enterica subsp...' in out))
+                'NC_004631.1 Salmonella enterica subsp' in out))
     assert all (('1.6 Mbp      100.0%  100.0%' in out,
-                 'NC_002163.1 Campylobacter jejuni subs...' in out))
+                 'NC_002163.1 Campylobacter jejuni subs' in out))
     assert all(('1.9 Mbp      100.0%  100.0%' in out,
-                'NC_000853.1 Thermotoga maritima MSB8 ...' in out))
+                'NC_000853.1 Thermotoga maritima MSB8 ' in out))
 
     #check additional query sig
     assert all(('4.9 Mbp      100.0%  100.0%' in out,
-                'NC_003198.1 Salmonella enterica subsp...' in out))
+                'NC_003198.1 Salmonella enterica subsp' in out))
 
 
 @utils.in_tempdir
@@ -3696,12 +3950,12 @@ def test_multigather_metagenome_query_from_file_with_addl_query(c):
     assert 'found 12 matches total' in out
     assert 'the recovered matches hit 100.0% of the query' in out
     assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                'NC_003198.1 Salmonella enterica subsp...' in out))
+                'NC_003198.1 Salmonella enterica subsp' in out))
     assert all(('4.7 Mbp        0.5%    1.5%' in out,
-                'NC_011294.1 Salmonella enterica subsp...' in out))
+                'NC_011294.1 Salmonella enterica subsp' in out))
 
     # second gather query
-    assert '4.9 Mbp      100.0%  100.0%    NC_003198.1 Salmonella enterica subsp...' in out
+    assert '4.9 Mbp      100.0%  100.0%    NC_003198.1 Salmonella enterica subsp' in out
     assert 'found 1 matches total;' in out
     assert 'the recovered matches hit 100.0% of the query' in out
 
@@ -3726,9 +3980,9 @@ def test_gather_metagenome_traverse(runtmp, linear_gather, prefetch_gather):
     assert 'found 12 matches total' in runtmp.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
     assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
-                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_003198.1 Salmonella enterica subsp' in runtmp.last_result.out))
     assert all(('4.7 Mbp        0.5%    1.5%' in runtmp.last_result.out,
-                'NC_011294.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_011294.1 Salmonella enterica subsp' in runtmp.last_result.out))
 
 
 def test_gather_metagenome_traverse_check_csv(runtmp, linear_gather, prefetch_gather):
@@ -3764,9 +4018,9 @@ def test_gather_metagenome_traverse_check_csv(runtmp, linear_gather, prefetch_ga
     assert 'found 12 matches total' in runtmp.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
     assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
-                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_003198.1 Salmonella enterica subsp' in runtmp.last_result.out))
     assert all(('4.7 Mbp        0.5%    1.5%' in runtmp.last_result.out,
-                'NC_011294.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_011294.1 Salmonella enterica subsp' in runtmp.last_result.out))
 
 
 @utils.in_tempdir
@@ -3782,7 +4036,7 @@ def test_gather_traverse_incompatible(c):
     c.run_sourmash("gather", scaled_sig, c.output('searchme'))
     print(c.last_result.out)
     print(c.last_result.err)
-    assert "5.2 Mbp      100.0%  100.0%    NC_009665.1 Shewanella baltica OS185,..." in c.last_result.out
+    assert "5.2 Mbp      100.0%  100.0%    NC_009665.1 Shewanella baltica OS185," in c.last_result.out
 
 
 def test_gather_metagenome_output_unassigned(runtmp):
@@ -3799,7 +4053,7 @@ def test_gather_metagenome_output_unassigned(runtmp):
     assert 'found 1 matches total' in runtmp.last_result.out
     assert 'the recovered matches hit 33.2% of the query' in runtmp.last_result.out
     assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
-                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_003198.1 Salmonella enterica subsp' in runtmp.last_result.out))
 
     # now examine unassigned
     testdata2_glob = utils.get_test_data('gather/GCF_000009505.1*.sig')
@@ -3828,9 +4082,9 @@ def test_gather_metagenome_output_unassigned_none(runtmp):
     assert 'found 12 matches total' in runtmp.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
     assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
-                'NC_003198.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_003198.1 Salmonella enterica subsp' in runtmp.last_result.out))
     assert all(('4.5 Mbp        0.1%    0.4%' in runtmp.last_result.out,
-                'NC_004631.1 Salmonella enterica subsp...' in runtmp.last_result.out))
+                'NC_004631.1 Salmonella enterica subsp' in runtmp.last_result.out))
 
     # now examine unassigned
     assert not os.path.exists(runtmp.output('unassigned.sig'))
@@ -3957,7 +4211,11 @@ def test_gather_query_downsample(runtmp, linear_gather, prefetch_gather):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert 'loaded 12 signatures' in runtmp.last_result.err
+    err = runtmp.last_result.err
+
+    assert 'loaded 36 total signatures from 12 locations.' in err
+    assert 'after selecting signatures compatible with search, 12 remain.' in err
+
     assert all(('4.9 Mbp      100.0%  100.0%' in runtmp.last_result.out,
                 'NC_003197.2' in runtmp.last_result.out))
 
@@ -3976,7 +4234,11 @@ def test_gather_query_downsample_explicit(runtmp, linear_gather, prefetch_gather
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert 'loaded 12 signatures' in runtmp.last_result.err
+    err = runtmp.last_result.err
+
+    assert 'loaded 36 total signatures from 12 locations.' in err
+    assert 'after selecting signatures compatible with search, 12 remain.' in err
+
     assert all(('4.9 Mbp      100.0%  100.0%' in runtmp.last_result.out,
                 'NC_003197.2' in runtmp.last_result.out))
 
@@ -4062,15 +4324,15 @@ def test_gather_with_picklist_exclude(runtmp, linear_gather, prefetch_gather):
     out = runtmp.last_result.out
     print(out)
     assert "found 9 matches total;" in out
-    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 Salmonella enterica subsp..." in out
-    assert "1.6 Mbp       10.7%  100.0%    NC_002163.1 Campylobacter jejuni subs..." in out
-    assert "4.8 Mbp       10.4%   31.3%    NC_003197.2 Salmonella enterica subsp..." in out
-    assert "4.7 Mbp        5.2%   16.1%    NC_006905.1 Salmonella enterica subsp..." in out
-    assert "4.7 Mbp        4.0%   12.6%    NC_011080.1 Salmonella enterica subsp..." in out
-    assert "4.6 Mbp        2.9%    9.2%    NC_011274.1 Salmonella enterica subsp..." in out
-    assert "4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp..." in out
-    assert "4.7 Mbp        0.5%    1.5%    NC_011294.1 Salmonella enterica subsp..." in out
-    assert "4.5 Mbp        0.1%    0.4%    NC_004631.1 Salmonella enterica subsp..." in out
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 Salmonella enterica subsp" in out
+    assert "1.6 Mbp       10.7%  100.0%    NC_002163.1 Campylobacter jejuni subs" in out
+    assert "4.8 Mbp       10.4%   31.3%    NC_003197.2 Salmonella enterica subsp" in out
+    assert "4.7 Mbp        5.2%   16.1%    NC_006905.1 Salmonella enterica subsp" in out
+    assert "4.7 Mbp        4.0%   12.6%    NC_011080.1 Salmonella enterica subsp" in out
+    assert "4.6 Mbp        2.9%    9.2%    NC_011274.1 Salmonella enterica subsp" in out
+    assert "4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp" in out
+    assert "4.7 Mbp        0.5%    1.5%    NC_011294.1 Salmonella enterica subsp" in out
+    assert "4.5 Mbp        0.1%    0.4%    NC_004631.1 Salmonella enterica subsp" in out
 
 
 def test_gather_with_pattern_include(runtmp, linear_gather, prefetch_gather):
@@ -4108,15 +4370,15 @@ def test_gather_with_pattern_exclude(runtmp, linear_gather, prefetch_gather):
     out = runtmp.last_result.out
     print(out)
     assert "found 9 matches total;" in out
-    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 Salmonella enterica subsp..." in out
-    assert "1.6 Mbp       10.7%  100.0%    NC_002163.1 Campylobacter jejuni subs..." in out
-    assert "4.8 Mbp       10.4%   31.3%    NC_003197.2 Salmonella enterica subsp..." in out
-    assert "4.7 Mbp        5.2%   16.1%    NC_006905.1 Salmonella enterica subsp..." in out
-    assert "4.7 Mbp        4.0%   12.6%    NC_011080.1 Salmonella enterica subsp..." in out
-    assert "4.6 Mbp        2.9%    9.2%    NC_011274.1 Salmonella enterica subsp..." in out
-    assert "4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp..." in out
-    assert "4.7 Mbp        0.5%    1.5%    NC_011294.1 Salmonella enterica subsp..." in out
-    assert "4.5 Mbp        0.1%    0.4%    NC_004631.1 Salmonella enterica subsp..." in out
+    assert "4.9 Mbp       33.2%  100.0%    NC_003198.1 Salmonella enterica subsp" in out
+    assert "1.6 Mbp       10.7%  100.0%    NC_002163.1 Campylobacter jejuni subs" in out
+    assert "4.8 Mbp       10.4%   31.3%    NC_003197.2 Salmonella enterica subsp" in out
+    assert "4.7 Mbp        5.2%   16.1%    NC_006905.1 Salmonella enterica subsp" in out
+    assert "4.7 Mbp        4.0%   12.6%    NC_011080.1 Salmonella enterica subsp" in out
+    assert "4.6 Mbp        2.9%    9.2%    NC_011274.1 Salmonella enterica subsp" in out
+    assert "4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp" in out
+    assert "4.7 Mbp        0.5%    1.5%    NC_011294.1 Salmonella enterica subsp" in out
+    assert "4.5 Mbp        0.1%    0.4%    NC_004631.1 Salmonella enterica subsp" in out
 
 
 def test_gather_save_matches(runtmp, linear_gather, prefetch_gather):
@@ -4450,6 +4712,41 @@ def test_gather_output_unassigned_with_abundance(runtmp, prefetch_gather, linear
             assert nomatch_mh.hashes[hashval] == abund
 
 
+def test_gather_empty_db_fail(runtmp, linear_gather, prefetch_gather):
+    # gather should fail on empty db with --fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('gather', query, against, against2, '-k', '51',
+                        linear_gather, prefetch_gather)
+
+
+    err = runtmp.last_result.err
+    assert "no compatible signatures found in " in err
+
+
+def test_gather_empty_db_nofail(runtmp, prefetch_gather, linear_gather):
+    # gather should not fail on empty db with --no-fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    runtmp.sourmash('gather', query, against, against2, '-k', '51',
+                    '--no-fail-on-empty-data',
+                    linear_gather, prefetch_gather)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+    print(out)
+    print(err)
+
+    assert "no compatible signatures found in " in err
+    assert "ksize on this database is 31; this is different from requested ksize of 51" in err
+    assert "loaded 50 total signatures from 2 locations" in err
+    assert "after selecting signatures compatible with search, 0 remain." in err
+
 def test_multigather_output_unassigned_with_abundance(runtmp):
     c = runtmp
     query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
@@ -4479,6 +4776,41 @@ def test_multigather_output_unassigned_with_abundance(runtmp):
         if hashval not in against_ss.minhash.hashes:
             assert nomatch_mh.hashes[hashval] == abund
 
+
+def test_multigather_empty_db_fail(runtmp):
+    # multigather should fail on empty db with --fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('multigather', '--query', query,
+                        '--db', against, against2, '-k', '51')
+
+    err = runtmp.last_result.err
+    assert "no compatible signatures found in " in err
+
+
+def test_multigather_empty_db_nofail(runtmp):
+    # multigather should not fail on empty db with --no-fail-on-empty-database
+    query = utils.get_test_data('2.fa.sig')
+    against = utils.get_test_data('47.fa.sig')
+    against2 = utils.get_test_data('lca/47+63.lca.json')
+
+    runtmp.sourmash('multigather', '--query', query,
+                    '--db', against, against2, '-k', '51',
+                    '--no-fail-on-empty-data')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+    print(out)
+    print(err)
+
+    assert "no compatible signatures found in " in err
+    assert "ksize on this database is 31; this is different from requested ksize of 51" in err
+    assert "conducted gather searches on 0 signatures" in err
+    assert "loaded 50 total signatures from 2 locations" in err
+    assert "after selecting signatures compatible with search, 0 remain." in err
 
 def test_sbt_categorize(runtmp):
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
@@ -4640,7 +4972,7 @@ def test_sbt_categorize_multiple_ksizes_moltypes(runtmp):
 
 
 def test_watch_check_num_bounds_negative(runtmp):
-    c=runtmp
+    c = runtmp
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     shutil.copyfile(testdata1, c.output('1.sig'))
@@ -4654,7 +4986,7 @@ def test_watch_check_num_bounds_negative(runtmp):
 
 
 def test_watch_check_num_bounds_less_than_minimum(runtmp):
-    c=runtmp
+    c = runtmp
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     shutil.copyfile(testdata1, c.output('1.sig'))
@@ -4667,7 +4999,7 @@ def test_watch_check_num_bounds_less_than_minimum(runtmp):
 
 
 def test_watch_check_num_bounds_more_than_maximum(runtmp):
-    c=runtmp
+    c = runtmp
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     shutil.copyfile(testdata1, c.output('1.sig'))
@@ -4731,41 +5063,49 @@ def test_watch_coverage(runtmp):
     assert 'FOUND: genome-s10, at 1.000' in runtmp.last_result.out
 
 
-def test_storage_convert():
-    import pytest
+def test_storage_convert(runtmp):
+    testdata = utils.get_test_data('v2.sbt.json')
+    shutil.copyfile(testdata, runtmp.output('v2.sbt.json'))
+    shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
+                    runtmp.output('.sbt.v2'))
+    testsbt = runtmp.output('v2.sbt.json')
 
-    with utils.TempDirectory() as location:
-        testdata = utils.get_test_data('v2.sbt.json')
-        shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
-        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
-                        os.path.join(location, '.sbt.v2'))
-        testsbt = os.path.join(location, 'v2.sbt.json')
+    original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+    args = ['storage', 'convert', '-b', 'ipfs', testsbt]
+    try:
+        runtmp.sourmash(*args)
+    except SourmashCommandFailed:
+        pass
 
-        args = ['storage', 'convert', '-b', 'ipfs', testsbt]
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location, fail_ok=True)
-        if not status and "ipfs.exceptions.ConnectionError" in err:
+    if runtmp.last_result.status:
+        if "ipfshttpclient.ConnectionError" in runtmp.last_result.err:
             raise pytest.xfail('ipfs probably not running')
+        if "No module named 'ipfshttpclient'" in runtmp.last_result.err:
+            raise pytest.xfail('ipfshttpclient module not installed')
 
-        ipfs = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+    print("NO FAIL; KEEP ON GOING!")
 
-        assert len(original) == len(ipfs)
-        assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original), sorted(ipfs)))
 
-        args = ['storage', 'convert',
-                '-b', """'ZipStorage("{}")'""".format(
-                    os.path.join(location, 'v2.sbt.zip')),
-                testsbt]
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
-        tar = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+    ipfs = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        assert len(original) == len(tar)
-        assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original), sorted(tar)))
+    assert len(original) == len(ipfs)
+    assert all(n1[1].name == n2[1].name
+                for (n1, n2) in zip(sorted(original), sorted(ipfs)))
+
+    args = ['storage', 'convert',
+            '-b', """'ZipStorage("{}")'""".format(
+                runtmp.output('v2.sbt.zip')),
+            testsbt]
+    runtmp.sourmash(*args)
+
+    tar = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+    assert len(original) == len(tar)
+    assert all(n1[1].name == n2[1].name
+                for (n1, n2) in zip(sorted(original), sorted(tar)))
+
+    print("it all worked!!")
 
 
 def test_storage_convert_identity(runtmp):
@@ -5021,7 +5361,7 @@ def test_index_matches_search_with_picklist(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "3 matches:" in out
+    assert "3 matches" in out
     assert "13.1%       NC_000853.1 Thermotoga" in out
     assert "13.0%       NC_009486.1 Thermotoga" in out
     assert "12.8%       NC_011978.1 Thermotoga" in out
@@ -5062,7 +5402,7 @@ def test_index_matches_search_with_picklist_exclude(runtmp):
 
     out = runtmp.last_result.out
     print(out)
-    assert "10 matches; showing first 3:" in out
+    assert "10 matches above threshold 0.080; showing first 3:" in out
     assert "100.0%       -" in out
     assert "33.2%       NC_003198.1 Salmonella" in out
     assert "33.1%       NC_003197.2 Salmonella" in out
@@ -5304,7 +5644,7 @@ def test_gather_with_prefetch_picklist_5_search(runtmp):
     out = runtmp.last_result.out
     print(out)
 
-    assert "12 matches; showing first 3:" in out
+    assert "12 matches above threshold 0.080; showing first 3:" in out
     assert " 33.2%       NC_003198.1 Salmonella enterica subsp." in out
 
     # now, do a gather with the results
@@ -5399,8 +5739,8 @@ def test_standalone_manifest_search_fail(runtmp):
         runtmp.sourmash('search', sig47, mf)
 
 
-@utils.in_tempdir
-def test_search_ani_jaccard(c):
+def test_search_ani_jaccard(runtmp):
+    c = runtmp
     sig47 = utils.get_test_data('47.fa.sig')
     sig4763 = utils.get_test_data('47+63.fa.sig')
 
@@ -5425,8 +5765,8 @@ def test_search_ani_jaccard(c):
         assert row['ani'] == "0.992530907924384"
 
 
-@utils.in_tempdir
-def test_search_ani_jaccard_error_too_high(c):
+def test_search_ani_jaccard_error_too_high(runtmp):
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=1', testdata1, testdata2)
@@ -5455,8 +5795,8 @@ def test_search_ani_jaccard_error_too_high(c):
     assert "WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_searchabund_no_ani(c):
+def test_searchabund_no_ani(runtmp):
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=10,abund', testdata1, testdata2)
@@ -5481,8 +5821,8 @@ def test_searchabund_no_ani(c):
         assert row['ani'] == "" # do we want empty column to appear??
 
 
-@utils.in_tempdir
-def test_search_ani_containment(c):
+def test_search_ani_containment(runtmp):
+    c = runtmp
     testdata1 = utils.get_test_data('2+63.fa.sig')
     testdata2 = utils.get_test_data('47+63.fa.sig')
 
@@ -5524,8 +5864,28 @@ def test_search_ani_containment(c):
         assert row['ani'] == "0.9868883523107224"
 
 
-@utils.in_tempdir
-def test_search_ani_containment_fail(c):
+def test_search_ani_containment_asymmetry(runtmp):
+    # test contained_by asymmetries, viz #2215
+    query_sig = utils.get_test_data('47.fa.sig')
+    merged_sig = utils.get_test_data('47-63-merge.sig')
+
+    runtmp.sourmash('search', query_sig, merged_sig, '-o',
+                    'query-in-merged.csv', '--containment')
+    runtmp.sourmash('search', merged_sig, query_sig, '-o',
+                    'merged-in-query.csv', '--containment')
+
+    with sourmash_args.FileInputCSV(runtmp.output('query-in-merged.csv')) as r:
+        query_in_merged = list(r)[0]
+
+    with sourmash_args.FileInputCSV(runtmp.output('merged-in-query.csv')) as r:
+        merged_in_query = list(r)[0]
+
+    assert query_in_merged['ani'] == '1.0'
+    assert merged_in_query['ani'] == '0.9865155060423993'
+
+
+def test_search_ani_containment_fail(runtmp):
+    c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=10', testdata1, testdata2)
@@ -5547,8 +5907,10 @@ def test_search_ani_containment_fail(c):
     assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons." in c.last_result.err
     
 
-@utils.in_tempdir
-def test_search_ani_containment_estimate_ci(c):
+def test_search_ani_containment_estimate_ci(runtmp):
+    # test ANI confidence intervals, based on (asymmetric) containment
+
+    c = runtmp
     testdata1 = utils.get_test_data('2+63.fa.sig')
     testdata2 = utils.get_test_data('47+63.fa.sig')
 
@@ -5569,8 +5931,8 @@ def test_search_ani_containment_estimate_ci(c):
         assert row['query_name'] == ''
         assert row['query_md5'] == '832a45e8'
         assert row['ani'] == "0.9866751346467802"
-        assert row['ani_low'] == "0.9861576758035308"
-        assert row['ani_high'] == "0.9871770716451368"
+        assert row['ani_low'] == "0.9861559138341189"
+        assert row['ani_high'] == "0.9871787293232042"
 
     # search other direction
     c.run_sourmash('search', '--containment', testdata2, testdata1, '-o', 'xxxx.csv', '--estimate-ani-ci')
@@ -5589,12 +5951,12 @@ def test_search_ani_containment_estimate_ci(c):
         assert row['query_name'] == ''
         assert row['query_md5'] == '491c0a81'
         assert row['ani'] == "0.9868883523107224"
-        assert row['ani_low'] == "0.986374049720872"
-        assert row['ani_high'] == "0.9873870188726516"
+        assert row['ani_low'] == "0.9863757952722036"
+        assert row['ani_high'] == "0.9873853776786775"
 
 
-@utils.in_tempdir
-def test_search_ani_max_containment(c):
+def test_search_ani_max_containment(runtmp):
+    c = runtmp
     testdata1 = utils.get_test_data('2+63.fa.sig')
     testdata2 = utils.get_test_data('47+63.fa.sig')
 
@@ -5617,8 +5979,10 @@ def test_search_ani_max_containment(c):
         assert row['ani'] == "0.9868883523107224"
 
 
-@utils.in_tempdir
-def test_search_ani_max_containment_estimate_ci(c):
+def test_search_ani_max_containment_estimate_ci(runtmp):
+    # test ANI confidence intervals, based on (symmetric) max-containment
+
+    c = runtmp
     testdata1 = utils.get_test_data('2+63.fa.sig')
     testdata2 = utils.get_test_data('47+63.fa.sig')
 
@@ -5643,8 +6007,9 @@ def test_search_ani_max_containment_estimate_ci(c):
         assert row['ani_high'] == "0.9873870188726516"
 
 
-@utils.in_tempdir
-def test_search_jaccard_ani_downsample(c):
+def test_search_jaccard_ani_downsample(runtmp):
+    c = runtmp
+
     sig47 = utils.get_test_data('47.fa.sig')
     sig4763 = utils.get_test_data('47+63.fa.sig')
     ss47 = sourmash.load_one_signature(sig47)
@@ -5787,11 +6152,51 @@ def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
         assert row['potential_false_negative'] == 'False'
 
 
-@utils.in_tempdir
-def test_compare_containment_ani(c):
-    import numpy
+def test_compare_containment_ani(runtmp):
+    # test compare --containment --ani
+    c = runtmp
 
     sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
+    testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
+
+    c.run_sourmash('compare', '--containment', '-k', '31',
+                   '--ani', '--csv', 'output.csv', *testdata_sigs)
+
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
+
+    # check explicit containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            mat_val = round(mat[i][j], 3)
+            print(mat_val)
+            if i == j:
+                assert 1 == mat_val
+            else:
+                ss_j = idx_to_sig[j]
+                containment_ani = ss_j.containment_ani(ss_i).ani
+                if containment_ani is not None:
+                    containment_ani = round(containment_ani, 3)
+                else:
+                    containment_ani = 0.0
+                mat_val = round(mat[i][j], 3)
+
+                assert containment_ani == mat_val #, (i, j)
+
+    print(c.last_result.err)
+    print(c.last_result.out)
+    assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
+
+
+def test_compare_containment_ani_asymmetry(runtmp):
+    # very specifically test asymmetry of ANI in containment matrices ;)
+    c = runtmp
+
+    import numpy
+
+    sigfiles = ["47.fa.sig", "47-63-merge.sig"]
     testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
 
     c.run_sourmash('compare', '--containment', '-k', '31',
@@ -5819,7 +6224,7 @@ def test_compare_containment_ani(c):
     for i in range(len(idx_to_sig)):
         ss_i = idx_to_sig[i]
         for j in range(len(idx_to_sig)):
-            mat_val = round(mat[i][j], 3)
+            mat_val = round(mat[i][j], 6)
             print(mat_val)
             if i == j:
                 assert 1 == mat_val
@@ -5827,21 +6232,93 @@ def test_compare_containment_ani(c):
                 ss_j = idx_to_sig[j]
                 containment_ani = ss_j.containment_ani(ss_i).ani
                 if containment_ani is not None:
-                    containment_ani = round(containment_ani, 3)
+                    containment_ani = round(containment_ani, 6)
                 else:
                     containment_ani = 0.0
-                mat_val = round(mat[i][j], 3)
+                mat_val = round(mat[i][j], 6)
 
                 assert containment_ani == mat_val #, (i, j)
 
     print(c.last_result.err)
     print(c.last_result.out)
-    assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_jaccard_ani(c):
-    import numpy
+def test_compare_jaccard_ani(runtmp):
+    c = runtmp
+
+    sigfiles = ["47.fa.sig", "47-63-merge.sig"]
+    testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
+
+    c.run_sourmash('compare', '--containment', '-k', '31',
+                   '--ani', '--csv', 'output.csv', *testdata_sigs)
+
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
+
+    # check explicit containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            mat_val = round(mat[i][j], 6)
+            print(mat_val)
+            if i == j:
+                assert 1 == mat_val
+            else:
+                ss_j = idx_to_sig[j]
+                containment_ani = ss_j.containment_ani(ss_i).ani
+                if containment_ani is not None:
+                    containment_ani = round(containment_ani, 6)
+                else:
+                    containment_ani = 0.0
+                mat_val = round(mat[i][j], 6)
+
+                assert containment_ani == mat_val #, (i, j)
+
+    print(c.last_result.err)
+    print(c.last_result.out)
+
+
+def test_compare_containment_ani_asymmetry_distance(runtmp):
+    # very specifically test asymmetry of ANI in containment matrices ;)
+    # ...calculated with --distance
+    c = runtmp
+
+    sigfiles = ["47.fa.sig", "47-63-merge.sig"]
+    testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
+
+    c.run_sourmash('compare', '--containment', '-k', '31', '--distance-matrix',
+                   '--ani', '--csv', 'output.csv', *testdata_sigs)
+
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
+
+    # check explicit containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            mat_val = round(mat[i][j], 6)
+            print(mat_val)
+            if i == j:
+                assert 0 == mat_val
+            else:
+                ss_j = idx_to_sig[j]
+                containment_ani = 1 - ss_j.containment_ani(ss_i).ani
+                if containment_ani is not None:
+                    containment_ani = round(containment_ani, 6)
+                else:
+                    containment_ani = 1
+                mat_val = round(mat[i][j], 6)
+
+                assert containment_ani == mat_val #, (i, j)
+
+    print(c.last_result.err)
+    print(c.last_result.out)
+
+
+def test_compare_jaccard_ani(runtmp):
+    c = runtmp
 
     sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
     testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
@@ -5849,25 +6326,11 @@ def test_compare_jaccard_ani(c):
     c.run_sourmash('compare', '-k', '31', '--estimate-ani',
                          '--csv', 'output.csv', *testdata_sigs)
 
-    # load the matrix output of compare --estimate-ani
-    with open(c.output('output.csv'), 'rt') as fp:
-        r = iter(csv.reader(fp))
-        headers = next(r)
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
 
-        mat = numpy.zeros((len(headers), len(headers)))
-        for i, row in enumerate(r):
-            for j, val in enumerate(row):
-                mat[i][j] = float(val)
-
-        print(mat)
-
-    # load in all the input signatures
-    idx_to_sig = dict()
-    for idx, filename in enumerate(testdata_sigs):
-        ss = sourmash.load_one_signature(filename, ksize=31)
-        idx_to_sig[idx] = ss
-
-    # check explicit containment against output of compare
+    # check explicit calculations against output of compare
     for i in range(len(idx_to_sig)):
         ss_i = idx_to_sig[i]
         for j in range(len(idx_to_sig)):
@@ -5891,9 +6354,9 @@ def test_compare_jaccard_ani(c):
     assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_jaccard_ani_jaccard_error_too_high(c):
-    import numpy
+def test_compare_jaccard_ani_jaccard_error_too_high(runtmp):
+    c = runtmp
+
     testdata1 = utils.get_test_data('short.fa')
     sig1 = c.output('short.fa.sig')
     testdata2 = utils.get_test_data('short2.fa')
@@ -5905,24 +6368,9 @@ def test_compare_jaccard_ani_jaccard_error_too_high(c):
     c.run_sourmash('compare', '-k', '31', '--estimate-ani', '--csv', 'output.csv', 'short.fa.sig', 'short2.fa.sig')
     print(c.last_result.status, c.last_result.out, c.last_result.err)
 
-
-    # load the matrix output of compare --estimate-ani
-    with open(c.output('output.csv'), 'rt') as fp:
-        r = iter(csv.reader(fp))
-        headers = next(r)
-
-        mat = numpy.zeros((len(headers), len(headers)))
-        for i, row in enumerate(r):
-            for j, val in enumerate(row):
-                mat[i][j] = float(val)
-
-        print(mat)
-
-    # load in all the input signatures
-    idx_to_sig = dict()
-    for idx, filename in enumerate(testdata_sigs):
-        ss = sourmash.load_one_signature(filename, ksize=31)
-        idx_to_sig[idx] = ss
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
 
     # check explicit containment against output of compare
     for i in range(len(idx_to_sig)):
@@ -5947,33 +6395,18 @@ def test_compare_jaccard_ani_jaccard_error_too_high(c):
     assert "WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_max_containment_ani(c):
-    import numpy
-    
+def test_compare_max_containment_ani(runtmp):
+    c = runtmp
+
     sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
     testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
 
     c.run_sourmash('compare', '--max-containment', '-k', '31',
                    '--estimate-ani', '--csv', 'output.csv', *testdata_sigs)
 
-    # load the matrix output of compare --max-containment --estimate-ani
-    with open(c.output('output.csv'), 'rt') as fp:
-        r = iter(csv.reader(fp))
-        headers = next(r)
-
-        mat = numpy.zeros((len(headers), len(headers)))
-        for i, row in enumerate(r):
-            for j, val in enumerate(row):
-                mat[i][j] = float(val)
-
-        print(mat)
-
-    # load in all the input signatures
-    idx_to_sig = dict()
-    for idx, filename in enumerate(testdata_sigs):
-        ss = sourmash.load_one_signature(filename, ksize=31)
-        idx_to_sig[idx] = ss
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
 
     # check explicit containment against output of compare
     for i in range(len(idx_to_sig)):
@@ -5998,9 +6431,9 @@ def test_compare_max_containment_ani(c):
     assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_avg_containment_ani(c):
-    import numpy
+def test_compare_avg_containment_ani(runtmp):
+    # test compare --avg-containment --ani
+    c = runtmp
 
     sigfiles = ["2.fa.sig", "2+63.fa.sig", "47.fa.sig", "63.fa.sig"]
     testdata_sigs = [utils.get_test_data(c) for c in sigfiles]
@@ -6008,23 +6441,9 @@ def test_compare_avg_containment_ani(c):
     c.run_sourmash('compare', '--avg-containment', '-k', '31',
                    '--estimate-ani', '--csv', 'output.csv', *testdata_sigs)
 
-    # load the matrix output of compare --max-containment --estimate-ani
-    with open(c.output('output.csv'), 'rt') as fp:
-        r = iter(csv.reader(fp))
-        headers = next(r)
-
-        mat = numpy.zeros((len(headers), len(headers)))
-        for i, row in enumerate(r):
-            for j, val in enumerate(row):
-                mat[i][j] = float(val)
-
-        print(mat)
-
-    # load in all the input signatures
-    idx_to_sig = dict()
-    for idx, filename in enumerate(testdata_sigs):
-        ss = sourmash.load_one_signature(filename, ksize=31)
-        idx_to_sig[idx] = ss
+    # load the matrix output
+    mat, idx_to_sig = _load_compare_matrix_and_sigs(c.output('output.csv'),
+                                                    testdata_sigs)
 
     # check explicit avg containment against output of compare
     for i in range(len(idx_to_sig)):
@@ -6049,8 +6468,10 @@ def test_compare_avg_containment_ani(c):
     assert "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_compare_ANI_require_scaled(c):
+def test_compare_ANI_require_scaled(runtmp):
+    # check that compare with containment requires scaled sketches
+    c = runtmp
+
     s47 = utils.get_test_data('num/47.fa.sig')
     s63 = utils.get_test_data('num/63.fa.sig')
 
