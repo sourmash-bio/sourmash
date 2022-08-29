@@ -553,9 +553,10 @@ class LCA_Database(Index):
             ident = self._idx_to_ident[idx]
             name = self._ident_to_name[ident]
             ss = SourmashSignature(mh, name=name)
+            ss.into_frozen()
 
             if passes_all_picklists(ss, self.picklists):
-                sigd[idx] = SourmashSignature(mh, name=name)
+                sigd[idx] = ss
 
         debug('=> {} signatures!', len(sigd))
         return sigd
