@@ -2,6 +2,7 @@ use finch::sketch_schemes::mash::MashSketcher;
 use finch::sketch_schemes::SketchScheme;
 
 use crate::encodings::HashFunctions;
+use crate::prelude::*;
 use crate::sketch::minhash::KmerMinHash;
 
 /*
