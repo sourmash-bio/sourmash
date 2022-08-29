@@ -41,7 +41,7 @@ def subparser(subparsers):
                                       aliases=['classify'],
                                       usage=usage)
     subparser.add_argument(
-        '-g', '--gather-csv', nargs='*', default = [],
+        '-g', '--gather-csv', action='extend', nargs='*', default = [],
         help='CSVs output by sourmash gather for this sample'
     )
     subparser.add_argument(
@@ -54,7 +54,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-t', '--taxonomy-csv', '--taxonomy', metavar='FILE',
-        nargs='+', required=True,
+        nargs='*', required=True, action='extend',
         help='database lineages CSV'
     )
     subparser.add_argument(
@@ -82,7 +82,8 @@ def subparser(subparsers):
         help='fail quickly if taxonomy is not available for an identifier',
     )
     subparser.add_argument(
-        '-F', '--output-format', default=['csv_summary'], nargs='+', choices=["csv_summary", "krona", "human", "lineage_csv"],
+        '-F', '--output-format', default=[], nargs='*', action='extend',
+        choices=["csv_summary", "krona", "human", "lineage_csv"],
         help='choose output format(s)',
     )
     subparser.add_argument(
@@ -102,4 +103,8 @@ def main(args):
     if not args.rank:
         if any(x in ["krona"] for x in args.output_format):
             raise ValueError(f"Rank (--rank) is required for krona output format.")
+    if not args.output_format:
+        # change to "human" for 5.0
+        args.output_format = ["csv_summary"]
+
     return sourmash.tax.__main__.genome(args)

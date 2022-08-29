@@ -295,9 +295,8 @@ class Index(ABC):
         implementations need only return an object that meets the
         public `CounterGather` interface, of course.
         """
-        # build a flat query
-        prefetch_query = query.copy()
-        prefetch_query.minhash = prefetch_query.minhash.flatten()
+        with query.update() as prefetch_query:
+            prefetch_query.minhash = prefetch_query.minhash.flatten()
 
         # find all matches and construct a CounterGather object.
         counter = CounterGather(prefetch_query)

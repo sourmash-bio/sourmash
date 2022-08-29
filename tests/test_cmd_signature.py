@@ -3300,6 +3300,7 @@ def test_sig_describe_empty(c):
     assert len(ss) == 1
     ss = ss[0]
 
+    ss = ss.to_mutable()
     ss.name = ''
     ss.filename = ''
 

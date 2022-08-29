@@ -432,6 +432,70 @@ def write_summary(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=Fa
             w.writerow(rD)
 
 
+def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
+    '''
+    Write taxonomy-summarized gather results as kraken-style kreport.
+
+    While this format typically records the percent of number of reads assigned to taxa,
+    we can create comparable output by reporting the percent of k-mers (percent containment)
+    and the total number of k-mers matched.
+
+    standard reads-based `kreport` columns:
+    - `Percent Reads Contained in Taxon`: The cumulative percentage of reads for this taxon and all descendants.
+    - `Number of Reads Contained in Taxon`: The cumulative number of reads for this taxon and all descendants.
+    - `Number of Reads Assigned to Taxon`: The number of reads assigned directly to this taxon (not a cumulative count of all descendants).
+    - `Rank Code`: (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies. 
+    - `NCBI Taxon ID`: Numerical ID from the NCBI taxonomy database.
+    - `Scientific Name`: The scientific name of the taxon.
+
+    Example reads-based `kreport` with all columns:
+    ```
+    88.41	2138742	193618	K	2	Bacteria
+    0.16	3852	818	P	201174	  Actinobacteria
+    0.13	3034	0	C	1760	    Actinomycetia
+    0.13	3034	45	O	85009	      Propionibacteriales
+    0.12	2989	1847	F	31957	        Propionibacteriaceae
+    0.05	1142	352	G	1912216	          Cutibacterium
+    0.03	790	790	S	1747	            Cutibacterium acnes
+    ```
+
+    sourmash `kreport` caveats:
+    - `Percent k-mers Contained in Taxon`: weighted by k-mer abundance
+    - `Estimated bp Contained in Taxon`: NOT WEIGHTED BY ABUNDANCE
+    - `Number of Reads Assigned to Taxon` and `NCBI Taxon ID` will not be reported (blank entries).
+
+    In the future, we may wish to report the NCBI taxid when we can (NCBI taxonomy only).
+    '''
+    columns = ["percent_containment", "num_bp_contained", "num_bp_assigned", "rank_code", "ncbi_taxid", "sci_name"]
+    w = csv.DictWriter(csv_fp, columns, delimiter=sep)
+
+    rankCode = { "superkingdom": "D", "kingdom": "K", "phylum": "P", "class": "C",
+                 "order": "O", "family":"F", "genus": "G", "species": "S"} # , "": "U"
+
+    unclassified_written=False
+    for rank, rank_results in summarized_gather.items():
+        rcode = rankCode[rank]
+        for res in rank_results:
+            # SummarizedGatherResults have an unclassified lineage at every rank, to facilitate reporting at a specific rank.
+            # Here, we only need to report it once, since it will be the same fraction for all ranks
+            if not res.lineage:
+                rank_sciname = "unclassified"
+                rcode = "U"
+                # if we've already written the unclassified portion, skip and continue to next loop iteration
+                if unclassified_written:
+                    continue
+                else:
+                    unclassified_written=True
+            else:
+                rank_sciname = res.lineage[-1].name
+            kresD = {"rank_code": rcode, "ncbi_taxid": "", "sci_name": rank_sciname,  "num_bp_assigned": ""}
+            # total percent containment, weighted to include abundance info
+            kresD['percent_containment'] = f'{res.f_weighted_at_rank:.2f}'
+            # num bp contained. THIS IS NOT WEIGHTED... do we want to weight??
+            kresD["num_bp_contained"] = res.bp_match_at_rank
+            w.writerow(kresD)
+
+
 def write_human_summary(summarized_gather, out_fp, display_rank):
     '''
     Write human-readable taxonomy-summarized gather results for a specific rank.
@@ -1012,6 +1076,8 @@ class MultiLineageDB(abc.Mapping):
     @classmethod
     def load(cls, locations, **kwargs):
         "Load one or more taxonomies from the given location(s)"
+        force = kwargs.get('force', False)
+
         if isinstance(locations, str):
             raise TypeError("'locations' should be a list, not a string")
 
@@ -1034,12 +1100,14 @@ class MultiLineageDB(abc.Mapping):
                     loaded = True
                 except (ValueError, csv.Error) as exc:
                     # for the last loader, just pass along ValueError...
-                    raise ValueError(f"cannot read taxonomy assignments from '{location}': {str(exc)}")
+                    if not force:
+                        raise ValueError(f"cannot read taxonomy assignments from '{location}': {str(exc)}")
 
             # nothing loaded, goodbye!
-            if not loaded:
+            if not loaded and not force:
                 raise ValueError(f"cannot read taxonomy assignments from '{location}'")
 
-            tax_assign.add(this_tax_assign)
+            if loaded:
+                tax_assign.add(this_tax_assign)
 
         return tax_assign

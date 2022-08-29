@@ -152,8 +152,11 @@ def test_save_signatures_to_location_1_zip_dup(runtmp):
 
         # here we have to change the names so the sig content is different;
         # exact duplicates will not be saved, otherwise.
+        ss2 = ss2.to_mutable()
         ss2.name = 'different name for ss2'
         save_sig.add(ss2)
+
+        ss47 = ss47.to_mutable()
         ss47.name = 'different name for ss47'
         save_sig.add(ss47)
 
@@ -229,7 +232,7 @@ def test_save_signatures_to_location_2_zip_add_dup(runtmp):
         # add ss2; here we have to change the names so the sig content is
         # different exact duplicates will not be saved, otherwise.
         import copy
-        ss2copy = copy.copy(ss2)
+        ss2copy = ss2.to_mutable()
         ss2copy.name = 'different name for ss2'
         save_sig.add(ss2copy)
 

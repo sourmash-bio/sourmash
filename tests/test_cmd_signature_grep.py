@@ -315,6 +315,8 @@ def test_sig_grep_7_lca(runtmp):
 
     ss47 = sourmash.load_file_as_signatures(sig47)
     ss47 = list(ss47)[0]
+
+    ss47 = ss47.to_mutable()
     ss47.minhash = ss47.minhash.downsample(scaled=10000)
 
     assert ss47.minhash == match.minhash
