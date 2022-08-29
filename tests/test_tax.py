@@ -1078,6 +1078,39 @@ def test_genome_gather_two_files(runtmp):
     assert 'test2,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test2.sig,0.057,444000.0' in c.last_result.out
 
 
+def test_genome_gather_two_files_empty_force(runtmp):
+    # make test2 results (identical to test1 except query_name and filename)
+    # add an empty file too, with --force -> should work
+    c = runtmp
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    g_res = utils.get_test_data('tax/test1.gather.csv')
+
+    g_empty_csv = runtmp.output('g_empty.csv')
+    with open(g_empty_csv, "w") as fp:
+        fp.write("")
+    print("g_csv: ", g_empty_csv)
+
+    g_res2 = runtmp.output("test2.gather.csv")
+    test2_results = [x.replace("test1", "test2") for x in open(g_res, 'r')]
+    with open(g_res2, 'w') as fp:
+        for line in test2_results:
+            fp.write(line)
+
+    c.run_sourmash('tax', 'genome', '-g', g_res, g_res2, '-g', g_empty_csv,
+                   '--taxonomy-csv', taxonomy_csv,
+                   '--rank', 'species', '--containment-threshold', '0',
+                   '--force')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
+    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
+    assert 'test2,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test2.sig,0.057,444000.0' in c.last_result.out
+
+
 def test_genome_gather_duplicate_filename(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -1417,6 +1450,35 @@ def test_genome_multiple_taxonomy_files(runtmp):
     assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,' in c.last_result.out
     # using single -t arg
     c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', subset_csv, taxonomy_csv)
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "The following are missing from the taxonomy information: GCF_001881345" not in c.last_result.err
+    assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
+    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,' in c.last_result.out
+
+
+def test_genome_multiple_taxonomy_files_empty_force(runtmp):
+    c = runtmp
+    # write temp taxonomy with missing entry, as well as an empty file,
+    # and use force
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    subset_csv = runtmp.output("subset_taxonomy.csv")
+    with open(subset_csv, 'w') as subset:
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        tax = [tax[0]] + tax[2:] # remove the best match (1st tax entry)
+        subset.write("\n".join(tax))
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    empty_tax = runtmp.output('tax_empty.txt')
+    with open(empty_tax, "w") as fp:
+        fp.write("")
+    
+    # using mult -t args
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', subset_csv, '-t', taxonomy_csv, '-t', empty_tax, '--force')
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)

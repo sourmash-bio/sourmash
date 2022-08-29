@@ -41,7 +41,7 @@ def subparser(subparsers):
                                       aliases=['classify'],
                                       usage=usage)
     subparser.add_argument(
-        '-g', '--gather-csv', action="extend", nargs='*', default = [],
+        '-g', '--gather-csv', action='extend', nargs='*', default = [],
         help='CSVs output by sourmash gather for this sample'
     )
     subparser.add_argument(
@@ -54,7 +54,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-t', '--taxonomy-csv', '--taxonomy', metavar='FILE',
-        nargs='*', required=True, # @CTB
+        nargs='*', required=True, action='extend',
         help='database lineages CSV'
     )
     subparser.add_argument(
