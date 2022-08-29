@@ -753,7 +753,7 @@ class MinHash(RustObject):
         #return self.count_common(other, downsample) / (len(self) * (1- (1-1/self.scaled)^(len(self)*self.scaled)))
 
 
-    def contained_by_with_bf(self, other, downsample=False):
+    def contained_by_debiased(self, other, downsample=False):
         """
         Calculate how much of self is contained by other.
         """
@@ -762,16 +762,13 @@ class MinHash(RustObject):
         denom = len(self)
         if not denom:
             return 0.0
-        if not self.size_is_accurate() or not other.size_is_accurate():
-            notify("WARNING: size estimation for at least one of these sketches may be inaccurate.")
-        #return self.count_common(other, downsample) / len(self)
-        # with bias factor
-        bf = 1.0 - (1.0 - 1.0/self.scaled) ** float(denom * self.scaled)
-        return self.count_common(other, downsample) / (denom * bf)# (1- (1-1/self.scaled)**(denom*self.scaled)))
+        total_denom = float(denom *self.scaled) # would be better if hll estimate - see #1798
+        bias_factor = 1.0 - (1.0 - 1.0/self.scaled) ** total_denom
+        return self.count_common(other, downsample) / (denom * bias_factor)
 
 
     def containment_ani(self, other, *, downsample=False, containment=None, confidence=0.95, estimate_ci = False, prob_threshold=1e-3):
-        "Use containment to estimate ANI between two MinHash objects."
+        "Use self contained by other to estimate ANI between two MinHash objects."
         if not (self.scaled and other.scaled):
             raise TypeError("Error: can only calculate ANI for scaled MinHashes")
         self_mh = self
@@ -781,9 +778,7 @@ class MinHash(RustObject):
             scaled = max(self_mh.scaled, other_mh.scaled)
             self_mh = self.downsample(scaled=scaled)
             other_mh = other.downsample(scaled=scaled)
-        if containment is None:
-            #containment = self_mh.contained_by(other_mh)
-            containment = self_mh.contained_by_with_bf(other_mh)
+        containment = self_mh.contained_by_debiased(other_mh) # recalc debiased containment
         n_kmers = len(self_mh) * scaled # would be better if hll estimate - see #1798
 
         c_aniresult = containment_to_distance(containment, self_mh.ksize, self_mh.scaled,
@@ -808,7 +803,7 @@ class MinHash(RustObject):
         return self.count_common(other, downsample) / min_denom
 
 
-    def max_containment_with_bf(self, other, downsample=False):
+    def max_containment_debiased(self, other, downsample=False):
         """
         Calculate maximum containment.
         """
@@ -817,12 +812,12 @@ class MinHash(RustObject):
         min_denom = min((len(self), len(other)))
         if not min_denom:
             return 0.0
-        #return self.count_common(other, downsample) / min_denom
-        bf = 1.0 - (1.0 - 1.0/self.scaled) ** float(min_denom * self.scaled)
-        return self.count_common(other, downsample) / (min_denom * bf) #(1- (1-1/self.scaled)**(min_denom*self.scaled)))
+        total_denom =  float(min_denom * self.scaled) # would be better if hll estimate - see #1798
+        bias_factor = 1.0 - (1.0 - 1.0/self.scaled) ** total_denom
+        return self.count_common(other, downsample) / (min_denom * bias_factor)
 
 
-    def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False, prob_threshold=1e-3):
+    def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False, prob_threshold=1e-3):  
         "Use max_containment to estimate ANI between two MinHash objects."
         if not (self.scaled and other.scaled):
             raise TypeError("Error: can only calculate ANI for scaled MinHashes")
@@ -833,9 +828,7 @@ class MinHash(RustObject):
             scaled = max(self_mh.scaled, other_mh.scaled)
             self_mh = self.downsample(scaled=scaled)
             other_mh = other.downsample(scaled=scaled)
-        if max_containment is None:
-            #max_containment = self_mh.max_containment(other_mh)
-            max_containment = self_mh.max_containment_with_bf(other_mh)
+        max_containment = self_mh.max_containment_debiased(other_mh) #recalc debiased max containment
         min_n_kmers = min(len(self_mh), len(other_mh))
         n_kmers = min_n_kmers * scaled  # would be better if hll estimate - see #1798
 
