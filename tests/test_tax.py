@@ -1875,7 +1875,7 @@ def test_annotate_no_gather_csv(runtmp):
 
 
 def test_annotate_0(runtmp):
-    # test annotate
+    # test annotate basics
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
@@ -1901,6 +1901,40 @@ def test_annotate_0(runtmp):
     assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in lin_gather_results[2]
     assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus" in lin_gather_results[3]
     assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in lin_gather_results[4]
+
+
+def test_annotate_gather_argparse(runtmp):
+    # test annotate with two gather CSVs, second one empty, and --force.
+    # this tests argparse handling w/extend.
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csvout = runtmp.output("test1.gather.with-lineages.csv")
+    out_dir = os.path.dirname(csvout)
+
+    g_empty_csv = runtmp.output('g_empty.csv')
+    with open(g_empty_csv, "w") as fp:
+        fp.write("")
+    print("g_csv: ", g_empty_csv)
+
+    c.run_sourmash('tax', 'annotate', '--gather-csv', g_csv,
+                   '-g', g_empty_csv, '--taxonomy-csv', tax, '-o', out_dir,
+                   '--force')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    lin_gather_results = [x.rstrip() for x in open(csvout)]
+    print("\n".join(lin_gather_results))
+    assert f"saving 'annotate' output to '{csvout}'" in runtmp.last_result.err
+
+    assert "lineage" in lin_gather_results[0]
+    assert "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in lin_gather_results[1]
 
 
 def test_annotate_0_db(runtmp):
@@ -1996,7 +2030,27 @@ def test_annotate_empty_tax_lineage_input_recover_with_second_taxfile(runtmp):
         fp.write("")
     print("t_csv: ", tax_empty)
 
-    runtmp.run_sourmash('tax', 'annotate', '-g', g_csv, '-t', tax_empty, '--taxonomy-csv', tax,'--force')
+    runtmp.run_sourmash('tax', 'annotate', '-g', g_csv, '-t', tax_empty, '--taxonomy-csv', tax, '--force')
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+
+
+def test_annotate_empty_tax_lineage_input_recover_with_second_taxfile_2(runtmp):
+    # test with empty tax second, to check on argparse handling
+    tax_empty = runtmp.output('t.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    with open(tax_empty, "w") as fp:
+        fp.write("")
+    print("t_csv: ", tax_empty)
+
+    runtmp.run_sourmash('tax', 'annotate', '-g', g_csv,
+                        '--taxonomy-csv', tax, '-t', tax_empty, '--force')
 
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
