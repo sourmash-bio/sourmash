@@ -721,7 +721,7 @@ def test_metagenome_gather_duplicate_query(runtmp):
 
 
 def test_metagenome_gather_duplicate_query_force(runtmp):
-    # do not load same query from multiple files. Instead, ignore query in second file.
+    # do not load same query from multiple files.
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -732,21 +732,18 @@ def test_metagenome_gather_duplicate_query_force(runtmp):
         for line in open(g_res, 'r'):
             fp.write(line)
 
-    c.run_sourmash('tax', 'metagenome',  '--gather-csv', g_res, g_res2,
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('tax', 'metagenome',  '--gather-csv', g_res, g_res2,
                    '--taxonomy-csv', taxonomy_csv, '--force')
 
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert c.last_result.status == 0
+    assert c.last_result.status == -1
 
     assert "Gather query test1 was found in more than one CSV." in c.last_result.err
-    assert "--force is set. Attempting to continue to next set of gather results." in c.last_result.err
-    assert "loaded 4 results total from 1 gather CSVs" in c.last_result.err
-    assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,superkingdom,0.204,d__Bacteria,md5,test1.sig,0.131,1024000' in c.last_result.out
-    assert 'No gather results loaded from ' in c.last_result.err
+    assert "Cannot force past duplicated gather query. Exiting." in c.last_result.err
 
 
 def test_metagenome_gather_duplicate_filename(runtmp):
@@ -1190,21 +1187,18 @@ def test_genome_gather_from_file_duplicate_query_force(runtmp):
         f_csv.write(f"{g_res}\n")
         f_csv.write(f"{g_res2}\n")
 
-    c.run_sourmash('tax', 'genome', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('tax', 'genome', '--from-file', g_from_file, '--taxonomy-csv', taxonomy_csv,
                    '--rank', 'species', '--containment-threshold', '0', '--force')
 
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert c.last_result.status == 0
+    assert c.last_result.status == -1
 
     assert "Gather query test1 was found in more than one CSV." in c.last_result.err
-    assert "--force is set. Attempting to continue to next set of gather results." in c.last_result.err
-    assert "loaded 4 results total from 1 gather CSVs" in c.last_result.err
-    assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
-    assert 'No gather results loaded from ' in c.last_result.err
+    assert "Cannot force past duplicated gather query. Exiting." in c.last_result.err
 
 
 def test_genome_gather_cli_and_from_file(runtmp):
