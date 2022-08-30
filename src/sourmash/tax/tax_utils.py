@@ -108,15 +108,8 @@ def load_gather_results(gather_csv, *, delimiter=',',
             query_name = row['query_name']
             # check if we've seen this query already in a different gather CSV
             if query_name in seen_queries:
-                if query_name not in gather_queries: #seen already in this CSV? (only want to warn once per query per CSV)
-                    notify(f"WARNING: Gather query {query_name} was already loaded from a separate gather CSV. Cannot load duplicate query from CSV {gather_csv}...")
-                if force:
-                    if query_name not in gather_queries:
-                        notify("--force is set, ignoring duplicate query.")
-                        gather_queries.add(query_name)
-                    continue
-                else:
-                    raise ValueError(f"Gather query {query_name} was found in more than one CSV. Cannot load from '{gather_csv}'.")
+                # do not allow loading of same query from a second CSV.
+                raise ValueError(f"Gather query {query_name} was found in more than one CSV. Cannot load from '{gather_csv}'.")
             else:
                 gather_results.append(row)
             # add query name to the gather_queries from this CSV
@@ -149,6 +142,7 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
         except ValueError as exc:
             if force:
                 notify(str(exc))
+                notify(f'No gather results loaded from {gather_csv}')
                 notify('--force is set. Attempting to continue to next set of gather results.')
                 n_ignored+=1
                 continue

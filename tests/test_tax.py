@@ -721,6 +721,7 @@ def test_metagenome_gather_duplicate_query(runtmp):
 
 
 def test_metagenome_gather_duplicate_query_force(runtmp):
+    # do not load same query from multiple files. Instead, ignore query in second file.
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -739,15 +740,13 @@ def test_metagenome_gather_duplicate_query_force(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert '--force is set, ignoring duplicate query.' in c.last_result.err
-    assert 'No gather results loaded from ' in c.last_result.err
-    assert 'loaded 4 results total from 1 gather CSVs' in c.last_result.err
+
+    assert "Gather query test1 was found in more than one CSV." in c.last_result.err
+    assert "--force is set. Attempting to continue to next set of gather results." in c.last_result.err
+    assert "loaded 4 results total from 1 gather CSVs" in c.last_result.err
     assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'test1,superkingdom,0.204,d__Bacteria,md5,test1.sig,0.131,1024000' in c.last_result.out
-    assert 'test1,superkingdom,0.796,unclassified,md5,test1.sig,0.869,3990000' in c.last_result.out
-    assert 'test1,phylum,0.116,d__Bacteria;p__Bacteroidota,md5,test1.sig,0.073,582000' in c.last_result.out
-    assert 'test1,phylum,0.088,d__Bacteria;p__Proteobacteria,md5,test1.sig,0.058,442000' in c.last_result.out
-    assert 'test1,phylum,0.796,unclassified,md5,test1.sig,0.869,3990000' in c.last_result.out
+    assert 'No gather results loaded from ' in c.last_result.err
 
 
 def test_metagenome_gather_duplicate_filename(runtmp):
@@ -1199,11 +1198,13 @@ def test_genome_gather_from_file_duplicate_query_force(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
+
+    assert "Gather query test1 was found in more than one CSV." in c.last_result.err
+    assert "--force is set. Attempting to continue to next set of gather results." in c.last_result.err
+    assert "loaded 4 results total from 1 gather CSVs" in c.last_result.err
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
-    assert '--force is set, ignoring duplicate query.' in c.last_result.err
     assert 'No gather results loaded from ' in c.last_result.err
-    assert 'loaded 4 results total from 1 gather CSVs' in c.last_result.err
 
 
 def test_genome_gather_cli_and_from_file(runtmp):
