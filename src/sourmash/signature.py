@@ -6,6 +6,7 @@ import sys
 import os
 import weakref
 from enum import Enum
+import contextlib
 
 from .logging import error
 from . import MinHash
@@ -225,16 +226,94 @@ class SourmashSignature(RustObject):
         )
 
     def __copy__(self):
-        mh = self.minhash
-        mh = mh.to_frozen()
         a = SourmashSignature(
-            mh,
+            self.minhash,
             name=self.name,
             filename=self.filename,
         )
         return a
 
     copy = __copy__
+
+    def to_frozen(self):
+        "Return a frozen copy of this signature."
+        new_ss = self.copy()
+        new_ss.__class__ = FrozenSourmashSignature
+        return new_ss
+
+    def to_mutable(self):
+        "Return a mutable copy of this signature."
+        return self.copy()
+
+    def into_frozen(self):
+        "Freeze this signature, preventing attribute changes."
+        # this will always be the case b/c minhash property returns FrozenMH:
+        # assert isinstance(self.minhash, FrozenMinHash)
+        self.__class__ = FrozenSourmashSignature
+
+
+class FrozenSourmashSignature(SourmashSignature):
+    "Frozen (immutable) signature class."
+
+    @SourmashSignature.minhash.setter
+    def minhash(self, value):
+        raise ValueError("cannot set .minhash on FrozenSourmashSignature")
+
+    @SourmashSignature._name.setter
+    def _name(self, value):
+        raise ValueError("cannot set ._name on FrozenSourmashSignature")
+
+    @SourmashSignature.name.setter
+    def name(self, value):
+        raise ValueError("cannot set .name on FrozenSourmashSignature")
+
+    @SourmashSignature.filename.setter
+    def filename(self, value):
+        raise ValueError("cannot set .filename on FrozenSourmashSignature")
+
+    def add_sequence(self, sequence, force=False):
+        raise ValueError("cannot add sequence data to FrozenSourmashSignature")
+
+    def add_protein(self, sequence):
+        raise ValueError("cannot add protein sequence to FrozenSourmashSignature")
+
+    def __copy__(self):
+        return self
+    copy = __copy__
+
+    def to_frozen(self):
+        "Return a frozen copy of this signature."
+        return self
+
+    def to_mutable(self):
+        "Turn this object into a mutable object."
+        mut = SourmashSignature.__new__(SourmashSignature)
+        state_tup = self.__getstate__()
+        mut.__setstate__(state_tup)
+        return mut
+
+    def into_frozen(self):
+        "Freeze this signature, preventing attribute changes."
+        self.__class__ = FrozenSourmashSignature
+
+    @contextlib.contextmanager
+    def update(self):
+        """Make a mutable copy of this signature for modification, then freeze.
+
+        This is a context manager that implements:
+
+        new_sig = this_sig.copy()
+        new_sig.to_mutable()
+        # modify new_sig
+        new_sig.into_frozen()
+
+        This could be made more efficient by _not_ copying the signature,
+        but that is non-intuitive and leads to hard-to-find bugs.
+        """
+        new_copy = self.to_mutable()
+        yield new_copy
+        new_copy.into_frozen()
+
 
 def _detect_input_type(data):
     """\
@@ -272,7 +351,7 @@ def load_signatures(
 ):
     """Load a JSON string with signatures into classes.
 
-    Returns list of SourmashSignature objects.
+    Returns iterator over SourmashSignature objects.
 
     Note, the order is not necessarily the same as what is in the source file.
     """
@@ -342,7 +421,7 @@ def load_signatures(
             sigs.append(sig)
 
         for sig in sigs:
-            yield sig
+            yield sig.to_frozen()
 
     except Exception as e:
         if do_raise:

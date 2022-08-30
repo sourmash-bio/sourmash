@@ -256,6 +256,8 @@ def test_scaledSearchResult():
     ss4763_file = utils.get_test_data('47+63.fa.sig')
     ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
     ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype='dna')
+
+    ss4763 = ss4763.to_mutable()
     ss4763.filename = ss4763_file
 
     scaled = ss47.minhash.scaled
@@ -293,6 +295,7 @@ def test_numSearchResult():
     ss63_file = utils.get_test_data('num/63.fa.sig')
     ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
     ss63 = load_one_signature(ss63_file, ksize=31, select_moltype='dna')
+    ss63 = ss63.to_mutable()
     ss63.filename = ss63_file
 
     assert ss47.minhash.num and ss63.minhash.num
@@ -370,6 +373,8 @@ def test_PrefetchResult():
     ss4763_file = utils.get_test_data('47+63.fa.sig')
     ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
     ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype='dna')
+
+    ss4763 = ss4763.to_mutable()
     ss4763.filename = ss4763_file
 
     scaled = ss47.minhash.scaled
@@ -438,6 +443,8 @@ def test_GatherResult():
     ss4763_file = utils.get_test_data('47+63.fa.sig')
     ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
     ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype='dna')
+
+    ss4763 = ss4763.to_mutable()
     ss4763.filename = ss4763_file
 
     scaled = ss47.minhash.scaled
@@ -513,6 +520,8 @@ def test_GatherResult_ci():
     ss4763_file = utils.get_test_data('47+63.fa.sig')
     ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
     ss4763 = load_one_signature(ss4763_file, ksize=31, select_moltype='dna')
+
+    ss4763 = ss4763.to_mutable()
     ss4763.filename = ss4763_file
 
     scaled = ss47.minhash.scaled
