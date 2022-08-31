@@ -319,15 +319,15 @@ class SearchResult(BaseResult):
     def estimate_search_ani(self):
         #future: could estimate ANI from abund searches if we want (use query containment?)
         if self.cmp_scaled is None:
-            raise TypeError("ANI can only be estimated from scaled signatures.")
+            raise TypeError("Error: ANI can only be estimated from scaled signatures.")
         if self.searchtype == SearchType.CONTAINMENT:
-            self.cmp.estimate_ani_from_mh2_containment_in_mh1(containment = self.similarity)
-            self.ani = self.cmp.ani_from_mh2_containment_in_mh1
+            self.cmp.estimate_ani_from_mh1_containment_in_mh2()
+            self.ani = self.cmp.ani_from_mh1_containment_in_mh2
             if self.estimate_ani_ci:
-                self.ani_low = self.cmp.ani_from_mh2_containment_in_mh1_low
-                self.ani_high = self.cmp.ani_from_mh2_containment_in_mh1_high
+                self.ani_low = self.cmp.ani_from_mh1_containment_in_mh2_low
+                self.ani_high = self.cmp.ani_from_mh1_containment_in_mh2_high
         elif self.searchtype == SearchType.MAX_CONTAINMENT:
-            self.cmp.estimate_max_containment_ani(max_containment = self.similarity)
+            self.cmp.estimate_max_containment_ani()
             self.ani = self.cmp.max_containment_ani
             if self.estimate_ani_ci:
                 self.ani_low = self.cmp.max_containment_ani_low
