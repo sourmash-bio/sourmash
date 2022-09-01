@@ -431,7 +431,8 @@ class GatherResult(PrefetchResult):
     total_abund: int = None
     orig_query_len: int = None
     orig_query_abunds: list = None
-    orig_query_sum_abunds: int = None
+    n_weighted_found: int = None
+    sum_weighted_hashes: int = None
 
     gather_write_cols = ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
                          'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename', # here we use 'filename'
@@ -439,7 +440,8 @@ class GatherResult(PrefetchResult):
                          'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
                          'moltype', 'scaled', 'query_n_hashes', 'query_abundance', 'query_containment_ani',
                          'match_containment_ani', 'average_containment_ani', 'max_containment_ani',
-                         'potential_false_negative', 'orig_query_sum_abunds']
+                         'potential_false_negative',
+                         'n_weighted_found', 'sum_weighted_hashes']
 
     ci_cols = ["query_containment_ani_low", "query_containment_ani_high",
                    "match_containment_ani_low", "match_containment_ani_high"]
@@ -781,9 +783,10 @@ class GatherDatabases:
 
         # compute weighted_missed for remaining query hashes
         query_hashes = set(query_mh.hashes) - set(found_mh.hashes)
-        weighted_missed = sum((orig_query_abunds[k] for k in query_hashes))
-        weighted_missed += self.noident_query_sum_abunds
-        weighted_missed /= sum_abunds
+        n_weighted_missed = sum((orig_query_abunds[k] for k in query_hashes))
+        n_weighted_missed += self.noident_query_sum_abunds
+        n_weighted_found = sum_abunds - n_weighted_missed
+        weighted_missed = n_weighted_missed / sum_abunds
 
         # build a GatherResult
         result = GatherResult(self.orig_query, best_match,
@@ -797,7 +800,8 @@ class GatherDatabases:
                               orig_query_len=orig_query_len,
                               orig_query_abunds = self.orig_query_abunds,
                               estimate_ani_ci=self.estimate_ani_ci,
-                              orig_query_sum_abunds=sum_abunds
+                              n_weighted_found=n_weighted_found,
+                              sum_weighted_hashes=sum_abunds,
                               )
 
         self.result_n += 1

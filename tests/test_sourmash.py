@@ -4516,6 +4516,7 @@ def test_gather_deduce_moltype(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_abund_1_1(runtmp, linear_gather, prefetch_gather):
+    # check gather with a hand-constructed abundance-weighted query, mark 1
     c = runtmp
     #
     # make r1.fa with 2x coverage of genome s10
@@ -4560,6 +4561,7 @@ def test_gather_abund_1_1(runtmp, linear_gather, prefetch_gather):
 
 
 def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
+    # check gather with a hand-constructed abundance-weighted query
     c = runtmp
     # see comments in test_gather_abund_1_1, above.
     # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
@@ -4605,14 +4607,22 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
         f_weighted_list = []
         average_abunds = []
         remaining_bps = []
+        n_weighted_list = []
+        sum_weighted_list = []
 
         for n, row in enumerate(r):
             assert int(row['gather_result_rank']) == n
+
+            # other than f_weighted, these are all 'flat' numbers - no abunds.
             overlap = float(row['intersect_bp'])
             remaining_bp = float(row['remaining_bp'])
             unique_overlap = float(row['unique_intersect_bp'])
             f_weighted = float(row['f_unique_weighted'])
             average_abund = float(row['average_abund'])
+
+            # also check 'n_weighted_found' and 'sum_weighted_hashes'
+            n_weighted_list.append(float(row['n_weighted_found']))
+            sum_weighted_list.append(float(row['sum_weighted_hashes']))
 
             overlaps.append(overlap)
             unique_overlaps.append(unique_overlap)
@@ -4636,8 +4646,15 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
     total_query_bp = len(query_mh) * query_mh.scaled
     assert total_bp_analyzed == total_query_bp
 
+    # weighted list should all be the same
+    assert min(sum_weighted_list) == max(sum_weighted_list)
+    assert min(sum_weighted_list) == 7986
+
 
 def test_gather_abund_10_1_ignore_abundance(runtmp, linear_gather, prefetch_gather):
+    # check gather with an abundance-weighted query, then flattened with
+    # --ignore-abund
+
     c = runtmp
     # see comments in test_gather_abund_1_1, above.
     # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
@@ -4686,6 +4703,8 @@ def test_gather_abund_10_1_ignore_abundance(runtmp, linear_gather, prefetch_gath
 
 
 def test_gather_output_unassigned_with_abundance(runtmp, prefetch_gather, linear_gather):
+    # check --output-unassigned with an abund query
+    # @CTB: could add check on sum weighted etc.
     c = runtmp
     query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
     against = utils.get_test_data('gather-abund/genome-s10.fa.gz.sig')
