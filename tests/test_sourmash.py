@@ -4636,7 +4636,7 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
     weighted_calc = []
     for (overlap, average_abund) in zip(overlaps, average_abunds):
         prod = overlap*average_abund
-        weighted_calc.append(prod)
+        weighted_calc.append(prod) # @CTB redundant terms with below?
 
     total_weighted = sum(weighted_calc)
     for prod, f_weighted in zip(weighted_calc, f_weighted_list):
@@ -4651,16 +4651,23 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
 
     # running sum of n_weighted_list should match sum_weighted_list
     sofar_sum = 0
-    for n_weighted, sum_weighted in zip(n_weighted_list, sum_weighted_list):
+    for i in range(len(n_weighted_list)):
+        n_weighted = n_weighted_list[i]
+        sum_weighted = sum_weighted_list[i]
+
         sofar_sum += n_weighted
         assert sum_weighted == sofar_sum
 
     # weighted list should all be the same, and should match sum_weighted_list
-    # for this query
+    # for this query, since 100% found.
     assert min(total_weighted_list) == max(total_weighted_list)
     assert min(total_weighted_list) == 7986
     assert sum_weighted_list[-1] == 7986
 
+    # check/verify calculations for f_weighted -
+    for i in range(len(n_weighted_list)):
+        f_weighted = f_weighted_list[i]
+        assert f_weighted == n_weighted / 7986
 
 def test_gather_abund_10_1_ignore_abundance(runtmp, linear_gather, prefetch_gather):
     # check gather with an abundance-weighted query, then flattened with
