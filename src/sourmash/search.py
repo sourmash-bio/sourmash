@@ -431,8 +431,8 @@ class GatherResult(PrefetchResult):
     total_abund: int = None
     orig_query_len: int = None
     orig_query_abunds: list = None
-    n_weighted_found: int = None
-    sum_weighted_hashes: int = None
+    sum_weighted_found: int = None
+    total_weighted_hashes: int = None
 
     gather_write_cols = ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
                          'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename', # here we use 'filename'
@@ -441,7 +441,8 @@ class GatherResult(PrefetchResult):
                          'moltype', 'scaled', 'query_n_hashes', 'query_abundance', 'query_containment_ani',
                          'match_containment_ani', 'average_containment_ani', 'max_containment_ani',
                          'potential_false_negative',
-                         'n_weighted_found', 'sum_weighted_hashes']
+                         'n_unique_weighted_found', 'sum_weighted_found',
+                         'total_weighted_hashes']
 
     ci_cols = ["query_containment_ani_low", "query_containment_ani_high",
                    "match_containment_ani_low", "match_containment_ani_high"]
@@ -502,8 +503,9 @@ class GatherResult(PrefetchResult):
             self.std_abund = self.query_weighted_unique_intersection.std_abundance
             # 'query' will be flattened by default. reset track abundance if we have abunds
             self.query_abundance = self.query_weighted_unique_intersection.track_abundance
-             # calculate scores weighted by abundances
-            self.f_unique_weighted =  float(self.query_weighted_unique_intersection.sum_abundances) / self.total_abund
+            # calculate scores weighted by abundances
+            self.n_unique_weighted_found = self.query_weighted_unique_intersection.sum_abundances
+            self.f_unique_weighted = self.n_unique_weighted_found / self.total_abund
         else:
             self.f_unique_weighted = self.f_unique_to_query
 
@@ -785,7 +787,7 @@ class GatherDatabases:
         query_hashes = set(query_mh.hashes) - set(found_mh.hashes)
         n_weighted_missed = sum((orig_query_abunds[k] for k in query_hashes))
         n_weighted_missed += self.noident_query_sum_abunds
-        n_weighted_found = sum_abunds - n_weighted_missed
+        sum_weighted_found = sum_abunds - n_weighted_missed
         weighted_missed = n_weighted_missed / sum_abunds
 
         # build a GatherResult
@@ -800,8 +802,8 @@ class GatherDatabases:
                               orig_query_len=orig_query_len,
                               orig_query_abunds = self.orig_query_abunds,
                               estimate_ani_ci=self.estimate_ani_ci,
-                              n_weighted_found=n_weighted_found,
-                              sum_weighted_hashes=sum_abunds,
+                              sum_weighted_found=sum_weighted_found,
+                              total_weighted_hashes=sum_abunds, # redundant w/total_abund @CTB
                               )
 
         self.result_n += 1

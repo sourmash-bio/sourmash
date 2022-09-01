@@ -4607,8 +4607,10 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
         f_weighted_list = []
         average_abunds = []
         remaining_bps = []
+
         n_weighted_list = []
         sum_weighted_list = []
+        total_weighted_list = []
 
         for n, row in enumerate(r):
             assert int(row['gather_result_rank']) == n
@@ -4620,15 +4622,16 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
             f_weighted = float(row['f_unique_weighted'])
             average_abund = float(row['average_abund'])
 
-            # also check 'n_weighted_found' and 'sum_weighted_hashes'
-            n_weighted_list.append(float(row['n_weighted_found']))
-            sum_weighted_list.append(float(row['sum_weighted_hashes']))
-
             overlaps.append(overlap)
             unique_overlaps.append(unique_overlap)
             f_weighted_list.append(f_weighted)
             average_abunds.append(average_abund)
             remaining_bps.append(remaining_bp)
+
+            # also track weighted calculations
+            n_weighted_list.append(float(row['n_unique_weighted_found']))
+            sum_weighted_list.append(float(row['sum_weighted_found']))
+            total_weighted_list.append(float(row['total_weighted_hashes']))
 
     weighted_calc = []
     for (overlap, average_abund) in zip(overlaps, average_abunds):
@@ -4646,9 +4649,17 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
     total_query_bp = len(query_mh) * query_mh.scaled
     assert total_bp_analyzed == total_query_bp
 
-    # weighted list should all be the same
-    assert min(sum_weighted_list) == max(sum_weighted_list)
-    assert min(sum_weighted_list) == 7986
+    # running sum of n_weighted_list should match sum_weighted_list
+    sofar_sum = 0
+    for n_weighted, sum_weighted in zip(n_weighted_list, sum_weighted_list):
+        sofar_sum += n_weighted
+        assert sum_weighted == sofar_sum
+
+    # weighted list should all be the same, and should match sum_weighted_list
+    # for this query
+    assert min(total_weighted_list) == max(total_weighted_list)
+    assert min(total_weighted_list) == 7986
+    assert sum_weighted_list[-1] == 7986
 
 
 def test_gather_abund_10_1_ignore_abundance(runtmp, linear_gather, prefetch_gather):
