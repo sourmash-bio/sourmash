@@ -200,10 +200,17 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
     sum_uniq_to_query = defaultdict(lambda: defaultdict(float))
     sum_uniq_bp = defaultdict(lambda: defaultdict(float))
     query_info = {}
-    ksize, scaled, query_nhashes=None, None, None
+
+    set_ksize = False
+    ksize, scaled, query_nhashes = None, 0, None
 
     for row in gather_results:
         # get essential gather info
+        if not set_ksize and "ksize" in row.keys():
+            set_ksize = True
+            ksize = int(row['ksize'])
+            scaled = int(row['scaled'])
+        
         query_name = row['query_name']
         f_unique_to_query = float(row['f_unique_to_query'])
         f_uniq_weighted = float(row['f_unique_weighted'])
@@ -223,11 +230,8 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
         # store query info
         query_info[query_name] = QueryInfo(query_md5=query_md5, query_filename=query_filename, query_bp=query_bp, query_hashes=query_nhashes, total_weighted_hashes=total_weighted_hashes)
         
-        if estimate_query_ani and (not ksize or not scaled): # just need to set these once. BUT, if we have these, should we check for compatibility when loading the gather file?
-            if "ksize" in row.keys():
-                ksize = int(row['ksize'])
-                scaled = int(row['scaled'])
-            else:
+        if estimate_query_ani and (not ksize or not scaled):
+            if not set_ksize:
                 estimate_query_ani=False
                 notify("WARNING: Please run gather with sourmash >= 4.4 to estimate query ANI at rank. Continuing without ANI...")
         
@@ -277,7 +281,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                 query_ani = containment_to_distance(fraction, ksize, scaled,
                                                     n_unique_kmers= qInfo.query_hashes, sequence_len_bp= qInfo.query_bp).ani
             sres = SummarizedGatherResult(query_name, rank, fraction, lineage, qInfo.query_md5,
-                                          qInfo.query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes)
+                                          qInfo.query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes * scaled)
             sum_uniq_to_query_sorted.append(sres)
         else:
             total_f_weighted= 0.0
@@ -298,7 +302,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                     query_ani = containment_to_distance(fraction, ksize, scaled,
                                                         n_unique_kmers=qInfo.query_hashes, sequence_len_bp=qInfo.query_bp).ani
                 sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5,
-                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes)
+                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes * scaled)
                 sum_uniq_to_query_sorted.append(sres)
 
             # record unclassified
@@ -309,7 +313,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                 f_weighted_at_rank = 1.0 - total_f_weighted
                 bp_intersect_at_rank = qInfo.query_bp - total_bp_classified
                 sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5,
-                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes)
+                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes*scaled)
                 sum_uniq_to_query_sorted.append(sres)
 
     return sum_uniq_to_query_sorted, seen_perfect, estimate_query_ani
