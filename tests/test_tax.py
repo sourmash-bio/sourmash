@@ -164,6 +164,7 @@ def test_metagenome_summary_csv_out_empty_gather_force(runtmp):
 
 
 def test_metagenome_kreport_out(runtmp):
+    # test 'kreport' kraken output format
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
@@ -199,6 +200,56 @@ def test_metagenome_kreport_out(runtmp):
     assert ['0.06', '444000', '', 'S', '', 's__Prevotella copri'] == kreport_results[13]
     assert ['0.06', '442000', '', 'S', '', 's__Escherichia coli']== kreport_results[14]
     assert ['0.02', '138000', '', 'S', '', 's__Phocaeicola vulgatus'] == kreport_results[15]
+
+
+def test_metagenome_kreport_out_lemonade(runtmp):
+    # test 'kreport' kraken output format against lemonade output
+    g_csv = utils.get_test_data('tax/lemonade-MAG3.x.gtdb.csv')
+    tax = utils.get_test_data('tax/lemonade-MAG3.x.gtdb.matches.tax.csv')
+    csv_base = "out"
+    sum_csv = csv_base + ".kreport.txt"
+    csvout = runtmp.output(sum_csv)
+    outdir = os.path.dirname(csvout)
+
+    runtmp.run_sourmash('tax', 'metagenome', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-dir', outdir, '-F', "kreport")
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    kreport_results = [x.rstrip().split('\t') for x in open(csvout)]
+    assert f"saving 'kreport' output to '{csvout}'" in runtmp.last_result.err
+    print(kreport_results)
+    assert ['0.05', '116', '', 'D', '', 'd__Bacteria'] == kreport_results[0]
+    assert ['0.95', '2054', '', 'U', '', 'unclassified'] == kreport_results[1]
+    assert ['0.05', '116', '', 'P', '', 'p__Bacteroidota'] == kreport_results[2]
+    assert ['0.05', '116', '', 'C', '', 'c__Chlorobia'] == kreport_results[3]
+    assert ['0.05', '116', '', 'O', '', 'o__Chlorobiales'] == kreport_results[4]
+    assert ['0.05', '116', '', 'F', '', 'f__Chlorobiaceae'] == kreport_results[5]
+    assert ['0.05', '116', '', 'G', '', 'g__Prosthecochloris'] == kreport_results[6]
+    assert ['0.05', '116', '', 'S', '', 's__Prosthecochloris vibrioformis'] == kreport_results[7]
+
+
+def test_metagenome_kreport_out_fail(runtmp):
+    # kreport cannot be generated with gather results from < v4.5.0
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+    sum_csv = csv_base + ".kreport.txt"
+    csvout = runtmp.output(sum_csv)
+    outdir = os.path.dirname(csvout)
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.run_sourmash('tax', 'metagenome', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-dir', outdir, '-F', "kreport")
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "ERROR: cannot produce 'kreport' format from gather results before sourmash v4.5.0" in runtmp.last_result.err
 
 
 def test_metagenome_krona_tsv_out(runtmp):
