@@ -499,7 +499,7 @@ def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
             kresD = {"rank_code": rcode, "ncbi_taxid": "", "sci_name": rank_sciname,  "num_bp_assigned": ""}
             # total percent containment, weighted to include abundance info
             kresD['percent_containment'] = f'{res.f_weighted_at_rank:.2f}'
-            # num bp contained. THIS IS NOT WEIGHTED... do we want to weight??
+            # weighted bp
             kresD["num_bp_contained"] = int(res.f_weighted_at_rank * res.total_weighted_hashes)
             w.writerow(kresD)
 
