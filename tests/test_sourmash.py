@@ -3151,6 +3151,9 @@ def test_gather_csv(runtmp, linear_gather, prefetch_gather):
         assert row['query_md5'] == 'c9d5a795'
         assert row['query_bp'] == '910'
 
+        assert row['query_abundance'] == 'False'
+        assert row['n_unique_weighted_found'] == ''
+
 
 def test_gather_csv_gz(runtmp, linear_gather, prefetch_gather):
     # test 'gather -o csvfile.gz'
