@@ -165,7 +165,7 @@ def test_metagenome_summary_csv_out_empty_gather_force(runtmp):
 
 def test_metagenome_kreport_out(runtmp):
     # test 'kreport' kraken output format
-    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
     sum_csv = csv_base + ".kreport.txt"
@@ -184,22 +184,22 @@ def test_metagenome_kreport_out(runtmp):
     kreport_results = [x.rstrip().split('\t') for x in open(csvout)]
     assert f"saving 'kreport' output to '{csvout}'" in runtmp.last_result.err
     print(kreport_results)
-    assert ['0.13', '1024000', '', 'D', '', 'd__Bacteria'] == kreport_results[0]
-    assert ['0.87', '3990000', '', 'U', '', 'unclassified'] == kreport_results[1]
-    assert ['0.07', '582000', '', 'P', '', 'p__Bacteroidota'] == kreport_results[2]
-    assert ['0.06', '442000', '', 'P', '', 'p__Proteobacteria'] == kreport_results[3]
-    assert ['0.07', '582000', '', 'C', '', 'c__Bacteroidia'] == kreport_results[4]
-    assert ['0.06', '442000', '', 'C', '', 'c__Gammaproteobacteria'] == kreport_results[5]
-    assert ['0.07', '582000', '', 'O', '', 'o__Bacteroidales'] == kreport_results[6]
-    assert ['0.06', '442000', '', 'O', '', 'o__Enterobacterales'] == kreport_results[7]
-    assert ['0.07', '582000', '', 'F', '', 'f__Bacteroidaceae'] == kreport_results[8]
-    assert ['0.06', '442000', '', 'F', '', 'f__Enterobacteriaceae'] == kreport_results[9]
-    assert ['0.06', '444000', '', 'G', '', 'g__Prevotella']  == kreport_results[10]
-    assert ['0.06', '442000', '', 'G', '', 'g__Escherichia'] == kreport_results[11]
-    assert ['0.02', '138000', '', 'G', '', 'g__Phocaeicola'] == kreport_results[12]
-    assert ['0.06', '444000', '', 'S', '', 's__Prevotella copri'] == kreport_results[13]
-    assert ['0.06', '442000', '', 'S', '', 's__Escherichia coli']== kreport_results[14]
-    assert ['0.02', '138000', '', 'S', '', 's__Phocaeicola vulgatus'] == kreport_results[15]
+    assert ['0.13', '802', '', 'D', '', 'd__Bacteria'] == kreport_results[0]
+    assert ['0.87', '5336', '', 'U', '', 'unclassified'] == kreport_results[1]
+    assert ['0.07', '446', '', 'P', '', 'p__Bacteroidota'] == kreport_results[2]
+    assert ['0.06', '357', '', 'P', '', 'p__Proteobacteria'] == kreport_results[3]
+    assert ['0.07', '446', '', 'C', '', 'c__Bacteroidia'] == kreport_results[4]
+    assert ['0.06', '357', '', 'C', '', 'c__Gammaproteobacteria'] == kreport_results[5]
+    assert ['0.07', '446', '', 'O', '', 'o__Bacteroidales'] == kreport_results[6]
+    assert ['0.06', '357', '', 'O', '', 'o__Enterobacterales'] == kreport_results[7]
+    assert ['0.07', '446', '', 'F', '', 'f__Bacteroidaceae'] == kreport_results[8]
+    assert ['0.06', '357', '', 'F', '', 'f__Enterobacteriaceae'] == kreport_results[9]
+    assert ['0.06', '350', '', 'G', '', 'g__Prevotella']  == kreport_results[10]
+    assert ['0.06', '357', '', 'G', '', 'g__Escherichia'] == kreport_results[11]
+    assert ['0.02', '96', '', 'G', '', 'g__Phocaeicola'] == kreport_results[12]
+    assert ['0.06', '350', '', 'S', '', 's__Prevotella copri'] == kreport_results[13]
+    assert ['0.06', '357', '', 'S', '', 's__Escherichia coli']== kreport_results[14]
+    assert ['0.02', '96', '', 'S', '', 's__Phocaeicola vulgatus'] == kreport_results[15]
 
 
 def test_metagenome_kreport_out_lemonade(runtmp):

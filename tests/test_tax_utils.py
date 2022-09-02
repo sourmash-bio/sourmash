@@ -635,13 +635,15 @@ def test_write_summary_csv(runtmp):
                                                           query_md5='queryA_md5', query_filename='queryA.sig',
                                                           f_weighted_at_rank=1.0, bp_match_at_rank=100,
                                                           lineage=(LineagePair(rank='superkingdom', name='a'),),
-                                                          query_ani_at_rank=None)],
+                                                          query_ani_at_rank=None,
+                                                          total_weighted_hashes=0)],
                   'phylum':  [SummarizedGatherResult(query_name='queryA', rank='phylum', fraction=1.0,
                                                      query_md5='queryA_md5', query_filename='queryA.sig',
                                                      f_weighted_at_rank=1.0, bp_match_at_rank=100,
                                                      lineage=(LineagePair(rank='superkingdom', name='a'),
                                                               LineagePair(rank='phylum', name='b')),
-                                                     query_ani_at_rank=None)]}
+                                                     query_ani_at_rank=None,
+                                                     total_weighted_hashes=0)]}
 
     outs= runtmp.output("outsum.csv")
     with open(outs, 'w') as out_fp:
@@ -649,9 +651,9 @@ def test_write_summary_csv(runtmp):
 
     sr = [x.rstrip().split(',') for x in open(outs, 'r')]
     print("gather_summary_results_from_file: \n", sr)
-    assert ['query_name', 'rank', 'fraction', 'lineage', 'query_md5', 'query_filename', 'f_weighted_at_rank', 'bp_match_at_rank', 'query_ani_at_rank'] == sr[0]
-    assert ['queryA', 'superkingdom', '1.0', 'a', 'queryA_md5', 'queryA.sig', '1.0', '100', ''] == sr[1]
-    assert ['queryA', 'phylum', '1.0', 'a;b', 'queryA_md5', 'queryA.sig', '1.0', '100',''] == sr[2]
+    assert ['query_name', 'rank', 'fraction', 'lineage', 'query_md5', 'query_filename', 'f_weighted_at_rank', 'bp_match_at_rank', 'query_ani_at_rank', 'total_weighted_hashes'] == sr[0]
+    assert ['queryA', 'superkingdom', '1.0', 'a', 'queryA_md5', 'queryA.sig', '1.0', '100', '', '0'] == sr[1]
+    assert ['queryA', 'phylum', '1.0', 'a;b', 'queryA_md5', 'queryA.sig', '1.0', '100','','0'] == sr[2]
 
 
 def test_write_classification(runtmp):
@@ -864,21 +866,21 @@ def test_combine_sumgather_csvs_by_lineage(runtmp):
                                                      f_weighted_at_rank=0.5, bp_match_at_rank=50,
                                                      lineage=(LineagePair(rank='superkingdom', name='a'),
                                                               LineagePair(rank='phylum', name='b')),
-                                                     query_ani_at_rank=None
+                                                     query_ani_at_rank=None,
                                                      total_weighted_hashes=0)]}
     sum_gather2 = {'superkingdom': [SummarizedGatherResult(query_name='queryB', rank='superkingdom', fraction=0.7,
                                                           query_md5='queryB_md5', query_filename='queryB.sig',
                                                           f_weighted_at_rank=0.7, bp_match_at_rank=70,
                                                           lineage=(LineagePair(rank='superkingdom', name='a'),),
                                                            query_ani_at_rank=None,
-                                                           total_weighted_hashes=0))],
+                                                           total_weighted_hashes=0)],
                   'phylum':  [SummarizedGatherResult(query_name='queryB', rank='phylum', fraction=0.7,
                                                      query_md5='queryB_md5', query_filename='queryB.sig',
                                                      f_weighted_at_rank=0.7, bp_match_at_rank=70,
                                                      lineage=(LineagePair(rank='superkingdom', name='a'),
                                                               LineagePair(rank='phylum', name='c')),
                                                      query_ani_at_rank=None,
-                                                     total_weighted_hashes=0))]}
+                                                     total_weighted_hashes=0)]}
 
     # write summarized gather results csvs
     sg1= runtmp.output("sample1.csv")
@@ -953,27 +955,27 @@ def test_combine_sumgather_csvs_by_lineage_improper_rank(runtmp):
                                                           f_weighted_at_rank=0.5, bp_match_at_rank=50,
                                                           lineage=(LineagePair(rank='superkingdom', name='a'),),
                                                            query_ani_at_rank=None,
-                                                           total_weighted_hashes=0))],
+                                                           total_weighted_hashes=0)],
                   'phylum':  [SummarizedGatherResult(query_name='queryA', rank='phylum', fraction=0.5,
                                                      query_md5='queryA_md5', query_filename='queryA.sig',
                                                      f_weighted_at_rank=0.5, bp_match_at_rank=50,
                                                      lineage=(LineagePair(rank='superkingdom', name='a'),
                                                               LineagePair(rank='phylum', name='b')),
                                                      query_ani_at_rank=None,
-                                                     total_weighted_hashes=0))]}
+                                                     total_weighted_hashes=0)]}
     sum_gather2 = {'superkingdom': [SummarizedGatherResult(query_name='queryB', rank='superkingdom', fraction=0.7,
                                                           query_md5='queryB_md5', query_filename='queryB.sig',
                                                           f_weighted_at_rank=0.7, bp_match_at_rank=70,
                                                           lineage=(LineagePair(rank='superkingdom', name='a'),),
                                                            query_ani_at_rank=None,
-                                                           total_weighted_hashes=0))],
+                                                           total_weighted_hashes=0)],
                   'phylum':  [SummarizedGatherResult(query_name='queryB', rank='phylum', fraction=0.7,
                                                      query_md5='queryB_md5', query_filename='queryB.sig',
                                                      f_weighted_at_rank=0.7, bp_match_at_rank=70,
                                                      lineage=(LineagePair(rank='superkingdom', name='a'),
                                                               LineagePair(rank='phylum', name='c')),
                                                      query_ani_at_rank=None,
-                                                     total_weighted_hashes=0))]}
+                                                     total_weighted_hashes=0)]}
 
     # write summarized gather results csvs
     sg1= runtmp.output("sample1.csv")
