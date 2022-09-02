@@ -26,8 +26,9 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
 from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
 
-QueryInfo = namedtuple("QueryInfo", "query_md5, query_filename, query_bp, query_hashes")
-SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
+# CTB: these could probably usefully be converted into dataclasses.
+QueryInfo = namedtuple("QueryInfo", "query_md5, query_filename, query_bp, query_hashes, total_weighted_hashes")
+SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank, total_weighted_hashes")
 ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
 
 # Essential Gather column names that must be in gather_csv to allow `tax` summarization
@@ -207,6 +208,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
         f_unique_to_query = float(row['f_unique_to_query'])
         f_uniq_weighted = float(row['f_unique_weighted'])
         unique_intersect_bp = int(row['unique_intersect_bp'])
+        total_weighted_hashes = int(row.get('total_weighted_hashes', 0))
         query_md5 = row['query_md5']
         query_filename = row['query_filename']
         # get query_bp
@@ -219,7 +221,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                 query_bp = unique_intersect_bp + int(row['remaining_bp'])
         
         # store query info
-        query_info[query_name] = QueryInfo(query_md5=query_md5, query_filename=query_filename, query_bp=query_bp, query_hashes = query_nhashes)
+        query_info[query_name] = QueryInfo(query_md5=query_md5, query_filename=query_filename, query_bp=query_bp, query_hashes=query_nhashes, total_weighted_hashes=total_weighted_hashes)
         
         if estimate_query_ani and (not ksize or not scaled): # just need to set these once. BUT, if we have these, should we check for compatibility when loading the gather file?
             if "ksize" in row.keys():
@@ -275,7 +277,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                 query_ani = containment_to_distance(fraction, ksize, scaled,
                                                     n_unique_kmers= qInfo.query_hashes, sequence_len_bp= qInfo.query_bp).ani
             sres = SummarizedGatherResult(query_name, rank, fraction, lineage, qInfo.query_md5,
-                                          qInfo.query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
+                                          qInfo.query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes)
             sum_uniq_to_query_sorted.append(sres)
         else:
             total_f_weighted= 0.0
@@ -296,7 +298,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                     query_ani = containment_to_distance(fraction, ksize, scaled,
                                                         n_unique_kmers=qInfo.query_hashes, sequence_len_bp=qInfo.query_bp).ani
                 sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5,
-                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
+                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes)
                 sum_uniq_to_query_sorted.append(sres)
 
             # record unclassified
@@ -307,7 +309,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                 f_weighted_at_rank = 1.0 - total_f_weighted
                 bp_intersect_at_rank = qInfo.query_bp - total_bp_classified
                 sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5,
-                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
+                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes)
                 sum_uniq_to_query_sorted.append(sres)
 
     return sum_uniq_to_query_sorted, seen_perfect, estimate_query_ani
@@ -488,7 +490,7 @@ def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
             # total percent containment, weighted to include abundance info
             kresD['percent_containment'] = f'{res.f_weighted_at_rank:.2f}'
             # num bp contained. THIS IS NOT WEIGHTED... do we want to weight??
-            kresD["num_bp_contained"] = res.bp_match_at_rank
+            kresD["num_bp_contained"] = res.f_weighted_at_rank * res.total_weighted_hashes
             w.writerow(kresD)
 
 
