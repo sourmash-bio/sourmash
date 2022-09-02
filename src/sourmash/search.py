@@ -507,6 +507,7 @@ class GatherResult(PrefetchResult):
             self.f_unique_weighted = self.n_unique_weighted_found / self.total_weighted_hashes
         else:
             self.f_unique_weighted = self.f_unique_to_query
+            self.query_abundance = False
 
     def __post_init__(self):
         self.check_gatherresult_input()

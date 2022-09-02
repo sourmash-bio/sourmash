@@ -4718,6 +4718,9 @@ def test_gather_abund_10_1_ignore_abundance(runtmp, linear_gather, prefetch_gath
             assert row['median_abund'] == ''
             assert row['std_abund'] == ''
 
+            assert row['query_abundance'] == 'False', row['query_abundance']
+            assert row['n_unique_weighted_found'] == ''
+
         assert some_results
 
 
