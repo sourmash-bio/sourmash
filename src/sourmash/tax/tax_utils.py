@@ -470,6 +470,12 @@ def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
     rankCode = { "superkingdom": "D", "kingdom": "K", "phylum": "P", "class": "C",
                  "order": "O", "family":"F", "genus": "G", "species": "S"} # , "": "U"
 
+    # check - are we using v4.5.0 or later gather CSVs?
+    for rank, rank_results in summarized_gather.items():
+        for res in rank_results:
+            if res.total_weighted_hashes == 0:
+                raise ValueError("ERROR: cannot produce 'kreport' format from gather results before sourmash v4.5.0")
+
     unclassified_written=False
     for rank, rank_results in summarized_gather.items():
         rcode = rankCode[rank]
