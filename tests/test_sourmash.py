@@ -4666,6 +4666,7 @@ def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
 
     # check/verify calculations for f_weighted -
     for i in range(len(n_weighted_list)):
+        n_weighted = n_weighted_list[i]
         f_weighted = f_weighted_list[i]
         assert f_weighted == n_weighted / 7986
 

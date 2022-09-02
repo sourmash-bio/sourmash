@@ -428,7 +428,6 @@ class PrefetchResult(BaseResult):
 class GatherResult(PrefetchResult):
     gather_querymh: MinHash = None
     gather_result_rank: int = None
-    total_abund: int = None
     orig_query_len: int = None
     orig_query_abunds: list = None
     sum_weighted_found: int = None
@@ -461,8 +460,8 @@ class GatherResult(PrefetchResult):
             raise ValueError("Error: must provide current gather sketch (remaining hashes) for GatherResult")
         if self.gather_result_rank is None:
             raise ValueError("Error: must provide 'gather_result_rank' to GatherResult")
-        if not self.total_abund: # catch total_abund = 0 as well
-            raise ValueError("Error: must provide sum of all abundances ('total_abund') to GatherResult")
+        if not self.total_weighted_hashes: # catch total_weighted_hashes = 0 as well
+            raise ValueError("Error: must provide sum of all abundances ('total_weighted_hashes') to GatherResult")
         if not self.orig_query_abunds:
             raise ValueError("Error: must provide original query abundances ('orig_query_abunds') to GatherResult")
 
@@ -505,7 +504,7 @@ class GatherResult(PrefetchResult):
             self.query_abundance = self.query_weighted_unique_intersection.track_abundance
             # calculate scores weighted by abundances
             self.n_unique_weighted_found = self.query_weighted_unique_intersection.sum_abundances
-            self.f_unique_weighted = self.n_unique_weighted_found / self.total_abund
+            self.f_unique_weighted = self.n_unique_weighted_found / self.total_weighted_hashes
         else:
             self.f_unique_weighted = self.f_unique_to_query
 
@@ -795,7 +794,6 @@ class GatherDatabases:
                               cmp_scaled=scaled,
                               filename=filename,
                               gather_result_rank=self.result_n,
-                              total_abund= sum_abunds,
                               gather_querymh=query.minhash,
                               ignore_abundance= not track_abundance,
                               threshold_bp=threshold_bp,
@@ -803,7 +801,7 @@ class GatherDatabases:
                               orig_query_abunds = self.orig_query_abunds,
                               estimate_ani_ci=self.estimate_ani_ci,
                               sum_weighted_found=sum_weighted_found,
-                              total_weighted_hashes=sum_abunds, # redundant w/total_abund @CTB
+                              total_weighted_hashes=sum_abunds,
                               )
 
         self.result_n += 1
