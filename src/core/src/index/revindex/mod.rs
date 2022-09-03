@@ -2,12 +2,14 @@ pub mod mem_revindex;
 pub mod revindex;
 
 use std::collections::{BTreeSet, HashMap};
+use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use byteorder::{LittleEndian, WriteBytesExt};
 use rkyv::{Archive, Deserialize, Serialize};
+use roaring::RoaringTreemap;
 
 use crate::index::revindex::mem_revindex::GatherResult;
 use crate::signature::{Signature, SigsTrait};
@@ -262,11 +264,24 @@ pub fn prepare_query(search_sig: &Signature, template: &Sketch) -> Option<KmerMi
     search_mh
 }
 
-#[derive(Debug, PartialEq, Clone, Archive, Serialize, Deserialize, Hash)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Datasets {
     Empty,
     Unique(DatasetID),
-    Many(BTreeSet<DatasetID>),
+    Many(RoaringTreemap),
+}
+
+impl Hash for Datasets {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        match self {
+            Self::Empty => todo!(),
+            Self::Unique(v) => v.hash(state),
+            Self::Many(v) => todo!(),
+        }
+    }
 }
 
 impl IntoIterator for Datasets {
@@ -323,31 +338,47 @@ impl Datasets {
         } else if vals.len() == 1 {
             Self::Unique(vals[0])
         } else {
-            Self::Many(BTreeSet::from_iter(vals.iter().cloned()))
+            Self::Many(RoaringTreemap::from_sorted_iter(vals.iter().copied()).unwrap())
         }
     }
 
     fn from_slice(slice: &[u8]) -> Option<Self> {
-        // TODO: avoid the aligned vec allocation here
-        let mut vec = rkyv::AlignedVec::new();
-        vec.extend_from_slice(slice);
-        let archived_value = unsafe { rkyv::archived_root::<Datasets>(vec.as_ref()) };
-        let inner = archived_value.deserialize(&mut rkyv::Infallible).unwrap();
-        Some(inner)
+        use byteorder::ReadBytesExt;
+
+        if slice.len() == 8 {
+            // Unique
+            Some(Self::Unique(
+                (&slice[..]).read_u64::<LittleEndian>().unwrap(),
+            ))
+        } else if slice.len() == 1 {
+            // Empty
+            Some(Self::Empty)
+        } else {
+            // Many
+            Some(Self::Many(
+                RoaringTreemap::deserialize_from(&slice[..]).unwrap(),
+            ))
+        }
     }
 
     fn as_bytes(&self) -> Option<Vec<u8>> {
-        let bytes = rkyv::to_bytes::<_, 256>(self).unwrap();
-        Some(bytes.into_vec())
+        use byteorder::WriteBytesExt;
 
-        /*
-        let mut serializer = DefaultSerializer::default();
-        let v = serializer.serialize_value(self).unwrap();
-        debug_assert_eq!(v, 0);
-        let buf = serializer.into_serializer().into_inner();
-        debug_assert!(Datasets::from_slice(&buf.to_vec()).is_some());
-        Some(buf.to_vec())
-        */
+        match self {
+            Self::Empty => Some(vec![42_u8]),
+            Self::Unique(v) => {
+                let mut buf = vec![0u8; 8];
+                (&mut buf[..])
+                    .write_u64::<LittleEndian>(*v)
+                    .expect("error writing bytes");
+                Some(buf)
+            }
+            Self::Many(v) => {
+                let mut buf = vec![];
+                v.serialize_into(&mut buf).unwrap();
+                Some(buf)
+            }
+        }
     }
 
     fn union(&mut self, other: Datasets) {
@@ -363,10 +394,9 @@ impl Datasets {
                         *self = Datasets::Many([*v, o].iter().copied().collect())
                     }
                 }
-                Datasets::Many(o) => {
-                    let mut new_hashset: BTreeSet<DatasetID> = [*v].iter().copied().collect();
-                    new_hashset.extend(o.into_iter());
-                    *self = Datasets::Many(new_hashset);
+                Datasets::Many(mut o) => {
+                    o.extend([*v].into_iter());
+                    *self = Datasets::Many(o);
                 }
             },
             Datasets::Many(ref mut v) => v.extend(other.into_iter()),
@@ -377,7 +407,7 @@ impl Datasets {
         match self {
             Self::Empty => 0,
             Self::Unique(_) => 1,
-            Self::Many(ref v) => v.len(),
+            Self::Many(ref v) => v.len() as usize,
         }
     }
 
@@ -385,7 +415,7 @@ impl Datasets {
         match self {
             Self::Empty => false,
             Self::Unique(v) => v == value,
-            Self::Many(ref v) => v.contains(value),
+            Self::Many(ref v) => v.contains(*value),
         }
     }
 }
