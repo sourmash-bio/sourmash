@@ -27,7 +27,7 @@ You can verify that they've been successfully downloaded (and view database prop
 
 [GTDB R07-RS207](https://forum.gtdb.ecogenomic.org/t/announcing-gtdb-r07-rs207/264) consists of 317,542 genomes organized into 65,703 species clusters.
 
-The lineage spreadsheet (for `sourmash tax` commands) is available [at the species level](https://osf.io/v3zmg/download) and [at the strain level](https://osf.io/r87td/download).
+The lineage spreadsheet (for `sourmash tax` commands) is available [at the species level](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.species-taxonomy.csv.gz) and [at the strain level](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.taxonomy.with-strain.csv.gz).
 
 ### GTDB R07-RS207 genomic representatives (66k)
 
@@ -35,9 +35,9 @@ The GTDB genomic representatives are a low-redundancy subset of Genbank genomes,
 
 | K-mer size | Zipfile collection | SBT | LCA |
 | -------- | -------- | -------- | ---- |
-| 21 | [download (1.7 GB)](https://osf.io/f2wzc/download) | [download (3.5 GB)](https://osf.io/zsypg/download) | [download (181 MB)](https://osf.io/pm35d/download) |
-| 31 | [download (1.7 GB)](https://osf.io/3a6gn/download) | [download (3.5 GB)](https://osf.io/ernct/download) | [download (181 MB)](https://osf.io/p9ezm/download) |
-| 51 | [download (1.7 GB)](https://osf.io/f23qn/download) | [download (3.5 GB)](https://osf.io/yq7dc/download) | [download (181 MB)](https://osf.io/8qhgy/download) |
+| 21 | [download (1.7 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic-reps.dna.k21.zip) | [download (3.5 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic-reps.dna.k21.sbt.zip) | [download (181 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic-reps.dna.k21.lca.json.gz) |
+| 31 | [download (1.7 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic-reps.dna.k31.zip) | [download (3.5 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic-reps.dna.k31.sbt.zip) | [download (181 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic-reps.dna.k31.lca.json.gz) |
+| 51 | [download (1.7 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic-reps.dna.k51.zip) | [download (3.5 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic-reps.dna.k51.sbt.zip) | [download (181 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic-reps.dna.k51.lca.json.gz) |
 
 ### GTDB R07-RS207 all genomes (318k)
 
@@ -45,9 +45,9 @@ These are databases for the full GTDB release, each containing 317,542 genomes.
 
 | K-mer size | Zipfile collection | SBT | LCA |
 | -------- | -------- | -------- | ---- |
-| 21 | [download (9.4 GB)](https://osf.io/9gpck/download) | [download (19 GB)](https://osf.io/wr8pk/download) | [download (351 MB)](https://osf.io/su9za/download) |
-| 31 | [download (9.4 GB)](https://osf.io/k2u8s/download) | [download (19 GB)](https://osf.io/748ew/download) | [download (351 MB)](https://osf.io/tf3ah/download) |
-| 51 | [download (9.4 GB)](https://osf.io/ubt7p/download) | [download (19 GB)](https://osf.io/78hdr/download) | [download (351 MB)](https://osf.io/vc8ua/download) |
+| 21 | [download (9.4 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic.k21.zip) | [download (19 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic.k21.sbt.zip) | [download (351 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic.k21.lca.json.gz) |
+| 31 | [download (9.4 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic.k31.zip) | [download (19 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic.k31.sbt.zip) | [download (351 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic.k31.lca.json.gz) |
+| 51 | [download (9.4 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic.k51.zip) | [download (19 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic.k51.sbt.zip) | [download (351 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs207.genomic.k51.lca.json.gz) |
 
 ## Genbank genomes from March 2022
 
@@ -61,63 +61,63 @@ Taxonomic spreadsheets for each domain are provided below as well.
 
 47,952 genomes:
 
-[genbank-2022.03-viral-k21.zip](https://dweb.link/ipfs/bafybeicjyx6qkhdtw6q4cxs6fyl46gqfhd4q5eqje5lkswf2npljnyytzi)
+[genbank-2022.03-viral-k21.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-viral-k21.zip)
 
-[genbank-2022.03-viral-k31.zip](https://dweb.link/ipfs/bafybeibqsldwsztjf66rwvwnb6hamjtsfkmdk5bmfqbzwrod6wwwkqz2ya)
+[genbank-2022.03-viral-k31.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-viral-k31.zip)
 
-[genbank-2022.03-viral-k51.zip](https://dweb.link/ipfs/bafybeibgifuv4q3mihfubnhjhwm2esjnoseudpnzwahlkp3hvlbmtd4s2q)
+[genbank-2022.03-viral-k51.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-viral-k51.zip)
 
-[genbank-2022.03-viral.lineages.csv.gz](https://osf.io/j4tsu/download)
+[genbank-2022.03-viral.lineages.csv.gz](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-viral.lineages.csv.gz)
 
 ### Genbank archaeal
 
 8,750 genomes:
 
-[genbank-2022.03-archaea-k21.zip](https://dweb.link/ipfs/bafybeiepywe7c6zjzgh3rksqiwpo5zyb7uuefbgvbn5nkgiq77iaavpzl4)
+[genbank-2022.03-archaea-k21.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-archaea-k21.zip)
 
-[genbank-2022.03-archaea-k31.zip](https://dweb.link/ipfs/bafybeidn6epju7yrdxrktq5wjko2yiwp6nrx3mq37htiuwecm7lffrbcdi)
+[genbank-2022.03-archaea-k31.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-archaea-k31.zip)
 
-[genbank-2022.03-archaea-k51.zip](https://dweb.link/ipfs/bafybeifyrwbx5dnay4mflboc5zai2de3xrvcxtgiu4j7adzj6qrxhb3zva)
+[genbank-2022.03-archaea-k51.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-archaea-k51.zip)
 
-[genbank-2022.03-archaea.lineages.csv.gz](https://osf.io/kcbpn/download)
+[genbank-2022.03-archaea.lineages.csv.gz](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-archaea.lineages.csv.gz)
 
 
 ### Genbank protozoa
 
 1193 genomes:
 
-[genbank-2022.03-protozoa-k21.zip](https://dweb.link/ipfs/bafybeicfh4xl4wuxd4xy2tf73hfamxlqa3s2higghnsjay4t5wtlmsdo5y)
+[genbank-2022.03-protozoa-k21.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-protozoa-k21.zip)
 
-[genbank-2022.03-protozoa-k31.zip](https://dweb.link/ipfs/bafybeicpxjhfrzem7f34eghbbwm3vglz2njxo72vpqcw7foilfomexsghi)
+[genbank-2022.03-protozoa-k31.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-protozoa-k31.zip)
 
-[genbank-2022.03-protozoa-k51.zip](https://dweb.link/ipfs/bafybeigfpxkmzyq6sdkob53l6ztiy5ro44dzkad7dxakhuaao6cw4gp4eu)
+[genbank-2022.03-protozoa-k51.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-protozoa-k51.zip)
 
-[genbank-2022.03-protozoa.lineages.csv.gz](https://osf.io/2x8u4/download)
+[genbank-2022.03-protozoa.lineages.csv.gz](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-protozoa.lineages.csv.gz)
 
 
 ### Genbank fungi
 
 10,286 genomes:
 
-[genbank-2022.03-fungi-k21.zip](https://dweb.link/ipfs/bafybeibrirvek4lxn6hh3wgsmtsd5vz5gtmewpzeg364bix3hojghwmygq)
+[genbank-2022.03-fungi-k21.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-fungi-k21.zip)
 
-[genbank-2022.03-fungi-k31.zip](https://dweb.link/ipfs/bafybeidhhwvwujkteno5ugwgjy4brhrv5dff2aumifcuew73qolfktdndq)
+[genbank-2022.03-fungi-k31.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-fungi-k31.zip)
 
-[genbank-2022.03-fungi-k51.zip](https://dweb.link/ipfs/bafybeibnrtt45f7wez2xb3fy5rxhatpeevc3rilm2gs65u5h6gc4u72fam)
+[genbank-2022.03-fungi-k51.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-fungi-k51.zip)
 
-[genbank-2022.03-fungi.lineages.csv.gz](https://osf.io/s4b85/download)
+[genbank-2022.03-fungi.lineages.csv.gz](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-fungi.lineages.csv.gz)
 
 ### Genbank bacterial:
 
 1,148,011 genomes:
 
-[genbank-2022.03-bacteria-k21.zip](https://dweb.link/ipfs/bafybeif2hdztfrevkngnfqk3bsoyajxxf67o57u4dezbz647jwcf6gnwoy)
+[genbank-2022.03-bacteria-k21.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-bacteria-k21.zip)
 
-[genbank-2022.03-bacteria-k31.zip](https://dweb.link/ipfs/bafybeigkcvizvhe3xzxsuzv3ryf3ogvgvcmms2e5nfk7epl5egts22jyue)
+[genbank-2022.03-bacteria-k31.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-bacteria-k31.zip)
 
-[genbank-2022.03-bacteria-k51.zip](https://dweb.link/ipfs/bafybeie3eyyectnh5xqxz44oa3qj5vura3bffqdwfqk6jjuzzadkh7e2sq)
+[genbank-2022.03-bacteria-k51.zip](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-bacteria-k51.zip)
 
-[genbank-2022.03-bacteria.lineages.csv.gz](https://osf.io/4agsp/download)
+[genbank-2022.03-bacteria.lineages.csv.gz](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/genbank-2022.03/genbank-2022.03-bacteria.lineages.csv.gz)
 
 ## GTDB R06-RS202 - DNA databases
 
