@@ -364,6 +364,22 @@ def _load_stdin(filename, **kwargs):
     return db
 
 
+def _load_http_get(filename, **kwargs):
+    "Load collection from .sig/.sig.gz file available via HTTP"
+    db = None
+    if filename.startswith('http'):
+        import requests
+
+        req = requests.get(filename, stream=True)
+
+        # load from req.raw as LinearIndex, then pass into MultiIndex to
+        # generate a manifest.
+        lidx = LinearIndex.load(req.raw, filename=filename)
+        db = MultiIndex.load((lidx,), (None,), parent=None)
+
+    return db
+
+
 def _load_standalone_manifest(filename, **kwargs):
     from sourmash.index import StandaloneManifestIndex
     idx = StandaloneManifestIndex.load(filename)
@@ -426,6 +442,7 @@ def _load_zipfile(filename, **kwargs):
 # all loader functions, in order.
 _loader_functions = [
     ("load from stdin", _load_stdin),
+    ("load via HTTP GET", _load_http_get),
     ("load collection from sqlitedb", _load_sqlite_db),
     ("load from standalone manifest", _load_standalone_manifest),
     ("load from path (file or directory)", _multiindex_load_from_path),
