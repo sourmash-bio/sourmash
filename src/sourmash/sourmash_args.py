@@ -372,10 +372,12 @@ def _load_http_get(filename, **kwargs):
 
         req = requests.get(filename, stream=True)
 
-        # load from req.raw as LinearIndex, then pass into MultiIndex to
-        # generate a manifest.
-        lidx = LinearIndex.load(req.raw, filename=filename)
-        db = MultiIndex.load((lidx,), (None,), parent=None)
+        # CTB: does this follow redirects?
+        if req.status_code == 200:
+            # load from req.raw as LinearIndex, then pass into MultiIndex to
+            # generate a manifest.
+            lidx = LinearIndex.load(req.raw, filename=filename)
+            db = MultiIndex.load((lidx,), (None,), parent=None)
 
     return db
 
