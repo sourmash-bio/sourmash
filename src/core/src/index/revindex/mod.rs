@@ -452,12 +452,10 @@ fn sig_save_to_db(
 }
 
 fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) {
-    todo!()
-    /*
     use byteorder::ReadBytesExt;
     use histogram::Histogram;
-    use numsep::{separate, Locale};
     use log::info;
+    use numsep::{separate, Locale};
 
     let cf = db.cf_handle(cf_name).unwrap();
 
@@ -505,5 +503,4 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) {
         info!("p25 v: {}", vcounts.percentile(25.0).unwrap());
         info!("p75 v: {}", vcounts.percentile(75.0).unwrap());
     }
-    */
 }
