@@ -1503,7 +1503,7 @@ def test_pickle_protein(track_abundance):
 
 
 def test_pickle_dayhoff(track_abundance):
-    # check that protein/etc ksize is handled properly during serialization.
+    # check that dayhoff ksize is handled properly during serialization.
     a = MinHash(0, 10, track_abundance=track_abundance, dayhoff=True,
                 scaled=_get_scaled_for_max_hash(20))
     for i in range(0, 40, 2):
