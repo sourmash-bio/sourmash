@@ -1493,7 +1493,7 @@ def test_pickle_protein(track_abundance):
     assert b.num == a.num
     assert b._max_hash == a._max_hash
     assert b._max_hash == 20
-    assert not b.is_protein
+    assert b.is_protein
     assert b.track_abundance == track_abundance
     assert b.seed == a.seed
     assert len(b.hashes) == len(a.hashes)
