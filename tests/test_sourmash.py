@@ -6317,6 +6317,20 @@ def test_compare_jaccard_ani(runtmp):
     print(c.last_result.out)
 
 
+def test_compare_jaccard_protein_parallel_ani_bug(runtmp):
+    # this checks a bug that occurred with serialization of protein minhash
+    # in parallel situations. See #2262.
+    c = runtmp
+
+    sigfile = utils.get_test_data("prot/protein.zip")
+
+    c.run_sourmash('compare', '--ani', '-p', '2', '--csv', 'output.csv',
+                   sigfile)
+
+    print(c.last_result.err)
+    print(c.last_result.out)
+
+
 def test_compare_containment_ani_asymmetry_distance(runtmp):
     # very specifically test asymmetry of ANI in containment matrices ;)
     # ...calculated with --distance

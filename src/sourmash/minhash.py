@@ -275,9 +275,13 @@ class MinHash(RustObject):
 
     def __getstate__(self):
         "support pickling via __getstate__/__setstate__"
+
+        # note: we multiple ksize by 3 here so that
+        # pickle protocols that bypass __setstate__ <coff numpy coff>
+        # get a ksize that makes sense to the Rust layer. See #2262.
         return (
             self.num,
-            self.ksize,
+            self.ksize if self.is_dna else self.ksize*3,
             self.is_protein,
             self.dayhoff,
             self.hp,
@@ -1107,11 +1111,6 @@ class FrozenMinHash(MinHash):
         mut = MinHash.__new__(MinHash)
         state_tup = self.__getstate__()
 
-        # is protein/hp/dayhoff?
-        if state_tup[2] or state_tup[3] or state_tup[4]:
-            state_tup = list(state_tup)
-            # adjust ksize.
-            state_tup[1] = state_tup[1] * 3
         mut.__setstate__(state_tup)
         return mut
 
