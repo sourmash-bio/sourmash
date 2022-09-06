@@ -6319,7 +6319,7 @@ def test_compare_jaccard_ani(runtmp):
 
 def test_compare_jaccard_protein_parallel_ani_bug(runtmp):
     # this checks a bug that occurred with serialization of protein minhash
-    # in parallel situations.
+    # in parallel situations. See #2262.
     c = runtmp
 
     sigfile = utils.get_test_data("prot/protein.zip")
