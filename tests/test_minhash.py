@@ -1481,6 +1481,27 @@ def test_scaled_property(track_abundance):
     assert a.scaled == scaled
 
 
+def test_pickle_protein(track_abundance):
+    # check that protein/etc ksize is handled properly during serialization.
+    a = MinHash(0, 10, track_abundance=track_abundance, is_protein=True,
+                scaled=_get_scaled_for_max_hash(20))
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = pickle.loads(pickle.dumps(a))
+    assert a.ksize == b.ksize
+    assert b.num == a.num
+    assert b._max_hash == a._max_hash
+    assert b._max_hash == 20
+    assert not b.is_protein
+    assert b.track_abundance == track_abundance
+    assert b.seed == a.seed
+    assert len(b.hashes) == len(a.hashes)
+    assert len(b.hashes) == 11
+    assert a.scaled == b.scaled
+    assert b.scaled != 0
+
+
 def test_pickle_max_hash(track_abundance):
     a = MinHash(0, 10, track_abundance=track_abundance,
                 scaled=_get_scaled_for_max_hash(20))
