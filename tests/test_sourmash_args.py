@@ -158,7 +158,6 @@ def test_save_signatures_to_location_1_zip_bad(runtmp):
     assert 'cannot be opened as a zip file' in str(exc)
 
 
-
 def test_save_signatures_to_location_1_zip_dup(runtmp):
     # save to sigfile.zip
     sig2 = utils.get_test_data('2.fa.sig')

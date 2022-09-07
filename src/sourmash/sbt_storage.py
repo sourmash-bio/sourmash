@@ -323,6 +323,9 @@ class _RwZipStorage(Storage):
     def close(self):
         # TODO: this is not ideal; checking for zipfile.fp is looking at
         # internal implementation details from CPython...
+
+        # might not have self.zipfile if was invalid zipfile and __init__
+        # failed.
         if hasattr(self, 'zipfile'):
             if self.zipfile is not None or self.bufferzip is not None:
                 self.flush(keep_closed=True)
