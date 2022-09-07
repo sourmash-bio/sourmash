@@ -1112,7 +1112,15 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         if os.path.exists(self.location):
             do_create = False
 
-        storage = ZipStorage(self.location, mode="w")
+        storage = None
+        try:
+            storage = ZipStorage(self.location, mode="w")
+        except zipfile.BadZipFile:
+            pass
+
+        if storage is None:
+            raise ValueError(f"File '{self.location}' cannot be opened as a zip file.")
+
         if not storage.subdir:
             storage.subdir = 'signatures'
 
