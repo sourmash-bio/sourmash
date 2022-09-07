@@ -5946,9 +5946,9 @@ def test_search_ani_containment_fail(runtmp):
         print(row)
         assert search_result_names == list(row.keys())
         assert round(float(row['similarity']), 3) == 0.967
-        assert row['ani'] == ""
-
-    assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons." in c.last_result.err
+        assert row['ani'] == "0.998906999319701"
+    # With PR #2268, this error message should not appear
+    #assert "WARNING: size estimation for at least one of these sketches may be inaccurate. ANI values will not be reported for these comparisons." in c.last_result.err
     
 
 def test_search_ani_containment_estimate_ci(runtmp):
@@ -6185,14 +6185,14 @@ def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
         assert row['query_name'] == 'tr1 4'
         assert row['query_md5'] == 'c9d5a795'
         assert row['query_bp'] == '910'
-        assert row['query_containment_ani']== ''
-        assert row['query_containment_ani_low']== ''
-        assert row['query_containment_ani_high']== ''
-        assert row['match_containment_ani'] == ''
-        assert row['match_containment_ani_low'] == ''
-        assert row['match_containment_ani_high'] == ''
-        assert row['average_containment_ani'] == ''
-        assert row['max_containment_ani'] ==''
+        assert row['query_containment_ani'] == '1.0'
+        assert row['query_containment_ani_low'] == '1.0'
+        assert row['query_containment_ani_high'] == '1.0'
+        assert row['match_containment_ani'] == '1.0'
+        assert row['match_containment_ani_low'] == '1.0'
+        assert row['match_containment_ani_high'] == '1.0'
+        assert row['average_containment_ani'] == '1.0'
+        assert row['max_containment_ani'] == '1.0'
         assert row['potential_false_negative'] == 'False'
 
 
