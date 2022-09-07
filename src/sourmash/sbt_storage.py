@@ -323,10 +323,11 @@ class _RwZipStorage(Storage):
     def close(self):
         # TODO: this is not ideal; checking for zipfile.fp is looking at
         # internal implementation details from CPython...
-        if self.zipfile is not None or self.bufferzip is not None:
-            self.flush(keep_closed=True)
-            self.zipfile.close()
-            self.zipfile = None
+        if hasattr(self, 'zipfile'):
+            if self.zipfile is not None or self.bufferzip is not None:
+                self.flush(keep_closed=True)
+                self.zipfile.close()
+                self.zipfile = None
 
     def flush(self, *, keep_closed=False):
         # This is a bit complicated, but we have to deal with new data
