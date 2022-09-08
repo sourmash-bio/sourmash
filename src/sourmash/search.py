@@ -672,7 +672,9 @@ class GatherDatabases:
     "Iterator object for doing gather/min-set-cov."
 
     def __init__(self, query, counters, *,
-                 threshold_bp=0, ignore_abundance=False, noident_mh=None, ident_mh=None, estimate_ani_ci=False):
+                 threshold_bp=0, ignore_abundance=False, noident_mh=None,
+                 ident_mh=None, estimate_ani_ci=False,
+                 csv_version="v5"):
         # track original query information for later usage?
         track_abundance = query.minhash.track_abundance and not ignore_abundance
         self.orig_query = query
@@ -720,6 +722,7 @@ class GatherDatabases:
         self._update_scaled(cmp_scaled)
 
         self.estimate_ani_ci = estimate_ani_ci # by default, do not report ANI confidence intervals
+        self.csv_version = csv_version
 
     def _update_scaled(self, scaled):
         max_scaled = max(self.cmp_scaled, scaled)
@@ -816,6 +819,7 @@ class GatherDatabases:
                               estimate_ani_ci=self.estimate_ani_ci,
                               sum_weighted_found=sum_weighted_found,
                               total_weighted_hashes=sum_abunds,
+                              csv_header_format=self.csv_version
                               )
 
         self.result_n += 1
