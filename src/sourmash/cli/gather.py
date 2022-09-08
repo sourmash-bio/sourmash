@@ -146,6 +146,10 @@ def subparser(subparsers):
     )
     subparser.set_defaults(fail_on_empty_database=True)
 
+    subparser.add_argument('--csv-version', choices=['v4', 'v5'],
+                           default='v4',
+                           help="version of CSV headers to use")
+
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
     add_picklist_args(subparser)

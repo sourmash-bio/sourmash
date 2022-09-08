@@ -6118,8 +6118,8 @@ def test_gather_ani_csv(runtmp, linear_gather, prefetch_gather):
     print(runtmp.last_result.err)
 
     csv_file = runtmp.output('foo.csv')
-    gather_result_names = GatherResult.gather_write_cols
-    gather_result_names_ci = GatherResult.gather_write_cols_ci
+    gather_result_names = GatherResult.gather_write_cols_v4
+    gather_result_names_ci = gather_result_names + GatherResult.ci_cols
 
     with open(csv_file) as fp:
         reader = csv.DictReader(fp)
@@ -6164,12 +6164,17 @@ def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
 
     csv_file = runtmp.output('foo.csv')
 
-    gather_result_names = GatherResult.gather_write_cols_ci
+    gather_result_names = GatherResult.gather_write_cols_v4
+    gather_result_names = gather_result_names + GatherResult.ci_cols
 
     with open(csv_file) as fp:
         reader = csv.DictReader(fp)
         row = next(reader)
-        print(row)
+        print('row:', len(row), row)
+        print('expected names:', len(gather_result_names), gather_result_names)
+        print('diff a:', set(gather_result_names) - set(row.keys()))
+        print('diff b:', set(row.keys()) - set(gather_result_names))
+
         assert gather_result_names == list(row.keys())
         assert float(row['intersect_bp']) == 910
         assert float(row['unique_intersect_bp']) == 910
