@@ -36,6 +36,7 @@
 import itertools
 import pickle
 import math
+import numpy as np
 
 import pytest
 
@@ -3144,9 +3145,9 @@ def test_containment_ani_ci_tiny_testdata():
 
     m2_cani_m1 = mh2.containment_ani(mh1, estimate_ci=True)
     print(m2_cani_m1)
-    assert m2_cani_m1.ani == None
+    # from the formula ANI = c^(1/k) for c=3/4 and k=21
+    np.testing.assert_almost_equal(m2_cani_m1.ani, 0.986394259982259, decimal=3)
     m2_cani_m1.size_is_inaccurate = False
-    assert m2_cani_m1.ani == 0.986394259982259
     assert m2_cani_m1.ani_low == None
     assert m2_cani_m1.ani_high == None
 
@@ -3207,7 +3208,7 @@ def test_minhash_set_size_estimate_is_accurate():
     f2 = utils.get_test_data('2+63.fa.sig')
     mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
     mh2 = sourmash.load_one_signature(f2).minhash
-    mh1_ds = mh1.downsample(scaled=10000)
+    mh1_ds = mh1.downsample(scaled=100000)
     # check accuracy using default thresholds (rel_err= 0.2, confidence=0.95)
     assert mh1.size_is_accurate() == True
     assert mh1_ds.size_is_accurate() == False
@@ -3219,7 +3220,7 @@ def test_minhash_set_size_estimate_is_accurate():
 
     # change prob
     assert mh1.size_is_accurate(confidence=0.5) == True
-    assert mh1.size_is_accurate(confidence=1) == False
+    assert mh1.size_is_accurate(relative_error=0.001, confidence=1) == False
 
     # check that relative error and confidence must be between 0 and 1
     with pytest.raises(ValueError) as exc:
@@ -3236,15 +3237,16 @@ def test_minhash_set_size_estimate_is_accurate():
 
 
 def test_minhash_ani_inaccurate_size_est():
+    # TODO: It's actually really tricky to get the set size to be inaccurate. Eg. For a scale factor of 10000,
+    # you would need
     f1 = utils.get_test_data('2.fa.sig')
     f2 = utils.get_test_data('2+63.fa.sig')
     mh1 = sourmash.load_one_signature(f1, ksize=31).minhash
     mh2 = sourmash.load_one_signature(f2).minhash
     # downsample
-    mh1_ds = mh1.downsample(scaled=10000)
-    mh2_ds = mh2.downsample(scaled=10000)
-
-    assert mh1.size_is_accurate(relative_error=0.05, confidence=0.95) == False
+    mh1_ds = mh1.downsample(scaled=100000)
+    mh2_ds = mh2.downsample(scaled=100000)
+    assert mh1.size_is_accurate(relative_error=0.05, confidence=0.95) == True
     assert mh1.size_is_accurate() == True
     assert mh1_ds.size_is_accurate() == False
     assert mh2.size_is_accurate() == True
