@@ -77,7 +77,7 @@ harness = false
 ## Wasm section. Crates only used for WASM, as well as specific configurations
 
 [target.'cfg(all(target_arch = "wasm32", target_vendor="unknown"))'.dependencies.wasm-bindgen]
-version = "0.2.62"
+version = "0.2.83"
 features = ["serde-serialize"]
 
 [target.'cfg(all(target_arch = "wasm32", target_vendor="unknown"))'.dependencies.web-sys]
