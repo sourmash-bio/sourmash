@@ -8,7 +8,7 @@ Michael Crusoe.
 The basic build environment needed below can be created as follows:
 
 ```
-conda create -y -n sourmash-rc python=3.8 pip cxx-compiler make twine tox tox-conda setuptools setuptools_scm
+conda create -y -n sourmash-rc python=3.10 pip cxx-compiler make twine tox tox-conda setuptools setuptools_scm
 ```
 
 Then activate it with `conda activate sourmash-rc`.
