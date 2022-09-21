@@ -190,6 +190,7 @@ class BaseResult:
     cmp_scaled: int = None
     write_cols: list = None
     potential_false_negative: bool = False
+    csv_version: str = "v4"
 
     def init_result(self):
         self.mh1 = self.query.minhash
@@ -229,7 +230,7 @@ class BaseResult:
         if self.filename is None and self.match_filename is not None:
             self.filename = self.match_filename
         self.match_md5 = self.match.md5sum()
-        # set these from self.match_*
+        # set these from self.match_* - used in csv-version=v4.
         self.md5= self.match_md5
         self.name = self.match_name
         # could define in PrefetchResult instead, same reasoning as above
@@ -345,6 +346,7 @@ class PrefetchResult(BaseResult):
     """
     PrefetchResult class supports 'sourmash prefetch' operations.
     """
+    csv_version: str = "v4"
 
     # current prefetch columns
     prefetch_write_cols = ['intersect_bp', 'jaccard', 'max_containment', 'f_query_match',
@@ -432,8 +434,9 @@ class GatherResult(PrefetchResult):
     orig_query_abunds: list = None
     sum_weighted_found: int = None
     total_weighted_hashes: int = None
+    csv_version: str = "v4"
 
-    gather_write_cols = ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
+    gather_write_cols_v4 = ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
                          'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'filename', # here we use 'filename'
                          'name', 'md5', 'f_match_orig', 'unique_intersect_bp', 'gather_result_rank',
                          'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
@@ -443,10 +446,15 @@ class GatherResult(PrefetchResult):
                          'n_unique_weighted_found', 'sum_weighted_found',
                          'total_weighted_hashes']
 
-    ci_cols = ["query_containment_ani_low", "query_containment_ani_high",
-                   "match_containment_ani_low", "match_containment_ani_high"]
-
-    gather_write_cols_ci = gather_write_cols + ci_cols
+    gather_write_cols = ['intersect_bp', 'f_orig_query', 'f_match', 'f_unique_to_query',
+                         'f_unique_weighted','average_abund', 'median_abund', 'std_abund', 'match_filename',
+                         'match_name', 'match_md5', 'f_match_orig', 'unique_intersect_bp', 'gather_result_rank',
+                         'remaining_bp', 'query_filename', 'query_name', 'query_md5', 'query_bp', 'ksize',
+                         'moltype', 'scaled', 'query_n_hashes', 'query_abundance', 'query_containment_ani',
+                         'match_containment_ani', 'average_containment_ani', 'max_containment_ani',
+                         'potential_false_negative',
+                         'n_unique_weighted_found', 'sum_weighted_found',
+                         'total_weighted_hashes']
 
     def init_gathersketchcomparison(self):
         # compare remaining gather hashes with match. Force at cmp_scaled. Force match flatten(), bc we don't need abunds.
@@ -514,10 +522,15 @@ class GatherResult(PrefetchResult):
         self.init_sigcomparison() # initialize original sketch vs match sketch comparison (inherited from PrefetchResult)
         self.init_gathersketchcomparison() # initialize remaining gather sketch vs match sketch comparison
         self.build_gather_result() # build gather-specific attributes
-        # set write columns for prefetch result
-        self.write_cols = self.gather_write_cols
+
+        # set write columns for gather result - allowing for different versions
+        if self.csv_version == "v4":
+            self.write_cols = self.gather_write_cols_v4
+        else:
+            self.write_cols = self.gather_write_cols
+
         if self.estimate_ani_ci:
-            self.write_cols = self.gather_write_cols_ci
+            self.write_cols = self.write_cols + self.ci_cols
 
     def prep_gather_result(self):
         # for gather, we only shorten the query_md5
@@ -659,7 +672,9 @@ class GatherDatabases:
     "Iterator object for doing gather/min-set-cov."
 
     def __init__(self, query, counters, *,
-                 threshold_bp=0, ignore_abundance=False, noident_mh=None, ident_mh=None, estimate_ani_ci=False):
+                 threshold_bp=0, ignore_abundance=False, noident_mh=None,
+                 ident_mh=None, estimate_ani_ci=False,
+                 csv_version="v5"):
         # track original query information for later usage?
         track_abundance = query.minhash.track_abundance and not ignore_abundance
         self.orig_query = query
@@ -707,6 +722,7 @@ class GatherDatabases:
         self._update_scaled(cmp_scaled)
 
         self.estimate_ani_ci = estimate_ani_ci # by default, do not report ANI confidence intervals
+        self.csv_version = csv_version
 
     def _update_scaled(self, scaled):
         max_scaled = max(self.cmp_scaled, scaled)
@@ -803,6 +819,7 @@ class GatherDatabases:
                               estimate_ani_ci=self.estimate_ani_ci,
                               sum_weighted_found=sum_weighted_found,
                               total_weighted_hashes=sum_abunds,
+                              csv_version=self.csv_version
                               )
 
         self.result_n += 1

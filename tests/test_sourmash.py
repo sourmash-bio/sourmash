@@ -6118,8 +6118,8 @@ def test_gather_ani_csv(runtmp, linear_gather, prefetch_gather):
     print(runtmp.last_result.err)
 
     csv_file = runtmp.output('foo.csv')
-    gather_result_names = GatherResult.gather_write_cols
-    gather_result_names_ci = GatherResult.gather_write_cols_ci
+    gather_result_names = GatherResult.gather_write_cols_v4
+    gather_result_names_ci = gather_result_names + GatherResult.ci_cols
 
     with open(csv_file) as fp:
         reader = csv.DictReader(fp)
@@ -6164,12 +6164,17 @@ def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
 
     csv_file = runtmp.output('foo.csv')
 
-    gather_result_names = GatherResult.gather_write_cols_ci
+    gather_result_names = GatherResult.gather_write_cols_v4
+    gather_result_names = gather_result_names + GatherResult.ci_cols
 
     with open(csv_file) as fp:
         reader = csv.DictReader(fp)
         row = next(reader)
-        print(row)
+        print('row:', len(row), row)
+        print('expected names:', len(gather_result_names), gather_result_names)
+        print('diff a:', set(gather_result_names) - set(row.keys()))
+        print('diff b:', set(row.keys()) - set(gather_result_names))
+
         assert gather_result_names == list(row.keys())
         assert float(row['intersect_bp']) == 910
         assert float(row['unique_intersect_bp']) == 910
@@ -6180,6 +6185,64 @@ def test_gather_ani_csv_estimate_ci(runtmp, linear_gather, prefetch_gather):
         assert row['filename'] == 'zzz'
         assert row['name'] == 'tr1 4'
         assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
+        assert row['gather_result_rank'] == '0'
+        assert row['query_filename'].endswith('short2.fa')
+        assert row['query_name'] == 'tr1 4'
+        assert row['query_md5'] == 'c9d5a795'
+        assert row['query_bp'] == '910'
+        assert row['query_containment_ani'] == '1.0'
+        assert row['query_containment_ani_low'] == '1.0'
+        assert row['query_containment_ani_high'] == '1.0'
+        assert row['match_containment_ani'] == '1.0'
+        assert row['match_containment_ani_low'] == '1.0'
+        assert row['match_containment_ani_high'] == '1.0'
+        assert row['average_containment_ani'] == '1.0'
+        assert row['max_containment_ani'] == '1.0'
+        assert row['potential_false_negative'] == 'False'
+
+
+def test_gather_ani_csv_estimate_ci_v5_columns(runtmp, linear_gather, prefetch_gather):
+    # check ani CI estimate with new --csv-version=v5 column headers
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '--name-from-first', testdata1, testdata2)
+
+    runtmp.sourmash('sketch','dna','-p','scaled=10', '-o', 'query.fa.sig', '--name-from-first', testdata2)
+
+    runtmp.sourmash('index', '-k', '31', 'zzz', 'short.fa.sig', 'short2.fa.sig')
+
+    assert os.path.exists(runtmp.output('zzz.sbt.zip'))
+
+    runtmp.sourmash('gather', 'query.fa.sig', 'zzz', '-o', 'foo.csv', '--threshold-bp=1', '--estimate-ani-ci', linear_gather, prefetch_gather,
+                    '--csv-version=v5')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    csv_file = runtmp.output('foo.csv')
+
+    gather_result_names = GatherResult.gather_write_cols
+    gather_result_names = gather_result_names + GatherResult.ci_cols
+
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        print('row:', len(row), row)
+        print('expected names:', len(gather_result_names), gather_result_names)
+        print('diff a:', set(gather_result_names) - set(row.keys()))
+        print('diff b:', set(row.keys()) - set(gather_result_names))
+
+        assert gather_result_names == list(row.keys())
+        assert float(row['intersect_bp']) == 910
+        assert float(row['unique_intersect_bp']) == 910
+        assert float(row['remaining_bp']) == 0
+        assert float(row['f_orig_query']) == 1.0
+        assert float(row['f_unique_to_query']) == 1.0
+        assert float(row['f_match']) == 1.0
+        #assert row['match_filename'] == 'zzz' @CTB
+        assert row['match_name'] == 'tr1 4'
+        assert row['match_md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
         assert row['gather_result_rank'] == '0'
         assert row['query_filename'].endswith('short2.fa')
         assert row['query_name'] == 'tr1 4'

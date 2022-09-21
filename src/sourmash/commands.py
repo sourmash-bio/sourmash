@@ -809,7 +809,8 @@ def gather(args):
                                   ignore_abundance=args.ignore_abundance,
                                   noident_mh=noident_mh,
                                   ident_mh=ident_mh,
-                                  estimate_ani_ci=args.estimate_ani_ci)
+                                  estimate_ani_ci=args.estimate_ani_ci,
+                                  csv_version=args.csv_version)
 
     screen_width = _get_screen_width()
     for result, weighted_missed in gather_iter:
