@@ -51,9 +51,18 @@ These are databases for the full GTDB release, each containing 317,542 genomes.
 
 ## Genbank genomes from March 2022
 
-The below zip files contain signatures for all microbial Genbank genomes as of March 2022, based on the assembly_summary files provided [here](https://ftp.ncbi.nlm.nih.gov/genomes/genbank/).
+The below zip files contain different subsets of the signatures for
+all microbial Genbank genomes. The databases were built in March 2022,
+and are based on the assembly_summary files provided
+[here](https://ftp.ncbi.nlm.nih.gov/genomes/genbank/).
 
-Since some of the files are extremely large, we only provide them in Zip format.
+Since some of the files are extremely large, we only provide them in
+Zip format (which is our smallest and most flexible format).
+
+Note that all of the sourmash search commands support multiple
+databases on the command line, so you can search multiple subsets
+simply by providing them all on the command line, e.g. `sourmash
+search query.sig genbank-2022.03-{viral,protozoa}-k31.zip`.
 
 Taxonomic spreadsheets for each domain are provided below as well.
 
