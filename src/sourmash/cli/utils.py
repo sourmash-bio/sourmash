@@ -48,6 +48,7 @@ def add_construct_moltype_args(parser):
 
 
 def add_ksize_arg(parser, default=None):
+    "Add -k/--ksize to argparse parsers, with specified default."
     if default:
         message = f"k-mer size to select; default={default}"
     else:

@@ -4499,6 +4499,7 @@ def test_gather_deduce_ksize(runtmp, prefetch_gather, linear_gather):
 
 
 def test_gather_deduce_moltype(runtmp, linear_gather, prefetch_gather):
+    # gather should automatically figure out ksize
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
