@@ -147,7 +147,7 @@ where
         basepath.push(path);
         basepath.canonicalize()?;
 
-        let linear = LinearIndex::<L>::from_reader(&mut reader, &basepath.parent().unwrap())?;
+        let linear = LinearIndex::<L>::from_reader(&mut reader, basepath.parent().unwrap())?;
         Ok(linear)
     }
 

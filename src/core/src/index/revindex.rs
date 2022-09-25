@@ -178,7 +178,7 @@ impl RevIndex {
                 info!("Processed {} reference sigs", i);
             }
 
-            let search_sig = Signature::from_path(&filename)
+            let search_sig = Signature::from_path(filename)
                 .unwrap_or_else(|_| panic!("Error processing {:?}", filename))
                 .swap_remove(0);
 
@@ -215,7 +215,7 @@ impl RevIndex {
             Some(
                 sigs_iter
                     .map(|ref_path| {
-                        Signature::from_path(&ref_path)
+                        Signature::from_path(ref_path)
                             .unwrap_or_else(|_| panic!("Error processing {:?}", ref_path))
                             .swap_remove(0)
                     })
@@ -394,7 +394,7 @@ impl RevIndex {
                 &refsigs[dataset_id as usize]
             } else {
                 // TODO: remove swap_remove
-                ref_match = Signature::from_path(&match_path)?.swap_remove(0);
+                ref_match = Signature::from_path(match_path)?.swap_remove(0);
                 &ref_match
             };
 
@@ -539,7 +539,7 @@ impl RevIndex {
                 &refsigs[dataset_id as usize]
             } else {
                 // TODO: remove swap_remove
-                ref_match = Signature::from_path(&match_path)?.swap_remove(0);
+                ref_match = Signature::from_path(match_path)?.swap_remove(0);
                 &ref_match
             };
 
