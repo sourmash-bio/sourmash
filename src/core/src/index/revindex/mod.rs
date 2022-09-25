@@ -87,6 +87,19 @@ impl RevIndex {
         }
     }
 
+    pub fn update(
+        &self,
+        index_sigs: Vec<PathBuf>,
+        template: &Sketch,
+        threshold: f64,
+        save_paths: bool,
+    ) {
+        match self {
+            //Self::Color(db) => db.update(index_sigs, template, threshold, save_paths),
+            Self::Plain(db) => db.update(index_sigs, template, threshold, save_paths),
+        }
+    }
+
     pub fn compact(&self) {
         match self {
             //Self::Color(db) => db.compact(),

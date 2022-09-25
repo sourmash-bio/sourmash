@@ -386,6 +386,77 @@ impl RevIndex {
         info!("Processed {} reference sigs", processed_sigs.into_inner());
     }
 
+    pub fn update(
+        &self,
+        index_sigs: Vec<PathBuf>,
+        template: &Sketch,
+        threshold: f64,
+        save_paths: bool,
+    ) {
+        use byteorder::ReadBytesExt;
+
+        if !save_paths {
+            todo!("only supports with save_paths=True for now");
+        }
+
+        let cf_sigs = self.db.cf_handle(SIGS).unwrap();
+        let iter = self.db.iterator_cf(&cf_sigs, rocksdb::IteratorMode::Start);
+
+        info!("Verifying existing sigs");
+        // verify data match up to this point
+        let mut max_dataset_id = 0;
+        let to_skip = iter
+            .map(|(key, value)| {
+                let current_dataset_id = (&key[..]).read_u64::<LittleEndian>().unwrap();
+
+                let filename = &index_sigs[current_dataset_id as usize];
+                let sig_data = SignatureData::from_slice(&value).unwrap();
+                match sig_data {
+                    SignatureData::External(sig) => {
+                        assert_eq!(sig, filename.as_os_str().to_str().unwrap().to_string())
+                    }
+                    SignatureData::Empty => (),
+                    SignatureData::Internal(_) => {
+                        todo!("only supports with save_paths=True for now")
+                    }
+                };
+                max_dataset_id = max_dataset_id.max(current_dataset_id as u64);
+            })
+            .count();
+
+        max_dataset_id += 1;
+        assert_eq!(max_dataset_id as usize, to_skip);
+
+        // process the remainder
+        let processed_sigs = AtomicUsize::new(0);
+
+        index_sigs
+            .par_iter()
+            .skip(to_skip)
+            .enumerate()
+            .for_each(|(i, filename)| {
+                let dataset_id = i + to_skip;
+
+                let i = processed_sigs.fetch_add(1, Ordering::SeqCst);
+                if i % 1000 == 0 {
+                    info!("Processed {} reference sigs", i);
+                }
+
+                self.map_hashes_colors(
+                    dataset_id as DatasetID,
+                    filename,
+                    threshold,
+                    template,
+                    save_paths,
+                );
+            });
+
+        info!(
+            "Processed additional {} reference sigs",
+            processed_sigs.into_inner()
+        );
+    }
+
     pub fn check(&self, quick: bool) {
         stats_for_cf(self.db.clone(), HASHES, true, quick);
         info!("");
