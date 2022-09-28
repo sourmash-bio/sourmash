@@ -287,7 +287,7 @@ where
         // TODO: canonicalize doesn't work on wasm32-wasi
         //basepath.canonicalize()?;
 
-        let sbt = SBT::<Node<U>, T>::from_reader(&mut reader, &basepath.parent().unwrap())?;
+        let sbt = SBT::<Node<U>, T>::from_reader(&mut reader, basepath.parent().unwrap())?;
         Ok(sbt)
     }
 
