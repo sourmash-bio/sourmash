@@ -84,7 +84,7 @@ def subparser(subparsers):
         help="only output a count of discovered signatures; implies --silent",
         action='store_true'
     )
-    add_ksize_arg(subparser, 31)
+    add_ksize_arg(subparser)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
 

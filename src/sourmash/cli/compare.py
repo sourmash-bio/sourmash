@@ -87,7 +87,7 @@ def subparser(subparsers):
     subparser.add_argument(
         '--similarity-matrix', action='store_false',
         dest='distance_matrix',
-        help='output a similiarty matrix; this is the default',
+        help='output a similarity matrix; this is the default',
     )
 
     add_ksize_arg(subparser)

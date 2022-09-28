@@ -28,7 +28,7 @@ def subparser(subparsers):
         '--name', type=str, default='stdin',
         help='name to use for generated signature'
     )
-    add_ksize_arg(subparser, 31)
+    add_ksize_arg(subparser)
     add_num_arg(subparser, 500)
 
 def main(args):

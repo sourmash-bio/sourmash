@@ -14,7 +14,7 @@ def subparser(subparsers):
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
     )
-    add_ksize_arg(subparser, 31)
+    add_ksize_arg(subparser)
     subparser.add_argument(
         '--threshold', default=0.08, type=float,
         help='minimum threshold for reporting matches; default=0.08'
