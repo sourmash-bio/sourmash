@@ -648,31 +648,46 @@ Example reads-based `kreport` with all columns:
     0.03	790	790	S	1747	            Cutibacterium acnes
 ```
 
-current sourmash `kreport` caveats:
-- `Percent Reads [k-mers] Contained in Taxon`: weighted by k-mer abundance
-- `Number of Reads [bp from k-mers] Contained in Taxon`: NOT WEIGHTED BY ABUNDANCE
+sourmash `kreport` columns:
+- `Percent [k-mers] contained in taxon` (abundance-weighted)
+- `Estimated base pairs contained in taxon` (abundance-weighted)
+- [blank column]
+- `Rank Code`: (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies.
+- [blank column]
+- `Scientific Name`: The scientific name of the taxon.
+
+notes:
 - `Number of Reads Assigned to Taxon` and `NCBI Taxon ID` will not be reported (blank entries).
-- Rows are ordered by rank and then percent containment.
+- Rows are ordered by rank and then ~percent containment.
+- Since `gather` results are non-overlapping and all assignments are done at the
+  genome level, the percent match (first column) will sum to 100% at each rank
+  (aside from rounding issues) when including the unclassified (U) percentage.
+  Higher-rank assignments are generated using LCA-style summarization of genome
+  matches.
 
 example sourmash `{output-name}.kreport.txt`:
 
 ```
-0.13	1024000		D		d__Bacteria
-0.87	3990000		U		unclassified
-0.07	582000		P		p__Bacteroidota
-0.06	442000		P		p__Proteobacteria
-0.07	582000		C		c__Bacteroidia
-0.06	442000		C		c__Gammaproteobacteria
-0.07	582000		O		o__Bacteroidales
-0.06	442000		O		o__Enterobacterales
-0.07	582000		F		f__Bacteroidaceae
-0.06	442000		F		f__Enterobacteriaceae
-0.06	444000		G		g__Prevotella
-0.06	442000		G		g__Escherichia
-0.02	138000		G		g__Phocaeicola
-0.06	444000		S		s__Prevotella copri
-0.06	442000		S		s__Escherichia coli
-0.02	138000		S		s__Phocaeicola vulgatus
+0.95    2275774000              D               Bacteria
+0.01    28766999                D               Eukaryota
+0.03    82866000                U               unclassified
+0.77    1841829000              P               Proteobacteria
+0.18    433945000               P               Firmicutes
+0.01    19243000                P               Ascomycota
+.
+.
+.
+0.47    1123782000              S               Escherichia coli
+0.01    17110000                S               Saccharomyces cerevisiae
+0.24    571653000               S               Salmonella enterica
+0.03    64374000                S               Bacillus subtilis
+0.02    38944000                S               Listeria monocytogenes
+0.04    104660000               S               Staphylococcus aureus
+0.06    145756000               S               Limosilactobacillus fermentum
+0.06    146394000               S               Pseudomonas aeruginosa
+0.03    80068000                S               Enterococcus faecalis
+0.00    2133000         S               Saccharomyces pastorianus
+0.00    143000          S               Bacillus sp. KbaB1
 ```
 
 
