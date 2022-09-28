@@ -651,8 +651,17 @@ Example reads-based `kreport` with all columns:
 sourmash `kreport` columns:
 - `Percent [k-mers] contained in taxon` (abundance-weighted)
 - `Estimated base pairs contained in taxon` (abundance-weighted)
+- `Rank Code`: (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies.
+- `Scientific Name`: The scientific name of the taxon.
+
+notes:
 - `Number of Reads Assigned to Taxon` and `NCBI Taxon ID` will not be reported (blank entries).
 - Rows are ordered by rank and then ~percent containment.
+- Since `gather` results are non-overlapping and all assignments are done at the
+  genome level, the percent match (first column) will sum to 100% at each rank
+  (aside from rounding issues) when including the unclassified (U) percentage.
+  Higher-rank assignments are generated using LCA-style summarization of genome
+  matches.
 
 example sourmash `{output-name}.kreport.txt`:
 
@@ -678,12 +687,6 @@ example sourmash `{output-name}.kreport.txt`:
 0.00    2133000         S               Saccharomyces pastorianus
 0.00    143000          S               Bacillus sp. KbaB1
 ```
-
-Since `gather` results are non-overlapping and all assignments are done at the
-genome level, the percent match (first column) will sum to 100% at each rank
-(aside from rounding issues) when including the unclassified (U) percentage.
-Higher-rank assignments are generated using LCA-style summarization of genome
-matches.
 
 
 ### `sourmash tax genome` - classify a genome using `gather` results
