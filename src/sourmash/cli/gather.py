@@ -146,7 +146,7 @@ def subparser(subparsers):
     )
     subparser.set_defaults(fail_on_empty_database=True)
 
-    add_ksize_arg(subparser, 31)
+    add_ksize_arg(subparser)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
     add_pattern_args(subparser)

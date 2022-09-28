@@ -52,7 +52,7 @@ def subparser(subparsers):
         '-M', '--max-abundance', type=int, default=None,
         help='keep hashes <= this maximum abundance'
     )
-    add_ksize_arg(subparser, 31)
+    add_ksize_arg(subparser)
     add_moltype_args(subparser)
 
 

@@ -9,11 +9,13 @@ import zipfile
 import io
 import contextlib
 import csv
+import argparse
 
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash import sourmash_args, manifest
 from sourmash.index import LinearIndex
+from sourmash.cli.utils import add_ksize_arg
 
 
 def test_save_signatures_api_none():
@@ -768,3 +770,35 @@ def test_fileoutput_csv_2_stdout():
 
     with sourmash_args.FileOutputCSV(None) as fp:
         assert fp == sys.stdout
+
+
+def test_add_ksize_arg_no_default():
+    # test behavior of cli.utils.add_ksize_arg
+    p = argparse.ArgumentParser()
+    add_ksize_arg(p)
+    args = p.parse_args()
+    assert args.ksize == None
+
+
+def test_add_ksize_arg_no_default_specify():
+    # test behavior of cli.utils.add_ksize_arg
+    p = argparse.ArgumentParser()
+    add_ksize_arg(p)
+    args = p.parse_args(['-k', '21'])
+    assert args.ksize == 21
+
+
+def test_add_ksize_arg_default_31():
+    # test behavior of cli.utils.add_ksize_arg
+    p = argparse.ArgumentParser()
+    add_ksize_arg(p, default=31)
+    args = p.parse_args()
+    assert args.ksize == 31
+
+
+def test_add_ksize_arg_default_31_specify():
+    # test behavior of cli.utils.add_ksize_arg
+    p = argparse.ArgumentParser()
+    add_ksize_arg(p, default=31)
+    args = p.parse_args(['-k', '21'])
+    assert args.ksize == 21
