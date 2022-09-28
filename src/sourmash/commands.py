@@ -813,6 +813,7 @@ def gather(args):
 
     screen_width = _get_screen_width()
     sum_f_uniq_found = 0.
+    result = None
     for result in gather_iter:
         sum_f_uniq_found += result.f_unique_to_query
 
@@ -857,8 +858,7 @@ def gather(args):
     if args.num_results and len(found) == args.num_results:
         print_results(f'(truncated gather because --num-results={args.num_results})')
 
-    # @CTB check if no results what happens?
-    if is_abundance:
+    if is_abundance and result:
         p_covered = result.sum_weighted_found / result.total_weighted_hashes
         p_covered *= 100
         print_results(f'the recovered matches hit {p_covered:.1f}% of the abundance-weighted query.')
@@ -1001,6 +1001,7 @@ def multigather(args):
 
             screen_width = _get_screen_width()
             sum_f_uniq_found = 0.
+            result = None
             for result in gather_iter:
                 sum_f_uniq_found += result.f_unique_to_query
                 if not len(found):                # first result? print header.
@@ -1043,8 +1044,7 @@ def multigather(args):
             # basic reporting
             print_results('\nfound {} matches total;', len(found))
 
-            # @CTB check if no results what happens?
-            if is_abundance:
+            if is_abundance and result:
                 p_covered = result.sum_weighted_found / result.total_weighted_hashes
                 p_covered *= 100
                 print_results(f'the recovered matches hit {p_covered:.1f}% of the abundance-weighted query.')
