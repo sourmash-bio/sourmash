@@ -938,6 +938,8 @@ def multigather(args):
     # need a query to get ksize, moltype for db loading
     query = next(iter(sourmash_args.load_file_as_signatures(inp_files[0], ksize=args.ksize, select_moltype=moltype)))
 
+    notify(f'loaded first query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})')
+
     databases = sourmash_args.load_dbs_and_sigs(args.db, query, False,
                                                 fail_on_empty_database=args.fail_on_empty_database)
 

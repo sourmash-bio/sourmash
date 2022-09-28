@@ -3451,12 +3451,27 @@ def test_gather_f_match_orig(runtmp, linear_gather, prefetch_gather):
             remaining_mh.remove_many(match.minhash.hashes.keys())
 
 
-def test_gather_nomatch(runtmp):
+def test_gather_nomatch(runtmp, linear_gather, prefetch_gather):
     testdata_query = utils.get_test_data(
         'gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig')
     testdata_match = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
-    runtmp.sourmash('gather', testdata_query, testdata_match)
+    runtmp.sourmash('gather', testdata_query, testdata_match,
+                    linear_gather, prefetch_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'found 0 matches total' in runtmp.last_result.out
+    assert 'the recovered matches hit 0.0% of the query' in runtmp.last_result.out
+
+
+def test_gather_abund_nomatch(runtmp, linear_gather, prefetch_gather):
+    testdata_query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+    testdata_match = utils.get_test_data('gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig')
+
+    runtmp.sourmash('gather', testdata_query, testdata_match,
+                    linear_gather, prefetch_gather)
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
@@ -4855,6 +4870,36 @@ def test_multigather_empty_db_nofail(runtmp):
     assert "conducted gather searches on 0 signatures" in err
     assert "loaded 50 total signatures from 2 locations" in err
     assert "after selecting signatures compatible with search, 0 remain." in err
+
+
+def test_multigather_nomatch(runtmp):
+    testdata_query = utils.get_test_data(
+        'gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig')
+    testdata_match = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+
+    runtmp.sourmash('multigather', '--query', testdata_query,
+                    '--db', testdata_match, '-k', '31')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'found 0 matches total' in runtmp.last_result.out
+    assert 'the recovered matches hit 0.0% of the query' in runtmp.last_result.out
+
+
+def test_multigather_abund_nomatch(runtmp):
+    testdata_query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+    testdata_match = utils.get_test_data('gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig')
+
+    runtmp.sourmash('multigather', '--query', testdata_query,
+                    '--db', testdata_match)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'found 0 matches total' in runtmp.last_result.out
+    assert 'the recovered matches hit 0.0% of the query' in runtmp.last_result.out
+
 
 def test_sbt_categorize(runtmp):
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
