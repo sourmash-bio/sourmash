@@ -812,7 +812,11 @@ def gather(args):
                                   estimate_ani_ci=args.estimate_ani_ci)
 
     screen_width = _get_screen_width()
-    for result, weighted_missed in gather_iter:
+    sum_f_uniq_found = 0.
+    result = None
+    for result in gather_iter:
+        sum_f_uniq_found += result.f_unique_to_query
+
         if not len(found):                # first result? print header.
             if is_abundance:
                 print_results("")
@@ -854,11 +858,13 @@ def gather(args):
     if args.num_results and len(found) == args.num_results:
         print_results(f'(truncated gather because --num-results={args.num_results})')
 
-    p_covered = (1 - weighted_missed) * 100
-    if is_abundance:
-        print_results(f'the recovered matches hit {p_covered:.1f}% of the abundance-weighted query')
-    else:
-        print_results(f'the recovered matches hit {p_covered:.1f}% of the query (unweighted)')
+    if is_abundance and result:
+        p_covered = result.sum_weighted_found / result.total_weighted_hashes
+        p_covered *= 100
+        print_results(f'the recovered matches hit {p_covered:.1f}% of the abundance-weighted query.')
+
+    print_results(f'the recovered matches hit {sum_f_uniq_found*100:.1f}% of the query k-mers (unweighted).')
+
     print_results('')
     if gather_iter.scaled != query.minhash.scaled:
         print_results(f'WARNING: final scaled was {gather_iter.scaled}, vs query scaled of {query.minhash.scaled}')
@@ -932,6 +938,8 @@ def multigather(args):
     # need a query to get ksize, moltype for db loading
     query = next(iter(sourmash_args.load_file_as_signatures(inp_files[0], ksize=args.ksize, select_moltype=moltype)))
 
+    notify(f'loaded first query: {str(query)[:30]}... (k={query.minhash.ksize}, {sourmash_args.get_moltype(query)})')
+
     databases = sourmash_args.load_dbs_and_sigs(args.db, query, False,
                                                 fail_on_empty_database=args.fail_on_empty_database)
 
@@ -994,7 +1002,10 @@ def multigather(args):
                                           ident_mh=ident_mh)
 
             screen_width = _get_screen_width()
-            for result, weighted_missed in gather_iter:
+            sum_f_uniq_found = 0.
+            result = None
+            for result in gather_iter:
+                sum_f_uniq_found += result.f_unique_to_query
                 if not len(found):                # first result? print header.
                     if is_abundance:
                         print_results("")
@@ -1035,8 +1046,12 @@ def multigather(args):
             # basic reporting
             print_results('\nfound {} matches total;', len(found))
 
-            print_results('the recovered matches hit {:.1f}% of the query',
-                   (1 - weighted_missed) * 100)
+            if is_abundance and result:
+                p_covered = result.sum_weighted_found / result.total_weighted_hashes
+                p_covered *= 100
+                print_results(f'the recovered matches hit {p_covered:.1f}% of the abundance-weighted query.')
+
+            print_results(f'the recovered matches hit {sum_f_uniq_found*100:.1f}% of the query k-mers (unweighted).')
             print_results('')
 
             if not found:
