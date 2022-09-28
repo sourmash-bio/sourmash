@@ -651,7 +651,9 @@ Example reads-based `kreport` with all columns:
 sourmash `kreport` columns:
 - `Percent [k-mers] contained in taxon` (abundance-weighted)
 - `Estimated base pairs contained in taxon` (abundance-weighted)
+- [blank column]
 - `Rank Code`: (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies.
+- [blank column]
 - `Scientific Name`: The scientific name of the taxon.
 
 notes:
