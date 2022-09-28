@@ -4576,6 +4576,7 @@ def test_gather_abund_1_1(runtmp, linear_gather, prefetch_gather):
     assert 'genome-s12.fa.gz' not in out
 
     assert "the recovered matches hit 100.0% of the abundance-weighted query" in out
+    assert "the recovered matches hit 100.0% of the query k-mers (unweighted)" in out
 
 
 def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
@@ -4715,6 +4716,7 @@ def test_gather_abund_10_1_ignore_abundance(runtmp, linear_gather, prefetch_gath
 
     print(out)
     print(err)
+    assert "the recovered matches hit 100.0% of the abundance-weighted query" not in out
     assert "the recovered matches hit 100.0% of the query k-mers (unweighted)" in out
 
     # when we project s10x10-s11 (r2+r3), 10:1 abundance,
@@ -4816,6 +4818,10 @@ def test_multigather_output_unassigned_with_abundance(runtmp):
 
     print(c.last_result.out)
     print(c.last_result.err)
+
+    out = c.last_result.out
+    assert "the recovered matches hit 91.0% of the abundance-weighted query." in out
+    assert "the recovered matches hit 57.2% of the query k-mers (unweighted)." in out
 
     assert os.path.exists(c.output('r3.fa.unassigned.sig'))
 
