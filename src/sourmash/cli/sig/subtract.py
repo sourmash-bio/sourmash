@@ -45,7 +45,7 @@ def subparser(subparsers):
         '-A', '--abundances-from', metavar='FILE',
         help='intersect with & take abundances from this signature'
     )
-    add_ksize_arg(subparser, 31)
+    add_ksize_arg(subparser)
     add_moltype_args(subparser)
 
 

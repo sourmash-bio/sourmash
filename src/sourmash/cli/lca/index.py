@@ -66,7 +66,7 @@ def subparser(subparsers):
         choices=['json', 'sql'],
     )
 
-    add_ksize_arg(subparser, 31)
+    add_ksize_arg(subparser, default=31)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
 

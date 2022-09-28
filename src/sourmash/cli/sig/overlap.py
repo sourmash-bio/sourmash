@@ -35,7 +35,7 @@ def subparser(subparsers):
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
     )
-    add_ksize_arg(subparser, 31)
+    add_ksize_arg(subparser)
     add_moltype_args(subparser)
 
 

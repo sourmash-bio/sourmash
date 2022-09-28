@@ -169,7 +169,7 @@ ______
 
 Usage:
 ```
-sourmash compute filename [ filename2 ... ]
+sourmash compute <filename> [<filename2> ... ]
 ```
 Optional arguments:
 ```
@@ -205,7 +205,7 @@ Identity (ANI) estimates instead of Jaccard or containment index; use
 
 Usage:
 ```
-sourmash compare file1.sig [ file2.sig ... ]
+sourmash compare <file1> [ <file2> ... ]
 ```
 
 Options:
@@ -244,7 +244,7 @@ dendrogram+matrix -- from a matrix created by `sourmash compare
 
 Usage:
 ```
-sourmash plot <matrix>
+sourmash plot <matrix_file>
 ```
 
 Options:
@@ -277,7 +277,7 @@ decrease search time and memory where possible.
 
 Usage:
 ```
-sourmash search query.sig <signatures or databases>
+sourmash search query.sig <database1> [ <database2> ... ]
 ```
 
 Example output:
@@ -335,7 +335,7 @@ decrease search time and memory where possible.
 
 Usage:
 ```
-sourmash gather query.sig [ list of signatures or SBTs ]
+sourmash gather query.sig <database1> [ <database2> ... ]
 ```
 
 Example output:
@@ -408,7 +408,7 @@ of signatures to include when running `index`.
 
 Usage:
 ```
-sourmash index database [ list of input signatures/directories/databases ]
+sourmash index <database_name> <inputfile1> [ <inputfile2> ... ]
 ```
 
 This will create a `database.sbt.zip` file containing the SBT of the
