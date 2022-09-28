@@ -4700,7 +4700,7 @@ def test_gather_abund_10_1_ignore_abundance(runtmp, linear_gather, prefetch_gath
 
     print(out)
     print(err)
-    assert "the recovered matches hit 100.0% of the query (unweighted)" in out
+    assert "the recovered matches hit 100.0% of the query k-mers (unweighted)" in out
 
     # when we project s10x10-s11 (r2+r3), 10:1 abundance,
     # onto s10 and s11 genomes with gather --ignore-abundance, we get:
