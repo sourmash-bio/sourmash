@@ -501,7 +501,7 @@ def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
             kresD['percent_containment'] = f'{res.f_weighted_at_rank:.2f}'
             # weighted bp
             kresD["num_bp_contained"] = int(res.f_weighted_at_rank * res.total_weighted_hashes)
-            if rank == 'species':
+            if rank == 'species' or rank_sciname == "unclassified":
                 kresD["num_bp_assigned"] = kresD["num_bp_contained"]
             w.writerow(kresD)
 

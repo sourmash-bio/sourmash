@@ -185,7 +185,7 @@ def test_metagenome_kreport_out(runtmp):
     assert f"saving 'kreport' output to '{csvout}'" in runtmp.last_result.err
     print(kreport_results)
     assert ['0.13', '1605999', '0', 'D', '', 'd__Bacteria'] == kreport_results[0]
-    assert ['0.87', '10672000', '0', 'U', '', 'unclassified'] == kreport_results[1]
+    assert ['0.87', '10672000', '10672000', 'U', '', 'unclassified'] == kreport_results[1]
     assert ['0.07', '892000', '0', 'P', '', 'p__Bacteroidota'] == kreport_results[2]
     assert ['0.06', '714000', '0', 'P', '', 'p__Proteobacteria'] == kreport_results[3]
     assert ['0.07', '892000', '0', 'C', '', 'c__Bacteroidia'] == kreport_results[4]
@@ -224,7 +224,7 @@ def test_metagenome_kreport_out_lemonade(runtmp):
     assert f"saving 'kreport' output to '{csvout}'" in runtmp.last_result.err
     print(kreport_results)
     assert ['0.05', '116000', '0', 'D', '', 'd__Bacteria'] == kreport_results[0]
-    assert ['0.95', '2054000', '0', 'U', '', 'unclassified'] == kreport_results[1]
+    assert ['0.95', '2054000', '2054000', 'U', '', 'unclassified'] == kreport_results[1]
     assert ['0.05', '116000', '0', 'P', '', 'p__Bacteroidota'] == kreport_results[2]
     assert ['0.05', '116000', '0', 'C', '', 'c__Chlorobia'] == kreport_results[3]
     assert ['0.05', '116000', '0', 'O', '', 'o__Chlorobiales'] == kreport_results[4]
