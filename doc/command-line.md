@@ -625,10 +625,13 @@ To produce multiple output types from the same command, add the types into the
 The `kreport` output reports kraken-style `kreport` output, which may be useful for
 comparison with other taxonomic profiling methods. While this format typically
 records the percent of number of reads assigned to taxa, we create ~comparable
-output by reporting the percent of k-mers (abundance-weighted percent containment)
-and the total number of unique k-mers matched.
+output by reporting the percent of k-mers matched to each taxon and the estimated
+number of base pairs that these k-mers represent. To best represent the percent of all
+reads, we use k-mer abundance information in this output. To generate this properly, query
+FracMinHash sketches should be generated with abundance information (`-p abund`) to allow
+abundance-weighted `gather` results.
 
-standard `kreport` columns:
+standard `kreport` columns (read-based tools):
 - `Percent Reads Contained in Taxon`: The cumulative percentage of reads for this taxon and all descendants.
 - `Number of Reads Contained in Taxon`: The cumulative number of reads for this taxon and all descendants.
 - `Number of Reads Assigned to Taxon`: The number of reads assigned directly to this taxon (not a cumulative count of all descendants).
@@ -649,21 +652,26 @@ Example reads-based `kreport` with all columns:
 ```
 
 sourmash `kreport` columns:
-- `Percent [k-mers] contained in taxon` (abundance-weighted)
-- `Estimated base pairs contained in taxon` (abundance-weighted)
-- [blank column]
+- `Percent [k-mers] contained in taxon`: The cumulative percentage of k-mers for this taxon and all descendants.
+- `Estimated base pairs contained in taxon`: The cumulative estimated base pairs for this taxon and all descendants.
+- `Estimated base pairs "assigned" (species-level)`: The estimated base pairs assigned at species-level (cumulative count of base pairs assigned to individual genomes in this species).
 - `Rank Code`: (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies.
-- [blank column]
+- [blank column]: (`NCBI Taxon ID` is not currently reported).
 - `Scientific Name`: The scientific name of the taxon.
 
 notes:
-- `Number of Reads Assigned to Taxon` and `NCBI Taxon ID` will not be reported (blank entries).
-- Rows are ordered by rank and then ~percent containment.
+- `gather` assigns k-mers to specific genomes. To mimic the output of other
+  tools, we report all results as "assigned" to species-level, which summarizes
+  the k-mers matched to each genome within a given species. Hence, column 3 will
+  show all estimated base pairs at this level, and 0 for all other ranks.
+  Column 2 contains the summarized info at the higher ranks.
 - Since `gather` results are non-overlapping and all assignments are done at the
   genome level, the percent match (first column) will sum to 100% at each rank
   (aside from rounding issues) when including the unclassified (U) percentage.
   Higher-rank assignments are generated using LCA-style summarization of genome
   matches.
+- Rows are ordered by rank and then ~percent containment.
+
 
 example sourmash `{output-name}.kreport.txt`:
 
