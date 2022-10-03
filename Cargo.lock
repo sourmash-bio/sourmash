@@ -126,6 +126,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "camino"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "88ad0e1e3e88dd237a156ab9f571021b8a158caa0ae44b1968a241efb5144c1e"
+
+[[package]]
 name = "capnp"
 version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -678,17 +684,18 @@ dependencies = [
 
 [[package]]
 name = "piz"
-version = "0.4.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58c75d1c00e6d407e283cc66d9d4fd0985ef1703c761520845b93c4f981bfb65"
+checksum = "898b071c1938a2c92b95c18708cbf38f2566a01f0ab9dd7bdf4329987e5c2e17"
 dependencies = [
+ "camino",
  "chrono",
  "codepage-437",
  "crc32fast",
  "flate2",
  "log",
+ "memchr",
  "thiserror",
- "twoway",
 ]
 
 [[package]]
@@ -1137,16 +1144,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "twoway"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c57ffb460d7c24cd6eda43694110189030a3d1dfe418416d9468fd1c1d290b47"
-dependencies = [
- "memchr",
- "unchecked-index",
-]
-
-[[package]]
 name = "twox-hash"
 version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1167,12 +1164,6 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[package]]
-name = "unchecked-index"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eeba86d422ce181a719445e51872fa30f1f7413b62becb52e95ec91aa262d85c"
 
 [[package]]
 name = "unicode-width"
