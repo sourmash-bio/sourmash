@@ -631,6 +631,11 @@ reads, we use k-mer abundance information in this output. To generate this prope
 FracMinHash sketches should be generated with abundance information (`-p abund`) to allow
 abundance-weighted `gather` results.
 
+Note: `sourmash gather` makes all assignments to genomes, and then `sourmash tax`
+integrates taxonomy information and uses LCA-style summarization to build assignments.
+For species-level specificity, our current recommendation is to use use our default
+k-mer size of 31.
+
 standard `kreport` columns (read-based tools):
 - `Percent Reads Contained in Taxon`: The cumulative percentage of reads for this taxon and all descendants.
 - `Number of Reads Contained in Taxon`: The cumulative number of reads for this taxon and all descendants.
