@@ -110,6 +110,10 @@ pub trait AbundMinHashOps: MinHashOps {
         // TODO(lirber): bring back compat check once method sig changes
         //self.check_compatible(other)?;
 
+        if !self.track_abundance() || !other.track_abundance() {
+            return Err(Error::NeedsAbundanceTracking);
+        }
+
         // TODO: check which one is smaller, swap around if needed
         // TODO(lirber): use iters here, instead of allocating new vecs!
         let abunds = self.to_vec_abunds();

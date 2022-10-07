@@ -258,7 +258,8 @@ jobs:
       - name: Check semver
         uses: obi1kenobi/cargo-semver-checks-action@v1
         with:
-          crate-name: sourmash                                                                                                                                                      version-tag-prefix: r
+          crate-name: sourmash
+          version-tag-prefix: r
 
       - name: Make sure we can publish the sourmash crate
         uses: actions-rs/cargo@v1
