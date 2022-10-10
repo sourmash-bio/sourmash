@@ -1071,7 +1071,7 @@ def multigather(args):
                 for result in found:
                     if w is None:
                         w = result.init_dictwriter(fp)
-                        result.write(w)
+                    result.write(w)
 
             output_matches = output_base + '.matches.sig'
             with open(output_matches, 'wt') as fp:
