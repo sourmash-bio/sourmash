@@ -125,6 +125,32 @@ fn similarity_3() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
+fn angular_similarity_requires_abundance() -> Result<(), Box<dyn std::error::Error>> {
+    let mut a = KmerMinHash::new(0, 20, HashFunctions::murmur64_dayhoff, 42, false, 5);
+    let mut b = KmerMinHash::new(0, 20, HashFunctions::murmur64_dayhoff, 42, false, 5);
+
+    a.add_hash(1);
+    b.add_hash(1);
+
+    assert!(a.angular_similarity(&b).is_err());
+
+    Ok(())
+}
+
+#[test]
+fn angular_similarity_btree_requires_abundance() -> Result<(), Box<dyn std::error::Error>> {
+    let mut a = KmerMinHashBTree::new(0, 20, HashFunctions::murmur64_dayhoff, 42, false, 5);
+    let mut b = KmerMinHashBTree::new(0, 20, HashFunctions::murmur64_dayhoff, 42, false, 5);
+
+    a.add_hash(1);
+    b.add_hash(1);
+
+    assert!(a.angular_similarity(&b).is_err());
+
+    Ok(())
+}
+
+#[test]
 fn dayhoff() {
     let mut a = KmerMinHash::new(0, 6, HashFunctions::murmur64_dayhoff, 42, false, 10);
     let mut b = KmerMinHash::new(0, 6, HashFunctions::murmur64_protein, 42, false, 10);
