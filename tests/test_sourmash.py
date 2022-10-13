@@ -3711,7 +3711,37 @@ def test_multigather_metagenome_output(runtmp):
     cmd = cmd.split(' ')
     c.run_sourmash(*cmd)
 
-    output_csv = '-.csv'
+    output_csv = runtmp.output('-.csv')
+    assert os.path.exists(output_csv)
+    with open(output_csv, newline='') as fp:
+        x = fp.readlines()
+        assert len(x) == 13
+
+
+def test_multigather_metagenome_output_outdir(runtmp):
+    # test multigather CSV output to different location
+    c = runtmp
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
+
+    # create output directory
+    outdir = runtmp.output('savehere')
+    os.mkdir(outdir)
+
+    cmd = f'multigather --query {query_sig} --db gcf_all -k 21 --threshold-bp=0 --output-dir {outdir}'
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    output_csv = runtmp.output('savehere/-.csv')
     assert os.path.exists(output_csv)
     with open(output_csv, newline='') as fp:
         x = fp.readlines()

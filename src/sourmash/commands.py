@@ -1064,8 +1064,11 @@ def multigather(args):
                 query_filename = query.md5sum()
 
             output_base = os.path.basename(query_filename)
+            if args.output_dir:
+                output_base = os.path.join(args.output_dir, output_base)
             output_csv = output_base + '.csv'
 
+            notify(f'saving all CSV matches to "{output_csv}"')
             w = None
             with FileOutputCSV(output_csv) as fp:
                 for result in found:
@@ -1076,7 +1079,7 @@ def multigather(args):
             output_matches = output_base + '.matches.sig'
             with open(output_matches, 'wt') as fp:
                 outname = output_matches
-                notify(f'saving all matches to "{outname}"')
+                notify(f'saving all matching signatures to "{outname}"')
                 sig.save_signatures([ r.match for r in found ], fp)
 
             output_unassigned = output_base + '.unassigned.sig'
