@@ -3692,6 +3692,32 @@ def test_multigather_metagenome_query_from_file(runtmp):
                 'NC_011294.1 Salmonella enterica subsp' in out))
 
 
+def test_multigather_metagenome_output(runtmp):
+    # test multigather CSV output has more than one output line
+    c = runtmp
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
+
+    cmd = f'multigather --query {query_sig} --db gcf_all -k 21 --threshold-bp=0'
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    output_csv = '-.csv'
+    assert os.path.exists(output_csv)
+    with open(output_csv, newline='') as fp:
+        x = fp.readlines()
+        assert len(x) == 13
+
+
 @utils.in_tempdir
 def test_multigather_metagenome_query_with_sbt(c):
 
