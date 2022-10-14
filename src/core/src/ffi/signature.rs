@@ -4,6 +4,9 @@ use std::io;
 use std::os::raw::c_char;
 use std::slice;
 
+use crate::errors::SourmashError;
+use crate::ffi::signature::Sketch::HyperLogLog;
+
 use crate::encodings::HashFunctions;
 use crate::signature::Signature;
 use crate::sketch::Sketch;
@@ -11,6 +14,8 @@ use crate::sketch::Sketch;
 use crate::ffi::cmd::compute::SourmashComputeParameters;
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::utils::{ForeignObject, SourmashStr};
+
+use crate::sketch::minhash::KmerMinHash;
 
 pub struct SourmashSignature;
 
@@ -165,11 +170,16 @@ ffi_fn! {
 unsafe fn signature_first_mh(ptr: *const SourmashSignature) -> Result<*mut SourmashKmerMinHash> {
     let sig = SourmashSignature::as_rust(ptr);
 
-    if let Some(Sketch::MinHash(mh)) = sig.signatures.get(0) {
-        Ok(SourmashKmerMinHash::from_rust(mh.clone()))
-    } else {
-        // TODO: need to select the correct one
-        unimplemented!()
+    match sig.signatures.get(0) {
+        Some(Sketch::MinHash(mh)) => {
+            Ok(SourmashKmerMinHash::from_rust(mh.clone()))
+        },
+        Some(Sketch::LargeMinHash(mh_btree)) => {
+            let mh = KmerMinHash::from(mh_btree.clone());
+            Ok(SourmashKmerMinHash::from_rust(mh))
+        },
+        Some(&HyperLogLog(_)) => Err(SourmashError::MismatchKSizes),
+        None => Err(SourmashError::MismatchKSizes),
     }
 }
 }
