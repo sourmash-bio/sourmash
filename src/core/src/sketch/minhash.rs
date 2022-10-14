@@ -644,8 +644,7 @@ impl KmerMinHash {
         self.check_compatible(other)?;
 
         if self.abunds.is_none() || other.abunds.is_none() {
-            // TODO: throw error, we need abundance for this
-            unimplemented!() // @CTB fixme
+            return Err(Error::NeedsAbundanceTracking);
         }
 
         // TODO: check which one is smaller, swap around if needed
@@ -1430,8 +1429,7 @@ impl KmerMinHashBTree {
         self.check_compatible(other)?;
 
         if self.abunds.is_none() || other.abunds.is_none() {
-            // TODO: throw error, we need abundance for this
-            unimplemented!() // @CTB fixme
+            return Err(Error::NeedsAbundanceTracking);
         }
 
         let abunds = self.abunds.as_ref().unwrap();
