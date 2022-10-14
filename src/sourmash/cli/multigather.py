@@ -83,6 +83,11 @@ def subparser(subparsers):
     )
     subparser.set_defaults(fail_on_empty_database=True)
 
+    subparser.add_argument(
+        '--output-dir', '--outdir',
+        help='output CSV results to this directory',
+    )
+
     add_ksize_arg(subparser)
     add_moltype_args(subparser)
     add_scaled_arg(subparser, 0)
