@@ -1628,9 +1628,10 @@ impl From<&KmerMinHashBTree> for KmerMinHash {
             other.num(),
         );
 
-        let mins = other.mins.iter().map(|h| *h).collect();
+        let mins = other.mins.iter().copied().collect();
         let abunds = other
-            .abunds.as_ref()
+            .abunds
+            .as_ref()
             .map(|abunds| abunds.values().cloned().collect());
 
         new_mh.mins = mins;
