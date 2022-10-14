@@ -5,7 +5,6 @@ use std::os::raw::c_char;
 use std::slice;
 
 use crate::errors::SourmashError;
-use crate::ffi::signature::Sketch::HyperLogLog;
 
 use crate::encodings::HashFunctions;
 use crate::signature::Signature;
@@ -178,9 +177,9 @@ unsafe fn signature_first_mh(ptr: *const SourmashSignature) -> Result<*mut Sourm
             let mh = KmerMinHash::from(mh_btree);
             Ok(SourmashKmerMinHash::from_rust(mh))
         },
-        // @CTB: fix error.
-        Some(&HyperLogLog(_)) => Err(SourmashError::MismatchKSizes),
-        None => Err(SourmashError::MismatchKSizes),
+        _ => Err(SourmashError::Internal {
+            message: "found unsupported sketch type".to_string()
+        }),
     }
 }
 }
