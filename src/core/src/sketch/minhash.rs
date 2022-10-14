@@ -1619,6 +1619,29 @@ impl From<KmerMinHashBTree> for KmerMinHash {
     }
 }
 
+impl From<&KmerMinHashBTree> for KmerMinHash {
+    fn from(other: &KmerMinHashBTree) -> KmerMinHash {
+        let mut new_mh = KmerMinHash::new(
+            other.scaled(),
+            other.ksize() as u32,
+            other.hash_function(),
+            other.seed(),
+            other.track_abundance(),
+            other.num(),
+        );
+
+        let mins = other.mins.iter().map(|h| *h).collect();
+        let abunds = other
+            .abunds.as_ref()
+            .map(|abunds| abunds.values().cloned().collect());
+
+        new_mh.mins = mins;
+        new_mh.abunds = abunds;
+
+        new_mh
+    }
+}
+
 impl From<KmerMinHash> for KmerMinHashBTree {
     fn from(other: KmerMinHash) -> KmerMinHashBTree {
         let mut new_mh = KmerMinHashBTree::new(

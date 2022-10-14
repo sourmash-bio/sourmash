@@ -175,9 +175,10 @@ unsafe fn signature_first_mh(ptr: *const SourmashSignature) -> Result<*mut Sourm
             Ok(SourmashKmerMinHash::from_rust(mh.clone()))
         },
         Some(Sketch::LargeMinHash(mh_btree)) => {
-            let mh = KmerMinHash::from(mh_btree.clone());
+            let mh = KmerMinHash::from(mh_btree);
             Ok(SourmashKmerMinHash::from_rust(mh))
         },
+        // @CTB: fix error.
         Some(&HyperLogLog(_)) => Err(SourmashError::MismatchKSizes),
         None => Err(SourmashError::MismatchKSizes),
     }
