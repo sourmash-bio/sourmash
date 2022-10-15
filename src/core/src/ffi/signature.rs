@@ -14,8 +14,6 @@ use crate::ffi::cmd::compute::SourmashComputeParameters;
 use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::utils::{ForeignObject, SourmashStr};
 
-use crate::sketch::minhash::KmerMinHash;
-
 pub struct SourmashSignature;
 
 impl ForeignObject for SourmashSignature {
@@ -174,8 +172,7 @@ unsafe fn signature_first_mh(ptr: *const SourmashSignature) -> Result<*mut Sourm
             Ok(SourmashKmerMinHash::from_rust(mh.clone()))
         },
         Some(Sketch::LargeMinHash(mh_btree)) => {
-            let mh = KmerMinHash::from(mh_btree);
-            Ok(SourmashKmerMinHash::from_rust(mh))
+            Ok(SourmashKmerMinHash::from_rust(mh_btree.into()))
         },
         _ => Err(SourmashError::Internal {
             message: "found unsupported sketch type".to_string()
