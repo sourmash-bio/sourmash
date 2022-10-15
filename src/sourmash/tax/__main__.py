@@ -9,7 +9,7 @@ import re
 
 import sourmash
 from ..sourmash_args import FileOutputCSV, FileOutput
-from sourmash.logging import set_quiet, error, notify
+from sourmash.logging import set_quiet, error, notify, print_results
 from sourmash.lca.lca_utils import display_lineage
 
 from . import tax_utils
@@ -436,6 +436,46 @@ def grep(args):
                 w.writerow([ident] + [ x.name for x in lineage ])
 
         notify(f"found {len(match_ident)} matches; saved identifiers to picklist file '{args.output}'")
+
+
+def summarize(args):
+    "Summarize multiple taxonomy databases."
+    notify("loading taxonomies...")
+    try:
+        tax_assign = MultiLineageDB.load(args.taxonomy_files,
+                                         force=args.force,
+                       keep_full_identifiers=args.keep_full_identifiers,
+                       keep_identifier_versions=args.keep_identifier_versions)
+    except ValueError as exc:
+        error("ERROR while loading taxonomies!")
+        error(str(exc))
+        sys.exit(-1)
+
+    notify(f"...loaded {len(tax_assign)} entries.")
+
+    print_results(f"num idents: {len(tax_assign)}")
+
+    rank_counts = defaultdict(int)
+    name_seen = set()
+    for v in tax_assign.values():
+        sofar = []
+        for rank, name in v:
+            if name not in name_seen:
+                rank_counts[rank] += 1
+                name_seen.add(name)
+
+            if 0:
+                # check duplicates?
+                sofar.append(name)
+                tup = tuple(sofar)
+                seen.add(tuple(sofar))
+        #break
+
+    rank_count_items = list(rank_counts.items())
+    rank_count_items.sort(key=lambda x: x[1])
+    for rank, count in rank_count_items:
+        rank_name_str = f"{rank}:"
+        print_results(f"rank {rank_name_str:<20s} {count} distinct identifiers")
 
 
 def main(arglist=None):
