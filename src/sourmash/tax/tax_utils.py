@@ -732,7 +732,8 @@ class LineageDB(abc.Mapping):
                     identifier = 'accession'
                     header = ["ident" if "accession" == x else x for x in header]
                 else:
-                    raise ValueError('No taxonomic identifiers found.')
+                    header_str = ",".join([repr(x) for x in header])
+                    raise ValueError(f'No taxonomic identifiers found; headers are {header_str}')
             # is "strain" an available rank?
             if "strain" in header:
                 include_strain=True
