@@ -4,13 +4,13 @@ Command-line entry point for 'python -m sourmash.tax'
 import sys
 import csv
 import os
-from collections import defaultdict
+from collections import defaultdict, Counter
 import re
 
 import sourmash
 from ..sourmash_args import FileOutputCSV, FileOutput
 from sourmash.logging import set_quiet, error, notify, print_results
-from sourmash.lca.lca_utils import display_lineage
+from sourmash.lca.lca_utils import display_lineage, zip_lineage
 
 from . import tax_utils
 from .tax_utils import ClassificationResult, MultiLineageDB
@@ -476,6 +476,30 @@ def summarize(args):
     for rank, count in rank_count_items:
         rank_name_str = f"{rank}:"
         print_results(f"rank {rank_name_str:<20s} {count} distinct identifiers")
+
+
+    if args.output_lineage_information:
+        notify("now calculating detailed lineage counts...")
+        lineage_counts = Counter()
+        for v in tax_assign.values():
+            tup = v
+            while tup:
+                lineage_counts[tup] += 1
+                tup = tup[:-1]
+        notify("...done!")
+
+        with FileOutputCSV(args.output_lineage_information) as fp:
+            w = csv.writer(fp)
+            w.writerow(['rank', 'count', 'lineage'])
+
+            # output in order of most common
+            for lineage, count in lineage_counts.most_common():
+                rank = lineage[-1].rank
+                lin = ";".join(zip_lineage(lineage, truncate_empty=True))
+                w.writerow([rank, str(count), lin])
+
+        n = len(lineage_counts)
+        notify(f"saved {n} lineage counts to '{args.output_lineage_information}'")
 
 
 def main(arglist=None):

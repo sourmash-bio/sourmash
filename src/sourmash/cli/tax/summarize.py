@@ -31,8 +31,8 @@ def subparser(subparsers):
         help='database lineages'
     )
     subparser.add_argument(
-        '-o', '--output',
-        help='output file',
+        '-o', '--output-lineage-information',
+        help='output a CSV file containing individual lineage counts',
         # @CTB implement
     )
     subparser.add_argument(
