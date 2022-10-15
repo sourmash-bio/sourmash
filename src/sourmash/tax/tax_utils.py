@@ -838,8 +838,6 @@ class LineageDB(abc.Mapping):
                     lineage = row['lineage']
                     lineage = lca_utils.make_lineage(lineage)
 
-                    print(ident, row['lineage'])
-
                     # check duplicates
                     if ident in assignments:
                         if assignments[ident] != tuple(lineage):
