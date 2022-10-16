@@ -1,15 +1,22 @@
 use std::path::PathBuf;
 use std::slice;
+use std::sync::Arc;
 
-use crate::index::revindex::mem_revindex::RevIndex;
+use crate::index::revindex::mem_revindex::{LinearRevIndex, RevIndex};
 use crate::index::Index;
+use crate::manifest::Manifest;
 use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::KmerMinHash;
+use crate::sketch::minhash::{max_hash_for_scaled, KmerMinHash};
 use crate::sketch::Sketch;
+use crate::storage::Storage;
 
-use crate::ffi::index::SourmashSearchResult;
+use crate::ffi::index::{
+    SignatureIterator, SourmashSearchResult, SourmashSelection, SourmashSignatureIter,
+};
+use crate::ffi::manifest::SourmashManifest;
 use crate::ffi::minhash::{MinHash, SourmashKmerMinHash};
 use crate::ffi::signature::SourmashSignature;
+use crate::ffi::storage::SourmashZipStorage;
 use crate::ffi::utils::{ForeignObject, SourmashStr};
 
 pub struct SourmashRevIndex;
@@ -251,5 +258,143 @@ unsafe fn revindex_signatures(
     *size = b.len();
 
     Ok(Box::into_raw(b) as *mut *mut SourmashSignature)
+}
+}
+
+//--------------------------------------------------
+
+pub struct SourmashLinearIndex;
+
+impl ForeignObject for SourmashLinearIndex {
+    type RustObject = LinearRevIndex;
+}
+
+ffi_fn! {
+unsafe fn linearindex_new(
+    storage_ptr: *mut SourmashZipStorage,
+    manifest_ptr: *mut SourmashManifest,
+    selection_ptr: *mut SourmashSelection,
+    use_manifest: bool,
+) -> Result<*mut SourmashLinearIndex> {
+    let storage = Arc::try_unwrap(*SourmashZipStorage::into_rust(storage_ptr)).ok().unwrap();
+
+    let manifest = if manifest_ptr.is_null() {
+        if use_manifest {
+        // Load manifest from zipstorage
+            Some(Manifest::from_reader(storage.load("SOURMASH-MANIFEST.csv")?.as_slice())?)
+        } else {
+            None
+        }
+    } else {
+        Some(*SourmashManifest::into_rust(manifest_ptr))
+    };
+
+    let _selection = if !selection_ptr.is_null() {
+        Some(SourmashSelection::into_rust(selection_ptr))
+    } else {
+        None
+    };
+    // TODO: how to extract a template? Probably from selection?
+    let max_hash = max_hash_for_scaled(100);
+    let template = Sketch::MinHash(
+        KmerMinHash::builder()
+            .num(0u32)
+            .ksize(57)
+            .hash_function(crate::encodings::HashFunctions::murmur64_protein)
+            .max_hash(max_hash)
+            .build(),
+    );
+
+    /*
+    def __init__(self, storage, *, selection_dict=None,
+                 traverse_yield_all=False, manifest=None, use_manifest=True):
+        sig_files: Manifest,
+        template: &Sketch,
+        keep_sigs: bool,
+        ref_sigs: Option<Vec<Signature>>,
+        storage: Option<ZipStorage>,
+    */
+
+    let linear_index = LinearRevIndex::new(manifest, &template, false, None, Some(storage));
+
+    Ok(SourmashLinearIndex::from_rust(linear_index))
+}
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn linearindex_free(ptr: *mut SourmashLinearIndex) {
+    SourmashLinearIndex::drop(ptr);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn linearindex_manifest(
+    ptr: *const SourmashLinearIndex,
+) -> *const SourmashManifest {
+    let index = SourmashLinearIndex::as_rust(ptr);
+    SourmashManifest::from_rust(index.manifest())
+}
+
+ffi_fn! {
+unsafe fn linearindex_set_manifest(
+    ptr: *mut SourmashLinearIndex,
+    manifest_ptr: *mut SourmashManifest,
+) -> Result<()> {
+    let index = SourmashLinearIndex::as_rust_mut(ptr);
+    let manifest = SourmashManifest::into_rust(manifest_ptr);
+
+    index.set_manifest(*manifest)?;
+    Ok(())
+}
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn linearindex_len(ptr: *const SourmashLinearIndex) -> u64 {
+    let index = SourmashLinearIndex::as_rust(ptr);
+    index.len() as u64
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn linearindex_location(ptr: *const SourmashLinearIndex) -> SourmashStr {
+    let index = SourmashLinearIndex::as_rust(ptr);
+    match index.location() {
+        Some(x) => x,
+        None => "".into(),
+    }
+    .into()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn linearindex_storage(
+    ptr: *const SourmashLinearIndex,
+) -> *const SourmashZipStorage {
+    let index = SourmashLinearIndex::as_rust(ptr);
+    let storage = index.storage();
+
+    match storage {
+        Some(st) => SourmashZipStorage::from_rust(st),
+        None => std::ptr::null::<SourmashZipStorage>(),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn linearindex_signatures(
+    ptr: *const SourmashLinearIndex,
+) -> *mut SourmashSignatureIter {
+    let index = SourmashLinearIndex::as_rust(ptr);
+
+    let iter = Box::new(index.signatures_iter());
+    SourmashSignatureIter::from_rust(SignatureIterator { iter })
+}
+
+ffi_fn! {
+unsafe fn linearindex_select(
+    ptr: *mut SourmashLinearIndex,
+    selection_ptr: *const SourmashSelection,
+) -> Result<*mut SourmashLinearIndex> {
+    let index = SourmashLinearIndex::into_rust(ptr);
+    let selection = SourmashSelection::as_rust(selection_ptr);
+
+    let new_index = index.select(selection)?;
+    Ok(SourmashLinearIndex::from_rust(new_index))
 }
 }

@@ -63,6 +63,9 @@ pub enum SourmashError {
     #[error(transparent)]
     IOError(#[from] std::io::Error),
 
+    #[error(transparent)]
+    CsvError(#[from] csv::Error),
+
     #[cfg(not(all(target_arch = "wasm32", target_vendor = "unknown")))]
     #[error(transparent)]
     Panic(#[from] crate::ffi::utils::Panic),
@@ -108,6 +111,7 @@ pub enum SourmashErrorCode {
     ParseInt = 100_003,
     SerdeError = 100_004,
     NifflerError = 100_005,
+    CsvError = 100_006,
 }
 
 #[cfg(not(all(target_arch = "wasm32", target_vendor = "unknown")))]
@@ -137,6 +141,7 @@ impl SourmashErrorCode {
             SourmashError::IOError { .. } => SourmashErrorCode::Io,
             SourmashError::NifflerError { .. } => SourmashErrorCode::NifflerError,
             SourmashError::Utf8Error { .. } => SourmashErrorCode::Utf8Error,
+            SourmashError::CsvError { .. } => SourmashErrorCode::CsvError,
         }
     }
 }

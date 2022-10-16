@@ -7,8 +7,12 @@ import gzip
 import os.path
 from abc import abstractmethod
 import itertools
+from typing import TYPE_CHECKING
 
 from sourmash.picklist import SignaturePicklist
+
+if TYPE_CHECKING:
+    from typing_extensions import Unpack
 
 
 class BaseCollectionManifest:
@@ -303,6 +307,7 @@ class CollectionManifest(BaseCollectionManifest):
         for row in matching_rows:
             yield row
 
+    #def select_to_manifest(self, **kwargs: Unpack[Selection]):
     def select_to_manifest(self, **kwargs):
         "Do a 'select' and return a new CollectionManifest object."
         new_rows = self._select(**kwargs)
@@ -343,3 +348,34 @@ class CollectionManifest(BaseCollectionManifest):
         picklist.pickset = set(self._md5_set)
 
         return picklist
+
+    @staticmethod
+    def _from_rust(value):
+        from ._lowlevel import ffi, lib
+        from .utils import rustcall, decode_str
+
+        iterator = rustcall(lib.manifest_rows, value)
+
+        rows = []
+        next_row = rustcall(lib.manifest_rows_iter_next, iterator)
+        while next_row != ffi.NULL:
+
+            # TODO: extract row data from next_row
+            # FIXME: free mem from strings?
+            row = {}
+            row['md5'] = decode_str(next_row.md5)
+            row['md5short'] = row['md5'][:8]
+            row['ksize'] = next_row.ksize
+            row['moltype'] = decode_str(next_row.moltype)
+            row['num'] = 0 #ss.minhash.num
+            row['scaled'] = 0 #ss.minhash.scaled
+            row['n_hashes'] = 0 # len(ss.minhash)
+            row['with_abundance'] = next_row.with_abundance
+            row['name'] = decode_str(next_row.name)
+            row['filename'] = "" #ss.filename
+            row['internal_location'] = decode_str(next_row.internal_location)
+            rows.append(row)
+
+            next_row = rustcall(lib.manifest_rows_iter_next, iterator)
+
+        return CollectionManifest(rows)

@@ -15,6 +15,7 @@ use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
+use crate::encodings::HashFunctions;
 use crate::errors::ReadDataError;
 use crate::index::search::{search_minhashes, search_minhashes_containment};
 use crate::prelude::*;
@@ -22,6 +23,39 @@ use crate::signature::SigsTrait;
 use crate::sketch::Sketch;
 use crate::storage::{InnerStorage, Storage};
 use crate::Error;
+
+#[derive(Default)]
+pub struct Selection {
+    ksize: Option<u32>,
+    abund: Option<bool>,
+    moltype: Option<HashFunctions>,
+}
+
+impl Selection {
+    pub fn ksize(&self) -> Option<u32> {
+        self.ksize
+    }
+
+    pub fn set_ksize(&mut self, ksize: u32) {
+        self.ksize = Some(ksize);
+    }
+
+    pub fn abund(&self) -> Option<bool> {
+        self.abund
+    }
+
+    pub fn set_abund(&mut self, value: bool) {
+        self.abund = Some(value);
+    }
+
+    pub fn moltype(&self) -> Option<HashFunctions> {
+        self.moltype
+    }
+
+    pub fn set_moltype(&mut self, value: HashFunctions) {
+        self.moltype = Some(value);
+    }
+}
 
 pub trait Index<'a> {
     type Item: Comparable<Self::Item>;
@@ -116,7 +150,7 @@ pub struct DatasetInfo {
 }
 
 #[derive(TypedBuilder, Default, Clone)]
-pub struct SigStore<T> {
+pub struct SigStore {
     #[builder(setter(into))]
     filename: String,
 
@@ -129,16 +163,16 @@ pub struct SigStore<T> {
     storage: Option<InnerStorage>,
 
     #[builder(setter(into), default)]
-    data: OnceCell<T>,
+    data: OnceCell<Signature>,
 }
 
-impl<T> SigStore<T> {
+impl SigStore {
     pub fn name(&self) -> String {
         self.name.clone()
     }
 }
 
-impl<T> std::fmt::Debug for SigStore<T> {
+impl std::fmt::Debug for SigStore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -148,7 +182,7 @@ impl<T> std::fmt::Debug for SigStore<T> {
     }
 }
 
-impl ReadData<Signature> for SigStore<Signature> {
+impl ReadData<Signature> for SigStore {
     fn data(&self) -> Result<&Signature, Error> {
         if let Some(sig) = self.data.get() {
             Ok(sig)
@@ -172,10 +206,7 @@ impl ReadData<Signature> for SigStore<Signature> {
     }
 }
 
-impl<T> SigStore<T>
-where
-    T: ToWriter,
-{
+impl SigStore {
     pub fn save(&self, path: &str) -> Result<String, Error> {
         if let Some(storage) = &self.storage {
             if let Some(data) = self.data.get() {
@@ -192,8 +223,8 @@ where
     }
 }
 
-impl SigStore<Signature> {
-    pub fn count_common(&self, other: &SigStore<Signature>) -> u64 {
+impl SigStore {
+    pub fn count_common(&self, other: &SigStore) -> u64 {
         let ng: &Signature = self.data().unwrap();
         let ong: &Signature = other.data().unwrap();
 
@@ -220,13 +251,13 @@ impl SigStore<Signature> {
     }
 }
 
-impl From<SigStore<Signature>> for Signature {
-    fn from(other: SigStore<Signature>) -> Signature {
+impl From<SigStore> for Signature {
+    fn from(other: SigStore) -> Signature {
         other.data.get().unwrap().to_owned()
     }
 }
 
-impl Deref for SigStore<Signature> {
+impl Deref for SigStore {
     type Target = Signature;
 
     fn deref(&self) -> &Signature {
@@ -234,8 +265,8 @@ impl Deref for SigStore<Signature> {
     }
 }
 
-impl From<Signature> for SigStore<Signature> {
-    fn from(other: Signature) -> SigStore<Signature> {
+impl From<Signature> for SigStore {
+    fn from(other: Signature) -> SigStore {
         let name = other.name();
         let filename = other.filename();
 
@@ -249,8 +280,8 @@ impl From<Signature> for SigStore<Signature> {
     }
 }
 
-impl Comparable<SigStore<Signature>> for SigStore<Signature> {
-    fn similarity(&self, other: &SigStore<Signature>) -> f64 {
+impl Comparable<SigStore> for SigStore {
+    fn similarity(&self, other: &SigStore) -> f64 {
         let ng: &Signature = self.data().unwrap();
         let ong: &Signature = other.data().unwrap();
 
@@ -273,7 +304,7 @@ impl Comparable<SigStore<Signature>> for SigStore<Signature> {
         unimplemented!()
     }
 
-    fn containment(&self, other: &SigStore<Signature>) -> f64 {
+    fn containment(&self, other: &SigStore) -> f64 {
         let ng: &Signature = self.data().unwrap();
         let ong: &Signature = other.data().unwrap();
 
@@ -325,8 +356,8 @@ impl Comparable<Signature> for Signature {
     }
 }
 
-impl<L> From<DatasetInfo> for SigStore<L> {
-    fn from(other: DatasetInfo) -> SigStore<L> {
+impl From<DatasetInfo> for SigStore {
+    fn from(other: DatasetInfo) -> SigStore {
         SigStore {
             filename: other.filename,
             name: other.name,

@@ -12,12 +12,12 @@ use crate::storage::{FSStorage, InnerStorage, Storage, StorageInfo};
 use crate::Error;
 
 #[derive(TypedBuilder)]
-pub struct LinearIndex<L> {
+pub struct LinearIndex {
     #[builder(default)]
     storage: Option<InnerStorage>,
 
     #[builder(default)]
-    datasets: Vec<SigStore<L>>,
+    datasets: Vec<SigStore>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -27,15 +27,11 @@ struct LinearInfo<L> {
     leaves: Vec<L>,
 }
 
-impl<'a, L> Index<'a> for LinearIndex<L>
-where
-    L: Clone + Comparable<L> + 'a,
-    SigStore<L>: From<L>,
-{
-    type Item = L;
+impl<'a> Index<'a> for LinearIndex {
+    type Item = Signature;
     //type SignatureIterator = std::slice::Iter<'a, Self::Item>;
 
-    fn insert(&mut self, node: L) -> Result<(), Error> {
+    fn insert(&mut self, node: Self::Item) -> Result<(), Error> {
         self.datasets.push(node.into());
         Ok(())
     }
@@ -76,11 +72,7 @@ where
     */
 }
 
-impl<L> LinearIndex<L>
-where
-    L: ToWriter,
-    SigStore<L>: ReadData<L>,
-{
+impl LinearIndex {
     pub fn save_file<P: AsRef<Path>>(
         &mut self,
         path: P,
@@ -115,7 +107,7 @@ where
                 .iter_mut()
                 .map(|l| {
                     // Trigger data loading
-                    let _: &L = (*l).data().unwrap();
+                    let _: &Signature = (*l).data().unwrap();
 
                     // set storage to new one
                     l.storage = Some(storage.clone());
@@ -137,7 +129,7 @@ where
         Ok(())
     }
 
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<LinearIndex<L>, Error> {
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<LinearIndex, Error> {
         let file = File::open(&path)?;
         let mut reader = BufReader::new(file);
 
@@ -147,11 +139,11 @@ where
         basepath.push(path);
         basepath.canonicalize()?;
 
-        let linear = LinearIndex::<L>::from_reader(&mut reader, basepath.parent().unwrap())?;
+        let linear = LinearIndex::from_reader(&mut reader, basepath.parent().unwrap())?;
         Ok(linear)
     }
 
-    pub fn from_reader<R, P>(rdr: R, path: P) -> Result<LinearIndex<L>, Error>
+    pub fn from_reader<R, P>(rdr: R, path: P) -> Result<LinearIndex, Error>
     where
         R: Read,
         P: AsRef<Path>,
@@ -171,7 +163,7 @@ where
                 .leaves
                 .into_iter()
                 .map(|l| {
-                    let mut v: SigStore<L> = l.into();
+                    let mut v: SigStore = l.into();
                     v.storage = Some(storage.clone());
                     v
                 })

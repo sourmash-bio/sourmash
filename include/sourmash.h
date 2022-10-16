@@ -42,6 +42,7 @@ enum SourmashErrorCode {
   SOURMASH_ERROR_CODE_PARSE_INT = 100003,
   SOURMASH_ERROR_CODE_SERDE_ERROR = 100004,
   SOURMASH_ERROR_CODE_NIFFLER_ERROR = 100005,
+  SOURMASH_ERROR_CODE_CSV_ERROR = 100006,
 };
 typedef uint32_t SourmashErrorCode;
 
@@ -51,13 +52,25 @@ typedef struct SourmashHyperLogLog SourmashHyperLogLog;
 
 typedef struct SourmashKmerMinHash SourmashKmerMinHash;
 
+typedef struct SourmashLinearIndex SourmashLinearIndex;
+
+typedef struct SourmashManifest SourmashManifest;
+
+typedef struct SourmashManifestRowIter SourmashManifestRowIter;
+
 typedef struct SourmashNodegraph SourmashNodegraph;
+
+typedef struct SourmashPicklist SourmashPicklist;
 
 typedef struct SourmashRevIndex SourmashRevIndex;
 
 typedef struct SourmashSearchResult SourmashSearchResult;
 
+typedef struct SourmashSelection SourmashSelection;
+
 typedef struct SourmashSignature SourmashSignature;
+
+typedef struct SourmashSignatureIter SourmashSignatureIter;
 
 typedef struct SourmashZipStorage SourmashZipStorage;
 
@@ -78,6 +91,15 @@ typedef struct {
    */
   bool owned;
 } SourmashStr;
+
+typedef struct {
+  uint32_t ksize;
+  uint8_t with_abundance;
+  SourmashStr md5;
+  SourmashStr internal_location;
+  SourmashStr name;
+  SourmashStr moltype;
+} SourmashManifestRow;
 
 bool computeparams_dayhoff(const SourmashComputeParameters *ptr);
 
@@ -269,6 +291,32 @@ SourmashKmerMinHash *kmerminhash_to_mutable(const SourmashKmerMinHash *ptr);
 
 bool kmerminhash_track_abundance(const SourmashKmerMinHash *ptr);
 
+void linearindex_free(SourmashLinearIndex *ptr);
+
+uint64_t linearindex_len(const SourmashLinearIndex *ptr);
+
+SourmashStr linearindex_location(const SourmashLinearIndex *ptr);
+
+const SourmashManifest *linearindex_manifest(const SourmashLinearIndex *ptr);
+
+SourmashLinearIndex *linearindex_new(SourmashZipStorage *storage_ptr,
+                                     SourmashManifest *manifest_ptr,
+                                     SourmashSelection *selection_ptr,
+                                     bool use_manifest);
+
+SourmashLinearIndex *linearindex_select(SourmashLinearIndex *ptr,
+                                        const SourmashSelection *selection_ptr);
+
+void linearindex_set_manifest(SourmashLinearIndex *ptr, SourmashManifest *manifest_ptr);
+
+SourmashSignatureIter *linearindex_signatures(const SourmashLinearIndex *ptr);
+
+const SourmashZipStorage *linearindex_storage(const SourmashLinearIndex *ptr);
+
+SourmashManifestRowIter *manifest_rows(const SourmashManifest *ptr);
+
+const SourmashManifestRow *manifest_rows_iter_next(SourmashManifestRowIter *ptr);
+
 void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
 
 bool nodegraph_count(SourmashNodegraph *ptr, uint64_t h);
@@ -312,6 +360,16 @@ void nodegraph_update_mh(SourmashNodegraph *ptr, const SourmashKmerMinHash *optr
 SourmashNodegraph *nodegraph_with_tables(uintptr_t ksize,
                                          uintptr_t starting_size,
                                          uintptr_t n_tables);
+
+void picklist_free(SourmashPicklist *ptr);
+
+SourmashPicklist *picklist_new(void);
+
+void picklist_set_coltype(SourmashPicklist *ptr, const char *coltype_ptr, uintptr_t insize);
+
+void picklist_set_column_name(SourmashPicklist *ptr, const char *prop_ptr, uintptr_t insize);
+
+void picklist_set_pickfile(SourmashPicklist *ptr, const char *prop_ptr, uintptr_t insize);
 
 void revindex_free(SourmashRevIndex *ptr);
 
@@ -358,6 +416,20 @@ double searchresult_score(const SourmashSearchResult *ptr);
 
 SourmashSignature *searchresult_signature(const SourmashSearchResult *ptr);
 
+bool selection_abund(const SourmashSelection *ptr);
+
+uint32_t selection_ksize(const SourmashSelection *ptr);
+
+HashFunctions selection_moltype(const SourmashSelection *ptr);
+
+SourmashSelection *selection_new(void);
+
+void selection_set_abund(SourmashSelection *ptr, bool new_abund);
+
+void selection_set_ksize(SourmashSelection *ptr, uint32_t new_ksize);
+
+void selection_set_moltype(SourmashSelection *ptr, HashFunctions new_moltype);
+
 void signature_add_protein(SourmashSignature *ptr, const char *sequence);
 
 void signature_add_sequence(SourmashSignature *ptr, const char *sequence, bool force);
@@ -387,6 +459,8 @@ void signature_set_filename(SourmashSignature *ptr, const char *name);
 void signature_set_mh(SourmashSignature *ptr, const SourmashKmerMinHash *other);
 
 void signature_set_name(SourmashSignature *ptr, const char *name);
+
+const SourmashSignature *signatures_iter_next(SourmashSignatureIter *ptr);
 
 SourmashSignature **signatures_load_buffer(const char *ptr,
                                            uintptr_t insize,

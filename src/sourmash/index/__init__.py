@@ -34,10 +34,15 @@ signatures on demand. No signatures are kept in memory.
 CounterGather - an ancillary class returned by the 'counter_gather()' method.
 """
 
+from __future__ import annotations
+
 import os
 import sourmash
 from abc import abstractmethod, ABC
-from collections import namedtuple, Counter
+from collections import Counter
+from collections import defaultdict
+from typing import NamedTuple, Optional, TypedDict, TYPE_CHECKING
+import weakref
 
 from sourmash.search import (make_jaccard_search_query,
                              make_containment_query,
@@ -45,12 +50,79 @@ from sourmash.search import (make_jaccard_search_query,
 from sourmash.manifest import CollectionManifest
 from sourmash.logging import debug_literal
 from sourmash.signature import load_signatures, save_signatures
+from sourmash._lowlevel import ffi, lib
+from sourmash.utils import RustObject, rustcall, decode_str, encode_str
+from sourmash import SourmashSignature
+from sourmash.picklist import SignaturePicklist
 from sourmash.minhash import (flatten_and_downsample_scaled,
                               flatten_and_downsample_num,
                               flatten_and_intersect_scaled)
 
-# generic return tuple for Index.search and Index.gather
-IndexSearchResult = namedtuple('Result', 'score, signature, location')
+
+if TYPE_CHECKING:
+    from typing_extensions import Unpack
+
+
+class IndexSearchResult(NamedTuple):
+    """generic return tuple for Index.search and Index.gather"""
+    score: float
+    signature: SourmashSignature
+    location: str
+
+
+class Selection(TypedDict):
+    ksize: Optional[int]
+    moltype: Optional[str]
+    num: Optional[int]
+    scaled: Optional[int]
+    containment: Optional[bool]
+    abund: Optional[bool]
+    picklist: Optional[SignaturePicklist]
+
+
+# TypedDict can't have methods (it is a dict in runtime)
+def _selection_as_rust(selection: Selection):
+    ptr = lib.selection_new()
+
+    for key, v in selection.items():
+        if v is not None:
+            if key == "ksize":
+                rustcall(lib.selection_set_ksize, ptr, v)
+
+            elif key == "moltype":
+                hash_function = None
+                if v.lower() == "dna":
+                    hash_function = lib.HASH_FUNCTIONS_MURMUR64_DNA
+                elif v.lower() == "protein":
+                    hash_function = lib.HASH_FUNCTIONS_MURMUR64_PROTEIN
+                elif v.lower() == "dayhoff":
+                    hash_function = lib.HASH_FUNCTIONS_MURMUR64_DAYHOFF
+                elif v.lower() == "hp":
+                    hash_function = lib.HASH_FUNCTIONS_MURMUR64_HP
+
+                rustcall(lib.selection_set_moltype, ptr, hash_function)
+
+            elif key == "num":
+                raise NotImplementedError("num")
+
+            elif key == "scaled":
+                raise NotImplementedError("scaled")
+
+            elif key ==  "containment":
+                raise NotImplementedError("containment")
+
+            elif key == "abund":
+                rustcall(lib.selection_set_abund, ptr, bool(v))
+
+            elif key == "picklist":
+                picklist_ptr = v._as_rust()
+                rustcall(lib.selection_set_picklist, ptr, picklist_ptr)
+
+            else:
+                raise KeyError(f"Unsupported key {key} for Selection in rust")
+
+    return ptr
+
 
 class Index(ABC):
     # this will be removed soon; see sourmash#1894.
@@ -307,8 +379,7 @@ class Index(ABC):
         return counter
 
     @abstractmethod
-    def select(self, ksize=None, moltype=None, scaled=None, num=None,
-               abund=None, containment=None):
+    def select(self, **kwargs: Unpack[Selection]):
         """Return Index containing only signatures that match requirements.
 
         Current arguments can be any or all of:
@@ -326,9 +397,16 @@ class Index(ABC):
         """
 
 
-def select_signature(ss, *, ksize=None, moltype=None, scaled=0, num=0,
-                     containment=False, abund=None, picklist=None):
+def select_signature(ss, **kwargs: Unpack[Selection]):
     "Check that the given signature matches the specified requirements."
+    ksize = kwargs.get('ksize')
+    moltype = kwargs.get('moltype')
+    containment = kwargs.get('containment', False)
+    scaled = kwargs.get('scaled', 0)
+    num = kwargs.get('num', 0)
+    abund = kwargs.get('abund')
+    picklist = kwargs.get('picklist')
+
     # ksize match?
     if ksize and ksize != ss.minhash.ksize:
         return False
@@ -408,7 +486,7 @@ class LinearIndex(Index):
         lidx = LinearIndex(si, filename=filename)
         return lidx
 
-    def select(self, **kwargs):
+    def select(self, **kwargs: Unpack[Selection]):
         """Return new LinearIndex containing only signatures that match req's.
 
         Does not raise ValueError, but may return an empty Index.
@@ -479,7 +557,7 @@ class LazyLinearIndex(Index):
     def load(cls, path):
         raise NotImplementedError
 
-    def select(self, **kwargs):
+    def select(self, **kwargs: Unpack[Selection]):
         """Return new object yielding only signatures that match req's.
 
         Does not raise ValueError, but may return an empty Index.
@@ -642,7 +720,7 @@ class ZipFileLinearIndex(Index):
                         if select(ss):
                             yield ss
 
-    def select(self, **kwargs):
+    def select(self, **kwargs: Unpack[Selection]):
         "Select signatures in zip file based on ksize/moltype/etc."
 
         # if we have a manifest, run 'select' on the manifest.
@@ -1053,7 +1131,7 @@ class MultiIndex(Index):
     def save(self, *args):
         raise NotImplementedError
 
-    def select(self, **kwargs):
+    def select(self, **kwargs: Unpack[Selection]):
         "Run 'select' on the manifest."
         new_manifest = self.manifest.select_to_manifest(**kwargs)
         return MultiIndex(new_manifest, self.parent,
@@ -1162,8 +1240,135 @@ class StandaloneManifestIndex(Index):
     def insert(self, *args):
         raise NotImplementedError
 
-    def select(self, **kwargs):
+    def select(self, **kwargs: Unpack[Selection]):
         "Run 'select' on the manifest."
         new_manifest = self.manifest.select_to_manifest(**kwargs)
         return StandaloneManifestIndex(new_manifest, self._location,
                                        prefix=self.prefix)
+
+class RustLinearIndex(Index, RustObject):
+    """\
+    A read-only collection of signatures in a zip file.
+
+    Does not support `insert` or `save`.
+
+    Concrete class; signatures dynamically loaded from disk; uses manifests.
+    """
+    is_database = True
+
+    __dealloc_func__ = lib.linearindex_free
+
+    def __init__(self, storage, *, selection_dict=None,
+                 traverse_yield_all=False, manifest=None, use_manifest=True):
+
+        self._selection_dict = selection_dict
+        self._traverse_yield_all = traverse_yield_all
+        self._use_manifest = use_manifest
+
+        # Taking ownership of the storage
+        storage_ptr = storage._take_objptr()
+
+        manifest_ptr = ffi.NULL
+        # do we have a manifest already? if not, try loading.
+        if use_manifest:
+            if manifest is not None:
+                debug_literal('RustLinearIndex using passed-in manifest')
+                manifest_ptr = manifest._as_rust()._take_objptr()
+
+        selection_ptr = ffi.NULL
+
+        self._objptr = rustcall(lib.linearindex_new, storage_ptr,
+                                manifest_ptr, selection_ptr, use_manifest)
+
+        """
+        if self.manifest is not None:
+            assert not self.selection_dict, self.selection_dict
+        if self.selection_dict:
+            assert self.manifest is None
+        """
+
+    @property
+    def manifest(self):
+        return CollectionManifest._from_rust(self._methodcall(lib.linearindex_manifest))
+
+    @manifest.setter
+    def manifest(self, value):
+        if value is None:
+            return  # FIXME: can't unset manifest in a Rust Linear Index
+        self._methodcall(lib.linearindex_set_manifest, value._as_rust()._take_objptr())
+
+    def __bool__(self):
+        "Are there any matching signatures in this zipfile? Avoid calling len."
+        return self._methodcall(lib.linearindex_len) > 0
+
+    def __len__(self):
+        "calculate number of signatures."
+        return self._methodcall(lib.linearindex_len)
+
+    @property
+    def location(self):
+        return decode_str(self._methodcall(lib.linearindex_location))
+
+    @property
+    def storage(self):
+        from ..sbt_storage import ZipStorage
+
+        ptr = self._methodcall(lib.linearindex_storage)
+        return ZipStorage._from_objptr(ptr)
+
+    def insert(self, signature):
+        raise NotImplementedError
+
+    def save(self, path):
+        raise NotImplementedError
+
+    @classmethod
+    def load(cls, location, traverse_yield_all=False, use_manifest=True):
+        "Class method to load a zipfile."
+        from ..sbt_storage import ZipStorage
+
+        # we can only load from existing zipfiles in this method.
+        if not os.path.exists(location):
+            raise FileNotFoundError(location)
+
+        storage = ZipStorage(location)
+        return cls(storage, traverse_yield_all=traverse_yield_all,
+                   use_manifest=use_manifest)
+
+    def _signatures_with_internal(self):
+        """Return an iterator of tuples (ss, internal_location).
+
+        Note: does not limit signatures to subsets.
+        """
+        # list all the files, without using the Storage interface; currently,
+        # 'Storage' does not provide a way to list all the files, so :shrug:.
+        for filename in self.storage._filenames():
+            # should we load this file? if it ends in .sig OR we are forcing:
+            if filename.endswith('.sig') or \
+               filename.endswith('.sig.gz') or \
+               self._traverse_yield_all:
+                sig_data = self.storage.load(filename)
+                for ss in load_signatures(sig_data):
+                    yield ss, filename
+
+    def signatures(self):
+        "Load all signatures in the zip file."
+        attached_refs = weakref.WeakKeyDictionary()
+        iterator = self._methodcall(lib.linearindex_signatures)
+
+        next_sig = rustcall(lib.signatures_iter_next, iterator)
+        while next_sig != ffi.NULL:
+            attached_refs[next_sig] = iterator
+            yield SourmashSignature._from_objptr(next_sig)
+            next_sig = rustcall(lib.signatures_iter_next, iterator)
+
+    def select(self, **kwargs: Unpack[Selection]):
+        "Select signatures in zip file based on ksize/moltype/etc."
+
+        selection = _selection_as_rust(kwargs)
+
+        # select consumes the current index
+        ptr = self._take_objptr()
+        ptr = rustcall(lib.linearindex_select, ptr, selection)
+
+        return RustLinearIndex._from_objptr(ptr)

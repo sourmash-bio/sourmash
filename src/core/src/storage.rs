@@ -24,10 +24,10 @@ pub trait Storage {
 }
 
 #[derive(Clone)]
-pub struct InnerStorage(Arc<Mutex<dyn Storage>>);
+pub struct InnerStorage(Arc<Mutex<dyn Storage + Send + Sync + 'static>>);
 
 impl InnerStorage {
-    pub fn new(inner: impl Storage + 'static) -> InnerStorage {
+    pub fn new(inner: impl Storage + Send + Sync + 'static) -> InnerStorage {
         InnerStorage(Arc::new(Mutex::new(inner)))
     }
 }

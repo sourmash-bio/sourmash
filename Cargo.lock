@@ -1383,6 +1383,7 @@ dependencies = [
  "cfg-if",
  "counter",
  "criterion",
+ "csv",
  "finch",
  "fixedbitset",
  "flume",
