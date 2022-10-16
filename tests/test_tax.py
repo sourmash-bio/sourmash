@@ -5,6 +5,7 @@ import os
 import csv
 import pytest
 import gzip
+from collections import Counter
 
 import sourmash
 import sourmash_tst_utils as utils
@@ -13,6 +14,7 @@ from sourmash_tst_utils import SourmashCommandFailed
 
 from sourmash import sqlite_utils
 from sourmash.exceptions import IndexNotSupported
+from sourmash import sourmash_args
 
 ## command line tests
 def test_run_sourmash_tax():
@@ -2902,3 +2904,84 @@ def test_tax_grep_duplicate_csv(runtmp):
     assert 'GCF_000017325.1' in names
     assert 'GCF_000021665.1' in names
     assert 'GCF_001881345.1' in names
+
+
+def test_tax_summarize(runtmp):
+    # test basic operation
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'summarize', taxfile)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert "num idents: 6" in out
+    assert "rank superkingdom:        1 distinct identifiers" in out
+    assert "rank phylum:              2 distinct identifiers" in out
+    assert "rank class:               2 distinct identifiers" in out
+    assert "rank order:               2 distinct identifiers" in out
+    assert "rank family:              3 distinct identifiers" in out
+    assert "rank genus:               4 distinct identifiers" in out
+    assert "rank species:             4 distinct identifiers" in out
+
+
+def test_tax_summarize_csv(runtmp):
+    # test basic operation w/csv output
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'summarize', taxfile, '-o', 'ranks.csv')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert "num idents: 6" in out
+    assert "saved 18 lineage counts to 'ranks.csv'" in err
+
+    csv_out = runtmp.output('ranks.csv')
+
+    with sourmash_args.FileInputCSV(csv_out) as r:
+        # count number across ranks as a cheap consistency check
+        c = Counter()
+        for row in r:
+            val = row['count']
+            c[val] += 1
+
+        assert c['3'] == 7
+        assert c['2'] == 5
+        assert c['1'] == 5
+
+
+def test_summarize_on_annotate(runtmp):
+    # test summarize on output of annotate basics
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csvout = runtmp.output("test1.gather.with-lineages.csv")
+    out_dir = os.path.dirname(csvout)
+
+    runtmp.run_sourmash('tax', 'annotate', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', out_dir)
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    # so far so good - now see if we can run summarize!
+
+    runtmp.run_sourmash('tax', 'summarize', csvout)
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(out)
+    print(err)
+
+    assert "num idents: 4" in out
+    assert "rank superkingdom:        1 distinct identifiers" in out
+    assert "rank phylum:              2 distinct identifiers" in out
+    assert "rank class:               2 distinct identifiers" in out
+    assert "rank order:               2 distinct identifiers" in out
+    assert "rank family:              2 distinct identifiers" in out
+    assert "rank genus:               3 distinct identifiers" in out
+    assert "rank species:             3 distinct identifiers" in out
+
