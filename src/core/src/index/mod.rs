@@ -28,6 +28,9 @@ use crate::Error;
 pub struct Selection {
     ksize: Option<u32>,
     abund: Option<bool>,
+    num: Option<u32>,
+    scaled: Option<u32>,
+    containment: Option<bool>,
     moltype: Option<HashFunctions>,
 }
 
@@ -46,6 +49,30 @@ impl Selection {
 
     pub fn set_abund(&mut self, value: bool) {
         self.abund = Some(value);
+    }
+
+    pub fn num(&self) -> Option<u32> {
+        self.num
+    }
+
+    pub fn set_num(&mut self, num: u32) {
+        self.num = Some(num);
+    }
+
+    pub fn scaled(&self) -> Option<u32> {
+        self.scaled
+    }
+
+    pub fn set_scaled(&mut self, scaled: u32) {
+        self.scaled = Some(scaled);
+    }
+
+    pub fn containment(&self) -> Option<bool> {
+        self.containment
+    }
+
+    pub fn set_containment(&mut self, containment: bool) {
+        self.containment = Some(containment);
     }
 
     pub fn moltype(&self) -> Option<HashFunctions> {

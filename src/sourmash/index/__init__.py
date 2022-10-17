@@ -103,13 +103,13 @@ def _selection_as_rust(selection: Selection):
                 rustcall(lib.selection_set_moltype, ptr, hash_function)
 
             elif key == "num":
-                raise NotImplementedError("num")
+                rustcall(lib.selection_set_num, ptr, v)
 
             elif key == "scaled":
-                raise NotImplementedError("scaled")
+                rustcall(lib.selection_set_scaled, ptr, v)
 
             elif key ==  "containment":
-                raise NotImplementedError("containment")
+                rustcall(lib.selection_set_containment, ptr, v)
 
             elif key == "abund":
                 rustcall(lib.selection_set_abund, ptr, bool(v))

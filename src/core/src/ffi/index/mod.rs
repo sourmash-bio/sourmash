@@ -69,6 +69,57 @@ pub unsafe extern "C" fn selection_set_ksize(ptr: *mut SourmashSelection, new_ks
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn selection_num(ptr: *const SourmashSelection) -> u32 {
+    let sel = SourmashSelection::as_rust(ptr);
+    if let Some(num) = sel.num() {
+        num
+    } else {
+        todo!("empty num case not supported yet")
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn selection_set_num(ptr: *mut SourmashSelection, new_num: u32) {
+    let sel = SourmashSelection::as_rust_mut(ptr);
+    sel.set_num(new_num);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn selection_scaled(ptr: *const SourmashSelection) -> u32 {
+    let sel = SourmashSelection::as_rust(ptr);
+    if let Some(scaled) = sel.scaled() {
+        scaled
+    } else {
+        todo!("empty scaled case not supported yet")
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn selection_set_scaled(ptr: *mut SourmashSelection, new_scaled: u32) {
+    let sel = SourmashSelection::as_rust_mut(ptr);
+    sel.set_scaled(new_scaled);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn selection_containment(ptr: *const SourmashSelection) -> bool {
+    let sel = SourmashSelection::as_rust(ptr);
+    if let Some(containment) = sel.containment() {
+        containment
+    } else {
+        todo!("empty scaled case not supported yet")
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn selection_set_containment(
+    ptr: *mut SourmashSelection,
+    new_containment: bool,
+) {
+    let sel = SourmashSelection::as_rust_mut(ptr);
+    sel.set_containment(new_containment);
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn selection_abund(ptr: *const SourmashSelection) -> bool {
     let sel = SourmashSelection::as_rust(ptr);
     if let Some(abund) = sel.abund() {
