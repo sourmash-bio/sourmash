@@ -4141,6 +4141,36 @@ def test_gather_metagenome_output_unassigned(runtmp):
                 'NC_011294.1' in runtmp.last_result.out))
 
 
+def test_gather_metagenome_output_unassigned_as_zip(runtmp):
+    testdata_glob = utils.get_test_data('gather/GCF_000195995*g')
+    testdata_sigs = glob.glob(testdata_glob)[0]
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    runtmp.sourmash('gather', query_sig, testdata_sigs, '-k', '21', '--output-unassigned=unassigned.sig.zip')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'found 1 matches total' in runtmp.last_result.out
+    assert 'the recovered matches hit 33.2% of the query' in runtmp.last_result.out
+    assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
+                'NC_003198.1 Salmonella enterica subsp' in runtmp.last_result.out))
+
+    assert zipfile.is_zipfile(runtmp.output('unassigned.sig.zip'))
+
+    # now examine unassigned
+    testdata2_glob = utils.get_test_data('gather/GCF_000009505.1*.sig')
+    testdata2_sigs = glob.glob(testdata2_glob)[0]
+
+    runtmp.sourmash('gather', 'unassigned.sig.zip', testdata_sigs, testdata2_sigs, '-k', '21')
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+    assert all(('1.3 Mbp       13.6%   28.2%' in runtmp.last_result.out,
+                'NC_011294.1' in runtmp.last_result.out))
+
+
 def test_gather_metagenome_output_unassigned_none(runtmp):
     # test what happens when there's nothing unassigned to output
     testdata_glob = utils.get_test_data('gather/GCF_*.sig')
