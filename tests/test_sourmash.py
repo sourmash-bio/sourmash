@@ -5124,6 +5124,7 @@ def test_sbt_categorize_multiple_ksizes_moltypes(runtmp):
 
 
 def test_watch_check_num_bounds_negative(runtmp):
+    # check that watch properly outputs error on negative num
     c = runtmp
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
@@ -5138,6 +5139,7 @@ def test_watch_check_num_bounds_negative(runtmp):
 
 
 def test_watch_check_num_bounds_less_than_minimum(runtmp):
+    # check that watch properly outputs warnings on small num
     c = runtmp
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
@@ -5151,6 +5153,7 @@ def test_watch_check_num_bounds_less_than_minimum(runtmp):
 
 
 def test_watch_check_num_bounds_more_than_maximum(runtmp):
+    # check that watch properly outputs warnings on large num
     c = runtmp
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
@@ -5163,8 +5166,9 @@ def test_watch_check_num_bounds_more_than_maximum(runtmp):
     assert "WARNING: num value should be <= 50000. Continuing anyway." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_watch(c):
+def test_watch(runtmp):
+    # check basic watch functionality
+    c = runtmp
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     shutil.copyfile(testdata1, c.output('1.sig'))
@@ -5178,8 +5182,9 @@ def test_watch(c):
     assert 'FOUND: genome-s10, at 1.000' in c.last_result.out
 
 
-@utils.in_tempdir
-def test_watch_deduce_ksize(c):
+def test_watch_deduce_ksize(runtmp):
+    # check that watch guesses ksize automatically from database
+    c = runtmp
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     c.run_sourmash('sketch','dna','-p','k=29,num=500', '-o', '1.sig', testdata0)
 
@@ -5194,6 +5199,7 @@ def test_watch_deduce_ksize(c):
 
 
 def test_watch_coverage(runtmp):
+    # check output details/coverage of found
     testdata0 = utils.get_test_data('genome-s10.fa.gz')
     testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
     shutil.copyfile(testdata1, runtmp.output('1.sig'))
@@ -5213,6 +5219,37 @@ def test_watch_coverage(runtmp):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
     assert 'FOUND: genome-s10, at 1.000' in runtmp.last_result.out
+
+
+def test_watch_output_sig(runtmp):
+    # test watch --output
+    testdata0 = utils.get_test_data('genome-s10.fa.gz')
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    shutil.copyfile(testdata1, runtmp.output('1.sig'))
+
+    args = ['index', '--dna', '-k', '21', 'zzz', '1.sig']
+    runtmp.sourmash(*args)
+
+    with open(runtmp.output('query.fa'), 'wt') as fp:
+        record = list(screed.open(testdata0))[0]
+        for start in range(0, len(record), 100):
+            fp.write('>{}\n{}\n'.format(start,
+                                        record.sequence[start:start+500]))
+
+    args = ['watch', '--ksize', '21', '--dna', 'zzz', 'query.fa',
+            '-o', 'out.sig', '--name', 'xyzfoo']
+    runtmp.sourmash(*args)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    out_sig = runtmp.output('out.sig')
+    assert os.path.exists(out_sig)
+
+    siglist = list(sourmash.load_file_as_signatures(out_sig))
+    assert len(siglist) == 1
+    assert siglist[0].filename == 'stdin'
+    assert siglist[0].name == 'xyzfoo'
 
 
 def test_storage_convert(runtmp):
