@@ -2010,6 +2010,40 @@ def test_annotate_0(runtmp):
     assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in lin_gather_results[4]
 
 
+def test_annotate_gzipped_gather(runtmp):
+    # test annotate basics
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    # rewrite gather_csv as gzipped csv
+    gz_gather = runtmp.output('test1.gather.csv.gz')
+    with open(g_csv, 'rb') as f_in, gzip.open(gz_gather, 'wb') as f_out:
+        f_out.writelines(f_in)
+
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csvout = runtmp.output("test1.gather.with-lineages.csv")
+    out_dir = os.path.dirname(csvout)
+
+    c.run_sourmash('tax', 'annotate', '--gather-csv', gz_gather, '--taxonomy-csv', tax, '-o', out_dir)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    lin_gather_results = [x.rstrip() for x in open(csvout)]
+    print("\n".join(lin_gather_results))
+    assert f"saving 'annotate' output to '{csvout}'" in runtmp.last_result.err
+
+    assert "lineage" in lin_gather_results[0]
+    assert "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in lin_gather_results[1]
+    assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in lin_gather_results[2]
+    assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus" in lin_gather_results[3]
+    assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in lin_gather_results[4]
+
+
 def test_annotate_gather_argparse(runtmp):
     # test annotate with two gather CSVs, second one empty, and --force.
     # this tests argparse handling w/extend.
