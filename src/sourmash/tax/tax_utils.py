@@ -85,8 +85,7 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     return gather_csvs
 
 
-def load_gather_results(gather_csv, *, delimiter=',',
-                        essential_colnames=EssentialGatherColnames,
+def load_gather_results(gather_csv, *, essential_colnames=EssentialGatherColnames,
                         seen_queries=None, force=False):
     "Load a single gather csv"
     if not seen_queries:
@@ -94,8 +93,7 @@ def load_gather_results(gather_csv, *, delimiter=',',
     header = []
     gather_results = []
     gather_queries = set()
-    with open(gather_csv, 'rt') as fp:
-        r = csv.DictReader(fp, delimiter=delimiter)
+    with sourmash_args.FileInputCSV(gather_csv) as r:
         header = r.fieldnames
         # check for empty file
         if not header:

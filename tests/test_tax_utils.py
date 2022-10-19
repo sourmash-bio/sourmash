@@ -156,6 +156,17 @@ def test_load_gather_results():
     assert len(gather_results) == 4
 
 
+def test_load_gather_results_gzipped(runtmp):
+    gather_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    # rewrite gather_csv as gzipped csv
+    gz_gather = runtmp.output('g.csv.gz')
+    with open(gather_csv, 'rb') as f_in, gzip.open(gz_gather, 'wb') as f_out:
+        f_out.writelines(f_in)
+    gather_results, header, seen_queries = load_gather_results(gz_gather)
+    assert len(gather_results) == 4
+
+
 def test_load_gather_results_bad_header(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
