@@ -258,10 +258,10 @@ class SignaturePicklist:
 
         ptr = lib.picklist_new()
 
-        rustcall(lib.picklist_set_coltype, ptr, self.coltype)
-        rustcall(lib.picklist_set_pickfile, ptr, self.pickfile)
-        rustcall(lib.picklist_set_column_name, ptr, self.column_name)
-        rustcall(lib.picklist_set_pickstyle, ptr, self.pickstyle)
+        rustcall(lib.picklist_set_coltype, ptr, self.coltype.encode('utf-8'), len(self.coltype))
+        rustcall(lib.picklist_set_pickfile, ptr, self.pickfile.encode('utf-8'), len(self.pickfile))
+        rustcall(lib.picklist_set_column_name, ptr, self.column_name.encode('utf-8'), len(self.column_name))
+        rustcall(lib.picklist_set_pickstyle, ptr, self.pickstyle.value)
 
         #self.preprocess_fn = preprocess[coltype]
         #self.pickset = None

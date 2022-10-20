@@ -1,7 +1,7 @@
 use std::os::raw::c_char;
 use std::slice;
 
-use crate::picklist::Picklist;
+use crate::picklist::{PickStyle, Picklist};
 
 use crate::ffi::utils::ForeignObject;
 
@@ -70,6 +70,19 @@ unsafe fn picklist_set_column_name(
     };
     let pl = SourmashPicklist::as_rust_mut(ptr);
     pl.set_column_name(prop.to_string());
+
+    Ok(())
+}
+}
+
+ffi_fn! {
+unsafe fn picklist_set_pickstyle(
+    ptr: *mut SourmashPicklist,
+    pickstyle: PickStyle,
+) -> Result<()> {
+    let pl = SourmashPicklist::as_rust_mut(ptr);
+
+    pl.set_pickstyle(pickstyle);
 
     Ok(())
 }

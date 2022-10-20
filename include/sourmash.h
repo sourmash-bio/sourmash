@@ -16,6 +16,12 @@ enum HashFunctions {
 };
 typedef uint32_t HashFunctions;
 
+enum PickStyle {
+  PICK_STYLE_INCLUDE = 1,
+  PICK_STYLE_EXCLUDE = 2,
+};
+typedef uint32_t PickStyle;
+
 enum SourmashErrorCode {
   SOURMASH_ERROR_CODE_NO_ERROR = 0,
   SOURMASH_ERROR_CODE_PANIC = 1,
@@ -371,6 +377,8 @@ void picklist_set_column_name(SourmashPicklist *ptr, const char *prop_ptr, uintp
 
 void picklist_set_pickfile(SourmashPicklist *ptr, const char *prop_ptr, uintptr_t insize);
 
+void picklist_set_pickstyle(SourmashPicklist *ptr, PickStyle pickstyle);
+
 void revindex_free(SourmashRevIndex *ptr);
 
 const SourmashSearchResult *const *revindex_gather(const SourmashRevIndex *ptr,
@@ -428,6 +436,8 @@ SourmashSelection *selection_new(void);
 
 uint32_t selection_num(const SourmashSelection *ptr);
 
+const SourmashPicklist *selection_picklist(const SourmashSelection *ptr);
+
 uint32_t selection_scaled(const SourmashSelection *ptr);
 
 void selection_set_abund(SourmashSelection *ptr, bool new_abund);
@@ -439,6 +449,8 @@ void selection_set_ksize(SourmashSelection *ptr, uint32_t new_ksize);
 void selection_set_moltype(SourmashSelection *ptr, HashFunctions new_moltype);
 
 void selection_set_num(SourmashSelection *ptr, uint32_t new_num);
+
+void selection_set_picklist(SourmashSelection *ptr, SourmashPicklist *new_picklist);
 
 void selection_set_scaled(SourmashSelection *ptr, uint32_t new_scaled);
 

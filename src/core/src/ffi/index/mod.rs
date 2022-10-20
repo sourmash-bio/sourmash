@@ -5,6 +5,7 @@ use crate::index::{Selection, SigStore};
 
 use crate::signature::Signature;
 
+use crate::ffi::picklist::SourmashPicklist;
 use crate::ffi::signature::SourmashSignature;
 use crate::ffi::utils::{ForeignObject, SourmashStr};
 
@@ -152,6 +153,28 @@ pub unsafe extern "C" fn selection_set_moltype(
 ) {
     let sel = SourmashSelection::as_rust_mut(ptr);
     sel.set_moltype(new_moltype);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn selection_picklist(
+    ptr: *const SourmashSelection,
+) -> *const SourmashPicklist {
+    let sel = SourmashSelection::as_rust(ptr);
+    if let Some(picklist) = sel.picklist() {
+        SourmashPicklist::from_rust(picklist)
+    } else {
+        todo!("empty picklist case not supported yet")
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn selection_set_picklist(
+    ptr: *mut SourmashSelection,
+    new_picklist: *mut SourmashPicklist,
+) {
+    let sel = SourmashSelection::as_rust_mut(ptr);
+    let pick = SourmashPicklist::into_rust(new_picklist);
+    sel.set_picklist(*pick);
 }
 
 //================================================================

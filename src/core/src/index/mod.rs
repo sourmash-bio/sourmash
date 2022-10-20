@@ -18,6 +18,7 @@ use typed_builder::TypedBuilder;
 use crate::encodings::HashFunctions;
 use crate::errors::ReadDataError;
 use crate::index::search::{search_minhashes, search_minhashes_containment};
+use crate::picklist::Picklist;
 use crate::prelude::*;
 use crate::signature::SigsTrait;
 use crate::sketch::Sketch;
@@ -32,6 +33,7 @@ pub struct Selection {
     scaled: Option<u32>,
     containment: Option<bool>,
     moltype: Option<HashFunctions>,
+    picklist: Option<Picklist>,
 }
 
 impl Selection {
@@ -81,6 +83,14 @@ impl Selection {
 
     pub fn set_moltype(&mut self, value: HashFunctions) {
         self.moltype = Some(value);
+    }
+
+    pub fn picklist(&self) -> Option<Picklist> {
+        self.picklist.clone()
+    }
+
+    pub fn set_picklist(&mut self, value: Picklist) {
+        self.picklist = Some(value);
     }
 }
 
