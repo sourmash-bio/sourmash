@@ -363,8 +363,8 @@ def import_csv(args):
             notify(f'loaded signature: {name} {s.md5sum()[:8]}')
 
         notify(f'saving {len(siglist)} signatures to JSON')
-        with FileOutput(args.output, 'wt') as outfp:
-            sig.save_signatures(siglist, outfp)
+        with SaveSignaturesToLocation(args.output) as save_sig:
+            save_sig.add_many(siglist)
 
 
 def sbt_combine(args):
@@ -902,8 +902,8 @@ def gather(args):
                 abund_query_mh = remaining_query.minhash.inflate(orig_query_mh)
                 remaining_query.minhash = abund_query_mh
 
-            with FileOutput(args.output_unassigned, 'wt') as fp:
-                sig.save_signatures([ remaining_query ], fp)
+            with SaveSignaturesToLocation(args.output_unassigned) as save_sig:
+                save_sig.add(remaining_query)
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
@@ -1077,10 +1077,9 @@ def multigather(args):
                     result.write(w)
 
             output_matches = output_base + '.matches.sig'
-            with open(output_matches, 'wt') as fp:
-                outname = output_matches
-                notify(f'saving all matching signatures to "{outname}"')
-                sig.save_signatures([ r.match for r in found ], fp)
+            with SaveSignaturesToLocation(output_matches) as save_sig:
+                notify(f"saving all matching signatures to '{output_matches}'")
+                save_sig.add_many([ r.match for r in found ])
 
             output_unassigned = output_base + '.unassigned.sig'
             with open(output_unassigned, 'wt') as fp:
@@ -1101,8 +1100,9 @@ def multigather(args):
                 else:
                     notify(f'saving unassigned hashes to "{output_unassigned}"')
 
+                with SaveSignaturesToLocation(output_unassigned) as save_sig:
                     # CTB: note, multigather does not save abundances
-                    sig.save_signatures([ remaining_query ], fp)
+                    save_sig.add(remaining_query)
             n += 1
 
         # fini, next query!
@@ -1199,11 +1199,10 @@ def watch(args):
                similarity)
 
     if args.output:
-        notify(f'saving signature to {args.output}')
-        with FileOutput(args.output, 'wt') as fp:
-            streamsig = sig.SourmashSignature(E, filename='stdin',
-                                              name=args.name)
-        sig.save_signatures([streamsig], fp)
+        notify(f"saving signature to '{args.output}'")
+        streamsig = sig.SourmashSignature(E, filename='stdin', name=args.name)
+        with SaveSignaturesToLocation(args.output) as save_sig:
+            save_sig.add(streamsig)
 
 
 def migrate(args):
@@ -1392,8 +1391,8 @@ def prefetch(args):
             ident_mh = ident_mh.inflate(orig_query_mh)
 
         ss = sig.SourmashSignature(ident_mh, name=sig_name)
-        with open(filename, "wt") as fp:
-            sig.save_signatures([ss], fp)
+        with SaveSignaturesToLocation(filename) as save_sig:
+            save_sig.add(ss)
 
     if args.save_unmatched_hashes:
         filename = args.save_unmatched_hashes
@@ -1409,8 +1408,8 @@ def prefetch(args):
             noident_mh = noident_mh.inflate(orig_query_mh)
 
         ss = sig.SourmashSignature(noident_mh, name=sig_name)
-        with open(filename, "wt") as fp:
-            sig.save_signatures([ss], fp)
+        with SaveSignaturesToLocation(filename) as save_sig:
+            save_sig.add(ss)
 
     if picklist:
         sourmash_args.report_picklist(args, picklist)
