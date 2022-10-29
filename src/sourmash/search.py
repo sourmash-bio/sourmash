@@ -783,12 +783,11 @@ class GatherDatabases:
         new_query_mh.remove_many(found_mh)
         new_query = SourmashSignature(new_query_mh)
 
-        # compute weighted_missed for remaining query hashes
+        # compute weighted information for remaining query hashes
         query_hashes = set(query_mh.hashes) - set(found_mh.hashes)
         n_weighted_missed = sum((orig_query_abunds[k] for k in query_hashes))
         n_weighted_missed += self.noident_query_sum_abunds
         sum_weighted_found = sum_abunds - n_weighted_missed
-        weighted_missed = n_weighted_missed / sum_abunds
 
         # build a GatherResult
         result = GatherResult(self.orig_query, best_match,
@@ -809,7 +808,7 @@ class GatherDatabases:
         self.query = new_query
         self.orig_query_mh = orig_query_mh
 
-        return result, weighted_missed
+        return result
 
 
 ###

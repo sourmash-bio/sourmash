@@ -31,7 +31,7 @@ def subparser(subparsers):
         '--md5', default=None,
         help='select the signature with this md5 as query'
     )
-    add_ksize_arg(subparser, 31)
+    add_ksize_arg(subparser)
     add_moltype_args(subparser)
 
 

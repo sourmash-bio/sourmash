@@ -85,8 +85,7 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     return gather_csvs
 
 
-def load_gather_results(gather_csv, *, delimiter=',',
-                        essential_colnames=EssentialGatherColnames,
+def load_gather_results(gather_csv, *, essential_colnames=EssentialGatherColnames,
                         seen_queries=None, force=False):
     "Load a single gather csv"
     if not seen_queries:
@@ -94,8 +93,7 @@ def load_gather_results(gather_csv, *, delimiter=',',
     header = []
     gather_results = []
     gather_queries = set()
-    with open(gather_csv, 'rt') as fp:
-        r = csv.DictReader(fp, delimiter=delimiter)
+    with sourmash_args.FileInputCSV(gather_csv) as r:
         header = r.fieldnames
         # check for empty file
         if not header:
@@ -496,11 +494,14 @@ def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
                     unclassified_written=True
             else:
                 rank_sciname = res.lineage[-1].name
-            kresD = {"rank_code": rcode, "ncbi_taxid": "", "sci_name": rank_sciname,  "num_bp_assigned": ""}
+            kresD = {"rank_code": rcode, "ncbi_taxid": "", "sci_name": rank_sciname,  "num_bp_assigned": 0}
             # total percent containment, weighted to include abundance info
-            kresD['percent_containment'] = f'{res.f_weighted_at_rank:.2f}'
+            proportion = res.f_weighted_at_rank * 100
+            kresD['percent_containment'] = f'{proportion:.2f}'
             # weighted bp
             kresD["num_bp_contained"] = int(res.f_weighted_at_rank * res.total_weighted_hashes)
+            if rank == 'species' or rank_sciname == "unclassified":
+                kresD["num_bp_assigned"] = kresD["num_bp_contained"]
             w.writerow(kresD)
 
 

@@ -54,7 +54,7 @@ def subparser(subparsers):
         '-f', '--force', action='store_true',
         help='try to load all files as signatures'
     )
-    add_ksize_arg(subparser, 31)
+    add_ksize_arg(subparser)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
     add_num_arg(subparser, 0)

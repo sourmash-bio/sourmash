@@ -184,22 +184,22 @@ def test_metagenome_kreport_out(runtmp):
     kreport_results = [x.rstrip().split('\t') for x in open(csvout)]
     assert f"saving 'kreport' output to '{csvout}'" in runtmp.last_result.err
     print(kreport_results)
-    assert ['0.13', '1605999', '', 'D', '', 'd__Bacteria'] == kreport_results[0]
-    assert ['0.87', '10672000', '', 'U', '', 'unclassified'] == kreport_results[1]
-    assert ['0.07', '892000', '', 'P', '', 'p__Bacteroidota'] == kreport_results[2]
-    assert ['0.06', '714000', '', 'P', '', 'p__Proteobacteria'] == kreport_results[3]
-    assert ['0.07', '892000', '', 'C', '', 'c__Bacteroidia'] == kreport_results[4]
-    assert ['0.06', '714000', '', 'C', '', 'c__Gammaproteobacteria'] == kreport_results[5]
-    assert ['0.07', '892000', '', 'O', '', 'o__Bacteroidales'] == kreport_results[6]
-    assert ['0.06', '714000', '', 'O', '', 'o__Enterobacterales'] == kreport_results[7]
-    assert ['0.07', '892000', '', 'F', '', 'f__Bacteroidaceae'] == kreport_results[8]
-    assert ['0.06', '714000', '', 'F', '', 'f__Enterobacteriaceae'] == kreport_results[9]
-    assert ['0.06', '700000', '', 'G', '', 'g__Prevotella']  == kreport_results[10]
-    assert ['0.06', '714000', '', 'G', '', 'g__Escherichia'] == kreport_results[11]
-    assert ['0.02', '192000', '', 'G', '', 'g__Phocaeicola'] == kreport_results[12]
-    assert ['0.06', '700000', '', 'S', '', 's__Prevotella copri'] == kreport_results[13]
-    assert ['0.06', '714000', '', 'S', '', 's__Escherichia coli']== kreport_results[14]
-    assert ['0.02', '192000', '', 'S', '', 's__Phocaeicola vulgatus'] == kreport_results[15]
+    assert ['13.08', '1605999', '0', 'D', '', 'd__Bacteria'] == kreport_results[0]
+    assert ['86.92', '10672000', '10672000', 'U', '', 'unclassified'] == kreport_results[1]
+    assert ['7.27', '892000', '0', 'P', '', 'p__Bacteroidota'] == kreport_results[2]
+    assert ['5.82', '714000', '0', 'P', '', 'p__Proteobacteria'] == kreport_results[3]
+    assert ['7.27', '892000', '0', 'C', '', 'c__Bacteroidia'] == kreport_results[4]
+    assert ['5.82', '714000', '0', 'C', '', 'c__Gammaproteobacteria'] == kreport_results[5]
+    assert ['7.27', '892000', '0', 'O', '', 'o__Bacteroidales'] == kreport_results[6]
+    assert ['5.82', '714000', '0', 'O', '', 'o__Enterobacterales'] == kreport_results[7]
+    assert ['7.27', '892000', '0', 'F', '', 'f__Bacteroidaceae'] == kreport_results[8]
+    assert ['5.82', '714000', '0', 'F', '', 'f__Enterobacteriaceae'] == kreport_results[9]
+    assert ['5.70', '700000', '0', 'G', '', 'g__Prevotella']  == kreport_results[10]
+    assert ['5.82', '714000', '0', 'G', '', 'g__Escherichia'] == kreport_results[11]
+    assert ['1.56', '192000', '0', 'G', '', 'g__Phocaeicola'] == kreport_results[12]
+    assert ['5.70', '700000', '700000', 'S', '', 's__Prevotella copri'] == kreport_results[13]
+    assert ['5.82', '714000', '714000', 'S', '', 's__Escherichia coli']== kreport_results[14]
+    assert ['1.56', '192000', '192000', 'S', '', 's__Phocaeicola vulgatus'] == kreport_results[15]
 
 
 def test_metagenome_kreport_out_lemonade(runtmp):
@@ -223,14 +223,14 @@ def test_metagenome_kreport_out_lemonade(runtmp):
     kreport_results = [x.rstrip().split('\t') for x in open(csvout)]
     assert f"saving 'kreport' output to '{csvout}'" in runtmp.last_result.err
     print(kreport_results)
-    assert ['0.05', '116000', '', 'D', '', 'd__Bacteria'] == kreport_results[0]
-    assert ['0.95', '2054000', '', 'U', '', 'unclassified'] == kreport_results[1]
-    assert ['0.05', '116000', '', 'P', '', 'p__Bacteroidota'] == kreport_results[2]
-    assert ['0.05', '116000', '', 'C', '', 'c__Chlorobia'] == kreport_results[3]
-    assert ['0.05', '116000', '', 'O', '', 'o__Chlorobiales'] == kreport_results[4]
-    assert ['0.05', '116000', '', 'F', '', 'f__Chlorobiaceae'] == kreport_results[5]
-    assert ['0.05', '116000', '', 'G', '', 'g__Prosthecochloris'] == kreport_results[6]
-    assert ['0.05', '116000', '', 'S', '', 's__Prosthecochloris vibrioformis'] == kreport_results[7]
+    assert ['5.35', '116000', '0', 'D', '', 'd__Bacteria'] == kreport_results[0]
+    assert ['94.65', '2054000', '2054000', 'U', '', 'unclassified'] == kreport_results[1]
+    assert ['5.35', '116000', '0', 'P', '', 'p__Bacteroidota'] == kreport_results[2]
+    assert ['5.35', '116000', '0', 'C', '', 'c__Chlorobia'] == kreport_results[3]
+    assert ['5.35', '116000', '0', 'O', '', 'o__Chlorobiales'] == kreport_results[4]
+    assert ['5.35', '116000', '0', 'F', '', 'f__Chlorobiaceae'] == kreport_results[5]
+    assert ['5.35', '116000', '0', 'G', '', 'g__Prosthecochloris'] == kreport_results[6]
+    assert ['5.35', '116000', '116000', 'S', '', 's__Prosthecochloris vibrioformis'] == kreport_results[7]
 
 
 def test_metagenome_kreport_out_fail(runtmp):
@@ -1991,6 +1991,40 @@ def test_annotate_0(runtmp):
     out_dir = os.path.dirname(csvout)
 
     c.run_sourmash('tax', 'annotate', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', out_dir)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    lin_gather_results = [x.rstrip() for x in open(csvout)]
+    print("\n".join(lin_gather_results))
+    assert f"saving 'annotate' output to '{csvout}'" in runtmp.last_result.err
+
+    assert "lineage" in lin_gather_results[0]
+    assert "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in lin_gather_results[1]
+    assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in lin_gather_results[2]
+    assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus" in lin_gather_results[3]
+    assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in lin_gather_results[4]
+
+
+def test_annotate_gzipped_gather(runtmp):
+    # test annotate basics
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    # rewrite gather_csv as gzipped csv
+    gz_gather = runtmp.output('test1.gather.csv.gz')
+    with open(g_csv, 'rb') as f_in, gzip.open(gz_gather, 'wb') as f_out:
+        f_out.writelines(f_in)
+
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csvout = runtmp.output("test1.gather.with-lineages.csv")
+    out_dir = os.path.dirname(csvout)
+
+    c.run_sourmash('tax', 'annotate', '--gather-csv', gz_gather, '--taxonomy-csv', tax, '-o', out_dir)
 
     print(c.last_result.status)
     print(c.last_result.out)
