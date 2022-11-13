@@ -2959,6 +2959,18 @@ def test_tax_summarize(runtmp):
     assert "rank species:             4 distinct identifiers" in out
 
 
+def test_tax_summarize_empty(runtmp):
+    # test failure on empty file
+    taxfile = runtmp.output('no-exist')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('tax', 'summarize', taxfile)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+    assert "ERROR while loading taxonomies" in err
+
+
 def test_tax_summarize_csv(runtmp):
     # test basic operation w/csv output
     taxfile = utils.get_test_data('tax/test.taxonomy.csv')
@@ -2977,7 +2989,7 @@ def test_tax_summarize_csv(runtmp):
         # count number across ranks as a cheap consistency check
         c = Counter()
         for row in r:
-            val = row['count']
+            val = row['lineage_count']
             c[val] += 1
 
         assert c['3'] == 7

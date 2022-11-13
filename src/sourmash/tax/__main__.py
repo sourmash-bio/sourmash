@@ -465,6 +465,7 @@ def summarize(args):
                 name_seen.add(name)
 
             if 0:
+                # @CTB
                 # check duplicates?
                 sofar.append(name)
                 tup = tuple(sofar)
@@ -490,7 +491,7 @@ def summarize(args):
 
         with FileOutputCSV(args.output_lineage_information) as fp:
             w = csv.writer(fp)
-            w.writerow(['rank', 'count', 'lineage'])
+            w.writerow(['rank', 'lineage_count', 'lineage'])
 
             # output in order of most common
             for lineage, count in lineage_counts.most_common():

@@ -9,8 +9,8 @@ or lineage files (produced by 'tax annotate'), combines them,
 and produces a human readable summary.
 
 Please see the 'tax summarize' documentation for more details:
-  https://sourmash.readthedocs.io/en/latest/command-line.html#sourmash-tax-summarize
-@CTB check URL :)
+  https://sourmash.readthedocs.io/en/latest/command-line.html#command-line.html#sourmash-tax-summarize-print-summary-information-for-lineage-spreadsheets-or-taxonomy-databases
+
 """
 
 import sourmash
