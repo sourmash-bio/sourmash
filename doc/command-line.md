@@ -92,6 +92,7 @@ information; these are grouped under the `sourmash tax` and
 * `tax genome`     - summarize single-genome gather results and report most likely classification.
 * `tax annotate`   - annotate gather results with lineage information (no summarization or classification).
 * `tax grep` - subset taxonomies and create picklists based on taxonomy string matches.
+* `tax summarize` - print summary information (counts of lineages) for a taxonomy lineages file or database.
 
 `sourmash lca` commands:
 
@@ -911,6 +912,12 @@ _not_ match the pattern.
 
 Currently only CSV output (optionally gzipped) is supported; use `sourmash tax prepare` to
 convert CSV output from `tax grep` into a sqlite3 taxonomy database.
+
+### `sourmash tax summarize` - print summary information for lineage spreadsheets or taxonomy databases
+
+(`sourmash tax summarize` is a new command as of sourmash v4.5.0.) @CTB
+
+@CTB
 
 ## `sourmash lca` subcommands for in-memory taxonomy integration
 
