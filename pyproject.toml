@@ -100,8 +100,8 @@ license = { text = "BSD 3-Clause License" }
 
 [project.optional-dependencies]
 test = [
-  "pytest>=6.2.4,<7.2.0",
-  "pytest-cov>=2.12,<4.0",
+  "pytest>=6.2.4,<7.3.0",
+  "pytest-cov>=2.12,<5.0",
   "pytest-xdist",
   "pyyaml>=6,<7",
   "recommonmark",
@@ -114,13 +114,13 @@ demo = [
 ]
 doc = [
   "sphinx>=4.4.0,<6",
-  "myst-parser==0.18.0",
+  "myst-parser==0.18.1",
   "Jinja2==3.1.2",
   "alabaster",
   "sphinxcontrib-napoleon",
   "nbsphinx",
   "ipython",
-  "docutils>=0.17.1,<0.18",
+  "docutils>=0.17.1,<0.20",
 ]
 storage = [
   "ipfshttpclient>=0.4.13",
