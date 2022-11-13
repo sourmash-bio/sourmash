@@ -765,12 +765,9 @@ class LineageDB(abc.Mapping):
                     ident = row[identifier]
 
                     # fold, spindle, and mutilate ident?
-                    # @CTB: replace with get_ident?
-                    if not keep_full_identifiers:
-                        ident = ident.split(' ')[0]
-
-                        if not keep_identifier_versions:
-                            ident = ident.split('.')[0]
+                    ident = get_ident(ident,
+                                      keep_full_identifiers=keep_full_identifiers,
+                                      keep_identifier_versions=keep_identifier_versions)
 
                     # clean lineage of null names, replace with 'unassigned'
                     lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
