@@ -141,6 +141,7 @@ def test_check_and_load_gather_lineage_csvs_empty(runtmp):
 
 
 def test_check_and_load_gather_lineage_csvs_bad_header(runtmp):
+    # test on file with wrong headers
     g_res = runtmp.output('empty.gather-tax.csv')
     with open(g_res, 'w', newline="") as fp:
         fp.write("x,y,z")
@@ -151,6 +152,7 @@ def test_check_and_load_gather_lineage_csvs_bad_header(runtmp):
 
 
 def test_check_and_load_gather_lineage_csvs_dne(runtmp):
+    # test loading with-lineage file that does not exist
     g_res = runtmp.output('empty.gather-tax.csv')
 
     with pytest.raises(ValueError) as exc:
@@ -159,6 +161,7 @@ def test_check_and_load_gather_lineage_csvs_dne(runtmp):
 
 
 def test_check_and_load_gather_lineage_csvs_isdir(runtmp):
+    # test loading a with-lineage file that is actually a directory
     g_res = runtmp.output('empty.gather-tax.csv')
     os.mkdir(g_res)
 

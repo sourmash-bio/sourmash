@@ -3064,3 +3064,71 @@ def test_summarize_on_annotate(runtmp):
     assert "rank genus:               3 distinct identifiers" in out
     assert "rank species:             3 distinct identifiers" in out
 
+
+def test_tax_summarize_strain_csv(runtmp):
+    # test basic operation w/csv output on taxonomy with strains
+    taxfile = utils.get_test_data('tax/test-strain.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'summarize', taxfile, '-o', 'ranks.csv')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert "num idents: 6" in out
+    assert "saved 24 lineage counts to 'ranks.csv'" in err
+
+    csv_out = runtmp.output('ranks.csv')
+
+    with sourmash_args.FileInputCSV(csv_out) as r:
+        # count number across ranks as a cheap consistency check
+        c = Counter()
+        for row in r:
+            print(row)
+            val = row['lineage_count']
+            c[val] += 1
+
+        print(list(c.most_common()))
+
+        assert c['3'] == 7
+        assert c['2'] == 5
+        assert c['6'] == 1
+        assert c['1'] == 11
+
+
+def test_tax_summarize_strain_csv_with_lineages(runtmp):
+    # test basic operation w/csv output
+    taxfile = utils.get_test_data('tax/test-strain.taxonomy.csv')
+    lineage_csv = runtmp.output('lin-with-strains.csv')
+
+    taxdb = tax_utils.LineageDB.load(taxfile)
+    with open(lineage_csv, 'w', newline="") as fp:
+        w = csv.writer(fp)
+        w.writerow(['name', 'lineage'])
+        for k, v in taxdb.items():
+            linstr = lca_utils.display_lineage(v)
+            w.writerow([k, linstr])
+
+    runtmp.sourmash('tax', 'summarize', lineage_csv, '-o', 'ranks.csv')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert "num idents: 6" in out
+    assert "saved 24 lineage counts to" in err
+
+    csv_out = runtmp.output('ranks.csv')
+
+    with sourmash_args.FileInputCSV(csv_out) as r:
+        # count number across ranks as a cheap consistency check
+        c = Counter()
+        for row in r:
+            print(row)
+            val = row['lineage_count']
+            c[val] += 1
+
+        print(list(c.most_common()))
+
+        assert c['3'] == 7
+        assert c['2'] == 5
+        assert c['6'] == 1
+        assert c['1'] == 11

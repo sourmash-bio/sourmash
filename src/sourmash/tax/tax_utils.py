@@ -850,7 +850,6 @@ class LineageDB(abc.Mapping):
                     if lineage[-1].rank == 'species':
                         n_species += 1
                     elif lineage[-1].rank == 'strain':
-                        assert 0 # @CTB
                         n_species += 1
                         n_strains += 1
 
