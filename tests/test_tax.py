@@ -10,6 +10,7 @@ from collections import Counter
 import sourmash
 import sourmash_tst_utils as utils
 from sourmash.tax import tax_utils
+from sourmash.lca import lca_utils
 from sourmash_tst_utils import SourmashCommandFailed
 
 from sourmash import sqlite_utils
@@ -1377,6 +1378,38 @@ def test_genome_rank_duplicated_taxonomy_fail(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', duplicated_csv,
                        '--rank', 'species')
+    assert "cannot read taxonomy assignments" in str(exc.value)
+    assert "multiple lineages for identifier GCF_001881345" in str(exc.value)
+
+
+def test_genome_rank_duplicated_taxonomy_fail_lineages(runtmp):
+    c = runtmp
+
+    # write temp taxonomy with duplicates => lineages-style file
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    taxdb = tax_utils.LineageDB.load(taxonomy_csv)
+
+    for k, v in taxdb.items():
+        print(k, v)
+
+    lineage_csv = runtmp.output('lin.csv')
+    with open(lineage_csv, 'w', newline="") as fp:
+        w = csv.writer(fp)
+        w.writerow(['name', 'lineage'])
+        for k, v in taxdb.items():
+            linstr = lca_utils.display_lineage(v)
+            w.writerow([k, linstr])
+
+            # duplicate each row, changing something (truncate species, here)
+            v = v[:-1]
+            linstr = lca_utils.display_lineage(v)
+            w.writerow([k, linstr])
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('tax', 'summarize', lineage_csv)
+        print(c.last_result.out)
+        print(c.last_result.err)
+
     assert "cannot read taxonomy assignments" in str(exc.value)
     assert "multiple lineages for identifier GCF_001881345" in str(exc.value)
 

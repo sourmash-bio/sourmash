@@ -826,28 +826,33 @@ class LineageDB(abc.Mapping):
 
             # now parse and load lineages
             for n, row in enumerate(r):
-                if row:
-                    num_rows += 1
+                # skip empty rows
+                if not row:
+                    continue
 
-                    name = row['name']
-                    ident = get_ident(name)
-                    lineage = row['lineage']
-                    lineage = lca_utils.make_lineage(lineage)
+                num_rows += 1
 
-                    # check duplicates
-                    if ident in assignments:
-                        if assignments[ident] != tuple(lineage):
-                            # @CTB what to do here...
-                            if not force:
-                                raise ValueError(f"multiple lineages for identifier {ident}")
-                    else:
-                        assignments[ident] = tuple(lineage)
+                name = row['name']
+                ident = get_ident(name)
+                lineage = row['lineage']
+                lineage = lca_utils.make_lineage(lineage)
 
-                        if lineage[-1].rank == 'species':
-                            n_species += 1
-                        elif lineage[-1].rank == 'strain':
-                            n_species += 1
-                            n_strains += 1
+                # check duplicates
+                if ident in assignments:
+                    if assignments[ident] != tuple(lineage):
+                        # this should not happen with valid
+                        # sourmash tax annotate output, but check anyway.
+                        if not force:
+                            raise ValueError(f"multiple lineages for identifier {ident}")
+                else:
+                    assignments[ident] = tuple(lineage)
+
+                    if lineage[-1].rank == 'species':
+                        n_species += 1
+                    elif lineage[-1].rank == 'strain':
+                        assert 0 # @CTB
+                        n_species += 1
+                        n_strains += 1
 
         return LineageDB(assignments, ranks)
 
