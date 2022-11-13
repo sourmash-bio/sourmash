@@ -1383,9 +1383,9 @@ def test_genome_rank_duplicated_taxonomy_fail(runtmp):
 
 
 def test_genome_rank_duplicated_taxonomy_fail_lineages(runtmp):
+    # write temp taxonomy with duplicates => lineages-style file
     c = runtmp
 
-    # write temp taxonomy with duplicates => lineages-style file
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     taxdb = tax_utils.LineageDB.load(taxonomy_csv)
 
@@ -1415,8 +1415,8 @@ def test_genome_rank_duplicated_taxonomy_fail_lineages(runtmp):
 
 
 def test_genome_rank_duplicated_taxonomy_force(runtmp):
-    c = runtmp
     # write temp taxonomy with duplicates
+    c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
     with open(duplicated_csv, 'w') as dup:
@@ -2974,8 +2974,27 @@ def test_tax_grep_duplicate_csv(runtmp):
 
 
 def test_tax_summarize(runtmp):
-    # test basic operation
+    # test basic operation with summarize
     taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'summarize', taxfile)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert "num idents: 6" in out
+    assert "rank superkingdom:        1 distinct identifiers" in out
+    assert "rank phylum:              2 distinct identifiers" in out
+    assert "rank class:               2 distinct identifiers" in out
+    assert "rank order:               2 distinct identifiers" in out
+    assert "rank family:              3 distinct identifiers" in out
+    assert "rank genus:               4 distinct identifiers" in out
+    assert "rank species:             4 distinct identifiers" in out
+
+
+def test_tax_summarize_empty_line(runtmp):
+    # test basic operation with summarize on a file w/empty line
+    taxfile = utils.get_test_data('tax/test-empty-line.taxonomy.csv')
 
     runtmp.sourmash('tax', 'summarize', taxfile)
 
@@ -3030,7 +3049,7 @@ def test_tax_summarize_csv(runtmp):
         assert c['1'] == 5
 
 
-def test_summarize_on_annotate(runtmp):
+def test_tax_summarize_on_annotate(runtmp):
     # test summarize on output of annotate basics
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
@@ -3096,7 +3115,7 @@ def test_tax_summarize_strain_csv(runtmp):
 
 
 def test_tax_summarize_strain_csv_with_lineages(runtmp):
-    # test basic operation w/csv output
+    # test basic operation w/csv output on lineages-style file w/strain csv
     taxfile = utils.get_test_data('tax/test-strain.taxonomy.csv')
     lineage_csv = runtmp.output('lin-with-strains.csv')
 

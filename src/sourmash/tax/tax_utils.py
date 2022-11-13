@@ -755,43 +755,42 @@ class LineageDB(abc.Mapping):
 
             # now parse and load lineages
             for n, row in enumerate(r):
-                if row:
-                    num_rows += 1
-                    lineage = []
-                    # read row into a lineage pair
-                    for rank in lca_utils.taxlist(include_strain=include_strain):
-                        lin = row[rank]
-                        lineage.append(LineagePair(rank, lin))
-                    ident = row[identifier]
+                num_rows += 1
+                lineage = []
+                # read row into a lineage pair
+                for rank in lca_utils.taxlist(include_strain=include_strain):
+                    lin = row[rank]
+                    lineage.append(LineagePair(rank, lin))
+                ident = row[identifier]
 
-                    # fold, spindle, and mutilate ident?
-                    ident = get_ident(ident,
-                                      keep_full_identifiers=keep_full_identifiers,
-                                      keep_identifier_versions=keep_identifier_versions)
+                # fold, spindle, and mutilate ident?
+                ident = get_ident(ident,
+                                  keep_full_identifiers=keep_full_identifiers,
+                                  keep_identifier_versions=keep_identifier_versions)
 
-                    # clean lineage of null names, replace with 'unassigned'
-                    lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
-                    lineage = [ LineagePair(a, b) for (a, b) in lineage ]
+                # clean lineage of null names, replace with 'unassigned'
+                lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
+                lineage = [ LineagePair(a, b) for (a, b) in lineage ]
 
-                    # remove end nulls
-                    while lineage and lineage[-1].name == 'unassigned':
-                        lineage = lineage[:-1]
+                # remove end nulls
+                while lineage and lineage[-1].name == 'unassigned':
+                    lineage = lineage[:-1]
 
-                    # store lineage tuple
-                    if lineage:
-                        # check duplicates
-                        if ident in assignments:
-                            if assignments[ident] != tuple(lineage):
-                                if not force:
-                                    raise ValueError(f"multiple lineages for identifier {ident}")
-                        else:
-                            assignments[ident] = tuple(lineage)
+                # store lineage tuple
+                if lineage:
+                    # check duplicates
+                    if ident in assignments:
+                        if assignments[ident] != tuple(lineage):
+                            if not force:
+                                raise ValueError(f"multiple lineages for identifier {ident}")
+                    else:
+                        assignments[ident] = tuple(lineage)
 
-                            if lineage[-1].rank == 'species':
-                                n_species += 1
-                            elif lineage[-1].rank == 'strain':
-                                n_species += 1
-                                n_strains += 1
+                        if lineage[-1].rank == 'species':
+                            n_species += 1
+                        elif lineage[-1].rank == 'strain':
+                            n_species += 1
+                            n_strains += 1
 
         return LineageDB(assignments, ranks)
 
@@ -826,10 +825,6 @@ class LineageDB(abc.Mapping):
 
             # now parse and load lineages
             for n, row in enumerate(r):
-                # skip empty rows
-                if not row:
-                    continue
-
                 num_rows += 1
 
                 name = row['name']

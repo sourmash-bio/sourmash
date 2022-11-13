@@ -33,7 +33,6 @@ def subparser(subparsers):
     subparser.add_argument(
         '-o', '--output-lineage-information',
         help='output a CSV file containing individual lineage counts',
-        # @CTB implement
     )
     subparser.add_argument(
         '--keep-full-identifiers', action='store_true',

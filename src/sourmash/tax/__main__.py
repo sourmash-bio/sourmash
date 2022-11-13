@@ -478,7 +478,6 @@ def summarize(args):
         rank_name_str = f"{rank}:"
         print_results(f"rank {rank_name_str:<20s} {count} distinct identifiers")
 
-
     if args.output_lineage_information:
         notify("now calculating detailed lineage counts...")
         lineage_counts = Counter()

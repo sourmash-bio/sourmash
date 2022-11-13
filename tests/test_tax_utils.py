@@ -131,6 +131,7 @@ def test_check_and_load_gather_csvs_with_empty_force(runtmp):
 
 
 def test_check_and_load_gather_lineage_csvs_empty(runtmp):
+    # try loading an empty annotated gather file
     g_res = runtmp.output('empty.gather-tax.csv')
     with open(g_res, 'w') as fp:
         fp.write("")
