@@ -453,8 +453,9 @@ def summarize(args):
 
     notify(f"...loaded {len(tax_assign)} entries.")
 
-    print_results(f"num idents: {len(tax_assign)}")
+    print_results(f"number of distinct taxonomic lineages: {len(tax_assign)}")
 
+    # count the number of distinct lineage names seen
     rank_counts = defaultdict(int)
     name_seen = set()
     for v in tax_assign.values():
@@ -464,19 +465,11 @@ def summarize(args):
                 rank_counts[rank] += 1
                 name_seen.add(name)
 
-            if 0:
-                # @CTB
-                # check duplicates?
-                sofar.append(name)
-                tup = tuple(sofar)
-                seen.add(tuple(sofar))
-        #break
-
     rank_count_items = list(rank_counts.items())
     rank_count_items.sort(key=lambda x: x[1])
     for rank, count in rank_count_items:
         rank_name_str = f"{rank}:"
-        print_results(f"rank {rank_name_str:<20s} {count} distinct identifiers")
+        print_results(f"rank {rank_name_str:<20s} {count} distinct taxonomic lineages")
 
     if args.output_lineage_information:
         notify("now calculating detailed lineage counts...")

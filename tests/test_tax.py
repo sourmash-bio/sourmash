@@ -2982,14 +2982,34 @@ def test_tax_summarize(runtmp):
     out = runtmp.last_result.out
     err = runtmp.last_result.err
 
-    assert "num idents: 6" in out
-    assert "rank superkingdom:        1 distinct identifiers" in out
-    assert "rank phylum:              2 distinct identifiers" in out
-    assert "rank class:               2 distinct identifiers" in out
-    assert "rank order:               2 distinct identifiers" in out
-    assert "rank family:              3 distinct identifiers" in out
-    assert "rank genus:               4 distinct identifiers" in out
-    assert "rank species:             4 distinct identifiers" in out
+    assert "number of distinct taxonomic lineages: 6" in out
+    assert "rank superkingdom:        1 distinct taxonomic lineages" in out
+    assert "rank phylum:              2 distinct taxonomic lineages" in out
+    assert "rank class:               2 distinct taxonomic lineages" in out
+    assert "rank order:               2 distinct taxonomic lineages" in out
+    assert "rank family:              3 distinct taxonomic lineages" in out
+    assert "rank genus:               4 distinct taxonomic lineages" in out
+    assert "rank species:             4 distinct taxonomic lineages" in out
+
+
+def test_tax_summarize_multiple(runtmp):
+    # test basic operation with summarize on multiple files
+    tax1 = utils.get_test_data('tax/bacteria_refseq_lineage.csv')
+    tax2 = utils.get_test_data('tax/protozoa_genbank_lineage.csv')
+
+    runtmp.sourmash('tax', 'summarize', tax1, tax2)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert "number of distinct taxonomic lineages: 6" in out
+    assert "rank superkingdom:        2 distinct taxonomic lineages" in out
+    assert "rank phylum:              3 distinct taxonomic lineages" in out
+    assert "rank class:               4 distinct taxonomic lineages" in out
+    assert "rank order:               4 distinct taxonomic lineages" in out
+    assert "rank family:              5 distinct taxonomic lineages" in out
+    assert "rank genus:               5 distinct taxonomic lineages" in out
+    assert "rank species:             5 distinct taxonomic lineages" in out
 
 
 def test_tax_summarize_empty_line(runtmp):
@@ -3001,14 +3021,14 @@ def test_tax_summarize_empty_line(runtmp):
     out = runtmp.last_result.out
     err = runtmp.last_result.err
 
-    assert "num idents: 6" in out
-    assert "rank superkingdom:        1 distinct identifiers" in out
-    assert "rank phylum:              2 distinct identifiers" in out
-    assert "rank class:               2 distinct identifiers" in out
-    assert "rank order:               2 distinct identifiers" in out
-    assert "rank family:              3 distinct identifiers" in out
-    assert "rank genus:               4 distinct identifiers" in out
-    assert "rank species:             4 distinct identifiers" in out
+    assert "number of distinct taxonomic lineages: 6" in out
+    assert "rank superkingdom:        1 distinct taxonomic lineages" in out
+    assert "rank phylum:              2 distinct taxonomic lineages" in out
+    assert "rank class:               2 distinct taxonomic lineages" in out
+    assert "rank order:               2 distinct taxonomic lineages" in out
+    assert "rank family:              3 distinct taxonomic lineages" in out
+    assert "rank genus:               4 distinct taxonomic lineages" in out
+    assert "rank species:             4 distinct taxonomic lineages" in out
 
 
 def test_tax_summarize_empty(runtmp):
@@ -3032,7 +3052,7 @@ def test_tax_summarize_csv(runtmp):
     out = runtmp.last_result.out
     err = runtmp.last_result.err
 
-    assert "num idents: 6" in out
+    assert "number of distinct taxonomic lineages: 6" in out
     assert "saved 18 lineage counts to 'ranks.csv'" in err
 
     csv_out = runtmp.output('ranks.csv')
@@ -3074,14 +3094,14 @@ def test_tax_summarize_on_annotate(runtmp):
     print(out)
     print(err)
 
-    assert "num idents: 4" in out
-    assert "rank superkingdom:        1 distinct identifiers" in out
-    assert "rank phylum:              2 distinct identifiers" in out
-    assert "rank class:               2 distinct identifiers" in out
-    assert "rank order:               2 distinct identifiers" in out
-    assert "rank family:              2 distinct identifiers" in out
-    assert "rank genus:               3 distinct identifiers" in out
-    assert "rank species:             3 distinct identifiers" in out
+    assert "number of distinct taxonomic lineages: 4" in out
+    assert "rank superkingdom:        1 distinct taxonomic lineages" in out
+    assert "rank phylum:              2 distinct taxonomic lineages" in out
+    assert "rank class:               2 distinct taxonomic lineages" in out
+    assert "rank order:               2 distinct taxonomic lineages" in out
+    assert "rank family:              2 distinct taxonomic lineages" in out
+    assert "rank genus:               3 distinct taxonomic lineages" in out
+    assert "rank species:             3 distinct taxonomic lineages" in out
 
 
 def test_tax_summarize_strain_csv(runtmp):
@@ -3093,7 +3113,7 @@ def test_tax_summarize_strain_csv(runtmp):
     out = runtmp.last_result.out
     err = runtmp.last_result.err
 
-    assert "num idents: 6" in out
+    assert "number of distinct taxonomic lineages: 6" in out
     assert "saved 24 lineage counts to 'ranks.csv'" in err
 
     csv_out = runtmp.output('ranks.csv')
@@ -3132,7 +3152,7 @@ def test_tax_summarize_strain_csv_with_lineages(runtmp):
     out = runtmp.last_result.out
     err = runtmp.last_result.err
 
-    assert "num idents: 6" in out
+    assert "number of distinct taxonomic lineages: 6" in out
     assert "saved 24 lineage counts to" in err
 
     csv_out = runtmp.output('ranks.csv')
