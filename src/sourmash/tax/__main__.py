@@ -8,7 +8,7 @@ from collections import defaultdict, Counter
 import re
 
 import sourmash
-from ..sourmash_args import FileOutputCSV, FileOutput
+from ..sourmash_args import FileOutputCSV, FileOutput, get_manifest
 from sourmash.logging import set_quiet, error, notify, print_results
 from sourmash.lca.lca_utils import display_lineage, zip_lineage
 
@@ -493,6 +493,44 @@ def summarize(args):
 
         n = len(lineage_counts)
         notify(f"saved {n} lineage counts to '{args.output_lineage_information}'")
+
+
+def crosscheck(args):
+    "Cross-check between taxonomies and sketches."
+    # @CTB: provide fail-on args.
+    if not args.taxonomy_files:
+        error("Must provide one or more taxonomy files with '--taxonomy'.")
+        sys.exit(-1)
+
+    if not args.database_files:
+        error("Must provide one or more database files with '--database'.")
+        sys.exit(-1)
+        
+    notify("loading taxonomies...")
+    try:
+        tax_assign = MultiLineageDB.load(args.taxonomy_files,
+                                         force=args.force,
+                       keep_full_identifiers=args.keep_full_identifiers,
+                       keep_identifier_versions=args.keep_identifier_versions)
+    except ValueError as exc:
+        error("ERROR while loading taxonomies!")
+        error(str(exc))
+        sys.exit(-1)
+
+    notify(f"...loaded {len(tax_assign)} entries.")
+
+    # now, load the databases/manifests
+    notify("loading sourmash databases...")
+
+    manifests = []
+    total_num_sketches = 0
+    for filename in args.database_files:
+        idx = sourmash.load_file_as_index(filename)
+        mf = get_manifest(idx)
+        total_num_sketches += len(mf)
+        manifests.append((filename, mf))
+
+    notify(f"...found {total_num_sketches} sketches across {len(manifests)} files")
 
 
 def main(arglist=None):
