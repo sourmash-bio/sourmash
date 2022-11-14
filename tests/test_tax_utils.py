@@ -3,6 +3,7 @@ Tests for functions in taxonomy submodule.
 """
 
 import pytest
+import os
 from os.path import basename
 import gzip
 
@@ -127,6 +128,47 @@ def test_check_and_load_gather_csvs_with_empty_force(runtmp):
     print("ids_missing: ", ids_missing)
     assert n_missing == 1
     assert ids_missing == {"gA"}
+
+
+def test_check_and_load_gather_lineage_csvs_empty(runtmp):
+    # try loading an empty annotated gather file
+    g_res = runtmp.output('empty.gather-tax.csv')
+    with open(g_res, 'w') as fp:
+        fp.write("")
+
+    with pytest.raises(ValueError) as exc:
+        tax_assign = LineageDB.load_from_gather_with_lineages(g_res)
+    assert "cannot read taxonomy assignments" in str(exc.value)
+
+
+def test_check_and_load_gather_lineage_csvs_bad_header(runtmp):
+    # test on file with wrong headers
+    g_res = runtmp.output('empty.gather-tax.csv')
+    with open(g_res, 'w', newline="") as fp:
+        fp.write("x,y,z")
+
+    with pytest.raises(ValueError) as exc:
+        tax_assign = LineageDB.load_from_gather_with_lineages(g_res)
+    assert "Expected headers 'name' and 'lineage' not found. Is this a with-lineages file?" in str(exc.value)
+
+
+def test_check_and_load_gather_lineage_csvs_dne(runtmp):
+    # test loading with-lineage file that does not exist
+    g_res = runtmp.output('empty.gather-tax.csv')
+
+    with pytest.raises(ValueError) as exc:
+        tax_assign = LineageDB.load_from_gather_with_lineages(g_res)
+    assert "does not exist" in str(exc.value)
+
+
+def test_check_and_load_gather_lineage_csvs_isdir(runtmp):
+    # test loading a with-lineage file that is actually a directory
+    g_res = runtmp.output('empty.gather-tax.csv')
+    os.mkdir(g_res)
+
+    with pytest.raises(ValueError) as exc:
+        tax_assign = LineageDB.load_from_gather_with_lineages(g_res)
+    assert "is a directory" in str(exc.value)
 
 
 def test_check_and_load_gather_csvs_fail_on_missing(runtmp):

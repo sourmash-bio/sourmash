@@ -730,13 +730,17 @@ class LineageDB(abc.Mapping):
                 elif 'accession' in header:
                     identifier = 'accession'
                     header = ["ident" if "accession" == x else x for x in header]
+                elif 'name' in header and 'lineage' in header:
+                    return cls.load_from_gather_with_lineages(filename,
+                                                              force=force)
                 else:
-                    raise ValueError('No taxonomic identifiers found.')
+                    header_str = ",".join([repr(x) for x in header])
+                    raise ValueError(f'No taxonomic identifiers found; headers are {header_str}')
             # is "strain" an available rank?
             if "strain" in header:
                 include_strain=True
 
-           # check that all ranks are in header
+            # check that all ranks are in header
             ranks = list(lca_utils.taxlist(include_strain=include_strain))
             if not set(ranks).issubset(header):
                 # for now, just raise err if not all ranks are present.
@@ -751,45 +755,98 @@ class LineageDB(abc.Mapping):
 
             # now parse and load lineages
             for n, row in enumerate(r):
-                if row:
-                    num_rows += 1
-                    lineage = []
-                    # read row into a lineage pair
-                    for rank in lca_utils.taxlist(include_strain=include_strain):
-                        lin = row[rank]
-                        lineage.append(LineagePair(rank, lin))
-                    ident = row[identifier]
+                num_rows += 1
+                lineage = []
+                # read row into a lineage pair
+                for rank in lca_utils.taxlist(include_strain=include_strain):
+                    lin = row[rank]
+                    lineage.append(LineagePair(rank, lin))
+                ident = row[identifier]
 
-                    # fold, spindle, and mutilate ident?
-                    if not keep_full_identifiers:
-                        ident = ident.split(' ')[0]
+                # fold, spindle, and mutilate ident?
+                ident = get_ident(ident,
+                                  keep_full_identifiers=keep_full_identifiers,
+                                  keep_identifier_versions=keep_identifier_versions)
 
-                        if not keep_identifier_versions:
-                            ident = ident.split('.')[0]
+                # clean lineage of null names, replace with 'unassigned'
+                lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
+                lineage = [ LineagePair(a, b) for (a, b) in lineage ]
 
-                    # clean lineage of null names, replace with 'unassigned'
-                    lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
-                    lineage = [ LineagePair(a, b) for (a, b) in lineage ]
+                # remove end nulls
+                while lineage and lineage[-1].name == 'unassigned':
+                    lineage = lineage[:-1]
 
-                    # remove end nulls
-                    while lineage and lineage[-1].name == 'unassigned':
-                        lineage = lineage[:-1]
+                # store lineage tuple
+                if lineage:
+                    # check duplicates
+                    if ident in assignments:
+                        if assignments[ident] != tuple(lineage):
+                            if not force:
+                                raise ValueError(f"multiple lineages for identifier {ident}")
+                    else:
+                        assignments[ident] = tuple(lineage)
 
-                    # store lineage tuple
-                    if lineage:
-                        # check duplicates
-                        if ident in assignments:
-                            if assignments[ident] != tuple(lineage):
-                                if not force:
-                                    raise ValueError(f"multiple lineages for identifier {ident}")
-                        else:
-                            assignments[ident] = tuple(lineage)
+                        if lineage[-1].rank == 'species':
+                            n_species += 1
+                        elif lineage[-1].rank == 'strain':
+                            n_species += 1
+                            n_strains += 1
 
-                            if lineage[-1].rank == 'species':
-                                n_species += 1
-                            elif lineage[-1].rank == 'strain':
-                                n_species += 1
-                                n_strains += 1
+        return LineageDB(assignments, ranks)
+
+
+    @classmethod
+    def load_from_gather_with_lineages(cls, filename, *, force=False):
+        """
+        Load an annotated gather-with-lineages CSV file produced by
+        'tax annotate' into a LineageDB.
+        """
+        include_strain = False
+
+        if not os.path.exists(filename):
+            raise ValueError(f"'{filename}' does not exist")
+
+        if os.path.isdir(filename):
+            raise ValueError(f"'{filename}' is a directory")
+
+        with sourmash_args.FileInputCSV(filename) as r:
+            header = r.fieldnames
+            if not header:
+                raise ValueError(f'cannot read taxonomy assignments from {filename}')
+
+            if "name" not in header or "lineage" not in header:
+                raise ValueError(f"Expected headers 'name' and 'lineage' not found. Is this a with-lineages file?")
+
+            ranks = list(lca_utils.taxlist(include_strain=include_strain))
+            assignments = {}
+            num_rows = 0
+            n_species = 0
+            n_strains = 0
+
+            # now parse and load lineages
+            for n, row in enumerate(r):
+                num_rows += 1
+
+                name = row['name']
+                ident = get_ident(name)
+                lineage = row['lineage']
+                lineage = lca_utils.make_lineage(lineage)
+
+                # check duplicates
+                if ident in assignments:
+                    if assignments[ident] != tuple(lineage):
+                        # this should not happen with valid
+                        # sourmash tax annotate output, but check anyway.
+                        if not force:
+                            raise ValueError(f"multiple lineages for identifier {ident}")
+                else:
+                    assignments[ident] = tuple(lineage)
+
+                    if lineage[-1].rank == 'species':
+                        n_species += 1
+                    elif lineage[-1].rank == 'strain':
+                        n_species += 1
+                        n_strains += 1
 
         return LineageDB(assignments, ranks)
 

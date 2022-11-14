@@ -5,14 +5,17 @@ import os
 import csv
 import pytest
 import gzip
+from collections import Counter
 
 import sourmash
 import sourmash_tst_utils as utils
 from sourmash.tax import tax_utils
+from sourmash.lca import lca_utils
 from sourmash_tst_utils import SourmashCommandFailed
 
 from sourmash import sqlite_utils
 from sourmash.exceptions import IndexNotSupported
+from sourmash import sourmash_args
 
 ## command line tests
 def test_run_sourmash_tax():
@@ -1379,9 +1382,41 @@ def test_genome_rank_duplicated_taxonomy_fail(runtmp):
     assert "multiple lineages for identifier GCF_001881345" in str(exc.value)
 
 
-def test_genome_rank_duplicated_taxonomy_force(runtmp):
+def test_genome_rank_duplicated_taxonomy_fail_lineages(runtmp):
+    # write temp taxonomy with duplicates => lineages-style file
     c = runtmp
+
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    taxdb = tax_utils.LineageDB.load(taxonomy_csv)
+
+    for k, v in taxdb.items():
+        print(k, v)
+
+    lineage_csv = runtmp.output('lin.csv')
+    with open(lineage_csv, 'w', newline="") as fp:
+        w = csv.writer(fp)
+        w.writerow(['name', 'lineage'])
+        for k, v in taxdb.items():
+            linstr = lca_utils.display_lineage(v)
+            w.writerow([k, linstr])
+
+            # duplicate each row, changing something (truncate species, here)
+            v = v[:-1]
+            linstr = lca_utils.display_lineage(v)
+            w.writerow([k, linstr])
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('tax', 'summarize', lineage_csv)
+        print(c.last_result.out)
+        print(c.last_result.err)
+
+    assert "cannot read taxonomy assignments" in str(exc.value)
+    assert "multiple lineages for identifier GCF_001881345" in str(exc.value)
+
+
+def test_genome_rank_duplicated_taxonomy_force(runtmp):
     # write temp taxonomy with duplicates
+    c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     duplicated_csv = runtmp.output("duplicated_taxonomy.csv")
     with open(duplicated_csv, 'w') as dup:
@@ -2936,3 +2971,203 @@ def test_tax_grep_duplicate_csv(runtmp):
     assert 'GCF_000017325.1' in names
     assert 'GCF_000021665.1' in names
     assert 'GCF_001881345.1' in names
+
+
+def test_tax_summarize(runtmp):
+    # test basic operation with summarize
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'summarize', taxfile)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert "number of distinct taxonomic lineages: 6" in out
+    assert "rank superkingdom:        1 distinct taxonomic lineages" in out
+    assert "rank phylum:              2 distinct taxonomic lineages" in out
+    assert "rank class:               2 distinct taxonomic lineages" in out
+    assert "rank order:               2 distinct taxonomic lineages" in out
+    assert "rank family:              3 distinct taxonomic lineages" in out
+    assert "rank genus:               4 distinct taxonomic lineages" in out
+    assert "rank species:             4 distinct taxonomic lineages" in out
+
+
+def test_tax_summarize_multiple(runtmp):
+    # test basic operation with summarize on multiple files
+    tax1 = utils.get_test_data('tax/bacteria_refseq_lineage.csv')
+    tax2 = utils.get_test_data('tax/protozoa_genbank_lineage.csv')
+
+    runtmp.sourmash('tax', 'summarize', tax1, tax2)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert "number of distinct taxonomic lineages: 6" in out
+    assert "rank superkingdom:        2 distinct taxonomic lineages" in out
+    assert "rank phylum:              3 distinct taxonomic lineages" in out
+    assert "rank class:               4 distinct taxonomic lineages" in out
+    assert "rank order:               4 distinct taxonomic lineages" in out
+    assert "rank family:              5 distinct taxonomic lineages" in out
+    assert "rank genus:               5 distinct taxonomic lineages" in out
+    assert "rank species:             5 distinct taxonomic lineages" in out
+
+
+def test_tax_summarize_empty_line(runtmp):
+    # test basic operation with summarize on a file w/empty line
+    taxfile = utils.get_test_data('tax/test-empty-line.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'summarize', taxfile)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert "number of distinct taxonomic lineages: 6" in out
+    assert "rank superkingdom:        1 distinct taxonomic lineages" in out
+    assert "rank phylum:              2 distinct taxonomic lineages" in out
+    assert "rank class:               2 distinct taxonomic lineages" in out
+    assert "rank order:               2 distinct taxonomic lineages" in out
+    assert "rank family:              3 distinct taxonomic lineages" in out
+    assert "rank genus:               4 distinct taxonomic lineages" in out
+    assert "rank species:             4 distinct taxonomic lineages" in out
+
+
+def test_tax_summarize_empty(runtmp):
+    # test failure on empty file
+    taxfile = runtmp.output('no-exist')
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('tax', 'summarize', taxfile)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+    assert "ERROR while loading taxonomies" in err
+
+
+def test_tax_summarize_csv(runtmp):
+    # test basic operation w/csv output
+    taxfile = utils.get_test_data('tax/test.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'summarize', taxfile, '-o', 'ranks.csv')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert "number of distinct taxonomic lineages: 6" in out
+    assert "saved 18 lineage counts to 'ranks.csv'" in err
+
+    csv_out = runtmp.output('ranks.csv')
+
+    with sourmash_args.FileInputCSV(csv_out) as r:
+        # count number across ranks as a cheap consistency check
+        c = Counter()
+        for row in r:
+            val = row['lineage_count']
+            c[val] += 1
+
+        assert c['3'] == 7
+        assert c['2'] == 5
+        assert c['1'] == 5
+
+
+def test_tax_summarize_on_annotate(runtmp):
+    # test summarize on output of annotate basics
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csvout = runtmp.output("test1.gather.with-lineages.csv")
+    out_dir = os.path.dirname(csvout)
+
+    runtmp.run_sourmash('tax', 'annotate', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', out_dir)
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    # so far so good - now see if we can run summarize!
+
+    runtmp.run_sourmash('tax', 'summarize', csvout)
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(out)
+    print(err)
+
+    assert "number of distinct taxonomic lineages: 4" in out
+    assert "rank superkingdom:        1 distinct taxonomic lineages" in out
+    assert "rank phylum:              2 distinct taxonomic lineages" in out
+    assert "rank class:               2 distinct taxonomic lineages" in out
+    assert "rank order:               2 distinct taxonomic lineages" in out
+    assert "rank family:              2 distinct taxonomic lineages" in out
+    assert "rank genus:               3 distinct taxonomic lineages" in out
+    assert "rank species:             3 distinct taxonomic lineages" in out
+
+
+def test_tax_summarize_strain_csv(runtmp):
+    # test basic operation w/csv output on taxonomy with strains
+    taxfile = utils.get_test_data('tax/test-strain.taxonomy.csv')
+
+    runtmp.sourmash('tax', 'summarize', taxfile, '-o', 'ranks.csv')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert "number of distinct taxonomic lineages: 6" in out
+    assert "saved 24 lineage counts to 'ranks.csv'" in err
+
+    csv_out = runtmp.output('ranks.csv')
+
+    with sourmash_args.FileInputCSV(csv_out) as r:
+        # count number across ranks as a cheap consistency check
+        c = Counter()
+        for row in r:
+            print(row)
+            val = row['lineage_count']
+            c[val] += 1
+
+        print(list(c.most_common()))
+
+        assert c['3'] == 7
+        assert c['2'] == 5
+        assert c['6'] == 1
+        assert c['1'] == 11
+
+
+def test_tax_summarize_strain_csv_with_lineages(runtmp):
+    # test basic operation w/csv output on lineages-style file w/strain csv
+    taxfile = utils.get_test_data('tax/test-strain.taxonomy.csv')
+    lineage_csv = runtmp.output('lin-with-strains.csv')
+
+    taxdb = tax_utils.LineageDB.load(taxfile)
+    with open(lineage_csv, 'w', newline="") as fp:
+        w = csv.writer(fp)
+        w.writerow(['name', 'lineage'])
+        for k, v in taxdb.items():
+            linstr = lca_utils.display_lineage(v)
+            w.writerow([k, linstr])
+
+    runtmp.sourmash('tax', 'summarize', lineage_csv, '-o', 'ranks.csv')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    assert "number of distinct taxonomic lineages: 6" in out
+    assert "saved 24 lineage counts to" in err
+
+    csv_out = runtmp.output('ranks.csv')
+
+    with sourmash_args.FileInputCSV(csv_out) as r:
+        # count number across ranks as a cheap consistency check
+        c = Counter()
+        for row in r:
+            print(row)
+            val = row['lineage_count']
+            c[val] += 1
+
+        print(list(c.most_common()))
+
+        assert c['3'] == 7
+        assert c['2'] == 5
+        assert c['6'] == 1
+        assert c['1'] == 11

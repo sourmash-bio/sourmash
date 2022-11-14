@@ -92,6 +92,7 @@ information; these are grouped under the `sourmash tax` and
 * `tax genome`     - summarize single-genome gather results and report most likely classification.
 * `tax annotate`   - annotate gather results with lineage information (no summarization or classification).
 * `tax grep` - subset taxonomies and create picklists based on taxonomy string matches.
+* `tax summarize` - print summary information (counts of lineages) for a taxonomy lineages file or database.
 
 `sourmash lca` commands:
 
@@ -515,7 +516,6 @@ As with all reference-based analysis, results can be affected by the
 For more details on how `gather` works and can be used to classify
  signatures, see [classifying-signatures](classifying-signatures.md).
 
-
 ### `sourmash tax metagenome` - summarize metagenome content from `gather` results
 
 `sourmash tax metagenome` summarizes gather results for each query metagenome by
@@ -836,6 +836,10 @@ sourmash tax annotate
     --taxonomy gtdb-rs202.taxonomy.v2.csv
 ```
 
+The `with-lineages` output file format can be summarized with
+`sourmash tax summarize` and can also be used as an input taxonomy
+spreadsheet for any of the tax subcommands (new as of v4.6.0).
+
 ### `sourmash tax prepare` - prepare and/or combine taxonomy files
 
 `sourmash tax prepare` prepares taxonomy files for other `sourmash tax`
@@ -864,6 +868,9 @@ can be set to CSV like so:
 ```
 sourmash tax prepare --taxonomy file1.csv file2.db -o tax.csv -F csv
 ```
+
+**Note:** As of sourmash v4.6.0, the output of `sourmash tax annotate` can
+ be used as a taxonomy input spreadsheet as well.
 
 ### `sourmash tax grep` - subset taxonomies and create picklists based on taxonomy string matches
 
@@ -895,9 +902,8 @@ sourmash search query.sig gtdb-rs207.genomic.k31.zip \
     --picklist shew-picklist.csv:ident:ident
 ```
 
-
 `tax grep` can also restrict string matching to a specific taxonomic rank
-with `-r/--rank`; for examplem
+with `-r/--rank`; for example,
 ```
 sourmash tax grep Shew -t gtdb-rs207.taxonomy.sqldb \
     -o shew-picklist.csv -r genus
@@ -911,6 +917,47 @@ _not_ match the pattern.
 
 Currently only CSV output (optionally gzipped) is supported; use `sourmash tax prepare` to
 convert CSV output from `tax grep` into a sqlite3 taxonomy database.
+
+### `sourmash tax summarize` - print summary information for lineage spreadsheets or taxonomy databases
+
+(`sourmash tax summarize` is a new command as of sourmash v4.6.0.)
+
+`sourmash tax summarize` loads in one or more lineage spreadsheets,
+counts the distinct taxonomic lineages, and outputs a summary. It
+optionally will output a CSV file with a detailed count of how many
+identifiers belong to each taxonomic lineage.
+
+For example,
+```
+sourmash tax summarize gtdb-rs202.taxonomy.v2.db -o ranks.csv
+```
+outputs
+```
+number of distinct taxonomic lineages: 258406
+rank superkingdom:        2 distinct taxonomic lineages
+rank phylum:              169 distinct taxonomic lineages
+rank class:               419 distinct taxonomic lineages
+rank order:               1312 distinct taxonomic lineages
+rank family:              3264 distinct taxonomic lineages
+rank genus:               12888 distinct taxonomic lineages
+rank species:             47894 distinct taxonomic lineages
+```
+
+and creates a file `ranks.csv` with the number of distinct identifier
+counts for each lineage at each rank:
+```
+rank,lineage_count,lineage
+superkingdom,254090,d__Bacteria
+phylum,120757,d__Bacteria;p__Proteobacteria
+class,104665,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria
+order,64157,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales
+family,55347,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae
+...
+```
+That is, there are 254,090 identifiers in GTDB rs202 under `d__Bacteria`,
+and 120,757 within the `p__Proteobacteria`.
+
+`tax summarize` can also be used to summarize the output of `tax annotate`.
 
 ## `sourmash lca` subcommands for in-memory taxonomy integration
 
