@@ -440,6 +440,8 @@ def grep(args):
 
 def summarize(args):
     "Summarize multiple taxonomy databases."
+    set_quiet(args.quiet)
+
     notify("loading taxonomies...")
     try:
         tax_assign = MultiLineageDB.load(args.taxonomy_files,
@@ -497,7 +499,10 @@ def summarize(args):
 
 def crosscheck(args):
     "Cross-check between taxonomies and sketches."
-    # @CTB: provide fail-on args.
+    set_quiet(args.quiet)
+
+    # @CTB provide output args
+
     if not args.taxonomy_files:
         error("Must provide one or more taxonomy files with '--taxonomy'.")
         sys.exit(-1)
@@ -526,11 +531,63 @@ def crosscheck(args):
     total_num_sketches = 0
     for filename in args.database_files:
         idx = sourmash.load_file_as_index(filename)
+        # @CTB: test what happens if no manifest/manifest is None
         mf = get_manifest(idx)
         total_num_sketches += len(mf)
+        # @CTB do we need to track filename?
         manifests.append((filename, mf))
 
     notify(f"...found {total_num_sketches} sketches across {len(manifests)} files")
+    notify("")
+
+    num_duplicate_idents = 0
+    num_missing_idents = 0
+    idents_from_tax = set(tax_assign.keys())
+
+    idents = set()
+    for (filename, mf) in manifests:
+        for row in mf.rows:
+            ident = tax_utils.get_ident(row['name'])
+            if ident in idents:
+                num_duplicate_idents += 1
+
+            if ident in idents_from_tax:
+                idents_from_tax.remove(ident)
+            elif ident not in idents: # don't double-count missing idents
+                num_missing_idents += 1
+
+            idents.add(ident)
+
+    fail = False
+
+    if num_duplicate_idents:
+        notify(f"found {num_duplicate_idents} duplicate identifiers in databases.")
+        if not args.no_fail_duplicate_ident:
+            fail = True
+    else:
+        notify(f"no duplicate identifiers found!")
+
+    if num_missing_idents:
+        notify(f"found {num_missing_idents} distinct identifiers with no associated taxonomic lineage.")
+        if not args.no_fail_missing_ident:
+            fail = True
+    else:
+        notify("all identifiers have a taxonomic lineage associated with them!")
+
+    if idents_from_tax:
+        notify(f"found {len(idents_from_tax)} identifiers in the taxonomy that are NOT in any database.")
+        if not args.no_fail_extra_tax:
+            fail = True
+    else:
+        notify("all taxonomy entries have a matching sketch in the databases!")
+
+    if fail:
+        if args.no_fail:
+            notify("(exiting without error because --no-fail was set)")
+            return 0
+        return -1
+
+    return 0
 
 
 def main(arglist=None):

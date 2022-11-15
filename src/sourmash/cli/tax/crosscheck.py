@@ -48,6 +48,24 @@ def subparser(subparsers):
         help='continue past errors in file and taxonomy loading',
     )
 
+    subparser.add_argument(
+        '--no-fail', action='store_true',
+        help="do not fail if problems are detected; just output information",
+    )
+    subparser.add_argument(
+        '--no-fail-extra-tax', action='store_true',
+        help="do not fail if databases are missing identifiers from taxonomy",
+    )
+    subparser.add_argument(
+        '--no-fail-missing-ident', action='store_true',
+        help="do not fail if taxonomy is missing for any identifiers",
+    )
+    subparser.add_argument(
+        '--no-fail-duplicate-ident', action='store_true',
+        help="do not fail if there are duplicate identifiers",
+    )
+
+
 def main(args):
     import sourmash
     return sourmash.tax.__main__.crosscheck(args)
