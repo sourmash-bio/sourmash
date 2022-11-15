@@ -681,26 +681,29 @@ notes:
 example sourmash `{output-name}.kreport.txt`:
 
 ```
-0.95    2275774000              D               Bacteria
-0.01    28766999                D               Eukaryota
-0.03    82866000                U               unclassified
-0.77    1841829000              P               Proteobacteria
-0.18    433945000               P               Firmicutes
-0.01    19243000                P               Ascomycota
+92.73    64060000                D               Bacteria
+0.44    11299000                D               Eukaryota
+6.82    284315000               U               unclassified
+60.23    30398000                P               Proteobacteria
+21.86    22526000                P               Firmicutes
+10.41    5250000         P               Bacteroidetes
 .
 .
 .
-0.47    1123782000              S               Escherichia coli
-0.01    17110000                S               Saccharomyces cerevisiae
-0.24    571653000               S               Salmonella enterica
-0.03    64374000                S               Bacillus subtilis
-0.02    38944000                S               Listeria monocytogenes
-0.04    104660000               S               Staphylococcus aureus
-0.06    145756000               S               Limosilactobacillus fermentum
-0.06    146394000               S               Pseudomonas aeruginosa
-0.03    80068000                S               Enterococcus faecalis
-0.00    2133000         S               Saccharomyces pastorianus
-0.00    143000          S               Bacillus sp. KbaB1
+3.94    6710000         S               Escherichia coli
+4.56    6150000         S               Pseudomonas aeruginosa
+0.71    5801000         S               Clostridium beijerinckii
+2.55    5474000         S               Bacillus cereus
+21.95    4987000         S               Escherichia sp. XD7
+28.57    4124000         S               Cereibacter sphaeroides
+0.25    4014000         S               Acinetobacter baumannii
+7.23    3934000         S               Staphylococcus haemolyticus
+0.09    3187000         S               Phocaeicola vulgatus
+0.61    2820000         S               Streptococcus agalactiae
+0.20    2499000         S               Cutibacterium acnes
+0.03    2339000         S               Deinococcus radiodurans
+10.31    2063000         S               Porphyromonas gingivalis
+9.24    2011000         S               Streptococcus mutans
 ```
 
 
@@ -822,8 +825,9 @@ To produce multiple output types from the same command, add the types into the
 ### `sourmash tax annotate` - annotates gather output with taxonomy
 
 `sourmash tax annotate` adds a column with taxonomic lineage information
- for each database match to gather output. Do not summarize or classify.
- Note that this is not required for either `summarize` or `classify`.
+ for each genome match in the gather output, without LCA summarization
+ or classification. This format is not required for either `metagenome`
+ or `genome`, but may be helpful for other downstream analyses.
 
 By default, `annotate` uses the name of each input gather csv to write
 an updated version with lineages information. For example, annotating
