@@ -47,7 +47,7 @@ pub struct SBT<N, L> {
 }
 
 const fn parent(pos: u64, d: u64) -> u64 {
-    ((pos - 1) / d) as u64
+    (pos - 1) / d
 }
 
 const fn child(parent: u64, pos: u64, d: u64) -> u64 {

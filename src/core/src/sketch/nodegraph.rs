@@ -139,7 +139,7 @@ impl Nodegraph {
         let occupancy = self.occupied_bins;
 
         let fp_one = occupancy as f64 / min_size as f64;
-        f64::powf(fp_one as f64, n_ht as f64)
+        f64::powf(fp_one, n_ht as f64)
     }
 
     pub fn tablesize(&self) -> usize {

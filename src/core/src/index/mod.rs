@@ -197,7 +197,7 @@ impl SigStore<Signature> {
         // TODO: better matching here, what if it is not a mh?
         if let Sketch::MinHash(mh) = &ng.signatures[0] {
             if let Sketch::MinHash(omh) = &ong.signatures[0] {
-                return mh.count_common(omh, false).unwrap() as u64;
+                return mh.count_common(omh, false).unwrap();
             }
         }
         unimplemented!();
