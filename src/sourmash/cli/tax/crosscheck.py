@@ -64,6 +64,10 @@ def subparser(subparsers):
         '--no-fail-duplicate-ident', action='store_true',
         help="do not fail if there are duplicate identifiers",
     )
+    subparser.add_argument(
+        '-o', '--output-details',
+        help="save details of failed crosscheck to this file",
+    )
 
 
 def main(args):

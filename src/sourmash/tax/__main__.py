@@ -540,23 +540,62 @@ def crosscheck(args):
     notify(f"...found {total_num_sketches} sketches across {len(manifests)} files")
     notify("")
 
+    # track various things
     num_duplicate_idents = 0
-    num_missing_idents = 0
     idents_from_tax = set(tax_assign.keys())
 
+    # iterate over all identifiers in the database & cross-check.
     idents = set()
+    missing_idents = set()
     for (filename, mf) in manifests:
         for row in mf.rows:
-            ident = tax_utils.get_ident(row['name'])
+            ident = tax_utils.get_ident(row['name'],
+                                        keep_full_identifiers=args.keep_full_identifiers,
+                                        keep_identifier_versions=args.keep_identifier_versions)
             if ident in idents:
                 num_duplicate_idents += 1
 
             if ident in idents_from_tax:
                 idents_from_tax.remove(ident)
             elif ident not in idents: # don't double-count missing idents
-                num_missing_idents += 1
+                missing_idents.add(ident)
 
             idents.add(ident)
+
+    # hackity hack hack
+    if missing_idents:
+        notify("Missing identifiers; checking GenBank to see if we need to demux")
+        notify("GCA_ and GCF_ identifiers.")
+
+        genbank_detected = False
+        alt_idents = {}
+        for ident in idents:
+            alt_ident = None
+            if ident.startswith('GCA_'):
+                genbank_detected = True
+                alt_ident = 'GCF_' + ident[4:]
+                alt_idents[ident] = alt_ident
+            elif ident.startswith('GCF_'):
+                genbank_detected = True
+                alt_ident = 'GCA_' + ident[4:]
+                alt_idents[ident] = alt_ident
+
+        if genbank_detected:
+            notify(f"Found {len(alt_idents)} GenBank identifiers!")
+            notify(f"Turn off GenBank demuxification with --ignore-genbank.")
+            notify("")
+
+            missing_idents_2 = set(missing_idents)
+            for missing_ident in missing_idents:
+                alt_ident = alt_idents.get(missing_ident) # what do we do? @CTB
+                if alt_ident and alt_ident in idents_from_tax:
+                    idents_from_tax.remove(alt_ident)
+                    missing_idents_2.remove(missing_ident)
+
+            # did we find any??
+            if len(missing_idents_2) != len(missing_idents):
+                notify(f"Resolved all but {len(missing_idents_2)} missing identifiers with GenBank demuxification.")
+                missing_idents = missing_idents_2
 
     fail = False
 
@@ -567,8 +606,8 @@ def crosscheck(args):
     else:
         notify(f"no duplicate identifiers found!")
 
-    if num_missing_idents:
-        notify(f"found {num_missing_idents} distinct identifiers with no associated taxonomic lineage.")
+    if missing_idents:
+        notify(f"found {len(missing_idents)} distinct identifiers with no associated taxonomic lineage.")
         if not args.no_fail_missing_ident:
             fail = True
     else:
@@ -580,6 +619,21 @@ def crosscheck(args):
             fail = True
     else:
         notify("all taxonomy entries have a matching sketch in the databases!")
+
+    if args.output_details:
+        n_output_rows = 0
+        with open(args.output_details, "w", newline="") as outfp:
+            w = csv.writer(outfp)
+            w.writerow(['ident', 'problem', 'details'])
+            for ident in missing_idents:
+                w.writerow([ident, 'missing_from_tax', 'this identifier is in a database but not in a taxonomy'])
+                n_output_rows += 1
+
+            for ident in idents_from_tax:
+                w.writerow([ident, 'missing_from_db', 'this identifier is in a taxonomy but not in a database'])
+                n_output_rows += 1
+
+        notify(f"Output {n_output_rows} entries to '{args.output_details}'")
 
     if fail:
         if args.no_fail:
