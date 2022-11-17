@@ -68,6 +68,10 @@ def subparser(subparsers):
         '-o', '--output-details',
         help="save details of failed crosscheck to this file",
     )
+    subparser.add_argument(
+        '--ignore-genbank', action='store_true',
+        help="do not invoke special handling for GenBank identifiers (GCA <=> GCF checking)",
+    )
 
 
 def main(args):

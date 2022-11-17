@@ -563,7 +563,7 @@ def crosscheck(args):
             idents.add(ident)
 
     # hackity hack hack
-    if missing_idents:
+    if missing_idents and not args.ignore_genbank:
         notify("Missing identifiers; checking GenBank to see if we need to demux")
         notify("GCA_ and GCF_ identifiers.")
 
@@ -596,6 +596,9 @@ def crosscheck(args):
             if len(missing_idents_2) != len(missing_idents):
                 notify(f"Resolved all but {len(missing_idents_2)} missing identifiers with GenBank demuxification.")
                 missing_idents = missing_idents_2
+    elif missing_idents and args.ignore_genbank:
+        notify("** NOTE: missing identifiers, but --ignore-genbank is set;")
+        notify("** we are NOT checking to see if GCF <=> GCA conversion would resolve.")
 
     fail = False
 
