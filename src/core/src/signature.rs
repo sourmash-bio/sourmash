@@ -210,7 +210,7 @@ impl SeqToHashes {
             sequence: seq.to_ascii_uppercase(),
             k_size: ksize,
             kmer_index: 0,
-            max_index: _max_index as usize,
+            max_index: _max_index,
             force,
             is_protein,
             hash_function,
@@ -248,7 +248,7 @@ impl Iterator for SeqToHashes {
             if !self.is_protein {
                 // Setting the parameters only in the first iteration
                 if !self.dna_configured {
-                    self.dna_ksize = self.k_size as usize;
+                    self.dna_ksize = self.k_size;
                     self.dna_len = self.sequence.len();
                     if self.dna_len < self.dna_ksize
                         || (!self.hash_function.dna() && self.dna_len < self.k_size * 3)
@@ -320,7 +320,7 @@ impl Iterator for SeqToHashes {
                         )
                         .unwrap();
 
-                        aa.windows(self.k_size as usize).for_each(|n| {
+                        aa.windows(self.k_size).for_each(|n| {
                             let hash = crate::_hash_murmur(n, self.seed);
                             self.hashes_buffer.push(hash);
                         });
@@ -339,7 +339,7 @@ impl Iterator for SeqToHashes {
                         )
                         .unwrap();
 
-                        aa_rc.windows(self.k_size as usize).for_each(|n| {
+                        aa_rc.windows(self.k_size).for_each(|n| {
                             let hash = crate::_hash_murmur(n, self.seed);
                             self.hashes_buffer.push(hash);
                         });
@@ -570,7 +570,7 @@ impl Signature {
                     match sig {
                         Sketch::MinHash(mh) => {
                             if let Some(k) = ksize {
-                                if k != mh.ksize() as usize {
+                                if k != mh.ksize() {
                                     return false;
                                 }
                             };
@@ -586,7 +586,7 @@ impl Signature {
                         }
                         Sketch::LargeMinHash(mh) => {
                             if let Some(k) = ksize {
-                                if k != mh.ksize() as usize {
+                                if k != mh.ksize() {
                                     return false;
                                 }
                             };
