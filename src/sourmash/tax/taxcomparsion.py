@@ -33,7 +33,7 @@ class BaseLineageInfo:
                 else:
                     self.lineage= self.init_empty()
             else:
-                raise ValueError("Must provide ordered ranks for lineage_str")
+                raise ValueError(f"Must provide ordered ranks for {self.lineage_str}")
         else:
             if self.ranks is not None:
                 self.validate_lineage()
@@ -59,7 +59,7 @@ class BaseLineageInfo:
             if lin.rank != taxrank:
                 raise ValueError(f'incomplete lineage at {taxrank} - is {lin.rank} instead')
             if lin.rank not in self.ranks:
-                raise ValueError("Error: Lineage not valid. Rank {rank} not in set ranks: {self.ranks}")
+                raise ValueError(f"Error: Lineage not valid. Rank {lin.rank} not in set ranks: {self.ranks}")
 
     def make_lineage(self, lin):
         "Turn a ; or ,-separated set of lineages into a tuple of LineageTuple objs."
@@ -114,7 +114,7 @@ class BaseLineageInfo:
         if not other.ranks == self.ranks: # check same ranks
             raise ValueError("Cannot compare lineages from taxonomies with different ranks.")
         if rank not in self.ranks: # rank is available
-            raise ValueError("Desired Rank {rank} not available for this lineage")
+            raise ValueError(f"Desired Rank {rank} not available for this lineage")
         for a, b in zip(self.lineage, other.lineage):
             assert a.rank == b.rank
             if a.rank == rank:
@@ -128,7 +128,7 @@ class BaseLineageInfo:
     def pop_to_rank(self, rank):
         "Remove lineage tuples from given lineage `lin` until `rank` is reached."
         if rank not in self.ranks:
-            raise ValueError("Desired Rank {rank} not available for this lineage")
+            raise ValueError(f"Desired Rank {rank} not available for this lineage")
 
         before_rank = []
         for tax_rank in self.ranks:
@@ -181,7 +181,7 @@ class LineageInfoLINS(BaseLineageInfo):
                 else:
                     self.lineage= self.init_empty()
             else:
-                raise ValueError("Must provide ordered ranks for lineage_str")
+                raise ValueError(f"Must provide ordered ranks for {self.lineage_str}")
         else:
             if self.ranks is not None:
                 self.validate_lineage()
@@ -203,7 +203,7 @@ class LineageInfoLINS(BaseLineageInfo):
 #    lineages:  # list of LineageInfo??
 #
 #    def build_tree(self):
-#        return self
+#        return self 
 #    def find_lca(self):
 #        return self
 
