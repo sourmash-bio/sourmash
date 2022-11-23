@@ -77,7 +77,7 @@
               scipy
               deprecation>=2.0.6
               cachetools<6,>=4
-              bitstring<4,>=3.1.9
+              bitstring<5,>=3.1.9
             '';
             requirementsExtra = ''
               setuptools >= 61
