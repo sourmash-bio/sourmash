@@ -1103,7 +1103,7 @@ class MultiLineageDB(abc.Mapping):
         """)
             did_create = True
         except sqlite3.OperationalError:
-            # already exists?
+            # already exists? ...OR database is read only...
             raise ValueError(f"taxonomy table already exists in '{filename}'")
 
         # follow up and create index

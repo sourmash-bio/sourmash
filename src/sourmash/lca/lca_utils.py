@@ -144,7 +144,7 @@ def build_tree(assignments, initial=None):
 
 def find_lca(tree):
     """
-    Given a tree produced by 'find_tree', find the first node with multiple
+    Given a tree produced by 'build_tree', find the first node with multiple
     children, OR the only leaf in the tree.  Return (lineage_tup, reason),
     where 'reason' is the number of children of the returned node, i.e.
     0 if it's a leaf and > 1 if it's an internal node.
