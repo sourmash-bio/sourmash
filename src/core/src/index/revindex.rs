@@ -413,7 +413,7 @@ impl RevIndex {
             let gather_result_rank = matches.len();
 
             let (intersect_orig, _) = match_mh.intersection_size(query)?;
-            let intersect_bp = (match_mh.scaled() as u64 * intersect_orig) as usize;
+            let intersect_bp = (match_mh.scaled() * intersect_orig) as usize;
 
             let f_unique_to_query = intersect_orig as f64 / query.size() as f64;
             let match_ = match_sig.clone();
