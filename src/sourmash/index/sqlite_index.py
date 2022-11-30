@@ -428,7 +428,7 @@ class SqliteIndex(Index):
 
         # return a new SqliteIndex with a new manifest, but same old conn.
         return SqliteIndex(self.dbfile,
-                           sqlite_manifest=manifest,
+                           sqlite_manifest=sqlite_manifest,
                            conn=self.conn)
 
     #
