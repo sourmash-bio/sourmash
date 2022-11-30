@@ -14,7 +14,7 @@ def subparser(subparsers):
             help='suppress non-error output'
         )
         subparser.add_argument(
-            '-o', '--output', metavar='FILE',
+            '-o', '--output', metavar='FILE', default='-',
             help='output signature to this file (default stdout)'
         )
 
