@@ -929,7 +929,7 @@ class LCA_SqliteDatabase(SqliteIndex):
     def __init__(self, dbfile, *, lineage_db=None, sqlite_manifest=None):
         # CTB note: we need to let SqliteIndex open dbfile here, so can't
         # just pass in a conn.
-        super().__init__(dbfile)
+        super().__init__(dbfile, sqlite_manifest=sqlite_manifest)
 
         c = self.conn.cursor()
 
