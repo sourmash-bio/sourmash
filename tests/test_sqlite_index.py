@@ -795,6 +795,17 @@ def test_sqlite_lca_db_load_existing():
     assert len(siglist) == 2
 
 
+def test_sqlite_lca_db_select():
+    # try loading an existing sqlite index
+    filename = utils.get_test_data('sqlite/lca.sqldb')
+    sqlidx = sourmash.load_file_as_index(filename)
+    assert isinstance(sqlidx, LCA_SqliteDatabase)
+
+    sqlidx2 = sqlidx.select(ksize=31)
+    x = list(sqlidx2.hashvals)  # only on LCA_SqliteDatabase
+    assert isinstance(sqlidx2, LCA_SqliteDatabase)
+
+
 def test_sqlite_lca_db_create_load_existing(runtmp):
     # try creating (from CLI) then loading (from API) an LCA db
     filename = runtmp.output('lca.sqldb')
