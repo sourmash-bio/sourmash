@@ -92,6 +92,7 @@ information; these are grouped under the `sourmash tax` and
 * `tax genome`     - summarize single-genome gather results and report most likely classification.
 * `tax annotate`   - annotate gather results with lineage information (no summarization or classification).
 * `tax grep` - subset taxonomies and create picklists based on taxonomy string matches.
+* `tax summarize` - print summary information (counts of lineages) for a taxonomy lineages file or database.
 
 `sourmash lca` commands:
 
@@ -169,7 +170,7 @@ ______
 
 Usage:
 ```
-sourmash compute filename [ filename2 ... ]
+sourmash compute <filename> [<filename2> ... ]
 ```
 Optional arguments:
 ```
@@ -205,7 +206,7 @@ Identity (ANI) estimates instead of Jaccard or containment index; use
 
 Usage:
 ```
-sourmash compare file1.sig [ file2.sig ... ]
+sourmash compare <file1> [ <file2> ... ]
 ```
 
 Options:
@@ -244,7 +245,7 @@ dendrogram+matrix -- from a matrix created by `sourmash compare
 
 Usage:
 ```
-sourmash plot <matrix>
+sourmash plot <matrix_file>
 ```
 
 Options:
@@ -277,7 +278,7 @@ decrease search time and memory where possible.
 
 Usage:
 ```
-sourmash search query.sig <signatures or databases>
+sourmash search query.sig <database1> [ <database2> ... ]
 ```
 
 Example output:
@@ -335,7 +336,7 @@ decrease search time and memory where possible.
 
 Usage:
 ```
-sourmash gather query.sig [ list of signatures or SBTs ]
+sourmash gather query.sig <database1> [ <database2> ... ]
 ```
 
 Example output:
@@ -408,7 +409,7 @@ of signatures to include when running `index`.
 
 Usage:
 ```
-sourmash index database [ list of input signatures/directories/databases ]
+sourmash index <database_name> <inputfile1> [ <inputfile2> ... ]
 ```
 
 This will create a `database.sbt.zip` file containing the SBT of the
@@ -514,7 +515,6 @@ As with all reference-based analysis, results can be affected by the
 
 For more details on how `gather` works and can be used to classify
  signatures, see [classifying-signatures](classifying-signatures.md).
-
 
 ### `sourmash tax metagenome` - summarize metagenome content from `gather` results
 
@@ -625,10 +625,18 @@ To produce multiple output types from the same command, add the types into the
 The `kreport` output reports kraken-style `kreport` output, which may be useful for
 comparison with other taxonomic profiling methods. While this format typically
 records the percent of number of reads assigned to taxa, we create ~comparable
-output by reporting the percent of k-mers (abundance-weighted percent containment)
-and the total number of unique k-mers matched.
+output by reporting the percent of k-mers matched to each taxon and the estimated
+number of base pairs that these k-mers represent. To best represent the percent of all
+reads, we use k-mer abundance information in this output. To generate this properly, query
+FracMinHash sketches should be generated with abundance information (`-p abund`) to allow
+abundance-weighted `gather` results.
 
-standard `kreport` columns:
+Note: `sourmash gather` makes all assignments to genomes, and then `sourmash tax`
+integrates taxonomy information and uses LCA-style summarization to build assignments.
+For species-level specificity, our current recommendation is to use use our default
+k-mer size of 31.
+
+standard `kreport` columns (read-based tools):
 - `Percent Reads Contained in Taxon`: The cumulative percentage of reads for this taxon and all descendants.
 - `Number of Reads Contained in Taxon`: The cumulative number of reads for this taxon and all descendants.
 - `Number of Reads Assigned to Taxon`: The number of reads assigned directly to this taxon (not a cumulative count of all descendants).
@@ -648,31 +656,54 @@ Example reads-based `kreport` with all columns:
     0.03	790	790	S	1747	            Cutibacterium acnes
 ```
 
-current sourmash `kreport` caveats:
-- `Percent Reads [k-mers] Contained in Taxon`: weighted by k-mer abundance
-- `Number of Reads [bp from k-mers] Contained in Taxon`: NOT WEIGHTED BY ABUNDANCE
-- `Number of Reads Assigned to Taxon` and `NCBI Taxon ID` will not be reported (blank entries).
-- Rows are ordered by rank and then percent containment.
+sourmash `kreport` columns:
+- `Percent [k-mers] contained in taxon`: The cumulative percentage of k-mers for this taxon and all descendants.
+- `Estimated base pairs contained in taxon`: The cumulative estimated base pairs for this taxon and all descendants.
+- `Estimated base pairs "assigned" (species-level)`: The estimated base pairs assigned at species-level (cumulative count of base pairs assigned to individual genomes in this species).
+- `Rank Code`: (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies.
+- [blank column]: (`NCBI Taxon ID` is not currently reported).
+- `Scientific Name`: The scientific name of the taxon.
+
+notes:
+- `gather` assigns k-mers to specific genomes. To mimic the output of other
+  tools, we report all results as "assigned" to species-level, which summarizes
+  the k-mers matched to each genome within a given species. Hence, column 3 will
+  show all estimated base pairs at this level, and 0 for all other ranks.
+  Column 2 contains the summarized info at the higher ranks.
+- Since `gather` results are non-overlapping and all assignments are done at the
+  genome level, the percent match (first column) will sum to 100% at each rank
+  (aside from rounding issues) when including the unclassified (U) percentage.
+  Higher-rank assignments are generated using LCA-style summarization of genome
+  matches.
+- Rows are ordered by rank and then ~percent containment.
+
 
 example sourmash `{output-name}.kreport.txt`:
 
 ```
-0.13	1024000		D		d__Bacteria
-0.87	3990000		U		unclassified
-0.07	582000		P		p__Bacteroidota
-0.06	442000		P		p__Proteobacteria
-0.07	582000		C		c__Bacteroidia
-0.06	442000		C		c__Gammaproteobacteria
-0.07	582000		O		o__Bacteroidales
-0.06	442000		O		o__Enterobacterales
-0.07	582000		F		f__Bacteroidaceae
-0.06	442000		F		f__Enterobacteriaceae
-0.06	444000		G		g__Prevotella
-0.06	442000		G		g__Escherichia
-0.02	138000		G		g__Phocaeicola
-0.06	444000		S		s__Prevotella copri
-0.06	442000		S		s__Escherichia coli
-0.02	138000		S		s__Phocaeicola vulgatus
+92.73    64060000                D               Bacteria
+0.44    11299000                D               Eukaryota
+6.82    284315000               U               unclassified
+60.23    30398000                P               Proteobacteria
+21.86    22526000                P               Firmicutes
+10.41    5250000         P               Bacteroidetes
+.
+.
+.
+3.94    6710000         S               Escherichia coli
+4.56    6150000         S               Pseudomonas aeruginosa
+0.71    5801000         S               Clostridium beijerinckii
+2.55    5474000         S               Bacillus cereus
+21.95    4987000         S               Escherichia sp. XD7
+28.57    4124000         S               Cereibacter sphaeroides
+0.25    4014000         S               Acinetobacter baumannii
+7.23    3934000         S               Staphylococcus haemolyticus
+0.09    3187000         S               Phocaeicola vulgatus
+0.61    2820000         S               Streptococcus agalactiae
+0.20    2499000         S               Cutibacterium acnes
+0.03    2339000         S               Deinococcus radiodurans
+10.31    2063000         S               Porphyromonas gingivalis
+9.24    2011000         S               Streptococcus mutans
 ```
 
 
@@ -794,8 +825,9 @@ To produce multiple output types from the same command, add the types into the
 ### `sourmash tax annotate` - annotates gather output with taxonomy
 
 `sourmash tax annotate` adds a column with taxonomic lineage information
- for each database match to gather output. Do not summarize or classify.
- Note that this is not required for either `summarize` or `classify`.
+ for each genome match in the gather output, without LCA summarization
+ or classification. This format is not required for either `metagenome`
+ or `genome`, but may be helpful for other downstream analyses.
 
 By default, `annotate` uses the name of each input gather csv to write
 an updated version with lineages information. For example, annotating
@@ -807,6 +839,10 @@ sourmash tax annotate
     --gather-csv Sb47+63_gather_x_gtdbrs202_k31.csv \
     --taxonomy gtdb-rs202.taxonomy.v2.csv
 ```
+
+The `with-lineages` output file format can be summarized with
+`sourmash tax summarize` and can also be used as an input taxonomy
+spreadsheet for any of the tax subcommands (new as of v4.6.0).
 
 ### `sourmash tax prepare` - prepare and/or combine taxonomy files
 
@@ -836,6 +872,9 @@ can be set to CSV like so:
 ```
 sourmash tax prepare --taxonomy file1.csv file2.db -o tax.csv -F csv
 ```
+
+**Note:** As of sourmash v4.6.0, the output of `sourmash tax annotate` can
+ be used as a taxonomy input spreadsheet as well.
 
 ### `sourmash tax grep` - subset taxonomies and create picklists based on taxonomy string matches
 
@@ -867,9 +906,8 @@ sourmash search query.sig gtdb-rs207.genomic.k31.zip \
     --picklist shew-picklist.csv:ident:ident
 ```
 
-
 `tax grep` can also restrict string matching to a specific taxonomic rank
-with `-r/--rank`; for examplem
+with `-r/--rank`; for example,
 ```
 sourmash tax grep Shew -t gtdb-rs207.taxonomy.sqldb \
     -o shew-picklist.csv -r genus
@@ -883,6 +921,47 @@ _not_ match the pattern.
 
 Currently only CSV output (optionally gzipped) is supported; use `sourmash tax prepare` to
 convert CSV output from `tax grep` into a sqlite3 taxonomy database.
+
+### `sourmash tax summarize` - print summary information for lineage spreadsheets or taxonomy databases
+
+(`sourmash tax summarize` is a new command as of sourmash v4.6.0.)
+
+`sourmash tax summarize` loads in one or more lineage spreadsheets,
+counts the distinct taxonomic lineages, and outputs a summary. It
+optionally will output a CSV file with a detailed count of how many
+identifiers belong to each taxonomic lineage.
+
+For example,
+```
+sourmash tax summarize gtdb-rs202.taxonomy.v2.db -o ranks.csv
+```
+outputs
+```
+number of distinct taxonomic lineages: 258406
+rank superkingdom:        2 distinct taxonomic lineages
+rank phylum:              169 distinct taxonomic lineages
+rank class:               419 distinct taxonomic lineages
+rank order:               1312 distinct taxonomic lineages
+rank family:              3264 distinct taxonomic lineages
+rank genus:               12888 distinct taxonomic lineages
+rank species:             47894 distinct taxonomic lineages
+```
+
+and creates a file `ranks.csv` with the number of distinct identifier
+counts for each lineage at each rank:
+```
+rank,lineage_count,lineage
+superkingdom,254090,d__Bacteria
+phylum,120757,d__Bacteria;p__Proteobacteria
+class,104665,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria
+order,64157,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales
+family,55347,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae
+...
+```
+That is, there are 254,090 identifiers in GTDB rs202 under `d__Bacteria`,
+and 120,757 within the `p__Proteobacteria`.
+
+`tax summarize` can also be used to summarize the output of `tax annotate`.
 
 ## `sourmash lca` subcommands for in-memory taxonomy integration
 

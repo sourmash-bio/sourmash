@@ -644,8 +644,7 @@ impl KmerMinHash {
         self.check_compatible(other)?;
 
         if self.abunds.is_none() || other.abunds.is_none() {
-            // TODO: throw error, we need abundance for this
-            unimplemented!() // @CTB fixme
+            return Err(Error::NeedsAbundanceTracking);
         }
 
         // TODO: check which one is smaller, swap around if needed
@@ -1430,8 +1429,7 @@ impl KmerMinHashBTree {
         self.check_compatible(other)?;
 
         if self.abunds.is_none() || other.abunds.is_none() {
-            // TODO: throw error, we need abundance for this
-            unimplemented!() // @CTB fixme
+            return Err(Error::NeedsAbundanceTracking);
         }
 
         let abunds = self.abunds.as_ref().unwrap();
@@ -1610,6 +1608,30 @@ impl From<KmerMinHashBTree> for KmerMinHash {
         let mins = other.mins.into_iter().collect();
         let abunds = other
             .abunds
+            .map(|abunds| abunds.values().cloned().collect());
+
+        new_mh.mins = mins;
+        new_mh.abunds = abunds;
+
+        new_mh
+    }
+}
+
+impl From<&KmerMinHashBTree> for KmerMinHash {
+    fn from(other: &KmerMinHashBTree) -> KmerMinHash {
+        let mut new_mh = KmerMinHash::new(
+            other.scaled(),
+            other.ksize() as u32,
+            other.hash_function(),
+            other.seed(),
+            other.track_abundance(),
+            other.num(),
+        );
+
+        let mins = other.mins.iter().copied().collect();
+        let abunds = other
+            .abunds
+            .as_ref()
             .map(|abunds| abunds.values().cloned().collect());
 
         new_mh.mins = mins;

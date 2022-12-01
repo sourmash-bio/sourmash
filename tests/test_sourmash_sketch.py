@@ -213,6 +213,10 @@ def test_dna_defaults():
     assert not params.hp
     assert not params.protein
 
+    siglist = factory()
+    sig = siglist[0]
+    sig.minhash
+
 
 def test_dna_override_1():
     factory = _signatures_for_sketch_factory(['k=21,scaled=2000,abund'],

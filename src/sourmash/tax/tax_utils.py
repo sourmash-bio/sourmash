@@ -26,8 +26,9 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
 from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
 
-QueryInfo = namedtuple("QueryInfo", "query_md5, query_filename, query_bp, query_hashes")
-SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
+# CTB: these could probably usefully be converted into dataclasses.
+QueryInfo = namedtuple("QueryInfo", "query_md5, query_filename, query_bp, query_hashes, total_weighted_hashes")
+SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank, total_weighted_hashes")
 ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
 
 # Essential Gather column names that must be in gather_csv to allow `tax` summarization
@@ -84,8 +85,7 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     return gather_csvs
 
 
-def load_gather_results(gather_csv, *, delimiter=',',
-                        essential_colnames=EssentialGatherColnames,
+def load_gather_results(gather_csv, *, essential_colnames=EssentialGatherColnames,
                         seen_queries=None, force=False):
     "Load a single gather csv"
     if not seen_queries:
@@ -93,8 +93,7 @@ def load_gather_results(gather_csv, *, delimiter=',',
     header = []
     gather_results = []
     gather_queries = set()
-    with open(gather_csv, 'rt') as fp:
-        r = csv.DictReader(fp, delimiter=delimiter)
+    with sourmash_args.FileInputCSV(gather_csv) as r:
         header = r.fieldnames
         # check for empty file
         if not header:
@@ -199,14 +198,22 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
     sum_uniq_to_query = defaultdict(lambda: defaultdict(float))
     sum_uniq_bp = defaultdict(lambda: defaultdict(float))
     query_info = {}
-    ksize, scaled, query_nhashes=None, None, None
+
+    set_ksize = False
+    ksize, scaled, query_nhashes = None, 0, None
 
     for row in gather_results:
         # get essential gather info
+        if not set_ksize and "ksize" in row.keys():
+            set_ksize = True
+            ksize = int(row['ksize'])
+            scaled = int(row['scaled'])
+        
         query_name = row['query_name']
         f_unique_to_query = float(row['f_unique_to_query'])
         f_uniq_weighted = float(row['f_unique_weighted'])
         unique_intersect_bp = int(row['unique_intersect_bp'])
+        total_weighted_hashes = int(row.get('total_weighted_hashes', 0))
         query_md5 = row['query_md5']
         query_filename = row['query_filename']
         # get query_bp
@@ -219,13 +226,10 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                 query_bp = unique_intersect_bp + int(row['remaining_bp'])
         
         # store query info
-        query_info[query_name] = QueryInfo(query_md5=query_md5, query_filename=query_filename, query_bp=query_bp, query_hashes = query_nhashes)
+        query_info[query_name] = QueryInfo(query_md5=query_md5, query_filename=query_filename, query_bp=query_bp, query_hashes=query_nhashes, total_weighted_hashes=total_weighted_hashes)
         
-        if estimate_query_ani and (not ksize or not scaled): # just need to set these once. BUT, if we have these, should we check for compatibility when loading the gather file?
-            if "ksize" in row.keys():
-                ksize = int(row['ksize'])
-                scaled = int(row['scaled'])
-            else:
+        if estimate_query_ani and (not ksize or not scaled):
+            if not set_ksize:
                 estimate_query_ani=False
                 notify("WARNING: Please run gather with sourmash >= 4.4 to estimate query ANI at rank. Continuing without ANI...")
         
@@ -275,7 +279,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                 query_ani = containment_to_distance(fraction, ksize, scaled,
                                                     n_unique_kmers= qInfo.query_hashes, sequence_len_bp= qInfo.query_bp).ani
             sres = SummarizedGatherResult(query_name, rank, fraction, lineage, qInfo.query_md5,
-                                          qInfo.query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
+                                          qInfo.query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes * scaled)
             sum_uniq_to_query_sorted.append(sres)
         else:
             total_f_weighted= 0.0
@@ -296,7 +300,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                     query_ani = containment_to_distance(fraction, ksize, scaled,
                                                         n_unique_kmers=qInfo.query_hashes, sequence_len_bp=qInfo.query_bp).ani
                 sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5,
-                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
+                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes * scaled)
                 sum_uniq_to_query_sorted.append(sres)
 
             # record unclassified
@@ -307,7 +311,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                 f_weighted_at_rank = 1.0 - total_f_weighted
                 bp_intersect_at_rank = qInfo.query_bp - total_bp_classified
                 sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5,
-                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani)
+                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes*scaled)
                 sum_uniq_to_query_sorted.append(sres)
 
     return sum_uniq_to_query_sorted, seen_perfect, estimate_query_ani
@@ -468,6 +472,12 @@ def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
     rankCode = { "superkingdom": "D", "kingdom": "K", "phylum": "P", "class": "C",
                  "order": "O", "family":"F", "genus": "G", "species": "S"} # , "": "U"
 
+    # check - are we using v4.5.0 or later gather CSVs?
+    for rank, rank_results in summarized_gather.items():
+        for res in rank_results:
+            if res.total_weighted_hashes == 0:
+                raise ValueError("ERROR: cannot produce 'kreport' format from gather results before sourmash v4.5.0")
+
     unclassified_written=False
     for rank, rank_results in summarized_gather.items():
         rcode = rankCode[rank]
@@ -484,11 +494,14 @@ def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
                     unclassified_written=True
             else:
                 rank_sciname = res.lineage[-1].name
-            kresD = {"rank_code": rcode, "ncbi_taxid": "", "sci_name": rank_sciname,  "num_bp_assigned": ""}
+            kresD = {"rank_code": rcode, "ncbi_taxid": "", "sci_name": rank_sciname,  "num_bp_assigned": 0}
             # total percent containment, weighted to include abundance info
-            kresD['percent_containment'] = f'{res.f_weighted_at_rank:.2f}'
-            # num bp contained. THIS IS NOT WEIGHTED... do we want to weight??
-            kresD["num_bp_contained"] = res.bp_match_at_rank
+            proportion = res.f_weighted_at_rank * 100
+            kresD['percent_containment'] = f'{proportion:.2f}'
+            # weighted bp
+            kresD["num_bp_contained"] = int(res.f_weighted_at_rank * res.total_weighted_hashes)
+            if rank == 'species' or rank_sciname == "unclassified":
+                kresD["num_bp_assigned"] = kresD["num_bp_contained"]
             w.writerow(kresD)
 
 
@@ -717,13 +730,17 @@ class LineageDB(abc.Mapping):
                 elif 'accession' in header:
                     identifier = 'accession'
                     header = ["ident" if "accession" == x else x for x in header]
+                elif 'name' in header and 'lineage' in header:
+                    return cls.load_from_gather_with_lineages(filename,
+                                                              force=force)
                 else:
-                    raise ValueError('No taxonomic identifiers found.')
+                    header_str = ",".join([repr(x) for x in header])
+                    raise ValueError(f'No taxonomic identifiers found; headers are {header_str}')
             # is "strain" an available rank?
             if "strain" in header:
                 include_strain=True
 
-           # check that all ranks are in header
+            # check that all ranks are in header
             ranks = list(lca_utils.taxlist(include_strain=include_strain))
             if not set(ranks).issubset(header):
                 # for now, just raise err if not all ranks are present.
@@ -738,45 +755,98 @@ class LineageDB(abc.Mapping):
 
             # now parse and load lineages
             for n, row in enumerate(r):
-                if row:
-                    num_rows += 1
-                    lineage = []
-                    # read row into a lineage pair
-                    for rank in lca_utils.taxlist(include_strain=include_strain):
-                        lin = row[rank]
-                        lineage.append(LineagePair(rank, lin))
-                    ident = row[identifier]
+                num_rows += 1
+                lineage = []
+                # read row into a lineage pair
+                for rank in lca_utils.taxlist(include_strain=include_strain):
+                    lin = row[rank]
+                    lineage.append(LineagePair(rank, lin))
+                ident = row[identifier]
 
-                    # fold, spindle, and mutilate ident?
-                    if not keep_full_identifiers:
-                        ident = ident.split(' ')[0]
+                # fold, spindle, and mutilate ident?
+                ident = get_ident(ident,
+                                  keep_full_identifiers=keep_full_identifiers,
+                                  keep_identifier_versions=keep_identifier_versions)
 
-                        if not keep_identifier_versions:
-                            ident = ident.split('.')[0]
+                # clean lineage of null names, replace with 'unassigned'
+                lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
+                lineage = [ LineagePair(a, b) for (a, b) in lineage ]
 
-                    # clean lineage of null names, replace with 'unassigned'
-                    lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
-                    lineage = [ LineagePair(a, b) for (a, b) in lineage ]
+                # remove end nulls
+                while lineage and lineage[-1].name == 'unassigned':
+                    lineage = lineage[:-1]
 
-                    # remove end nulls
-                    while lineage and lineage[-1].name == 'unassigned':
-                        lineage = lineage[:-1]
+                # store lineage tuple
+                if lineage:
+                    # check duplicates
+                    if ident in assignments:
+                        if assignments[ident] != tuple(lineage):
+                            if not force:
+                                raise ValueError(f"multiple lineages for identifier {ident}")
+                    else:
+                        assignments[ident] = tuple(lineage)
 
-                    # store lineage tuple
-                    if lineage:
-                        # check duplicates
-                        if ident in assignments:
-                            if assignments[ident] != tuple(lineage):
-                                if not force:
-                                    raise ValueError(f"multiple lineages for identifier {ident}")
-                        else:
-                            assignments[ident] = tuple(lineage)
+                        if lineage[-1].rank == 'species':
+                            n_species += 1
+                        elif lineage[-1].rank == 'strain':
+                            n_species += 1
+                            n_strains += 1
 
-                            if lineage[-1].rank == 'species':
-                                n_species += 1
-                            elif lineage[-1].rank == 'strain':
-                                n_species += 1
-                                n_strains += 1
+        return LineageDB(assignments, ranks)
+
+
+    @classmethod
+    def load_from_gather_with_lineages(cls, filename, *, force=False):
+        """
+        Load an annotated gather-with-lineages CSV file produced by
+        'tax annotate' into a LineageDB.
+        """
+        include_strain = False
+
+        if not os.path.exists(filename):
+            raise ValueError(f"'{filename}' does not exist")
+
+        if os.path.isdir(filename):
+            raise ValueError(f"'{filename}' is a directory")
+
+        with sourmash_args.FileInputCSV(filename) as r:
+            header = r.fieldnames
+            if not header:
+                raise ValueError(f'cannot read taxonomy assignments from {filename}')
+
+            if "name" not in header or "lineage" not in header:
+                raise ValueError(f"Expected headers 'name' and 'lineage' not found. Is this a with-lineages file?")
+
+            ranks = list(lca_utils.taxlist(include_strain=include_strain))
+            assignments = {}
+            num_rows = 0
+            n_species = 0
+            n_strains = 0
+
+            # now parse and load lineages
+            for n, row in enumerate(r):
+                num_rows += 1
+
+                name = row['name']
+                ident = get_ident(name)
+                lineage = row['lineage']
+                lineage = lca_utils.make_lineage(lineage)
+
+                # check duplicates
+                if ident in assignments:
+                    if assignments[ident] != tuple(lineage):
+                        # this should not happen with valid
+                        # sourmash tax annotate output, but check anyway.
+                        if not force:
+                            raise ValueError(f"multiple lineages for identifier {ident}")
+                else:
+                    assignments[ident] = tuple(lineage)
+
+                    if lineage[-1].rank == 'species':
+                        n_species += 1
+                    elif lineage[-1].rank == 'strain':
+                        n_species += 1
+                        n_strains += 1
 
         return LineageDB(assignments, ranks)
 
@@ -1015,7 +1085,10 @@ class MultiLineageDB(abc.Mapping):
         cursor = db.cursor()
         try:
             sqlite_utils.add_sourmash_internal(cursor, 'SqliteLineage', '1.0')
+        except sqlite3.OperationalError:
+            raise ValueError("attempt to write a readonly database")
 
+        try:
             # CTB: could add 'IF NOT EXIST' here; would need tests, too.
             cursor.execute("""
 

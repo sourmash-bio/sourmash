@@ -467,7 +467,7 @@ def test_GatherResult():
     res = GatherResult(ss47, ss4763, cmp_scaled=scaled,
                         gather_querymh=remaining_mh,
                         gather_result_rank=gather_result_rank,
-                        total_abund = sum_abunds,
+                        total_weighted_hashes = sum_abunds,
                         orig_query_len=len(ss47.minhash),
                         orig_query_abunds=orig_query_abunds)
 
@@ -541,7 +541,7 @@ def test_GatherResult_ci():
     res = GatherResult(ss47, ss4763, cmp_scaled=scaled,
                         gather_querymh=remaining_mh,
                         gather_result_rank=gather_result_rank,
-                        total_abund = sum_abunds,
+                        total_weighted_hashes = sum_abunds,
                         orig_query_len=len(ss47.minhash),
                         orig_query_abunds=orig_query_abunds,
                         estimate_ani_ci=True)
@@ -578,7 +578,7 @@ def test_GatherResult_incompatible_sigs():
         GatherResult(ss47, ss4763, cmp_scaled=1,
                         gather_querymh=ss47.minhash,
                         gather_result_rank=1,
-                        total_abund = 1,
+                        total_weighted_hashes = 1,
                         orig_query_len=len(ss47.minhash),
                         orig_query_abunds=orig_query_abunds)
     print(str(exc))
@@ -596,7 +596,7 @@ def test_GatherResult_incomplete_input_cmpscaled():
         GatherResult(ss47, ss4763, cmp_scaled=None,
                         gather_querymh=ss47.minhash,
                         gather_result_rank=1,
-                        total_abund = 1,
+                        total_weighted_hashes = 1,
                         orig_query_len=len(ss47.minhash),
                         orig_query_abunds=orig_query_abunds)
     print(str(exc))
@@ -614,7 +614,7 @@ def test_GatherResult_incomplete_input_gathermh():
         GatherResult(ss47, ss4763, cmp_scaled=1000,
                         gather_querymh=None,
                         gather_result_rank=1,
-                        total_abund = 1,
+                        total_weighted_hashes = 1,
                         orig_query_len=len(ss47.minhash),
                         orig_query_abunds=orig_query_abunds)
     print(str(exc))
@@ -632,14 +632,14 @@ def test_GatherResult_incomplete_input_gather_result_rank():
         GatherResult(ss47, ss4763, cmp_scaled=1000,
                         gather_querymh=ss47.minhash,
                         gather_result_rank=None,
-                        total_abund = 1,
+                        total_weighted_hashes = 1,
                         orig_query_len=len(ss47.minhash),
                         orig_query_abunds=orig_query_abunds)
     print(str(exc))
     assert "Error: must provide 'gather_result_rank' to GatherResult" in str(exc)
 
 
-def test_GatherResult_incomplete_input_total_abund():
+def test_GatherResult_incomplete_input_total_weighted_hashes():
     ss47_file = utils.get_test_data('47.fa.sig')
     ss4763_file = utils.get_test_data('47+63.fa.sig')
     ss47 = load_one_signature(ss47_file, ksize=31, select_moltype='dna')
@@ -650,21 +650,21 @@ def test_GatherResult_incomplete_input_total_abund():
         GatherResult(ss47, ss4763, cmp_scaled=1000,
                         gather_querymh=ss47.minhash,
                         gather_result_rank=1,
-                        total_abund = None,
+                        total_weighted_hashes = None,
                         orig_query_len=len(ss47.minhash),
                         orig_query_abunds=orig_query_abunds)
     print(str(exc))
-    assert "Error: must provide sum of all abundances ('total_abund') to GatherResult" in str(exc)
+    assert "Error: must provide sum of all abundances ('total_weighted_hashes') to GatherResult" in str(exc)
 
     with pytest.raises(ValueError) as exc:
         GatherResult(ss47, ss4763, cmp_scaled=1000,
                         gather_querymh=ss47.minhash,
                         gather_result_rank=1,
-                        total_abund = 0,
+                        total_weighted_hashes = 0,
                         orig_query_len=len(ss47.minhash),
                         orig_query_abunds=orig_query_abunds)
     print(str(exc))
-    assert "Error: must provide sum of all abundances ('total_abund') to GatherResult" in str(exc)
+    assert "Error: must provide sum of all abundances ('total_weighted_hashes') to GatherResult" in str(exc)
 
 
 def test_GatherResult_incomplete_input_orig_query_abunds():
@@ -678,7 +678,7 @@ def test_GatherResult_incomplete_input_orig_query_abunds():
         GatherResult(ss47, ss4763, cmp_scaled=1000,
                         gather_querymh=ss47.minhash,
                         gather_result_rank=1,
-                        total_abund = 1,
+                        total_weighted_hashes = 1,
                         orig_query_len=len(ss47.minhash),
                         orig_query_abunds=orig_query_abunds)
     print(str(exc))
@@ -690,7 +690,7 @@ def test_GatherResult_incomplete_input_orig_query_abunds():
         GatherResult(ss47, ss4763, cmp_scaled=1000,
                         gather_querymh=ss47.minhash,
                         gather_result_rank=1,
-                        total_abund = 1,
+                        total_weighted_hashes = 1,
                         orig_query_len=len(ss47.minhash),
                         orig_query_abunds=orig_query_abunds)
     print(str(exc))

@@ -6,7 +6,7 @@ class MinHash - core MinHash class.
 class FrozenMinHash - read-only MinHash class.
 """
 from __future__ import unicode_literals, division
-from .distance_utils import jaccard_to_distance, containment_to_distance, set_size_chernoff
+from .distance_utils import jaccard_to_distance, containment_to_distance, set_size_exact_prob
 from .logging import notify
 
 import numpy as np
@@ -275,9 +275,13 @@ class MinHash(RustObject):
 
     def __getstate__(self):
         "support pickling via __getstate__/__setstate__"
+
+        # note: we multiple ksize by 3 here so that
+        # pickle protocols that bypass __setstate__ <coff numpy coff>
+        # get a ksize that makes sense to the Rust layer. See #2262.
         return (
             self.num,
-            self.ksize,
+            self.ksize if self.is_dna else self.ksize*3,
             self.is_protein,
             self.dayhoff,
             self.hp,
@@ -784,7 +788,6 @@ class MinHash(RustObject):
             c_aniresult.size_is_inaccurate = True
         return c_aniresult
 
-
     def max_containment(self, other, downsample=False):
         """
         Calculate maximum containment.
@@ -804,7 +807,6 @@ class MinHash(RustObject):
             return 0.0
         else:
             return max_containment
-
 
     def max_containment_ani(self, other, *, downsample=False, max_containment=None, confidence=0.95, estimate_ci=False, prob_threshold=1e-3):  
         "Use max_containment to estimate ANI between two MinHash objects."
@@ -1010,7 +1012,7 @@ class MinHash(RustObject):
         if any([not (0 <= relative_error <= 1), not (0 <= confidence <= 1)]):
             raise ValueError("Error: relative error and confidence values must be between 0 and 1.")
         # to do: replace unique_dataset_hashes with HLL estimation when it gets implemented 
-        probability = set_size_chernoff(self.unique_dataset_hashes, self.scaled, relative_error=relative_error)
+        probability = set_size_exact_prob(self.unique_dataset_hashes, self.scaled, relative_error=relative_error)
         return probability >= confidence
 
 
@@ -1070,11 +1072,6 @@ class FrozenMinHash(MinHash):
         mut = MinHash.__new__(MinHash)
         state_tup = self.__getstate__()
 
-        # is protein/hp/dayhoff?
-        if state_tup[2] or state_tup[3] or state_tup[4]:
-            state_tup = list(state_tup)
-            # adjust ksize.
-            state_tup[1] = state_tup[1] * 3
         mut.__setstate__(state_tup)
         return mut
 

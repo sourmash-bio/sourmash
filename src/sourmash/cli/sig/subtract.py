@@ -34,7 +34,7 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE',
+        '-o', '--output', metavar='FILE', default='-',
         help='output signature to this file (default stdout)'
     )
     subparser.add_argument(
@@ -45,7 +45,7 @@ def subparser(subparsers):
         '-A', '--abundances-from', metavar='FILE',
         help='intersect with & take abundances from this signature'
     )
-    add_ksize_arg(subparser, 31)
+    add_ksize_arg(subparser)
     add_moltype_args(subparser)
 
 

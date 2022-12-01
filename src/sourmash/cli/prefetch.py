@@ -62,7 +62,7 @@ def subparser(subparsers):
         '--estimate-ani-ci', action='store_true',
         help='also output confidence intervals for ANI estimates'
     )
-    add_ksize_arg(subparser, 31)
+    add_ksize_arg(subparser)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
     add_pattern_args(subparser)

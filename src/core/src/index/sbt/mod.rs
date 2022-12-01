@@ -47,7 +47,7 @@ pub struct SBT<N, L> {
 }
 
 const fn parent(pos: u64, d: u64) -> u64 {
-    ((pos - 1) / d) as u64
+    (pos - 1) / d
 }
 
 const fn child(parent: u64, pos: u64, d: u64) -> u64 {
@@ -287,7 +287,7 @@ where
         // TODO: canonicalize doesn't work on wasm32-wasi
         //basepath.canonicalize()?;
 
-        let sbt = SBT::<Node<U>, T>::from_reader(&mut reader, &basepath.parent().unwrap())?;
+        let sbt = SBT::<Node<U>, T>::from_reader(&mut reader, basepath.parent().unwrap())?;
         Ok(sbt)
     }
 

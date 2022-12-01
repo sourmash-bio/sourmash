@@ -9,11 +9,14 @@ import zipfile
 import io
 import contextlib
 import csv
+import argparse
+import shutil
 
 import sourmash_tst_utils as utils
 import sourmash
 from sourmash import sourmash_args, manifest
 from sourmash.index import LinearIndex
+from sourmash.cli.utils import add_ksize_arg
 
 
 def test_save_signatures_api_none():
@@ -135,6 +138,27 @@ def test_save_signatures_to_location_1_zip(runtmp):
     assert ss2 in saved
     assert ss47 in saved
     assert len(saved) == 2
+
+
+def test_save_signatures_to_location_1_zip_bad(runtmp):
+    # try saving to bad sigfile.zip
+    sig2 = utils.get_test_data('2.fa.sig')
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+
+    outloc = runtmp.output('foo.zip')
+
+    # create bad zip:
+    with open(outloc, 'wt') as fp:
+        pass
+
+    # now check for error
+    with pytest.raises(ValueError) as exc:
+        with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
+            pass
+
+    assert 'cannot be opened as a zip file' in str(exc)
 
 
 def test_save_signatures_to_location_1_zip_dup(runtmp):
@@ -747,3 +771,47 @@ def test_fileoutput_csv_2_stdout():
 
     with sourmash_args.FileOutputCSV(None) as fp:
         assert fp == sys.stdout
+
+
+def test_add_ksize_arg_no_default():
+    # test behavior of cli.utils.add_ksize_arg
+    p = argparse.ArgumentParser()
+    add_ksize_arg(p)
+    args = p.parse_args()
+    assert args.ksize == None
+
+
+def test_add_ksize_arg_no_default_specify():
+    # test behavior of cli.utils.add_ksize_arg
+    p = argparse.ArgumentParser()
+    add_ksize_arg(p)
+    args = p.parse_args(['-k', '21'])
+    assert args.ksize == 21
+
+
+def test_add_ksize_arg_default_31():
+    # test behavior of cli.utils.add_ksize_arg
+    p = argparse.ArgumentParser()
+    add_ksize_arg(p, default=31)
+    args = p.parse_args()
+    assert args.ksize == 31
+
+
+def test_add_ksize_arg_default_31_specify():
+    # test behavior of cli.utils.add_ksize_arg
+    p = argparse.ArgumentParser()
+    add_ksize_arg(p, default=31)
+    args = p.parse_args(['-k', '21'])
+    assert args.ksize == 21
+
+
+def test_bug_2370(runtmp):
+    # bug - manifest loading code does not catch gzip.BadGzipFile
+    sigfile = utils.get_test_data('63.fa.sig')
+
+    # copy sigfile over to a .gz file without compressing it -
+    shutil.copyfile(sigfile, runtmp.output('not_really_gzipped.gz'))
+
+    # try running sourmash_args.load_file_as_index
+    #runtmp.sourmash('sig', 'describe', runtmp.output('not_really_gzipped.gz'))
+    sourmash_args.load_file_as_index(runtmp.output('not_really_gzipped.gz'))

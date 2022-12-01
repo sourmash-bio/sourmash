@@ -47,10 +47,16 @@ def add_construct_moltype_args(parser):
     parser.set_defaults(dna=True)
 
 
-def add_ksize_arg(parser, default=31):
+def add_ksize_arg(parser, *, default=None):
+    "Add -k/--ksize to argparse parsers, with specified default."
+    if default:
+        message = f"k-mer size to select; default={default}"
+    else:
+        message = f"k-mer size to select; no default."
+
     parser.add_argument(
-        '-k', '--ksize', metavar='K', default=None, type=int,
-        help='k-mer size; default={d}'.format(d=default)
+        '-k', '--ksize', metavar='K', default=default, type=int,
+        help=message,
     )
 
 #https://stackoverflow.com/questions/55324449/how-to-specify-a-minimum-or-maximum-float-value-with-argparse#55410582
