@@ -195,9 +195,11 @@ Minor new features:
 
 Bug fixes:
 
-Cleanup and documentation fixes:
+Cleanup and documentation updates:
 
 Developer updates:
+
+Dependabot updates:
 ```
 
 ## Conda-forge
