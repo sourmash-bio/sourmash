@@ -3,22 +3,30 @@
 These are adapted from the khmer release docs, originally written by
 Michael Crusoe.
 
-## Required build environment
+## Creating the build environment with conda
 
-The basic build environment needed below can be created as follows:
+You can most easily set up your build environment with conda.
+
+Your conda version will need to be at least `v4.9.0`. You can check your
+conda version with `conda --version` and update with `conda update conda`.
+
+Create the basic build environment:
 
 ```
-conda create -y -n sourmash-rc python=3.10 pip cxx-compiler make twine tox tox-conda setuptools setuptools_scm
+mamba create -y -n sourmash-rc python=3.10 pip \
+    cxx-compiler make twine tox tox-conda \
+    setuptools setuptools_scm
 ```
 
 Then activate it with `conda activate sourmash-rc`.
 
 You will also need a Rust installation (see
 [Development Environment](developer.md)); be sure to update it to the
-latest version with `rustup update`.
+latest version with `rustup update`:
 
-Your conda version will need to be at least `v4.9.0`. You can check your
-conda version with `conda --version` and update with `conda update conda`.
+```
+rustup update
+```
 
 ## Testing a release
 
@@ -68,7 +76,7 @@ source bin/activate
 git clone --depth 1 --branch v${new_version}${rc} https://github.com/sourmash-bio/sourmash.git
 cd sourmash
 python -m pip install -r requirements.txt
-make test
+pytest && cargo test
 
 # Secondly we test via pip
 
@@ -78,7 +86,7 @@ source bin/activate
 python -m pip install setuptools_scm build
 python -m pip install -e git+https://github.com/sourmash-bio/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
 cd src/sourmash
-make test
+pytest && cargo test
 make dist
 cp dist/sourmash*tar.gz ../../../testenv3/
 
@@ -88,67 +96,51 @@ cp dist/sourmash*tar.gz ../../../testenv3/
 cd ../../../testenv3/
 deactivate
 source bin/activate
+python -m pip install pytest build wheel
 python -m pip install sourmash*tar.gz
-python -m pip install pytest build
 tar xzf sourmash-${new_version}${rc}.tar.gz
 cd sourmash-${new_version}${rc}
 python -m pip install -r requirements.txt
-make dist
 cp -a ../../sourmash/tests/test-data tests/  ## We don't ship the test data, so let's copy it here
-make test
+pytest && cargo test
 ```
 
-4\. Publish the new release on the testing PyPI server.
-You will need to [change your PyPI credentials].
-We will be using `twine` to upload the package to TestPyPI and verify
-everything works before sending it to PyPI:
-```
-python -m pip install twine
-twine upload --repository-url https://test.pypi.org/legacy/ dist/sourmash-${new_version}${rc}.tar.gz
-```
-Test the PyPI release in a new virtualenv:
-```
-cd ../../testenv4
-deactivate
-source bin/activate
-# install as much as possible from non-test server!
-python -m pip install screed pytest numpy matplotlib scipy bam2fasta deprecation cffi
-python -m pip install -i https://test.pypi.org/simple --pre sourmash
-sourmash info  # should print "sourmash version ${new_version}${rc}"
-```
-
-[change your PyPI credentials]: https://packaging.python.org/tutorials/packaging-projects/#uploading-the-distribution-archives
-
-5\. Do any final testing:
+4\. Do any final testing:
 
  * check that the binder demo notebook is up to date
 
-6\. Wait for GitHub Actions to finish running on the release candidate tag.
+5\. Wait for GitHub Actions to finish running on the release candidate tag.
+
+Wait for the
+[various cibuildwheel actions](https://github.com/sourmash-bio/sourmash/actions)
+to finish and upload; the
+[latest release](https://github.com/sourmash-bio/sourmash/releases)
+should have eight wheel files attached to it.
+
+6\. Remove relase candidate tags
 
 NOTE: If you delete the rc tag before the rc wheels are done building, they
 may get added to the wrong release.
+
+```
+cd ../sourmash
+git tag -d v${new_version}${rc}
+git push --delete origin v${new_version}${rc}
+```
 
 ## How to make a final release
 
 When you've got a thoroughly tested release candidate,
 cut a release like so:
 
-1\. Create the final tag. Write the changes from previous version in the tag commit message. `git log --oneline` can be useful here, because it can be used to compare the two versions (and hopefully we used descriptive PR names and commit messages). An example comparing `2.2.0` to `2.1.0`:
-`git log --oneline v2.1.0..v2.2.0`
+1\. Create the final tag and push to GitHub:
 
 ```
-cd ../sourmash
 git tag -a v${new_version}
-```
-
-2\. Delete the release candidate tag and push the tag updates to GitHub:
-```
-git tag -d v${new_version}${rc}
 git push --tags origin
-git push --delete origin v${new_version}${rc}
 ```
 
-3\. Upload wheels from GitHub Releases to PyPI
+2\. Upload wheels from GitHub Releases to PyPI
 
 [GitHub Actions will automatically build wheels and upload them to GitHub Releases](https://github.com/sourmash-bio/sourmash/actions?query=workflow%3Acibuildwheel).
 This will take about 45 minutes, or more. After they're built, they must be
@@ -179,7 +171,7 @@ make dist
 twine upload dist/sourmash-${new_version}.tar.gz
 ```
 
-(This should be done *after* the wheels are available, because some of
+(This must be done *after* the wheels are available, because some of
 the conda package build steps require the source dist and are automatically
 triggered when a new version shows up on PyPI.)
 
