@@ -28,6 +28,28 @@ latest version with `rustup update`:
 rustup update
 ```
 
+## Writing release notes
+
+Draft release notes can be created with `git log --oneline
+v4.4.1..latest`, but should then be edited manually. We suggest
+putting PRs in the following categories:
+
+```
+Major new features:
+
+Minor new features:
+
+Bug fixes:
+
+Cleanup and documentation updates:
+
+Developer updates:
+
+Dependabot updates:
+```
+
+A convenient way to edit release notes is to put them in a [hackmd.io](https://hackmd.io) document and edit/display them there; then, create a "draft release notes for v..." issue and paste the markdown into the issue.
+
 ## Testing a release
 
 0\. First things first: check if Read the Docs is building properly for `latest`.
@@ -183,24 +205,6 @@ with the tag you pushed. Copy and paste in the release notes.
 Note that there will also be releases associated with the Rust `core`
 package, which is versioned differently than `sourmash`.  These will
 be of the form `rXX.YY.ZZ`, e.g. `r0.9.0`. Please just ignore them :)
-
-Draft release notes can be created with `git log --oneline
-v4.4.1..latest`, but should then be edited manually. We suggest
-putting PRs in the following categories:
-
-```
-Major new features:
-
-Minor new features:
-
-Bug fixes:
-
-Cleanup and documentation updates:
-
-Developer updates:
-
-Dependabot updates:
-```
 
 ## Conda-forge
 
