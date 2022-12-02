@@ -61,6 +61,7 @@ git push --tags origin
 
 3\. Test the release candidate. Bonus: repeat on macOS:
 ```
+python -m pip install -U pip
 python -m pip install -U virtualenv wheel tox-setuptools-version build
 
 cd ..
@@ -73,6 +74,7 @@ python -m venv testenv4
 
 cd testenv1
 source bin/activate
+python -m pip install wheel
 git clone --depth 1 --branch v${new_version}${rc} https://github.com/sourmash-bio/sourmash.git
 cd sourmash
 python -m pip install -r requirements.txt
@@ -83,7 +85,7 @@ pytest && cargo test
 cd ../../testenv2
 deactivate
 source bin/activate
-python -m pip install setuptools_scm build
+python -m pip install setuptools_scm build wheel
 python -m pip install -e git+https://github.com/sourmash-bio/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
 cd src/sourmash
 pytest && cargo test
