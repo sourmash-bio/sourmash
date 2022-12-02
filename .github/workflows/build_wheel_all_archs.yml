@@ -1,4 +1,4 @@
-name: cibuildwheel
+name: cibuildwheel_ubuntu
 
 on:
   push:
