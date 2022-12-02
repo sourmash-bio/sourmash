@@ -79,7 +79,7 @@ jobs:
   release:
     name: Publish wheels
     runs-on: ubuntu-20.04
-    if: startsWith(github.ref, 'refs/tags/v')
+#    if: startsWith(github.ref, 'refs/tags/v')
     needs: build_wheels
 
     steps:
