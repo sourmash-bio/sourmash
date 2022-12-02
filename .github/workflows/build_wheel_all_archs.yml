@@ -1,7 +1,7 @@
 name: cibuildwheel_ubuntu
 
 on:
-  pull_request:        # CTB remove before merge!
+  #pull_request:        # use for testing modifications to this action
   push:
     branches: [latest]
     tags: v*
