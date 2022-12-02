@@ -160,7 +160,7 @@ cut a release like so:
 1\. Create the final tag and push to GitHub:
 
 ```
-git tag -a v${new_version}
+git tag -a v${new_version} -m "${new_version} release"
 git push --tags origin
 ```
 
