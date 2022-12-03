@@ -3,6 +3,33 @@
 These are adapted from the khmer release docs, originally written by
 Michael Crusoe.
 
+## Checklist
+
+Here's a checklist to copy/paste into an issue:
+
+```
+
+Release candidate testing:
+- [ ] Command line tests pass for a release candidate
+- [ ] All eight release candidate wheels are built
+
+Releasing to PyPI:
+
+- [ ] RC tag(s)s deleted on github
+- [ ] Release tag cut
+- [ ] Release notes written
+- [ ] All eight release wheels built
+- [ ] Release wheels uploaded to pypi
+- [ ] tar.gz distribution uploaded to pypi
+
+After release to PyPI and conda-forge/bioconda packages built:
+
+- [ ] [PyPI page](https://pypi.org/project/sourmash/) updated
+- [ ] Zenodo DOI successfully minted upon new github release - [see search results](https://zenodo.org/search?page=1&size=20&q=sourmash)
+- [ ] `pip install sourmash` installs the correct version
+- [ ] `mamba create -n smash-release -y sourmash` installs the correct version
+```
+
 ## Creating the build environment with conda
 
 You can most easily set up your build environment with conda.
@@ -221,7 +248,9 @@ merge it and wait for the `sourmash-minimal` package to show up in conda-forge:
 conda search sourmash-minimal={new_version}
 ```
 
-An example PR for [`3.4.0`](https://github.com/conda-forge/sourmash-minimal-feedstock/pull/7).
+[An example conda-forge PR for `4.6.0`](https://github.com/conda-forge/sourmash-minimal-feedstock/pull/37).
+
+[An example bioconda PR for `4.6.0`](https://github.com/bioconda/bioconda-recipes/pull/38205).
 
 ## Bioconda
 
@@ -234,15 +263,6 @@ prepared in the previous section to be available for installation,
 and tests are going to fail in Bioconda before that.
 
 An example PR for [`3.4.0`](https://github.com/bioconda/bioconda-recipes/pull/23171).
-
-## Double check everything:
-
-```
-- [ ] [PyPI page](https://pypi.org/project/sourmash/) updated
-- [ ] Zenodo DOI successfully minted upon new github release - [see search results](https://zenodo.org/search?page=1&size=20&q=sourmash)
-- [ ] `pip install sourmash` installs the correct version
-- [ ] `mamba create -n smash-release -y sourmash` installs the correct version
-```
 
 ## Announce it!
 
