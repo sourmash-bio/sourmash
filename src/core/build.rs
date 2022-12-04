@@ -12,6 +12,11 @@ fn copy_c_bindings(_crate_dir: &str) {}
 fn copy_c_bindings(crate_dir: &str) {
     use std::path::Path;
 
+    let out_dir = env::var("OUT_DIR").unwrap();
+
+    // Hack to try to find header back in workspace root.
+    // Ideally wouldn't need to specify the crate Cargo.toml,
+    // but maturin doesn't work well with workspaces yet.
     let header_path = Path::new(crate_dir)
         .parent()
         .unwrap()
@@ -20,6 +25,7 @@ fn copy_c_bindings(crate_dir: &str) {
         .join("include")
         .join("sourmash.h");
     let header = std::fs::read_to_string(header_path).unwrap_or_else(|_| {
+        // Fallback to find header if workspace Cargo.toml is used.
         let header_path = Path::new(crate_dir).join("include").join("sourmash.h");
         std::fs::read_to_string(header_path).expect("error reading header")
     });
@@ -32,7 +38,23 @@ fn copy_c_bindings(crate_dir: &str) {
 
     std::fs::write(
         Path::new(crate_dir).join("target").join("header.h"),
-        new_header,
+        &new_header,
     )
-    .expect("error writing header");
+    .unwrap_or_else(|_| {
+        // Need this hack to support editable installations.
+        // Ends up finding the `target` dir based on OUT_DIR.
+        // Hack fixable with better cargo workspace support in maturin.
+        let dir = Path::new(&out_dir)
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap();
+        std::fs::create_dir_all(&dir).expect("error creating target dir");
+
+        std::fs::write(dir.join("header.h"), new_header).expect("error writing header");
+    });
 }
