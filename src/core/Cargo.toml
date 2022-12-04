@@ -20,6 +20,7 @@ bench = false
 [features]
 from-finch = ["finch"]
 parallel = ["rayon"]
+maturin = []
 
 [dependencies]
 az = "1.0.0"

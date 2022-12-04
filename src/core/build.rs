@@ -1,21 +1,17 @@
 use std::env;
-use std::path::Path;
 
 fn main() {
     let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    generate_c_bindings(&crate_dir);
+    copy_c_bindings(&crate_dir);
 }
 
-#[cfg(feature = "cbindgen")]
-fn generate_c_bindings(crate_dir: &str) {
-    cbindgen::generate(crate_dir)
-        .expect("Unable to generate bindings")
-        .write_to_file("");
-    bindings.write_to_file(Path::new("target").join("header.h"));
-}
+#[cfg(not(feature = "maturin"))]
+fn copy_c_bindings(_crate_dir: &str) {}
 
-#[cfg(not(feature = "cbindgen"))]
-fn generate_c_bindings(crate_dir: &str) {
+#[cfg(feature = "maturin")]
+fn copy_c_bindings(crate_dir: &str) {
+    use std::path::Path;
+
     let header_path = Path::new(crate_dir)
         .parent()
         .unwrap()

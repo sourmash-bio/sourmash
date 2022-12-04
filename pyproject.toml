@@ -132,6 +132,7 @@ python-source = "src"
 manifest-path = "src/core/Cargo.toml"
 bindings = "cffi"
 include = [{ path = "include/sourmash.h", format = ["sdist","wheel"]}]
+features = ["maturin"]
 
 [tool.isort]
 known_third_party = ["deprecation", "hypothesis", "mmh3", "numpy", "pkg_resources", "pytest", "screed", "setuptools", "sourmash_tst_utils"]
