@@ -79,13 +79,7 @@
               cachetools<6,>=4
               bitstring<5,>=3.1.9
             '';
-            requirementsExtra = ''
-              setuptools >= 61
-              milksnake
-              setuptools_scm[toml] >= 4, <6
-              wheel >= 0.29.0
-            '';
-            SETUPTOOLS_SCM_PRETEND_VERSION = "4.4.2";
+            SETUPTOOLS_SCM_PRETEND_VERSION = "4.6.1";
             DYLD_LIBRARY_PATH = "${self.packages.${system}.lib}/lib";
             NO_BUILD = "1";
           };
@@ -120,10 +114,12 @@
             git
             stdenv.cc.cc.lib
             (python310.withPackages (ps: with ps; [ virtualenv tox setuptools ]))
+            (python311.withPackages (ps: with ps; [ virtualenv setuptools ]))
             (python39.withPackages (ps: with ps; [ virtualenv setuptools ]))
             (python38.withPackages (ps: with ps; [ virtualenv setuptools ]))
 
             rust-cbindgen
+            maturin
 
             wasmtime
             wasm-pack
