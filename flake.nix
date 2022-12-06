@@ -19,25 +19,50 @@
         flake-utils.follows = "utils";
       };
     };
-
-    mach-nix = {
-      url = "github:DavHau/mach-nix/3.5.0";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "utils";
-      inputs.pypi-deps-db.follows = "pypi-deps-db";
-    };
-
-    pypi-deps-db = {
-      url = "github:DavHau/mach-nix/3.5.0";
-    };
   };
 
-  outputs = { self, nixpkgs, naersk, rust-overlay, mach-nix, pypi-deps-db, utils }:
+  outputs = { self, nixpkgs, naersk, rust-overlay, utils }:
     utils.lib.eachDefaultSystem (system:
       let
         overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs {
           inherit system overlays;
+          config.packageOverrides = pkgs:
+            {
+              maturin = pkgs.rustPlatform.buildRustPackage rec {
+                pname = "maturin";
+                version = "0.14.3";
+                src = pkgs.fetchFromGitHub {
+                  owner = "PyO3";
+                  repo = "maturin";
+                  rev = "v0.14.3";
+                  hash = "sha256-n+z05My49LNl5nUaCMw90nLk6EiiAWB/HUCZANvrVuY=";
+                };
+                cargoHash = "sha256-xSUdFzYCbsdyg2uowMRmFSJL1s76KSU9ZJcPYwZsN3Q=";
+                nativeBuildInputs = [ pkgs.pkg-config ];
+#                buildInputs = lib.optionals stdenv.isLinux [ dbus ]
+#                  ++ lib.optionals stdenv.isDarwin [ Security libiconv ];
+                # Requires network access, fails in sandbox.
+                doCheck = false;
+#                passthru.tests.pyo3 = callPackage ./pyo3-test { };
+                /*
+                meta = with lib; {
+                  description = "Build and publish Rust crates Python packages";
+                  longDescription = ''
+                    Build and publish Rust crates with PyO3, rust-cpython, and
+                    cffi bindings as well as Rust binaries as Python packages.
+                    This project is meant as a zero-configuration replacement for
+                    setuptools-rust and Milksnake. It supports building wheels for
+                    Python and can upload them to PyPI.
+                  '';
+                  homepage = "https://github.com/PyO3/maturin";
+                  license = licenses.asl20;
+                  maintainers = [ ];
+                };
+                */
+              }
+              ;
+            };
         };
         rustVersion = pkgs.rust-bin.stable.latest.default.override {
           #extensions = [ "rust-src" ];
@@ -53,36 +78,59 @@
           rustc = rustPlatform.rust.rustc;
         };
 
-        python = "python39";
-        mach-nix-wrapper = import mach-nix { inherit pkgs python; };
+        python = pkgs.python310Packages;
+
+        screed = python.buildPythonPackage rec {
+          pname = "screed";
+          version = "1.1";
+          #format = "pyproject";
+
+          src = pkgs.fetchFromGitHub {
+            owner = "dib-lab";
+            repo = "screed";
+            rev = "v1.1";
+            hash = "sha256-g1FZJx94RGBPoTiLfwttdYqCJ02pxtOKK708WA63kHE=";
+          };
+
+          SETUPTOOLS_SCM_PRETEND_VERSION = "1.1";
+          propagatedBuildInputs = with python; [setuptools bz2file setuptools_scm ];
+          doCheck = false;
+        };
+
       in
 
       with pkgs;
       {
         packages = {
+
           lib = naersk-lib.buildPackage {
             pname = "libsourmash";
             root = ./.;
             copyLibs = true;
           };
-          sourmash = mach-nix-wrapper.buildPythonPackage {
-            src = ./.;
+
+          sourmash = python.buildPythonPackage rec {
             pname = "sourmash";
-            version = "4.4.2";
-            requirements = ''
-              screed>=1.0.5
-              cffi>=1.14.0
-              numpy
-              matplotlib
-              scipy
-              deprecation>=2.0.6
-              cachetools<6,>=4
-              bitstring<5,>=3.1.9
-            '';
-            SETUPTOOLS_SCM_PRETEND_VERSION = "4.6.1";
+            version = "4.6.1";
+            format = "pyproject";
+            #disabled = lib.pythonOlder "3.6";
+
+            src = ./.;
+            cargoDeps = rustPlatform.fetchCargoTarball {
+              inherit src;
+              name = "${pname}-${version}";
+              hash = "sha256-Zne9ERU3zQLK1anTEIhUyNx92Gr4YMFCf3cJU6U+BO4=";
+            };
+
+            nativeBuildInputs = with rustPlatform; [ cargoSetupHook maturinBuildHook ];
+
+            buildInputs = lib.optionals stdenv.isDarwin [ libiconv ];
+            propagatedBuildInputs = with python; [ cffi deprecation cachetools bitstring numpy scipy matplotlib screed ];
+
             DYLD_LIBRARY_PATH = "${self.packages.${system}.lib}/lib";
             NO_BUILD = "1";
           };
+
           docker =
             let
               bin = self.defaultPackage.${system};
