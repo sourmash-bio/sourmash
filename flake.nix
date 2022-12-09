@@ -31,37 +31,17 @@
             {
               maturin = pkgs.rustPlatform.buildRustPackage rec {
                 pname = "maturin";
-                version = "0.14.3";
+                version = "0.14.5";
                 src = pkgs.fetchFromGitHub {
                   owner = "PyO3";
                   repo = "maturin";
-                  rev = "v0.14.3";
-                  hash = "sha256-n+z05My49LNl5nUaCMw90nLk6EiiAWB/HUCZANvrVuY=";
+                  rev = "v0.14.5";
+                  hash = "sha256-3TEEmraQ9KGx29ok7IUdVzTW0ilaAci1dOZUlKvQYJE==";
                 };
-                cargoHash = "sha256-xSUdFzYCbsdyg2uowMRmFSJL1s76KSU9ZJcPYwZsN3Q=";
+                cargoHash = "sha256-/biWBTNIysg6HDozyF8UdKoxlgkHl9tnyean8+333hI=";
                 nativeBuildInputs = [ pkgs.pkg-config ];
-#                buildInputs = lib.optionals stdenv.isLinux [ dbus ]
-#                  ++ lib.optionals stdenv.isDarwin [ Security libiconv ];
-                # Requires network access, fails in sandbox.
                 doCheck = false;
-#                passthru.tests.pyo3 = callPackage ./pyo3-test { };
-                /*
-                meta = with lib; {
-                  description = "Build and publish Rust crates Python packages";
-                  longDescription = ''
-                    Build and publish Rust crates with PyO3, rust-cpython, and
-                    cffi bindings as well as Rust binaries as Python packages.
-                    This project is meant as a zero-configuration replacement for
-                    setuptools-rust and Milksnake. It supports building wheels for
-                    Python and can upload them to PyPI.
-                  '';
-                  homepage = "https://github.com/PyO3/maturin";
-                  license = licenses.asl20;
-                  maintainers = [ ];
-                };
-                */
-              }
-              ;
+              };
             };
         };
         rustVersion = pkgs.rust-bin.stable.latest.default.override {
@@ -93,7 +73,7 @@
           };
 
           SETUPTOOLS_SCM_PRETEND_VERSION = "1.1";
-          propagatedBuildInputs = with python; [setuptools bz2file setuptools_scm ];
+          propagatedBuildInputs = with python; [ setuptools bz2file setuptools_scm ];
           doCheck = false;
         };
 
@@ -161,10 +141,10 @@
 
             git
             stdenv.cc.cc.lib
-            (python310.withPackages (ps: with ps; [ virtualenv tox setuptools ]))
-            (python311.withPackages (ps: with ps; [ virtualenv setuptools ]))
-            (python39.withPackages (ps: with ps; [ virtualenv setuptools ]))
-            (python38.withPackages (ps: with ps; [ virtualenv setuptools ]))
+            (python310.withPackages (ps: with ps; [ virtualenv tox ]))
+            (python311.withPackages (ps: with ps; [ virtualenv ]))
+            (python39.withPackages (ps: with ps; [ virtualenv ]))
+            (python38.withPackages (ps: with ps; [ virtualenv ]))
 
             rust-cbindgen
             maturin

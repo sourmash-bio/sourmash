@@ -1,5 +1,4 @@
 use std::env;
-use std::path::{Path, PathBuf};
 
 fn main() {
     let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
@@ -11,6 +10,8 @@ fn copy_c_bindings(_crate_dir: &str) {}
 
 #[cfg(feature = "maturin")]
 fn copy_c_bindings(crate_dir: &str) {
+    use std::path::{Path, PathBuf};
+
     fn find_root_dir(crate_dir: &str) -> &Path {
         let root_dir = Path::new(crate_dir);
 
