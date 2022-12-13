@@ -192,13 +192,13 @@ The `compare` subcommand compares one or more signatures
 (if signatures are created with `-p abund`) the [angular
 similarity](https://en.wikipedia.org/wiki/Cosine_similarity#Angular_distance_and_similarity).
 
-The default output
-is a text display of a similarity matrix where each entry `[i, j]`
-contains the estimated Jaccard index between input signature `i` and
-input signature `j`.  The output matrix can be saved to a file
-with `--output` and used with the `sourmash plot` subcommand (or loaded
-with `numpy.load(...)`.  Using `--csv` will output a CSV file that can
-be loaded into other languages than Python, such as R.
+The default output is a text display of a similarity matrix where each
+entry `[i, j]` contains the estimated Jaccard index between input
+signature `i` and input signature `j`.  The output matrix can be saved
+to a numpy binary file with `--output <outfile.mat>` and used with the
+`sourmash plot` subcommand (or loaded with `numpy.load(...)`.  Using
+`--csv <outfile.csv>` will output a CSV file that can be loaded into
+other languages than Python, such as R.
 
 As of sourmash 4.4.0, `compare` also supports Average Nucleotide
 Identity (ANI) estimates instead of Jaccard or containment index; use
@@ -206,20 +206,20 @@ Identity (ANI) estimates instead of Jaccard or containment index; use
 
 Usage:
 ```
-sourmash compare <file1> [ <file2> ... ]
+sourmash compare <sourmash signature file> [ <sourmash signature file> ... ]
 ```
 
 Options:
 
-* `--output` -- save the output matrix to this file (as a numpy binary matrix).
+* `--output <filename>` -- save the output matrix to this file (as a numpy binary matrix).
 * `--distance-matrix` -- create and output a distance matrix, instead of a similarity matrix.
-* `--ksize` -- do the comparisons at this k-mer size.
+* `--ksize <k>` -- do the comparisons at this k-mer size.
 * `--containment` -- calculate containment instead of similarity; `C(i, j) = size(i intersection j) / size(i)`
 * `--ani` -- output estimates of Average Nucleotide Identity (ANI) instead of Jaccard similarity or containment.
-* `--from-file` -- append the list of files in this text file to the input
-        signatures.
+* `--from-file <filelist.txt>` -- append the list of files in this text file to the input signatures.
 * `--ignore-abundance` -- ignore abundances in signatures.
-* `--picklist` -- select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
+* `--picklist <pickfile>:<colname>:<coltype>` -- select a subset of signatures with [a picklist](#using-picklists-to-subset-large-collections-of-signatures)
+* `--csv <outfile.csv>` -- save the output matrix in CSV format.
 
 **Note:** compare by default produces a symmetric similarity matrix
 that can be used for clustering in downstream tasks. With `--containment`,
