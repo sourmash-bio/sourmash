@@ -10,6 +10,7 @@ import io
 import contextlib
 import csv
 import argparse
+import shutil
 
 import sourmash_tst_utils as utils
 import sourmash
@@ -802,3 +803,15 @@ def test_add_ksize_arg_default_31_specify():
     add_ksize_arg(p, default=31)
     args = p.parse_args(['-k', '21'])
     assert args.ksize == 21
+
+
+def test_bug_2370(runtmp):
+    # bug - manifest loading code does not catch gzip.BadGzipFile
+    sigfile = utils.get_test_data('63.fa.sig')
+
+    # copy sigfile over to a .gz file without compressing it -
+    shutil.copyfile(sigfile, runtmp.output('not_really_gzipped.gz'))
+
+    # try running sourmash_args.load_file_as_index
+    #runtmp.sourmash('sig', 'describe', runtmp.output('not_really_gzipped.gz'))
+    sourmash_args.load_file_as_index(runtmp.output('not_really_gzipped.gz'))

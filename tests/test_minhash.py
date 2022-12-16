@@ -2352,18 +2352,6 @@ def test_max_containment():
     assert mh1.max_containment(mh2) == 1/2
     assert mh2.max_containment(mh1) == 1/2
 
-def test_max_containment_debiased():
-    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
-    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
-
-    mh1.add_many((1, 2, 3, 4))
-    mh2.add_many((1, 5))
-
-    assert mh1.contained_by_debiased(mh2) == 1/4
-    assert mh2.contained_by_debiased(mh1) == 1/2
-    assert mh1.max_containment_debiased(mh2) == 1/2
-    assert mh2.max_containment_debiased(mh1) == 1/2
-
 
 def test_max_containment_empty():
     mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
@@ -2375,18 +2363,6 @@ def test_max_containment_empty():
     assert mh2.contained_by(mh1) == 0
     assert mh1.max_containment(mh2) == 0
     assert mh2.max_containment(mh1) == 0
-
-
-def test_max_containment_debiased_empty():
-    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
-    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
-
-    mh1.add_many((1, 2, 3, 4))
-
-    assert mh1.contained_by_debiased(mh2) == 0
-    assert mh2.contained_by_debiased(mh1) == 0
-    assert mh1.max_containment_debiased(mh2) == 0
-    assert mh2.max_containment_debiased(mh1) == 0
 
 
 def test_max_containment_equal():
@@ -2402,19 +2378,6 @@ def test_max_containment_equal():
     assert mh2.max_containment(mh1) == 1
 
 
-def test_max_containment_debiased_equal():
-    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
-    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
-
-    mh1.add_many((1, 2, 3, 4))
-    mh2.add_many((1, 2, 3, 4))
-
-    assert mh1.contained_by_debiased(mh2) == 1
-    assert mh2.contained_by_debiased(mh1) == 1
-    assert mh1.max_containment_debiased(mh2) == 1
-    assert mh2.max_containment_debiased(mh1) == 1
-
-
 def test_avg_containment():
     mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
     mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
@@ -2426,19 +2389,6 @@ def test_avg_containment():
     assert mh2.contained_by(mh1) == 1/2
     assert mh1.avg_containment(mh2) == 0.375
     assert mh2.avg_containment(mh1) == 0.375
-
-
-def test_avg_containment_debiased():
-    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
-    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
-
-    mh1.add_many((1, 2, 3, 4))
-    mh2.add_many((1, 5))
-
-    assert mh1.contained_by_debiased(mh2) == 1/4
-    assert mh2.contained_by_debiased(mh1) == 1/2
-    assert mh1.avg_containment_debiased(mh2) == 0.375
-    assert mh2.avg_containment_debiased(mh1) == 0.375
 
 
 def test_avg_containment_empty():
@@ -2453,18 +2403,6 @@ def test_avg_containment_empty():
     assert mh2.avg_containment(mh1) == 0
 
 
-def test_avg_containment_debiased_empty():
-    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
-    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
-
-    mh1.add_many((1, 2, 3, 4))
-
-    assert mh1.contained_by_debiased(mh2) == 0
-    assert mh2.contained_by_debiased(mh1) == 0
-    assert mh1.avg_containment_debiased(mh2) == 0
-    assert mh2.avg_containment_debiased(mh1) == 0
-
-
 def test_avg_containment_equal():
     mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
     mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
@@ -2476,19 +2414,6 @@ def test_avg_containment_equal():
     assert mh2.contained_by(mh1) == 1
     assert mh1.avg_containment(mh2) == 1
     assert mh2.avg_containment(mh1) == 1
-
-
-def test_avg_containment_debiased_equal():
-    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
-    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
-
-    mh1.add_many((1, 2, 3, 4))
-    mh2.add_many((1, 2, 3, 4))
-
-    assert mh1.contained_by_debiased(mh2) == 1
-    assert mh2.contained_by_debiased(mh1) == 1
-    assert mh1.avg_containment_debiased(mh2) == 1
-    assert mh2.avg_containment_debiased(mh1) == 1
 
 
 def test_frozen_and_mutable_1(track_abundance):
@@ -2868,21 +2793,6 @@ def test_containment(track_abundance):
     assert mh2.contained_by(mh1) == 1/2
 
 
-def test_containment_debiased(track_abundance):
-    "basic containment test. note: containment w/abundance ignores abundance."
-    mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
-    mh2 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
-
-    mh1.add_many((1, 2, 3, 4))
-    mh1.add_many((1, 2))
-    mh2.add_many((1, 5))
-    mh2.add_many((1, 5))
-    mh2.add_many((1, 5))
-
-    assert mh1.contained_by_debiased(mh2) == 1/4
-    assert mh2.contained_by_debiased(mh1) == 1/2
-
-
 def test_sum_abundances(track_abundance):
     "test sum_abundances"
     mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
@@ -3163,19 +3073,10 @@ def test_containment_num_fail():
     print(str(exc))
     assert "Error: can only calculate containment for scaled MinHashes" in str(exc)
     with pytest.raises(TypeError) as exc:
-        mh2.contained_by_debiased(mh1)
-    assert "Error: can only calculate containment for scaled MinHashes" in str(exc)
-    with pytest.raises(TypeError) as exc:
         mh1.max_containment(mh2)
     assert "Error: can only calculate containment for scaled MinHashes" in str(exc)
     with pytest.raises(TypeError) as exc:
-        mh1.max_containment_debiased(mh2)
-    assert "Error: can only calculate containment for scaled MinHashes" in str(exc)
-    with pytest.raises(TypeError) as exc:
         mh1.avg_containment(mh2)
-    assert "Error: can only calculate containment for scaled MinHashes" in str(exc)
-    with pytest.raises(TypeError) as exc:
-        mh1.avg_containment_debiased(mh2)
     assert "Error: can only calculate containment for scaled MinHashes" in str(exc)
 
 

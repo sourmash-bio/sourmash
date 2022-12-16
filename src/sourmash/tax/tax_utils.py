@@ -1085,7 +1085,10 @@ class MultiLineageDB(abc.Mapping):
         cursor = db.cursor()
         try:
             sqlite_utils.add_sourmash_internal(cursor, 'SqliteLineage', '1.0')
+        except sqlite3.OperationalError:
+            raise ValueError("attempt to write a readonly database")
 
+        try:
             # CTB: could add 'IF NOT EXIST' here; would need tests, too.
             cursor.execute("""
 

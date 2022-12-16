@@ -195,8 +195,8 @@ def split(args):
             notify(f"** overwriting existing file {format(output_name)}")
 
         # save!
-        with open(output_name, 'wt') as outfp:
-            sourmash.save_signatures([sig], outfp)
+        with sourmash_args.SaveSignaturesToLocation(output_name) as save_sigs:
+            save_sigs.add(sig)
             notify(f'writing sig to {output_name}')
 
     notify(f'loaded and split {len(progress)} signatures total.')
@@ -442,8 +442,8 @@ def merge(args):
 
     merged_sigobj = sourmash.SourmashSignature(mh, name=args.name)
 
-    with FileOutput(args.output, 'wt') as fp:
-        sourmash.save_signatures([merged_sigobj], fp=fp)
+    with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
+        save_sigs.add(merged_sigobj)
 
     notify(f'loaded and merged {len(progress)} signatures')
 
@@ -505,8 +505,8 @@ def intersect(args):
         intersect_mh = intersect_mh.inflate(abund_sig.minhash)
 
     intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
-    with FileOutput(args.output, 'wt') as fp:
-        sourmash.save_signatures([intersect_sigobj], fp=fp)
+    with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
+        save_sigs.add(intersect_sigobj)
 
     notify(f'loaded and intersected {len(progress)} signatures')
     if picklist:
@@ -623,8 +623,8 @@ def subtract(args):
 
     subtract_sigobj = sourmash.SourmashSignature(subtract_mh)
 
-    with FileOutput(args.output, 'wt') as fp:
-        sourmash.save_signatures([subtract_sigobj], fp=fp)
+    with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
+        save_sigs.add(subtract_sigobj)
 
     notify(f'loaded and subtracted {len(progress)} signatures')
 
@@ -963,8 +963,8 @@ def sig_import(args):
             siglist.append(s)
 
     notify(f'saving {len(siglist)} signatures to JSON')
-    with FileOutput(args.output, 'wt') as fp:
-        sourmash.save_signatures(siglist, fp)
+    with sourmash_args.SaveSignaturesToLocation(args.output) as save_sigs:
+        save_sigs.add_many(siglist)
 
 
 def export(args):
