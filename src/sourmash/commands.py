@@ -134,10 +134,16 @@ def compare(args):
         if track_abundances:
             notify('NOTE: --containment, --max-containment, --avg-containment, and --estimate-ani ignore signature abundances.')
 
-    # if using --scaled, downsample appropriately
+    # if using scaled sketches or --scaled, downsample to common max.
     printed_scaled_msg = False
     if is_scaled:
         max_scaled = max(s.minhash.scaled for s in siglist)
+        if args.scaled:
+            max_scaled = max(max_scaled, args.scaled)
+            if max_scaled > args.scaled:
+                notify(f"WARNING: --scaled specified {args.scaled}, but max scaled of sketches is {max_scaled}")
+                notify(f"continuing with scaled value of {max_scaled}.")
+
         new_siglist = []
         for s in siglist:
             if not size_may_be_inaccurate and not s.minhash.size_is_accurate():
@@ -152,6 +158,9 @@ def compare(args):
             else:
                 new_siglist.append(s)
         siglist = new_siglist
+    elif args.scaled is not None:
+        error("ERROR: cannot specify --scaled with non-scaled signatures.")
+        sys.exit(-1)
 
     if len(siglist) == 0:
         error('no signatures!')
