@@ -136,6 +136,7 @@ include = [
   { path = "Cargo.lock", format = ["sdist"]},
 ]
 features = ["maturin"]
+locked = true
 
 [tool.isort]
 known_third_party = ["deprecation", "hypothesis", "mmh3", "numpy", "pkg_resources", "pytest", "screed", "setuptools", "sourmash_tst_utils"]
