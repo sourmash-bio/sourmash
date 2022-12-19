@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "maturin>=0.14.3,<0.15",
+    "maturin>=0.14.7,<0.15",
     "cffi",
 ]
 build-backend = 'maturin'
@@ -132,8 +132,7 @@ python-source = "src"
 manifest-path = "src/core/Cargo.toml"
 bindings = "cffi"
 include = [
-  { path = "include/sourmash.h", format = ["sdist","wheel"]},
-  { path = "Cargo.lock", format = ["sdist"]},
+  { path = "include/sourmash.h", format = ["sdist","wheel"] },
 ]
 features = ["maturin"]
 locked = true

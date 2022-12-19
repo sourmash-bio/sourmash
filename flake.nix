@@ -31,14 +31,14 @@
             {
               maturin = pkgs.rustPlatform.buildRustPackage rec {
                 pname = "maturin";
-                version = "0.14.6";
+                version = "0.14.7";
                 src = pkgs.fetchFromGitHub {
                   owner = "PyO3";
                   repo = "maturin";
-                  rev = "v0.14.6";
-                  hash = "sha256-vowEhxyMw9DUi51R4Ldun/Y/DWipPZCtiuuTDzI8PFE=";
+                  rev = "v0.14.7";
+                  hash = "sha256-PCE4SvUrS8ass8UPc+t5Ix126Q4tB2yCMU2kWuCfr5Q=";
                 };
-                cargoHash = "sha256-ychMWPf/FfAySH/EXZavoCwwoWRQIwF6RtUyOlGNDNs=";
+                cargoHash = "sha256-ODMOJOoyra29ZeaG0yKnjPRwcjh/20VsgOz+IGZbQ/s=";
                 nativeBuildInputs = [ pkgs.pkg-config ];
                 doCheck = false;
               };
@@ -99,7 +99,7 @@
             cargoDeps = rustPlatform.fetchCargoTarball {
               inherit src;
               name = "${pname}-${version}";
-              hash = "sha256-Zne9ERU3zQLK1anTEIhUyNx92Gr4YMFCf3cJU6U+BO4=";
+              hash = "sha256-yKTLAsorPbRnJqBDypnqR9qNou5RKleLr7fEZAehxo4=";
             };
 
             nativeBuildInputs = with rustPlatform; [ cargoSetupHook maturinBuildHook ];
@@ -141,7 +141,7 @@
 
             git
             stdenv.cc.cc.lib
-            (python310.withPackages (ps: with ps; [ virtualenv tox ]))
+            (python310.withPackages (ps: with ps; [ virtualenv tox cffi ]))
             (python311.withPackages (ps: with ps; [ virtualenv ]))
             (python39.withPackages (ps: with ps; [ virtualenv ]))
             (python38.withPackages (ps: with ps; [ virtualenv ]))
