@@ -1,13 +1,13 @@
 """
 Taxonomic Information Classes
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 @dataclass
 class LineagePair:
     """Class for storing per-rank lineage information"""
-    name: str = None
     rank: str = None
+    name: str = None
 
     def is_empty(self):
         return any(self.name is None, self.rank is None)
@@ -20,8 +20,8 @@ class LineageTuple(LineagePair):
 
 @dataclass
 class BaseLineageInfo:
-    ranks: list = None
-    lineage: tuple = None # tuple of LineageTuples/LineagePairs
+    ranks: list[str] = field(default_factory=list)
+    lineage: list[LineageTuple] = field(default_factory=list)#tuple = None # tuple of LineageTuples/LineagePairs
     lineage_str: str = None # ';'- or ','-separated str of lineage names
     
     def __post_init__(self):
@@ -35,10 +35,7 @@ class BaseLineageInfo:
             else:
                 raise ValueError(f"Must provide ordered ranks for {self.lineage_str}")
         else:
-            if self.ranks is not None:
-                self.validate_lineage()
-            else:
-                self.ranks = [a.rank for a in self.lineage]
+            self.init_from_lineage
 
     def taxlist(self):
         return self.ranks
@@ -50,8 +47,32 @@ class BaseLineageInfo:
         'initialize empty genome lineage'
         if self.lineage != None:
             raise ValueError("lineage not empty")
+        self.lineage = []
         for rank in self.ranks:
             self.lineage.append(LineageTuple(rank=rank))
+       
+    def init_from_lineage(self):
+        'initialize from lineage tuples, allowing empty ranks'
+        # first, initialize_empty
+        print(self.lineage)
+        new_lineage = []
+        if self.ranks is not None:
+            for rank in self.ranks:
+                new_lineage.append(LineageTuple(rank=rank))
+            # now add input tuples in correct spots
+            for lin_tup in self.lineage:
+                # find index for this rank
+                if lin_tup.rank: # skip this tuple if rank is None or ""
+                    rank_idx = self.ranks.index(lin_tup.rank)
+                    try:
+                        new_lineage[rank_idx] = lin_tup
+                    except ValueError:
+                        raise ValueError(f"Provided lineage contains a rank not present in {self.ranks}")
+            self.lineage = new_lineage
+        else:
+            # lineage can be exactly what was input. Then use lineage to build ranks
+            self.ranks = [a.rank for a in self.lineage]
+        
     
     def validate_lineage(self):
         "Check if all lineage ranks are in allowed ranks; check that they are in order"
@@ -76,12 +97,16 @@ class BaseLineageInfo:
         zipped = [a.name for a in self.lineage]
         # eliminate empty if so requested
         if truncate_empty:
-            empty = ""
+            empty = None
             last_lineage_name = zipped[-1]
             while zipped and last_lineage_name == empty:
                 zipped.pop(-1)
                 if zipped:
                     last_lineage_name = zipped[-1]
+        # replace None with empty string ("")
+        if None in zipped:
+            zipped = ['' if x is    None else x for x in zipped]
+
         return zipped
 
     def zip_taxid(self, truncate_empty=False):
@@ -150,7 +175,7 @@ class BaseLineageInfo:
 @dataclass
 class LineageInfoRanks(BaseLineageInfo):
     """Class for storing multi-rank lineage information"""
-    ranks: list = ['superkingdom', 'phylum', 'class', 'order', 'family','genus', 'species']
+    ranks: list = field(default_factory=lambda: ['superkingdom', 'phylum', 'class', 'order', 'family','genus', 'species'])
     include_strain: bool = False
 
     def __post_init__(self):
@@ -163,8 +188,10 @@ class LineageInfoRanks(BaseLineageInfo):
             else:
                 self.lineage= self.init_empty()
         else:
-            self.validate_lineage()
-    
+            # allow empties -- add strings
+            self.init_from_lineage()
+            #self.validate_lineage()
+
 
 @dataclass
 class LineageInfoLINS(BaseLineageInfo):
