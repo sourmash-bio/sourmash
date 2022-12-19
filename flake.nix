@@ -31,14 +31,14 @@
             {
               maturin = pkgs.rustPlatform.buildRustPackage rec {
                 pname = "maturin";
-                version = "0.14.5";
+                version = "0.14.6";
                 src = pkgs.fetchFromGitHub {
                   owner = "PyO3";
                   repo = "maturin";
-                  rev = "v0.14.5";
-                  hash = "sha256-3TEEmraQ9KGx29ok7IUdVzTW0ilaAci1dOZUlKvQYJE==";
+                  rev = "v0.14.6";
+                  hash = "sha256-vowEhxyMw9DUi51R4Ldun/Y/DWipPZCtiuuTDzI8PFE=";
                 };
-                cargoHash = "sha256-/biWBTNIysg6HDozyF8UdKoxlgkHl9tnyean8+333hI=";
+                cargoHash = "sha256-ychMWPf/FfAySH/EXZavoCwwoWRQIwF6RtUyOlGNDNs=";
                 nativeBuildInputs = [ pkgs.pkg-config ];
                 doCheck = false;
               };

@@ -131,7 +131,10 @@ all = ["sourmash[test,demo,doc,storage]"]
 python-source = "src"
 manifest-path = "src/core/Cargo.toml"
 bindings = "cffi"
-include = [{ path = "include/sourmash.h", format = ["sdist","wheel"]}]
+include = [
+  { path = "include/sourmash.h", format = ["sdist","wheel"]},
+  { path = "Cargo.lock", format = ["sdist"]},
+]
 features = ["maturin"]
 
 [tool.isort]
