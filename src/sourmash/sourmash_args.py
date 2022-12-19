@@ -366,7 +366,12 @@ def _load_stdin(filename, **kwargs):
 
 def _load_standalone_manifest(filename, **kwargs):
     from sourmash.index import StandaloneManifestIndex
-    idx = StandaloneManifestIndex.load(filename)
+
+    try:
+        idx = StandaloneManifestIndex.load(filename)
+    except gzip.BadGzipFile as exc:
+        raise ValueError(exc)
+
     return idx
 
 
@@ -921,19 +926,14 @@ def get_manifest(idx, *, require=True, rebuild=False):
 #
 
 def _get_signatures_from_rust(siglist):
-    for ss in siglist:
-        try:
-            ss.md5sum()
-            yield ss
-        except sourmash.exceptions.Panic:
-            # this deals with a disconnect between the way Rust
-            # and Python handle signatures; Python expects one
-            # minhash (and hence one md5sum) per signature, while
-            # Rust supports multiple. For now, go through serializing
-            # and deserializing the signature! See issue #1167 for more.
-            json_str = sourmash.save_signatures([ss])
-            for ss in sourmash.load_signatures(json_str):
-                yield ss
+    # this deals with a disconnect between the way Rust
+    # and Python handle signatures; Python expects one
+    # minhash (and hence one md5sum) per signature, while
+    # Rust supports multiple. For now, go through serializing
+    # and deserializing the signature! See issue #1167 for more.
+    json_str = sourmash.save_signatures(siglist)
+    for ss in sourmash.load_signatures(json_str):
+        yield ss
 
 
 class _BaseSaveSignaturesToLocation:

@@ -41,7 +41,7 @@ class BaseCollectionManifest:
         if db is not None:
             return db
 
-        # not a SQLite db?
+        # not a SQLite db? CTB: fix this to actually try loading this as .gz...
         if filename.endswith('.gz'):
             xopen = gzip.open
         else:

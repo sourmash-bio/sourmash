@@ -405,7 +405,7 @@ class SqliteIndex(Index):
                     if picklist is None or subj in picklist:
                         yield IndexSearchResult(score, subj, self.location)
 
-    def select(self, *, num=0, track_abundance=False, **kwargs):
+    def _select(self, *, num=0, track_abundance=False, **kwargs):
         "Run a select! This just modifies the manifest."
         # check SqliteIndex specific conditions on the 'select'
         if num:
@@ -421,9 +421,14 @@ class SqliteIndex(Index):
         # modify manifest
         manifest = manifest.select_to_manifest(**kwargs)
 
+        return manifest
+
+    def select(self, *args, **kwargs):
+        sqlite_manifest = self._select(*args, **kwargs)
+
         # return a new SqliteIndex with a new manifest, but same old conn.
         return SqliteIndex(self.dbfile,
-                           sqlite_manifest=manifest,
+                           sqlite_manifest=sqlite_manifest,
                            conn=self.conn)
 
     #
@@ -921,10 +926,10 @@ class LCA_SqliteDatabase(SqliteIndex):
     """
     is_database = True
 
-    def __init__(self, dbfile, *, lineage_db=None):
+    def __init__(self, dbfile, *, lineage_db=None, sqlite_manifest=None):
         # CTB note: we need to let SqliteIndex open dbfile here, so can't
         # just pass in a conn.
-        super().__init__(dbfile)
+        super().__init__(dbfile, sqlite_manifest=sqlite_manifest)
 
         c = self.conn.cursor()
 
@@ -1032,6 +1037,14 @@ class LCA_SqliteDatabase(SqliteIndex):
     # prevent insertions
     def insert(self, *args, **kwargs):
         raise NotImplementedError
+
+    # return correct type on select
+    def select(self, *args, **kwargs):
+        sqlite_manifest = self._select(*args, **kwargs)
+
+        return LCA_SqliteDatabase(self.dbfile,
+                                  sqlite_manifest=sqlite_manifest,
+                                  lineage_db=self.lineage_db)
 
     ### LCA_Database API/protocol.
 

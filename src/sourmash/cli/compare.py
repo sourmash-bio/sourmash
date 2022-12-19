@@ -9,9 +9,10 @@ created with `-p abund`) the angular similarity [2]).
 The default output is a text display of a similarity matrix where each
 entry `[i, j]` contains the estimated Jaccard index between input
 signature `i` and input signature `j`.  The output matrix can be saved
-to a file with `--output` and used with the `sourmash plot` subcommand
-(or loaded with `numpy.load(...)`.  Using `--csv` will output a CSV
-file that can be loaded into other languages than Python, such as R.
+to a file with `--output <outfile.mat>` and used with the `sourmash
+plot` subcommand (or loaded with `numpy.load(...)`.  Using `--csv
+<outfile.csv>` will output a CSV file that can be loaded into other
+languages than Python, such as R.
 
 Command line usage:
 ```

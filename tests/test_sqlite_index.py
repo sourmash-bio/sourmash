@@ -795,6 +795,17 @@ def test_sqlite_lca_db_load_existing():
     assert len(siglist) == 2
 
 
+def test_sqlite_lca_db_select():
+    # try loading an existing sqlite index
+    filename = utils.get_test_data('sqlite/lca.sqldb')
+    sqlidx = sourmash.load_file_as_index(filename)
+    assert isinstance(sqlidx, LCA_SqliteDatabase)
+
+    sqlidx2 = sqlidx.select(ksize=31)
+    x = list(sqlidx2.hashvals)  # only on LCA_SqliteDatabase
+    assert isinstance(sqlidx2, LCA_SqliteDatabase)
+
+
 def test_sqlite_lca_db_create_load_existing(runtmp):
     # try creating (from CLI) then loading (from API) an LCA db
     filename = runtmp.output('lca.sqldb')
@@ -831,6 +842,33 @@ def test_sqlite_lca_db_load_empty(runtmp):
 
     runtmp.sourmash('sig', 'describe', dbname)
     assert 'loaded 0 signatures' in runtmp.last_result.err
+
+
+def test_sqlite_lca_db_create_readonly(runtmp):
+    # try running 'prepare' on a read-only sqlite db, check error message.
+
+    dbname = runtmp.output('empty.sqldb')
+
+    # create empty SqliteIndex...
+    runtmp.sourmash('sig', 'cat', '-o', dbname)
+    assert os.path.exists(dbname)
+
+    # make it read only...
+    from stat import S_IREAD, S_IRGRP, S_IROTH
+    os.chmod(dbname, S_IREAD|S_IRGRP|S_IROTH)
+
+    # ...and try creating empty sourmash_taxonomy tables in there...
+    empty_tax = utils.get_test_data('scaled/empty-lineage.csv')
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.sourmash('tax', 'prepare', '-F', 'sql', '-t', empty_tax,
+                        '-o', dbname)
+
+    err = runtmp.last_result.err
+    print(err)
+
+    assert not "taxonomy table already exists in" in err
+    assert "attempt to write a readonly database" in err
 
 
 def test_sqlite_lca_db_try_load_sqlite_index():

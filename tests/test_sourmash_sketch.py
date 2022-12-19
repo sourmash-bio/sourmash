@@ -218,6 +218,33 @@ def test_dna_defaults():
     sig.minhash
 
 
+def test_dna_multiple_ksize():
+    factory = _signatures_for_sketch_factory(['k=21,k=31,k=51'], 'dna')
+    params_list = list(factory.get_compute_params())
+
+    assert len(params_list) == 1
+    params = params_list[0]
+
+    assert params.ksizes == [21,31,51]
+    assert params.num_hashes == 0
+    assert params.scaled == 1000
+    assert not params.track_abundance
+    assert params.seed == 42
+    assert params.dna
+    assert not params.dayhoff
+    assert not params.hp
+    assert not params.protein
+
+    from sourmash.sourmash_args import _get_signatures_from_rust
+
+    siglist = factory()
+    ksizes = set()
+    for ss in _get_signatures_from_rust(siglist):
+        ksizes.add(ss.minhash.ksize)
+
+    assert ksizes == {21, 31, 51}
+
+
 def test_dna_override_1():
     factory = _signatures_for_sketch_factory(['k=21,scaled=2000,abund'],
                                              'dna')
@@ -271,6 +298,7 @@ def test_dna_override_bad_1():
 def test_dna_override_bad_2():
     with pytest.raises(ValueError):
         factory = _signatures_for_sketch_factory(['k=21,protein'], 'dna')
+
 
 def test_protein_defaults():
     factory = _signatures_for_sketch_factory([], 'protein')
@@ -337,6 +365,7 @@ def test_dayhoff_defaults():
 def test_dayhoff_override_bad_2():
     with pytest.raises(ValueError):
         factory = _signatures_for_sketch_factory(['k=21,dna'], 'dayhoff')
+
 
 def test_hp_defaults():
     factory = _signatures_for_sketch_factory([], 'hp')
@@ -847,6 +876,22 @@ def test_do_sourmash_sketchdna_multik(runtmp):
     assert os.path.exists(outfile)
 
     siglist = list(signature.load_signatures(outfile))
+    assert len(siglist) == 2
+    ksizes = set([ x.minhash.ksize for x in siglist ])
+    assert 21 in ksizes
+    assert 31 in ksizes
+
+
+def test_do_sourmash_sketchdna_multik_output(runtmp, sig_save_extension):
+    testdata1 = utils.get_test_data('short.fa')
+    outfile = runtmp.output(f'out.{sig_save_extension}')
+    runtmp.sourmash('sketch', 'dna', '-p', 'k=31,k=21', testdata1,
+                    '-o', outfile)
+
+    print("saved to file/path with extension:", outfile)
+    assert os.path.exists(outfile)
+
+    siglist = list(sourmash.load_file_as_signatures(outfile))
     assert len(siglist) == 2
     ksizes = set([ x.minhash.ksize for x in siglist ])
     assert 21 in ksizes
