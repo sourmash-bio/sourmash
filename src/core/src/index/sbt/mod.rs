@@ -306,7 +306,7 @@ where
         let storage = match storage {
             Some(s) => s,
             None => {
-                let subdir = format!(".sbt.{}", basename);
+                let subdir = format!(".sbt.{basename}");
                 InnerStorage::new(FSStorage::new(location.to_str().unwrap(), &subdir))
             }
         };
@@ -437,7 +437,7 @@ where
 
             let (_, leaf) = pnode.remove_entry();
 
-            let mut new_node = self.factory(&format!("internal.{}", parent_pos))?;
+            let mut new_node = self.factory(&format!("internal.{parent_pos}"))?;
 
             // for each children update the parent node
             // TODO: write the update method
@@ -459,7 +459,7 @@ where
         } else {
             // TODO: moved these two lines here to avoid borrow checker
             // error E0502 in the Vacant case, but would love to avoid it!
-            let mut new_node = self.factory(&format!("internal.{}", parent_pos))?;
+            let mut new_node = self.factory(&format!("internal.{parent_pos}"))?;
             let c_pos = self.children(parent_pos)[0];
 
             match self.nodes.entry(parent_pos) {

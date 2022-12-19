@@ -375,7 +375,7 @@ impl Iterator for SeqToHashes {
                             }
                             invalid => {
                                 return Some(Err(Error::InvalidHashFunction {
-                                    function: format!("{}", invalid),
+                                    function: format!("{invalid}"),
                                 }));
                             }
                         };

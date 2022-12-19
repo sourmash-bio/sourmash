@@ -96,7 +96,7 @@ where
         let storage = match storage {
             Some(s) => s,
             None => {
-                let subdir = format!(".linear.{}", basename);
+                let subdir = format!(".linear.{basename}");
                 InnerStorage::new(FSStorage::new(location.to_str().unwrap(), &subdir))
             }
         };
