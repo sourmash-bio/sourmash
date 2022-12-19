@@ -349,9 +349,9 @@ dependencies = [
 
 [[package]]
 name = "finch"
-version = "0.4.3"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2be227b432983d32ff5d7553ac5b3b020f6cebfcda61bd989d4457dd8bbeb916"
+checksum = "36c2841b02a42271f46ca5ea2357cf133cab54a63beccb318668be9bbe00d8ae"
 dependencies = [
  "bincode",
  "capnp",
