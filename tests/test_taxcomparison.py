@@ -53,6 +53,51 @@ def test_RankLineageInfo_init_lineage_str_1():
     assert taxinf.zip_lineage()== ['a', 'b', 'c', '', '', '', '', '']
 
 
+def test_BaseLineageInfo_init_lineage_str_1():
+    x = "a;b;c"
+    ranks=["A", "B", "C"]
+    taxinf = BaseLineageInfo(lineage_str=x, ranks=ranks)
+    print(taxinf.lineage)
+    print(taxinf.lineage_str)
+    assert taxinf.zip_lineage()== ['a', 'b', 'c']
+
+
+def test_BaseLineageInfo_init_lineage_str_lineage_dict_test_eq():
+    x = "a;b;c"
+    ranks=["A", "B", "C"]
+    rankD = {"A": "a", "B": "b", "C": "c"}
+    lin1 = BaseLineageInfo(lineage_str=x, ranks=ranks)
+    lin2 = BaseLineageInfo(lineage_dict=rankD, ranks=ranks)
+    assert lin1 == lin2 
+
+
+def test_BaseLineageInfo_reinit_lineage():
+    x = "a;b;c"
+    ranks=["A", "B", "C"]
+    lin1 = BaseLineageInfo(lineage_str=x, ranks=ranks)
+    print(lin1)
+    with pytest.raises(ValueError) as exc:
+        lin1.init_empty()
+    assert "lineage not empty" in str(exc)
+
+
+def test_RankLineageInfo_reinit_lineage():
+    x = "a;b;c"
+    lin1 = RankLineageInfo(lineage_str=x)
+    print(lin1)
+    with pytest.raises(ValueError) as exc:
+        lin1.init_empty()
+    assert "lineage not empty" in str(exc)
+
+
+def test_BaseLineageInfo_init_lineage_str_no_ranks():
+    x = "a;b;c"
+    with pytest.raises(ValueError) as exc:
+        BaseLineageInfo(lineage_str=x)
+    print(exc)
+    assert "Cannot initialize BaseLineageInfo. Please provide lineage or rank info." in str(exc)
+
+
 def test_RankLineageInfo_init_lineage_str_1_truncate():
     x = "a;b;c"
     taxinf = RankLineageInfo(lineage_str=x, include_strain=True)
