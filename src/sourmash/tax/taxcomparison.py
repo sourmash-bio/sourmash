@@ -214,6 +214,8 @@ class LineageInfoRanks(BaseLineageInfo):
             self.make_lineage()
         else:
             self.init_empty()
+        # make dictionary for optional easier access?
+        self.lineageD = {lin_tup.rank: lin_tup.name for lin_tup in self.lineage}
 
 
 @dataclass
