@@ -2,6 +2,7 @@
 Taxonomic Information Classes
 """
 from dataclasses import dataclass, field
+from itertools import zip_longest
 
 @dataclass
 class LineagePair:
@@ -20,22 +21,22 @@ class LineageTuple(LineagePair):
 
 @dataclass
 class BaseLineageInfo:
-    ranks: list[str] = field(default_factory=list)
-    lineage: list[LineageTuple] = field(default_factory=list)#tuple = None # tuple of LineageTuples/LineagePairs
+    ranks: list[str] = field(default_factory=[""])
+    lineage: list = field(default_factory=lambda: [LineageTuple()]) #list of LineageTuples/LineagePairs
     lineage_str: str = None # ';'- or ','-separated str of lineage names
     
     def __post_init__(self):
         "Initialize according to passed values"
-        if self.lineage is None:
-            if self.ranks is not None:
+        if not self.lineage:
+            if self.ranks:
                 if self.lineage_str is not None:
-                        self.lineage = self.make_lineage(self.lineage_str)
+                    self.make_lineage()
                 else:
-                    self.lineage= self.init_empty()
+                    self.init_empty()
             else:
                 raise ValueError(f"Must provide ordered ranks for {self.lineage_str}")
         else:
-            self.init_from_lineage
+            self.init_from_lineage()
 
     def taxlist(self):
         return self.ranks
@@ -45,7 +46,7 @@ class BaseLineageInfo:
     
     def init_empty(self):
         'initialize empty genome lineage'
-        if self.lineage != None:
+        if self.lineage and self.lineage != [LineageTuple()]:
             raise ValueError("lineage not empty")
         self.lineage = []
         for rank in self.ranks:
@@ -63,11 +64,11 @@ class BaseLineageInfo:
             for lin_tup in self.lineage:
                 # find index for this rank
                 if lin_tup.rank: # skip this tuple if rank is None or ""
-                    rank_idx = self.ranks.index(lin_tup.rank)
                     try:
-                        new_lineage[rank_idx] = lin_tup
-                    except ValueError:
-                        raise ValueError(f"Provided lineage contains a rank not present in {self.ranks}")
+                        rank_idx = self.ranks.index(lin_tup.rank)
+                    except ValueError as e:
+                        raise ValueError(f"Rank '{lin_tup.rank}' not present in {', '.join(self.ranks)}") from e
+                    new_lineage[rank_idx] = lin_tup
             self.lineage = new_lineage
         else:
             # lineage can be exactly what was input. Then use lineage to build ranks
@@ -82,12 +83,12 @@ class BaseLineageInfo:
             if lin.rank not in self.ranks:
                 raise ValueError(f"Error: Lineage not valid. Rank {lin.rank} not in set ranks: {self.ranks}")
 
-    def make_lineage(self, lin):
+    def make_lineage(self):
         "Turn a ; or ,-separated set of lineages into a tuple of LineageTuple objs."
-        new_lin = lin.split(';')
+        new_lin = self.lineage_str.split(';')
         if len(new_lin) == 1:
-            new_lin = lin.split(',')
-        new_lin = [ LineageTuple(rank=rank, name=n) for (rank, n) in zip(self.ranks, new_lin) ]
+            new_lin = self.lineage_str.split(',')
+        new_lin = [ LineageTuple(rank=rank, name=n) for (rank, n) in zip_longest(self.ranks, new_lin) ]
         self.lineage=tuple(new_lin)
     
     def zip_lineage(self, truncate_empty=False):
@@ -124,7 +125,8 @@ class BaseLineageInfo:
                     last_lineage_taxid = zipped[-1]
         return zipped
 
-    def display_lineage(self, truncate_empty=False):
+    def display_lineage(self, truncate_empty=True):
+        # default truncate empty??
         "Return lineage names as ';'-separated list"
         return ";".join(self.zip_lineage(truncate_empty=truncate_empty))
 
@@ -182,15 +184,12 @@ class LineageInfoRanks(BaseLineageInfo):
         "Initialize according to passed values"
         if self.include_strain:
             self.ranks.append("strain")
-        if self.lineage is None:
-            if self.lineage_str is not None:
-                    self.lineage = self.make_lineage(self.lineage_str)
-            else:
-                self.lineage= self.init_empty()
-        else:
-            # allow empties -- add strings
+        if self.lineage != [LineageTuple()]:
             self.init_from_lineage()
-            #self.validate_lineage()
+        elif self.lineage_str is not None:
+            self.make_lineage()
+        else:
+            self.init_empty()
 
 
 @dataclass
@@ -204,7 +203,7 @@ class LineageInfoLINS(BaseLineageInfo):
         if self.lineage is None:
             if self.ranks is not None:
                 if self.lineage_str is not None:
-                        self.lineage = self.make_lineage(self.lineage_str)
+                        self.lineage = self.make_lineage()
                 else:
                     self.lineage= self.init_empty()
             else:
