@@ -25,24 +25,27 @@ class BaseLineageInfo:
     lineage: list = field(default_factory=lambda: [LineageTuple()]) #list of LineageTuples/LineagePairs
     lineage_str: str = None # ';'- or ','-separated str of lineage names
     
-    def __post_init__(self):
-        "Initialize according to passed values"
-        if not self.lineage:
-            if self.ranks:
-                if self.lineage_str is not None:
-                    self.make_lineage()
-                else:
-                    self.init_empty()
-            else:
-                raise ValueError(f"Must provide ordered ranks for {self.lineage_str}")
-        else:
-            self.init_from_lineage()
+    def __eq__(self, other): # ignore lineage_str
+        return all([self.ranks == other.ranks, self.lineage==other.lineage])
 
     def taxlist(self):
         return self.ranks
     
     def ascending_taxlist(self):
         return self.ranks[::-1]
+
+    def lineageD(self):
+        return {lin_tup.rank: lin_tup.name for lin_tup in self.lineage}
+
+    def rank_index(self, rank):
+        return self.ranks.index(rank)
+
+    @property
+    def filled_lineage(self):
+        # return lineage down to lowest non-empty rank. Preserves missing ranks above.
+        # Would we prefer this to be the default returned by lineage??
+        lowest_filled_rank_idx = self.rank_index(self.filled_ranks[-1])
+        return self.lineage[:lowest_filled_rank_idx+1]
     
     def init_empty(self):
         'initialize empty genome lineage'
@@ -54,14 +57,13 @@ class BaseLineageInfo:
         self.filled_ranks = []
        
     def init_from_lineage(self):
-        'initialize from lineage tuples, allowing empty ranks and reordering if possible'
+        'initialize from lineage tuples, allowing empty ranks and reordering if necessary'
         # first, initialize_empty
-        print(self.lineage)
         new_lineage = []
         # check this is a list of lineage tuples:
         for lin_tup in self.lineage:
             if not isinstance(lin_tup, (LineageTuple, LineagePair)):
-                raise ValueError(f"{lin_tup} is not LineageTuple()")
+                raise ValueError(f"{lin_tup} is not LineageTuple or LineagePair")
         if self.ranks is not None:
             # build empty lineage
             for rank in self.ranks:
@@ -69,9 +71,9 @@ class BaseLineageInfo:
             # now add input tuples in correct spots. This corrects for order and allows empty values.
             for lin_tup in self.lineage:
                 # find index for this rank
-                if lin_tup.rank: # skip this tuple if rank is None or ""
+                if lin_tup.rank: # skip this tuple if rank is None or "" (empty lineage tuple. is this needed?)
                     try:
-                        rank_idx = self.ranks.index(lin_tup.rank)
+                        rank_idx = self.rank_index(lin_tup.rank)
                     except ValueError as e:
                         raise ValueError(f"Rank '{lin_tup.rank}' not present in {', '.join(self.ranks)}") from e
                     new_lineage[rank_idx] = lin_tup
@@ -85,18 +87,7 @@ class BaseLineageInfo:
                 self.ranks.append(lin_tup.rank)
         # build list of filled ranks
         self.filled_ranks = [a.rank for a in self.lineage if a.name]
-            # use lineage to build ranks
-            # self.ranks = [a.rank for a in self.lineage]
         
-    
-    def validate_lineage(self):
-        "Check if all lineage ranks are in allowed ranks; check that they are in order"
-        for taxrank, lin in zip(self.ranks, self.lineage):
-            if lin.rank != taxrank:
-                raise ValueError(f'incomplete lineage at {taxrank} - is {lin.rank} instead')
-            if lin.rank not in self.ranks:
-                raise ValueError(f"Error: Lineage not valid. Rank {lin.rank} not in set ranks: {self.ranks}")
-
     def make_lineage(self):
         "Turn a ; or ,-separated set of lineages into a tuple of LineageTuple objs."
         if not self.ranks:
@@ -112,15 +103,10 @@ class BaseLineageInfo:
         """
         Return lineage names as a list
         """
-        zipped = [a.name for a in self.lineage]
-        # eliminate empty if so requested
         if truncate_empty:
-            empty = None
-            last_lineage_name = zipped[-1]
-            while zipped and last_lineage_name == empty:
-                zipped.pop(-1)
-                if zipped:
-                    last_lineage_name = zipped[-1]
+            zipped = [a.name for a in self.filled_lineage]
+        else:
+            zipped = [a.name for a in self.lineage]
         # replace None with empty string ("")
         if None in zipped:
             zipped = ['' if x is None else x for x in zipped]
@@ -132,16 +118,10 @@ class BaseLineageInfo:
         Return taxids as a list
         """
         # don't turn None into str(None)
-        zipped = [str(a.taxid) for a in self.lineage if a.taxid is not None]
-        # eliminate empty if so requested
         if truncate_empty:
-            empty = None
-            last_lineage_taxid = zipped[-1]
-            while zipped and last_lineage_taxid == empty:
-                zipped.pop(-1)
-                if zipped:
-                    last_lineage_taxid = zipped[-1]
-        
+            zipped = [str(a.taxid) for a in self.filled_lineage if a.taxid is not None]
+        else:
+            zipped = [str(a.taxid) for a in self.lineage if a.taxid is not None]
         # replace None with empty string ("")
         if None in zipped:
             zipped = ['' if x is None else x for x in zipped]
@@ -165,41 +145,37 @@ class BaseLineageInfo:
             raise ValueError("Cannot compare lineages from taxonomies with different ranks.")
         if rank not in self.ranks: # rank is available
             raise ValueError(f"Desired Rank {rank} not available for this lineage")
+        # always return false if rank is not filled in either of the two lineages
         if rank in self.filled_ranks and rank in other.filled_ranks:
-            for a, b in zip(self.lineage, other.lineage):
-                assert a.rank == b.rank
-                if a.rank == rank:
-                    if a == b:
-                        return 1
-                if a != b:
-                    return 0
+            rank_idx = self.rank_index(rank)
+            a_lin = self.lineage[:rank_idx+1]
+            b_lin = other.lineage[:rank_idx+1]
+            if a_lin == b_lin:
+                return 1
         return 0
 
     def pop_to_rank(self, rank):
-        # what is desired behavior? do we want new LineageInfoRanks?
+        # current behavior: removes information, same as original pop_to_rank. Is that desired here if we can do it another way?)
         "Remove lineage tuples from given lineage `lin` until `rank` is reached."
         if rank not in self.ranks:
             raise ValueError(f"Desired Rank {rank} not available for this lineage")
-
-        before_rank = []
-        for tax_rank in self.ranks:
-            if tax_rank != rank:
-                before_rank.append(tax_rank)
-            else:
-                break        
         # are we already above rank?
-        if self.lineage and self.lineage[-1].rank in before_rank:
-            return tuple(self.lineage)
+        if rank not in self.filled_ranks:
+            return self
+        # if not, pop lineage to this rank, replacing lower with empty lineagetuples
+        while self.filled_ranks and self.filled_ranks[-1] != rank:
+            # remove rank from filled ranks
+            this_rank = self.filled_ranks[-1]
+            self.filled_ranks.pop()
+            # replace LineageTuple at this rank with empty rank lineage tuple
+            rank_idx = self.rank_index(this_rank)
+            self.lineage[rank_idx] = LineageTuple(rank=this_rank)
         
-        # if not, get lineage at this rank
-        while self.lineage and self.lineage[-1].rank != rank:
-            self.lineage.pop()
-        
-        return self.lineage
-    
+        return self
+
 
 @dataclass
-class LineageInfoRanks(BaseLineageInfo):
+class RankLineageInfo(BaseLineageInfo):
     """Class for storing multi-rank lineage information"""
     ranks: list = field(default_factory=lambda: ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'])
     include_strain: bool = False
@@ -214,9 +190,9 @@ class LineageInfoRanks(BaseLineageInfo):
             self.make_lineage()
         else:
             self.init_empty()
-        # make dictionary for optional easier access?
-        self.lineageD = {lin_tup.rank: lin_tup.name for lin_tup in self.lineage}
 
+    def __eq__(self, other): # ignore lineage_str
+        return all([self.ranks == other.ranks, self.lineage==other.lineage])
 
 @dataclass
 class LineageInfoLINS(BaseLineageInfo):
