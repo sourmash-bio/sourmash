@@ -102,7 +102,7 @@ def compare(args):
 
     # complain if it's not all one or the other
     if is_scaled != is_scaled_2:
-        error('cannot mix scaled signatures with bounded signatures')
+        error('ERROR: cannot mix scaled signatures with num signatures')
         sys.exit(-1)
 
     is_containment = False
@@ -139,10 +139,12 @@ def compare(args):
     if is_scaled:
         max_scaled = max(s.minhash.scaled for s in siglist)
         if args.scaled:
+            args.scaled = int(args.scaled)
+
             max_scaled = max(max_scaled, args.scaled)
             if max_scaled > args.scaled:
                 notify(f"WARNING: --scaled specified {args.scaled}, but max scaled of sketches is {max_scaled}")
-                notify(f"continuing with scaled value of {max_scaled}.")
+                notify(f"WARNING: continuing with scaled value of {max_scaled}.")
 
         new_siglist = []
         for s in siglist:
@@ -150,7 +152,7 @@ def compare(args):
                 size_may_be_inaccurate = True
             if s.minhash.scaled != max_scaled:
                 if not printed_scaled_msg:
-                    notify(f'downsampling to scaled value of {format(max_scaled)}')
+                    notify(f'NOTE: downsampling to scaled value of {format(max_scaled)}')
                     printed_scaled_msg = True
                 with s.update() as s:
                     s.minhash = s.minhash.downsample(scaled=max_scaled)

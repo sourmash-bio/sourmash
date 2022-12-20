@@ -414,7 +414,7 @@ def test_compare_output_csv_gz(runtmp):
 
 
 def test_compare_downsample(runtmp):
-    # test 'compare' with --downsample
+    # test 'compare' with implicit downsampling
     c = runtmp
     testdata1 = utils.get_test_data('short.fa')
     c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=200', testdata1)
@@ -431,6 +431,66 @@ def test_compare_downsample(runtmp):
         assert len(lines) == 3
         assert lines[1].startswith('1.0,0.6666')
         assert lines[2].startswith('0.6666')
+
+
+def test_compare_downsample_scaled(runtmp):
+    # test 'compare' with explicit --scaled downsampling
+    c = runtmp
+    testdata1 = utils.get_test_data('short.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=200', testdata1)
+
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=100', testdata2)
+
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx',
+                   '--scaled', '300')
+
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert 'downsampling to scaled value of 300' in c.last_result.err
+    with open(c.output('xxx')) as fp:
+        lines = fp.readlines()
+        assert len(lines) == 3
+        assert lines[1].startswith('1.0,0.0')
+        assert lines[2].startswith('0.0')
+
+
+def test_compare_downsample_scaled_too_low(runtmp):
+    # test 'compare' with explicit --scaled downsampling, but lower than min
+    c = runtmp
+    testdata1 = utils.get_test_data('short.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=200', testdata1)
+
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=100', testdata2)
+
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx',
+                   '--scaled', '100')
+
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert 'downsampling to scaled value of 200' in c.last_result.err
+    assert "WARNING: --scaled specified 100, but max scaled of sketches is 200" in c.last_result.err
+    with open(c.output('xxx')) as fp:
+        lines = fp.readlines()
+        assert len(lines) == 3
+        assert lines[1].startswith('1.0,0.6666')
+        assert lines[2].startswith('0.6666')
+
+
+def test_compare_downsample_scaled_fail_num(runtmp):
+    # test 'compare' with explicit --scaled downsampling; fail on num sketch
+    c = runtmp
+    testdata1 = utils.get_test_data('short.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=20', testdata1)
+
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=100', testdata2)
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig',
+                       '--csv', 'xxx', '--scaled', '300')
+
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert "cannot mix scaled signatures with num signatures" in c.last_result.err
 
 
 def test_compare_output_multiple_k(runtmp):
