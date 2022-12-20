@@ -24,19 +24,21 @@ def test_LineageInfoRanks_taxlist_with_strain():
     assert taxinf.ascending_taxlist() == strain_taxranks[::-1]
 
 
-def test_LineageInfoRanks_init_lineage_str():
+def test_LineageInfoRanks_init_lineage_str_1():
     x = "a;b;c"
     taxinf = LineageInfoRanks(lineage_str=x, include_strain=True)
     print(taxinf.lineage)
     print(taxinf.lineage_str)
     assert taxinf.zip_lineage()== ['a', 'b', 'c', '', '', '', '', '']
 
-def test_LineageInfoRanks_init_lineage_str_truncate():
+
+def test_LineageInfoRanks_init_lineage_str_1_truncate():
     x = "a;b;c"
     taxinf = LineageInfoRanks(lineage_str=x, include_strain=True)
     print(taxinf.lineage)
     print(taxinf.lineage_str)
     assert taxinf.zip_lineage(truncate_empty=True)== ['a', 'b', 'c']
+
 
 def test_LineageInfoRanks_init_lineage_str_2():
     x = "a;b;;c"
@@ -44,6 +46,7 @@ def test_LineageInfoRanks_init_lineage_str_2():
     print(taxinf.lineage)
     print(taxinf.lineage_str)
     assert taxinf.zip_lineage()== ['a', 'b', '', 'c' '', '', '', '', '']
+
 
 def test_LineageInfoRanks_init_lineage_str_2_truncate():
     x = "a;b;;c"
@@ -94,8 +97,6 @@ def test_zip_lineage_4():
     taxinf = LineageInfoRanks(lineage=x, include_strain=True) 
     assert taxinf.zip_lineage(truncate_empty=True) == ['a', '', 'c']
 
-#    assert 'incomplete lineage at phylum - is class instead' in str(e.value)
-
 
 def test_display_lineage_1():
     x = [ LineagePair('superkingdom', 'a'), LineagePair('phylum', 'b') ]
@@ -107,3 +108,92 @@ def test_display_lineage_2():
     x = [ LineagePair('superkingdom', 'a'), LineagePair(None, ''), LineagePair('class', 'c') ]
     taxinf = LineageInfoRanks(lineage=x) 
     assert taxinf.display_lineage() == "a;;c"
+
+def test_display_taxid_1():
+    x = [ LineageTuple('superkingdom', 'a', 1), LineageTuple('phylum', 'b', 2) ]
+    taxinf = LineageInfoRanks(lineage=x) 
+    assert taxinf.display_taxid() == "1;2"
+
+## WORKING HERE
+
+def test_is_lineage_match_1():
+    # basic behavior: match at order and above, but not at family or below.
+    lin1 = LineageInfoRanks(lineage_str = 'd__a;p__b;c__c;o__d;f__e')
+    lin2 = LineageInfoRanks(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
+    print(lin1.lineage)
+    assert lin1.is_lineage_match(lin2, 'superkingdom')
+    assert lin2.is_lineage_match(lin1, 'superkingdom')
+    assert lin1.is_lineage_match(lin2, 'phylum')
+    assert lin2.is_lineage_match(lin1, 'phylum')
+    assert lin1.is_lineage_match(lin2, 'class')
+    assert lin2.is_lineage_match(lin1, 'class')
+    assert lin1.is_lineage_match(lin2, 'order')
+    assert lin2.is_lineage_match(lin1, 'order')
+    
+    assert not lin1.is_lineage_match(lin2, 'family')
+    assert not lin2.is_lineage_match(lin1, 'family')
+    assert not lin1.is_lineage_match(lin2, 'genus')
+    assert not lin2.is_lineage_match(lin1, 'genus')
+    assert not lin1.is_lineage_match(lin2, 'species')
+    assert not lin2.is_lineage_match(lin1, 'species')
+
+
+def test_is_lineage_match_2():
+    # match at family, and above, levels; no genus or species to match
+    lin1 = LineageInfoRanks(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
+    lin2 = LineageInfoRanks(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
+    assert lin1.is_lineage_match(lin2, 'superkingdom')
+    assert lin2.is_lineage_match(lin1, 'superkingdom')
+    assert lin1.is_lineage_match(lin2, 'phylum')
+    assert lin2.is_lineage_match(lin1, 'phylum')
+    assert lin1.is_lineage_match(lin2, 'class')
+    assert lin2.is_lineage_match(lin1, 'class')
+    assert lin1.is_lineage_match(lin2, 'order')
+    assert lin2.is_lineage_match(lin1, 'order')
+    assert lin1.is_lineage_match(lin2, 'family')
+    assert lin2.is_lineage_match(lin1, 'family')
+
+    assert not lin1.is_lineage_match(lin2, 'genus')
+    assert not lin2.is_lineage_match(lin1, 'genus')
+    assert not lin1.is_lineage_match(lin2, 'species')
+    assert not lin2.is_lineage_match(lin1, 'species')
+
+def test_is_lineage_match_3():
+    # one lineage is empty
+    lin1 = LineageInfoRanks()
+    lin2 = LineageInfoRanks(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
+    
+    assert not lin1.is_lineage_match(lin2, 'superkingdom')
+    assert not lin2.is_lineage_match(lin1, 'superkingdom')
+    assert not lin1.is_lineage_match(lin2, 'phylum')
+    assert not lin2.is_lineage_match(lin1, 'phylum')
+    assert not lin1.is_lineage_match(lin2, 'class')
+    assert not lin2.is_lineage_match(lin1, 'class')
+    assert not lin1.is_lineage_match(lin2, 'order')
+    assert not lin2.is_lineage_match(lin1, 'order')
+    assert not lin1.is_lineage_match(lin2, 'family')
+    assert not lin2.is_lineage_match(lin1, 'family')
+    assert not lin1.is_lineage_match(lin2, 'genus')
+    assert not lin2.is_lineage_match(lin1, 'genus')
+    assert not lin1.is_lineage_match(lin2, 'species')
+    assert not lin2.is_lineage_match(lin1, 'species')
+
+
+#def test_pop_to_rank_1():
+#    # basic behavior - pop to order?
+#    lin1 = LineageInfoRanks(lineage_str='d__a;p__b;c__c;o__d')
+#    lin2 = LineageInfoRanks(lineage_str='d__a;p__b;c__c;o__d;f__f')
+
+#    print(lin1)
+#    popped = lin2.pop_to_rank('order')
+ #   print(popped)
+#    assert lin1.is_lineage_match(popped, "order")
+#    assert lin2.pop_to_rank('order') == lin1.lineage # this is much easier syntax == ENABLE
+
+
+#def test_pop_to_rank_2():
+#    # what if we're already above rank?
+#    lin2 = make_lineage('d__a;p__b;c__c;o__d;f__f')
+
+#    print(pop_to_rank(lin2, 'species'))
+#    assert pop_to_rank(lin2, 'species') == lin2

@@ -51,16 +51,22 @@ class BaseLineageInfo:
         self.lineage = []
         for rank in self.ranks:
             self.lineage.append(LineageTuple(rank=rank))
+        self.filled_ranks = []
        
     def init_from_lineage(self):
-        'initialize from lineage tuples, allowing empty ranks'
+        'initialize from lineage tuples, allowing empty ranks and reordering if possible'
         # first, initialize_empty
         print(self.lineage)
         new_lineage = []
+        # check this is a list of lineage tuples:
+        for lin_tup in self.lineage:
+            if not isinstance(lin_tup, (LineageTuple, LineagePair)):
+                raise ValueError(f"{lin_tup} is not LineageTuple()")
         if self.ranks is not None:
+            # build empty lineage
             for rank in self.ranks:
                 new_lineage.append(LineageTuple(rank=rank))
-            # now add input tuples in correct spots
+            # now add input tuples in correct spots. This corrects for order and allows empty values.
             for lin_tup in self.lineage:
                 # find index for this rank
                 if lin_tup.rank: # skip this tuple if rank is None or ""
@@ -71,8 +77,16 @@ class BaseLineageInfo:
                     new_lineage[rank_idx] = lin_tup
             self.lineage = new_lineage
         else:
-            # lineage can be exactly what was input. Then use lineage to build ranks
-            self.ranks = [a.rank for a in self.lineage]
+            # if ranks not provided, check that all ranks are provided; build ranks from lineage tuples
+            self.ranks=[]
+            for lin_tup in self.lineage:
+                if not lin_tup.rank:
+                    raise ValueError(f"Missing Rank for Lineage Tuple {lin_tup} and ranks not provided!")
+                self.ranks.append(lin_tup.rank)
+        # build list of filled ranks
+        self.filled_ranks = [a.rank for a in self.lineage if a.name]
+            # use lineage to build ranks
+            # self.ranks = [a.rank for a in self.lineage]
         
     
     def validate_lineage(self):
@@ -85,11 +99,14 @@ class BaseLineageInfo:
 
     def make_lineage(self):
         "Turn a ; or ,-separated set of lineages into a tuple of LineageTuple objs."
+        if not self.ranks:
+            raise ValueError(f"Must provide ordered ranks for {self.lineage_str}")
         new_lin = self.lineage_str.split(';')
         if len(new_lin) == 1:
             new_lin = self.lineage_str.split(',')
         new_lin = [ LineageTuple(rank=rank, name=n) for (rank, n) in zip_longest(self.ranks, new_lin) ]
-        self.lineage=tuple(new_lin)
+        self.lineage=new_lin
+        self.filled_ranks = [a.rank for a in self.lineage if a.name]
     
     def zip_lineage(self, truncate_empty=False):
         """
@@ -106,7 +123,7 @@ class BaseLineageInfo:
                     last_lineage_name = zipped[-1]
         # replace None with empty string ("")
         if None in zipped:
-            zipped = ['' if x is    None else x for x in zipped]
+            zipped = ['' if x is None else x for x in zipped]
 
         return zipped
 
@@ -114,15 +131,21 @@ class BaseLineageInfo:
         """
         Return taxids as a list
         """
-        zipped = [a.taxid for a in self.lineage]
+        # don't turn None into str(None)
+        zipped = [str(a.taxid) for a in self.lineage if a.taxid is not None]
         # eliminate empty if so requested
         if truncate_empty:
-            empty = ""
+            empty = None
             last_lineage_taxid = zipped[-1]
             while zipped and last_lineage_taxid == empty:
                 zipped.pop(-1)
                 if zipped:
                     last_lineage_taxid = zipped[-1]
+        
+        # replace None with empty string ("")
+        if None in zipped:
+            zipped = ['' if x is None else x for x in zipped]
+        
         return zipped
 
     def display_lineage(self, truncate_empty=True):
@@ -130,7 +153,7 @@ class BaseLineageInfo:
         "Return lineage names as ';'-separated list"
         return ";".join(self.zip_lineage(truncate_empty=truncate_empty))
 
-    def display_taxid(self, truncate_empty=False):
+    def display_taxid(self, truncate_empty=True):
         "Return lineage taxids as ';'-separated list"
         return ";".join(self.zip_taxid(truncate_empty=truncate_empty))
 
@@ -142,17 +165,18 @@ class BaseLineageInfo:
             raise ValueError("Cannot compare lineages from taxonomies with different ranks.")
         if rank not in self.ranks: # rank is available
             raise ValueError(f"Desired Rank {rank} not available for this lineage")
-        for a, b in zip(self.lineage, other.lineage):
-            assert a.rank == b.rank
-            if a.rank == rank:
-                if a == b:
-                    return 1
-            if a != b:
-                return 0
-
+        if rank in self.filled_ranks and rank in other.filled_ranks:
+            for a, b in zip(self.lineage, other.lineage):
+                assert a.rank == b.rank
+                if a.rank == rank:
+                    if a == b:
+                        return 1
+                if a != b:
+                    return 0
         return 0
 
     def pop_to_rank(self, rank):
+        # what is desired behavior? do we want new LineageInfoRanks?
         "Remove lineage tuples from given lineage `lin` until `rank` is reached."
         if rank not in self.ranks:
             raise ValueError(f"Desired Rank {rank} not available for this lineage")
@@ -171,13 +195,13 @@ class BaseLineageInfo:
         while self.lineage and self.lineage[-1].rank != rank:
             self.lineage.pop()
         
-        return tuple(self.lineage)
+        return self.lineage
     
 
 @dataclass
 class LineageInfoRanks(BaseLineageInfo):
     """Class for storing multi-rank lineage information"""
-    ranks: list = field(default_factory=lambda: ['superkingdom', 'phylum', 'class', 'order', 'family','genus', 'species'])
+    ranks: list = field(default_factory=lambda: ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'])
     include_strain: bool = False
 
     def __post_init__(self):
