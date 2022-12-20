@@ -8,7 +8,8 @@ import pytest
 
 from sourmash.tax.taxcomparison import LineagePair, LineageTuple, BaseLineageInfo, RankLineageInfo, LINSLineageInfo, build_tree
 
-# sigh, can't make build tree work as easily with both LineagePair and LineageInfo. What if LineagePair just had the extra info?
+# sigh, can't make build tree work as easily with both LineagePair and LineageInfo.
+# What if LineagePair just had the extra info?
 from sourmash.tax.taxcomparison import LineageTuple as LineagePair
 from sourmash.lca.lca_utils import find_lca
 
@@ -82,6 +83,53 @@ def test_RankLineageInfo_init_lineage_with_incorrect_rank():
         RankLineageInfo(lineage=x)
     print(str(exc))
     assert f"Rank 'NotARank' not present in " in str(exc)
+
+
+def test_BaseLineageInfo_init_lineage_dict_1():
+    x = {'rank1': 'name1', 'rank2': 'name2'}
+    taxinf = BaseLineageInfo(lineage_dict=x, ranks=["rank1", "rank2"])
+    print("ranks: ", taxinf.ranks)
+    print("lineage: ", taxinf.lineage)
+    print("zipped lineage: ", taxinf.zip_lineage())
+    assert taxinf.zip_lineage()== ['name1', 'name2']
+
+
+def test_BaseLineageInfo_init_lineage_dict_withtaxid():
+    x = {'rank1': {'name': 'name1', 'taxid': 1}, 'rank2': {'name':'name2', 'taxid': 2}}
+    taxinf = BaseLineageInfo(lineage_dict=x, ranks=["rank1", "rank2"])
+    print("ranks: ", taxinf.ranks)
+    print("lineage: ", taxinf.lineage)
+    print("zipped lineage: ", taxinf.zip_lineage())
+    assert taxinf.zip_lineage()== ['name1', 'name2']
+    assert taxinf.zip_taxid()== ['1', '2']
+
+
+def test_RankLineageInfo_init_lineage_dict_1():
+    x = {'superkingdom': 'name1', 'class': 'name2'}
+    taxinf = RankLineageInfo(lineage_dict=x)
+    print("ranks: ", taxinf.ranks)
+    print("lineage: ", taxinf.lineage)
+    print("zipped lineage: ", taxinf.zip_lineage())
+    assert taxinf.zip_lineage()== ['name1', '', 'name2', '', '', '', '']
+
+
+def test_RankLineageInfo_init_lineage_dict_strain():
+    x = {'superkingdom': 'name1', 'class': 'name2'}
+    taxinf = RankLineageInfo(lineage_dict=x, include_strain=True)
+    print("ranks: ", taxinf.ranks)
+    print("lineage: ", taxinf.lineage)
+    print("zipped lineage: ", taxinf.zip_lineage())
+    assert taxinf.zip_lineage()== ['name1', '', 'name2', '', '', '', '', '']
+
+
+def test_RankLineageInfo_init_lineage_dict_withtaxid():
+    x = {'superkingdom': {'name': 'name1', 'taxid': 1}, 'class': {'name':'name2', 'taxid': 2}}
+    taxinf = RankLineageInfo(lineage_dict=x)
+    print("ranks: ", taxinf.ranks)
+    print("lineage: ", taxinf.lineage)
+    print("zipped lineage: ", taxinf.zip_lineage())
+    assert taxinf.zip_lineage()== ['name1', '', 'name2', '', '', '', '']
+    assert taxinf.zip_taxid()== ['1', '', '2', '', '', '', '']
 
 
 def test_zip_lineage_1():
@@ -355,3 +403,9 @@ def test_find_lca_3():
     tree = build_tree([lin1, lin2])
     lca, reason = find_lca(tree)
     assert lca == tuple(lin1.filled_lineage)           # find most specific leaf node
+
+
+#def test_LINSLineageInfo_taxlist():
+#    taxinf = LINSLineageInfo(num_positions=10)
+#    assert taxinf.taxlist() == [0]*10
+#    assert taxinf.ascending_taxlist() == standard_taxranks[::-1] 

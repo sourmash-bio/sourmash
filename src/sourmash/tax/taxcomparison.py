@@ -31,6 +31,8 @@ class BaseLineageInfo:
     ranks: list[str] = field(default_factory=lambda: [])
     lineage: list = field(default_factory=lambda: [LineageTuple()]) #list of LineageTuples/LineagePairs
     lineage_str: str = None # ';'- or ','-separated str of lineage names
+    lineage_dict: dict = None # dict of rank: name
+    ident: str = None
 
     def __post_init__(self):
         "Initialize according to passed values"
@@ -38,6 +40,8 @@ class BaseLineageInfo:
             self.init_from_lineage()
         elif self.lineage_str is not None and self.ranks:
             self.make_lineage()
+        elif self.lineage_dict is not None and self.ranks:
+            self.init_from_lineage_dict()
         elif self.ranks:
             self.init_empty()
         else:
@@ -109,6 +113,35 @@ class BaseLineageInfo:
                 self.ranks.append(lin_tup.rank)
         # build list of filled ranks
         self.filled_ranks = [a.rank for a in self.lineage if a.name]
+
+    def init_from_lineage_dict(self):
+        'initialize from lineage dict, e.g. from gather csv, allowing empty ranks and reordering if necessary'
+        if not isinstance(self.lineage_dict, (dict)):
+            raise ValueError(f"{self.lineage_dict} is not dictionary")
+        # first, initialize_empty
+        new_lineage = []
+        # build empty lineage
+        for rank in self.ranks:
+            new_lineage.append(LineageTuple(rank=rank))
+        # now add input information in correct spots. This corrects for order and allows empty values.
+        for rank, info in self.lineage_dict.items():
+            try:
+                rank_idx = self.rank_index(rank)
+            except ValueError as e:
+                raise ValueError(f"Rank '{rank}' not present in {', '.join(self.ranks)}") from e
+
+            name, taxid = None, None
+            if isinstance(info, dict):
+                if 'name' in info.keys():
+                    name = info['name']
+                if 'taxid' in info.keys():
+                    taxid = info['taxid']
+            elif isinstance(info, str):
+                name = info
+            new_lineage[rank_idx] =  LineageTuple(rank=rank, name=name, taxid=taxid)
+        self.lineage = new_lineage
+        # build list of filled ranks
+        self.filled_ranks = [a.rank for a in self.lineage if a.name]
         
     def make_lineage(self):
         "Turn a ; or ,-separated set of lineages into a tuple of LineageTuple objs."
@@ -141,12 +174,11 @@ class BaseLineageInfo:
         """
         # don't turn None into str(None)
         if truncate_empty:
-            zipped = [str(a.taxid) for a in self.filled_lineage if a.taxid is not None]
+            zipped = [a.taxid for a in self.filled_lineage]
         else:
-            zipped = [str(a.taxid) for a in self.lineage if a.taxid is not None]
-        # replace None with empty string ("")
-        if None in zipped:
-            zipped = ['' if x is None else x for x in zipped]
+            zipped = [a.taxid for a in self.lineage]
+        # replace None with empty string (""); cast taxids to str
+        zipped = ['' if x is None else str(x) for x in zipped]
         
         return zipped
 
@@ -210,16 +242,19 @@ class RankLineageInfo(BaseLineageInfo):
             self.init_from_lineage()
         elif self.lineage_str is not None:
             self.make_lineage()
+        elif self.lineage_dict is not None:
+            self.init_from_lineage_dict()
         else:
             self.init_empty()
 
     def __eq__(self, other): # ignore lineage_str
         return all([self.ranks == other.ranks, self.lineage==other.lineage])
 
+
 @dataclass
 class LINSLineageInfo(BaseLineageInfo):
     """Class for storing multi-rank lineage information"""
-    ranks: list
+    num_positions: int = None
     ## WHAT special considerations do we have here?
     def __post_init__(self):
         "Initialize according to passed values"
@@ -265,21 +300,4 @@ def build_tree(assignments, initial=None):
                 node = child
 
     return tree
-
-
-#@dataclass
-#class QueryInfo: # prob don't need this if we just have iall info in Base gather result
-#    res: list = None
-
-#@dataclass
-#class BaseGatherResult:
-#    res: list = None
-
-#@dataclass
-#class SummarizedGatherResult(BaseGatherResult):
-#    res: list = None
-
-#@dataclass
-#class ClassificationResult(BaseGatherResult):
-#    res: list = None
 
