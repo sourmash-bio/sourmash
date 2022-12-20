@@ -493,6 +493,23 @@ def test_compare_downsample_scaled_fail_num(runtmp):
     assert "cannot mix scaled signatures with num signatures" in c.last_result.err
 
 
+def test_compare_downsample_scaled_fail_all_num(runtmp):
+    # test 'compare' with explicit --scaled downsampling; fail on all num sketches
+    c = runtmp
+    testdata1 = utils.get_test_data('short.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=20', testdata1)
+
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=30', testdata2)
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig',
+                       '--csv', 'xxx', '--scaled', '300')
+
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert "ERROR: cannot specify --scaled with non-scaled signatures." in c.last_result.err
+
+
 def test_compare_output_multiple_k(runtmp):
     # test 'compare' when given multiple k-mer sizes -> should fail
     c = runtmp
