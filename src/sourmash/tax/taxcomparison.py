@@ -4,27 +4,45 @@ Taxonomic Information Classes
 from dataclasses import dataclass, field
 from itertools import zip_longest
 
-@dataclass
-class LineagePair:
+@dataclass(frozen=True)
+class LineagePair():
     """Class for storing per-rank lineage information"""
-    rank: str = None
-    name: str = None
+    rank: str=None
+    name: str=None
+#    taxid: int=None # would actually be easier just to change it
 
     def is_empty(self):
         return any(self.name is None, self.rank is None)
 
-@dataclass
+@dataclass(frozen=True)
 class LineageTuple(LineagePair):
     """Class for storing per-rank lineage information"""
     taxid: int = None # taxid allowed to be empty
 
+    # do we want to force taxid to be int? Seems safe ish, prevents regular ranks from being input here..
+    def __post_init__(self):
+        if self.taxid is not None and not isinstance(self.taxid, int):
+            raise TypeError('taxid not an int')
 
+# storing lineage as list make manipulation easier within the class. BUT, do I only want to be returning
+# lineage/filled_lineage as tuples, instead?
 @dataclass
 class BaseLineageInfo:
-    ranks: list[str] = field(default_factory=[""])
+    ranks: list[str] = field(default_factory=lambda: [])
     lineage: list = field(default_factory=lambda: [LineageTuple()]) #list of LineageTuples/LineagePairs
     lineage_str: str = None # ';'- or ','-separated str of lineage names
-    
+
+    def __post_init__(self):
+        "Initialize according to passed values"
+        if self.lineage != [LineageTuple()]:
+            self.init_from_lineage()
+        elif self.lineage_str is not None and self.ranks:
+            self.make_lineage()
+        elif self.ranks:
+            self.init_empty()
+        else:
+            raise ValueError("Cannot initialize BaseLineageInfo. Please provide lineage or rank info.")
+
     def __eq__(self, other): # ignore lineage_str
         return all([self.ranks == other.ranks, self.lineage==other.lineage])
 
@@ -64,7 +82,7 @@ class BaseLineageInfo:
         for lin_tup in self.lineage:
             if not isinstance(lin_tup, (LineageTuple, LineagePair)):
                 raise ValueError(f"{lin_tup} is not LineageTuple or LineagePair")
-        if self.ranks is not None:
+        if self.ranks:
             # build empty lineage
             for rank in self.ranks:
                 new_lineage.append(LineageTuple(rank=rank))
@@ -76,7 +94,11 @@ class BaseLineageInfo:
                         rank_idx = self.rank_index(lin_tup.rank)
                     except ValueError as e:
                         raise ValueError(f"Rank '{lin_tup.rank}' not present in {', '.join(self.ranks)}") from e
-                    new_lineage[rank_idx] = lin_tup
+                    # make sure we're adding lineagetuples, not lineagePairs for consistency
+                    if not isinstance(lin_tup, LineageTuple):
+                        new_lineage[rank_idx] =  LineageTuple(rank=lin_tup.rank, name=lin_tup.name)
+                    else:
+                        new_lineage[rank_idx] =  lin_tup
             self.lineage = new_lineage
         else:
             # if ranks not provided, check that all ranks are provided; build ranks from lineage tuples
@@ -195,60 +217,69 @@ class RankLineageInfo(BaseLineageInfo):
         return all([self.ranks == other.ranks, self.lineage==other.lineage])
 
 @dataclass
-class LineageInfoLINS(BaseLineageInfo):
+class LINSLineageInfo(BaseLineageInfo):
     """Class for storing multi-rank lineage information"""
     ranks: list
     ## WHAT special considerations do we have here?
-
     def __post_init__(self):
         "Initialize according to passed values"
-        if self.lineage is None:
-            if self.ranks is not None:
-                if self.lineage_str is not None:
-                        self.lineage = self.make_lineage()
-                else:
-                    self.lineage= self.init_empty()
-            else:
-                raise ValueError(f"Must provide ordered ranks for {self.lineage_str}")
+        if self.lineage != [LineageTuple()]:
+            self.init_from_lineage()
+        elif self.lineage_str is not None and self.ranks:
+            self.make_lineage()
+        elif self.ranks:
+            self.init_empty()
         else:
-            if self.ranks is not None:
-                self.validate_lineage()
-            else:
-                self.ranks = [a.rank for a in self.lineage]
+            raise ValueError("Cannot initialize LINSLineageInfo. Please provide lineage or rank info.")
     
-    def zip_taxid(self, truncate_empty=False):
-        raise NotImplementedError
+
+def build_tree(assignments, initial=None):
+    """
+    Builds a tree of dictionaries from lists of LineageInfo or LineagePair objects
+    in 'assignments'.  This tree can then be used to find lowest common
+    ancestor agreements/confusion.
+    """
+    if initial is None:
+        tree = {}
+    else:
+        tree = initial
+
+    if not assignments:
+        raise ValueError("empty assignment passed to build_tree")
     
-    def display_taxid(self, truncate_empty=False):
-        raise NotImplementedError
+    if not isinstance(assignments, list):
+        assignments = [assignments]
+
+    for assignment in assignments:
+        node = tree
+
+        if isinstance(assignment, (BaseLineageInfo, RankLineageInfo, LINSLineageInfo)):
+            assignment = assignment.filled_lineage
+
+        for lineage_tup in assignment:
+            if lineage_tup.name:
+                child = node.get(lineage_tup, {})
+                node[lineage_tup] = child
+
+                # shift -> down in tree
+                node = child
+
+    return tree
 
 
-# not sure where to go here.. we already have MultiLineagesDB .. can we use/mod that instead?
 #@dataclass
-#class MultiLineages:
-#    # NOTE: explicitly allow any ranks so this will worth with LINS
-#    """Class for manipulating groups of LineageInfo"""
-#    lineages:  # list of LineageInfo??
-#
-#    def build_tree(self):
-#        return self 
-#    def find_lca(self):
-#        return self
+#class QueryInfo: # prob don't need this if we just have iall info in Base gather result
+#    res: list = None
 
+#@dataclass
+#class BaseGatherResult:
+#    res: list = None
 
-@dataclass 
-class QueryInfo: # prob don't need this if we just have iall info in Base gather result
-    res: list = None
+#@dataclass
+#class SummarizedGatherResult(BaseGatherResult):
+#    res: list = None
 
-@dataclass 
-class BaseGatherResult:
-    res: list = None
-
-@dataclass 
-class SummarizedGatherResult(BaseGatherResult):
-    res: list = None
-
-@dataclass 
-class ClassificationResult(BaseGatherResult):
-    res: list = None
+#@dataclass
+#class ClassificationResult(BaseGatherResult):
+#    res: list = None
 
