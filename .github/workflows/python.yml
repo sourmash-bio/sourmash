@@ -1,4 +1,4 @@
-# note: to invalidate caches, adjust the pip-v? and tox-v? numbers below.
+# note: to invalidate caches, adjust the pip-v? number below.
 name: Python tests
 
 on:
@@ -36,7 +36,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip-v4-${{ hashFiles('**/setup.cfg') }}
+          key: ${{ runner.os }}-pip-v4-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-pip-v4-
 
@@ -65,7 +65,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: .tox/
-          key: ${{ runner.os }}-tox-v4-${{ hashFiles('**/setup.cfg') }}
+          key: ${{ runner.os }}-tox-v4-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-tox-v4-
 

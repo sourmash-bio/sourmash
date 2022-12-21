@@ -16,7 +16,7 @@ jobs:
         extra_nix_config: |
           access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-    - run: nix run . -- --version
+    - run: nix run .# -- --version
 
     - run: nix-shell --command "tox -e py39"
 

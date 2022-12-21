@@ -3,6 +3,3 @@ members = [
   "src/core",
 ]
 default-members = ["src/core"]
-
-[workspace.package]
-version = "0.11.0"

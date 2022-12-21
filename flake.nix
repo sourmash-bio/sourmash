@@ -16,7 +16,6 @@
       url = "github:nix-community/naersk";
       inputs = {
         nixpkgs.follows = "nixpkgs";
-        flake-utils.follows = "utils";
       };
     };
   };
@@ -93,13 +92,13 @@
             pname = "sourmash";
             version = "4.6.1";
             format = "pyproject";
-            #disabled = lib.pythonOlder "3.6";
 
             src = ./.;
+
             cargoDeps = rustPlatform.fetchCargoTarball {
               inherit src;
               name = "${pname}-${version}";
-              hash = "sha256-yKTLAsorPbRnJqBDypnqR9qNou5RKleLr7fEZAehxo4=";
+              hash = "sha256-qa/yth5PKEa/ZpjUVNfB6PleDMkRnXXLgsL6gTevBrA=";
             };
 
             nativeBuildInputs = with rustPlatform; [ cargoSetupHook maturinBuildHook ];
@@ -108,7 +107,6 @@
             propagatedBuildInputs = with python; [ cffi deprecation cachetools bitstring numpy scipy matplotlib screed ];
 
             DYLD_LIBRARY_PATH = "${self.packages.${system}.lib}/lib";
-            NO_BUILD = "1";
           };
 
           docker =
