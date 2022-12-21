@@ -18,7 +18,7 @@ jobs:
         path: |
           ~/.nix-portable/store
           ~/bin/nix-portable
-        key: nix-${{ hashFiles('shell.nix') }}-${{ hashFiles('nix/**') }}-v009
+        key: nix-${{ hashFiles('shell.nix') }}-${{ hashFiles('flake.*') }}-v010
 
     - name: Install nix-portable
       if: steps.cache-nix.outputs.cache-hit != 'true'
@@ -27,9 +27,9 @@ jobs:
         wget -qO ~/bin/nix-portable https://github.com/DavHau/nix-portable/releases/download/v009/nix-portable
         chmod +x ~/bin/nix-portable
 
-    - run: ~/bin/nix-portable nix-shell --command "tox -e py39"
-
     - run: ~/bin/nix-portable nix run . -- --version
+
+    - run: ~/bin/nix-portable nix-shell --command "tox -e py39"
 
   mamba:
     runs-on: ubuntu-latest
