@@ -132,7 +132,9 @@ def load_gather_results(gather_csv, tax_assignments, *, essential_colnames=Essen
     return gather_results, header #, gather_queries # can use the gather_results keys instead
 
 
-def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False):
+def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False, 
+                               keep_full_identifiers=False,keep_identifier_versions=False):
+                                                            
     '''
     Load gather csvs, checking for empties and ids missing from taxonomic assignments.
     '''
@@ -141,7 +143,6 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
     gather_results = {}
     total_missed = 0
     all_ident_missed = set()
-    #seen_queries = set()
     header = []
     n_ignored = 0
     for n, gather_csv in enumerate(gather_csvs):
@@ -149,8 +150,8 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
         try:
             these_results, header = load_gather_results(gather_csv, tax_assign, 
                                                         seen_queries=gather_results.keys(),
-                                                        force=force)
-            #seen_queries.add(these_results.keys())
+                                                        force=force, keep_full_identifiers=keep_full_identifiers,
+                                                        keep_identifier_versions = keep_identifier_versions)
         except ValueError as exc:
             if force:
                 if "found in more than one CSV" in str(exc):

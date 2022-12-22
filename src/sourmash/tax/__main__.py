@@ -88,26 +88,23 @@ def metagenome(args):
     # next, collect and load gather results
     gather_csvs = tax_utils.collect_gather_csvs(args.gather_csv, from_file= args.from_file)
     try:
-        gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
-                                                                                       fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
+        query_gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
+                                                                                       fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
+                                                                                       keep_full_identifiers=args.keep_full_identifiers,
+                                                                                       keep_identifier_versions = args.keep_identifier_versions,
+                                                                                       )
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
 
-    if not gather_results:
+    if not query_gather_results:
         notify('No gather results loaded. Exiting.')
         sys.exit(-1)
 
-    # actually summarize at rank
-    summarized_gather = {}
-    seen_perfect = set()
-    for rank in sourmash.lca.taxlist(include_strain=False):
+    # for each queryResult, actually summarize at rank, reporting any errors that occur.
+    for queryResult in query_gather_results:
         try:
-            summarized_gather[rank], seen_perfect, _ = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                                keep_full_identifiers=args.keep_full_identifiers,
-                                                                keep_identifier_versions = args.keep_identifier_versions,
-                                                                seen_perfect = seen_perfect)
-
+            queryResult.build_summarized_result()
         except ValueError as exc:
             error(f"ERROR: {str(exc)}")
             sys.exit(-1)
