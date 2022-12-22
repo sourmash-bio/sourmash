@@ -23,22 +23,66 @@ from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_re
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import LineagePair
+from sourmash.tax.taxcomparison import GatherRow, TaxResult, QueryTaxResult
 
-# utility functions for testing
-def make_mini_gather_results(g_infolist, include_ksize_and_scaled=False):
-    # make mini gather_results
-    min_header = ["query_name", "name", "match_ident", "f_unique_to_query", "query_md5", "query_filename", "f_unique_weighted", "unique_intersect_bp", "remaining_bp"]
-    if include_ksize_and_scaled:
-        min_header.extend(['ksize', 'scaled'])
-    gather_results = []
-    for g_info in g_infolist:
-        inf = dict(zip(min_header, g_info))
-        gather_results.append(inf)
+
+def make_mini_gather_results(gather_info, taxD, include_ksize_and_scaled=True):
+    gather_results = {}
+    this_querytaxres = None
+    for gather_infoD in gather_info:
+        # default
+        gatherD = {'query_name': 'q1',
+                'query_md5': 'md5',
+                'query_filename': 'query_fn',
+                'name': 'gA',
+                'f_unique_weighted': 0.1,
+                'f_unique_to_query': 0.1,
+                'unique_intersect_bp': 2,
+                'remaining_bp': 1,
+                'ksize': 31,
+                'scaled': 1}
+        gatherD.update(gather_infoD)
+        if not include_ksize_and_scaled:
+            gatherD.pop('ksize')
+            gatherD.pop('scaled')
+        query_name = gatherD['query_name']
+        gatherRaw = GatherRow(**gatherD)
+        taxres = TaxResult(raw=gatherRaw)
+        taxres.get_match_lineage(tax_assignments=taxD)
+                # add to matching QueryTaxResult or create new one
+        if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
+            # get existing or initialize new
+            this_querytaxres = gather_results.get(query_name, QueryTaxResult(taxres.query_info))
+        this_querytaxres.add_taxresult(taxres)
+        print('missed_ident?', taxres.missed_ident)
+        gather_results[query_name] = this_querytaxres
     return gather_results
 
+# utility functions for testing
+# def make_mini_gather_results(g_infolist, include_ksize_and_scaled=False):
+#     # make mini gather_results
+#     min_header = ["query_name", "name", "match_ident", "f_unique_to_query", "query_md5", "query_filename", "f_unique_weighted", "unique_intersect_bp", "remaining_bp"]
+#     if include_ksize_and_scaled:
+#         min_header.extend(['ksize', 'scaled'])
+#     gather_results = []
+#     this_querytaxres = None
+#     for g_info in g_infolist:
+#         query_name = g_info[0]
+#         row = dict(zip(min_header, g_info))
+#         gatherRaw = GatherRow(**row)
+#         taxres = TaxResult(raw=gatherRaw)
+#         if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
+#             # get existing or initialize new
+#             this_querytaxres = gather_results.get(query_name, QueryTaxResult(taxres.query_info))
+#         gather_results[query_name] = this_querytaxres
+#     return gather_results
 
-def make_mini_taxonomy(tax_info):
+
+def make_mini_taxonomy(tax_info=None):
     #pass in list of tuples: (name, lineage)
+    if not tax_info:
+        tax_info = [("gA", "a;b;c")]
+    #taxD = make_mini_taxonomy([gA_tax])
     taxD = {}
     for (name,lin) in tax_info:
         taxD[name] = lca_utils.make_lineage(lin)
@@ -123,7 +167,7 @@ def test_check_and_load_gather_csvs_with_empty_force(runtmp):
     print(tax_assign)
     # check gather results and missing ids
     gather_results, ids_missing, n_missing, header = check_and_load_gather_csvs(csvs, tax_assign, force=True)
-    assert len(gather_results) == 4
+    assert len(gather_results) == 1
     print("n_missing: ", n_missing)
     print("ids_missing: ", ids_missing)
     assert n_missing == 1
@@ -192,25 +236,38 @@ def test_check_and_load_gather_csvs_fail_on_missing(runtmp):
     assert "Failing on missing taxonomy" in str(exc)
 
 
-def test_load_gather_results():
+def test_load_gather_results_1():
+    taxD = make_mini_taxonomy([('GCF_001881345', 'a;b;c')])
     gather_csv = utils.get_test_data('tax/test1.gather.csv')
-    gather_results, header, seen_queries = load_gather_results(gather_csv)
-    assert len(gather_results) == 4
+    gather_results, header = load_gather_results(gather_csv, taxD)
+    assert len(gather_results) == 1
+    query_res = gather_results['test1']
+    assert len(query_res.raw_taxresults) ==4
+    for res in query_res.raw_taxresults:
+        print(res.match_ident)
+        print(res.lineageInfo.display_lineage())
 
 
 def test_load_gather_results_gzipped(runtmp):
+    taxD = make_mini_taxonomy([('GCF_001881345', 'a;b;c')])
     gather_csv = utils.get_test_data('tax/test1.gather.csv')
 
     # rewrite gather_csv as gzipped csv
     gz_gather = runtmp.output('g.csv.gz')
     with open(gather_csv, 'rb') as f_in, gzip.open(gz_gather, 'wb') as f_out:
         f_out.writelines(f_in)
-    gather_results, header, seen_queries = load_gather_results(gz_gather)
-    assert len(gather_results) == 4
+    gather_results, header = load_gather_results(gz_gather, taxD)
+    assert len(gather_results) == 1
+    query_res = gather_results['test1']
+    assert len(query_res.raw_taxresults) ==4
+    for res in query_res.raw_taxresults:
+        print(res.match_ident)
+        print(res.lineageInfo.display_lineage())
 
 
 def test_load_gather_results_bad_header(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
+    taxD = make_mini_taxonomy([('GCF_001881345', 'a;b;c')])
 
     bad_g_csv = runtmp.output('g.csv')
 
@@ -222,19 +279,20 @@ def test_load_gather_results_bad_header(runtmp):
     print("bad_gather_results: \n", bad_g)
 
     with pytest.raises(ValueError) as exc:
-        gather_results, header = load_gather_results(bad_g_csv)
+        gather_results, header = load_gather_results(bad_g_csv, taxD)
     assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
 
 
 def test_load_gather_results_empty(runtmp):
     empty_csv = runtmp.output('g.csv')
+    taxD = make_mini_taxonomy([('GCF_001881345', 'a;b;c')])
 
     #creates empty gather result
     with open(empty_csv, 'w') as fp:
         fp.write('')
 
     with pytest.raises(ValueError) as exc:
-        gather_results, header = load_gather_results(empty_csv)
+        gather_results, header = load_gather_results(empty_csv, taxD)
     assert f"Cannot read gather results from '{empty_csv}'. Is file empty?" in str(exc.value)
 
 
@@ -344,15 +402,22 @@ def test_load_taxonomy_csv_duplicate_force(runtmp):
 
 def test_find_missing_identities():
     # make gather results
-    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
-    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
-    g_res = make_mini_gather_results([gA,gB])
-
+    gA = {"name": "gA"}
+    gB = {"name": "gB"}
+    #gA = {"name": "gA", "f_unique_to_query": "0.5","f_unique_weighted":"0.5",
+    #       "unique_intersect_bp": "50", "remaining_bp": "50" }
+    #min_header = ["query_name", "name", "match_ident", "f_unique_to_query", 
+    #"query_md5", "query_filename", "f_unique_weighted", "unique_intersect_bp", "remaining_bp"]
+#    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
+#    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
     # make mini taxonomy
     gA_tax = ("gA", "a;b;c")
     taxD = make_mini_taxonomy([gA_tax])
+    
+    g_res = make_mini_gather_results([gA,gB], taxD=taxD)
+    print(g_res)
 
-    ids = find_missing_identities(g_res, taxD)
+    ids = find_missing_identities(g_res)
     print("ids_missing: ", ids)
     assert ids == {"gB"}
 
@@ -360,14 +425,17 @@ def test_find_missing_identities():
 def test_summarize_gather_at_0():
     """test two matches, equal f_unique_to_query"""
     # make gather results
-    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
-    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
-    g_res = make_mini_gather_results([gA,gB])
-
+    #gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
+    #gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
+    
     # make mini taxonomy
     gA_tax = ("gA", "a;b;c")
     gB_tax = ("gB", "a;b;d")
     taxD = make_mini_taxonomy([gA_tax,gB_tax])
+    # make mini gather results
+    gA = {"name": "gA"}
+    gB = {"name": "gB"}
+    g_res = make_mini_gather_results([gA,gB])
 
     # run summarize_gather_at and check results!
     sk_sum, _, _ = summarize_gather_at("superkingdom", taxD, g_res)

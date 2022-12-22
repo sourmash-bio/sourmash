@@ -3,6 +3,15 @@ Taxonomic Information Classes
 """
 from dataclasses import dataclass, field
 from itertools import zip_longest
+from collections import defaultdict
+
+from sourmash.logging import notify
+
+from sourmash.lca import lca_utils
+
+from sourmash.distance_utils import containment_to_distance
+
+#from sourmash.tax.tax_utils import find_match_lineage
 
 @dataclass(frozen=True)
 class LineagePair():
@@ -23,6 +32,7 @@ class LineageTuple(LineagePair):
     def __post_init__(self):
         if self.taxid is not None and not isinstance(self.taxid, int):
             raise TypeError('taxid not an int')
+
 
 # storing lineage as list make manipulation easier within the class. BUT, do I only want to be returning
 # lineage/filled_lineage as tuples, instead?
@@ -50,11 +60,17 @@ class BaseLineageInfo:
     def __eq__(self, other): # ignore lineage_str
         return all([self.ranks == other.ranks, self.lineage==other.lineage])
 
+    @property
     def taxlist(self):
         return self.ranks
     
+    @property
     def ascending_taxlist(self):
         return self.ranks[::-1]
+    
+    @property
+    def lowest_rank(self):
+        return self.filled_ranks[-1]
 
     def lineageD(self):
         return {lin_tup.rank: lin_tup.name for lin_tup in self.lineage}
@@ -64,6 +80,8 @@ class BaseLineageInfo:
 
     @property
     def filled_lineage(self):
+        if not self.filled_ranks:
+            return []
         # return lineage down to lowest non-empty rank. Preserves missing ranks above.
         # Would we prefer this to be the default returned by lineage??
         lowest_filled_rank_idx = self.rank_index(self.filled_ranks[-1])
@@ -84,7 +102,7 @@ class BaseLineageInfo:
         new_lineage = []
         # check this is a list of lineage tuples:
         for lin_tup in self.lineage:
-            if not isinstance(lin_tup, (LineageTuple, LineagePair)):
+            if not isinstance(lin_tup, (LineageTuple, LineagePair, lca_utils.LineagePair)):
                 raise ValueError(f"{lin_tup} is not LineageTuple or LineagePair")
         if self.ranks:
             # build empty lineage
@@ -226,18 +244,27 @@ class BaseLineageInfo:
             self.lineage[rank_idx] = LineageTuple(rank=this_rank)
         
         return self
+    
+    def lineage_at_rank(self, rank):
+        # non-descructive pop_to_rank. Returns tuple of lineagetuples
+        "Remove lineage tuples from given lineage `lin` until `rank` is reached."
+        if rank not in self.ranks:
+            raise ValueError(f"Desired Rank {rank} not available for this lineage")
+        # are we already above rank?
+        if rank not in self.filled_ranks:
+            return self.filled_lineage
+        # if not, return lineage tuples down to desired rank
+        rank_idx = self.rank_index(rank)
+        return self.filled_lineage[:rank_idx+1]
 
 
 @dataclass
 class RankLineageInfo(BaseLineageInfo):
     """Class for storing multi-rank lineage information"""
-    ranks: list = field(default_factory=lambda: ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'])
-    include_strain: bool = False
+    ranks: list = field(default_factory=lambda: ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain'])
 
     def __post_init__(self):
         "Initialize according to passed values"
-        if self.include_strain:
-            self.ranks.append("strain")
         if self.lineage != [LineageTuple()]:
             self.init_from_lineage()
         elif self.lineage_str is not None:
@@ -247,7 +274,7 @@ class RankLineageInfo(BaseLineageInfo):
         else:
             self.init_empty()
 
-    def __eq__(self, other): # ignore lineage_str
+    def __eq__(self, other):
         return all([self.ranks == other.ranks, self.lineage==other.lineage])
 
 
@@ -301,3 +328,250 @@ def build_tree(assignments, initial=None):
 
     return tree
 
+
+# strategy from: https://subscription.packtpub.com/book/programming/9781800207455/10/ch10lvl1sec01/using-dataclasses-to-simplify-working-with-csv-files
+@dataclass
+class GatherRow(): # should match "gather_write_cols" in `search.py`
+   # essential columns
+   query_name: str
+   name: str # match_name
+   f_unique_weighted: float
+   f_unique_to_query: float
+   unique_intersect_bp: int
+   remaining_bp: int
+   query_md5: str
+   query_filename: str
+   # non-essential
+   intersect_bp: int = None
+   f_orig_query: float = None
+   f_match: float = None
+   average_abund: float = None
+   median_abund: float = None
+   std_abund: float = None
+   filename: str = None
+   md5: str = None
+   f_match_orig: float = None
+   gather_result_rank: str = None
+   query_bp: int = None
+   ksize: int = None
+   moltype: str = None
+   scaled: int = None
+   query_n_hashes: int = None
+   query_abundance: int = None
+   query_containment_ani: float = None
+   match_containment_ani: float = None
+   average_containment_ani: float = None
+   max_containment_ani: float = None
+   potential_false_negative: bool = None
+   n_unique_weighted_found: int = None
+   sum_weighted_found: int = None
+   total_weighted_hashes: int = None
+
+
+#goal: associate all GatherRows from a particular query. Use query name to grab tax info from database.
+#add functions to summarize all of these at each taxonomic rank; report (general fn's from tax_utils)
+@dataclass(frozen=True)
+class QueryInfo():
+   """Class for storing per-rank lineage information"""
+   query_name: str
+   query_md5: str
+   query_filename: str
+   query_bp: int
+   query_hashes: int
+   total_weighted_hashes: int
+   ksize: int
+   scaled: int
+
+   @property
+   def total_weighted_bp(self):
+       return self.total_weighted_hashes * self.scaled
+
+@dataclass
+class TaxResult():
+    raw: GatherRow
+    # can we get rid of these / just choose default ident hacking/slashing for future?
+    keep_full_identifiers: bool = False
+    keep_identifier_versions: bool = False
+
+    query_name: str = field(init=False)
+    query_info: QueryInfo = field(init=False)
+    match_ident: str = field(init=False)
+    lineageInfo: RankLineageInfo = RankLineageInfo()
+    skipped_ident: bool = False
+    missed_ident: bool = False
+
+    def __post_init__(self):
+        self.get_ident()
+        self.query_name = self.raw.query_name
+        self.query_info = QueryInfo(query_name = self.raw.query_name,
+                                  query_md5=self.raw.query_md5,
+                                  query_filename = self.raw.query_filename,
+                                  query_bp = int(self.raw.query_bp),
+                                  query_hashes = int(self.raw.query_n_hashes),
+                                  total_weighted_hashes = int(self.raw.total_weighted_hashes),
+                                  ksize = self.raw.ksize,
+                                  scaled = int(self.raw.scaled)
+                                  )
+        # cast and store the imp bits
+        self.f_unique_to_query = float(self.raw.f_unique_to_query)
+        self.f_uniq_weighted = float(self.raw.f_unique_weighted)
+        self.unique_intersect_bp = int(self.raw.unique_intersect_bp)
+
+    def get_ident(self):
+        # split identifiers = split on whitespace
+        # keep identifiers = don't split .[12] from assembly accessions
+        "Hack and slash identifiers."
+        self.match_ident = self.raw.name
+        if not self.keep_full_identifiers:
+            self.match_ident = self.raw.name.split(' ')[0]
+        if not self.keep_identifier_versions:
+            self.match_ident = self.match_ident.split('.')[0]
+
+    def get_match_lineage(self, tax_assignments, skip_idents=None, fail_on_missing_taxonomy=False):
+        if skip_idents and self.match_ident in skip_idents:
+            self.skipped_ident = True
+        else:
+            lin = tax_assignments.get(self.match_ident)
+            if lin:
+                self.lineageInfo = RankLineageInfo(lineage=lin)
+            else:
+                self.missed_ident=True
+        if self.missed_ident and fail_on_missing_taxonomy:
+            raise ValueError(f"ident {self.match_ident} is not in the taxonomy database.")
+
+
+# desired behavior for this: initialize once for each query,
+# then add results (TaxResult) as you go, to build full representation of all results for a single query
+# once all results added, write/use summarize_at_rank(self, rank) method to summarize?
+# finally, add methods: write_classification_result, write_kreport, etc??
+
+
+@dataclass(frozen=True)
+class SummarizedTaxResult():
+#   """Class for storing summarized lineage information"""
+   lineage: tuple
+   rank: str
+   f_weighted: float
+   f_unique: float
+   bp_intersect: int
+   query_ani: float
+
+@dataclass
+class QueryTaxResult(): 
+    """Store all TaxResult for a query. Enable summarization."""
+    query_info: QueryInfo # initialize with QueryInfo dataclass
+    query_name: str = field(init=False)
+    raw_taxresults: list = field(default_factory=lambda: [])
+    skipped_idents: set = field(default_factory=lambda: set()) 
+    missed_idents: set = field(default_factory=lambda: set())
+    sum_uniq_weighted: dict = field(default_factory=lambda: defaultdict(float))
+    sum_uniq_to_query: dict = field(default_factory=lambda: defaultdict(float))
+    sum_uniq_bp: dict = field(default_factory=lambda: defaultdict(int))
+    estimate_query_ani: bool = False
+    perfect_match: set = field(default_factory=lambda: set())
+    total_f_weighted: float = 0.0
+    total_f_classified: float = 0.0
+    total_bp_classified: int = 0
+    summarized_lineage_results: list = field(default_factory=lambda: [])
+    best_only: bool = False
+
+    def __post_init__(self):
+        # pull this out for convenience?
+        self.query_name = self.query_info.query_name
+        if self.estimate_query_ani and (not self.query_info.ksize or not self.query_info.scaled):
+            self.estimate_query_ani = False
+            notify("WARNING: Please run gather with sourmash >= 4.4 to estimate query ANI at rank. Continuing without ANI...")
+    
+    def is_compatible(self, taxresult):
+        return taxresult.query_info == self.query_info
+    
+    def add_taxresult(self, taxresult):
+        # check that all query parameters match
+        if self.is_compatible(taxresult=taxresult):
+            self.raw_taxresults.append(taxresult)
+            if taxresult.skipped_ident:
+                self.skipped_idents.add(taxresult.match_ident)
+            elif taxresult.missed_ident:
+                self.missed_idents.add(taxresult.match_ident)
+        else:
+            #notify("this QueryInfo: {self.query_info}")
+            #notify("TaxResult QueryInfo: {taxresult.query_info}")
+            #notify(f"Cannot add TaxResult as query info does not match")
+            raise ValueError("Cannot add TaxResult {taxresult}: Query Info does not match.")
+    
+    def summarize_up_ranks(self, single_rank=None):
+        for taxres in self.raw_taxresults:
+            lininfo = taxres.lineageInfo
+            if lininfo: # we should have lineage if it wasn't in skip_idents
+                if taxres.f_unique_to_query >= 1.0:
+                    self.perfect_match.add(taxres.match_ident)
+                ranks_to_summarize = lininfo.ascending_taxlist()
+                if single_rank:
+                    if single_rank not in ranks_to_summarize:
+                        raise ValueError(f"Error: rank {single_rank} not in available ranks, {','.join(ranks_to_summarize)}")
+                    ranks_to_summarize = [single_rank]
+                for rank in ranks_to_summarize:
+                    lin_at_rank = lininfo.lineage_at_rank(rank)
+                    self.sum_uniq_weighted[lin_at_rank] += taxres.f_unique_weighted
+                    self.sum_uniq_to_query[lin_at_rank] += taxres.f_unique_to_query
+                    self.sum_uniq_bp[lin_at_rank] += taxres.unique_intersect_bp
+            #else:
+            #    self.sum_uniq_weighted['unclassified'] += taxres.f_unique_weighted
+            #    self.sum_uniq_to_query['unclassified'] += taxres.f_unique_to_query
+            #    self.sum_uniq_bp['unclassified'] += taxres.unique_intersect_bp
+    
+    def build_summarized_result(self, single_rank=None):
+        if not self.sum_uniq_weighted: # hasn't been summarized, do that first
+            self.summarize_up_ranks(single_rank=single_rank)
+        # first, sort
+        sorted_sum_uniq_to_query = sorted(self.sum_uniq_to_query.items(), lambda kv: kv[1], reverse=True)
+        if self.best_only:
+            lineage, f_unique = sorted_sum_uniq_to_query[0]
+            if f_unique > 1:
+                raise ValueError(f"The tax summary of query '{self.query_name}' is {f_unique}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
+            # HANDLE THIS CASE??
+            #elif f_unique == 0: #NO annotated results for this query -- just add empty sres?
+                # continue
+            
+            f_weighted_at_rank = self.sum_uniq_weighted[lineage]
+            bp_intersect_at_rank = self.sum_uniq_bp[lineage]
+            if self.estimate_query_ani:
+                query_ani = containment_to_distance(f_unique, self.query_info.ksize, self.query_info.scaled,
+                                                    n_unique_kmers=self.query_info.query_hashes, 
+                                                    sequence_len_bp=self.query_info.query_bp).ani
+            sres = SummarizedTaxResult(lineage=lineage, rank=lineage.lowest_rank,
+                                       f_weighted=f_weighted_at_rank, f_unique=f_unique,
+                                       bp_intersect=bp_intersect_at_rank, query_ani=query_ani)
+            self.summarized_lineage_results.append(sres)
+        else:
+            for lineage, f_unique in sorted_sum_uniq_to_query:
+                query_ani = None
+                if f_unique > 1:
+                    raise ValueError(f"The tax summary of query '{self.query_name}' is {f_unique}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
+                elif f_unique == 0:
+                    continue
+                self.total_f_classified += f_unique
+                f_weighted_at_rank = self.sum_uniq_weighted[lineage]
+                self.total_f_weighted += f_weighted_at_rank
+                bp_intersect_at_rank = self.sum_uniq_bp[lineage]
+                self.total_bp_classified += bp_intersect_at_rank
+                if self.estimate_query_ani:
+                    query_ani = containment_to_distance(self.f_unique, self.query_info.ksize, self.query_info.scaled,
+                                                        n_unique_kmers=self.query_info.query_hashes, 
+                                                        sequence_len_bp=self.query_info.query_bp).ani
+                sres = SummarizedTaxResult(lineage=lineage, rank=lineage.lowest_rank,
+                                        f_weighted=f_weighted_at_rank, f_unique=f_unique,
+                                        bp_intersect=bp_intersect_at_rank, query_ani=query_ani)
+                self.summarized_lineage_results.append(sres)
+
+            # record unclassified
+            lineage = RankLineageInfo()
+            query_ani = None
+            f_unique = 1.0 - self.total_f_classified
+            if f_unique > 0:
+                f_weighted_at_rank = 1.0 - self.total_f_weighted
+                bp_intersect_at_rank = self.query_info.query_bp - self.total_bp_classified
+                sres = SummarizedTaxResult(lineage=lineage, rank=lineage.lowest_rank,
+                                        f_weighted=f_weighted_at_rank, f_unique=f_unique,
+                                        bp_intersect=bp_intersect_at_rank, query_ani=query_ani)
+                self.summarized_lineage_results.append(sres)

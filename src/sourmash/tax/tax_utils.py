@@ -38,6 +38,7 @@ EssentialGatherColnames = ('query_name', 'name', 'f_unique_weighted', 'f_unique_
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import (LineagePair, taxlist, display_lineage, pop_to_rank)
 
+from sourmash.tax.taxcomparison import GatherRow, TaxResult, QueryTaxResult
 
 def get_ident(ident, *,
               keep_full_identifiers=False, keep_identifier_versions=False):
@@ -85,14 +86,14 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     return gather_csvs
 
 
-def load_gather_results(gather_csv, *, essential_colnames=EssentialGatherColnames,
-                        seen_queries=None, force=False):
+def load_gather_results(gather_csv, tax_assignments, *, essential_colnames=EssentialGatherColnames,
+                        seen_queries=None, force=False, skip_idents = None, fail_on_missing_taxonomy=False,
+                        keep_full_identifiers=False, keep_identifier_versions=False):
     "Load a single gather csv"
     if not seen_queries:
         seen_queries=set()
     header = []
-    gather_results = []
-    gather_queries = set()
+    gather_results = {}
     with sourmash_args.FileInputCSV(gather_csv) as r:
         header = r.fieldnames
         # check for empty file
@@ -103,6 +104,7 @@ def load_gather_results(gather_csv, *, essential_colnames=EssentialGatherColname
         if not set(essential_colnames).issubset(header):
             raise ValueError(f"Not all required gather columns are present in '{gather_csv}'.")
 
+        this_querytaxres = None
         for n, row in enumerate(r):
             query_name = row['query_name']
             # check if we've seen this query already in a different gather CSV
@@ -110,16 +112,24 @@ def load_gather_results(gather_csv, *, essential_colnames=EssentialGatherColname
                 # do not allow loading of same query from a second CSV.
                 raise ValueError(f"Gather query {query_name} was found in more than one CSV. Cannot load from '{gather_csv}'.")
             else:
-                gather_results.append(row)
-            # add query name to the gather_queries from this CSV
-            if query_name not in gather_queries:
-                gather_queries.add(query_name)
+                # read gather row into TaxResult
+                gatherRaw = GatherRow(**row)
+                taxres = TaxResult(raw=gatherRaw, keep_full_identifiers=keep_full_identifiers,
+                                                  keep_identifier_versions=keep_identifier_versions)
+                taxres.get_match_lineage(tax_assignments=tax_assignments, skip_idents=skip_idents, 
+                                         fail_on_missing_taxonomy=fail_on_missing_taxonomy)
+                # add to matching QueryTaxResult or create new one
+                if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
+                    # get existing or initialize new
+                    this_querytaxres = gather_results.get(query_name, QueryTaxResult(taxres.query_info))
+                this_querytaxres.add_taxresult(taxres)
+                gather_results[query_name] = this_querytaxres
 
     if not gather_results:
         raise ValueError(f'No gather results loaded from {gather_csv}.')
     else:
         notify(f"loaded {len(gather_results)} gather results from '{gather_csv}'.")
-    return gather_results, header, gather_queries
+    return gather_results, header #, gather_queries # can use the gather_results keys instead
 
 
 def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False):
@@ -128,16 +138,19 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
     '''
     if not isinstance(gather_csvs, list):
         gather_csvs = [gather_csvs]
-    gather_results = []
+    gather_results = {}
     total_missed = 0
     all_ident_missed = set()
-    seen_queries = set()
+    #seen_queries = set()
     header = []
     n_ignored = 0
     for n, gather_csv in enumerate(gather_csvs):
-        these_results = []
+        these_results = {}
         try:
-            these_results, header, seen_queries = load_gather_results(gather_csv, seen_queries=seen_queries, force=force)
+            these_results, header = load_gather_results(gather_csv, tax_assign, 
+                                                        seen_queries=gather_results.keys(),
+                                                        force=force)
+            #seen_queries.add(these_results.keys())
         except ValueError as exc:
             if force:
                 if "found in more than one CSV" in str(exc):
@@ -161,7 +174,7 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
             total_missed += len(ident_missed)
             all_ident_missed.update(ident_missed)
         # add these results to gather_results
-        gather_results += these_results
+        gather_results.update(these_results)
 
     num_gather_csvs_loaded = n+1 - n_ignored
     notify(f'loaded {len(gather_results)} results total from {str(num_gather_csvs_loaded)} gather CSVs')
@@ -317,17 +330,15 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
     return sum_uniq_to_query_sorted, seen_perfect, estimate_query_ani
 
 
-def find_missing_identities(gather_results, tax_assign):
+def find_missing_identities(gather_results):
     """
     Identify match ids/accessions from gather results
     that are not present in taxonomic assignments.
     """
     ident_missed= set()
-    for row in gather_results:
-        match_ident = row['name']
-        match_ident = get_ident(match_ident)
-        if match_ident not in tax_assign:
-            ident_missed.add(match_ident)
+    for querytaxres in gather_results.values():
+        print(querytaxres.missed_idents)
+        ident_missed.update(querytaxres.missed_idents)
 
     if ident_missed:
         notify(f'of {len(gather_results)} gather results, missed {len(ident_missed)} lineage assignments.')

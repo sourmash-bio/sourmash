@@ -13,8 +13,7 @@ from sourmash.tax.taxcomparison import LineagePair, LineageTuple, BaseLineageInf
 from sourmash.tax.taxcomparison import LineageTuple as LineagePair
 from sourmash.lca.lca_utils import find_lca
 
-standard_taxranks = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species']
-strain_taxranks = standard_taxranks + ['strain']
+taxranks = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain']
 
 def test_LineagePair():
     lin = LineagePair(rank="rank1", name='name1')
@@ -35,19 +34,13 @@ def test_LineageTuple_taxid_as_str():
 
 def test_RankLineageInfo_taxlist():
     taxinf = RankLineageInfo()
-    assert taxinf.taxlist() == standard_taxranks
-    assert taxinf.ascending_taxlist() == standard_taxranks[::-1] 
-
-
-def test_RankLineageInfo_taxlist_with_strain():
-    taxinf = RankLineageInfo(include_strain = True)
-    assert taxinf.taxlist() == strain_taxranks
-    assert taxinf.ascending_taxlist() == strain_taxranks[::-1]
+    assert taxinf.taxlist() == taxranks
+    assert taxinf.ascending_taxlist() == taxranks[::-1] 
 
 
 def test_RankLineageInfo_init_lineage_str_1():
     x = "a;b;c"
-    taxinf = RankLineageInfo(lineage_str=x, include_strain=True)
+    taxinf = RankLineageInfo(lineage_str=x)
     print(taxinf.lineage)
     print(taxinf.lineage_str)
     assert taxinf.zip_lineage()== ['a', 'b', 'c', '', '', '', '', '']
@@ -68,6 +61,14 @@ def test_BaseLineageInfo_init_lineage_str_lineage_dict_test_eq():
     rankD = {"A": "a", "B": "b", "C": "c"}
     lin1 = BaseLineageInfo(lineage_str=x, ranks=ranks)
     lin2 = BaseLineageInfo(lineage_dict=rankD, ranks=ranks)
+    assert lin1 == lin2 
+
+
+def test_RankLineageInfo_init_lineage_str_lineage_dict_test_eq():
+    x = "a;b;c"
+    rankD = {"superkingdom": "a", "phylum": "b", "class": "c"}
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = RankLineageInfo(lineage_dict=rankD)
     assert lin1 == lin2 
 
 
@@ -100,7 +101,7 @@ def test_BaseLineageInfo_init_lineage_str_no_ranks():
 
 def test_RankLineageInfo_init_lineage_str_1_truncate():
     x = "a;b;c"
-    taxinf = RankLineageInfo(lineage_str=x, include_strain=True)
+    taxinf = RankLineageInfo(lineage_str=x)
     print(taxinf.lineage)
     print(taxinf.lineage_str)
     assert taxinf.zip_lineage(truncate_empty=True)== ['a', 'b', 'c']
@@ -108,7 +109,7 @@ def test_RankLineageInfo_init_lineage_str_1_truncate():
 
 def test_RankLineageInfo_init_lineage_str_2():
     x = "a;b;;c"
-    taxinf = RankLineageInfo(lineage_str=x, include_strain=True)
+    taxinf = RankLineageInfo(lineage_str=x)
     print(taxinf.lineage)
     print(taxinf.lineage_str)
     assert taxinf.zip_lineage()== ['a', 'b', '', 'c' '', '', '', '', '']
@@ -116,7 +117,7 @@ def test_RankLineageInfo_init_lineage_str_2():
 
 def test_RankLineageInfo_init_lineage_str_2_truncate():
     x = "a;b;;c"
-    taxinf = RankLineageInfo(lineage_str=x, include_strain=True)
+    taxinf = RankLineageInfo(lineage_str=x)
     print(taxinf.lineage)
     print(taxinf.lineage_str)
     assert taxinf.zip_lineage(truncate_empty=True)== ['a', 'b', '', 'c']
@@ -155,15 +156,6 @@ def test_RankLineageInfo_init_lineage_dict_1():
     print("ranks: ", taxinf.ranks)
     print("lineage: ", taxinf.lineage)
     print("zipped lineage: ", taxinf.zip_lineage())
-    assert taxinf.zip_lineage()== ['name1', '', 'name2', '', '', '', '']
-
-
-def test_RankLineageInfo_init_lineage_dict_strain():
-    x = {'superkingdom': 'name1', 'class': 'name2'}
-    taxinf = RankLineageInfo(lineage_dict=x, include_strain=True)
-    print("ranks: ", taxinf.ranks)
-    print("lineage: ", taxinf.lineage)
-    print("zipped lineage: ", taxinf.zip_lineage())
     assert taxinf.zip_lineage()== ['name1', '', 'name2', '', '', '', '', '']
 
 
@@ -173,13 +165,13 @@ def test_RankLineageInfo_init_lineage_dict_withtaxid():
     print("ranks: ", taxinf.ranks)
     print("lineage: ", taxinf.lineage)
     print("zipped lineage: ", taxinf.zip_lineage())
-    assert taxinf.zip_lineage()== ['name1', '', 'name2', '', '', '', '']
-    assert taxinf.zip_taxid()== ['1', '', '2', '', '', '', '']
+    assert taxinf.zip_lineage()== ['name1', '', 'name2', '', '', '', '', '']
+    assert taxinf.zip_taxid()== ['1', '', '2', '', '', '', '', '']
 
 
 def test_zip_lineage_1():
     x = [ LineageTuple('superkingdom', 'a'), LineageTuple('phylum', 'b') ]
-    taxinf = RankLineageInfo(lineage=x, include_strain=True)
+    taxinf = RankLineageInfo(lineage=x)
     print("ranks: ", taxinf.ranks)
     print("zipped lineage: ", taxinf.zip_lineage())
     assert taxinf.zip_lineage() == ['a', 'b', '', '', '', '', '', '']
@@ -187,7 +179,7 @@ def test_zip_lineage_1():
 
 def test_zip_lineage_2():
     x = [ LineageTuple('superkingdom', 'a'), LineageTuple('phylum', 'b') ]
-    taxinf = RankLineageInfo(lineage=x, include_strain=True)
+    taxinf = RankLineageInfo(lineage=x)
     print("ranks: ", taxinf.ranks)
     print("zipped lineage: ", taxinf.zip_lineage(truncate_empty=True))
     assert taxinf.zip_lineage(truncate_empty=True) == ['a', 'b']
@@ -195,19 +187,19 @@ def test_zip_lineage_2():
 
 def test_zip_lineage_3():
     x = [ LineagePair('superkingdom', 'a'), LineagePair(None, ''), LineagePair('class', 'c') ]
-    taxinf = RankLineageInfo(lineage=x, include_strain=True)
+    taxinf = RankLineageInfo(lineage=x)
     assert taxinf.zip_lineage() == ['a', '', 'c', '', '', '', '', '']
 
 
 def test_zip_lineage_3_truncate():
     x = [ LineagePair('superkingdom', 'a'), LineagePair(None, ''), LineagePair('class', 'c') ]
-    taxinf = RankLineageInfo(lineage=x, include_strain=True)
+    taxinf = RankLineageInfo(lineage=x)
     assert taxinf.zip_lineage(truncate_empty=True) == ['a', '', 'c']
 
 
 def test_zip_lineage_4():
     x = [ LineagePair('superkingdom', 'a'), LineagePair('class', 'c') ]
-    taxinf = RankLineageInfo(lineage=x, include_strain=True)
+    taxinf = RankLineageInfo(lineage=x)
     assert taxinf.zip_lineage(truncate_empty=True) == ['a', '', 'c']
 
 
@@ -228,6 +220,12 @@ def test_display_taxid_1():
     taxinf = RankLineageInfo(lineage=x)
     print(taxinf)
     assert taxinf.display_taxid() == "1;2"
+
+def test_display_taxid_2():
+    x = [ LineageTuple('superkingdom', 'name1', 1), LineageTuple(None, ''), LineageTuple    ('class', 'name2',2) ]
+    taxinf = RankLineageInfo(lineage=x)
+    print(taxinf)
+    assert taxinf.display_taxid() == "1;;2"
 
 
 def test_is_lineage_match_1():
@@ -292,6 +290,13 @@ def test_is_lineage_match_3():
     assert not lin2.is_lineage_match(lin1, 'genus')
     assert not lin1.is_lineage_match(lin2, 'species')
     assert not lin2.is_lineage_match(lin1, 'species')
+
+
+#def test_is_lineage_match_incorrect_ranks():
+#    # basic behavior: match at order and above, but not at family or below.
+#    lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__e')
+#    lin2 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
+#    print(lin1.lineage)
 
 
 def test_pop_to_rank_1():
@@ -453,4 +458,4 @@ def test_find_lca_3():
 #def test_LINSLineageInfo_taxlist():
 #    taxinf = LINSLineageInfo(num_positions=10)
 #    assert taxinf.taxlist() == [0]*10
-#    assert taxinf.ascending_taxlist() == standard_taxranks[::-1] 
+#    assert taxinf.ascending_taxlist() == taxranks[::-1] 
