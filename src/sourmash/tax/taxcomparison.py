@@ -473,7 +473,7 @@ class QueryTaxResult():
     total_f_classified: float = 0.0
     total_bp_classified: int = 0
     summarized_lineage_results: dict = field(default_factory=lambda: defaultdict(list))
-#    best_only: bool = False
+    best_only: bool = False
     ranks: list = field(default_factory=lambda: [])
     ascending_ranks: list = field(default_factory=lambda: [])
     summarized_ranks: list = field(default_factory=lambda: [])
@@ -510,7 +510,9 @@ class QueryTaxResult():
             lininfo = taxres.lineageInfo
             if lininfo: # we should have lineage if it wasn't in skip_idents
                 if taxres.f_unique_to_query >= 1.0:
-                    self.perfect_match.add(taxres.match_ident)
+                    if taxres.match_ident not in self.perfect_match:
+                        notify(f'WARNING: 100% match! Is query "{self.query_name}" identical to its database match, {taxres.match_ident}?')
+                        self.perfect_match.add(taxres.match_ident)
                 self.summarized_ranks = lininfo.ascending_taxlist()
                 if single_rank:
                     if single_rank not in self.summarized_ranks:
@@ -527,6 +529,7 @@ class QueryTaxResult():
             self.summarize_up_ranks(single_rank=single_rank)
         # catch potential error from running summarize_up_ranks separately and passing in different single_rank
         if single_rank not in self.summarized_ranks:
+            self.best_only = True
             raise ValueError(f"Error: rank {single_rank} not in summarized ranks, {','.join(self.summarized_ranks)}")
         # rank loop is currently done in __main__
         for rank in self.summarized_ranks:  # ascending ranks or single rank
