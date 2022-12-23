@@ -6,6 +6,7 @@ import csv
 from collections import namedtuple, defaultdict
 from collections import abc
 import gzip
+from dataclasses import dataclass, asdict
 
 from sourmash import sqlite_utils, sourmash_args
 from sourmash.exceptions import IndexNotSupported
@@ -26,9 +27,10 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
 from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
 
+from sourmash.tax.taxcomparison import SummarizedGatherResult
 # CTB: these could probably usefully be converted into dataclasses.
-QueryInfo = namedtuple("QueryInfo", "query_md5, query_filename, query_bp, query_hashes, total_weighted_hashes")
-SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank, total_weighted_hashes")
+#QueryInfo = namedtuple("QueryInfo", "query_md5, query_filename, query_bp, query_hashes, total_weighted_hashes")
+#SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank, total_weighted_hashes")
 ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
 
 # Essential Gather column names that must be in gather_csv to allow `tax` summarization
@@ -166,7 +168,7 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
                 raise
 
         # check for match identites in these gather_results not found in lineage spreadsheets
-        ident_missed = find_missing_identities(these_results, tax_assign)
+        ident_missed = find_missing_identities(these_results)
         if ident_missed:
             notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
             if fail_on_missing_taxonomy:
@@ -178,9 +180,10 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
         gather_results.update(these_results)
 
     num_gather_csvs_loaded = n+1 - n_ignored
-    notify(f'loaded {len(gather_results)} results total from {str(num_gather_csvs_loaded)} gather CSVs')
+    notify(f'loaded {len(gather_results)} query results total from {str(num_gather_csvs_loaded)} gather CSVs')
+    query_results_list = list(gather_results.values())
 
-    return gather_results, all_ident_missed, total_missed, header
+    return query_results_list, all_ident_missed, total_missed, header
 
 
 def find_match_lineage(match_ident, tax_assign, *, skip_idents = [],
@@ -214,7 +217,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
     query_info = {}
 
     set_ksize = False
-    ksize, scaled, query_nhashes = None, 0, None
+    ksize, scaled, query_n_hashes = None, 0, None
 
     for row in gather_results:
         # get essential gather info
@@ -232,8 +235,8 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
         query_filename = row['query_filename']
         # get query_bp
         if query_name not in query_info.keys(): #REMOVING THIS AFFECTS GATHER RESULTS!!! BUT query bp should always be same for same query? bug?
-            if "query_nhashes" in row.keys():
-                query_nhashes = int(row["query_nhashes"])
+            if "query_n_hashes" in row.keys():
+                query_n_hashes = int(row["query_n_hashes"])
             if "query_bp" in row.keys():
                 query_bp = int(row["query_bp"])
             else:
@@ -358,7 +361,7 @@ def make_krona_header(min_rank, *, include_strain=False):
     return tuple(header + tl[:rank_index+1])
 
 
-def aggregate_by_lineage_at_rank(rank_results, *, by_query=False):
+def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
     '''
     Aggregate list of rank SummarizedGatherResults,
     keeping query info or aggregating across queries.
@@ -367,28 +370,30 @@ def aggregate_by_lineage_at_rank(rank_results, *, by_query=False):
     if by_query:
         lineage_summary = defaultdict(dict)
     all_queries = []
-    for res in rank_results:
-        if res.query_name not in all_queries:
-            all_queries.append(res.query_name)
-        if by_query:
-            lineage_summary[res.lineage][res.query_name] = res.fraction
-        else:
-            lineage_summary[res.lineage] += res.fraction
-    return lineage_summary, all_queries, len(all_queries)
 
+    for queryResult in query_gather_results:
+        query_name = queryResult.query_name
+        all_queries.append(query_name)
+        
+        for res in queryResult.summarized_ranks[rank]:
+            if by_query:
+                    lineage_summary[res.lineage][query_name] = res.f_weighted # weighted or unique??
+            else:
+                lineage_summary[res.lineage] += res.f_weighted
 
-def format_for_krona(rank, summarized_gather):
-    '''
-    Aggregate list of SummarizedGatherResults and format for krona output
-    '''
-    num_queries=0
-    for res_rank, rank_results in summarized_gather.items():
-        if res_rank == rank:
-            lineage_summary, all_queries, num_queries = aggregate_by_lineage_at_rank(rank_results, by_query=False)
     # if aggregating across queries divide fraction by the total number of queries
-    for lin, fraction in lineage_summary.items():
-        # divide total fraction by total number of queries
-        lineage_summary[lin] = fraction/num_queries
+    if not by_query:
+        for lin, fraction in lineage_summary.items():
+                lineage_summary[lin] = fraction/len(all_queries)
+
+
+    return lineage_summary, all_queries
+
+def format_for_krona(query_gather_results, rank):
+    '''
+    Aggregate across all queries and format for krona output
+    '''
+    lineage_summary, all_queries = aggregate_by_lineage_at_rank(query_gather_results, rank, by_query=False)
 
     # sort by fraction
     lin_items = list(lineage_summary.items())
@@ -429,19 +434,20 @@ def write_summary(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=Fa
     '''
     Write taxonomy-summarized gather results for each rank.
     '''
-    header = SummarizedGatherResult._fields
+    header = SummarizedGatherResult.__dataclass_fields__
     w = csv.DictWriter(csv_fp, header, delimiter=sep)
     w.writeheader()
     for rank, rank_results in summarized_gather.items():
         for res in rank_results:
-            rD = res._asdict()
+            res.lineage = display_lineage(res.lineage)
+            if res.lineage == "":
+                res.lineage = "unclassified"
             if limit_float_decimals:
-                rD['fraction'] = f'{res.fraction:.3f}'
-                rD['f_weighted_at_rank'] = f'{res.f_weighted_at_rank:.3f}'
-            rD['lineage'] = display_lineage(res.lineage)
-            if rD['lineage'] == "":
-                rD['lineage'] = "unclassified"
+                res.fraction = f'{res.fraction:.3f}'
+                res.f_weighted_at_rank = f'{res.f_weighted_at_rank:.3f}'
+            rD = asdict(res)
             w.writerow(rD)
+#            rD = res._asdict()
 
 
 def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
@@ -517,48 +523,49 @@ def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
             w.writerow(kresD)
 
 
-def write_human_summary(summarized_gather, out_fp, display_rank):
+def write_human_summary(query_gather_results, out_fp, display_rank):
     '''
     Write human-readable taxonomy-summarized gather results for a specific rank.
     '''
     header = SummarizedGatherResult._fields
 
-    found_ANI = False
-    results = [] 
-    for rank, rank_results in summarized_gather.items():
-        # only show results for a specified rank.
-        if rank == display_rank:
-            rank_results = list(rank_results)
-            rank_results.sort(key=lambda res: -res.f_weighted_at_rank)
+    for queryResult in query_gather_results:
+        found_ANI = False
+        results = []
+        for rank, rank_results in queryResult.summarized_ranks.items():
+            # only show results for a specified rank.
+            if rank == display_rank:
+                rank_results = list(rank_results)
+                rank_results.sort(key=lambda res: -res.f_weighted)
+                for res in rank_results:
+                    rD = res._asdict()
+                    rD['query_md5'] = queryResult.query_info.query_md5
+                    rD['fraction'] = f'{res.f_unique:.3f}'
+                    rD['f_weighted_at_rank'] = f"{res.f_weighted*100:>4.1f}%"
+                    if rD['query_ani_at_rank'] is not None:
+                        found_ANI = True
+                        rD['query_ani_at_rank'] = f"{res.query_ani*100:>3.1f}%"
+                    else:
+                        rD['query_ani_at_rank'] = '-    '
+                    rD['lineage'] = display_lineage(res.lineage)
+                    if rD['lineage'] == "":
+                        rD['lineage'] = "unclassified"
 
-            for res in rank_results:
-                rD = res._asdict()
-                rD['fraction'] = f'{res.fraction:.3f}'
-                rD['f_weighted_at_rank'] = f"{res.f_weighted_at_rank*100:>4.1f}%"
-                if rD['query_ani_at_rank'] is not None:
-                    found_ANI = True
-                    rD['query_ani_at_rank'] = f"{res.query_ani_at_rank*100:>3.1f}%"
-                else:
-                    rD['query_ani_at_rank'] = '-    '
-                rD['lineage'] = display_lineage(res.lineage)
-                if rD['lineage'] == "":
-                    rD['lineage'] = "unclassified"
-
-                results.append(rD)
+                    results.append(rD)
 
 
-    if found_ANI:
-        out_fp.write("sample name    proportion   cANI   lineage\n")
-        out_fp.write("-----------    ----------   ----   -------\n")
+        if found_ANI:
+            out_fp.write("sample name    proportion   cANI   lineage\n")
+            out_fp.write("-----------    ----------   ----   -------\n")
 
-        for rD in results:
-            out_fp.write("{query_name:<15s}   {f_weighted_at_rank}     {query_ani_at_rank}  {lineage}\n".format(**rD))
-    else:
-        out_fp.write("sample name    proportion   lineage\n")
-        out_fp.write("-----------    ----------   -------\n")
+            for rD in results:
+                out_fp.write("{query_name:<15s}   {f_weighted_at_rank}     {query_ani_at_rank}  {lineage}\n".format(**rD))
+        else:
+            out_fp.write("sample name    proportion   lineage\n")
+            out_fp.write("-----------    ----------   -------\n")
 
-        for rD in results:
-            out_fp.write("{query_name:<15s}   {f_weighted_at_rank}     {lineage}\n".format(**rD))
+            for rD in results:
+                out_fp.write("{query_name:<15s}   {f_weighted_at_rank}     {lineage}\n".format(**rD))
 
 
 def write_lineage_csv(summarized_gather, csv_fp):

@@ -403,18 +403,31 @@ class TaxResult():
     def __post_init__(self):
         self.get_ident()
         self.query_name = self.raw.query_name
+
+        # before 4.x, these weren't in gather output. 
+        # Get query_bp; only change type here if they exist
+        if not self.raw.query_bp:
+            raise ValueError("Error: Gather Results too old. Please regenerate with sourmash > 4.4.")
+            #self.raw.query_bp = int(self.raw.unique_intersect_bp) + int(self.raw.remaining_bp)
+        if self.raw.query_n_hashes:
+            self.raw.query_n_hashes = int(self.raw.query_n_hashes)
+        if self.raw.total_weighted_hashes:
+            self.raw.total_weighted_hashes = int(self.raw.total_weighted_hashes)
+        if self.raw.scaled:
+            self.raw.scaled = int(self.raw.scaled)
+
         self.query_info = QueryInfo(query_name = self.raw.query_name,
                                   query_md5=self.raw.query_md5,
                                   query_filename = self.raw.query_filename,
                                   query_bp = int(self.raw.query_bp),
-                                  query_hashes = int(self.raw.query_n_hashes),
-                                  total_weighted_hashes = int(self.raw.total_weighted_hashes),
+                                  query_hashes = self.raw.query_n_hashes,
+                                  total_weighted_hashes = self.raw.total_weighted_hashes,
                                   ksize = self.raw.ksize,
-                                  scaled = int(self.raw.scaled)
+                                  scaled = self.raw.scaled
                                   )
         # cast and store the imp bits
         self.f_unique_to_query = float(self.raw.f_unique_to_query)
-        self.f_uniq_weighted = float(self.raw.f_unique_weighted)
+        self.f_unique_weighted = float(self.raw.f_unique_weighted)
         self.unique_intersect_bp = int(self.raw.unique_intersect_bp)
 
     def get_ident(self):
@@ -446,14 +459,17 @@ class TaxResult():
 # finally, add methods: write_classification_result, write_kreport, etc??
 
 
-@dataclass(frozen=True)
-class SummarizedTaxResult():
+@dataclass
+class SummarizedGatherResult():
 #   """Class for storing summarized lineage information"""
-   lineage: tuple
+   query_name: str
+   query_md5: str
+   query_filename: str
    rank: str
-   f_weighted: float
-   f_unique: float
-   bp_intersect: int
+   fraction: float
+   f_weighted_at_rank: float
+   lineage: tuple
+   bp_match_at_rank: int
    query_ani: float
 
 @dataclass
@@ -513,13 +529,13 @@ class QueryTaxResult():
                     if taxres.match_ident not in self.perfect_match:
                         notify(f'WARNING: 100% match! Is query "{self.query_name}" identical to its database match, {taxres.match_ident}?')
                         self.perfect_match.add(taxres.match_ident)
-                self.summarized_ranks = lininfo.ascending_taxlist()
+                self.summarized_ranks = lininfo.ascending_taxlist
                 if single_rank:
                     if single_rank not in self.summarized_ranks:
                         raise ValueError(f"Error: rank {single_rank} not in available ranks, {','.join(self.summarized_ranks)}")
                     self.summarized_ranks = [single_rank]
                 for rank in self.summarized_ranks:
-                    lin_at_rank = lininfo.lineage_at_rank(rank)
+                    lin_at_rank = tuple(lininfo.lineage_at_rank(rank))
                     self.sum_uniq_weighted[rank][lin_at_rank] += taxres.f_unique_weighted
                     self.sum_uniq_to_query[rank][lin_at_rank] += taxres.f_unique_to_query
                     self.sum_uniq_bp[rank][lin_at_rank] += taxres.unique_intersect_bp
@@ -528,14 +544,16 @@ class QueryTaxResult():
         if not self.sum_uniq_weighted: # hasn't been summarized, do that first
             self.summarize_up_ranks(single_rank=single_rank)
         # catch potential error from running summarize_up_ranks separately and passing in different single_rank
-        if single_rank not in self.summarized_ranks:
+        if single_rank and single_rank not in self.summarized_ranks:
             self.best_only = True
             raise ValueError(f"Error: rank {single_rank} not in summarized ranks, {','.join(self.summarized_ranks)}")
         # rank loop is currently done in __main__
         for rank in self.summarized_ranks:  # ascending ranks or single rank
-            sum_uniq_to_query = self.sum_uniq_to_query[rank]
+            sum_uniq_to_query = self.sum_uniq_to_query[rank] #should be lineage: value
             # first, sort
-            sorted_sum_uniq_to_query = sorted(sum_uniq_to_query.items(), lambda kv: kv[1], reverse=True)
+            #sorted_sum_uniq_to_query = sorted(sum_uniq_to_query.items(), lambda kv: kv[1], reverse=True)
+            sorted_sum_uniq_to_query = list(sum_uniq_to_query.items())
+            sorted_sum_uniq_to_query.sort(key = lambda x: -x[1])
             if best_only: # consider first match only
                 sorted_sum_uniq_to_query = [sorted_sum_uniq_to_query[0]] 
             for lineage, f_unique in sorted_sum_uniq_to_query:
@@ -544,8 +562,8 @@ class QueryTaxResult():
                     raise ValueError(f"The tax summary of query '{self.query_name}' is {f_unique}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
                 elif f_unique == 0: #no annotated results for this query. do we need to handle this differently now?
                     continue
-                f_weighted_at_rank = self.sum_uniq_weighted[lineage]
-                bp_intersect_at_rank = self.sum_uniq_bp[lineage]
+                f_weighted_at_rank = self.sum_uniq_weighted[rank][lineage]
+                bp_intersect_at_rank = self.sum_uniq_bp[rank][lineage]
                 
                 self.total_f_classified += f_unique
                 self.total_f_weighted += f_weighted_at_rank
@@ -555,33 +573,25 @@ class QueryTaxResult():
                     query_ani = containment_to_distance(f_unique, self.query_info.ksize, self.query_info.scaled,
                                                         n_unique_kmers=self.query_info.query_hashes, 
                                                         sequence_len_bp=self.query_info.query_bp).ani
-                sres = SummarizedTaxResult(lineage=lineage, rank=lineage.lowest_rank,
-                                        f_weighted=f_weighted_at_rank, f_unique=f_unique,
-                                        bp_intersect=bp_intersect_at_rank, query_ani=query_ani)
+                sres = SummarizedGatherResult(query_name=self.query_name, query_md5=self.query_info.query_md5, 
+                                              query_filename=self.query_info.query_filename,
+                                              lineage=lineage, rank=rank,
+                                              f_weighted_at_rank=f_weighted_at_rank, fraction=f_unique,
+                                              bp_match_at_rank=bp_intersect_at_rank, query_ani=query_ani)
                 self.summarized_lineage_results[rank].append(sres)
                 #self.summarized_lineage_results.append(sres)
 
             # record unclassified
-            lineage = RankLineageInfo()
+            lineage = ()
             query_ani = None
             f_unique = 1.0 - self.total_f_classified
             if f_unique > 0:
                 f_weighted_at_rank = 1.0 - self.total_f_weighted
                 bp_intersect_at_rank = self.query_info.query_bp - self.total_bp_classified
-                sres = SummarizedTaxResult(lineage=lineage, rank=lineage.lowest_rank,
-                                        f_weighted=f_weighted_at_rank, f_unique=f_unique,
-                                        bp_intersect=bp_intersect_at_rank, query_ani=query_ani)
+                sres = SummarizedGatherResult(query_name=self.query_name, query_md5=self.query_info.query_md5, 
+                                              query_filename=self.query_info.query_filename,
+                                              lineage=lineage, rank=rank,
+                                              f_weighted_at_rank=f_weighted_at_rank, fraction=f_unique,
+                                              bp_match_at_rank=bp_intersect_at_rank, query_ani=query_ani)
                 self.summarized_lineage_results[rank].append(sres)
                 #self.summarized_lineage_results.append(sres)
-
-
-   ### the per-query output formats are:
-   # - kreport (metagenome)
-   # - lineages sample_frac
-   
-
-   ### the multi-query output formats are:
-   # - write_classifications (best-only per query)
-
-   # ???
-   # - krona (summarize across queries?)
