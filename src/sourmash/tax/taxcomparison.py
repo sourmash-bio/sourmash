@@ -453,12 +453,6 @@ class TaxResult():
             raise ValueError(f"ident {self.match_ident} is not in the taxonomy database.")
 
 
-# desired behavior for this: initialize once for each query,
-# then add results (TaxResult) as you go, to build full representation of all results for a single query
-# once all results added, write/use summarize_at_rank(self, rank) method to summarize?
-# finally, add methods: write_classification_result, write_kreport, etc??
-
-
 @dataclass
 class SummarizedGatherResult():
 #   """Class for storing summarized lineage information"""
