@@ -1299,7 +1299,7 @@ class Node:
         self._factory = factory
         self._data = None
         self._path = path
-        self.metadata = dict()
+        self.metadata = {}
 
     def __str__(self):
         return '*Node:{name} [occupied: {nb}, fpr: {fpr:.2}]'.format(

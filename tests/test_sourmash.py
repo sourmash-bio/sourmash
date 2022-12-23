@@ -619,7 +619,7 @@ def _load_compare_matrix_and_sigs(compare_csv, sigfiles, *, ksize=31):
         print(mat)
 
     # load in all the input signatures
-    idx_to_sig = dict()
+    idx_to_sig = {}
     for idx, filename in enumerate(sigfiles):
         ss = sourmash.load_one_signature(filename, ksize=ksize)
         idx_to_sig[idx] = ss
@@ -6760,7 +6760,7 @@ def test_compare_containment_ani_asymmetry(runtmp):
         print(mat)
 
     # load in all the input signatures
-    idx_to_sig = dict()
+    idx_to_sig = {}
     for idx, filename in enumerate(testdata_sigs):
         ss = sourmash.load_one_signature(filename, ksize=31)
         idx_to_sig[idx] = ss

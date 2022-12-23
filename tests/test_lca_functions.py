@@ -244,7 +244,7 @@ def test_count_lca_for_assignments_3():
 def test_count_lca_for_assignments_abund_1():
     # test basic mechanics of gather_assignments function
     hashval = 12345678
-    hashval_counts = dict()
+    hashval_counts = {}
     hashval_counts[hashval] = 3
 
     lin = lca_utils.make_lineage('a;b;c')
@@ -263,7 +263,7 @@ def test_count_lca_for_assignments_abund_1():
 def test_count_lca_for_assignments_abund_2():
     # test basic mechanics of gather_assignments function with two lineages
     hashval = 12345678
-    hashval_counts = dict()
+    hashval_counts = {}
     hashval_counts[hashval] = 3
 
     lin = lca_utils.make_lineage('a;b;c')
@@ -289,7 +289,7 @@ def test_count_lca_for_assignments_abund_3():
     # and two hashvals
     hashval = 12345678
     hashval2 = 87654321
-    hashval_counts = dict()
+    hashval_counts = {}
     hashval_counts[hashval] = 2
     hashval_counts[hashval2] = 5
 
@@ -317,7 +317,7 @@ def test_count_lca_for_assignments_abund_4():
     hashval = 12345678
     hashval2 = 87654321
     hashval3 = 34567891
-    hashval_counts = dict()
+    hashval_counts = {}
     hashval_counts[hashval] = 2
     hashval_counts[hashval2] = 5
     hashval_counts[hashval3] = 3
@@ -348,7 +348,7 @@ def test_count_lca_for_assignments_abund_5():
     # and two hashvals when linages match but one has lower taxo detail
     hashval = 12345678
     hashval2 = 87654321
-    hashval_counts = dict()
+    hashval_counts = {}
     hashval_counts[hashval] = 2
     hashval_counts[hashval2] = 5
 
