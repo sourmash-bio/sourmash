@@ -98,7 +98,7 @@
             cargoDeps = rustPlatform.fetchCargoTarball {
               inherit src;
               name = "${pname}-${version}";
-              hash = "sha256-qa/yth5PKEa/ZpjUVNfB6PleDMkRnXXLgsL6gTevBrA=";
+              hash = "sha256-IaIX4RdXEhLQhne+QiSfdP1KiIwZUqxRg14uWknS+0o=";
             };
 
             nativeBuildInputs = with rustPlatform; [ cargoSetupHook maturinBuildHook ];
