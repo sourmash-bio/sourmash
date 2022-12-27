@@ -39,12 +39,11 @@ fn copy_c_bindings(crate_dir: &str) {
         }
         let mut dir: PathBuf = components.collect();
 
-        dbg!(out_dir);
         if dir.as_os_str().is_empty() {
             panic!("Couldn't find target dir based on OUT_DIR");
         } else {
             dir.push("target");
-            dbg!(dir)
+            dir
         }
     }
 
