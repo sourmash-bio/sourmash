@@ -11,25 +11,14 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Cache nix store
-      id: cache-nix
-      uses: actions/cache@v3
+    - uses: cachix/install-nix-action@v18
       with:
-        path: |
-          ~/.nix-portable/store
-          ~/bin/nix-portable
-        key: nix-${{ hashFiles('shell.nix') }}-${{ hashFiles('nix/**') }}-v009
+        extra_nix_config: |
+          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-    - name: Install nix-portable
-      if: steps.cache-nix.outputs.cache-hit != 'true'
-      run: |
-        mkdir ~/bin
-        wget -qO ~/bin/nix-portable https://github.com/DavHau/nix-portable/releases/download/v009/nix-portable
-        chmod +x ~/bin/nix-portable
+    - run: nix run .# -- --version
 
-    - run: ~/bin/nix-portable nix-shell --command "tox -e py39"
-
-    - run: ~/bin/nix-portable nix run . -- --version
+    - run: nix-shell --command "tox -e py39"
 
   mamba:
     runs-on: ubuntu-latest

@@ -7,10 +7,11 @@ repository = "https://github.com/sourmash-bio/sourmash"
 keywords = ["minhash", "bioinformatics"]
 categories = ["science", "algorithms", "data-structures"]
 license = "BSD-3-Clause"
-edition = "2018"
+edition = "2021"
 readme = "README.md"
 autoexamples = false
 autobins = false
+rust-version = "1.56.1"
 
 [lib]
 name = "sourmash"
@@ -20,6 +21,7 @@ bench = false
 [features]
 from-finch = ["finch"]
 parallel = ["rayon"]
+maturin = []
 
 [dependencies]
 az = "1.0.0"
@@ -89,3 +91,6 @@ wasm-bindgen-test = "0.3.31"
 
 ### These crates don't compile on wasm
 [target.'cfg(not(all(target_arch = "wasm32", target_vendor="unknown")))'.dependencies]
+
+[package.metadata.maturin]
+name = "sourmash._lowlevel"
