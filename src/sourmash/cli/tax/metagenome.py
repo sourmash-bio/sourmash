@@ -27,7 +27,6 @@ from sourmash.logging import notify, print_results, error
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('metagenome',
-                                      aliases=['summarize'],
                                       usage=usage)
     subparser.add_argument(
         '-g', '--gather-csv', action="extend", nargs='*', default = [],
