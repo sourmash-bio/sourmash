@@ -230,7 +230,7 @@ class BaseLineageInfo:
         # current behavior: removes information, same as original pop_to_rank. Is that desired here if we can do it another way?)
         "Remove lineage tuples from given lineage `lin` until `rank` is reached."
         if rank not in self.ranks:
-            raise ValueError(f"Desired Rank {rank} not available for this lineage")
+            raise ValueError(f"Desired Rank '{rank}' not available for this lineage")
         # are we already above rank?
         if rank not in self.filled_ranks:
             return self
@@ -249,8 +249,10 @@ class BaseLineageInfo:
         # non-descructive pop_to_rank. Returns tuple of lineagetuples
         "Remove lineage tuples from given lineage `lin` until `rank` is reached."
         if rank not in self.ranks:
-            raise ValueError(f"Desired Rank {rank} not available for this lineage")
+            raise ValueError(f"Desired Rank '{rank}' not available for this lineage")
         # are we already above rank?
+    # if rank is not provided, we only return the filled lineage, to follow original pop_to_rank behavior.
+    # Do we want to alter this behavior?
         if rank not in self.filled_ranks:
             return self.filled_lineage
         # if not, return lineage tuples down to desired rank
@@ -399,15 +401,17 @@ class TaxResult():
     lineageInfo: RankLineageInfo = RankLineageInfo()
     skipped_ident: bool = False
     missed_ident: bool = False
+    match_lineage_attempted: bool = False
 
     def __post_init__(self):
         self.get_ident()
         self.query_name = self.raw.query_name
 
-        # before 4.x, these weren't in gather output. 
-        # Get query_bp; only change type here if they exist
+        # before 4.x, these weren't in gather output. Only change type here if they exist
         if not self.raw.query_bp:
-            raise ValueError("Error: Gather Results too old. Please regenerate with sourmash > 4.4.")
+            raise ValueError("Error: Please run gather with sourmash >= 4.4 for taxonomic summarization.")
+            # before, I was estimating this way using ONLY the first row of the gather results.
+            # NOT a good way to do this going forward, worried about bugs. We should use query_bp
             #self.raw.query_bp = int(self.raw.unique_intersect_bp) + int(self.raw.remaining_bp)
         if self.raw.query_n_hashes:
             self.raw.query_n_hashes = int(self.raw.query_n_hashes)
@@ -437,8 +441,12 @@ class TaxResult():
         self.match_ident = self.raw.name
         if not self.keep_full_identifiers:
             self.match_ident = self.raw.name.split(' ')[0]
+        else:
+            #overrides version bc can't keep full without keeping version
+            self.keep_identifier_versions = True 
         if not self.keep_identifier_versions:
             self.match_ident = self.match_ident.split('.')[0]
+
 
     def get_match_lineage(self, tax_assignments, skip_idents=None, fail_on_missing_taxonomy=False):
         if skip_idents and self.match_ident in skip_idents:
@@ -449,8 +457,9 @@ class TaxResult():
                 self.lineageInfo = RankLineageInfo(lineage=lin)
             else:
                 self.missed_ident=True
+        self.match_lineage_attempted = True
         if self.missed_ident and fail_on_missing_taxonomy:
-            raise ValueError(f"ident {self.match_ident} is not in the taxonomy database.")
+            raise ValueError(f"Error: ident '{self.match_ident}' is not in the taxonomy database.")
 
 
 @dataclass
@@ -468,66 +477,83 @@ class SummarizedGatherResult():
 
 @dataclass
 class QueryTaxResult(): 
-    """Store all TaxResult for a query. Enable summarization."""
+    """Store all TaxResults for a query. Enable summarization."""
     query_info: QueryInfo # initialize with QueryInfo dataclass
-    query_name: str = field(init=False)
-    raw_taxresults: list = field(default_factory=lambda: [])
-    skipped_idents: set = field(default_factory=lambda: set()) 
-    missed_idents: set = field(default_factory=lambda: set())
-    sum_uniq_weighted: dict = field(default_factory=lambda: defaultdict(lambda: defaultdict(float)))
-    sum_uniq_to_query: dict = field(default_factory=lambda: defaultdict(lambda: defaultdict(float)))
-    sum_uniq_bp: dict = field(default_factory=lambda: defaultdict(lambda: defaultdict(int)))
-    estimate_query_ani: bool = False
-    perfect_match: set = field(default_factory=lambda: set())
-    total_f_weighted: float = 0.0
-    total_f_classified: float = 0.0
-    total_bp_classified: int = 0
-    summarized_lineage_results: dict = field(default_factory=lambda: defaultdict(list))
-    best_only: bool = False
-    ranks: list = field(default_factory=lambda: [])
-    ascending_ranks: list = field(default_factory=lambda: [])
-    summarized_ranks: list = field(default_factory=lambda: [])
-
-    def __post_init__(self):
-        # pull this out for convenience?
-        self.query_name = self.query_info.query_name
-        if self.estimate_query_ani and (not self.query_info.ksize or not self.query_info.scaled):
-            self.estimate_query_ani = False
-            notify("WARNING: Please run gather with sourmash >= 4.4 to estimate query ANI at rank. Continuing without ANI...")
     
+    def __post_init__(self):
+        self.query_name = self.query_info.query_name # for convenience
+        self._init_taxresult_vars()
+        self._init_summarization_vars()
+    
+    def _init_taxresult_vars(self):
+        self.ranks = []
+        self.raw_taxresults = []
+        self.skipped_idents= set()
+        self.missed_idents = set()
+        self.n_missed = 0
+        self.n_skipped = 0
+        self.perfect_match = set()
+
+    def _init_summarization_vars(self):
+        self.sum_uniq_weighted = defaultdict(lambda: defaultdict(float))
+        self.sum_uniq_to_query = defaultdict(lambda: defaultdict(float))
+        self.sum_uniq_bp = defaultdict(lambda: defaultdict(int))
+        self.total_f_weighted = 0.0
+        self.total_f_classified = 0.0
+        self.total_bp_classified = 0.0
+        self.summarized_lineage_results = defaultdict(list)
+        self.summarize_best_only = False
+        self.summarized_ranks = []
+
     def is_compatible(self, taxresult):
         return taxresult.query_info == self.query_info
+    
+    @property
+    def ascending_ranks(self):
+        if not self.ranks:
+            return []
+        else:
+            return self.ranks[::-1]
     
     def add_taxresult(self, taxresult):
         # check that all query parameters match
         if self.is_compatible(taxresult=taxresult):
+            if not taxresult.match_lineage_attempted:
+                raise ValueError("Error: Cannot add TaxResult. Please use get_match_lineage() to add taxonomic lineage information first.")
             if not self.ranks:
                 self.ranks = taxresult.lineageInfo.ranks
-                self.ascending_ranks = taxresult.lineageInfo.ranks[::-1]
-            self.raw_taxresults.append(taxresult)
             if taxresult.skipped_ident:
+                self.n_skipped +=1
                 self.skipped_idents.add(taxresult.match_ident)
             elif taxresult.missed_ident:
+                self.n_missed +=1
                 self.missed_idents.add(taxresult.match_ident)
+            self.raw_taxresults.append(taxresult)
         else:
-            #notify("this QueryInfo: {self.query_info}")
-            #notify("TaxResult QueryInfo: {taxresult.query_info}")
-            #notify(f"Cannot add TaxResult as query info does not match")
-            raise ValueError("Cannot add TaxResult {taxresult}: Query Info does not match.")
+            raise ValueError("Error: Cannot add TaxResult: query information does not match.")
     
-    def summarize_up_ranks(self, single_rank=None):
+    def summarize_up_ranks(self, single_rank=None, force_resummarize=False):
+        if self.summarized_ranks: # has already been summarized
+            if force_resummarize:
+                self._init_summarization_vars()
+            else:
+                raise ValueError("Error: already summarized using rank(s): '{', '.join(self.summarized_ranks)}'. Use 'force_resummarize=True' to reset and resummarize")
+        # set ranks levels to summarize
+        self.summarized_ranks = self.ascending_ranks
+        if single_rank:
+            if single_rank not in self.summarized_ranks:
+                raise ValueError(f"Error: rank {single_rank} not in available ranks, {','.join(self.summarized_ranks)}")
+            self.summarized_ranks = [single_rank]
+        notify(f"Starting summarization up rank(s): {','.join(self.summarized_ranks)} ")
         for taxres in self.raw_taxresults:
             lininfo = taxres.lineageInfo
-            if lininfo: # we should have lineage if it wasn't in skip_idents
+            if lininfo: # won't always have lineage to summarize (skipped idents, missed idents)
+                # notify + track perfect matches
                 if taxres.f_unique_to_query >= 1.0:
                     if taxres.match_ident not in self.perfect_match:
                         notify(f'WARNING: 100% match! Is query "{self.query_name}" identical to its database match, {taxres.match_ident}?')
                         self.perfect_match.add(taxres.match_ident)
-                self.summarized_ranks = lininfo.ascending_taxlist
-                if single_rank:
-                    if single_rank not in self.summarized_ranks:
-                        raise ValueError(f"Error: rank {single_rank} not in available ranks, {','.join(self.summarized_ranks)}")
-                    self.summarized_ranks = [single_rank]
+                # add this taxresult to summary
                 for rank in self.summarized_ranks:
                     lin_at_rank = tuple(lininfo.lineage_at_rank(rank))
                     self.sum_uniq_weighted[rank][lin_at_rank] += taxres.f_unique_weighted

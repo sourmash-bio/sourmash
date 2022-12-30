@@ -6,12 +6,12 @@ Tests for the 'TaxComparison' classes.
 import pytest
 #import sourmash_tst_utils as utils
 
-from sourmash.tax.taxcomparison import LineagePair, LineageTuple, BaseLineageInfo, RankLineageInfo, LINSLineageInfo, build_tree
+from sourmash.tax.taxcomparison import LineagePair, LineageTuple, BaseLineageInfo, RankLineageInfo, LINSLineageInfo, build_tree, GatherRow, TaxResult, QueryTaxResult
 
 # sigh, can't make build tree work as easily with both LineagePair and LineageInfo.
 # What if LineagePair just had the extra info?
 from sourmash.tax.taxcomparison import LineageTuple as LineagePair
-from sourmash.lca.lca_utils import find_lca
+from sourmash.lca.lca_utils import find_lca, make_lineage
 
 taxranks = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain']
 
@@ -34,8 +34,8 @@ def test_LineageTuple_taxid_as_str():
 
 def test_RankLineageInfo_taxlist():
     taxinf = RankLineageInfo()
-    assert taxinf.taxlist() == taxranks
-    assert taxinf.ascending_taxlist() == taxranks[::-1] 
+    assert taxinf.taxlist == taxranks
+    assert taxinf.ascending_taxlist == taxranks[::-1] 
 
 
 def test_RankLineageInfo_init_lineage_str_1():
@@ -292,11 +292,15 @@ def test_is_lineage_match_3():
     assert not lin2.is_lineage_match(lin1, 'species')
 
 
-#def test_is_lineage_match_incorrect_ranks():
-#    # basic behavior: match at order and above, but not at family or below.
-#    lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__e')
-#    lin2 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
-#    print(lin1.lineage)
+def test_is_lineage_match_incorrect_ranks():
+    #test comparison with incompatible ranks
+    lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__e', ranks=taxranks[::-1])
+    lin2 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
+    print(lin1.lineage)
+    with pytest.raises(ValueError) as exc:
+        lin1.is_lineage_match(lin2, 'superkingdom')
+    print(str(exc))
+    assert 'Cannot compare lineages from taxonomies with different ranks.' in str(exc)
 
 
 def test_pop_to_rank_1():
@@ -315,6 +319,15 @@ def test_pop_to_rank_2():
     lin2 = RankLineageInfo(lineage_str='d__a;p__b;c__c;o__d;f__f')
     print(lin2.pop_to_rank('species'))
     assert lin2.pop_to_rank('species') == lin2
+
+
+def test_pop_to_rank_rank_not_avail():
+    lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
+    with pytest.raises(ValueError) as exc:
+        lin1.pop_to_rank("NotARank")
+    print(str(exc))
+    assert "Desired Rank 'NotARank' not available for this lineage" in str(exc)
+    
 
 
 def test_build_tree_base():
@@ -455,7 +468,360 @@ def test_find_lca_3():
     assert lca == tuple(lin1.filled_lineage)           # find most specific leaf node
 
 
-#def test_LINSLineageInfo_taxlist():
-#    taxinf = LINSLineageInfo(num_positions=10)
-#    assert taxinf.taxlist() == [0]*10
-#    assert taxinf.ascending_taxlist() == taxranks[::-1] 
+def test_lineage_at_rank_norank():
+    lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
+    with pytest.raises(TypeError) as exc:
+        lin1.lineage_at_rank()
+    print(str(exc))
+    assert "lineage_at_rank() missing 1 required positional argument: 'rank'" in str(exc)
+
+
+def test_lineage_at_rank_rank_not_avail():
+    lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
+    with pytest.raises(ValueError) as exc:
+        lin1.lineage_at_rank("NotARank")
+    print(str(exc))
+    assert "Desired Rank 'NotARank' not available for this lineage" in str(exc)
+    
+
+def test_lineage_at_rank_1():
+    lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
+    print(lin1.lineage_at_rank('superkingdom'))
+    
+    assert lin1.lineage_at_rank('superkingdom') == [LineageTuple(rank='superkingdom', name='d__a', taxid=None)]
+    print(lin1.lineage_at_rank('class'))
+    assert lin1.lineage_at_rank('class') == [LineageTuple(rank='superkingdom', name='d__a', taxid=None), 
+                                             LineageTuple(rank='phylum', name='p__b', taxid=None), 
+                                             LineageTuple(rank='class', name='c__c', taxid=None)]
+    
+
+def test_lineage_at_rank_below_rank():
+    lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
+    print(lin1.lineage_at_rank('superkingdom'))
+    # if rank is not provided, we only return the filled lineage, to follow original pop_to_rank behavior.
+
+    print(lin1.lineage_at_rank('genus'))
+    assert lin1.lineage_at_rank('genus') == [LineageTuple(rank='superkingdom', name='d__a', taxid=None), 
+                                             LineageTuple(rank='phylum', name='p__b', taxid=None), 
+                                             LineageTuple(rank='class', name='c__c', taxid=None),
+                                             LineageTuple(rank='order', name='o__d', taxid=None), 
+                                             LineageTuple(rank='family', name='f__f', taxid=None)]
+
+# utility functions for testing
+def make_mini_taxonomy(tax_info=None):
+    #usage: pass in list of tuples: [(name, lineage)]
+    if not tax_info:
+        tax_info = [("gA", "a;b;c")]
+    taxD = {}
+    for (name,lin) in tax_info:
+        taxD[name] = make_lineage(lin)
+    return taxD
+
+
+def make_GatherRow(gather_dict=None):
+    """Load artificial gather row (dict) into GatherRow class"""
+    # default contains just the essential cols
+    gatherD = {'query_name': 'q1',
+               'query_md5': 'md5',
+               'query_filename': 'query_fn',
+               'name': 'gA',
+               'f_unique_weighted': 0.2,
+               'f_unique_to_query': 0.1,
+               'query_bp':100,
+               'unique_intersect_bp': 20,
+               'remaining_bp': 1,
+               'ksize': 31,
+               'scaled': 1}
+    if gather_dict is not None:
+        gatherD.update(gather_dict)
+    gatherRaw = GatherRow(**gatherD)
+    return gatherRaw
+
+
+def make_TaxResult(gather_dict=None, taxD=None, keep_full_ident=False, keep_ident_version=False, skip_idents=None):
+    """Make TaxResult from artificial gather row (dict)"""
+    gRow = make_GatherRow(gather_dict)
+    taxres = TaxResult(raw=gRow, keep_full_identifiers=keep_full_ident, keep_identifier_versions=keep_ident_version)
+    if taxD is not None:
+        taxres.get_match_lineage(tax_assignments=taxD, skip_idents=skip_idents)
+    return taxres
+
+
+def make_QueryTaxResults(gather_info, taxD=None, keep_full_ident=False, keep_ident_version=False, skip_idents=None):
+    """Make QueryTaxResult(s) from artificial gather information, formatted as list of gather rows (dicts)"""
+    gather_results = {}
+    this_querytaxres = None
+    for gather_infoD in gather_info:
+        taxres = make_TaxResult(gather_infoD, taxD=taxD,  keep_full_ident=keep_full_ident,
+                                keep_ident_version=keep_ident_version, skip_idents=skip_idents)
+        query_name = taxres.query_name
+        # add to matching QueryTaxResult or create new one
+        if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
+            # get existing or initialize new
+            this_querytaxres = gather_results.get(query_name, QueryTaxResult(taxres.query_info))
+        this_querytaxres.add_taxresult(taxres)
+#        print('missed_ident?', taxres.missed_ident)
+        gather_results[query_name] = this_querytaxres
+    return gather_results
+
+
+def test_TaxResult_old_gather():
+    # gather does not contain query_name column
+    gA = {"name": "gA.1 name"}
+    gRow = make_GatherRow(gA)
+    gRow.query_bp = None  # reset query_bp
+    print("query_bp: ", gRow.query_bp)
+    with pytest.raises(ValueError) as exc:
+        TaxResult(raw=gRow)
+    print(str(exc))
+    assert "Error: Please run gather with sourmash >= 4.4 for taxonomic summarization." in str(exc)
+
+
+def test_TaxResult_get_ident_1():
+    gA = {"name": "gA.1 name"}
+    taxres = make_TaxResult(gA)
+    print(taxres.match_ident)
+    assert taxres.match_ident == "gA"
+
+
+def test_TaxResult_get_ident_keep_full():
+    gA = {"name": "gA.1 name"}
+    taxres = make_TaxResult(gA, keep_full_ident=True)
+    print("raw ident: ", taxres.raw.name)
+    print("keep_full?: ", taxres.keep_full_identifiers)
+    print("keep_version?: ",taxres.keep_identifier_versions)
+    print("final ident: ", taxres.match_ident)
+    assert taxres.match_ident == "gA.1 name"
+
+
+def test_TaxResult_get_ident_keep_version():
+    gA = {"name": "gA.1 name"}
+    taxres = make_TaxResult(gA, keep_ident_version=True)
+    print("raw ident: ", taxres.raw.name)
+    print("keep_full?: ", taxres.keep_full_identifiers)
+    print("keep_version?: ",taxres.keep_identifier_versions)
+    print("final ident: ", taxres.match_ident)
+    assert taxres.match_ident == "gA.1"
+
+
+def test_TaxResult_get_match_lineage_1():
+    gA_tax = ("gA", "a;b;c")
+    taxD = make_mini_taxonomy([gA_tax])
+
+    gA = {"name": "gA.1 name"}
+    taxres = make_TaxResult(gA)
+    taxres.get_match_lineage(tax_assignments=taxD)
+    assert taxres.lineageInfo.display_lineage() == "a;b;c"
+
+
+def test_TaxResult_get_match_lineage_skip_ident():
+    gA_tax = ("gA", "a;b;c")
+    taxD = make_mini_taxonomy([gA_tax])
+
+    gA = {"name": "gA.1 name"}
+    taxres = make_TaxResult(gA)
+    taxres.get_match_lineage(tax_assignments=taxD, skip_idents=['gA'])
+    print("skipped_ident?: ", taxres.skipped_ident)
+    print("missed_ident?: ", taxres.missed_ident)
+    assert taxres.skipped_ident == True
+    assert taxres.lineageInfo.display_lineage() == ""
+
+
+def test_TaxResult_get_match_lineage_missed_ident():
+    gA_tax = ("gA.1", "a;b;c")
+    taxD = make_mini_taxonomy([gA_tax])
+
+    gA = {"name": "gA.1 name"}
+    taxres = make_TaxResult(gA)
+    taxres.get_match_lineage(tax_assignments=taxD, skip_idents=['gB'])
+    print("skipped_ident?: ", taxres.skipped_ident)
+    print("missed_ident?: ", taxres.missed_ident)
+    assert taxres.skipped_ident == False
+    assert taxres.missed_ident == True
+    assert taxres.lineageInfo.display_lineage() == ""
+
+
+def test_TaxResult_get_match_lineage_missed_ident_fail_on_missing():
+    gA_tax = ("gA.1", "a;b;c")
+    taxD = make_mini_taxonomy([gA_tax])
+
+    gA = {"name": "gA.1 name"}
+    taxres = make_TaxResult(gA)
+    with pytest.raises(ValueError) as exc:
+        taxres.get_match_lineage(tax_assignments=taxD, skip_idents=['gB'], fail_on_missing_taxonomy=True)
+    print(str(exc))
+    assert "Error: ident 'gA' is not in the taxonomy database." in str(exc)
+
+
+def test_QueryTaxResult_1():
+    "basic functionality: initialize and add a taxresult"
+    tax_info = [("gA", "a;b;c")]
+    taxD = make_mini_taxonomy(tax_info=tax_info)
+    taxres = make_TaxResult(taxD=taxD)
+    # initialize
+    q_res = QueryTaxResult(taxres.query_info)
+    q_res.add_taxresult(taxres)
+    # check that new querytaxres is compatible with taxres
+    assert q_res.is_compatible(taxres)
+    # check that a few thngs were set properly and/or are not yet set.
+    assert q_res.query_name == "q1"
+    assert q_res.query_info.query_bp == 100
+    assert len(q_res.raw_taxresults) == 1
+    assert q_res.skipped_idents == set()
+    assert q_res.missed_idents == set()
+    assert q_res.summarized_lineage_results == {}
+
+
+def test_QueryTaxResult_add_incompatible():
+    "basic functionality: initialize and add a taxresult"
+    tax_info = [("gA", "a;b;c")]
+    taxD = make_mini_taxonomy(tax_info=tax_info)
+    taxres = make_TaxResult(taxD=taxD)
+    taxres2 = make_TaxResult({'query_name': 'q2'}, taxD=taxD)
+    # initialize
+    q_res = QueryTaxResult(taxres.query_info)
+    # check that new querytaxres is compatible with taxres and not taxres2
+    assert q_res.is_compatible(taxres)
+    assert not q_res.is_compatible(taxres2)
+    q_res.add_taxresult(taxres)
+    with pytest.raises(ValueError) as exc:
+        q_res.add_taxresult(taxres2)
+    print(str(exc))
+    assert "Error: Cannot add TaxResult: query information does not match." in str(exc)
+
+
+def test_QueryTaxResult_add_without_tax_info():
+    "initialize and add a taxresult with missed ident"
+    taxres = make_TaxResult() # do not add taxonomic info
+    # initialize
+    q_res = QueryTaxResult(taxres.query_info)
+    print("attempted to add lineage info?: ", taxres.match_lineage_attempted)
+    with pytest.raises(ValueError) as exc:
+        q_res.add_taxresult(taxres)
+    print(str(exc))
+    assert "Error: Cannot add TaxResult. Please use get_match_lineage() to add taxonomic lineage information first." in str(exc)
+    
+    
+def test_QueryTaxResult_add_skipped_ident():
+    "initialize and add a taxresult with skipped ident"
+    gA_tax = ("gA", "a;b;c")
+    taxD = make_mini_taxonomy([gA_tax])
+    taxres = make_TaxResult(taxD=taxD, skip_idents = ['gA'])
+#    taxres.get_match_lineage(tax_assignments=taxD, skip_idents=['gA'])
+    # initialize
+    q_res = QueryTaxResult(taxres.query_info)
+    q_res.add_taxresult(taxres)
+    assert len(q_res.skipped_idents) == 1
+    assert len(q_res.raw_taxresults) == 1
+    assert q_res.missed_idents == set()
+    assert q_res.summarized_lineage_results == {}
+
+
+def test_QueryTaxResult_add_missed_ident():
+    "initialize and add a taxresult with missed ident"
+    gA_tax = ("gB", "a;b;c")
+    taxD = make_mini_taxonomy([gA_tax])
+    taxres = make_TaxResult(taxD=taxD)
+    # initialize
+    q_res = QueryTaxResult(taxres.query_info)
+    # add taxonomic info to taxres
+    q_res.add_taxresult(taxres)
+    assert len(q_res.missed_idents) == 1
+    assert len(q_res.raw_taxresults) == 1
+    assert q_res.skipped_idents == set()
+    assert q_res.summarized_lineage_results == {} 
+
+
+def test_QueryTaxResult_track_missed_and_skipped():
+    "make sure missed and skipped idents are being tracked"
+    # make taxonomy
+    tax_info = [("gA", "a;b;c"), ("gB", "a;b;d")]
+    taxD = make_mini_taxonomy(tax_info=tax_info)
+    # make results
+    taxres = make_TaxResult()
+    taxres2 = make_TaxResult({"name": 'gB'}) # skipped
+    taxres3 = make_TaxResult({"name": 'gB'}) # skipped
+    taxres4 = make_TaxResult({"name": 'gC'}) # skipped
+    taxres5 = make_TaxResult({"name": 'gD'}) # missed
+    taxres6 = make_TaxResult({"name": 'gE'}) # missed
+    # initialize
+    q_res = QueryTaxResult(taxres.query_info)
+    # add taxonomic info to taxres, add to q_res
+    for n, tr in enumerate([taxres, taxres2, taxres3, taxres4, taxres5, taxres6]):
+        tr.get_match_lineage(tax_assignments=taxD, skip_idents=['gB', 'gC'])
+        print("num: ", n)
+        print("skipped?: ", tr.skipped_ident)
+        print("missed?: ", tr.missed_ident)
+        q_res.add_taxresult(tr)
+    assert len(q_res.raw_taxresults) == 6
+    print(q_res.n_skipped)
+    print(q_res.n_missed)
+    assert q_res.n_missed == 2
+    assert q_res.n_skipped == 3
+    assert 'gB' in q_res.skipped_idents
+    assert len(q_res.skipped_idents) == 2
+    assert 'gD' in q_res.missed_idents
+    assert q_res.summarized_lineage_results == {}
+
+def test_QueryTaxResult_track_missed_and_skipped_using_fn():
+    "make sure missed and skipped idents are being tracked. Same as above but use helper fn."
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}, {"name": 'gB'}, {"name": 'gC'}, {"name": 'gD'}, {"name": 'gE'}]
+    gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, skip_idents=['gB', 'gC'])
+    # should have 6 results for default query 'q1' 
+    print(gres.keys())
+    q_res = next(iter(gres.values()))
+    assert len(q_res.raw_taxresults) == 6
+    print(q_res.n_skipped)
+    print(q_res.n_missed)
+    assert q_res.n_missed == 2
+    assert q_res.n_skipped == 3
+    assert 'gB' in q_res.skipped_idents
+    assert len(q_res.skipped_idents) == 2
+    assert 'gD' in q_res.missed_idents
+    assert q_res.summarized_lineage_results == {}
+    
+
+def test_QueryTaxResult_summarize_up_ranks_1():
+    "basic functionality: summarize up ranks"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD)
+    assert len(gres.keys()) == 1
+    q_res = next(iter(gres.values()))
+    # now summarize up the ranks
+    q_res.summarize_up_ranks()
+    assert len(q_res.raw_taxresults) == 2
+    assert list(q_res.sum_uniq_weighted.keys()) == q_res.ranks[::-1]
+    #print(q_res.sum_uniq_weighted.values())
+    print(q_res.sum_uniq_weighted['superkingdom'])
+    assert q_res.sum_uniq_weighted['superkingdom'] ==  {(LineageTuple(rank='superkingdom', name='a', taxid=None),): 0.4}
+    print(q_res.sum_uniq_weighted['phylum'])
+    assert q_res.sum_uniq_weighted['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
+                                                  LineageTuple(rank='phylum', name='b', taxid=None)): 0.4}
+    assert q_res.sum_uniq_to_query['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
+                                                  LineageTuple(rank='phylum', name='b', taxid=None)): 0.2}
+    assert q_res.sum_uniq_bp['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
+                                                  LineageTuple(rank='phylum', name='b', taxid=None)): 40}
+    print(q_res.sum_uniq_weighted['class'])
+    assert q_res.sum_uniq_weighted['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
+                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
+                                                 LineageTuple(rank='class', name='c', taxid=None)): 0.2, 
+                                                (LineageTuple(rank='superkingdom', name='a', taxid=None),
+                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
+                                                 LineageTuple(rank='class', name='d', taxid=None)): 0.2}
+    assert q_res.sum_uniq_to_query['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
+                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
+                                                 LineageTuple(rank='class', name='c', taxid=None)): 0.1, 
+                                                (LineageTuple(rank='superkingdom', name='a', taxid=None),
+                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
+                                                 LineageTuple(rank='class', name='d', taxid=None)): 0.1}
+    assert q_res.sum_uniq_bp['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
+                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
+                                                 LineageTuple(rank='class', name='c', taxid=None)): 20, 
+                                                (LineageTuple(rank='superkingdom', name='a', taxid=None),
+                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
+                                                 LineageTuple(rank='class', name='d', taxid=None)): 20}
+
+    
+    
