@@ -498,12 +498,15 @@ class QueryTaxResult():
         self.sum_uniq_weighted = defaultdict(lambda: defaultdict(float))
         self.sum_uniq_to_query = defaultdict(lambda: defaultdict(float))
         self.sum_uniq_bp = defaultdict(lambda: defaultdict(int))
-        self.total_f_weighted = 0.0
-        self.total_f_classified = 0.0
-        self.total_bp_classified = 0.0
-        self.summarized_lineage_results = defaultdict(list)
-        self.summarize_best_only = False
         self.summarized_ranks = []
+        self._init_summarization_results()
+
+    def _init_summarization_results(self):
+        self.best_only_result = False
+        self.total_f_weighted = defaultdict(float) #0.0
+        self.total_f_classified = defaultdict(float)#0.0
+        self.total_bp_classified = defaultdict(int) #0
+        self.summarized_lineage_results = defaultdict(list)
 
     def is_compatible(self, taxresult):
         return taxresult.query_info == self.query_info
@@ -544,14 +547,14 @@ class QueryTaxResult():
             if single_rank not in self.summarized_ranks:
                 raise ValueError(f"Error: rank {single_rank} not in available ranks, {','.join(self.summarized_ranks)}")
             self.summarized_ranks = [single_rank]
-        notify(f"Starting summarization up rank(s): {','.join(self.summarized_ranks)} ")
+        notify(f"Starting summarization up rank(s): {', '.join(self.summarized_ranks)} ")
         for taxres in self.raw_taxresults:
             lininfo = taxres.lineageInfo
             if lininfo: # won't always have lineage to summarize (skipped idents, missed idents)
                 # notify + track perfect matches
                 if taxres.f_unique_to_query >= 1.0:
                     if taxres.match_ident not in self.perfect_match:
-                        notify(f'WARNING: 100% match! Is query "{self.query_name}" identical to its database match, {taxres.match_ident}?')
+                        notify(f"WARNING: 100% match! Is query '{self.query_name}' identical to its database match, '{taxres.match_ident}'?")
                         self.perfect_match.add(taxres.match_ident)
                 # add this taxresult to summary
                 for rank in self.summarized_ranks:
@@ -561,12 +564,16 @@ class QueryTaxResult():
                     self.sum_uniq_bp[rank][lin_at_rank] += taxres.unique_intersect_bp
     
     def build_summarized_result(self, single_rank=None, best_only=False):
-        if not self.sum_uniq_weighted: # hasn't been summarized, do that first
+        # just reset if we've already built summarized result (avoid adding to existing)? Or write in an error/force option?
+        self._init_summarization_results()
+        # if taxresults haven't been summarized, do that first
+        if not self.summarized_ranks: 
             self.summarize_up_ranks(single_rank=single_rank)
         # catch potential error from running summarize_up_ranks separately and passing in different single_rank
         if single_rank and single_rank not in self.summarized_ranks:
-            self.best_only = True
-            raise ValueError(f"Error: rank {single_rank} not in summarized ranks, {','.join(self.summarized_ranks)}")
+            raise ValueError(f"Error: rank '{single_rank}' not in summarized rank(s), {','.join(self.summarized_ranks)}")
+        if best_only:
+            self.best_only_result = True
         # rank loop is currently done in __main__
         for rank in self.summarized_ranks:  # ascending ranks or single rank
             sum_uniq_to_query = self.sum_uniq_to_query[rank] #should be lineage: value
@@ -585,33 +592,32 @@ class QueryTaxResult():
                 f_weighted_at_rank = self.sum_uniq_weighted[rank][lineage]
                 bp_intersect_at_rank = self.sum_uniq_bp[rank][lineage]
                 
-                self.total_f_classified += f_unique
-                self.total_f_weighted += f_weighted_at_rank
-                self.total_bp_classified += bp_intersect_at_rank
+                # These change by rank ONLY when doing best_only (selecting top hit at that particular rank)
+                self.total_f_classified[rank] += f_unique
+                self.total_f_weighted[rank] += f_weighted_at_rank
+                self.total_bp_classified[rank] += bp_intersect_at_rank
                 
-                if self.estimate_query_ani:
-                    query_ani = containment_to_distance(f_unique, self.query_info.ksize, self.query_info.scaled,
-                                                        n_unique_kmers=self.query_info.query_hashes, 
-                                                        sequence_len_bp=self.query_info.query_bp).ani
+#                if self.estimate_query_ani:
+                query_ani = containment_to_distance(f_unique, self.query_info.ksize, self.query_info.scaled,
+                                                    n_unique_kmers=self.query_info.query_hashes,
+                                                    sequence_len_bp=self.query_info.query_bp).ani
                 sres = SummarizedGatherResult(query_name=self.query_name, query_md5=self.query_info.query_md5, 
                                               query_filename=self.query_info.query_filename,
                                               lineage=lineage, rank=rank,
                                               f_weighted_at_rank=f_weighted_at_rank, fraction=f_unique,
                                               bp_match_at_rank=bp_intersect_at_rank, query_ani=query_ani)
                 self.summarized_lineage_results[rank].append(sres)
-                #self.summarized_lineage_results.append(sres)
 
             # record unclassified
             lineage = ()
             query_ani = None
-            f_unique = 1.0 - self.total_f_classified
+            f_unique = 1.0 - self.total_f_classified[rank]
             if f_unique > 0:
-                f_weighted_at_rank = 1.0 - self.total_f_weighted
-                bp_intersect_at_rank = self.query_info.query_bp - self.total_bp_classified
+                f_weighted_at_rank = 1.0 - self.total_f_weighted[rank]
+                bp_intersect_at_rank = self.query_info.query_bp - self.total_bp_classified[rank]
                 sres = SummarizedGatherResult(query_name=self.query_name, query_md5=self.query_info.query_md5, 
                                               query_filename=self.query_info.query_filename,
                                               lineage=lineage, rank=rank,
                                               f_weighted_at_rank=f_weighted_at_rank, fraction=f_unique,
                                               bp_match_at_rank=bp_intersect_at_rank, query_ani=query_ani)
                 self.summarized_lineage_results[rank].append(sres)
-                #self.summarized_lineage_results.append(sres)
