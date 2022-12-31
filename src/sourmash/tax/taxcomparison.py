@@ -380,9 +380,9 @@ class QueryInfo():
    query_filename: str
    query_bp: int
    query_hashes: int
-   total_weighted_hashes: int
    ksize: int
    scaled: int
+   total_weighted_hashes: int = 0
 
    @property
    def total_weighted_bp(self):
@@ -417,6 +417,8 @@ class TaxResult():
             self.raw.query_n_hashes = int(self.raw.query_n_hashes)
         if self.raw.total_weighted_hashes:
             self.raw.total_weighted_hashes = int(self.raw.total_weighted_hashes)
+        else:
+            self.raw.total_weighted_hashes = 0
         if self.raw.scaled:
             self.raw.scaled = int(self.raw.scaled)
 
@@ -459,21 +461,41 @@ class TaxResult():
                 self.missed_ident=True
         self.match_lineage_attempted = True
         if self.missed_ident and fail_on_missing_taxonomy:
-            raise ValueError(f"Error: ident '{self.match_ident}' is not in the taxonomy database.")
+            raise ValueError(f"Error: ident '{self.match_ident}' is not in the taxonomy database. Failing, as requested via --fail-on-missing-taxonomy")
+#            raise ValueError('Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
+
 
 
 @dataclass
 class SummarizedGatherResult():
 #   """Class for storing summarized lineage information"""
    query_name: str
-   query_md5: str
-   query_filename: str
    rank: str
    fraction: float
-   f_weighted_at_rank: float
    lineage: tuple
+   query_md5: str
+   query_filename: str
+   f_weighted_at_rank: float
    bp_match_at_rank: int
-   query_ani: float
+   query_ani_at_rank: float
+   total_weighted_hashes: int
+
+#ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, 
+# lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
+@dataclass
+class ClassificationResult():
+#   """Class for storing summarized lineage information"""
+   query_name: str
+   query_md5: str
+   query_filename: str
+   status: str
+   rank: str
+   fraction: float
+   lineage: tuple
+   f_weighted_at_rank: float
+   bp_match_at_rank: int
+   query_ani_at_rank: float
+
 
 @dataclass
 class QueryTaxResult(): 
@@ -605,7 +627,8 @@ class QueryTaxResult():
                                               query_filename=self.query_info.query_filename,
                                               lineage=lineage, rank=rank,
                                               f_weighted_at_rank=f_weighted_at_rank, fraction=f_unique,
-                                              bp_match_at_rank=bp_intersect_at_rank, query_ani=query_ani)
+                                              bp_match_at_rank=bp_intersect_at_rank, query_ani_at_rank=query_ani,
+                                              total_weighted_hashes=self.query_info.total_weighted_hashes)
                 self.summarized_lineage_results[rank].append(sres)
 
             # record unclassified
@@ -619,5 +642,71 @@ class QueryTaxResult():
                                               query_filename=self.query_info.query_filename,
                                               lineage=lineage, rank=rank,
                                               f_weighted_at_rank=f_weighted_at_rank, fraction=f_unique,
-                                              bp_match_at_rank=bp_intersect_at_rank, query_ani=query_ani)
+                                              bp_match_at_rank=bp_intersect_at_rank, query_ani_at_rank=query_ani,
+                                              total_weighted_hashes=self.query_info.total_weighted_hashes)
                 self.summarized_lineage_results[rank].append(sres)
+
+
+# utility functions for testing
+def make_mini_taxonomy(tax_info=None):
+    from sourmash.lca import lca_utils
+     #usage: pass in list of tuples: [(name, lineage)]
+    if not tax_info:
+         tax_info = [("gA", "a;b;c")]
+    taxD = {}
+    for (name,lin) in tax_info:
+        taxD[name] = lca_utils.make_lineage(lin)
+    return taxD
+
+
+def make_GatherRow(gather_dict=None):
+    """Load artificial gather row (dict) into GatherRow class"""
+    # default contains just the essential cols
+    gatherD = {'query_name': 'q1',
+               'query_md5': 'md5',
+               'query_filename': 'query_fn',
+               'name': 'gA',
+               'f_unique_weighted': 0.2,
+               'f_unique_to_query': 0.1,
+               'query_bp':100,
+               'unique_intersect_bp': 20,
+               'remaining_bp': 1,
+               'ksize': 31,
+               'scaled': 1}
+    if gather_dict is not None:
+        gatherD.update(gather_dict)
+    gatherRaw = GatherRow(**gatherD)
+    return gatherRaw
+
+
+def make_TaxResult(gather_dict=None, taxD=None, keep_full_ident=False, keep_ident_version=False, skip_idents=None):
+    """Make TaxResult from artificial gather row (dict)"""
+    gRow = make_GatherRow(gather_dict)
+    taxres = TaxResult(raw=gRow, keep_full_identifiers=keep_full_ident, keep_identifier_versions=keep_ident_version)
+    if taxD is not None:
+        taxres.get_match_lineage(tax_assignments=taxD, skip_idents=skip_idents)
+    return taxres
+
+
+def make_QueryTaxResults(gather_info, taxD=None, single_query=False, keep_full_ident=False, keep_ident_version=False, skip_idents=None):
+    """Make QueryTaxResult(s) from artificial gather information, formatted as list of gather rows (dicts)"""
+    gather_results = {}
+    this_querytaxres = None
+    for gather_infoD in gather_info:
+        taxres = make_TaxResult(gather_infoD, taxD=taxD,  keep_full_ident=keep_full_ident,
+                                keep_ident_version=keep_ident_version, skip_idents=skip_idents)
+        query_name = taxres.query_name
+        # add to matching QueryTaxResult or create new one
+        if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
+            # get existing or initialize new
+            this_querytaxres = gather_results.get(query_name, QueryTaxResult(taxres.query_info))
+        this_querytaxres.add_taxresult(taxres)
+#        print('missed_ident?', taxres.missed_ident)
+        gather_results[query_name] = this_querytaxres
+    # for convenience: If working with single query, just return that QueryTaxResult.
+    if single_query:
+        if len(gather_results.keys()) > 1:
+            raise ValueError("You passed in results for more than one query")
+        else:
+            return next(iter(gather_results.values()))
+    return gather_results

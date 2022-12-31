@@ -17,7 +17,7 @@ import sqlite3
 
 __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
            'load_gather_results', 'check_and_load_gather_csvs',
-           'find_match_lineage', 'summarize_gather_at',
+         # 'find_match_lineage', # 'summarize_gather_at',
            'find_missing_identities', 'make_krona_header',
            'aggregate_by_lineage_at_rank', 'format_for_krona',
            'write_krona', 'write_summary', 'write_classifications',
@@ -168,14 +168,14 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
                 raise
 
         # check for match identites in these gather_results not found in lineage spreadsheets
-        ident_missed = find_missing_identities(these_results)
-        if ident_missed:
-            notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
-            if fail_on_missing_taxonomy:
-                raise ValueError('Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
+        ident_missed = find_missing_identities(these_results, fail_on_missing_taxonomy=fail_on_missing_taxonomy)
+#        if ident_missed:
+#            notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
+#            if fail_on_missing_taxonomy:
+#                raise ValueError('Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
 
-            total_missed += len(ident_missed)
-            all_ident_missed.update(ident_missed)
+        total_missed += len(ident_missed)
+        all_ident_missed.update(ident_missed)
         # add these results to gather_results
         gather_results.update(these_results)
 
@@ -186,166 +186,23 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
     return query_results_list, all_ident_missed, total_missed, header
 
 
-def find_match_lineage(match_ident, tax_assign, *, skip_idents = [],
-                       keep_full_identifiers=False,
-                       keep_identifier_versions=False):
-    lineage=""
-    match_ident = get_ident(match_ident, keep_full_identifiers=keep_full_identifiers, keep_identifier_versions=keep_identifier_versions)
-    # if identity not in lineage database, and not --fail-on-missing-taxonomy, skip summarizing this match
-    if match_ident in skip_idents:
-        return lineage
-    try:
-        lineage = tax_assign[match_ident]
-    except KeyError:
-        raise ValueError(f"ident {match_ident} is not in the taxonomy database.")
-    return lineage
-
-
-def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
-                        keep_full_identifiers=False,
-                        keep_identifier_versions=False, best_only=False,
-                        seen_perfect=set(),
-                        estimate_query_ani=False):
-    """
-    Summarize gather results at specified taxonomic rank
-    """
-    # init dictionaries
-    sum_uniq_weighted = defaultdict(lambda: defaultdict(float))
-    # store together w/ ^ instead?
-    sum_uniq_to_query = defaultdict(lambda: defaultdict(float))
-    sum_uniq_bp = defaultdict(lambda: defaultdict(float))
-    query_info = {}
-
-    set_ksize = False
-    ksize, scaled, query_n_hashes = None, 0, None
-
-    for row in gather_results:
-        # get essential gather info
-        if not set_ksize and "ksize" in row.keys():
-            set_ksize = True
-            ksize = int(row['ksize'])
-            scaled = int(row['scaled'])
-        
-        query_name = row['query_name']
-        f_unique_to_query = float(row['f_unique_to_query'])
-        f_uniq_weighted = float(row['f_unique_weighted'])
-        unique_intersect_bp = int(row['unique_intersect_bp'])
-        total_weighted_hashes = int(row.get('total_weighted_hashes', 0))
-        query_md5 = row['query_md5']
-        query_filename = row['query_filename']
-        # get query_bp
-        if query_name not in query_info.keys(): #REMOVING THIS AFFECTS GATHER RESULTS!!! BUT query bp should always be same for same query? bug?
-            if "query_n_hashes" in row.keys():
-                query_n_hashes = int(row["query_n_hashes"])
-            if "query_bp" in row.keys():
-                query_bp = int(row["query_bp"])
-            else:
-                query_bp = unique_intersect_bp + int(row['remaining_bp'])
-        
-        # store query info
-        query_info[query_name] = QueryInfo(query_md5=query_md5, query_filename=query_filename, query_bp=query_bp, query_hashes=query_nhashes, total_weighted_hashes=total_weighted_hashes)
-        
-        if estimate_query_ani and (not ksize or not scaled):
-            if not set_ksize:
-                estimate_query_ani=False
-                notify("WARNING: Please run gather with sourmash >= 4.4 to estimate query ANI at rank. Continuing without ANI...")
-        
-        match_ident = row['name']
-
-        # 100% match? are we looking at something in the database?
-        if f_unique_to_query >= 1.0 and query_name not in seen_perfect: # only want to notify once, not for each rank
-            ident = get_ident(match_ident,
-                              keep_full_identifiers=keep_full_identifiers,
-                              keep_identifier_versions=keep_identifier_versions)
-            seen_perfect.add(query_name)
-            notify(f'WARNING: 100% match! Is query "{query_name}" identical to its database match, {ident}?')
-
-        # get lineage for match
-        lineage = find_match_lineage(match_ident, tax_assign,
-                                    skip_idents=skip_idents,
-                                    keep_full_identifiers=keep_full_identifiers,
-                                    keep_identifier_versions=keep_identifier_versions)
-        # ident was in skip_idents
-        if not lineage:
-            continue
-
-        # summarize at rank!
-        lineage = pop_to_rank(lineage, rank)
-        assert lineage[-1].rank == rank, lineage[-1]
-        # record info
-        sum_uniq_to_query[query_name][lineage] += f_unique_to_query
-        sum_uniq_weighted[query_name][lineage] += f_uniq_weighted
-        sum_uniq_bp[query_name][lineage] += unique_intersect_bp
-
-    # sort and store each as SummarizedGatherResult
-    sum_uniq_to_query_sorted = []
-    for query_name, lineage_weights in sum_uniq_to_query.items():
-        qInfo = query_info[query_name]
-        sumgather_items = list(lineage_weights.items())
-        sumgather_items.sort(key = lambda x: -x[1])
-        query_ani = None
-        if best_only:
-            lineage, fraction = sumgather_items[0]
-            if fraction > 1:
-                raise ValueError(f"The tax summary of query '{query_name}' is {fraction}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
-            elif fraction == 0:
-                continue
-            f_weighted_at_rank = sum_uniq_weighted[query_name][lineage]
-            bp_intersect_at_rank = sum_uniq_bp[query_name][lineage]
-            if estimate_query_ani:
-                query_ani = containment_to_distance(fraction, ksize, scaled,
-                                                    n_unique_kmers= qInfo.query_hashes, sequence_len_bp= qInfo.query_bp).ani
-            sres = SummarizedGatherResult(query_name, rank, fraction, lineage, qInfo.query_md5,
-                                          qInfo.query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes * scaled)
-            sum_uniq_to_query_sorted.append(sres)
-        else:
-            total_f_weighted= 0.0
-            total_f_classified = 0.0
-            total_bp_classified = 0
-            for lineage, fraction in sumgather_items:
-                query_ani = None
-                if fraction > 1:
-                    raise ValueError(f"The tax summary of query '{query_name}' is {fraction}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
-                elif fraction == 0:
-                    continue
-                total_f_classified += fraction
-                f_weighted_at_rank = sum_uniq_weighted[query_name][lineage]
-                total_f_weighted += f_weighted_at_rank
-                bp_intersect_at_rank = int(sum_uniq_bp[query_name][lineage])
-                total_bp_classified += bp_intersect_at_rank
-                if estimate_query_ani:
-                    query_ani = containment_to_distance(fraction, ksize, scaled,
-                                                        n_unique_kmers=qInfo.query_hashes, sequence_len_bp=qInfo.query_bp).ani
-                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5,
-                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes * scaled)
-                sum_uniq_to_query_sorted.append(sres)
-
-            # record unclassified
-            lineage = ()
-            query_ani = None
-            fraction = 1.0 - total_f_classified
-            if fraction > 0:
-                f_weighted_at_rank = 1.0 - total_f_weighted
-                bp_intersect_at_rank = qInfo.query_bp - total_bp_classified
-                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5,
-                                              query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes*scaled)
-                sum_uniq_to_query_sorted.append(sres)
-
-    return sum_uniq_to_query_sorted, seen_perfect, estimate_query_ani
-
-
-def find_missing_identities(gather_results):
+def find_missing_identities(gather_results, fail_on_missing_taxonomy=False):
     """
     Identify match ids/accessions from gather results
     that are not present in taxonomic assignments.
     """
     ident_missed= set()
+    total_n_missed = 0
     for querytaxres in gather_results.values():
-        print(querytaxres.missed_idents)
         ident_missed.update(querytaxres.missed_idents)
+        total_n_missed+= querytaxres.n_missed
 
     if ident_missed:
-        notify(f'of {len(gather_results)} gather results, missed {len(ident_missed)} lineage assignments.')
+        notify(f'of {len(gather_results)} gather results, missed lineage assignments for {len(ident_missed)} results.')
+        notify(f'The following are missing from the taxonomy information: {", ".join(ident_missed)}')
+        if fail_on_missing_taxonomy: # now we will fail earlier, I think
+            raise ValueError('Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
+
     return ident_missed
 
 
@@ -447,7 +304,6 @@ def write_summary(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=Fa
                 res.f_weighted_at_rank = f'{res.f_weighted_at_rank:.3f}'
             rD = asdict(res)
             w.writerow(rD)
-#            rD = res._asdict()
 
 
 def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
