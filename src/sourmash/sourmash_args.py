@@ -45,6 +45,7 @@ from io import StringIO, TextIOWrapper
 import re
 import zipfile
 import contextlib
+import itertools
 
 import screed
 import sourmash
@@ -1226,7 +1227,9 @@ _save_classes = [
 
 
 def SaveSignaturesToLocation(location):
-    for priority, cls in sorted(_save_classes):
+    save_list = itertools.chain(_save_classes,
+                                sourmash_plugins.get_save_to_functions())
+    for priority, cls in sorted(save_list):
         debug_literal(f"trying to match save function {cls}, priority={priority}")
         if cls.matches(location):
             debug_literal(f"is match!")

@@ -14,6 +14,7 @@ CTB TODO:
 """
 
 DEFAULT_LOAD_FROM_PRIORITY = 99
+DEFAULT_SAVE_TO_PRIORITY = 99
 
 from .logging import error, debug_literal
 
@@ -44,3 +45,23 @@ def get_load_from_functions():
         name = plugin.name
         debug_literal(f"plugins.load_from_functions: got '{name}', priority={priority}")
         yield priority, name, loader_fn
+
+
+# load 'save_to' entry points.
+_plugin_save_to = entry_points(group='sourmash.save_to')
+
+def get_save_to_functions():
+    "Load the 'save_to' plugins and yield tuples (priority, fn)."
+    debug_literal(f"save_to plugins: {_plugin_save_to}")
+
+    # Load each plugin,
+    for plugin in _plugin_save_to:
+        loader_fn = plugin.load()
+
+        # get 'priority' if it is available
+        priority = getattr(loader_fn, 'priority', DEFAULT_SAVE_TO_PRIORITY)
+
+        # retrieve name (which is specified by plugin?)
+        name = plugin.name
+        debug_literal(f"plugins.save_to_functions: got '{name}', priority={priority}")
+        yield priority, loader_fn
