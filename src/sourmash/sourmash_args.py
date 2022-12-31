@@ -46,19 +46,10 @@ import re
 import zipfile
 import contextlib
 
-# cover for older versions of Python like 3.8...?
-from importlib.metadata import entry_points
-try:
-    plugin_load_from = entry_points(group='sourmash.load_from')
-except TypeError:
-    from importlib_metadata import entry_points
-    plugin_load_from = entry_points(group='sourmash.load_from')
-
-print('XXX', plugin_load_from, file=sys.stderr)
-
 import screed
 import sourmash
 
+from sourmash import plugins as sourmash_plugins
 from sourmash.sbtmh import load_sbt_index
 from sourmash.lca.lca_db import load_single_database
 import sourmash.exceptions
@@ -465,19 +456,18 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     """
     loaded = False
 
-    # XXX can probably do this once at module level, yah?
-    loadme = list(_loader_functions)
-    for pin in plugin_load_from:
-        lfn = pin.load()
-        priority = getattr(lfn, 'priority', 99)
-        name = pin.name
-        loadme.append((priority, name, lfn))
+    # CTB: we probably do this once at module level, but I am avoiding
+    # cluttering that up for now. Perhaps create a new module for loaders?
 
-    loadme.sort()
+    # make copy of default loader functions:
+    load_from_functions = list(_loader_functions)
 
-    # iterate through loader functions, trying them all. Catch ValueError
-    # but nothing else.
-    for n, (priority, desc, load_fn) in enumerate(loadme):
+    # extend with plugins:
+    load_from_functions.extend(sourmash_plugins.get_load_from_functions())
+
+    # iterate through loader functions, sorted by priority; try them all.
+    # Catch ValueError but nothing else.
+    for n, (priority, desc, load_fn) in enumerate(sorted(load_from_functions)):
         db = None
         try:
             debug_literal(f"_load_databases: trying loader fn {n} / priority {priority} - '{desc}'")
@@ -485,8 +475,9 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
                          traverse_yield_all=traverse_yield_all,
                          cache_size=cache_size)
         except ValueError:
-            debug_literal(f"_load_databases: FAIL on fn {n} {desc}.")
+            debug_literal(f"_load_databases: FAIL with ValueError: on fn {n} {desc}.")
             debug_literal(traceback.format_exc())
+            debug_literal("(continuing past exception)")
 
         if db is not None:
             loaded = True
