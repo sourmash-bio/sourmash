@@ -959,6 +959,11 @@ class _BaseSaveSignaturesToLocation:
         self.location = location
         self.count = 0
 
+    @classmethod
+    def matches(self, location):
+        "returns True when this class should handle a specific location"
+        raise NotImplementedError
+
     def __repr__(self):
         raise NotImplementedError
 
@@ -987,6 +992,10 @@ class SaveSignatures_NoOutput(_BaseSaveSignaturesToLocation):
     def __repr__(self):
         return 'SaveSignatures_NoOutput()'
 
+    @classmethod
+    def matches(self, location):
+        return location is None
+
     def open(self):
         pass
 
@@ -1001,6 +1010,12 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
 
     def __repr__(self):
         return f"SaveSignatures_Directory('{self.location}')"
+
+    @classmethod
+    def matches(self, location):
+        "anything ending in /"
+        if location:
+            return location.endswith('/')
 
     def close(self):
         pass
@@ -1040,6 +1055,12 @@ class SaveSignatures_SqliteIndex(_BaseSaveSignaturesToLocation):
         self.idx = None
         self.cursor = None
 
+    @classmethod
+    def matches(self, location):
+        "anything ending in .sqldb"
+        if location:
+            return location.endswith('.sqldb')
+
     def __repr__(self):
         return f"SaveSignatures_SqliteIndex('{self.location}')"
 
@@ -1070,6 +1091,11 @@ class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
         self.compress = 0
         if self.location.endswith('.gz'):
             self.compress = 1
+
+    @classmethod
+    def matches(self, location):
+        # match anything that is not None or ""
+        return bool(location)
 
     def __repr__(self):
         return f"SaveSignatures_SigFile('{self.location}')"
@@ -1104,6 +1130,12 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
     def __init__(self, location):
         super().__init__(location)
         self.storage = None
+
+    @classmethod
+    def matches(self, location):
+        "anything ending in .zip"
+        if location:
+            return location.endswith('.zip')
 
     def __repr__(self):
         return f"SaveSignatures_ZipFile('{self.location}')"
@@ -1184,47 +1216,21 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
             super().add(ss)
 
 
-class SigFileSaveType(Enum):
-    NO_OUTPUT = 0
-    SIGFILE = 1
-    SIGFILE_GZ = 2
-    DIRECTORY = 3
-    ZIPFILE = 4
-    SQLITEDB = 5
-
-_save_classes = {
-    SigFileSaveType.NO_OUTPUT: SaveSignatures_NoOutput,
-    SigFileSaveType.SIGFILE: SaveSignatures_SigFile,
-    SigFileSaveType.SIGFILE_GZ: SaveSignatures_SigFile,
-    SigFileSaveType.DIRECTORY: SaveSignatures_Directory,
-    SigFileSaveType.ZIPFILE: SaveSignatures_ZipFile,
-    SigFileSaveType.SQLITEDB: SaveSignatures_SqliteIndex,
-}
+_save_classes = [
+    (10, SaveSignatures_NoOutput),
+    (20, SaveSignatures_Directory),
+    (30, SaveSignatures_ZipFile),
+    (40, SaveSignatures_SqliteIndex),
+    (99, SaveSignatures_SigFile),
+]
 
 
-def SaveSignaturesToLocation(filename, *, force_type=None):
-    """Create and return an appropriate object for progressive saving of
-    signatures."""
-    save_type = None
-    if not force_type:
-        if filename is None:
-            save_type = SigFileSaveType.NO_OUTPUT
-        elif filename.endswith('/'):
-            save_type = SigFileSaveType.DIRECTORY
-        elif filename.endswith('.gz'):
-            save_type = SigFileSaveType.SIGFILE_GZ
-        elif filename.endswith('.zip'):
-            save_type = SigFileSaveType.ZIPFILE
-        elif filename.endswith('.sqldb'):
-            save_type = SigFileSaveType.SQLITEDB
-        else:
-            # default to SIGFILE intentionally!
-            save_type = SigFileSaveType.SIGFILE
-    else:
-        save_type = force_type
+def SaveSignaturesToLocation(location):
+    for priority, cls in sorted(_save_classes):
+        debug_literal(f"trying to match save function {cls}, priority={priority}")
+        if cls.matches(location):
+            debug_literal(f"is match!")
+            # CTB: check if None or exception?
+            return cls(location)
 
-    cls = _save_classes.get(save_type)
-    if cls is None:
-        raise Exception("invalid save type; this should never happen!?")
-
-    return cls(filename)
+    raise Exception(f"cannot determine how to open location {location} for saving; this should never happen!?")
