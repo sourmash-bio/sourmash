@@ -46,6 +46,16 @@ import re
 import zipfile
 import contextlib
 
+# cover for older versions of Python like 3.8...?
+from importlib.metadata import entry_points
+try:
+    plugin_load_from = entry_points(group='sourmash.load_from')
+except TypeError:
+    from importlib_metadata import entry_points
+    plugin_load_from = entry_points(group='sourmash.load_from')
+
+print('XXX', plugin_load_from, file=sys.stderr)
+
 import screed
 import sourmash
 
@@ -351,7 +361,18 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *,
 
     return databases
 
+#
+# internal index/signature loading functions
+#
 
+_loader_functions = []
+def add_loader(name, priority):
+    def dec_priority(func):
+        _loader_functions.append((priority, name, func))
+        return func
+    return dec_priority
+
+@add_loader("load from stdin", 10)
 def _load_stdin(filename, **kwargs):
     "Load collection from .sig file streamed in via stdin"
     db = None
@@ -364,6 +385,7 @@ def _load_stdin(filename, **kwargs):
     return db
 
 
+@add_loader("load from standalone manifest", 30)
 def _load_standalone_manifest(filename, **kwargs):
     from sourmash.index import StandaloneManifestIndex
 
@@ -375,6 +397,7 @@ def _load_standalone_manifest(filename, **kwargs):
     return idx
 
 
+@add_loader("load from list of paths", 50)
 def _multiindex_load_from_pathlist(filename, **kwargs):
     "Load collection from a list of signature/database files"
     db = MultiIndex.load_from_pathlist(filename)
@@ -382,6 +405,7 @@ def _multiindex_load_from_pathlist(filename, **kwargs):
     return db
 
 
+@add_loader("load from path (file or directory)", 40)
 def _multiindex_load_from_path(filename, **kwargs):
     "Load collection from a directory."
     traverse_yield_all = kwargs['traverse_yield_all']
@@ -390,6 +414,7 @@ def _multiindex_load_from_path(filename, **kwargs):
     return db
 
 
+@add_loader("load SBT", 60)
 def _load_sbt(filename, **kwargs):
     "Load collection from an SBT."
     cache_size = kwargs.get('cache_size')
@@ -402,16 +427,19 @@ def _load_sbt(filename, **kwargs):
     return db
 
 
+@add_loader("load revindex", 70)
 def _load_revindex(filename, **kwargs):
     "Load collection from an LCA database/reverse index."
     db, _, _ = load_single_database(filename)
     return db
 
 
+@add_loader("load collection from sqlitedb", 20)
 def _load_sqlite_db(filename, **kwargs):
     return load_sqlite_index(filename)
 
 
+@add_loader("load collection from zipfile", 80)
 def _load_zipfile(filename, **kwargs):
     "Load collection from a .zip file."
     db = None
@@ -428,19 +456,6 @@ def _load_zipfile(filename, **kwargs):
     return db
 
 
-# all loader functions, in order.
-_loader_functions = [
-    ("load from stdin", _load_stdin),
-    ("load collection from sqlitedb", _load_sqlite_db),
-    ("load from standalone manifest", _load_standalone_manifest),
-    ("load from path (file or directory)", _multiindex_load_from_path),
-    ("load from file list", _multiindex_load_from_pathlist),
-    ("load SBT", _load_sbt),
-    ("load revindex", _load_revindex),
-    ("load collection from zipfile", _load_zipfile),
-    ]
-
-
 def _load_database(filename, traverse_yield_all, *, cache_size=None):
     """Load file as a database - list of signatures, LCA, SBT, etc.
 
@@ -450,11 +465,22 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     """
     loaded = False
 
+    # XXX can probably do this once at module level, yah?
+    loadme = list(_loader_functions)
+    for pin in plugin_load_from:
+        lfn = pin.load()
+        priority = getattr(lfn, 'priority', 99)
+        name = pin.name
+        loadme.append((priority, name, lfn))
+
+    loadme.sort()
+
     # iterate through loader functions, trying them all. Catch ValueError
     # but nothing else.
-    for n, (desc, load_fn) in enumerate(_loader_functions):
+    for n, (priority, desc, load_fn) in enumerate(loadme):
+        db = None
         try:
-            debug_literal(f"_load_databases: trying loader fn {n} '{desc}'")
+            debug_literal(f"_load_databases: trying loader fn {n} / priority {priority} - '{desc}'")
             db = load_fn(filename,
                          traverse_yield_all=traverse_yield_all,
                          cache_size=cache_size)
