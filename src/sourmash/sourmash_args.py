@@ -475,7 +475,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             db = load_fn(filename,
                          traverse_yield_all=traverse_yield_all,
                          cache_size=cache_size)
-        except ValueError:
+        except ValueError:      # CTB: use custom exception?
             debug_literal(f"_load_databases: FAIL with ValueError: on fn {n} {desc}.")
             debug_literal(traceback.format_exc())
             debug_literal("(continuing past exception)")
@@ -487,6 +487,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
 
     # check to see if it's a FASTA/FASTQ record (i.e. screed loadable)
     # so we can provide a better error message to users.
+    # CTB: put this in the plugin framework??
     if not loaded:
         successful_screed_load = False
         it = None
@@ -1222,14 +1223,14 @@ _save_classes = [
     (20, SaveSignatures_Directory),
     (30, SaveSignatures_ZipFile),
     (40, SaveSignatures_SqliteIndex),
-    (99, SaveSignatures_SigFile),
+    (1000, SaveSignatures_SigFile),
 ]
 
 
 def SaveSignaturesToLocation(location):
     save_list = itertools.chain(_save_classes,
                                 sourmash_plugins.get_save_to_functions())
-    for priority, cls in sorted(save_list):
+    for priority, cls in sorted(save_list, key=lambda x:x[0]):
         debug_literal(f"trying to match save function {cls}, priority={priority}")
         if cls.matches(location):
             debug_literal(f"is match!")
