@@ -8,8 +8,6 @@ Plugin entry point names:
 
 CTB TODO:
 
-* is there a way to provide attributes like 'priority' in the pyproject.toml
-  of the plugin?
 * consider using something other than 'name' for loader fn name. Maybe __doc__?
 """
 
@@ -49,6 +47,7 @@ def get_load_from_functions():
 
 # load 'save_to' entry points.
 _plugin_save_to = entry_points(group='sourmash.save_to')
+
 
 def get_save_to_functions():
     "Load the 'save_to' plugins and yield tuples (priority, fn)."
