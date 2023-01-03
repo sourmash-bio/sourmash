@@ -18,7 +18,7 @@ thread_local! {
     pub static LAST_ERROR: RefCell<Option<Error>> = RefCell::new(None);
 }
 
-#[allow(clippy::clippy::wrong_self_convention)]
+#[allow(clippy::wrong_self_convention)]
 pub trait ForeignObject: Sized {
     type RustObject;
 
@@ -313,4 +313,8 @@ pub unsafe extern "C" fn sourmash_str_free(s: *mut SourmashStr) {
     if !s.is_null() {
         (*s).free()
     }
+}
+
+impl ForeignObject for SourmashStr {
+    type RustObject = SourmashStr;
 }

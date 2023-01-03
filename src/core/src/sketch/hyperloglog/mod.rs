@@ -16,7 +16,7 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use serde::{Deserialize, Serialize};
 
 use crate::encodings::HashFunctions;
-use crate::index::sbt::Update;
+use crate::prelude::*;
 use crate::signature::SigsTrait;
 use crate::sketch::KmerMinHash;
 use crate::Error;
@@ -25,7 +25,7 @@ use crate::HashIntoType;
 pub mod estimators;
 use estimators::CounterType;
 
-#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HyperLogLog {
     registers: Vec<CounterType>,
     p: usize,
@@ -120,7 +120,7 @@ impl HyperLogLog {
         wtr.write_u8(self.p as u8)?; // number of bits used for indexing
         wtr.write_u8(self.q as u8)?; // number of bits used for counting leading zeroes
         wtr.write_u8(self.ksize as u8)?; // ksize
-        wtr.write_all(&self.registers.as_slice())?;
+        wtr.write_all(self.registers.as_slice())?;
 
         Ok(())
     }
@@ -147,10 +147,10 @@ impl HyperLogLog {
         rdr.read_exact(&mut registers)?;
 
         Ok(HyperLogLog {
+            registers,
             p,
             q,
             ksize,
-            registers,
         })
     }
 
@@ -170,7 +170,7 @@ impl SigsTrait for HyperLogLog {
     }
 
     fn ksize(&self) -> usize {
-        self.ksize as usize
+        self.ksize
     }
 
     fn seed(&self) -> u64 {

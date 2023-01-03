@@ -16,82 +16,55 @@ jobs:
       matrix:
         build: [
           linux-x86_64,
-          linux-aarch64,
-          linux-ppc64le,
-          linux-s390x,
           macos-x86_64,
+          macos-arm64,
         ]
         include:
           - build: linux-x86_64
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             arch: x86_64
-            macos_target: ''
-          - build: linux-aarch64
-            os: ubuntu-18.04
-            arch: aarch64
-            macos_target: ''
-          - build: linux-ppc64le
-            os: ubuntu-18.04
-            arch: ppc64le
-            macos_target: ''
-          - build: linux-s390x
-            os: ubuntu-18.04
-            arch: s390x
             macos_target: ''
           - build: macos-x86_64
             os: macos-latest
             arch: x86_64
-            macos_target: 'MACOSX_DEPLOYMENT_TARGET=10.11'
+            macos_target: 'MACOSX_DEPLOYMENT_TARGET=10.11 CARGO_BUILD_TARGET=x86_64-apple-darwin'
+          - build: macos-arm64
+            os: macos-latest
+            arch: arm64
+            macos_target: 'MACOSX_DEPLOYMENT_TARGET=11.0 CARGO_BUILD_TARGET=aarch64-apple-darwin'
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         name: Install Python
         with:
           python-version: '3.9'
 
-      - name: Install cibuildwheel
-        run: |
-          python -m pip install cibuildwheel==1.8.0
-
-      - name: Set up QEMU
-        if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v1
-        with:
-          platforms: all
-
       - name: Build wheels
+        uses: pypa/cibuildwheel@v2.11.4
         env:
-          CIBW_BUILD: "cp39-*"
-          CIBW_SKIP: "*-win32 *-manylinux_i686"
-          CIBW_BEFORE_BUILD: 'source .ci/install_cargo.sh'
-          CIBW_ENVIRONMENT: 'PATH="$HOME/.cargo/bin:$PATH"'
           CIBW_ENVIRONMENT_MACOS: ${{ matrix.macos_target }}
-          CIBW_BUILD_VERBOSITY: 3
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
           CIBW_ARCHS_MACOS: ${{ matrix.arch }}
-        run: |
-          python -m cibuildwheel --output-dir dist
-          ls -lR ./dist
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
-          path: './dist/sourmash*.whl'
+          path: './wheelhouse/sourmash*.whl'
 
   release:
     name: Publish wheels
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build_wheels
 
     steps:
       - name: Fetch wheels from artifacts
         id: fetch_artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           path: 'wheels/'
 

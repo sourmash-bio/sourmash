@@ -1,0 +1,99 @@
+name: cibuildwheel_ubuntu
+
+on:
+  #pull_request:        # use for testing modifications to this action
+  push:
+    branches: [latest]
+    tags: v*
+  schedule:
+    - cron: "0 0 * * *" # daily
+
+jobs:
+  build_wheels:
+    name: Build wheels for ${{ matrix.os }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [
+          linux-aarch64,
+          linux-ppc64le,
+          linux-s390x,
+        ]
+        include:
+          - build: linux-aarch64
+            os: ubuntu-20.04
+            arch: aarch64
+            macos_target: ''
+          - build: linux-ppc64le
+            os: ubuntu-20.04
+            arch: ppc64le
+            macos_target: ''
+          - build: linux-s390x
+            os: ubuntu-20.04
+            arch: s390x
+            macos_target: ''
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v4
+        name: Install Python
+        with:
+          python-version: '3.9'
+
+      # Added due to weird error when building inside docker container
+      # for other platforms...
+      # https://github.com/JonasAlfredsson/docker-nginx-certbot/issues/30
+      - name: Set Swap Space
+        if: runner.os == 'Linux'
+        uses: pierotofy/set-swap-space@v1.0
+        with:
+          swap-size-gb: 10
+      - run: |
+          # Workaround for https://github.com/rust-lang/cargo/issues/8719
+          sudo mkdir -p /var/lib/docker
+          sudo mount -t tmpfs -o size=10G none /var/lib/docker
+          sudo systemctl restart docker
+        if: runner.os == 'Linux'
+
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: all
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.11.4
+        env:
+          CIBW_ENVIRONMENT_MACOS: ${{ matrix.macos_target }}
+          CIBW_ARCHS_LINUX: ${{ matrix.arch }}
+          CIBW_ARCHS_MACOS: ${{ matrix.arch }}
+          CARGO_NET_GIT_FETCH_WITH_CLI: true
+
+      - uses: actions/upload-artifact@v3
+        with:
+          path: './wheelhouse/sourmash*.whl'
+
+  release:
+    name: Publish wheels
+    runs-on: ubuntu-20.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build_wheels
+
+    steps:
+      - name: Fetch wheels from artifacts
+        id: fetch_artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: 'wheels/'
+
+      # if it matches a Python release tag, upload to github releases
+      # TODO: In the future, use the create-release and upload-release-assets actions
+      - name: Release
+        uses: fnkr/github-action-ghr@v1
+        env:
+          GHR_PATH: ${{steps.fetch_artifacts.outputs.download-path}}/artifact
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
