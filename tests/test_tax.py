@@ -256,7 +256,7 @@ def test_metagenome_kreport_out_fail(runtmp):
 
 
 def test_metagenome_krona_tsv_out(runtmp):
-    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.v440.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
     kr_csv = csv_base + ".krona.tsv"
@@ -413,7 +413,7 @@ def test_metagenome_duplicated_taxonomy_fail(runtmp):
         tax.append(tax[1] + 'FOO') # add first tax_assign again
         dup.write("\n".join(tax))
 
-    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.v440.csv')
 
     with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', duplicated_csv)
@@ -422,7 +422,7 @@ def test_metagenome_duplicated_taxonomy_fail(runtmp):
     assert "multiple lineages for identifier GCF_001881345" in str(exc.value)
 
 
-def test_metagenome_duplicated_taxonomy_force(runtmp):
+def test_metagenome_duplicated_taxonomy_force(runtmp): 
     c = runtmp
     # write temp taxonomy with duplicates
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -432,7 +432,7 @@ def test_metagenome_duplicated_taxonomy_force(runtmp):
         tax.append(tax[1]) # add first tax_assign again
         dup.write("\n".join(tax))
 
-    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.v440.csv')
 
     c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', duplicated_csv, '--force')
 
@@ -459,7 +459,7 @@ def test_metagenome_missing_taxonomy(runtmp):
         tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
         subset.write("\n".join(tax[:4]))
 
-    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.v440.csv')
 
     c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', subset_csv)
     print(c.last_result.status)
@@ -585,7 +585,7 @@ def test_metagenome_multiple_taxonomy_files_multiple_taxonomy_args_empty_force(r
     bacteria_refseq  = utils.get_test_data('tax/bacteria_refseq_lineage.csv')
 
     tax_empty = runtmp.output('t.csv')
-    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.v440.csv')
 
     with open(tax_empty, "w") as fp:
         fp.write("")
@@ -633,7 +633,7 @@ def test_metagenome_bad_gather_header(runtmp):
     bad_g_csv = runtmp.output('g.csv')
 
     #creates bad gather result
-    bad_g = [x.replace("name", "nope") for x in open(g_csv, 'r')]
+    bad_g = [x.replace(",name", ",nope") for x in open(g_csv, 'r')]
     with open(bad_g_csv, 'w') as fp:
         for line in bad_g:
             fp.write(line)
@@ -642,7 +642,8 @@ def test_metagenome_bad_gather_header(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'metagenome', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
-    assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
+    print(str(exc.value))
+    assert f"'{bad_g_csv}' is missing columns needed for taxonomic summarization. Please run gather with sourmash >= 4.4." in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
@@ -805,7 +806,7 @@ def test_metagenome_gather_duplicate_filename(runtmp):
     # twice to a single -g argument.
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    g_res = utils.get_test_data('tax/test1.gather.v450.csv')
+    g_res = utils.get_test_data('tax/test1.gather.v440.csv')
 
     c.run_sourmash('tax', 'metagenome', '--gather-csv', g_res, g_res, '--taxonomy-csv', taxonomy_csv)
 
@@ -823,7 +824,7 @@ def test_metagenome_gather_duplicate_filename_2(runtmp):
     # test that a duplicate filename is properly flagged, with -g a -g b
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    g_res = utils.get_test_data('tax/test1.gather.v450.csv')
+    g_res = utils.get_test_data('tax/test1.gather.v440.csv')
 
     c.run_sourmash('tax', 'metagenome', '--gather-csv', g_res, '-g', g_res, '--taxonomy-csv', taxonomy_csv)
 
@@ -840,7 +841,7 @@ def test_metagenome_gather_duplicate_filename_2(runtmp):
 def test_metagenome_gather_duplicate_filename_from_file(runtmp):
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
-    g_res = utils.get_test_data('tax/test1.gather.v450.csv')
+    g_res = utils.get_test_data('tax/test1.gather.v440.csv')
     g_from_file = runtmp.output("tmp-from-file.txt")
     with open(g_from_file, 'w') as f_csv:
         f_csv.write(f"{g_res}\n")
@@ -2164,7 +2165,7 @@ def test_annotate_bad_gather_header(runtmp):
     bad_g_csv = runtmp.output('g.csv')
 
     #creates bad gather result
-    bad_g = [x.replace("query_name", "nope") for x in open(g_csv, 'r')]
+    bad_g = [x.replace(",query_bp", ",nope") for x in open(g_csv, 'r')]
     with open(bad_g_csv, 'w') as fp:
         for line in bad_g:
             fp.write(line)
@@ -2173,7 +2174,7 @@ def test_annotate_bad_gather_header(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'annotate', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
-    assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
+    assert f"'{bad_g_csv}' is missing columns needed for taxonomic summarization. Please run gather with sourmash >= 4.4."in str(exc.value)
     assert runtmp.last_result.status == -1
 
 

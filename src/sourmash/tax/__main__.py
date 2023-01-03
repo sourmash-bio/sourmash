@@ -6,6 +6,7 @@ import csv
 import os
 from collections import defaultdict, Counter
 import re
+from dataclasses import dataclass, asdict
 
 import sourmash
 from ..sourmash_args import FileOutputCSV, FileOutput
@@ -14,6 +15,7 @@ from sourmash.lca.lca_utils import display_lineage, zip_lineage
 
 from . import tax_utils
 from .tax_utils import ClassificationResult, MultiLineageDB
+
 
 usage='''
 sourmash taxonomy <command> [<args>] - manipulate/work with taxonomy information.
@@ -107,7 +109,7 @@ def metagenome(args):
         desired_single_outputs = [x for x in args.output_format if x in single_query_output_formats]
         if desired_single_outputs:
             notify(f"WARNING: found results for multiple gather queries. Can only output multi-query result formats, skipping {', '.join(desired_single_outputs)}")
-            args.output_format.remove(desired_single_outputs)
+            args.output_format.remove(desired_single_outputs) ## NTP - is this taken care of below instead?
         # remove single query outputs from output format
         args.output_format = [x for x in args.output_format if x not in single_query_output_formats]
         if not args.output_format:
@@ -351,10 +353,13 @@ def annotate(args):
 
     # handle each gather csv separately
     for n, g_csv in enumerate(gather_csvs):
-        gather_results, idents_missed, total_missed, header = tax_utils.check_and_load_gather_csvs(g_csv, tax_assign, force=args.force,
-                                                                                 fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
+        query_gather_results, idents_missed, total_missed, header = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
+                                                                                       fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
+                                                                                       keep_full_identifiers=args.keep_full_identifiers,
+                                                                                       keep_identifier_versions = args.keep_identifier_versions,
+                                                                                       )
 
-        if not gather_results:
+        if not query_gather_results:
             continue
 
         out_base = os.path.basename(g_csv.rsplit('.csv')[0])
@@ -365,14 +370,12 @@ def annotate(args):
             w = csv.DictWriter(out_fp, header, delimiter=',')
             w.writeheader()
 
-            # add taxonomy info and then print directly
-            for row in gather_results:
-                match_ident = row['name']
-                lineage = tax_utils.find_match_lineage(match_ident, tax_assign, skip_idents=idents_missed,
-                                             keep_full_identifiers=args.keep_full_identifiers,
-                                             keep_identifier_versions=args.keep_identifier_versions)
-                row['lineage'] = display_lineage(lineage)
-                w.writerow(row)
+            for gather_res in query_gather_results:
+                for taxres in gather_res.raw_taxresults:
+                    gr = asdict(taxres.raw)
+                    write_gr = {key: gr[key] for key in gr if key in header}
+                    write_gr['lineage'] = taxres.lineageInfo.display_lineage(truncate_empty=True)
+                    w.writerow(write_gr)
 
 
 def prepare(args):
