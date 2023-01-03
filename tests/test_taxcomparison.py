@@ -958,6 +958,72 @@ def test_QueryTaxResult_build_summarized_result_1():
     assert q_res.best_only_result == False
 
 
+def test_QueryTaxResult_build_summarized_result_2():
+    """test two queries, build summarized result for each"""
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b")
+    gB_tax = ("gB", "a;c")
+    taxD = make_mini_taxonomy([gA_tax, gB_tax])
+    # make gather results
+    gather_results = [{'query_name': 'queryA', 'name': 'gA', 'f_unique_weighted': 0.5,'f_unique_to_query': 0.5,'unique_intersect_bp': 50}, 
+                      {'query_name': 'queryA', "name": 'gB', 'f_unique_weighted': 0.4,'f_unique_to_query': 0.3,'unique_intersect_bp': 30},
+                      {'query_name': 'queryB', "name": 'gB', 'f_unique_weighted': 0.3,'f_unique_to_query': 0.3,'unique_intersect_bp': 30}]
+    gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD)
+    
+    for query_name, q_res in gres.items():
+        q_res.build_summarized_result() # summarize and build result
+        sk = q_res.summarized_lineage_results['superkingdom']
+        phy = q_res.summarized_lineage_results['phylum']
+        assert len(sk) == 2
+        assert sk[0].lineage == (LineageTuple(rank='superkingdom', name='a', taxid=None),)
+        print(phy)
+        if query_name == 'queryA':
+            # check superkingdom results
+            assert sk[0].fraction == approx(0.8)
+            assert sk[0].f_weighted_at_rank == approx(0.9)
+            assert sk[0].bp_match_at_rank == 80
+            assert sk[1].fraction == approx(0.2)
+            assert sk[1].f_weighted_at_rank == approx(0.1)
+            assert sk[1].bp_match_at_rank == 20
+            assert sk[1].lineage == ()
+            # check phylum results
+            assert len(phy) == 3
+            assert phy[0].fraction == approx(0.5)
+            assert phy[0].f_weighted_at_rank == approx(0.5)
+            assert phy[0].bp_match_at_rank == 50
+            assert phy[0].lineage == (LineageTuple(rank='superkingdom', name='a', taxid=None),
+                                      LineageTuple(rank='phylum', name='b', taxid=None))
+            assert phy[1].fraction == approx(0.3)
+            assert phy[1].f_weighted_at_rank == approx(0.4)
+            assert phy[1].bp_match_at_rank == 30
+            assert phy[1].lineage == (LineageTuple(rank='superkingdom', name='a', taxid=None),
+                                      LineageTuple(rank='phylum', name='c', taxid=None))
+            assert phy[2].fraction == approx(0.2)
+            assert phy[2].f_weighted_at_rank == approx(0.1)
+            assert phy[2].bp_match_at_rank == 20
+            assert phy[2].lineage == ()
+        if query_name == 'queryB':
+            # check superkingdom results
+            assert sk[0].fraction == approx(0.3)
+            assert sk[0].f_weighted_at_rank == approx(0.3)
+            assert sk[0].bp_match_at_rank == 30
+            assert sk[1].fraction == approx(0.7)
+            assert sk[1].f_weighted_at_rank == approx(0.7)
+            assert sk[1].bp_match_at_rank == 70
+            assert sk[1].lineage == ()
+            # check phylum results
+            assert len(phy) == 2
+            assert phy[0].fraction == approx(0.3)
+            assert phy[0].f_weighted_at_rank == approx(0.3)
+            assert phy[0].bp_match_at_rank == 30
+            assert phy[0].lineage == (LineageTuple(rank='superkingdom', name='a', taxid=None),
+                                      LineageTuple(rank='phylum', name='c', taxid=None))
+            assert phy[1].fraction == approx(0.7)
+            assert phy[1].f_weighted_at_rank == approx(0.7)
+            assert phy[1].bp_match_at_rank == 70
+            assert phy[1].lineage == ()
+
+
 def test_QueryTaxResult_build_summarized_result_over100percent():
     "summarize up ranks: different values"
     taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
@@ -1021,7 +1087,3 @@ def test_QueryTaxResult_build_summarized_result_best_only():
     assert q_res.total_bp_classified['superkingdom'] == 40
     assert q_res.total_bp_classified['class'] == 20
     assert q_res.best_only_result == True
-
-
-
-
