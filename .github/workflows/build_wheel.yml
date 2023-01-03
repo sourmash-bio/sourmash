@@ -31,7 +31,7 @@ jobs:
           - build: macos-arm64
             os: macos-latest
             arch: arm64
-            macos_target: 'MACOSX_DEPLOYMENT_TARGET=11 CARGO_BUILD_TARGET=aarch64-apple-darwin'
+            macos_target: 'MACOSX_DEPLOYMENT_TARGET=11.0 CARGO_BUILD_TARGET=aarch64-apple-darwin'
       fail-fast: false
 
     steps:
@@ -45,7 +45,7 @@ jobs:
           python-version: '3.9'
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.11.3
+        uses: pypa/cibuildwheel@v2.11.4
         env:
           CIBW_ENVIRONMENT_MACOS: ${{ matrix.macos_target }}
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}

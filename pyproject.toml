@@ -1,17 +1,15 @@
 [build-system]
 requires = [
-    "setuptools >= 61",
-    "setuptools_scm[toml] >= 4, <6",
-    "setuptools_scm_git_archive",
-    "milksnake",
-    "wheel >= 0.29.0",
+    "maturin>=0.14.7,<0.15",
+    "cffi",
 ]
-build-backend = 'setuptools.build_meta'
+build-backend = 'maturin'
 
 [project]
 name = "sourmash"
 description = "tools for comparing biological sequences with k-mer sketches"
 readme = "README.md"
+version = "4.6.1"
 
 authors = [
   { name="Luiz Irber", orcid="0000-0003-4371-9659" },
@@ -83,7 +81,6 @@ dependencies = [
 ]
 
 requires-python = ">=3.8"
-dynamic = ["version"]
 
 [metadata]
 license = { text = "BSD 3-Clause License" }
@@ -113,7 +110,7 @@ demo = [
   "ipython",
 ]
 doc = [
-  "sphinx>=4.4.0,<6",
+  "sphinx>=4.4.0,<7",
   "myst-parser==0.18.1",
   "Jinja2==3.1.2",
   "alabaster",
@@ -130,19 +127,15 @@ storage = [
 # https://github.com/pypa/pip/issues/10393#issuecomment-941885429
 all = ["sourmash[test,demo,doc,storage]"]
 
-[tool.setuptools]
-zip-safe = false
-platforms = ["any"]
-
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.setuptools.dynamic]
-version = {attr = "sourmash.version.version"}
-
-[tool.setuptools_scm]
-write_to = "src/sourmash/version.py"
-git_describe_command = "git describe --dirty --tags --long --match v* --first-parent"
+[tool.maturin]
+python-source = "src"
+manifest-path = "src/core/Cargo.toml"
+bindings = "cffi"
+include = [
+  { path = "include/sourmash.h", format = ["sdist","wheel"] },
+]
+features = ["maturin"]
+locked = true
 
 [tool.isort]
 known_third_party = ["deprecation", "hypothesis", "mmh3", "numpy", "pkg_resources", "pytest", "screed", "setuptools", "sourmash_tst_utils"]
