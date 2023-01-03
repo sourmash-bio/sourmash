@@ -421,6 +421,8 @@ class TaxResult():
             self.raw.total_weighted_hashes = 0
         if self.raw.scaled:
             self.raw.scaled = int(self.raw.scaled)
+        if self.raw.ksize:
+            self.raw.ksize = int(self.raw.ksize)
 
         self.query_info = QueryInfo(query_name = self.raw.query_name,
                                   query_md5=self.raw.query_md5,
@@ -597,7 +599,7 @@ class QueryTaxResult():
         if best_only:
             self.best_only_result = True
         # rank loop is currently done in __main__
-        for rank in self.summarized_ranks:  # ascending ranks or single rank
+        for rank in self.summarized_ranks[::-1]:  # reverse so that results are in descending order
             sum_uniq_to_query = self.sum_uniq_to_query[rank] #should be lineage: value
             # first, sort
             #sorted_sum_uniq_to_query = sorted(sum_uniq_to_query.items(), lambda kv: kv[1], reverse=True)
@@ -688,7 +690,8 @@ def make_TaxResult(gather_dict=None, taxD=None, keep_full_ident=False, keep_iden
     return taxres
 
 
-def make_QueryTaxResults(gather_info, taxD=None, single_query=False, keep_full_ident=False, keep_ident_version=False, skip_idents=None):
+def make_QueryTaxResults(gather_info, taxD=None, single_query=False, keep_full_ident=False, keep_ident_version=False,
+                        skip_idents=None, summarize=False, best_only=False):
     """Make QueryTaxResult(s) from artificial gather information, formatted as list of gather rows (dicts)"""
     gather_results = {}
     this_querytaxres = None
@@ -703,6 +706,9 @@ def make_QueryTaxResults(gather_info, taxD=None, single_query=False, keep_full_i
         this_querytaxres.add_taxresult(taxres)
 #        print('missed_ident?', taxres.missed_ident)
         gather_results[query_name] = this_querytaxres
+    if summarize:
+        for query_name, qres in gather_results.items():
+            qres.build_summarized_result(best_only=best_only)
     # for convenience: If working with single query, just return that QueryTaxResult.
     if single_query:
         if len(gather_results.keys()) > 1:
