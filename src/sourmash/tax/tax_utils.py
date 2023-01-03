@@ -220,37 +220,42 @@ def make_krona_header(min_rank, *, include_strain=False):
 
 def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
     '''
-    Aggregate list of rank SummarizedGatherResults,
-    keeping query info or aggregating across queries.
+    Aggregate list of summarized_lineage_results at rank, keeping 
+    query names or not (but this aggregates across queries if multiple).
     '''
     lineage_summary = defaultdict(float)
     if by_query:
         lineage_summary = defaultdict(dict)
-    all_queries = []
+    n_queries = len(query_gather_results)
 
     for queryResult in query_gather_results:
         query_name = queryResult.query_name
-        all_queries.append(query_name)
+
+        if rank not in queryResult.summarized_ranks:
+            raise ValueError(f"Error: rank '{rank}' not available for aggregation.")
         
-        for res in queryResult.summarized_ranks[rank]:
+        for res in queryResult.summarized_lineage_results[rank]:
             if by_query:
-                    lineage_summary[res.lineage][query_name] = res.f_weighted # weighted or unique??
+                    lineage_summary[res.lineage][query_name] = res.f_weighted_at_rank # weighted or unique??
             else:
-                lineage_summary[res.lineage] += res.f_weighted
+                lineage_summary[res.lineage] += res.f_weighted_at_rank
 
     # if aggregating across queries divide fraction by the total number of queries
     if not by_query:
         for lin, fraction in lineage_summary.items():
-                lineage_summary[lin] = fraction/len(all_queries)
+                lineage_summary[lin] = fraction/n_queries
 
-
-    return lineage_summary, all_queries
+    return lineage_summary
 
 def format_for_krona(query_gather_results, rank):
     '''
-    Aggregate across all queries and format for krona output
+    Aggregate and format for krona output. Single query recommended, but we don't want query headers.
     '''
-    lineage_summary, all_queries = aggregate_by_lineage_at_rank(query_gather_results, rank, by_query=False)
+    # do we want to block more than one query??
+    if len(query_gather_results) > 1:
+        notify('WARNING: results from more than one query found. Krona summarization not recommended as percentages may exceed 1.')
+    
+    lineage_summary = aggregate_by_lineage_at_rank(query_gather_results, rank, by_query=False)
 
     # sort by fraction
     lin_items = list(lineage_summary.items())
@@ -354,6 +359,8 @@ def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
 
     unclassified_written=False
     for rank, rank_results in summarized_gather.items():
+        if rank == 'strain': # no code for strain, can't include in this output afaik
+            continue
         rcode = rankCode[rank]
         for res in rank_results:
             # SummarizedGatherResults have an unclassified lineage at every rank, to facilitate reporting at a specific rank.
