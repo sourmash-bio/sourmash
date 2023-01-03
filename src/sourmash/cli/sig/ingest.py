@@ -1,7 +1,5 @@
 """ingest/import a mash or other signature"""
 
-import sys
-
 
 def subparser(subparsers):
     # Dirty hack to simultaneously support new and previous interface
@@ -16,7 +14,7 @@ def subparser(subparsers):
             help='suppress non-error output'
         )
         subparser.add_argument(
-            '-o', '--output', metavar='FILE',
+            '-o', '--output', metavar='FILE', default='-',
             help='output signature to this file (default stdout)'
         )
 

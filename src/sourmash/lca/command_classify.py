@@ -113,7 +113,7 @@ def classify(args):
 
     # set up output
     csvfp = csv.writer(sys.stdout)
-    notify("outputting classifications to {}", args.output)
+    notify(f"outputting classifications to {args.output}")
     with sourmash_args.FileOutputCSV(args.output) as outfp:
         csvfp = csv.writer(outfp)
 
@@ -128,13 +128,15 @@ def classify(args):
             for query_sig in load_file_as_signatures(query_filename,
                                                      ksize=ksize):
                 notify(u'\r\033[K', end=u'')
-                notify('... classifying {} (file {} of {})', query_sig,
-                       n, total_n, end='\r')
+                notify(f'... classifying {query_sig} (file {n} of {total_n})', end='\r')
                 debug('classifying', query_sig)
                 total_count += 1
 
                 # make sure we're looking at the same scaled value as database
-                query_sig.minhash = query_sig.minhash.downsample(scaled=scaled)
+                if query_sig.minhash.scaled != scaled:
+                    with query_sig.update() as query_sig:
+                        downsample_mh = query_sig.minhash.downsample(scaled=scaled)
+                        query_sig.minhash = downsample_mh
 
                 # do the classification
                 lineage, status = classify_signature(query_sig, dblist,
@@ -151,7 +153,7 @@ def classify(args):
                 csvfp.writerow(row)
 
         notify(u'\r\033[K', end=u'')
-        notify('classified {} signatures total', total_count)
+        notify(f'classified {total_count} signatures total')
 
 
 if __name__ == '__main__':

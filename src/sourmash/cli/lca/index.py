@@ -1,6 +1,7 @@
 """create LCA database"""
 
-from sourmash.cli.utils import add_ksize_arg, add_moltype_args
+from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
+                                add_picklist_args)
 
 
 def subparser(subparsers):
@@ -18,8 +19,6 @@ def subparser(subparsers):
     subparser.add_argument(
         '--scaled', metavar='S', default=10000, type=float
     )
-    add_ksize_arg(subparser, 31)
-    add_moltype_args(subparser)
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
@@ -42,7 +41,11 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '--split-identifiers', action='store_true',
-        help='split names in signatures on whitspace and period'
+        help='split names in signatures on whitespace'
+    )
+    subparser.add_argument(
+        '--keep-identifier-versions', action='store_true',
+        help='do not remove accession versions'
     )
     subparser.add_argument('-f', '--force', action='store_true')
     subparser.add_argument(
@@ -52,6 +55,20 @@ def subparser(subparsers):
         '--require-taxonomy', action='store_true',
         help='ignore signatures with no taxonomy entry'
     )
+    subparser.add_argument(
+        '--fail-on-missing-taxonomy', action='store_true',
+        help='fail quickly if taxonomy is not available for an identifier',
+    )
+    subparser.add_argument(
+        '-F', '--database-format',
+        help="format of output database; default is 'json')",
+        default='json',
+        choices=['json', 'sql'],
+    )
+
+    add_ksize_arg(subparser, default=31)
+    add_moltype_args(subparser)
+    add_picklist_args(subparser)
 
 
 def main(args):

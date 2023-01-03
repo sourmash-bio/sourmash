@@ -25,7 +25,8 @@ change in sourmash v4 to default to `.sbt.zip`.
 ---
 """
 
-from sourmash.cli.utils import add_moltype_args, add_ksize_arg
+from sourmash.cli.utils import (add_ksize_arg, add_moltype_args,
+                                add_picklist_args, add_scaled_arg)
 
 
 def subparser(subparsers):
@@ -44,7 +45,6 @@ def subparser(subparsers):
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
     )
-    add_ksize_arg(subparser, 31)
     subparser.add_argument(
         '-d', '--n_children', metavar='D', type=int, default=2,
         help='number of children for internal nodes; default=2'
@@ -66,11 +66,10 @@ def subparser(subparsers):
         help='What percentage of internal nodes will not be saved; ranges '
         'from 0.0 (save all nodes) to 1.0 (no nodes saved)'
     )
-    subparser.add_argument(
-        '--scaled', metavar='FLOAT', type=float, default=0,
-        help='downsample signatures to the specified scaled factor'
-    )
+    add_ksize_arg(subparser)
     add_moltype_args(subparser)
+    add_picklist_args(subparser)
+    add_scaled_arg(subparser, 0)
 
 
 def main(args):

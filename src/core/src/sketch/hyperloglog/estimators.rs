@@ -28,7 +28,7 @@ pub fn mle(counts: &[u16], p: usize, q: usize, relerr: f64) -> f64 {
         .rev()
         .find(|(_, v)| **v != 0)
         .unwrap();
-    let k_max_prime = cmp::min(q, k_max as usize);
+    let k_max_prime = cmp::min(q, k_max);
 
     let mut z = 0.;
     for i in num_iter::range_step_inclusive(k_max_prime as i32, k_min_prime as i32, -1) {
@@ -120,7 +120,7 @@ pub fn joint_mle(
     let mut ceq = vec![0; q + 2];
 
     for (k1_, k2_) in k1.iter().zip(k2.iter()) {
-        match k1_.cmp(&k2_) {
+        match k1_.cmp(k2_) {
             cmp::Ordering::Less => {
                 c1[*k1_ as usize] += 1;
                 cg2[*k2_ as usize] += 1;

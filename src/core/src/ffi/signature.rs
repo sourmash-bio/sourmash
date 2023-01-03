@@ -4,6 +4,8 @@ use std::io;
 use std::os::raw::c_char;
 use std::slice;
 
+use crate::errors::SourmashError;
+
 use crate::encodings::HashFunctions;
 use crate::signature::Signature;
 use crate::sketch::Sketch;
@@ -165,11 +167,16 @@ ffi_fn! {
 unsafe fn signature_first_mh(ptr: *const SourmashSignature) -> Result<*mut SourmashKmerMinHash> {
     let sig = SourmashSignature::as_rust(ptr);
 
-    if let Some(Sketch::MinHash(mh)) = sig.signatures.get(0) {
-        Ok(SourmashKmerMinHash::from_rust(mh.clone()))
-    } else {
-        // TODO: need to select the correct one
-        unimplemented!()
+    match sig.signatures.get(0) {
+        Some(Sketch::MinHash(mh)) => {
+            Ok(SourmashKmerMinHash::from_rust(mh.clone()))
+        },
+        Some(Sketch::LargeMinHash(mh_btree)) => {
+            Ok(SourmashKmerMinHash::from_rust(mh_btree.into()))
+        },
+        _ => Err(SourmashError::Internal {
+            message: "found unsupported sketch type".to_string()
+        }),
     }
 }
 }

@@ -54,7 +54,7 @@ def test_load_index_4():
     idx = sourmash.load_file_as_index(testfile)
 
     sigs = list(idx.signatures())
-    assert len(sigs) == 7
+    assert len(sigs) == 8
 
 
 def test_load_index_4_b():

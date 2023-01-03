@@ -1,7 +1,5 @@
 "'sourmash categorize' - query an SBT for bes match, with many signatures."
 
-import argparse
-
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
 
@@ -16,7 +14,7 @@ def subparser(subparsers):
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
     )
-    add_ksize_arg(subparser, 31)
+    add_ksize_arg(subparser)
     subparser.add_argument(
         '--threshold', default=0.08, type=float,
         help='minimum threshold for reporting matches; default=0.08'

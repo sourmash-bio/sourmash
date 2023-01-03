@@ -9,7 +9,7 @@ contains many feature improvements and new functionality, as well as
 many breaking changes with sourmash 2.x and 3.x.
 
 Please see
-[our migration guide](../support.md#migrating-from-sourmash-v3-x-to-sourmash-v4-x)
+[our migration guide](../support.md#migrating-from-sourmash-v3x-to-sourmash-v4x)
 for guidance on updating to sourmash v4, and post questions about
 migrating to sourmash 4.0 in the
 [sourmash issue tracker](https://github.com/dib-lab/sourmash/issues/new).
