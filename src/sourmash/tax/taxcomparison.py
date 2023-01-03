@@ -13,7 +13,7 @@ from sourmash.distance_utils import containment_to_distance
 
 #from sourmash.tax.tax_utils import find_match_lineage
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, order=True)
 class LineagePair():
     """Class for storing per-rank lineage information"""
     rank: str=None
@@ -23,7 +23,7 @@ class LineagePair():
     def is_empty(self):
         return any(self.name is None, self.rank is None)
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, order=True)
 class LineageTuple(LineagePair):
     """Class for storing per-rank lineage information"""
     taxid: int = None # taxid allowed to be empty
