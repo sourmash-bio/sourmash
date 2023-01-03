@@ -33,9 +33,6 @@ from sourmash.tax.taxcomparison import SummarizedGatherResult
 #SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank, total_weighted_hashes")
 ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
 
-# Essential Gather column names that must be in gather_csv to allow `tax` summarization
-EssentialGatherColnames = ('query_name', 'name', 'f_unique_weighted', 'f_unique_to_query', 'unique_intersect_bp', 'remaining_bp', 'query_md5', 'query_filename')
-
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import (LineagePair, taxlist, display_lineage, pop_to_rank)
@@ -88,8 +85,8 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     return gather_csvs
 
 
-def load_gather_results(gather_csv, tax_assignments, *, essential_colnames=EssentialGatherColnames,
-                        seen_queries=None, force=False, skip_idents = None, fail_on_missing_taxonomy=False,
+def load_gather_results(gather_csv, tax_assignments, *, seen_queries=None, force=False,
+                        skip_idents = None, fail_on_missing_taxonomy=False,
                         keep_full_identifiers=False, keep_identifier_versions=False):
     "Load a single gather csv"
     if not seen_queries:
@@ -102,10 +99,6 @@ def load_gather_results(gather_csv, tax_assignments, *, essential_colnames=Essen
         if not header:
             raise ValueError(f"Cannot read gather results from '{gather_csv}'. Is file empty?")
 
-        # check for critical column names used by summarize_gather_at
-        if not set(essential_colnames).issubset(header):
-            raise ValueError(f"Not all required gather columns are present in '{gather_csv}'.")
-
         this_querytaxres = None
         for n, row in enumerate(r):
             query_name = row['query_name']
@@ -115,7 +108,10 @@ def load_gather_results(gather_csv, tax_assignments, *, essential_colnames=Essen
                 raise ValueError(f"Gather query {query_name} was found in more than one CSV. Cannot load from '{gather_csv}'.")
             else:
                 # read gather row into TaxResult
-                gatherRaw = GatherRow(**row)
+                try:
+                    gatherRaw = GatherRow(**row)
+                except TypeError as exc:
+                    raise ValueError(f"'{gather_csv}' is missing columns needed for taxonomic summarization. Please run gather with sourmash >= 4.4.") from exc
                 taxres = TaxResult(raw=gatherRaw, keep_full_identifiers=keep_full_identifiers,
                                                   keep_identifier_versions=keep_identifier_versions)
                 taxres.get_match_lineage(tax_assignments=tax_assignments, skip_idents=skip_idents, 

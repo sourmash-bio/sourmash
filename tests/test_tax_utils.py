@@ -230,7 +230,7 @@ def test_load_gather_results_bad_header(runtmp):
 
     with pytest.raises(ValueError) as exc:
         gather_results, header = load_gather_results(bad_g_csv, taxD)
-    assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
+    assert f"Error: '{bad_g_csv}' is missing columns needed for taxonomic summarization. Please run gather with sourmash >= 4.4." in str(exc.value)
 
 
 def test_load_gather_results_empty(runtmp):
@@ -518,7 +518,7 @@ def test_format_for_krona_best_only():
     assert k_res == [(0.5, 'a', 'b', 'c'), (approx(0.5), 'unclassified', 'unclassified', 'unclassified')] 
 
 
-def test_write_krona(runtmp):
+def test_write_krona(runtmp):   
     """test two matches, equal f_unique_to_query"""
     class_krona_results =  [(0.5, 'a', 'b', 'c'), (0.5, 'a', 'b', 'd')]
     outk= runtmp.output("outkrona.tsv")

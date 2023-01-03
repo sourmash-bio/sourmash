@@ -333,7 +333,7 @@ def build_tree(assignments, initial=None):
 
 # strategy from: https://subscription.packtpub.com/book/programming/9781800207455/10/ch10lvl1sec01/using-dataclasses-to-simplify-working-with-csv-files
 @dataclass
-class GatherRow(): # should match "gather_write_cols" in `search.py`
+class GatherRow(): # all cols should match "gather_write_cols" in `search.py`
    # essential columns
    query_name: str
    name: str # match_name
@@ -343,6 +343,11 @@ class GatherRow(): # should match "gather_write_cols" in `search.py`
    remaining_bp: int
    query_md5: str
    query_filename: str
+   # new essential cols: requires 4.4x
+   query_bp: int
+   ksize: int
+   scaled: int
+   
    # non-essential
    intersect_bp: int = None
    f_orig_query: float = None
@@ -354,10 +359,7 @@ class GatherRow(): # should match "gather_write_cols" in `search.py`
    md5: str = None
    f_match_orig: float = None
    gather_result_rank: str = None
-   query_bp: int = None
-   ksize: int = None
    moltype: str = None
-   scaled: int = None
    query_n_hashes: int = None
    query_abundance: int = None
    query_containment_ani: float = None
@@ -406,23 +408,12 @@ class TaxResult():
     def __post_init__(self):
         self.get_ident()
         self.query_name = self.raw.query_name
-
-        # before 4.x, these weren't in gather output. Only change type here if they exist
-        if not self.raw.query_bp:
-            raise ValueError("Error: Please run gather with sourmash >= 4.4 for taxonomic summarization.")
-            # before, I was estimating this way using ONLY the first row of the gather results.
-            # NOT a good way to do this going forward, worried about bugs. We should use query_bp
-            #self.raw.query_bp = int(self.raw.unique_intersect_bp) + int(self.raw.remaining_bp)
         if self.raw.query_n_hashes:
             self.raw.query_n_hashes = int(self.raw.query_n_hashes)
         if self.raw.total_weighted_hashes:
             self.raw.total_weighted_hashes = int(self.raw.total_weighted_hashes)
         else:
             self.raw.total_weighted_hashes = 0
-        if self.raw.scaled:
-            self.raw.scaled = int(self.raw.scaled)
-        if self.raw.ksize:
-            self.raw.ksize = int(self.raw.ksize)
 
         self.query_info = QueryInfo(query_name = self.raw.query_name,
                                   query_md5=self.raw.query_md5,
@@ -430,8 +421,8 @@ class TaxResult():
                                   query_bp = int(self.raw.query_bp),
                                   query_hashes = self.raw.query_n_hashes,
                                   total_weighted_hashes = self.raw.total_weighted_hashes,
-                                  ksize = self.raw.ksize,
-                                  scaled = self.raw.scaled
+                                  ksize = int(self.raw.ksize),
+                                  scaled = int(self.raw.scaled)
                                   )
         # cast and store the imp bits
         self.f_unique_to_query = float(self.raw.f_unique_to_query)
