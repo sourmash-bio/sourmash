@@ -962,7 +962,7 @@ class _BaseSaveSignaturesToLocation:
         self.count = 0
 
     @classmethod
-    def matches(self, location):
+    def matches(cls, location):
         "returns True when this class should handle a specific location"
         raise NotImplementedError
 
@@ -971,6 +971,12 @@ class _BaseSaveSignaturesToLocation:
 
     def __len__(self):
         return self.count
+
+    def open(self):
+        pass
+
+    def close(self):
+        pass
 
     def __enter__(self):
         "provide context manager functionality"
@@ -995,7 +1001,7 @@ class SaveSignatures_NoOutput(_BaseSaveSignaturesToLocation):
         return 'SaveSignatures_NoOutput()'
 
     @classmethod
-    def matches(self, location):
+    def matches(cls, location):
         return location is None
 
     def open(self):
@@ -1014,7 +1020,7 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
         return f"SaveSignatures_Directory('{self.location}')"
 
     @classmethod
-    def matches(self, location):
+    def matches(cls, location):
         "anything ending in /"
         if location:
             return location.endswith('/')
@@ -1058,7 +1064,7 @@ class SaveSignatures_SqliteIndex(_BaseSaveSignaturesToLocation):
         self.cursor = None
 
     @classmethod
-    def matches(self, location):
+    def matches(cls, location):
         "anything ending in .sqldb"
         if location:
             return location.endswith('.sqldb')
@@ -1095,7 +1101,7 @@ class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
             self.compress = 1
 
     @classmethod
-    def matches(self, location):
+    def matches(cls, location):
         # match anything that is not None or ""
         return bool(location)
 
@@ -1134,7 +1140,7 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         self.storage = None
 
     @classmethod
-    def matches(self, location):
+    def matches(cls, location):
         "anything ending in .zip"
         if location:
             return location.endswith('.zip')
@@ -1232,6 +1238,7 @@ def SaveSignaturesToLocation(location):
                                 sourmash_plugins.get_save_to_functions())
     for priority, cls in sorted(save_list, key=lambda x:x[0]):
         debug_literal(f"trying to match save function {cls}, priority={priority}")
+
         if cls.matches(location):
             debug_literal(f"is match!")
             # CTB: check if None or exception?
