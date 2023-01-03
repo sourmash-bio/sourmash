@@ -574,7 +574,7 @@ class QueryTaxResult():
         notify(f"Starting summarization up rank(s): {', '.join(self.summarized_ranks)} ")
         for taxres in self.raw_taxresults:
             lininfo = taxres.lineageInfo
-            if lininfo: # won't always have lineage to summarize (skipped idents, missed idents)
+            if lininfo and lininfo.filled_lineage: # won't always have lineage to summarize (skipped idents, missed idents)
                 # notify + track perfect matches
                 if taxres.f_unique_to_query >= 1.0:
                     if taxres.match_ident not in self.perfect_match:
