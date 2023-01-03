@@ -446,10 +446,10 @@ def test_aggregate_by_lineage_at_rank_by_query():
                       {'query_name': 'queryB', "name": 'gB', 'f_unique_weighted': 0.3,'f_unique_to_query': 0.3,'unique_intersect_bp': 30}]
     gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, summarize = True)
     # just need to pass in list of queryResults + desired rank
-    agg_res = aggregate_by_lineage_at_rank(gres.values(), 'superkingdom', by_query=True)
+    agg_res, _ = aggregate_by_lineage_at_rank(gres.values(), 'superkingdom', by_query=True)
     assert agg_res == {(LineageTuple(rank='superkingdom', name='a', taxid=None),): {'queryA': 0.9, 'queryB': 0.3},
                         (): {'queryA': approx(0.1), 'queryB': 0.7}}
-    agg_res = aggregate_by_lineage_at_rank(gres.values(), 'phylum', by_query=True)
+    agg_res, _ = aggregate_by_lineage_at_rank(gres.values(), 'phylum', by_query=True)
     print(agg_res)
     assert agg_res == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
                         LineageTuple(rank='phylum', name='b', taxid=None)): {'queryA': 0.5},

@@ -226,10 +226,11 @@ def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
     lineage_summary = defaultdict(float)
     if by_query:
         lineage_summary = defaultdict(dict)
-    n_queries = len(query_gather_results)
+    all_queries = []
 
     for queryResult in query_gather_results:
         query_name = queryResult.query_name
+        all_queries.append(query_name)
 
         if rank not in queryResult.summarized_ranks:
             raise ValueError(f"Error: rank '{rank}' not available for aggregation.")
@@ -242,10 +243,11 @@ def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
 
     # if aggregating across queries divide fraction by the total number of queries
     if not by_query:
+        n_queries = len(all_queries)
         for lin, fraction in lineage_summary.items():
                 lineage_summary[lin] = fraction/n_queries
 
-    return lineage_summary
+    return lineage_summary, all_queries
 
 def format_for_krona(query_gather_results, rank):
     '''
@@ -255,7 +257,7 @@ def format_for_krona(query_gather_results, rank):
     if len(query_gather_results) > 1:
         notify('WARNING: results from more than one query found. Krona summarization not recommended as percentages may exceed 1.')
     
-    lineage_summary = aggregate_by_lineage_at_rank(query_gather_results, rank, by_query=False)
+    lineage_summary, _ = aggregate_by_lineage_at_rank(query_gather_results, rank, by_query=False)
 
     # sort by fraction
     lin_items = list(lineage_summary.items())
