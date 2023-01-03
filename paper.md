@@ -80,9 +80,9 @@ sourmash is a command line tool and Python library for sketching
 collections of DNA, RNA, and amino acid k-mers for biological sequence
 search, comparison, and analysis [@Pierce:2019]. sourmash's FracMinHash sketching supports fast and accurate sequence comparisons between datasets of different sizes [@gather], including petabase-scale database search [@branchwater]. From release 4.x, sourmash is built on top of Rust and provides an experimental Rust interface.
 
-FracMinHash sketching is lossy compression approach that represents
+FracMinHash sketching is a lossy compression approach that represents
 data sets using a "fractional" sketch containing $1/S$ of the original 
-k-mers. Like other sequence sketching techniques (e.g. MinHash, [@Ondov:2015]), FracMinHash provides a lightweight way to store representations of large DNA or RNA sequence collections for comparison and search. Sketches can be used to identify samples, find similar samples, identify data sets with shared sequences, and build phylogenetic trees. FracMinHash sketches support estimation of overlap, bidirectional containment, and Jaccard similarity between data sets and is accurate even for data sets of different sizes.
+k-mers. Like other sequence sketching techniques (e.g. MinHash, [@Ondov:2015]), FracMinHash provides a lightweight way to store representations of large DNA or RNA sequence collections for comparison and search. Sketches can be used to identify samples, find similar samples, identify data sets with shared sequences, and build phylogenetic trees. FracMinHash sketching supports estimation of overlap, bidirectional containment, and Jaccard similarity between data sets and is accurate even for data sets of very different sizes.
 
 Since sourmash v1 was released in 2016 [@Brown:2016], sourmash has expanded
 to support new database types and many more command line functions.
