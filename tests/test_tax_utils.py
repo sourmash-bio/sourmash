@@ -3,6 +3,7 @@ Tests for functions in taxonomy submodule.
 """
 
 import pytest
+from pytest import approx
 import os
 from os.path import basename
 import gzip
@@ -24,7 +25,8 @@ from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_re
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import LineagePair
-from sourmash.tax.taxcomparison import make_mini_taxonomy, make_GatherRow, make_TaxResult, make_QueryTaxResults
+from sourmash.tax.taxcomparison import (make_mini_taxonomy, make_GatherRow, make_TaxResult, 
+                                        make_QueryTaxResults, LineageTuple)
 
 def make_mini_taxonomy(tax_info=None):
     #pass in list of tuples: (name, lineage)
@@ -186,7 +188,7 @@ def test_check_and_load_gather_csvs_fail_on_missing(runtmp):
 
 def test_load_gather_results_1():
     taxD = make_mini_taxonomy([('GCF_001881345', 'a;b;c')])
-    gather_csv = utils.get_test_data('tax/test1.gather.csv')
+    gather_csv = utils.get_test_data('tax/test1.gather.v450.csv')
     gather_results, header = load_gather_results(gather_csv, taxD)
     assert len(gather_results) == 1
     query_res = gather_results['test1']
@@ -198,7 +200,7 @@ def test_load_gather_results_1():
 
 def test_load_gather_results_gzipped(runtmp):
     taxD = make_mini_taxonomy([('GCF_001881345', 'a;b;c')])
-    gather_csv = utils.get_test_data('tax/test1.gather.csv')
+    gather_csv = utils.get_test_data('tax/test1.gather.v450.csv')
 
     # rewrite gather_csv as gzipped csv
     gz_gather = runtmp.output('g.csv.gz')
@@ -439,149 +441,81 @@ def test_aggregate_by_lineage_at_rank_by_query():
     gB_tax = ("gB", "a;c")
     taxD = make_mini_taxonomy([gA_tax, gB_tax])
     # make gather results
-    gather_results = [{'query_name': 'queryA', 'name': 'gA', 'f_unique_weighted': 0.5,'f_unique_to_query': 0.5,'unique_intersect_bp': 100}, 
-                      {'query_name': 'queryA', "name": 'gB', 'f_unique_weighted': 0.4,'f_unique_to_query': 0.3,'unique_intersect_bp': 60},
-                      {'query_name': 'queryB', "name": 'gB', 'f_unique_weighted': 0.3,'f_unique_to_query': 0.3,'unique_intersect_bp': 60}]
-    gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD)
+    gather_results = [{'query_name': 'queryA', 'name': 'gA', 'f_unique_weighted': 0.5,'f_unique_to_query': 0.5,'unique_intersect_bp': 50}, 
+                      {'query_name': 'queryA', "name": 'gB', 'f_unique_weighted': 0.4,'f_unique_to_query': 0.3,'unique_intersect_bp': 30},
+                      {'query_name': 'queryB', "name": 'gB', 'f_unique_weighted': 0.3,'f_unique_to_query': 0.3,'unique_intersect_bp': 30}]
+    gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, summarize = True)
+    # just need to pass in list of queryResults + desired rank
+    agg_res = aggregate_by_lineage_at_rank(gres.values(), 'superkingdom', by_query=True)
+    assert agg_res == {(LineageTuple(rank='superkingdom', name='a', taxid=None),): {'queryA': 0.9, 'queryB': 0.3},
+                        (): {'queryA': approx(0.1), 'queryB': 0.7}}
+    agg_res = aggregate_by_lineage_at_rank(gres.values(), 'phylum', by_query=True)
+    print(agg_res)
+    assert agg_res == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
+                        LineageTuple(rank='phylum', name='b', taxid=None)): {'queryA': 0.5},
+                       (LineageTuple(rank='superkingdom', name='a', taxid=None), 
+                        LineageTuple(rank='phylum', name='c', taxid=None)): {'queryA': 0.4, 'queryB': 0.3},
+                        (): {'queryA': approx(0.1), 'queryB': 0.7}}
 
-    # make gather results
-   # gA = ["queryA","gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '100', '100']
-   # gB = ["queryA","gB","0.3","0.4", "queryA_md5", "queryA.sig", '0.5', '60', '140']
-   # gC = ["queryB","gB","0.3","0.3", "queryB_md5", "queryB.sig", '0.5', '60', '140']
-   # g_res = make_mini_gather_results([gA,gB,gC])
 
+def test_aggregate_by_lineage_at_rank_by_query_rank_not_available():
+    """test two queries, aggregate lineage at rank for each"""
     # make mini taxonomy
-#    gA_tax = ("gA", "a;b")
-#    gB_tax = ("gB", "a;c")
-#    taxD = make_mini_taxonomy([gA_tax,gB_tax])
-
-
-    ## WORKING HERE: finish updating test!
-
-    # aggregate by lineage at rank
-#    sk_sum, _, _ = summarize_gather_at("superkingdom", taxD, g_res)
-#    print("superkingdom summarized gather results:", sk_sum)
-    # assert len(sk_sum) ==4
-    # assert sk_sum[0].query_name == "queryA"
-    # assert sk_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),)
-    # assert sk_sum[0].fraction == 0.9
-    # assert sk_sum[0].bp_match_at_rank == 160
-    # # check for unassigned for queryA
-    # assert sk_sum[1].query_name == "queryA"
-    # assert sk_sum[1].lineage == ()
-    # assert sk_sum[1].bp_match_at_rank == 40
-    # assert round(sk_sum[1].fraction,1) == 0.1
-    # # queryB
-    # assert sk_sum[2].query_name == "queryB"
-    # assert sk_sum[2].lineage == (LineagePair(rank='superkingdom', name='a'),)
-    # assert sk_sum[2].fraction == 0.3
-    # assert sk_sum[2].bp_match_at_rank == 60
-    # # check for unassigned for queryA
-    # assert sk_sum[3].query_name == "queryB"
-    # assert sk_sum[3].lineage == ()
-    # assert sk_sum[3].fraction == 0.7
-    # assert sk_sum[3].bp_match_at_rank == 140
-    # sk_lin_sum, query_names, num_queries = aggregate_by_lineage_at_rank(sk_sum, by_query=True)
-    # print("superkingdom lineage summary:", sk_lin_sum, '\n')
-    # assert sk_lin_sum == {(LineagePair(rank='superkingdom', name='a'),): {'queryA': 0.9, 'queryB': 0.3},
-    #                       (): {'queryA': 0.09999999999999998, 'queryB': 0.7}}
-    # assert num_queries == 2
-    # assert query_names == ['queryA', 'queryB']
-
-    # phy_sum, _, _ = summarize_gather_at("phylum", taxD, g_res)
-    # print("phylum summary:", phy_sum, ']\n')
-    # phy_lin_sum, query_names, num_queries = aggregate_by_lineage_at_rank(phy_sum, by_query=True)
-    # print("phylum lineage summary:", phy_lin_sum, '\n')
-    # assert phy_lin_sum ==  {(LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='b')): {'queryA': 0.5},
-    #                         (LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='c')): {'queryA': 0.4, 'queryB': 0.3},
-    #                         (): {'queryA': 0.09999999999999998, 'queryB': 0.7}}
-    # assert num_queries == 2
-    # assert query_names == ['queryA', 'queryB']
+    gA_tax = ("gA", "a;b")
+    gB_tax = ("gB", "a;c")
+    taxD = make_mini_taxonomy([gA_tax, gB_tax])
+    # make gather results
+    gather_results = [{'query_name': 'queryA', 'name': 'gA', 'f_unique_weighted': 0.5,'f_unique_to_query': 0.5,'unique_intersect_bp': 50}, 
+                      {'query_name': 'queryA', "name": 'gB', 'f_unique_weighted': 0.4,'f_unique_to_query': 0.3,'unique_intersect_bp': 30},
+                      {'query_name': 'queryB', "name": 'gB', 'f_unique_weighted': 0.3,'f_unique_to_query': 0.3,'unique_intersect_bp': 30}]
+    gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, summarize = True)
+    # just need to pass in list of queryResults + desired rank
+    with pytest.raises(ValueError) as exc:
+        aggregate_by_lineage_at_rank(gres.values(), 'NotARank', by_query=True)
+    print(str(exc))
+    assert "Error: rank 'NotARank' not available for aggregation." in str(exc)
 
 
 def test_format_for_krona_0():
-    """test format for krona, equal matches"""
-    # make gather results
-#    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
-#    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
-#    g_res = make_mini_gather_results([gA,gB])
-
-    # make mini taxonomy
-    gA_tax = ("gA", "a;b;c")
-    gB_tax = ("gB", "a;b;d")
-    taxD = make_mini_taxonomy([gA_tax,gB_tax])
-
-    # check krona format and check results!
-    sk_sum, _, _ = summarize_gather_at("superkingdom", taxD, g_res)
-    print("superkingdom summarized gather results:", sk_sum)
-    krona_res = format_for_krona("superkingdom", {"superkingdom": sk_sum})
-    print("krona_res: ", krona_res)
-    assert krona_res == [(1.0, 'a')]
-
-    phy_sum, _, _ = summarize_gather_at("phylum", taxD, g_res)
-    krona_res = format_for_krona("phylum", {"phylum": phy_sum})
-    print("krona_res: ", krona_res)
-    assert krona_res == [(1.0, 'a', 'b')]
-
-
-def test_format_for_krona_1():
     """test format for krona at each rank"""
-    # make gather results
-    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
-    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
-    g_res = make_mini_gather_results([gA,gB])
-
     # make mini taxonomy
     gA_tax = ("gA", "a;b;c")
     gB_tax = ("gB", "a;b;d")
     taxD = make_mini_taxonomy([gA_tax,gB_tax])
-
-    # summarize with all ranks
-    sum_res = {}
-    #for rank in lca_utils.taxlist(include_strain=False):
-    for rank in ['superkingdom', 'phylum', 'class']:
-        sum_res[rank], _, _ = summarize_gather_at(rank, taxD, g_res)
-    print('summarized gather: ', sum_res)
-    # check krona format
-    sk_krona = format_for_krona("superkingdom", sum_res)
-    print("sk_krona: ", sk_krona)
-    assert sk_krona == [(1.0, 'a')]
-    phy_krona = format_for_krona("phylum", sum_res)
-    print("phy_krona: ", phy_krona)
-    assert phy_krona ==  [(1.0, 'a', 'b')]
-    cl_krona = format_for_krona("class", sum_res)
-    print("cl_krona: ", cl_krona)
-    assert cl_krona ==  [(0.5, 'a', 'b', 'c'), (0.5, 'a', 'b', 'd')]
+    # make gather results
+    gather_results = [{'name': 'gA', 'f_unique_weighted': 0.5}, 
+                      {"name": 'gB', 'f_unique_weighted': 0.3}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, single_query=True, taxD=taxD, summarize=True)
+    k_res = format_for_krona([q_res], "superkingdom")
+    print("superkingdom krona: ", k_res)
+    assert k_res == [(0.8, 'a'), (approx(0.2), 'unclassified')]
+    k_res = format_for_krona([q_res], "phylum")
+    print("phylum krona: ", k_res)
+    assert k_res == [(0.8, 'a', 'b'), (approx(0.2), 'unclassified', 'unclassified')]
+    k_res = format_for_krona([q_res], "class")
+    print("class krona: ", k_res)
+    assert k_res == [(0.5, 'a', 'b', 'c'), (0.3, 'a', 'b', 'd'), (approx(0.2), 'unclassified', 'unclassified', 'unclassified')] 
 
 
 def test_format_for_krona_best_only():
-    """test two matches, equal f_unique_to_query"""
-    # make gather results
-    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
-    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
-    g_res = make_mini_gather_results([gA,gB])
-
+    """test format for krona: best only"""
     # make mini taxonomy
     gA_tax = ("gA", "a;b;c")
     gB_tax = ("gB", "a;b;d")
     taxD = make_mini_taxonomy([gA_tax,gB_tax])
-
-    # summarize with all ranks
-    sum_res = {}
-    #for rank in lca_utils.taxlist(include_strain=False):
-    for rank in ['superkingdom', 'phylum', 'class']:
-        sum_res[rank], _, _ = summarize_gather_at(rank, taxD, g_res, best_only=True)
-    print('summarized gather: ', sum_res)
-    # check krona format
-    sk_krona = format_for_krona("superkingdom", sum_res)
-    print("sk_krona: ", sk_krona)
-    assert sk_krona == [(1.0, 'a')]
-    phy_krona = format_for_krona("phylum", sum_res)
-    print("phy_krona: ", phy_krona)
-    assert phy_krona ==  [(1.0, 'a', 'b')]
-    cl_krona = format_for_krona("class", sum_res)
-    print("cl_krona: ", cl_krona)
-    assert cl_krona ==  [(0.5, 'a', 'b', 'c')]
+    # make gather results
+    gather_results = [{'name': 'gA', 'f_unique_weighted': 0.5}, 
+                      {"name": 'gB', 'f_unique_weighted': 0.3}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, single_query=True, taxD=taxD, summarize=True, best_only=True)
+    k_res = format_for_krona([q_res], "superkingdom")
+    print("superkingdom krona: ", k_res)
+    assert k_res == [(0.8, 'a'), (approx(0.2), 'unclassified')]
+    k_res = format_for_krona([q_res], "phylum")
+    print("phylum krona: ", k_res)
+    assert k_res == [(0.8, 'a', 'b'), (approx(0.2), 'unclassified', 'unclassified')]
+    k_res = format_for_krona([q_res], "class")
+    print("class krona: ", k_res)
+    assert k_res == [(0.5, 'a', 'b', 'c'), (approx(0.5), 'unclassified', 'unclassified', 'unclassified')] 
 
 
 def test_write_krona(runtmp):
