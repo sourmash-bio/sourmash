@@ -2023,7 +2023,7 @@ def test_annotate_0(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
-    csvout = runtmp.output("test1.gather.with-lineages.csv")
+    csvout = runtmp.output("test1.gather.v450.with-lineages.csv")
     out_dir = os.path.dirname(csvout)
 
     c.run_sourmash('tax', 'annotate', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', out_dir)
@@ -2057,7 +2057,7 @@ def test_annotate_gzipped_gather(runtmp):
         f_out.writelines(f_in)
 
     tax = utils.get_test_data('tax/test.taxonomy.csv')
-    csvout = runtmp.output("test1.gather.with-lineages.csv")
+    csvout = runtmp.output("test1.gather.v450.with-lineages.csv")
     out_dir = os.path.dirname(csvout)
 
     c.run_sourmash('tax', 'annotate', '--gather-csv', gz_gather, '--taxonomy-csv', tax, '-o', out_dir)
@@ -2087,7 +2087,7 @@ def test_annotate_gather_argparse(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
-    csvout = runtmp.output("test1.gather.with-lineages.csv")
+    csvout = runtmp.output("test1.gather.v450.with-lineages.csv")
     out_dir = os.path.dirname(csvout)
 
     g_empty_csv = runtmp.output('g_empty.csv')
@@ -2120,7 +2120,7 @@ def test_annotate_0_db(runtmp):
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
     tax = utils.get_test_data('tax/test.taxonomy.db')
-    csvout = runtmp.output("test1.gather.with-lineages.csv")
+    csvout = runtmp.output("test1.gather.v450.with-lineages.csv")
     out_dir = os.path.dirname(csvout)
 
     c.run_sourmash('tax', 'annotate', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', out_dir)
@@ -3074,7 +3074,7 @@ def test_tax_summarize_on_annotate(runtmp):
     # test summarize on output of annotate basics
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
-    csvout = runtmp.output("test1.gather.with-lineages.csv")
+    csvout = runtmp.output("test1.gather.v450.with-lineages.csv")
     out_dir = os.path.dirname(csvout)
 
     runtmp.run_sourmash('tax', 'annotate', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', out_dir)
