@@ -81,7 +81,6 @@ def SaveSignaturesToLocation(location):
 
         if cls.matches(location):
             debug_literal(f"{cls} is a match!")
-            # CTB: check if None or exception?
             return cls(location)
 
     raise Exception(f"cannot determine how to open location {location} for saving; this should never happen!?")
@@ -98,26 +97,24 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     """
     loaded = False
 
-    # CTB: we probably do this once at module level, but I am avoiding
-    # cluttering that up for now. Perhaps create a new module for loaders?
+    # load plugins
+    plugin_fns = sourmash_plugins.get_load_from_functions()
 
-    # make copy of default loader functions:
-    load_from_functions = list(_loader_functions)
-
-    # extend with plugins:
-    load_from_functions.extend(sourmash_plugins.get_load_from_functions())
-
+    # aggregate with default load_from functions & sort by priority
+    load_from_functions = sorted(itertools.chain(_loader_functions,
+                                                 plugin_fns))
+                                                 
     # iterate through loader functions, sorted by priority; try them all.
     # Catch ValueError & IndexNotLoaded but nothing else.
-    for n, (priority, desc, load_fn) in enumerate(sorted(load_from_functions)):
+    for (priority, desc, load_fn) in load_from_functions:
         db = None
         try:
-            debug_literal(f"_load_databases: trying loader fn {n} / priority {priority} - '{desc}'")
+            debug_literal(f"_load_databases: trying loader fn - priority {priority} - '{desc}'")
             db = load_fn(filename,
                          traverse_yield_all=traverse_yield_all,
                          cache_size=cache_size)
         except (ValueError, IndexNotLoaded):
-            debug_literal(f"_load_databases: FAIL with ValueError: on fn {n} {desc}.")
+            debug_literal(f"_load_databases: FAIL with ValueError: on fn {desc}.")
             debug_literal(traceback.format_exc())
             debug_literal("(continuing past exception)")
 
@@ -126,39 +123,21 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             debug_literal("_load_databases: success!")
             break
 
-    # check to see if it's a FASTA/FASTQ record (i.e. screed loadable)
-    # so we can provide a better error message to users.
-    # CTB: put this in the plugin framework??
-    if not loaded:
-        successful_screed_load = False
-        it = None
-        try:
-            # CTB: could be kind of time consuming for a big record, but at the
-            # moment screed doesn't expose format detection cleanly.
-            with screed.open(filename) as it:
-                _ = next(iter(it))
-            successful_screed_load = True
-        except:
-            pass
-
-        if successful_screed_load:
-            raise ValueError(f"Error while reading signatures from '{filename}' - got sequences instead! Is this a FASTA/FASTQ file?")
-
-    if not loaded:
-        raise ValueError(f"Error while reading signatures from '{filename}'.")
-
-    if loaded:                  # this is a bit redundant but safe > sorry
+    if loaded:
         assert db is not None
-
-    return db
+        return db
+    
+    raise ValueError(f"Error while reading signatures from '{filename}'.")
 
 
 _loader_functions = []
 def add_loader(name, priority):
+    "decorator to add name/priority to _loader_functions"
     def dec_priority(func):
         _loader_functions.append((priority, name, func))
         return func
     return dec_priority
+
 
 @add_loader("load from stdin", 10)
 def _load_stdin(filename, **kwargs):
@@ -244,6 +223,20 @@ def _load_zipfile(filename, **kwargs):
     return db
 
 
+@add_loader("catch FASTA/FASTQ files and error", 1000)
+def _error_on_fastaq(filename, **kwargs):
+    "This is a tail-end loader that checks for FASTA/FASTQ sequences => err."
+    success = False
+    try:
+        with screed.open(filename) as it:
+            _ = next(iter(it))
+
+            success = True
+    except:
+        pass
+
+    if success:
+        raise Exception(f"Error while reading signatures from '{filename}' - got sequences instead! Is this a FASTA/FASTQ file?")
 
 
 ### Implementation machinery for SaveSignaturesToLocation

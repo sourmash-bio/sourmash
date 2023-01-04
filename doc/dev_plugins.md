@@ -43,3 +43,10 @@ Some beta plugins are available as examples:
 * [sourmash-bio/sourmash_plugin_load_urls](https://github.com/sourmash-bio/sourmash_plugin_load_urls) - load signatures and CSV manifests via [fsspec](https://filesystem-spec.readthedocs.io/).
 * [sourmash-bio/sourmash_plugin_avro](https://github.com/sourmash-bio/sourmash_plugin_avro) - use [Apache Avro](https://avro.apache.org/) as a serialization format.
 
+## Debugging plugins
+
+`sourmash sig cat <input sig> -o <output sig>` is a simple way to
+invoke a `save_to` plugin. Use `-d` to turn on debugging output.
+
+`sourmash sig describe <input location>` is a simple way to invoke
+a `load_from` plugin. Use `-d` to turn on debugging output.
