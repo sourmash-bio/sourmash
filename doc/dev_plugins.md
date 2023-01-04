@@ -28,17 +28,22 @@ a_writer = "module_name:SaveSignatures_WriteFile"
 
 Here, `module_name` should be the name of the module to import.
 `load_sketches` should be a function that takes a location along with
-arbitrary keyword arguments. `SaveSignatures_WriteFile` should be a
-class that subclasses `BaseSave_SignaturesToLocation`. See the
-`sourmash.save_load` module for the saving and loading code already
-included in sourmash.
+arbitrary keyword arguments and returns an `Index` object
+(e.g. `LinearIndex` for a collection of in-memory
+signatures). `SaveSignatures_WriteFile` should be a class that
+subclasses `BaseSave_SignaturesToLocation` and implements its own
+mechanisms of saving signatures. See the `sourmash.save_load` module
+for saving and loading code already used in sourmash.
 
 Note that if the function or class has a `priority` attribute, this will
 be used to determine the order in which the plugins are called.
 
+The `name` attribute of the plugin (`a_reader` and `a_writer` in
+`pyproject.toml`, above) is only used in debugging.
+
 ## Examples
 
-Some beta plugins are available as examples:
+Some (early stage) plugins are available as examples:
 
 * [sourmash-bio/sourmash_plugin_load_urls](https://github.com/sourmash-bio/sourmash_plugin_load_urls) - load signatures and CSV manifests via [fsspec](https://filesystem-spec.readthedocs.io/).
 * [sourmash-bio/sourmash_plugin_avro](https://github.com/sourmash-bio/sourmash_plugin_avro) - use [Apache Avro](https://avro.apache.org/) as a serialization format.
