@@ -1,7 +1,7 @@
 """
 Taxonomic Information Classes
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from itertools import zip_longest
 from collections import defaultdict
 
@@ -462,33 +462,43 @@ class TaxResult():
 @dataclass
 class SummarizedGatherResult():
 #   """Class for storing summarized lineage information"""
-   query_name: str
-   rank: str
-   fraction: float
-   lineage: tuple
-   query_md5: str
-   query_filename: str
-   f_weighted_at_rank: float
-   bp_match_at_rank: int
-   query_ani_at_rank: float
-   total_weighted_hashes: int
+    query_name: str
+    rank: str
+    fraction: float
+    lineage: tuple
+    query_md5: str
+    query_filename: str
+    f_weighted_at_rank: float
+    bp_match_at_rank: int
+    query_ani_at_rank: float
+    total_weighted_hashes: int
 
-#ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, 
-# lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
+    def as_float_limited_dict(self):
+        sD = asdict(self)
+        sD['fraction'] = f'{self.fraction:.3f}'
+        sD['f_weighted_at_rank'] = f'{self.f_weighted_at_rank:.3f}'
+        return sD
+
+
 @dataclass
 class ClassificationResult():
 #   """Class for storing summarized lineage information"""
-   query_name: str
-   query_md5: str
-   query_filename: str
-   status: str
-   rank: str
-   fraction: float
-   lineage: tuple
-   f_weighted_at_rank: float
-   bp_match_at_rank: int
-   query_ani_at_rank: float
+    query_name: str
+    status: str
+    rank: str
+    fraction: float
+    lineage: tuple
+    query_md5: str
+    query_filename: str
+    f_weighted_at_rank: float
+    bp_match_at_rank: int
+    query_ani_at_rank: float
 
+    def as_float_limited_dict(self):
+        cD = asdict(self)
+        cD['fraction'] = f'{self.fraction:.3f}'
+        cD['f_weighted_at_rank'] = f'{self.f_weighted_at_rank:.3f}'
+        return cD
 
 @dataclass
 class QueryTaxResult(): 
@@ -523,6 +533,12 @@ class QueryTaxResult():
         self.total_bp_classified = defaultdict(int) #0
         self.summarized_lineage_results = defaultdict(list)
 
+    def _init_classification_results(self):
+        self.best_only_result = True
+        self.status = 'nomatch'
+        self.classification_result = None
+        self.krona_classification_result = None
+    
     def is_compatible(self, taxresult):
         return taxresult.query_info == self.query_info
     
@@ -577,7 +593,8 @@ class QueryTaxResult():
                     self.sum_uniq_weighted[rank][lin_at_rank] += taxres.f_unique_weighted
                     self.sum_uniq_to_query[rank][lin_at_rank] += taxres.f_unique_to_query
                     self.sum_uniq_bp[rank][lin_at_rank] += taxres.unique_intersect_bp
-    
+     
+
     def build_summarized_result(self, single_rank=None, best_only=False):
         # just reset if we've already built summarized result (avoid adding to existing)? Or write in an error/force option?
         self._init_summarization_results()
@@ -639,6 +656,69 @@ class QueryTaxResult():
                                               total_weighted_hashes=self.query_info.total_weighted_hashes)
                 self.summarized_lineage_results[rank].append(sres)
 
+    def build_classification_result(self, rank=None, ani_threshold=None, containment_threshold=None):
+        self._init_classification_results() # init some fields
+        #for sg in self.summarized_lineage_results:
+        if not self.summarized_ranks: 
+            self.summarize_up_ranks(single_rank=rank)
+        # catch potential error from running summarize_up_ranks separately and passing in different single_rank
+        if rank and rank not in self.summarized_ranks:
+            raise ValueError(f"Error: rank '{rank}' not in summarized rank(s), {','.join(self.summarized_ranks)}")
+        # CLASSIFY using summarization--> best only result. Best way = use ANI or containment threshold
+        for this_rank in self.summarized_ranks: # ascending order or just single rank
+            # reset for this rank
+            f_weighted=0.0
+            f_unique_at_rank=0.0
+            bp_intersect_at_rank=0
+            #sum_uniq_to_query = self.sum_uniq_to_query[this_rank] 
+            sum_uniq_weighted = self.sum_uniq_weighted[this_rank]  ##SHOULD WE BE USING WEIGHTED HERE? I THINK MAYBE YES?
+            # sort the results and grab best
+            sorted_sum_uniq_weighted = list(sum_uniq_weighted.items())
+            sorted_sum_uniq_weighted.sort(key = lambda x: -x[1])
+            # best only
+            this_lineage, f_weighted = sorted_sum_uniq_weighted[0]
+            if f_weighted > 1:
+                raise ValueError(f"The tax classification of query '{self.query_name}' is {f_weighted}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
+            elif f_weighted == 0: #no annotated results for this query. do we need to handle this differently?
+                continue
+            else:
+                status="below_threshold"
+            f_unique_at_rank = self.sum_uniq_to_query[this_rank][this_lineage]
+            query_ani = containment_to_distance(f_unique_at_rank, self.query_info.ksize, self.query_info.scaled,
+                                                n_unique_kmers=self.query_info.query_hashes,
+                                                sequence_len_bp=self.query_info.query_bp).ani 
+            # set classification status based on thresholds
+            if ani_threshold and query_ani and query_ani >= ani_threshold:
+                status = 'match'
+            elif containment_threshold and f_weighted >= containment_threshold:
+                status = 'match'
+            # determine whether to move on to a higher tax rank (if avail)
+            if status == 'match':
+                break
+        
+        if this_rank == "superkingdom" and status == "nomatch":
+            status="below_threshold"
+
+        # what happens when we don't have a gather match at all?
+        bp_intersect_at_rank = self.sum_uniq_bp[this_rank][this_lineage]
+
+        classif = ClassificationResult(query_name=self.query_name, status=status, rank=this_rank,
+                                       fraction=f_unique_at_rank, lineage=this_lineage,
+                                       query_md5=self.query_info.query_md5, query_filename=self.query_info.query_filename,
+                                       f_weighted_at_rank=f_weighted, bp_match_at_rank=bp_intersect_at_rank,
+                                       query_ani_at_rank= query_ani)
+        # use same formatting as summarized gather result for easier writing
+        self.classification_result = classif
+
+        def krona_classification_result(self, rank=None, ani_threshold=None, containment_threshold=None):
+            if not self.classification_result:
+                self.build_classification_result(rank=rank, ani_threshold=ani_threshold, containment_threshold=containment_threshold)
+            lin = self.classification_result.lineage
+            #if lin == ():
+            #    return (f_weighted, "unclassified")
+            lin_list = lin.display_lineage().split(';') #display_lineage(sg.lineage).split(';')
+            return (f_weighted, *lin_list)
+        
 
 # utility functions for testing
 def make_mini_taxonomy(tax_info=None):

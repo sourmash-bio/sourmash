@@ -128,14 +128,14 @@ def metagenome(args):
     # write summarized output in human-readable format
     if "lineage_summary" in args.output_format:
             # if lineage summary table
-            lineage_outfile, limit_float = make_outfile(args.output_base, "lineage_summary", output_dir=args.output_dir)
+        lineage_outfile, limit_float = make_outfile(args.output_base, "lineage_summary", output_dir=args.output_dir)
 
-            ## aggregate by lineage, by query
-            lineageD, query_names= tax_utils.aggregate_by_lineage_at_rank(query_gather_results=query_gather_results, 
-                                                                                        rank=args.rank, by_query=True)
+        ## aggregate by lineage, by query
+        lineageD, query_names= tax_utils.aggregate_by_lineage_at_rank(query_gather_results=query_gather_results, 
+                                                                      rank=args.rank, by_query=True)
 
-            with FileOutputCSV(lineage_outfile) as out_fp:
-                tax_utils.write_lineage_sample_frac(query_names, lineageD, out_fp, format_lineage=True, sep='\t')
+        with FileOutputCSV(lineage_outfile) as out_fp:
+            tax_utils.write_lineage_sample_frac(query_names, lineageD, out_fp, format_lineage=True, sep='\t')
     
     # write summarized --> krona output tsv
     if "krona" in args.output_format:
@@ -197,104 +197,42 @@ def genome(args):
     # get gather_csvs from args
     gather_csvs = tax_utils.collect_gather_csvs(args.gather_csv, from_file=args.from_file)
 
-    classifications = defaultdict(list)
-    matched_queries=set()
-    krona_results = []
-    status = "nomatch"
-    seen_perfect = set()
+#    matched_queries=set()
+#    krona_results = []
+#    status = "nomatch"
+#    seen_perfect = set()
 
-    # read in all gather CSVs (queries in more than one gather file will raise error; with --force they will only be loaded once)
-    # note: doing one CSV at a time would work and probably be more memory efficient, but we would need to change how we check
-    # for duplicated queries
     try:
-        gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
-                                                                            fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
+         query_gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
+                                                                                       fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
+                                                                                       keep_full_identifiers=args.keep_full_identifiers,
+                                                                                       keep_identifier_versions = args.keep_identifier_versions,
+                                                                                       )
 
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
-
-    # if --rank is specified, classify to that rank
-    estimate_query_ani = True
-    if args.rank:
+    classifications = defaultdict(list)
+    # for each queryResult, actually summarize at rank, reporting any errors that occur.
+    for queryResult in query_gather_results:
         try:
-            best_at_rank, seen_perfect, estimate_query_ani = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                     keep_full_identifiers=args.keep_full_identifiers,
-                                                     keep_identifier_versions = args.keep_identifier_versions,
-                                                     best_only=True, seen_perfect=seen_perfect, estimate_query_ani=True)
-
+            queryResult.build_classification_result(rank=args.rank,
+                                                    ani_threshold=args.ani_threshold,
+                                                    containment_threshold=args.containment_threshold)
+            
+            classif = queryResult.classification_result
+            if classif is not None:
+                c_rank = classif.rank
+                classifications[c_rank].append(queryResult)
         except ValueError as exc:
             error(f"ERROR: {str(exc)}")
             sys.exit(-1)
-
-       # best at rank is a list of SummarizedGather tuples
-        for sg in best_at_rank:
-            status = 'nomatch'
-            if sg.query_name in matched_queries:
-                continue
-            if args.ani_threshold and sg.query_ani_at_rank < args.ani_threshold:
-                status="below_threshold"
-                notify(f"WARNING: classifying query {sg.query_name} at desired rank {args.rank} does not meet query ANI/AAI threshold {args.ani_threshold}")
-            elif sg.fraction <= args.containment_threshold: # should this just be less than?
-                status="below_threshold"
-                notify(f"WARNING: classifying query {sg.query_name} at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
-            else:
-                status="match"
-            classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename, sg.f_weighted_at_rank, sg.bp_match_at_rank, sg.query_ani_at_rank)
-            classifications[args.rank].append(classif)
-            matched_queries.add(sg.query_name)
-            if "krona" in args.output_format:
-                lin_list = display_lineage(sg.lineage).split(';')
-                krona_results.append((sg.fraction, *lin_list))
-    else:
-        # classify to the rank/match that passes the containment threshold.
-        # To do - do we want to store anything for this match if nothing >= containment threshold?
-        for rank in tax_utils.ascending_taxlist(include_strain=False):
-            # gets best_at_rank for all queries in this gather_csv
-            try:
-                best_at_rank, seen_perfect, estimate_query_ani = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                                                                keep_full_identifiers=args.keep_full_identifiers,
-                                                                                                keep_identifier_versions = args.keep_identifier_versions,
-                                                                                                best_only=True, seen_perfect=seen_perfect, estimate_query_ani=estimate_query_ani)
-            except ValueError as exc:
-                error(f"ERROR: {str(exc)}")
-                sys.exit(-1)
-
-            for sg in best_at_rank:
-                status = 'nomatch'
-                if sg.query_name in matched_queries:
-                    continue
-                if sg.query_ani_at_rank is not None and args.ani_threshold and sg.query_ani_at_rank >= args.ani_threshold:
-                    status="match"
-                elif sg.fraction >= args.containment_threshold:
-                    status = "match"
-                if status == "match":
-                    classif = ClassificationResult(query_name=sg.query_name, status=status, rank=sg.rank,
-                                                    fraction=sg.fraction, lineage=sg.lineage,
-                                                    query_md5=sg.query_md5, query_filename=sg.query_filename,
-                                                    f_weighted_at_rank=sg.f_weighted_at_rank, bp_match_at_rank=sg.bp_match_at_rank,
-                                                    query_ani_at_rank= sg.query_ani_at_rank)
-                    classifications[sg.rank].append(classif)
-                    matched_queries.add(sg.query_name)
-                    continue
-                elif rank == "superkingdom" and status == "nomatch":
-                    status="below_threshold"
-                    classif = ClassificationResult(query_name=sg.query_name, status=status,
-                                                   rank="", fraction=0, lineage="",
-                                                   query_md5=sg.query_md5, query_filename=sg.query_filename,
-                                                   f_weighted_at_rank=sg.f_weighted_at_rank, bp_match_at_rank=sg.bp_match_at_rank, 
-                                                   query_ani_at_rank=sg.query_ani_at_rank)
-                    classifications[sg.rank].append(classif)
-
-    if not any([classifications, krona_results]):
-        notify('No results for classification. Exiting.')
-        sys.exit(-1)
 
     # write outputs
     if "csv_summary" in args.output_format:
         summary_outfile, limit_float = make_outfile(args.output_base, "classification", output_dir=args.output_dir)
         with FileOutputCSV(summary_outfile) as out_fp:
-            tax_utils.write_classifications(classifications, out_fp, limit_float_decimals=limit_float)
+            tax_utils.write_classifications(query_gather_results, out_fp, limit_float_decimals=limit_float)
 
     # write summarized output in human-readable format
     if "human" in args.output_format:
@@ -311,6 +249,9 @@ def genome(args):
 
         krona_outfile, limit_float = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
         with FileOutputCSV(krona_outfile) as out_fp:
+            krona_results = []
+            for classif in classifications.values():
+                krona_results.append(queryResult.krona_classification_result())
             tax_utils.write_krona(args.rank, krona_results, out_fp)
 
     if "lineage_csv" in args.output_format:
@@ -323,6 +264,83 @@ def genome(args):
                                           output_dir=args.output_dir)
         with FileOutputCSV(lineage_outfile) as out_fp:
             tax_utils.write_lineage_csv(classifications, out_fp)
+    # if --rank is specified, classify to that rank
+    #estimate_query_ani = True
+    #if args.rank:
+    #    try:
+    #        best_at_rank, seen_perfect, estimate_query_ani = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
+    #                                                 keep_full_identifiers=args.keep_full_identifiers,
+    #                                                 keep_identifier_versions = args.keep_identifier_versions,
+    #                                                 best_only=True, seen_perfect=seen_perfect, estimate_query_ani=True)
+
+#        except ValueError as exc:
+#            error(f"ERROR: {str(exc)}")
+#            sys.exit(-1)
+
+       # best at rank is a list of SummarizedGather tuples
+    #     for sg in best_at_rank:
+    #         status = 'nomatch'
+    #         if sg.query_name in matched_queries:
+    #             continue
+    #         if args.ani_threshold and sg.query_ani_at_rank < args.ani_threshold:
+    #             status="below_threshold"
+    #             notify(f"WARNING: classifying query {sg.query_name} at desired rank {args.rank} does not meet query ANI/AAI threshold {args.ani_threshold}")
+    #         elif sg.fraction <= args.containment_threshold: # should this just be less than?
+    #             status="below_threshold"
+    #             notify(f"WARNING: classifying query {sg.query_name} at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
+    #         else:
+    #             status="match"
+    #         classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename, sg.f_weighted_at_rank, sg.bp_match_at_rank, sg.query_ani_at_rank)
+    #         classifications[args.rank].append(classif)
+    #         matched_queries.add(sg.query_name)
+    #         if "krona" in args.output_format:
+    #             lin_list = display_lineage(sg.lineage).split(';')
+    #             krona_results.append((sg.fraction, *lin_list))
+    # else:
+    #     # classify to the rank/match that passes the containment threshold.
+    #     # To do - do we want to store anything for this match if nothing >= containment threshold?
+    #     for rank in tax_utils.ascending_taxlist(include_strain=False):
+    #         # gets best_at_rank for all queries in this gather_csv
+    #         try:
+    #             best_at_rank, seen_perfect, estimate_query_ani = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
+    #                                                                                             keep_full_identifiers=args.keep_full_identifiers,
+    #                                                                                             keep_identifier_versions = args.keep_identifier_versions,
+    #                                                                                             best_only=True, seen_perfect=seen_perfect, estimate_query_ani=estimate_query_ani)
+    #         except ValueError as exc:
+    #             error(f"ERROR: {str(exc)}")
+    #             sys.exit(-1)
+
+    #         for sg in best_at_rank:
+    #             status = 'nomatch'
+    #             if sg.query_name in matched_queries:
+    #                 continue
+    #             if sg.query_ani_at_rank is not None and args.ani_threshold and sg.query_ani_at_rank >= args.ani_threshold:
+    #                 status="match"
+    #             elif sg.fraction >= args.containment_threshold:
+    #                 status = "match"
+    #             if status == "match":
+    #                 classif = ClassificationResult(query_name=sg.query_name, status=status, rank=sg.rank,
+    #                                                 fraction=sg.fraction, lineage=sg.lineage,
+    #                                                 query_md5=sg.query_md5, query_filename=sg.query_filename,
+    #                                                 f_weighted_at_rank=sg.f_weighted_at_rank, bp_match_at_rank=sg.bp_match_at_rank,
+    #                                                 query_ani_at_rank= sg.query_ani_at_rank)
+    #                 classifications[sg.rank].append(classif)
+    #                 matched_queries.add(sg.query_name)
+    #                 continue
+    #             elif rank == "superkingdom" and status == "nomatch":
+    #                 status="below_threshold"
+    #                 classif = ClassificationResult(query_name=sg.query_name, status=status,
+    #                                                rank="", fraction=0, lineage="",
+    #                                                query_md5=sg.query_md5, query_filename=sg.query_filename,
+    #                                                f_weighted_at_rank=sg.f_weighted_at_rank, bp_match_at_rank=sg.bp_match_at_rank, 
+    #                                                query_ani_at_rank=sg.query_ani_at_rank)
+    #                 classifications[sg.rank].append(classif)
+
+    #if not any([classifications, krona_results]):
+    #    notify('No results for classification. Exiting.')
+    #    sys.exit(-1)
+
+    
 
 
 def annotate(args):

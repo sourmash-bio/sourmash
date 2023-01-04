@@ -27,11 +27,11 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
 from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
 
-from sourmash.tax.taxcomparison import SummarizedGatherResult
+from sourmash.tax.taxcomparison import SummarizedGatherResult, ClassificationResult
 # CTB: these could probably usefully be converted into dataclasses.
 #QueryInfo = namedtuple("QueryInfo", "query_md5, query_filename, query_bp, query_hashes, total_weighted_hashes")
 #SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank, total_weighted_hashes")
-ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
+#ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
 
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
@@ -388,12 +388,12 @@ def write_human_summary(query_gather_results, out_fp, display_rank):
     '''
     Write human-readable taxonomy-summarized gather results for a specific rank.
     '''
-    header = SummarizedGatherResult._fields
+    header = SummarizedGatherResult.__dataclass_fields__
 
     for queryResult in query_gather_results:
         found_ANI = False
         results = []
-        for rank, rank_results in queryResult.summarized_ranks.items():
+        for rank, rank_results in queryResult.summarized_lineage_results.items():
             # only show results for a specified rank.
             if rank == display_rank:
                 rank_results = list(rank_results)
@@ -448,24 +448,24 @@ def write_lineage_csv(summarized_gather, csv_fp):
             w.writerow(d)
 
 
-def write_classifications(classifications, csv_fp, *, sep=',', limit_float_decimals=False):
+def write_classifications(query_gather_results, csv_fp, *, sep=',', limit_float_decimals=False):
     '''
     Write taxonomy-classifed gather results.
     '''
-    header = ClassificationResult._fields
+    header = ClassificationResult.__dataclass_fields__
     w = csv.DictWriter(csv_fp, header, delimiter=sep)
     w.writeheader()
-    for rank, rank_results in classifications.items():
-        for res in rank_results:
-            rD = res._asdict()
-            if limit_float_decimals:
-                rD['fraction'] = f'{res.fraction:.3f}'
-                rD['f_weighted_at_rank'] = f'{res.f_weighted_at_rank:.3f}'
-            rD['lineage'] = display_lineage(res.lineage)
-            # needed?
-            if rD['lineage'] == "":
-                rD['lineage'] = "unclassified"
-            w.writerow(rD)
+    for query_result in query_gather_results:
+        c_res = query_result.classification_result
+        if limit_float_decimals:
+            cD = c_res.as_float_limited_dict()
+        else:
+            cD = asdict(c_res)
+        cD['lineage'] = display_lineage(c_res.lineage)
+        if cD['lineage'] == "":
+            cD['lineage'] = "unclassified"
+        w.writerow(cD)
+
 
 
 def combine_sumgather_csvs_by_lineage(gather_csvs, *, rank="species", accept_ranks = list(lca_utils.taxlist(include_strain=False)), force=False):
