@@ -29,9 +29,9 @@ a_writer = "module_name:SaveSignatures_WriteFile"
 Here, `module_name` should be the name of the module to import.
 `load_sketches` should be a function that takes a location along with
 arbitrary keyword arguments. `SaveSignatures_WriteFile` should be a
-class that subclasses `_BaseSaveSignaturesToLocation`. See the
-`sourmash.sourmash_args` module for some of the default
-implementations used by sourmash.
+class that subclasses `BaseSave_SignaturesToLocation`. See the
+`sourmash.save_load` module for the saving and loading code already
+included in sourmash.
 
 Note that if the function or class has a `priority` attribute, this will
 be used to determine the order in which the plugins are called.
