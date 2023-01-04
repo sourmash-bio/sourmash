@@ -1,6 +1,7 @@
 """
 Taxonomic Information Classes
 """
+import csv
 from dataclasses import dataclass, field, asdict
 from itertools import zip_longest
 from collections import defaultdict
@@ -36,7 +37,7 @@ class LineageTuple(LineagePair):
 
 # storing lineage as list make manipulation easier within the class. BUT, do I only want to be returning
 # lineage/filled_lineage as tuples, instead?
-@dataclass
+@dataclass#(frozen=True, order=True)
 class BaseLineageInfo:
     ranks: list[str] = field(default_factory=lambda: [])
     lineage: list = field(default_factory=lambda: [LineageTuple()]) #list of LineageTuples/LineagePairs
@@ -72,11 +73,26 @@ class BaseLineageInfo:
     def lowest_rank(self):
         return self.filled_ranks[-1]
 
+    @property
+    def lowest_lineage_name(self, null_as_unclassified = False):
+        if not self.filled_ranks:
+            if null_as_unclassified:
+                return "unclassified"
+            else:
+                return ""
+        return self.filled_lineage[-1].name
+    
+    @property
+    def lowest_lineage_taxid(self):
+        if not self.filled_ranks:
+            return ""
+        return self.filled_lineage[-1].taxid
+    
     def lineageD(self):
         return {lin_tup.rank: lin_tup.name for lin_tup in self.lineage}
 
     def rank_index(self, rank):
-        return self.ranks.index(rank)
+        return self.ranks.index(rank)    
 
     @property
     def filled_lineage(self):
@@ -162,7 +178,7 @@ class BaseLineageInfo:
         self.filled_ranks = [a.rank for a in self.lineage if a.name]
         
     def make_lineage(self):
-        "Turn a ; or ,-separated set of lineages into a tuple of LineageTuple objs."
+        "Turn a ; or ,-separated set of lineages into a list of LineageTuple objs."
         if not self.ranks:
             raise ValueError(f"Must provide ordered ranks for {self.lineage_str}")
         new_lin = self.lineage_str.split(';')
@@ -200,10 +216,15 @@ class BaseLineageInfo:
         
         return zipped
 
-    def display_lineage(self, truncate_empty=True):
+    def display_lineage(self, truncate_empty=True, null_as_unclassified=False):
         # default truncate empty??
         "Return lineage names as ';'-separated list"
-        return ";".join(self.zip_lineage(truncate_empty=truncate_empty))
+        lin = ";".join(self.zip_lineage(truncate_empty=truncate_empty))
+        if null_as_unclassified:
+            if lin == "":
+                return "unclassified"
+        else:
+            return lin
 
     def display_taxid(self, truncate_empty=True):
         "Return lineage taxids as ';'-separated list"
@@ -226,6 +247,8 @@ class BaseLineageInfo:
                 return 1
         return 0
 
+    # Probably need to remove this/replace with `lineage_at_rank` if we need to make this class 'frozen'
+    # Or make/return new instance instead of self
     def pop_to_rank(self, rank):
         # current behavior: removes information, same as original pop_to_rank. Is that desired here if we can do it another way?)
         "Remove lineage tuples from given lineage `lin` until `rank` is reached."
@@ -479,6 +502,37 @@ class SummarizedGatherResult():
         sD['f_weighted_at_rank'] = f'{self.f_weighted_at_rank:.3f}'
         return sD
 
+    def as_human_friendly_dict(self):
+        sD = asdict(self)
+        sD['fraction'] = f'{self.fraction:.3f}'
+        sD['f_weighted_at_rank'] = f"{self.f_weighted_at_rank*100:>4.1f}%"
+        if sD['query_ani_at_rank'] is not None:
+            sD['query_ani_at_rank'] = f"{self.query_ani_at_rank*100:>3.1f}%"
+        else:
+            sD['query_ani_at_rank'] = '-    '
+            #cD['lineage'] = display_lineage(res.lineage)
+            sD['lineage'] = self.lineage.display_lineage(null_as_unclassified=True)
+        return sD
+    
+    def as_kreport_dict(self, rankCode):
+         sD = asdict(self)
+         this_rank = self.lineage.lowest_rank
+         this_sciname = self.lineage.lowest_lineage_name
+         sD['ncbi_taxid'] = self.lineage.lowest_lineage_taxid
+         sD['sci_name'] = this_sciname
+         #sD['lineage'] = self.lineage.display_lineage(null_as_unclassified=True)
+         sD['rank_code'] = rankCode[this_rank]
+         sD['num_bp_assigned'] = 0
+         # total percent containment, weighted to include abundance info
+         sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
+         sD["num_bp_contained"] = int(self.f_weighted_at_rank * self.total_weighted_hashes)
+         # the number of bp actually 'assigned' at this rank. Sourmash assigns everything 
+         # at genome level, but since kreport traditionally doesn't include 'strain' or genome,
+         # it is reasonable to state that sourmash assigns at 'species' level for this.
+         # can be modified later.
+         lowest_assignment_rank = 'species'
+         if this_rank == lowest_assignment_rank or this_sciname == "unclassified":
+            sD["num_bp_assigned"] = sD["num_bp_contained"]
 
 @dataclass
 class ClassificationResult():
@@ -499,6 +553,8 @@ class ClassificationResult():
         cD['fraction'] = f'{self.fraction:.3f}'
         cD['f_weighted_at_rank'] = f'{self.f_weighted_at_rank:.3f}'
         return cD
+
+
 
 @dataclass
 class QueryTaxResult(): 
@@ -595,12 +651,12 @@ class QueryTaxResult():
                     self.sum_uniq_bp[rank][lin_at_rank] += taxres.unique_intersect_bp
      
 
-    def build_summarized_result(self, single_rank=None, best_only=False):
+    def build_summarized_result(self, single_rank=None, best_only=False, force_resummarize=False):
         # just reset if we've already built summarized result (avoid adding to existing)? Or write in an error/force option?
         self._init_summarization_results()
         # if taxresults haven't been summarized, do that first
-        if not self.summarized_ranks: 
-            self.summarize_up_ranks(single_rank=single_rank)
+        if not self.summarized_ranks or force_resummarize:
+            self.summarize_up_ranks(single_rank=single_rank, force_resummarize=force_resummarize)
         # catch potential error from running summarize_up_ranks separately and passing in different single_rank
         if single_rank and single_rank not in self.summarized_ranks:
             raise ValueError(f"Error: rank '{single_rank}' not in summarized rank(s), {','.join(self.summarized_ranks)}")
@@ -656,11 +712,11 @@ class QueryTaxResult():
                                               total_weighted_hashes=self.query_info.total_weighted_hashes)
                 self.summarized_lineage_results[rank].append(sres)
 
-    def build_classification_result(self, rank=None, ani_threshold=None, containment_threshold=None):
+    def build_classification_result(self, rank=None, ani_threshold=None, containment_threshold=None, force_resummarize=False):
         self._init_classification_results() # init some fields
         #for sg in self.summarized_lineage_results:
-        if not self.summarized_ranks: 
-            self.summarize_up_ranks(single_rank=rank)
+        if not self.summarized_ranks or force_resummarize:
+            self.summarize_up_ranks(single_rank=rank, force_resummarize=force_resummarize)
         # catch potential error from running summarize_up_ranks separately and passing in different single_rank
         if rank and rank not in self.summarized_ranks:
             raise ValueError(f"Error: rank '{rank}' not in summarized rank(s), {','.join(self.summarized_ranks)}")
@@ -710,7 +766,7 @@ class QueryTaxResult():
         # use same formatting as summarized gather result for easier writing
         self.classification_result = classif
 
-        def krona_classification_result(self, rank=None, ani_threshold=None, containment_threshold=None):
+        def write_krona_classification_result(self, rank, *, ani_threshold=None, containment_threshold=None):
             if not self.classification_result:
                 self.build_classification_result(rank=rank, ani_threshold=ani_threshold, containment_threshold=containment_threshold)
             lin = self.classification_result.lineage
@@ -719,6 +775,55 @@ class QueryTaxResult():
             lin_list = lin.display_lineage().split(';') #display_lineage(sg.lineage).split(';')
             return (f_weighted, *lin_list)
         
+        def make_krona_header(self, min_rank):
+            "make header for krona output"
+            if min_rank not in self.ranks:
+                raise ValueError(f"Rank {min_rank} not present in available ranks!")
+            else: 
+                rank_index = self.ranks.index(min_rank)
+            return ["fraction"] + self.ranks[:rank_index+1]
+        
+        def write_human_summary(self, display_rank, csv_fp):
+            results = []
+            display_rank_results = self.summarized_lineage_results[display_rank]
+            display_rank_results.sort(key=lambda res: -res.f_weighted_at_rank)
+            for res in display_rank_results:
+                rD = res.as_human_friendly_dict()
+                rD['query_name'] = self.query_name
+                rD['query_md5'] = self.query_info.query_md5
+                rD['query_filename'] = self.query_info.query_filename
+                rD['total_weighted_hashes'] = self.query_info.total_weighted_hashes
+                results.append(rD)
+            return results
+        
+        def write_kreport(self, csv_fp, sep='\t'):
+            columns = ["percent_containment", "num_bp_contained", "num_bp_assigned", "rank_code", "ncbi_taxid", "sci_name"]
+            w = csv.DictWriter(csv_fp, columns, delimiter=sep)
+            rankCode = { "superkingdom": "D", "kingdom": "K", "phylum": "P", "class": "C",
+                         "order": "O", "family":"F", "genus": "G", "species": "S", "unclassified": "U"}
+            if self.query_info.total_weighted_hashes == 0:
+                raise ValueError("ERROR: cannot produce 'kreport' format from gather results before sourmash v4.5.0")
+            required_ranks = set(rankCode.keys).pop('unclassified')
+            if not set(required_ranks).issubset(set(self.ranks)):
+                raise ValueError("ERROR: cannot produce 'kreport' format from ranks {', '.join(self.ranks)}")
+            unclassified_written=False
+            # want to order results descending by rank
+            for rank in self.ranks:
+                if rank == 'strain': # no code for strain, can't include in this output afaik
+                    continue
+                rank_results = self.summarized_lineage_results[rank]
+                for res in rank_results:
+                    kresD = res.as_kreport_dict(rankCode)
+                    if kresD['sci_name'] == "unclassified":
+                        # SummarizedGatherResults have an unclassified lineage at every rank, to facilitate reporting at a specific rank.
+                        # Here, we only need to report it once, since it will be the same fraction for all ranks
+                        if unclassified_written:
+                            continue
+                        else:
+                            unclassified_written = True
+                    w.writerow(kresD)
+            
+
 
 # utility functions for testing
 def make_mini_taxonomy(tax_info=None):
