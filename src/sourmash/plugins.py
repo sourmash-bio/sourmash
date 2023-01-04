@@ -9,6 +9,7 @@ Plugin entry point names:
 CTB TODO:
 
 * consider using something other than 'name' for loader fn name. Maybe __doc__?
+* try implement picklist plugin?
 """
 
 DEFAULT_LOAD_FROM_PRIORITY = 99
