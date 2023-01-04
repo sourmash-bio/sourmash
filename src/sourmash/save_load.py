@@ -20,6 +20,9 @@ Public API:
 APIs for plugins to use:
 
 * class Base_SaveSignaturesToLocation - to implement a new output method.
+
+CTB TODO:
+* consider replacing ValueError with IndexNotLoaded in the future.
 """
 import sys
 import os
@@ -34,6 +37,7 @@ import sourmash
 
 from . import plugins as sourmash_plugins
 from .logging import notify, debug_literal
+from .exceptions import IndexNotLoaded
 
 from .index.sqlite_index import load_sqlite_index, SqliteIndex
 from .sbtmh import load_sbt_index
@@ -104,7 +108,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     load_from_functions.extend(sourmash_plugins.get_load_from_functions())
 
     # iterate through loader functions, sorted by priority; try them all.
-    # Catch ValueError but nothing else.
+    # Catch ValueError & IndexNotLoaded but nothing else.
     for n, (priority, desc, load_fn) in enumerate(sorted(load_from_functions)):
         db = None
         try:
@@ -112,7 +116,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             db = load_fn(filename,
                          traverse_yield_all=traverse_yield_all,
                          cache_size=cache_size)
-        except ValueError:      # CTB: use custom exception?
+        except (ValueError, IndexNotLoaded):
             debug_literal(f"_load_databases: FAIL with ValueError: on fn {n} {desc}.")
             debug_literal(traceback.format_exc())
             debug_literal("(continuing past exception)")
@@ -176,7 +180,7 @@ def _load_standalone_manifest(filename, **kwargs):
     try:
         idx = StandaloneManifestIndex.load(filename)
     except gzip.BadGzipFile as exc:
-        raise ValueError(exc)
+        raise IndexNotLoaded(exc)
 
     return idx
 
@@ -206,7 +210,7 @@ def _load_sbt(filename, **kwargs):
     try:
         db = load_sbt_index(filename, cache_size=cache_size)
     except (FileNotFoundError, TypeError) as exc:
-        raise ValueError(exc)
+        raise IndexNotLoaded(exc)
 
     return db
 
@@ -233,9 +237,9 @@ def _load_zipfile(filename, **kwargs):
             db = ZipFileLinearIndex.load(filename,
                                          traverse_yield_all=traverse_yield_all)
         except FileNotFoundError as exc:
-            # turn this into a ValueError => proper exception handling by
+            # turn this into an IndexNotLoaded => proper exception handling by
             # _load_database.
-            raise ValueError(exc)
+            raise IndexNotLoaded(exc)
 
     return db
 
