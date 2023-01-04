@@ -235,7 +235,7 @@ def test_dna_multiple_ksize():
     assert not params.hp
     assert not params.protein
 
-    from sourmash.sourmash_args import _get_signatures_from_rust
+    from sourmash.save_load import _get_signatures_from_rust
 
     siglist = factory()
     ksizes = set()

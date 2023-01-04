@@ -13,8 +13,8 @@ from sourmash.logging import set_quiet
 import sourmash_tst_utils as utils
 from sourmash import plugins
 from sourmash.index import LinearIndex
-from sourmash.sourmash_args import (_BaseSaveSignaturesToLocation,
-                                    SaveSignaturesToLocation)
+from sourmash.save_load import (Base_SaveSignaturesToLocation,
+                                SaveSignaturesToLocation)
 
 
 class FakeEntryPoint:
@@ -146,7 +146,7 @@ class Test_EntryPoint_LoadFrom_Priority:
 # Test basic features of the save_to plugin hook.
 #
 
-class FakeSaveClass(_BaseSaveSignaturesToLocation):
+class FakeSaveClass(Base_SaveSignaturesToLocation):
     """
     A fake save class that just records what was sent to it.
     """
