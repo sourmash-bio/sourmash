@@ -14,7 +14,7 @@ CTB TODO:
 DEFAULT_LOAD_FROM_PRIORITY = 99
 DEFAULT_SAVE_TO_PRIORITY = 99
 
-from .logging import error, debug_literal
+from .logging import debug_literal
 
 # cover for older versions of Python that don't support selection on load
 # (the 'group=' below).
