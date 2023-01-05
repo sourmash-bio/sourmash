@@ -202,16 +202,16 @@ def find_missing_identities(gather_results, fail_on_missing_taxonomy=False):
     return ident_missed
 
 
-# pass ranks; have ranks=[default_ranks]
-def make_krona_header(min_rank, *, include_strain=False):
-    "make header for krona output"
-    header = ["fraction"]
-    tl = list(taxlist(include_strain=include_strain))
-    try:
-        rank_index = tl.index(min_rank)
-    except ValueError:
-        raise ValueError(f"Rank {min_rank} not present in available ranks!")
-    return tuple(header + tl[:rank_index+1])
+# # pass ranks; have ranks=[default_ranks]
+# def make_krona_header(min_rank, *, include_strain=False):
+#     "make header for krona output"
+#     header = ["fraction"]
+#     tl = list(taxlist(include_strain=include_strain))
+#     try:
+#         rank_index = tl.index(min_rank)
+#     except ValueError:
+#         raise ValueError(f"Rank {min_rank} not present in available ranks!")
+#     return tuple(header + tl[:rank_index+1])
 
 
 def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
@@ -245,51 +245,62 @@ def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
 
     return lineage_summary, all_queries
 
-def format_for_krona(query_gather_results, rank):
+def format_for_krona(query_gather_results, rank, *, classification=False):
     '''
     Aggregate and format for krona output. Single query recommended, but we don't want query headers.
     '''
-    # do we want to block more than one query??
+    # make header
+    header = query_gather_results[0].make_krona_header(min_rank=rank)
+    krona_results = []
+    # do we want to block more than one query for summarization?
     if len(query_gather_results) > 1:
         notify('WARNING: results from more than one query found. Krona summarization not recommended as percentages may exceed 1.')
     
-    lineage_summary, _ = aggregate_by_lineage_at_rank(query_gather_results, rank, by_query=False)
+    if classification:
+        # for classification, just write the results
+        for q_res in query_gather_results:
+            if q_res.classified_ranks != [rank]:
+                q_res.build_classification_result(rank=rank)
+            krona_results.append(q_res.krona_classification_result)
+            krona_results.append(q_res.krona_unclassified_result)
+    else:
+        lineage_summary, _ = aggregate_by_lineage_at_rank(query_gather_results, rank, by_query=False)
 
-    # sort by fraction
-    lin_items = list(lineage_summary.items())
-    lin_items.sort(key = lambda x: -x[1])
+        # sort by fraction
+        lin_items = list(lineage_summary.items())
+        lin_items.sort(key = lambda x: -x[1])
 
-    # reformat lineage for krona_results printing
-    krona_results = []
-    unclassified_fraction = 0
-    for lin, fraction in lin_items:
-        # save unclassified fraction for the end
-        if lin == ():
-            unclassified_fraction = fraction
-            continue
-        lin_list = display_lineage(lin).split(';')
-        krona_results.append((fraction, *lin_list))
+        # reformat lineage for krona_results printing
+        unclassified_fraction = 0
+        for lin, fraction in lin_items:
+            # save unclassified fraction for the end
+            if lin == ():
+                unclassified_fraction = fraction
+                continue
+            lin_list = lin.display_lineage().split(';')
+            #lin_list = display_lineage(lin).split(';')
+            krona_results.append((fraction, *lin_list))
 
-    # handle unclassified
-    if unclassified_fraction:
-        len_unclassified_lin = len(krona_results[-1]) -1
-        unclassifed_lin = ["unclassified"]*len_unclassified_lin
-        krona_results.append((unclassified_fraction, *unclassifed_lin))
+        # handle unclassified
+        if unclassified_fraction:
+            len_unclassified_lin = len(krona_results[-1]) -1
+            unclassifed_lin = ["unclassified"]*len_unclassified_lin
+            krona_results.append((unclassified_fraction, *unclassifed_lin))
+    
+    return krona_results, header
 
-    return krona_results
 
-
-def write_krona(rank, krona_results, out_fp, *, sep='\t'):
+def write_krona(rank, krona_results, header, out_fp, *, sep='\t'):
     'write krona output'
     # CTB: do we want to optionally allow restriction to a specific rank
-    # & above?
-    header = make_krona_header(rank)
+    # & above? NTP: krona must be at a single rank.
     tsv_output = csv.writer(out_fp, delimiter='\t')
     tsv_output.writerow(header)
     for res in krona_results:
         tsv_output.writerow(res)
 
 
+# TO DO: FIXME
 def write_summary(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=False):
     '''
     Write taxonomy-summarized gather results for each rank.
@@ -388,32 +399,32 @@ def write_human_summary(query_gather_results, out_fp, display_rank):
     '''
     Write human-readable taxonomy-summarized gather results for a specific rank.
     '''
-    header = SummarizedGatherResult.__dataclass_fields__
+#    header = SummarizedGatherResult.__dataclass_fields__
 
     for queryResult in query_gather_results:
-        found_ANI = False
-        results = []
-        for rank, rank_results in queryResult.summarized_lineage_results.items():
-            # only show results for a specified rank.
-            if rank == display_rank:
-                rank_results = list(rank_results)
-                rank_results.sort(key=lambda res: -res.f_weighted)
-                for res in rank_results:
-                    rD = res._asdict()
-                    rD['query_md5'] = queryResult.query_info.query_md5
-                    rD['fraction'] = f'{res.f_unique:.3f}'
-                    rD['f_weighted_at_rank'] = f"{res.f_weighted*100:>4.1f}%"
-                    if rD['query_ani_at_rank'] is not None:
-                        found_ANI = True
-                        rD['query_ani_at_rank'] = f"{res.query_ani*100:>3.1f}%"
-                    else:
-                        rD['query_ani_at_rank'] = '-    '
-                    rD['lineage'] = display_lineage(res.lineage)
-                    if rD['lineage'] == "":
-                        rD['lineage'] = "unclassified"
+        found_ANI = True #False
+        results = queryResult.make_human_summary(display_rank=display_rank)
+        # results = []
+        # for rank, rank_results in queryResult.summarized_lineage_results.items():
+        #     # only show results for a specified rank.
+        #     if rank == display_rank:
+        #         rank_results = list(rank_results)
+        #         rank_results.sort(key=lambda res: -res.f_weighted)
+        #         for res in rank_results:
+        #             rD = res._asdict()
+        #             rD['query_md5'] = queryResult.query_info.query_md5
+        #             rD['fraction'] = f'{res.f_unique:.3f}'
+        #             rD['f_weighted_at_rank'] = f"{res.f_weighted*100:>4.1f}%"
+        #             if rD['query_ani_at_rank'] is not None:
+        #                 found_ANI = True
+        #                 rD['query_ani_at_rank'] = f"{res.query_ani*100:>3.1f}%"
+        #             else:
+        #                 rD['query_ani_at_rank'] = '-    '
+        #             rD['lineage'] = display_lineage(res.lineage)
+        #             if rD['lineage'] == "":
+        #                 rD['lineage'] = "unclassified"
 
-                    results.append(rD)
-
+        #             results.append(rD)
 
         if found_ANI:
             out_fp.write("sample name    proportion   cANI   lineage\n")
@@ -461,7 +472,7 @@ def write_classifications(query_gather_results, csv_fp, *, sep=',', limit_float_
             cD = c_res.as_float_limited_dict()
         else:
             cD = asdict(c_res)
-        cD['lineage'] = display_lineage(c_res.lineage)
+        cD['lineage'] = display_lineage(c_res.lineage) # this can change if we have lineageInfo instead of tuple of lineage tuples
         if cD['lineage'] == "":
             cD['lineage'] = "unclassified"
         w.writerow(cD)

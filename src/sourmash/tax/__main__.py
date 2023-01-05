@@ -212,7 +212,7 @@ def genome(args):
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
-    classifications = defaultdict(list)
+    classifications = []#defaultdict(list)
     # for each queryResult, actually summarize at rank, reporting any errors that occur.
     for queryResult in query_gather_results:
         try:
@@ -220,10 +220,8 @@ def genome(args):
                                                     ani_threshold=args.ani_threshold,
                                                     containment_threshold=args.containment_threshold)
             
-            classif = queryResult.classification_result
-            if classif is not None:
-                c_rank = classif.rank
-                classifications[c_rank].append(queryResult)
+            #classif = queryResult.classification_result
+            classifications.append(queryResult)
         except ValueError as exc:
             error(f"ERROR: {str(exc)}")
             sys.exit(-1)
