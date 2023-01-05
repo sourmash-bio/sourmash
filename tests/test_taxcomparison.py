@@ -1323,3 +1323,26 @@ def test_make_human_summary_2():
                   {'rank': 'phylum', 'fraction': '0.200', 'lineage': 'a;b',
                   'f_weighted_at_rank': '40.0%', 'bp_match_at_rank': 40, 'query_ani_at_rank': '94.9%',
                   'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': 0}]
+
+def test_make_human_summary_classification():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, classify=True, classify_rank="superkingdom")
+    hs = q_res.make_human_summary(display_rank = "superkingdom", classification=True)
+    print(hs)
+    assert hs == [{'rank': 'superkingdom', 'fraction': '0.200', 'lineage': 'a',
+                  'f_weighted_at_rank': '40.0%', 'bp_match_at_rank': 40,
+                  'query_ani_at_rank': '94.9%', 'status': 'match', 'query_name': 'q1',
+                  'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': 0}]
+
+def test_make_human_summary_classification_2():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, classify=True, classify_rank="phylum")
+    hs = q_res.make_human_summary(display_rank = "phylum", classification=True)
+    print(hs)
+    assert hs == [{'rank': 'phylum', 'fraction': '0.200', 'lineage': 'a;b',
+                   'f_weighted_at_rank': '40.0%', 'bp_match_at_rank': 40,
+                   'query_ani_at_rank': '94.9%', 'status': 'match',
+                   'query_name': 'q1', 'query_md5': 'md5',
+                   'query_filename': 'query_fn', 'total_weighted_hashes': 0}]

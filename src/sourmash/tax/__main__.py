@@ -139,11 +139,12 @@ def metagenome(args):
     
     # write summarized --> krona output tsv
     if "krona" in args.output_format:
-        krona_resultslist = tax_utils.format_for_krona(query_gather_results, args.rank)
+        krona_results, header =  tax_utils.format_for_krona(query_gather_results, rank=args.rank)
+        
 
         krona_outfile, limit_float = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
         with FileOutputCSV(krona_outfile) as out_fp:
-            tax_utils.write_krona(args.rank, krona_resultslist, out_fp)
+            tax_utils.write_krona(args.rank, krona_results, header, out_fp)
 
 
     if "human" in args.output_format:
@@ -197,11 +198,6 @@ def genome(args):
     # get gather_csvs from args
     gather_csvs = tax_utils.collect_gather_csvs(args.gather_csv, from_file=args.from_file)
 
-#    matched_queries=set()
-#    krona_results = []
-#    status = "nomatch"
-#    seen_perfect = set()
-
     try:
          query_gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
                                                                                        fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
@@ -212,7 +208,7 @@ def genome(args):
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
-    classifications = []#defaultdict(list)
+    classifications = []
     # for each queryResult, actually summarize at rank, reporting any errors that occur.
     for queryResult in query_gather_results:
         try:
@@ -220,15 +216,10 @@ def genome(args):
                                                     ani_threshold=args.ani_threshold,
                                                     containment_threshold=args.containment_threshold)
             
-            #classif = queryResult.classification_result
             classifications.append(queryResult)
         except ValueError as exc:
             error(f"ERROR: {str(exc)}")
             sys.exit(-1)
-    
-    if not any([classifications, krona_results]):
-        notify('No results for classification. Exiting.')
-        sys.exit(-1)
 
     # write outputs
     if "csv_summary" in args.output_format:
@@ -241,34 +232,29 @@ def genome(args):
         summary_outfile, limit_float = make_outfile(args.output_base, "human", output_dir=args.output_dir)
 
         with FileOutput(summary_outfile) as out_fp:
-            tax_utils.write_human_summary(classifications, out_fp, args.rank or "species")
+            tax_utils.write_human_summary(classifications, out_fp, args.rank or "species", classification=True)
 
     if "krona" in args.output_format:
         # classifications only at a single rank
-        assert len(classifications) == 1
-        if args.rank:
-            assert args.rank in classifications
-
+        krona_results, header =  tax_utils.format_for_krona(query_gather_results=query_gather_results, rank=args.rank, classification=True)
         krona_outfile, limit_float = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
         with FileOutputCSV(krona_outfile) as out_fp:
-            krona_results = []
-            for classif in classifications.values():
-                krona_results.append(queryResult.krona_classification_result())
-            tax_utils.write_krona(args.rank, krona_results, out_fp)
+            tax_utils.write_krona(args.rank, krona_results, header, out_fp)
 
     if "lineage_csv" in args.output_format:
-        # should only classify at a single rank
-        assert len(classifications) == 1
-        if args.rank:
-            assert args.rank in classifications
+        # should only classify at a single rank -- just check for args.rank?
+        # assert len(classifications) == 1
+        # if args.rank:
+        #     assert args.rank in classifications
 
         lineage_outfile, _ = make_outfile(args.output_base, "lineage_csv",
                                           output_dir=args.output_dir)
         with FileOutputCSV(lineage_outfile) as out_fp:
             tax_utils.write_lineage_csv(classifications, out_fp)
-
-
     
+    # if not classifications:
+    #     notify('No results for classification. Exiting.')
+    #     sys.exit(-1)
 
 
 def annotate(args):

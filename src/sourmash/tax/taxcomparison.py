@@ -491,8 +491,6 @@ class TaxResult():
             raise ValueError(f"Error: ident '{self.match_ident}' is not in the taxonomy database. Failing, as requested via --fail-on-missing-taxonomy")
 #            raise ValueError('Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
 
-
-
 @dataclass
 class SummarizedGatherResult():
 #   """Class for storing summarized lineage information"""
@@ -503,25 +501,31 @@ class SummarizedGatherResult():
     bp_match_at_rank: int
     query_ani_at_rank: float
 
-    def as_float_limited_dict(self):
+    def as_summary_dict(self, query_info=None, limit_float=False):
         sD = asdict(self)
-        sD['fraction'] = f'{self.fraction:.3f}'
-        sD['f_weighted_at_rank'] = f'{self.f_weighted_at_rank:.3f}'
-        return sD
+        if self.lineage == (): # to do -- get rid of me by using null RankLineageInfo() instead of () for empties
+            sD['lineage'] = 'unclassified'
+        else:
+            sD['lineage'] = self.lineage.display_lineage()
+        if query_info is not None:
+            sD['query_name'] = query_info.query_name
+            sD['query_md5'] = query_info.query_md5
+            sD['query_filename'] = query_info.query_filename
+            sD['total_weighted_hashes'] = query_info.total_weighted_hashes
+        if limit_float:
+            sD['fraction'] = f'{self.fraction:.3f}'
+            sD['f_weighted_at_rank'] = f'{self.f_weighted_at_rank:.3f}'
 
-    def as_human_friendly_dict(self):
-        sD = asdict(self)
-        sD['fraction'] = f'{self.fraction:.3f}'
+        return(sD)
+
+
+    def as_human_friendly_dict(self, query_info = None):
+        sD = self.as_summary_dict(query_info=query_info, limit_float=True)
         sD['f_weighted_at_rank'] = f"{self.f_weighted_at_rank*100:>4.1f}%"
         if sD['query_ani_at_rank'] is not None:
             sD['query_ani_at_rank'] = f"{self.query_ani_at_rank*100:>3.1f}%"
         else:
             sD['query_ani_at_rank'] = '-    '
-            #cD['lineage'] = display_lineage(res.lineage)
-        if self.lineage == (): # to do -- get rid of me by using null RankLineageInfo() instead of () for empties
-            sD['lineage'] = 'unclassified'
-        else:
-            sD['lineage'] = self.lineage.display_lineage()
         return sD
     
     def as_kreport_dict(self, rankCode, total_weighted_hashes):
@@ -545,22 +549,9 @@ class SummarizedGatherResult():
             sD["num_bp_assigned"] = sD["num_bp_contained"]
 
 @dataclass
-class ClassificationResult():
+class ClassificationResult(SummarizedGatherResult):
 #   """Class for storing summarized lineage information"""
     status: str
-    rank: str
-    fraction: float
-    lineage: tuple
-    f_weighted_at_rank: float
-    bp_match_at_rank: int
-    query_ani_at_rank: float
-
-    def as_float_limited_dict(self):
-        cD = asdict(self)
-        cD['fraction'] = f'{self.fraction:.3f}'
-        cD['f_weighted_at_rank'] = f'{self.f_weighted_at_rank:.3f}'
-        return cD
-
 
 
 @dataclass
@@ -796,57 +787,43 @@ class QueryTaxResult():
             rank_index = self.ranks.index(min_rank)
         return ["fraction"] + list(self.ranks[:rank_index+1])
         
-    def make_human_summary(self, display_rank):
+    def make_human_summary(self, display_rank, classification=False):
         results = []
-        if not self.summarized_lineage_results:
-            raise ValueError("lineages not summarized yet.")
-        display_rank_results = self.summarized_lineage_results[display_rank]
-        display_rank_results.sort(key=lambda res: -res.f_weighted_at_rank)
+        if classification:
+            if not self.classification_result:
+                raise ValueError("query not classified yet.")
+            display_rank_results = [self.classification_result]
+        else:
+            if not self.summarized_lineage_results:
+                raise ValueError("lineages not summarized yet.")
+            display_rank_results = self.summarized_lineage_results[display_rank]
+            display_rank_results.sort(key=lambda res: -res.f_weighted_at_rank)
+
         for res in display_rank_results:
-            rD = res.as_human_friendly_dict()
-            rD['query_name'] = self.query_name
-            rD['query_md5'] = self.query_info.query_md5
-            rD['query_filename'] = self.query_info.query_filename
-            rD['total_weighted_hashes'] = self.query_info.total_weighted_hashes
+            results.append(res.as_human_friendly_dict())
+        return results
+    
+    def make_full_summary(self, classification=False):
+        results = []
+        if classification:
+            if not self.classification_result:
+                raise ValueError("query not classified yet.")
+            rD = self.classification_result.as_summary_dict(query_info = res.query_info)
             results.append(rD)
+        else:
+            if not self.summarized_lineage_results:
+                raise ValueError("lineages not summarized yet.")
+            
+            for rank in self.summarized_ranks:
+                rank_results = self.summarized_lineage_results[rank]
+                rank_results.sort(key=lambda res: -res.f_weighted_at_rank)
+                for res in rank_results:
+                    results.append(res.as_summary_dict(query_info=res.query_info))
         return results
         
-    def write_kreport(self, csv_fp, sep='\t'):
-        '''
-        Write taxonomy-summarized gather results as kraken-style kreport.
-
-        While this format typically records the percent of number of reads assigned to taxa,
-        we can create comparable output by reporting the percent of k-mers (percent containment)
-        and the total number of k-mers matched.
-
-        standard reads-based `kreport` columns:
-        - `Percent Reads Contained in Taxon`: The cumulative percentage of reads for this taxon and all descendants.
-        - `Number of Reads Contained in Taxon`: The cumulative number of reads for this taxon and all descendants.
-        - `Number of Reads Assigned to Taxon`: The number of reads assigned directly to this taxon (not a cumulative count of all descendants).
-        - `Rank Code`: (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies. 
-        - `NCBI Taxon ID`: Numerical ID from the NCBI taxonomy database.
-        - `Scientific Name`: The scientific name of the taxon.
-
-        Example reads-based `kreport` with all columns:
-        ```
-        88.41	2138742	193618	K	2	Bacteria
-        0.16	3852	818	P	201174	  Actinobacteria
-        0.13	3034	0	C	1760	    Actinomycetia
-        0.13	3034	45	O	85009	      Propionibacteriales
-        0.12	2989	1847	F	31957	        Propionibacteriaceae
-        0.05	1142	352	G	1912216	          Cutibacterium
-        0.03	790	790	S	1747	            Cutibacterium acnes
-        ```
-
-        sourmash `kreport` caveats:
-        - `Percent k-mers Contained in Taxon`: weighted by k-mer abundance
-        - `Estimated bp Contained in Taxon`: NOT WEIGHTED BY ABUNDANCE
-        - `Number of Reads Assigned to Taxon` and `NCBI Taxon ID` will not be reported (blank entries).
-
-        In the future, we may wish to report the NCBI taxid when we can (NCBI taxonomy only).
-        '''
-        columns = ["percent_containment", "num_bp_contained", "num_bp_assigned", "rank_code", "ncbi_taxid", "sci_name"]
-        w = csv.DictWriter(csv_fp, columns, delimiter=sep)
+    def make_kreport_results(self):
+        #columns = ["percent_containment", "num_bp_contained", "num_bp_assigned", "rank_code", "ncbi_taxid", "sci_name"]
+#        w = csv.DictWriter(csv_fp, columns, delimiter=sep)
         rankCode = { "superkingdom": "D", "kingdom": "K", "phylum": "P", "class": "C",
                         "order": "O", "family":"F", "genus": "G", "species": "S", "unclassified": "U"}
         if self.query_info.total_weighted_hashes == 0:
@@ -854,7 +831,8 @@ class QueryTaxResult():
         required_ranks = set(rankCode.keys).pop('unclassified')
         if not set(required_ranks).issubset(set(self.ranks)):
             raise ValueError("ERROR: cannot produce 'kreport' format from ranks {', '.join(self.ranks)}")
-        unclassified_written=False
+        kreport_results = []
+        unclassified_recorded=False
         # want to order results descending by rank
         for rank in self.ranks:
             if rank == 'strain': # no code for strain, can't include in this output afaik
@@ -865,11 +843,12 @@ class QueryTaxResult():
                 if kresD['sci_name'] == "unclassified":
                     # SummarizedGatherResults have an unclassified lineage at every rank, to facilitate reporting at a specific rank.
                     # Here, we only need to report it once, since it will be the same fraction for all ranks
-                    if unclassified_written:
+                    if unclassified_recorded:
                         continue
                     else:
-                        unclassified_written = True
-                w.writerow(kresD)
+                        unclassified_recorded = True
+                kreport_results.append(kresD)
+        return(kreport_results)
             
 
 
