@@ -1,4 +1,4 @@
-## sourmash plugins via Python entry points
+# sourmash plugins via Python entry points
 
 As of version 4.7.0, sourmash has experimental support for Python
 plugins to load and save signatures in different ways (e.g. file
