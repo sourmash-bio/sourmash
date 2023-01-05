@@ -55,3 +55,18 @@ invoke a `save_to` plugin. Use `-d` to turn on debugging output.
 
 `sourmash sig describe <input location>` is a simple way to invoke
 a `load_from` plugin. Use `-d` to turn on debugging output.
+
+## Semantic versioning and listing sourmash as a dependency
+
+Plugins should probably list sourmash as a dependency for installation.
+
+Once plugins are officially supported by sourmash, the plugin API will
+be under [semantic versioning constraints](https://semver.org/). That
+means that you should constrain plugins to depend on sourmash only up
+to the next major version, e.g. sourmash v5.
+
+Specifically, we suggest placing something like:
+```
+dependencies = ['sourmash>=4.8.0,<5']
+```
+in your `pyproject.toml` file.
