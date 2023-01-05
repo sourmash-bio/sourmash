@@ -8,7 +8,7 @@ from pytest import approx
 
 from sourmash.tax.taxcomparison import (LineagePair, LineageTuple, BaseLineageInfo, RankLineageInfo,
                                         SummarizedGatherResult, build_tree, GatherRow, TaxResult, QueryTaxResult,
-                                        make_mini_taxonomy, make_GatherRow, make_TaxResult, make_QueryTaxResults) #LINSLineageInfo
+                                        make_mini_taxonomy, make_GatherRow, make_TaxResult, make_QueryTaxResults, ClassificationResult) #LINSLineageInfo
 
 # sigh, can't make build tree work as easily with both orig LineagePair and LineageInfo.
 # What if LineagePair just had the extra info?
@@ -16,7 +16,7 @@ from sourmash.tax.taxcomparison import LineageTuple as LineagePair
 from sourmash.lca.lca_utils import find_lca, make_lineage
 from sourmash.tax.tax_utils import write_summary, aggregate_by_lineage_at_rank, format_for_krona, write_krona
 
-taxranks = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain']
+taxranks = ('superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain')
 
 def test_LineagePair():
     lin = LineagePair(rank="rank1", name='name1')
@@ -75,23 +75,23 @@ def test_RankLineageInfo_init_lineage_str_lineage_dict_test_eq():
     assert lin1 == lin2 
 
 
-def test_BaseLineageInfo_reinit_lineage():
-    x = "a;b;c"
-    ranks=["A", "B", "C"]
-    lin1 = BaseLineageInfo(lineage_str=x, ranks=ranks)
-    print(lin1)
-    with pytest.raises(ValueError) as exc:
-        lin1.init_empty()
-    assert "lineage not empty" in str(exc)
+# def test_BaseLineageInfo_reinit_lineage():
+#     x = "a;b;c"
+#     ranks=["A", "B", "C"]
+#     lin1 = BaseLineageInfo(lineage_str=x, ranks=ranks)
+#     print(lin1)
+#     with pytest.raises(ValueError) as exc:
+#         lin1._init_empty()
+#     assert "lineage not empty" in str(exc)
 
 
-def test_RankLineageInfo_reinit_lineage():
-    x = "a;b;c"
-    lin1 = RankLineageInfo(lineage_str=x)
-    print(lin1)
-    with pytest.raises(ValueError) as exc:
-        lin1.init_empty()
-    assert "lineage not empty" in str(exc)
+# def test_RankLineageInfo_reinit_lineage():
+#     x = "a;b;c"
+#     lin1 = RankLineageInfo(lineage_str=x)
+#     print(lin1)
+#     with pytest.raises(ValueError) as exc:
+#         lin1.init_empty()
+#     assert "lineage not empty" in str(exc)
 
 
 def test_BaseLineageInfo_init_lineage_str_no_ranks():
@@ -491,11 +491,11 @@ def test_lineage_at_rank_1():
     lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
     print(lin1.lineage_at_rank('superkingdom'))
     
-    assert lin1.lineage_at_rank('superkingdom') == [LineageTuple(rank='superkingdom', name='d__a', taxid=None)]
+    assert lin1.lineage_at_rank('superkingdom') == (LineageTuple(rank='superkingdom', name='d__a', taxid=None),)
     print(lin1.lineage_at_rank('class'))
-    assert lin1.lineage_at_rank('class') == [LineageTuple(rank='superkingdom', name='d__a', taxid=None), 
+    assert lin1.lineage_at_rank('class') == (LineageTuple(rank='superkingdom', name='d__a', taxid=None), 
                                              LineageTuple(rank='phylum', name='p__b', taxid=None), 
-                                             LineageTuple(rank='class', name='c__c', taxid=None)]
+                                             LineageTuple(rank='class', name='c__c', taxid=None))
     
 
 def test_lineage_at_rank_below_rank():
@@ -504,24 +504,21 @@ def test_lineage_at_rank_below_rank():
     # if rank is not provided, we only return the filled lineage, to follow original pop_to_rank behavior.
 
     print(lin1.lineage_at_rank('genus'))
-    assert lin1.lineage_at_rank('genus') == [LineageTuple(rank='superkingdom', name='d__a', taxid=None), 
+    assert lin1.lineage_at_rank('genus') == (LineageTuple(rank='superkingdom', name='d__a', taxid=None), 
                                              LineageTuple(rank='phylum', name='p__b', taxid=None), 
                                              LineageTuple(rank='class', name='c__c', taxid=None),
                                              LineageTuple(rank='order', name='o__d', taxid=None), 
-                                             LineageTuple(rank='family', name='f__f', taxid=None)]
+                                             LineageTuple(rank='family', name='f__f', taxid=None))
 
 
 
-def test_TaxResult_old_gather():
+def test_GatherRow_old_gather():
     # gather does not contain query_name column
     gA = {"name": "gA.1 name"}
-    gRow = make_GatherRow(gA)
-    gRow.query_bp = None  # reset query_bp
-    print("query_bp: ", gRow.query_bp)
-    with pytest.raises(ValueError) as exc:
-        TaxResult(raw=gRow)
+    with pytest.raises(TypeError) as exc:
+        make_GatherRow(gA, exclude_cols=['query_bp'])
     print(str(exc))
-    assert "Error: Please run gather with sourmash >= 4.4 for taxonomic summarization." in str(exc)
+    assert "__init__() missing 1 required positional argument: 'query_bp'" in str(exc)
 
 
 def test_TaxResult_get_ident_1():
@@ -740,36 +737,21 @@ def test_QueryTaxResult_summarize_up_ranks_1():
     # now summarize up the ranks
     q_res.summarize_up_ranks()
     assert len(q_res.raw_taxresults) == 2
-    assert list(q_res.sum_uniq_weighted.keys()) == q_res.ranks[::-1]
     #print(q_res.sum_uniq_weighted.values())
-    print(q_res.sum_uniq_weighted['superkingdom'])
-    assert q_res.sum_uniq_weighted['superkingdom'] ==  {(LineageTuple(rank='superkingdom', name='a', taxid=None),): 0.4}
-    print(q_res.sum_uniq_weighted['phylum'])
-    assert q_res.sum_uniq_weighted['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                  LineageTuple(rank='phylum', name='b', taxid=None)): 0.4}
-    assert q_res.sum_uniq_to_query['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                  LineageTuple(rank='phylum', name='b', taxid=None)): 0.2}
-    assert q_res.sum_uniq_bp['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                  LineageTuple(rank='phylum', name='b', taxid=None)): 40}
-    print(q_res.sum_uniq_weighted['class'])
-    assert q_res.sum_uniq_weighted['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                 LineageTuple(rank='class', name='c', taxid=None)): 0.2, 
-                                                (LineageTuple(rank='superkingdom', name='a', taxid=None),
-                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                 LineageTuple(rank='class', name='d', taxid=None)): 0.2}
-    assert q_res.sum_uniq_to_query['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                 LineageTuple(rank='class', name='c', taxid=None)): 0.1, 
-                                                (LineageTuple(rank='superkingdom', name='a', taxid=None),
-                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                 LineageTuple(rank='class', name='d', taxid=None)): 0.1}
-    assert q_res.sum_uniq_bp['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                 LineageTuple(rank='class', name='c', taxid=None)): 20, 
-                                                (LineageTuple(rank='superkingdom', name='a', taxid=None),
-                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                 LineageTuple(rank='class', name='d', taxid=None)): 20}
+    #print(q_res.sum_uniq_weighted['superkingdom'])
+    assert list(q_res.sum_uniq_weighted.keys()) == ['class', 'phylum', 'superkingdom']
+    assert q_res.sum_uniq_weighted['superkingdom'] == {RankLineageInfo(lineage_str="a"): approx(0.4)}
+    assert q_res.sum_uniq_to_query['superkingdom'] == {RankLineageInfo(lineage_str="a"): approx(0.2)}
+    assert q_res.sum_uniq_bp['superkingdom'] == {RankLineageInfo(lineage_str="a"): 40}
+    assert q_res.sum_uniq_weighted['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.4)}
+    assert q_res.sum_uniq_to_query['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.2)}
+    assert q_res.sum_uniq_bp['phylum'] == {RankLineageInfo(lineage_str="a;b"): 40}
+    assert q_res.sum_uniq_weighted['class'] == {RankLineageInfo(lineage_str="a;b;c"): approx(0.2),
+                                                RankLineageInfo(lineage_str="a;b;d"): approx(0.2)}
+    assert q_res.sum_uniq_to_query['class'] == {RankLineageInfo(lineage_str="a;b;c"): approx(0.1),
+                                                RankLineageInfo(lineage_str="a;b;d"): approx(0.1)}
+    assert q_res.sum_uniq_bp['class'] == {RankLineageInfo(lineage_str="a;b;c"): 20,
+                                          RankLineageInfo(lineage_str="a;b;d"): 20}
 
 
 def test_QueryTaxResult_summarize_up_ranks_2():
@@ -780,36 +762,20 @@ def test_QueryTaxResult_summarize_up_ranks_2():
     # now summarize up the ranks
     q_res.summarize_up_ranks()
     assert len(q_res.raw_taxresults) == 2
-    assert list(q_res.sum_uniq_weighted.keys()) == q_res.ranks[::-1]
     print(q_res.sum_uniq_weighted.values())
     print(q_res.sum_uniq_weighted['superkingdom'])
-    assert q_res.sum_uniq_weighted['superkingdom'] ==  {(LineageTuple(rank='superkingdom', name='a', taxid=None),): approx(0.3)}
-    print(q_res.sum_uniq_weighted['phylum'])
-    assert q_res.sum_uniq_weighted['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                LineageTuple(rank='phylum', name='b', taxid=None)): approx(0.3)}
-    assert q_res.sum_uniq_to_query['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                LineageTuple(rank='phylum', name='b', taxid=None)): approx(0.15)}
-    assert q_res.sum_uniq_bp['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                LineageTuple(rank='phylum', name='b', taxid=None)): 30}
-    print(q_res.sum_uniq_weighted['class'])
-    assert q_res.sum_uniq_weighted['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                LineageTuple(rank='class', name='c', taxid=None)): approx(0.2), 
-                                                (LineageTuple(rank='superkingdom', name='a', taxid=None),
-                                                LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                LineageTuple(rank='class', name='d', taxid=None)): approx(0.1)}
-    assert q_res.sum_uniq_to_query['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                LineageTuple(rank='class', name='c', taxid=None)): 0.1, 
-                                                (LineageTuple(rank='superkingdom', name='a', taxid=None),
-                                                LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                LineageTuple(rank='class', name='d', taxid=None)): 0.05}
-    assert q_res.sum_uniq_bp['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                LineageTuple(rank='class', name='c', taxid=None)): 20, 
-                                                (LineageTuple(rank='superkingdom', name='a', taxid=None),
-                                                LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                LineageTuple(rank='class', name='d', taxid=None)): 10}
+    assert q_res.sum_uniq_weighted['superkingdom'] == {RankLineageInfo(lineage_str="a"): approx(0.3)}
+    assert q_res.sum_uniq_to_query['superkingdom'] == {RankLineageInfo(lineage_str="a"): approx(0.15)}
+    assert q_res.sum_uniq_bp['superkingdom'] == {RankLineageInfo(lineage_str="a"): 30}
+    assert q_res.sum_uniq_weighted['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.3)}
+    assert q_res.sum_uniq_to_query['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.15)}
+    assert q_res.sum_uniq_bp['phylum'] == {RankLineageInfo(lineage_str="a;b"): 30}
+    assert q_res.sum_uniq_weighted['class'] == {RankLineageInfo(lineage_str="a;b;c"): approx(0.2),
+                                                RankLineageInfo(lineage_str="a;b;d"): approx(0.1)}
+    assert q_res.sum_uniq_to_query['class'] == {RankLineageInfo(lineage_str="a;b;c"): approx(0.1),
+                                                RankLineageInfo(lineage_str="a;b;d"): approx(0.05)}
+    assert q_res.sum_uniq_bp['class'] == {RankLineageInfo(lineage_str="a;b;c"): 20,
+                                          RankLineageInfo(lineage_str="a;b;d"): 10}
 
 
 def test_QueryTaxResult_summarize_up_ranks_missing_lineage():
@@ -822,27 +788,17 @@ def test_QueryTaxResult_summarize_up_ranks_missing_lineage():
     # now summarize up the ranks
     q_res.summarize_up_ranks()
     assert len(q_res.raw_taxresults) == 2
-    assert list(q_res.sum_uniq_weighted.keys()) == q_res.ranks[::-1]
     #print(q_res.sum_uniq_weighted.values())
     print(q_res.sum_uniq_weighted['superkingdom'])
-    assert q_res.sum_uniq_weighted['superkingdom'] ==  {(LineageTuple(rank='superkingdom', name='a', taxid=None),): 0.2}
-    print(q_res.sum_uniq_weighted['phylum'])
-    assert q_res.sum_uniq_weighted['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                  LineageTuple(rank='phylum', name='b', taxid=None)): 0.2}
-    assert q_res.sum_uniq_to_query['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                  LineageTuple(rank='phylum', name='b', taxid=None)): 0.1}
-    assert q_res.sum_uniq_bp['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                  LineageTuple(rank='phylum', name='b', taxid=None)): 20}
-    print(q_res.sum_uniq_weighted['class'])
-    assert q_res.sum_uniq_weighted['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                 LineageTuple(rank='class', name='c', taxid=None)): 0.2}
-    assert q_res.sum_uniq_to_query['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                 LineageTuple(rank='class', name='c', taxid=None)): 0.1}
-    assert q_res.sum_uniq_bp['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                 LineageTuple(rank='class', name='c', taxid=None)): 20}
+    assert q_res.sum_uniq_weighted['superkingdom'] == {RankLineageInfo(lineage_str="a"): approx(0.2)}
+    assert q_res.sum_uniq_to_query['superkingdom'] == {RankLineageInfo(lineage_str="a"): approx(0.1)}
+    assert q_res.sum_uniq_bp['superkingdom'] == {RankLineageInfo(lineage_str="a"): 20}
+    assert q_res.sum_uniq_weighted['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.2)}
+    assert q_res.sum_uniq_to_query['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.1)}
+    assert q_res.sum_uniq_bp['phylum'] == {RankLineageInfo(lineage_str="a;b"): 20}
+    assert q_res.sum_uniq_weighted['class'] == {RankLineageInfo(lineage_str="a;b;c"): approx(0.2)}
+    assert q_res.sum_uniq_to_query['class'] == {RankLineageInfo(lineage_str="a;b;c"): approx(0.1)}
+    assert q_res.sum_uniq_bp['class'] == {RankLineageInfo(lineage_str="a;b;c"): 20}
 
 
 def test_QueryTaxResult_summarize_up_ranks_skipped_lineage():
@@ -855,27 +811,18 @@ def test_QueryTaxResult_summarize_up_ranks_skipped_lineage():
     # now summarize up the ranks
     q_res.summarize_up_ranks()
     assert len(q_res.raw_taxresults) == 2
-    assert list(q_res.sum_uniq_weighted.keys()) == q_res.ranks[::-1]
+    assert list(q_res.sum_uniq_weighted.keys()) == ['class', 'phylum', 'superkingdom']
     #print(q_res.sum_uniq_weighted.values())
     print(q_res.sum_uniq_weighted['superkingdom'])
-    assert q_res.sum_uniq_weighted['superkingdom'] ==  {(LineageTuple(rank='superkingdom', name='a', taxid=None),): 0.2}
-    print(q_res.sum_uniq_weighted['phylum'])
-    assert q_res.sum_uniq_weighted['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                  LineageTuple(rank='phylum', name='b', taxid=None)): 0.2}
-    assert q_res.sum_uniq_to_query['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                  LineageTuple(rank='phylum', name='b', taxid=None)): 0.1}
-    assert q_res.sum_uniq_bp['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                  LineageTuple(rank='phylum', name='b', taxid=None)): 20}
-    print(q_res.sum_uniq_weighted['class'])
-    assert q_res.sum_uniq_weighted['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                 LineageTuple(rank='class', name='c', taxid=None)): 0.2}
-    assert q_res.sum_uniq_to_query['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                 LineageTuple(rank='class', name='c', taxid=None)): 0.1}
-    assert q_res.sum_uniq_bp['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                 LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                 LineageTuple(rank='class', name='c', taxid=None)): 20}
+    assert q_res.sum_uniq_weighted['superkingdom'] == {RankLineageInfo(lineage_str="a"): approx(0.2)}
+    assert q_res.sum_uniq_to_query['superkingdom'] == {RankLineageInfo(lineage_str="a"): approx(0.1)}
+    assert q_res.sum_uniq_bp['superkingdom'] == {RankLineageInfo(lineage_str="a"): 20}
+    assert q_res.sum_uniq_weighted['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.2)}
+    assert q_res.sum_uniq_to_query['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.1)}
+    assert q_res.sum_uniq_bp['phylum'] == {RankLineageInfo(lineage_str="a;b"): 20}
+    assert q_res.sum_uniq_weighted['class'] == {RankLineageInfo(lineage_str="a;b;c"): approx(0.2)}
+    assert q_res.sum_uniq_to_query['class'] == {RankLineageInfo(lineage_str="a;b;c"): approx(0.1)}
+    assert q_res.sum_uniq_bp['class'] == {RankLineageInfo(lineage_str="a;b;c"): 20}
 
 
 def test_QueryTaxResult_summarize_up_ranks_perfect_match():
@@ -886,10 +833,9 @@ def test_QueryTaxResult_summarize_up_ranks_perfect_match():
     # now summarize up the ranks
     q_res.summarize_up_ranks()
     assert len(q_res.raw_taxresults) == 1
-    assert list(q_res.sum_uniq_weighted.keys()) == q_res.ranks[::-1]
     print(q_res.sum_uniq_weighted.values())
     print(q_res.sum_uniq_to_query['superkingdom'])
-    assert q_res.sum_uniq_to_query['superkingdom'] ==  {(LineageTuple(rank='superkingdom', name='a', taxid=None),): approx(1.0)}
+    assert list(q_res.sum_uniq_to_query['superkingdom'].values()) == [1.0]
     assert 'gA' in q_res.perfect_match
 
 
@@ -914,39 +860,20 @@ def test_QueryTaxResult_summarize_up_ranks_already_summarized_force():
     # now summarize up the ranks
     q_res.summarize_up_ranks()
     q_res.summarize_up_ranks(force_resummarize=True)
+    assert list(q_res.sum_uniq_weighted.keys()) == ['class', 'phylum', 'superkingdom']
 
     #check that all results are still good 
     assert len(q_res.raw_taxresults) == 2
-    assert list(q_res.sum_uniq_weighted.keys()) == q_res.ranks[::-1]
-    print(q_res.sum_uniq_weighted.values())
-    print(q_res.sum_uniq_weighted['superkingdom'])
-    assert q_res.sum_uniq_weighted['superkingdom'] ==  {(LineageTuple(rank='superkingdom', name='a', taxid=None),): approx(0.3)}
-    print(q_res.sum_uniq_weighted['phylum'])
-    assert q_res.sum_uniq_weighted['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                LineageTuple(rank='phylum', name='b', taxid=None)): approx(0.3)}
-    assert q_res.sum_uniq_to_query['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                LineageTuple(rank='phylum', name='b', taxid=None)): approx(0.15)}
-    assert q_res.sum_uniq_bp['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                LineageTuple(rank='phylum', name='b', taxid=None)): 30}
-    print(q_res.sum_uniq_weighted['class'])
-    assert q_res.sum_uniq_weighted['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                LineageTuple(rank='class', name='c', taxid=None)): approx(0.2), 
-                                                (LineageTuple(rank='superkingdom', name='a', taxid=None),
-                                                LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                LineageTuple(rank='class', name='d', taxid=None)): approx(0.1)}
-    assert q_res.sum_uniq_to_query['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                LineageTuple(rank='class', name='c', taxid=None)): 0.1, 
-                                                (LineageTuple(rank='superkingdom', name='a', taxid=None),
-                                                LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                LineageTuple(rank='class', name='d', taxid=None)): 0.05}
-    assert q_res.sum_uniq_bp['class'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                LineageTuple(rank='class', name='c', taxid=None)): 20, 
-                                                (LineageTuple(rank='superkingdom', name='a', taxid=None),
-                                                LineageTuple(rank='phylum', name='b', taxid=None), 
-                                                LineageTuple(rank='class', name='d', taxid=None)): 10}
+    assert q_res.sum_uniq_weighted['superkingdom'] ==  {RankLineageInfo(lineage_str="a"): approx(0.3)}
+    assert q_res.sum_uniq_weighted['phylum'] ==  {RankLineageInfo(lineage_str="a;b"): approx(0.3)}
+    assert q_res.sum_uniq_to_query['phylum'] ==  {RankLineageInfo(lineage_str="a;b"): approx(0.15)}
+    assert q_res.sum_uniq_bp['phylum'] ==  {RankLineageInfo(lineage_str="a;b"): 30}
+    assert q_res.sum_uniq_to_query['class'] ==  {RankLineageInfo(lineage_str="a;b;c"): approx(0.1),
+                                                 RankLineageInfo(lineage_str="a;b;d"): approx(0.05)}
+    assert q_res.sum_uniq_weighted['class'] ==  {RankLineageInfo(lineage_str="a;b;c"): approx(0.2),
+                                                 RankLineageInfo(lineage_str="a;b;d"): approx(0.1)}
+    assert q_res.sum_uniq_bp['class'] ==  {RankLineageInfo(lineage_str="a;b;c"): 20,
+                                           RankLineageInfo(lineage_str="a;b;d"): 10}
                             
 
 def test_QueryTaxResult_summarize_up_ranks_single_rank():
@@ -961,13 +888,33 @@ def test_QueryTaxResult_summarize_up_ranks_single_rank():
     print(q_res.sum_uniq_weighted.keys())
     print(q_res.sum_uniq_weighted.values())
     print(q_res.sum_uniq_weighted['phylum'])
-    assert q_res.sum_uniq_weighted['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                LineageTuple(rank='phylum', name='b', taxid=None)): approx(0.3)}
-    assert q_res.sum_uniq_to_query['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                LineageTuple(rank='phylum', name='b', taxid=None)): approx(0.15)}
-    assert q_res.sum_uniq_bp['phylum'] == {(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                                LineageTuple(rank='phylum', name='b', taxid=None)): 30}
+    assert q_res.sum_uniq_weighted['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.3)}
+    assert list(q_res.sum_uniq_to_query['phylum'].values()) == [approx(0.15)]                                                    
+    assert list(q_res.sum_uniq_bp['phylum'].values()) == [30]                                                    
     assert q_res.summarized_ranks == ['phylum']
+
+def test_QueryTaxResult_summarize_up_ranks_single_rank_not_available():
+    "summarize up ranks: different values"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB','f_unique_weighted': 0.1,'f_unique_to_query': 0.05,'unique_intersect_bp': 10,}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    # now summarize up the ranks
+    with pytest.raises(ValueError) as exc:
+        q_res.summarize_up_ranks(single_rank='NotARank')
+    print(str(exc))
+    assert "Error: rank 'NotARank' not in available ranks (strain, species, genus, family, order, class, phylum, superkingdom)" in str(exc)
+
+
+def test_QueryTaxResult_summarize_up_ranks_single_rank_not_filled():
+    "summarize up ranks: different values"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB','f_unique_weighted': 0.1,'f_unique_to_query': 0.05,'unique_intersect_bp': 10,}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    # now summarize up the ranks
+    with pytest.raises(ValueError) as exc:
+        q_res.summarize_up_ranks(single_rank='species')
+    print(str(exc))
+    assert "Error: rank 'species' was not available for any matching lineages." in str(exc)
 
 
 def test_QueryTaxResult_build_summarized_result_1():
@@ -977,50 +924,34 @@ def test_QueryTaxResult_build_summarized_result_1():
     q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
     q_res.build_summarized_result()
     print(q_res.summarized_lineage_results.keys())
-    sk = [SummarizedGatherResult(query_name='q1',query_md5='md5', query_filename='query_fn', 
-                             rank='superkingdom', fraction=0.2, f_weighted_at_rank=0.4, 
-                             lineage=(LineageTuple(rank='superkingdom', name='a', taxid=None),), 
-                             bp_match_at_rank=40, query_ani_at_rank=approx(0.95, rel=1e-2),
-                             total_weighted_hashes=0),
-          SummarizedGatherResult(query_name='q1', query_md5='md5', query_filename='query_fn',
-                             rank='superkingdom', fraction=0.8, f_weighted_at_rank=0.6,
-                             lineage=(), bp_match_at_rank=60, query_ani_at_rank=None, total_weighted_hashes=0)]
+    sk = [SummarizedGatherResult(rank='superkingdom', fraction=0.2, f_weighted_at_rank=0.4, 
+                             lineage=RankLineageInfo(lineage_str='a'),
+                             bp_match_at_rank=40, query_ani_at_rank=approx(0.95, rel=1e-2)),
+          SummarizedGatherResult(rank='superkingdom', fraction=0.8, f_weighted_at_rank=0.6,
+                             lineage=(), bp_match_at_rank=60, query_ani_at_rank=None)]
+    print(q_res.summarized_lineage_results['superkingdom'])
     assert q_res.summarized_lineage_results['superkingdom'] == sk
     print(q_res.summarized_lineage_results['phylum'])
-    phy = [SummarizedGatherResult(query_name='q1', query_md5='md5', query_filename='query_fn',
-                                  rank='phylum', fraction=0.2, f_weighted_at_rank=0.4, 
-                                  lineage=(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                           LineageTuple(rank='phylum', name='b', taxid=None)),
-                                  bp_match_at_rank=40, query_ani_at_rank=approx(0.95, rel=1e-2),
-                                  total_weighted_hashes=0),
-           SummarizedGatherResult(query_name='q1', query_md5='md5', query_filename='query_fn',
-                                  rank='phylum', fraction=0.8, f_weighted_at_rank=0.6,
-                                  lineage=(), bp_match_at_rank=60, query_ani_at_rank=None, total_weighted_hashes=0)]
+    phy = [SummarizedGatherResult(rank='phylum', fraction=0.2, f_weighted_at_rank=0.4, 
+                                   lineage=RankLineageInfo(lineage_str='a;b'),
+                                   bp_match_at_rank=40, query_ani_at_rank=approx(0.95, rel=1e-2)),
+            SummarizedGatherResult(rank='phylum', fraction=0.8, f_weighted_at_rank=0.6,
+                                   lineage=(), bp_match_at_rank=60, query_ani_at_rank=None)]
     assert q_res.summarized_lineage_results['phylum'] == phy
     print(q_res.summarized_lineage_results['class'])
-    cl = [SummarizedGatherResult(query_name='q1', query_md5='md5', query_filename='query_fn',
-                                 rank='class', fraction=0.1, f_weighted_at_rank=0.2, 
-                                 lineage=(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                          LineageTuple(rank='phylum', name='b', taxid=None), 
-                                          LineageTuple(rank='class', name='c', taxid=None)), 
-                                  bp_match_at_rank=20, query_ani_at_rank=approx(0.93, rel=1e-2),
-                                  total_weighted_hashes=0),
-          SummarizedGatherResult(query_name='q1', query_md5='md5', query_filename='query_fn',
-                                 rank='class', fraction=0.1, f_weighted_at_rank=0.2,
-                                 lineage=(LineageTuple(rank='superkingdom', name='a', taxid=None),
-                                          LineageTuple(rank='phylum', name='b', taxid=None),
-                                          LineageTuple(rank='class', name='d', taxid=None)),
-                                  bp_match_at_rank=20, query_ani_at_rank=approx(0.93, rel=1e-2),
-                                  total_weighted_hashes=0),
-          SummarizedGatherResult(query_name='q1', query_md5='md5', query_filename='query_fn',
-                                 rank='class', fraction=0.8, f_weighted_at_rank=0.6,
-                                 lineage=(), bp_match_at_rank=60, query_ani_at_rank=None, total_weighted_hashes=0)]
+    cl = [SummarizedGatherResult(rank='class', fraction=0.1, f_weighted_at_rank=0.2, 
+                                 lineage=RankLineageInfo(lineage_str='a;b;c'), 
+                                  bp_match_at_rank=20, query_ani_at_rank=approx(0.93, rel=1e-2)),
+          SummarizedGatherResult(rank='class', fraction=0.1, f_weighted_at_rank=0.2,
+                                 lineage=RankLineageInfo(lineage_str='a;b;d'),
+                                  bp_match_at_rank=20, query_ani_at_rank=approx(0.93, rel=1e-2)),
+          SummarizedGatherResult(rank='class', fraction=0.8, f_weighted_at_rank=0.6,
+                                 lineage=(), bp_match_at_rank=60, query_ani_at_rank=None)]
     assert q_res.summarized_lineage_results['class'] == cl
 
     assert q_res.total_f_weighted['phylum'] == approx(0.4)
     assert q_res.total_f_classified['class'] == approx(0.2)
     assert q_res.total_bp_classified['superkingdom'] == 40
-    assert q_res.best_only_result == False
 
 
 def test_QueryTaxResult_build_summarized_result_2():
@@ -1040,7 +971,7 @@ def test_QueryTaxResult_build_summarized_result_2():
         sk = q_res.summarized_lineage_results['superkingdom']
         phy = q_res.summarized_lineage_results['phylum']
         assert len(sk) == 2
-        assert sk[0].lineage == (LineageTuple(rank='superkingdom', name='a', taxid=None),)
+        assert sk[0].lineage == RankLineageInfo(lineage_str="a")
         print(phy)
         if query_name == 'queryA':
             # check superkingdom results
@@ -1056,13 +987,11 @@ def test_QueryTaxResult_build_summarized_result_2():
             assert phy[0].fraction == approx(0.5)
             assert phy[0].f_weighted_at_rank == approx(0.5)
             assert phy[0].bp_match_at_rank == 50
-            assert phy[0].lineage == (LineageTuple(rank='superkingdom', name='a', taxid=None),
-                                      LineageTuple(rank='phylum', name='b', taxid=None))
+            assert phy[0].lineage ==  RankLineageInfo(lineage_str="a;b")
             assert phy[1].fraction == approx(0.3)
             assert phy[1].f_weighted_at_rank == approx(0.4)
             assert phy[1].bp_match_at_rank == 30
-            assert phy[1].lineage == (LineageTuple(rank='superkingdom', name='a', taxid=None),
-                                      LineageTuple(rank='phylum', name='c', taxid=None))
+            assert phy[1].lineage ==  RankLineageInfo(lineage_str="a;c")
             assert phy[2].fraction == approx(0.2)
             assert phy[2].f_weighted_at_rank == approx(0.1)
             assert phy[2].bp_match_at_rank == 20
@@ -1081,8 +1010,7 @@ def test_QueryTaxResult_build_summarized_result_2():
             assert phy[0].fraction == approx(0.3)
             assert phy[0].f_weighted_at_rank == approx(0.3)
             assert phy[0].bp_match_at_rank == 30
-            assert phy[0].lineage == (LineageTuple(rank='superkingdom', name='a', taxid=None),
-                                      LineageTuple(rank='phylum', name='c', taxid=None))
+            assert phy[0].lineage ==  RankLineageInfo(lineage_str="a;c")
             assert phy[1].fraction == approx(0.7)
             assert phy[1].f_weighted_at_rank == approx(0.7)
             assert phy[1].bp_match_at_rank == 70
@@ -1098,41 +1026,29 @@ def test_QueryTaxResult_build_summarized_result_missing_lineage():
     print(q_res.summarized_lineage_results.keys())
     print(q_res.summarized_lineage_results['superkingdom'])
 
-    sk = [SummarizedGatherResult(query_name='q1', rank='superkingdom', fraction=0.1, 
-                                 lineage=(LineageTuple(rank='superkingdom', name='a', taxid=None),), 
-                                 query_md5='md5', query_filename='query_fn', f_weighted_at_rank=0.2, 
-                                 bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2), 
-                                 total_weighted_hashes=0), 
-          SummarizedGatherResult(query_name='q1', rank='superkingdom', fraction=0.9, lineage=(),
-                                 query_md5='md5', query_filename='query_fn', f_weighted_at_rank=0.8,
-                                 bp_match_at_rank=80, query_ani_at_rank=None, total_weighted_hashes=0)]
+    sk = [SummarizedGatherResult(rank='superkingdom', fraction=0.1, f_weighted_at_rank=0.2, 
+                                 lineage=RankLineageInfo(lineage_str="a"), 
+                                 bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)),
+          SummarizedGatherResult(rank='superkingdom', fraction=0.9, lineage=(),f_weighted_at_rank=0.8,
+                                 bp_match_at_rank=80, query_ani_at_rank=None)]
     assert q_res.summarized_lineage_results['superkingdom'] == sk
     print(q_res.summarized_lineage_results['phylum'])
-    phy = [SummarizedGatherResult(query_name='q1', rank='phylum', fraction=0.1, 
-                                  lineage=(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                           LineageTuple(rank='phylum', name='b', taxid=None)),
-                                  query_md5='md5', query_filename='query_fn', f_weighted_at_rank=0.2,
-                                  bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2), total_weighted_hashes=0),
-           SummarizedGatherResult(query_name='q1', rank='phylum', fraction=0.9, lineage=(), query_md5='md5',
-                                  query_filename='query_fn', f_weighted_at_rank=0.8, bp_match_at_rank=80,
-                                  query_ani_at_rank=None, total_weighted_hashes=0)]
+    phy = [SummarizedGatherResult(rank='phylum', fraction=0.1, f_weighted_at_rank=0.2,
+                                  lineage=RankLineageInfo(lineage_str="a;b"), 
+                                  bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)),
+           SummarizedGatherResult(rank='phylum', fraction=0.9, lineage=(),f_weighted_at_rank=0.8,
+                                  bp_match_at_rank=80, query_ani_at_rank=None)]
     assert q_res.summarized_lineage_results['phylum'] == phy
     print(q_res.summarized_lineage_results['class'])
-    cl = [SummarizedGatherResult(query_name='q1', rank='class', fraction=0.1,
-                                 lineage=(LineageTuple(rank='superkingdom', name='a', taxid=None),
-                                          LineageTuple(rank='phylum', name='b', taxid=None),
-                                          LineageTuple(rank='class', name='c', taxid=None)),
-                                  query_md5='md5', query_filename='query_fn', f_weighted_at_rank=0.2,
-                                  bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2), total_weighted_hashes=0),
-          SummarizedGatherResult(query_name='q1', rank='class', fraction=0.9, lineage=(), query_md5='md5',
-                                 query_filename='query_fn', f_weighted_at_rank=0.8, bp_match_at_rank=80,
-                                 query_ani_at_rank=None, total_weighted_hashes=0)]
+    cl = [SummarizedGatherResult(rank='class', fraction=0.1, lineage= RankLineageInfo(lineage_str="a;b;c"),
+                                  f_weighted_at_rank=0.2, bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)),
+          SummarizedGatherResult(rank='class', fraction=0.9, lineage=(), f_weighted_at_rank=0.8,
+                                 bp_match_at_rank=80, query_ani_at_rank=None)]
     assert q_res.summarized_lineage_results['class'] == cl
 
     assert q_res.total_f_weighted['phylum'] == approx(0.2)
     assert q_res.total_f_classified['class'] == approx(0.1)
     assert q_res.total_bp_classified['superkingdom'] == 20
-    assert q_res.best_only_result == False
 
 
 def test_QueryTaxResult_build_summarized_result_skipped_lineage():
@@ -1144,41 +1060,28 @@ def test_QueryTaxResult_build_summarized_result_skipped_lineage():
     print(q_res.summarized_lineage_results.keys())
     print(q_res.summarized_lineage_results['superkingdom'])
 
-    sk = [SummarizedGatherResult(query_name='q1', rank='superkingdom', fraction=0.1, 
-                                 lineage=(LineageTuple(rank='superkingdom', name='a', taxid=None),), 
-                                 query_md5='md5', query_filename='query_fn', f_weighted_at_rank=0.2, 
-                                 bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2), 
-                                 total_weighted_hashes=0), 
-          SummarizedGatherResult(query_name='q1', rank='superkingdom', fraction=0.9, lineage=(),
-                                 query_md5='md5', query_filename='query_fn', f_weighted_at_rank=0.8,
-                                 bp_match_at_rank=80, query_ani_at_rank=None, total_weighted_hashes=0)]
+    sk = [SummarizedGatherResult(rank='superkingdom', fraction=0.1, f_weighted_at_rank=0.2,  
+                                 lineage=RankLineageInfo(lineage_str="a"), 
+                                 bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)), 
+          SummarizedGatherResult(rank='superkingdom', fraction=0.9, lineage=(),f_weighted_at_rank=0.8,
+                                 bp_match_at_rank=80, query_ani_at_rank=None)]
     assert q_res.summarized_lineage_results['superkingdom'] == sk
     print(q_res.summarized_lineage_results['phylum'])
-    phy = [SummarizedGatherResult(query_name='q1', rank='phylum', fraction=0.1, 
-                                  lineage=(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                           LineageTuple(rank='phylum', name='b', taxid=None)),
-                                  query_md5='md5', query_filename='query_fn', f_weighted_at_rank=0.2,
-                                  bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2), total_weighted_hashes=0),
-           SummarizedGatherResult(query_name='q1', rank='phylum', fraction=0.9, lineage=(), query_md5='md5',
-                                  query_filename='query_fn', f_weighted_at_rank=0.8, bp_match_at_rank=80,
-                                  query_ani_at_rank=None, total_weighted_hashes=0)]
+    phy = [SummarizedGatherResult(rank='phylum', fraction=0.1, lineage=RankLineageInfo(lineage_str="a;b"),
+                                  f_weighted_at_rank=0.2, bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)),
+           SummarizedGatherResult(rank='phylum', fraction=0.9, lineage=(), f_weighted_at_rank=0.8, bp_match_at_rank=80,
+                                  query_ani_at_rank=None)]
     assert q_res.summarized_lineage_results['phylum'] == phy
     print(q_res.summarized_lineage_results['class'])
-    cl = [SummarizedGatherResult(query_name='q1', rank='class', fraction=0.1,
-                                 lineage=(LineageTuple(rank='superkingdom', name='a', taxid=None),
-                                          LineageTuple(rank='phylum', name='b', taxid=None),
-                                          LineageTuple(rank='class', name='c', taxid=None)),
-                                  query_md5='md5', query_filename='query_fn', f_weighted_at_rank=0.2,
-                                  bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2), total_weighted_hashes=0),
-          SummarizedGatherResult(query_name='q1', rank='class', fraction=0.9, lineage=(), query_md5='md5',
-                                 query_filename='query_fn', f_weighted_at_rank=0.8, bp_match_at_rank=80,
-                                 query_ani_at_rank=None, total_weighted_hashes=0)]
+    cl = [SummarizedGatherResult(rank='class', fraction=0.1,lineage=RankLineageInfo(lineage_str="a;b;c"),
+                                  f_weighted_at_rank=0.2, bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)),
+          SummarizedGatherResult(rank='class', fraction=0.9, lineage=(), f_weighted_at_rank=0.8, bp_match_at_rank=80,
+                                 query_ani_at_rank=None)]
     assert q_res.summarized_lineage_results['class'] == cl
 
     assert q_res.total_f_weighted['phylum'] == approx(0.2)
     assert q_res.total_f_classified['class'] == approx(0.1)
     assert q_res.total_bp_classified['superkingdom'] == 20
-    assert q_res.best_only_result == False
 
 
 def test_QueryTaxResult_build_summarized_result_over100percent():
@@ -1194,53 +1097,229 @@ def test_QueryTaxResult_build_summarized_result_over100percent():
     assert "The tax summary of query 'q1' is 1.05, which is > 100% of the query!! This should not be possible." in str(exc)
 
 
-def test_QueryTaxResult_build_summarized_result_best_only():
-    "basic functionality: build summarized_result"
+def test_build_summarized_result_rank_fail_not_available_resummarize():
+    "build classification result"
     taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
     gather_results = [{}, {"name": 'gB'}]
     q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
-    q_res.build_summarized_result(best_only=True)
-    print(q_res.summarized_lineage_results.keys())
-    print(q_res.summarized_lineage_results['superkingdom'])
-    sk = [SummarizedGatherResult(query_name='q1',query_md5='md5', query_filename='query_fn', 
-                              rank='superkingdom', fraction=0.2, f_weighted_at_rank=0.4, 
-                              lineage=(LineageTuple(rank='superkingdom', name='a', taxid=None),), 
-                              bp_match_at_rank=40, query_ani_at_rank=approx(0.95, rel=1e-2),
-                              total_weighted_hashes=0),
-           SummarizedGatherResult(query_name='q1', query_md5='md5', query_filename='query_fn',
-                              rank='superkingdom', fraction=0.8, f_weighted_at_rank=0.6,
-                              lineage=(), bp_match_at_rank=60, query_ani_at_rank=None,
-                              total_weighted_hashes=0)]
-    assert q_res.summarized_lineage_results['superkingdom'] == sk
-    print(q_res.summarized_lineage_results['phylum'])
-    phy = [SummarizedGatherResult(query_name='q1', query_md5='md5', query_filename='query_fn',
-                                   rank='phylum', fraction=0.2, f_weighted_at_rank=0.4, 
-                                   lineage=(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                            LineageTuple(rank='phylum', name='b', taxid=None)),
-                                   bp_match_at_rank=40, query_ani_at_rank=approx(0.95, rel=1e-2),
-                                   total_weighted_hashes=0),
-            SummarizedGatherResult(query_name='q1', query_md5='md5', query_filename='query_fn',
-                                   rank='phylum', fraction=0.8, f_weighted_at_rank=0.6,
-                                   lineage=(), bp_match_at_rank=60, query_ani_at_rank=None,
-                                   total_weighted_hashes=0)]
-    assert q_res.summarized_lineage_results['phylum'] == phy
-    print(q_res.summarized_lineage_results['class'])
-    # best_only picks first if equally good
-    cl = [SummarizedGatherResult(query_name='q1', query_md5='md5', query_filename='query_fn',
-                                  rank='class', fraction=0.1, f_weighted_at_rank=0.2, 
-                                  lineage=(LineageTuple(rank='superkingdom', name='a', taxid=None), 
-                                           LineageTuple(rank='phylum', name='b', taxid=None), 
-                                           LineageTuple(rank='class', name='c', taxid=None)), 
-                                   bp_match_at_rank=20, query_ani_at_rank=approx(0.93, rel=1e-2),
-                                   total_weighted_hashes=0), 
-           SummarizedGatherResult(query_name='q1', query_md5='md5', query_filename='query_fn',
-                                  rank='class', fraction=0.9, f_weighted_at_rank=0.8,
-                                  lineage=(), bp_match_at_rank=80, query_ani_at_rank=None, total_weighted_hashes=0)]
-    assert q_res.summarized_lineage_results['class'] == cl
+    q_res.summarize_up_ranks('superkingdom')
+    with pytest.raises(ValueError) as exc:
+        q_res.build_summarized_result(single_rank='order')
+    print(str(exc))
+    assert "Error: rank 'order' not in summarized rank(s), superkingdom" in str(exc)
 
-    assert q_res.total_f_weighted['phylum'] == approx(0.4)
-    assert q_res.total_f_classified['phylum'] == approx(0.2)
-    assert q_res.total_f_classified['class'] == approx(0.1)
-    assert q_res.total_bp_classified['superkingdom'] == 40
-    assert q_res.total_bp_classified['class'] == 20
-    assert q_res.best_only_result == True
+
+def test_build_classification_result_containment_threshold():
+    "basic functionality: build classification result using containment threshold"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.build_classification_result(containment_threshold=0.1)
+    print("classif: ", q_res.classification_result)
+    assert q_res.classification_result == ClassificationResult(status='match', rank='class', fraction=0.1, 
+                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
+                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
+    q_res.build_classification_result(containment_threshold=0.4)
+    print("classif: ", q_res.classification_result)
+    assert q_res.classification_result == ClassificationResult(status='match', rank='phylum', fraction=0.2, 
+                                                               lineage=RankLineageInfo(lineage_str="a;b"), f_weighted_at_rank=0.4,
+                                                               bp_match_at_rank=40,  query_ani_at_rank=approx(0.95, rel=1e-2))
+    q_res.build_classification_result(containment_threshold=1.0)
+    print("classif: ", q_res.classification_result)
+    assert q_res.classification_result == ClassificationResult(status='below_threshold', rank='superkingdom', fraction=0.2, 
+                                                               lineage=RankLineageInfo(lineage_str="a"), f_weighted_at_rank=0.4,
+                                                               bp_match_at_rank=40,  query_ani_at_rank=approx(0.95, rel=1e-2))
+
+def test_build_classification_result_containment_threshold_fail():
+    "classification result: improper containment threshold"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    with pytest.raises(ValueError) as exc:
+        q_res.build_classification_result(containment_threshold=1.2)
+    print(str(exc))
+    assert "Containment threshold must be between 0 and 1 (input value: 1.2)." in str(exc)
+    with pytest.raises(ValueError) as exc:
+        q_res.build_classification_result(containment_threshold=-.1)
+    print(str(exc))
+    assert "Containment threshold must be between 0 and 1 (input value: -0.1)." in str(exc)
+
+
+def test_build_classification_result_ani_threshold():
+    "basic functionality: build classification result"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.build_classification_result(ani_threshold=.92)
+    print("classif: ", q_res.classification_result)
+    assert q_res.classification_result == ClassificationResult(status='match', rank='class', fraction=0.1, 
+                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
+                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
+    q_res.build_classification_result(ani_threshold=0.94)
+    print("classif: ", q_res.classification_result)
+    assert q_res.classification_result == ClassificationResult(status='match', rank='phylum', fraction=0.2, 
+                                                               lineage=RankLineageInfo(lineage_str="a;b"), f_weighted_at_rank=0.4,
+                                                               bp_match_at_rank=40,  query_ani_at_rank=approx(0.95, rel=1e-2))
+    q_res.build_classification_result(ani_threshold=0.96)
+    print("classif: ", q_res.classification_result)
+    assert q_res.classification_result == ClassificationResult(status='below_threshold', rank='superkingdom', fraction=0.2, 
+                                                               lineage=RankLineageInfo(lineage_str="a"), f_weighted_at_rank=0.4,
+                                                               bp_match_at_rank=40,  query_ani_at_rank=approx(0.95, rel=1e-2))
+
+def test_build_classification_result_ani_threshold_fail():
+    "classification result: improper ANI threshold"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    with pytest.raises(ValueError) as exc:
+        q_res.build_classification_result(ani_threshold=1.2)
+    print(str(exc))
+    assert "ANI threshold must be between 0 and 1 (input value: 1.2)." in str(exc)
+    with pytest.raises(ValueError) as exc:
+        q_res.build_classification_result(ani_threshold=-.1)
+    print(str(exc))
+    assert "ANI threshold must be between 0 and 1 (input value: -0.1)." in str(exc)
+
+
+def test_build_classification_result_rank_fail_not_filled():
+    "classification result: rank not available (wasn't filled in tax lineage matches)"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    with pytest.raises(ValueError) as exc:
+        q_res.build_classification_result(rank='order')
+    print(str(exc))
+    assert "Error: rank 'order' was not available for any matching lineages." in str(exc)
+
+def test_build_classification_result_rank_fail_not_available_resummarize():
+    "classification result: rank not available (wasn't summarized)"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.summarize_up_ranks('superkingdom')
+    with pytest.raises(ValueError) as exc:
+        q_res.build_classification_result(rank='order')
+    print(str(exc))
+    assert "Error: rank 'order' not in summarized rank(s), superkingdom" in str(exc)
+
+def test_build_classification_result_rank_fail_not_available():
+    "classification result: rank not available"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    with pytest.raises(ValueError) as exc:
+        q_res.build_classification_result(rank='NotARank')
+    print(str(exc))
+    assert "Error: rank 'NotARank' not in available ranks (strain, species, genus, family, order, class, phylum, superkingdom)" in str(exc)
+
+
+def test_build_classification_result_rank_containment_threshold():
+    "classification result - rank and containment threshold (default)"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.build_classification_result(rank='class')
+    print("classif: ", q_res.classification_result)
+    assert q_res.classification_result == ClassificationResult(status='match', rank='class', fraction=0.1, 
+                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
+                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
+    q_res.build_classification_result(rank='class', containment_threshold=0.4)
+    assert q_res.classification_result == ClassificationResult(status='below_threshold', rank='class', fraction=0.1, 
+                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
+                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
+    
+def test_build_classification_result_rank_ani_threshold():
+    "classification result with rank and ANI threshold"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.build_classification_result(rank='class', ani_threshold=0.92)
+    assert q_res.classification_result == ClassificationResult(status='match', rank='class', fraction=0.1, 
+                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
+                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
+    q_res.build_classification_result(rank='class', ani_threshold=0.95)
+    assert q_res.classification_result == ClassificationResult(status='below_threshold', rank='class', fraction=0.1, 
+                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
+                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
+
+
+def test_krona_classification_result():
+    "basic functionality: build classification result using containment threshold"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.build_classification_result()
+    assert q_res.krona_classification_result == None
+    q_res.build_classification_result(rank='phylum')#, force_resummarize=True)
+    print(q_res.krona_classification_result)
+    assert q_res.krona_classification_result == (0.4, 'a', 'b')
+    q_res.build_classification_result(rank='superkingdom')
+    print(q_res.krona_classification_result)
+    assert q_res.krona_classification_result == (0.4, 'a')
+    q_res.build_classification_result()
+    assert q_res.krona_classification_result == None
+
+def test_make_krona_header_0():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    phy_header = ["fraction", "superkingdom", "phylum"]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.build_classification_result(rank='phylum')
+    print(q_res.krona_classification_result)
+    print(q_res.krona_classification_header)
+    assert q_res.krona_classification_header == phy_header
+    hd = q_res.make_krona_header('phylum')
+    print("header: ", hd)
+    assert hd == phy_header
+
+
+def test_make_krona_header_1():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    class_header = ["fraction", "superkingdom", "phylum", "class"]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.build_classification_result(rank='class')
+    assert q_res.krona_classification_header == class_header
+    hd = q_res.make_krona_header(min_rank='class')
+    print("header: ", hd)
+    assert hd == class_header
+
+
+def test_make_krona_header_fail():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True)
+    with pytest.raises(ValueError) as exc:
+        q_res.make_krona_header("order")
+    assert "Rank 'order' not present in summarized ranks." in str(exc.value)
+    with pytest.raises(ValueError) as exc:
+        q_res.make_krona_header("NotARank")
+    assert "Rank 'NotARank' not present in summarized ranks." in str(exc.value)
+
+def test_make_human_summary():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True)
+    hs = q_res.make_human_summary(display_rank = "superkingdom")
+    print(hs)
+    assert hs == [{'rank': 'superkingdom', 'fraction': '0.800', 'lineage': 'unclassified', 
+                   'f_weighted_at_rank': '60.0%', 'bp_match_at_rank': 60, 'query_ani_at_rank': '-    ',
+                   'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn',
+                   'total_weighted_hashes': 0}, 
+                  {'rank': 'superkingdom', 'fraction': '0.200', 'lineage': "a",
+                  'f_weighted_at_rank': '40.0%', 'bp_match_at_rank': 40, 'query_ani_at_rank': '94.9%',
+                  'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': 0}]
+
+def test_make_human_summary_2():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True)
+    hs = q_res.make_human_summary(display_rank = "phylum")
+    print(hs)
+    assert hs == [{'rank': 'phylum', 'fraction': '0.800', 'lineage': 'unclassified', 
+                   'f_weighted_at_rank': '60.0%', 'bp_match_at_rank': 60, 'query_ani_at_rank': '-    ',
+                   'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn',
+                   'total_weighted_hashes': 0}, 
+                  {'rank': 'phylum', 'fraction': '0.200', 'lineage': 'a;b',
+                  'f_weighted_at_rank': '40.0%', 'bp_match_at_rank': 40, 'query_ani_at_rank': '94.9%',
+                  'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': 0}]
