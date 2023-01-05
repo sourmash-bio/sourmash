@@ -803,27 +803,31 @@ class QueryTaxResult():
             results.append(res.as_human_friendly_dict())
         return results
     
-    def make_full_summary(self, classification=False):
+    def make_full_summary(self, classification=False, limit_float=False):
         results = []
         if classification:
+            header= ["query_name", "status", "rank", "fraction", "lineage",
+                     "query_md5", "query_filename", "f_weighted_at_rank",
+                     "bp_match_at_rank", "query_ani_at_rank"]
             if not self.classification_result:
                 raise ValueError("query not classified yet.")
-            rD = self.classification_result.as_summary_dict(query_info = res.query_info)
+            rD = self.classification_result.as_summary_dict(query_info = self.query_info, limit_float=limit_float)
             results.append(rD)
         else:
+            header= ["query_name", "rank", "fraction", "lineage", "query_md5",
+                     "query_filename", "f_weighted_at_rank", "bp_match_at_rank", 
+                     "query_ani_at_rank", "total_weighted_hashes"]
             if not self.summarized_lineage_results:
                 raise ValueError("lineages not summarized yet.")
             
-            for rank in self.summarized_ranks:
+            for rank in self.summarized_ranks[::-1]:
                 rank_results = self.summarized_lineage_results[rank]
                 rank_results.sort(key=lambda res: -res.f_weighted_at_rank)
                 for res in rank_results:
-                    results.append(res.as_summary_dict(query_info=res.query_info))
-        return results
+                    results.append(res.as_summary_dict(query_info=self.query_info, limit_float=limit_float))
+        return header, results
         
     def make_kreport_results(self):
-        #columns = ["percent_containment", "num_bp_contained", "num_bp_assigned", "rank_code", "ncbi_taxid", "sci_name"]
-#        w = csv.DictWriter(csv_fp, columns, delimiter=sep)
         rankCode = { "superkingdom": "D", "kingdom": "K", "phylum": "P", "class": "C",
                         "order": "O", "family":"F", "genus": "G", "species": "S", "unclassified": "U"}
         if self.query_info.total_weighted_hashes == 0:

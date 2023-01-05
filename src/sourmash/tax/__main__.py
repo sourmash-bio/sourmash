@@ -156,11 +156,11 @@ def metagenome(args):
 
     ### single query outputs:
     # write summarized output csv
-    single_query_results = query_gather_results[0].summarized_lineage_results
+    single_query_results = query_gather_results[0]#.summarized_lineage_results
     if "csv_summary" in args.output_format:
         summary_outfile, limit_float = make_outfile(args.output_base, "csv_summary", output_dir=args.output_dir)
         with FileOutputCSV(summary_outfile) as out_fp:
-            tax_utils.write_summary(single_query_results, out_fp, limit_float_decimals=limit_float)
+            tax_utils.write_summary({query_gather_results}, out_fp, limit_float_decimals=limit_float)
 
     # write summarized --> kreport output tsv
     if "kreport" in args.output_format:

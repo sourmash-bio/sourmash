@@ -300,24 +300,31 @@ def write_krona(rank, krona_results, header, out_fp, *, sep='\t'):
         tsv_output.writerow(res)
 
 
-# TO DO: FIXME
-def write_summary(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=False):
+def write_summary(query_gather_results, csv_fp, *, sep=',', limit_float_decimals=False):
     '''
     Write taxonomy-summarized gather results for each rank.
     '''
-    header = SummarizedGatherResult.__dataclass_fields__
-    w = csv.DictWriter(csv_fp, header, delimiter=sep)
-    w.writeheader()
-    for rank, rank_results in summarized_gather.items():
-        for res in rank_results:
-            res.lineage = display_lineage(res.lineage)
-            if res.lineage == "":
-                res.lineage = "unclassified"
-            if limit_float_decimals:
-                res.fraction = f'{res.fraction:.3f}'
-                res.f_weighted_at_rank = f'{res.f_weighted_at_rank:.3f}'
-            rD = asdict(res)
-            w.writerow(rD)
+    w= None
+    for q_res in query_gather_results:
+        header, summary = q_res.make_full_summary(limit_float=limit_float_decimals)
+        if w is None:
+            w = csv.DictWriter(csv_fp, header, delimiter=sep)
+            w.writeheader()
+        for res in summary:
+            w.writerow(res)
+    # header = SummarizedGatherResult.__dataclass_fields__
+    # w = csv.DictWriter(csv_fp, header, delimiter=sep)
+    # w.writeheader()
+    # for rank, rank_results in summarized_gather.items():
+    #     for res in rank_results:
+    #         res.lineage = display_lineage(res.lineage)
+    #         if res.lineage == "":
+    #             res.lineage = "unclassified"
+    #         if limit_float_decimals:
+    #             res.fraction = f'{res.fraction:.3f}'
+    #             res.f_weighted_at_rank = f'{res.f_weighted_at_rank:.3f}'
+    #         rD = asdict(res)
+    #         w.writerow(rD)
 
 
 def write_kreport(query_gather_results, csv_fp, *, sep='\t'):
@@ -356,48 +363,10 @@ def write_kreport(query_gather_results, csv_fp, *, sep='\t'):
     '''
     columns = ["percent_containment", "num_bp_contained", "num_bp_assigned", "rank_code", "ncbi_taxid", "sci_name"]
     w = csv.DictWriter(csv_fp, columns, delimiter=sep)
-    for q_res in query_gather_results:
+    for q_res in query_gather_results: # really only want one here, but I think I handle that earlier..
         results = q_res.make_kreport_results()
         for kresD in results:
             w.writerow(kresD)
-
-
-    # rankCode = { "superkingdom": "D", "kingdom": "K", "phylum": "P", "class": "C",
-    #              "order": "O", "family":"F", "genus": "G", "species": "S"} # , "": "U"
-
-    # # check - are we using v4.5.0 or later gather CSVs?
-    # for rank, rank_results in summarized_gather.items():
-    #     for res in rank_results:
-    #         if res.total_weighted_hashes == 0:
-    #             raise ValueError("ERROR: cannot produce 'kreport' format from gather results before sourmash v4.5.0")
-
-    # unclassified_written=False
-    # for rank, rank_results in summarized_gather.items():
-    #     if rank == 'strain': # no code for strain, can't include in this output afaik
-    #         continue
-    #     rcode = rankCode[rank]
-    #     for res in rank_results:
-    #         # SummarizedGatherResults have an unclassified lineage at every rank, to facilitate reporting at a specific rank.
-    #         # Here, we only need to report it once, since it will be the same fraction for all ranks
-    #         if not res.lineage:
-    #             rank_sciname = "unclassified"
-    #             rcode = "U"
-    #             # if we've already written the unclassified portion, skip and continue to next loop iteration
-    #             if unclassified_written:
-    #                 continue
-    #             else:
-    #                 unclassified_written=True
-    #         else:
-    #             rank_sciname = res.lineage[-1].name
-    #         kresD = {"rank_code": rcode, "ncbi_taxid": "", "sci_name": rank_sciname,  "num_bp_assigned": 0}
-    #         # total percent containment, weighted to include abundance info
-    #         proportion = res.f_weighted_at_rank * 100
-    #         kresD['percent_containment'] = f'{proportion:.2f}'
-    #         # weighted bp
-    #         kresD["num_bp_contained"] = int(res.f_weighted_at_rank * res.total_weighted_hashes)
-    #         if rank == 'species' or rank_sciname == "unclassified":
-    #             kresD["num_bp_assigned"] = kresD["num_bp_contained"]
-    #         w.writerow(kresD)
 
 
 def write_human_summary(query_gather_results, out_fp, display_rank, classification=False):
