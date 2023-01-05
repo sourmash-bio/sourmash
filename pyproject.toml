@@ -103,6 +103,7 @@ test = [
   "pyyaml>=6,<7",
   "recommonmark",
   "hypothesis",
+  "build",
 ]
 demo = [
   "jupyter",
