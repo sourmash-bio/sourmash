@@ -777,7 +777,7 @@ def write_human_summary(summarized_gather, out_fp, display_rank):
     '''
     Write human-readable taxonomy-summarized gather results for a specific rank.
     '''
-    header = SummarizedGatherResult._fields
+    header = SumGathInf._fields
 
     found_ANI = False
     results = [] 
@@ -1586,10 +1586,7 @@ class SummarizedGatherResult():
 
     def as_summary_dict(self, query_info=None, limit_float=False):
         sD = asdict(self)
-        if self.lineage == (): # to do -- get rid of me by using null RankLineageInfo() instead of () for empties
-            sD['lineage'] = 'unclassified'
-        else:
-            sD['lineage'] = self.lineage.display_lineage()
+        sD['lineage'] = self.lineage.display_lineage(null_as_unclassified=True)
         if query_info is not None:
             sD['query_name'] = query_info.query_name
             sD['query_md5'] = query_info.query_md5
