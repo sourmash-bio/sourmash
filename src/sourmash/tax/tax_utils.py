@@ -85,6 +85,8 @@ class BaseLineageInfo:
 
     @property
     def lowest_rank(self):
+        if not self.filled_ranks:
+            return None
         return self.filled_ranks[-1]
 
     def rank_index(self, rank):

@@ -1243,6 +1243,19 @@ def test_LineagePair_1():
     print(lin1)
 
 
+def test_BaseLineageInfo_init_empty():
+    ranks=["A", "B", "C"]
+    taxinf = BaseLineageInfo(ranks=ranks)
+    print(taxinf.lineage)
+    print(taxinf.lineage_str)
+    assert taxinf.zip_lineage()== ['', '', ''] # this is a bit odd, but it's what preserves empty ranks...
+    print(taxinf.filled_lineage)
+    assert taxinf.filled_lineage == ()
+    assert taxinf.lowest_lineage_name == ""
+    assert taxinf.filled_ranks == ()
+    assert taxinf.lowest_rank == None 
+
+
 def test_BaseLineageInfo_init_lineage_str():
     x = "a;b;c"
     ranks=["A", "B", "C"]
@@ -1250,6 +1263,11 @@ def test_BaseLineageInfo_init_lineage_str():
     print(taxinf.lineage)
     print(taxinf.lineage_str)
     assert taxinf.zip_lineage()== ['a', 'b', 'c']
+    print(taxinf.filled_lineage)
+    assert taxinf.filled_lineage == (LineagePair(rank='A', name='a', taxid=None),
+                                     LineagePair(rank='B', name='b', taxid=None),
+                                     LineagePair(rank='C', name='c', taxid=None))
+    assert taxinf.lowest_lineage_name == "C"
 
 
 def test_BaseLineageInfo_init_lineage_tups():
@@ -1278,6 +1296,8 @@ def test_BaseLineageInfo_init_lineage_dict_withtaxid():
     print("zipped lineage: ", taxinf.zip_lineage())
     assert taxinf.zip_lineage()== ['name1', 'name2']
     assert taxinf.zip_taxid()== ['1', '2']
+    assert taxinf.lowest_lineage_taxid == "2"
+    assert taxinf.lowest_lineage_name == "name2"
 
 
 def test_BaseLineageInfo_init_lineage_str_lineage_dict_test_eq():
