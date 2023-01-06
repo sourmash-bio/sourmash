@@ -3,6 +3,7 @@ Tests for functions in taxonomy submodule.
 """
 
 import pytest
+from pytest import approx
 import os
 from os.path import basename
 import gzip
@@ -1793,3 +1794,757 @@ def test_lineage_at_rank_below_rank():
                                              LineagePair(rank='class', name='c__c', taxid=None),
                                              LineagePair(rank='order', name='o__d', taxid=None),
                                              LineagePair(rank='family', name='f__f', taxid=None))
+
+
+def test_TaxResult_get_match_lineage_1():
+    gA_tax = ("gA", "a;b;c")
+    taxD = make_mini_taxonomy([gA_tax])
+
+    gA = {"name": "gA.1 name"}
+    taxres = make_TaxResult(gA)
+    taxres.get_match_lineage(tax_assignments=taxD)
+    assert taxres.lineageInfo.display_lineage() == "a;b;c"
+
+
+def test_TaxResult_get_match_lineage_skip_ident():
+    gA_tax = ("gA", "a;b;c")
+    taxD = make_mini_taxonomy([gA_tax])
+
+    gA = {"name": "gA.1 name"}
+    taxres = make_TaxResult(gA)
+    taxres.get_match_lineage(tax_assignments=taxD, skip_idents=['gA'])
+    print("skipped_ident?: ", taxres.skipped_ident)
+    print("missed_ident?: ", taxres.missed_ident)
+    assert taxres.skipped_ident == True
+    assert taxres.lineageInfo.display_lineage() == ""
+
+
+def test_TaxResult_get_match_lineage_missed_ident():
+    gA_tax = ("gA.1", "a;b;c")
+    taxD = make_mini_taxonomy([gA_tax])
+
+    gA = {"name": "gA.1 name"}
+    taxres = make_TaxResult(gA)
+    taxres.get_match_lineage(tax_assignments=taxD, skip_idents=['gB'])
+    print("skipped_ident?: ", taxres.skipped_ident)
+    print("missed_ident?: ", taxres.missed_ident)
+    assert taxres.skipped_ident == False
+    assert taxres.missed_ident == True
+    assert taxres.lineageInfo.display_lineage() == ""
+
+
+def test_TaxResult_get_match_lineage_missed_ident_fail_on_missing():
+    gA_tax = ("gA.1", "a;b;c")
+    taxD = make_mini_taxonomy([gA_tax])
+
+    gA = {"name": "gA.1 name"}
+    taxres = make_TaxResult(gA)
+    with pytest.raises(ValueError) as exc:
+        taxres.get_match_lineage(tax_assignments=taxD, skip_idents=['gB'], fail_on_missing_taxonomy=True)
+    print(str(exc))
+    assert "Error: ident 'gA' is not in the taxonomy database." in str(exc)
+
+
+def test_QueryTaxResult():
+    "basic functionality: initialize and add a taxresult"
+    tax_info = [("gA", "a;b;c")]
+    taxD = make_mini_taxonomy(tax_info=tax_info)
+    taxres = make_TaxResult(taxD=taxD)
+    # initialize
+    q_res = QueryTaxResult(taxres.query_info)
+    q_res.add_taxresult(taxres)
+    # check that new querytaxres is compatible with taxres
+    assert q_res.is_compatible(taxres)
+    # check that a few thngs were set properly and/or are not yet set.
+    assert q_res.query_name == "q1"
+    assert q_res.query_info.query_bp == 100
+    assert len(q_res.raw_taxresults) == 1
+    assert q_res.skipped_idents == set()
+    assert q_res.missed_idents == set()
+    assert q_res.summarized_lineage_results == {}
+
+
+def test_QueryTaxResult_add_incompatible():
+    "initialize and try to add incompatible taxresult"
+    tax_info = [("gA", "a;b;c")]
+    taxD = make_mini_taxonomy(tax_info=tax_info)
+    taxres = make_TaxResult(taxD=taxD)
+    taxres2 = make_TaxResult({'query_name': 'q2'}, taxD=taxD)
+    # initialize
+    q_res = QueryTaxResult(taxres.query_info)
+    # check that new querytaxres is compatible with taxres and not taxres2
+    assert q_res.is_compatible(taxres)
+    assert not q_res.is_compatible(taxres2)
+    q_res.add_taxresult(taxres)
+    with pytest.raises(ValueError) as exc:
+        q_res.add_taxresult(taxres2)
+    print(str(exc))
+    assert "Error: Cannot add TaxResult: query information does not match." in str(exc)
+
+
+def test_QueryTaxResult_add_without_tax_info():
+    "initialize and add a taxresult with missed ident"
+    taxres = make_TaxResult() # do not add taxonomic info
+    # initialize
+    q_res = QueryTaxResult(taxres.query_info)
+    print("attempted to add lineage info?: ", taxres.match_lineage_attempted)
+    with pytest.raises(ValueError) as exc:
+        q_res.add_taxresult(taxres)
+    print(str(exc))
+    assert "Error: Cannot add TaxResult. Please use get_match_lineage() to add taxonomic lineage information first." in str(exc)
+    
+    
+def test_QueryTaxResult_add_skipped_ident():
+    "initialize and add a taxresult with skipped ident"
+    gA_tax = ("gA", "a;b;c")
+    taxD = make_mini_taxonomy([gA_tax])
+    taxres = make_TaxResult(taxD=taxD, skip_idents = ['gA'])
+#    taxres.get_match_lineage(tax_assignments=taxD, skip_idents=['gA'])
+    # initialize
+    q_res = QueryTaxResult(taxres.query_info)
+    q_res.add_taxresult(taxres)
+    assert len(q_res.skipped_idents) == 1
+    assert len(q_res.raw_taxresults) == 1
+    assert q_res.missed_idents == set()
+    assert q_res.summarized_lineage_results == {}
+
+
+def test_QueryTaxResult_add_missed_ident():
+    "initialize and add a taxresult with missed ident"
+    gA_tax = ("gB", "a;b;c")
+    taxD = make_mini_taxonomy([gA_tax])
+    taxres = make_TaxResult(taxD=taxD)
+    # initialize
+    q_res = QueryTaxResult(taxres.query_info)
+    # add taxonomic info to taxres
+    q_res.add_taxresult(taxres)
+    assert len(q_res.missed_idents) == 1
+    assert len(q_res.raw_taxresults) == 1
+    assert q_res.skipped_idents == set()
+    assert q_res.summarized_lineage_results == {}
+
+
+def test_QueryTaxResult_track_missed_and_skipped():
+    "make sure missed and skipped idents are being tracked"
+    # make taxonomy
+    tax_info = [("gA", "a;b;c"), ("gB", "a;b;d")]
+    taxD = make_mini_taxonomy(tax_info=tax_info)
+    # make results
+    taxres = make_TaxResult()
+    taxres2 = make_TaxResult({"name": 'gB'}) # skipped
+    taxres3 = make_TaxResult({"name": 'gB'}) # skipped
+    taxres4 = make_TaxResult({"name": 'gC'}) # skipped
+    taxres5 = make_TaxResult({"name": 'gD'}) # missed
+    taxres6 = make_TaxResult({"name": 'gE'}) # missed
+    # initialize
+    q_res = QueryTaxResult(taxres.query_info)
+    # add taxonomic info to taxres, add to q_res
+    for n, tr in enumerate([taxres, taxres2, taxres3, taxres4, taxres5, taxres6]):
+        tr.get_match_lineage(tax_assignments=taxD, skip_idents=['gB', 'gC'])
+        print("num: ", n)
+        print("skipped?: ", tr.skipped_ident)
+        print("missed?: ", tr.missed_ident)
+        q_res.add_taxresult(tr)
+    assert len(q_res.raw_taxresults) == 6
+    print(q_res.n_skipped)
+    print(q_res.n_missed)
+    assert q_res.n_missed == 2
+    assert q_res.n_skipped == 3
+    assert 'gB' in q_res.skipped_idents
+    assert len(q_res.skipped_idents) == 2
+    assert 'gD' in q_res.missed_idents
+    assert q_res.summarized_lineage_results == {}
+
+
+def test_QueryTaxResult_track_missed_and_skipped_using_fn():
+    "make sure missed and skipped idents are being tracked. Same as above but use helper fn."
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}, {"name": 'gB'}, {"name": 'gC'}, {"name": 'gD'}, {"name": 'gE'}]
+    gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, skip_idents=['gB', 'gC'])
+    # should have 6 results for default query 'q1' 
+    print(gres.keys())
+    q_res = next(iter(gres.values()))
+    assert len(q_res.raw_taxresults) == 6
+    print(q_res.n_skipped)
+    print(q_res.n_missed)
+    assert q_res.n_missed == 2
+    assert q_res.n_skipped == 3
+    assert 'gB' in q_res.skipped_idents
+    assert len(q_res.skipped_idents) == 2
+    assert 'gD' in q_res.missed_idents
+    assert q_res.summarized_lineage_results == {}
+
+
+def test_QueryTaxResult_summarize_up_ranks_1():
+    "basic functionality: summarize up ranks"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD)
+    assert len(gres.keys()) == 1
+    q_res = next(iter(gres.values()))
+    # now summarize up the ranks
+    q_res.summarize_up_ranks()
+    assert len(q_res.raw_taxresults) == 2
+    #print(q_res.sum_uniq_weighted.values())
+    #print(q_res.sum_uniq_weighted['superkingdom'])
+    assert list(q_res.sum_uniq_weighted.keys()) == ['class', 'phylum', 'superkingdom']
+    assert q_res.sum_uniq_weighted['superkingdom'] == {RankLineageInfo(lineage_str="a"): approx(0.4)}
+    assert q_res.sum_uniq_to_query['superkingdom'] == {RankLineageInfo(lineage_str="a"): approx(0.2)}
+    assert q_res.sum_uniq_bp['superkingdom'] == {RankLineageInfo(lineage_str="a"): 40}
+    assert q_res.sum_uniq_weighted['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.4)}
+    assert q_res.sum_uniq_to_query['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.2)}
+    assert q_res.sum_uniq_bp['phylum'] == {RankLineageInfo(lineage_str="a;b"): 40}
+    assert q_res.sum_uniq_weighted['class'] == {RankLineageInfo(lineage_str="a;b;c"): approx(0.2),
+                                                RankLineageInfo(lineage_str="a;b;d"): approx(0.2)}
+    assert q_res.sum_uniq_to_query['class'] == {RankLineageInfo(lineage_str="a;b;c"): approx(0.1),
+                                                RankLineageInfo(lineage_str="a;b;d"): approx(0.1)}
+    assert q_res.sum_uniq_bp['class'] == {RankLineageInfo(lineage_str="a;b;c"): 20,
+                                          RankLineageInfo(lineage_str="a;b;d"): 20}
+
+
+def test_QueryTaxResult_summarize_up_ranks_2():
+    "summarize up ranks: different values"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB','f_unique_weighted': 0.1,'f_unique_to_query': 0.05,'unique_intersect_bp': 10,}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    # now summarize up the ranks
+    q_res.summarize_up_ranks()
+    assert len(q_res.raw_taxresults) == 2
+    print(q_res.sum_uniq_weighted.values())
+    print(q_res.sum_uniq_weighted['superkingdom'])
+    assert q_res.sum_uniq_weighted['superkingdom'] == {RankLineageInfo(lineage_str="a"): approx(0.3)}
+    assert q_res.sum_uniq_to_query['superkingdom'] == {RankLineageInfo(lineage_str="a"): approx(0.15)}
+    assert q_res.sum_uniq_bp['superkingdom'] == {RankLineageInfo(lineage_str="a"): 30}
+    assert q_res.sum_uniq_weighted['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.3)}
+    assert q_res.sum_uniq_to_query['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.15)}
+    assert q_res.sum_uniq_bp['phylum'] == {RankLineageInfo(lineage_str="a;b"): 30}
+    assert q_res.sum_uniq_weighted['class'] == {RankLineageInfo(lineage_str="a;b;c"): approx(0.2),
+                                                RankLineageInfo(lineage_str="a;b;d"): approx(0.1)}
+    assert q_res.sum_uniq_to_query['class'] == {RankLineageInfo(lineage_str="a;b;c"): approx(0.1),
+                                                RankLineageInfo(lineage_str="a;b;d"): approx(0.05)}
+    assert q_res.sum_uniq_bp['class'] == {RankLineageInfo(lineage_str="a;b;c"): 20,
+                                          RankLineageInfo(lineage_str="a;b;d"): 10}
+
+
+
+def test_QueryTaxResult_summarize_up_ranks_missing_lineage():
+    "basic functionality: summarize up ranks"
+    taxD = make_mini_taxonomy([("gA", "a;b;c")])
+    gather_results = [{}, {"name": 'gB'}]
+    gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD)
+    assert len(gres.keys()) == 1
+    q_res = next(iter(gres.values()))
+    # now summarize up the ranks
+    q_res.summarize_up_ranks()
+    assert len(q_res.raw_taxresults) == 2
+    #print(q_res.sum_uniq_weighted.values())
+    print(q_res.sum_uniq_weighted['superkingdom'])
+    assert q_res.sum_uniq_weighted['superkingdom'] == {RankLineageInfo(lineage_str="a"): approx(0.2)}
+    assert q_res.sum_uniq_to_query['superkingdom'] == {RankLineageInfo(lineage_str="a"): approx(0.1)}
+    assert q_res.sum_uniq_bp['superkingdom'] == {RankLineageInfo(lineage_str="a"): 20}
+    assert q_res.sum_uniq_weighted['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.2)}
+    assert q_res.sum_uniq_to_query['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.1)}
+    assert q_res.sum_uniq_bp['phylum'] == {RankLineageInfo(lineage_str="a;b"): 20}
+    assert q_res.sum_uniq_weighted['class'] == {RankLineageInfo(lineage_str="a;b;c"): approx(0.2)}
+    assert q_res.sum_uniq_to_query['class'] == {RankLineageInfo(lineage_str="a;b;c"): approx(0.1)}
+    assert q_res.sum_uniq_bp['class'] == {RankLineageInfo(lineage_str="a;b;c"): 20}
+
+
+def test_QueryTaxResult_summarize_up_ranks_skipped_lineage():
+    "basic functionality: summarize up ranks"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, skip_idents=['gB'])
+    assert len(gres.keys()) == 1
+    q_res = next(iter(gres.values()))
+    # now summarize up the ranks
+    q_res.summarize_up_ranks()
+    assert len(q_res.raw_taxresults) == 2
+    assert list(q_res.sum_uniq_weighted.keys()) == ['class', 'phylum', 'superkingdom']
+    #print(q_res.sum_uniq_weighted.values())
+    print(q_res.sum_uniq_weighted['superkingdom'])
+    assert q_res.sum_uniq_weighted['superkingdom'] == {RankLineageInfo(lineage_str="a"): approx(0.2)}
+    assert q_res.sum_uniq_to_query['superkingdom'] == {RankLineageInfo(lineage_str="a"): approx(0.1)}
+    assert q_res.sum_uniq_bp['superkingdom'] == {RankLineageInfo(lineage_str="a"): 20}
+    assert q_res.sum_uniq_weighted['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.2)}
+    assert q_res.sum_uniq_to_query['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.1)}
+    assert q_res.sum_uniq_bp['phylum'] == {RankLineageInfo(lineage_str="a;b"): 20}
+    assert q_res.sum_uniq_weighted['class'] == {RankLineageInfo(lineage_str="a;b;c"): approx(0.2)}
+    assert q_res.sum_uniq_to_query['class'] == {RankLineageInfo(lineage_str="a;b;c"): approx(0.1)}
+    assert q_res.sum_uniq_bp['class'] == {RankLineageInfo(lineage_str="a;b;c"): 20}
+
+
+def test_QueryTaxResult_summarize_up_ranks_perfect_match():
+    "summarize up ranks: different values"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{'f_unique_to_query': 1.0}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    # now summarize up the ranks
+    q_res.summarize_up_ranks()
+    assert len(q_res.raw_taxresults) == 1
+    print(q_res.sum_uniq_weighted.values())
+    print(q_res.sum_uniq_to_query['superkingdom'])
+    assert list(q_res.sum_uniq_to_query['superkingdom'].values()) == [1.0]
+    assert 'gA' in q_res.perfect_match
+
+
+def test_QueryTaxResult_summarize_up_ranks_already_summarized():
+    "summarize up ranks: error, already summarized"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{'f_unique_to_query': 1.0}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    # now summarize up the ranks
+    q_res.summarize_up_ranks()
+    with pytest.raises(ValueError) as exc:
+        q_res.summarize_up_ranks()
+    print(str(exc))
+    assert "Error: already summarized" in str(exc)
+    
+
+def test_QueryTaxResult_summarize_up_ranks_already_summarized_force():
+    "summarize up ranks: already summarized but force"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB','f_unique_weighted': 0.1,'f_unique_to_query': 0.05,'unique_intersect_bp': 10,}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    # now summarize up the ranks
+    q_res.summarize_up_ranks()
+    q_res.summarize_up_ranks(force_resummarize=True)
+    assert list(q_res.sum_uniq_weighted.keys()) == ['class', 'phylum', 'superkingdom']
+
+    #check that all results are still good 
+    assert len(q_res.raw_taxresults) == 2
+    assert q_res.sum_uniq_weighted['superkingdom'] ==  {RankLineageInfo(lineage_str="a"): approx(0.3)}
+    assert q_res.sum_uniq_weighted['phylum'] ==  {RankLineageInfo(lineage_str="a;b"): approx(0.3)}
+    assert q_res.sum_uniq_to_query['phylum'] ==  {RankLineageInfo(lineage_str="a;b"): approx(0.15)}
+    assert q_res.sum_uniq_bp['phylum'] ==  {RankLineageInfo(lineage_str="a;b"): 30}
+    assert q_res.sum_uniq_to_query['class'] ==  {RankLineageInfo(lineage_str="a;b;c"): approx(0.1),
+                                                 RankLineageInfo(lineage_str="a;b;d"): approx(0.05)}
+    assert q_res.sum_uniq_weighted['class'] ==  {RankLineageInfo(lineage_str="a;b;c"): approx(0.2),
+                                                 RankLineageInfo(lineage_str="a;b;d"): approx(0.1)}
+    assert q_res.sum_uniq_bp['class'] ==  {RankLineageInfo(lineage_str="a;b;c"): 20,
+                                           RankLineageInfo(lineage_str="a;b;d"): 10}
+
+
+def test_QueryTaxResult_summarize_up_ranks_single_rank():
+    "summarize up ranks: different values"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB','f_unique_weighted': 0.1,'f_unique_to_query': 0.05,'unique_intersect_bp': 10,}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    # now summarize up the ranks
+    q_res.summarize_up_ranks(single_rank='phylum')
+    assert len(q_res.raw_taxresults) == 2
+    assert list(q_res.sum_uniq_weighted.keys()) == ['phylum']
+    print(q_res.sum_uniq_weighted.keys())
+    print(q_res.sum_uniq_weighted.values())
+    print(q_res.sum_uniq_weighted['phylum'])
+    assert q_res.sum_uniq_weighted['phylum'] == {RankLineageInfo(lineage_str="a;b"): approx(0.3)}
+    assert list(q_res.sum_uniq_to_query['phylum'].values()) == [approx(0.15)]                                                    
+    assert list(q_res.sum_uniq_bp['phylum'].values()) == [30]                                                    
+    assert q_res.summarized_ranks == ['phylum']
+
+def test_QueryTaxResult_summarize_up_ranks_single_rank_not_available():
+    "summarize up ranks: different values"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB','f_unique_weighted': 0.1,'f_unique_to_query': 0.05,'unique_intersect_bp': 10,}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    # now summarize up the ranks
+    with pytest.raises(ValueError) as exc:
+        q_res.summarize_up_ranks(single_rank='NotARank')
+    print(str(exc))
+    assert "Error: rank 'NotARank' not in available ranks (strain, species, genus, family, order, class, phylum, superkingdom)" in str(exc)
+
+
+def test_QueryTaxResult_summarize_up_ranks_single_rank_not_filled():
+    "summarize up ranks: different values"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB','f_unique_weighted': 0.1,'f_unique_to_query': 0.05,'unique_intersect_bp': 10,}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    # now summarize up the ranks
+    with pytest.raises(ValueError) as exc:
+        q_res.summarize_up_ranks(single_rank='species')
+    print(str(exc))
+    assert "Error: rank 'species' was not available for any matching lineages." in str(exc)
+
+
+def test_QueryTaxResult_build_summarized_result_1():
+    "basic functionality: build summarized_result"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.build_summarized_result()
+    print(q_res.summarized_lineage_results.keys())
+    sk = [SummarizedGatherResult(rank='superkingdom', fraction=0.2, f_weighted_at_rank=0.4, 
+                             lineage=RankLineageInfo(lineage_str='a'),
+                             bp_match_at_rank=40, query_ani_at_rank=approx(0.95, rel=1e-2)),
+          SummarizedGatherResult(rank='superkingdom', fraction=0.8, f_weighted_at_rank=0.6,
+                             lineage=(), bp_match_at_rank=60, query_ani_at_rank=None)]
+    print(q_res.summarized_lineage_results['superkingdom'])
+    assert q_res.summarized_lineage_results['superkingdom'] == sk
+    print(q_res.summarized_lineage_results['phylum'])
+    phy = [SummarizedGatherResult(rank='phylum', fraction=0.2, f_weighted_at_rank=0.4, 
+                                   lineage=RankLineageInfo(lineage_str='a;b'),
+                                   bp_match_at_rank=40, query_ani_at_rank=approx(0.95, rel=1e-2)),
+            SummarizedGatherResult(rank='phylum', fraction=0.8, f_weighted_at_rank=0.6,
+                                   lineage=(), bp_match_at_rank=60, query_ani_at_rank=None)]
+    assert q_res.summarized_lineage_results['phylum'] == phy
+    print(q_res.summarized_lineage_results['class'])
+    cl = [SummarizedGatherResult(rank='class', fraction=0.1, f_weighted_at_rank=0.2, 
+                                 lineage=RankLineageInfo(lineage_str='a;b;c'), 
+                                  bp_match_at_rank=20, query_ani_at_rank=approx(0.93, rel=1e-2)),
+          SummarizedGatherResult(rank='class', fraction=0.1, f_weighted_at_rank=0.2,
+                                 lineage=RankLineageInfo(lineage_str='a;b;d'),
+                                  bp_match_at_rank=20, query_ani_at_rank=approx(0.93, rel=1e-2)),
+          SummarizedGatherResult(rank='class', fraction=0.8, f_weighted_at_rank=0.6,
+                                 lineage=(), bp_match_at_rank=60, query_ani_at_rank=None)]
+    assert q_res.summarized_lineage_results['class'] == cl
+
+    assert q_res.total_f_weighted['phylum'] == approx(0.4)
+    assert q_res.total_f_classified['class'] == approx(0.2)
+    assert q_res.total_bp_classified['superkingdom'] == 40
+
+
+def test_QueryTaxResult_build_summarized_result_2():
+    """test two queries, build summarized result for each"""
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b")
+    gB_tax = ("gB", "a;c")
+    taxD = make_mini_taxonomy([gA_tax, gB_tax])
+    # make gather results
+    gather_results = [{'query_name': 'queryA', 'name': 'gA', 'f_unique_weighted': 0.5,'f_unique_to_query': 0.5,'unique_intersect_bp': 50}, 
+                      {'query_name': 'queryA', "name": 'gB', 'f_unique_weighted': 0.4,'f_unique_to_query': 0.3,'unique_intersect_bp': 30},
+                      {'query_name': 'queryB', "name": 'gB', 'f_unique_weighted': 0.3,'f_unique_to_query': 0.3,'unique_intersect_bp': 30}]
+    gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD)
+    
+    for query_name, q_res in gres.items():
+        q_res.build_summarized_result() # summarize and build result
+        sk = q_res.summarized_lineage_results['superkingdom']
+        phy = q_res.summarized_lineage_results['phylum']
+        assert len(sk) == 2
+        assert sk[0].lineage == RankLineageInfo(lineage_str="a")
+        print(phy)
+        if query_name == 'queryA':
+            # check superkingdom results
+            assert sk[0].fraction == approx(0.8)
+            assert sk[0].f_weighted_at_rank == approx(0.9)
+            assert sk[0].bp_match_at_rank == 80
+            assert sk[1].fraction == approx(0.2)
+            assert sk[1].f_weighted_at_rank == approx(0.1)
+            assert sk[1].bp_match_at_rank == 20
+            assert sk[1].lineage == ()
+            # check phylum results
+            assert len(phy) == 3
+            assert phy[0].fraction == approx(0.5)
+            assert phy[0].f_weighted_at_rank == approx(0.5)
+            assert phy[0].bp_match_at_rank == 50
+            assert phy[0].lineage ==  RankLineageInfo(lineage_str="a;b")
+            assert phy[1].fraction == approx(0.3)
+            assert phy[1].f_weighted_at_rank == approx(0.4)
+            assert phy[1].bp_match_at_rank == 30
+            assert phy[1].lineage ==  RankLineageInfo(lineage_str="a;c")
+            assert phy[2].fraction == approx(0.2)
+            assert phy[2].f_weighted_at_rank == approx(0.1)
+            assert phy[2].bp_match_at_rank == 20
+            assert phy[2].lineage == ()
+        if query_name == 'queryB':
+            # check superkingdom results
+            assert sk[0].fraction == approx(0.3)
+            assert sk[0].f_weighted_at_rank == approx(0.3)
+            assert sk[0].bp_match_at_rank == 30
+            assert sk[1].fraction == approx(0.7)
+            assert sk[1].f_weighted_at_rank == approx(0.7)
+            assert sk[1].bp_match_at_rank == 70
+            assert sk[1].lineage == ()
+            # check phylum results
+            assert len(phy) == 2
+            assert phy[0].fraction == approx(0.3)
+            assert phy[0].f_weighted_at_rank == approx(0.3)
+            assert phy[0].bp_match_at_rank == 30
+            assert phy[0].lineage ==  RankLineageInfo(lineage_str="a;c")
+            assert phy[1].fraction == approx(0.7)
+            assert phy[1].f_weighted_at_rank == approx(0.7)
+            assert phy[1].bp_match_at_rank == 70
+            assert phy[1].lineage == ()
+
+
+def test_QueryTaxResult_build_summarized_result_missing_lineage():
+    "build summarized_result with missing lineage"
+    taxD = make_mini_taxonomy([("gA", "a;b;c")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.build_summarized_result()
+    print(q_res.summarized_lineage_results.keys())
+    print(q_res.summarized_lineage_results['superkingdom'])
+
+    sk = [SummarizedGatherResult(rank='superkingdom', fraction=0.1, f_weighted_at_rank=0.2, 
+                                 lineage=RankLineageInfo(lineage_str="a"), 
+                                 bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)),
+          SummarizedGatherResult(rank='superkingdom', fraction=0.9, lineage=(),f_weighted_at_rank=0.8,
+                                 bp_match_at_rank=80, query_ani_at_rank=None)]
+    assert q_res.summarized_lineage_results['superkingdom'] == sk
+    print(q_res.summarized_lineage_results['phylum'])
+    phy = [SummarizedGatherResult(rank='phylum', fraction=0.1, f_weighted_at_rank=0.2,
+                                  lineage=RankLineageInfo(lineage_str="a;b"), 
+                                  bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)),
+           SummarizedGatherResult(rank='phylum', fraction=0.9, lineage=(),f_weighted_at_rank=0.8,
+                                  bp_match_at_rank=80, query_ani_at_rank=None)]
+    assert q_res.summarized_lineage_results['phylum'] == phy
+    print(q_res.summarized_lineage_results['class'])
+    cl = [SummarizedGatherResult(rank='class', fraction=0.1, lineage= RankLineageInfo(lineage_str="a;b;c"),
+                                  f_weighted_at_rank=0.2, bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)),
+          SummarizedGatherResult(rank='class', fraction=0.9, lineage=(), f_weighted_at_rank=0.8,
+                                 bp_match_at_rank=80, query_ani_at_rank=None)]
+    assert q_res.summarized_lineage_results['class'] == cl
+
+    assert q_res.total_f_weighted['phylum'] == approx(0.2)
+    assert q_res.total_f_classified['class'] == approx(0.1)
+    assert q_res.total_bp_classified['superkingdom'] == 20
+
+
+def test_QueryTaxResult_build_summarized_result_skipped_lineage():
+    "build summarized_result with skipped lineage"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, skip_idents=['gB'])
+    q_res.build_summarized_result()
+    print(q_res.summarized_lineage_results.keys())
+    print(q_res.summarized_lineage_results['superkingdom'])
+
+    sk = [SummarizedGatherResult(rank='superkingdom', fraction=0.1, f_weighted_at_rank=0.2,  
+                                 lineage=RankLineageInfo(lineage_str="a"), 
+                                 bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)), 
+          SummarizedGatherResult(rank='superkingdom', fraction=0.9, lineage=(),f_weighted_at_rank=0.8,
+                                 bp_match_at_rank=80, query_ani_at_rank=None)]
+    assert q_res.summarized_lineage_results['superkingdom'] == sk
+    print(q_res.summarized_lineage_results['phylum'])
+    phy = [SummarizedGatherResult(rank='phylum', fraction=0.1, lineage=RankLineageInfo(lineage_str="a;b"),
+                                  f_weighted_at_rank=0.2, bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)),
+           SummarizedGatherResult(rank='phylum', fraction=0.9, lineage=(), f_weighted_at_rank=0.8, bp_match_at_rank=80,
+                                  query_ani_at_rank=None)]
+    assert q_res.summarized_lineage_results['phylum'] == phy
+    print(q_res.summarized_lineage_results['class'])
+    cl = [SummarizedGatherResult(rank='class', fraction=0.1,lineage=RankLineageInfo(lineage_str="a;b;c"),
+                                  f_weighted_at_rank=0.2, bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)),
+          SummarizedGatherResult(rank='class', fraction=0.9, lineage=(), f_weighted_at_rank=0.8, bp_match_at_rank=80,
+                                 query_ani_at_rank=None)]
+    assert q_res.summarized_lineage_results['class'] == cl
+
+    assert q_res.total_f_weighted['phylum'] == approx(0.2)
+    assert q_res.total_f_classified['class'] == approx(0.1)
+    assert q_res.total_bp_classified['superkingdom'] == 20
+
+
+def test_QueryTaxResult_build_summarized_result_over100percent():
+    "summarize up ranks: different values"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB','f_unique_to_query': 0.95}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    # now summarize up the ranks
+    assert len(q_res.raw_taxresults) == 2
+    with pytest.raises(ValueError) as exc:
+        q_res.build_summarized_result()
+    print(str(exc))
+    assert "The tax summary of query 'q1' is 1.05, which is > 100% of the query!! This should not be possible." in str(exc)
+
+
+def test_build_summarized_result_rank_fail_not_available_resummarize():
+    "build classification result"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.summarize_up_ranks('superkingdom')
+    with pytest.raises(ValueError) as exc:
+        q_res.build_summarized_result(single_rank='order')
+    print(str(exc))
+    assert "Error: rank 'order' not in summarized rank(s), superkingdom" in str(exc)
+
+
+def test_build_classification_result_containment_threshold():
+    "basic functionality: build classification result using containment threshold"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.build_classification_result(containment_threshold=0.1)
+    print("classif: ", q_res.classification_result)
+    assert q_res.classification_result == ClassificationResult(status='match', rank='class', fraction=0.1, 
+                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
+                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
+    q_res.build_classification_result(containment_threshold=0.4)
+    print("classif: ", q_res.classification_result)
+    assert q_res.classification_result == ClassificationResult(status='match', rank='phylum', fraction=0.2, 
+                                                               lineage=RankLineageInfo(lineage_str="a;b"), f_weighted_at_rank=0.4,
+                                                               bp_match_at_rank=40,  query_ani_at_rank=approx(0.95, rel=1e-2))
+    q_res.build_classification_result(containment_threshold=1.0)
+    print("classif: ", q_res.classification_result)
+    assert q_res.classification_result == ClassificationResult(status='below_threshold', rank='superkingdom', fraction=0.2, 
+                                                               lineage=RankLineageInfo(lineage_str="a"), f_weighted_at_rank=0.4,
+                                                               bp_match_at_rank=40,  query_ani_at_rank=approx(0.95, rel=1e-2))
+
+
+
+def test_build_classification_result_containment_threshold_fail():
+    "classification result: improper containment threshold"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    with pytest.raises(ValueError) as exc:
+        q_res.build_classification_result(containment_threshold=1.2)
+    print(str(exc))
+    assert "Containment threshold must be between 0 and 1 (input value: 1.2)." in str(exc)
+    with pytest.raises(ValueError) as exc:
+        q_res.build_classification_result(containment_threshold=-.1)
+    print(str(exc))
+    assert "Containment threshold must be between 0 and 1 (input value: -0.1)." in str(exc)
+
+
+def test_build_classification_result_ani_threshold():
+    "basic functionality: build classification result"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.build_classification_result(ani_threshold=.92)
+    print("classif: ", q_res.classification_result)
+    assert q_res.classification_result == ClassificationResult(status='match', rank='class', fraction=0.1, 
+                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
+                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
+    q_res.build_classification_result(ani_threshold=0.94)
+    print("classif: ", q_res.classification_result)
+    assert q_res.classification_result == ClassificationResult(status='match', rank='phylum', fraction=0.2, 
+                                                               lineage=RankLineageInfo(lineage_str="a;b"), f_weighted_at_rank=0.4,
+                                                               bp_match_at_rank=40,  query_ani_at_rank=approx(0.95, rel=1e-2))
+    q_res.build_classification_result(ani_threshold=0.96)
+    print("classif: ", q_res.classification_result)
+    assert q_res.classification_result == ClassificationResult(status='below_threshold', rank='superkingdom', fraction=0.2, 
+                                                               lineage=RankLineageInfo(lineage_str="a"), f_weighted_at_rank=0.4,
+                                                               bp_match_at_rank=40,  query_ani_at_rank=approx(0.95, rel=1e-2))
+
+
+def test_build_classification_result_ani_threshold_fail():
+    "classification result: improper ANI threshold"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    with pytest.raises(ValueError) as exc:
+        q_res.build_classification_result(ani_threshold=1.2)
+    print(str(exc))
+    assert "ANI threshold must be between 0 and 1 (input value: 1.2)." in str(exc)
+    with pytest.raises(ValueError) as exc:
+        q_res.build_classification_result(ani_threshold=-.1)
+    print(str(exc))
+    assert "ANI threshold must be between 0 and 1 (input value: -0.1)." in str(exc)
+
+
+def test_build_classification_result_rank_fail_not_filled():
+    "classification result: rank not available (wasn't filled in tax lineage matches)"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    with pytest.raises(ValueError) as exc:
+        q_res.build_classification_result(rank='order')
+    print(str(exc))
+    assert "Error: rank 'order' was not available for any matching lineages." in str(exc)
+
+def test_build_classification_result_rank_fail_not_available_resummarize():
+    "classification result: rank not available (wasn't summarized)"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.summarize_up_ranks('superkingdom')
+    with pytest.raises(ValueError) as exc:
+        q_res.build_classification_result(rank='order')
+    print(str(exc))
+    assert "Error: rank 'order' not in summarized rank(s), superkingdom" in str(exc)
+
+def test_build_classification_result_rank_fail_not_available():
+    "classification result: rank not available"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    with pytest.raises(ValueError) as exc:
+        q_res.build_classification_result(rank='NotARank')
+    print(str(exc))
+    assert "Error: rank 'NotARank' not in available ranks (strain, species, genus, family, order, class, phylum, superkingdom)" in str(exc)
+
+
+def test_build_classification_result_rank_containment_threshold():
+    "classification result - rank and containment threshold (default)"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.build_classification_result(rank='class')
+    print("classif: ", q_res.classification_result)
+    assert q_res.classification_result == ClassificationResult(status='match', rank='class', fraction=0.1, 
+                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
+                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
+    q_res.build_classification_result(rank='class', containment_threshold=0.4)
+    assert q_res.classification_result == ClassificationResult(status='below_threshold', rank='class', fraction=0.1, 
+                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
+                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
+    
+def test_build_classification_result_rank_ani_threshold():
+    "classification result with rank and ANI threshold"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.build_classification_result(rank='class', ani_threshold=0.92)
+    assert q_res.classification_result == ClassificationResult(status='match', rank='class', fraction=0.1, 
+                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
+                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
+    q_res.build_classification_result(rank='class', ani_threshold=0.95)
+    assert q_res.classification_result == ClassificationResult(status='below_threshold', rank='class', fraction=0.1, 
+                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
+                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
+
+
+def test_krona_classification_result():
+    "basic functionality: build classification result using containment threshold"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.build_classification_result()
+    assert q_res.krona_classification_result == None
+    q_res.build_classification_result(rank='phylum')#, force_resummarize=True)
+    print(q_res.krona_classification_result)
+    assert q_res.krona_classification_result == (0.4, 'a', 'b')
+    q_res.build_classification_result(rank='superkingdom')
+    print(q_res.krona_classification_result)
+    assert q_res.krona_classification_result == (0.4, 'a')
+    q_res.build_classification_result()
+    assert q_res.krona_classification_result == None
+
+def test_make_krona_header_0():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    phy_header = ["fraction", "superkingdom", "phylum"]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.build_classification_result(rank='phylum')
+    print(q_res.krona_classification_result)
+    print(q_res.krona_classification_header)
+    assert q_res.krona_classification_header == phy_header
+    hd = q_res.make_krona_header('phylum')
+    print("header: ", hd)
+    assert hd == phy_header
+
+
+def test_make_krona_header_1():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    class_header = ["fraction", "superkingdom", "phylum", "class"]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+    q_res.build_classification_result(rank='class')
+    assert q_res.krona_classification_header == class_header
+    hd = q_res.make_krona_header(min_rank='class')
+    print("header: ", hd)
+    assert hd == class_header
+
+
+def test_make_krona_header_fail():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True)
+    with pytest.raises(ValueError) as exc:
+        q_res.make_krona_header("order")
+    assert "Rank 'order' not present in summarized ranks." in str(exc.value)
+    with pytest.raises(ValueError) as exc:
+        q_res.make_krona_header("NotARank")
+    assert "Rank 'NotARank' not present in summarized ranks." in str(exc.value)
+

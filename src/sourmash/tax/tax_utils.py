@@ -1764,7 +1764,7 @@ class QueryTaxResult():
                 self.total_bp_classified[rank] += bp_intersect_at_rank
 
                 query_ani = containment_to_distance(f_unique, self.query_info.ksize, self.query_info.scaled,
-                                                    n_unique_kmers=self.query_info.query_hashes,
+                                                    n_unique_kmers=self.query_info.query_n_hashes,
                                                     sequence_len_bp=self.query_info.query_bp).ani
                 sres = SummarizedGatherResult(lineage=lineage, rank=rank,
                                               f_weighted_at_rank=f_weighted_at_rank, fraction=f_unique,
@@ -1820,7 +1820,7 @@ class QueryTaxResult():
                 status="below_threshold"
             f_unique_at_rank = self.sum_uniq_to_query[this_rank][this_lineage]
             query_ani = containment_to_distance(f_unique_at_rank, self.query_info.ksize, self.query_info.scaled,
-                                                n_unique_kmers=self.query_info.query_hashes,
+                                                n_unique_kmers=self.query_info.query_n_hashes,
                                                 sequence_len_bp=self.query_info.query_bp).ani
             # set classification status based on thresholds
             if ani_threshold: # if provided, just use ani thresh
