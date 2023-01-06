@@ -64,3 +64,25 @@ def get_save_to_functions():
         name = plugin.name
         debug_literal(f"plugins.save_to_functions: got '{name}', priority={priority}")
         yield priority, save_cls
+
+
+def get_cli_scripts_descriptions():
+    "Get the descriptions for command-line plugins."
+    plugin_list = entry_points(group='sourmash.cli_script')
+    for plugin in plugin_list:
+        name = plugin.name
+        script_cls = plugin.load()
+        yield script_cls.helpstring
+
+
+def add_cli_scripts(parser):
+    "Configure parsing for command-line plugins."
+    plugin_list = entry_points(group='sourmash.cli_script')
+    for plugin in plugin_list:
+        name = plugin.name
+        script_cls = plugin.load()
+        subparser = parser.add_parser(script_cls.command)
+        debug_literal(f"cls_script plugin '{name}' adding command '{script_cls.command}'")
+        obj = script_cls(subparser)
+
+    return 0

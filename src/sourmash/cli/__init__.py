@@ -38,6 +38,7 @@ from . import sig as signature
 from . import sketch
 from . import storage
 from . import tax
+from . import scripts
 
 
 class SourmashParser(ArgumentParser):
@@ -133,5 +134,19 @@ def get_parser():
     )
     for op in basic_ops + cmd_group_dirs:
         getattr(sys.modules[__name__], op).subparser(sub)
+
+
+    ### configure 'scripts' extension hooks
+
+    # get individual help strings:
+    descrs = list(sourmash.plugins.get_cli_scripts_descriptions())
+
+    # ...and now add commands.
+    scripts_sub = sub.add_parser('scripts')
+    s = scripts_sub.add_subparsers(title="extension commands", metavar='subcmd',
+                                   help=SUPPRESS,
+                                   description="\n".join(descrs))
+    sourmash.plugins.add_cli_scripts(s)
+
     parser._action_groups.reverse()
     return parser
