@@ -102,13 +102,10 @@ class BaseLineageInfo:
         return self.lineage[:lowest_filled_rank_idx+1]
 
     @property
-    def lowest_lineage_name(self, null_as_unclassified = False):
+    def lowest_lineage_name(self):
         """Return the name of the lowest filled lineage"""
         if not self.filled_ranks:
-            if null_as_unclassified: # todo: enable me
-                return "unclassified"
-            else:
-                return ""
+            return ""
         return self.filled_lineage[-1].name
 
     @property

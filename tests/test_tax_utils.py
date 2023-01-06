@@ -1271,6 +1271,7 @@ def test_BaseLineageInfo_init_lineage_str():
                                      LineagePair(rank='B', name='b', taxid=None),
                                      LineagePair(rank='C', name='c', taxid=None))
     assert taxinf.lowest_lineage_name == "c"
+    assert taxinf.lowest_rank == "C"
 
 def test_BaseLineageInfo_init_lineage_str_comma_sep():
     x = "a,b,c"
