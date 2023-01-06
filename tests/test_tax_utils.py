@@ -1309,14 +1309,14 @@ def test_BaseLineageInfo_init_no_ranks():
 
 def test_BaseLineageInfo_init_with_wrong_ranks():
     ranks=["A", "B", "C"]
-    lin_tups = (LineagePair(rank="rank1", name='name1'))
+    lin_tups = [LineagePair(rank="rank1", name='name1')]
     linD = {"rank1": "a"}
     with pytest.raises(ValueError) as exc:
         BaseLineageInfo(lineage=lin_tups, ranks=ranks)
     print(str(exc))
     assert "Rank 'rank1' not present in A, B, C" in str(exc)
     with pytest.raises(ValueError) as exc:
-        BaseLineageInfo(lineage=linD, ranks=ranks)
+        BaseLineageInfo(lineage_dict=linD, ranks=ranks)
     print(str(exc))
     assert "Rank 'rank1' not present in A, B, C" in str(exc)
 
