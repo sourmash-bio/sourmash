@@ -1252,8 +1252,11 @@ def test_BaseLineageInfo_init_empty():
     print(taxinf.filled_lineage)
     assert taxinf.filled_lineage == ()
     assert taxinf.lowest_lineage_name == ""
+    assert taxinf.lowest_lineage_taxid == ""
     assert taxinf.filled_ranks == ()
-    assert taxinf.lowest_rank == None 
+    assert taxinf.lowest_rank == None
+    assert taxinf.display_lineage() == ""
+    assert taxinf.display_lineage(null_as_unclassified=True) == "unclassified"
 
 
 def test_BaseLineageInfo_init_lineage_str():
@@ -1267,7 +1270,17 @@ def test_BaseLineageInfo_init_lineage_str():
     assert taxinf.filled_lineage == (LineagePair(rank='A', name='a', taxid=None),
                                      LineagePair(rank='B', name='b', taxid=None),
                                      LineagePair(rank='C', name='c', taxid=None))
-    assert taxinf.lowest_lineage_name == "C"
+    assert taxinf.lowest_lineage_name == "c"
+
+def test_BaseLineageInfo_init_lineage_str_comma_sep():
+    x = "a,b,c"
+    ranks=["A", "B", "C"]
+    taxinf = BaseLineageInfo(lineage_str=x, ranks=ranks)
+    print(taxinf.lineage)
+    print(taxinf.lineage_str)
+    assert taxinf.zip_lineage()== ['a', 'b', 'c']
+    print(taxinf.filled_lineage)
+    assert taxinf.lowest_lineage_name == "c"
 
 
 def test_BaseLineageInfo_init_lineage_tups():
@@ -1279,7 +1292,26 @@ def test_BaseLineageInfo_init_lineage_tups():
     assert taxinf.zip_lineage()== ['a', '', 'b']
 
 
-def test_BaseLineageInfo_init_lineage_dict():
+def test_BaseLineageInfo_init_lca_lineage_tups():
+    ranks=["A", "B", "C"]
+    lin_tups = (lca_utils.LineagePair(rank="A", name='a'), lca_utils.LineagePair(rank="C", name='b'))
+    taxinf = BaseLineageInfo(lineage=lin_tups, ranks=ranks)
+    print(taxinf.lineage)
+    print(taxinf.lineage_str)
+    assert taxinf.zip_lineage()== ['a', '', 'b']
+
+
+def test_BaseLineageInfo_init_lineage_dict_fail():
+    ranks=["A", "B", "C"]
+    lin_tups = (lca_utils.LineagePair(rank="A", name='a'), lca_utils.LineagePair(rank="C", name='b'))
+    with pytest.raises(ValueError) as exc:
+        taxinf = BaseLineageInfo(ranks=ranks, lineage_dict=lin_tups)
+    print(str(exc))
+
+    assert "is not dictionary" in str(exc)
+
+
+def test_BaseLineageInfo_init_lineage_dict  ():
     x = {'rank1': 'name1', 'rank2': 'name2'}
     taxinf = BaseLineageInfo(lineage_dict=x, ranks=["rank1", "rank2"])
     print("ranks: ", taxinf.ranks)
@@ -1296,7 +1328,7 @@ def test_BaseLineageInfo_init_lineage_dict_withtaxid():
     print("zipped lineage: ", taxinf.zip_lineage())
     assert taxinf.zip_lineage()== ['name1', 'name2']
     assert taxinf.zip_taxid()== ['1', '2']
-    assert taxinf.lowest_lineage_taxid == "2"
+    assert taxinf.lowest_lineage_taxid == 2
     assert taxinf.lowest_lineage_name == "name2"
 
 
@@ -1363,6 +1395,14 @@ def test_RankLineageInfo_init_lineage_str():
     print(taxinf.lineage)
     print(taxinf.lineage_str)
     assert taxinf.zip_lineage()== ['a', 'b', 'c', '', '', '', '', '']
+
+def test_RankLineageInfo_init_lineage_str_with_ranks_as_list():
+    x = "a;b;c"
+    taxranks = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species']
+    taxinf = RankLineageInfo(lineage_str=x, ranks=taxranks)
+    print(taxinf.lineage)
+    print(taxinf.lineage_str)
+    assert taxinf.zip_lineage()== ['a', 'b', 'c', '', '', '', '']
 
 
 def test_RankLineageInfo_init_lineage_tups():
@@ -1575,6 +1615,17 @@ def test_is_lineage_match_incorrect_ranks():
         lin1.is_lineage_match(lin2, 'superkingdom')
     print(str(exc))
     assert 'Cannot compare lineages from taxonomies with different ranks.' in str(exc)
+
+
+def test_is_lineage_match_improper_rank():
+    #test comparison with incompatible ranks
+    lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__e')
+    lin2 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
+    print(lin1.lineage)
+    with pytest.raises(ValueError) as exc:
+        lin1.is_lineage_match(lin2, 'NotARank')
+    print(str(exc))
+    assert "Desired Rank 'NotARank' not available for this lineage" in str(exc)
 
 
 def test_pop_to_rank_1():

@@ -105,9 +105,9 @@ class BaseLineageInfo:
     def lowest_lineage_name(self, null_as_unclassified = False):
         """Return the name of the lowest filled lineage"""
         if not self.filled_ranks:
-            #if null_as_unclassified: # todo: enable me
-            #    return "unclassified"
-            #else:
+            if null_as_unclassified: # todo: enable me
+                return "unclassified"
+            else:
                 return ""
         return self.filled_lineage[-1].name
 
@@ -143,7 +143,7 @@ class BaseLineageInfo:
                     rank_idx = self.rank_index(lin_tup.rank)
                 except ValueError as e:
                     raise ValueError(f"Rank '{lin_tup.rank}' not present in {', '.join(self.ranks)}") from e
-                # make sure we're adding LineagePairs, not lineagePairs for consistency
+                # make sure we're adding tax_utils.LineagePairs, not lca_utils.LineagePairs for consistency
                 if isinstance(lin_tup, lca_utils.LineagePair):
                     new_lineage[rank_idx] =  LineagePair(rank=lin_tup.rank, name=lin_tup.name)
                 else:
@@ -238,16 +238,28 @@ class BaseLineageInfo:
         "Return lineage taxids as ';'-separated list"
         return ";".join(self.zip_taxid(truncate_empty=truncate_empty))
 
+    def check_rank_availability(self, rank):
+        if rank in self.ranks: # rank is available
+            return True
+        raise ValueError(f"Desired Rank '{rank}' not available for this lineage.")
+ 
+    def rank_is_filled(self, rank, other=None):
+        self.check_rank_availability(rank)
+        if other is not None:
+            if rank in self.filled_ranks and rank in other.filled_ranks:
+                return True
+        elif rank in self.filled_ranks:
+            return True
+        return False
+
     def is_lineage_match(self, other, rank):
         """
         check to see if two lineages are a match down to given rank.
         """
         if not other.ranks == self.ranks: # check same ranks
             raise ValueError("Cannot compare lineages from taxonomies with different ranks.")
-        if rank not in self.ranks: # rank is available
-            raise ValueError(f"Desired Rank {rank} not available for this lineage")
         # always return false if rank is not filled in either of the two lineages
-        if rank in self.filled_ranks and rank in other.filled_ranks:
+        if self.rank_is_filled(rank, other=other):
             rank_idx = self.rank_index(rank)
             a_lin = self.lineage[:rank_idx+1]
             b_lin = other.lineage[:rank_idx+1]
@@ -257,10 +269,8 @@ class BaseLineageInfo:
 
     def pop_to_rank(self, rank):
         "Return new LineageInfo with ranks only filled to desired rank"
-        if rank not in self.ranks:
-            raise ValueError(f"Desired Rank '{rank}' not available for this lineage")
         # are we already above rank?
-        if rank not in self.filled_ranks:
+        if not self.rank_is_filled(rank):
             return replace(self)
         # if not, make filled_lineage at this rank + use to generate new LineageInfo
         new_lineage = self.lineage_at_rank(rank)
@@ -272,10 +282,8 @@ class BaseLineageInfo:
     def lineage_at_rank(self, rank):
         # non-descructive pop_to_rank. Returns tuple of LineagePairs
         "Returns tuple of LineagePairs at given rank."
-        if rank not in self.ranks:
-            raise ValueError(f"Desired Rank '{rank}' not available for this lineage")
         # are we already above rank?
-        if rank not in self.filled_ranks:
+        if not self.rank_is_filled(rank):
             return self.filled_lineage
         # if not, return lineage tuples down to desired rank
         rank_idx = self.rank_index(rank)
@@ -300,23 +308,6 @@ class RankLineageInfo(BaseLineageInfo):
             self._init_from_lineage_dict()
         elif self.ranks:
             self._init_empty()
-
-
-@dataclass(frozen=True, order=True)
-class LINSLineageInfo(BaseLineageInfo):
-    """Class for storing multi-rank lineage information"""
-    num_positions: int = None
-    ## WHAT special considerations do we have here?
-    def __post_init__(self):
-        "Initialize according to passed values"
-        if self.lineage != [LineagePair()]:
-            self._init_from_lineage_tuples()
-        elif self.lineage_str is not None and self.ranks:
-            self._init_from_lineage_str()
-        elif self.ranks:
-            self._init_empty()
-        else:
-            raise ValueError("Cannot initialize LINSLineageInfo. Please provide lineage or rank info.")
 
 
 def get_ident(ident, *,
