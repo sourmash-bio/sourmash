@@ -1023,7 +1023,7 @@ def test_genome_rank_human_output(runtmp):
     # test basic genome - output csv
     c = runtmp
 
-    g_csv = utils.get_test_data('tax/test1.gather_ani.csv')
+    g_csv = utils.get_test_data('tax/test1.gather_old.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
     csvout = runtmp.output(csv_base + '.human.txt')
@@ -1841,7 +1841,7 @@ def test_genome_over100percent_error(runtmp):
 
 def test_genome_ani_threshold_input_errors(runtmp):
     c = runtmp
-    g_csv = utils.get_test_data('tax/test1.gather_ani.csv')
+    g_csv = utils.get_test_data('tax/test1.gather_old.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     below_threshold = "-1"
 
@@ -1916,7 +1916,7 @@ def test_genome_ani_threshold(runtmp):
 def test_genome_ani_oldgather(runtmp):
     # Ignore ANI if we don't have the information we need to estimate it
     c = runtmp
-    g_csv = utils.get_test_data('tax/test1.gather_ani.csv')
+    g_csv = utils.get_test_data('tax/test1.gather_old.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
     c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax)
