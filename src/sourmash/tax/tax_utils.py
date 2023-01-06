@@ -7,7 +7,7 @@ from collections import namedtuple, defaultdict
 from collections import abc
 from itertools import zip_longest
 from typing import NamedTuple
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field, replace, asdict
 import gzip
 
 from sourmash import sqlite_utils, sourmash_args
@@ -24,15 +24,15 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
            'aggregate_by_lineage_at_rank', 'format_for_krona',
            'write_krona', 'write_summary', 'write_classifications',
            'combine_sumgather_csvs_by_lineage', 'write_lineage_sample_frac',
-           'MultiLineageDB']
+           'MultiLineageDB', 'RankLineageInfo']
 
 from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
 
 # CTB: these could probably usefully be converted into dataclasses.
-QueryInfo = namedtuple("QueryInfo", "query_md5, query_filename, query_bp, query_hashes, total_weighted_hashes")
-SummarizedGatherResult = namedtuple("SummarizedGatherResult", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank, total_weighted_hashes")
-ClassificationResult = namedtuple("ClassificationResult", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
+QInfo = namedtuple("QInfo", "query_md5, query_filename, query_bp, query_hashes, total_weighted_hashes")
+SumGathInf = namedtuple("SumGathInf", "query_name, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank, total_weighted_hashes")
+ClassInf = namedtuple("ClassInf", "query_name, status, rank, fraction, lineage, query_md5, query_filename, f_weighted_at_rank, bp_match_at_rank, query_ani_at_rank")
 
 # Essential Gather column names that must be in gather_csv to allow `tax` summarization
 EssentialGatherColnames = ('query_name', 'name', 'f_unique_weighted', 'f_unique_to_query', 'unique_intersect_bp', 'remaining_bp', 'query_md5', 'query_filename')
@@ -494,7 +494,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                 query_bp = unique_intersect_bp + int(row['remaining_bp'])
         
         # store query info
-        query_info[query_name] = QueryInfo(query_md5=query_md5, query_filename=query_filename, query_bp=query_bp, query_hashes=query_nhashes, total_weighted_hashes=total_weighted_hashes)
+        query_info[query_name] = QInfo(query_md5=query_md5, query_filename=query_filename, query_bp=query_bp, query_hashes=query_nhashes, total_weighted_hashes=total_weighted_hashes)
         
         if estimate_query_ani and (not ksize or not scaled):
             if not set_ksize:
@@ -528,7 +528,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
         sum_uniq_weighted[query_name][lineage] += f_uniq_weighted
         sum_uniq_bp[query_name][lineage] += unique_intersect_bp
 
-    # sort and store each as SummarizedGatherResult
+    # sort and store each as SumGathInf
     sum_uniq_to_query_sorted = []
     for query_name, lineage_weights in sum_uniq_to_query.items():
         qInfo = query_info[query_name]
@@ -546,7 +546,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
             if estimate_query_ani:
                 query_ani = containment_to_distance(fraction, ksize, scaled,
                                                     n_unique_kmers= qInfo.query_hashes, sequence_len_bp= qInfo.query_bp).ani
-            sres = SummarizedGatherResult(query_name, rank, fraction, lineage, qInfo.query_md5,
+            sres = SumGathInf(query_name, rank, fraction, lineage, qInfo.query_md5,
                                           qInfo.query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes * scaled)
             sum_uniq_to_query_sorted.append(sres)
         else:
@@ -567,7 +567,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
                 if estimate_query_ani:
                     query_ani = containment_to_distance(fraction, ksize, scaled,
                                                         n_unique_kmers=qInfo.query_hashes, sequence_len_bp=qInfo.query_bp).ani
-                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5,
+                sres = SumGathInf(query_name, rank, fraction, lineage, query_md5,
                                               query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes * scaled)
                 sum_uniq_to_query_sorted.append(sres)
 
@@ -578,7 +578,7 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
             if fraction > 0:
                 f_weighted_at_rank = 1.0 - total_f_weighted
                 bp_intersect_at_rank = qInfo.query_bp - total_bp_classified
-                sres = SummarizedGatherResult(query_name, rank, fraction, lineage, query_md5,
+                sres = SumGathInf(query_name, rank, fraction, lineage, query_md5,
                                               query_filename, f_weighted_at_rank, bp_intersect_at_rank, query_ani, qInfo.total_weighted_hashes*scaled)
                 sum_uniq_to_query_sorted.append(sres)
 
@@ -616,7 +616,7 @@ def make_krona_header(min_rank, *, include_strain=False):
 
 def aggregate_by_lineage_at_rank(rank_results, *, by_query=False):
     '''
-    Aggregate list of rank SummarizedGatherResults,
+    Aggregate list of rank SumGathInfs,
     keeping query info or aggregating across queries.
     '''
     lineage_summary = defaultdict(float)
@@ -635,7 +635,7 @@ def aggregate_by_lineage_at_rank(rank_results, *, by_query=False):
 
 def format_for_krona(rank, summarized_gather):
     '''
-    Aggregate list of SummarizedGatherResults and format for krona output
+    Aggregate list of SumGathInfs and format for krona output
     '''
     num_queries=0
     for res_rank, rank_results in summarized_gather.items():
@@ -685,7 +685,7 @@ def write_summary(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=Fa
     '''
     Write taxonomy-summarized gather results for each rank.
     '''
-    header = SummarizedGatherResult._fields
+    header = SumGathInf._fields
     w = csv.DictWriter(csv_fp, header, delimiter=sep)
     w.writeheader()
     for rank, rank_results in summarized_gather.items():
@@ -840,7 +840,7 @@ def write_classifications(classifications, csv_fp, *, sep=',', limit_float_decim
     '''
     Write taxonomy-classifed gather results.
     '''
-    header = ClassificationResult._fields
+    header = ClassInf._fields
     w = csv.DictWriter(csv_fp, header, delimiter=sep)
     w.writeheader()
     for rank, rank_results in classifications.items():
@@ -1448,3 +1448,488 @@ class MultiLineageDB(abc.Mapping):
                 tax_assign.add(this_tax_assign)
 
         return tax_assign
+
+
+# strategy from: https://subscription.packtpub.com/book/programming/9781800207455/10/ch10lvl1sec01/using-dataclasses-to-simplify-working-with-csv-files
+@dataclass
+class GatherRow(): # all cols should match "gather_write_cols" in `search.py`
+   # essential columns
+   query_name: str
+   name: str # match_name
+   f_unique_weighted: float
+   f_unique_to_query: float
+   unique_intersect_bp: int
+   remaining_bp: int
+   query_md5: str
+   query_filename: str
+   # new essential cols: requires 4.4x
+   query_bp: int
+   ksize: int
+   scaled: int
+
+   # non-essential
+   intersect_bp: int = None
+   f_orig_query: float = None
+   f_match: float = None
+   average_abund: float = None
+   median_abund: float = None
+   std_abund: float = None
+   filename: str = None
+   md5: str = None
+   f_match_orig: float = None
+   gather_result_rank: str = None
+   moltype: str = None
+   query_n_hashes: int = None
+   query_abundance: int = None
+   query_containment_ani: float = None
+   match_containment_ani: float = None
+   average_containment_ani: float = None
+   max_containment_ani: float = None
+   potential_false_negative: bool = None
+   n_unique_weighted_found: int = None
+   sum_weighted_found: int = None
+   total_weighted_hashes: int = None
+
+
+@dataclass(frozen=True)
+class QueryInfo():
+   """Class for storing per-rank lineage information"""
+   query_name: str
+   query_md5: str
+   query_filename: str
+   query_bp: int
+   query_n_hashes: int
+   ksize: int
+   scaled: int
+   total_weighted_hashes: int = 0
+
+   @property
+   def total_weighted_bp(self):
+       return self.total_weighted_hashes * self.scaled
+
+@dataclass
+class TaxResult():
+    raw: GatherRow
+    # can we get rid of these / just choose default ident hacking/slashing for future?
+    keep_full_identifiers: bool = False
+    keep_identifier_versions: bool = False
+
+    query_name: str = field(init=False)
+    query_info: QueryInfo = field(init=False)
+    match_ident: str = field(init=False)
+    lineageInfo: RankLineageInfo = RankLineageInfo()
+    skipped_ident: bool = False
+    missed_ident: bool = False
+    match_lineage_attempted: bool = False
+
+    def __post_init__(self):
+        self.get_ident()
+        self.query_name = self.raw.query_name
+        if self.raw.query_n_hashes:
+            self.raw.query_n_hashes = int(self.raw.query_n_hashes)
+        if self.raw.total_weighted_hashes:
+            self.raw.total_weighted_hashes = int(self.raw.total_weighted_hashes)
+        else:
+            self.raw.total_weighted_hashes = 0
+
+        self.query_info = QueryInfo(query_name = self.raw.query_name,
+                                  query_md5=self.raw.query_md5,
+                                  query_filename = self.raw.query_filename,
+                                  query_bp = int(self.raw.query_bp),
+                                  query_n_hashes = self.raw.query_n_hashes,
+                                  total_weighted_hashes = self.raw.total_weighted_hashes,
+                                  ksize = int(self.raw.ksize),
+                                  scaled = int(self.raw.scaled)
+                                  )
+        # cast and store the imp bits
+        self.f_unique_to_query = float(self.raw.f_unique_to_query)
+        self.f_unique_weighted = float(self.raw.f_unique_weighted)
+        self.unique_intersect_bp = int(self.raw.unique_intersect_bp)
+
+    def get_ident(self):
+        # split identifiers = split on whitespace
+        # keep identifiers = don't split .[12] from assembly accessions
+        "Hack and slash identifiers."
+        self.match_ident = self.raw.name
+        if not self.keep_full_identifiers:
+            self.match_ident = self.raw.name.split(' ')[0]
+        else:
+            #overrides version bc can't keep full without keeping version
+            self.keep_identifier_versions = True
+        if not self.keep_identifier_versions:
+            self.match_ident = self.match_ident.split('.')[0]
+
+
+    def get_match_lineage(self, tax_assignments, skip_idents=None, fail_on_missing_taxonomy=False):
+        if skip_idents and self.match_ident in skip_idents:
+            self.skipped_ident = True
+        else:
+            lin = tax_assignments.get(self.match_ident)
+            if lin:
+                self.lineageInfo = RankLineageInfo(lineage=lin)
+            else:
+                self.missed_ident=True
+        self.match_lineage_attempted = True
+        if self.missed_ident and fail_on_missing_taxonomy:
+            raise ValueError(f"Error: ident '{self.match_ident}' is not in the taxonomy database. Failing, as requested via --fail-on-missing-taxonomy")
+#            raise ValueError('Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
+
+@dataclass
+class SummarizedGatherResult():
+#   """Class for storing summarized lineage information"""
+    rank: str
+    fraction: float
+    lineage: RankLineageInfo
+    f_weighted_at_rank: float
+    bp_match_at_rank: int
+    query_ani_at_rank: float
+
+    def as_summary_dict(self, query_info=None, limit_float=False):
+        sD = asdict(self)
+        if self.lineage == (): # to do -- get rid of me by using null RankLineageInfo() instead of () for empties
+            sD['lineage'] = 'unclassified'
+        else:
+            sD['lineage'] = self.lineage.display_lineage()
+        if query_info is not None:
+            sD['query_name'] = query_info.query_name
+            sD['query_md5'] = query_info.query_md5
+            sD['query_filename'] = query_info.query_filename
+            sD['total_weighted_hashes'] = query_info.total_weighted_hashes
+        if limit_float:
+            sD['fraction'] = f'{self.fraction:.3f}'
+            sD['f_weighted_at_rank'] = f'{self.f_weighted_at_rank:.3f}'
+
+        return(sD)
+
+    def as_human_friendly_dict(self, query_info = None):
+        sD = self.as_summary_dict(query_info=query_info, limit_float=True)
+        sD['f_weighted_at_rank'] = f"{self.f_weighted_at_rank*100:>4.1f}%"
+        if sD['query_ani_at_rank'] is not None:
+            sD['query_ani_at_rank'] = f"{self.query_ani_at_rank*100:>3.1f}%"
+        else:
+            sD['query_ani_at_rank'] = '-    '
+        return sD
+
+    def as_kreport_dict(self, rankCode, total_weighted_hashes):
+         sD = asdict(self)
+         this_rank = self.lineage.lowest_rank
+         this_sciname = self.lineage.lowest_lineage_name
+         sD['ncbi_taxid'] = self.lineage.lowest_lineage_taxid
+         sD['sci_name'] = this_sciname
+         #sD['lineage'] = self.lineage.display_lineage(null_as_unclassified=True)
+         sD['rank_code'] = rankCode[this_rank]
+         sD['num_bp_assigned'] = 0
+         # total percent containment, weighted to include abundance info
+         sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
+         sD["num_bp_contained"] = int(self.f_weighted_at_rank * total_weighted_hashes)
+         # the number of bp actually 'assigned' at this rank. Sourmash assigns everything
+         # at genome level, but since kreport traditionally doesn't include 'strain' or genome,
+         # it is reasonable to state that sourmash assigns at 'species' level for this.
+         # can be modified later.
+         lowest_assignment_rank = 'species'
+         if this_rank == lowest_assignment_rank or this_sciname == "unclassified":
+            sD["num_bp_assigned"] = sD["num_bp_contained"]
+
+@dataclass
+class ClassificationResult(SummarizedGatherResult):
+#   """Class for storing summarized lineage information"""
+    status: str
+
+
+@dataclass
+class QueryTaxResult():
+    """Store all TaxResults for a query. Enable summarization."""
+    query_info: QueryInfo # initialize with QueryInfo dataclass
+
+    def __post_init__(self):
+        self.query_name = self.query_info.query_name # for convenience
+        self._init_taxresult_vars()
+        self._init_summarization_vars()
+
+    def _init_taxresult_vars(self):
+        self.ranks = []
+        self.raw_taxresults = []
+        self.skipped_idents= set()
+        self.missed_idents = set()
+        self.n_missed = 0
+        self.n_skipped = 0
+        self.perfect_match = set()
+
+    def _init_summarization_vars(self):
+        self.sum_uniq_weighted = defaultdict(lambda: defaultdict(float))
+        self.sum_uniq_to_query = defaultdict(lambda: defaultdict(float))
+        self.sum_uniq_bp = defaultdict(lambda: defaultdict(int))
+        self.summarized_ranks = []
+        self._init_summarization_results()
+
+    def _init_summarization_results(self):
+        self.total_f_weighted = defaultdict(float) #0.0
+        self.total_f_classified = defaultdict(float)#0.0
+        self.total_bp_classified = defaultdict(int) #0
+        self.summarized_lineage_results = defaultdict(list)
+
+    def _init_classification_results(self):
+        self.status = 'nomatch'
+        self.classified_ranks = []
+        self.classification_result = None
+        self.krona_classification_result = None
+        self.krona_unclassified_result = None
+        self.krona_classification_header = []
+
+    def is_compatible(self, taxresult):
+        return taxresult.query_info == self.query_info
+
+    @property
+    def ascending_ranks(self):
+        if not self.ranks:
+            return []
+        else:
+            return self.ranks[::-1]
+
+    def add_taxresult(self, taxresult):
+        # check that all query parameters match
+        if self.is_compatible(taxresult=taxresult):
+            if not taxresult.match_lineage_attempted:
+                raise ValueError("Error: Cannot add TaxResult. Please use get_match_lineage() to add taxonomic lineage information first.")
+            if not self.ranks:
+                self.ranks = taxresult.lineageInfo.ranks
+            if taxresult.skipped_ident:
+                self.n_skipped +=1
+                self.skipped_idents.add(taxresult.match_ident)
+            elif taxresult.missed_ident:
+                self.n_missed +=1
+                self.missed_idents.add(taxresult.match_ident)
+            self.raw_taxresults.append(taxresult)
+        else:
+            raise ValueError("Error: Cannot add TaxResult: query information does not match.")
+
+    def summarize_up_ranks(self, single_rank=None, force_resummarize=False):
+        if self.summarized_ranks: # has already been summarized
+            if force_resummarize:
+                self._init_summarization_vars()
+            else:
+                raise ValueError("Error: already summarized using rank(s): '{', '.join(self.summarized_ranks)}'. Use 'force_resummarize=True' to reset and resummarize")
+        # set ranks levels to summarize
+        self.summarized_ranks = self.ascending_ranks
+        if single_rank:
+            if single_rank not in self.summarized_ranks:
+                raise ValueError(f"Error: rank '{single_rank}' not in available ranks ({', '.join(self.summarized_ranks)})")
+            self.summarized_ranks = [single_rank]
+        notify(f"Starting summarization up rank(s): {', '.join(self.summarized_ranks)} ")
+        for taxres in self.raw_taxresults:
+            lininfo = taxres.lineageInfo
+            if lininfo and lininfo.filled_lineage: # won't always have lineage to summarize (skipped idents, missed idents)
+                # notify + track perfect matches
+                if taxres.f_unique_to_query >= 1.0:
+                    if taxres.match_ident not in self.perfect_match:
+                        notify(f"WARNING: 100% match! Is query '{self.query_name}' identical to its database match, '{taxres.match_ident}'?")
+                        self.perfect_match.add(taxres.match_ident)
+                # add this taxresult to summary
+                for rank in self.summarized_ranks:
+                    if rank in lininfo.filled_ranks: # only store if this rank is filled.
+                        lin_at_rank = lininfo.pop_to_rank(rank)
+                        self.sum_uniq_weighted[rank][lin_at_rank] += taxres.f_unique_weighted
+                        self.sum_uniq_to_query[rank][lin_at_rank] += taxres.f_unique_to_query
+                        self.sum_uniq_bp[rank][lin_at_rank] += taxres.unique_intersect_bp
+        # reset ranks levels to the ones that were actually summarized + that we can access for summarized result
+        self.summarized_ranks = [x for x in self.summarized_ranks if x in self.sum_uniq_bp.keys()]
+        if single_rank and single_rank not in self.summarized_ranks:
+            raise ValueError(f"Error: rank '{single_rank}' was not available for any matching lineages.")
+
+    def build_summarized_result(self, single_rank=None, force_resummarize=False):
+        # just reset if we've already built summarized result (avoid adding to existing)? Or write in an error/force option?
+        self._init_summarization_results()
+        # if taxresults haven't been summarized, do that first
+        if not self.summarized_ranks or force_resummarize:
+            self.summarize_up_ranks(single_rank=single_rank, force_resummarize=force_resummarize)
+        # catch potential error from running summarize_up_ranks separately and passing in different single_rank
+        if single_rank and single_rank not in self.summarized_ranks:
+            raise ValueError(f"Error: rank '{single_rank}' not in summarized rank(s), {','.join(self.summarized_ranks)}")
+        # rank loop is currently done in __main__
+        for rank in self.summarized_ranks[::-1]:  # reverse so that results are in descending order
+            sum_uniq_to_query = self.sum_uniq_to_query[rank] #should be lineage: value
+            # first, sort
+            sorted_sum_uniq_to_query = list(sum_uniq_to_query.items())
+            sorted_sum_uniq_to_query.sort(key = lambda x: -x[1])
+            for lineage, f_unique in sorted_sum_uniq_to_query:
+                query_ani = None
+                if f_unique > 1:
+                    raise ValueError(f"The tax summary of query '{self.query_name}' is {f_unique}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
+                elif f_unique == 0: #no annotated results for this query. do we need to handle this differently now?
+                    continue
+                f_weighted_at_rank = self.sum_uniq_weighted[rank][lineage]
+                bp_intersect_at_rank = self.sum_uniq_bp[rank][lineage]
+
+                # NTP Note: These change by rank ONLY when doing best_only (selecting top hit at that particular rank)
+                # now that I pulled best_only into separate fn, these don't need to be dicts...
+                self.total_f_classified[rank] += f_unique
+                self.total_f_weighted[rank] += f_weighted_at_rank
+                self.total_bp_classified[rank] += bp_intersect_at_rank
+
+                query_ani = containment_to_distance(f_unique, self.query_info.ksize, self.query_info.scaled,
+                                                    n_unique_kmers=self.query_info.query_hashes,
+                                                    sequence_len_bp=self.query_info.query_bp).ani
+                sres = SummarizedGatherResult(lineage=lineage, rank=rank,
+                                              f_weighted_at_rank=f_weighted_at_rank, fraction=f_unique,
+                                              bp_match_at_rank=bp_intersect_at_rank, query_ani_at_rank=query_ani)
+                self.summarized_lineage_results[rank].append(sres)
+
+            # record unclassified
+            lineage = ()
+            query_ani = None
+            f_unique = 1.0 - self.total_f_classified[rank]
+            if f_unique > 0:
+                f_weighted_at_rank = 1.0 - self.total_f_weighted[rank]
+                bp_intersect_at_rank = self.query_info.query_bp - self.total_bp_classified[rank]
+                sres = SummarizedGatherResult(lineage=lineage, rank=rank, f_weighted_at_rank=f_weighted_at_rank,
+                                              fraction=f_unique, bp_match_at_rank=bp_intersect_at_rank, query_ani_at_rank=query_ani)
+                self.summarized_lineage_results[rank].append(sres)
+
+    def build_classification_result(self, rank=None, ani_threshold=None, containment_threshold=0.1, force_resummarize=False):
+        if containment_threshold and not 0 <= containment_threshold <= 1:
+            raise ValueError(f"Containment threshold must be between 0 and 1 (input value: {containment_threshold}).")
+        if ani_threshold and not 0 <= ani_threshold <= 1:
+            raise ValueError(f"ANI threshold must be between 0 and 1 (input value: {ani_threshold}).")
+        self._init_classification_results() # init some fields
+        #for sg in self.summarized_lineage_results:
+        if not self.summarized_ranks or force_resummarize:
+            self.summarize_up_ranks(single_rank=rank, force_resummarize=force_resummarize)
+        # catch potential error from running summarize_up_ranks separately and passing in different single_rank
+        self.classified_ranks = self.summarized_ranks
+        # if a rank is provided, we need to classify ONLY using that rank
+        if rank:
+            if rank not in self.summarized_ranks:
+                raise ValueError(f"Error: rank '{rank}' not in summarized rank(s), {','.join(self.summarized_ranks)}")
+            else:
+                self.classified_ranks = [rank]
+        # CLASSIFY using summarization--> best only result. Best way = use ANI or containment threshold
+        for this_rank in self.classified_ranks: # ascending order or just single rank
+            # reset for this rank
+            f_weighted=0.0
+            f_unique_at_rank=0.0
+            bp_intersect_at_rank=0
+            #sum_uniq_to_query = self.sum_uniq_to_query[this_rank]
+            sum_uniq_weighted = self.sum_uniq_weighted[this_rank]  ##SHOULD WE BE USING WEIGHTED HERE? I THINK YES, but this is a change from before.
+            # sort the results and grab best
+            sorted_sum_uniq_weighted = list(sum_uniq_weighted.items())
+            sorted_sum_uniq_weighted.sort(key = lambda x: -x[1])
+            # best only
+            this_lineage, f_weighted = sorted_sum_uniq_weighted[0]
+            if f_weighted > 1:
+                raise ValueError(f"The tax classification of query '{self.query_name}' is {f_weighted}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
+            elif f_weighted == 0: #no annotated results for this query. do we need to handle this differently?
+                continue
+            else:
+                status="below_threshold"
+            f_unique_at_rank = self.sum_uniq_to_query[this_rank][this_lineage]
+            query_ani = containment_to_distance(f_unique_at_rank, self.query_info.ksize, self.query_info.scaled,
+                                                n_unique_kmers=self.query_info.query_hashes,
+                                                sequence_len_bp=self.query_info.query_bp).ani
+            # set classification status based on thresholds
+            if ani_threshold: # if provided, just use ani thresh
+                if query_ani and query_ani >= ani_threshold:
+                    status = 'match'
+                else:
+                    status = 'below_threshold'
+            elif f_weighted >= containment_threshold:
+                status = 'match'
+            # determine whether to move on to a higher tax rank (if avail)
+            if status == 'match':
+                break
+
+        if this_rank == "superkingdom" and status == "nomatch":
+            status="below_threshold"
+
+        # what happens when we don't have a gather match at all?
+        bp_intersect_at_rank = self.sum_uniq_bp[this_rank][this_lineage]
+
+        classif = ClassificationResult(status=status, rank=this_rank, fraction=f_unique_at_rank, lineage=this_lineage,
+                                       f_weighted_at_rank=f_weighted, bp_match_at_rank=bp_intersect_at_rank,
+                                       query_ani_at_rank= query_ani)
+        self.classification_result = classif
+
+        if rank is not None:
+            lin_as_list = this_lineage.display_lineage().split(';')
+            krona_classification = (f_weighted, *lin_as_list)
+            self.krona_classification_result = (krona_classification)
+            # handle unclassified - do we want/need this?
+            unclassified_fraction= 1.0-f_weighted
+            len_unclassified_lin = len(lin_as_list)
+            unclassifed_lin = ["unclassified"]*(len_unclassified_lin)
+            self.krona_unclassified_result = (unclassified_fraction, *unclassifed_lin)
+            self.krona_classification_header=self.make_krona_header(min_rank=rank)
+
+    def make_krona_header(self, min_rank):
+        "make header for krona output"
+        if min_rank not in self.summarized_ranks:
+            raise ValueError(f"Rank '{min_rank}' not present in summarized ranks.")
+        else:
+            rank_index = self.ranks.index(min_rank)
+        return ["fraction"] + list(self.ranks[:rank_index+1])
+
+    def make_human_summary(self, display_rank, classification=False):
+        results = []
+        if classification:
+            if not self.classification_result:
+                raise ValueError("query not classified yet.")
+            display_rank_results = [self.classification_result]
+        else:
+            if not self.summarized_lineage_results:
+                raise ValueError("lineages not summarized yet.")
+            display_rank_results = self.summarized_lineage_results[display_rank]
+            display_rank_results.sort(key=lambda res: -res.f_weighted_at_rank)
+
+        for res in display_rank_results:
+            results.append(res.as_human_friendly_dict())
+        return results
+
+    def make_full_summary(self, classification=False, limit_float=False):
+        results = []
+        if classification:
+            header= ["query_name", "status", "rank", "fraction", "lineage",
+                     "query_md5", "query_filename", "f_weighted_at_rank",
+                     "bp_match_at_rank", "query_ani_at_rank"]
+            if not self.classification_result:
+                raise ValueError("query not classified yet.")
+            rD = self.classification_result.as_summary_dict(query_info = self.query_info, limit_float=limit_float)
+            results.append(rD)
+        else:
+            header= ["query_name", "rank", "fraction", "lineage", "query_md5",
+                     "query_filename", "f_weighted_at_rank", "bp_match_at_rank",
+                     "query_ani_at_rank", "total_weighted_hashes"]
+            if not self.summarized_lineage_results:
+                raise ValueError("lineages not summarized yet.")
+
+            for rank in self.summarized_ranks[::-1]:
+                rank_results = self.summarized_lineage_results[rank]
+                rank_results.sort(key=lambda res: -res.f_weighted_at_rank)
+                for res in rank_results:
+                    results.append(res.as_summary_dict(query_info=self.query_info, limit_float=limit_float))
+        return header, results
+
+    def make_kreport_results(self):
+        rankCode = { "superkingdom": "D", "kingdom": "K", "phylum": "P", "class": "C",
+                        "order": "O", "family":"F", "genus": "G", "species": "S", "unclassified": "U"}
+        if self.query_info.total_weighted_hashes == 0:
+            raise ValueError("ERROR: cannot produce 'kreport' format from gather results before sourmash v4.5.0")
+        required_ranks = set(rankCode.keys).pop('unclassified')
+        if not set(required_ranks).issubset(set(self.ranks)):
+            raise ValueError("ERROR: cannot produce 'kreport' format from ranks {', '.join(self.ranks)}")
+        kreport_results = []
+        unclassified_recorded=False
+        # want to order results descending by rank
+        for rank in self.ranks:
+            if rank == 'strain': # no code for strain, can't include in this output afaik
+                continue
+            rank_results = self.summarized_lineage_results[rank]
+            for res in rank_results:
+                kresD = res.as_kreport_dict(rankCode, self.query_info.total_weighted_hashes)
+                if kresD['sci_name'] == "unclassified":
+                    # SummarizedGatherResults have an unclassified lineage at every rank, to facilitate reporting at a specific rank.
+                    # Here, we only need to report it once, since it will be the same fraction for all ranks
+                    if unclassified_recorded:
+                        continue
+                    else:
+                        unclassified_recorded = True
+                kreport_results.append(kresD)
+        return(kreport_results)

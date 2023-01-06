@@ -14,15 +14,17 @@ from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_re
                                     write_summary, MultiLineageDB,
                                     collect_gather_csvs, check_and_load_gather_csvs,
                                     SummarizedGatherResult, ClassificationResult,
+                                    QueryInfo, GatherRow, TaxResult, QueryTaxResult,
+                                    BaseLineageInfo, RankLineageInfo, LineagePair,
                                     write_classifications,
                                     aggregate_by_lineage_at_rank,
                                     make_krona_header, format_for_krona, write_krona,
                                     combine_sumgather_csvs_by_lineage, write_lineage_sample_frac,
-                                    LineageDB, LineageDB_Sqlite)
+                                    LineageDB, LineageDB_Sqlite,
+                                    SumGathInf, ClassInf, QInfo)
 
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
-from sourmash.tax.tax_utils import LineagePair, BaseLineageInfo, RankLineageInfo
 
 # utility functions for testing
 def make_mini_gather_results(g_infolist, include_ksize_and_scaled=False):
@@ -45,6 +47,68 @@ def make_mini_taxonomy(tax_info):
     return taxD
 
 
+def make_GatherRow(gather_dict=None, exclude_cols=[]):
+    """Load artificial gather row (dict) into GatherRow class"""
+    # default contains just the essential cols
+    gatherD = {'query_name': 'q1',
+               'query_md5': 'md5',
+               'query_filename': 'query_fn',
+               'name': 'gA',
+               'f_unique_weighted': 0.2,
+               'f_unique_to_query': 0.1,
+               'query_bp':100,
+               'unique_intersect_bp': 20,
+               'remaining_bp': 1,
+               'ksize': 31,
+               'scaled': 1}
+    if gather_dict is not None:
+        gatherD.update(gather_dict)
+    for col in exclude_cols:
+        gatherD.pop(col)
+    gatherRaw = GatherRow(**gatherD)
+    return gatherRaw
+
+
+def make_TaxResult(gather_dict=None, taxD=None, keep_full_ident=False, keep_ident_version=False, skip_idents=None):
+    """Make TaxResult from artificial gather row (dict)"""
+    gRow = make_GatherRow(gather_dict)
+    taxres = TaxResult(raw=gRow, keep_full_identifiers=keep_full_ident, keep_identifier_versions=keep_ident_version)
+    if taxD is not None:
+        taxres.get_match_lineage(tax_assignments=taxD, skip_idents=skip_idents)
+    return taxres
+
+
+def make_QueryTaxResults(gather_info, taxD=None, single_query=False, keep_full_ident=False, keep_ident_version=False,
+                        skip_idents=None, summarize=False, classify=False, classify_rank=None, c_thresh=0.1, ani_thresh=None):
+    """Make QueryTaxResult(s) from artificial gather information, formatted as list of gather rows (dicts)"""
+    gather_results = {}
+    this_querytaxres = None
+    for gather_infoD in gather_info:
+        taxres = make_TaxResult(gather_infoD, taxD=taxD,  keep_full_ident=keep_full_ident,
+                                keep_ident_version=keep_ident_version, skip_idents=skip_idents)
+        query_name = taxres.query_name
+        # add to matching QueryTaxResult or create new one
+        if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
+            # get existing or initialize new
+            this_querytaxres = gather_results.get(query_name, QueryTaxResult(taxres.query_info))
+        this_querytaxres.add_taxresult(taxres)
+#        print('missed_ident?', taxres.missed_ident)
+        gather_results[query_name] = this_querytaxres
+    if summarize:
+        for query_name, qres in gather_results.items():
+            qres.build_summarized_result()
+    if classify:
+        for query_name, qres in gather_results.items():
+            qres.build_classification_result(rank=classify_rank, containment_threshold=c_thresh, ani_threshold=ani_thresh)
+    # for convenience: If working with single query, just return that QueryTaxResult.
+    if single_query:
+        if len(gather_results.keys()) > 1:
+            raise ValueError("You passed in results for more than one query")
+        else:
+            return next(iter(gather_results.values()))
+    return gather_results
+
+
 ## tests
 def test_ascending_taxlist_1():
     assert list(ascending_taxlist()) ==  ['strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom']
@@ -54,22 +118,58 @@ def test_ascending_taxlist_2():
     assert list(ascending_taxlist(include_strain=False)) ==  ['species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom']
 
 
+def test_GatherRow_old_gather():
+    # gather does not contain query_name column
+    gA = {"name": "gA.1 name"}
+    with pytest.raises(TypeError) as exc:
+        make_GatherRow(gA, exclude_cols=['query_bp'])
+    print(str(exc))
+    assert "__init__() missing 1 required positional argument: 'query_bp'" in str(exc)
+
+
 def test_get_ident_default():
     ident = "GCF_001881345.1"
     n_id = get_ident(ident)
     assert n_id == "GCF_001881345"
 
 
+def test_TaxResult_get_ident_default():
+    gA = {"name": "GCF_001881345.1"}  # gather result with match name as GCF_001881345.1
+    taxres = make_TaxResult(gA)
+    print(taxres.match_ident)
+    assert taxres.match_ident == "GCF_001881345"
+
+
 def test_get_ident_split_but_keep_version():
-    ident = "GCF_001881345.1"
+    ident = "GCF_001881345.1 secondname"
     n_id = get_ident(ident, keep_identifier_versions=True)
     assert n_id == "GCF_001881345.1"
+
+
+def test_TaxResult_get_ident_split_but_keep_version():
+    gA = {"name": "GCF_001881345.1 secondname"}
+    taxres = make_TaxResult(gA, keep_ident_version=True)
+    print("raw ident: ", taxres.raw.name)
+    print("keep_full?: ", taxres.keep_full_identifiers)
+    print("keep_version?: ",taxres.keep_identifier_versions)
+    print("final ident: ", taxres.match_ident)
+    assert taxres.match_ident == "GCF_001881345.1"
 
 
 def test_get_ident_no_split():
     ident = "GCF_001881345.1 secondname"
     n_id = get_ident(ident, keep_full_identifiers=True)
     assert n_id == "GCF_001881345.1 secondname"
+
+
+def test_TaxResult_get_ident_keep_full():
+    gA = {"name": "GCF_001881345.1 secondname"}
+    taxres = make_TaxResult(gA, keep_full_ident=True)
+    print("raw ident: ", taxres.raw.name)
+    print("keep_full?: ", taxres.keep_full_identifiers)
+    print("keep_version?: ",taxres.keep_identifier_versions)
+    print("final ident: ", taxres.match_ident)
+    assert taxres.match_ident == "GCF_001881345.1 secondname"
 
 
 def test_collect_gather_csvs(runtmp):
@@ -684,13 +784,13 @@ def test_summarize_gather_at_best_only_equal_choose_first():
 def test_write_summary_csv(runtmp):
     """test summary csv write function"""
 
-    sum_gather = {'superkingdom': [SummarizedGatherResult(query_name='queryA', rank='superkingdom', fraction=1.0,
+    sum_gather = {'superkingdom': [SumGathInf(query_name='queryA', rank='superkingdom', fraction=1.0,
                                                           query_md5='queryA_md5', query_filename='queryA.sig',
                                                           f_weighted_at_rank=1.0, bp_match_at_rank=100,
                                                           lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),),
                                                           query_ani_at_rank=None,
                                                           total_weighted_hashes=0)],
-                  'phylum':  [SummarizedGatherResult(query_name='queryA', rank='phylum', fraction=1.0,
+                  'phylum':  [SumGathInf(query_name='queryA', rank='phylum', fraction=1.0,
                                                      query_md5='queryA_md5', query_filename='queryA.sig',
                                                      f_weighted_at_rank=1.0, bp_match_at_rank=100,
                                                      lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),
@@ -711,7 +811,7 @@ def test_write_summary_csv(runtmp):
 
 def test_write_classification(runtmp):
     """test classification csv write function"""
-    classif = ClassificationResult('queryA', 'match', 'phylum', 1.0,
+    classif = ClassInf('queryA', 'match', 'phylum', 1.0,
                                     (lca_utils.LineagePair(rank='superkingdom', name='a'),
                                      lca_utils.LineagePair(rank='phylum', name='b')),
                                      'queryA_md5', 'queryA.sig', 1.0, 100,
@@ -908,26 +1008,26 @@ def test_write_krona(runtmp):
 
 def test_combine_sumgather_csvs_by_lineage(runtmp):
     # some summarized gather dicts
-    sum_gather1 = {'superkingdom': [SummarizedGatherResult(query_name='queryA', rank='superkingdom', fraction=0.5,
+    sum_gather1 = {'superkingdom': [SumGathInf(query_name='queryA', rank='superkingdom', fraction=0.5,
                                                           query_md5='queryA_md5', query_filename='queryA.sig',
                                                           f_weighted_at_rank=1.0, bp_match_at_rank=100,
                                                           lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),),
                                                            query_ani_at_rank=None,
                                                            total_weighted_hashes=0)],
-                  'phylum':  [SummarizedGatherResult(query_name='queryA', rank='phylum', fraction=0.5,
+                  'phylum':  [SumGathInf(query_name='queryA', rank='phylum', fraction=0.5,
                                                      query_md5='queryA_md5', query_filename='queryA.sig',
                                                      f_weighted_at_rank=0.5, bp_match_at_rank=50,
                                                      lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),
                                                               lca_utils.LineagePair(rank='phylum', name='b')),
                                                      query_ani_at_rank=None,
                                                      total_weighted_hashes=0)]}
-    sum_gather2 = {'superkingdom': [SummarizedGatherResult(query_name='queryB', rank='superkingdom', fraction=0.7,
+    sum_gather2 = {'superkingdom': [SumGathInf(query_name='queryB', rank='superkingdom', fraction=0.7,
                                                           query_md5='queryB_md5', query_filename='queryB.sig',
                                                           f_weighted_at_rank=0.7, bp_match_at_rank=70,
                                                           lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),),
                                                            query_ani_at_rank=None,
                                                            total_weighted_hashes=0)],
-                  'phylum':  [SummarizedGatherResult(query_name='queryB', rank='phylum', fraction=0.7,
+                  'phylum':  [SumGathInf(query_name='queryB', rank='phylum', fraction=0.7,
                                                      query_md5='queryB_md5', query_filename='queryB.sig',
                                                      f_weighted_at_rank=0.7, bp_match_at_rank=70,
                                                      lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),
@@ -1003,26 +1103,26 @@ def test_write_lineage_sample_frac_format_lineage(runtmp):
 
 def test_combine_sumgather_csvs_by_lineage_improper_rank(runtmp):
     # some summarized gather dicts
-    sum_gather1 = {'superkingdom': [SummarizedGatherResult(query_name='queryA', rank='superkingdom', fraction=0.5,
+    sum_gather1 = {'superkingdom': [SumGathInf(query_name='queryA', rank='superkingdom', fraction=0.5,
                                                           query_md5='queryA_md5', query_filename='queryA.sig',
                                                           f_weighted_at_rank=0.5, bp_match_at_rank=50,
                                                           lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),),
                                                            query_ani_at_rank=None,
                                                            total_weighted_hashes=0)],
-                  'phylum':  [SummarizedGatherResult(query_name='queryA', rank='phylum', fraction=0.5,
+                  'phylum':  [SumGathInf(query_name='queryA', rank='phylum', fraction=0.5,
                                                      query_md5='queryA_md5', query_filename='queryA.sig',
                                                      f_weighted_at_rank=0.5, bp_match_at_rank=50,
                                                      lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),
                                                               lca_utils.LineagePair(rank='phylum', name='b')),
                                                      query_ani_at_rank=None,
                                                      total_weighted_hashes=0)]}
-    sum_gather2 = {'superkingdom': [SummarizedGatherResult(query_name='queryB', rank='superkingdom', fraction=0.7,
+    sum_gather2 = {'superkingdom': [SumGathInf(query_name='queryB', rank='superkingdom', fraction=0.7,
                                                           query_md5='queryB_md5', query_filename='queryB.sig',
                                                           f_weighted_at_rank=0.7, bp_match_at_rank=70,
                                                           lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),),
                                                            query_ani_at_rank=None,
                                                            total_weighted_hashes=0)],
-                  'phylum':  [SummarizedGatherResult(query_name='queryB', rank='phylum', fraction=0.7,
+                  'phylum':  [SumGathInf(query_name='queryB', rank='phylum', fraction=0.7,
                                                      query_md5='queryB_md5', query_filename='queryB.sig',
                                                      f_weighted_at_rank=0.7, bp_match_at_rank=70,
                                                      lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),
