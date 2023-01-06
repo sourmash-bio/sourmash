@@ -43,7 +43,7 @@ from sourmash.lca.lca_utils import (taxlist, display_lineage, pop_to_rank)
 
 class LineagePair(NamedTuple):
     rank: str
-    name: str = ""
+    name: str = None
     taxid: int = None
 
 @dataclass(frozen=True, order=True)
@@ -129,24 +129,23 @@ class BaseLineageInfo:
         'initialize from tuple/list of LineagePairs, allowing empty ranks and reordering if necessary'
         new_lineage = []
         # check this is a list or tuple of lineage tuples:
-        for lin_tup in self.lineage:
-            if not isinstance(lin_tup, (LineagePair, lca_utils.LineagePair)):
-                raise ValueError(f"{lin_tup} is not LineagePair or LineagePair")
         for rank in self.ranks:
             new_lineage.append(LineagePair(rank=rank))
-        # now add input tuples in correct spots. This corrects for order and allows empty values.
-            for lin_tup in self.lineage:
+        for lin_tup in self.lineage:
+            # now add input tuples in correct spots. This corrects for order and allows empty values.
+            if not isinstance(lin_tup, (LineagePair, lca_utils.LineagePair)):
+                raise ValueError(f"{lin_tup} is not LineagePair.")
                 # find index for this rank
-                if lin_tup.rank: # skip this tuple if rank is None or "" (empty lineage tuple. is this needed?)
-                    try:
-                        rank_idx = self.rank_index(lin_tup.rank)
-                    except ValueError as e:
-                        raise ValueError(f"Rank '{lin_tup.rank}' not present in {', '.join(self.ranks)}") from e
-                    # make sure we're adding LineagePairs, not lineagePairs for consistency
-                    if not isinstance(lin_tup, LineagePair):
-                        new_lineage[rank_idx] =  LineagePair(rank=lin_tup.rank, name=lin_tup.name)
-                    else:
-                        new_lineage[rank_idx] =  lin_tup
+            if lin_tup.rank: # skip this tuple if rank is None or "" (empty lineage tuple. is this needed?)
+                try:
+                    rank_idx = self.rank_index(lin_tup.rank)
+                except ValueError as e:
+                    raise ValueError(f"Rank '{lin_tup.rank}' not present in {', '.join(self.ranks)}") from e
+                # make sure we're adding LineagePairs, not lineagePairs for consistency
+                if isinstance(lin_tup, lca_utils.LineagePair):
+                    new_lineage[rank_idx] =  LineagePair(rank=lin_tup.rank, name=lin_tup.name)
+                else:
+                    new_lineage[rank_idx] =  lin_tup
         # build list of filled ranks
         filled_ranks = [a.rank for a in new_lineage if a.name]
         # set lineage and filled_ranks
@@ -299,11 +298,6 @@ class RankLineageInfo(BaseLineageInfo):
             self._init_from_lineage_dict()
         elif self.ranks:
             self._init_empty()
-
-    def __eq__(self, other):
-        if other == (): # sometimes we compare to null lineage.. this just helps with that
-            return False
-        return all([self.ranks == other.ranks, self.lineage==other.lineage])
 
 
 @dataclass(frozen=True, order=True)
