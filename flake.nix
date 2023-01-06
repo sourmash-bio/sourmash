@@ -95,10 +95,8 @@
 
             src = ./.;
 
-            cargoDeps = rustPlatform.fetchCargoTarball {
-              inherit src;
-              name = "${pname}-${version}";
-              hash = "sha256-IaIX4RdXEhLQhne+QiSfdP1KiIwZUqxRg14uWknS+0o=";
+            cargoDeps = rustPlatform.importCargoLock {
+              lockFile = ./Cargo.lock;
             };
 
             nativeBuildInputs = with rustPlatform; [ cargoSetupHook maturinBuildHook ];
