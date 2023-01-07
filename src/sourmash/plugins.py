@@ -120,15 +120,21 @@ def add_cli_scripts(parser):
 
 
 def list_all_plugins():
+    plugins = itertools.chain(_plugin_load_from,
+                              _plugin_save_to,
+                              _plugin_cli_cache)
+    plugins = list(plugins)
+
+    if not plugins:
+        print("\n(no plugins detected)\n")
+
     print("")
     print("the following plugins are installed:")
     print("")
     print(f"{'plugin type':<20s} {'from python module':<30s} {'v':<5s} {'entry point name':<20s}")
     print(f"{'-'*20} {'-'*30} {'-'*5} {'-'*20}")
 
-    for plugin in itertools.chain(_plugin_load_from,
-                                  _plugin_save_to,
-                                  _plugin_cli_cache):
+    for plugin in plugins:
         name = plugin.name
         mod = plugin.module
         version = plugin.dist.version

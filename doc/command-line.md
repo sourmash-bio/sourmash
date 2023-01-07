@@ -1980,3 +1980,5 @@ is installed in.
 
 In the future, we will include a list of available sourmash plugins in
 the documentation, and also provide a way to list available plugins.
+
+You can list all detected plugins with `sourmash info -v`.
