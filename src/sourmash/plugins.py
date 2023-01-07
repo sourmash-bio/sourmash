@@ -31,6 +31,10 @@ except TypeError:
 # load 'save_to' entry points as well.
 _plugin_save_to = entry_points(group='sourmash.save_to')
 
+# aaaaand CLI entry points:
+_plugin_cli_cache = None
+
+###
 
 def get_load_from_functions():
     "Load the 'load_from' plugins and yield tuples (priority, name, fn)."
@@ -66,19 +70,31 @@ def get_save_to_functions():
         yield priority, save_cls
 
 
+def get_cli_script_plugins():
+    global _plugin_cli_cache
+
+    if _plugin_cli_cache is None:
+        _plugin_cli_cache = []
+        for plugin in entry_points(group='sourmash.cli_script'):
+            name = plugin.name
+            mod = plugin.module
+            script_cls = plugin.load()
+
+            command = getattr(script_cls, 'command', None)
+            if command is None:
+                error(f"ERROR: no command provided by cli_script plugin '{name}' from {mod}; skipping")
+
+            _plugin_cli_cache.append(plugin)
+
+    return _plugin_cli_cache
+
+
 def get_cli_scripts_descriptions():
-    "Get the descriptions for command-line plugins."
-    plugin_list = entry_points(group='sourmash.cli_script')
-    for plugin in plugin_list:
+    "Build the descriptions for command-line plugins."
+    for plugin in get_cli_script_plugins():
         name = plugin.name
-        mod = plugin.module
         script_cls = plugin.load()
-
-        command = getattr(script_cls, 'command', None)
-        if command is None:
-            error(f"ERROR: no command provided by CLI plugin '{name}' from {mod}; skipping")
-            continue
-
+        command = getattr(script_cls, 'command')
         description = getattr(script_cls, 'description',
                               f"(no description provided by plugin '{name}')")
         yield f"sourmash scripts {command:16s} - {description}"
@@ -86,18 +102,12 @@ def get_cli_scripts_descriptions():
 
 def add_cli_scripts(parser):
     "Configure parsing for command-line plugins."
-    plugin_list = entry_points(group='sourmash.cli_script')
     d = {}
 
     # @CTB: factor out common code
-    for plugin in plugin_list:
-        mod = plugin.module
+    for plugin in get_cli_script_plugins():
         name = plugin.name
         script_cls = plugin.load()
-
-        if getattr(script_cls, "command", None) is None:
-            debug_literal(f"skipping CLI plugin '{name}' from '{mod}' - no command provided")
-            continue
 
         subparser = parser.add_parser(script_cls.command)
         debug_literal(f"cls_script plugin '{name}' adding command '{script_cls.command}'")
