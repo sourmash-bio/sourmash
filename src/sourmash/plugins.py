@@ -15,6 +15,8 @@ CTB TODO:
 DEFAULT_LOAD_FROM_PRIORITY = 99
 DEFAULT_SAVE_TO_PRIORITY = 99
 
+import itertools
+
 from .logging import debug_literal, error
 
 # cover for older versions of Python that don't support selection on load
@@ -115,3 +117,21 @@ def add_cli_scripts(parser):
         d[script_cls.command] = obj
 
     return d
+
+
+def list_all_plugins():
+    print("")
+    print("the following plugins are installed:")
+    print("")
+    print(f"{'plugin type':<20s} {'from python module':<30s} {'v':<5s} {'entry point name':<20s}")
+    print(f"{'-'*20} {'-'*30} {'-'*5} {'-'*20}")
+
+    for plugin in itertools.chain(_plugin_load_from,
+                                  _plugin_save_to,
+                                  _plugin_cli_cache):
+        name = plugin.name
+        mod = plugin.module
+        version = plugin.dist.version
+        group = plugin.group
+
+        print(f"{group:<20s} {mod:<30s} {version:<5s} {name:<20s}")
