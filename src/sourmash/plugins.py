@@ -15,7 +15,7 @@ CTB TODO:
 DEFAULT_LOAD_FROM_PRIORITY = 99
 DEFAULT_SAVE_TO_PRIORITY = 99
 
-from .logging import debug_literal
+from .logging import debug_literal, error
 
 # cover for older versions of Python that don't support selection on load
 # (the 'group=' below).
@@ -71,18 +71,37 @@ def get_cli_scripts_descriptions():
     plugin_list = entry_points(group='sourmash.cli_script')
     for plugin in plugin_list:
         name = plugin.name
+        mod = plugin.module
         script_cls = plugin.load()
-        yield script_cls.helpstring
+
+        command = getattr(script_cls, 'command', None)
+        if command is None:
+            error(f"ERROR: no command provided by CLI plugin '{name}' from {mod}; skipping")
+            continue
+
+        description = getattr(script_cls, 'description',
+                              f"(no description provided by plugin '{name}')")
+        yield f"sourmash scripts {command:16s} - {description}"
 
 
 def add_cli_scripts(parser):
     "Configure parsing for command-line plugins."
     plugin_list = entry_points(group='sourmash.cli_script')
+    d = {}
+
+    # @CTB: factor out common code
     for plugin in plugin_list:
+        mod = plugin.module
         name = plugin.name
         script_cls = plugin.load()
+
+        if getattr(script_cls, "command", None) is None:
+            debug_literal(f"skipping CLI plugin '{name}' from '{mod}' - no command provided")
+            continue
+
         subparser = parser.add_parser(script_cls.command)
         debug_literal(f"cls_script plugin '{name}' adding command '{script_cls.command}'")
         obj = script_cls(subparser)
+        d[script_cls.command] = obj
 
-    return 0
+    return d
