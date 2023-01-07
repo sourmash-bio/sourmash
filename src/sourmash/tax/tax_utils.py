@@ -1586,7 +1586,10 @@ class SummarizedGatherResult():
 
     def as_summary_dict(self, query_info=None, limit_float=False):
         sD = asdict(self)
-        sD['lineage'] = self.lineage.display_lineage(null_as_unclassified=True)
+        if sD['lineage'] == (): # get rid of my by using blank RankLineageInfo() instead of () as empty lini?
+            sD['lineage'] = "unclassified"
+        else:
+            sD['lineage'] = self.lineage.display_lineage(null_as_unclassified=True)
         if query_info is not None:
             sD['query_name'] = query_info.query_name
             sD['query_md5'] = query_info.query_md5
