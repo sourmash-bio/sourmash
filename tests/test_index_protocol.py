@@ -75,7 +75,7 @@ def build_sbt_index_save_load(runtmp):
 
 
 def build_zipfile_index(runtmp):
-    from sourmash.sourmash_args import SaveSignatures_ZipFile
+    from sourmash.save_load import SaveSignatures_ZipFile
 
     location = runtmp.output('index.zip')
     with SaveSignatures_ZipFile(location) as save_sigs:
