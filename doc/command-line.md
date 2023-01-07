@@ -1966,3 +1966,17 @@ situations where you have a **very large** collection of signatures
 in the collection (as you would have to, with a zipfile). This can be
 useful if you want to refer to different subsets of the collection
 without making multiple copies in a zip file.
+
+### Using sourmash plugins
+
+As of sourmash v4.7.0, sourmash has an experimental plugins interface!
+The plugin interface supports extending sourmash to load and save
+signatures in new ways, and also supports the addition of sourmash
+subcommands via `sourmash scripts`.
+
+In order to use a plugin with sourmash, you will need to use `pip`
+or `conda` to install the plug in the same environment that sourmash
+is installed in.
+
+In the future, we will include a list of available sourmash plugins in
+the documentation, and also provide a way to list available plugins.
