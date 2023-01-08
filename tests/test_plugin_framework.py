@@ -362,3 +362,80 @@ class Test_EntryPointBasics_Command:
 
         assert 'other is False' in out
         assert 'hello, world! argument is: some arg' in out
+
+
+class FakeCommandClass_Second:
+    """
+    A fake CLI class.
+    """
+    command = 'more_nifty'
+    description = "do somethin' else nifty"
+
+    def __init__(self, parser):
+        parser.add_argument('arg1')
+        parser.add_argument('--other', action='store_true')
+        parser.add_argument('--do-fail', action='store_true')
+
+    def main(self, args):
+        print(f"hello, world! argument is: {args.arg1}")
+        print(f"other is {args.other}")
+
+        if args.do_fail:
+            return 1
+        return 0
+
+
+class Test_EntryPointBasics_TwoCommands:
+    # test a second command
+    def setup_method(self):
+        _ = plugins.get_cli_script_plugins()
+        self.saved_plugins = plugins._plugin_cli_cache
+        plugins._plugin_cli_cache = [FakeEntryPoint('test_command',
+                                                    FakeCommandClass),
+                                     FakeEntryPoint('test_command2',
+                                                    FakeCommandClass_Second)]
+
+    def teardown_method(self):
+        plugins._plugin_cli_cache = self.saved_plugins
+
+    def test_cmd_0(self, runtmp):
+        with pytest.raises(utils.SourmashCommandFailed):
+            runtmp.sourmash('scripts')
+
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+        assert "do somethin' nifty" in out
+        assert "sourmash scripts nifty" in out
+
+        assert "do somethin' else nifty" in out
+        assert "sourmash scripts more_nifty" in out
+
+    def test_cmd_1(self, runtmp):
+        # test 'nifty'
+        runtmp.sourmash('scripts', 'nifty', 'some arg')
+
+        status = runtmp.last_result.status
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+        print(status)
+
+        assert 'other is False' in out
+        assert 'hello, world! argument is: some arg' in out
+
+    def test_cmd_2(self, runtmp):
+        # test 'more_nifty'
+        runtmp.sourmash('scripts', 'more_nifty', 'some arg')
+
+        status = runtmp.last_result.status
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+        print(status)
+
+        assert 'other is False' in out
+        assert 'hello, world! argument is: some arg' in out
