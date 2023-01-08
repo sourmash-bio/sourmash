@@ -23,6 +23,7 @@ class FakeEntryPoint:
     A class that stores a name and an object to be returned on 'load()'.
     Mocks the EntryPoint class used by importlib.metadata.
     """
+    module = 'test_plugin_framework'
     def __init__(self, name, load_obj):
         self.name = name
         self.load_obj = load_obj
@@ -291,12 +292,12 @@ class Test_EntryPointBasics_Command:
     # test the basics
     def setup_method(self):
         _ = plugins.get_cli_script_plugins()
-        self.saved_plugins = plugins._plugin_cli_cache
-        plugins._plugin_cli_cache = [FakeEntryPoint('test_command',
-                                                    FakeCommandClass)]
+        self.saved_plugins = plugins._plugin_cli
+        plugins._plugin_cli = [FakeEntryPoint('test_command',
+                                              FakeCommandClass)]
 
     def teardown_method(self):
-        plugins._plugin_cli_cache = self.saved_plugins
+        plugins._plugin_cli = self.saved_plugins
 
     def test_cmd_0(self, runtmp):
         with pytest.raises(utils.SourmashCommandFailed):
@@ -389,14 +390,14 @@ class Test_EntryPointBasics_TwoCommands:
     # test a second command
     def setup_method(self):
         _ = plugins.get_cli_script_plugins()
-        self.saved_plugins = plugins._plugin_cli_cache
-        plugins._plugin_cli_cache = [FakeEntryPoint('test_command',
-                                                    FakeCommandClass),
-                                     FakeEntryPoint('test_command2',
-                                                    FakeCommandClass_Second)]
+        self.saved_plugins = plugins._plugin_cli
+        plugins._plugin_cli = [FakeEntryPoint('test_command',
+                                              FakeCommandClass),
+                               FakeEntryPoint('test_command2',
+                                              FakeCommandClass_Second)]
 
     def teardown_method(self):
-        plugins._plugin_cli_cache = self.saved_plugins
+        plugins._plugin_cli = self.saved_plugins
 
     def test_cmd_0(self, runtmp):
         with pytest.raises(utils.SourmashCommandFailed):

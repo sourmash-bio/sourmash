@@ -34,7 +34,8 @@ except TypeError:
 _plugin_save_to = entry_points(group='sourmash.save_to')
 
 # aaaaand CLI entry points:
-_plugin_cli_cache = None
+_plugin_cli = entry_points(group='sourmash.cli_script')
+_plugin_cli_once = False
 
 ###
 
@@ -73,22 +74,20 @@ def get_save_to_functions():
 
 
 def get_cli_script_plugins():
-    global _plugin_cli_cache
+    x = []
+    for plugin in _plugin_cli:
+        name = plugin.name
+        mod = plugin.module
+        script_cls = plugin.load()
 
-    if _plugin_cli_cache is None:
-        _plugin_cli_cache = []
-        for plugin in entry_points(group='sourmash.cli_script'):
-            name = plugin.name
-            mod = plugin.module
-            script_cls = plugin.load()
+        command = getattr(script_cls, 'command', None)
+        if command is None and _plugin_cli_once is False:
+            error(f"ERROR: no command provided by cli_script plugin '{name}' from {mod}; skipping")
 
-            command = getattr(script_cls, 'command', None)
-            if command is None:
-                error(f"ERROR: no command provided by cli_script plugin '{name}' from {mod}; skipping")
+        x.append(plugin)
 
-            _plugin_cli_cache.append(plugin)
-
-    return _plugin_cli_cache
+    _plugin_cli_once = True
+    return x
 
 
 def get_cli_scripts_descriptions():
@@ -122,7 +121,7 @@ def add_cli_scripts(parser):
 def list_all_plugins():
     plugins = itertools.chain(_plugin_load_from,
                               _plugin_save_to,
-                              _plugin_cli_cache)
+                              _plugin_cli)
     plugins = list(plugins)
 
     if not plugins:
