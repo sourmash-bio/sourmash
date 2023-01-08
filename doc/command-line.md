@@ -1975,10 +1975,10 @@ signatures in new ways, and also supports the addition of sourmash
 subcommands via `sourmash scripts`.
 
 In order to use a plugin with sourmash, you will need to use `pip`
-or `conda` to install the plug in the same environment that sourmash
+or `conda` to install the plugin the same environment that sourmash
 is installed in.
 
 In the future, we will include a list of available sourmash plugins in
 the documentation, and also provide a way to list available plugins.
 
-You can list all detected plugins with `sourmash info -v`.
+You can list all installed plugins with `sourmash info -v`.
