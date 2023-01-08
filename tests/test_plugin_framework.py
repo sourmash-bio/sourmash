@@ -283,10 +283,8 @@ class FakeCommandClass:
         print(f"other is {args.other}")
 
         if args.do_fail:
-            sys.exit(1)
-            #return 1
-        sys.exit(0)
-        #return 0
+            return 1
+        return 0
 
 
 class Test_EntryPointBasics_Command:
@@ -355,10 +353,12 @@ class Test_EntryPointBasics_Command:
         with pytest.raises(utils.SourmashCommandFailed):
             runtmp.sourmash('scripts', 'nifty', '--do-fail', 'some arg')
 
+        status = runtmp.last_result.status
         out = runtmp.last_result.out
         err = runtmp.last_result.err
         print(out)
         print(err)
+        print(status)
 
         assert 'other is False' in out
         assert 'hello, world! argument is: some arg' in out
