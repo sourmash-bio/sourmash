@@ -1,7 +1,6 @@
 """display sourmash version and other information"""
 
 import os
-import screed
 import sourmash
 from sourmash.logging import notify
 from sourmash.plugins import list_all_plugins
@@ -24,6 +23,7 @@ def info(verbose=False):
         notify('khmer version: None (internal Nodegraph)')
         notify('')
 
+        import screed
         notify(f'screed version {screed.__version__}')
         notify(f'- loaded from path: {os.path.dirname(screed.__file__)}')
 

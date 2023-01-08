@@ -32,7 +32,6 @@ import zipfile
 import itertools
 import traceback
 
-import screed
 import sourmash
 
 from . import plugins as sourmash_plugins
@@ -226,6 +225,7 @@ def _load_zipfile(filename, **kwargs):
 @add_loader("catch FASTA/FASTQ files and error", 1000)
 def _error_on_fastaq(filename, **kwargs):
     "This is a tail-end loader that checks for FASTA/FASTQ sequences => err."
+    import screed
     success = False
     try:
         with screed.open(filename) as it:

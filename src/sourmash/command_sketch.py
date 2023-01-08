@@ -7,8 +7,6 @@ from collections import defaultdict, Counter
 import csv
 import shlex
 
-import screed
-
 import sourmash
 from .signature import SourmashSignature
 from .logging import notify, error, set_quiet, print_results
@@ -300,6 +298,8 @@ def translate(args):
 
 def _compute_sigs(to_build, output, *, check_sequence=False):
     "actually build the signatures in 'to_build' and output them to 'output'"
+    import screed
+
     save_sigs = sourmash_args.SaveSignaturesToLocation(output)
     save_sigs.open()
 
