@@ -17,7 +17,7 @@ DEFAULT_SAVE_TO_PRIORITY = 99
 
 import itertools
 
-from .logging import debug_literal, error
+from .logging import debug_literal, error, notify
 
 # cover for older versions of Python that don't support selection on load
 # (the 'group=' below).
@@ -126,13 +126,13 @@ def list_all_plugins():
     plugins = list(plugins)
 
     if not plugins:
-        print("\n(no plugins detected)\n")
+        notify("\n(no plugins detected)\n")
 
-    print("")
-    print("the following plugins are installed:")
-    print("")
-    print(f"{'plugin type':<20s} {'from python module':<30s} {'v':<5s} {'entry point name':<20s}")
-    print(f"{'-'*20} {'-'*30} {'-'*5} {'-'*20}")
+    notify("")
+    notify("the following plugins are installed:")
+    notify("")
+    notify(f"{'plugin type':<20s} {'from python module':<30s} {'v':<5s} {'entry point name':<20s}")
+    notify(f"{'-'*20} {'-'*30} {'-'*5} {'-'*20}")
 
     for plugin in plugins:
         name = plugin.name
@@ -140,4 +140,4 @@ def list_all_plugins():
         version = plugin.dist.version
         group = plugin.group
 
-        print(f"{group:<20s} {mod:<30s} {version:<5s} {name:<20s}")
+        notify(f"{group:<20s} {mod:<30s} {version:<5s} {name:<20s}")
