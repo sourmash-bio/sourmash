@@ -99,6 +99,7 @@ def get_parser():
         'sketch': 'Create signatures',
         'sig': 'Manipulate signature files',
         'storage': 'Operations on storage',
+        'scripts': "Plug-ins",
     }
     alias = {
         "sig": "signature"
@@ -107,7 +108,7 @@ def get_parser():
 
     clidir = os.path.dirname(__file__)
     basic_ops = utils.command_list(clidir)
-    user_ops = [op for op in basic_ops if op not in expert]
+    user_ops = [op for op in basic_ops if op not in expert and op not in module_descs]
     usage = '    Basic operations\n'
     for op in user_ops:
         docstring = getattr(sys.modules[__name__], op).__doc__

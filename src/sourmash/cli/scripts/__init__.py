@@ -1,19 +1,17 @@
-"""CLI plugin @CTB"""
+"""Provide a mechanism to add CLI plugins to sourmash.
+
+See https://sourmash.readthedocs.io/en/latest/dev_plugins.html for docs,
+src/sourmash/plugins.py for code, and
+https://github.com/sourmash-bio/sourmash_plugin_template for a template repo.
+"""
 
 # CTB TODO:
 # * evaluate how multiple commands in a single package work
 # * evaluate/check debugging capability
 # * provide suggestions for URLs etc.
-# * provide a _sourmash_ mechanism to list _all_ plugins (info?
-#   or scripts list?)
 # * provide guidance on how to test your CLI plugin at the CLI
 #   (sourmash scripts, look for description etc.)
 
-usage="""
-
-CLI plugins @CTB
-
-"""
 import argparse
 import sourmash
 
@@ -28,11 +26,13 @@ def __getattr__(name):
     raise AttributeError(name)
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('scripts', description=__doc__, usage=usage)
+    subparser = subparsers.add_parser('scripts',
+                                      usage=argparse.SUPPRESS,
+                                      formatter_class=argparse.RawDescriptionHelpFormatter)
 
     # get individual help strings:
     descrs = list(sourmash.plugins.get_cli_scripts_descriptions())
-    s = subparser.add_subparsers(title="extension commands",
+    s = subparser.add_subparsers(title="available plugin/extension commands",
                                  dest='subcmd',
                                  metavar='subcmd',
                                  help=argparse.SUPPRESS,
@@ -40,15 +40,16 @@ def subparser(subparsers):
 
     _extension_dict.update(sourmash.plugins.add_cli_scripts(s))
 
-    subparser.add_argument(
-        '-q', '--quiet', action='store_true',
-        help='suppress non-error output'
-    )
-    # @CTB hmm, this doesn't work...
-    subparser.add_argument(
-        '-d', '--debug', action='store_true',
-        help='provide debugging output'
-    )
+    if 0:
+        subparser.add_argument(
+            '-q', '--quiet', action='store_true',
+            help='suppress non-error output'
+        )
+        # @CTB hmm, this doesn't work...
+        subparser.add_argument(
+            '-d', '--debug', action='store_true',
+            help='provide debugging output'
+        )
 
 
 def main(args):
