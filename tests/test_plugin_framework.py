@@ -6,6 +6,7 @@ CTB TODO:
 * check name?
 """
 
+import sys
 import pytest
 import sourmash
 from sourmash.logging import set_quiet
@@ -259,3 +260,105 @@ class Test_EntryPointPriority_SaveTo:
         assert isinstance(x, FakeSaveClass_HighPriority)
         assert x.keep == [sig2, sig47, sig63]
         assert x.priority == 1
+
+
+#
+# Test basic features of the save_to plugin hook.
+#
+
+class FakeCommandClass:
+    """
+    A fake CLI class.
+    """
+    command = 'nifty'
+    description = "do somethin' nifty"
+
+    def __init__(self, parser):
+        parser.add_argument('arg1')
+        parser.add_argument('--other', action='store_true')
+        parser.add_argument('--do-fail', action='store_true')
+
+    def main(self, args):
+        print(f"hello, world! argument is: {args.arg1}")
+        print(f"other is {args.other}")
+
+        if args.do_fail:
+            sys.exit(1)
+            #return 1
+        sys.exit(0)
+        #return 0
+
+
+class Test_EntryPointBasics_Command:
+    # test the basics
+    def setup_method(self):
+        _ = plugins.get_cli_script_plugins()
+        self.saved_plugins = plugins._plugin_cli_cache
+        plugins._plugin_cli_cache = [FakeEntryPoint('test_command',
+                                                    FakeCommandClass)]
+
+    def teardown_method(self):
+        plugins._plugin_cli_cache = self.saved_plugins
+
+    def test_cmd_0(self, runtmp):
+        with pytest.raises(utils.SourmashCommandFailed):
+            runtmp.sourmash('scripts')
+
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+        assert "do somethin' nifty" in out
+        assert "sourmash scripts nifty" in out
+
+    def test_cmd_1(self):
+        ps = list(plugins.get_cli_scripts_descriptions())
+        print(ps)
+        assert len(ps) == 1
+
+        descr0 = ps[0]
+        assert "do somethin' nifty" in descr0
+        assert "sourmash scripts nifty" in descr0
+
+    def test_cmd_2(self):
+        ps = list(plugins.get_cli_script_plugins())
+        print(ps)
+        assert len(ps) == 1
+
+    def test_cmd_3(self, runtmp):
+        # test ability to run 'nifty' ;)
+        with pytest.raises(utils.SourmashCommandFailed):
+            runtmp.sourmash('scripts', 'nifty')
+
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+
+        assert 'nifty: error: the following arguments are required: arg1' in err
+        assert 'usage:  nifty [-h] [--other] [--do-fail] arg1' in err
+
+    def test_cmd_4(self, runtmp):
+        # test basic argument parsing etc
+        runtmp.sourmash('scripts', 'nifty', '--other', 'some arg')
+
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+
+        assert 'other is True' in out
+        assert 'hello, world! argument is: some arg' in out
+
+    def test_cmd_5(self, runtmp):
+        # test exit code passthru
+        with pytest.raises(utils.SourmashCommandFailed):
+            runtmp.sourmash('scripts', 'nifty', '--do-fail', 'some arg')
+
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+
+        assert 'other is False' in out
+        assert 'hello, world! argument is: some arg' in out

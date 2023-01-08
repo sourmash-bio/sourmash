@@ -11,6 +11,7 @@ https://github.com/sourmash-bio/sourmash_plugin_template for a template repo.
 # * provide suggestions for URLs etc.
 # * provide guidance on how to test your CLI plugin at the CLI
 #   (sourmash scripts, look for description etc.)
+# * is there any reason to provide a callback mechanism of any kind?
 
 import argparse
 import sourmash
@@ -53,7 +54,7 @@ def subparser(subparsers):
 
 
 def main(args):
-    raise Exception
+    raise Exception # @CTB this isn't called!
     from sourmash.logging import set_quiet
     from sourmash.logging import debug_literal
 
