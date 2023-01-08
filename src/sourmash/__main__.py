@@ -1,7 +1,12 @@
-import sourmash
+"""
+The main entry point for sourmash, defined in pyproject.toml.
+
+Can also be executed as 'python -m sourmash'.
+"""
 
 
 def main(arglist=None):
+    import sourmash
     args = sourmash.cli.get_parser().parse_args(arglist)
     if hasattr(args, 'subcmd'):
         mod = getattr(sourmash.cli, args.cmd)
@@ -10,8 +15,10 @@ def main(arglist=None):
     else:
         mod = getattr(sourmash.cli, args.cmd)
         mainmethod = getattr(mod, 'main')
-    return mainmethod(args)
+
+    retval = mainmethod(args)
+    raise SystemExit(retval)
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    main()
