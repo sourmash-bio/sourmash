@@ -440,3 +440,18 @@ class Test_EntryPointBasics_TwoCommands:
 
         assert 'other is False' in out
         assert 'hello, world! argument is: some arg' in out
+
+
+def test_cli_scripts_getattr_fail():
+    # test scripts.__getattr__ fail
+    from sourmash.cli import scripts
+
+    with pytest.raises(AttributeError):
+        scripts.ThisAttrDoesNotExist
+
+
+def test_cli_scripts_getattr_succ():
+    # test scripts.__getattr__ success
+    from sourmash.cli import scripts
+
+    scripts.subparser

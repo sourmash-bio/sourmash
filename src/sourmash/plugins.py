@@ -78,7 +78,10 @@ def get_cli_script_plugins():
     for plugin in _plugin_cli:
         name = plugin.name
         mod = plugin.module
-        script_cls = plugin.load()
+        try:
+            script_cls = plugin.load()
+        except ModuleNotFoundError: # @CTB
+            continue
 
         command = getattr(script_cls, 'command', None)
         if command is None and _plugin_cli_once is False:
@@ -94,7 +97,10 @@ def get_cli_scripts_descriptions():
     "Build the descriptions for command-line plugins."
     for plugin in get_cli_script_plugins():
         name = plugin.name
-        script_cls = plugin.load()
+        try:
+            script_cls = plugin.load()
+        except ModuleNotFoundError: # @CTB
+            continue
         command = getattr(script_cls, 'command')
         description = getattr(script_cls, 'description',
                               f"(no description provided by plugin '{name}')")
