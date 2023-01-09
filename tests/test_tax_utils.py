@@ -119,6 +119,40 @@ def test_ascending_taxlist_2():
     assert list(ascending_taxlist(include_strain=False)) ==  ['species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom']
 
 
+def test_QueryInfo_basic():
+    "basic functionality of QueryInfo dataclass"
+    qInf = QueryInfo(query_name='q1', query_md5='md5', query_filename='f1',query_bp='100',query_n_hashes='10',ksize='31',scaled='10', total_weighted_hashes='200')
+    assert qInf.query_name == 'q1'
+    assert isinstance(qInf.query_n_hashes, int)
+    assert isinstance(qInf.ksize, int)
+    assert isinstance(qInf.scaled, int)
+    assert qInf.total_weighted_hashes == 200
+    assert qInf.total_weighted_bp == 2000
+
+
+def test_QueryInfo_no_hash_info():
+    "QueryInfo dataclass for older gather results without query_n_hashes or total_weighted_hashes"
+    qInf = QueryInfo(query_name='q1', query_md5='md5', query_filename='f1',query_bp='100',ksize=31,scaled=10)
+    assert qInf.query_name == 'q1'
+    assert qInf.query_n_hashes == 0
+    assert qInf.total_weighted_hashes == 0
+    assert qInf.total_weighted_bp == 0
+
+
+def test_QueryInfo_missing():
+    "check that required args"
+    with pytest.raises(TypeError) as exc:
+        QueryInfo(query_name='q1', query_filename='f1',query_bp='100',query_n_hashes='10',ksize=31,scaled=10, total_weighted_hashes=200)
+    print(str(exc))
+    assert "missing 1 required positional argument: 'query_md5'" in str(exc)
+
+
+def test_SummarizedGatherResult():
+    "basic functionality of SummarizedGatherResult dataclass"
+    sgr = SummarizedGatherResult(rank="phylum", fraction=0.2, lineage=RankLineageInfo(lineage_str="a;b"), f_weighted_at_rank=0.3, bp_match_at_rank=30, query_ani_at_rank=0.97)
+
+
+
 def test_GatherRow_old_gather():
     # gather does not contain query_name column
     gA = {"name": "gA.1 name"}
@@ -1337,11 +1371,17 @@ def test_lineage_db_sql_load(runtmp):
 def test_LineagePair():
     lin = LineagePair(rank="rank1", name='name1')
     print(lin)
+    assert lin.rank=="rank1"
+    assert lin.name =="name1"
+    assert lin.taxid==None
 
 
 def test_LineagePair_1():
-    lin1 = LineagePair(rank="rank1", name='name1', taxid=1)
-    print(lin1)
+    lin = LineagePair(rank="rank1", name='name1', taxid=1)
+    assert lin.rank=="rank1"
+    assert lin.name =="name1"
+    assert lin.taxid==1
+    print(lin)
 
 
 def test_BaseLineageInfo_init_empty():
@@ -2358,29 +2398,6 @@ def test_build_summarized_result_rank_fail_not_available_resummarize():
     assert "Error: rank 'order' not in summarized rank(s), superkingdom" in str(exc)
 
 
-def test_build_classification_result_containment_threshold():
-    "basic functionality: build classification result using containment threshold"
-    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
-    gather_results = [{}, {"name": 'gB'}]
-    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
-    q_res.build_classification_result(containment_threshold=0.1)
-    print("classif: ", q_res.classification_result)
-    assert q_res.classification_result == ClassificationResult(status='match', rank='class', fraction=0.1, 
-                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
-                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
-    q_res.build_classification_result(containment_threshold=0.4)
-    print("classif: ", q_res.classification_result)
-    assert q_res.classification_result == ClassificationResult(status='match', rank='phylum', fraction=0.2, 
-                                                               lineage=RankLineageInfo(lineage_str="a;b"), f_weighted_at_rank=0.4,
-                                                               bp_match_at_rank=40,  query_ani_at_rank=approx(0.95, rel=1e-2))
-    q_res.build_classification_result(containment_threshold=1.0)
-    print("classif: ", q_res.classification_result)
-    assert q_res.classification_result == ClassificationResult(status='below_threshold', rank='superkingdom', fraction=0.2, 
-                                                               lineage=RankLineageInfo(lineage_str="a"), f_weighted_at_rank=0.4,
-                                                               bp_match_at_rank=40,  query_ani_at_rank=approx(0.95, rel=1e-2))
-
-
-
 def test_build_classification_result_containment_threshold_fail():
     "classification result: improper containment threshold"
     taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
@@ -2396,26 +2413,80 @@ def test_build_classification_result_containment_threshold_fail():
     assert "Containment threshold must be between 0 and 1 (input value: -0.1)." in str(exc)
 
 
+
+def test_build_classification_result_containment_threshold():
+    "basic functionality: build classification result using containment threshold"
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+
+    q_res.build_classification_result(containment_threshold=0.1)
+    print("classif: ", q_res.classification_result)
+    assert q_res.classification_result.status == 'match'
+    assert q_res.classification_result.rank == 'class'
+    assert q_res.classification_result.fraction == 0.1
+    assert q_res.classification_result.lineage == RankLineageInfo(lineage_str="a;b;c")
+    assert q_res.classification_result.f_weighted_at_rank == 0.2
+    assert q_res.classification_result.bp_match_at_rank == 20
+    assert q_res.classification_result.query_ani_at_rank == approx(0.928, rel=1e-2)
+
+    q_res.build_classification_result(containment_threshold=0.4)
+    print("classif: ", q_res.classification_result)
+    assert q_res.classification_result.status == 'match'
+    assert q_res.classification_result.rank == 'phylum'
+    assert q_res.classification_result.lineage == RankLineageInfo(lineage_str="a;b")
+    assert q_res.classification_result.f_weighted_at_rank == 0.4
+    assert q_res.classification_result.fraction == 0.2
+    assert q_res.classification_result.bp_match_at_rank == 40
+    assert q_res.classification_result.query_ani_at_rank == approx(0.95, rel=1e-2)
+
+    q_res.build_classification_result(containment_threshold=1.0)
+    print("classif: ", q_res.classification_result)
+    assert q_res.classification_result.status == 'below_threshold'
+    assert q_res.classification_result.rank == 'superkingdom'
+    assert q_res.classification_result.fraction == 0.2
+    assert q_res.classification_result.lineage == RankLineageInfo(lineage_str="a")
+    assert q_res.classification_result.f_weighted_at_rank == 0.4
+    assert q_res.classification_result.bp_match_at_rank == 40
+    assert q_res.classification_result.query_ani_at_rank == approx(0.95, rel=1e-2)
+
+
 def test_build_classification_result_ani_threshold():
     "basic functionality: build classification result"
     taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
     gather_results = [{}, {"name": 'gB'}]
     q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+
     q_res.build_classification_result(ani_threshold=.92)
     print("classif: ", q_res.classification_result)
-    assert q_res.classification_result == ClassificationResult(status='match', rank='class', fraction=0.1, 
-                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
-                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
-    q_res.build_classification_result(ani_threshold=0.94)
+    assert q_res.classification_result.status == 'match'
+    assert q_res.classification_result.rank == 'class'
+    assert q_res.classification_result.fraction == 0.1
+    assert q_res.classification_result.lineage == RankLineageInfo(lineage_str="a;b;c")
+    assert q_res.classification_result.f_weighted_at_rank == 0.2
+    assert q_res.classification_result.bp_match_at_rank == 20
+    assert q_res.classification_result.query_ani_at_rank == approx(0.928, rel=1e-2)
+
+    q_res.build_classification_result(ani_threshold=0.94) # should classify at phylum
     print("classif: ", q_res.classification_result)
-    assert q_res.classification_result == ClassificationResult(status='match', rank='phylum', fraction=0.2, 
-                                                               lineage=RankLineageInfo(lineage_str="a;b"), f_weighted_at_rank=0.4,
-                                                               bp_match_at_rank=40,  query_ani_at_rank=approx(0.95, rel=1e-2))
+    assert q_res.classification_result.status == 'match'
+    assert q_res.classification_result.rank == 'phylum'
+    assert q_res.classification_result.fraction == 0.2
+    assert q_res.classification_result.lineage == RankLineageInfo(lineage_str="a;b")
+    assert q_res.classification_result.f_weighted_at_rank == 0.4
+    assert q_res.classification_result.bp_match_at_rank == 40
+    assert q_res.classification_result.query_ani_at_rank == approx(0.95, rel=1e-2)
+
+    # superk result, but doesn't meet ANI threshold
     q_res.build_classification_result(ani_threshold=0.96)
     print("classif: ", q_res.classification_result)
-    assert q_res.classification_result == ClassificationResult(status='below_threshold', rank='superkingdom', fraction=0.2, 
-                                                               lineage=RankLineageInfo(lineage_str="a"), f_weighted_at_rank=0.4,
-                                                               bp_match_at_rank=40,  query_ani_at_rank=approx(0.95, rel=1e-2))
+    assert q_res.classification_result.status == 'below_threshold'
+    assert q_res.classification_result.rank == 'superkingdom'
+    assert q_res.classification_result.fraction == 0.2
+    assert q_res.classification_result.lineage == RankLineageInfo(lineage_str="a")
+    assert q_res.classification_result.f_weighted_at_rank == 0.4
+    assert q_res.classification_result.bp_match_at_rank == 40
+    assert q_res.classification_result.query_ani_at_rank == approx(0.95, rel=1e-2)
 
 
 def test_build_classification_result_ani_threshold_fail():
@@ -2470,68 +2541,95 @@ def test_build_classification_result_rank_containment_threshold():
     taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
     gather_results = [{}, {"name": 'gB'}]
     q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+
     q_res.build_classification_result(rank='class')
     print("classif: ", q_res.classification_result)
-    assert q_res.classification_result == ClassificationResult(status='match', rank='class', fraction=0.1, 
-                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
-                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
+    assert q_res.classification_result.status == 'match'
+    assert q_res.classification_result.rank == 'class'
+    assert q_res.classification_result.fraction == 0.1
+    assert q_res.classification_result.lineage == RankLineageInfo(lineage_str="a;b;c")
+    assert q_res.classification_result.f_weighted_at_rank == 0.2
+    assert q_res.classification_result.bp_match_at_rank == 20
+    assert q_res.classification_result.query_ani_at_rank == approx(0.928, rel=1e-2)
+
     q_res.build_classification_result(rank='class', containment_threshold=0.4)
-    assert q_res.classification_result == ClassificationResult(status='below_threshold', rank='class', fraction=0.1, 
-                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
-                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
-    
+    assert q_res.classification_result.status == 'below_threshold'
+    assert q_res.classification_result.rank == 'class'
+    assert q_res.classification_result.fraction == 0.1
+    assert q_res.classification_result.lineage == RankLineageInfo(lineage_str="a;b;c")
+    assert q_res.classification_result.f_weighted_at_rank == 0.2
+    assert q_res.classification_result.bp_match_at_rank == 20
+    assert q_res.classification_result.query_ani_at_rank == approx(0.928, rel=1e-2)
+
+
 def test_build_classification_result_rank_ani_threshold():
     "classification result with rank and ANI threshold"
     taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
     gather_results = [{}, {"name": 'gB'}]
     q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
+
     q_res.build_classification_result(rank='class', ani_threshold=0.92)
-    assert q_res.classification_result == ClassificationResult(status='match', rank='class', fraction=0.1, 
-                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
-                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
+    assert q_res.classification_result.status == 'match'
+    assert q_res.classification_result.rank == 'class'
+    assert q_res.classification_result.fraction == 0.1
+    assert q_res.classification_result.lineage == RankLineageInfo(lineage_str="a;b;c")
+    assert q_res.classification_result.f_weighted_at_rank == 0.2
+    assert q_res.classification_result.bp_match_at_rank == 20
+    assert q_res.classification_result.query_ani_at_rank == approx(0.928, rel=1e-2)
+
     q_res.build_classification_result(rank='class', ani_threshold=0.95)
-    assert q_res.classification_result == ClassificationResult(status='below_threshold', rank='class', fraction=0.1, 
-                                                               lineage=RankLineageInfo(lineage_str="a;b;c"), f_weighted_at_rank=0.2,
-                                                               bp_match_at_rank=20,  query_ani_at_rank=approx(0.928, rel=1e-2))
+    assert q_res.classification_result.status == 'below_threshold'
+    assert q_res.classification_result.rank == 'class'
+    assert q_res.classification_result.fraction == 0.1
+    assert q_res.classification_result.lineage == RankLineageInfo(lineage_str="a;b;c")
+    assert q_res.classification_result.f_weighted_at_rank == 0.2
+    assert q_res.classification_result.bp_match_at_rank == 20
+    assert q_res.classification_result.query_ani_at_rank == approx(0.928, rel=1e-2)
 
 
-def test_krona_classification_result():
+def test_krona_classified():
     "basic functionality: build classification result using containment threshold"
     taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
     gather_results = [{}, {"name": 'gB'}]
     q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
     q_res.build_classification_result()
-    assert q_res.krona_classification_result == None
+    assert q_res.krona_classified == None
     q_res.build_classification_result(rank='phylum')#, force_resummarize=True)
-    print(q_res.krona_classification_result)
-    assert q_res.krona_classification_result == (0.4, 'a', 'b')
+    print(q_res.krona_classified)
+    assert q_res.krona_classified == (0.4, 'a', 'b')
+    assert q_res.krona_unclassified == (0.6, 'unclassified', 'unclassified')
     q_res.build_classification_result(rank='superkingdom')
-    print(q_res.krona_classification_result)
-    assert q_res.krona_classification_result == (0.4, 'a')
+    print(q_res.krona_classified)
+    assert q_res.krona_classified == (0.4, 'a')
+    assert q_res.krona_unclassified == (0.6, 'unclassified')
+    # make sure this goes back to None if we reclassify without rank
     q_res.build_classification_result()
-    assert q_res.krona_classification_result == None
+    assert q_res.krona_classified == None
+    assert q_res.krona_unclassified == None
+    assert q_res.krona_header == []
 
-def test_make_krona_header_0():
+
+def test_make_krona_header_basic():
     taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
     gather_results = [{}, {"name": 'gB'}]
     phy_header = ["fraction", "superkingdom", "phylum"]
     q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
     q_res.build_classification_result(rank='phylum')
-    print(q_res.krona_classification_result)
-    print(q_res.krona_classification_header)
-    assert q_res.krona_classification_header == phy_header
+    print(q_res.krona_classified)
+    print(q_res.krona_header)
+    assert q_res.krona_header == phy_header
     hd = q_res.make_krona_header('phylum')
     print("header: ", hd)
     assert hd == phy_header
 
 
-def test_make_krona_header_1():
+def test_make_krona_header_basic_1():
     taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
     gather_results = [{}, {"name": 'gB'}]
     class_header = ["fraction", "superkingdom", "phylum", "class"]
     q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True)
     q_res.build_classification_result(rank='class')
-    assert q_res.krona_classification_header == class_header
+    assert q_res.krona_header == class_header
     hd = q_res.make_krona_header(min_rank='class')
     print("header: ", hd)
     assert hd == class_header
