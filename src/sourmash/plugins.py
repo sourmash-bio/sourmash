@@ -115,7 +115,6 @@ def add_cli_scripts(parser):
     "Configure parsing for command-line plugins."
     d = {}
 
-    # @CTB: factor out common code
     for plugin in get_cli_script_plugins():
         name = plugin.name
         script_cls = plugin.load()
