@@ -149,8 +149,185 @@ def test_QueryInfo_missing():
 
 def test_SummarizedGatherResult():
     "basic functionality of SummarizedGatherResult dataclass"
-    sgr = SummarizedGatherResult(rank="phylum", fraction=0.2, lineage=RankLineageInfo(lineage_str="a;b"), f_weighted_at_rank=0.3, bp_match_at_rank=30, query_ani_at_rank=0.97)
+    qInf = QueryInfo(query_name='q1', query_md5='md5', query_filename='f1',query_bp='100',
+                     query_n_hashes='10',ksize='31',scaled='10', total_weighted_hashes='200')
+    sgr = SummarizedGatherResult(rank="phylum", fraction=0.2, lineage=RankLineageInfo(lineage_str="a;b"),
+                                 f_weighted_at_rank=0.3, bp_match_at_rank=30)
+    print(sgr)
+    assert sgr.rank=='phylum'
+    sumD = sgr.as_summary_dict(query_info=qInf)
+    print(sumD)
+    assert sumD == {'rank': 'phylum', 'fraction': "0.2", 'lineage': 'a;b', 'f_weighted_at_rank': "0.3",
+                    'bp_match_at_rank': "30", 'query_ani_at_rank': None, 'query_name': 'q1',
+                    'query_md5': 'md5', 'query_filename': 'f1', 'total_weighted_hashes': "200"}
+    hD = sgr.as_human_friendly_dict(query_info=qInf)
+    print(hD)
+    assert hD == {'rank': 'phylum', 'fraction': '0.200', 'lineage': 'a;b', 'f_weighted_at_rank': '30.0%',
+                  'bp_match_at_rank': "30", 'query_ani_at_rank': '-    ', 'query_name': 'q1',
+                  'query_md5': 'md5', 'query_filename': 'f1', 'total_weighted_hashes': "200"}
+    krD = sgr.as_kreport_dict(query_info=qInf)
+    print(krD)
+    assert krD == {'ncbi_taxid': None, 'sci_name': 'b', 'rank_code': 'P', 'num_bp_assigned': "0",
+                   'percent_containment': '30.00', 'num_bp_contained': "60"}
 
+
+def test_SummarizedGatherResult_set_query_ani():
+    "Check ANI estimation within SummarizedGatherResult dataclass"
+    qInf = QueryInfo(query_name='q1', query_md5='md5', query_filename='f1',query_bp='100',
+                     query_n_hashes='10',ksize='31',scaled='10', total_weighted_hashes='200')
+    sgr = SummarizedGatherResult(rank="phylum", fraction=0.2, lineage=RankLineageInfo(lineage_str="a;b"),
+                                 f_weighted_at_rank=0.3, bp_match_at_rank=30)
+    sgr.set_query_ani(query_info=qInf)
+    print(sgr.query_ani_at_rank)
+    assert sgr.query_ani_at_rank == approx(0.949,  rel=1e-3)
+    # ANI can be calculated with query_bp OR query_n_hashes. Remove each and check the results are identical
+    qInf = QueryInfo(query_name='q1', query_md5='md5', query_filename='f1',query_bp='100',
+                     query_n_hashes=0,ksize='31',scaled='10', total_weighted_hashes='200')
+    sgr = SummarizedGatherResult(rank="phylum", fraction=0.2, lineage=RankLineageInfo(lineage_str="a;b"),
+                                 f_weighted_at_rank=0.3, bp_match_at_rank=30)
+    sgr.set_query_ani(query_info=qInf)
+    print(sgr.query_ani_at_rank)
+    assert sgr.query_ani_at_rank == approx(0.949,  rel=1e-3)
+    # try without query_bp
+    qInf = QueryInfo(query_name='q1', query_md5='md5', query_filename='f1',query_bp=0,
+                     query_n_hashes='10',ksize='31',scaled='10', total_weighted_hashes='200')
+    sgr = SummarizedGatherResult(rank="phylum", fraction=0.2, lineage=RankLineageInfo(lineage_str="a;b"),
+                                 f_weighted_at_rank=0.3, bp_match_at_rank=30)
+    sgr.set_query_ani(query_info=qInf)
+    print(sgr.query_ani_at_rank)
+    assert sgr.query_ani_at_rank == approx(0.949,  rel=1e-3)
+
+
+def test_SummarizedGatherResult_greater_than_1():
+    "basic functionality of SummarizedGatherResult dataclass"
+    # fraction > 1
+    with pytest.raises(ValueError) as exc:
+        SummarizedGatherResult(rank="phylum", fraction=0.3, lineage=RankLineageInfo(lineage_str="a;b"),
+                                 f_weighted_at_rank=1.2, bp_match_at_rank=30)
+    print(str(exc))
+    assert "> 100% of the query!" in str(exc)
+    # f_weighted > 1
+    with pytest.raises(ValueError) as exc:
+        SummarizedGatherResult(rank="phylum", fraction=1.2, lineage=RankLineageInfo(lineage_str="a;b"),
+                                 f_weighted_at_rank=0.3, bp_match_at_rank=30)
+    print(str(exc))
+    assert "> 100% of the query!" in str(exc)
+
+
+def test_SummarizedGatherResult_0_fraction():
+    with pytest.raises(ValueError) as exc:
+        SummarizedGatherResult(rank="phylum", fraction=-.1, lineage=RankLineageInfo(lineage_str="a;b"),
+                                 f_weighted_at_rank=0.3, bp_match_at_rank=30)
+    err_msg = "Summarized fraction is <=0% of the query! This should not occur."
+    assert err_msg in str(exc)
+    #assert cr.status == 'nomatch'
+    
+    with pytest.raises(ValueError) as exc:
+        SummarizedGatherResult(rank="phylum", fraction=.1, lineage=RankLineageInfo(lineage_str="a;b"),
+                                 f_weighted_at_rank=0, bp_match_at_rank=30)
+    print(str(exc))
+    assert err_msg in str(exc)
+
+
+def test_SummarizedGatherResult_species_kreport():
+    "basic functionality of SummarizedGatherResult dataclass"
+    qInf = QueryInfo(query_name='q1', query_md5='md5', query_filename='f1',query_bp='100',
+                     query_n_hashes='10',ksize='31',scaled='10', total_weighted_hashes='200')
+    sgr = SummarizedGatherResult(rank="species", fraction=0.2, lineage=RankLineageInfo(lineage_str="a;b;c;d;e;f;g"),
+                                 f_weighted_at_rank=0.3, bp_match_at_rank=30)
+    print(sgr)
+    assert sgr.rank=='species'
+    krD = sgr.as_kreport_dict(query_info=qInf)
+    print(krD)
+    assert krD == {'ncbi_taxid': None, 'sci_name': 'g', 'rank_code': 'S', 'num_bp_assigned': "60",
+                   'percent_containment': '30.00', 'num_bp_contained': "60"}
+
+
+def test_SummarizedGatherResult_summary_dict_limit_float():
+    "basic functionality of SummarizedGatherResult dataclass"
+    qInf = QueryInfo(query_name='q1', query_md5='md5', query_filename='f1',query_bp='100',
+                     query_n_hashes='10',ksize='31',scaled='10', total_weighted_hashes='200')
+    sgr = SummarizedGatherResult(rank="phylum", fraction=0.123456, lineage=RankLineageInfo(lineage_str="a;b"),
+                                 f_weighted_at_rank=0.345678, bp_match_at_rank=30)
+    print(sgr)
+    assert sgr.rank=='phylum'
+    sumD = sgr.as_summary_dict(query_info=qInf)
+    print(sumD)
+    assert sumD == {'rank': 'phylum', 'fraction': "0.123456", 'lineage': 'a;b', 'f_weighted_at_rank': "0.345678",
+                    'bp_match_at_rank': "30", 'query_ani_at_rank': None, 'query_name': 'q1',
+                    'query_md5': 'md5', 'query_filename': 'f1', 'total_weighted_hashes': "200"}
+    
+    sumD = sgr.as_summary_dict(query_info=qInf, limit_float=True)
+    print(sumD)
+    assert sumD == {'rank': 'phylum', 'fraction': "0.123", 'lineage': 'a;b', 'f_weighted_at_rank': "0.346",
+                    'bp_match_at_rank': "30", 'query_ani_at_rank': None, 'query_name': 'q1',
+                    'query_md5': 'md5', 'query_filename': 'f1', 'total_weighted_hashes': "200"}
+
+
+def test_ClassificationResult():
+    "basic functionality of ClassificationResult dataclass"
+    qInf = QueryInfo(query_name='q1', query_md5='md5', query_filename='f1',query_bp='100',
+                     query_n_hashes='10',ksize='31',scaled='10', total_weighted_hashes='200')
+    cr = ClassificationResult(rank="phylum", fraction=0.2, lineage=RankLineageInfo(lineage_str="a;b"),
+                              f_weighted_at_rank=0.3, bp_match_at_rank=30, query_ani_at_rank=0.97)
+    cr.set_status(query_info=qInf, containment_threshold=0.1)
+    assert cr.status == 'match'
+    print(cr.query_ani_at_rank)
+    assert cr.query_ani_at_rank == approx(0.949,  rel=1e-3)
+    cr.set_status(query_info=qInf, containment_threshold=0.35)
+    assert cr.status == 'below_threshold'
+
+
+def test_ClassificationResult_greater_than_1():
+    "basic functionality of SummarizedGatherResult dataclass"
+    # fraction > 1
+    with pytest.raises(ValueError) as exc:
+        ClassificationResult(rank="phylum", fraction=0.3, lineage=RankLineageInfo(lineage_str="a;b"),
+                                 f_weighted_at_rank=1.2, bp_match_at_rank=30)
+    print(str(exc))
+    assert "> 100% of the query!" in str(exc)
+    # f_weighted > 1
+    with pytest.raises(ValueError) as exc:
+        ClassificationResult(rank="phylum", fraction=1.2, lineage=RankLineageInfo(lineage_str="a;b"),
+                                 f_weighted_at_rank=0.3, bp_match_at_rank=30)
+    print(str(exc))
+    assert "> 100% of the query!" in str(exc)
+
+
+def test_ClassificationResult_0_fraction():
+    with pytest.raises(ValueError) as exc:
+        ClassificationResult(rank="phylum", fraction=-.1, lineage=RankLineageInfo(lineage_str="a;b"),
+                                 f_weighted_at_rank=0.3, bp_match_at_rank=30)
+    err_msg = "Summarized fraction is <=0% of the query! This should not occur."
+    assert err_msg in str(exc)
+    #assert cr.status == 'nomatch'
+    
+    with pytest.raises(ValueError) as exc:
+        ClassificationResult(rank="phylum", fraction=.1, lineage=RankLineageInfo(lineage_str="a;b"),
+                                 f_weighted_at_rank=0, bp_match_at_rank=30)
+    print(str(exc))
+    assert err_msg in str(exc)
+
+
+def test_ClassificationResult_build_krona_result():
+    qInf = QueryInfo(query_name='q1', query_md5='md5', query_filename='f1',query_bp='100',
+                     query_n_hashes='10',ksize='31',scaled='10', total_weighted_hashes='200')
+    cr = ClassificationResult(rank="phylum", fraction=0.2, lineage=RankLineageInfo(lineage_str="a;b"),
+                              f_weighted_at_rank=0.3, bp_match_at_rank=30, query_ani_at_rank=0.97)
+    #cr.set_status(query_info=qInf, rank='phylum')
+    kr, ukr = cr.build_krona_result(rank='phylum')
+    print(kr)
+    assert kr == (0.3, 'a', 'b')
+    print(ukr)
+    assert ukr == (0.7, 'unclassified', 'unclassified')  
+
+
+def test_ClassificationResult_build_krona_result_no_rank():
+    qInf = QueryInfo(query_name='q1', query_md5='md5', query_filename='f1',query_bp='100',
+                     query_n_hashes='10',ksize='31',scaled='10', total_weighted_hashes='200')
+    cr = ClassificationResult(rank="phylum", fraction=0.2, lineage=RankLineageInfo(lineage_str="a;b"),
+                              f_weighted_at_rank=0.3, bp_match_at_rank=30, query_ani_at_rank=0.97)
+    cr.set_status(query_info=qInf, containment_threshold=0.1)
 
 
 def test_GatherRow_old_gather():
@@ -1902,6 +2079,9 @@ def test_QueryTaxResult():
     assert q_res.skipped_idents == set()
     assert q_res.missed_idents == set()
     assert q_res.summarized_lineage_results == {}
+    taxranks = ('superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain')
+    assert q_res.ranks == taxranks
+    assert q_res.ascending_ranks == taxranks[::-1]
 
 
 def test_QueryTaxResult_add_incompatible():
@@ -2654,12 +2834,12 @@ def test_make_human_summary():
     hs = q_res.make_human_summary(display_rank = "superkingdom")
     print(hs)
     assert hs == [{'rank': 'superkingdom', 'fraction': '0.800', 'lineage': 'unclassified',
-                   'f_weighted_at_rank': '60.0%', 'bp_match_at_rank': 60, 'query_ani_at_rank': '-    ',
+                   'f_weighted_at_rank': '60.0%', 'bp_match_at_rank': "60", 'query_ani_at_rank': '-    ',
                    'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn',
-                   'total_weighted_hashes': 0},
+                   'total_weighted_hashes': "0"},
                   {'rank': 'superkingdom', 'fraction': '0.200', 'lineage': "a",
-                  'f_weighted_at_rank': '40.0%', 'bp_match_at_rank': 40, 'query_ani_at_rank': '94.9%',
-                  'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': 0}]
+                  'f_weighted_at_rank': '40.0%', 'bp_match_at_rank': "40", 'query_ani_at_rank': '94.9%',
+                  'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': "0"}]
 
 
 def test_make_human_summary_2():
@@ -2669,12 +2849,12 @@ def test_make_human_summary_2():
     hs = q_res.make_human_summary(display_rank = "phylum")
     print(hs)
     assert hs == [{'rank': 'phylum', 'fraction': '0.800', 'lineage': 'unclassified',
-                   'f_weighted_at_rank': '60.0%', 'bp_match_at_rank': 60, 'query_ani_at_rank': '-    ',
+                   'f_weighted_at_rank': '60.0%', 'bp_match_at_rank': "60", 'query_ani_at_rank': '-    ',
                    'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn',
-                   'total_weighted_hashes': 0},
+                   'total_weighted_hashes': "0"},
                   {'rank': 'phylum', 'fraction': '0.200', 'lineage': 'a;b',
-                  'f_weighted_at_rank': '40.0%', 'bp_match_at_rank': 40, 'query_ani_at_rank': '94.9%',
-                  'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': 0}]
+                  'f_weighted_at_rank': '40.0%', 'bp_match_at_rank': "40", 'query_ani_at_rank': '94.9%',
+                  'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': "0"}]
 
 
 def test_make_human_summary_classification():
@@ -2684,9 +2864,9 @@ def test_make_human_summary_classification():
     hs = q_res.make_human_summary(display_rank = "superkingdom", classification=True)
     print(hs)
     assert hs == [{'rank': 'superkingdom', 'fraction': '0.200', 'lineage': 'a',
-                  'f_weighted_at_rank': '40.0%', 'bp_match_at_rank': 40,
+                  'f_weighted_at_rank': '40.0%', 'bp_match_at_rank': "40",
                   'query_ani_at_rank': '94.9%', 'status': 'match', 'query_name': 'q1',
-                  'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': 0}]
+                  'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': "0"}]
 
 
 def test_make_human_summary_classification_2():
@@ -2696,7 +2876,7 @@ def test_make_human_summary_classification_2():
     hs = q_res.make_human_summary(display_rank = "phylum", classification=True)
     print(hs)
     assert hs == [{'rank': 'phylum', 'fraction': '0.200', 'lineage': 'a;b',
-                   'f_weighted_at_rank': '40.0%', 'bp_match_at_rank': 40,
+                   'f_weighted_at_rank': '40.0%', 'bp_match_at_rank': "40",
                    'query_ani_at_rank': '94.9%', 'status': 'match',
                    'query_name': 'q1', 'query_md5': 'md5',
-                   'query_filename': 'query_fn', 'total_weighted_hashes': 0}]
+                   'query_filename': 'query_fn', 'total_weighted_hashes': "0"}]

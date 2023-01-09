@@ -37,6 +37,9 @@ ClassInf = namedtuple("ClassInf", "query_name, status, rank, fraction, lineage, 
 # Essential Gather column names that must be in gather_csv to allow `tax` summarization
 EssentialGatherColnames = ('query_name', 'name', 'f_unique_weighted', 'f_unique_to_query', 'unique_intersect_bp', 'remaining_bp', 'query_md5', 'query_filename')
 
+RANKCODE = { "superkingdom": "D", "kingdom": "K", "phylum": "P", "class": "C",
+                        "order": "O", "family":"F", "genus": "G", "species": "S", "unclassified": "U"}
+
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import (taxlist, display_lineage, pop_to_rank)
@@ -737,9 +740,6 @@ def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
     columns = ["percent_containment", "num_bp_contained", "num_bp_assigned", "rank_code", "ncbi_taxid", "sci_name"]
     w = csv.DictWriter(csv_fp, columns, delimiter=sep)
 
-    rankCode = { "superkingdom": "D", "kingdom": "K", "phylum": "P", "class": "C",
-                 "order": "O", "family":"F", "genus": "G", "species": "S"} # , "": "U"
-
     # check - are we using v4.5.0 or later gather CSVs?
     for rank, rank_results in summarized_gather.items():
         for res in rank_results:
@@ -748,7 +748,7 @@ def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
 
     unclassified_written=False
     for rank, rank_results in summarized_gather.items():
-        rcode = rankCode[rank]
+        rcode = RANKCODE[rank]
         for res in rank_results:
             # SummarizedGatherResults have an unclassified lineage at every rank, to facilitate reporting at a specific rank.
             # Here, we only need to report it once, since it will be the same fraction for all ranks
@@ -1585,29 +1585,42 @@ class SummarizedGatherResult():
     bp_match_at_rank: int
     query_ani_at_rank: float = None
 
+    def __post_init__(self):
+        self.check_values()
+
+    def check_values(self):
+        if any([self.fraction > 1, self.f_weighted_at_rank > 1]):
+            raise ValueError(f"Summarized fraction is > 100% of the query! This should not be possible. Please check that your input files come directly from a single gather run per query.")
+        # is this true for weighted too, or is that set to 0 when --ignore-abundance is used?
+        if any([self.fraction <=0, self.f_weighted_at_rank <= 0]): # this shouldn't actually happen, but it breaks ANI estimation, so let's check for it.
+            raise ValueError(f"Summarized fraction is <=0% of the query! This should not occur.")
+
     def set_query_ani(self, query_info):
         self.query_ani_at_rank = containment_to_distance(self.fraction, query_info.ksize, query_info.scaled,
                                                          n_unique_kmers=query_info.query_n_hashes,
                                                          sequence_len_bp=query_info.query_bp).ani
 
-    def as_summary_dict(self, query_info=None, limit_float=False):
+    def as_summary_dict(self, query_info, limit_float=False):
         sD = asdict(self)
         if sD['lineage'] == (): # get rid of my by using blank RankLineageInfo() instead of () as empty lini?
             sD['lineage'] = "unclassified"
         else:
             sD['lineage'] = self.lineage.display_lineage() # null_as_unclassified=True
-        if query_info is not None:
-            sD['query_name'] = query_info.query_name
-            sD['query_md5'] = query_info.query_md5
-            sD['query_filename'] = query_info.query_filename
-            sD['total_weighted_hashes'] = query_info.total_weighted_hashes
+        sD['query_name'] = query_info.query_name
+        sD['query_md5'] = query_info.query_md5
+        sD['query_filename'] = query_info.query_filename
+        sD['total_weighted_hashes'] = str(query_info.total_weighted_hashes)
+        sD['bp_match_at_rank'] = str(self.bp_match_at_rank)
         if limit_float:
             sD['fraction'] = f'{self.fraction:.3f}'
             sD['f_weighted_at_rank'] = f'{self.f_weighted_at_rank:.3f}'
+        else:
+            sD['fraction'] = str(self. fraction)
+            sD['f_weighted_at_rank'] = str(self.f_weighted_at_rank)
 
         return(sD)
 
-    def as_human_friendly_dict(self, query_info = None):
+    def as_human_friendly_dict(self, query_info):
         sD = self.as_summary_dict(query_info=query_info, limit_float=True)
         sD['f_weighted_at_rank'] = f"{self.f_weighted_at_rank*100:>4.1f}%"
         if sD['query_ani_at_rank'] is not None:
@@ -1616,25 +1629,26 @@ class SummarizedGatherResult():
             sD['query_ani_at_rank'] = '-    '
         return sD
 
-    def as_kreport_dict(self, rankCode, total_weighted_hashes):
-         sD = asdict(self)
-         this_rank = self.lineage.lowest_rank
-         this_sciname = self.lineage.lowest_lineage_name
-         sD['ncbi_taxid'] = self.lineage.lowest_lineage_taxid
-         sD['sci_name'] = this_sciname
-         #sD['lineage'] = self.lineage.display_lineage(null_as_unclassified=True)
-         sD['rank_code'] = rankCode[this_rank]
-         sD['num_bp_assigned'] = 0
-         # total percent containment, weighted to include abundance info
-         sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
-         sD["num_bp_contained"] = int(self.f_weighted_at_rank * total_weighted_hashes)
-         # the number of bp actually 'assigned' at this rank. Sourmash assigns everything
-         # at genome level, but since kreport traditionally doesn't include 'strain' or genome,
-         # it is reasonable to state that sourmash assigns at 'species' level for this.
-         # can be modified later.
-         lowest_assignment_rank = 'species'
-         if this_rank == lowest_assignment_rank or this_sciname == "unclassified":
-            sD["num_bp_assigned"] = sD["num_bp_contained"]
+    def as_kreport_dict(self, query_info):
+        sD = {}
+        this_rank = self.lineage.lowest_rank
+        this_sciname = self.lineage.lowest_lineage_name
+        sD['ncbi_taxid'] = self.lineage.lowest_lineage_taxid
+        sD['sci_name'] = this_sciname
+        #sD['lineage'] = self.lineage.display_lineage(null_as_unclassified=True)
+        sD['rank_code'] = RANKCODE[this_rank]
+        sD['num_bp_assigned'] = str(0)
+        # total percent containment, weighted to include abundance info
+        sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
+        sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_hashes))
+        # the number of bp actually 'assigned' at this rank. Sourmash assigns everything
+        # at genome level, but since kreport traditionally doesn't include 'strain' or genome,
+        # it is reasonable to state that sourmash assigns at 'species' level for this.
+        # can be modified later.
+        lowest_assignment_rank = 'species'
+        if this_rank == lowest_assignment_rank or this_sciname == "unclassified":
+           sD["num_bp_assigned"] = sD["num_bp_contained"]
+        return sD
 
 @dataclass
 class ClassificationResult(SummarizedGatherResult):
@@ -1642,23 +1656,20 @@ class ClassificationResult(SummarizedGatherResult):
     status: str = field(init=False)
 
     def __post_init__(self):
-        self.status = None
+        # check for out of bounds values, default "nomatch" if no match at all
+        self.check_values()
+        self.status = 'nomatch' #None?
 
     def set_status(self, query_info, containment_threshold=None, ani_threshold=None):
-        # check for out of bounds values, set "nomatch" if no match at all
-        if self.f_weighted_at_rank > 1:
-            raise ValueError(f"The tax classification of query '{query_info.query_name}' is {self.f_weighted_at_rank}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
-        elif self.f_weighted_at_rank == 0: #no annotated results for this query. This also  shouldn't happen, right?
-            self.status="nomatch"
-        else:
-            # if any matches, use 'below_threshold' as default; set 'match' if meets threshold
+        # if any matches, use 'below_threshold' as default; set 'match' if meets threshold
+        if any([containment_threshold, ani_threshold]):
             self.status="below_threshold"
-            self.set_query_ani(query_info=query_info)
-            if ani_threshold:  # if provided, just use ani thresh, don't use containment threshold
-                if self.query_ani_at_rank >= ani_threshold:
-                    self.status = 'match'
-            elif containment_threshold and self.f_weighted_at_rank >= containment_threshold:
-                    self.status = 'match'
+        self.set_query_ani(query_info=query_info)
+        if ani_threshold:  # if provided, just use ani thresh, don't use containment threshold
+            if self.query_ani_at_rank >= ani_threshold:
+                self.status = 'match'
+        elif containment_threshold and self.f_weighted_at_rank >= containment_threshold:
+                self.status = 'match'
 
     def build_krona_result(self, rank=None):
         krona_classified, krona_unclassified = None, None
@@ -1672,7 +1683,6 @@ class ClassificationResult(SummarizedGatherResult):
             unclassifed_lin = ["unclassified"]*(len_unclassified_lin)
             krona_unclassified = (unclassified_fraction, *unclassifed_lin)
         return krona_classified, krona_unclassified
-
  
 
 @dataclass
