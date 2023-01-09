@@ -74,6 +74,8 @@ def get_save_to_functions():
 
 
 def get_cli_script_plugins():
+    global _plugin_cli_once
+
     x = []
     for plugin in _plugin_cli:
         name = plugin.name
@@ -84,10 +86,12 @@ def get_cli_script_plugins():
             continue
 
         command = getattr(script_cls, 'command', None)
-        if command is None and _plugin_cli_once is False:
-            error(f"ERROR: no command provided by cli_script plugin '{name}' from {mod}; skipping")
-
-        x.append(plugin)
+        if command is None:
+            # print error message only once...
+            if _plugin_cli_once is False:
+                error(f"ERROR: no command provided by cli_script plugin '{name}' from {mod}; skipping")
+        else:
+            x.append(plugin)
 
     _plugin_cli_once = True
     return x

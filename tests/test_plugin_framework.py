@@ -8,6 +8,8 @@ CTB TODO:
 
 import sys
 import pytest
+import collections
+
 import sourmash
 from sourmash.logging import set_quiet
 
@@ -18,12 +20,16 @@ from sourmash.save_load import (Base_SaveSignaturesToLocation,
                                 SaveSignaturesToLocation)
 
 
+_Dist = collections.namedtuple('_Dist', ['version'])
 class FakeEntryPoint:
     """
     A class that stores a name and an object to be returned on 'load()'.
     Mocks the EntryPoint class used by importlib.metadata.
     """
     module = 'test_plugin_framework'
+    dist = _Dist('0.1')
+    group = 'groupfoo'
+
     def __init__(self, name, load_obj):
         self.name = name
         self.load_obj = load_obj
@@ -386,6 +392,33 @@ class FakeCommandClass_Second:
         return 0
 
 
+class FakeCommandClass_Broken_1:
+    """
+    A fake CLI class.
+    """
+    # command = 'more_nifty' # no command
+
+    def __init__(self, parser):
+        assert 0
+
+    def main(self, args):
+        assert 0
+
+
+class FakeCommandClass_Broken_2:
+    """
+    A fake CLI class.
+    """
+    command = 'broken'
+    # no description
+
+    def __init__(self, parser):
+        pass
+
+    def main(self, args):
+        return 0
+
+
 class Test_EntryPointBasics_TwoCommands:
     # test a second command
     def setup_method(self):
@@ -394,7 +427,12 @@ class Test_EntryPointBasics_TwoCommands:
         plugins._plugin_cli = [FakeEntryPoint('test_command',
                                               FakeCommandClass),
                                FakeEntryPoint('test_command2',
-                                              FakeCommandClass_Second)]
+                                              FakeCommandClass_Second),
+                               FakeEntryPoint('test_command3',
+                                              FakeCommandClass_Broken_1),
+                               FakeEntryPoint('test_command4',
+                                              FakeCommandClass_Broken_2)
+                               ]
 
     def teardown_method(self):
         plugins._plugin_cli = self.saved_plugins
@@ -440,6 +478,24 @@ class Test_EntryPointBasics_TwoCommands:
 
         assert 'other is False' in out
         assert 'hello, world! argument is: some arg' in out
+
+    def test_sourmash_info(self, runtmp):
+        # test 'sourmash info -v' => shows the plugins
+        runtmp.sourmash('info', '-v')
+
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+
+        expected = """
+groupfoo             test_plugin_framework          0.1   test_command
+groupfoo             test_plugin_framework          0.1   test_command2
+groupfoo             test_plugin_framework          0.1   test_command3
+groupfoo             test_plugin_framework          0.1   test_command4
+""".splitlines()
+        for line in expected:
+            assert line in err
 
 
 def test_cli_scripts_getattr_fail():
