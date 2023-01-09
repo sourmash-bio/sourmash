@@ -1595,7 +1595,7 @@ class SummarizedGatherResult():
         if sD['lineage'] == (): # get rid of my by using blank RankLineageInfo() instead of () as empty lini?
             sD['lineage'] = "unclassified"
         else:
-            sD['lineage'] = self.lineage.display_lineage(null_as_unclassified=True)
+            sD['lineage'] = self.lineage.display_lineage() # null_as_unclassified=True
         if query_info is not None:
             sD['query_name'] = query_info.query_name
             sD['query_md5'] = query_info.query_md5
@@ -1889,7 +1889,7 @@ class QueryTaxResult():
             display_rank_results.sort(key=lambda res: -res.f_weighted_at_rank)
 
         for res in display_rank_results:
-            results.append(res.as_human_friendly_dict())
+            results.append(res.as_human_friendly_dict(query_info=self.query_info))
         return results
 
     def make_full_summary(self, classification=False, limit_float=False):
