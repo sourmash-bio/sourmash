@@ -1651,8 +1651,8 @@ def test_BaseLineageInfo_init_empty():
     assert taxinf.zip_lineage()== ['', '', ''] # this is a bit odd, but it's what preserves empty ranks...
     print(taxinf.filled_lineage)
     assert taxinf.filled_lineage == ()
-    assert taxinf.lowest_lineage_name == ""
-    assert taxinf.lowest_lineage_taxid == ""
+    assert taxinf.lowest_lineage_name == None
+    assert taxinf.lowest_lineage_taxid == None
     assert taxinf.filled_ranks == ()
     assert taxinf.lowest_rank == None
     assert taxinf.display_lineage() == ""
@@ -1695,7 +1695,7 @@ def test_BaseLineageInfo_init_lineage_tups():
 
 def test_BaseLineageInfo_init_lca_lineage_tups():
     ranks=["A", "B", "C"]
-    lin_tups = (lca_utils.LineagePair(rank="A", name='a'), lca_utils.LineagePair(rank="C", name='b'))
+    lin_tups = (LineagePair(rank="A", name='a'), LineagePair(rank="C", name='b'))
     taxinf = BaseLineageInfo(lineage=lin_tups, ranks=ranks)
     print(taxinf.lineage)
     print(taxinf.lineage_str)
@@ -1704,7 +1704,7 @@ def test_BaseLineageInfo_init_lca_lineage_tups():
 
 def test_BaseLineageInfo_init_lineage_dict_fail():
     ranks=["A", "B", "C"]
-    lin_tups = (lca_utils.LineagePair(rank="A", name='a'), lca_utils.LineagePair(rank="C", name='b'))
+    lin_tups = (LineagePair(rank="A", name='a'), LineagePair(rank="C", name='b'))
     with pytest.raises(ValueError) as exc:
         taxinf = BaseLineageInfo(ranks=ranks, lineage_dict=lin_tups)
     print(str(exc))
