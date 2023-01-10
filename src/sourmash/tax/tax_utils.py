@@ -52,7 +52,7 @@ class BaseLineageInfo:
        hierarchical set of LineagePairs. """
     # need to set compare=False for any mutable type to keep this class hashable
     ranks: tuple() # require ranks
-    lineage: tuple = field(default=()) #tuple of LineagePairs
+    lineage: tuple = field(default=()) # tuple of LineagePairs
     lineage_str: str = field(default=None, compare=False) # ';'- or ','-separated str of lineage names
     lineage_dict: dict = field(default=None, compare=False) # dict of rank: name
 
@@ -103,14 +103,14 @@ class BaseLineageInfo:
 
     @property
     def lowest_lineage_name(self):
-        """Return the name of the lowest filled lineage"""
+        "Return the name of the lowest filled lineage"
         if not self.filled_ranks:
             return ""
         return self.filled_lineage[-1].name
 
     @property
     def lowest_lineage_taxid(self):
-        """Return the taxid of the lowest filled lineage"""
+        "Return the taxid of the lowest filled lineage"
         if not self.filled_ranks:
             return ""
         return self.filled_lineage[-1].taxid
@@ -142,9 +142,9 @@ class BaseLineageInfo:
                     raise ValueError(f"Rank '{lin_tup.rank}' not present in {', '.join(self.ranks)}") from e
                 # make sure we're adding tax_utils.LineagePairs, not lca_utils.LineagePairs for consistency
                 if isinstance(lin_tup, lca_utils.LineagePair):
-                    new_lineage[rank_idx] =  LineagePair(rank=lin_tup.rank, name=lin_tup.name)
+                    new_lineage[rank_idx] = LineagePair(rank=lin_tup.rank, name=lin_tup.name)
                 else:
-                    new_lineage[rank_idx] =  lin_tup
+                    new_lineage[rank_idx] = lin_tup
         # build list of filled ranks
         filled_ranks = [a.rank for a in new_lineage if a.name]
         # set lineage and filled_ranks
@@ -289,7 +289,7 @@ class BaseLineageInfo:
 
 @dataclass(frozen=True, order=True)
 class RankLineageInfo(BaseLineageInfo):
-    """Class for storing multi-rank lineage information"""
+    "Class for storing multi-rank lineage information"
     ranks: tuple = field(default_factory=lambda: ('superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain'))
 
     def __post_init__(self):
