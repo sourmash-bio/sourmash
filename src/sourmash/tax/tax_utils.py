@@ -1632,24 +1632,29 @@ class SummarizedGatherResult():
         return sD
 
     def as_kreport_dict(self, query_info):
+        lowest_assignment_rank = 'species'
         sD = {}
-        this_rank = self.lineage.lowest_rank
-        this_sciname = self.lineage.lowest_lineage_name
-        sD['ncbi_taxid'] = self.lineage.lowest_lineage_taxid
-        sD['sci_name'] = this_sciname
-        #sD['lineage'] = self.lineage.display_lineage(null_as_unclassified=True)
-        sD['rank_code'] = RANKCODE[this_rank]
         sD['num_bp_assigned'] = str(0)
         # total percent containment, weighted to include abundance info
         sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
         sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_hashes))
-        # the number of bp actually 'assigned' at this rank. Sourmash assigns everything
-        # at genome level, but since kreport traditionally doesn't include 'strain' or genome,
-        # it is reasonable to state that sourmash assigns at 'species' level for this.
-        # can be modified later.
-        lowest_assignment_rank = 'species'
-        if this_rank == lowest_assignment_rank or this_sciname == "unclassified":
-           sD["num_bp_assigned"] = sD["num_bp_contained"]
+        # could make this cleaner if used empty RankLineageInfo()
+        #sD['lineage'] = self.lineage.display_lineage(null_as_unclassified=True)
+        if self.lineage != ():
+            this_rank = self.lineage.lowest_rank
+            sD['rank_code'] = RANKCODE[this_rank]
+            sD['sci_name'] = self.lineage.lowest_lineage_name
+            sD['ncbi_taxid'] = self.lineage.lowest_lineage_taxid
+            # the number of bp actually 'assigned' at this rank. Sourmash assigns everything
+            # at genome level, but since kreport traditionally doesn't include 'strain' or genome,
+            # it is reasonable to state that sourmash assigns at 'species' level for this.
+            # can be modified later.
+            if this_rank == lowest_assignment_rank:
+                sD["num_bp_assigned"] = sD["num_bp_contained"]
+        else:
+            sD['sci_name'] = 'unclassified'
+            sD['rank_code'] = RANKCODE['unclassified']
+            sD["num_bp_assigned"] = sD["num_bp_contained"]
         return sD
 
 @dataclass
@@ -1935,12 +1940,11 @@ class QueryTaxResult():
 
     def make_kreport_results(self):
         self.check_summarization()
-        rankCode = { "superkingdom": "D", "kingdom": "K", "phylum": "P", "class": "C",
-                        "order": "O", "family":"F", "genus": "G", "species": "S", "unclassified": "U"}
         if self.query_info.total_weighted_hashes == 0:
             raise ValueError("ERROR: cannot produce 'kreport' format from gather results before sourmash v4.5.0")
-        required_ranks = set(rankCode.keys).pop('unclassified')
-        if not set(required_ranks).issubset(set(self.ranks)):
+        required_ranks = set(RANKCODE.keys())
+        acceptable_ranks = list(self.ranks) + ['unclassified', 'kingdom']
+        if not required_ranks.issubset(set(acceptable_ranks)):
             raise ValueError("ERROR: cannot produce 'kreport' format from ranks {', '.join(self.ranks)}")
         kreport_results = []
         unclassified_recorded=False
@@ -1950,7 +1954,7 @@ class QueryTaxResult():
                 continue
             rank_results = self.summarized_lineage_results[rank]
             for res in rank_results:
-                kresD = res.as_kreport_dict(rankCode, self.query_info.total_weighted_hashes)
+                kresD = res.as_kreport_dict(self.query_info)
                 if kresD['sci_name'] == "unclassified":
                     # SummarizedGatherResults have an unclassified lineage at every rank, to facilitate reporting at a specific rank.
                     # Here, we only need to report it once, since it will be the same fraction for all ranks

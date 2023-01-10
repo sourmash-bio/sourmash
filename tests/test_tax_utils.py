@@ -2994,3 +2994,57 @@ def test_make_full_summary_classification_fail():
     print(str(exc))
     assert 'not classified yet' in str(exc)
 
+
+def test_make_kreport_results():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;c;d;e;f;g")])
+    #need to go down to species to check that `num_bp_assigned` is happening correctly
+    gather_results = [{"total_weighted_hashes":100}, {"name": 'gB', "total_weighted_hashes":100}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True)
+    krepD = q_res.make_kreport_results()
+    print(krepD)
+    assert krepD == [{'num_bp_assigned': '0', 'percent_containment': '40.00', 'num_bp_contained': '40',
+                    'rank_code': 'D', 'sci_name': 'a', 'ncbi_taxid': None},
+                    {'num_bp_assigned': '60', 'percent_containment': '60.00', 'num_bp_contained': '60',
+                    'sci_name': 'unclassified', 'rank_code': 'U'},
+                    {'num_bp_assigned': '0', 'percent_containment': '40.00', 'num_bp_contained': '40',
+                    'rank_code': 'P', 'sci_name': 'b', 'ncbi_taxid': None},
+                    {'num_bp_assigned': '0', 'percent_containment': '40.00', 'num_bp_contained': '40',
+                    'rank_code': 'C', 'sci_name': 'c', 'ncbi_taxid': None},
+                    {'num_bp_assigned': '0', 'percent_containment': '20.00', 'num_bp_contained': '20',
+                    'rank_code': 'O', 'sci_name': 'd', 'ncbi_taxid': None},
+                    {'num_bp_assigned': '0', 'percent_containment': '20.00', 'num_bp_contained': '20',
+                    'rank_code': 'F', 'sci_name': 'e', 'ncbi_taxid': None},
+                    {'num_bp_assigned': '0', 'percent_containment': '20.00', 'num_bp_contained': '20',
+                    'rank_code': 'G', 'sci_name': 'f', 'ncbi_taxid': None},
+                    {'num_bp_assigned': '20', 'percent_containment': '20.00', 'num_bp_contained': '20',
+                    'rank_code': 'S', 'sci_name': 'g', 'ncbi_taxid': None}]
+
+
+def test_make_kreport_results_fail():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=False)
+    with pytest.raises(ValueError) as exc:
+        q_res.make_kreport_results()
+    print(str(exc))
+    assert 'not summarized yet' in str(exc)
+
+
+def test_make_kreport_results_fail_pre_v450():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True)
+    with pytest.raises(ValueError) as exc:
+        q_res.make_kreport_results()
+    print(str(exc))
+    assert "cannot produce 'kreport' format from gather results before sourmash v4.5.0" in str(exc)
+
+
+def test_make_kreport_results_fail_pre_v450():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True)
+    with pytest.raises(ValueError) as exc:
+        q_res.make_kreport_results()
+    print(str(exc))
+    assert "cannot produce 'kreport' format from gather results before sourmash v4.5.0" in str(exc)
