@@ -1023,7 +1023,7 @@ def test_genome_rank_human_output(runtmp):
     # test basic genome - output csv
     c = runtmp
 
-    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    g_csv = utils.get_test_data('tax/test1.gather_old.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
     csvout = runtmp.output(csv_base + '.human.txt')
@@ -1841,7 +1841,7 @@ def test_genome_over100percent_error(runtmp):
 
 def test_genome_ani_threshold_input_errors(runtmp):
     c = runtmp
-    g_csv = utils.get_test_data('tax/test1.gather_ani.csv')
+    g_csv = utils.get_test_data('tax/test1.gather_old.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     below_threshold = "-1"
 
@@ -1878,7 +1878,7 @@ def test_genome_ani_threshold_input_errors(runtmp):
 
 def test_genome_ani_threshold(runtmp):
     c = runtmp
-    g_csv = utils.get_test_data('tax/test1.gather_ani.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
     c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
@@ -1889,7 +1889,6 @@ def test_genome_ani_threshold(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert "WARNING: Please run gather with sourmash >= 4.4 to estimate query ANI at rank. Continuing without ANI..." not in c.last_result.err
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,0.9328896594471843' in c.last_result.out 
 
@@ -1917,7 +1916,7 @@ def test_genome_ani_threshold(runtmp):
 def test_genome_ani_oldgather(runtmp):
     # Ignore ANI if we don't have the information we need to estimate it
     c = runtmp
-    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    g_csv = utils.get_test_data('tax/test1.gather_old.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
     c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax)
