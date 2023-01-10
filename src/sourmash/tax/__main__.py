@@ -88,11 +88,11 @@ def metagenome(args):
     # next, collect and load gather results
     gather_csvs = tax_utils.collect_gather_csvs(args.gather_csv, from_file= args.from_file)
     try:
-         query_gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
-                                                                                       fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
-                                                                                       keep_full_identifiers=args.keep_full_identifiers,
-                                                                                       keep_identifier_versions = args.keep_identifier_versions,
-                                                                                       )
+         query_gather_results = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
+                                                                     fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
+                                                                     keep_full_identifiers=args.keep_full_identifiers,
+                                                                     keep_identifier_versions = args.keep_identifier_versions,
+                                                                     )
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
@@ -158,7 +158,7 @@ def metagenome(args):
     if "csv_summary" in args.output_format:
         summary_outfile, limit_float = make_outfile(args.output_base, "csv_summary", output_dir=args.output_dir)
         with FileOutputCSV(summary_outfile) as out_fp:
-            tax_utils.write_summary({query_gather_results}, out_fp, limit_float_decimals=limit_float)
+            tax_utils.write_summary(query_gather_results, out_fp, limit_float_decimals=limit_float)
 
     # write summarized --> kreport output tsv
     if "kreport" in args.output_format:
@@ -206,8 +206,8 @@ def genome(args):
     # note: doing one CSV at a time would work and probably be more memory efficient, but we would need to change how we check
     # for duplicated queries
     try:
-        gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
-                                                                            fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
+        gather_results = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
+                                                              fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
 
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")

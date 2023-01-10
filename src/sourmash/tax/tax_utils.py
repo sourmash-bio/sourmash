@@ -401,53 +401,6 @@ def load_gather_results(gather_csv, tax_assignments, *, seen_queries=None, force
     return gather_results, header #, gather_queries # can use the gather_results keys instead
 
 
-def check_and_load_gather_csvs_old(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False):
-    '''
-    Load gather csvs, checking for empties and ids missing from taxonomic assignments.
-    '''
-    if not isinstance(gather_csvs, list):
-        gather_csvs = [gather_csvs]
-    gather_results = []
-    total_missed = 0
-    all_ident_missed = set()
-    seen_queries = set()
-    header = []
-    n_ignored = 0
-    for n, gather_csv in enumerate(gather_csvs):
-        these_results = []
-        try:
-            these_results, header, seen_queries = load_gather_results_old(gather_csv, seen_queries=seen_queries, force=force)
-        except ValueError as exc:
-            if force:
-                if "found in more than one CSV" in str(exc):
-                    notify('Cannot force past duplicated gather query. Exiting.')
-                    raise
-                notify(str(exc))
-                notify('--force is set. Attempting to continue to next set of gather results.')
-                n_ignored+=1
-                continue
-            else:
-                notify('Exiting.')
-                raise
-
-        # check for match identites in these gather_results not found in lineage spreadsheets
-        ident_missed = find_missing_identities(these_results, tax_assign)
-        if ident_missed:
-            notify(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
-            if fail_on_missing_taxonomy:
-                raise ValueError('Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
-
-            total_missed += len(ident_missed)
-            all_ident_missed.update(ident_missed)
-        # add these results to gather_results
-        gather_results += these_results
-
-    num_gather_csvs_loaded = n+1 - n_ignored
-    notify(f'loaded {len(gather_results)} results total from {str(num_gather_csvs_loaded)} gather CSVs')
-
-    return gather_results, all_ident_missed, total_missed, header
-
-
 def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False, 
                                keep_full_identifiers=False,keep_identifier_versions=False):
     '''
@@ -2127,11 +2080,18 @@ class QueryTaxResult():
                      "query_filename", "f_weighted_at_rank", "bp_match_at_rank",
                      "query_ani_at_rank", "total_weighted_hashes"]
 
-            for rank in self.summarized_ranks[::-1]:
+            for rank in self.summarized_ranks[::-1]: #descending
+                unclassified=[]
                 rank_results = self.summarized_lineage_results[rank]
-                rank_results.sort(key=lambda res: -res.f_weighted_at_rank)
+                rank_results.sort(key=lambda res: -res.fraction) #f_weighted_at_rank) FUTURE: CHANGE TO SORTING BY WEIGHTED?
                 for res in rank_results:
-                    results.append(res.as_summary_dict(query_info=self.query_info, limit_float=limit_float))
+                    rD = res.as_summary_dict(query_info=self.query_info, limit_float=limit_float)
+                    # save unclassified for the end
+                    if rD['lineage'] == "unclassified":
+                        unclassified.append(rD)
+                    else:
+                        results.append(rD)
+                results +=unclassified
         return header, results
 
     def make_kreport_results(self):

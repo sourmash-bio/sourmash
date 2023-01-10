@@ -11,8 +11,7 @@ import gzip
 import sourmash_tst_utils as utils
 
 from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_results,
-                                    summarize_gather_at, find_missing_identities_old,
-                                    report_missing_and_skipped_identities,
+                                    summarize_gather_at, 
                                     write_summary_old, MultiLineageDB,
                                     collect_gather_csvs, check_and_load_gather_csvs,
                                     SummarizedGatherResult, ClassificationResult,
@@ -3036,20 +3035,17 @@ def test_make_full_summary():
     assert header == ['query_name', 'rank', 'fraction', 'lineage', 'query_md5', 'query_filename', 
                    'f_weighted_at_rank', 'bp_match_at_rank', 'query_ani_at_rank', 'total_weighted_hashes']
     print(fs)
-    assert fs == [{'rank': 'superkingdom', 'fraction': '0.8', 'lineage': 'unclassified', 'f_weighted_at_rank':
+    assert fs == [{'rank': 'superkingdom', 'fraction': '0.2', 'lineage': 'a', 'f_weighted_at_rank': '0.4',
+                   'bp_match_at_rank': '40', 'query_ani_at_rank': approx(0.949,rel=1e-3), 'query_name': 'q1',
+                   'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
+                   {'rank': 'superkingdom', 'fraction': '0.8', 'lineage': 'unclassified', 'f_weighted_at_rank':
                    '0.6', 'bp_match_at_rank': '60', 'query_ani_at_rank': None,
                    'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn',
                    'total_weighted_hashes': '0'},
-                   {'rank': 'superkingdom', 'fraction': '0.2', 'lineage': 'a', 'f_weighted_at_rank': '0.4',
-                   'bp_match_at_rank': '40', 'query_ani_at_rank': approx(0.949,rel=1e-3), 'query_name': 'q1',
-                   'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
-                   {'rank': 'phylum', 'fraction': '0.8', 'lineage': 'unclassified', 'f_weighted_at_rank': '0.6',
-                   'bp_match_at_rank': '60', 'query_ani_at_rank': None, 'query_name': 'q1', 'query_md5': 'md5',
-                   'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
                    {'rank': 'phylum', 'fraction': '0.2', 'lineage': 'a;b', 'f_weighted_at_rank': '0.4',
                    'bp_match_at_rank': '40', 'query_ani_at_rank': approx(0.949,rel=1e-3), 'query_name': 'q1',
                    'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
-                   {'rank': 'class', 'fraction': '0.8', 'lineage': 'unclassified', 'f_weighted_at_rank': '0.6',
+                   {'rank': 'phylum', 'fraction': '0.8', 'lineage': 'unclassified', 'f_weighted_at_rank': '0.6',
                    'bp_match_at_rank': '60', 'query_ani_at_rank': None, 'query_name': 'q1', 'query_md5': 'md5',
                    'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
                    {'rank': 'class', 'fraction': '0.1', 'lineage': 'a;b;c', 'f_weighted_at_rank': '0.2',
@@ -3057,26 +3053,26 @@ def test_make_full_summary():
                    'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
                    {'rank': 'class', 'fraction': '0.1', 'lineage': 'a;b;d','f_weighted_at_rank': '0.2',
                    'bp_match_at_rank': '20', 'query_ani_at_rank': approx(0.928, rel=1e-3), 'query_name': 'q1',
-                   'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'}]
+                   'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
+                   {'rank': 'class', 'fraction': '0.8', 'lineage': 'unclassified', 'f_weighted_at_rank': '0.6',
+                   'bp_match_at_rank': '60', 'query_ani_at_rank': None, 'query_name': 'q1', 'query_md5': 'md5',
+                   'query_filename': 'query_fn', 'total_weighted_hashes': '0'}]
     
     header, fs = q_res.make_full_summary(limit_float=True)
     assert header == ['query_name', 'rank', 'fraction', 'lineage', 'query_md5', 'query_filename', 
                    'f_weighted_at_rank', 'bp_match_at_rank', 'query_ani_at_rank', 'total_weighted_hashes']
     print(fs)
-    assert fs == [{'rank': 'superkingdom', 'fraction': '0.800', 'lineage': 'unclassified', 'f_weighted_at_rank':
+    assert fs == [{'rank': 'superkingdom', 'fraction': '0.200', 'lineage': 'a', 'f_weighted_at_rank': '0.400',
+                   'bp_match_at_rank': '40', 'query_ani_at_rank': "0.949", 'query_name': 'q1',
+                   'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
+                  {'rank': 'superkingdom', 'fraction': '0.800', 'lineage': 'unclassified', 'f_weighted_at_rank':
                    '0.600', 'bp_match_at_rank': '60', 'query_ani_at_rank': None,
                    'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn',
                    'total_weighted_hashes': '0'},
-                   {'rank': 'superkingdom', 'fraction': '0.200', 'lineage': 'a', 'f_weighted_at_rank': '0.400',
-                   'bp_match_at_rank': '40', 'query_ani_at_rank': "0.949", 'query_name': 'q1',
-                   'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
-                   {'rank': 'phylum', 'fraction': '0.800', 'lineage': 'unclassified', 'f_weighted_at_rank': '0.600',
-                   'bp_match_at_rank': '60', 'query_ani_at_rank': None, 'query_name': 'q1', 'query_md5': 'md5',
-                   'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
                    {'rank': 'phylum', 'fraction': '0.200', 'lineage': 'a;b', 'f_weighted_at_rank': '0.400',
                    'bp_match_at_rank': '40', 'query_ani_at_rank': "0.949", 'query_name': 'q1',
                    'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
-                   {'rank': 'class', 'fraction': '0.800', 'lineage': 'unclassified', 'f_weighted_at_rank': '0.600',
+                   {'rank': 'phylum', 'fraction': '0.800', 'lineage': 'unclassified', 'f_weighted_at_rank': '0.600',
                    'bp_match_at_rank': '60', 'query_ani_at_rank': None, 'query_name': 'q1', 'query_md5': 'md5',
                    'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
                    {'rank': 'class', 'fraction': '0.100', 'lineage': 'a;b;c', 'f_weighted_at_rank': '0.200',
@@ -3084,7 +3080,10 @@ def test_make_full_summary():
                    'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
                    {'rank': 'class', 'fraction': '0.100', 'lineage': 'a;b;d','f_weighted_at_rank': '0.200',
                    'bp_match_at_rank': '20', 'query_ani_at_rank': "0.928", 'query_name': 'q1',
-                   'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'}]
+                   'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
+                   {'rank': 'class', 'fraction': '0.800', 'lineage': 'unclassified', 'f_weighted_at_rank': '0.600',
+                   'bp_match_at_rank': '60', 'query_ani_at_rank': None, 'query_name': 'q1', 'query_md5': 'md5',
+                   'query_filename': 'query_fn', 'total_weighted_hashes': '0'}]
 
 
 def test_make_full_summary_summarization_fail():
