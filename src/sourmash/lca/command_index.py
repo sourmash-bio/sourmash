@@ -11,7 +11,6 @@ from sourmash import sourmash_args
 from sourmash.sourmash_args import load_file_as_signatures
 from sourmash.logging import notify, error, debug, set_quiet
 from . import lca_utils
-#from .lca_utils import LineagePair
 from .lca_db import LCA_Database
 from sourmash.sourmash_args import DEFAULT_LOAD_K
 

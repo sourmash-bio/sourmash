@@ -262,7 +262,7 @@ class LCA_Database(Index):
 
         Method specific to this class.
         """
-        from .lca_utils import taxlist #, LineagePair
+        from .lca_utils import taxlist
         from sourmash.tax.tax_utils import LineagePair
 
         if not os.path.isfile(db_name):
