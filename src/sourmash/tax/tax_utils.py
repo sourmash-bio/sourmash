@@ -161,6 +161,7 @@ class BaseLineageInfo:
                     new_lineage[rank_idx] = LineagePair(rank=lin_tup.rank, name=lin_tup.name)
                 else:
                     new_lineage[rank_idx] = lin_tup
+    
         # build list of filled ranks
         filled_ranks = [a.rank for a in new_lineage if a.name]
         # set lineage and filled_ranks
@@ -293,7 +294,7 @@ class BaseLineageInfo:
         return new
 
     def lineage_at_rank(self, rank):
-        # non-destructive pop_to_rank. Returns tuple of LineagePairs
+        "non-destructive pop_to_rank. Returns tuple of LineagePairs"
         "Returns tuple of LineagePairs at given rank."
         # are we already above rank?
         if not self.rank_is_filled(rank):
