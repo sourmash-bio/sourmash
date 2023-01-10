@@ -12,14 +12,15 @@ import sourmash_tst_utils as utils
 
 from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_results,
                                     summarize_gather_at, find_missing_identities,
-                                    write_summary, MultiLineageDB,
+                                    write_summary_old, MultiLineageDB,
                                     collect_gather_csvs, check_and_load_gather_csvs,
                                     SummarizedGatherResult, ClassificationResult,
                                     QueryInfo, GatherRow, TaxResult, QueryTaxResult,
                                     BaseLineageInfo, RankLineageInfo, LineagePair,
-                                    write_classifications,
-                                    aggregate_by_lineage_at_rank,
-                                    make_krona_header, format_for_krona, write_krona,
+                                    aggregate_by_lineage_at_rank, format_for_krona,
+                                    write_classifications, write_krona,
+                                    aggregate_by_lineage_at_rank_old,
+                                    make_krona_header, format_for_krona_old, write_krona_old,
                                     combine_sumgather_csvs_by_lineage, write_lineage_sample_frac,
                                     LineageDB, LineageDB_Sqlite,
                                     SumGathInf, ClassInf, QInfo)
@@ -993,7 +994,7 @@ def test_summarize_gather_at_best_only_equal_choose_first():
     assert cl_sum[0].bp_match_at_rank == 50
 
 
-def test_write_summary_csv(runtmp):
+def test_write_summary_old_csv(runtmp):
     """test summary csv write function"""
 
     sum_gather = {'superkingdom': [SumGathInf(query_name='queryA', rank='superkingdom', fraction=1.0,
@@ -1012,7 +1013,7 @@ def test_write_summary_csv(runtmp):
 
     outs= runtmp.output("outsum.csv")
     with open(outs, 'w') as out_fp:
-        write_summary(sum_gather, out_fp)
+        write_summary_old(sum_gather, out_fp)
 
     sr = [x.rstrip().split(',') for x in open(outs, 'r')]
     print("gather_summary_results_from_file: \n", sr)
@@ -1065,7 +1066,7 @@ def test_make_krona_header_fail():
     assert "Rank strain not present in available ranks" in str(exc.value)
 
 
-def test_aggregate_by_lineage_at_rank_by_query():
+def test_aggregate_by_lineage_at_rank_old_by_query():
     """test two queries, aggregate lineage at rank for each"""
     # make gather results
     gA = ["queryA","gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '100', '100']
@@ -1101,7 +1102,7 @@ def test_aggregate_by_lineage_at_rank_by_query():
     assert sk_sum[3].lineage == ()
     assert sk_sum[3].fraction == 0.7
     assert sk_sum[3].bp_match_at_rank == 140
-    sk_lin_sum, query_names, num_queries = aggregate_by_lineage_at_rank(sk_sum, by_query=True)
+    sk_lin_sum, query_names, num_queries = aggregate_by_lineage_at_rank_old(sk_sum, by_query=True)
     print("superkingdom lineage summary:", sk_lin_sum, '\n')
     assert sk_lin_sum == {(lca_utils.LineagePair(rank='superkingdom', name='a'),): {'queryA': 0.9, 'queryB': 0.3},
                           (): {'queryA': 0.09999999999999998, 'queryB': 0.7}}
@@ -1110,7 +1111,7 @@ def test_aggregate_by_lineage_at_rank_by_query():
 
     phy_sum, _, _ = summarize_gather_at("phylum", taxD, g_res)
     print("phylum summary:", phy_sum, ']\n')
-    phy_lin_sum, query_names, num_queries = aggregate_by_lineage_at_rank(phy_sum, by_query=True)
+    phy_lin_sum, query_names, num_queries = aggregate_by_lineage_at_rank_old(phy_sum, by_query=True)
     print("phylum lineage summary:", phy_lin_sum, '\n')
     assert phy_lin_sum ==  {(lca_utils.LineagePair(rank='superkingdom', name='a'), lca_utils.LineagePair(rank='phylum', name='b')): {'queryA': 0.5},
                             (lca_utils.LineagePair(rank='superkingdom', name='a'), lca_utils.LineagePair(rank='phylum', name='c')): {'queryA': 0.4, 'queryB': 0.3},
@@ -1119,7 +1120,7 @@ def test_aggregate_by_lineage_at_rank_by_query():
     assert query_names == ['queryA', 'queryB']
 
 
-def test_format_for_krona_0():
+def test_format_for_krona_old_0():
     """test format for krona, equal matches"""
     # make gather results
     gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
@@ -1134,17 +1135,88 @@ def test_format_for_krona_0():
     # check krona format and check results!
     sk_sum, _, _ = summarize_gather_at("superkingdom", taxD, g_res)
     print("superkingdom summarized gather results:", sk_sum)
-    krona_res = format_for_krona("superkingdom", {"superkingdom": sk_sum})
+    krona_res = format_for_krona_old("superkingdom", {"superkingdom": sk_sum})
     print("krona_res: ", krona_res)
     assert krona_res == [(1.0, 'a')]
 
     phy_sum, _, _ = summarize_gather_at("phylum", taxD, g_res)
-    krona_res = format_for_krona("phylum", {"phylum": phy_sum})
+    krona_res = format_for_krona_old("phylum", {"phylum": phy_sum})
     print("krona_res: ", krona_res)
     assert krona_res == [(1.0, 'a', 'b')]
 
+def test_format_for_krona_summarization():
+    """test format for krona"""
+    # make gather results
+     # make mini taxonomy
+    gA_tax = ("gA", "a;b")
+    gB_tax = ("gB", "a;c")
+    taxD = make_mini_taxonomy([gA_tax,gB_tax])
 
-def test_format_for_krona_1():
+    gather_results = [{'query_name': 'queryA', 'name': 'gA', 'f_unique_weighted': 0.2,'f_unique_to_query': 0.2,'unique_intersect_bp': 50}, 
+                      {'query_name': 'queryA', "name": 'gB', 'f_unique_weighted': 0.3,'f_unique_to_query': 0.3,'unique_intersect_bp': 30}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, summarize=True, single_query=True)
+    kres, header = format_for_krona([q_res], 'superkingdom')
+    assert header == ['fraction', 'superkingdom']
+    print("krona_res: ", kres)
+    assert kres == [(0.5, 'a'), (0.5, 'unclassified')]
+    kres, header = format_for_krona([q_res], 'phylum')
+    assert header == ['fraction', 'superkingdom', 'phylum']
+    assert kres == [(0.3, 'a', 'c'), (0.2, 'a', 'b'), (0.5, 'unclassified', 'unclassified')]
+
+
+def test_format_for_krona_classification():
+    """test format for krona"""
+    # make gather results
+     # make mini taxonomy
+    gA_tax = ("gA", "a;b")
+    gB_tax = ("gB", "a;c")
+    taxD = make_mini_taxonomy([gA_tax,gB_tax])
+
+    gather_results = [{'query_name': 'queryA', 'name': 'gA', 'f_unique_weighted': 0.2,'f_unique_to_query': 0.2,'unique_intersect_bp': 50}, 
+                      {'query_name': 'queryA', "name": 'gB', 'f_unique_weighted': 0.3,'f_unique_to_query': 0.3,'unique_intersect_bp': 30}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, classify=True, single_query=True)
+    kres, header = format_for_krona([q_res], 'superkingdom', classification=True)
+    assert header == ['fraction', 'superkingdom']
+    print("krona_res: ", kres)
+    assert kres == [(0.5, 'a')]#, (0.5, 'unclassified')]
+    kres, header = format_for_krona([q_res], 'phylum', classification=True)
+    assert header == ['fraction', 'superkingdom', 'phylum']
+    assert kres == [(0.3, 'a', 'c')]#, (0.7, 'unclassified', 'unclassified')]
+
+
+def test_format_for_krona_improper_rank():
+    """test format for krona"""
+    # make gather results
+     # make mini taxonomy
+    gA_tax = ("gA", "a;b")
+    gB_tax = ("gB", "a;c")
+    taxD = make_mini_taxonomy([gA_tax,gB_tax])
+
+    gather_results = [{'query_name': 'queryA', 'name': 'gA', 'f_unique_weighted': 0.2,'f_unique_to_query': 0.2,'unique_intersect_bp': 50}, 
+                      {'query_name': 'queryA', "name": 'gB', 'f_unique_weighted': 0.3,'f_unique_to_query': 0.3,'unique_intersect_bp': 30}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, summarize=True, single_query=True)
+    with pytest.raises(ValueError) as exc:
+        format_for_krona([q_res], 'NotARank')
+    print(str(exc))
+    assert "Rank 'NotARank' not present in summarized ranks." in str(exc)
+
+
+def test_write_krona(runtmp):
+    """test two matches, equal f_unique_to_query"""
+    krona_results =  [(0.5, 'a', 'b', 'c'), (0.5, 'a', 'b', 'd')]
+    header = ['fraction', 'superkingdom', 'phylum', 'class']
+    outk= runtmp.output("outkrona.tsv")
+    with open(outk, 'w') as out_fp:
+        write_krona(krona_results, header, out_fp)
+
+    kr = [x.strip().split('\t') for x in open(outk, 'r')]
+    print("krona_results_from_file: \n", kr)
+    assert kr[0] == ["fraction", "superkingdom", "phylum", "class"]
+    assert kr[1] == ["0.5", "a", "b", "c"]
+    assert kr[2] == ["0.5", "a", "b", "d"]
+
+
+def test_format_for_krona_old_1():
     """test format for krona at each rank"""
     # make gather results
     gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
@@ -1163,18 +1235,18 @@ def test_format_for_krona_1():
         sum_res[rank], _, _ = summarize_gather_at(rank, taxD, g_res)
     print('summarized gather: ', sum_res)
     # check krona format
-    sk_krona = format_for_krona("superkingdom", sum_res)
+    sk_krona = format_for_krona_old("superkingdom", sum_res)
     print("sk_krona: ", sk_krona)
     assert sk_krona == [(1.0, 'a')]
-    phy_krona = format_for_krona("phylum", sum_res)
+    phy_krona = format_for_krona_old("phylum", sum_res)
     print("phy_krona: ", phy_krona)
     assert phy_krona ==  [(1.0, 'a', 'b')]
-    cl_krona = format_for_krona("class", sum_res)
+    cl_krona = format_for_krona_old("class", sum_res)
     print("cl_krona: ", cl_krona)
     assert cl_krona ==  [(0.5, 'a', 'b', 'c'), (0.5, 'a', 'b', 'd')]
 
 
-def test_format_for_krona_best_only():
+def test_format_for_krona_old_best_only():
     """test two matches, equal f_unique_to_query"""
     # make gather results
     gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
@@ -1193,23 +1265,23 @@ def test_format_for_krona_best_only():
         sum_res[rank], _, _ = summarize_gather_at(rank, taxD, g_res, best_only=True)
     print('summarized gather: ', sum_res)
     # check krona format
-    sk_krona = format_for_krona("superkingdom", sum_res)
+    sk_krona = format_for_krona_old("superkingdom", sum_res)
     print("sk_krona: ", sk_krona)
     assert sk_krona == [(1.0, 'a')]
-    phy_krona = format_for_krona("phylum", sum_res)
+    phy_krona = format_for_krona_old("phylum", sum_res)
     print("phy_krona: ", phy_krona)
     assert phy_krona ==  [(1.0, 'a', 'b')]
-    cl_krona = format_for_krona("class", sum_res)
+    cl_krona = format_for_krona_old("class", sum_res)
     print("cl_krona: ", cl_krona)
     assert cl_krona ==  [(0.5, 'a', 'b', 'c')]
 
 
-def test_write_krona(runtmp):
+def test_write_krona_old(runtmp):
     """test two matches, equal f_unique_to_query"""
     class_krona_results =  [(0.5, 'a', 'b', 'c'), (0.5, 'a', 'b', 'd')]
     outk= runtmp.output("outkrona.tsv")
     with open(outk, 'w') as out_fp:
-        write_krona("class", class_krona_results, out_fp)
+        write_krona_old("class", class_krona_results, out_fp)
 
     kr = [x.strip().split('\t') for x in open(outk, 'r')]
     print("krona_results_from_file: \n", kr)
@@ -1250,11 +1322,11 @@ def test_combine_sumgather_csvs_by_lineage(runtmp):
     # write summarized gather results csvs
     sg1= runtmp.output("sample1.csv")
     with open(sg1, 'w') as out_fp:
-        write_summary(sum_gather1, out_fp)
+        write_summary_old(sum_gather1, out_fp)
 
     sg2= runtmp.output("sample2.csv")
     with open(sg2, 'w') as out_fp:
-        write_summary(sum_gather2, out_fp)
+        write_summary_old(sum_gather2, out_fp)
 
     # test combine_summarized_gather_csvs_by_lineage_at_rank
     linD, query_names = combine_sumgather_csvs_by_lineage([sg1,sg2], rank="phylum")
@@ -1345,11 +1417,11 @@ def test_combine_sumgather_csvs_by_lineage_improper_rank(runtmp):
     # write summarized gather results csvs
     sg1= runtmp.output("sample1.csv")
     with open(sg1, 'w') as out_fp:
-        write_summary(sum_gather1, out_fp)
+        write_summary_old(sum_gather1, out_fp)
 
     sg2= runtmp.output("sample2.csv")
     with open(sg2, 'w') as out_fp:
-        write_summary(sum_gather2, out_fp)
+        write_summary_old(sum_gather2, out_fp)
 
     # test combine_summarized_gather_csvs_by_lineage_at_rank
     with pytest.raises(ValueError) as exc:
@@ -2364,6 +2436,7 @@ def test_QueryTaxResult_summarize_up_ranks_single_rank():
     assert list(q_res.sum_uniq_bp['phylum'].values()) == [30]                                                    
     assert q_res.summarized_ranks == ['phylum']
 
+
 def test_QueryTaxResult_summarize_up_ranks_single_rank_not_available():
     "summarize up ranks: different values"
     taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
@@ -2579,6 +2652,64 @@ def test_build_summarized_result_rank_fail_not_available_resummarize():
     print(str(exc))
     assert "Error: rank 'order' not in summarized rank(s), superkingdom" in str(exc)
 
+def test_aggregate_by_lineage_at_rank():
+    """test aggregate by lineage at rank"""
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b")
+    gB_tax = ("gB", "a;c")
+    taxD = make_mini_taxonomy([gA_tax, gB_tax])
+    # make gather results
+    gather_results = [{'query_name': 'queryA', 'name': 'gA', 'f_unique_weighted': 0.5,'f_unique_to_query': 0.4,'unique_intersect_bp': 50}, 
+                      {'query_name': 'queryA', "name": 'gB', 'f_unique_weighted': 0.3,'f_unique_to_query': 0.3,'unique_intersect_bp': 30}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True)
+    summarized, all_queries = aggregate_by_lineage_at_rank([q_res], rank='phylum', by_query=False)
+    print(summarized)
+    assert summarized == {RankLineageInfo(lineage_str='a;b'): 0.4,
+                          RankLineageInfo(lineage_str='a;c'): 0.3,
+                          (): approx(0.3, rel=1e-2)}
+    assert all_queries == ['queryA']
+
+
+def test_aggregate_by_lineage_at_rank_not_available():
+    """test aggregate by lineage at rank"""
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b")
+    gB_tax = ("gB", "a;c")
+    taxD = make_mini_taxonomy([gA_tax, gB_tax])
+    # make gather results
+    gather_results = [{'query_name': 'queryA', 'name': 'gA', 'f_unique_weighted': 0.5,'f_unique_to_query': 0.4,'unique_intersect_bp': 50}, 
+                      {'query_name': 'queryA', "name": 'gB', 'f_unique_weighted': 0.3,'f_unique_to_query': 0.3,'unique_intersect_bp': 30}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True)
+    with pytest.raises(ValueError) as exc:
+        aggregate_by_lineage_at_rank([q_res], rank='species', by_query=False)
+    print(str(exc))
+    assert "Error: rank 'species' not available for aggregation." in str(exc)
+
+
+def test_aggregate_by_lineage_at_rank_by_query():
+    """test two queries, aggregate by lineage at rank by query"""
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b")
+    gB_tax = ("gB", "a;c")
+    taxD = make_mini_taxonomy([gA_tax, gB_tax])
+    # make gather results
+    gather_results = [{'query_name': 'queryA', 'name': 'gA', 'f_unique_weighted': 0.2,'f_unique_to_query': 0.2,'unique_intersect_bp': 50}, 
+                      {'query_name': 'queryA', "name": 'gB', 'f_unique_weighted': 0.3,'f_unique_to_query': 0.3,'unique_intersect_bp': 30},
+                      {'query_name': 'queryB', "name": 'gB', 'f_unique_weighted': 0.4,'f_unique_to_query': 0.4,'unique_intersect_bp': 30}]
+    gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, summarize=True)
+    # check by query
+    summarized, all_queries = aggregate_by_lineage_at_rank(gres.values(), rank='superkingdom', by_query=True)
+    print(summarized)
+    assert summarized == {RankLineageInfo(lineage_str='a'): {'queryA': 0.5, 'queryB': 0.4},
+                          (): {'queryA': 0.5, 'queryB': 0.6}}
+    #assert summarized == {'a': {'queryA': approx(0.1, rel=1e-2), 'queryB': 0.7}}
+    assert all_queries == ['queryA', 'queryB']
+    summarized, all_queries = aggregate_by_lineage_at_rank(gres.values(), rank='phylum', by_query=True)
+    print(summarized)
+    assert summarized == {RankLineageInfo(lineage_str='a;c'): {'queryA': 0.3, 'queryB': 0.4}, 
+                          RankLineageInfo(lineage_str='a;b'): {'queryA': 0.2}, 
+                          (): {'queryA': 0.5, 'queryB': 0.6}}
+    
 
 def test_build_classification_result_containment_threshold_fail():
     "classification result: improper containment threshold"

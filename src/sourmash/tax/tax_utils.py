@@ -21,8 +21,8 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
            'load_gather_results', 'check_and_load_gather_csvs',
            'find_match_lineage', 'summarize_gather_at',
            'find_missing_identities', 'make_krona_header',
-           'aggregate_by_lineage_at_rank', 'format_for_krona',
-           'write_krona', 'write_summary', 'write_classifications',
+           'aggregate_by_lineage_at_rank_old', 'format_for_krona_old',
+           'write_krona_old', 'write_summary_old', 'write_classifications',
            'combine_sumgather_csvs_by_lineage', 'write_lineage_sample_frac',
            'MultiLineageDB', 'RankLineageInfo']
 
@@ -617,7 +617,7 @@ def make_krona_header(min_rank, *, include_strain=False):
     return tuple(header + tl[:rank_index+1])
 
 
-def aggregate_by_lineage_at_rank(rank_results, *, by_query=False):
+def aggregate_by_lineage_at_rank_old(rank_results, *, by_query=False):
     '''
     Aggregate list of rank SumGathInfs,
     keeping query info or aggregating across queries.
@@ -636,14 +636,48 @@ def aggregate_by_lineage_at_rank(rank_results, *, by_query=False):
     return lineage_summary, all_queries, len(all_queries)
 
 
-def format_for_krona(rank, summarized_gather):
+def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
+    '''
+    Aggregate list of summarized_lineage_results at rank, keeping 
+    query names or not (but this aggregates across queries if multiple).
+    '''
+    lineage_summary = defaultdict(float)
+    if by_query:
+        lineage_summary = defaultdict(dict)
+    all_queries = []
+
+    for queryResult in query_gather_results:
+        query_name = queryResult.query_name
+        all_queries.append(query_name)
+
+        if rank not in queryResult.summarized_ranks:
+            raise ValueError(f"Error: rank '{rank}' not available for aggregation.")
+
+        for res in queryResult.summarized_lineage_results[rank]:
+            if by_query:
+                    lineage_summary[res.lineage][query_name] = res.fraction # FUTURE: USE WEIGHTED INSTEAD?
+            else:
+                lineage_summary[res.lineage] += res.fraction
+
+    # if aggregating across queries divide fraction by the total number of queries
+    if not by_query:
+        n_queries = len(all_queries)
+        print(lineage_summary.items())
+        for lin, fraction in lineage_summary.items():
+            print(lin, fraction)
+            lineage_summary[lin] = fraction/n_queries
+    print(lineage_summary)
+    return lineage_summary, all_queries
+
+
+def format_for_krona_old(rank, summarized_gather):
     '''
     Aggregate list of SumGathInfs and format for krona output
     '''
     num_queries=0
     for res_rank, rank_results in summarized_gather.items():
         if res_rank == rank:
-            lineage_summary, all_queries, num_queries = aggregate_by_lineage_at_rank(rank_results, by_query=False)
+            lineage_summary, all_queries, num_queries = aggregate_by_lineage_at_rank_old(rank_results, by_query=False)
     # if aggregating across queries divide fraction by the total number of queries
     for lin, fraction in lineage_summary.items():
         # divide total fraction by total number of queries
@@ -673,7 +707,56 @@ def format_for_krona(rank, summarized_gather):
     return krona_results
 
 
-def write_krona(rank, krona_results, out_fp, *, sep='\t'):
+def format_for_krona(query_gather_results, rank, *, classification=False):
+    '''
+    Aggregate and format for krona output. Single query recommended, but we don't want query headers.
+    '''
+    # make header
+    header = query_gather_results[0].make_krona_header(min_rank=rank)
+    krona_results = []
+    # do we want to block more than one query for summarization?
+    if len(query_gather_results) > 1:
+        notify('WARNING: results from more than one query found. Krona summarization not recommended as percentages may exceed 1.')
+
+    if classification:
+        # for classification, just write the results
+        for q_res in query_gather_results:
+            if q_res.classified_ranks != [rank]:
+                q_res.build_classification_result(rank=rank)
+                header = q_res.make_krona_header(min_rank=rank)
+            # unclassified is 'correct' in that it is the part not classified to this match,
+            # but also misleading, since we're using best_only and there may
+            # be more matches that are not included here, making % unclassified seem higher than it would
+            # be with summarization. We previously excluded it -- is that the behavior we want to keep?
+            krona_results.extend([q_res.krona_classified])#, q_res.krona_unclassified])
+    else:
+        lineage_summary, _ = aggregate_by_lineage_at_rank(query_gather_results, rank, by_query=False)
+
+        # sort by fraction
+        lin_items = list(lineage_summary.items())
+        lin_items.sort(key = lambda x: -x[1])
+
+        # reformat lineage for krona_results printing
+        unclassified_fraction = 0
+        for lin, fraction in lin_items:
+            # save unclassified fraction for the end
+            if lin == ():
+                unclassified_fraction = fraction
+                continue
+            else:
+                lin_list = lin.display_lineage().split(';')
+                krona_results.append((fraction, *lin_list))
+
+        # handle unclassified
+        if unclassified_fraction:
+            len_unclassified_lin = len(krona_results[-1]) -1
+            unclassifed_lin = ["unclassified"]*len_unclassified_lin
+            krona_results.append((unclassified_fraction, *unclassifed_lin))
+
+    return krona_results, header
+
+
+def write_krona_old(rank, krona_results, out_fp, *, sep='\t'):
     'write krona output'
     # CTB: do we want to optionally allow restriction to a specific rank
     # & above?
@@ -684,7 +767,20 @@ def write_krona(rank, krona_results, out_fp, *, sep='\t'):
         tsv_output.writerow(res)
 
 
-def write_summary(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=False):
+def write_krona(krona_results, header, out_fp, *, sep='\t'):
+    'write krona output'
+    # CTB: do we want to optionally allow restriction to a specific rank
+    # & above? NTP: think we originally kept krona to a specific rank, but
+    # that may have been how we were plotting, since krona plots can be
+    # hierarchical? Probably worth changing/extending to multilevel to
+    # take advantage of full krona plot features
+    tsv_output = csv.writer(out_fp, delimiter='\t')
+    tsv_output.writerow(header)
+    for res in krona_results:
+        tsv_output.writerow(res)
+
+
+def write_summary_old(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=False):
     '''
     Write taxonomy-summarized gather results for each rank.
     '''
@@ -703,7 +799,21 @@ def write_summary(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=Fa
             w.writerow(rD)
 
 
-def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
+def write_summary(query_gather_results, csv_fp, *, sep=',', limit_float_decimals=False):
+    '''
+    Write taxonomy-summarized gather results for each rank.
+    '''
+    w= None
+    for q_res in query_gather_results:
+        header, summary = q_res.make_full_summary(limit_float=limit_float_decimals)
+        if w is None:
+            w = csv.DictWriter(csv_fp, header, delimiter=sep)
+            w.writeheader()
+        for res in summary:
+            w.writerow(res)
+
+
+def write_kreport_old(summarized_gather, csv_fp, *, sep='\t'):
     '''
     Write taxonomy-summarized gather results as kraken-style kreport.
 
@@ -773,7 +883,7 @@ def write_kreport(summarized_gather, csv_fp, *, sep='\t'):
             w.writerow(kresD)
 
 
-def write_human_summary(summarized_gather, out_fp, display_rank):
+def write_human_summary_old(summarized_gather, out_fp, display_rank):
     '''
     Write human-readable taxonomy-summarized gather results for a specific rank.
     '''
