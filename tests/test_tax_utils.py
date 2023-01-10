@@ -11,7 +11,8 @@ import gzip
 import sourmash_tst_utils as utils
 
 from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_results,
-                                    summarize_gather_at, find_missing_identities,
+                                    summarize_gather_at, find_missing_identities_old,
+                                    report_missing_and_skipped_identities,
                                     write_summary_old, MultiLineageDB,
                                     collect_gather_csvs, check_and_load_gather_csvs,
                                     SummarizedGatherResult, ClassificationResult,
@@ -409,7 +410,7 @@ def test_check_and_load_gather_csvs_empty(runtmp):
     print(tax_assign)
     # check gather results and missing ids
     with pytest.raises(Exception) as exc:
-        gather_results, ids_missing, n_missing, header = check_and_load_gather_csvs(csvs, tax_assign)
+        check_and_load_gather_csvs(csvs, tax_assign)
     assert "Cannot read gather results from" in str(exc.value)
 
 
@@ -435,12 +436,13 @@ def test_check_and_load_gather_csvs_with_empty_force(runtmp):
                                      keep_identifier_versions=False)
     print(tax_assign)
     # check gather results and missing ids
-    gather_results, ids_missing, n_missing, header = check_and_load_gather_csvs(csvs, tax_assign, force=True)
-    assert len(gather_results) == 4
-    print("n_missing: ", n_missing)
-    print("ids_missing: ", ids_missing)
-    assert n_missing == 1
-    assert ids_missing == {"gA"}
+    gather_results = check_and_load_gather_csvs(csvs, tax_assign, force=True)
+    assert len(gather_results) == 1
+    q_res = gather_results[0]
+    assert len(q_res.raw_taxresults) == 4
+    assert q_res.n_missed == 1
+    assert 'gA' in q_res.missed_idents
+    assert q_res.n_skipped == 0
 
 
 def test_check_and_load_gather_lineage_csvs_empty(runtmp):
@@ -501,28 +503,48 @@ def test_check_and_load_gather_csvs_fail_on_missing(runtmp):
     print(tax_assign)
     # check gather results and missing ids
     with pytest.raises(ValueError) as exc:
-        gather_results, ids_missing, n_missing, header = check_and_load_gather_csvs(csvs, tax_assign, fail_on_missing_taxonomy=True, force=True)
-    assert "Failing on missing taxonomy" in str(exc)
+        check_and_load_gather_csvs(csvs, tax_assign, fail_on_missing_taxonomy=True, force=True)
+    assert "Failing, as requested via --fail-on-missing-taxonomy" in str(exc)
 
 
 def test_load_gather_results():
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    tax_assign = MultiLineageDB.load([taxonomy_csv],
+                                     keep_full_identifiers=False,
+                                     keep_identifier_versions=False)
     gather_csv = utils.get_test_data('tax/test1.gather.csv')
-    gather_results, header, seen_queries = load_gather_results(gather_csv)
-    assert len(gather_results) == 4
+    gather_results, header = load_gather_results(gather_csv, tax_assignments=tax_assign)
+    assert len(gather_results) == 1
+    for query_name, res in gather_results.items():
+        assert query_name == 'test1'
+        assert len(res.raw_taxresults) == 4
 
 
 def test_load_gather_results_gzipped(runtmp):
+    gather_csv = utils.get_test_data('tax/test1.gather.csv')
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    tax_assign = MultiLineageDB.load([taxonomy_csv],
+                                     keep_full_identifiers=False,
+                                     keep_identifier_versions=False)
     gather_csv = utils.get_test_data('tax/test1.gather.csv')
 
     # rewrite gather_csv as gzipped csv
     gz_gather = runtmp.output('g.csv.gz')
     with open(gather_csv, 'rb') as f_in, gzip.open(gz_gather, 'wb') as f_out:
         f_out.writelines(f_in)
-    gather_results, header, seen_queries = load_gather_results(gz_gather)
-    assert len(gather_results) == 4
+    #gather_results, header, seen_queries = load_gather_results(gz_gather)
+    gather_results, header = load_gather_results(gz_gather, tax_assignments=tax_assign)
+    assert len(gather_results) == 1
+    for query_name, res in gather_results.items():
+        assert query_name == 'test1'
+        assert len(res.raw_taxresults) == 4
 
 
 def test_load_gather_results_bad_header(runtmp):
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    tax_assign = MultiLineageDB.load([taxonomy_csv],
+                                     keep_full_identifiers=False,
+                                     keep_identifier_versions=False)
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
     bad_g_csv = runtmp.output('g.csv')
@@ -535,11 +557,15 @@ def test_load_gather_results_bad_header(runtmp):
     print("bad_gather_results: \n", bad_g)
 
     with pytest.raises(ValueError) as exc:
-        gather_results, header = load_gather_results(bad_g_csv)
-    assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
+        gather_results, header = load_gather_results(bad_g_csv, tax_assignments=tax_assign)
+    assert f"'{bad_g_csv}' is missing columns needed for taxonomic summarization" in str(exc.value)
 
 
 def test_load_gather_results_empty(runtmp):
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    tax_assign = MultiLineageDB.load([taxonomy_csv],
+                                     keep_full_identifiers=False,
+                                     keep_identifier_versions=False)
     empty_csv = runtmp.output('g.csv')
 
     #creates empty gather result
@@ -547,7 +573,7 @@ def test_load_gather_results_empty(runtmp):
         fp.write('')
 
     with pytest.raises(ValueError) as exc:
-        gather_results, header = load_gather_results(empty_csv)
+        gather_results, header = load_gather_results(empty_csv, tax_assignments=tax_assign)
     assert f"Cannot read gather results from '{empty_csv}'. Is file empty?" in str(exc.value)
 
 
@@ -653,21 +679,6 @@ def test_load_taxonomy_csv_duplicate_force(runtmp):
 
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1']
-
-
-def test_find_missing_identities():
-    # make gather results
-    gA = ["queryA", "gA","0.5","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
-    gB = ["queryA", "gB","0.3","0.5", "queryA_md5", "queryA.sig", '0.5', '50', '50']
-    g_res = make_mini_gather_results([gA,gB])
-
-    # make mini taxonomy
-    gA_tax = ("gA", "a;b;c")
-    taxD = make_mini_taxonomy([gA_tax])
-
-    ids = find_missing_identities(g_res, taxD)
-    print("ids_missing: ", ids)
-    assert ids == {"gB"}
 
 
 def test_summarize_gather_at_0():

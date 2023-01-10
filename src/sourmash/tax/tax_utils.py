@@ -18,7 +18,7 @@ import sqlite3
 
 
 __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
-           'load_gather_results', 'check_and_load_gather_csvs',
+           'load_gather_results_old', 'check_and_load_gather_csvs_old',
            'find_match_lineage', 'summarize_gather_at',
            'find_missing_identities', 'make_krona_header',
            'aggregate_by_lineage_at_rank_old', 'format_for_krona_old',
@@ -356,24 +356,21 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     return gather_csvs
 
 
-def load_gather_results(gather_csv, *, essential_colnames=EssentialGatherColnames,
-                        seen_queries=None, force=False):
+def load_gather_results(gather_csv, tax_assignments, *, seen_queries=None, force=False,
+                        skip_idents = None, fail_on_missing_taxonomy=False,
+                        keep_full_identifiers=False, keep_identifier_versions=False):
     "Load a single gather csv"
     if not seen_queries:
         seen_queries=set()
     header = []
-    gather_results = []
-    gather_queries = set()
+    gather_results = {}
     with sourmash_args.FileInputCSV(gather_csv) as r:
         header = r.fieldnames
         # check for empty file
         if not header:
             raise ValueError(f"Cannot read gather results from '{gather_csv}'. Is file empty?")
 
-        # check for critical column names used by summarize_gather_at
-        if not set(essential_colnames).issubset(header):
-            raise ValueError(f"Not all required gather columns are present in '{gather_csv}'.")
-
+        this_querytaxres = None
         for n, row in enumerate(r):
             query_name = row['query_name']
             # check if we've seen this query already in a different gather CSV
@@ -381,19 +378,30 @@ def load_gather_results(gather_csv, *, essential_colnames=EssentialGatherColname
                 # do not allow loading of same query from a second CSV.
                 raise ValueError(f"Gather query {query_name} was found in more than one CSV. Cannot load from '{gather_csv}'.")
             else:
-                gather_results.append(row)
-            # add query name to the gather_queries from this CSV
-            if query_name not in gather_queries:
-                gather_queries.add(query_name)
+                # read gather row into TaxResult
+                try:
+                    gatherRaw = GatherRow(**row)
+                except TypeError as exc:
+                    raise ValueError(f"'{gather_csv}' is missing columns needed for taxonomic summarization. Please run gather with sourmash >= 4.4.") from exc
+                taxres = TaxResult(raw=gatherRaw, keep_full_identifiers=keep_full_identifiers,
+                                                  keep_identifier_versions=keep_identifier_versions)
+                taxres.get_match_lineage(tax_assignments=tax_assignments, skip_idents=skip_idents, 
+                                         fail_on_missing_taxonomy=fail_on_missing_taxonomy)
+                # add to matching QueryTaxResult or create new one
+                if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
+                    # get existing or initialize new
+                    this_querytaxres = gather_results.get(query_name, QueryTaxResult(taxres.query_info))
+                this_querytaxres.add_taxresult(taxres)
+                gather_results[query_name] = this_querytaxres
 
     if not gather_results:
         raise ValueError(f'No gather results loaded from {gather_csv}.')
     else:
         notify(f"loaded {len(gather_results)} gather results from '{gather_csv}'.")
-    return gather_results, header, gather_queries
+    return gather_results, header #, gather_queries # can use the gather_results keys instead
 
 
-def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False):
+def check_and_load_gather_csvs_old(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False):
     '''
     Load gather csvs, checking for empties and ids missing from taxonomic assignments.
     '''
@@ -408,7 +416,7 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
     for n, gather_csv in enumerate(gather_csvs):
         these_results = []
         try:
-            these_results, header, seen_queries = load_gather_results(gather_csv, seen_queries=seen_queries, force=force)
+            these_results, header, seen_queries = load_gather_results_old(gather_csv, seen_queries=seen_queries, force=force)
         except ValueError as exc:
             if force:
                 if "found in more than one CSV" in str(exc):
@@ -438,6 +446,56 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
     notify(f'loaded {len(gather_results)} results total from {str(num_gather_csvs_loaded)} gather CSVs')
 
     return gather_results, all_ident_missed, total_missed, header
+
+
+def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False, 
+                               keep_full_identifiers=False,keep_identifier_versions=False):
+    '''
+    Load gather csvs, checking for empties and ids missing from taxonomic assignments.
+    '''
+    if not isinstance(gather_csvs, list):
+        gather_csvs = [gather_csvs]
+    gather_results = {}
+    total_missed = 0
+    all_ident_missed = set()
+    header = []
+    n_ignored = 0
+    for n, gather_csv in enumerate(gather_csvs):
+        these_results = {}
+        try:
+            these_results, header = load_gather_results(gather_csv, tax_assign, 
+                                                        seen_queries=gather_results.keys(),
+                                                        force=force, keep_full_identifiers=keep_full_identifiers,
+                                                        keep_identifier_versions = keep_identifier_versions,
+                                                        fail_on_missing_taxonomy=fail_on_missing_taxonomy)
+        except ValueError as exc:
+            if force:
+                if "found in more than one CSV" in str(exc):
+                    notify('Cannot force past duplicated gather query. Exiting.')
+                    raise
+                if "Failing, as requested via --fail-on-missing-taxonomy" in str(exc):
+                    raise
+                notify(str(exc))
+                notify('--force is set. Attempting to continue to next set of gather results.')
+                n_ignored+=1
+                continue
+            else:
+                notify('Exiting.')
+                raise
+
+        # add these results to gather_results
+        gather_results.update(these_results)
+ 
+    # some reporting
+    num_gather_csvs_loaded = n+1 - n_ignored
+    notify(f'loaded results for {len(gather_results)} queries from {str(num_gather_csvs_loaded)} gather CSVs')
+    # count and report missing and skipped idents
+    report_missing_and_skipped_identities(gather_results)
+
+    # just return the list of QueryTaxResults
+    query_results_list = list(gather_results.values())
+
+    return query_results_list
 
 
 def find_match_lineage(match_ident, tax_assign, *, skip_idents = [],
@@ -588,7 +646,35 @@ def summarize_gather_at(rank, tax_assign, gather_results, *, skip_idents = [],
     return sum_uniq_to_query_sorted, seen_perfect, estimate_query_ani
 
 
-def find_missing_identities(gather_results, tax_assign):
+def report_missing_and_skipped_identities(gather_results):
+    """
+    Report match ids/accessions from gather results
+    that are not present in taxonomic assignments, either
+    by accident (missed) or request (skipped).
+    """
+    ident_missed= set()
+    ident_skipped= set()
+    total_n_missed = 0
+    total_n_skipped = 0
+    total_taxresults = 0
+    for querytaxres in gather_results.values():
+        ident_missed.update(querytaxres.missed_idents)
+        ident_skipped.update(querytaxres.skipped_idents)
+        # totals are total rows in gather that were missed - do we want to report these at all?
+        total_n_missed+= querytaxres.n_missed
+        total_n_skipped+= querytaxres.n_skipped
+        total_taxresults += len(querytaxres.raw_taxresults)
+
+    if ident_missed:
+        notify(f'of {total_taxresults} gather results, lineage assignments for {total_n_missed} results were missed.')
+        #notify(f'of {total_taxresults} gather results, missed lineage assignments for {total_n_missed)} results.')
+        notify(f'The following are missing from the taxonomy information: {", ".join(ident_missed)}')
+    if ident_skipped:
+        notify(f'The following idents were skipped during taxonomic assignment, as requested: {", ".join(ident_skipped)}')
+        notify(f'of {total_taxresults} gather results, lineage assignments for {total_n_skipped} results were skipped.')
+
+
+def find_missing_identities_old(gather_results, tax_assign):
     """
     Identify match ids/accessions from gather results
     that are not present in taxonomic assignments.
