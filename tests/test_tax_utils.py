@@ -2069,6 +2069,8 @@ def test_QueryTaxResult():
     taxres = make_TaxResult(taxD=taxD)
     # initialize
     q_res = QueryTaxResult(taxres.query_info)
+    assert q_res.ranks == []
+    assert q_res.ascending_ranks == []
     q_res.add_taxresult(taxres)
     # check that new querytaxres is compatible with taxres
     assert q_res.is_compatible(taxres)
