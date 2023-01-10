@@ -2563,7 +2563,7 @@ def test_QueryTaxResult_build_summarized_result_over100percent():
     with pytest.raises(ValueError) as exc:
         q_res.build_summarized_result()
     print(str(exc))
-    assert "The tax summary of query 'q1' is 1.05, which is > 100% of the query!! This should not be possible." in str(exc)
+    assert "Summarized fraction is > 100% of the query! This should not be possible" in str(exc)
 
 
 def test_build_summarized_result_rank_fail_not_available_resummarize():
@@ -2694,6 +2694,7 @@ def test_build_classification_result_rank_fail_not_filled():
     print(str(exc))
     assert "Error: rank 'order' was not available for any matching lineages." in str(exc)
 
+
 def test_build_classification_result_rank_fail_not_available_resummarize():
     "classification result: rank not available (wasn't summarized)"
     taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
@@ -2704,6 +2705,7 @@ def test_build_classification_result_rank_fail_not_available_resummarize():
         q_res.build_classification_result(rank='order')
     print(str(exc))
     assert "Error: rank 'order' not in summarized rank(s), superkingdom" in str(exc)
+
 
 def test_build_classification_result_rank_fail_not_available():
     "classification result: rank not available"
@@ -2880,3 +2882,113 @@ def test_make_human_summary_classification_2():
                    'query_ani_at_rank': '94.9%', 'status': 'match',
                    'query_name': 'q1', 'query_md5': 'md5',
                    'query_filename': 'query_fn', 'total_weighted_hashes': "0"}]
+
+
+def test_make_full_summary():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True)
+    header, fs = q_res.make_full_summary()
+    assert header == ['query_name', 'rank', 'fraction', 'lineage', 'query_md5', 'query_filename', 
+                   'f_weighted_at_rank', 'bp_match_at_rank', 'query_ani_at_rank', 'total_weighted_hashes']
+    print(fs)
+    assert fs == [{'rank': 'superkingdom', 'fraction': '0.8', 'lineage': 'unclassified', 'f_weighted_at_rank':
+                   '0.6', 'bp_match_at_rank': '60', 'query_ani_at_rank': None,
+                   'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn',
+                   'total_weighted_hashes': '0'},
+                   {'rank': 'superkingdom', 'fraction': '0.2', 'lineage': 'a', 'f_weighted_at_rank': '0.4',
+                   'bp_match_at_rank': '40', 'query_ani_at_rank': approx(0.949,rel=1e-3), 'query_name': 'q1',
+                   'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
+                   {'rank': 'phylum', 'fraction': '0.8', 'lineage': 'unclassified', 'f_weighted_at_rank': '0.6',
+                   'bp_match_at_rank': '60', 'query_ani_at_rank': None, 'query_name': 'q1', 'query_md5': 'md5',
+                   'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
+                   {'rank': 'phylum', 'fraction': '0.2', 'lineage': 'a;b', 'f_weighted_at_rank': '0.4',
+                   'bp_match_at_rank': '40', 'query_ani_at_rank': approx(0.949,rel=1e-3), 'query_name': 'q1',
+                   'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
+                   {'rank': 'class', 'fraction': '0.8', 'lineage': 'unclassified', 'f_weighted_at_rank': '0.6',
+                   'bp_match_at_rank': '60', 'query_ani_at_rank': None, 'query_name': 'q1', 'query_md5': 'md5',
+                   'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
+                   {'rank': 'class', 'fraction': '0.1', 'lineage': 'a;b;c', 'f_weighted_at_rank': '0.2',
+                   'bp_match_at_rank': '20', 'query_ani_at_rank': approx(0.928, rel=1e-3),
+                   'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
+                   {'rank': 'class', 'fraction': '0.1', 'lineage': 'a;b;d','f_weighted_at_rank': '0.2',
+                   'bp_match_at_rank': '20', 'query_ani_at_rank': approx(0.928, rel=1e-3), 'query_name': 'q1',
+                   'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'}]
+    
+    header, fs = q_res.make_full_summary(limit_float=True)
+    assert header == ['query_name', 'rank', 'fraction', 'lineage', 'query_md5', 'query_filename', 
+                   'f_weighted_at_rank', 'bp_match_at_rank', 'query_ani_at_rank', 'total_weighted_hashes']
+    print(fs)
+    assert fs == [{'rank': 'superkingdom', 'fraction': '0.800', 'lineage': 'unclassified', 'f_weighted_at_rank':
+                   '0.600', 'bp_match_at_rank': '60', 'query_ani_at_rank': None,
+                   'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn',
+                   'total_weighted_hashes': '0'},
+                   {'rank': 'superkingdom', 'fraction': '0.200', 'lineage': 'a', 'f_weighted_at_rank': '0.400',
+                   'bp_match_at_rank': '40', 'query_ani_at_rank': "0.949", 'query_name': 'q1',
+                   'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
+                   {'rank': 'phylum', 'fraction': '0.800', 'lineage': 'unclassified', 'f_weighted_at_rank': '0.600',
+                   'bp_match_at_rank': '60', 'query_ani_at_rank': None, 'query_name': 'q1', 'query_md5': 'md5',
+                   'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
+                   {'rank': 'phylum', 'fraction': '0.200', 'lineage': 'a;b', 'f_weighted_at_rank': '0.400',
+                   'bp_match_at_rank': '40', 'query_ani_at_rank': "0.949", 'query_name': 'q1',
+                   'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
+                   {'rank': 'class', 'fraction': '0.800', 'lineage': 'unclassified', 'f_weighted_at_rank': '0.600',
+                   'bp_match_at_rank': '60', 'query_ani_at_rank': None, 'query_name': 'q1', 'query_md5': 'md5',
+                   'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
+                   {'rank': 'class', 'fraction': '0.100', 'lineage': 'a;b;c', 'f_weighted_at_rank': '0.200',
+                   'bp_match_at_rank': '20', 'query_ani_at_rank': "0.928",
+                   'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'},
+                   {'rank': 'class', 'fraction': '0.100', 'lineage': 'a;b;d','f_weighted_at_rank': '0.200',
+                   'bp_match_at_rank': '20', 'query_ani_at_rank': "0.928", 'query_name': 'q1',
+                   'query_md5': 'md5', 'query_filename': 'query_fn', 'total_weighted_hashes': '0'}]
+
+
+def test_make_full_summary_summarization_fail():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=False)
+    with pytest.raises(ValueError) as exc:
+        q_res.make_full_summary()
+    print(str(exc))
+    assert 'not summarized yet' in str(exc)
+
+
+def test_make_full_summary_classification():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, classify=True)
+    header, fs = q_res.make_full_summary(classification=True)
+    assert header == ["query_name", "status", "rank", "fraction", "lineage",
+                     "query_md5", "query_filename", "f_weighted_at_rank",
+                     "bp_match_at_rank", "query_ani_at_rank"]
+    print(fs)
+    assert fs == [{'rank': 'class', 'fraction': '0.1', 'lineage': 'a;b;c', 'f_weighted_at_rank': '0.2', 
+                   'bp_match_at_rank': '20', 'query_ani_at_rank': approx(0.928, rel=1e-3),
+                   'status': 'match', 'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn',
+                   'total_weighted_hashes': '0'}]
+
+ 
+def test_make_full_summary_classification_limit_float():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, classify=True)
+    header, fs = q_res.make_full_summary(classification=True, limit_float=True)
+    assert header == ["query_name", "status", "rank", "fraction", "lineage",
+                     "query_md5", "query_filename", "f_weighted_at_rank",
+                     "bp_match_at_rank", "query_ani_at_rank"]
+    print(fs)
+    assert fs == [{'rank': 'class', 'fraction': '0.100', 'lineage': 'a;b;c', 'f_weighted_at_rank': '0.200', 
+                   'bp_match_at_rank': '20', 'query_ani_at_rank': "0.928",
+                   'status': 'match', 'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn',
+                   'total_weighted_hashes': '0'}]
+
+
+def test_make_full_summary_classification_fail():
+    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True)
+    with pytest.raises(ValueError) as exc:
+        q_res.make_full_summary(classification=True)
+    print(str(exc))
+    assert 'not classified yet' in str(exc)
+

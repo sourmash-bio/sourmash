@@ -1614,8 +1614,10 @@ class SummarizedGatherResult():
         if limit_float:
             sD['fraction'] = f'{self.fraction:.3f}'
             sD['f_weighted_at_rank'] = f'{self.f_weighted_at_rank:.3f}'
+            if self.query_ani_at_rank:
+                sD['query_ani_at_rank'] = f'{self.query_ani_at_rank:.3f}'#f"{self.query_ani_at_rank*100:>3.1f}%"
         else:
-            sD['fraction'] = str(self. fraction)
+            sD['fraction'] = str(self.fraction)
             sD['f_weighted_at_rank'] = str(self.f_weighted_at_rank)
 
         return(sD)
@@ -1623,7 +1625,7 @@ class SummarizedGatherResult():
     def as_human_friendly_dict(self, query_info):
         sD = self.as_summary_dict(query_info=query_info, limit_float=True)
         sD['f_weighted_at_rank'] = f"{self.f_weighted_at_rank*100:>4.1f}%"
-        if sD['query_ani_at_rank'] is not None:
+        if self.query_ani_at_rank is not None:
             sD['query_ani_at_rank'] = f"{self.query_ani_at_rank*100:>3.1f}%"
         else:
             sD['query_ani_at_rank'] = '-    '
@@ -1694,6 +1696,7 @@ class QueryTaxResult():
         self.query_name = self.query_info.query_name # for convenience
         self._init_taxresult_vars()
         self._init_summarization_vars()
+        self._init_classification_results()
 
     def _init_taxresult_vars(self):
         self.ranks = []
@@ -1801,23 +1804,22 @@ class QueryTaxResult():
             sorted_sum_uniq_to_query = list(sum_uniq_to_query.items())
             sorted_sum_uniq_to_query.sort(key = lambda x: -x[1])
             for lineage, f_unique in sorted_sum_uniq_to_query:
-                query_ani = None
-                if f_unique > 1:
-                    raise ValueError(f"The tax summary of query '{self.query_name}' is {f_unique}, which is > 100% of the query!! This should not be possible. Please check that your input files come directly from a single gather run per query.")
-                elif f_unique == 0: #no annotated results for this query. do we need to handle this differently now?
+                # does this ever happen? do we need it?
+                if f_unique == 0: #no annotated results for this query. do we need to handle this differently now?
                     continue
                 f_weighted_at_rank = self.sum_uniq_weighted[rank][lineage]
                 bp_intersect_at_rank = self.sum_uniq_bp[rank][lineage]
-                # NTP Note: These change by rank ONLY when doing best_only (selecting top hit at that particular rank)
-                # now that I pulled best_only into separate fn, these don't need to be dicts...
-                self.total_f_classified[rank] += f_unique
-                self.total_f_weighted[rank] += f_weighted_at_rank
-                self.total_bp_classified[rank] += bp_intersect_at_rank
                 sres = SummarizedGatherResult(lineage=lineage, rank=rank,
                                               f_weighted_at_rank=f_weighted_at_rank, fraction=f_unique,
                                               bp_match_at_rank=bp_intersect_at_rank)
                 sres.set_query_ani(query_info=self.query_info)
                 self.summarized_lineage_results[rank].append(sres)
+
+                # NTP Note: These change by rank ONLY when doing best_only (selecting top hit at that particular rank)
+                # now that I pulled best_only into separate fn, these don't need to be dicts...
+                self.total_f_classified[rank] += f_unique
+                self.total_f_weighted[rank] += f_weighted_at_rank
+                self.total_bp_classified[rank] += bp_intersect_at_rank
 
             # record unclassified
             lineage = ()
@@ -1886,15 +1888,21 @@ class QueryTaxResult():
             rank_index = self.ranks.index(min_rank)
         return ["fraction"] + list(self.ranks[:rank_index+1])
 
+    def check_classification(self):
+        if not self.classification_result:
+            raise ValueError("query not classified yet.")
+
+    def check_summarization(self):
+        if not self.summarized_lineage_results:
+            raise ValueError("lineages not summarized yet.")
+
     def make_human_summary(self, display_rank, classification=False):
         results = []
         if classification:
-            if not self.classification_result:
-                raise ValueError("query not classified yet.")
+            self.check_classification()
             display_rank_results = [self.classification_result]
         else:
-            if not self.summarized_lineage_results:
-                raise ValueError("lineages not summarized yet.")
+            self.check_summarization()
             display_rank_results = self.summarized_lineage_results[display_rank]
             display_rank_results.sort(key=lambda res: -res.f_weighted_at_rank)
 
@@ -1905,19 +1913,17 @@ class QueryTaxResult():
     def make_full_summary(self, classification=False, limit_float=False):
         results = []
         if classification:
+            self.check_classification()
             header= ["query_name", "status", "rank", "fraction", "lineage",
                      "query_md5", "query_filename", "f_weighted_at_rank",
                      "bp_match_at_rank", "query_ani_at_rank"]
-            if not self.classification_result:
-                raise ValueError("query not classified yet.")
             rD = self.classification_result.as_summary_dict(query_info = self.query_info, limit_float=limit_float)
             results.append(rD)
         else:
+            self.check_summarization()
             header= ["query_name", "rank", "fraction", "lineage", "query_md5",
                      "query_filename", "f_weighted_at_rank", "bp_match_at_rank",
                      "query_ani_at_rank", "total_weighted_hashes"]
-            if not self.summarized_lineage_results:
-                raise ValueError("lineages not summarized yet.")
 
             for rank in self.summarized_ranks[::-1]:
                 rank_results = self.summarized_lineage_results[rank]
@@ -1927,6 +1933,7 @@ class QueryTaxResult():
         return header, results
 
     def make_kreport_results(self):
+        self.check_summarization()
         rankCode = { "superkingdom": "D", "kingdom": "K", "phylum": "P", "class": "C",
                         "order": "O", "family":"F", "genus": "G", "species": "S", "unclassified": "U"}
         if self.query_info.total_weighted_hashes == 0:
