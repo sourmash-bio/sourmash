@@ -88,67 +88,84 @@ def metagenome(args):
     # next, collect and load gather results
     gather_csvs = tax_utils.collect_gather_csvs(args.gather_csv, from_file= args.from_file)
     try:
-        gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
-                                                                                       fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
+         query_gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
+                                                                                       fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
+                                                                                       keep_full_identifiers=args.keep_full_identifiers,
+                                                                                       keep_identifier_versions = args.keep_identifier_versions,
+                                                                                       )
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
 
-    if not gather_results:
+    if not query_gather_results:
         notify('No gather results loaded. Exiting.')
         sys.exit(-1)
 
-    # actually summarize at rank
-    summarized_gather = {}
-    seen_perfect = set()
-    for rank in sourmash.lca.taxlist(include_strain=False):
-        try:
-            summarized_gather[rank], seen_perfect, _ = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                                keep_full_identifiers=args.keep_full_identifiers,
-                                                                keep_identifier_versions = args.keep_identifier_versions,
-                                                                seen_perfect = seen_perfect)
+    single_query_output_formats =  ['csv_summary', 'kreport', 'krona']
+    desired_single_outputs = []
+    if len(query_gather_results) > 1: # working with multiple queries
+        desired_single_outputs = [x for x in args.output_format if x in single_query_output_formats]
+        if desired_single_outputs:
+            notify(f"WARNING: found results for multiple gather queries. Can only output multi-query result formats, skipping {', '.join(desired_single_outputs)}")
+            args.output_format.remove(desired_single_outputs) ## NTP - is this taken care of below instead?
+        # remove single query outputs from output format
+        args.output_format = [x for x in args.output_format if x not in single_query_output_formats]
+        if not args.output_format:
+            args.output_format = ["human"] # when this is default (5.0), shouldn't have issues
+#            raise ValueError('Error: no output formats remaining.')
 
+    # for each queryResult, actually summarize at rank, reporting any errors that occur.
+    for queryResult in query_gather_results:
+        try:
+            queryResult.build_summarized_result()
         except ValueError as exc:
             error(f"ERROR: {str(exc)}")
             sys.exit(-1)
 
-    # write summarized output csv
-    if "csv_summary" in args.output_format:
-        summary_outfile, limit_float = make_outfile(args.output_base, "csv_summary", output_dir=args.output_dir)
-        with FileOutputCSV(summary_outfile) as out_fp:
-            tax_utils.write_summary(summarized_gather, out_fp, limit_float_decimals=limit_float)
-
+    ### outputs that aggregate information for multiple queries if available (but ok if not avail):
     # write summarized output in human-readable format
-    if "human" in args.output_format:
-        summary_outfile, limit_float = make_outfile(args.output_base, "human", output_dir=args.output_dir)
-
-        with FileOutput(summary_outfile) as out_fp:
-            tax_utils.write_human_summary(summarized_gather, out_fp, args.rank or "species")
-
-    # if lineage summary table
     if "lineage_summary" in args.output_format:
+            # if lineage summary table
         lineage_outfile, limit_float = make_outfile(args.output_base, "lineage_summary", output_dir=args.output_dir)
 
         ## aggregate by lineage, by query
-        lineageD, query_names, num_queries = tax_utils.aggregate_by_lineage_at_rank(summarized_gather[args.rank], by_query=True)
+        lineageD, query_names= tax_utils.aggregate_by_lineage_at_rank(query_gather_results=query_gather_results,
+                                                                      rank=args.rank, by_query=True)
 
         with FileOutputCSV(lineage_outfile) as out_fp:
             tax_utils.write_lineage_sample_frac(query_names, lineageD, out_fp, format_lineage=True, sep='\t')
 
     # write summarized --> krona output tsv
     if "krona" in args.output_format:
-        krona_resultslist = tax_utils.format_for_krona(args.rank, summarized_gather)
+        krona_results, header =  tax_utils.format_for_krona(query_gather_results, rank=args.rank)
+
 
         krona_outfile, limit_float = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
         with FileOutputCSV(krona_outfile) as out_fp:
-            tax_utils.write_krona(args.rank, krona_resultslist, out_fp)
+            tax_utils.write_krona(args.rank, krona_results, header, out_fp)
+
+
+    if "human" in args.output_format:
+        summary_outfile, limit_float = make_outfile(args.output_base, "human", output_dir=args.output_dir)
+
+        with FileOutput(summary_outfile) as out_fp:
+            tax_utils.write_human_summary(query_gather_results, out_fp, args.rank or "species")
+
+
+    ### single query outputs:
+    # write summarized output csv
+    single_query_results = query_gather_results[0]#.summarized_lineage_results
+    if "csv_summary" in args.output_format:
+        summary_outfile, limit_float = make_outfile(args.output_base, "csv_summary", output_dir=args.output_dir)
+        with FileOutputCSV(summary_outfile) as out_fp:
+            tax_utils.write_summary({query_gather_results}, out_fp, limit_float_decimals=limit_float)
 
     # write summarized --> kreport output tsv
     if "kreport" in args.output_format:
         kreport_outfile, limit_float = make_outfile(args.output_base, "kreport", output_dir=args.output_dir)
 
         with FileOutputCSV(kreport_outfile) as out_fp:
-            tax_utils.write_kreport(summarized_gather, out_fp)
+            tax_utils.write_kreport(single_query_results, out_fp)
 
 
 def genome(args):
