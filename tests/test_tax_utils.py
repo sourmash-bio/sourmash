@@ -1251,8 +1251,8 @@ def test_BaseLineageInfo_init_empty():
     assert taxinf.zip_lineage()== ['', '', ''] # this is a bit odd, but it's what preserves empty ranks...
     print(taxinf.filled_lineage)
     assert taxinf.filled_lineage == ()
-    assert taxinf.lowest_lineage_name == ""
-    assert taxinf.lowest_lineage_taxid == ""
+    assert taxinf.lowest_lineage_name == None
+    assert taxinf.lowest_lineage_taxid == None
     assert taxinf.filled_ranks == ()
     assert taxinf.lowest_rank == None
     assert taxinf.display_lineage() == ""

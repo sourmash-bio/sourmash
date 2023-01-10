@@ -105,14 +105,14 @@ class BaseLineageInfo:
     def lowest_lineage_name(self):
         "Return the name of the lowest filled lineage"
         if not self.filled_ranks:
-            return ""
+            return None
         return self.filled_lineage[-1].name
 
     @property
     def lowest_lineage_taxid(self):
         "Return the taxid of the lowest filled lineage"
         if not self.filled_ranks:
-            return ""
+            return None
         return self.filled_lineage[-1].taxid
 
     def _init_empty(self):
