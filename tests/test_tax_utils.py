@@ -379,7 +379,7 @@ def test_summarize_gather_at_0():
     assert sk_sum[0].query_md5 == "queryA_md5"
     assert sk_sum[0].query_filename == "queryA.sig"
     assert sk_sum[0].rank == 'superkingdom'
-    assert sk_sum[0].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),)
+    assert sk_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),)
     assert sk_sum[0].fraction == 1.0
     assert sk_sum[0].f_weighted_at_rank == 1.0
     assert sk_sum[0].bp_match_at_rank == 100
@@ -392,7 +392,7 @@ def test_summarize_gather_at_0():
     assert phy_sum[0].query_md5 == "queryA_md5"
     assert phy_sum[0].query_filename == "queryA.sig"
     assert phy_sum[0].rank == 'phylum'
-    assert phy_sum[0].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),lca_utils.LineagePair(rank='phylum', name='b'))
+    assert phy_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),LineagePair(rank='phylum', name='b'))
     assert phy_sum[0].fraction == 1.0
     assert phy_sum[0].f_weighted_at_rank == 1.0
     assert phy_sum[0].bp_match_at_rank == 100
@@ -404,16 +404,16 @@ def test_summarize_gather_at_0():
     assert cl_sum[0].query_md5 == "queryA_md5"
     assert cl_sum[0].query_filename == "queryA.sig"
     assert cl_sum[0].rank == 'class'
-    assert cl_sum[0].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),
-                                 lca_utils.LineagePair(rank='phylum', name='b'),
-                                 lca_utils.LineagePair(rank='class', name='c'))
+    assert cl_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),
+                                 LineagePair(rank='phylum', name='b'),
+                                 LineagePair(rank='class', name='c'))
     assert cl_sum[0].fraction == 0.5
     assert cl_sum[0].f_weighted_at_rank == 0.5
     assert cl_sum[0].bp_match_at_rank == 50
     assert cl_sum[1].rank == 'class'
-    assert cl_sum[1].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),
-                                 lca_utils.LineagePair(rank='phylum', name='b'),
-                                 lca_utils.LineagePair(rank='class', name='d'))
+    assert cl_sum[1].lineage == (LineagePair(rank='superkingdom', name='a'),
+                                 LineagePair(rank='phylum', name='b'),
+                                 LineagePair(rank='class', name='d'))
     assert cl_sum[1].fraction == 0.5
     assert cl_sum[1].f_weighted_at_rank == 0.5
     assert cl_sum[1].bp_match_at_rank == 50
@@ -438,7 +438,7 @@ def test_summarize_gather_at_1():
     # superkingdom
     assert len(sk_sum) == 2
     print("\nsuperkingdom summarized gather 0: ", sk_sum[0])
-    assert sk_sum[0].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),)
+    assert sk_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),)
     assert sk_sum[0].fraction == 0.7
     assert sk_sum[0].bp_match_at_rank == 70
     print("superkingdom summarized gather 1: ", sk_sum[1])
@@ -453,7 +453,7 @@ def test_summarize_gather_at_1():
     print("phylum summarized gather 0: ", phy_sum[0])
     print("phylum summarized gather 1: ", phy_sum[1])
     assert len(phy_sum) == 2
-    assert phy_sum[0].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),lca_utils.LineagePair(rank='phylum', name='b'))
+    assert phy_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),LineagePair(rank='phylum', name='b'))
     assert phy_sum[0].fraction == 0.7
     assert phy_sum[0].f_weighted_at_rank == 0.6
     assert phy_sum[0].bp_match_at_rank == 70
@@ -466,18 +466,18 @@ def test_summarize_gather_at_1():
     cl_sum, _, _ = summarize_gather_at("class", taxD, g_res, estimate_query_ani=True)
     assert len(cl_sum) == 3
     print("class summarized gather: ", cl_sum)
-    assert cl_sum[0].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),
-                                 lca_utils.LineagePair(rank='phylum', name='b'),
-                                 lca_utils.LineagePair(rank='class', name='c'))
+    assert cl_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),
+                                 LineagePair(rank='phylum', name='b'),
+                                 LineagePair(rank='class', name='c'))
     assert cl_sum[0].fraction == 0.6
     assert cl_sum[0].f_weighted_at_rank == 0.5
     assert cl_sum[0].bp_match_at_rank == 60
     assert cl_sum[0].query_ani_at_rank == 0.9836567776983505
 
     assert cl_sum[1].rank == 'class'
-    assert cl_sum[1].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),
-                                 lca_utils.LineagePair(rank='phylum', name='b'),
-                                 lca_utils.LineagePair(rank='class', name='d'))
+    assert cl_sum[1].lineage == (LineagePair(rank='superkingdom', name='a'),
+                                 LineagePair(rank='phylum', name='b'),
+                                 LineagePair(rank='class', name='d'))
     assert cl_sum[1].fraction == 0.1
     assert cl_sum[1].f_weighted_at_rank == 0.1
     assert cl_sum[1].bp_match_at_rank == 10
@@ -504,7 +504,7 @@ def test_summarize_gather_at_perfect_match():
     # superkingdom
     assert len(sk_sum) == 1
     print("superkingdom summarized gather: ", sk_sum[0])
-    assert sk_sum[0].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),)
+    assert sk_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),)
     assert sk_sum[0].fraction == 1.0
 
 
@@ -534,15 +534,15 @@ def test_summarize_gather_at_over100percent_f_unique_to_query():
     cl_sum, _, _ = summarize_gather_at("class", taxD, g_res)
     assert len(cl_sum) == 2
     print("class summarized gather: ", cl_sum)
-    assert cl_sum[0].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),
-                                 lca_utils.LineagePair(rank='phylum', name='b'),
-                                 lca_utils.LineagePair(rank='class', name='d'))
+    assert cl_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),
+                                 LineagePair(rank='phylum', name='b'),
+                                 LineagePair(rank='class', name='d'))
     assert cl_sum[0].fraction == 0.6
     assert cl_sum[0].bp_match_at_rank == 60
     assert cl_sum[1].rank == 'class'
-    assert cl_sum[1].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),
-                                 lca_utils.LineagePair(rank='phylum', name='b'),
-                                 lca_utils.LineagePair(rank='class', name='c'))
+    assert cl_sum[1].lineage == (LineagePair(rank='superkingdom', name='a'),
+                                 LineagePair(rank='phylum', name='b'),
+                                 LineagePair(rank='class', name='c'))
     assert cl_sum[1].fraction == 0.5
     assert cl_sum[1].bp_match_at_rank == 50
 
@@ -563,7 +563,7 @@ def test_summarize_gather_at_missing_ignore():
     # superkingdom
     assert len(sk_sum) == 2
     print("superkingdom summarized gather: ", sk_sum[0])
-    assert sk_sum[0].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),)
+    assert sk_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),)
     assert sk_sum[0].fraction == 0.5
     assert sk_sum[0].bp_match_at_rank == 50
     assert sk_sum[1].lineage == ()
@@ -574,7 +574,7 @@ def test_summarize_gather_at_missing_ignore():
     phy_sum, _, _ = summarize_gather_at("phylum", taxD, g_res, skip_idents=['gB'])
     print("phylum summarized gather: ", phy_sum[0])
     assert len(phy_sum) == 2
-    assert phy_sum[0].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),lca_utils.LineagePair(rank='phylum', name='b'))
+    assert phy_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),LineagePair(rank='phylum', name='b'))
     assert phy_sum[0].fraction == 0.5
     assert phy_sum[0].bp_match_at_rank == 50
     assert phy_sum[1].lineage == ()
@@ -584,9 +584,9 @@ def test_summarize_gather_at_missing_ignore():
     cl_sum, _, _ = summarize_gather_at("class", taxD, g_res, skip_idents=['gB'])
     assert len(cl_sum) == 2
     print("class summarized gather: ", cl_sum)
-    assert cl_sum[0].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),
-                                 lca_utils.LineagePair(rank='phylum', name='b'),
-                                 lca_utils.LineagePair(rank='class', name='c'))
+    assert cl_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),
+                                 LineagePair(rank='phylum', name='b'),
+                                 LineagePair(rank='class', name='c'))
     assert cl_sum[0].fraction == 0.5
     assert cl_sum[0].bp_match_at_rank == 50
     assert cl_sum[1].lineage == ()
@@ -629,7 +629,7 @@ def test_summarize_gather_at_best_only_0():
     # superkingdom
     assert len(sk_sum) == 1
     print("superkingdom summarized gather: ", sk_sum[0])
-    assert sk_sum[0].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),)
+    assert sk_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),)
     assert sk_sum[0].fraction == 0.7
     assert sk_sum[0].bp_match_at_rank == 70
     print("superk ANI:",sk_sum[0].query_ani_at_rank)
@@ -639,7 +639,7 @@ def test_summarize_gather_at_best_only_0():
     phy_sum, _, _ = summarize_gather_at("phylum", taxD, g_res, best_only=True,estimate_query_ani=True)
     print("phylum summarized gather: ", phy_sum[0])
     assert len(phy_sum) == 1
-    assert phy_sum[0].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),lca_utils.LineagePair(rank='phylum', name='b'))
+    assert phy_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),LineagePair(rank='phylum', name='b'))
     assert phy_sum[0].fraction == 0.7
     assert phy_sum[0].bp_match_at_rank == 70
     print("phy ANI:",phy_sum[0].query_ani_at_rank)
@@ -648,9 +648,9 @@ def test_summarize_gather_at_best_only_0():
     cl_sum, _, _ = summarize_gather_at("class", taxD, g_res, best_only=True, estimate_query_ani=True)
     assert len(cl_sum) == 1
     print("class summarized gather: ", cl_sum)
-    assert cl_sum[0].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),
-                                 lca_utils.LineagePair(rank='phylum', name='b'),
-                                 lca_utils.LineagePair(rank='class', name='c'))
+    assert cl_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),
+                                 LineagePair(rank='phylum', name='b'),
+                                 LineagePair(rank='class', name='c'))
     assert cl_sum[0].fraction == 0.6
     assert cl_sum[0].bp_match_at_rank == 60
     print("cl ANI:",cl_sum[0].query_ani_at_rank)
@@ -674,9 +674,9 @@ def test_summarize_gather_at_best_only_equal_choose_first():
     cl_sum, _, _ = summarize_gather_at("class", taxD, g_res, best_only=True)
     assert len(cl_sum) == 1
     print("class summarized gather: ", cl_sum)
-    assert cl_sum[0].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),
-                                 lca_utils.LineagePair(rank='phylum', name='b'),
-                                 lca_utils.LineagePair(rank='class', name='c'))
+    assert cl_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),
+                                 LineagePair(rank='phylum', name='b'),
+                                 LineagePair(rank='class', name='c'))
     assert cl_sum[0].fraction == 0.5
     assert cl_sum[0].bp_match_at_rank == 50
 
@@ -687,14 +687,14 @@ def test_write_summary_csv(runtmp):
     sum_gather = {'superkingdom': [SummarizedGatherResult(query_name='queryA', rank='superkingdom', fraction=1.0,
                                                           query_md5='queryA_md5', query_filename='queryA.sig',
                                                           f_weighted_at_rank=1.0, bp_match_at_rank=100,
-                                                          lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),),
+                                                          lineage=(LineagePair(rank='superkingdom', name='a'),),
                                                           query_ani_at_rank=None,
                                                           total_weighted_hashes=0)],
                   'phylum':  [SummarizedGatherResult(query_name='queryA', rank='phylum', fraction=1.0,
                                                      query_md5='queryA_md5', query_filename='queryA.sig',
                                                      f_weighted_at_rank=1.0, bp_match_at_rank=100,
-                                                     lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),
-                                                              lca_utils.LineagePair(rank='phylum', name='b')),
+                                                     lineage=(LineagePair(rank='superkingdom', name='a'),
+                                                              LineagePair(rank='phylum', name='b')),
                                                      query_ani_at_rank=None,
                                                      total_weighted_hashes=0)]}
 
@@ -712,8 +712,8 @@ def test_write_summary_csv(runtmp):
 def test_write_classification(runtmp):
     """test classification csv write function"""
     classif = ClassificationResult('queryA', 'match', 'phylum', 1.0,
-                                    (lca_utils.LineagePair(rank='superkingdom', name='a'),
-                                     lca_utils.LineagePair(rank='phylum', name='b')),
+                                    (LineagePair(rank='superkingdom', name='a'),
+                                     LineagePair(rank='phylum', name='b')),
                                      'queryA_md5', 'queryA.sig', 1.0, 100,
                                      query_ani_at_rank=None)
 
@@ -771,7 +771,7 @@ def test_aggregate_by_lineage_at_rank_by_query():
     print("superkingdom summarized gather results:", sk_sum)
     assert len(sk_sum) ==4
     assert sk_sum[0].query_name == "queryA"
-    assert sk_sum[0].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),)
+    assert sk_sum[0].lineage == (LineagePair(rank='superkingdom', name='a'),)
     assert sk_sum[0].fraction == 0.9
     assert sk_sum[0].bp_match_at_rank == 160
     # check for unassigned for queryA
@@ -781,7 +781,7 @@ def test_aggregate_by_lineage_at_rank_by_query():
     assert round(sk_sum[1].fraction,1) == 0.1
     # queryB
     assert sk_sum[2].query_name == "queryB"
-    assert sk_sum[2].lineage == (lca_utils.LineagePair(rank='superkingdom', name='a'),)
+    assert sk_sum[2].lineage == (LineagePair(rank='superkingdom', name='a'),)
     assert sk_sum[2].fraction == 0.3
     assert sk_sum[2].bp_match_at_rank == 60
     # check for unassigned for queryA
@@ -791,7 +791,7 @@ def test_aggregate_by_lineage_at_rank_by_query():
     assert sk_sum[3].bp_match_at_rank == 140
     sk_lin_sum, query_names, num_queries = aggregate_by_lineage_at_rank(sk_sum, by_query=True)
     print("superkingdom lineage summary:", sk_lin_sum, '\n')
-    assert sk_lin_sum == {(lca_utils.LineagePair(rank='superkingdom', name='a'),): {'queryA': 0.9, 'queryB': 0.3},
+    assert sk_lin_sum == {(LineagePair(rank='superkingdom', name='a'),): {'queryA': 0.9, 'queryB': 0.3},
                           (): {'queryA': 0.09999999999999998, 'queryB': 0.7}}
     assert num_queries == 2
     assert query_names == ['queryA', 'queryB']
@@ -800,8 +800,8 @@ def test_aggregate_by_lineage_at_rank_by_query():
     print("phylum summary:", phy_sum, ']\n')
     phy_lin_sum, query_names, num_queries = aggregate_by_lineage_at_rank(phy_sum, by_query=True)
     print("phylum lineage summary:", phy_lin_sum, '\n')
-    assert phy_lin_sum ==  {(lca_utils.LineagePair(rank='superkingdom', name='a'), lca_utils.LineagePair(rank='phylum', name='b')): {'queryA': 0.5},
-                            (lca_utils.LineagePair(rank='superkingdom', name='a'), lca_utils.LineagePair(rank='phylum', name='c')): {'queryA': 0.4, 'queryB': 0.3},
+    assert phy_lin_sum ==  {(LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='b')): {'queryA': 0.5},
+                            (LineagePair(rank='superkingdom', name='a'), LineagePair(rank='phylum', name='c')): {'queryA': 0.4, 'queryB': 0.3},
                             (): {'queryA': 0.09999999999999998, 'queryB': 0.7}}
     assert num_queries == 2
     assert query_names == ['queryA', 'queryB']
@@ -911,27 +911,27 @@ def test_combine_sumgather_csvs_by_lineage(runtmp):
     sum_gather1 = {'superkingdom': [SummarizedGatherResult(query_name='queryA', rank='superkingdom', fraction=0.5,
                                                           query_md5='queryA_md5', query_filename='queryA.sig',
                                                           f_weighted_at_rank=1.0, bp_match_at_rank=100,
-                                                          lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),),
+                                                          lineage=(LineagePair(rank='superkingdom', name='a'),),
                                                            query_ani_at_rank=None,
                                                            total_weighted_hashes=0)],
                   'phylum':  [SummarizedGatherResult(query_name='queryA', rank='phylum', fraction=0.5,
                                                      query_md5='queryA_md5', query_filename='queryA.sig',
                                                      f_weighted_at_rank=0.5, bp_match_at_rank=50,
-                                                     lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),
-                                                              lca_utils.LineagePair(rank='phylum', name='b')),
+                                                     lineage=(LineagePair(rank='superkingdom', name='a'),
+                                                              LineagePair(rank='phylum', name='b')),
                                                      query_ani_at_rank=None,
                                                      total_weighted_hashes=0)]}
     sum_gather2 = {'superkingdom': [SummarizedGatherResult(query_name='queryB', rank='superkingdom', fraction=0.7,
                                                           query_md5='queryB_md5', query_filename='queryB.sig',
                                                           f_weighted_at_rank=0.7, bp_match_at_rank=70,
-                                                          lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),),
+                                                          lineage=(LineagePair(rank='superkingdom', name='a'),),
                                                            query_ani_at_rank=None,
                                                            total_weighted_hashes=0)],
                   'phylum':  [SummarizedGatherResult(query_name='queryB', rank='phylum', fraction=0.7,
                                                      query_md5='queryB_md5', query_filename='queryB.sig',
                                                      f_weighted_at_rank=0.7, bp_match_at_rank=70,
-                                                     lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),
-                                                              lca_utils.LineagePair(rank='phylum', name='c')),
+                                                     lineage=(LineagePair(rank='superkingdom', name='a'),
+                                                              LineagePair(rank='phylum', name='c')),
                                                      query_ani_at_rank=None,
                                                      total_weighted_hashes=0)]}
 
@@ -1006,27 +1006,27 @@ def test_combine_sumgather_csvs_by_lineage_improper_rank(runtmp):
     sum_gather1 = {'superkingdom': [SummarizedGatherResult(query_name='queryA', rank='superkingdom', fraction=0.5,
                                                           query_md5='queryA_md5', query_filename='queryA.sig',
                                                           f_weighted_at_rank=0.5, bp_match_at_rank=50,
-                                                          lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),),
+                                                          lineage=(LineagePair(rank='superkingdom', name='a'),),
                                                            query_ani_at_rank=None,
                                                            total_weighted_hashes=0)],
                   'phylum':  [SummarizedGatherResult(query_name='queryA', rank='phylum', fraction=0.5,
                                                      query_md5='queryA_md5', query_filename='queryA.sig',
                                                      f_weighted_at_rank=0.5, bp_match_at_rank=50,
-                                                     lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),
-                                                              lca_utils.LineagePair(rank='phylum', name='b')),
+                                                     lineage=(LineagePair(rank='superkingdom', name='a'),
+                                                              LineagePair(rank='phylum', name='b')),
                                                      query_ani_at_rank=None,
                                                      total_weighted_hashes=0)]}
     sum_gather2 = {'superkingdom': [SummarizedGatherResult(query_name='queryB', rank='superkingdom', fraction=0.7,
                                                           query_md5='queryB_md5', query_filename='queryB.sig',
                                                           f_weighted_at_rank=0.7, bp_match_at_rank=70,
-                                                          lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),),
+                                                          lineage=(LineagePair(rank='superkingdom', name='a'),),
                                                            query_ani_at_rank=None,
                                                            total_weighted_hashes=0)],
                   'phylum':  [SummarizedGatherResult(query_name='queryB', rank='phylum', fraction=0.7,
                                                      query_md5='queryB_md5', query_filename='queryB.sig',
                                                      f_weighted_at_rank=0.7, bp_match_at_rank=70,
-                                                     lineage=(lca_utils.LineagePair(rank='superkingdom', name='a'),
-                                                              lca_utils.LineagePair(rank='phylum', name='c')),
+                                                     lineage=(LineagePair(rank='superkingdom', name='a'),
+                                                              LineagePair(rank='phylum', name='c')),
                                                      query_ani_at_rank=None,
                                                      total_weighted_hashes=0)]}
 
