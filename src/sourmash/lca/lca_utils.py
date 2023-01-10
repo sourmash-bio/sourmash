@@ -105,6 +105,7 @@ null_names = set(['[Blank]', 'na', 'null'])
 
 def make_lineage(lineage_str):
     "Turn a ; or ,-separated set of lineages into a tuple of LineagePair objs."
+    from sourmash.tax.tax_utils import LineagePair
     lin = lineage_str.split(';')
     if len(lin) == 1:
         lin = lineage.split(',')
@@ -249,6 +250,7 @@ def pop_to_rank(lin, rank):
 
 def make_lineage(lineage):
     "Turn a ; or ,-separated set of lineages into a tuple of LineagePair objs."
+    from sourmash.tax.tax_utils import LineagePair
     lin = lineage.split(';')
     if len(lin) == 1:
         lin = lineage.split(',')

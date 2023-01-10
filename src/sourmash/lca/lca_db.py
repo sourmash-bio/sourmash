@@ -262,7 +262,8 @@ class LCA_Database(Index):
 
         Method specific to this class.
         """
-        from .lca_utils import taxlist, LineagePair
+        from .lca_utils import taxlist #, LineagePair
+        from sourmash.tax.tax_utils import LineagePair
 
         if not os.path.isfile(db_name):
             raise ValueError(f"'{db_name}' is not a file and cannot be loaded as an LCA database")
@@ -325,7 +326,7 @@ class LCA_Database(Index):
             lid_to_lineage = {}
             lineage_to_lid = {}
             for k, v in lid_to_lineage_2.items():
-                v = dict(v)
+                v = dict( ((x[0], x[1]) for x in v) )
                 vv = []
                 for rank in taxlist():
                     name = v.get(rank, '')
