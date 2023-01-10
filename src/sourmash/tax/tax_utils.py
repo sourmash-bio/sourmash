@@ -1670,8 +1670,10 @@ class ClassificationResult(SummarizedGatherResult):
         if ani_threshold:  # if provided, just use ani thresh, don't use containment threshold
             if self.query_ani_at_rank >= ani_threshold:
                 self.status = 'match'
-        elif containment_threshold and self.f_weighted_at_rank >= containment_threshold:
-                self.status = 'match'
+        # should we switch to using weighted here? I think yes, but this would be behavior change
+        elif containment_threshold and self.fraction >= containment_threshold:
+        #elif containment_threshold and self.f_weighted_at_rank >= containment_threshold:
+            self.status = 'match'
 
     def build_krona_result(self, rank=None):
         krona_classified, krona_unclassified = None, None
@@ -1854,15 +1856,14 @@ class QueryTaxResult():
             f_weighted=0.0
             f_unique_at_rank=0.0
             bp_intersect_at_rank=0
-            #sum_uniq_to_query = self.sum_uniq_to_query[this_rank]
-            sum_uniq_weighted = self.sum_uniq_weighted[this_rank]  ##SHOULD WE BE USING WEIGHTED HERE? I THINK YES, but this is a change from before.
+            sum_uniq_to_query = self.sum_uniq_to_query[this_rank]
             # sort the results and grab best
-            sorted_sum_uniq_weighted = list(sum_uniq_weighted.items())
-            sorted_sum_uniq_weighted.sort(key = lambda x: -x[1])
-            # best only
-            this_lineage, f_weighted = sorted_sum_uniq_weighted[0]
-            f_unique_at_rank = self.sum_uniq_to_query[this_rank][this_lineage]
+            sorted_sum_uniq_to_query = list(sum_uniq_to_query.items())
+            sorted_sum_uniq_to_query.sort(key = lambda x: -x[1])
+            # select best-at-rank only
+            this_lineage, f_unique_at_rank = sorted_sum_uniq_to_query[0]
             bp_intersect_at_rank = self.sum_uniq_bp[this_rank][this_lineage]
+            f_weighted = self.sum_uniq_weighted[this_rank][this_lineage]
 
             classif = ClassificationResult(rank=this_rank, fraction=f_unique_at_rank, lineage=this_lineage,
                                            f_weighted_at_rank=f_weighted, bp_match_at_rank=bp_intersect_at_rank)

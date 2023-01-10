@@ -2610,7 +2610,7 @@ def test_build_classification_result_containment_threshold():
     assert q_res.classification_result.bp_match_at_rank == 20
     assert q_res.classification_result.query_ani_at_rank == approx(0.928, rel=1e-2)
 
-    q_res.build_classification_result(containment_threshold=0.4)
+    q_res.build_classification_result(containment_threshold=0.2)
     print("classif: ", q_res.classification_result)
     assert q_res.classification_result.status == 'match'
     assert q_res.classification_result.rank == 'phylum'
