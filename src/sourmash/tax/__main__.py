@@ -460,7 +460,9 @@ def summarize(args):
     name_seen = set()
     for v in tax_assign.values():
         sofar = []
-        for rank, name in v:
+        for vv in v:
+            name = vv.name
+            rank = vv.rank
             if name not in name_seen:
                 rank_counts[rank] += 1
                 name_seen.add(name)

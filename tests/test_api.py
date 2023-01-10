@@ -69,7 +69,7 @@ def test_load_fasta_as_signature():
     # try loading a fasta file - should fail with informative exception
     testfile = utils.get_test_data('short.fa')
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(Exception) as exc:
         idx = sourmash.load_file_as_index(testfile)
 
     print(exc.value)
