@@ -290,7 +290,7 @@ class BaseLineageInfo:
 @dataclass(frozen=True, order=True)
 class RankLineageInfo(BaseLineageInfo):
     "Class for storing multi-rank lineage information"
-    ranks: tuple = field(default_factory=lambda: ('superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain'))
+    ranks: tuple = ('superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain')
 
     def __post_init__(self):
         "Initialize according to passed values"
