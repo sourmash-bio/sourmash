@@ -48,11 +48,27 @@ class LineagePair(NamedTuple):
 
 @dataclass(frozen=True, order=True)
 class BaseLineageInfo:
-    """BaseLineageInfo Class, defining a set of functions that can be used to handle
-       hierarchical set of LineagePairs. """
+    """
+    This BaseLineageInfo class defines a set of methods that can be used to handle
+    summarization and manipulation of taxonomic lineages with hierarchical taxonomic ranks.
+
+    Inputs:
+        required:
+            ranks: tuple or list of hierarchical ranks
+        optional:
+            lineage: tuple or list of LineagePair
+            lineage_str: `;`- or `,`-separated string of names
+            lineage_dict: dictionary of {rank: name}
+
+    If no lineage information is provided, result will be a BaseLineageInfo
+    with provided ranks and no lineage names.
+
+    Input lineage information is only used for initialization of the final `lineage`
+    and will not be used or compared in any other class methods.
+    """
     # need to set compare=False for any mutable type to keep this class hashable
     ranks: tuple() # require ranks
-    lineage: tuple = field(default=()) #tuple of LineagePairs
+    lineage: tuple = () # tuple of LineagePairs
     lineage_str: str = field(default=None, compare=False) # ';'- or ','-separated str of lineage names
     lineage_dict: dict = field(default=None, compare=False) # dict of rank: name
 
@@ -103,16 +119,16 @@ class BaseLineageInfo:
 
     @property
     def lowest_lineage_name(self):
-        """Return the name of the lowest filled lineage"""
+        "Return the name of the lowest filled lineage"
         if not self.filled_ranks:
-            return ""
+            return None
         return self.filled_lineage[-1].name
 
     @property
     def lowest_lineage_taxid(self):
-        """Return the taxid of the lowest filled lineage"""
+        "Return the taxid of the lowest filled lineage"
         if not self.filled_ranks:
-            return ""
+            return None
         return self.filled_lineage[-1].taxid
 
     def _init_empty(self):
@@ -142,9 +158,10 @@ class BaseLineageInfo:
                     raise ValueError(f"Rank '{lin_tup.rank}' not present in {', '.join(self.ranks)}") from e
                 # make sure we're adding tax_utils.LineagePairs, not lca_utils.LineagePairs for consistency
                 if isinstance(lin_tup, lca_utils.LineagePair):
-                    new_lineage[rank_idx] =  LineagePair(rank=lin_tup.rank, name=lin_tup.name)
+                    new_lineage[rank_idx] = LineagePair(rank=lin_tup.rank, name=lin_tup.name)
                 else:
-                    new_lineage[rank_idx] =  lin_tup
+                    new_lineage[rank_idx] = lin_tup
+    
         # build list of filled ranks
         filled_ranks = [a.rank for a in new_lineage if a.name]
         # set lineage and filled_ranks
@@ -277,7 +294,7 @@ class BaseLineageInfo:
         return new
 
     def lineage_at_rank(self, rank):
-        # non-descructive pop_to_rank. Returns tuple of LineagePairs
+        "non-destructive pop_to_rank. Returns tuple of LineagePairs"
         "Returns tuple of LineagePairs at given rank."
         # are we already above rank?
         if not self.rank_is_filled(rank):
@@ -289,8 +306,25 @@ class BaseLineageInfo:
 
 @dataclass(frozen=True, order=True)
 class RankLineageInfo(BaseLineageInfo):
-    """Class for storing multi-rank lineage information"""
-    ranks: tuple = field(default_factory=lambda: ('superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain'))
+    """
+    This RankLineageInfo class usees the BaseLineageInfo methods for a standard set
+    of taxonomic ranks.
+
+    Inputs:
+        optional:
+            ranks: tuple or list of hierarchical ranks
+                   default: ('superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain')
+            lineage: tuple or list of LineagePair
+            lineage_str: `;`- or `,`-separated string of names
+            lineage_dict: dictionary of {rank: name}
+
+    If no inputs are provided, result will be RankLineageInfo with
+    default ranks and no lineage names.
+
+    Input lineage information is only used for initialization of the final `lineage`
+    and will not be used or compared in any other class methods.
+    """
+    ranks: tuple = ('superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain')
 
     def __post_init__(self):
         "Initialize according to passed values"
