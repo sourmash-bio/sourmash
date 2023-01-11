@@ -170,6 +170,10 @@ def test_SummarizedGatherResult():
     print(krD)
     assert krD == {'ncbi_taxid': None, 'sci_name': 'b', 'rank_code': 'P', 'num_bp_assigned': "0",
                    'percent_containment': '30.00', 'num_bp_contained': "600"}
+    lD = sgr.as_lineage_dict(ranks = RankLineageInfo().ranks, query_info=qInf)
+    print(lD)
+    assert lD == {'ident': 'q1', 'superkingdom': 'a', 'phylum': 'b', 'class': '', 'order': '',
+                  'family': '', 'genus': '', 'species': '', 'strain': ''}
 
 
 def test_SummarizedGatherResult_set_query_ani():
@@ -277,6 +281,10 @@ def test_ClassificationResult():
     assert cr.query_ani_at_rank == approx(0.949,  rel=1e-3)
     cr.set_status(query_info=qInf, containment_threshold=0.35)
     assert cr.status == 'below_threshold'
+    lD = cr.as_lineage_dict(ranks = RankLineageInfo().ranks, query_info=qInf)
+    print(lD)
+    assert lD == {'ident': 'q1', 'superkingdom': 'a', 'phylum': 'b', 'class': '', 'order': '',
+                  'family': '', 'genus': '', 'species': '', 'strain': ''}
 
 
 def test_ClassificationResult_greater_than_1():
@@ -1657,6 +1665,7 @@ def test_BaseLineageInfo_init_empty():
     assert taxinf.lowest_lineage_name == None
     assert taxinf.lowest_lineage_taxid == None
     assert taxinf.filled_ranks == ()
+    assert taxinf.name_at_rank("A") == None
     assert taxinf.lowest_rank == None
     assert taxinf.display_lineage() == ""
     assert taxinf.display_lineage(null_as_unclassified=True) == "unclassified"
@@ -1675,6 +1684,7 @@ def test_BaseLineageInfo_init_lineage_str():
                                      LineagePair(rank='C', name='c', taxid=None))
     assert taxinf.lowest_lineage_name == "c"
     assert taxinf.lowest_rank == "C"
+    assert taxinf.name_at_rank("A") == "a"
 
 def test_BaseLineageInfo_init_lineage_str_comma_sep():
     x = "a,b,c"
