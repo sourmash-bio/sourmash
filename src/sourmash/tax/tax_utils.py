@@ -852,6 +852,15 @@ def write_krona(krona_results, header, out_fp, *, sep='\t'):
     for res in krona_results:
         tsv_output.writerow(res)
 
+def write_output(header, results, out_fp, *, sep=','):
+    """
+    write pre-generated results list of rows, with each
+    row being a dictionary
+    """
+    output = csv.DictWriter(out_fp, header, delimiter=sep)
+    for res in results:
+        output.writerow(res)   
+
 
 def write_summary_old(summarized_gather, csv_fp, *, sep=',', limit_float_decimals=False):
     '''
@@ -1819,8 +1828,8 @@ class SummarizedGatherResult():
         sD = {}
         sD['num_bp_assigned'] = str(0)
         # total percent containment, weighted to include abundance info
-        sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
-        sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_hashes))
+        sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'  #f'{proportion:.2f}'
+        sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_bp))
         # could make this cleaner if used empty RankLineageInfo()
         #sD['lineage'] = self.lineage.display_lineage(null_as_unclassified=True)
         if self.lineage != ():
@@ -2130,6 +2139,7 @@ class QueryTaxResult():
 
     def make_kreport_results(self):
         self.check_summarization()
+        header = ["percent_containment", "num_bp_contained", "num_bp_assigned", "rank_code", "ncbi_taxid", "sci_name"]
         if self.query_info.total_weighted_hashes == 0:
             raise ValueError("ERROR: cannot produce 'kreport' format from gather results before sourmash v4.5.0")
         required_ranks = set(RANKCODE.keys())
@@ -2153,4 +2163,4 @@ class QueryTaxResult():
                     else:
                         unclassified_recorded = True
                 kreport_results.append(kresD)
-        return(kreport_results)
+        return header, kreport_results

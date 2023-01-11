@@ -169,7 +169,7 @@ def test_SummarizedGatherResult():
     krD = sgr.as_kreport_dict(query_info=qInf)
     print(krD)
     assert krD == {'ncbi_taxid': None, 'sci_name': 'b', 'rank_code': 'P', 'num_bp_assigned': "0",
-                   'percent_containment': '30.00', 'num_bp_contained': "60"}
+                   'percent_containment': '30.00', 'num_bp_contained': "600"}
 
 
 def test_SummarizedGatherResult_set_query_ani():
@@ -240,8 +240,8 @@ def test_SummarizedGatherResult_species_kreport():
     assert sgr.rank=='species'
     krD = sgr.as_kreport_dict(query_info=qInf)
     print(krD)
-    assert krD == {'ncbi_taxid': None, 'sci_name': 'g', 'rank_code': 'S', 'num_bp_assigned': "60",
-                   'percent_containment': '30.00', 'num_bp_contained': "60"}
+    assert krD == {'ncbi_taxid': None, 'sci_name': 'g', 'rank_code': 'S', 'num_bp_assigned': "600",
+                   'percent_containment': '30.00', 'num_bp_contained': "600"}
 
 
 def test_SummarizedGatherResult_summary_dict_limit_float():
@@ -3141,7 +3141,7 @@ def test_make_kreport_results():
     #need to go down to species to check that `num_bp_assigned` is happening correctly
     gather_results = [{"total_weighted_hashes":100}, {"name": 'gB', "total_weighted_hashes":100}]
     q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True)
-    krepD = q_res.make_kreport_results()
+    header, krepD = q_res.make_kreport_results()
     print(krepD)
     assert krepD == [{'num_bp_assigned': '0', 'percent_containment': '40.00', 'num_bp_contained': '40',
                     'rank_code': 'D', 'sci_name': 'a', 'ncbi_taxid': None},

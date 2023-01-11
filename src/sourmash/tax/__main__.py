@@ -165,7 +165,8 @@ def metagenome(args):
         kreport_outfile, limit_float = make_outfile(args.output_base, "kreport", output_dir=args.output_dir)
 
         with FileOutputCSV(kreport_outfile) as out_fp:
-            tax_utils.write_kreport(single_query_results, out_fp)
+            header, kreport_results = single_query_results.make_kreport_results()
+            tax_utils.write_output(header, kreport_results, out_fp, sep="\t")
 
 
 def genome(args):
