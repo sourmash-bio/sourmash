@@ -1372,7 +1372,8 @@ def test_write_lineage_sample_frac(runtmp):
 def test_write_lineage_sample_frac_format_lineage(runtmp):
     outfrac = runtmp.output('outfrac.csv')
     sample_names = ['sample1', 'sample2']
-    sk_lineage = lca_utils.make_lineage('a')
+    # sk_lineage = lca_utils.make_lineage('a')
+    sk_lineage='a'
     print(sk_lineage)
     sk_linD = {sk_lineage: {'sample1': '0.500' ,'sample2': '0.700'}}
     with open(outfrac, 'w') as out_fp:
@@ -1382,9 +1383,11 @@ def test_write_lineage_sample_frac_format_lineage(runtmp):
     print("csv_lines: ", frac_lines)
     assert frac_lines == [['lineage', 'sample1', 'sample2'], ['a', '0.500', '0.700']]
 
-    phy_lineage = lca_utils.make_lineage('a;b')
+    phy_lineage='a;b'
+    # phy_lineage = lca_utils.make_lineage('a;b')
     print(phy_lineage)
-    phy2_lineage = lca_utils.make_lineage('a;c')
+    phy2_lineage = 'a;c'
+    # phy2_lineage = lca_utils.make_lineage('a;c')
     print(phy2_lineage)
     phy_linD = {phy_lineage: {'sample1': '0.500'}, phy2_lineage: {'sample2': '0.700'}}
     with open(outfrac, 'w') as out_fp:
@@ -2678,9 +2681,9 @@ def test_aggregate_by_lineage_at_rank():
     q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True)
     summarized, all_queries = aggregate_by_lineage_at_rank([q_res], rank='phylum', by_query=False)
     print(summarized)
-    assert summarized == {RankLineageInfo(lineage_str='a;b'): 0.4,
-                          RankLineageInfo(lineage_str='a;c'): 0.3,
-                          RankLineageInfo(): approx(0.3, rel=1e-2)}
+    assert summarized == {'a;b': 0.4,
+                          'a;c': 0.3,
+                          'unclassified': approx(0.3, rel=1e-2)}
     assert all_queries == ['queryA']
 
 
@@ -2714,15 +2717,15 @@ def test_aggregate_by_lineage_at_rank_by_query():
     # check by query
     summarized, all_queries = aggregate_by_lineage_at_rank(gres.values(), rank='superkingdom', by_query=True)
     print(summarized)
-    assert summarized == {RankLineageInfo(lineage_str='a'): {'queryA': 0.5, 'queryB': 0.4},
-                          RankLineageInfo(): {'queryA': 0.5, 'queryB': 0.6}}
+    assert summarized == {"a": {'queryA': 0.5, 'queryB': 0.4},
+                          "unclassified": {'queryA': 0.5, 'queryB': 0.6}}
     #assert summarized == {'a': {'queryA': approx(0.1, rel=1e-2), 'queryB': 0.7}}
     assert all_queries == ['queryA', 'queryB']
     summarized, all_queries = aggregate_by_lineage_at_rank(gres.values(), rank='phylum', by_query=True)
     print(summarized)
-    assert summarized == {RankLineageInfo(lineage_str='a;c'): {'queryA': 0.3, 'queryB': 0.4}, 
-                          RankLineageInfo(lineage_str='a;b'): {'queryA': 0.2}, 
-                          RankLineageInfo(): {'queryA': 0.5, 'queryB': 0.6}}
+    assert summarized == {'a;c': {'queryA': 0.3, 'queryB': 0.4}, 
+                          'a;b': {'queryA': 0.2}, 
+                          "unclassified": {'queryA': 0.5, 'queryB': 0.6}}
     
 
 def test_build_classification_result_containment_threshold_fail():

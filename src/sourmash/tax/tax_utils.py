@@ -726,10 +726,13 @@ def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
             raise ValueError(f"Error: rank '{rank}' not available for aggregation.")
 
         for res in queryResult.summarized_lineage_results[rank]:
+            lineage = res.lineage.display_lineage(null_as_unclassified = True)
             if by_query:
-                    lineage_summary[res.lineage][query_name] = res.fraction # FUTURE: USE WEIGHTED INSTEAD?
+                    #lineage_summary[res.lineage][query_name] = res.fraction # FUTURE: USE WEIGHTED INSTEAD?
+                    lineage_summary[lineage][query_name] = res.fraction # FUTURE: USE WEIGHTED INSTEAD?
             else:
-                lineage_summary[res.lineage] += res.fraction
+                lineage_summary[lineage] += res.fraction
+                #lineage_summary[res.lineage] += res.fraction
 
     # if aggregating across queries divide fraction by the total number of queries
     if not by_query:
@@ -812,16 +815,17 @@ def format_for_krona(query_gather_results, rank, *, classification=False):
         unclassified_fraction = 0
         for lin, fraction in lin_items:
             # save unclassified fraction for the end
-            if lin == RankLineageInfo():
+            if lin == "unclassified":
                 unclassified_fraction = fraction
                 continue
             else:
-                lin_list = lin.display_lineage().split(';')
+                #lin_list = lin.display_lineage().split(';')
+                lin_list = lin.split(';')
                 krona_results.append((fraction, *lin_list))
 
         # handle unclassified
         if unclassified_fraction:
-            len_unclassified_lin = len(krona_results[-1]) -1
+            len_unclassified_lin = len(header) -1
             unclassifed_lin = ["unclassified"]*len_unclassified_lin
             krona_results.append((unclassified_fraction, *unclassifed_lin))
 
@@ -1131,9 +1135,11 @@ def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, format_line
     w.writeheader()
     blank_row = {query_name: 0 for query_name in sample_names}
     unclassified_row = None
+    # print(lineage_dict.keys())
     for lin, sampleinfo in sorted(lineage_dict.items()):
-        if format_lineage:
-            lin = display_lineage(lin)
+        # if format_lineage:
+        #     lin=lin.display_lineage(null_as_unclassified=True)
+            #lin = display_lineage(lin)
 
         #add lineage and 0 placeholders
         row = {'lineage': lin}
@@ -1141,7 +1147,7 @@ def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, format_line
         # add info for query_names that exist for this lineage
         row.update(sampleinfo)
         # if unclassified, save this row for the end
-        if not lin:
+        if lin== "unclassified":
             row.update({'lineage': 'unclassified'})
             unclassified_row = row
             continue
@@ -1846,8 +1852,6 @@ class SummarizedGatherResult():
         # total percent containment, weighted to include abundance info
         sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'  #f'{proportion:.2f}'
         sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_bp))
-        # could make this cleaner if used empty RankLineageInfo()
-        #sD['lineage'] = self.lineage.display_lineage(null_as_unclassified=True)
         if self.lineage != RankLineageInfo():
             this_rank = self.lineage.lowest_rank
             sD['rank_code'] = RANKCODE[this_rank]
