@@ -840,14 +840,14 @@ def write_krona_old(rank, krona_results, out_fp, *, sep='\t'):
         tsv_output.writerow(res)
 
 
-def write_krona(krona_results, header, out_fp, *, sep='\t'):
+def write_krona(header, krona_results, out_fp, *, sep='\t'):
     'write krona output'
     # CTB: do we want to optionally allow restriction to a specific rank
     # & above? NTP: think we originally kept krona to a specific rank, but
     # that may have been how we were plotting, since krona plots can be
     # hierarchical? Probably worth changing/extending to multilevel to
     # take advantage of full krona plot features
-    tsv_output = csv.writer(out_fp, delimiter='\t')
+    tsv_output = csv.writer(out_fp, delimiter=sep)
     tsv_output.writerow(header)
     for res in krona_results:
         tsv_output.writerow(res)
@@ -1007,6 +1007,27 @@ def write_human_summary_old(summarized_gather, out_fp, display_rank):
 
         for rD in results:
             out_fp.write("{query_name:<15s}   {f_weighted_at_rank}     {lineage}\n".format(**rD))
+
+
+def write_human_summary(query_gather_results, out_fp, display_rank, classification=False):
+    '''
+    Write human-readable taxonomy-summarized gather results for a specific rank.
+    '''
+    for queryResult in query_gather_results:
+        results = queryResult.make_human_summary(display_rank=display_rank, classification=classification)
+
+        if classification:
+            out_fp.write("sample name    status    proportion   cANI   lineage\n")
+            out_fp.write("-----------    ------    ----------   ----   -------\n")
+
+            for rD in results:
+                out_fp.write("{query_name:<15s}   {status}    {f_weighted_at_rank}     {query_ani_at_rank}  {lineage}\n".format(**rD))
+        else:
+            out_fp.write("sample name    proportion   cANI   lineage\n")
+            out_fp.write("-----------    ----------   ----   -------\n")
+
+            for rD in results:
+                out_fp.write("{query_name:<15s}   {f_weighted_at_rank}     {query_ani_at_rank}  {lineage}\n".format(**rD))
 
 
 def write_lineage_csv(summarized_gather, csv_fp):

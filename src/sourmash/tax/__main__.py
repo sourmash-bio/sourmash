@@ -142,8 +142,7 @@ def metagenome(args):
 
         krona_outfile, limit_float = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
         with FileOutputCSV(krona_outfile) as out_fp:
-            tax_utils.write_krona(args.rank, krona_results, header, out_fp)
-
+            tax_utils.write_krona(header, krona_results, out_fp)
 
     if "human" in args.output_format:
         summary_outfile, limit_float = make_outfile(args.output_base, "human", output_dir=args.output_dir)

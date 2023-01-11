@@ -339,13 +339,14 @@ def test_metagenome_human_format_out(runtmp):
 
     assert len(outp) == 6
     outp = [ x.strip() for x in outp ]
+    print(outp)
 
-    assert outp[0] == 'sample name    proportion   lineage'
-    assert outp[1] == '-----------    ----------   -------'
-    assert outp[2] == 'test1             86.9%     unclassified'
-    assert outp[3] == 'test1              5.8%     d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia'
-    assert outp[4] == 'test1              5.7%     d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella'
-    assert outp[5] == 'test1              1.6%     d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola'
+    assert outp[0] == 'sample name    proportion   cANI   lineage'
+    assert outp[1] == '-----------    ----------   ----   -------'
+    assert outp[2] == 'test1             86.9%     -      unclassified'
+    assert outp[3] == 'test1              5.8%     92.5%  d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia'
+    assert outp[4] == 'test1              5.7%     92.5%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella'
+    assert outp[5] == 'test1              1.6%     89.1%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola'
 
 
 def test_metagenome_no_taxonomy_fail(runtmp):
@@ -494,8 +495,8 @@ def test_metagenome_missing_fail_taxonomy(runtmp):
 
     print(str(exc.value))
 
-    assert "The following are missing from the taxonomy information: GCF_003471795" in str(exc.value)
-    assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in str(exc.value)
+    assert "ident 'GCF_003471795' is not in the taxonomy database." in str(exc.value)
+    assert "Failing, as requested via --fail-on-missing-taxonomy" in str(exc.value)
     assert c.last_result.status == -1
 
 
@@ -512,7 +513,7 @@ def test_metagenome_multiple_taxonomy_files_missing(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert "of 6 gather results, missed 2 lineage assignments." in c.last_result.err
+    assert "of 6 gather results, lineage assignments for 2 results were missed" in c.last_result.err
     assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'multtest,superkingdom,0.204,d__Bacteria,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.131,1024000' in c.last_result.out
     assert 'multtest,superkingdom,0.796,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.869,3990000' in c.last_result.out

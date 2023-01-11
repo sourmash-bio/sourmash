@@ -1217,7 +1217,7 @@ def test_write_krona(runtmp):
     header = ['fraction', 'superkingdom', 'phylum', 'class']
     outk= runtmp.output("outkrona.tsv")
     with open(outk, 'w') as out_fp:
-        write_krona(krona_results, header, out_fp)
+        write_krona(header, krona_results, out_fp)
 
     kr = [x.strip().split('\t') for x in open(outk, 'r')]
     print("krona_results_from_file: \n", kr)
