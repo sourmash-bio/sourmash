@@ -228,7 +228,7 @@ def genome(args):
     if "csv_summary" in args.output_format:
         summary_outfile, limit_float = make_outfile(args.output_base, "classification", output_dir=args.output_dir)
         with FileOutputCSV(summary_outfile) as out_fp:
-            tax_utils.write_classifications(query_gather_results, out_fp, limit_float_decimals=limit_float)
+            tax_utils.write_summary(classifications, out_fp, limit_float_decimals=limit_float, classification=True)
 
     # write summarized output in human-readable format
     if "human" in args.output_format:

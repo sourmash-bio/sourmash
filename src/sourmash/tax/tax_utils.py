@@ -747,11 +747,8 @@ def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
     # if aggregating across queries divide fraction by the total number of queries
     if not by_query:
         n_queries = len(all_queries)
-        print(lineage_summary.items())
         for lin, fraction in lineage_summary.items():
-            print(lin, fraction)
             lineage_summary[lin] = fraction/n_queries
-    print(lineage_summary)
     return lineage_summary, all_queries
 
 
@@ -896,13 +893,13 @@ def write_summary_old(summarized_gather, csv_fp, *, sep=',', limit_float_decimal
             w.writerow(rD)
 
 
-def write_summary(query_gather_results, csv_fp, *, sep=',', limit_float_decimals=False):
+def write_summary(query_gather_results, csv_fp, *, sep=',', limit_float_decimals=False, classification=False):
     '''
     Write taxonomy-summarized gather results for each rank.
     '''
     w= None
     for q_res in query_gather_results:
-        header, summary = q_res.make_full_summary(limit_float=limit_float_decimals)
+        header, summary = q_res.make_full_summary(limit_float=limit_float_decimals, classification=classification)
         if w is None:
             w = csv.DictWriter(csv_fp, header, delimiter=sep)
             w.writeheader()
@@ -1062,26 +1059,6 @@ def write_lineage_csv(summarized_gather, csv_fp):
 
             d['ident'] = res.query_name
             w.writerow(d)
-
-
-def write_classifications(classifications, csv_fp, *, sep=',', limit_float_decimals=False):
-    '''
-    Write taxonomy-classifed gather results.
-    '''
-    header = ClassInf._fields
-    w = csv.DictWriter(csv_fp, header, delimiter=sep)
-    w.writeheader()
-    for rank, rank_results in classifications.items():
-        for res in rank_results:
-            rD = res._asdict()
-            if limit_float_decimals:
-                rD['fraction'] = f'{res.fraction:.3f}'
-                rD['f_weighted_at_rank'] = f'{res.f_weighted_at_rank:.3f}'
-            rD['lineage'] = display_lineage(res.lineage)
-            # needed?
-            if rD['lineage'] == "":
-                rD['lineage'] = "unclassified"
-            w.writerow(rD)
 
 
 def combine_sumgather_csvs_by_lineage(gather_csvs, *, rank="species", accept_ranks = list(lca_utils.taxlist(include_strain=False)), force=False):
@@ -1834,8 +1811,6 @@ class SummarizedGatherResult():
         lD = {}
         lD['ident'] = query_info.query_name
         for rank in ranks:
-            notify(", ".join(ranks))
-            notify(rank)
             lin_name = self.lineage.name_at_rank(rank)
             if lin_name is None:
                 lin_name = ""
@@ -1906,15 +1881,15 @@ class ClassificationResult(SummarizedGatherResult):
 
     def set_status(self, query_info, containment_threshold=None, ani_threshold=None):
         # if any matches, use 'below_threshold' as default; set 'match' if meets threshold
-        if any([containment_threshold, ani_threshold]):
+        if any([containment_threshold is not None, ani_threshold is not None]):
             self.status="below_threshold"
         self.set_query_ani(query_info=query_info)
-        if ani_threshold:  # if provided, just use ani thresh, don't use containment threshold
+        if ani_threshold is not None:  # if provided, just use ani thresh, don't use containment threshold
             if self.query_ani_at_rank >= ani_threshold:
                 self.status = 'match'
         # should we switch to using weighted here? I think yes, but this would be behavior change
-        elif containment_threshold and self.fraction >= containment_threshold:
-        #elif containment_threshold and self.f_weighted_at_rank >= containment_threshold:
+        elif containment_threshold is not None and self.fraction >= containment_threshold:
+        #elif containment_threshold is not None and self.f_weighted_at_rank >= containment_threshold:
             self.status = 'match'
 
     def build_krona_result(self, rank=None):
@@ -2077,9 +2052,9 @@ class QueryTaxResult():
                 self.summarized_lineage_results[rank].append(sres)
 
     def build_classification_result(self, rank=None, ani_threshold=None, containment_threshold=0.1, force_resummarize=False):
-        if containment_threshold and not 0 <= containment_threshold <= 1:
+        if containment_threshold is not None and not 0 <= containment_threshold <= 1:
             raise ValueError(f"Containment threshold must be between 0 and 1 (input value: {containment_threshold}).")
-        if ani_threshold and not 0 <= ani_threshold <= 1:
+        if ani_threshold is not None and not 0 <= ani_threshold <= 1:
             raise ValueError(f"ANI threshold must be between 0 and 1 (input value: {ani_threshold}).")
         self._init_classification_results() # init some fields
         if not self.summarized_ranks or force_resummarize:
@@ -2155,12 +2130,14 @@ class QueryTaxResult():
 
     def make_full_summary(self, classification=False, limit_float=False):
         results = []
+        rD = {}
         if classification:
             self.check_classification()
             header= ["query_name", "status", "rank", "fraction", "lineage",
                      "query_md5", "query_filename", "f_weighted_at_rank",
                      "bp_match_at_rank", "query_ani_at_rank"]
             rD = self.classification_result.as_summary_dict(query_info = self.query_info, limit_float=limit_float)
+            del rD['total_weighted_hashes']
             results.append(rD)
         else:
             self.check_summarization()
