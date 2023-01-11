@@ -242,7 +242,7 @@ def genome(args):
         krona_results, header =  tax_utils.format_for_krona(query_gather_results=classifications, rank=args.rank, classification=True)
         krona_outfile, limit_float = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
         with FileOutputCSV(krona_outfile) as out_fp:
-            tax_utils.write_krona(args.rank, krona_results, header, out_fp)
+            tax_utils.write_krona(header, krona_results, out_fp)
 
     if "lineage_csv" in args.output_format:
         lineage_outfile, _ = make_outfile(args.output_base, "lineage_csv",

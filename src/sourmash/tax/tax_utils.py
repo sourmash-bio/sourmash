@@ -1061,6 +1061,26 @@ def write_lineage_csv(summarized_gather, csv_fp):
             w.writerow(d)
 
 
+def write_classifications(classifications, csv_fp, *, sep=',', limit_float_decimals=False):
+    '''
+    Write taxonomy-classifed gather results.
+    '''
+    header = ClassInf._fields
+    w = csv.DictWriter(csv_fp, header, delimiter=sep)
+    w.writeheader()
+    for rank, rank_results in classifications.items():
+        for res in rank_results:
+            rD = res._asdict()
+            if limit_float_decimals:
+                rD['fraction'] = f'{res.fraction:.3f}'
+                rD['f_weighted_at_rank'] = f'{res.f_weighted_at_rank:.3f}'
+            rD['lineage'] = display_lineage(res.lineage)
+            # needed?
+            if rD['lineage'] == "":
+                rD['lineage'] = "unclassified"
+            w.writerow(rD)
+
+
 def combine_sumgather_csvs_by_lineage(gather_csvs, *, rank="species", accept_ranks = list(lca_utils.taxlist(include_strain=False)), force=False):
     '''
     Takes in one or more output csvs from `sourmash taxonomy summarize`
@@ -1896,10 +1916,10 @@ class ClassificationResult(SummarizedGatherResult):
         krona_classified, krona_unclassified = None, None
         if rank is not None and rank == self.rank:
             lin_as_list = self.lineage.display_lineage().split(';')
-            krona_classification = (self.f_weighted_at_rank, *lin_as_list)
+            krona_classification = (self.fraction, *lin_as_list) # FUTURE: f_weighted_at_rank?
             krona_classified = (krona_classification)
             # handle unclassified - do we want/need this?
-            unclassified_fraction= 1.0-self.f_weighted_at_rank
+            unclassified_fraction= 1.0-self.fraction #f_weighted_at_rank
             len_unclassified_lin = len(lin_as_list)
             unclassifed_lin = ["unclassified"]*(len_unclassified_lin)
             krona_unclassified = (unclassified_fraction, *unclassifed_lin)

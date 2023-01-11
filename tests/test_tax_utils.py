@@ -318,9 +318,9 @@ def test_ClassificationResult_build_krona_result():
     #cr.set_status(query_info=qInf, rank='phylum')
     kr, ukr = cr.build_krona_result(rank='phylum')
     print(kr)
-    assert kr == (0.3, 'a', 'b')
+    assert kr == (0.2, 'a', 'b')
     print(ukr)
-    assert ukr == (0.7, 'unclassified', 'unclassified')  
+    assert ukr == (0.8, 'unclassified', 'unclassified')  
 
 
 def test_ClassificationResult_build_krona_result_no_rank():
@@ -2928,12 +2928,12 @@ def test_krona_classified():
     assert q_res.krona_classified == None
     q_res.build_classification_result(rank='phylum')#, force_resummarize=True)
     print(q_res.krona_classified)
-    assert q_res.krona_classified == (0.4, 'a', 'b')
-    assert q_res.krona_unclassified == (0.6, 'unclassified', 'unclassified')
+    assert q_res.krona_classified == (0.2, 'a', 'b')
+    assert q_res.krona_unclassified == (0.8, 'unclassified', 'unclassified')
     q_res.build_classification_result(rank='superkingdom')
     print(q_res.krona_classified)
-    assert q_res.krona_classified == (0.4, 'a')
-    assert q_res.krona_unclassified == (0.6, 'unclassified')
+    assert q_res.krona_classified == (0.2, 'a')
+    assert q_res.krona_unclassified == (0.8, 'unclassified')
     # make sure this goes back to None if we reclassify without rank
     q_res.build_classification_result()
     assert q_res.krona_classified == None
@@ -3114,8 +3114,7 @@ def test_make_full_summary_classification():
     print(fs)
     assert fs == [{'rank': 'class', 'fraction': '0.1', 'lineage': 'a;b;c', 'f_weighted_at_rank': '0.2', 
                    'bp_match_at_rank': '20', 'query_ani_at_rank': approx(0.928, rel=1e-3),
-                   'status': 'match', 'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn',
-                   'total_weighted_hashes': '0'}]
+                   'status': 'match', 'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn'}]
 
  
 def test_make_full_summary_classification_limit_float():
@@ -3129,8 +3128,7 @@ def test_make_full_summary_classification_limit_float():
     print(fs)
     assert fs == [{'rank': 'class', 'fraction': '0.100', 'lineage': 'a;b;c', 'f_weighted_at_rank': '0.200', 
                    'bp_match_at_rank': '20', 'query_ani_at_rank': "0.928",
-                   'status': 'match', 'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn',
-                   'total_weighted_hashes': '0'}]
+                   'status': 'match', 'query_name': 'q1', 'query_md5': 'md5', 'query_filename': 'query_fn'}]
 
 
 def test_make_full_summary_classification_fail():

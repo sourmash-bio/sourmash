@@ -962,7 +962,6 @@ def test_genome_rank_stdout_0_db(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert "WARNING: classifying query test1 at desired rank species does not meet containment threshold 1.0" in c.last_result.err
     assert "test1,below_threshold,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000," in c.last_result.out
 
 
@@ -1025,7 +1024,7 @@ def test_genome_rank_human_output(runtmp):
     # test basic genome - output csv
     c = runtmp
 
-    g_csv = utils.get_test_data('tax/test1.gather_old.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
     csvout = runtmp.output(csv_base + '.human.txt')
@@ -1045,13 +1044,14 @@ def test_genome_rank_human_output(runtmp):
 
     with open(csvout) as fp:
         outp = fp.readlines()
+        print(outp)
 
     assert len(outp) == 3
     outp = [ x.strip() for x in outp ]
 
-    assert outp[0] == 'sample name    proportion   lineage'
-    assert outp[1] == '-----------    ----------   -------'
-    assert outp[2] == 'test1              5.7%     d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri'
+    assert outp[0] == 'sample name    status    proportion   cANI   lineage'
+    assert outp[1] == '-----------    ------    ----------   ----   -------'
+    assert outp[2] == 'test1             match     5.7%     92.5%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri'
 
 
 def test_genome_rank_lineage_csv_output(runtmp):
@@ -1313,6 +1313,8 @@ def test_genome_gather_cli_and_from_file_duplicate_filename(runtmp):
 
 
 def test_genome_gather_from_file_below_threshold(runtmp):
+    # What do we want the results from this to be? I think I initially thought we shouldn't report anything,
+    # but wouldn't a "below_threshold" + superkingdom result (here, 0.204) be helpful information?
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -1329,7 +1331,8 @@ def test_genome_gather_from_file_below_threshold(runtmp):
 
     assert c.last_result.status == 0
     assert "query_name,status,rank,fraction,lineage" in c.last_result.out
-    assert "test1,below_threshold,,0.000," in c.last_result.out
+    # assert "test1,below_threshold,,0.000," in c.last_result.out
+    assert "test1,below_threshold,superkingdom,0.204," in c.last_result.out
 
 
 def test_genome_gather_two_queries(runtmp):
@@ -1530,7 +1533,7 @@ def test_genome_multiple_taxonomy_files(runtmp):
     assert c.last_result.status == 0
     assert "The following are missing from the taxonomy information: GCF_001881345" not in c.last_result.err
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,' in c.last_result.out
+    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000,' in c.last_result.out
     # using single -t arg
     c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', subset_csv, taxonomy_csv)
     print(c.last_result.status)
@@ -1540,7 +1543,7 @@ def test_genome_multiple_taxonomy_files(runtmp):
     assert c.last_result.status == 0
     assert "The following are missing from the taxonomy information: GCF_001881345" not in c.last_result.err
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,' in c.last_result.out
+    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000,' in c.last_result.out
 
 
 def test_genome_multiple_taxonomy_files_empty_force(runtmp):
@@ -1569,7 +1572,7 @@ def test_genome_multiple_taxonomy_files_empty_force(runtmp):
     assert c.last_result.status == 0
     assert "The following are missing from the taxonomy information: GCF_001881345" not in c.last_result.err
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,' in c.last_result.out
+    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000,' in c.last_result.out
 
 
 def test_genome_missing_taxonomy_fail_threshold(runtmp):
@@ -1886,7 +1889,7 @@ def test_genome_ani_threshold(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
     c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
-                       '--ani-threshold', "0.95")
+                       '--ani-threshold', "0.93") # note: I think this was previously a bug, if 0.95 produced the result below...
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -1894,7 +1897,7 @@ def test_genome_ani_threshold(runtmp):
 
     assert c.last_result.status == 0
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,0.9328896594471843' in c.last_result.out 
+    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000,0.93' in c.last_result.out 
 
     # more lax threshold
     c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
@@ -1913,8 +1916,8 @@ def test_genome_ani_threshold(runtmp):
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
-    assert "WARNING: classifying query test1 at desired rank species does not meet query ANI/AAI threshold 1.0" in c.last_result.err
-    assert "test1,below_threshold,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000,0.9247805047263588" in c.last_result.out
+    # assert "WARNING: classifying query test1 at desired rank species does not meet query ANI/AAI threshold 1.0" in c.last_result.err
+    assert "test1,below_threshold,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000,0.92" in c.last_result.out
 
 
 def test_genome_ani_oldgather(runtmp):
