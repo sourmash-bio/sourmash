@@ -140,7 +140,7 @@ class BaseLineageInfo:
         for rank in self.ranks:
             new_lineage.append(LineagePair(rank=rank))
         # set lineage and filled_ranks (because frozen, need to do it this way)
-        object.__setattr__(self, "lineage", new_lineage)
+        object.__setattr__(self, "lineage", tuple(new_lineage))
         object.__setattr__(self, "filled_ranks", ())
 
     def _init_from_lineage_tuples(self):
@@ -245,9 +245,8 @@ class BaseLineageInfo:
     def display_lineage(self, truncate_empty=True, null_as_unclassified=False):
         "Return lineage names as ';'-separated list"
         lin = ";".join(self.zip_lineage(truncate_empty=truncate_empty))
-        if null_as_unclassified:
-            if lin == "":
-                return "unclassified"
+        if null_as_unclassified and lin == "" or lin is None:
+            return "unclassified"
         else:
             return lin
 
@@ -813,7 +812,7 @@ def format_for_krona(query_gather_results, rank, *, classification=False):
         unclassified_fraction = 0
         for lin, fraction in lin_items:
             # save unclassified fraction for the end
-            if lin == ():
+            if lin == RankLineageInfo():
                 unclassified_fraction = fraction
                 continue
             else:
@@ -1112,7 +1111,7 @@ def combine_sumgather_csvs_by_lineage(gather_csvs, *, rank="species", accept_ran
 
 def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, format_lineage=False, sep='\t'):
     '''
-    takes in a lineage dictionary with sample counts (output of combine_sumgather_by_lineage)
+    takes in a lineage dictionary with sample counts (output of aggregate_by_lineage_at_rank)
     and produces a tab-separated file with fractions for each sample.
 
     input: {lin_a: {sample1: 0.4, sample2: 0.17, sample3: 0.6}
@@ -1786,7 +1785,6 @@ class TaxResult():
         self.match_lineage_attempted = True
         if self.missed_ident and fail_on_missing_taxonomy:
             raise ValueError(f"Error: ident '{self.match_ident}' is not in the taxonomy database. Failing, as requested via --fail-on-missing-taxonomy")
-#            raise ValueError('Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy.')
 
 @dataclass
 class SummarizedGatherResult():
@@ -1815,10 +1813,7 @@ class SummarizedGatherResult():
 
     def as_summary_dict(self, query_info, limit_float=False):
         sD = asdict(self)
-        if sD['lineage'] == (): # get rid of my by using blank RankLineageInfo() instead of () as empty lini?
-            sD['lineage'] = "unclassified"
-        else:
-            sD['lineage'] = self.lineage.display_lineage() # null_as_unclassified=True
+        sD['lineage'] = self.lineage.display_lineage(null_as_unclassified=True)
         sD['query_name'] = query_info.query_name
         sD['query_md5'] = query_info.query_md5
         sD['query_filename'] = query_info.query_filename
@@ -1853,7 +1848,7 @@ class SummarizedGatherResult():
         sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_bp))
         # could make this cleaner if used empty RankLineageInfo()
         #sD['lineage'] = self.lineage.display_lineage(null_as_unclassified=True)
-        if self.lineage != ():
+        if self.lineage != RankLineageInfo():
             this_rank = self.lineage.lowest_rank
             sD['rank_code'] = RANKCODE[this_rank]
             sD['sci_name'] = self.lineage.lowest_lineage_name
@@ -2042,7 +2037,7 @@ class QueryTaxResult():
                 self.total_bp_classified[rank] += bp_intersect_at_rank
 
             # record unclassified
-            lineage = ()
+            lineage = RankLineageInfo()
             query_ani = None
             f_unique = 1.0 - self.total_f_classified[rank]
             if f_unique > 0:

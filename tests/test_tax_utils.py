@@ -2115,10 +2115,12 @@ def test_TaxResult_get_match_lineage_skip_ident():
     print("skipped_ident?: ", taxres.skipped_ident)
     print("missed_ident?: ", taxres.missed_ident)
     assert taxres.skipped_ident == True
+    assert taxres.lineageInfo == RankLineageInfo()
     assert taxres.lineageInfo.display_lineage() == ""
+    assert taxres.lineageInfo.display_lineage(null_as_unclassified=True) == "unclassified"
 
 
-def test_TaxResult_get_match_lineage_missed_ident():
+def test_TaxResult_get_match_lineage_missed_ident_fail_on_missing():
     gA_tax = ("gA.1", "a;b;c")
     taxD = make_mini_taxonomy([gA_tax])
 
@@ -2129,7 +2131,9 @@ def test_TaxResult_get_match_lineage_missed_ident():
     print("missed_ident?: ", taxres.missed_ident)
     assert taxres.skipped_ident == False
     assert taxres.missed_ident == True
+    assert taxres.lineageInfo == RankLineageInfo()
     assert taxres.lineageInfo.display_lineage() == ""
+    assert taxres.lineageInfo.display_lineage(null_as_unclassified=True) == "unclassified"
 
 
 def test_TaxResult_get_match_lineage_missed_ident_fail_on_missing():
@@ -2482,7 +2486,7 @@ def test_QueryTaxResult_build_summarized_result_1():
                              lineage=RankLineageInfo(lineage_str='a'),
                              bp_match_at_rank=40, query_ani_at_rank=approx(0.95, rel=1e-2)),
           SummarizedGatherResult(rank='superkingdom', fraction=0.8, f_weighted_at_rank=0.6,
-                             lineage=(), bp_match_at_rank=60, query_ani_at_rank=None)]
+                             lineage=RankLineageInfo(), bp_match_at_rank=60, query_ani_at_rank=None)]
     print(q_res.summarized_lineage_results['superkingdom'])
     assert q_res.summarized_lineage_results['superkingdom'] == sk
     print(q_res.summarized_lineage_results['phylum'])
@@ -2490,7 +2494,7 @@ def test_QueryTaxResult_build_summarized_result_1():
                                    lineage=RankLineageInfo(lineage_str='a;b'),
                                    bp_match_at_rank=40, query_ani_at_rank=approx(0.95, rel=1e-2)),
             SummarizedGatherResult(rank='phylum', fraction=0.8, f_weighted_at_rank=0.6,
-                                   lineage=(), bp_match_at_rank=60, query_ani_at_rank=None)]
+                                   lineage=RankLineageInfo(), bp_match_at_rank=60, query_ani_at_rank=None)]
     assert q_res.summarized_lineage_results['phylum'] == phy
     print(q_res.summarized_lineage_results['class'])
     cl = [SummarizedGatherResult(rank='class', fraction=0.1, f_weighted_at_rank=0.2, 
@@ -2500,7 +2504,7 @@ def test_QueryTaxResult_build_summarized_result_1():
                                  lineage=RankLineageInfo(lineage_str='a;b;d'),
                                   bp_match_at_rank=20, query_ani_at_rank=approx(0.93, rel=1e-2)),
           SummarizedGatherResult(rank='class', fraction=0.8, f_weighted_at_rank=0.6,
-                                 lineage=(), bp_match_at_rank=60, query_ani_at_rank=None)]
+                                 lineage=RankLineageInfo(), bp_match_at_rank=60, query_ani_at_rank=None)]
     assert q_res.summarized_lineage_results['class'] == cl
 
     assert q_res.total_f_weighted['phylum'] == approx(0.4)
@@ -2535,7 +2539,7 @@ def test_QueryTaxResult_build_summarized_result_2():
             assert sk[1].fraction == approx(0.2)
             assert sk[1].f_weighted_at_rank == approx(0.1)
             assert sk[1].bp_match_at_rank == 20
-            assert sk[1].lineage == ()
+            assert sk[1].lineage == RankLineageInfo()
             # check phylum results
             assert len(phy) == 3
             assert phy[0].fraction == approx(0.5)
@@ -2549,7 +2553,7 @@ def test_QueryTaxResult_build_summarized_result_2():
             assert phy[2].fraction == approx(0.2)
             assert phy[2].f_weighted_at_rank == approx(0.1)
             assert phy[2].bp_match_at_rank == 20
-            assert phy[2].lineage == ()
+            assert phy[2].lineage == RankLineageInfo()
         if query_name == 'queryB':
             # check superkingdom results
             assert sk[0].fraction == approx(0.3)
@@ -2558,7 +2562,7 @@ def test_QueryTaxResult_build_summarized_result_2():
             assert sk[1].fraction == approx(0.7)
             assert sk[1].f_weighted_at_rank == approx(0.7)
             assert sk[1].bp_match_at_rank == 70
-            assert sk[1].lineage == ()
+            assert sk[1].lineage == RankLineageInfo()
             # check phylum results
             assert len(phy) == 2
             assert phy[0].fraction == approx(0.3)
@@ -2568,7 +2572,7 @@ def test_QueryTaxResult_build_summarized_result_2():
             assert phy[1].fraction == approx(0.7)
             assert phy[1].f_weighted_at_rank == approx(0.7)
             assert phy[1].bp_match_at_rank == 70
-            assert phy[1].lineage == ()
+            assert phy[1].lineage == RankLineageInfo()
 
 
 def test_QueryTaxResult_build_summarized_result_missing_lineage():
@@ -2583,20 +2587,20 @@ def test_QueryTaxResult_build_summarized_result_missing_lineage():
     sk = [SummarizedGatherResult(rank='superkingdom', fraction=0.1, f_weighted_at_rank=0.2, 
                                  lineage=RankLineageInfo(lineage_str="a"), 
                                  bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)),
-          SummarizedGatherResult(rank='superkingdom', fraction=0.9, lineage=(),f_weighted_at_rank=0.8,
+          SummarizedGatherResult(rank='superkingdom', fraction=0.9, lineage=RankLineageInfo(),f_weighted_at_rank=0.8,
                                  bp_match_at_rank=80, query_ani_at_rank=None)]
     assert q_res.summarized_lineage_results['superkingdom'] == sk
     print(q_res.summarized_lineage_results['phylum'])
     phy = [SummarizedGatherResult(rank='phylum', fraction=0.1, f_weighted_at_rank=0.2,
                                   lineage=RankLineageInfo(lineage_str="a;b"), 
                                   bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)),
-           SummarizedGatherResult(rank='phylum', fraction=0.9, lineage=(),f_weighted_at_rank=0.8,
+           SummarizedGatherResult(rank='phylum', fraction=0.9, lineage=RankLineageInfo(),f_weighted_at_rank=0.8,
                                   bp_match_at_rank=80, query_ani_at_rank=None)]
     assert q_res.summarized_lineage_results['phylum'] == phy
     print(q_res.summarized_lineage_results['class'])
     cl = [SummarizedGatherResult(rank='class', fraction=0.1, lineage= RankLineageInfo(lineage_str="a;b;c"),
                                   f_weighted_at_rank=0.2, bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)),
-          SummarizedGatherResult(rank='class', fraction=0.9, lineage=(), f_weighted_at_rank=0.8,
+          SummarizedGatherResult(rank='class', fraction=0.9, lineage=RankLineageInfo(), f_weighted_at_rank=0.8,
                                  bp_match_at_rank=80, query_ani_at_rank=None)]
     assert q_res.summarized_lineage_results['class'] == cl
 
@@ -2617,19 +2621,19 @@ def test_QueryTaxResult_build_summarized_result_skipped_lineage():
     sk = [SummarizedGatherResult(rank='superkingdom', fraction=0.1, f_weighted_at_rank=0.2,  
                                  lineage=RankLineageInfo(lineage_str="a"), 
                                  bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)), 
-          SummarizedGatherResult(rank='superkingdom', fraction=0.9, lineage=(),f_weighted_at_rank=0.8,
+          SummarizedGatherResult(rank='superkingdom', fraction=0.9, lineage=RankLineageInfo(),f_weighted_at_rank=0.8,
                                  bp_match_at_rank=80, query_ani_at_rank=None)]
     assert q_res.summarized_lineage_results['superkingdom'] == sk
     print(q_res.summarized_lineage_results['phylum'])
     phy = [SummarizedGatherResult(rank='phylum', fraction=0.1, lineage=RankLineageInfo(lineage_str="a;b"),
                                   f_weighted_at_rank=0.2, bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)),
-           SummarizedGatherResult(rank='phylum', fraction=0.9, lineage=(), f_weighted_at_rank=0.8, bp_match_at_rank=80,
+           SummarizedGatherResult(rank='phylum', fraction=0.9, lineage=RankLineageInfo(), f_weighted_at_rank=0.8, bp_match_at_rank=80,
                                   query_ani_at_rank=None)]
     assert q_res.summarized_lineage_results['phylum'] == phy
     print(q_res.summarized_lineage_results['class'])
     cl = [SummarizedGatherResult(rank='class', fraction=0.1,lineage=RankLineageInfo(lineage_str="a;b;c"),
                                   f_weighted_at_rank=0.2, bp_match_at_rank=20, query_ani_at_rank=approx(0.928, rel=1e-2)),
-          SummarizedGatherResult(rank='class', fraction=0.9, lineage=(), f_weighted_at_rank=0.8, bp_match_at_rank=80,
+          SummarizedGatherResult(rank='class', fraction=0.9, lineage=RankLineageInfo(), f_weighted_at_rank=0.8, bp_match_at_rank=80,
                                  query_ani_at_rank=None)]
     assert q_res.summarized_lineage_results['class'] == cl
 
@@ -2676,7 +2680,7 @@ def test_aggregate_by_lineage_at_rank():
     print(summarized)
     assert summarized == {RankLineageInfo(lineage_str='a;b'): 0.4,
                           RankLineageInfo(lineage_str='a;c'): 0.3,
-                          (): approx(0.3, rel=1e-2)}
+                          RankLineageInfo(): approx(0.3, rel=1e-2)}
     assert all_queries == ['queryA']
 
 
@@ -2711,14 +2715,14 @@ def test_aggregate_by_lineage_at_rank_by_query():
     summarized, all_queries = aggregate_by_lineage_at_rank(gres.values(), rank='superkingdom', by_query=True)
     print(summarized)
     assert summarized == {RankLineageInfo(lineage_str='a'): {'queryA': 0.5, 'queryB': 0.4},
-                          (): {'queryA': 0.5, 'queryB': 0.6}}
+                          RankLineageInfo(): {'queryA': 0.5, 'queryB': 0.6}}
     #assert summarized == {'a': {'queryA': approx(0.1, rel=1e-2), 'queryB': 0.7}}
     assert all_queries == ['queryA', 'queryB']
     summarized, all_queries = aggregate_by_lineage_at_rank(gres.values(), rank='phylum', by_query=True)
     print(summarized)
     assert summarized == {RankLineageInfo(lineage_str='a;c'): {'queryA': 0.3, 'queryB': 0.4}, 
                           RankLineageInfo(lineage_str='a;b'): {'queryA': 0.2}, 
-                          (): {'queryA': 0.5, 'queryB': 0.6}}
+                          RankLineageInfo(): {'queryA': 0.5, 'queryB': 0.6}}
     
 
 def test_build_classification_result_containment_threshold_fail():
