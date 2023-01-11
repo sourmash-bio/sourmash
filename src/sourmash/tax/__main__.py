@@ -166,7 +166,7 @@ def metagenome(args):
 
         with FileOutputCSV(kreport_outfile) as out_fp:
             header, kreport_results = single_query_results.make_kreport_results()
-            tax_utils.write_output(header, kreport_results, out_fp, sep="\t")
+            tax_utils.write_output(header, kreport_results, out_fp, sep="\t", write_header=False)
 
 
 def genome(args):
@@ -220,6 +220,10 @@ def genome(args):
             error(f"ERROR: {str(exc)}")
             sys.exit(-1)
 
+    if not classifications:
+        notify('No results for classification. Exiting.')
+        sys.exit(-1)
+
     # write outputs
     if "csv_summary" in args.output_format:
         summary_outfile, limit_float = make_outfile(args.output_base, "classification", output_dir=args.output_dir)
@@ -235,25 +239,27 @@ def genome(args):
 
     if "krona" in args.output_format:
         # classifications only at a single rank
-        krona_results, header =  tax_utils.format_for_krona(query_gather_results=query_gather_results, rank=args.rank, classification=True)
+        krona_results, header =  tax_utils.format_for_krona(query_gather_results=classifications, rank=args.rank, classification=True)
         krona_outfile, limit_float = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
         with FileOutputCSV(krona_outfile) as out_fp:
             tax_utils.write_krona(args.rank, krona_results, header, out_fp)
 
     if "lineage_csv" in args.output_format:
-        # should only classify at a single rank -- just check for args.rank?
-        # assert len(classifications) == 1
-        # if args.rank:
-        #     assert args.rank in classifications
-
         lineage_outfile, _ = make_outfile(args.output_base, "lineage_csv",
                                           output_dir=args.output_dir)
+        lineage_results = []
+        header = None
+        for q_res in classifications:
+            if not header:
+                ranks = list(q_res.ranks)
+                if 'strain' in ranks: # maintains prior functionality.. but we could keep strain now, i think?
+                    ranks.remove('strain')
+                header = ["ident", *ranks]
+            lineageD = q_res.classification_result.as_lineage_dict(q_res.query_info, ranks)
+            lineage_results.append(lineageD)
         with FileOutputCSV(lineage_outfile) as out_fp:
-            tax_utils.write_lineage_csv(classifications, out_fp)
+            tax_utils.write_output(header, lineage_results, out_fp)
     
-    # if not classifications:
-    #     notify('No results for classification. Exiting.')
-    #     sys.exit(-1)
 
 
 

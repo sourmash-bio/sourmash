@@ -1593,8 +1593,9 @@ def test_genome_missing_taxonomy_fail_threshold(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert "The following are missing from the taxonomy information: GCF_001881345" in str(exc.value)
-    assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in str(exc.value)
+    # assert "The following are missing from the taxonomy information: GCF_001881345" in str(exc.value)
+    assert "ident 'GCF_001881345' is not in the taxonomy database." in str(exc.value)
+    assert "Failing, as requested via --fail-on-missing-taxonomy" in str(exc.value)
     assert c.last_result.status == -1
 
 
@@ -1619,8 +1620,9 @@ def test_genome_missing_taxonomy_fail_rank(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert "The following are missing from the taxonomy information: GCF_001881345" in str(exc.value)
-    assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in str(exc.value)
+    # assert "The following are missing from the taxonomy information: GCF_001881345" in str(exc.value)
+    assert "ident 'GCF_001881345' is not in the taxonomy database." in str(exc.value)
+    assert "Failing, as requested via --fail-on-missing-taxonomy" in str(exc.value)
     assert c.last_result.status == -1
 
 
@@ -1838,7 +1840,8 @@ def test_genome_over100percent_error(runtmp):
     print(runtmp.last_result.err)
 
     assert runtmp.last_result.status == -1
-    assert "ERROR: The tax summary of query 'test1' is 1.1, which is > 100% of the query!!" in runtmp.last_result.err
+    assert "fraction is > 100% of the query! This should not be possible." in runtmp.last_result.err
+    # assert "ERROR: The tax summary of query 'test1' is 1.1, which is > 100% of the query!!" in runtmp.last_result.err
 
 
 def test_genome_ani_threshold_input_errors(runtmp):
@@ -1973,12 +1976,16 @@ def test_genome_ani_lemonade_classify(runtmp):
                    '--ani', '0.8', '-F', 'human')
 
     output = c.last_result.out
-    assert 'MAG3_1             5.3%     91.0%  d__Bacteria;p__Bacteroidota;c__Chlorobia;o__Chlorobiales;f__Chlorobiaceae;g__Prosthecochloris;s__Prosthecochloris vibrioformis' in output
+    # assert 'MAG3_1            5.3%     91.0%  d__Bacteria;p__Bacteroidota;c__Chlorobia;o__Chlorobiales;f__Chlorobiaceae;g__Prosthecochloris;s__Prosthecochloris vibrioformis' in output
+    assert 'MAG3_1            match     5.3%     91.0%  d__Bacteria;p__Bacteroidota;c__Chlorobia;o__Chlorobiales;f__Chlorobiaceae;g__Prosthecochloris;s__Prosthecochloris vibrioformis' in output
 
     # aaand classify to lineage_csv
     c.run_sourmash('tax', 'genome', '-g', this_gather_file, '-t', taxonomy_file,
                    '--ani', '0.8', '-F', 'lineage_csv')
 
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
     output = c.last_result.out
     assert 'ident,superkingdom,phylum,class,order,family,genus,species' in output
     assert 'MAG3_1,d__Bacteria,p__Bacteroidota,c__Chlorobia,o__Chlorobiales,f__Chlorobiaceae,g__Prosthecochloris,s__Prosthecochloris vibrioformis' in output
@@ -2165,7 +2172,7 @@ def test_annotate_bad_gather_header(runtmp):
     bad_g_csv = runtmp.output('g.csv')
 
     #creates bad gather result
-    bad_g = [x.replace("query_bp", "nope") for x in open(g_csv, 'r')]
+    bad_g = [x.replace("query_name", "nope") for x in open(g_csv, 'r')]
     with open(bad_g_csv, 'w') as fp:
         for line in bad_g:
             fp.write(line)

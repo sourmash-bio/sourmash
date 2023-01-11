@@ -109,7 +109,16 @@ class BaseLineageInfo:
         return self.filled_ranks[-1]
 
     def rank_index(self, rank):
+        self.check_rank_availability(rank)
         return self.ranks.index(rank)
+
+    def name_at_rank(self, rank):
+        "Return the lineage name at this rank"
+        self.check_rank_availability(rank)
+        if not self.filled_ranks or rank not in self.filled_ranks:
+            return None
+        rank_idx = self.rank_index(rank)
+        return self.filled_lineage[rank_idx].name
 
     @property
     def filled_lineage(self):
@@ -272,6 +281,7 @@ class BaseLineageInfo:
         """
         check to see if two lineages are a match down to given rank.
         """
+        self.check_rank_availability(rank)
         if not other.ranks == self.ranks: # check same ranks
             raise ValueError("Cannot compare lineages from taxonomies with different ranks.")
         # always return false if rank is not filled in either of the two lineages
@@ -286,6 +296,7 @@ class BaseLineageInfo:
     def pop_to_rank(self, rank):
         "Return new LineageInfo with ranks only filled to desired rank"
         # are we already above rank?
+        self.check_rank_availability(rank)
         if not self.rank_is_filled(rank):
             return replace(self)
         # if not, make filled_lineage at this rank + use to generate new LineageInfo
@@ -299,6 +310,7 @@ class BaseLineageInfo:
         "non-destructive pop_to_rank. Returns tuple of LineagePairs"
         "Returns tuple of LineagePairs at given rank."
         # are we already above rank?
+        self.check_rank_availability(rank)
         if not self.rank_is_filled(rank):
             return self.filled_lineage
         # if not, return lineage tuples down to desired rank
@@ -853,12 +865,14 @@ def write_krona(header, krona_results, out_fp, *, sep='\t'):
     for res in krona_results:
         tsv_output.writerow(res)
 
-def write_output(header, results, out_fp, *, sep=','):
+def write_output(header, results, out_fp, *, sep=',', write_header=True):
     """
     write pre-generated results list of rows, with each
     row being a dictionary
     """
     output = csv.DictWriter(out_fp, header, delimiter=sep)
+    if write_header:
+        output.writeheader()
     for res in results:
         output.writerow(res)   
 
@@ -1814,6 +1828,19 @@ class SummarizedGatherResult():
         self.query_ani_at_rank = containment_to_distance(self.fraction, query_info.ksize, query_info.scaled,
                                                          n_unique_kmers=query_info.query_n_hashes,
                                                          sequence_len_bp=query_info.query_bp).ani
+
+
+    def as_lineage_dict(self, query_info, ranks):
+        lD = {}
+        lD['ident'] = query_info.query_name
+        for rank in ranks:
+            notify(", ".join(ranks))
+            notify(rank)
+            lin_name = self.lineage.name_at_rank(rank)
+            if lin_name is None:
+                lin_name = ""
+            lD[rank] = lin_name
+        return lD
 
     def as_summary_dict(self, query_info, limit_float=False):
         sD = asdict(self)
