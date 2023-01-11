@@ -892,7 +892,7 @@ def test_genome_bad_gather_header(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'genome', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
-    assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
+    assert 'is missing columns needed for taxonomic summarization.' in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
@@ -2165,7 +2165,7 @@ def test_annotate_bad_gather_header(runtmp):
     bad_g_csv = runtmp.output('g.csv')
 
     #creates bad gather result
-    bad_g = [x.replace("query_name", "nope") for x in open(g_csv, 'r')]
+    bad_g = [x.replace("query_bp", "nope") for x in open(g_csv, 'r')]
     with open(bad_g_csv, 'w') as fp:
         for line in bad_g:
             fp.write(line)
@@ -2174,7 +2174,7 @@ def test_annotate_bad_gather_header(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'annotate', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
-    assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
+    assert 'is missing columns needed for taxonomic summarization.' in str(exc.value)
     assert runtmp.last_result.status == -1
 
 

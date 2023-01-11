@@ -297,7 +297,7 @@ def annotate(args):
         out_base = os.path.basename(g_csv.rsplit('.csv')[0])
         this_outfile, limit_float = make_outfile(out_base, "annotate", output_dir=args.output_dir)
 
-        header = list(fields(GatherRow))
+        header = [field.name for field in fields(GatherRow)]
         with FileOutputCSV(this_outfile) as out_fp:
             header.append("lineage")
             w = csv.DictWriter(out_fp, header, delimiter=',')

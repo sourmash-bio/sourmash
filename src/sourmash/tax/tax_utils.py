@@ -405,27 +405,25 @@ def load_gather_results(gather_csv, tax_assignments, *, seen_queries=None, force
 
         this_querytaxres = None
         for n, row in enumerate(r):
-            query_name = row['query_name']
+            # try reading each gather row into a TaxResult
+            try:
+                gatherRow = GatherRow(**row)
+            except TypeError as exc:
+                raise ValueError(f"'{gather_csv}' is missing columns needed for taxonomic summarization. Please run gather with sourmash >= 4.4.") from exc
             # check if we've seen this query already in a different gather CSV
-            if query_name in seen_queries:
+            if gatherRow.query_name in seen_queries:
                 # do not allow loading of same query from a second CSV.
-                raise ValueError(f"Gather query {query_name} was found in more than one CSV. Cannot load from '{gather_csv}'.")
-            else:
-                # read gather row into TaxResult
-                try:
-                    gatherRaw = GatherRow(**row)
-                except TypeError as exc:
-                    raise ValueError(f"'{gather_csv}' is missing columns needed for taxonomic summarization. Please run gather with sourmash >= 4.4.") from exc
-                taxres = TaxResult(raw=gatherRaw, keep_full_identifiers=keep_full_identifiers,
-                                                  keep_identifier_versions=keep_identifier_versions)
-                taxres.get_match_lineage(tax_assignments=tax_assignments, skip_idents=skip_idents, 
-                                         fail_on_missing_taxonomy=fail_on_missing_taxonomy)
-                # add to matching QueryTaxResult or create new one
-                if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
-                    # get existing or initialize new
-                    this_querytaxres = gather_results.get(query_name, QueryTaxResult(taxres.query_info))
-                this_querytaxres.add_taxresult(taxres)
-                gather_results[query_name] = this_querytaxres
+                raise ValueError(f"Gather query {gatherRow.query_name} was found in more than one CSV. Cannot load from '{gather_csv}'.")
+            taxres = TaxResult(raw=gatherRow, keep_full_identifiers=keep_full_identifiers,
+                                                keep_identifier_versions=keep_identifier_versions)
+            taxres.get_match_lineage(tax_assignments=tax_assignments, skip_idents=skip_idents, 
+                                        fail_on_missing_taxonomy=fail_on_missing_taxonomy)
+            # add to matching QueryTaxResult or create new one
+            if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
+                # get existing or initialize new
+                this_querytaxres = gather_results.get(gatherRow.query_name, QueryTaxResult(taxres.query_info))
+            this_querytaxres.add_taxresult(taxres)
+            gather_results[gatherRow.query_name] = this_querytaxres
 
     if not gather_results:
         raise ValueError(f'No gather results loaded from {gather_csv}.')
