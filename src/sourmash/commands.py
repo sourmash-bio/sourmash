@@ -7,6 +7,7 @@ import os.path
 import sys
 import shutil
 
+import screed
 from .compare import (compare_all_pairs, compare_serial_containment,
                       compare_serial_max_containment, compare_serial_avg_containment)
 from . import MinHash
@@ -1123,8 +1124,6 @@ def multigather(args):
 
 def watch(args):
     "Build a signature from raw FASTA/FASTQ coming in on stdin, search."
-    import screed
-
     set_quiet(args.quiet)
 
     if args.input_is_protein and args.dna:

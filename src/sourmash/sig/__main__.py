@@ -9,6 +9,7 @@ from collections import defaultdict, namedtuple, Counter
 import json
 import re
 
+import screed
 import sourmash
 from sourmash.sourmash_args import FileOutput
 
@@ -999,8 +1000,6 @@ def kmers(args):
     """
     retrieve k-mers and/or sequences contained by the minhashes
     """
-    import screed
-
     from sourmash.search import format_bp
 
     set_quiet(args.quiet)

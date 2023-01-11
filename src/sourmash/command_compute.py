@@ -5,6 +5,7 @@ import os
 import os.path
 import sys
 import random
+import screed
 
 from . import sourmash_args
 from .signature import SourmashSignature
@@ -150,8 +151,6 @@ class _signatures_for_compute_factory:
 
 
 def _compute_individual(args, signatures_factory):
-    import screed
-
     # this is where output signatures will go.
     save_sigs = None
 
@@ -262,8 +261,6 @@ def _compute_individual(args, signatures_factory):
 
 
 def _compute_merged(args, signatures_factory):
-    import screed
-
     # make a signature for the whole file
     sigs = signatures_factory()
 
