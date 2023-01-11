@@ -1919,32 +1919,15 @@ def test_genome_ani_threshold(runtmp):
 
 
 def test_genome_ani_oldgather(runtmp):
-    # Ignore ANI if we don't have the information we need to estimate it
+    # now fail if using gather <4.4
     c = runtmp
     g_csv = utils.get_test_data('tax/test1.gather_old.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
-    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax)
-
-    print(c.last_result.status)
-    print(c.last_result.out)
-    print(c.last_result.err)
-
-    assert c.last_result.status == 0
-    assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,' in c.last_result.out
-
-    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
-                       '--ani-threshold', "0.95")
-
-    print(c.last_result.status)
-    print(c.last_result.out)
-    print(c.last_result.err)
-
-    assert c.last_result.status == 0
-    assert "WARNING: Please run gather with sourmash >= 4.4 to estimate query ANI at rank. Continuing without ANI..." in c.last_result.err
-    assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,' in c.last_result.out
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax)
+    assert "is missing columns needed for taxonomic summarization. Please run gather with sourmash >= 4.4." in str(exc.value)
+    assert c.last_result.status == -1
 
 
 def test_genome_ani_lemonade_classify(runtmp):
