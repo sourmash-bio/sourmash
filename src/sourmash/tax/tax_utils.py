@@ -1359,7 +1359,7 @@ class SummarizedGatherResult():
 
     def as_lineage_dict(self, query_info, ranks):
         '''
-        Format to write lineage-CSV file suitable for use with sourmash tax ... -t.
+        Format to dict for writing lineage-CSV file suitable for use with sourmash tax ... -t.
         '''
         lD = {}
         lD['ident'] = query_info.query_name
@@ -1424,7 +1424,7 @@ class SummarizedGatherResult():
 
 @dataclass
 class ClassificationResult(SummarizedGatherResult):
-#   """Class for storing summarized lineage information"""
+    "Class for storing query classification information"
     status: str = field(init=False)
 
     def __post_init__(self):
