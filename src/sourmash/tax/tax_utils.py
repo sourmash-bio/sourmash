@@ -610,6 +610,7 @@ def write_krona(header, krona_results, out_fp, *, sep='\t'):
     for res in krona_results:
         tsv_output.writerow(res)
 
+
 def write_output(header, results, out_fp, *, sep=',', write_header=True):
     """
     write pre-generated results list of rows, with each
@@ -1207,50 +1208,64 @@ class MultiLineageDB(abc.Mapping):
         return tax_assign
 
 
-# strategy from: https://subscription.packtpub.com/book/programming/9781800207455/10/ch10lvl1sec01/using-dataclasses-to-simplify-working-with-csv-files
 @dataclass
-class GatherRow(): # all cols should match "gather_write_cols" in `search.py`
-   # essential columns
-   query_name: str
-   name: str # match_name
-   f_unique_weighted: float
-   f_unique_to_query: float
-   unique_intersect_bp: int
-   remaining_bp: int
-   query_md5: str
-   query_filename: str
-   # new essential cols: requires 4.4x
-   query_bp: int
-   ksize: int
-   scaled: int
+class GatherRow():
+    """
+    Class to facilitate safely reading in Gather CSVs. The fields here should be match those
+    in "gather_write_cols" in `search.py`
 
-   # non-essential
-   intersect_bp: int = None
-   f_orig_query: float = None
-   f_match: float = None
-   average_abund: float = None
-   median_abund: float = None
-   std_abund: float = None
-   filename: str = None
-   md5: str = None
-   f_match_orig: float = None
-   gather_result_rank: str = None
-   moltype: str = None
-   query_n_hashes: int = None
-   query_abundance: int = None
-   query_containment_ani: float = None
-   match_containment_ani: float = None
-   average_containment_ani: float = None
-   max_containment_ani: float = None
-   potential_false_negative: bool = None
-   n_unique_weighted_found: int = None
-   sum_weighted_found: int = None
-   total_weighted_hashes: int = None
+    To ensure all columns required for taxonomic summarization are present, this class
+    contains no defaults for these columns and thus will throw a TypeError if any of these
+    columns are missing in the passed gather input. All other fields have default None.
+
+    Usage:
+
+    with sourmash_args.FileInputCSV(gather_csv) as r:
+        for row in enumerate(r):
+            gatherRow = GatherRow(**row)
+    """
+
+    # essential columns
+    query_name: str
+    name: str # match_name
+    f_unique_weighted: float
+    f_unique_to_query: float
+    unique_intersect_bp: int
+    remaining_bp: int
+    query_md5: str
+    query_filename: str
+    # new essential cols: requires 4.4x
+    query_bp: int
+    ksize: int
+    scaled: int
+
+    # non-essential
+    intersect_bp: int = None
+    f_orig_query: float = None
+    f_match: float = None
+    average_abund: float = None
+    median_abund: float = None
+    std_abund: float = None
+    filename: str = None
+    md5: str = None
+    f_match_orig: float = None
+    gather_result_rank: str = None
+    moltype: str = None
+    query_n_hashes: int = None
+    query_abundance: int = None
+    query_containment_ani: float = None
+    match_containment_ani: float = None
+    average_containment_ani: float = None
+    max_containment_ani: float = None
+    potential_false_negative: bool = None
+    n_unique_weighted_found: int = None
+    sum_weighted_found: int = None
+    total_weighted_hashes: int = None
 
 
 @dataclass()
 class QueryInfo():
-    """Class for storing query information"""
+    "Class for storing query information"
     query_name: str
     query_md5: str
     query_filename: str
@@ -1274,6 +1289,29 @@ class QueryInfo():
 
 @dataclass
 class TaxResult():
+    """
+    Class to store taxonomic result of a single row from a gather CSV, including accessible
+    query information (QueryInfo) and matched taxonomic lineage. TaxResult tracks whether
+    lineage matching has been attempted and whether the lineage matching failed
+    due to missing or skipped lineage identifiers.
+
+    Initialize TaxResult using GatherRow, which ensures all required fields are present.
+    The QueryInfo in TaxResult is used to ensure only compatible gather results generated
+    from the same query are summarized during taxonomic summarization.
+
+    Usage:
+
+        with sourmash_args.FileInputCSV(gather_csv) as r:
+            for row in enumerate(r):
+                gatherRow = GatherRow(**row)
+                # initialize TaxResult
+                tax_res = TaxResult(raw=gatherRow)
+
+                # get match lineage
+                tax_res.get_match_lineage(taxD=taxonomic_assignments)
+
+    Uses RankLineageInfo to store lineage information; this may need to be modified in the future.            
+    """
     raw: GatherRow
     # can we get rid of these / just choose default ident hacking/slashing for future?
     keep_full_identifiers: bool = False
@@ -1333,7 +1371,12 @@ class TaxResult():
 
 @dataclass
 class SummarizedGatherResult():
-#   """Class for storing summarized lineage information"""
+    """
+    Class for storing summarized lineage information.
+    Automatically checks for out-of-range values and estimates ANI.
+
+    Methods included for returning formatted results for different outputs.
+    """
     rank: str
     fraction: float
     lineage: RankLineageInfo
@@ -1424,6 +1467,15 @@ class SummarizedGatherResult():
 
 @dataclass
 class ClassificationResult(SummarizedGatherResult):
+    """
+    Inherits from SummarizedGatherResult
+
+    Class for storing query classification information.
+    Automatically checks for out-of-range values and estimates ANI.
+    Checks classification status according to provided containment and ANI thresholds.
+
+    Methods included for returning formatted results for different outputs.
+    """
     "Class for storing query classification information"
     status: str = field(init=False)
 
@@ -1461,7 +1513,15 @@ class ClassificationResult(SummarizedGatherResult):
 
 @dataclass
 class QueryTaxResult():
-    """Store all TaxResults for a query. Enable summarization."""
+    """
+    Class for storing all TaxResults (gather results rows) for a query.
+    Checks query compatibility prior to adding a TaxResult.
+    Stores raw TaxResults and provides methods for summarizing up ranks
+    and reporting these summarized results as metagenome summaries or
+    genome classifications.
+
+    Contains methods for formatting results for different outputs.
+    """
     query_info: QueryInfo # initialize with QueryInfo dataclass
 
     def __post_init__(self):
