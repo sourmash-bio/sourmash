@@ -83,7 +83,7 @@ def cat(args):
     """
     concatenate all signatures into one file.
     """
-    set_quiet(args.quiet)
+    set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
     picklist = sourmash_args.load_picklist(args)
     pattern_search = sourmash_args.load_include_exclude_db_patterns(args)

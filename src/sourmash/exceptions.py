@@ -25,6 +25,11 @@ class IndexNotSupported(SourmashError):
         SourmashError.__init__(self, "This index format is not supported in this version of sourmash")
 
 
+class IndexNotLoaded(SourmashError):
+    def __init__(self, msg):
+        SourmashError.__init__(self, f"Cannot load sourmash index: {str(msg)}")
+
+
 def _make_error(error_name, base=SourmashError, code=None):
     class Exc(base):
         pass

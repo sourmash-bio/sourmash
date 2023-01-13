@@ -26,7 +26,6 @@ src/sourmash/_lowlevel*.py
 Pipfile
 Pipfile.lock
 target/
-Cargo.lock
 .eggs
 .asv
 pkg/
