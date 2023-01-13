@@ -71,7 +71,7 @@ class BaseLineageInfo:
     """
     # need to set compare=False for any mutable type to keep this class hashable
     ranks: tuple() # require ranks
-    lineage: tuple = () # tuple of LineagePairs
+    lineage: tuple = None # tuple of LineagePairs
     lineage_str: str = field(default=None, compare=False) # ';'- or ','-separated str of lineage names
     lineage_dict: dict = field(default=None, compare=False) # dict of rank: name
 
@@ -80,7 +80,7 @@ class BaseLineageInfo:
         # ranks must be tuple for hashability
         if isinstance(self.ranks, list):
             object.__setattr__(self, "ranks", tuple(self.ranks))
-        if self.lineage:
+        if self.lineage is not None:
             self._init_from_lineage_tuples()
         elif self.lineage_str is not None:
             self._init_from_lineage_str()
@@ -345,7 +345,7 @@ class RankLineageInfo(BaseLineageInfo):
         # ranks must be tuple for hashability
         if isinstance(self.ranks, list):
             object.__setattr__(self, "ranks", tuple(self.ranks))
-        if self.lineage:
+        if self.lineage is not None:
             self._init_from_lineage_tuples()
         elif self.lineage_str is not None:
             self._init_from_lineage_str()

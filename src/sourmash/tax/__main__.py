@@ -102,18 +102,17 @@ def metagenome(args):
         notify('No gather results loaded. Exiting.')
         sys.exit(-1)
 
-    single_query_output_formats =  ['csv_summary', 'kreport', 'krona']
+    single_query_output_formats =  ['csv_summary', 'kreport', 'krona', "lineage_summary"]
     desired_single_outputs = []
     if len(query_gather_results) > 1: # working with multiple queries
         desired_single_outputs = [x for x in args.output_format if x in single_query_output_formats]
         if desired_single_outputs:
-            notify(f"WARNING: found results for multiple gather queries. Can only output multi-query result formats, skipping {', '.join(desired_single_outputs)}")
-            args.output_format.remove(desired_single_outputs) ## NTP - is this taken care of below instead?
+            notify(f"WARNING: found results for multiple gather queries. Can only output multi-query result formats: skipping {', '.join(desired_single_outputs)}")
         # remove single query outputs from output format
         args.output_format = [x for x in args.output_format if x not in single_query_output_formats]
         if not args.output_format:
-            args.output_format = ["human"] # when this is default (5.0), shouldn't have issues
-#            raise ValueError('Error: no output formats remaining.')
+            error(f"ERROR: No output formats remaining.")
+            sys.exit(-1)
 
     # for each queryResult, actually summarize at rank, reporting any errors that occur.
     for queryResult in query_gather_results:
@@ -123,10 +122,9 @@ def metagenome(args):
             error(f"ERROR: {str(exc)}")
             sys.exit(-1)
 
-    ### outputs that aggregate information for multiple queries if available (but ok if not avail):
     # write summarized output in human-readable format
     if "lineage_summary" in args.output_format:
-            # if lineage summary table
+        # if lineage summary table
         lineage_outfile, limit_float = make_outfile(args.output_base, "lineage_summary", output_dir=args.output_dir)
 
         ## aggregate by lineage, by query
