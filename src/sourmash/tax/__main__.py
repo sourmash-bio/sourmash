@@ -11,10 +11,10 @@ import re
 import sourmash
 from ..sourmash_args import FileOutputCSV, FileOutput
 from sourmash.logging import set_quiet, error, notify, print_results
-from sourmash.lca.lca_utils import display_lineage, zip_lineage
+from sourmash.lca.lca_utils import zip_lineage
 
 from . import tax_utils
-from .tax_utils import ClassInf, MultiLineageDB, GatherRow
+from .tax_utils import MultiLineageDB, GatherRow
 
 usage='''
 sourmash taxonomy <command> [<args>] - manipulate/work with taxonomy information.
