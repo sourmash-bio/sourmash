@@ -33,6 +33,7 @@ metagenome -g <gather_csv> [<gather_csv> ... ] -t [<taxonomy_csv> ...]    - summ
 sourmash taxonomy metagenome -h
 '''
 
+# outfile utils
 _output_type_to_ext = {
     'csv_summary': '.summarized.csv',
     'classification': '.classifications.csv',
@@ -44,7 +45,6 @@ _output_type_to_ext = {
     'kreport': ".kreport.txt",
     }
 
-# some utils
 def make_outfile(base, output_type, *, output_dir = ""):
     limit_float_decimals=False
     if base == "-":
@@ -110,7 +110,7 @@ def metagenome(args):
             notify(f"WARNING: found results for multiple gather queries. Can only output multi-query result formats: skipping {', '.join(desired_single_outputs)}")
         # remove single query outputs from output format
         args.output_format = [x for x in args.output_format if x not in single_query_output_formats]
-        if not args.output_format:
+        if not args.output_format: # or do we want to insert `human` here so we always report something?
             error(f"ERROR: No output formats remaining.")
             sys.exit(-1)
 
@@ -124,10 +124,9 @@ def metagenome(args):
 
     # write summarized output in human-readable format
     if "lineage_summary" in args.output_format:
-        # if lineage summary table
         lineage_outfile, limit_float = make_outfile(args.output_base, "lineage_summary", output_dir=args.output_dir)
 
-        ## aggregate by lineage, by query
+        ## aggregate by lineage by query
         lineageD, query_names= tax_utils.aggregate_by_lineage_at_rank(query_gather_results=query_gather_results,
                                                                       rank=args.rank, by_query=True)
 
@@ -137,7 +136,6 @@ def metagenome(args):
     # write summarized --> krona output tsv
     if "krona" in args.output_format:
         krona_results, header =  tax_utils.format_for_krona(query_gather_results, rank=args.rank)
-
 
         krona_outfile, limit_float = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
         with FileOutputCSV(krona_outfile) as out_fp:
@@ -149,8 +147,6 @@ def metagenome(args):
         with FileOutput(summary_outfile) as out_fp:
             tax_utils.write_human_summary(query_gather_results, out_fp, args.rank or "species")
 
-
-    ### single query outputs:
     # write summarized output csv
     single_query_results = query_gather_results[0]#.summarized_lineage_results
     if "csv_summary" in args.output_format:
@@ -205,39 +201,39 @@ def genome(args):
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
-    classifications = []
-    # for each queryResult, actually summarize at rank, reporting any errors that occur.
+
+    if not query_gather_results:
+        notify('No results for classification. Exiting.')
+        sys.exit(-1)
+
+    # for each queryResult, summarize at rank and classify according to thresholds, reporting any errors that occur.
     for queryResult in query_gather_results:
         try:
             queryResult.build_classification_result(rank=args.rank,
                                                     ani_threshold=args.ani_threshold,
                                                     containment_threshold=args.containment_threshold)
-  
-            classifications.append(queryResult)
+
         except ValueError as exc:
             error(f"ERROR: {str(exc)}")
             sys.exit(-1)
-
-    if not classifications:
-        notify('No results for classification. Exiting.')
-        sys.exit(-1)
 
     # write outputs
     if "csv_summary" in args.output_format:
         summary_outfile, limit_float = make_outfile(args.output_base, "classification", output_dir=args.output_dir)
         with FileOutputCSV(summary_outfile) as out_fp:
-            tax_utils.write_summary(classifications, out_fp, limit_float_decimals=limit_float, classification=True)
+            tax_utils.write_summary(query_gather_results, out_fp, limit_float_decimals=limit_float, classification=True)
 
     # write summarized output in human-readable format
     if "human" in args.output_format:
         summary_outfile, limit_float = make_outfile(args.output_base, "human", output_dir=args.output_dir)
 
         with FileOutput(summary_outfile) as out_fp:
-            tax_utils.write_human_summary(classifications, out_fp, args.rank or "species", classification=True)
+            tax_utils.write_human_summary(query_gather_results, out_fp, args.rank or "species", classification=True)
 
+    # The following require a single rank:
+    # note: interactive krona can handle mult ranks, do we want to enable?
     if "krona" in args.output_format:
-        # classifications only at a single rank
-        krona_results, header =  tax_utils.format_for_krona(query_gather_results=classifications, rank=args.rank, classification=True)
+        krona_results, header =  tax_utils.format_for_krona(query_gather_results=query_gather_results, rank=args.rank, classification=True)
         krona_outfile, limit_float = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
         with FileOutputCSV(krona_outfile) as out_fp:
             tax_utils.write_krona(header, krona_results, out_fp)
@@ -247,7 +243,7 @@ def genome(args):
                                           output_dir=args.output_dir)
         lineage_results = []
         header = None
-        for q_res in classifications:
+        for q_res in query_gather_results:
             if not header:
                 ranks = list(q_res.ranks)
                 if 'strain' in ranks: # maintains prior functionality.. but we could keep strain now, i think?
