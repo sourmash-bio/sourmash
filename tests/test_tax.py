@@ -845,24 +845,26 @@ def test_metagenome_two_queries_with_single_query_output_formats_fail(runtmp):
             fp.write(line)
 
     csv_summary_out = runtmp.output("tst.summarized.csv")
-    krona_out = runtmp.output("tst.krona.tsv")
+    kreport_out = runtmp.output("tst.kreport.txt")
+    lineage_summary_out = runtmp.output("tst.lineage_summary.tsv")
 
     with pytest.raises(SourmashCommandFailed) as exc:
         c.run_sourmash('tax', 'metagenome',  '--gather-csv', g_res, g_res2,
-                       '--taxonomy-csv', taxonomy_csv, '-F', "csv_summary", "krona", "-o", "tst", "--rank", "phylum")
+                       '--taxonomy-csv', taxonomy_csv, '-F', "csv_summary", "kreport", "-F", "lineage_summary", "--rank", "phylum", "-o", "tst")
     print(str(exc.value))
 
     assert not os.path.exists(csv_summary_out)
-    assert not os.path.exists(krona_out)
+    assert not os.path.exists(kreport_out)
+    assert not os.path.exists(lineage_summary_out)
     
     assert c.last_result.status == -1
-    # assert "loaded results for 2 queries from 2 gather CSVs" in c.last_result.err
-    assert "WARNING: found results for multiple gather queries. Can only output multi-query result formats: skipping csv_summary, krona" in c.last_result.err #str(exc.value)
-    assert "ERROR: No output formats remaining." in c.last_result.err #str(exc.value)
+    assert "loaded results for 2 queries from 2 gather CSVs" in c.last_result.err
+    assert "WARNING: found results for multiple gather queries. Can only output multi-query result formats: skipping csv_summary, kreport, lineage_summary" in c.last_result.err
+    assert "ERROR: No output formats remaining." in c.last_result.err
 
 
-def test_metagenome_two_queries_with_single_query_output_format(runtmp):
-    # do not load same query from multiple files.
+def test_metagenome_two_queries_krona(runtmp):
+    # for now, we enable multi-query krona. Is this desired?
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -874,25 +876,19 @@ def test_metagenome_two_queries_with_single_query_output_format(runtmp):
             line = line.replace('test1', 'test2')
             fp.write(line)
 
-    human_out = runtmp.output("tst.human.txt")
     c.run_sourmash('tax', 'metagenome',  '--gather-csv', g_res, g_res2,
-                   '--taxonomy-csv', taxonomy_csv, '-F', "csv_summary", "-F", "human", "-o", "tst")
+                   '--taxonomy-csv', taxonomy_csv, '-F', "krona", '--rank', 'superkingdom')
 
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert os.path.exists(human_out)
-    human_res = [x.rstrip() for x in open(human_out)]
-    print(human_res[2])
     assert c.last_result.status == 0
-    assert "WARNING: found results for multiple gather queries. Can only output multi-query result formats: skipping csv_summary" in c.last_result.err
-    assert "test1             86.9%     -      unclassified" in human_res[2]
-    assert "test1              5.8%     92.5%  d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in human_res[3]
-    assert "test2             86.9%     -      unclassified" in human_res[8]
-    assert "test2              5.8%     92.5%  d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in human_res[9]
-    assert "test2              5.7%     92.5%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in human_res[10]
-    assert "test2              1.6%     89.1%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus" in human_res[11]
+    assert "WARNING: results from more than one query found. Krona summarization not recommended." in c.last_result.err
+    assert "Percentage assignment will be normalized by the number of queries to maintain range 0-100%" in c.last_result.err
+    assert "fraction	superkingdom" in c.last_result.out
+    assert "0.2042281611487834	d__Bacteria" in c.last_result.out
+    assert "0.7957718388512166	unclassified" in c.last_result.out
 
 
 def test_metagenome_gather_duplicate_filename(runtmp):

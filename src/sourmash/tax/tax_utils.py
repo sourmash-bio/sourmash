@@ -665,9 +665,10 @@ def report_missing_and_skipped_identities(gather_results):
         notify(f'of {total_taxresults} gather results, lineage assignments for {total_n_missed} results were missed.')
         #notify(f'of {total_taxresults} gather results, missed lineage assignments for {total_n_missed)} results.')
         notify(f'The following are missing from the taxonomy information: {", ".join(ident_missed)}')
-    if ident_skipped:
-        notify(f'The following idents were skipped during taxonomic assignment, as requested: {", ".join(ident_skipped)}')
-        notify(f'of {total_taxresults} gather results, lineage assignments for {total_n_skipped} results were skipped.')
+    # skipping not actually enabled? do we want to enable?
+    # if ident_skipped:
+    #     notify(f'The following idents were skipped during taxonomic assignment, as requested: {", ".join(ident_skipped)}')
+    #     notify(f'of {total_taxresults} gather results, lineage assignments for {total_n_skipped} results were skipped.')
 
 
 def find_missing_identities_old(gather_results, tax_assign):
@@ -798,7 +799,8 @@ def format_for_krona(query_gather_results, rank, *, classification=False):
     krona_results = []
     # do we want to block more than one query for summarization?
     if len(query_gather_results) > 1:
-        notify('WARNING: results from more than one query found. Krona summarization not recommended as percentages may exceed 1.')
+        notify('WARNING: results from more than one query found. Krona summarization not recommended.\n' \
+                'Percentage assignment will be normalized by the number of queries to maintain range 0-100%.')
 
     if classification:
         # for classification, just write the results

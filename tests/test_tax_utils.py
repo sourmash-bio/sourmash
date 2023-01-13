@@ -1219,6 +1219,27 @@ def test_format_for_krona_improper_rank():
     assert "Rank 'NotARank' not present in summarized ranks." in str(exc)
 
 
+def test_format_for_krona_summarization_two_queries():
+    """test format for krona with multiple queries (normalize by n_queries)"""
+    # make gather results
+     # make mini taxonomy
+    gA_tax = ("gA", "a;b")
+    gB_tax = ("gB", "a;c")
+    taxD = make_mini_taxonomy([gA_tax,gB_tax])
+
+    gather_results = [{'query_name': 'queryA', 'name': 'gA', 'f_unique_weighted': 0.2,'f_unique_to_query': 0.2,'unique_intersect_bp': 50}, 
+                      {'query_name': 'queryA', "name": 'gB', 'f_unique_weighted': 0.3,'f_unique_to_query': 0.3,'unique_intersect_bp': 30},
+                      {'query_name': 'queryB', "name": 'gB', 'f_unique_weighted': 0.5,'f_unique_to_query': 0.5,'unique_intersect_bp': 50}]
+    gres = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, summarize=True)
+    kres, header = format_for_krona(list(gres.values()), 'superkingdom')
+    assert header == ['fraction', 'superkingdom']
+    print("krona_res: ", kres)
+    assert kres == [(0.5, 'a'), (0.5, 'unclassified')]
+    kres, header = format_for_krona(list(gres.values()), 'phylum')
+    assert header == ['fraction', 'superkingdom', 'phylum']
+    assert kres == [(0.4, 'a', 'c'), (0.1, 'a', 'b'), (0.5, 'unclassified', 'unclassified')]
+
+
 def test_write_krona(runtmp):
     """test two matches, equal f_unique_to_query"""
     krona_results =  [(0.5, 'a', 'b', 'c'), (0.5, 'a', 'b', 'd')]
