@@ -134,7 +134,7 @@ def compare(args):
         if track_abundances:
             notify('NOTE: --containment, --max-containment, --avg-containment, and --estimate-ani ignore signature abundances.')
 
-    # if using scaled sketches or --scaled, downsample to common max.
+    # if using scaled sketches or --scaled, downsample to common max scaled.
     printed_scaled_msg = False
     if is_scaled:
         max_scaled = max(s.minhash.scaled for s in siglist)
