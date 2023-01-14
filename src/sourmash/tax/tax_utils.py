@@ -1209,7 +1209,7 @@ class MultiLineageDB(abc.Mapping):
 
 
 @dataclass
-class GatherRow():
+class GatherRow:
     """
     Class to facilitate safely reading in Gather CSVs. The fields here should be match those
     in "gather_write_cols" in `search.py`
@@ -1263,8 +1263,8 @@ class GatherRow():
     total_weighted_hashes: int = None
 
 
-@dataclass()
-class QueryInfo():
+@dataclass
+class QueryInfo:
     "Class for storing query information"
     query_name: str
     query_md5: str
@@ -1288,7 +1288,7 @@ class QueryInfo():
         return self.total_weighted_hashes * self.scaled
 
 @dataclass
-class TaxResult():
+class TaxResult:
     """
     Class to store taxonomic result of a single row from a gather CSV, including accessible
     query information (QueryInfo) and matched taxonomic lineage. TaxResult tracks whether
@@ -1370,7 +1370,7 @@ class TaxResult():
             raise ValueError(f"Error: ident '{self.match_ident}' is not in the taxonomy database. Failing, as requested via --fail-on-missing-taxonomy")
 
 @dataclass
-class SummarizedGatherResult():
+class SummarizedGatherResult:
     """
     Class for storing summarized lineage information.
     Automatically checks for out-of-range values and estimates ANI.
@@ -1512,7 +1512,7 @@ class ClassificationResult(SummarizedGatherResult):
  
 
 @dataclass
-class QueryTaxResult():
+class QueryTaxResult:
     """
     Class for storing all TaxResults (gather results rows) for a query.
     Checks query compatibility prior to adding a TaxResult.
