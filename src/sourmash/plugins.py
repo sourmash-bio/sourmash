@@ -17,7 +17,7 @@ DEFAULT_SAVE_TO_PRIORITY = 99
 
 import itertools
 
-from .logging import debug_literal, error, notify
+from .logging import (debug_literal, error, notify, set_quiet)
 
 # cover for older versions of Python that don't support selection on load
 # (the 'group=' below).
@@ -71,6 +71,29 @@ def get_save_to_functions():
         name = plugin.name
         debug_literal(f"plugins.save_to_functions: got '{name}', priority={priority}")
         yield priority, save_cls
+
+
+class CommandLinePlugin:
+    """
+    Provide some minimal common CLI functionality - -q and -d.
+
+    Subclasses should call super().__init__(parser) and super().main(args).
+    """
+    command = None
+    description = None
+
+    def __init__(self, parser):
+        parser.add_argument(
+            '-q', '--quiet', action='store_true',
+            help='suppress non-error output'
+        )
+        parser.add_argument(
+            '-d', '--debug', action='store_true',
+            help='provide debugging output'
+        )
+
+    def main(self, args):
+        set_quiet(args.quiet, args.debug)
 
 
 def get_cli_script_plugins():
