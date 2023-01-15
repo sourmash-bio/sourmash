@@ -1,9 +1,6 @@
 """
 Test the plugin framework in sourmash.plugins, which uses importlib.metadata
 entrypoints.
-
-CTB TODO:
-* check name?
 """
 
 import sys
@@ -30,11 +27,15 @@ class FakeEntryPoint:
     dist = _Dist('0.1')
     group = 'groupfoo'
 
-    def __init__(self, name, load_obj):
+    def __init__(self, name, load_obj, *,
+                 error_on_import=None):
         self.name = name
         self.load_obj = load_obj
+        self.error_on_import = error_on_import
 
     def load(self):
+        if self.error_on_import is not None:
+            raise self.error_on_import("as requested")
         return self.load_obj
 
 #
@@ -424,6 +425,7 @@ class Test_EntryPointBasics_TwoCommands:
     def setup_method(self):
         _ = plugins.get_cli_script_plugins()
         self.saved_plugins = plugins._plugin_cli
+        plugins._plugin_cli_once = False
         plugins._plugin_cli = [FakeEntryPoint('test_command',
                                               FakeCommandClass),
                                FakeEntryPoint('test_command2',
@@ -431,7 +433,10 @@ class Test_EntryPointBasics_TwoCommands:
                                FakeEntryPoint('test_command3',
                                               FakeCommandClass_Broken_1),
                                FakeEntryPoint('test_command4',
-                                              FakeCommandClass_Broken_2)
+                                              FakeCommandClass_Broken_2),
+                               FakeEntryPoint('error-on-import',
+                                              FakeCommandClass,
+                                           error_on_import=ModuleNotFoundError)
                                ]
 
     def teardown_method(self):
