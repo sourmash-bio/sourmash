@@ -309,7 +309,20 @@ class Test_EntryPointBasics_Command:
     def teardown_method(self):
         plugins._plugin_cli = self.saved_plugins
 
+    def test_empty(self, runtmp):
+        # empty out script plugins...
+        plugins._plugin_cli = []
+
+        with pytest.raises(utils.SourmashCommandFailed):
+            runtmp.sourmash('scripts')
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+        assert '(No script plugins detected!)' in out
+
     def test_cmd_0(self, runtmp):
+        # test default output with some plugins
         with pytest.raises(utils.SourmashCommandFailed):
             runtmp.sourmash('scripts')
 
@@ -321,6 +334,7 @@ class Test_EntryPointBasics_Command:
         assert "sourmash scripts nifty" in out
 
     def test_cmd_1(self):
+        # test descriptions
         ps = list(plugins.get_cli_scripts_descriptions())
         print(ps)
         assert len(ps) == 1
@@ -330,6 +344,7 @@ class Test_EntryPointBasics_Command:
         assert "sourmash scripts nifty" in descr0
 
     def test_cmd_2(self):
+        # test get_cli_script_plugins function
         ps = list(plugins.get_cli_script_plugins())
         print(ps)
         assert len(ps) == 1
@@ -448,6 +463,7 @@ class Test_EntryPointBasics_TwoCommands:
         plugins._plugin_cli = self.saved_plugins
 
     def test_cmd_0(self, runtmp):
+        # test default output for a few plugins
         with pytest.raises(utils.SourmashCommandFailed):
             runtmp.sourmash('scripts')
 
@@ -509,7 +525,7 @@ groupfoo             test_plugin_framework          0.1   test_command4
 
 
 def test_cli_scripts_getattr_fail():
-    # test scripts.__getattr__ fail
+    # test scripts.__getattr__ w/fail
     from sourmash.cli import scripts
 
     with pytest.raises(AttributeError):
@@ -517,7 +533,7 @@ def test_cli_scripts_getattr_fail():
 
 
 def test_cli_scripts_getattr_succ():
-    # test scripts.__getattr__ success
+    # test scripts.__getattr__ w/success
     from sourmash.cli import scripts
 
     scripts.subparser
