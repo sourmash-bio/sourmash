@@ -123,7 +123,7 @@ def command_list(dirpath):
 def add_scaled_arg(parser, default=None):
     parser.add_argument(
         '--scaled', metavar='FLOAT', type=check_scaled_bounds,
-        help='scaled value should be between 100 and 1e6'
+        help='downsample to this scaled; value should be between 100 and 1e6'
     )
 
 
