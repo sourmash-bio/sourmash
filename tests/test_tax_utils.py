@@ -1825,7 +1825,6 @@ def test_QueryTaxResult_summarize_up_ranks_single_rank():
     assert list(q_res.sum_uniq_bp['phylum'].values()) == [30]                                                    
     assert q_res.summarized_ranks == ['phylum']
 
-
 def test_QueryTaxResult_summarize_up_ranks_single_rank_not_available():
     "summarize up ranks: different values"
     taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
