@@ -7,21 +7,23 @@ for making new plugins.
 """
 
 # CTB TODO:
-# * provide suggestions for URLs etc.
+# * provide suggestions for documentation & metadata for authors:
+#   support -q, -d, better help strings; provide URLs for plugins; ??
 # * provide guidance on how to test your CLI plugin at the CLI
-#   (sourmash scripts, look for description etc.)
-# * is there any reason to provide a callback mechanism of any kind?
-# * provide default command class that implements -q and -d
+#   (minimal testing regime: sourmash scripts, look for description etc.)
+# * is there any reason to provide a post-plugin callback mechanism of any
+#   kind?
 
 import argparse
 import sourmash
 
-# decorate this module with the various extension objects
+# Here, we decorate this module with the various extension objects
 # e.g. 'sourmash scripts foo' will look up attribute 'scripts.foo'
 # and we will return the extension class object, which will then
 # be run by sourmash.__main__. This dictionary is loaded below
 # by sourmash.plugins.add_cli_scripts.
 _extension_dict = {}
+
 def __getattr__(name):
     if name in _extension_dict:
         return _extension_dict[name]
@@ -34,10 +36,15 @@ def subparser(subparsers):
 
     # get individual help strings:
     descrs = list(sourmash.plugins.get_cli_scripts_descriptions())
+    if descrs:
+        description = "\n".join(descrs)
+    else:
+        description = "(No script plugins detected!)"
+
     s = subparser.add_subparsers(title="available plugin/extension commands",
                                  dest='subcmd',
                                  metavar='subcmd',
                                  help=argparse.SUPPRESS,
-                                 description="\n".join(descrs))
+                                 description=description)
 
     _extension_dict.update(sourmash.plugins.add_cli_scripts(s))

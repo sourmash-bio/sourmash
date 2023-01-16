@@ -274,7 +274,7 @@ class Test_EntryPointPriority_SaveTo:
 # Test basic features of the save_to plugin hook.
 #
 
-class FakeCommandClass:
+class FakeCommandClass(plugins.CommandLinePlugin):
     """
     A fake CLI class.
     """
@@ -282,11 +282,13 @@ class FakeCommandClass:
     description = "do somethin' nifty"
 
     def __init__(self, parser):
+        super().__init__(parser)
         parser.add_argument('arg1')
         parser.add_argument('--other', action='store_true')
         parser.add_argument('--do-fail', action='store_true')
 
     def main(self, args):
+        super().main(args)
         print(f"hello, world! argument is: {args.arg1}")
         print(f"other is {args.other}")
 
@@ -300,6 +302,7 @@ class Test_EntryPointBasics_Command:
     def setup_method(self):
         _ = plugins.get_cli_script_plugins()
         self.saved_plugins = plugins._plugin_cli
+        plugins._plugin_cli_once = False
         plugins._plugin_cli = [FakeEntryPoint('test_command',
                                               FakeCommandClass)]
 
@@ -342,7 +345,7 @@ class Test_EntryPointBasics_Command:
         print(err)
 
         assert 'nifty: error: the following arguments are required: arg1' in err
-        assert 'usage:  nifty [-h] [--other] [--do-fail] arg1' in err
+        assert 'usage:  nifty [-h] [-q] [-d] [--other] [--do-fail] arg1' in err
 
     def test_cmd_4(self, runtmp):
         # test basic argument parsing etc
@@ -372,7 +375,7 @@ class Test_EntryPointBasics_Command:
         assert 'hello, world! argument is: some arg' in out
 
 
-class FakeCommandClass_Second:
+class FakeCommandClass_Second(plugins.CommandLinePlugin):
     """
     A fake CLI class.
     """
@@ -380,11 +383,13 @@ class FakeCommandClass_Second:
     description = "do somethin' else nifty"
 
     def __init__(self, parser):
+        super().__init__(parser)
         parser.add_argument('arg1')
         parser.add_argument('--other', action='store_true')
         parser.add_argument('--do-fail', action='store_true')
 
     def main(self, args):
+        super().main(args)
         print(f"hello, world! argument is: {args.arg1}")
         print(f"other is {args.other}")
 

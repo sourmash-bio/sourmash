@@ -108,12 +108,15 @@ def get_parser():
 
     clidir = os.path.dirname(__file__)
     basic_ops = utils.command_list(clidir)
+
+    # provide a list of the basic operations - not expert, not submodules.
     user_ops = [op for op in basic_ops if op not in expert and op not in module_descs]
     usage = '    Basic operations\n'
     for op in user_ops:
         docstring = getattr(sys.modules[__name__], op).__doc__
         helpstring = 'sourmash {op:s} --help'.format(op=op)
         usage += '        {hs:25s} {ds:s}\n'.format(hs=helpstring, ds=docstring)
+    # next, all the subcommand ones - dive into subdirectories.
     cmd_group_dirs = next(os.walk(clidir))[1]
     cmd_group_dirs = filter(utils.opfilter, cmd_group_dirs)
     cmd_group_dirs = sorted(cmd_group_dirs)

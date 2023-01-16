@@ -24,22 +24,34 @@ a_reader = "module_name:load_sketches"
 
 [project.entry-points."sourmash.save_to"]
 a_writer = "module_name:SaveSignatures_WriteFile"
+
+[project.entry-points."sourmash.cli_script"]
+new_cli = "module_name:Command_NewCommand"
 ```
 
 Here, `module_name` should be the name of the module to import.
-`load_sketches` should be a function that takes a location along with
+
+* `load_sketches` should be a function that takes a location along with
 arbitrary keyword arguments and returns an `Index` object
 (e.g. `LinearIndex` for a collection of in-memory
-signatures). `SaveSignatures_WriteFile` should be a class that
+signatures).
+* `SaveSignatures_WriteFile` should be a class that
 subclasses `BaseSave_SignaturesToLocation` and implements its own
 mechanisms of saving signatures. See the `sourmash.save_load` module
 for saving and loading code already used in sourmash.
+* `Command_NewCommand` should be a class that subclasses
+  `plugins.CommandLinePlugin` and provides an `__init__` and
+  `main` method.
 
-Note that if the function or class has a `priority` attribute, this will
-be used to determine the order in which the plugins are called.
+Note that if the reader function or writer class has a `priority`
+attribute, this will be used to determine the order in which the
+plugins are called.
 
-The `name` attribute of the plugin (`a_reader` and `a_writer` in
+The `name` attribute of the plugin (`a_reader`, `a_writer`, and `new_cli` in
 `pyproject.toml`, above) is only used in debugging.
+
+You can provide zero or more plugins, and you can define just a reader, or
+just a writer, or just a CLI plugin.
 
 ## Templates and examples
 
@@ -53,11 +65,15 @@ Some (early stage) plugins are also available as examples:
 
 ## Debugging plugins
 
+`sourmash info -v` will list all detected plugins.
+
 `sourmash sig cat <input sig> -o <output sig>` is a simple way to
 invoke a `save_to` plugin. Use `-d` to turn on debugging output.
 
 `sourmash sig describe <input location>` is a simple way to invoke
 a `load_from` plugin. Use `-d` to turn on debugging output.
+
+`sourmash scripts` will list available CLI plugins.
 
 ## Semantic versioning and listing sourmash as a dependency
 
