@@ -1122,6 +1122,46 @@ def test_RankLineageInfo_init_lineage_str():
     assert taxinf.zip_lineage()== ['a', 'b', 'c', '', '', '', '', '']
 
 
+<<<<<<< HEAD
+=======
+def test_LINSLineageInfo_init_n_pos():
+    n_pos = 5
+    taxinf = LINSLineageInfo(n_lin_positions=n_pos)
+    print(taxinf.lineage)
+    print(taxinf.lineage_str)
+    assert taxinf.n_lin_positions == 5
+    assert taxinf.zip_lineage()== ['', '', '', '', '']
+
+
+def test_LINSLineageInfo_init_n_pos_and_lineage_str():
+    x = "0;0;1"
+    n_pos = 5
+    taxinf = LINSLineageInfo(lineage_str=x, n_lin_positions=n_pos)
+    print(taxinf.lineage)
+    print(taxinf.lineage_str)
+    assert taxinf.n_lin_positions == 5
+    assert taxinf.zip_lineage()== ['0', '0', '1', '', '']
+
+
+def test_LINSLineageInfo_init_n_pos_and_lineage_str_fail():
+    x = "0;0;1"
+    n_pos = 2
+    with pytest.raises(ValueError) as exc:
+        LINSLineageInfo(lineage_str=x, n_lin_positions=n_pos)
+    print(str(exc))
+    assert "Provided 'n_lin_positions' has fewer positions than provided 'lineage_str'." in str(exc)
+
+
+def test_LINSLineageInfo_init_lineage_str_only():
+    x = "0,0,1"
+    taxinf = LINSLineageInfo(lineage_str=x)
+    print(taxinf.lineage)
+    print(taxinf.lineage_str)
+    assert taxinf.n_lin_positions == 3
+    assert taxinf.zip_lineage()== ['0', '0', '1']
+
+
+>>>>>>> 41c44d44 (err if n_positions insufficient for provided lineage_str)
 def test_RankLineageInfo_init_lineage_str_with_ranks_as_list():
     x = "a;b;c"
     taxranks = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species']

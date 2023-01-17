@@ -310,7 +310,7 @@ class RankLineageInfo(BaseLineageInfo):
         elif self.ranks:
             self._init_empty()
 
-    def _init_from_lineage_dict(self):
+def _init_from_lineage_dict(self):
         """
         Initialize from lineage dict, e.g. from lineages csv.
         Use NCBI taxids if available as '|'-separated 'taxpath' column.
@@ -351,6 +351,42 @@ class RankLineageInfo(BaseLineageInfo):
                  name = None
             new_lineage[rank_idx] =  LineagePair(rank=rank, name=name, taxid=taxid)
 
+@dataclass(frozen=True, order=True)
+class LINSLineageInfo(BaseLineageInfo):
+    """
+    This LINSLineageInfo class usees the BaseLineageInfo methods for hierarchical LINS taxonomic 'ranks'.
+
+    Inputs (at least one required):
+        n_lin_positions: the number of lineage positions
+        lineage_str: `;`- or `,`-separated LINS string
+
+    If both `n_lin_positions` and `lineage_str` are provided, we will initialize a `LINSLineageInfo`
+    with the provided n_lin_positions, and fill positions with `lineage_str` values. If the number of
+    positions is less than provided lineages, initialization will fail. Otherwise, we will insert blanks
+    beyond provided data in `lineage_str`.
+
+    LINSLineageInfo must be initialized with lineage or n_lin_positions
+    defau and no lineage names.
+
+    Input lineage information is only used for initialization of the final `lineage`
+    and will not be used or compared in any other class methods.
+    """
+    ranks: tuple = field(default=None, init=False, compare=False)# we will set this within class instead
+    n_lin_positions: int = None # init with this to make empty LINSLineageInfo with correct n_lin_positions
+    
+    def _init_from_lineage_str(self):
+        """
+        Turn a ; or ,-separated set of lineages into a list of LineagePair objs.
+        """
+        new_lineage = self.lineage_str.split(';')
+        if len(new_lineage) == 1:
+            new_lineage = self.lineage_str.split(',')
+        if self.n_lin_positions is not None:
+            self._init_ranks_from_n_lin_positions()
+        else:
+            n_lin_positions = len(new_lineage)
+            object.__setattr__(self, "n_lin_positions", n_lin_positions)
+            self._init_ranks_from_n_lin_positions()
         # build list of filled ranks
         filled_ranks = [a.rank for a in new_lineage if a.name]
         # set lineage and filled_ranks
