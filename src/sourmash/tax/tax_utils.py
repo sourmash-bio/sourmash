@@ -350,13 +350,14 @@ class LINSLineageInfo(BaseLineageInfo):
     """
     This LINSLineageInfo class usees the BaseLineageInfo methods for hierarchical LINS taxonomic 'ranks'.
 
-    Inputs:
-        required:
-            ranks: tuple or list of hierarchical ranks
-        optional:
-            lineage: tuple or list of LineagePair
-            lineage_str: `;`- or `,`-separated string of names
-            lineage_dict: dictionary of {rank: name}
+    Inputs (at least one required):
+        n_lin_positions: the number of lineage positions
+        lineage_str: `;`- or `,`-separated LINS string
+
+    If both `n_lin_positions` and `lineage_str` are provided, we will initialize a `LINSLineageInfo`
+    with the provided n_lin_positions, and fill positions with `lineage_str` values. If the number of
+    positions is less than provided lineages, initialization will fail. Otherwise, we will insert blanks
+    beyond provided data in `lineage_str`.
 
     LINSLineageInfo must be initialized with lineage or n_lin_positions
     defau and no lineage names.
@@ -400,6 +401,8 @@ class LINSLineageInfo(BaseLineageInfo):
         if len(new_lineage) == 1:
             new_lineage = self.lineage_str.split(',')
         if self.n_lin_positions is not None:
+            if self.n_lin_positions < len(new_lineage):
+                raise(ValueError("Provided 'n_lin_positions' has fewer positions than provided 'lineage_str'."))
             self._init_ranks_from_n_lin_positions()
         else:
             n_lin_positions = len(new_lineage)

@@ -1191,6 +1191,15 @@ def test_LINSLineageInfo_init_n_pos_and_lineage_str():
     assert taxinf.zip_lineage()== ['0', '0', '1', '', '']
 
 
+def test_LINSLineageInfo_init_n_pos_and_lineage_str_fail():
+    x = "0;0;1"
+    n_pos = 2
+    with pytest.raises(ValueError) as exc:
+        LINSLineageInfo(lineage_str=x, n_lin_positions=n_pos)
+    print(str(exc))
+    assert "Provided 'n_lin_positions' has fewer positions than provided 'lineage_str'." in str(exc)
+
+
 def test_LINSLineageInfo_init_lineage_str_only():
     x = "0,0,1"
     taxinf = LINSLineageInfo(lineage_str=x)
