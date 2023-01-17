@@ -362,17 +362,42 @@ class LINSLineageInfo(BaseLineageInfo):
 
     If both `n_lin_positions` and `lineage_str` are provided, we will initialize a `LINSLineageInfo`
     with the provided n_lin_positions, and fill positions with `lineage_str` values. If the number of
-    positions is less than provided lineages, initialization will fail. Otherwise, blank entries will be
-    inserted beyond provided data in `lineage_str`.
+    positions is less than provided lineages, initialization will fail. Otherwise, we will insert blanks
+    beyond provided data in `lineage_str`.
 
-    LINSLineageInfo must be initialized with lineage_str or n_lin_positions.
+    LINSLineageInfo must be initialized with lineage or n_lin_positions.
 
     Input lineage information is only used for initialization of the final `lineage`
     and will not be used or compared in any other class methods.
     """
     ranks: tuple = field(default=None, init=False, compare=False)# we will set this within class instead
     n_lin_positions: int = None # init with this to make empty LINSLineageInfo with correct n_lin_positions
-    
+
+    def __post_init__(self):
+        "Initialize according to passed values"
+        # ranks must be tuple for hashability
+        if self.lineage_str is not None:
+            self._init_from_lineage_str()
+        elif self.n_lin_positions is not None:
+            self._init_empty()
+        else:
+            raise ValueError("Please initialize 'LINSLineageInfo' with 'lineage_str' or 'n_lin_positions'.")
+
+    def _init_ranks_from_n_lin_positions(self):
+        new_ranks = [x for x in range(0,self.n_lin_positions)] # or str(x) -- does rank need to be str?
+        object.__setattr__(self, "ranks", new_ranks)
+
+    def _init_empty(self):
+        "initialize empty genome lineage"
+        # first, set ranks from n_positions
+        self._init_ranks_from_n_lin_positions()
+        new_lineage=[]
+        for rank in self.ranks:
+            new_lineage.append(LineagePair(rank=rank))
+        # set lineage and filled_ranks (because frozen, need to do it this way)
+        object.__setattr__(self, "lineage", tuple(new_lineage))
+        object.__setattr__(self, "filled_ranks", ())
+
     def _init_from_lineage_str(self):
         """
         Turn a ; or ,-separated set of lineages into a list of LineagePair objs.
@@ -381,6 +406,8 @@ class LINSLineageInfo(BaseLineageInfo):
         if len(new_lineage) == 1:
             new_lineage = self.lineage_str.split(',')
         if self.n_lin_positions is not None:
+            if self.n_lin_positions < len(new_lineage):
+                raise(ValueError("Provided 'n_lin_positions' has fewer positions than provided 'lineage_str'."))
             self._init_ranks_from_n_lin_positions()
         else:
             n_lin_positions = len(new_lineage)

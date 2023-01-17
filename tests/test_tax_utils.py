@@ -1123,7 +1123,17 @@ def test_RankLineageInfo_init_lineage_str():
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+def test_LINSLineageInfo_init_fail():
+    with pytest.raises(ValueError) as exc:
+        LINSLineageInfo()
+    print(str(exc))
+    assert "Please initialize 'LINSLineageInfo' with 'lineage_str' or 'n_lin_positions'." in str(exc)
+
+
+>>>>>>> b2b1a688 (test init fail)
 def test_LINSLineageInfo_init_n_pos():
     n_pos = 5
     taxinf = LINSLineageInfo(n_lin_positions=n_pos)
