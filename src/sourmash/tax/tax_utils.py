@@ -60,7 +60,7 @@ class BaseLineageInfo:
     and will not be used or compared in any other class methods.
     """
     # need to set compare=False for any mutable type to keep this class hashable
-    ranks: tuple() # require ranks
+    ranks: tuple # require ranks
     lineage: tuple = None # tuple of LineagePairs
     lineage_str: str = field(default=None, compare=False) # ';'- or ','-separated str of lineage names
     lineage_dict: dict = field(default=None, compare=False) # dict of rank: name
@@ -343,6 +343,73 @@ class RankLineageInfo(BaseLineageInfo):
             self._init_from_lineage_dict()
         elif self.ranks:
             self._init_empty()
+
+
+@dataclass(frozen=True, order=True)
+class LINSLineageInfo(BaseLineageInfo):
+    """
+    This LINSLineageInfo class usees the BaseLineageInfo methods for hierarchical LINS taxonomic 'ranks'.
+
+    Inputs:
+        required:
+            ranks: tuple or list of hierarchical ranks
+        optional:
+            lineage: tuple or list of LineagePair
+            lineage_str: `;`- or `,`-separated string of names
+            lineage_dict: dictionary of {rank: name}
+
+    LINSLineageInfo must be initialized with lineage or n_lin_positions
+    defau and no lineage names.
+
+    Input lineage information is only used for initialization of the final `lineage`
+    and will not be used or compared in any other class methods.
+    """
+    ranks: tuple = field(default=None, init=False, compare=False)# we will set this within class instead
+    n_lin_positions: int = None # init with this to make empty LINSLineageInfo with correct n_lin_positions
+
+    def __post_init__(self):
+        "Initialize according to passed values"
+        # ranks must be tuple for hashability
+        if self.lineage_str is not None:
+            self._init_from_lineage_str()
+        elif self.n_lin_positions is not None:
+            self._init_empty()
+        else:
+            raise ValueError("Please initialize 'LINSLineageInfo' with 'lineage_str' or 'n_lin_positions'.")
+
+    def _init_ranks_from_n_lin_positions(self):
+        new_ranks = [x for x in range(0,self.n_lin_positions)] # or str(x) -- does rank need to be str?
+        object.__setattr__(self, "ranks", new_ranks)
+
+    def _init_empty(self):
+        'initialize empty genome lineage'
+        # first, set ranks from n_positions
+        self._init_ranks_from_n_lin_positions()
+        new_lineage=[]
+        for rank in self.ranks:
+            new_lineage.append(LineagePair(rank=rank))
+        # set lineage and filled_ranks (because frozen, need to do it this way)
+        object.__setattr__(self, "lineage", tuple(new_lineage))
+        object.__setattr__(self, "filled_ranks", ())
+
+    def _init_from_lineage_str(self):
+        """
+        Turn a ; or ,-separated set of lineages into a list of LineagePair objs.
+        """
+        new_lineage = self.lineage_str.split(';')
+        if len(new_lineage) == 1:
+            new_lineage = self.lineage_str.split(',')
+        if self.n_lin_positions is not None:
+            self._init_ranks_from_n_lin_positions()
+        else:
+            n_lin_positions = len(new_lineage)
+            object.__setattr__(self, "n_lin_positions", n_lin_positions)
+            self._init_ranks_from_n_lin_positions()
+        # build list of filled ranks
+        new_lineage = [ LineagePair(rank=rank, name=n) for (rank, n) in zip_longest(self.ranks, new_lineage) ]
+        filled_ranks = [a.rank for a in new_lineage if a.name]
+        object.__setattr__(self, "lineage", tuple(new_lineage))
+        object.__setattr__(self, "filled_ranks", filled_ranks)
 
 
 def get_ident(ident, *,

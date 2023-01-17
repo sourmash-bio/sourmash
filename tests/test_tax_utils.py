@@ -15,6 +15,7 @@ from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_re
                                     SummarizedGatherResult, ClassificationResult,
                                     QueryInfo, GatherRow, TaxResult, QueryTaxResult,
                                     BaseLineageInfo, RankLineageInfo, LineagePair,
+                                    LINSLineageInfo,
                                     aggregate_by_lineage_at_rank, format_for_krona,
                                     write_krona, write_lineage_sample_frac,
                                     LineageDB, LineageDB_Sqlite, MultiLineageDB)
@@ -1169,6 +1170,34 @@ def test_RankLineageInfo_init_lineage_str():
     print(taxinf.lineage)
     print(taxinf.lineage_str)
     assert taxinf.zip_lineage()== ['a', 'b', 'c', '', '', '', '', '']
+
+
+def test_LINSLineageInfo_init_n_pos():
+    n_pos = 5
+    taxinf = LINSLineageInfo(n_lin_positions=n_pos)
+    print(taxinf.lineage)
+    print(taxinf.lineage_str)
+    assert taxinf.n_lin_positions == 5
+    assert taxinf.zip_lineage()== ['', '', '', '', '']
+
+
+def test_LINSLineageInfo_init_n_pos_and_lineage_str():
+    x = "0;0;1"
+    n_pos = 5
+    taxinf = LINSLineageInfo(lineage_str=x, n_lin_positions=n_pos)
+    print(taxinf.lineage)
+    print(taxinf.lineage_str)
+    assert taxinf.n_lin_positions == 5
+    assert taxinf.zip_lineage()== ['0', '0', '1', '', '']
+
+
+def test_LINSLineageInfo_init_lineage_str_only():
+    x = "0,0,1"
+    taxinf = LINSLineageInfo(lineage_str=x)
+    print(taxinf.lineage)
+    print(taxinf.lineage_str)
+    assert taxinf.n_lin_positions == 3
+    assert taxinf.zip_lineage()== ['0', '0', '1']
 
 
 def test_RankLineageInfo_init_lineage_str_with_ranks_as_list():
