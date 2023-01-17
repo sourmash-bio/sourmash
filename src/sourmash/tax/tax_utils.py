@@ -206,17 +206,17 @@ class BaseLineageInfo:
 
         return zipped
 
-    def display_lineage(self, truncate_empty=True, null_as_unclassified=False):
+    def display_lineage(self, truncate_empty=True, null_as_unclassified=False, sep = ';'):
         "Return lineage names as ';'-separated list"
-        lin = ";".join(self.zip_lineage(truncate_empty=truncate_empty))
+        lin = sep.join(self.zip_lineage(truncate_empty=truncate_empty))
         if null_as_unclassified and lin == "" or lin is None:
             return "unclassified"
         else:
             return lin
 
-    def display_taxid(self, truncate_empty=True):
+    def display_taxid(self, truncate_empty=True, sep = ";"):
         "Return lineage taxids as ';'-separated list"
-        return ";".join(self.zip_taxid(truncate_empty=truncate_empty))
+        return sep.join(self.zip_taxid(truncate_empty=truncate_empty))
 
     def check_rank_availability(self, rank):
         if rank in self.ranks: # rank is available
@@ -1461,6 +1461,22 @@ class SummarizedGatherResult:
             sD['rank_code'] = RANKCODE['unclassified']
             sD["num_bp_assigned"] = sD["num_bp_contained"]
         return sD
+    
+    def as_cami_bioboxes(self):
+        '''
+        Format taxonomy-summarized gather results
+        as CAMI profiling Bioboxes format.
+
+        Columns are: TAXID	RANK	TAXPATH	TAXPATHSN	PERCENTAGE 
+
+        '''
+        # if this is filled (should always be true here, right? So don't actually need to check this?)
+        taxid = self.lineage.lowest_lineage_taxid
+        taxpath = self.lineage.display_taxid(sep="|")
+        taxpathsn = self.lineage.display_lineage(sep="|")
+        percentage = f"{(self.f_weighted_at_rank * 100):.2f}" # fix at 2 decimal points
+        return [taxid, self.rank, taxpath, taxpathsn, percentage]
+
 
 @dataclass
 class ClassificationResult(SummarizedGatherResult):
@@ -1840,3 +1856,63 @@ class QueryTaxResult:
                         unclassified_recorded = True
                 kreport_results.append(kresD)
         return header, kreport_results
+
+    def make_cami_bioboxes(self):
+        """
+        info: https://github.com/CAMI-challenge/contest_information/blob/master/file_formats/CAMI_TP_specification.mkd
+
+        columns:
+        TAXID - specifies a unique alphanumeric ID for a node in a reference tree such as the NCBI taxonomy
+        RANK -  superkingdom --> strain
+        TAXPATH - the path from the root of the reference taxonomy to the respective taxon 
+        TAXPATHSN - scientific names of taxpath
+        PERCENTAGE (0-100) -  field specifies what percentage of the sample was assigned to the respective TAXID
+
+        example:
+        
+        #CAMI Submission for Taxonomic Profiling
+        @Version:0.9.1
+        @SampleID:SAMPLEID
+        @Ranks:superkingdom|phylum|class|order|family|genus|species|strain
+        
+        @@TAXID	RANK	TAXPATH	TAXPATHSN	PERCENTAGE
+        2	superkingdom	2	Bacteria	98.81211
+        2157	superkingdom	2157	Archaea	1.18789
+        1239	phylum	2|1239	Bacteria|Firmicutes	59.75801
+        1224	phylum	2|1224	Bacteria|Proteobacteria	18.94674
+        28890	phylum	2157|28890	Archaea|Euryarchaeotes	1.18789
+        91061	class	2|1239|91061	Bacteria|Firmicutes|Bacilli	59.75801
+        28211	class	2|1224|28211	Bacteria|Proteobacteria|Alphaproteobacteria	18.94674
+        183925	class	2157|28890|183925	Archaea|Euryarchaeotes|Methanobacteria	1.18789
+        1385	order	2|1239|91061|1385	Bacteria|Firmicutes|Bacilli|Bacillales	59.75801
+        356	order	2|1224|28211|356	Bacteria|Proteobacteria|Alphaproteobacteria|Rhizobacteria	10.52311
+        204455	order	2|1224|28211|204455	Bacteria|Proteobacteria|Alphaproteobacteria|Rhodobacterales	8.42263
+        2158	order	2157|28890|183925|2158	Archaea|Euryarchaeotes|Methanobacteria|Methanobacteriales	1.18789
+        """
+        # see https://github.com/luizirber/2020-cami/blob/master/scripts/gather_to_opal.py
+
+        # starting from https://github.com/sourmash-bio/sourmash/pull/1606/files
+        cami_results = []
+        # build CAMI header info 
+        header_title = "# Taxonomic Profiling Output"
+        version_info = "@Version:0.10.0"
+        program = "@__program__:sourmash"
+        sample_info = f"@SampleID:{self.query_info.query_name}"
+        # taxonomy_id = "@TaxonomyID:2021-10-01" # store this with LineageDB, maybe?
+        ranks = list(self.ranks)
+        # if 'strain' in ranks:
+        #     ranks.remove('strain')
+        rank_info = f"@Ranks:{'|'.join(ranks)}"
+        header_lines = [header_title, sample_info, version_info, rank_info, program]
+        
+        # now build results in CAMI format
+        # order results by rank (descending), then percentage
+        for rank in ranks:
+            rank_results = self.summarized_lineage_results[rank]
+            for res in rank_results:
+                cami_info = res.as_cami_bioboxes()
+                cami_results.append(cami_info)
+
+        return header_lines, cami_results
+
+        
