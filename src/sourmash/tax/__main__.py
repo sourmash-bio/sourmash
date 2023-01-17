@@ -13,7 +13,7 @@ from sourmash.logging import set_quiet, error, notify, print_results
 from sourmash.lca.lca_utils import display_lineage, zip_lineage
 
 from . import tax_utils
-from .tax_utils import ClassificationResult, MultiLineageDB
+from .tax_utils import ClassInf, MultiLineageDB
 
 usage='''
 sourmash taxonomy <command> [<args>] - manipulate/work with taxonomy information.
@@ -222,7 +222,7 @@ def genome(args):
                 notify(f"WARNING: classifying query {sg.query_name} at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
             else:
                 status="match"
-            classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename, sg.f_weighted_at_rank, sg.bp_match_at_rank, sg.query_ani_at_rank)
+            classif = ClassInf(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename, sg.f_weighted_at_rank, sg.bp_match_at_rank, sg.query_ani_at_rank)
             classifications[args.rank].append(classif)
             matched_queries.add(sg.query_name)
             if "krona" in args.output_format:
@@ -251,7 +251,7 @@ def genome(args):
                 elif sg.fraction >= args.containment_threshold:
                     status = "match"
                 if status == "match":
-                    classif = ClassificationResult(query_name=sg.query_name, status=status, rank=sg.rank,
+                    classif = ClassInf(query_name=sg.query_name, status=status, rank=sg.rank,
                                                     fraction=sg.fraction, lineage=sg.lineage,
                                                     query_md5=sg.query_md5, query_filename=sg.query_filename,
                                                     f_weighted_at_rank=sg.f_weighted_at_rank, bp_match_at_rank=sg.bp_match_at_rank,
@@ -261,7 +261,7 @@ def genome(args):
                     continue
                 elif rank == "superkingdom" and status == "nomatch":
                     status="below_threshold"
-                    classif = ClassificationResult(query_name=sg.query_name, status=status,
+                    classif = ClassInf(query_name=sg.query_name, status=status,
                                                    rank="", fraction=0, lineage="",
                                                    query_md5=sg.query_md5, query_filename=sg.query_filename,
                                                    f_weighted_at_rank=sg.f_weighted_at_rank, bp_match_at_rank=sg.bp_match_at_rank, 
