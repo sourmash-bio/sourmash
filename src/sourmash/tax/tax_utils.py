@@ -382,7 +382,7 @@ class LINSLineageInfo(BaseLineageInfo):
         object.__setattr__(self, "ranks", new_ranks)
 
     def _init_empty(self):
-        'initialize empty genome lineage'
+        "initialize empty genome lineage"
         # first, set ranks from n_positions
         self._init_ranks_from_n_lin_positions()
         new_lineage=[]
