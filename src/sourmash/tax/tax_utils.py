@@ -356,11 +356,10 @@ class LINSLineageInfo(BaseLineageInfo):
 
     If both `n_lin_positions` and `lineage_str` are provided, we will initialize a `LINSLineageInfo`
     with the provided n_lin_positions, and fill positions with `lineage_str` values. If the number of
-    positions is less than provided lineages, initialization will fail. Otherwise, we will insert blanks
-    beyond provided data in `lineage_str`.
+    positions is less than provided lineages, initialization will fail. Otherwise, blank entries will be
+    inserted beyond provided data in `lineage_str`.
 
-    LINSLineageInfo must be initialized with lineage or n_lin_positions
-    defau and no lineage names.
+    LINSLineageInfo must be initialized with lineage_str or n_lin_positions.
 
     Input lineage information is only used for initialization of the final `lineage`
     and will not be used or compared in any other class methods.
