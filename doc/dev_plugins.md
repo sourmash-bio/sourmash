@@ -65,7 +65,7 @@ Some (early stage) plugins are also available as examples:
 
 ## Debugging plugins
 
-`sourmash info -v` will list all detected plugins.
+`sourmash info -v` will list all detected plugins of any known kind.
 
 `sourmash sig cat <input sig> -o <output sig>` is a simple way to
 invoke a `save_to` plugin. Use `-d` to turn on debugging output.
@@ -73,11 +73,11 @@ invoke a `save_to` plugin. Use `-d` to turn on debugging output.
 `sourmash sig describe <input location>` is a simple way to invoke
 a `load_from` plugin. Use `-d` to turn on debugging output.
 
-`sourmash scripts` will list available CLI plugins.
+`sourmash scripts` will list available command-line plugins.
 
 ## Semantic versioning and listing sourmash as a dependency
 
-Plugins should probably list sourmash as a dependency for installation.
+Plugins should generally list sourmash as a dependency for installation.
 
 Once plugins are officially supported by sourmash, the plugin API will
 be under [semantic versioning constraints](https://semver.org/). That
