@@ -75,7 +75,7 @@ authors:
    #affiliation: @@@
  - name: Ivan Ogasawara
    orcid: 0000-0001-5049-4289
-   affiliation: @@@
+  #  affiliation: @@@
  - name: Taylor Reiter
    orcid: 0000-0002-7388-421X
    affiliation: University of California, Davis
