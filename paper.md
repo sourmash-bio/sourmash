@@ -13,38 +13,65 @@ authors:
  - name: N. Tessa Pierce-Ward
    orcid: 0000-0002-2942-5331
    affiliation: University of California, Davis
- - name: Tim Head
-   orcid: 0000-0003-0931-3698
-   affiliation: @@@
+ - name: Mohamed Abuelanin
+   orcid: 0000-0002-3419-4785
+   affiliation: University of California, Davis
  - name: Harriet Alexander
    orcid: 0000-0003-1308-8008
    affiliation: Woods Hole Oceanographic Institute
+ - name: Abhishek Anant
+   orcid:  0000-0002-5751-2010
+   #affiliation: @@@
+ - name: Keya Barve
+   orcid:0000-0003-3241-2117
+   affiliation: University of California, Davis
+ - name: Colton Baumler
+   orcid: 0000-0002-5926-7792
+   affiliation: University of California, Davis
  - name: Olga Botvinnik
    orcid: 0000-0003-4412-7970
-   affiliation: Chan-Zuckerberg Biohub
+   affiliation: Bridge Bio
  - name: Phillip Brooks
    orcid: 0000-0003-3987-244X
-   affiliation: 10x Genomics
+   affiliation: Ancestry
+ - name: Peter Cock
+   orcid: 0000-0001-9513-9993
+   #affiliation: @@@
+ - name: Daniel Dsouza
+   orcid: 0000-0001-7843-8596
+   #affiliation: @@@
  - name: Laurent Gautier
    orcid: 0000-0003-0638-3391
-   affiliation: @@@
- - name: Lisa Johnson
-   orcid: 0000-0002-3600-7218
-   affiliation: 10x Genomics
- - name: Fabian Klötzl
-   orcid: @@@
-   affiliation: @@@
- - name: David Koslicki
-   orcid: 0000-0002-0640-954X
-   affiliation: Pennsylvania State University
+   #affiliation: @@@
+ - name: Tim Head
+   orcid: 0000-0003-0931-3698
+   #affiliation: @@@
  - name: Mahmudur Rahman Hera
    orcid: 0000-0002-5992-9012
    affiliation: Pennsylvania State University
+ - name: Hannah Eve Houts
+   orcid: 0000-0002-7954-4793
+   affiliation: University of California, Davis
+ - name: Lisa K. Johnson
+   orcid: 0000-0002-3600-7218
+   affiliation: 10x Genomics
+ - name: Fabian Klötzl
+   orcid: 0000-0002-6930-0592
+   #affiliation: @@@
+ - name: David Koslicki
+   orcid: 0000-0002-0640-954X
+   affiliation: Pennsylvania State University
  - name: Katrin Leinweber
    orcid: 0000-0001-5135-5758
-   affiliation: @@@
+   affiliation: Leibniz Universität Hannover
+ - name: Marisa Lim
+   orcid: 0000-0003-2097-8818
+   affiliation: 10x Genomics
+ - name: Ricky Lim
+   orcid: 0000-0003-1313-7076
+   #affiliation: @@@
  - name: Ivan Ogasawara
-   orcid: @@@
+   orcid: 0000-0001-5049-4289
    affiliation: @@@
  - name: Taylor Reiter
    orcid: 0000-0002-7388-421X
@@ -52,25 +79,37 @@ authors:
  - name: Camille Scott
    orcid: 0000-0001-8822-8779
    affiliation: University of California, Davis
+ - name: Andreas Sjödin
+   orcid: 0000-0001-5350-4219
+   #affiliation: @@@
  - name: Connor Skennerton
    orcid: 0000-0003-1320-4873
-   affiliation: @@@
+   #affiliation: @@@
+ - name: Jason Stajich
+   orcid: 0000-0002-7591-0020
+   #affiliation: @@@
  - name: Daniel Standage
    orcid: 0000-0003-0342-8531.
-   affiliation: @@@
- - name: Joshua Swamidass
+   #affiliation: @@@
+ - name: S. Joshua Swamidass
    orcid: 0000-0003-2191-0778
-   affiliation: @@@
+   #affiliation: @@@
  - name: Connor Tiffany
-   orcid: @@@
-   affiliation: @@@
+   orcid: 0000-0001-8188-7720
+   #affiliation: @@@
+ - name: Pranathi Vemuri
+   orcid: 0000-0002-5748-9594
+   affiliation: Chan-Zuckerberg Biohub 
  - name: Erik Young
-   orcid: @@@
+   orcid: 0000-0002-9195-9801
    affiliation: University of California, Davis
+ - name: Nick H
+   orcid: 0000-0002-1685-302X
+   #affiliation: @@@
  - name: C. Titus Brown
    orcid: 0000-0001-6001-2677
    affiliation: University of California, Davis
-date: 3 Mar 2021
+date: 23 Jan 2023
 bibliography: paper.bib
 ---
 
