@@ -43,6 +43,9 @@ authors:
  - name: Laurent Gautier
    orcid: 0000-0003-0638-3391
    #affiliation: @@@
+ - name: Nick H
+   orcid: 0000-0002-1685-302X
+   #affiliation: @@@
  - name: Tim Head
    orcid: 0000-0003-0931-3698
    #affiliation: @@@
@@ -103,9 +106,6 @@ authors:
  - name: Erik Young
    orcid: 0000-0002-9195-9801
    affiliation: University of California, Davis
- - name: Nick H
-   orcid: 0000-0002-1685-302X
-   #affiliation: @@@
  - name: C. Titus Brown
    orcid: 0000-0001-6001-2677
    affiliation: University of California, Davis
