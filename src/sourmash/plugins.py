@@ -105,8 +105,8 @@ def get_cli_script_plugins():
         mod = plugin.module
         try:
             script_cls = plugin.load()
-        except ModuleNotFoundError: # @CTB
-            continue
+        except ModuleNotFoundError: # @CTB this needs to be dealt with better.
+            continue # raise? report? allow `info -v` to report errors?
 
         command = getattr(script_cls, 'command', None)
         if command is None:
