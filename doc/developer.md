@@ -1,3 +1,7 @@
+```{contents} Contents
+:depth: 3
+```
+
 # Developer information
 
 ## Development environment
@@ -280,7 +284,7 @@ Some installation issues can be solved by simply removing the intermediate build
 make clean
 ```
 
-## Contents
+## Additional developer-focused documents
 
 ```{toctree}
 :maxdepth: 2
@@ -289,4 +293,6 @@ release
 requirements
 storage
 release-notes/releases
+dev_plugins
 ```
+
