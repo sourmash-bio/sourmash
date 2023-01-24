@@ -92,7 +92,7 @@ authors:
    orcid: 0000-0002-7591-0020
    #affiliation: @@@
  - name: Daniel Standage
-   orcid: 0000-0003-0342-8531.
+   orcid: 0000-0003-0342-8531
    #affiliation: @@@
  - name: S. Joshua Swamidass
    orcid: 0000-0003-2191-0778
