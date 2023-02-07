@@ -786,12 +786,11 @@ def test_write_lineage_sample_frac(runtmp):
 def test_write_lineage_sample_frac_format_lineage(runtmp):
     outfrac = runtmp.output('outfrac.csv')
     sample_names = ['sample1', 'sample2']
-    # sk_lineage = lca_utils.make_lineage('a')
     sk_lineage='a'
     print(sk_lineage)
     sk_linD = {sk_lineage: {'sample1': '0.500' ,'sample2': '0.700'}}
     with open(outfrac, 'w') as out_fp:
-        write_lineage_sample_frac(sample_names, sk_linD, out_fp, format_lineage=True)
+        write_lineage_sample_frac(sample_names, sk_linD, out_fp)
 
     frac_lines = [x.strip().split('\t') for x in open(outfrac, 'r')]
     print("csv_lines: ", frac_lines)
@@ -803,7 +802,7 @@ def test_write_lineage_sample_frac_format_lineage(runtmp):
     print(phy2_lineage)
     phy_linD = {phy_lineage: {'sample1': '0.500'}, phy2_lineage: {'sample2': '0.700'}}
     with open(outfrac, 'w') as out_fp:
-        write_lineage_sample_frac(sample_names, phy_linD, out_fp, format_lineage=True)
+        write_lineage_sample_frac(sample_names, phy_linD, out_fp)
 
     frac_lines = [x.strip().split('\t') for x in open(outfrac, 'r')]
     print("csv_lines: ", frac_lines)

@@ -1420,7 +1420,6 @@ def test_genome_gather_from_file_below_threshold(runtmp):
 
     assert c.last_result.status == 0
     assert "query_name,status,rank,fraction,lineage" in c.last_result.out
-    # assert "test1,below_threshold,,0.000," in c.last_result.out
     assert "test1,below_threshold,superkingdom,0.204," in c.last_result.out
 
 
@@ -1685,7 +1684,6 @@ def test_genome_missing_taxonomy_fail_threshold(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    # assert "The following are missing from the taxonomy information: GCF_001881345" in str(exc.value)
     assert "ident 'GCF_001881345' is not in the taxonomy database." in str(exc.value)
     assert "Failing, as requested via --fail-on-missing-taxonomy" in str(exc.value)
     assert c.last_result.status == -1
@@ -1712,7 +1710,6 @@ def test_genome_missing_taxonomy_fail_rank(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    # assert "The following are missing from the taxonomy information: GCF_001881345" in str(exc.value)
     assert "ident 'GCF_001881345' is not in the taxonomy database." in str(exc.value)
     assert "Failing, as requested via --fail-on-missing-taxonomy" in str(exc.value)
     assert c.last_result.status == -1
@@ -1932,7 +1929,6 @@ def test_genome_over100percent_error(runtmp):
 
     assert runtmp.last_result.status == -1
     assert "fraction is > 100% of the query! This should not be possible." in runtmp.last_result.err
-    # assert "ERROR: The tax summary of query 'test1' is 1.1, which is > 100% of the query!!" in runtmp.last_result.err
 
 
 def test_genome_ani_threshold_input_errors(runtmp):
@@ -2005,7 +2001,6 @@ def test_genome_ani_threshold(runtmp):
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
-    # assert "WARNING: classifying query test1 at desired rank species does not meet query ANI/AAI threshold 1.0" in c.last_result.err
     assert "test1,below_threshold,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000,0.92" in c.last_result.out
 
 
@@ -2050,7 +2045,6 @@ def test_genome_ani_lemonade_classify(runtmp):
                    '--ani', '0.8', '-F', 'human')
 
     output = c.last_result.out
-    # assert 'MAG3_1            5.3%     91.0%  d__Bacteria;p__Bacteroidota;c__Chlorobia;o__Chlorobiales;f__Chlorobiaceae;g__Prosthecochloris;s__Prosthecochloris vibrioformis' in output
     assert 'MAG3_1            match     5.3%     91.0%  d__Bacteria;p__Bacteroidota;c__Chlorobia;o__Chlorobiales;f__Chlorobiaceae;g__Prosthecochloris;s__Prosthecochloris vibrioformis' in output
 
     # aaand classify to lineage_csv

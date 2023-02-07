@@ -131,7 +131,7 @@ def metagenome(args):
                                                                       rank=args.rank, by_query=True)
 
         with FileOutputCSV(lineage_outfile) as out_fp:
-            tax_utils.write_lineage_sample_frac(query_names, lineageD, out_fp, format_lineage=True, sep='\t')
+            tax_utils.write_lineage_sample_frac(query_names, lineageD, out_fp, sep='\t')
 
     # write summarized --> krona output tsv
     if "krona" in args.output_format:
@@ -148,7 +148,7 @@ def metagenome(args):
             tax_utils.write_human_summary(query_gather_results, out_fp, args.rank or "species")
 
     # write summarized output csv
-    single_query_results = query_gather_results[0]#.summarized_lineage_results
+    single_query_results = query_gather_results[0]
     if "csv_summary" in args.output_format:
         summary_outfile, limit_float = make_outfile(args.output_base, "csv_summary", output_dir=args.output_dir)
         with FileOutputCSV(summary_outfile) as out_fp:

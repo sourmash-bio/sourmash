@@ -505,12 +505,7 @@ def report_missing_and_skipped_identities(gather_results):
 
     if ident_missed:
         notify(f'of {total_taxresults} gather results, lineage assignments for {total_n_missed} results were missed.')
-        #notify(f'of {total_taxresults} gather results, missed lineage assignments for {total_n_missed)} results.')
         notify(f'The following are missing from the taxonomy information: {", ".join(ident_missed)}')
-    # skipping not actually enabled? do we want to enable?
-    # if ident_skipped:
-    #     notify(f'The following idents were skipped during taxonomic assignment, as requested: {", ".join(ident_skipped)}')
-    #     notify(f'of {total_taxresults} gather results, lineage assignments for {total_n_skipped} results were skipped.')
 
 
 def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
@@ -533,11 +528,9 @@ def aggregate_by_lineage_at_rank(query_gather_results, rank, *, by_query=False):
         for res in queryResult.summarized_lineage_results[rank]:
             lineage = res.lineage.display_lineage(null_as_unclassified = True)
             if by_query:
-                    #lineage_summary[res.lineage][query_name] = res.fraction # FUTURE: USE WEIGHTED INSTEAD?
-                    lineage_summary[lineage][query_name] = res.fraction # FUTURE: USE WEIGHTED INSTEAD?
+                    lineage_summary[lineage][query_name] = res.fraction # v5?: res.f_weighted_at_rank
             else:
                 lineage_summary[lineage] += res.fraction
-                #lineage_summary[res.lineage] += res.fraction
 
     # if aggregating across queries divide fraction by the total number of queries
     if not by_query:
@@ -585,7 +578,6 @@ def format_for_krona(query_gather_results, rank, *, classification=False):
                 unclassified_fraction = fraction
                 continue
             else:
-                #lin_list = lin.display_lineage().split(';')
                 lin_list = lin.split(';')
                 krona_results.append((fraction, *lin_list))
 
@@ -658,7 +650,7 @@ def write_human_summary(query_gather_results, out_fp, display_rank, classificati
                 out_fp.write("{query_name:<15s}   {f_weighted_at_rank}     {query_ani_at_rank}  {lineage}\n".format(**rD))
 
 
-def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, format_lineage=False, sep='\t'):
+def write_lineage_sample_frac(sample_names, lineage_dict, out_fp, *, sep='\t'):
     '''
     takes in a lineage dictionary with sample counts (output of aggregate_by_lineage_at_rank)
     and produces a tab-separated file with fractions for each sample.
@@ -1313,7 +1305,6 @@ class TaxResult:
     Uses RankLineageInfo to store lineage information; this may need to be modified in the future.            
     """
     raw: GatherRow
-    # can we get rid of these / just choose default ident hacking/slashing for future?
     keep_full_identifiers: bool = False
     keep_identifier_versions: bool = False
 
@@ -1425,7 +1416,7 @@ class SummarizedGatherResult:
             sD['fraction'] = f'{self.fraction:.3f}'
             sD['f_weighted_at_rank'] = f'{self.f_weighted_at_rank:.3f}'
             if self.query_ani_at_rank:
-                sD['query_ani_at_rank'] = f'{self.query_ani_at_rank:.3f}'#f"{self.query_ani_at_rank*100:>3.1f}%"
+                sD['query_ani_at_rank'] = f'{self.query_ani_at_rank:.3f}'
         else:
             sD['fraction'] = str(self.fraction)
             sD['f_weighted_at_rank'] = str(self.f_weighted_at_rank)
@@ -1446,7 +1437,7 @@ class SummarizedGatherResult:
         sD = {}
         sD['num_bp_assigned'] = str(0)
         # total percent containment, weighted to include abundance info
-        sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'  #f'{proportion:.2f}'
+        sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
         sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_bp))
         if self.lineage != RankLineageInfo():
             this_rank = self.lineage.lowest_rank
@@ -1492,19 +1483,18 @@ class ClassificationResult(SummarizedGatherResult):
         if ani_threshold is not None:  # if provided, just use ani thresh, don't use containment threshold
             if self.query_ani_at_rank >= ani_threshold:
                 self.status = 'match'
-        # should we switch to using weighted here? I think yes, but this would be behavior change
+        # v5?: switch to using self.f_weighted_at_rank here
         elif containment_threshold is not None and self.fraction >= containment_threshold:
-        #elif containment_threshold is not None and self.f_weighted_at_rank >= containment_threshold:
             self.status = 'match'
 
     def build_krona_result(self, rank=None):
         krona_classified, krona_unclassified = None, None
         if rank is not None and rank == self.rank:
             lin_as_list = self.lineage.display_lineage().split(';')
-            krona_classification = (self.fraction, *lin_as_list) # FUTURE: f_weighted_at_rank?
+            krona_classification = (self.fraction, *lin_as_list) # v5?: f_weighted_at_rank
             krona_classified = (krona_classification)
             # handle unclassified - do we want/need this?
-            unclassified_fraction= 1.0-self.fraction #f_weighted_at_rank
+            unclassified_fraction= 1.0-self.fraction #v5?: f_weighted_at_rank
             len_unclassified_lin = len(lin_as_list)
             unclassifed_lin = ["unclassified"]*(len_unclassified_lin)
             krona_unclassified = (unclassified_fraction, *unclassifed_lin)
@@ -1761,7 +1751,7 @@ class QueryTaxResult:
             for rank in self.summarized_ranks[::-1]: #descending
                 unclassified=[]
                 rank_results = self.summarized_lineage_results[rank]
-                rank_results.sort(key=lambda res: -res.fraction) #f_weighted_at_rank) FUTURE: CHANGE TO SORTING BY WEIGHTED?
+                rank_results.sort(key=lambda res: -res.fraction) #v5?: f_weighted_at_rank)
                 for res in rank_results:
                     rD = res.as_summary_dict(query_info=self.query_info, limit_float=limit_float)
                     # save unclassified for the end
