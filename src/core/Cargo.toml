@@ -44,7 +44,7 @@ serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.91"
 primal-check = "0.3.1"
 thiserror = "1.0"
-typed-builder = "0.11.0"
+typed-builder = "0.12.0"
 twox-hash = "1.6.0"
 vec-collections = "0.3.4"
 piz = "0.4.0"  # piz 0.5.1 requires Rust 1.63+
@@ -79,7 +79,7 @@ harness = false
 ## Wasm section. Crates only used for WASM, as well as specific configurations
 
 [target.'cfg(all(target_arch = "wasm32", target_vendor="unknown"))'.dependencies.wasm-bindgen]
-version = "0.2.62"
+version = "0.2.84"
 features = ["serde-serialize"]
 
 [target.'cfg(all(target_arch = "wasm32", target_vendor="unknown"))'.dependencies.web-sys]
@@ -87,7 +87,7 @@ version = "0.3.58"
 features = ["console", "File"]
 
 [target.'cfg(all(target_arch = "wasm32", target_vendor="unknown"))'.dev-dependencies]
-wasm-bindgen-test = "0.3.31"
+wasm-bindgen-test = "0.3.34"
 
 ### These crates don't compile on wasm
 [target.'cfg(not(all(target_arch = "wasm32", target_vendor="unknown")))'.dependencies]
