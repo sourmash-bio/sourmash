@@ -360,9 +360,9 @@ def grep(args):
 
     # determine if lineage matches.
     def find_pattern(lineage, select_rank):
-        for (rank, name) in lineage:
-            if select_rank is None or rank == select_rank:
-                if pattern.search(name):
+        for lp in lineage:
+            if select_rank is None or lp.rank == select_rank:
+                if pattern.search(lp.name):
                     return True
         return False
 
