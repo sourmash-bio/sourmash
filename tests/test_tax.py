@@ -205,7 +205,7 @@ def test_metagenome_kreport_out(runtmp):
 
 
 def test_metagenome_kreport_ncbi_taxid_out(runtmp):
-    # test 'kreport' kraken output format
+    # test NCBI taxid output from kreport
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
     tax = utils.get_test_data('tax/test.ncbi-taxonomy.csv')
     csv_base = "out"
