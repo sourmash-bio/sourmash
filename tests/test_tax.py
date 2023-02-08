@@ -339,13 +339,14 @@ def test_metagenome_human_format_out(runtmp):
 
     assert len(outp) == 6
     outp = [ x.strip() for x in outp ]
+    print(outp)
 
-    assert outp[0] == 'sample name    proportion   lineage'
-    assert outp[1] == '-----------    ----------   -------'
-    assert outp[2] == 'test1             86.9%     unclassified'
-    assert outp[3] == 'test1              5.8%     d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia'
-    assert outp[4] == 'test1              5.7%     d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella'
-    assert outp[5] == 'test1              1.6%     d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola'
+    assert outp[0] == 'sample name    proportion   cANI   lineage'
+    assert outp[1] == '-----------    ----------   ----   -------'
+    assert outp[2] == 'test1             86.9%     -      unclassified'
+    assert outp[3] == 'test1              5.8%     92.5%  d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia'
+    assert outp[4] == 'test1              5.7%     92.5%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella'
+    assert outp[5] == 'test1              1.6%     89.1%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola'
 
 
 def test_metagenome_no_taxonomy_fail(runtmp):
@@ -494,8 +495,8 @@ def test_metagenome_missing_fail_taxonomy(runtmp):
 
     print(str(exc.value))
 
-    assert "The following are missing from the taxonomy information: GCF_003471795" in str(exc.value)
-    assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in str(exc.value)
+    assert "ident 'GCF_003471795' is not in the taxonomy database." in str(exc.value)
+    assert "Failing, as requested via --fail-on-missing-taxonomy" in str(exc.value)
     assert c.last_result.status == -1
 
 
@@ -512,7 +513,7 @@ def test_metagenome_multiple_taxonomy_files_missing(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert "of 6 gather results, missed 2 lineage assignments." in c.last_result.err
+    assert "of 6 gather results, lineage assignments for 2 results were missed" in c.last_result.err
     assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'multtest,superkingdom,0.204,d__Bacteria,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.131,1024000' in c.last_result.out
     assert 'multtest,superkingdom,0.796,unclassified,9687eeed,outputs/abundtrim/HSMA33MX.abundtrim.fq.gz,0.869,3990000' in c.last_result.out
@@ -633,7 +634,7 @@ def test_metagenome_bad_gather_header(runtmp):
     bad_g_csv = runtmp.output('g.csv')
 
     #creates bad gather result
-    bad_g = [x.replace("name", "nope") for x in open(g_csv, 'r')]
+    bad_g = [x.replace("query_bp", "nope") for x in open(g_csv, 'r')]
     with open(bad_g_csv, 'w') as fp:
         for line in bad_g:
             fp.write(line)
@@ -642,7 +643,8 @@ def test_metagenome_bad_gather_header(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'metagenome', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
-    assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
+    print(str(exc.value))
+    assert 'is missing columns needed for taxonomic summarization.' in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
@@ -719,7 +721,7 @@ def test_metagenome_perfect_match_warning(runtmp):
     print(runtmp.last_result.err)
 
     assert runtmp.last_result.status == 0
-    assert 'WARNING: 100% match! Is query "test1" identical to its database match, GCF_001881345' in runtmp.last_result.err
+    assert "WARNING: 100% match! Is query 'test1' identical to its database match, 'GCF_001881345'?" in runtmp.last_result.err
 
 
 def test_metagenome_over100percent_error(runtmp):
@@ -751,7 +753,7 @@ def test_metagenome_over100percent_error(runtmp):
     print(runtmp.last_result.err)
 
     assert runtmp.last_result.status == -1
-    assert "ERROR: The tax summary of query 'test1' is 1.1160749900279219, which is > 100% of the query!!" in runtmp.last_result.err
+    assert "fraction is > 100% of the query! This should not be possible." in runtmp.last_result.err
 
 
 def test_metagenome_gather_duplicate_query(runtmp):
@@ -798,6 +800,95 @@ def test_metagenome_gather_duplicate_query_force(runtmp):
 
     assert "Gather query test1 was found in more than one CSV." in c.last_result.err
     assert "Cannot force past duplicated gather query. Exiting." in c.last_result.err
+
+
+def test_metagenome_two_queries_human_output(runtmp):
+    # do not load same query from multiple files.
+    c = runtmp
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    g_res = utils.get_test_data('tax/test1.gather.csv')
+
+    # make a second query with same output
+    g_res2 = runtmp.output("test2.gather.csv")
+    with open(g_res2, 'w') as fp:
+        for line in open(g_res, 'r'):
+            line = line.replace('test1', 'test2')
+            fp.write(line)
+
+    c.run_sourmash('tax', 'metagenome',  '--gather-csv', g_res, g_res2,
+                   '--taxonomy-csv', taxonomy_csv, '-F', "human")
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "test1             86.9%     -      unclassified" in c.last_result.out
+    assert "test1              5.8%     92.5%  d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "test2             86.9%     -      unclassified" in c.last_result.out
+    assert "test2              5.8%     92.5%  d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli" in c.last_result.out
+    assert "test2              5.7%     92.5%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri"
+    assert "test2              1.6%     89.1%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus"
+
+
+def test_metagenome_two_queries_with_single_query_output_formats_fail(runtmp):
+    # remove single-query outputs when working with multiple queries 
+    c = runtmp
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    g_res = utils.get_test_data('tax/test1.gather.csv')
+
+    # make a second query with same output
+    g_res2 = runtmp.output("test2.gather.csv")
+    with open(g_res2, 'w') as fp:
+        for line in open(g_res, 'r'):
+            line = line.replace('test1', 'test2')
+            fp.write(line)
+
+    csv_summary_out = runtmp.output("tst.summarized.csv")
+    kreport_out = runtmp.output("tst.kreport.txt")
+    lineage_summary_out = runtmp.output("tst.lineage_summary.tsv")
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('tax', 'metagenome',  '--gather-csv', g_res, g_res2,
+                       '--taxonomy-csv', taxonomy_csv, '-F', "csv_summary", "kreport", "-F", "lineage_summary", "--rank", "phylum", "-o", "tst")
+    print(str(exc.value))
+
+    assert not os.path.exists(csv_summary_out)
+    assert not os.path.exists(kreport_out)
+    assert not os.path.exists(lineage_summary_out)
+    
+    assert c.last_result.status == -1
+    assert "loaded results for 2 queries from 2 gather CSVs" in c.last_result.err
+    assert "WARNING: found results for multiple gather queries. Can only output multi-query result formats: skipping csv_summary, kreport, lineage_summary" in c.last_result.err
+    assert "ERROR: No output formats remaining." in c.last_result.err
+
+
+def test_metagenome_two_queries_krona(runtmp):
+    # for now, we enable multi-query krona. Is this desired?
+    c = runtmp
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    g_res = utils.get_test_data('tax/test1.gather.csv')
+
+    # make a second query with same output
+    g_res2 = runtmp.output("test2.gather.csv")
+    with open(g_res2, 'w') as fp:
+        for line in open(g_res, 'r'):
+            line = line.replace('test1', 'test2')
+            fp.write(line)
+
+    c.run_sourmash('tax', 'metagenome',  '--gather-csv', g_res, g_res2,
+                   '--taxonomy-csv', taxonomy_csv, '-F', "krona", '--rank', 'superkingdom')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "WARNING: results from more than one query found. Krona summarization not recommended." in c.last_result.err
+    assert "Percentage assignment will be normalized by the number of queries to maintain range 0-100%" in c.last_result.err
+    assert "fraction	superkingdom" in c.last_result.out
+    assert "0.2042281611487834	d__Bacteria" in c.last_result.out
+    assert "0.7957718388512166	unclassified" in c.last_result.out
 
 
 def test_metagenome_gather_duplicate_filename(runtmp):
@@ -890,7 +981,7 @@ def test_genome_bad_gather_header(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'genome', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
-    assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
+    assert 'is missing columns needed for taxonomic summarization.' in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
@@ -930,7 +1021,7 @@ def test_genome_rank_stdout_0(runtmp):
 
     assert c.last_result.status == 0
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0'  in c.last_result.out
+    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000'  in c.last_result.out
 
 
 def test_genome_rank_stdout_0_db(runtmp):
@@ -949,7 +1040,7 @@ def test_genome_rank_stdout_0_db(runtmp):
 
     assert c.last_result.status == 0
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0'  in c.last_result.out
+    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000'  in c.last_result.out
 
     # too stringent of containment threshold:
     c.run_sourmash('tax', 'genome', '--gather-csv', g_csv, '--taxonomy-csv',
@@ -960,8 +1051,7 @@ def test_genome_rank_stdout_0_db(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert "WARNING: classifying query test1 at desired rank species does not meet containment threshold 1.0" in c.last_result.err
-    assert "test1,below_threshold,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0," in c.last_result.out
+    assert "test1,below_threshold,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000," in c.last_result.out
 
 
 def test_genome_rank_csv_0(runtmp):
@@ -988,7 +1078,7 @@ def test_genome_rank_csv_0(runtmp):
     assert c.last_result.status == 0
     cl_results = [x.rstrip() for x in open(csvout)]
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in cl_results[0]
-    assert 'test1,match,species,0.0885520542481053,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.05701254275940707,444000.0' in cl_results[1]
+    assert 'test1,match,species,0.0885520542481053,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.05701254275940707,444000' in cl_results[1]
 
 
 def test_genome_rank_krona(runtmp):
@@ -1023,7 +1113,7 @@ def test_genome_rank_human_output(runtmp):
     # test basic genome - output csv
     c = runtmp
 
-    g_csv = utils.get_test_data('tax/test1.gather_old.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     csv_base = "out"
     csvout = runtmp.output(csv_base + '.human.txt')
@@ -1043,13 +1133,14 @@ def test_genome_rank_human_output(runtmp):
 
     with open(csvout) as fp:
         outp = fp.readlines()
+        print(outp)
 
     assert len(outp) == 3
     outp = [ x.strip() for x in outp ]
 
-    assert outp[0] == 'sample name    proportion   lineage'
-    assert outp[1] == '-----------    ----------   -------'
-    assert outp[2] == 'test1              5.7%     d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri'
+    assert outp[0] == 'sample name    status    proportion   cANI   lineage'
+    assert outp[1] == '-----------    ------    ----------   ----   -------'
+    assert outp[2] == 'test1             match     5.7%     92.5%  d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri'
 
 
 def test_genome_rank_lineage_csv_output(runtmp):
@@ -1100,7 +1191,7 @@ def test_genome_gather_from_file_rank(runtmp):
 
     assert c.last_result.status == 0
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
+    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000' in c.last_result.out
 
 
 def test_genome_gather_two_files(runtmp):
@@ -1124,8 +1215,8 @@ def test_genome_gather_two_files(runtmp):
 
     assert c.last_result.status == 0
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
-    assert 'test2,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test2.sig,0.057,444000.0' in c.last_result.out
+    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000' in c.last_result.out
+    assert 'test2,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test2.sig,0.057,444000' in c.last_result.out
 
 
 def test_genome_gather_two_files_empty_force(runtmp):
@@ -1157,8 +1248,8 @@ def test_genome_gather_two_files_empty_force(runtmp):
 
     assert c.last_result.status == 0
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
-    assert 'test2,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test2.sig,0.057,444000.0' in c.last_result.out
+    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000' in c.last_result.out
+    assert 'test2,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test2.sig,0.057,444000' in c.last_result.out
 
 
 def test_genome_gather_duplicate_filename(runtmp):
@@ -1176,7 +1267,7 @@ def test_genome_gather_duplicate_filename(runtmp):
     assert c.last_result.status == 0
     assert f'ignoring duplicated reference to file: {g_res}'
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
+    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000' in c.last_result.out
 
 
 def test_genome_gather_from_file_duplicate_filename(runtmp):
@@ -1198,7 +1289,7 @@ def test_genome_gather_from_file_duplicate_filename(runtmp):
     assert c.last_result.status == 0
     assert f'ignoring duplicated reference to file: {g_res}'
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
+    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000' in c.last_result.out
 
 
 def test_genome_gather_from_file_duplicate_query(runtmp):
@@ -1282,8 +1373,8 @@ def test_genome_gather_cli_and_from_file(runtmp):
 
     assert c.last_result.status == 0
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
-    assert 'test2,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test2.sig,0.057,444000.0' in c.last_result.out
+    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000' in c.last_result.out
+    assert 'test2,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test2.sig,0.057,444000' in c.last_result.out
 
 
 def test_genome_gather_cli_and_from_file_duplicate_filename(runtmp):
@@ -1307,10 +1398,12 @@ def test_genome_gather_cli_and_from_file_duplicate_filename(runtmp):
     assert c.last_result.status == 0
     assert f'ignoring duplicated reference to file: {g_res}' in c.last_result.err
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
+    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000' in c.last_result.out
 
 
 def test_genome_gather_from_file_below_threshold(runtmp):
+    # What do we want the results from this to be? I think I initially thought we shouldn't report anything,
+    # but wouldn't a "below_threshold" + superkingdom result (here, 0.204) be helpful information?
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -1327,7 +1420,7 @@ def test_genome_gather_from_file_below_threshold(runtmp):
 
     assert c.last_result.status == 0
     assert "query_name,status,rank,fraction,lineage" in c.last_result.out
-    assert "test1,below_threshold,,0.000," in c.last_result.out
+    assert "test1,below_threshold,superkingdom,0.204," in c.last_result.out
 
 
 def test_genome_gather_two_queries(runtmp):
@@ -1435,7 +1528,7 @@ def test_genome_rank_duplicated_taxonomy_force(runtmp):
 
     assert c.last_result.status == 0
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
+    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000' in c.last_result.out
 
 
 def test_genome_missing_taxonomy_ignore_threshold(runtmp):
@@ -1458,7 +1551,7 @@ def test_genome_missing_taxonomy_ignore_threshold(runtmp):
     assert c.last_result.status == 0
     assert "The following are missing from the taxonomy information: GCF_001881345" in c.last_result.err
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
+    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000' in c.last_result.out
 
 
 def test_genome_missing_taxonomy_recover_with_second_tax_file(runtmp):
@@ -1481,7 +1574,7 @@ def test_genome_missing_taxonomy_recover_with_second_tax_file(runtmp):
     assert c.last_result.status == 0
     assert "The following are missing from the taxonomy information: GCF_001881345" not in c.last_result.err
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
+    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000' in c.last_result.out
 
 
 def test_genome_missing_taxonomy_ignore_rank(runtmp):
@@ -1504,7 +1597,7 @@ def test_genome_missing_taxonomy_ignore_rank(runtmp):
     assert c.last_result.status == 0
     assert "The following are missing from the taxonomy information: GCF_001881345" in c.last_result.err
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,below_threshold,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
+    assert 'test1,below_threshold,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000' in c.last_result.out
 
 
 def test_genome_multiple_taxonomy_files(runtmp):
@@ -1528,7 +1621,7 @@ def test_genome_multiple_taxonomy_files(runtmp):
     assert c.last_result.status == 0
     assert "The following are missing from the taxonomy information: GCF_001881345" not in c.last_result.err
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,' in c.last_result.out
+    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000,' in c.last_result.out
     # using single -t arg
     c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', subset_csv, taxonomy_csv)
     print(c.last_result.status)
@@ -1538,7 +1631,7 @@ def test_genome_multiple_taxonomy_files(runtmp):
     assert c.last_result.status == 0
     assert "The following are missing from the taxonomy information: GCF_001881345" not in c.last_result.err
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,' in c.last_result.out
+    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000,' in c.last_result.out
 
 
 def test_genome_multiple_taxonomy_files_empty_force(runtmp):
@@ -1567,7 +1660,7 @@ def test_genome_multiple_taxonomy_files_empty_force(runtmp):
     assert c.last_result.status == 0
     assert "The following are missing from the taxonomy information: GCF_001881345" not in c.last_result.err
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,' in c.last_result.out
+    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000,' in c.last_result.out
 
 
 def test_genome_missing_taxonomy_fail_threshold(runtmp):
@@ -1591,8 +1684,8 @@ def test_genome_missing_taxonomy_fail_threshold(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert "The following are missing from the taxonomy information: GCF_001881345" in str(exc.value)
-    assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in str(exc.value)
+    assert "ident 'GCF_001881345' is not in the taxonomy database." in str(exc.value)
+    assert "Failing, as requested via --fail-on-missing-taxonomy" in str(exc.value)
     assert c.last_result.status == -1
 
 
@@ -1617,8 +1710,8 @@ def test_genome_missing_taxonomy_fail_rank(runtmp):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert "The following are missing from the taxonomy information: GCF_001881345" in str(exc.value)
-    assert "Failing on missing taxonomy, as requested via --fail-on-missing-taxonomy." in str(exc.value)
+    assert "ident 'GCF_001881345' is not in the taxonomy database." in str(exc.value)
+    assert "Failing, as requested via --fail-on-missing-taxonomy" in str(exc.value)
     assert c.last_result.status == -1
 
 
@@ -1761,10 +1854,9 @@ def test_genome_empty_gather_results_with_csv_force(runtmp):
 
     assert c.last_result.status == 0
     assert '--force is set. Attempting to continue to next set of gather results.' in c.last_result.err
-    assert 'loaded 4 results total from 1 gather CSVs' in c.last_result.err
+    assert 'loaded results for 1 queries from 1 gather CSVs' in c.last_result.err
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0' in c.last_result.out
-
+    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000' in c.last_result.out
 
 def test_genome_containment_threshold_bounds(runtmp):
     c = runtmp
@@ -1836,7 +1928,7 @@ def test_genome_over100percent_error(runtmp):
     print(runtmp.last_result.err)
 
     assert runtmp.last_result.status == -1
-    assert "ERROR: The tax summary of query 'test1' is 1.1, which is > 100% of the query!!" in runtmp.last_result.err
+    assert "fraction is > 100% of the query! This should not be possible." in runtmp.last_result.err
 
 
 def test_genome_ani_threshold_input_errors(runtmp):
@@ -1882,7 +1974,7 @@ def test_genome_ani_threshold(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
     c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
-                       '--ani-threshold', "0.95")
+                       '--ani-threshold', "0.93") # note: I think this was previously a bug, if 0.95 produced the result below...
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -1890,7 +1982,7 @@ def test_genome_ani_threshold(runtmp):
 
     assert c.last_result.status == 0
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,0.9328896594471843' in c.last_result.out 
+    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000,0.93' in c.last_result.out 
 
     # more lax threshold
     c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
@@ -1901,7 +1993,7 @@ def test_genome_ani_threshold(runtmp):
     print(c.last_result.err)
 
     assert c.last_result.status == 0
-    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0'  in c.last_result.out
+    assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000'  in c.last_result.out
 
     # too stringent of threshold (using rank)
     c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
@@ -1909,37 +2001,19 @@ def test_genome_ani_threshold(runtmp):
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
-    assert "WARNING: classifying query test1 at desired rank species does not meet query ANI/AAI threshold 1.0" in c.last_result.err
-    assert "test1,below_threshold,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000.0,0.9247805047263588" in c.last_result.out
+    assert "test1,below_threshold,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000,0.92" in c.last_result.out
 
 
 def test_genome_ani_oldgather(runtmp):
-    # Ignore ANI if we don't have the information we need to estimate it
+    # now fail if using gather <4.4
     c = runtmp
     g_csv = utils.get_test_data('tax/test1.gather_old.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
 
-    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax)
-
-    print(c.last_result.status)
-    print(c.last_result.out)
-    print(c.last_result.err)
-
-    assert c.last_result.status == 0
-    assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,' in c.last_result.out
-
-    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
-                       '--ani-threshold', "0.95")
-
-    print(c.last_result.status)
-    print(c.last_result.out)
-    print(c.last_result.err)
-
-    assert c.last_result.status == 0
-    assert "WARNING: Please run gather with sourmash >= 4.4 to estimate query ANI at rank. Continuing without ANI..." in c.last_result.err
-    assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
-    assert 'test1,match,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000.0,' in c.last_result.out
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax)
+    assert "is missing columns needed for taxonomic summarization. Please run gather with sourmash >= 4.4." in str(exc.value)
+    assert c.last_result.status == -1
 
 
 def test_genome_ani_lemonade_classify(runtmp):
@@ -1971,12 +2045,15 @@ def test_genome_ani_lemonade_classify(runtmp):
                    '--ani', '0.8', '-F', 'human')
 
     output = c.last_result.out
-    assert 'MAG3_1             5.3%     91.0%  d__Bacteria;p__Bacteroidota;c__Chlorobia;o__Chlorobiales;f__Chlorobiaceae;g__Prosthecochloris;s__Prosthecochloris vibrioformis' in output
+    assert 'MAG3_1            match     5.3%     91.0%  d__Bacteria;p__Bacteroidota;c__Chlorobia;o__Chlorobiales;f__Chlorobiaceae;g__Prosthecochloris;s__Prosthecochloris vibrioformis' in output
 
     # aaand classify to lineage_csv
     c.run_sourmash('tax', 'genome', '-g', this_gather_file, '-t', taxonomy_file,
                    '--ani', '0.8', '-F', 'lineage_csv')
 
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
     output = c.last_result.out
     assert 'ident,superkingdom,phylum,class,order,family,genus,species' in output
     assert 'MAG3_1,d__Bacteria,p__Bacteroidota,c__Chlorobia,o__Chlorobiales,f__Chlorobiaceae,g__Prosthecochloris,s__Prosthecochloris vibrioformis' in output
@@ -2172,7 +2249,7 @@ def test_annotate_bad_gather_header(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'annotate', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
-    assert f"Not all required gather columns are present in '{bad_g_csv}'." in str(exc.value)
+    assert 'is missing columns needed for taxonomic summarization.' in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
