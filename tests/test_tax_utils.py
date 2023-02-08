@@ -1074,56 +1074,12 @@ def test_BaseLineageInfo_init_lca_lineage_tups():
     assert taxinf.zip_lineage()== ['a', '', 'b']
 
 
-def test_BaseLineageInfo_init_lineage_dict_fail():
-    ranks=["A", "B", "C"]
-    lin_tups = (LineagePair(rank="A", name='a'), LineagePair(rank="C", name='b'))
-    with pytest.raises(ValueError) as exc:
-        taxinf = BaseLineageInfo(ranks=ranks, lineage_dict=lin_tups)
-    print(str(exc))
-
-    assert "is not dictionary" in str(exc)
-
-
-def test_BaseLineageInfo_init_lineage_dict  ():
-    x = {'rank1': 'name1', 'rank2': 'name2'}
-    taxinf = BaseLineageInfo(lineage_dict=x, ranks=["rank1", "rank2"])
-    print("ranks: ", taxinf.ranks)
-    print("lineage: ", taxinf.lineage)
-    print("zipped lineage: ", taxinf.zip_lineage())
-    assert taxinf.zip_lineage()== ['name1', 'name2']
-
-
-def test_BaseLineageInfo_init_lineage_dict_withtaxid():
-    x = {'rank1': {'name': 'name1', 'taxid': 1}, 'rank2': {'name':'name2', 'taxid': 2}}
-    taxinf = BaseLineageInfo(lineage_dict=x, ranks=["rank1", "rank2"])
-    print("ranks: ", taxinf.ranks)
-    print("lineage: ", taxinf.lineage)
-    print("zipped lineage: ", taxinf.zip_lineage())
-    assert taxinf.zip_lineage()== ['name1', 'name2']
-    assert taxinf.zip_taxid()== ['1', '2']
-    assert taxinf.lowest_lineage_taxid == 2
-    assert taxinf.lowest_lineage_name == "name2"
-
-
-def test_BaseLineageInfo_init_lineage_str_lineage_dict_test_eq():
-    x = "a;b;c"
-    ranks=["A", "B", "C"]
-    rankD = {"A": "a", "B": "b", "C": "c"}
-    lin1 = BaseLineageInfo(lineage_str=x, ranks=ranks)
-    lin2 = BaseLineageInfo(lineage_dict=rankD, ranks=ranks)
-    assert lin1 == lin2
-
-
 def test_BaseLineageInfo_init_no_ranks():
     x = "a;b;c"
     rankD = {"superkingdom": "a", "phylum": "b", "class": "c"}
     lin_tups = (LineagePair(rank="rank2", name='name1'), LineagePair(rank="rank1", name='name1'))
     with pytest.raises(TypeError) as exc:
         BaseLineageInfo(lineage_str=x)
-    print(exc)
-    assert "__init__() missing 1 required positional argument: 'ranks'" in str(exc)
-    with pytest.raises(TypeError) as exc:
-        BaseLineageInfo(lineage_dict=rankD)
     print(exc)
     assert "__init__() missing 1 required positional argument: 'ranks'" in str(exc)
     with pytest.raises(TypeError) as exc:
@@ -1138,10 +1094,6 @@ def test_BaseLineageInfo_init_with_wrong_ranks():
     linD = {"rank1": "a"}
     with pytest.raises(ValueError) as exc:
         BaseLineageInfo(lineage=lin_tups, ranks=ranks)
-    print(str(exc))
-    assert "Rank 'rank1' not present in A, B, C" in str(exc)
-    with pytest.raises(ValueError) as exc:
-        BaseLineageInfo(lineage_dict=linD, ranks=ranks)
     print(str(exc))
     assert "Rank 'rank1' not present in A, B, C" in str(exc)
 
@@ -1187,12 +1139,53 @@ def test_RankLineageInfo_init_lineage_tups():
     assert taxinf.zip_lineage()== ['a', 'b', '', '', '', '', '', '']
 
 
+def test_RankLineageInfo_init_lineage_dict_fail():
+    ranks=["A", "B", "C"]
+    lin_tups = (LineagePair(rank="A", name='a'), LineagePair(rank="C", name='b'))
+    with pytest.raises(ValueError) as exc:
+        taxinf = RankLineageInfo(ranks=ranks, lineage_dict=lin_tups)
+    print(str(exc))
+
+    assert "is not dictionary" in str(exc)
+
+
 def test_RankLineageInfo_init_lineage_dict():
+    x = {'rank1': 'name1', 'rank2': 'name2'}
+    taxinf = RankLineageInfo(lineage_dict=x, ranks=["rank1", "rank2"])
+    print("ranks: ", taxinf.ranks)
+    print("lineage: ", taxinf.lineage)
+    print("zipped lineage: ", taxinf.zip_lineage())
+    assert taxinf.zip_lineage()== ['name1', 'name2']
+
+
+def test_RankLineageInfo_init_lineage_dict_default_ranks():
     x = {"superkingdom":'a',"phylum":'b'}
     taxinf = RankLineageInfo(lineage_dict=x)
     print(taxinf.lineage)
     print(taxinf.lineage_str)
     assert taxinf.zip_lineage()== ['a', 'b', '', '', '', '', '', '']
+
+
+def test_RankLineageInfo_init_lineage_dict_withtaxpath():
+    x = {'rank1': 'name1', 'rank2': 'name2', 'taxpath': "1|2"}
+    taxinf = RankLineageInfo(lineage_dict=x, ranks=["rank1", "rank2"])
+    print("ranks: ", taxinf.ranks)
+    print("lineage: ", taxinf.lineage)
+    print("zipped lineage: ", taxinf.zip_lineage())
+    print("zipped taxids: ", taxinf.zip_taxid())
+    assert taxinf.zip_lineage()== ['name1', 'name2']
+    assert taxinf.zip_taxid()== ['1', '2']
+    assert taxinf.lowest_lineage_taxid == "2"
+    assert taxinf.lowest_lineage_name == "name2"
+
+
+def test_RankLineageInfo_init_lineage_str_lineage_dict_test_eq():
+    x = "a;b;c"
+    ranks=["A", "B", "C"]
+    rankD = {"A": "a", "B": "b", "C": "c"}
+    lin1 = RankLineageInfo(lineage_str=x, ranks=ranks)
+    lin2 = RankLineageInfo(lineage_dict=rankD, ranks=ranks)
+    assert lin1 == lin2
 
 
 def test_RankLineageInfo_init_lineage_dict_missing_rank():
@@ -1205,8 +1198,8 @@ def test_RankLineageInfo_init_lineage_dict_missing_rank():
     assert taxinf.zip_lineage(truncate_empty=True)== ['name1', '', 'name2']
 
 
-def test_RankLineageInfo_init_lineage_dict_missing_rank_withtaxid():
-    x = {'superkingdom': {'name': 'name1', 'taxid': 1}, 'class': {'name':'name2', 'taxid': 2}}
+def test_RankLineageInfo_init_lineage_dict_missing_rank_with_taxpath():
+    x = {'superkingdom': 'name1', 'class': 'name2', 'taxpath': '1||2'}
     taxinf = RankLineageInfo(lineage_dict=x)
     print("ranks: ", taxinf.ranks)
     print("lineage: ", taxinf.lineage)

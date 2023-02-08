@@ -51,7 +51,6 @@ class BaseLineageInfo:
         optional:
             lineage: tuple or list of LineagePair
             lineage_str: `;`- or `,`-separated string of names
-            lineage_dict: dictionary of {rank: name}
 
     If no lineage information is provided, result will be a BaseLineageInfo
     with provided ranks and no lineage names.
@@ -63,7 +62,6 @@ class BaseLineageInfo:
     ranks: tuple() # require ranks
     lineage: tuple = None # tuple of LineagePairs
     lineage_str: str = field(default=None, compare=False) # ';'- or ','-separated str of lineage names
-    lineage_dict: dict = field(default=None, compare=False) # dict of rank: name
 
     def __post_init__(self):
         "Initialize according to passed values"
@@ -74,8 +72,6 @@ class BaseLineageInfo:
             self._init_from_lineage_tuples()
         elif self.lineage_str is not None:
             self._init_from_lineage_str()
-        elif self.lineage_dict is not None:
-            self._init_from_lineage_dict()
         else:
             self._init_empty()
 
@@ -164,37 +160,6 @@ class BaseLineageInfo:
                 else:
                     new_lineage[rank_idx] = lin_tup
     
-        # build list of filled ranks
-        filled_ranks = [a.rank for a in new_lineage if a.name]
-        # set lineage and filled_ranks
-        object.__setattr__(self, "lineage", tuple(new_lineage))
-        object.__setattr__(self, "filled_ranks", filled_ranks)
-
-    def _init_from_lineage_dict(self):
-        'initialize from lineage dict, e.g. from gather csv, allowing empty ranks and reordering if necessary'
-        if not isinstance(self.lineage_dict, (dict)):
-            raise ValueError(f"{self.lineage_dict} is not dictionary")
-        # first, initialize_empty
-        new_lineage = []
-        # build empty lineage
-        for rank in self.ranks:
-            new_lineage.append(LineagePair(rank=rank))
-        # now add input information in correct spots. This corrects for order and allows empty values.
-        for rank, info in self.lineage_dict.items():
-            try:
-                rank_idx = self.rank_index(rank)
-            except ValueError as e:
-                raise ValueError(f"Rank '{rank}' not present in {', '.join(self.ranks)}") from e
-
-            name, taxid = None, None
-            if isinstance(info, dict):
-                if 'name' in info.keys():
-                    name = info['name']
-                if 'taxid' in info.keys():
-                    taxid = info['taxid']
-            elif isinstance(info, str):
-                name = info
-            new_lineage[rank_idx] =  LineagePair(rank=rank, name=name, taxid=taxid)
         # build list of filled ranks
         filled_ranks = [a.rank for a in new_lineage if a.name]
         # set lineage and filled_ranks
@@ -329,6 +294,7 @@ class RankLineageInfo(BaseLineageInfo):
     and will not be used or compared in any other class methods.
     """
     ranks: tuple = ('superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain')
+    lineage_dict: dict = field(default=None, compare=False) # dict of rank: name
 
     def __post_init__(self):
         "Initialize according to passed values"
@@ -343,6 +309,45 @@ class RankLineageInfo(BaseLineageInfo):
             self._init_from_lineage_dict()
         elif self.ranks:
             self._init_empty()
+
+    def _init_from_lineage_dict(self):
+        'initialize from lineage dict, e.g. from lineages csv, allowing empty ranks/extra columns and reordering if necessary'
+        if not isinstance(self.lineage_dict, (dict)):
+            raise ValueError(f"{self.lineage_dict} is not dictionary")
+        new_lineage = []
+        taxpath=[]
+        # build empty lineage and taxpath
+        for rank in self.ranks:
+            new_lineage.append(LineagePair(rank=rank))
+
+        # check for NCBI taxpath information
+        taxpath_str = self.lineage_dict.get('taxpath', [])
+        if taxpath_str:
+            taxpath = taxpath_str.split('|')
+            if len(taxpath) > len(self.ranks):
+                raise ValueError(f"Number of NCBI taxids ({len(taxpath)}) exceeds number of ranks ({len(self.ranks)})")
+
+        # now add rank information in correct spots. This corrects for order and allows empty ranks and extra dict keys
+        for key, val in self.lineage_dict.items():
+            name, taxid = None, None
+            try:
+                rank, name = key, val
+                rank_idx = self.rank_index(rank)
+            except ValueError:
+                continue # ignore dictionary entries (columns) that don't match a rank
+
+            if taxpath:
+                try:
+                    taxid = taxpath[rank_idx]
+                except IndexError:
+                    taxid = None
+            new_lineage[rank_idx] =  LineagePair(rank=rank, name=name, taxid=taxid)
+
+        # build list of filled ranks
+        filled_ranks = [a.rank for a in new_lineage if a.name]
+        # set lineage and filled_ranks
+        object.__setattr__(self, "lineage", tuple(new_lineage))
+        object.__setattr__(self, "filled_ranks", filled_ranks)
 
 
 def get_ident(ident, *,
