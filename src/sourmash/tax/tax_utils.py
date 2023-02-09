@@ -310,7 +310,7 @@ class RankLineageInfo(BaseLineageInfo):
         elif self.ranks:
             self._init_empty()
 
-def _init_from_lineage_dict(self):
+    def _init_from_lineage_dict(self):
         """
         Initialize from lineage dict, e.g. from lineages csv.
         Use NCBI taxids if available as '|'-separated 'taxpath' column.
