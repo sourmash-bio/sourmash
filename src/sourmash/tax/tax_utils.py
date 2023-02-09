@@ -351,6 +351,12 @@ class RankLineageInfo(BaseLineageInfo):
                  name = None
             new_lineage[rank_idx] =  LineagePair(rank=rank, name=name, taxid=taxid)
 
+        # build list of filled ranks
+        filled_ranks = [a.rank for a in new_lineage if a.name]
+        # set lineage and filled_ranks
+        object.__setattr__(self, "lineage", tuple(new_lineage))
+        object.__setattr__(self, "filled_ranks", filled_ranks)
+
 @dataclass(frozen=True, order=True)
 class LINSLineageInfo(BaseLineageInfo):
     """
