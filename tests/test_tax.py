@@ -205,6 +205,46 @@ def test_metagenome_kreport_out(runtmp):
     assert ['1.56', '192000', '192000', 'S', '', 's__Phocaeicola vulgatus'] == kreport_results[15]
 
 
+def test_metagenome_kreport_ncbi_taxid_out(runtmp):
+    # test NCBI taxid output from kreport
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.ncbi-taxonomy.csv')
+    csv_base = "out"
+    sum_csv = csv_base + ".kreport.txt"
+    csvout = runtmp.output(sum_csv)
+    outdir = os.path.dirname(csvout)
+
+    runtmp.run_sourmash('tax', 'metagenome', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-dir', outdir, '-F', "kreport")
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    kreport_results = [x.rstrip().split('\t') for x in open(csvout)]
+    assert f"saving 'kreport' output to '{csvout}'" in runtmp.last_result.err
+    print(kreport_results)
+    assert ['13.08', '1605999', '0', 'D', '2', 'Bacteria'] == kreport_results[0]
+    assert ['86.92', '10672000', '10672000', 'U', '', 'unclassified'] == kreport_results[1]
+    assert ['7.27', '892000', '0', 'P', '976', 'Bacteroidota'] == kreport_results[2]
+    assert ['5.82', '714000', '0', 'P', '1224', 'Pseudomonadota'] == kreport_results[3]
+    assert ['7.27', '892000', '0', 'C', '200643', 'Bacteroidia'] == kreport_results[4]
+    assert ['5.82', '714000', '0', 'C', '1236', 'Gammaproteobacteria'] == kreport_results[5]
+    assert ['7.27', '892000', '0', 'O', '171549', 'Bacteroidales'] == kreport_results[6]
+    assert ['5.82', '714000', '0', 'O', '91347', 'Enterobacterales'] == kreport_results[7]
+    assert ['5.70', '700000', '0', 'F', '171552', 'Prevotellaceae'] == kreport_results[8]
+    assert ['5.82', '714000', '0', 'F', '543', 'Enterobacteriaceae'] == kreport_results[9]
+    assert ['1.56', '192000', '0', 'F', '815', 'Bacteroidaceae'] == kreport_results[10]
+    assert ['5.70', '700000', '0', 'G', '838', 'Prevotella'] == kreport_results[11]
+    assert ['5.82', '714000', '0', 'G', '561', 'Escherichia'] == kreport_results[12]
+    assert ['1.56', '192000', '0', 'G', '909656', 'Phocaeicola'] == kreport_results[13]
+    assert ['5.70', '700000', '700000', 'S', '165179', 'Prevotella copri'] == kreport_results[14]
+    assert ['5.82', '714000', '714000', 'S', '562', 'Escherichia coli'] == kreport_results[15]
+    assert ['1.56', '192000', '192000', 'S', '821', 'Phocaeicola vulgatus'] == kreport_results[16]
+
+
 def test_metagenome_kreport_out_lemonade(runtmp):
     # test 'kreport' kraken output format against lemonade output
     g_csv = utils.get_test_data('tax/lemonade-MAG3.x.gtdb.csv')

@@ -661,7 +661,7 @@ sourmash `kreport` columns:
 - `Estimated base pairs contained in taxon`: The cumulative estimated base pairs for this taxon and all descendants.
 - `Estimated base pairs "assigned" (species-level)`: The estimated base pairs assigned at species-level (cumulative count of base pairs assigned to individual genomes in this species).
 - `Rank Code`: (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies.
-- [blank column]: (`NCBI Taxon ID` is not currently reported).
+- `NCBI Taxon ID`: Reported (v4.7+) if using NCBI taxonomy. Otherwise blank.
 - `Scientific Name`: The scientific name of the taxon.
 
 notes:

@@ -80,7 +80,7 @@ class BaseLineageInfo:
             self._init_empty()
 
     def __eq__(self, other):
-        if other == (): # just handy: if comparing to a null tuple, don't try to find it's lineage before returning False
+        if other == (): # just handy: if comparing to a null tuple, don't try to find its lineage before returning False
             return False
         return all([self.ranks == other.ranks and self.lineage==other.lineage])
 
@@ -757,6 +757,9 @@ class LineageDB(abc.Mapping):
             # is "strain" an available rank?
             if "strain" in header:
                 include_strain=True
+            load_taxids=False
+            if 'taxpath' in header:
+                load_taxids=True
 
             # check that all ranks are in header
             ranks = list(lca_utils.taxlist(include_strain=include_strain))
@@ -775,10 +778,15 @@ class LineageDB(abc.Mapping):
             for n, row in enumerate(r):
                 num_rows += 1
                 lineage = []
+                taxid=None
                 # read row into a lineage pair
-                for rank in lca_utils.taxlist(include_strain=include_strain):
+                if load_taxids:
+                    taxpath = row['taxpath'].split('|')
+                for n, rank in enumerate(lca_utils.taxlist(include_strain=include_strain)):
                     lin = row[rank]
-                    lineage.append(lca_utils.LineagePair(rank, lin))
+                    if load_taxids:
+                        taxid = taxpath[n]
+                    lineage.append(LineagePair(rank, name=lin, taxid=taxid))
                 ident = row[identifier]
 
                 # fold, spindle, and mutilate ident?
@@ -787,8 +795,8 @@ class LineageDB(abc.Mapping):
                                   keep_identifier_versions=keep_identifier_versions)
 
                 # clean lineage of null names, replace with 'unassigned'
-                lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
-                lineage = [ lca_utils.LineagePair(a, b) for (a, b) in lineage ]
+                lineage = [ (lin.rank, lca_utils.filter_null(lin.name), lin.taxid) for lin in lineage ]
+                lineage = [ LineagePair(a, b, c) for (a, b, c) in lineage ]
 
                 # remove end nulls
                 while lineage and lineage[-1].name == 'unassigned':
@@ -942,7 +950,7 @@ class LineageDB_Sqlite(abc.Mapping):
 
     def _make_tup(self, row):
         "build a tuple of LineagePairs for this sqlite row"
-        tup = [ lca_utils.LineagePair(n, r) for (n, r) in zip(taxlist(True), row) ]
+        tup = [ LineagePair(n, r) for (n, r) in zip(taxlist(True), row) ]
         return tuple(tup)
 
     def __getitem__(self, ident):
