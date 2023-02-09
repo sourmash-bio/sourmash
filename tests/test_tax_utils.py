@@ -1208,6 +1208,25 @@ def test_RankLineageInfo_init_lineage_dict_missing_rank_with_taxpath():
     assert taxinf.zip_taxid()== ['1', '', '2', '', '', '', '', '']
 
 
+def test_RankLineageInfo_init_lineage_dict_name_taxpath_mismatch():
+    # if there's no name, we don't store the taxpath. Is this desired behavior?
+    x = {'superkingdom': 'name1', 'taxpath': '1||2'}
+    taxinf = RankLineageInfo(lineage_dict=x)
+    print("ranks: ", taxinf.ranks)
+    print("lineage: ", taxinf.lineage)
+    print("zipped lineage: ", taxinf.zip_lineage())
+    assert taxinf.zip_lineage()== ['name1', '', '', '', '', '', '', '']
+    assert taxinf.zip_taxid()== ['1', '', '', '', '', '', '', '']
+
+
+def test_RankLineageInfo_init_lineage_dict_taxpath_too_long():
+    x = {'superkingdom': 'name1', 'class': 'name2', 'taxpath': '1||2||||||||||'}
+    with pytest.raises(ValueError) as exc:
+        RankLineageInfo(lineage_dict=x)
+    print(str(exc))
+    assert f"Number of NCBI taxids (13) exceeds number of ranks (8)" in str(exc)
+
+
 def test_RankLineageInfo_init_lineage_str_lineage_dict_test_eq():
     x = "a;b;c"
     rankD = {"superkingdom": "a", "phylum": "b", "class": "c"}
