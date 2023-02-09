@@ -12,9 +12,9 @@ import sourmash_tst_utils as utils
 
 from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_results,
                                     collect_gather_csvs, check_and_load_gather_csvs,
+                                    LineagePair, QueryInfo, GatherRow, TaxResult, QueryTaxResult,
                                     SummarizedGatherResult, ClassificationResult,
-                                    QueryInfo, GatherRow, TaxResult, QueryTaxResult,
-                                    BaseLineageInfo, RankLineageInfo, LineagePair,
+                                    BaseLineageInfo, RankLineageInfo, LINSLineageInfo,
                                     aggregate_by_lineage_at_rank, format_for_krona,
                                     write_krona, write_lineage_sample_frac,
                                     LineageDB, LineageDB_Sqlite, MultiLineageDB)
@@ -1122,10 +1122,6 @@ def test_RankLineageInfo_init_lineage_str():
     assert taxinf.zip_lineage()== ['a', 'b', 'c', '', '', '', '', '']
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
 def test_LINSLineageInfo_init_fail():
     with pytest.raises(ValueError) as exc:
         LINSLineageInfo()
@@ -1133,7 +1129,6 @@ def test_LINSLineageInfo_init_fail():
     assert "Please initialize 'LINSLineageInfo' with 'lineage_str' or 'n_lin_positions'." in str(exc)
 
 
->>>>>>> b2b1a688 (test init fail)
 def test_LINSLineageInfo_init_n_pos():
     n_pos = 5
     taxinf = LINSLineageInfo(n_lin_positions=n_pos)
@@ -1171,7 +1166,6 @@ def test_LINSLineageInfo_init_lineage_str_only():
     assert taxinf.zip_lineage()== ['0', '0', '1']
 
 
->>>>>>> 41c44d44 (err if n_positions insufficient for provided lineage_str)
 def test_RankLineageInfo_init_lineage_str_with_ranks_as_list():
     x = "a;b;c"
     taxranks = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species']
