@@ -1209,7 +1209,8 @@ def test_RankLineageInfo_init_lineage_dict_missing_rank_with_taxpath():
 
 
 def test_RankLineageInfo_init_lineage_dict_name_taxpath_mismatch():
-    # if there's no name, we don't store the taxpath. Is this desired behavior?
+    # If there's no name, we don't report the taxpath, because lineage is not "filled".
+    # Is this desired behavior?
     x = {'superkingdom': 'name1', 'taxpath': '1||2'}
     taxinf = RankLineageInfo(lineage_dict=x)
     print("ranks: ", taxinf.ranks)
