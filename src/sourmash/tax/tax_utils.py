@@ -311,7 +311,12 @@ class RankLineageInfo(BaseLineageInfo):
             self._init_empty()
 
     def _init_from_lineage_dict(self):
-        'initialize from lineage dict, e.g. from lineages csv, allowing empty ranks/extra columns and reordering if necessary'
+        """
+        Initialize from lineage dict, e.g. from lineages csv.
+        Use NCBI taxids if available as '|'-separated 'taxpath' column.
+        Allows empty ranks/extra columns and reordering if necessary
+        """
+        null_names = set(['[Blank]', 'na', 'null', 'NA', ''])
         if not isinstance(self.lineage_dict, (dict)):
             raise ValueError(f"{self.lineage_dict} is not dictionary")
         new_lineage = []
@@ -341,6 +346,9 @@ class RankLineageInfo(BaseLineageInfo):
                     taxid = taxpath[rank_idx]
                 except IndexError:
                     taxid = None
+            # filter null
+            if name is not None and name.strip() in null_names:
+                 name = None
             new_lineage[rank_idx] =  LineagePair(rank=rank, name=name, taxid=taxid)
 
         # build list of filled ranks
@@ -759,15 +767,14 @@ class LineageDB(abc.Mapping):
                 else:
                     header_str = ",".join([repr(x) for x in header])
                     raise ValueError(f'No taxonomic identifiers found; headers are {header_str}')
+
             # is "strain" an available rank?
             if "strain" in header:
                 include_strain=True
-            load_taxids=False
-            if 'taxpath' in header:
-                load_taxids=True
-
             # check that all ranks are in header
-            ranks = list(lca_utils.taxlist(include_strain=include_strain))
+            ranks = list(RankLineageInfo().taxlist)
+            if not include_strain:
+                ranks.remove('strain')
             if not set(ranks).issubset(header):
                 # for now, just raise err if not all ranks are present.
                 # in future, we can define `ranks` differently if desired
@@ -782,16 +789,9 @@ class LineageDB(abc.Mapping):
             # now parse and load lineages
             for n, row in enumerate(r):
                 num_rows += 1
-                lineage = []
-                taxid=None
-                # read row into a lineage pair
-                if load_taxids:
-                    taxpath = row['taxpath'].split('|')
-                for n, rank in enumerate(lca_utils.taxlist(include_strain=include_strain)):
-                    lin = row[rank]
-                    if load_taxids:
-                        taxid = taxpath[n]
-                    lineage.append(LineagePair(rank, name=lin, taxid=taxid))
+                # read lineage from row dictionary
+                lineageInfo = RankLineageInfo(lineage_dict=row)
+                # get identifier
                 ident = row[identifier]
 
                 # fold, spindle, and mutilate ident?
@@ -799,23 +799,16 @@ class LineageDB(abc.Mapping):
                                   keep_full_identifiers=keep_full_identifiers,
                                   keep_identifier_versions=keep_identifier_versions)
 
-                # clean lineage of null names, replace with 'unassigned'
-                lineage = [ (lin.rank, lca_utils.filter_null(lin.name), lin.taxid) for lin in lineage ]
-                lineage = [ LineagePair(a, b, c) for (a, b, c) in lineage ]
-
-                # remove end nulls
-                while lineage and lineage[-1].name == 'unassigned':
-                    lineage = lineage[:-1]
-
                 # store lineage tuple
+                lineage = lineageInfo.filled_lineage
                 if lineage:
                     # check duplicates
                     if ident in assignments:
-                        if assignments[ident] != tuple(lineage):
+                        if assignments[ident] != lineage:
                             if not force:
                                 raise ValueError(f"multiple lineages for identifier {ident}")
                     else:
-                        assignments[ident] = tuple(lineage)
+                        assignments[ident] = lineage
 
                         if lineage[-1].rank == 'species':
                             n_species += 1
