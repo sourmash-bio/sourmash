@@ -1209,7 +1209,8 @@ def test_RankLineageInfo_init_lineage_dict_missing_rank_with_taxpath():
 
 
 def test_RankLineageInfo_init_lineage_dict_name_taxpath_mismatch():
-    # if there's no name, we don't store the taxpath. Is this desired behavior?
+    # If there's no name, we don't report the taxpath, because lineage is not "filled".
+    # Is this desired behavior?
     x = {'superkingdom': 'name1', 'taxpath': '1||2'}
     taxinf = RankLineageInfo(lineage_dict=x)
     print("ranks: ", taxinf.ranks)
@@ -1217,6 +1218,19 @@ def test_RankLineageInfo_init_lineage_dict_name_taxpath_mismatch():
     print("zipped lineage: ", taxinf.zip_lineage())
     assert taxinf.zip_lineage()== ['name1', '', '', '', '', '', '', '']
     assert taxinf.zip_taxid()== ['1', '', '', '', '', '', '', '']
+
+
+def test_RankLineageInfo_init_lineage_dict_name_taxpath_missing_taxids():
+    # If there's no name, we don't report the taxpath, because lineage is not "filled".
+    # Is this desired behavior?
+    x = {'superkingdom': 'name1', 'phylum': "name2", "class": "name3", 'taxpath': '|2'}
+    taxinf = RankLineageInfo(lineage_dict=x)
+    print("ranks: ", taxinf.ranks)
+    print("lineage: ", taxinf.lineage)
+    print("zipped lineage: ", taxinf.zip_lineage())
+    print("zipped taxids: ", taxinf.zip_taxid())
+    assert taxinf.zip_lineage()== ['name1', 'name2', 'name3', '', '', '', '', '']
+    assert taxinf.zip_taxid()== ['', '2', '', '', '', '', '', '']
 
 
 def test_RankLineageInfo_init_lineage_dict_taxpath_too_long():
