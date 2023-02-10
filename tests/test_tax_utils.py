@@ -576,18 +576,19 @@ def test_load_taxonomy_csv():
 
 def test_load_taxonomy_csv_LIN():
     taxonomy_csv = utils.get_test_data('tax/test.LINS-taxonomy.csv')
-    tax_assign = MultiLineageDB.load([taxonomy_csv], LINS_taxonomy=True)
+    tax_assign = MultiLineageDB.load([taxonomy_csv], LIN_taxonomy=True)
     print("taxonomy assignments: \n", tax_assign)
-    assert list(tax_assign.keys()) == ["GCF_000010525.1", "GCF_000007365.1", "GCF_000007725.1", "GCF_000009605.1", "GCF_000021065.1", "GCF_000021085.1"]
+    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1']
+    #assert list(tax_assign.keys()) == ["GCF_000010525.1", "GCF_000007365.1", "GCF_000007725.1", "GCF_000009605.1", "GCF_000021065.1", "GCF_000021085.1"]
     assert len(tax_assign) == 6 # should have read 6 rows
     print(tax_assign.available_ranks)
-    assert tax_assign.available_ranks == {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19}
+    assert tax_assign.available_ranks == {str(x) for x in range(0,20)}
 
 
 def test_load_taxonomy_csv_LIN_fail():
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     with pytest.raises(ValueError) as exc:
-        MultiLineageDB.load([taxonomy_csv], LINS_taxonomy=True)
+        MultiLineageDB.load([taxonomy_csv], LIN_taxonomy=True)
     assert f"'LIN' column not found: cannot read LIN taxonomy assignments from {taxonomy_csv}." in str(exc.value)
 
 
@@ -600,13 +601,13 @@ def test_load_taxonomy_csv_LIN_mismatch_in_taxfile(runtmp):
         for n, taxline in enumerate(tax):
             if n == 2: # add ;0 to a LIN
                 taxlist = taxline.split(',')
-                taxlist[2] += ';0' # add 21st position to LIN
+                taxlist[1] += ';0' # add 21st position to LIN
                 tax21.append(",".join(taxlist))
             else:
                 tax21.append(taxline)
         mm.write("\n".join(tax21))
     with pytest.raises(ValueError) as exc:
-        MultiLineageDB.load([mimatchLIN_csv], LINS_taxonomy=True)
+        MultiLineageDB.load([mimatchLIN_csv], LIN_taxonomy=True)
     assert "For taxonomic summarization, all LIN assignments must use the same number of LIN positions." in str(exc.value)
 
 
@@ -1162,7 +1163,7 @@ def test_LINSLineageInfo_init_fail():
     with pytest.raises(ValueError) as exc:
         LINSLineageInfo()
     print(str(exc))
-    assert "Please initialize 'LINSLineageInfo' with 'lineage_str' or 'n_lin_positions'." in str(exc)
+    assert "Please initialize 'LINSLineageInfo' with 'lineage', 'lineage_str' or 'n_lin_positions'." in str(exc)
 
 
 def test_LINSLineageInfo_init_n_pos():
@@ -1183,7 +1184,7 @@ def test_LINSLineageInfo_init_n_pos_and_lineage_str():
     print(taxinf.lineage_str)
     assert taxinf.n_lin_positions == 5
     assert taxinf.zip_lineage()== ['0', '0', '1', '', '']
-    assert taxinf.filled_ranks == (0,1,2)
+    assert taxinf.filled_ranks == ("0","1","2")
     assert taxinf.filled_pos == 3
 
 
@@ -1203,7 +1204,7 @@ def test_LINSLineageInfo_init_lineage_str_only():
     print(taxinf.lineage_str)
     assert taxinf.n_lin_positions == 3
     assert taxinf.zip_lineage()== ['0', '0', '1']
-    assert taxinf.filled_ranks == (0,1,2)
+    assert taxinf.filled_ranks == ("0","1","2")
     assert taxinf.filled_pos == 3
 
 

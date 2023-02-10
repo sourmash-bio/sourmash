@@ -22,7 +22,7 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
            'report_missing_and_skipped_identities', 'aggregate_by_lineage_at_rank'
            'format_for_krona',
            'combine_sumgather_csvs_by_lineage', 'write_lineage_sample_frac',
-           'MultiLineageDB', 'RankLineageInfo']
+           'MultiLineageDB', 'RankLineageInfo', 'LINSLineageInfo']
 
 from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
@@ -161,7 +161,7 @@ class BaseLineageInfo:
                     new_lineage[rank_idx] = lin_tup
 
         # build list of filled ranks
-        filled_ranks = [a.rank for a in new_lineage if a.name]
+        filled_ranks = [a.rank for a in new_lineage if a.name is not None]
         # set lineage and filled_ranks
         object.__setattr__(self, "lineage", tuple(new_lineage))
         object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
@@ -175,7 +175,7 @@ class BaseLineageInfo:
             new_lineage = self.lineage_str.split(',')
         new_lineage = [ LineagePair(rank=rank, name=n) for (rank, n) in zip_longest(self.ranks, new_lineage) ]
         # build list of filled ranks
-        filled_ranks = [a.rank for a in new_lineage if a.name]
+        filled_ranks = [a.rank for a in new_lineage if a.name is not None]
         object.__setattr__(self, "lineage", tuple(new_lineage))
         object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
 
@@ -377,20 +377,23 @@ class LINSLineageInfo(BaseLineageInfo):
     and will not be used or compared in any other class methods.
     """
     ranks: tuple = field(default=None, init=False, compare=False)# we will set this within class instead
+    lineage: tuple = None
     n_lin_positions: int = None # init with this to make empty LINSLineageInfo with correct n_lin_positions
 
     def __post_init__(self):
         "Initialize according to passed values"
         # ranks must be tuple for hashability
-        if self.lineage_str is not None:
+        if self.lineage is not None:
+            self._init_from_lineage_tuples()
+        elif self.lineage_str is not None:
             self._init_from_lineage_str()
         elif self.n_lin_positions is not None:
             self._init_empty()
         else:
-            raise ValueError("Please initialize 'LINSLineageInfo' with 'lineage_str' or 'n_lin_positions'.")
+            raise ValueError("Please initialize 'LINSLineageInfo' with 'lineage', 'lineage_str' or 'n_lin_positions'.")
 
     def _init_ranks_from_n_lin_positions(self):
-        new_ranks = [x for x in range(0, self.n_lin_positions)]
+        new_ranks = [str(x) for x in range(0, self.n_lin_positions)]
         object.__setattr__(self, "ranks", new_ranks)
 
     def _init_empty(self):
@@ -423,10 +426,30 @@ class LINSLineageInfo(BaseLineageInfo):
 
         # build lineage and filled_pos, filled_ranks
         new_lineage = [ LineagePair(rank=rank, name=n) for (rank, n) in zip_longest(self.ranks, new_lineage) ]
-        filled_ranks = [a.rank for a in new_lineage if a.name]
+        filled_ranks = [a.rank for a in new_lineage if a.name is not None]
         object.__setattr__(self, "lineage", tuple(new_lineage))
         object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
         object.__setattr__(self, "filled_pos", len(filled_ranks))
+
+    def _init_from_lineage_tuples(self):    
+        'initialize from tuple/list of LineagePairs, building ranks as you go'
+        new_lineage = []
+        # check this is a list or tuple of lineage tuples:
+        for lin_tup in self.lineage:
+            if not isinstance(lin_tup, (LineagePair, lca_utils.LineagePair)):
+                raise ValueError(f"{lin_tup} is not LineagePair.")
+            # make sure we're adding tax_utils.LineagePairs, not lca_utils.LineagePairs for consistency
+            if isinstance(lin_tup, lca_utils.LineagePair):
+                new_lineage.append(LineagePair(rank=lin_tup.rank, name=lin_tup.name))
+            else:
+                new_lineage.append(lin_tup)
+        # build list of filled ranks
+        filled_ranks = [a.rank for a in new_lineage if a.name is not None]
+        # set lineage and filled_ranks
+        object.__setattr__(self, "lineage", tuple(new_lineage))
+        object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
+        object.__setattr__(self, "filled_pos", len(filled_ranks))
+        object.__setattr__(self, "ranks", tuple(filled_ranks))
 
 
 def get_ident(ident, *,
@@ -477,7 +500,8 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
 
 def load_gather_results(gather_csv, tax_assignments, *, seen_queries=None, force=False,
                         skip_idents = None, fail_on_missing_taxonomy=False,
-                        keep_full_identifiers=False, keep_identifier_versions=False):
+                        keep_full_identifiers=False, keep_identifier_versions=False,
+                        LIN_taxonomy=False):
     "Load a single gather csv"
     if not seen_queries:
         seen_queries=set()
@@ -503,7 +527,8 @@ def load_gather_results(gather_csv, tax_assignments, *, seen_queries=None, force
             taxres = TaxResult(raw=gatherRow, keep_full_identifiers=keep_full_identifiers,
                                                 keep_identifier_versions=keep_identifier_versions)
             taxres.get_match_lineage(tax_assignments=tax_assignments, skip_idents=skip_idents, 
-                                        fail_on_missing_taxonomy=fail_on_missing_taxonomy)
+                                        fail_on_missing_taxonomy=fail_on_missing_taxonomy,
+                                        LIN_taxonomy=LIN_taxonomy)
             # add to matching QueryTaxResult or create new one
             if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
                 # get existing or initialize new
@@ -519,7 +544,7 @@ def load_gather_results(gather_csv, tax_assignments, *, seen_queries=None, force
 
 
 def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False, 
-                               keep_full_identifiers=False,keep_identifier_versions=False):
+                               keep_full_identifiers=False,keep_identifier_versions=False, LIN_taxonomy=False):
     '''
     Load gather csvs, checking for empties and ids missing from taxonomic assignments.
     '''
@@ -537,7 +562,8 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
                                                         seen_queries=gather_results.keys(),
                                                         force=force, keep_full_identifiers=keep_full_identifiers,
                                                         keep_identifier_versions = keep_identifier_versions,
-                                                        fail_on_missing_taxonomy=fail_on_missing_taxonomy)
+                                                        fail_on_missing_taxonomy=fail_on_missing_taxonomy,
+                                                        LIN_taxonomy=LIN_taxonomy)
         except ValueError as exc:
             if force:
                 if "found in more than one CSV" in str(exc):
@@ -797,7 +823,7 @@ class LineageDB(abc.Mapping):
 
     @classmethod
     def load(cls, filename, *, delimiter=',', force=False,
-             keep_full_identifiers=False, keep_identifier_versions=True, LINS_taxonomy=False):
+             keep_full_identifiers=False, keep_identifier_versions=True, LIN_taxonomy=False):
         """
         Load a taxonomy assignment CSV file into a LineageDB.
 
@@ -822,7 +848,7 @@ class LineageDB(abc.Mapping):
             if not header:
                 raise ValueError(f'cannot read taxonomy assignments from {filename}')
 
-            if LINS_taxonomy and "LIN" not in header:
+            if LIN_taxonomy and "LIN" not in header:
                 raise ValueError(f"'LIN' column not found: cannot read LIN taxonomy assignments from {filename}.")
 
             identifier = "ident"
@@ -842,7 +868,7 @@ class LineageDB(abc.Mapping):
                     header_str = ",".join([repr(x) for x in header])
                     raise ValueError(f'No taxonomic identifiers found; headers are {header_str}')
 
-            if not LINS_taxonomy:
+            if not LIN_taxonomy:
                 # is "strain" an available rank?
                 if "strain" in header:
                     include_strain=True
@@ -865,7 +891,7 @@ class LineageDB(abc.Mapping):
             # now parse and load lineages
             for n, row in enumerate(r):
                 num_rows += 1
-                if LINS_taxonomy:
+                if LIN_taxonomy:
                     lineageInfo = LINSLineageInfo(lineage_str=row['LIN'])
                     if n_pos is not None:
                         if lineageInfo.n_lin_positions != n_pos:
@@ -895,7 +921,7 @@ class LineageDB(abc.Mapping):
                     else:
                         assignments[ident] = lineage
 
-                        if not LINS_taxonomy:
+                        if not LIN_taxonomy:
                             if lineage[-1].rank == 'species':
                                 n_species += 1
                             elif lineage[-1].rank == 'strain':
@@ -1403,10 +1429,11 @@ class TaxResult:
     query_name: str = field(init=False)
     query_info: QueryInfo = field(init=False)
     match_ident: str = field(init=False)
-    lineageInfo: RankLineageInfo = RankLineageInfo()
+    lineageInfo: RankLineageInfo = RankLineageInfo() #None#field(init=False) #RankLineageInfo()
     skipped_ident: bool = False
     missed_ident: bool = False
     match_lineage_attempted: bool = False
+    LIN_taxonomy: bool = False
 
     def __post_init__(self):
         self.get_ident()
@@ -1439,13 +1466,16 @@ class TaxResult:
             self.match_ident = self.match_ident.split('.')[0]
 
 
-    def get_match_lineage(self, tax_assignments, skip_idents=None, fail_on_missing_taxonomy=False):
+    def get_match_lineage(self, tax_assignments, skip_idents=None, fail_on_missing_taxonomy=False, LIN_taxonomy=False):
         if skip_idents and self.match_ident in skip_idents:
             self.skipped_ident = True
         else:
             lin = tax_assignments.get(self.match_ident)
             if lin:
-                self.lineageInfo = RankLineageInfo(lineage=lin)
+                if LIN_taxonomy:
+                    self.lineageInfo = LINSLineageInfo(lineage = lin)
+                else:
+                    self.lineageInfo = RankLineageInfo(lineage = lin)
             else:
                 self.missed_ident=True
         self.match_lineage_attempted = True

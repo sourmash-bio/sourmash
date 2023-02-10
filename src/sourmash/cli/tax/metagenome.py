@@ -78,6 +78,14 @@ def subparser(subparsers):
         '-f', '--force', action = 'store_true',
         help='continue past errors in taxonomy database loading',
     )
+    subparser.add_argument(
+        '--LIN-taxonomy', action='store_true',
+        help='use LIN taxonomy in place of standard taxonomic ranks.  Note that the taxonomy CSV must contain LIN lineage information.'
+    )
+    subparser.add_argument(
+        '--LIN-position', type=int,
+        help='For non-default output formats: summarize taxonomy at this LIN position and above. Replaces "--rank" for standard taxonomy. Note that the taxonomy CSV must contain LIN with information at this position.'
+    )
 
 def main(args):
     import sourmash
@@ -86,6 +94,9 @@ def main(args):
     if len(args.output_format) > 1:
         if args.output_base == "-":
             raise TypeError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")
+    if args.LIN_taxonomy:
+        if args.LIN_position:
+            args.rank = args.LIN_position
     if not args.rank:
         if any(x in ["krona", "lineage_summary"] for x in args.output_format):
             raise ValueError(f"Rank (--rank) is required for krona and lineage_summary output formats.")

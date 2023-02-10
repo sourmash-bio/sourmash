@@ -72,7 +72,7 @@ def metagenome(args):
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
-                       force=args.force)
+                       force=args.force, LIN_taxonomy=args.LIN_taxonomy)
         available_ranks = tax_assign.available_ranks
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
@@ -93,6 +93,7 @@ def metagenome(args):
                                                                      fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
                                                                      keep_full_identifiers=args.keep_full_identifiers,
                                                                      keep_identifier_versions = args.keep_identifier_versions,
+                                                                     LIN_taxonomy=args.LIN_taxonomy,
                                                                      )
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
@@ -174,7 +175,7 @@ def genome(args):
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
-                       force=args.force)
+                       force=args.force, LIN_taxonomy=args.LIN_taxonomy)
         available_ranks = tax_assign.available_ranks
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")

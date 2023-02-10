@@ -3287,3 +3287,43 @@ def test_tax_summarize_strain_csv_with_lineages(runtmp):
         assert c['2'] == 5
         assert c['6'] == 1
         assert c['1'] == 11
+
+
+def test_metagenome_LINS(runtmp):
+    # test basic metagenome with LIN taxonomy
+    # get/design better test data for this?
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '--LIN-taxonomy')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
+    # 0th rank/position
+    assert "test1,0,0.089,1,md5,test1.sig,0.057,444000,0.925,0" in c.last_result.out
+    assert "test1,0,0.088,0,md5,test1.sig,0.058,442000,0.925,0" in c.last_result.out
+    assert "test1,0,0.028,2,md5,test1.sig,0.016,138000,0.891,0" in c.last_result.out
+    assert "test1,0,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
+    # 1st rank/position
+    assert "test1,1,0.089,1;0,md5,test1.sig,0.057,444000,0.925,0" in c.last_result.out
+    assert "test1,1,0.088,0;0,md5,test1.sig,0.058,442000,0.925,0" in c.last_result.out
+    assert "test1,1,0.028,2;0,md5,test1.sig,0.016,138000,0.891,0" in c.last_result.out
+    assert "test1,1,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
+    # 2nd rank/position
+    assert "test1,2,0.088,0;0;0,md5,test1.sig,0.058,442000,0.925,0" in c.last_result.out
+    assert "test1,2,0.078,1;0;0,md5,test1.sig,0.050,390000,0.921,0" in c.last_result.out
+    assert "test1,2,0.028,2;0;0,md5,test1.sig,0.016,138000,0.891,0" in c.last_result.out
+    assert "test1,2,0.011,1;0;1,md5,test1.sig,0.007,54000,0.864,0" in c.last_result.out
+    assert "test1,2,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
+    # 19th rank/position
+    assert "test1,19,0.088,0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,md5,test1.sig,0.058,442000,0.925,0" in c.last_result.out
+    assert "test1,19,0.078,1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,md5,test1.sig,0.050,390000,0.921,0" in c.last_result.out
+    assert "test1,19,0.028,2;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,md5,test1.sig,0.016,138000,0.891,0" in c.last_result.out
+    assert "test1,19,0.011,1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,md5,test1.sig,0.007,54000,0.864,0" in c.last_result.out
+    assert "test1,19,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
