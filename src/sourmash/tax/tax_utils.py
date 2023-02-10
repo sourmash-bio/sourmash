@@ -159,12 +159,12 @@ class BaseLineageInfo:
                     new_lineage[rank_idx] = LineagePair(rank=lin_tup.rank, name=lin_tup.name)
                 else:
                     new_lineage[rank_idx] = lin_tup
-    
+
         # build list of filled ranks
         filled_ranks = [a.rank for a in new_lineage if a.name]
         # set lineage and filled_ranks
         object.__setattr__(self, "lineage", tuple(new_lineage))
-        object.__setattr__(self, "filled_ranks", filled_ranks)
+        object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
 
     def _init_from_lineage_str(self):
         """
@@ -177,7 +177,7 @@ class BaseLineageInfo:
         # build list of filled ranks
         filled_ranks = [a.rank for a in new_lineage if a.name]
         object.__setattr__(self, "lineage", tuple(new_lineage))
-        object.__setattr__(self, "filled_ranks", filled_ranks)
+        object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
 
     def zip_lineage(self, truncate_empty=False):
         """
@@ -355,7 +355,7 @@ class RankLineageInfo(BaseLineageInfo):
         filled_ranks = [a.rank for a in new_lineage if a.name]
         # set lineage and filled_ranks
         object.__setattr__(self, "lineage", tuple(new_lineage))
-        object.__setattr__(self, "filled_ranks", filled_ranks)
+        object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
 
 @dataclass(frozen=True, order=True)
 class LINSLineageInfo(BaseLineageInfo):
@@ -390,7 +390,7 @@ class LINSLineageInfo(BaseLineageInfo):
             raise ValueError("Please initialize 'LINSLineageInfo' with 'lineage_str' or 'n_lin_positions'.")
 
     def _init_ranks_from_n_lin_positions(self):
-        new_ranks = [x for x in range(0,self.n_lin_positions)] # or str(x) -- does rank need to be str?
+        new_ranks = [x for x in range(0, self.n_lin_positions)]
         object.__setattr__(self, "ranks", new_ranks)
 
     def _init_empty(self):
@@ -403,6 +403,7 @@ class LINSLineageInfo(BaseLineageInfo):
         # set lineage and filled_ranks (because frozen, need to do it this way)
         object.__setattr__(self, "lineage", tuple(new_lineage))
         object.__setattr__(self, "filled_ranks", ())
+        object.__setattr__(self, "filled_pos", 0)
 
     def _init_from_lineage_str(self):
         """
@@ -419,11 +420,13 @@ class LINSLineageInfo(BaseLineageInfo):
             n_lin_positions = len(new_lineage)
             object.__setattr__(self, "n_lin_positions", n_lin_positions)
             self._init_ranks_from_n_lin_positions()
-        # build list of filled ranks
+
+        # build lineage and filled_pos, filled_ranks
+        new_lineage = [ LineagePair(rank=rank, name=n) for (rank, n) in zip_longest(self.ranks, new_lineage) ]
         filled_ranks = [a.rank for a in new_lineage if a.name]
-        # set lineage and filled_ranks
         object.__setattr__(self, "lineage", tuple(new_lineage))
-        object.__setattr__(self, "filled_ranks", filled_ranks)
+        object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
+        object.__setattr__(self, "filled_pos", len(filled_ranks))
 
 
 def get_ident(ident, *,

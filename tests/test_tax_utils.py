@@ -1136,7 +1136,8 @@ def test_LINSLineageInfo_init_n_pos():
     print(taxinf.lineage_str)
     assert taxinf.n_lin_positions == 5
     assert taxinf.zip_lineage()== ['', '', '', '', '']
-
+    assert taxinf.filled_ranks == ()
+    assert taxinf.filled_pos == 0
 
 def test_LINSLineageInfo_init_n_pos_and_lineage_str():
     x = "0;0;1"
@@ -1146,6 +1147,8 @@ def test_LINSLineageInfo_init_n_pos_and_lineage_str():
     print(taxinf.lineage_str)
     assert taxinf.n_lin_positions == 5
     assert taxinf.zip_lineage()== ['0', '0', '1', '', '']
+    assert taxinf.filled_ranks == (0,1,2)
+    assert taxinf.filled_pos == 3
 
 
 def test_LINSLineageInfo_init_n_pos_and_lineage_str_fail():
@@ -1164,6 +1167,8 @@ def test_LINSLineageInfo_init_lineage_str_only():
     print(taxinf.lineage_str)
     assert taxinf.n_lin_positions == 3
     assert taxinf.zip_lineage()== ['0', '0', '1']
+    assert taxinf.filled_ranks == (0,1,2)
+    assert taxinf.filled_pos == 3
 
 
 def test_RankLineageInfo_init_lineage_str_with_ranks_as_list():
