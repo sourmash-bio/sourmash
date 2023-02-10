@@ -49,6 +49,7 @@ def test_metagenome_stdout_0(runtmp):
     assert 'test1,order,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales,md5,test1.sig,0.073,582000' in c.last_result.out
     assert 'test1,order,0.088,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales,md5,test1.sig,0.058,442000' in c.last_result.out
     assert 'test1,order,0.796,unclassified,md5,test1.sig,0.869,3990000' in c.last_result.out
+    assert 'test1,family,0.116,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae,md5,test1.sig,0.073,582000' in c.last_result.out
     assert 'test1,family,0.088,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae,md5,test1.sig,0.058,442000' in c.last_result.out
     assert 'test1,family,0.796,unclassified,md5,test1.sig,0.869,3990000' in c.last_result.out
     assert 'test1,genus,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella,md5,test1.sig,0.057,444000' in c.last_result.out
