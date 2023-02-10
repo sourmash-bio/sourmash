@@ -1,0 +1,7 @@
+ident,TaxID,LIN,superkingdom,phylum,class,order,family,genus,species,subspecies,strain
+GCF_000010525.1,438753.0,0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,Bacteria,Proteobacteria,,Rhizobiales,Xanthobacteraceae,Azorhizobium,Azorhizobium caulinodans,,ORS 571
+GCF_000007365.1,198804.0,1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,Bacteria,Proteobacteria,,Enterobacterales,Erwiniaceae,Buchnera,Buchnera aphidicola,,Sg
+GCF_000007725.1,224915.0,2;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,Bacteria,Proteobacteria,,Enterobacterales,Erwiniaceae,Buchnera,Buchnera aphidicola,,Bp (Baizongia pistaciae)
+GCF_000009605.1,107806.0,1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,Bacteria,Proteobacteria,,Enterobacterales,Erwiniaceae,Buchnera,Buchnera aphidicola,,APS
+GCF_000021065.1,561501.0,1;0;1;0;0;0;0;0;0;0;0;0;0;1;0;0;0;0;0;0,Bacteria,Proteobacteria,,Enterobacterales,Erwiniaceae,Buchnera,Buchnera aphidicola,,Tuc7
+GCF_000021085.1,563178.0,1;0;1;0;0;0;0;0;0;0;0;0;0;1;1;0;0;0;0;0,Bacteria,Proteobacteria,,Enterobacterales,Erwiniaceae,Buchnera,Buchnera aphidicola,,5A
