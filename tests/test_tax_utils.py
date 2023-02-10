@@ -574,6 +574,42 @@ def test_load_taxonomy_csv():
     assert len(tax_assign) == 6 # should have read 6 rows
 
 
+def test_load_taxonomy_csv_LIN():
+    taxonomy_csv = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+    tax_assign = MultiLineageDB.load([taxonomy_csv], LINS_taxonomy=True)
+    print("taxonomy assignments: \n", tax_assign)
+    assert list(tax_assign.keys()) == ["GCF_000010525.1", "GCF_000007365.1", "GCF_000007725.1", "GCF_000009605.1", "GCF_000021065.1", "GCF_000021085.1"]
+    assert len(tax_assign) == 6 # should have read 6 rows
+    print(tax_assign.available_ranks)
+    assert tax_assign.available_ranks == {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19}
+
+
+def test_load_taxonomy_csv_LIN_fail():
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    with pytest.raises(ValueError) as exc:
+        MultiLineageDB.load([taxonomy_csv], LINS_taxonomy=True)
+    assert f"'LIN' column not found: cannot read LIN taxonomy assignments from {taxonomy_csv}." in str(exc.value)
+
+
+def test_load_taxonomy_csv_LIN_mismatch_in_taxfile(runtmp):
+    taxonomy_csv = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+    mimatchLIN_csv = runtmp.output('mmLINS-taxonomy.csv')
+    with open(mimatchLIN_csv, 'w') as mm:
+        tax21=[]
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        for n, taxline in enumerate(tax):
+            if n == 2: # add ;0 to a LIN
+                taxlist = taxline.split(',')
+                taxlist[2] += ';0' # add 21st position to LIN
+                tax21.append(",".join(taxlist))
+            else:
+                tax21.append(taxline)
+        mm.write("\n".join(tax21))
+    with pytest.raises(ValueError) as exc:
+        MultiLineageDB.load([mimatchLIN_csv], LINS_taxonomy=True)
+    assert "For taxonomic summarization, all LIN assignments must use the same number of LIN positions." in str(exc.value)
+
+
 def test_load_taxonomy_csv_gzip(runtmp):
     # test loading a gzipped taxonomy csv file
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')

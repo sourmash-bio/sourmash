@@ -797,7 +797,7 @@ class LineageDB(abc.Mapping):
 
     @classmethod
     def load(cls, filename, *, delimiter=',', force=False,
-             keep_full_identifiers=False, keep_identifier_versions=True):
+             keep_full_identifiers=False, keep_identifier_versions=True, LINS_taxonomy=False):
         """
         Load a taxonomy assignment CSV file into a LineageDB.
 
@@ -822,6 +822,9 @@ class LineageDB(abc.Mapping):
             if not header:
                 raise ValueError(f'cannot read taxonomy assignments from {filename}')
 
+            if LINS_taxonomy and "LIN" not in header:
+                raise ValueError(f"'LIN' column not found: cannot read LIN taxonomy assignments from {filename}.")
+
             identifier = "ident"
             # check for ident/identifier, handle some common alternatives
             if "ident" not in header:
@@ -839,29 +842,40 @@ class LineageDB(abc.Mapping):
                     header_str = ",".join([repr(x) for x in header])
                     raise ValueError(f'No taxonomic identifiers found; headers are {header_str}')
 
-            # is "strain" an available rank?
-            if "strain" in header:
-                include_strain=True
-            # check that all ranks are in header
-            ranks = list(RankLineageInfo().taxlist)
-            if not include_strain:
-                ranks.remove('strain')
-            if not set(ranks).issubset(header):
-                # for now, just raise err if not all ranks are present.
-                # in future, we can define `ranks` differently if desired
-                # return them from this function so we can check the `available` ranks
-                raise ValueError('Not all taxonomy ranks present')
+            if not LINS_taxonomy:
+                # is "strain" an available rank?
+                if "strain" in header:
+                    include_strain=True
+                # check that all ranks are in header
+                ranks = list(RankLineageInfo().taxlist)
+                if not include_strain:
+                    ranks.remove('strain')
+                if not set(ranks).issubset(header):
+                    # for now, just raise err if not all ranks are present.
+                    # in future, we can define `ranks` differently if desired
+                    # return them from this function so we can check the `available` ranks
+                    raise ValueError('Not all taxonomy ranks present')
 
             assignments = {}
             num_rows = 0
             n_species = 0
             n_strains = 0
+            n_pos = None
 
             # now parse and load lineages
             for n, row in enumerate(r):
                 num_rows += 1
-                # read lineage from row dictionary
-                lineageInfo = RankLineageInfo(lineage_dict=row)
+                if LINS_taxonomy:
+                    lineageInfo = LINSLineageInfo(lineage_str=row['LIN'])
+                    if n_pos is not None:
+                        if lineageInfo.n_lin_positions != n_pos:
+                            raise ValueError(f"For taxonomic summarization, all LIN assignments must use the same number of LIN positions.")
+                    else:
+                        n_pos = lineageInfo.n_lin_positions # set n_pos with first entry
+                        ranks=lineageInfo.ranks
+                else:
+                    # read lineage from row dictionary
+                    lineageInfo = RankLineageInfo(lineage_dict=row)
                 # get identifier
                 ident = row[identifier]
 
@@ -881,11 +895,12 @@ class LineageDB(abc.Mapping):
                     else:
                         assignments[ident] = lineage
 
-                        if lineage[-1].rank == 'species':
-                            n_species += 1
-                        elif lineage[-1].rank == 'strain':
-                            n_species += 1
-                            n_strains += 1
+                        if not LINS_taxonomy:
+                            if lineage[-1].rank == 'species':
+                                n_species += 1
+                            elif lineage[-1].rank == 'strain':
+                                n_species += 1
+                                n_strains += 1
 
         return LineageDB(assignments, ranks)
 
