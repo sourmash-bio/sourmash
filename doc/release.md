@@ -41,24 +41,15 @@ Create the basic build environment:
 
 ```
 mamba create -y -n sourmash-rc python=3.10 pip \
-    cxx-compiler make twine tox tox-conda \
-    setuptools setuptools_scm
+    cxx-compiler make twine tox tox-conda rust
 ```
 
 Then activate it with `conda activate sourmash-rc`.
 
-You will also need a Rust installation (see
-[Development Environment](developer.md)); be sure to update it to the
-latest version with `rustup update`:
-
-```
-rustup update
-```
-
 ## Writing release notes
 
 Draft release notes can be created with `git log --oneline
-v4.4.1..latest`, but should then be edited manually. We suggest
+v4.6.1..latest`, but should then be edited manually. We suggest
 putting PRs in the following categories:
 
 ```
@@ -100,18 +91,39 @@ or you can run `make last-tag` and check the output.
 new_version=4.X.X
 rc=rc1
 ```
-and then tag the release candidate with the new version number prefixed by the letter 'v':
+
+Next create a new branch to work on release candidates and the version bump:
 ```
-git tag -a v${new_version}${rc} -m "${new_version} release candidate ${rc}"
-git push --tags origin
+git checkout -b release/v${new_version}
+```
+and update the version number in `pyproject.toml`:
+```
+sed -i -e "s|version = .*$|version = \"${new_version}${rc}\"|g" pyproject.toml
+```
+Commit the changes and push the branch:
+```
+git add pyproject.toml
+git commit -m "${new_version} release candidate ${rc}"
+git push -u origin release/v${new_version}
+```
+and then open a PR for the new branch by following the link printed by
+```
+echo "https://github.com/sourmash-bio/sourmash/pull/new/release/v${new_version}"
 ```
 
 [the releases page]: https://github.com/sourmash-bio/sourmash/releases
 
+Once the checks for the PR work, let's trigger the automatic wheel building
+by creating a tag:
+
+```
+git tag -a v${new_version}${rc} -m "${new_version} release candidate ${rc}"
+git push origin refs/tags/v${new_version}${rc}
+```
+
 3\. Test the release candidate. Bonus: repeat on macOS:
 ```
 python -m pip install -U pip
-python -m pip install -U virtualenv wheel tox-setuptools-version build
 
 cd ..
 python -m venv testenv1
@@ -123,7 +135,6 @@ python -m venv testenv4
 
 cd testenv1
 source bin/activate
-python -m pip install wheel
 git clone --depth 1 --branch v${new_version}${rc} https://github.com/sourmash-bio/sourmash.git
 cd sourmash
 python -m pip install -r requirements.txt
@@ -134,7 +145,7 @@ pytest && cargo test
 cd ../../testenv2
 deactivate
 source bin/activate
-python -m pip install setuptools_scm build wheel
+python -m pip install build
 python -m pip install -e git+https://github.com/sourmash-bio/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
 cd src/sourmash
 pytest && cargo test
@@ -147,7 +158,6 @@ cp dist/sourmash*tar.gz ../../../testenv3/
 cd ../../../testenv3/
 deactivate
 source bin/activate
-python -m pip install pytest build wheel
 python -m pip install sourmash*tar.gz
 tar xzf sourmash-${new_version}${rc}.tar.gz
 cd sourmash-${new_version}${rc}
@@ -168,7 +178,7 @@ to finish and upload; the
 [latest release](https://github.com/sourmash-bio/sourmash/releases)
 should have eight wheel files attached to it.
 
-6\. Remove relase candidate tags
+6\. Remove release candidate tags
 
 NOTE: If you delete the rc tag before the rc wheels are done building, they
 may get added to the wrong release.
@@ -184,28 +194,38 @@ git push --delete origin v${new_version}${rc}
 When you've got a thoroughly tested release candidate,
 cut a release like so:
 
-1\. Create the final tag and push to GitHub:
+1\. Merge the pull request bumping the version. Once the PR is merged,
+change back to the `latest` branch and pull the new commit:
+
+```
+git checkout latest
+git pull --rebase
+```
+
+2\. Create the final tag and push to GitHub:
 
 ```
 git tag -a v${new_version} -m "${new_version} release"
 git push --tags origin
 ```
 
-2\. Upload wheels from GitHub Releases to PyPI
+(make sure to be in the `latest` branch when creating the final tag!)
+
+3\. Upload wheels from GitHub Releases to PyPI
 
 [GitHub Actions will automatically build wheels and upload them to GitHub Releases](https://github.com/sourmash-bio/sourmash/actions?query=workflow%3Acibuildwheel).
 This will take about 45 minutes, or more. After they're built, they must be
 copied over to PyPI manually.
 
 You can do this in two ways: you can manually download all the files
-from [the releases page], or, if you have
-[`hub`](https://hub.github.com/), you can use that to download the
+from [the releases page], or, if you have the
+[`GitHub CLI`](https://cli.github.com/), you can use that to download the
 packages.
 
-Download the wheels with hub:
+Download the wheels with the `GitHub CLI`:
 ```
 mkdir -p wheel && cd wheel
-hub release download v${new_version}
+gh release download v${new_version}
 ```
 or download them manually.
 
