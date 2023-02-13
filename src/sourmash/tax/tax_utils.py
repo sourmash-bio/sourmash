@@ -164,11 +164,7 @@ class BaseLineageInfo:
         filled_ranks = [a.rank for a in new_lineage if a.name is not None]
         # set lineage and filled_ranks
         object.__setattr__(self, "lineage", tuple(new_lineage))
-<<<<<<< HEAD
         object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
-=======
-        object.__setattr__(self, "filled_ranks", filled_ranks)
->>>>>>> latest
 
     def _init_from_lineage_str(self):
         """
@@ -359,7 +355,6 @@ class RankLineageInfo(BaseLineageInfo):
         filled_ranks = [a.rank for a in new_lineage if a.name]
         # set lineage and filled_ranks
         object.__setattr__(self, "lineage", tuple(new_lineage))
-<<<<<<< HEAD
         object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
 
 @dataclass(frozen=True, order=True)
@@ -455,9 +450,6 @@ class LINSLineageInfo(BaseLineageInfo):
         object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
         object.__setattr__(self, "filled_pos", len(filled_ranks))
         object.__setattr__(self, "ranks", tuple(filled_ranks))
-=======
-        object.__setattr__(self, "filled_ranks", filled_ranks)
->>>>>>> latest
 
 
 def get_ident(ident, *,
@@ -876,7 +868,6 @@ class LineageDB(abc.Mapping):
                     header_str = ",".join([repr(x) for x in header])
                     raise ValueError(f'No taxonomic identifiers found; headers are {header_str}')
 
-<<<<<<< HEAD
             if not LIN_taxonomy:
                 # is "strain" an available rank?
                 if "strain" in header:
@@ -890,20 +881,6 @@ class LineageDB(abc.Mapping):
                     # in future, we can define `ranks` differently if desired
                     # return them from this function so we can check the `available` ranks
                     raise ValueError('Not all taxonomy ranks present')
-=======
-            # is "strain" an available rank?
-            if "strain" in header:
-                include_strain=True
-            # check that all ranks are in header
-            ranks = list(RankLineageInfo().taxlist)
-            if not include_strain:
-                ranks.remove('strain')
-            if not set(ranks).issubset(header):
-                # for now, just raise err if not all ranks are present.
-                # in future, we can define `ranks` differently if desired
-                # return them from this function so we can check the `available` ranks
-                raise ValueError('Not all taxonomy ranks present')
->>>>>>> latest
 
             assignments = {}
             num_rows = 0
@@ -914,7 +891,6 @@ class LineageDB(abc.Mapping):
             # now parse and load lineages
             for n, row in enumerate(r):
                 num_rows += 1
-<<<<<<< HEAD
                 if LIN_taxonomy:
                     lineageInfo = LINSLineageInfo(lineage_str=row['LIN'])
                     if n_pos is not None:
@@ -926,10 +902,6 @@ class LineageDB(abc.Mapping):
                 else:
                     # read lineage from row dictionary
                     lineageInfo = RankLineageInfo(lineage_dict=row)
-=======
-                # read lineage from row dictionary
-                lineageInfo = RankLineageInfo(lineage_dict=row)
->>>>>>> latest
                 # get identifier
                 ident = row[identifier]
 
