@@ -406,7 +406,7 @@ class LINSLineageInfo(BaseLineageInfo):
         # set lineage and filled_ranks (because frozen, need to do it this way)
         object.__setattr__(self, "lineage", tuple(new_lineage))
         object.__setattr__(self, "filled_ranks", ())
-        object.__setattr__(self, "filled_pos", 0)
+        object.__setattr__(self, "n_filled_pos", 0)
 
     def _init_from_lineage_str(self):
         """
@@ -424,16 +424,17 @@ class LINSLineageInfo(BaseLineageInfo):
             object.__setattr__(self, "n_lin_positions", n_lin_positions)
             self._init_ranks_from_n_lin_positions()
 
-        # build lineage and filled_pos, filled_ranks
+        # build lineage and n_filled_pos, filled_ranks
         new_lineage = [ LineagePair(rank=rank, name=n) for (rank, n) in zip_longest(self.ranks, new_lineage) ]
         filled_ranks = [a.rank for a in new_lineage if a.name is not None]
         object.__setattr__(self, "lineage", tuple(new_lineage))
         object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
-        object.__setattr__(self, "filled_pos", len(filled_ranks))
+        object.__setattr__(self, "n_filled_pos", len(filled_ranks))
 
     def _init_from_lineage_tuples(self):    
         'initialize from tuple/list of LineagePairs, building ranks as you go'
         new_lineage = []
+        ranks = []
         # check this is a list or tuple of lineage tuples:
         for lin_tup in self.lineage:
             if not isinstance(lin_tup, (LineagePair, lca_utils.LineagePair)):
@@ -443,13 +444,15 @@ class LINSLineageInfo(BaseLineageInfo):
                 new_lineage.append(LineagePair(rank=lin_tup.rank, name=lin_tup.name))
             else:
                 new_lineage.append(lin_tup)
+            ranks.append(lin_tup.rank)
         # build list of filled ranks
         filled_ranks = [a.rank for a in new_lineage if a.name is not None]
         # set lineage and filled_ranks
         object.__setattr__(self, "lineage", tuple(new_lineage))
+        object.__setattr__(self, "n_lin_positions", len(new_lineage))
+        object.__setattr__(self, "ranks", tuple(ranks))
         object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
-        object.__setattr__(self, "filled_pos", len(filled_ranks))
-        object.__setattr__(self, "ranks", tuple(filled_ranks))
+        object.__setattr__(self, "n_filled_pos", len(filled_ranks))
 
 
 def get_ident(ident, *,

@@ -1174,7 +1174,8 @@ def test_LINSLineageInfo_init_n_pos():
     assert taxinf.n_lin_positions == 5
     assert taxinf.zip_lineage()== ['', '', '', '', '']
     assert taxinf.filled_ranks == ()
-    assert taxinf.filled_pos == 0
+    assert taxinf.n_filled_pos == 0
+
 
 def test_LINSLineageInfo_init_n_pos_and_lineage_str():
     x = "0;0;1"
@@ -1185,7 +1186,7 @@ def test_LINSLineageInfo_init_n_pos_and_lineage_str():
     assert taxinf.n_lin_positions == 5
     assert taxinf.zip_lineage()== ['0', '0', '1', '', '']
     assert taxinf.filled_ranks == ("0","1","2")
-    assert taxinf.filled_pos == 3
+    assert taxinf.n_filled_pos == 3
 
 
 def test_LINSLineageInfo_init_n_pos_and_lineage_str_fail():
@@ -1205,7 +1206,39 @@ def test_LINSLineageInfo_init_lineage_str_only():
     assert taxinf.n_lin_positions == 3
     assert taxinf.zip_lineage()== ['0', '0', '1']
     assert taxinf.filled_ranks == ("0","1","2")
-    assert taxinf.filled_pos == 3
+    assert taxinf.n_filled_pos == 3
+
+
+def test_LINSLineageInfo_init_not_lineagepair():
+    lin_tups = (("rank1", "name1"),)
+    with pytest.raises(ValueError) as exc:
+        LINSLineageInfo(lineage=lin_tups)
+    print(str(exc))
+    assert "is not LineagePair" in str(exc)
+
+
+def test_LINSLineageInfo_init_lineagepair():
+    lin_tups = (LineagePair("rank1", "name1"), LineagePair("rank2", None),)
+    taxinf = LINSLineageInfo(lineage=lin_tups)
+    print(taxinf.lineage)
+    assert taxinf.n_lin_positions == 2
+    assert taxinf.zip_lineage()== ["name1", ""]
+    assert taxinf.zip_lineage(truncate_empty=True)== ["name1"]
+    assert taxinf.filled_ranks == ("rank1",)
+    assert taxinf.ranks == ("rank1", "rank2")
+    assert taxinf.n_filled_pos == 1
+
+
+def test_LINSLineageInfo_init_lca_lineagepair():
+    lin_tups = (lca_utils.LineagePair("rank1", "name1"), lca_utils.LineagePair("rank2", None),)
+    taxinf = LINSLineageInfo(lineage=lin_tups)
+    print(taxinf.lineage)
+    assert taxinf.n_lin_positions == 2
+    assert taxinf.zip_lineage()== ["name1", ""]
+    assert taxinf.zip_lineage(truncate_empty=True)== ["name1"]
+    assert taxinf.filled_ranks == ("rank1",)
+    assert taxinf.ranks == ("rank1", "rank2")
+    assert taxinf.n_filled_pos == 1
 
 
 def test_RankLineageInfo_init_lineage_str_with_ranks_as_list():
