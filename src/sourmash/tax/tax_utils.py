@@ -51,7 +51,6 @@ class BaseLineageInfo:
         optional:
             lineage: tuple or list of LineagePair
             lineage_str: `;`- or `,`-separated string of names
-            lineage_dict: dictionary of {rank: name}
 
     If no lineage information is provided, result will be a BaseLineageInfo
     with provided ranks and no lineage names.
@@ -63,7 +62,6 @@ class BaseLineageInfo:
     ranks: tuple() # require ranks
     lineage: tuple = None # tuple of LineagePairs
     lineage_str: str = field(default=None, compare=False) # ';'- or ','-separated str of lineage names
-    lineage_dict: dict = field(default=None, compare=False) # dict of rank: name
 
     def __post_init__(self):
         "Initialize according to passed values"
@@ -74,8 +72,6 @@ class BaseLineageInfo:
             self._init_from_lineage_tuples()
         elif self.lineage_str is not None:
             self._init_from_lineage_str()
-        elif self.lineage_dict is not None:
-            self._init_from_lineage_dict()
         else:
             self._init_empty()
 
@@ -164,37 +160,6 @@ class BaseLineageInfo:
                 else:
                     new_lineage[rank_idx] = lin_tup
     
-        # build list of filled ranks
-        filled_ranks = [a.rank for a in new_lineage if a.name]
-        # set lineage and filled_ranks
-        object.__setattr__(self, "lineage", tuple(new_lineage))
-        object.__setattr__(self, "filled_ranks", filled_ranks)
-
-    def _init_from_lineage_dict(self):
-        'initialize from lineage dict, e.g. from gather csv, allowing empty ranks and reordering if necessary'
-        if not isinstance(self.lineage_dict, (dict)):
-            raise ValueError(f"{self.lineage_dict} is not dictionary")
-        # first, initialize_empty
-        new_lineage = []
-        # build empty lineage
-        for rank in self.ranks:
-            new_lineage.append(LineagePair(rank=rank))
-        # now add input information in correct spots. This corrects for order and allows empty values.
-        for rank, info in self.lineage_dict.items():
-            try:
-                rank_idx = self.rank_index(rank)
-            except ValueError as e:
-                raise ValueError(f"Rank '{rank}' not present in {', '.join(self.ranks)}") from e
-
-            name, taxid = None, None
-            if isinstance(info, dict):
-                if 'name' in info.keys():
-                    name = info['name']
-                if 'taxid' in info.keys():
-                    taxid = info['taxid']
-            elif isinstance(info, str):
-                name = info
-            new_lineage[rank_idx] =  LineagePair(rank=rank, name=name, taxid=taxid)
         # build list of filled ranks
         filled_ranks = [a.rank for a in new_lineage if a.name]
         # set lineage and filled_ranks
@@ -329,6 +294,7 @@ class RankLineageInfo(BaseLineageInfo):
     and will not be used or compared in any other class methods.
     """
     ranks: tuple = ('superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain')
+    lineage_dict: dict = field(default=None, compare=False) # dict of rank: name
 
     def __post_init__(self):
         "Initialize according to passed values"
@@ -343,6 +309,53 @@ class RankLineageInfo(BaseLineageInfo):
             self._init_from_lineage_dict()
         elif self.ranks:
             self._init_empty()
+
+    def _init_from_lineage_dict(self):
+        """
+        Initialize from lineage dict, e.g. from lineages csv.
+        Use NCBI taxids if available as '|'-separated 'taxpath' column.
+        Allows empty ranks/extra columns and reordering if necessary
+        """
+        null_names = set(['[Blank]', 'na', 'null', 'NA', ''])
+        if not isinstance(self.lineage_dict, (dict)):
+            raise ValueError(f"{self.lineage_dict} is not dictionary")
+        new_lineage = []
+        taxpath=[]
+        # build empty lineage and taxpath
+        for rank in self.ranks:
+            new_lineage.append(LineagePair(rank=rank))
+
+        # check for NCBI taxpath information
+        taxpath_str = self.lineage_dict.get('taxpath', [])
+        if taxpath_str:
+            taxpath = taxpath_str.split('|')
+            if len(taxpath) > len(self.ranks):
+                raise ValueError(f"Number of NCBI taxids ({len(taxpath)}) exceeds number of ranks ({len(self.ranks)})")
+
+        # now add rank information in correct spots. This corrects for order and allows empty ranks and extra dict keys
+        for key, val in self.lineage_dict.items():
+            name, taxid = None, None
+            try:
+                rank, name = key, val
+                rank_idx = self.rank_index(rank)
+            except ValueError:
+                continue # ignore dictionary entries (columns) that don't match a rank
+
+            if taxpath:
+                try:
+                    taxid = taxpath[rank_idx]
+                except IndexError:
+                    taxid = None
+            # filter null
+            if name is not None and name.strip() in null_names:
+                 name = None
+            new_lineage[rank_idx] =  LineagePair(rank=rank, name=name, taxid=taxid)
+
+        # build list of filled ranks
+        filled_ranks = [a.rank for a in new_lineage if a.name]
+        # set lineage and filled_ranks
+        object.__setattr__(self, "lineage", tuple(new_lineage))
+        object.__setattr__(self, "filled_ranks", filled_ranks)
 
 
 def get_ident(ident, *,
@@ -754,15 +767,14 @@ class LineageDB(abc.Mapping):
                 else:
                     header_str = ",".join([repr(x) for x in header])
                     raise ValueError(f'No taxonomic identifiers found; headers are {header_str}')
+
             # is "strain" an available rank?
             if "strain" in header:
                 include_strain=True
-            load_taxids=False
-            if 'taxpath' in header:
-                load_taxids=True
-
             # check that all ranks are in header
-            ranks = list(lca_utils.taxlist(include_strain=include_strain))
+            ranks = list(RankLineageInfo().taxlist)
+            if not include_strain:
+                ranks.remove('strain')
             if not set(ranks).issubset(header):
                 # for now, just raise err if not all ranks are present.
                 # in future, we can define `ranks` differently if desired
@@ -777,16 +789,9 @@ class LineageDB(abc.Mapping):
             # now parse and load lineages
             for n, row in enumerate(r):
                 num_rows += 1
-                lineage = []
-                taxid=None
-                # read row into a lineage pair
-                if load_taxids:
-                    taxpath = row['taxpath'].split('|')
-                for n, rank in enumerate(lca_utils.taxlist(include_strain=include_strain)):
-                    lin = row[rank]
-                    if load_taxids:
-                        taxid = taxpath[n]
-                    lineage.append(LineagePair(rank, name=lin, taxid=taxid))
+                # read lineage from row dictionary
+                lineageInfo = RankLineageInfo(lineage_dict=row)
+                # get identifier
                 ident = row[identifier]
 
                 # fold, spindle, and mutilate ident?
@@ -794,23 +799,16 @@ class LineageDB(abc.Mapping):
                                   keep_full_identifiers=keep_full_identifiers,
                                   keep_identifier_versions=keep_identifier_versions)
 
-                # clean lineage of null names, replace with 'unassigned'
-                lineage = [ (lin.rank, lca_utils.filter_null(lin.name), lin.taxid) for lin in lineage ]
-                lineage = [ LineagePair(a, b, c) for (a, b, c) in lineage ]
-
-                # remove end nulls
-                while lineage and lineage[-1].name == 'unassigned':
-                    lineage = lineage[:-1]
-
                 # store lineage tuple
+                lineage = lineageInfo.filled_lineage
                 if lineage:
                     # check duplicates
                     if ident in assignments:
-                        if assignments[ident] != tuple(lineage):
+                        if assignments[ident] != lineage:
                             if not force:
                                 raise ValueError(f"multiple lineages for identifier {ident}")
                     else:
-                        assignments[ident] = tuple(lineage)
+                        assignments[ident] = lineage
 
                         if lineage[-1].rank == 'species':
                             n_species += 1
