@@ -22,7 +22,7 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
            'report_missing_and_skipped_identities', 'aggregate_by_lineage_at_rank'
            'format_for_krona',
            'combine_sumgather_csvs_by_lineage', 'write_lineage_sample_frac',
-           'MultiLineageDB', 'RankLineageInfo', 'LINSLineageInfo']
+           'MultiLineageDB', 'RankLineageInfo', 'LINLineageInfo']
 
 from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
@@ -358,27 +358,27 @@ class RankLineageInfo(BaseLineageInfo):
         object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
 
 @dataclass(frozen=True, order=True)
-class LINSLineageInfo(BaseLineageInfo):
+class LINLineageInfo(BaseLineageInfo):
     """
-    This LINSLineageInfo class usees the BaseLineageInfo methods for hierarchical LINS taxonomic 'ranks'.
+    This LINLineageInfo class uses the BaseLineageInfo methods for hierarchical LIN taxonomic 'ranks'.
 
     Inputs (at least one required):
         n_lin_positions: the number of lineage positions
         lineage_str: `;`- or `,`-separated LINS string
 
-    If both `n_lin_positions` and `lineage_str` are provided, we will initialize a `LINSLineageInfo`
+    If both `n_lin_positions` and `lineage_str` are provided, we will initialize a `LINLineageInfo`
     with the provided n_lin_positions, and fill positions with `lineage_str` values. If the number of
     positions is less than provided lineages, initialization will fail. Otherwise, we will insert blanks
     beyond provided data in `lineage_str`.
 
-    LINSLineageInfo must be initialized with lineage or n_lin_positions.
+    LINLineageInfo must be initialized with lineage or n_lin_positions.
 
     Input lineage information is only used for initialization of the final `lineage`
     and will not be used or compared in any other class methods.
     """
     ranks: tuple = field(default=None, init=False, compare=False)# we will set this within class instead
     lineage: tuple = None
-    n_lin_positions: int = None # init with this to make empty LINSLineageInfo with correct n_lin_positions
+    n_lin_positions: int = None # init with this to make empty LINLineageInfo with correct n_lin_positions
 
     def __post_init__(self):
         "Initialize according to passed values"
@@ -390,7 +390,7 @@ class LINSLineageInfo(BaseLineageInfo):
         elif self.n_lin_positions is not None:
             self._init_empty()
         else:
-            raise ValueError("Please initialize 'LINSLineageInfo' with 'lineage', 'lineage_str' or 'n_lin_positions'.")
+            raise ValueError("Please initialize 'LINLineageInfo' with 'lineage', 'lineage_str' or 'n_lin_positions'.")
 
     def _init_ranks_from_n_lin_positions(self):
         new_ranks = [str(x) for x in range(0, self.n_lin_positions)]
@@ -895,7 +895,7 @@ class LineageDB(abc.Mapping):
             for n, row in enumerate(r):
                 num_rows += 1
                 if LIN_taxonomy:
-                    lineageInfo = LINSLineageInfo(lineage_str=row['LIN'])
+                    lineageInfo = LINLineageInfo(lineage_str=row['LIN'])
                     if n_pos is not None:
                         if lineageInfo.n_lin_positions != n_pos:
                             raise ValueError(f"For taxonomic summarization, all LIN assignments must use the same number of LIN positions.")
@@ -1476,7 +1476,7 @@ class TaxResult:
             lin = tax_assignments.get(self.match_ident)
             if lin:
                 if LIN_taxonomy:
-                    self.lineageInfo = LINSLineageInfo(lineage = lin)
+                    self.lineageInfo = LINLineageInfo(lineage = lin)
                 else:
                     self.lineageInfo = RankLineageInfo(lineage = lin)
             else:

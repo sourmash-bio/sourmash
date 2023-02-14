@@ -14,7 +14,7 @@ from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_re
                                     collect_gather_csvs, check_and_load_gather_csvs,
                                     LineagePair, QueryInfo, GatherRow, TaxResult, QueryTaxResult,
                                     SummarizedGatherResult, ClassificationResult,
-                                    BaseLineageInfo, RankLineageInfo, LINSLineageInfo,
+                                    BaseLineageInfo, RankLineageInfo, LINLineageInfo,
                                     aggregate_by_lineage_at_rank, format_for_krona,
                                     write_krona, write_lineage_sample_frac,
                                     LineageDB, LineageDB_Sqlite, MultiLineageDB)
@@ -1159,16 +1159,16 @@ def test_RankLineageInfo_init_lineage_str():
     assert taxinf.zip_lineage()== ['a', 'b', 'c', '', '', '', '', '']
 
 
-def test_LINSLineageInfo_init_fail():
+def test_LINLineageInfo_init_fail():
     with pytest.raises(ValueError) as exc:
-        LINSLineageInfo()
+        LINLineageInfo()
     print(str(exc))
-    assert "Please initialize 'LINSLineageInfo' with 'lineage', 'lineage_str' or 'n_lin_positions'." in str(exc)
+    assert "Please initialize 'LINLineageInfo' with 'lineage', 'lineage_str' or 'n_lin_positions'." in str(exc)
 
 
-def test_LINSLineageInfo_init_n_pos():
+def test_LINLineageInfo_init_n_pos():
     n_pos = 5
-    taxinf = LINSLineageInfo(n_lin_positions=n_pos)
+    taxinf = LINLineageInfo(n_lin_positions=n_pos)
     print(taxinf.lineage)
     print(taxinf.lineage_str)
     assert taxinf.n_lin_positions == 5
@@ -1177,10 +1177,10 @@ def test_LINSLineageInfo_init_n_pos():
     assert taxinf.n_filled_pos == 0
 
 
-def test_LINSLineageInfo_init_n_pos_and_lineage_str():
+def test_LINLineageInfo_init_n_pos_and_lineage_str():
     x = "0;0;1"
     n_pos = 5
-    taxinf = LINSLineageInfo(lineage_str=x, n_lin_positions=n_pos)
+    taxinf = LINLineageInfo(lineage_str=x, n_lin_positions=n_pos)
     print(taxinf.lineage)
     print(taxinf.lineage_str)
     assert taxinf.n_lin_positions == 5
@@ -1189,18 +1189,18 @@ def test_LINSLineageInfo_init_n_pos_and_lineage_str():
     assert taxinf.n_filled_pos == 3
 
 
-def test_LINSLineageInfo_init_n_pos_and_lineage_str_fail():
+def test_LINLineageInfo_init_n_pos_and_lineage_str_fail():
     x = "0;0;1"
     n_pos = 2
     with pytest.raises(ValueError) as exc:
-        LINSLineageInfo(lineage_str=x, n_lin_positions=n_pos)
+        LINLineageInfo(lineage_str=x, n_lin_positions=n_pos)
     print(str(exc))
     assert "Provided 'n_lin_positions' has fewer positions than provided 'lineage_str'." in str(exc)
 
 
-def test_LINSLineageInfo_init_lineage_str_only():
+def test_LINLineageInfo_init_lineage_str_only():
     x = "0,0,1"
-    taxinf = LINSLineageInfo(lineage_str=x)
+    taxinf = LINLineageInfo(lineage_str=x)
     print(taxinf.lineage)
     print(taxinf.lineage_str)
     assert taxinf.n_lin_positions == 3
@@ -1209,17 +1209,17 @@ def test_LINSLineageInfo_init_lineage_str_only():
     assert taxinf.n_filled_pos == 3
 
 
-def test_LINSLineageInfo_init_not_lineagepair():
+def test_LINLineageInfo_init_not_lineagepair():
     lin_tups = (("rank1", "name1"),)
     with pytest.raises(ValueError) as exc:
-        LINSLineageInfo(lineage=lin_tups)
+        LINLineageInfo(lineage=lin_tups)
     print(str(exc))
     assert "is not LineagePair" in str(exc)
 
 
-def test_LINSLineageInfo_init_lineagepair():
+def test_LINLineageInfo_init_lineagepair():
     lin_tups = (LineagePair("rank1", "name1"), LineagePair("rank2", None),)
-    taxinf = LINSLineageInfo(lineage=lin_tups)
+    taxinf = LINLineageInfo(lineage=lin_tups)
     print(taxinf.lineage)
     assert taxinf.n_lin_positions == 2
     assert taxinf.zip_lineage()== ["name1", ""]
@@ -1229,9 +1229,9 @@ def test_LINSLineageInfo_init_lineagepair():
     assert taxinf.n_filled_pos == 1
 
 
-def test_LINSLineageInfo_init_lca_lineagepair():
+def test_LINLineageInfo_init_lca_lineagepair():
     lin_tups = (lca_utils.LineagePair("rank1", "name1"), lca_utils.LineagePair("rank2", None),)
-    taxinf = LINSLineageInfo(lineage=lin_tups)
+    taxinf = LINLineageInfo(lineage=lin_tups)
     print(taxinf.lineage)
     assert taxinf.n_lin_positions == 2
     assert taxinf.zip_lineage()== ["name1", ""]
