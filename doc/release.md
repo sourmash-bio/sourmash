@@ -96,10 +96,11 @@ Next create a new branch to work on release candidates and the version bump:
 ```
 git checkout -b release/v${new_version}
 ```
-and update the version number in `pyproject.toml`:
+and update the version number in `pyproject.toml` and `flake.nix`:
 ```
-sed -i -e "s|version = .*$|version = \"${new_version}${rc}\"|g" pyproject.toml
+sed -i -e "s|version = .*$|version = \"${new_version}${rc}\"|g" pyproject.toml flake.nix
 ```
+
 Commit the changes and push the branch:
 ```
 git add pyproject.toml
