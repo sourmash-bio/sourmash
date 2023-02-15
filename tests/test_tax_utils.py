@@ -23,11 +23,15 @@ from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_re
 from sourmash.lca import lca_utils
 
 # utility functions for testing
-def make_mini_taxonomy(tax_info):
+def make_mini_taxonomy(tax_info, LIN=False):
     #pass in list of tuples: (name, lineage)
     taxD = {}
-    for (name,lin) in tax_info:
-        taxD[name] = lca_utils.make_lineage(lin)
+    for (name, lin) in tax_info:
+        if LIN:
+            lineage = LINLineageInfo(lineage_str=lin)
+        else:
+            lineage = RankLineageInfo(lineage_str=lin)
+        taxD[name] = lineage.filled_lineage
     return taxD
 
 
@@ -53,28 +57,30 @@ def make_GatherRow(gather_dict=None, exclude_cols=[]):
     return gatherRaw
 
 
-def make_TaxResult(gather_dict=None, taxD=None, keep_full_ident=False, keep_ident_version=False, skip_idents=None):
+def make_TaxResult(gather_dict=None, taxD=None, keep_full_ident=False, keep_ident_version=False, skip_idents=None, LIN=False):
     """Make TaxResult from artificial gather row (dict)"""
     gRow = make_GatherRow(gather_dict)
-    taxres = TaxResult(raw=gRow, keep_full_identifiers=keep_full_ident, keep_identifier_versions=keep_ident_version)
+    taxres = TaxResult(raw=gRow, keep_full_identifiers=keep_full_ident,
+                       keep_identifier_versions=keep_ident_version, LIN_taxonomy=LIN)
     if taxD is not None:
         taxres.get_match_lineage(tax_assignments=taxD, skip_idents=skip_idents)
     return taxres
 
 
 def make_QueryTaxResults(gather_info, taxD=None, single_query=False, keep_full_ident=False, keep_ident_version=False,
-                        skip_idents=None, summarize=False, classify=False, classify_rank=None, c_thresh=0.1, ani_thresh=None):
+                        skip_idents=None, summarize=False, classify=False, classify_rank=None, c_thresh=0.1, ani_thresh=None,
+                        LIN=False):
     """Make QueryTaxResult(s) from artificial gather information, formatted as list of gather rows (dicts)"""
     gather_results = {}
     this_querytaxres = None
     for gather_infoD in gather_info:
         taxres = make_TaxResult(gather_infoD, taxD=taxD,  keep_full_ident=keep_full_ident,
-                                keep_ident_version=keep_ident_version, skip_idents=skip_idents)
+                                keep_ident_version=keep_ident_version, skip_idents=skip_idents, LIN=LIN)
         query_name = taxres.query_name
         # add to matching QueryTaxResult or create new one
         if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
             # get existing or initialize new
-            this_querytaxres = gather_results.get(query_name, QueryTaxResult(taxres.query_info))
+            this_querytaxres = gather_results.get(query_name, QueryTaxResult(taxres.query_info, LIN_taxonomy=LIN))
         this_querytaxres.add_taxresult(taxres)
 #        print('missed_ident?', taxres.missed_ident)
         gather_results[query_name] = this_querytaxres
@@ -165,9 +171,9 @@ def test_SummarizedGatherResult_LINs():
     sgr = SummarizedGatherResult(rank="phylum", fraction=0.2, lineage=LINLineageInfo(lineage_str="0;0;1"),
                                  f_weighted_at_rank=0.3, bp_match_at_rank=30)
 
-    lgD = sgr.as_lingroup_dict(query_info=qInf, lg_name="lg_name", lowest_rank="2")
+    lgD = sgr.as_lingroup_dict(query_info=qInf, lg_name="lg_name", lowest_rank="4")
     print(lgD)
-    assert lgD == {'LINgroup_name': "lg_name", "LINgroup_prefix": "0;0;1", 'num_bp_assigned': "600",
+    assert lgD == {'LINgroup_name': "lg_name", "LINgroup_prefix": "0;0;1", 'num_bp_assigned': "0",
                    'percent_containment': '30.00', 'num_bp_contained': "600"}
     lgD = sgr.as_lingroup_dict(query_info=qInf, lg_name="lg_name", lowest_rank="3")
     print(lgD)
@@ -2722,11 +2728,24 @@ def test_make_kreport_results_fail_pre_v450():
     assert "cannot produce 'kreport' format from gather results before sourmash v4.5.0" in str(exc)
 
 
-def test_make_kreport_results_fail_pre_v450():
-    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
-    gather_results = [{}, {"name": 'gB'}]
-    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True)
-    with pytest.raises(ValueError) as exc:
-        q_res.make_kreport_results()
-    print(str(exc))
-    assert "cannot produce 'kreport' format from gather results before sourmash v4.5.0" in str(exc)
+def test_make_lingroup_results():
+    taxD = make_mini_taxonomy([("gA", "1;0;0"), ("gB", "1;0;1"), ("gC", "1;1;0")], LIN=True)
+    print(taxD)
+    lingroupD = {"1":"lg1", "1;0":'lg2', '1;1': "lg3"}
+    print(lingroupD)
+    gather_results = [{"total_weighted_hashes":100},
+                      {"name": 'gB', "total_weighted_hashes":100},
+                      {"name": 'gC', "total_weighted_hashes":100}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True, LIN=True)
+    print(q_res.summarized_lineage_results)
+
+    header, lgD = q_res.make_lingroup_results(LINgroupsD = lingroupD)
+    print(header)
+    assert header == ['LINgroup_name', 'LINgroup_prefix', 'percent_containment', 'num_bp_contained', 'num_bp_assigned']
+    print(lgD)
+    assert lgD == [{'percent_containment': '60.00', 'num_bp_contained': '60', 'num_bp_assigned': '0',
+                    'LINgroup_prefix': '1', 'LINgroup_name': 'lg1'},
+                   {'percent_containment': '40.00', 'num_bp_contained': '40', 'num_bp_assigned': '0',
+                    'LINgroup_prefix': '1;0', 'LINgroup_name': 'lg2'},
+                   {'percent_containment': '20.00', 'num_bp_contained': '20', 'num_bp_assigned': '0',
+                    'LINgroup_prefix': '1;1', 'LINgroup_name': 'lg3'}]

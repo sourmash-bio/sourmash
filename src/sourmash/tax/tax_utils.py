@@ -528,14 +528,14 @@ def load_gather_results(gather_csv, tax_assignments, *, seen_queries=None, force
                 # do not allow loading of same query from a second CSV.
                 raise ValueError(f"Gather query {gatherRow.query_name} was found in more than one CSV. Cannot load from '{gather_csv}'.")
             taxres = TaxResult(raw=gatherRow, keep_full_identifiers=keep_full_identifiers,
-                                                keep_identifier_versions=keep_identifier_versions)
+                                                keep_identifier_versions=keep_identifier_versions,
+                                                LIN_taxonomy=LIN_taxonomy)
             taxres.get_match_lineage(tax_assignments=tax_assignments, skip_idents=skip_idents, 
-                                        fail_on_missing_taxonomy=fail_on_missing_taxonomy,
-                                        LIN_taxonomy=LIN_taxonomy)
+                                        fail_on_missing_taxonomy=fail_on_missing_taxonomy)
             # add to matching QueryTaxResult or create new one
             if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
                 # get existing or initialize new
-                this_querytaxres = gather_results.get(gatherRow.query_name, QueryTaxResult(taxres.query_info))
+                this_querytaxres = gather_results.get(gatherRow.query_name, QueryTaxResult(taxres.query_info, LIN_taxonomy=LIN_taxonomy))
             this_querytaxres.add_taxresult(taxres)
             gather_results[gatherRow.query_name] = this_querytaxres
 
@@ -1432,7 +1432,6 @@ class TaxResult:
     query_name: str = field(init=False)
     query_info: QueryInfo = field(init=False)
     match_ident: str = field(init=False)
-    lineageInfo: RankLineageInfo = RankLineageInfo() #None#field(init=False) #RankLineageInfo()
     skipped_ident: bool = False
     missed_ident: bool = False
     match_lineage_attempted: bool = False
@@ -1454,6 +1453,10 @@ class TaxResult:
         self.f_unique_to_query = float(self.raw.f_unique_to_query)
         self.f_unique_weighted = float(self.raw.f_unique_weighted)
         self.unique_intersect_bp = int(self.raw.unique_intersect_bp)
+        if self.LIN_taxonomy:
+            self.lineageInfo = LINLineageInfo(n_lin_positions=0)
+        else:
+            self.lineageInfo = RankLineageInfo()
 
     def get_ident(self):
         # split identifiers = split on whitespace
@@ -1469,13 +1472,13 @@ class TaxResult:
             self.match_ident = self.match_ident.split('.')[0]
 
 
-    def get_match_lineage(self, tax_assignments, skip_idents=None, fail_on_missing_taxonomy=False, LIN_taxonomy=False):
+    def get_match_lineage(self, tax_assignments, skip_idents=None, fail_on_missing_taxonomy=False):
         if skip_idents and self.match_ident in skip_idents:
             self.skipped_ident = True
         else:
             lin = tax_assignments.get(self.match_ident)
             if lin:
-                if LIN_taxonomy:
+                if self.LIN_taxonomy:
                     self.lineageInfo = LINLineageInfo(lineage = lin)
                 else:
                     self.lineageInfo = RankLineageInfo(lineage = lin)
@@ -1592,17 +1595,16 @@ class SummarizedGatherResult:
         """
         # lowest_assignment_rank = 'species' # longest independent LINs? not sure how to do this...
         sD = {}
-        sD['num_bp_assigned'] = str(0)
         # total percent containment, weighted to include abundance info
         sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
         sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_bp))
-        if self.lineage != RankLineageInfo(): #empty lineage is currently always RankLineageInfo()
+        if self.lineage.n_lin_positions == 0: #empty lineage
             # the number of bp actually 'assigned' at this rank. Sourmash assigns everything
             # at genome level - not sure how we want to handle 'num_bp_assigned' here..
             if self.lineage.lowest_rank == lowest_rank:
                 sD["num_bp_assigned"] = sD["num_bp_contained"]
         else: # unassigned
-            sD["num_bp_assigned"] = sD["num_bp_contained"]
+            sD["num_bp_assigned"] = str(0)
         sD["LINgroup_prefix"] = self.lineage.display_lineage()
         sD["LINgroup_name"] = lg_name
         return sD
@@ -1665,6 +1667,7 @@ class QueryTaxResult:
     Contains methods for formatting results for different outputs.
     """
     query_info: QueryInfo # initialize with QueryInfo dataclass
+    LIN_taxonomy: bool = False
 
     def __post_init__(self):
         self.query_name = self.query_info.query_name # for convenience
@@ -1703,7 +1706,7 @@ class QueryTaxResult:
         self.krona_header = []
 
     def is_compatible(self, taxresult):
-        return taxresult.query_info == self.query_info
+        return taxresult.query_info == self.query_info and taxresult.LIN_taxonomy == self.LIN_taxonomy
 
     @property
     def ascending_ranks(self):
@@ -1796,7 +1799,10 @@ class QueryTaxResult:
                 self.total_bp_classified[rank] += bp_intersect_at_rank
 
             # record unclassified
-            lineage = RankLineageInfo()
+            if self.LIN_taxonomy:
+                lineage = LINLineageInfo(n_lin_positions=0) # empty
+            else:
+                lineage = RankLineageInfo()
             query_ani = None
             f_unique = 1.0 - self.total_f_classified[rank]
             if f_unique > 0:
@@ -1987,24 +1993,26 @@ class QueryTaxResult:
                 kreport_results.append(kresD)
         return header, kreport_results
     
-    def make_LINgroup_report_results(self, LINgroupsD): # dictionary {lg_prefix: lg_name}
+    def make_lingroup_results(self, LINgroupsD): # dictionary {lg_prefix: lg_name}
         self.check_summarization()
         header = ["LINgroup_name", "LINgroup_prefix", "percent_containment", "num_bp_contained", "num_bp_assigned"]
         if self.query_info.total_weighted_hashes == 0:
             raise ValueError("ERROR: cannot produce 'LINgroup_report' format from gather results before sourmash v4.5.0")
-        lingroup_results = []
         all_lg_ranks = set()
         rank_to_lgprefix = defaultdict(set)
-        all_lgs = list(LINgroupsD.values())
+        all_lgs = list(LINgroupsD.keys())
         for lg_prefix in all_lgs:
             lg_prefix_as_list = lg_prefix.split(';')
             lg_rank = len(lg_prefix_as_list) - 1 # because 0-based
-            all_lg_ranks.add(lg_rank)
-            rank_to_lgprefix[lg_rank].append(lg_prefix)
+            all_lg_ranks.add(str(lg_rank))
+            rank_to_lgprefix[str(lg_rank)].add(lg_prefix)
         
         # order lg_ranks low--> high (general --> specific)
         ordered_lg_ranks = sorted(all_lg_ranks) # ranks are str(int) .. how does this affect sorting? e.g. 1 vs 10?
         lowest_rank = ordered_lg_ranks[-1]
+
+        lingroup_results = []
+
         for rank in ordered_lg_ranks:
             these_lgs = rank_to_lgprefix[rank]
             rank_results = self.summarized_lineage_results[rank]
@@ -2013,5 +2021,5 @@ class QueryTaxResult:
                 if this_lineage in these_lgs: # is this lineage in the list of LINgroups at this rank?
                     this_lingroup_name = LINgroupsD[this_lineage]
                     lg_resD = res.as_lingroup_dict(self.query_info, this_lingroup_name, lowest_rank)
-                lingroup_results.append(lg_resD)
+                    lingroup_results.append(lg_resD)
         return header, lingroup_results
