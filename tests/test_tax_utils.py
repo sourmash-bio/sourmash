@@ -2751,6 +2751,17 @@ def test_make_lingroup_results():
                     'LINgroup_prefix': '1;1', 'LINgroup_name': 'lg3'}]
 
 
+def test_make_lingroup_results_fail_pre_v450():
+    taxD = make_mini_taxonomy([("gA", "1;0;0"), ("gB", "1;0;1"), ("gC", "1;1;0")], LIN=True)
+    gather_results = [{}, {"name": 'gB'}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True, LIN=True)
+    lingroupD = {"1":"lg1", "1;0":'lg2', '1;1': "lg3"}
+    with pytest.raises(ValueError) as exc:
+        q_res.make_lingroup_results(lingroupD)
+    print(str(exc))
+    assert "cannot produce 'LINgroup_report' format from gather results before sourmash v4.5.0" in str(exc)
+
+
 def test_read_lingroups(runtmp):
     lg_file = runtmp.output("test.lg.csv")
     with open(lg_file, 'w') as out:
@@ -2770,6 +2781,16 @@ def test_read_lingroups_empty_file(runtmp):
         read_lingroups(lg_file)
     print(str(exc))
     assert f"Cannot read lingroups from '{lg_file}'. Is file empty?" in str(exc)
+
+
+def test_read_lingroups_only_header(runtmp):
+    lg_file = runtmp.output("test.lg.csv")
+    with open(lg_file, 'w') as out:
+        out.write('LINgroup_prefix,LINgroup_name\n')
+    with pytest.raises(ValueError) as exc:
+        read_lingroups(lg_file)
+    print(str(exc))
+    assert f"No LINgroups loaded from {lg_file}" in str(exc)
 
 
 def test_read_lingroups_bad_header(runtmp):

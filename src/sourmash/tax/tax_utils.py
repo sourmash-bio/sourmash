@@ -503,6 +503,7 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
 
 def read_lingroups(lingroup_csv):
     lingroupD = {}
+    n=None
     with sourmash_args.FileInputCSV(lingroup_csv) as r:
         header = r.fieldnames
         # check for empty file
@@ -513,6 +514,8 @@ def read_lingroups(lingroup_csv):
         for n, row in enumerate(r):
             lingroupD[row['LINgroup_prefix']] = row['LINgroup_name']
 
+    if n is None:
+        raise ValueError(f'No LINgroups loaded from {lingroup_csv}.')
     n_lg = len(lingroupD.keys())
     notify(f"Read {n+1} LINgroup rows and found {n_lg} distinct LINgroup prefixes.")
     return lingroupD
