@@ -2745,9 +2745,9 @@ def test_make_lingroup_results():
     print(lgD)
     assert lgD == [{'percent_containment': '60.00', 'num_bp_contained': '60', 'num_bp_assigned': '0',
                     'LINgroup_prefix': '1', 'LINgroup_name': 'lg1'},
-                   {'percent_containment': '40.00', 'num_bp_contained': '40', 'num_bp_assigned': '0',
+                   {'percent_containment': '40.00', 'num_bp_contained': '40', 'num_bp_assigned': '40',
                     'LINgroup_prefix': '1;0', 'LINgroup_name': 'lg2'},
-                   {'percent_containment': '20.00', 'num_bp_contained': '20', 'num_bp_assigned': '0',
+                   {'percent_containment': '20.00', 'num_bp_contained': '20', 'num_bp_assigned': '20',
                     'LINgroup_prefix': '1;1', 'LINgroup_name': 'lg3'}]
 
 

@@ -1610,18 +1610,17 @@ class SummarizedGatherResult:
         """
         Produce LINgroup report dict for LINgroups.
         """
-        # lowest_assignment_rank = 'species' # longest independent LINs? not sure how to do this...
         sD = {}
         # total percent containment, weighted to include abundance info
         sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
         sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_bp))
-        if self.lineage.n_lin_positions == 0: #empty lineage
+        sD["num_bp_assigned"] = str(0)
+        if self.lineage.n_lin_positions != 0: #empty lineage
             # the number of bp actually 'assigned' at this rank. Sourmash assigns everything
             # at genome level - not sure how we want to handle 'num_bp_assigned' here..
             if self.lineage.lowest_rank == lowest_rank:
                 sD["num_bp_assigned"] = sD["num_bp_contained"]
-        else: # unassigned
-            sD["num_bp_assigned"] = str(0)
+
         sD["LINgroup_prefix"] = self.lineage.display_lineage()
         sD["LINgroup_name"] = lg_name
         return sD
@@ -2020,17 +2019,20 @@ class QueryTaxResult:
         all_lgs = list(LINgroupsD.keys())
         for lg_prefix in all_lgs:
             lg_prefix_as_list = lg_prefix.split(';')
-            lg_rank = len(lg_prefix_as_list) - 1 # because 0-based
-            all_lg_ranks.add(str(lg_rank))
+            lg_rank = len(lg_prefix_as_list) -1
+            all_lg_ranks.add(lg_rank) # bc 0 based
             rank_to_lgprefix[str(lg_rank)].add(lg_prefix)
         
         # order lg_ranks low--> high (general --> specific)
-        ordered_lg_ranks = sorted(all_lg_ranks) # ranks are str(int) .. how does this affect sorting? e.g. 1 vs 10?
-        lowest_rank = ordered_lg_ranks[-1]
+        ordered_lg_ranks = list(all_lg_ranks)
+        ordered_lg_ranks.sort() # ranks are str(int) .. how does this affect sorting? e.g. 1 vs 10?
+        # ordered_lg_ranks = [str(x-1) for x in ordered_lg_ranks] # because 0-based
+        lowest_rank = str(ordered_lg_ranks[-1])
 
         lingroup_results = []
 
         for rank in ordered_lg_ranks:
+            rank = str(rank)
             these_lgs = rank_to_lgprefix[rank]
             rank_results = self.summarized_lineage_results[rank]
             for res in rank_results:

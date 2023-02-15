@@ -3327,3 +3327,38 @@ def test_metagenome_LINS(runtmp):
     assert "test1,19,0.028,2;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,md5,test1.sig,0.016,138000,0.891,0" in c.last_result.out
     assert "test1,19,0.011,1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,md5,test1.sig,0.007,54000,0.864,0" in c.last_result.out
     assert "test1,19,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
+
+
+def test_metagenome_LINS_LINgroups(runtmp):
+    # get/design better test data for this?
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+
+    lg_file = runtmp.output("test.lg.csv")
+    with open(lg_file, 'w') as out:
+        out.write('LINgroup_prefix,LINgroup_name\n')
+        out.write('0;0;0,lg1\n')
+        out.write('1;0;0,lg2\n')
+        out.write('2;0;0,lg3\n')
+        out.write('1;0;1,lg3\n')
+        # write a 19 so we can check 'num_bp_assigned'
+        out.write('1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,lg4\n')
+
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--LIN-taxonomy', '--LINgroups', lg_file)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0" in c.last_result.err
+    assert "Read 5 LINgroup rows and found 5 distinct LINgroup prefixes." in c.last_result.err
+    assert "LINgroup_name	LINgroup_prefix	percent_containment	num_bp_contained	num_bp_assigned" in c.last_result.out
+    assert "lg1	0;0;0	5.82	714000	0" in c.last_result.out
+    assert "lg2	1;0;0	5.05	620000	0" in c.last_result.out
+    assert "lg3	2;0;0	1.56	192000	0" in c.last_result.out
+    assert "lg3	1;0;1	0.65	80000	0" in c.last_result.out
+    assert "lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000	80000" in c.last_result.out
