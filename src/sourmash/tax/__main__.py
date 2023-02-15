@@ -43,6 +43,7 @@ _output_type_to_ext = {
     'human': '.human.txt',
     'lineage_csv': '.lineage.csv',
     'kreport': ".kreport.txt",
+    'lingroup_report': ".lingroup_report.txt"
     }
 
 def make_outfile(base, output_type, *, output_dir = ""):
@@ -162,6 +163,14 @@ def metagenome(args):
         with FileOutputCSV(kreport_outfile) as out_fp:
             header, kreport_results = single_query_results.make_kreport_results()
             tax_utils.write_output(header, kreport_results, out_fp, sep="\t", write_header=False)
+
+    # write summarized --> LINgroup output tsv
+    if "LINgroup_report" in args.output_format:
+        lingroup_reportfile, limit_float = make_outfile(args.output_base, "lingroup_report", output_dir=args.output_dir)
+
+        with FileOutputCSV(lingroup_reportfile) as out_fp:
+            header, lgreport_results = single_query_results.make_LINgroup_report_results()
+            tax_utils.write_output(header, lgreport_results, out_fp, sep="\t", write_header=True)
 
 
 def genome(args):
