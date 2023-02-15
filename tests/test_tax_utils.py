@@ -16,7 +16,7 @@ from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_re
                                     SummarizedGatherResult, ClassificationResult,
                                     BaseLineageInfo, RankLineageInfo, LINLineageInfo,
                                     aggregate_by_lineage_at_rank, format_for_krona,
-                                    write_krona, write_lineage_sample_frac,
+                                    write_krona, write_lineage_sample_frac, read_lingroups,
                                     LineageDB, LineageDB_Sqlite, MultiLineageDB)
 
 # import lca utils as needed
@@ -2749,3 +2749,34 @@ def test_make_lingroup_results():
                     'LINgroup_prefix': '1;0', 'LINgroup_name': 'lg2'},
                    {'percent_containment': '20.00', 'num_bp_contained': '20', 'num_bp_assigned': '0',
                     'LINgroup_prefix': '1;1', 'LINgroup_name': 'lg3'}]
+
+
+def test_read_lingroups(runtmp):
+    lg_file = runtmp.output("test.lg.csv")
+    with open(lg_file, 'w') as out:
+        out.write('LINgroup_prefix,LINgroup_name\n')
+        out.write('1,lg1\n')
+        out.write('1;0,lg2\n')
+        out.write('1;1,lg3\n')
+    lgD = read_lingroups(lg_file)
+
+    assert lgD == {"1":"lg1", "1;0":'lg2', '1;1': "lg3"}
+
+def test_read_lingroups_empty_file(runtmp):
+    lg_file = runtmp.output("test.lg.csv")
+    with open(lg_file, 'w') as out:
+        out.write("")
+    with pytest.raises(ValueError) as exc:
+        read_lingroups(lg_file)
+    print(str(exc))
+    assert f"Cannot read lingroups from '{lg_file}'. Is file empty?" in str(exc)
+
+
+def test_read_lingroups_bad_header(runtmp):
+    lg_file = runtmp.output("test.lg.csv")
+    with open(lg_file, 'w') as out:
+        out.write('LINgroup_pfx,LINgroup_nm\n')
+    with pytest.raises(ValueError) as exc:
+        read_lingroups(lg_file)
+    print(str(exc))
+    assert f"'{lg_file}' must contain the following columns: 'LINgroup_prefix', 'LINgroup_name'." in str(exc)

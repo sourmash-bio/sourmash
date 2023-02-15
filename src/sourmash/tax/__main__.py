@@ -166,10 +166,20 @@ def metagenome(args):
 
     # write summarized --> LINgroup output tsv
     if "LINgroup_report" in args.output_format:
+        try:
+            lingroups = tax_utils.read_lingroups(args.LINgroups)
+        except ValueError as exc:
+            error(f"ERROR: {str(exc)}")
+            sys.exit(-1)
+
+        if not lingroups:
+            error(f'ERROR: No LINgroups loaded from {",".join(args.LINgroups)}. Exiting.')
+            sys.exit(-1)
+
         lingroup_reportfile, limit_float = make_outfile(args.output_base, "lingroup_report", output_dir=args.output_dir)
 
         with FileOutputCSV(lingroup_reportfile) as out_fp:
-            header, lgreport_results = single_query_results.make_LINgroup_report_results()
+            header, lgreport_results = single_query_results.make_lingroup_results(LINgroupsD = lingroups)
             tax_utils.write_output(header, lgreport_results, out_fp, sep="\t", write_header=True)
 
 

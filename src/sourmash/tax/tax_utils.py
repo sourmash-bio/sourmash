@@ -501,6 +501,23 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     return gather_csvs
 
 
+def read_lingroups(lingroup_csv):
+    lingroupD = {}
+    with sourmash_args.FileInputCSV(lingroup_csv) as r:
+        header = r.fieldnames
+        # check for empty file
+        if not header:
+            raise ValueError(f"Cannot read lingroups from '{lingroup_csv}'. Is file empty?")
+        if "LINgroup_prefix" not in header or "LINgroup_name" not in header:
+            raise ValueError(f"'{lingroup_csv}' must contain the following columns: 'LINgroup_prefix', 'LINgroup_name'.")
+        for n, row in enumerate(r):
+            lingroupD[row['LINgroup_prefix']] = row['LINgroup_name']
+
+    n_lg = len(lingroupD.keys())
+    notify(f"Read {n+1} LINgroup rows and found {n_lg} distinct LINgroup prefixes.")
+    return lingroupD
+
+
 def load_gather_results(gather_csv, tax_assignments, *, seen_queries=None, force=False,
                         skip_idents = None, fail_on_missing_taxonomy=False,
                         keep_full_identifiers=False, keep_identifier_versions=False,
