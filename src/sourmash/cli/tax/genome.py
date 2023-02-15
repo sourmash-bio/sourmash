@@ -107,29 +107,35 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
-    if not args.gather_csv and not args.from_file:
-        raise ValueError(f"No gather CSVs found! Please input via '-g' or '--from-file'.")
-    # handle LIN options
-    if args.LIN_taxonomy:
-        if args.LIN_position:
-            args.rank = args.LIN_position
-        if args.LINgroups:
-            if "LINgroup_report" not in args.output_format:
-                args.output_format.append("LINgroup_report")
-        elif "LINgroup_report" in args.output_format:
-            raise ValueError(f"Must provide LINgroup csv via '--LINgroup-info' in order to output a LINgroup_report.")
-    elif args.LINgroups:
-        raise ValueError(f"Must enable LIN taxonomy via '--LIN-taxonomy' in order to output a LINgroup_report.")
+    try:
+        if not args.gather_csv and not args.from_file:
+            raise ValueError(f"No gather CSVs found! Please input via '-g' or '--from-file'.")
+        # handle LIN options
+        if args.LIN_taxonomy:
+            if args.LIN_position:
+                args.rank = args.LIN_position
+            if args.LINgroups:
+                if "LINgroup_report" not in args.output_format:
+                    args.output_format.append("LINgroup_report")
+            elif "LINgroup_report" in args.output_format:
+                raise ValueError(f"Must provide LINgroup csv via '--LINgroups' in order to output a LINgroup_report.")
+        elif args.LINgroups or "LINgroup_report" in args.output_format:
+            raise ValueError(f"Must enable LIN taxonomy via '--LIN-taxonomy' in order to output a LINgroup_report.")
 
-    # handle output formats
-    if not args.rank:
-        if any(x in ["krona"] for x in args.output_format):
-            raise ValueError(f"Rank (--rank) is required for krona output format.")
-    if len(args.output_format) > 1:
-        if args.output_base == "-":
-            raise TypeError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")
-    elif not args.output_format:
-        # change to "human" for 5.0
-        args.output_format = ["csv_summary"]
+        # handle output formats
+        print(args.output_format)
+        if not args.rank:
+            if any(x in ["krona"] for x in args.output_format):
+                raise ValueError(f"Rank (--rank) is required for krona output format.")
+        if len(args.output_format) > 1:
+            if args.output_base == "-":
+                raise ValueError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")
+        elif not args.output_format:
+            # change to "human" for 5.0
+            args.output_format = ["csv_summary"]
+
+    except ValueError as exc:
+        error(f"ERROR: {str(exc)}")
+        import sys; sys.exit(-1)
 
     return sourmash.tax.__main__.genome(args)

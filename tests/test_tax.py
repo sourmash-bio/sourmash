@@ -3387,6 +3387,70 @@ def test_metagenome_LINS_LINgroups_empty_lg_file(runtmp):
     assert f"Cannot read lingroups from '{lg_file}'. Is file empty?" in c.last_result.err
 
 
+def test_metagenome_LINS_LINgroups_bad_cli_inputs(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+
+    lg_file = runtmp.output("test.lg.csv")
+    with open(lg_file, 'w') as out:
+        out.write("")
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--LIN-taxonomy', '-F', "LINgroup_report")
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status != 0
+    assert "Must provide LINgroup csv via '--LINgroups' in order to output a LINgroup_report." in c.last_result.err
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-F', "LINgroup_report")
+    print(c.last_result.err)
+    assert c.last_result.status != 0
+    assert "Must enable LIN taxonomy via '--LIN-taxonomy' in order to output a LINgroup_report." in c.last_result.err
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '--LINgroups', lg_file)
+    print(c.last_result.err)
+    assert c.last_result.status != 0
+    assert "Must enable LIN taxonomy via '--LIN-taxonomy' in order to output a LINgroup_report." in c.last_result.err
+
+
+def test_metagenome_mult_outputs_stdout_fail(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                       '-F', "kreport", 'csv_summary')
+
+    print(c.last_result.err)
+    assert c.last_result.status != 0
+    assert f"Writing to stdout is incompatible with multiple output formats ['kreport', 'csv_summary']" in c.last_result.err
+
+
+def test_genome_mult_outputs_stdout_fail(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
+                       '-F', "lineage_csv", 'csv_summary')
+
+    print(c.last_result.err)
+    assert c.last_result.status != 0
+    assert f"Writing to stdout is incompatible with multiple output formats ['lineage_csv', 'csv_summary']" in c.last_result.err
+
+
 def test_metagenome_LINS_LINgroups_lg_only_header(runtmp):
     c = runtmp
 
