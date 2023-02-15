@@ -158,6 +158,27 @@ def test_SummarizedGatherResult():
                   'family': '', 'genus': '', 'species': '', 'strain': ''}
 
 
+def test_SummarizedGatherResult_LINs():
+    "SummarizedGatherResult with LINs"
+    qInf = QueryInfo(query_name='q1', query_md5='md5', query_filename='f1',query_bp='100',
+                     query_n_hashes='10',ksize='31',scaled='10', total_weighted_hashes='200')
+    sgr = SummarizedGatherResult(rank="phylum", fraction=0.2, lineage=LINLineageInfo(lineage_str="0;0;1"),
+                                 f_weighted_at_rank=0.3, bp_match_at_rank=30)
+
+    lgD = sgr.as_lingroup_dict(query_info=qInf, lg_name="lg_name", lowest_rank="2")
+    print(lgD)
+    assert lgD == {'LINgroup_name': "lg_name", "LINgroup_prefix": "0;0;1", 'num_bp_assigned': "600",
+                   'percent_containment': '30.00', 'num_bp_contained': "600"}
+    lgD = sgr.as_lingroup_dict(query_info=qInf, lg_name="lg_name", lowest_rank="3")
+    print(lgD)
+    assert lgD == {'LINgroup_name': "lg_name", "LINgroup_prefix": "0;0;1",
+                   'num_bp_assigned': "0",'percent_containment': '30.00', 'num_bp_contained': "600"}
+    with pytest.raises(ValueError) as exc:
+        sgr.as_kreport_dict(query_info=qInf)
+    print(str(exc))
+    assert "Cannot produce 'kreport' with LIN taxonomy." in str(exc)
+
+
 def test_SummarizedGatherResult_set_query_ani():
     "Check ANI estimation within SummarizedGatherResult dataclass"
     qInf = QueryInfo(query_name='q1', query_md5='md5', query_filename='f1',query_bp='100',

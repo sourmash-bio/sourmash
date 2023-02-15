@@ -1567,6 +1567,8 @@ class SummarizedGatherResult:
         # total percent containment, weighted to include abundance info
         sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
         sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_bp))
+        if isinstance(self.lineage, LINLineageInfo):
+            raise ValueError("Cannot produce 'kreport' with LIN taxonomy.")
         if self.lineage != RankLineageInfo():
             this_rank = self.lineage.lowest_rank
             sD['rank_code'] = RANKCODE[this_rank]
@@ -1584,32 +1586,27 @@ class SummarizedGatherResult:
             sD["num_bp_assigned"] = sD["num_bp_contained"]
         return sD
     
-    # def as_LINgroup_report_dict(self, query_info):
-    #     """
-    #     Produce LINgroup report dict for LINgroups.
-    #     """
-    #     # lowest_assignment_rank = 'species' # longest independent LINs? not sure how to do this...
-    #     sD = {}
-    #     sD['num_bp_assigned'] = str(0)
-    #     # total percent containment, weighted to include abundance info
-    #     sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
-    #     sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_bp))
-    #     if self.lineage != RankLineageInfo():
-    #         this_rank = self.lineage.lowest_rank
-    #         sD['rank_code'] = RANKCODE[this_rank]
-    #         sD['sci_name'] = self.lineage.lowest_lineage_name
-    #         sD['ncbi_taxid'] = self.lineage.lowest_lineage_taxid
-    #         # the number of bp actually 'assigned' at this rank. Sourmash assigns everything
-    #         # at genome level, but since kreport traditionally doesn't include 'strain' or genome,
-    #         # it is reasonable to state that sourmash assigns at 'species' level for this.
-    #         # can be modified later.
-    #         if this_rank == lowest_assignment_rank:
-    #             sD["num_bp_assigned"] = sD["num_bp_contained"]
-    #     else:
-    #         sD['sci_name'] = 'unclassified'
-    #         sD['rank_code'] = RANKCODE['unclassified']
-    #         sD["num_bp_assigned"] = sD["num_bp_contained"]
-    #     return sD
+    def as_lingroup_dict(self, query_info, lg_name, lowest_rank):
+        """
+        Produce LINgroup report dict for LINgroups.
+        """
+        # lowest_assignment_rank = 'species' # longest independent LINs? not sure how to do this...
+        sD = {}
+        sD['num_bp_assigned'] = str(0)
+        # total percent containment, weighted to include abundance info
+        sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
+        sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_bp))
+        if self.lineage != RankLineageInfo(): #empty lineage is currently always RankLineageInfo()
+            # the number of bp actually 'assigned' at this rank. Sourmash assigns everything
+            # at genome level - not sure how we want to handle 'num_bp_assigned' here..
+            if self.lineage.lowest_rank == lowest_rank:
+                sD["num_bp_assigned"] = sD["num_bp_contained"]
+        else: # unassigned
+            sD["num_bp_assigned"] = sD["num_bp_contained"]
+        sD["LINgroup_prefix"] = self.lineage.display_lineage()
+        sD["LINgroup_name"] = lg_name
+        return sD
+
 
 @dataclass
 class ClassificationResult(SummarizedGatherResult):
@@ -1996,45 +1993,25 @@ class QueryTaxResult:
         if self.query_info.total_weighted_hashes == 0:
             raise ValueError("ERROR: cannot produce 'LINgroup_report' format from gather results before sourmash v4.5.0")
         lingroup_results = []
-        # unclassified_recorded=False
-        # come back to final ordering
-        # need to order LINgroups by prefix, so we know which LINgroups contain each other. 
-        # lg_relationships = {}
-        # for lg_name, lg_prefix in LINgroupsD.items():
-        #     all_lgs = 
-                                      
         all_lg_ranks = set()
         rank_to_lgprefix = defaultdict(set)
         all_lgs = list(LINgroupsD.values())
         for lg_prefix in all_lgs:
-            lg_rank = len(lg_prefix) -1 # because 0-based
+            lg_prefix_as_list = lg_prefix.split(';')
+            lg_rank = len(lg_prefix_as_list) - 1 # because 0-based
             all_lg_ranks.add(lg_rank)
             rank_to_lgprefix[lg_rank].append(lg_prefix)
         
         # order lg_ranks low--> high (general --> specific)
         ordered_lg_ranks = sorted(all_lg_ranks) # ranks are str(int) .. how does this affect sorting? e.g. 1 vs 10?
-
+        lowest_rank = ordered_lg_ranks[-1]
         for rank in ordered_lg_ranks:
+            these_lgs = rank_to_lgprefix[rank]
             rank_results = self.summarized_lineage_results[rank]
             for res in rank_results:
-                if res.lineage.display_lineage() in rank_to_lgprefix[rank]:
-                    lg_resD = res.as_lingroup_report_dict(self.query_info)
-
+                this_lineage = res.lineage.display_lineage()
+                if this_lineage in these_lgs: # is this lineage in the list of LINgroups at this rank?
+                    this_lingroup_name = LINgroupsD[this_lineage]
+                    lg_resD = res.as_lingroup_dict(self.query_info, this_lingroup_name, lowest_rank)
+                lingroup_results.append(lg_resD)
         return header, lingroup_results
-
-
-        # 
-        # for LINgroup, subgroups in lingroups:
-        #     if rank == 'strain': # no code for strain, can't include in this output afaik
-        #         continue
-        #     rank_results = self.summarized_lineage_results[rank]
-        #     for res in rank_results:
-        #         kresD = res.as_kreport_dict(self.query_info)
-        #         if kresD['sci_name'] == "unclassified":
-        #             # SummarizedGatherResults have an unclassified lineage at every rank, to facilitate reporting at a specific rank.
-        #             # Here, we only need to report it once, since it will be the same fraction for all ranks
-        #             if unclassified_recorded:
-        #                 continue
-        #             else:
-        #                 unclassified_recorded = True
-        #         kreport_results.append(kresD)
