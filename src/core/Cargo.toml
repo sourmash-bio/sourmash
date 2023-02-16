@@ -83,7 +83,7 @@ version = "0.2.84"
 features = ["serde-serialize"]
 
 [target.'cfg(all(target_arch = "wasm32", target_vendor="unknown"))'.dependencies.web-sys]
-version = "0.3.58"
+version = "0.3.61"
 features = ["console", "File"]
 
 [target.'cfg(all(target_arch = "wasm32", target_vendor="unknown"))'.dev-dependencies]
