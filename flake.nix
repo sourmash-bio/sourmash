@@ -43,23 +43,6 @@
 
         python = pkgs.python310Packages;
 
-        screed = python.buildPythonPackage rec {
-          pname = "screed";
-          version = "1.1";
-          #format = "pyproject";
-
-          src = pkgs.fetchFromGitHub {
-            owner = "dib-lab";
-            repo = "screed";
-            rev = "v1.1";
-            hash = "sha256-g1FZJx94RGBPoTiLfwttdYqCJ02pxtOKK708WA63kHE=";
-          };
-
-          SETUPTOOLS_SCM_PRETEND_VERSION = "1.1";
-          propagatedBuildInputs = with python; [ setuptools bz2file setuptools_scm ];
-          doCheck = false;
-        };
-
       in
 
       with pkgs;
