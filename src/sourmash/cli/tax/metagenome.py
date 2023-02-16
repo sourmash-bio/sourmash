@@ -110,7 +110,6 @@ def main(args):
             raise ValueError(f"Must enable LIN taxonomy via '--LIN-taxonomy' in order to output a LINgroup_report.")
 
         # handle output formats
-        print(args.output_format)
         if not args.rank:
             if any(x in ["krona", "lineage_summary"] for x in args.output_format):
                 raise ValueError(f"Rank (--rank) is required for krona and lineage_summary output formats.")
