@@ -3,8 +3,7 @@ Utility functions for taxonomy analysis tools.
 """
 import os
 import csv
-from collections import namedtuple, defaultdict
-from collections import abc
+from collections import abc, defaultdict
 from itertools import zip_longest
 from typing import NamedTuple
 from dataclasses import dataclass, field, replace, asdict
@@ -29,10 +28,6 @@ from sourmash.sourmash_args import load_pathlist_from_file
 
 RANKCODE = { "superkingdom": "D", "kingdom": "K", "phylum": "P", "class": "C",
                         "order": "O", "family":"F", "genus": "G", "species": "S", "unclassified": "U"}
-
-# import lca utils as needed for now
-from sourmash.lca import lca_utils
-from sourmash.lca.lca_utils import (taxlist)
 
 class LineagePair(NamedTuple):
     rank: str
@@ -146,19 +141,15 @@ class BaseLineageInfo:
             new_lineage.append(LineagePair(rank=rank))
         for lin_tup in self.lineage:
             # now add input tuples in correct spots. This corrects for order and allows empty values.
-            if not isinstance(lin_tup, (LineagePair, lca_utils.LineagePair)):
-                raise ValueError(f"{lin_tup} is not LineagePair.")
-                # find index for this rank
+            if not isinstance(lin_tup, LineagePair):
+                raise ValueError(f"{lin_tup} is not tax_utils LineagePair.")
             if lin_tup.rank: # skip this tuple if rank is None or "" (empty lineage tuple. is this needed?)
                 try:
+                    # find index for this rank
                     rank_idx = self.rank_index(lin_tup.rank)
                 except ValueError as e:
                     raise ValueError(f"Rank '{lin_tup.rank}' not present in {', '.join(self.ranks)}") from e
-                # make sure we're adding tax_utils.LineagePairs, not lca_utils.LineagePairs for consistency
-                if isinstance(lin_tup, lca_utils.LineagePair):
-                    new_lineage[rank_idx] = LineagePair(rank=lin_tup.rank, name=lin_tup.name)
-                else:
-                    new_lineage[rank_idx] = lin_tup
+                new_lineage[rank_idx] = lin_tup
 
         # build list of filled ranks
         filled_ranks = [a.rank for a in new_lineage if a.name is not None]
@@ -437,13 +428,10 @@ class LINLineageInfo(BaseLineageInfo):
         ranks = []
         # check this is a list or tuple of lineage tuples:
         for lin_tup in self.lineage:
-            if not isinstance(lin_tup, (LineagePair, lca_utils.LineagePair)):
-                raise ValueError(f"{lin_tup} is not LineagePair.")
-            # make sure we're adding tax_utils.LineagePairs, not lca_utils.LineagePairs for consistency
-            if isinstance(lin_tup, lca_utils.LineagePair):
-                new_lineage.append(LineagePair(rank=lin_tup.rank, name=lin_tup.name))
-            else:
-                new_lineage.append(lin_tup)
+            # make sure we're adding tax_utils.LineagePairs
+            if not isinstance(lin_tup, LineagePair):
+                raise ValueError(f"{lin_tup} is not tax_utils LineagePair.")
+            new_lineage.append(lin_tup)
             ranks.append(lin_tup.rank)
         # build list of filled ranks
         filled_ranks = [a.rank for a in new_lineage if a.name is not None]
@@ -453,6 +441,62 @@ class LINLineageInfo(BaseLineageInfo):
         object.__setattr__(self, "ranks", tuple(ranks))
         object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
         object.__setattr__(self, "n_filled_pos", len(filled_ranks))
+
+
+def build_tree(assignments, initial=None):
+    """
+    Builds a tree of dictionaries from lists of LineagePair objects or
+    LineageInfo objects in 'assignments'.  This tree can then be used
+    to find lowest common ancestor agreements/confusion.
+    """
+    if initial is None:
+        tree = {}
+    else:
+        tree = initial
+
+    if not assignments:
+        raise ValueError("empty assignment passed to build_tree")
+
+    if not isinstance(assignments, abc.Iterable):
+        raise ValueError("assignments must be an iterable object.")
+
+    for assignment in assignments:
+        node = tree
+
+        if isinstance(assignment, (BaseLineageInfo, RankLineageInfo, LINLineageInfo)):
+            print(assignment)
+            assignment = assignment.filled_lineage
+
+        for lineage_tup in assignment:
+            if lineage_tup.name:
+                child = node.get(lineage_tup, {})
+                node[lineage_tup] = child
+
+                # shift -> down in tree
+                node = child
+
+    return tree
+
+
+def find_lca(tree):
+    """
+    Given a tree produced by 'find_tree', find the first node with multiple
+    children, OR the only leaf in the tree.  Return (lineage_tup, reason),
+    where 'reason' is the number of children of the returned node, i.e.
+    0 if it's a leaf and > 1 if it's an internal node.
+    """
+
+    node = tree
+    lineage = []
+    while 1:
+        if len(node) == 1:                # descend to only child; track path
+            lineage_tup = next(iter(node.keys()))
+            lineage.append(lineage_tup)
+            node = node[lineage_tup]
+        elif len(node) == 0:              # at leaf; end
+            return tuple(lineage), 0
+        else:                             # len(node) > 1 => confusion!!
+            return tuple(lineage), len(node)
 
 
 def get_ident(ident, *,
@@ -886,7 +930,8 @@ class LineageDB(abc.Mapping):
                     header = ["ident" if "accession" == x else x for x in header]
                 elif 'name' in header and 'lineage' in header:
                     return cls.load_from_gather_with_lineages(filename,
-                                                              force=force)
+                                                              force=force,
+                                                              LIN_taxonomy=LIN_taxonomy)
                 else:
                     header_str = ",".join([repr(x) for x in header])
                     raise ValueError(f'No taxonomic identifiers found; headers are {header_str}')
@@ -955,7 +1000,7 @@ class LineageDB(abc.Mapping):
 
 
     @classmethod
-    def load_from_gather_with_lineages(cls, filename, *, force=False):
+    def load_from_gather_with_lineages(cls, filename, *, force=False, LIN_taxonomy=False):
         """
         Load an annotated gather-with-lineages CSV file produced by
         'tax annotate' into a LineageDB.
@@ -976,7 +1021,7 @@ class LineageDB(abc.Mapping):
             if "name" not in header or "lineage" not in header:
                 raise ValueError(f"Expected headers 'name' and 'lineage' not found. Is this a with-lineages file?")
 
-            ranks = list(lca_utils.taxlist(include_strain=include_strain))
+            ranks=None
             assignments = {}
             num_rows = 0
             n_species = 0
@@ -988,24 +1033,32 @@ class LineageDB(abc.Mapping):
 
                 name = row['name']
                 ident = get_ident(name)
-                lineage = row['lineage']
-                lineage = lca_utils.make_lineage(lineage)
 
+                if LIN_taxonomy:
+                    lineageInfo = LINLineageInfo(lineage_str=row['lineage'])
+                else:
+                    lineageInfo = RankLineageInfo(lineage_str= row['lineage'])
+
+                if ranks is None:
+                    ranks = lineageInfo.ranks
+
+                lineage = lineageInfo.filled_lineage
                 # check duplicates
                 if ident in assignments:
-                    if assignments[ident] != tuple(lineage):
+                    if assignments[ident] != lineage:
                         # this should not happen with valid
                         # sourmash tax annotate output, but check anyway.
                         if not force:
                             raise ValueError(f"multiple lineages for identifier {ident}")
                 else:
-                    assignments[ident] = tuple(lineage)
+                    assignments[ident] = lineage
 
-                    if lineage[-1].rank == 'species':
-                        n_species += 1
-                    elif lineage[-1].rank == 'strain':
-                        n_species += 1
-                        n_strains += 1
+                    if isinstance(lineageInfo, RankLineageInfo):
+                        if lineage[-1].rank == 'species':
+                            n_species += 1
+                        elif lineage[-1].rank == 'strain':
+                            n_species += 1
+                            n_strains += 1
 
         return LineageDB(assignments, ranks)
 
@@ -1039,7 +1092,7 @@ class LineageDB_Sqlite(abc.Mapping):
 
         # get available ranks...
         ranks = set()
-        for column, rank in zip(self.columns, taxlist(include_strain=True)):
+        for column, rank in zip(self.columns, RankLineageInfo().taxlist):
             query = f'SELECT COUNT({column}) FROM {self.table_name} WHERE {column} IS NOT NULL AND {column} != ""'
             c.execute(query)
             cnt, = c.fetchone()
@@ -1083,7 +1136,7 @@ class LineageDB_Sqlite(abc.Mapping):
 
     def _make_tup(self, row):
         "build a tuple of LineagePairs for this sqlite row"
-        tup = [ LineagePair(n, r) for (n, r) in zip(taxlist(True), row) ]
+        tup = [ LineagePair(n, r) for (n, r) in zip(RankLineageInfo().taxlist, row) ]
         return tuple(tup)
 
     def __getitem__(self, ident):
@@ -1283,7 +1336,7 @@ class MultiLineageDB(abc.Mapping):
         db.commit()
 
     def _save_csv(self, fp):
-        headers = ['identifiers'] + list(taxlist(include_strain=True))
+        headers = ['identifiers'] + list(RankLineageInfo().taxlist)
         w = csv.DictWriter(fp, fieldnames=headers)
         w.writeheader()
 
