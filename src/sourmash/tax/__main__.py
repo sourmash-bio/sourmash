@@ -43,7 +43,7 @@ _output_type_to_ext = {
     'human': '.human.txt',
     'lineage_csv': '.lineage.csv',
     'kreport': ".kreport.txt",
-    'lingroup_report': ".lingroup_report.txt"
+    'lingroup_report': ".lingroup_report.tsv"
     }
 
 def make_outfile(base, output_type, *, output_dir = ""):
