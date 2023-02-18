@@ -46,6 +46,10 @@ def subparser(subparsers):
         '-f', '--force', action = 'store_true',
         help='continue past errors in file and taxonomy loading',
     )
+    subparser.add_argument(
+        '--LIN-taxonomy', action='store_true', default=False,
+        help='use LIN taxonomy in place of standard taxonomic ranks.  Note that the taxonomy CSV must contain LIN lineage information.'
+    )
 
 def main(args):
     import sourmash

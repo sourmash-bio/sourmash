@@ -11,10 +11,9 @@ import re
 import sourmash
 from ..sourmash_args import FileOutputCSV, FileOutput
 from sourmash.logging import set_quiet, error, notify, print_results
-from sourmash.lca.lca_utils import zip_lineage
 
 from . import tax_utils
-from .tax_utils import MultiLineageDB, GatherRow
+from .tax_utils import MultiLineageDB, GatherRow, RankLineageInfo, LINLineageInfo
 
 usage='''
 sourmash taxonomy <command> [<args>] - manipulate/work with taxonomy information.
@@ -399,8 +398,7 @@ def grep(args):
     else:
         with FileOutputCSV(args.output) as fp:
             w = csv.writer(fp)
-
-            w.writerow(['ident'] + list(sourmash.lca.taxlist(include_strain=False)))
+            w.writerow(['ident'] + list(RankLineageInfo().taxlist[:-1]))
             for ident, lineage in sorted(match_ident):
                 w.writerow([ident] + [ x.name for x in lineage ])
 
@@ -459,7 +457,11 @@ def summarize(args):
             # output in order of most common
             for lineage, count in lineage_counts.most_common():
                 rank = lineage[-1].rank
-                lin = ";".join(zip_lineage(lineage, truncate_empty=True))
+                if args.LIN_taxonomy:
+                    inf = LINLineageInfo(lineage=lineage)
+                else:
+                    inf = RankLineageInfo(lineage=lineage)
+                lin = inf.display_lineage()
                 w.writerow([rank, str(count), lin])
 
         n = len(lineage_counts)

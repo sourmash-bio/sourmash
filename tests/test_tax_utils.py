@@ -2920,3 +2920,23 @@ def test_find_lca_3():
     lca, reason = find_lca(tree)
     assert lca == lin1.filled_lineage           # find most specific leaf node
     print(lca)
+
+
+def test_build_tree_with_initial():
+    x = "a;b;c"
+    y = "a;b;d"
+    z = "a;e"
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = RankLineageInfo(lineage_str=y)
+    lin3 = RankLineageInfo(lineage_str=z)
+
+    tree = build_tree([lin1, lin2])
+    lca = find_lca(tree)
+
+    print(lca)
+    assert lca == ((LineagePair(rank='superkingdom', name='a', taxid=None),
+                    LineagePair(rank='phylum', name='b', taxid=None)), 2)
+    tree2 = build_tree([lin3], initial=tree)
+    lca2 = find_lca(tree2)
+    print(lca2)
+    assert lca2 == ((LineagePair('superkingdom', 'a'),), 2)
