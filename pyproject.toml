@@ -135,6 +135,7 @@ bindings = "cffi"
 include = [
   { path = "include/sourmash.h", format = ["sdist","wheel"] },
   { path = "requirements.txt", format = ["sdist"] },
+  { path = "Cargo.*", format = ["sdist"] },
   { path = "tests/*.py", format = ["sdist"] },
   { path = "citation.cff", format = ["sdist", "wheel"] },
 ]
