@@ -3,22 +3,70 @@
 These are adapted from the khmer release docs, originally written by
 Michael Crusoe.
 
-## Required build environment
+## Checklist
 
-The basic build environment needed below can be created as follows:
+Here's a checklist to copy/paste into an issue:
 
 ```
-conda create -y -n sourmash-rc python=3.10 pip cxx-compiler make twine tox tox-conda setuptools setuptools_scm
+
+Release candidate testing:
+- [ ] Command line tests pass for a release candidate
+- [ ] All eight release candidate wheels are built
+
+Releasing to PyPI:
+
+- [ ] RC tag(s)s deleted on github
+- [ ] Release tag cut
+- [ ] Release notes written
+- [ ] All eight release wheels built
+- [ ] Release wheels uploaded to pypi
+- [ ] tar.gz distribution uploaded to pypi
+
+After release to PyPI and conda-forge/bioconda packages built:
+
+- [ ] [PyPI page](https://pypi.org/project/sourmash/) updated
+- [ ] Zenodo DOI successfully minted upon new github release - [see search results](https://zenodo.org/search?page=1&size=20&q=sourmash)
+- [ ] `pip install sourmash` installs the correct version
+- [ ] `mamba create -n smash-release -y sourmash` installs the correct version
+```
+
+## Creating the build environment with conda
+
+You can most easily set up your build environment with conda.
+
+Your conda version will need to be at least `v4.9.0`. You can check your
+conda version with `conda --version` and update with `conda update conda`.
+
+Create the basic build environment:
+
+```
+mamba create -y -n sourmash-rc python=3.10 pip \
+    cxx-compiler make twine tox tox-conda rust
 ```
 
 Then activate it with `conda activate sourmash-rc`.
 
-You will also need a Rust installation (see
-[Development Environment](developer.md)); be sure to update it to the
-latest version with `rustup update`.
+## Writing release notes
 
-Your conda version will need to be at least `v4.9.0`. You can check your
-conda version with `conda --version` and update with `conda update conda`.
+Draft release notes can be created with `git log --oneline
+v4.6.1..latest`, but should then be edited manually. We suggest
+putting PRs in the following categories:
+
+```
+Major new features:
+
+Minor new features:
+
+Bug fixes:
+
+Cleanup and documentation updates:
+
+Developer updates:
+
+Dependabot updates:
+```
+
+A convenient way to edit release notes is to put them in a [hackmd.io](https://hackmd.io) document and edit/display them there; then, create a "draft release notes for v..." issue and paste the markdown into the issue.
 
 ## Testing a release
 
@@ -43,17 +91,40 @@ or you can run `make last-tag` and check the output.
 new_version=4.X.X
 rc=rc1
 ```
-and then tag the release candidate with the new version number prefixed by the letter 'v':
+
+Next create a new branch to work on release candidates and the version bump:
 ```
-git tag -a v${new_version}${rc} -m "${new_version} release candidate ${rc}"
-git push --tags origin
+git checkout -b release/v${new_version}
+```
+and update the version number in `pyproject.toml` and `flake.nix`:
+```
+sed -i -e "s|version = .*$|version = \"${new_version}${rc}\"|g" pyproject.toml flake.nix
+```
+
+Commit the changes and push the branch:
+```
+git add pyproject.toml
+git commit -m "${new_version} release candidate ${rc}"
+git push -u origin release/v${new_version}
+```
+and then open a PR for the new branch by following the link printed by
+```
+echo "https://github.com/sourmash-bio/sourmash/pull/new/release/v${new_version}"
 ```
 
 [the releases page]: https://github.com/sourmash-bio/sourmash/releases
 
+Once the checks for the PR work, let's trigger the automatic wheel building
+by creating a tag:
+
+```
+git tag -a v${new_version}${rc} -m "${new_version} release candidate ${rc}"
+git push origin refs/tags/v${new_version}${rc}
+```
+
 3\. Test the release candidate. Bonus: repeat on macOS:
 ```
-python -m pip install -U virtualenv wheel tox-setuptools-version build
+python -m pip install -U pip
 
 cd ..
 python -m venv testenv1
@@ -68,17 +139,17 @@ source bin/activate
 git clone --depth 1 --branch v${new_version}${rc} https://github.com/sourmash-bio/sourmash.git
 cd sourmash
 python -m pip install -r requirements.txt
-make test
+pytest && cargo test
 
 # Secondly we test via pip
 
 cd ../../testenv2
 deactivate
 source bin/activate
-python -m pip install setuptools_scm build
+python -m pip install build
 python -m pip install -e git+https://github.com/sourmash-bio/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
 cd src/sourmash
-make test
+pytest && cargo test
 make dist
 cp dist/sourmash*tar.gz ../../../testenv3/
 
@@ -89,64 +160,57 @@ cd ../../../testenv3/
 deactivate
 source bin/activate
 python -m pip install sourmash*tar.gz
-python -m pip install pytest build
 tar xzf sourmash-${new_version}${rc}.tar.gz
 cd sourmash-${new_version}${rc}
 python -m pip install -r requirements.txt
-make dist
 cp -a ../../sourmash/tests/test-data tests/  ## We don't ship the test data, so let's copy it here
-make test
+pytest && cargo test
 ```
 
-4\. Publish the new release on the testing PyPI server.
-You will need to [change your PyPI credentials].
-We will be using `twine` to upload the package to TestPyPI and verify
-everything works before sending it to PyPI:
-```
-python -m pip install twine
-twine upload --repository-url https://test.pypi.org/legacy/ dist/sourmash-${new_version}${rc}.tar.gz
-```
-Test the PyPI release in a new virtualenv:
-```
-cd ../../testenv4
-deactivate
-source bin/activate
-# install as much as possible from non-test server!
-python -m pip install screed pytest numpy matplotlib scipy bam2fasta deprecation cffi
-python -m pip install -i https://test.pypi.org/simple --pre sourmash
-sourmash info  # should print "sourmash version ${new_version}${rc}"
-```
-
-[change your PyPI credentials]: https://packaging.python.org/tutorials/packaging-projects/#uploading-the-distribution-archives
-
-5\. Do any final testing:
+4\. Do any final testing:
 
  * check that the binder demo notebook is up to date
 
-6\. Wait for GitHub Actions to finish running on the release candidate tag.
+5\. Wait for GitHub Actions to finish running on the release candidate tag.
+
+Wait for the
+[various cibuildwheel actions](https://github.com/sourmash-bio/sourmash/actions)
+to finish and upload; the
+[latest release](https://github.com/sourmash-bio/sourmash/releases)
+should have eight wheel files attached to it.
+
+6\. Remove release candidate tags
 
 NOTE: If you delete the rc tag before the rc wheels are done building, they
 may get added to the wrong release.
+
+```
+cd ../sourmash
+git tag -d v${new_version}${rc}
+git push --delete origin v${new_version}${rc}
+```
 
 ## How to make a final release
 
 When you've got a thoroughly tested release candidate,
 cut a release like so:
 
-1\. Create the final tag. Write the changes from previous version in the tag commit message. `git log --oneline` can be useful here, because it can be used to compare the two versions (and hopefully we used descriptive PR names and commit messages). An example comparing `2.2.0` to `2.1.0`:
-`git log --oneline v2.1.0..v2.2.0`
+1\. Merge the pull request bumping the version. Once the PR is merged,
+change back to the `latest` branch and pull the new commit:
 
 ```
-cd ../sourmash
-git tag -a v${new_version}
+git checkout latest
+git pull --rebase
 ```
 
-2\. Delete the release candidate tag and push the tag updates to GitHub:
+2\. Create the final tag and push to GitHub:
+
 ```
-git tag -d v${new_version}${rc}
+git tag -a v${new_version} -m "${new_version} release"
 git push --tags origin
-git push --delete origin v${new_version}${rc}
 ```
+
+(make sure to be in the `latest` branch when creating the final tag!)
 
 3\. Upload wheels from GitHub Releases to PyPI
 
@@ -155,14 +219,14 @@ This will take about 45 minutes, or more. After they're built, they must be
 copied over to PyPI manually.
 
 You can do this in two ways: you can manually download all the files
-from [the releases page], or, if you have
-[`hub`](https://hub.github.com/), you can use that to download the
+from [the releases page], or, if you have the
+[`GitHub CLI`](https://cli.github.com/), you can use that to download the
 packages.
 
-Download the wheels with hub:
+Download the wheels with the `GitHub CLI`:
 ```
 mkdir -p wheel && cd wheel
-hub release download v${new_version}
+gh release download v${new_version}
 ```
 or download them manually.
 
@@ -179,7 +243,7 @@ make dist
 twine upload dist/sourmash-${new_version}.tar.gz
 ```
 
-(This should be done *after* the wheels are available, because some of
+(This must be done *after* the wheels are available, because some of
 the conda package build steps require the source dist and are automatically
 triggered when a new version shows up on PyPI.)
 
@@ -189,22 +253,6 @@ with the tag you pushed. Copy and paste in the release notes.
 Note that there will also be releases associated with the Rust `core`
 package, which is versioned differently than `sourmash`.  These will
 be of the form `rXX.YY.ZZ`, e.g. `r0.9.0`. Please just ignore them :)
-
-Draft release notes can be created with `git log --oneline
-v4.4.1..latest`, but should then be edited manually. We suggest
-putting PRs in the following categories:
-
-```
-Major new features:
-
-Minor new features:
-
-Bug fixes:
-
-Cleanup and documentation fixes:
-
-Developer updates:
-```
 
 ## Conda-forge
 
@@ -221,7 +269,9 @@ merge it and wait for the `sourmash-minimal` package to show up in conda-forge:
 conda search sourmash-minimal={new_version}
 ```
 
-An example PR for [`3.4.0`](https://github.com/conda-forge/sourmash-minimal-feedstock/pull/7).
+[An example conda-forge PR for `4.6.0`](https://github.com/conda-forge/sourmash-minimal-feedstock/pull/37).
+
+[An example bioconda PR for `4.6.0`](https://github.com/bioconda/bioconda-recipes/pull/38205).
 
 ## Bioconda
 
@@ -234,15 +284,6 @@ prepared in the previous section to be available for installation,
 and tests are going to fail in Bioconda before that.
 
 An example PR for [`3.4.0`](https://github.com/bioconda/bioconda-recipes/pull/23171).
-
-## Double check everything:
-
-```
-- [ ] [PyPI page](https://pypi.org/project/sourmash/) updated
-- [ ] Zenodo DOI successfully minted upon new github release - [see search results](https://zenodo.org/search?page=1&size=20&q=sourmash)
-- [ ] `pip install sourmash` installs the correct version
-- [ ] `mamba create -n smash-release -y sourmash` installs the correct version
-```
 
 ## Announce it!
 
