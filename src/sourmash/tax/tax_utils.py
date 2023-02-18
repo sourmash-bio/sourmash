@@ -464,7 +464,6 @@ def build_tree(assignments, initial=None):
         node = tree
 
         if isinstance(assignment, (BaseLineageInfo, RankLineageInfo, LINLineageInfo)):
-            print(assignment)
             assignment = assignment.filled_lineage
 
         for lineage_tup in assignment:
