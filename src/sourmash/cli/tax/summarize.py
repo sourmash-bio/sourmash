@@ -48,7 +48,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '--LIN-taxonomy', action='store_true', default=False,
-        help='use LIN taxonomy in place of standard taxonomic ranks.  Note that the taxonomy CSV must contain LIN lineage information.'
+        help='use LIN taxonomy in place of standard taxonomic ranks.'
     )
 
 def main(args):

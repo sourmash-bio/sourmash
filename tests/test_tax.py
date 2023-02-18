@@ -3289,6 +3289,50 @@ def test_tax_summarize_strain_csv_with_lineages(runtmp):
         assert c['1'] == 11
 
 
+def test_tax_summarize_LINS(runtmp):
+    # test basic operation w/LINs
+    taxfile = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+    lineage_csv = runtmp.output('annotated-lin.csv')
+
+    taxdb = tax_utils.LineageDB.load(taxfile, LIN_taxonomy=True)
+    with open(lineage_csv, 'w', newline="") as fp:
+        w = csv.writer(fp)
+        w.writerow(['name', 'lineage'])
+        for k, v in taxdb.items():
+            lin = tax_utils.LINLineageInfo(lineage=v)
+            linstr = lin.display_lineage(truncate_empty=False)
+            print(linstr)
+            w.writerow([k, linstr])
+
+    runtmp.sourmash('tax', 'summarize', lineage_csv, '-o', 'ranks.csv', '--LIN-taxonomy')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(out)
+    print(err)
+
+    assert "number of distinct taxonomic lineages: 6" in out
+    assert "saved 91 lineage counts to" in err
+
+    csv_out = runtmp.output('ranks.csv')
+
+    with sourmash_args.FileInputCSV(csv_out) as r:
+         # count number across ranks as a cheap consistency check
+        c = Counter()
+        for row in r:
+            print(row)
+            val = row['lineage_count']
+            c[val] += 1
+
+        print(list(c.most_common()))
+
+        assert c['1'] == 77
+        assert c['2'] == 1
+        assert c['3'] == 11
+        assert c['4'] == 2
+
+
 def test_metagenome_LINS(runtmp):
     # test basic metagenome with LIN taxonomy
     # get/design better test data for this?
@@ -3472,3 +3516,29 @@ def test_metagenome_LINS_LINgroups_lg_only_header(runtmp):
     assert c.last_result.status != 0
     assert "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0" in c.last_result.err
     assert f"No LINgroups loaded from {lg_file}" in c.last_result.err
+
+
+# def test_metagenome_LINS_csv_out(runtmp):
+#     # LIN taxonomy:: csv_summary out
+#     c = runtmp
+
+#     g_csv = utils.get_test_data('tax/test1.gather.csv')
+#     tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+
+#     lg_out = c.output('base.lingroup_report.tsv')
+
+#     c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '--LIN-taxonomy')
+
+#     print(c.last_result.status)
+#     print(c.last_result.out)
+#     print(c.last_result.err)
+
+#     assert c.last_result.status == 0
+#     assert os.path.exists(lg_out)
+
+#     results = [x.rstrip() for x in open(lg_out)]
+#     assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in results[0]
+#     # 0th rank/position
+#     assert "test1,0,0.089,1,md5,test1.sig,0.057,444000,0.925,0" in results[1]
+#     # 19th rank/position
+#     assert "test1,19,0.088,0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,md5,test1.sig,0.058,442000,0.925,0" in results[-4]

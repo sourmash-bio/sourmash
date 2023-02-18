@@ -914,9 +914,6 @@ class LineageDB(abc.Mapping):
             if not header:
                 raise ValueError(f'cannot read taxonomy assignments from {filename}')
 
-            if LIN_taxonomy and "LIN" not in header:
-                raise ValueError(f"'LIN' column not found: cannot read LIN taxonomy assignments from {filename}.")
-
             identifier = "ident"
             # check for ident/identifier, handle some common alternatives
             if "ident" not in header:
@@ -934,6 +931,9 @@ class LineageDB(abc.Mapping):
                 else:
                     header_str = ",".join([repr(x) for x in header])
                     raise ValueError(f'No taxonomic identifiers found; headers are {header_str}')
+
+            if LIN_taxonomy and "LIN" not in header:
+                raise ValueError(f"'LIN' column not found: cannot read LIN taxonomy assignments from {filename}.")
 
             if not LIN_taxonomy:
                 # is "strain" an available rank?
@@ -1039,7 +1039,7 @@ class LineageDB(abc.Mapping):
                     lineageInfo = RankLineageInfo(lineage_str= row['lineage'])
 
                 if ranks is None:
-                    ranks = lineageInfo.ranks
+                    ranks = lineageInfo.taxlist
 
                 lineage = lineageInfo.filled_lineage
                 # check duplicates

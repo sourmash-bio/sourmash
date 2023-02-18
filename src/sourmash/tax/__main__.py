@@ -412,7 +412,8 @@ def summarize(args):
         tax_assign = MultiLineageDB.load(args.taxonomy_files,
                                          force=args.force,
                        keep_full_identifiers=args.keep_full_identifiers,
-                       keep_identifier_versions=args.keep_identifier_versions)
+                       keep_identifier_versions=args.keep_identifier_versions,
+                       LIN_taxonomy=args.LIN_taxonomy)
     except ValueError as exc:
         error("ERROR while loading taxonomies!")
         error(str(exc))
