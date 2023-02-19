@@ -98,13 +98,13 @@ git checkout -b release/v${new_version}
 ```
 and update the version number in `pyproject.toml` and `flake.nix`:
 ```
-sed -i -e "s|version = .*$|version = \"${new_version}${rc}\"|g" pyproject.toml flake.nix
+sed -i -e "s|version = .*$|version = \"${new_version}\"|g" pyproject.toml flake.nix
 ```
 
 Commit the changes and push the branch:
 ```
 git add pyproject.toml
-git commit -m "${new_version} release candidate ${rc}"
+git commit -m "${new_version} release"
 git push -u origin release/v${new_version}
 ```
 and then open a PR for the new branch by following the link printed by
