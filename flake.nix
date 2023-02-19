@@ -116,7 +116,7 @@
             wasm-pack
             nodejs-16_x
 
-            py-spy
+            #py-spy
             heaptrack
             cargo-watch
             cargo-limit
