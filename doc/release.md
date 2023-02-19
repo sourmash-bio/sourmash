@@ -71,8 +71,8 @@ A convenient way to edit release notes is to put them in a [hackmd.io](https://h
 ## Testing a release
 
 0\. First things first: check if Read the Docs is building properly for `latest`.
-The build on [Read the Docs] should be passing,
-and also check if the [rendered docs] are updated.
+The build for the `latest` branch on [Read the Docs] should be passing,
+and also the [rendered docs] should be up to date.
 
 [Read the Docs]: https://readthedocs.org/projects/sourmash/builds/
 [rendered docs]: https://sourmash.readthedocs.io/en/latest/

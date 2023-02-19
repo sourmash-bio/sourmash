@@ -137,7 +137,7 @@ include = [
   { path = "requirements.txt", format = ["sdist"] },
   { path = "Cargo.*", format = ["sdist"] },
   { path = "tests/*.py", format = ["sdist"] },
-  { path = "citation.cff", format = ["sdist", "wheel"] },
+  { path = "CITATION.cff", format = ["sdist", "wheel"] },
 ]
 features = ["maturin"]
 locked = true
