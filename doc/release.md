@@ -103,7 +103,7 @@ sed -i -e "s|version = .*$|version = \"${new_version}\"|g" pyproject.toml flake.
 
 Commit the changes and push the branch:
 ```
-git add pyproject.toml
+git add pyproject.toml flake.nix
 git commit -m "${new_version} release"
 git push -u origin release/v${new_version}
 ```
