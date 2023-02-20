@@ -70,7 +70,7 @@ classifiers = [
 ]
 
 dependencies = [
-  "screed>=1.0.5",
+  "screed>=1.1.2,<2",
   "cffi>=1.14.0",
   "numpy",
   "matplotlib",
