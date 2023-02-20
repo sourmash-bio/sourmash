@@ -8,11 +8,8 @@ for making new plugins.
 
 # CTB TODO:
 # * provide suggestions for documentation & metadata for authors:
-#   support -q, -d, better help strings; provide URLs for plugins; ??
 # * provide guidance on how to test your CLI plugin at the CLI
 #   (minimal testing regime: sourmash scripts, look for description etc.)
-# * is there any reason to provide a post-plugin callback mechanism of any
-#   kind?
 
 import argparse
 import sourmash
