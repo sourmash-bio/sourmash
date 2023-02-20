@@ -105,8 +105,10 @@ def get_cli_script_plugins():
         mod = plugin.module
         try:
             script_cls = plugin.load()
-        except ModuleNotFoundError: # @CTB this needs to be dealt with better.
-            continue # raise? report? allow `info -v` to report errors?
+        except ModuleNotFoundError:
+            if _plugin_cli_once is False:
+                error(f"ERROR: cannot find or load module for cli_script plugin '{name}'")
+            continue
 
         command = getattr(script_cls, 'command', None)
         if command is None:
@@ -124,10 +126,8 @@ def get_cli_scripts_descriptions():
     "Build the descriptions for command-line plugins."
     for plugin in get_cli_script_plugins():
         name = plugin.name
-        try:
-            script_cls = plugin.load()
-        except ModuleNotFoundError: # @CTB
-            continue
+        script_cls = plugin.load()
+
         command = getattr(script_cls, 'command')
         description = getattr(script_cls, 'description',
                               f"(no description provided by plugin '{name}')")
