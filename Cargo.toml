@@ -3,3 +3,6 @@ members = [
   "src/core",
 ]
 default-members = ["src/core"]
+
+[profile.test]
+opt-level = 1
