@@ -3408,6 +3408,77 @@ def test_metagenome_LINS_LINgroups(runtmp):
     assert "lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000	80000" in c.last_result.out
 
 
+def test_metagenome_LINS_human_summary_no_lin_position(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--LIN-taxonomy', '-F', "human")
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0" in c.last_result.err
+    assert "sample name    proportion   cANI   lineage" in c.last_result.out
+    assert "-----------    ----------   ----   -------" in c.last_result.out
+    assert "test1             86.9%     -      unclassified" in c.last_result.out
+    assert "test1              5.8%     92.5%  0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" in c.last_result.out
+    assert "test1              5.0%     92.1%  1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" in c.last_result.out
+    assert "test1              1.6%     89.1%  2;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" in c.last_result.out
+    assert "test1              0.7%     86.4%  1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" in c.last_result.out
+
+
+def test_metagenome_LINS_human_summary_lin_position_5(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--LIN-taxonomy', '-F', "human", '--LIN-position', '5')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0" in c.last_result.err
+    assert "sample name    proportion   cANI   lineage" in c.last_result.out
+    assert "-----------    ----------   ----   -------" in c.last_result.out
+    assert "test1             86.9%     -      unclassified" in c.last_result.out
+    assert "test1              5.8%     92.5%  0;0;0;0;0;0" in c.last_result.out
+    assert "test1              5.0%     92.1%  1;0;0;0;0;0" in c.last_result.out
+    assert "test1              1.6%     89.1%  2;0;0;0;0;0" in c.last_result.out
+    assert "test1              0.7%     86.4%  1;0;1;0;0;0" in c.last_result.out
+
+
+def test_metagenome_LINS_krona_lin_position_5(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--LIN-taxonomy', '-F', "krona", '--LIN-position', '5')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0" in c.last_result.err
+    assert "fraction	0	1	2	3	4	5" in c.last_result.out
+    assert "0.08815317112086159	0	0	0	0	0	0" in c.last_result.out
+    assert "0.07778220981252493	1	0	0	0	0	0" in c.last_result.out
+    assert "0.027522935779816515	2	0	0	0	0	0" in c.last_result.out
+    assert "0.010769844435580374	1	0	1	0	0	0" in c.last_result.out
+    assert "0.7957718388512166	unclassified	unclassified	unclassified	unclassified	unclassified	unclassified" in c.last_result.out
+
+
 def test_metagenome_LINS_LINgroups_empty_lg_file(runtmp):
     c = runtmp
 

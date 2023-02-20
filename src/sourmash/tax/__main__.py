@@ -146,7 +146,11 @@ def metagenome(args):
         summary_outfile, limit_float = make_outfile(args.output_base, "human", output_dir=args.output_dir)
 
         with FileOutput(summary_outfile) as out_fp:
-            tax_utils.write_human_summary(query_gather_results, out_fp, args.rank or "species")
+            human_display_rank = args.rank or "species"
+            if args.LIN_taxonomy and not args.rank:
+                human_display_rank = query_gather_results[0].ranks[-1] # lowest rank
+
+            tax_utils.write_human_summary(query_gather_results, out_fp, human_display_rank)
 
     # write summarized output csv
     single_query_results = query_gather_results[0]

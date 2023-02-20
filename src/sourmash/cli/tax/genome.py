@@ -113,7 +113,7 @@ def main(args):
         # handle LIN options
         if args.LIN_taxonomy:
             if args.LIN_position:
-                args.rank = args.LIN_position
+                args.rank = str(args.LIN_position)
             if args.LINgroups:
                 if "LINgroup_report" not in args.output_format:
                     args.output_format.append("LINgroup_report")
