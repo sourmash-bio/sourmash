@@ -71,8 +71,8 @@ A convenient way to edit release notes is to put them in a [hackmd.io](https://h
 ## Testing a release
 
 0\. First things first: check if Read the Docs is building properly for `latest`.
-The build on [Read the Docs] should be passing,
-and also check if the [rendered docs] are updated.
+The build for the `latest` branch on [Read the Docs] should be passing,
+and also the [rendered docs] should be up to date.
 
 [Read the Docs]: https://readthedocs.org/projects/sourmash/builds/
 [rendered docs]: https://sourmash.readthedocs.io/en/latest/
@@ -98,13 +98,13 @@ git checkout -b release/v${new_version}
 ```
 and update the version number in `pyproject.toml` and `flake.nix`:
 ```
-sed -i -e "s|version = .*$|version = \"${new_version}${rc}\"|g" pyproject.toml flake.nix
+sed -i -e "s|version = .*$|version = \"${new_version}\"|g" pyproject.toml flake.nix
 ```
 
 Commit the changes and push the branch:
 ```
-git add pyproject.toml
-git commit -m "${new_version} release candidate ${rc}"
+git add pyproject.toml flake.nix
+git commit -m "${new_version} release"
 git push -u origin release/v${new_version}
 ```
 and then open a PR for the new branch by following the link printed by
@@ -160,8 +160,8 @@ cd ../../../testenv3/
 deactivate
 source bin/activate
 python -m pip install sourmash*tar.gz
-tar xzf sourmash-${new_version}${rc}.tar.gz
-cd sourmash-${new_version}${rc}
+tar xzf sourmash-${new_version}.tar.gz
+cd sourmash-${new_version}
 python -m pip install -r requirements.txt
 cp -a ../../sourmash/tests/test-data tests/  ## We don't ship the test data, so let's copy it here
 pytest && cargo test
