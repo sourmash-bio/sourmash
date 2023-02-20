@@ -1184,11 +1184,13 @@ def test_RankLineageInfo_init_lineage_str():
     assert taxinf.zip_lineage()== ['a', 'b', 'c', '', '', '', '', '']
 
 
-def test_LINLineageInfo_init_fail():
-    with pytest.raises(ValueError) as exc:
-        LINLineageInfo()
-    print(str(exc))
-    assert "Please initialize 'LINLineageInfo' with 'lineage', 'lineage_str' or 'n_lin_positions'." in str(exc)
+def test_LINLineageInfo_init_empty():
+    taxinf = LINLineageInfo()
+    assert taxinf.n_lin_positions == 0
+    assert taxinf.zip_lineage()== []
+    assert taxinf.display_lineage()== ""
+    assert taxinf.filled_ranks == ()
+    assert taxinf.n_filled_pos == 0
 
 
 def test_LINLineageInfo_init_n_pos():

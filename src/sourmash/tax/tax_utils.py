@@ -362,7 +362,7 @@ class LINLineageInfo(BaseLineageInfo):
     positions is less than provided lineages, initialization will fail. Otherwise, we will insert blanks
     beyond provided data in `lineage_str`.
 
-    LINLineageInfo must be initialized with lineage or n_lin_positions.
+    If no information is passed, an empty LINLineageInfo will be initialized (n_lin_positions=0).
 
     Input lineage information is only used for initialization of the final `lineage`
     and will not be used or compared in any other class methods.
@@ -378,10 +378,8 @@ class LINLineageInfo(BaseLineageInfo):
             self._init_from_lineage_tuples()
         elif self.lineage_str is not None:
             self._init_from_lineage_str()
-        elif self.n_lin_positions is not None:
-            self._init_empty()
         else:
-            raise ValueError("Please initialize 'LINLineageInfo' with 'lineage', 'lineage_str' or 'n_lin_positions'.")
+            self._init_empty()
 
     def _init_ranks_from_n_lin_positions(self):
         new_ranks = [str(x) for x in range(0, self.n_lin_positions)]
@@ -390,6 +388,9 @@ class LINLineageInfo(BaseLineageInfo):
     def _init_empty(self):
         "initialize empty genome lineage"
         # first, set ranks from n_positions
+        if self.n_lin_positions is None:
+            # set n_lin_positions to 0 for completely empty LINLineageInfo
+            object.__setattr__(self, "n_lin_positions", 0)
         self._init_ranks_from_n_lin_positions()
         new_lineage=[]
         for rank in self.ranks:
@@ -1526,7 +1527,7 @@ class TaxResult:
         self.f_unique_weighted = float(self.raw.f_unique_weighted)
         self.unique_intersect_bp = int(self.raw.unique_intersect_bp)
         if self.LIN_taxonomy:
-            self.lineageInfo = LINLineageInfo(n_lin_positions=0)
+            self.lineageInfo = LINLineageInfo()
         else:
             self.lineageInfo = RankLineageInfo()
 
@@ -1871,7 +1872,7 @@ class QueryTaxResult:
 
             # record unclassified
             if self.LIN_taxonomy:
-                lineage = LINLineageInfo(n_lin_positions=0) # empty
+                lineage = LINLineageInfo()
             else:
                 lineage = RankLineageInfo()
             query_ani = None
