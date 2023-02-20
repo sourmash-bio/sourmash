@@ -213,7 +213,7 @@ class BaseLineageInfo:
         if rank in self.ranks: # rank is available
             return True
         raise ValueError(f"Desired Rank '{rank}' not available for this lineage.")
- 
+
     def rank_is_filled(self, rank, other=None):
         self.check_rank_availability(rank)
         if other is not None:
@@ -223,12 +223,17 @@ class BaseLineageInfo:
             return True
         return False
 
+    def is_compatible(self, other):
+        if self.ranks == other.ranks:
+            return True
+        return False
+
     def is_lineage_match(self, other, rank):
         """
         check to see if two lineages are a match down to given rank.
         """
         self.check_rank_availability(rank)
-        if not other.ranks == self.ranks: # check same ranks
+        if not self.is_compatible(other):
             raise ValueError("Cannot compare lineages from taxonomies with different ranks.")
         # always return false if rank is not filled in either of the two lineages
         if self.rank_is_filled(rank, other=other):
@@ -262,6 +267,16 @@ class BaseLineageInfo:
         # if not, return lineage tuples down to desired rank
         rank_idx = self.rank_index(rank)
         return self.filled_lineage[:rank_idx+1]
+
+    def find_lca(self, other):
+        """
+        If an LCA match exists between self and other,
+        find and report LCA lineage. If not, return None.
+        """
+        for rank in self.ascending_taxlist:
+            if self.is_lineage_match(other, rank):
+                return self.pop_to_rank(rank)
+        return None
 
 
 @dataclass(frozen=True, order=True)
@@ -348,6 +363,7 @@ class RankLineageInfo(BaseLineageInfo):
         object.__setattr__(self, "lineage", tuple(new_lineage))
         object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
 
+
 @dataclass(frozen=True, order=True)
 class LINLineageInfo(BaseLineageInfo):
     """
@@ -369,7 +385,8 @@ class LINLineageInfo(BaseLineageInfo):
     """
     ranks: tuple = field(default=None, init=False, compare=False)# we will set this within class instead
     lineage: tuple = None
-    n_lin_positions: int = None # init with this to make empty LINLineageInfo with correct n_lin_positions
+    # init with n_positions if you want to set a specific number of positions
+    n_lin_positions: int = field(default=None, compare=False)
 
     def __post_init__(self):
         "Initialize according to passed values"
@@ -380,6 +397,16 @@ class LINLineageInfo(BaseLineageInfo):
             self._init_from_lineage_str()
         else:
             self._init_empty()
+
+    def __eq__(self, other):
+        """
+        Check if two LINLineageInfo match. Since we sometimes want to match LINprefixes, which have fewer
+        total ranks, with full LINs, we only check for the filled_lineage to match and don't check that
+        the number of lin_positions match.
+        """
+        if other == (): # if comparing to a null tuple, don't try to find its lineage before returning False
+            return False
+        return self.filled_lineage==other.filled_lineage
 
     def _init_ranks_from_n_lin_positions(self):
         new_ranks = [str(x) for x in range(0, self.n_lin_positions)]
@@ -444,6 +471,23 @@ class LINLineageInfo(BaseLineageInfo):
         object.__setattr__(self, "n_filled_pos", len(filled_ranks))
 
 
+    def is_compatible(self, other):
+        """
+        Since we sometimes want to match LINprefixes with full LINs,
+        we don't want to enforce identical ranks. Here we just look to
+        make sure self and other share any ranks (LIN positions).
+
+        Since ranks are positions, this should be true for LINLineageInfo
+        unless one is empty. However, it should prevent comparison between
+        other LineageInfo instances and LINLineageInfo.
+        """
+        # do self and other share any ranks?
+        if any(x in self.ranks for x in other.ranks):
+            return True
+        return False
+
+
+
 def build_tree(assignments, initial=None):
     """
     Builds a tree of dictionaries from lists of LineagePair objects or
@@ -480,7 +524,7 @@ def build_tree(assignments, initial=None):
 
 def find_lca(tree):
     """
-    Given a tree produced by 'find_tree', find the first node with multiple
+    Given a tree produced by 'build_tree', find the first node with multiple
     children, OR the only leaf in the tree.  Return (lineage_tup, reason),
     where 'reason' is the number of children of the returned node, i.e.
     0 if it's a leaf and > 1 if it's an internal node.
@@ -2064,7 +2108,7 @@ class QueryTaxResult:
                         unclassified_recorded = True
                 kreport_results.append(kresD)
         return header, kreport_results
-    
+
     def make_lingroup_results(self, LINgroupsD): # dictionary {lg_prefix: lg_name}
         self.check_summarization()
         header = ["LINgroup_name", "LINgroup_prefix", "percent_containment", "num_bp_contained", "num_bp_assigned"]
@@ -2075,14 +2119,13 @@ class QueryTaxResult:
         all_lgs = list(LINgroupsD.keys())
         for lg_prefix in all_lgs:
             lg_prefix_as_list = lg_prefix.split(';')
-            lg_rank = len(lg_prefix_as_list) -1
-            all_lg_ranks.add(lg_rank) # bc 0 based
+            lg_rank = len(lg_prefix_as_list) -1  # bc 0 based
+            all_lg_ranks.add(lg_rank)
             rank_to_lgprefix[str(lg_rank)].add(lg_prefix)
         
         # order lg_ranks low--> high (general --> specific)
         ordered_lg_ranks = list(all_lg_ranks)
-        ordered_lg_ranks.sort() # ranks are str(int) .. how does this affect sorting? e.g. 1 vs 10?
-        # ordered_lg_ranks = [str(x-1) for x in ordered_lg_ranks] # because 0-based
+        ordered_lg_ranks.sort()
         lowest_rank = str(ordered_lg_ranks[-1])
 
         lingroup_results = []
@@ -2098,3 +2141,47 @@ class QueryTaxResult:
                     lg_resD = res.as_lingroup_dict(self.query_info, this_lingroup_name, lowest_rank)
                     lingroup_results.append(lg_resD)
         return header, lingroup_results
+
+    # def make_lingroup_results_ordered(self, LINgroupsD): # dictionary {lg_prefix: lg_name}
+    #     self.check_summarization()
+    #     header = ["LINgroup_name", "LINgroup_prefix", "percent_containment", "num_bp_contained", "num_bp_assigned"]
+    #     if self.query_info.total_weighted_hashes == 0:
+    #         raise ValueError("ERROR: cannot produce 'LINgroup_report' format from gather results before sourmash v4.5.0")
+    #     # first, order the LINgroups
+
+    #     all_lgs = set()
+    #     lg_ranks = set()
+    #     for lg_prefix in LINgroupsD.keys():
+    #         # store lineage info for LCA pathfinding
+    #         lg_info = LINLineageInfo(lineage_str=lg_prefix)
+    #         all_lgs.add(lg_info)
+    #         # store rank so we only select summarized results at these ranks
+    #         lg_rank = lg_info.lowest_rank
+    #         lg_ranks.add(str(lg_rank))
+        
+    #     # now build tree from all lineage groups
+    #     lg_tree = build_tree(all_lgs)
+
+    #     # grab summarized results matching LINgroup prefixes
+    #     lg_results = {}
+    #     for rank in lg_ranks:
+    #         rank_results = self.summarized_lineage_results[rank]
+    #         for res in rank_results:
+    #             if res.lineage in all_lgs:# is this lineage in the list of LINgroups? 
+    #                 this_lingroup_name = LINgroupsD[res.lineage.display_lineage(truncate_empty=True)]
+    #                 lg_resD = res.as_lingroup_dict(self.query_info, this_lingroup_name, res.lowest_rank)
+    #                 lg_results[lg_info] = lg_resD
+
+    #     # now find each LCA path and write results for lineage groups there.
+    #     ordered_lg_results = [] 
+        
+    #     while 1:
+    #         this_path_results = []
+    #         lca, reason = find_lca(lg_tree)
+    #         if reason == 0: # this is a leaf node / at bottom of a path
+
+    #             # now reverse this path's results and add to the ordered results
+    #             path_results = this_path_results[::-1]
+    #             ordered_lg_results.extend(path_results)
+        
+    #     return header, lingroup_results

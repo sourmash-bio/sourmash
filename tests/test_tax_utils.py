@@ -1256,6 +1256,51 @@ def test_LINLineageInfo_init_lineagepair():
     assert taxinf.n_filled_pos == 1
 
 
+def test_lca_LINLineageInfo_diff_n_pos():
+    x = "0;0;1"
+    y = '0'
+    lin1 = LINLineageInfo(lineage_str=x)
+    lin2 = LINLineageInfo(lineage_str=y)
+    assert lin1.is_compatible(lin2)
+    assert lin2.is_compatible(lin1)
+    lca_from_lin1 = lin1.find_lca(lin2)
+    lca_from_lin2 = lin2.find_lca(lin1)
+    assert lca_from_lin1 == lca_from_lin2
+    assert lca_from_lin1.display_lineage(truncate_empty=True) == "0"
+
+
+def test_lca_LINLineageInfo_no_lca():
+    x = "0;0;1"
+    y = '12;0;1'
+    lin1 = LINLineageInfo(lineage_str=x)
+    lin2 = LINLineageInfo(lineage_str=y)
+    assert lin1.is_compatible(lin2)
+    assert lin2.is_compatible(lin1)
+    lca_from_lin1 = lin1.find_lca(lin2)
+    lca_from_lin2 = lin2.find_lca(lin1)
+    assert lca_from_lin1 == lca_from_lin2 == None
+
+
+def test_lca_RankLineageInfo_no_lca():
+    x = "a;b;c"
+    y = 'd;e;f;g'
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = RankLineageInfo(lineage_str=y)
+    assert lin1.is_compatible(lin2)
+    assert lin2.is_compatible(lin1)
+    lca_from_lin1 = lin1.find_lca(lin2)
+    lca_from_lin2 = lin2.find_lca(lin1)
+    assert lca_from_lin1 == lca_from_lin2 == None
+
+
+def test_incompatibility_LINLineageInfo_RankLineageInfo():
+    x="a;b;c"
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = LINLineageInfo(lineage_str=x)
+    assert not lin1.is_compatible(lin2)
+    assert not lin2.is_compatible(lin1)
+
+
 def test_RankLineageInfo_init_lineage_str_with_ranks_as_list():
     x = "a;b;c"
     taxranks = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species']
@@ -1482,6 +1527,7 @@ def test_is_lineage_match_1():
     lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__e')
     lin2 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
     print(lin1.lineage)
+    assert lin1.is_compatible(lin2)
     assert lin1.is_lineage_match(lin2, 'superkingdom')
     assert lin2.is_lineage_match(lin1, 'superkingdom')
     assert lin1.is_lineage_match(lin2, 'phylum')
@@ -1498,11 +1544,19 @@ def test_is_lineage_match_1():
     assert not lin1.is_lineage_match(lin2, 'species')
     assert not lin2.is_lineage_match(lin1, 'species')
 
+    lca_from_lin1 = lin1.find_lca(lin2)
+    print(lca_from_lin1.display_lineage())
+    lca_from_lin2 = lin2.find_lca(lin1)
+    assert lca_from_lin1 == lca_from_lin2
+    assert lca_from_lin1.display_lineage() == "d__a;p__b;c__c;o__d"
+    
+
 
 def test_is_lineage_match_2():
     # match at family, and above, levels; no genus or species to match
     lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
     lin2 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
+    assert lin1.is_compatible(lin2)
     assert lin1.is_lineage_match(lin2, 'superkingdom')
     assert lin2.is_lineage_match(lin1, 'superkingdom')
     assert lin1.is_lineage_match(lin2, 'phylum')
@@ -1519,12 +1573,19 @@ def test_is_lineage_match_2():
     assert not lin1.is_lineage_match(lin2, 'species')
     assert not lin2.is_lineage_match(lin1, 'species')
 
+    lca_from_lin1 = lin1.find_lca(lin2)
+    print(lca_from_lin1.display_lineage())
+    lca_from_lin2 = lin2.find_lca(lin1)
+    assert lca_from_lin1 == lca_from_lin2
+    assert lca_from_lin1.display_lineage() == "d__a;p__b;c__c;o__d;f__f"
+
 
 def test_is_lineage_match_3():
     # one lineage is empty
     lin1 = RankLineageInfo()
     lin2 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
 
+    assert lin1.is_compatible(lin2)
     assert not lin1.is_lineage_match(lin2, 'superkingdom')
     assert not lin2.is_lineage_match(lin1, 'superkingdom')
     assert not lin1.is_lineage_match(lin2, 'phylum')
@@ -1547,6 +1608,7 @@ def test_is_lineage_match_incorrect_ranks():
     lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__e', ranks=taxranks[::-1])
     lin2 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
     print(lin1.lineage)
+    assert not lin1.is_compatible(lin2)
     with pytest.raises(ValueError) as exc:
         lin1.is_lineage_match(lin2, 'superkingdom')
     print(str(exc))
@@ -1558,6 +1620,7 @@ def test_is_lineage_match_improper_rank():
     lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__e')
     lin2 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
     print(lin1.lineage)
+    assert lin1.is_compatible(lin2)
     with pytest.raises(ValueError) as exc:
         lin1.is_lineage_match(lin2, 'NotARank')
     print(str(exc))
