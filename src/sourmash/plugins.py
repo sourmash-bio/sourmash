@@ -45,7 +45,11 @@ def get_load_from_functions():
 
     # Load each plugin,
     for plugin in _plugin_load_from:
-        loader_fn = plugin.load()
+        try:
+            loader_fn = plugin.load()
+        except (ModuleNotFoundError, AttributeError) as e:
+            debug_literal(f"plugins.load_from_functions: got error loading {plugin.name}: {str(e)}")
+            continue
 
         # get 'priority' if it is available
         priority = getattr(loader_fn, 'priority', DEFAULT_LOAD_FROM_PRIORITY)
@@ -62,7 +66,11 @@ def get_save_to_functions():
 
     # Load each plugin,
     for plugin in _plugin_save_to:
-        save_cls = plugin.load()
+        try:
+            save_cls = plugin.load()
+        except (ModuleNotFoundError, AttributeError) as e:
+            debug_literal(f"plugins.load_from_functions: got error loading {plugin.name}: {str(e)}")
+            continue
 
         # get 'priority' if it is available
         priority = getattr(save_cls, 'priority', DEFAULT_SAVE_TO_PRIORITY)
@@ -105,7 +113,7 @@ def get_cli_script_plugins():
         mod = plugin.module
         try:
             script_cls = plugin.load()
-        except ModuleNotFoundError:
+        except (ModuleNotFoundError, AttributeError):
             if _plugin_cli_once is False:
                 error(f"ERROR: cannot find or load module for cli_script plugin '{name}'")
             continue
