@@ -59,7 +59,8 @@ class Test_EntryPointBasics_LoadFrom:
         
     def setup_method(self):
         self.saved_plugins = plugins._plugin_load_from
-        plugins._plugin_load_from = [FakeEntryPoint('test_load', self.get_some_sigs)]
+        plugins._plugin_load_from = [FakeEntryPoint('test_load', self.get_some_sigs),
+                                     FakeEntryPoint('test_load', self.get_some_sigs, error_on_import=ModuleNotFoundError)]
 
     def teardown_method(self):
         plugins._plugin_load_from = self.saved_plugins
@@ -183,7 +184,8 @@ class Test_EntryPointBasics_SaveTo:
     # test the basics
     def setup_method(self):
         self.saved_plugins = plugins._plugin_save_to
-        plugins._plugin_save_to = [FakeEntryPoint('test_save', FakeSaveClass)]
+        plugins._plugin_save_to = [FakeEntryPoint('test_save', FakeSaveClass),
+                                   FakeEntryPoint('test_save', FakeSaveClass, error_on_import=ModuleNotFoundError)]
 
     def teardown_method(self):
         plugins._plugin_save_to = self.saved_plugins
