@@ -4,7 +4,7 @@ Support for plugins to sourmash via importlib.metadata entrypoints.
 Plugin entry point names:
 * 'sourmash.load_from' - Index class loading.
 * 'sourmash.save_to' - Signature saving.
-* 'sourmash.picklist_filters' - extended Picklist functionality.
+* 'sourmash.cli_script' - command-line extension.
 
 CTB TODO:
 
