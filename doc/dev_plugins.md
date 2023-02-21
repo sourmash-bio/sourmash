@@ -2,7 +2,8 @@
 
 As of version 4.7.0, sourmash has experimental support for Python
 plugins to load and save signatures in different ways (e.g. file
-formats, RPC servers, databases, etc.).  This support is provided via
+formats, RPC servers, databases, etc.) and to run additional commands
+via the command-line.  This support is provided via
 the "entry points" mechanism supplied by
 [`importlib.metadata`](https://docs.python.org/3/library/importlib.metadata.html)
 and documented
