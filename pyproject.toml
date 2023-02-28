@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "maturin>=0.14.7,<0.15",
+    "maturin>=0.14.13,<0.15",
     "cffi",
 ]
 build-backend = 'maturin'
@@ -78,6 +78,7 @@ dependencies = [
   "deprecation>=2.0.6",
   "cachetools>=4,<6",
   "bitstring>=3.1.9,<5",
+  "importlib_metadata;python_version<'3.10'"
 ]
 
 requires-python = ">=3.8"
@@ -103,6 +104,7 @@ test = [
   "pyyaml>=6,<7",
   "recommonmark",
   "hypothesis",
+  "build",
 ]
 demo = [
   "jupyter",
@@ -133,6 +135,10 @@ manifest-path = "src/core/Cargo.toml"
 bindings = "cffi"
 include = [
   { path = "include/sourmash.h", format = ["sdist","wheel"] },
+  { path = "requirements.txt", format = ["sdist"] },
+  { path = "Cargo.*", format = ["sdist"] },
+  { path = "tests/*.py", format = ["sdist"] },
+  { path = "CITATION.cff", format = ["sdist", "wheel"] },
 ]
 features = ["maturin"]
 locked = true
