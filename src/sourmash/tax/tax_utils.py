@@ -488,59 +488,60 @@ class LINLineageInfo(BaseLineageInfo):
 
 
 
-def build_tree(assignments, initial=None):
+@dataclass
+class LineageTree:
     """
-    Builds a tree of dictionaries from lists of LineagePair objects or
+    Builds a tree of dictionaries from lists of LineagePair or
     LineageInfo objects in 'assignments'.  This tree can then be used
     to find lowest common ancestor agreements/confusion.
     """
-    if initial is None:
-        tree = {}
-    else:
-        tree = initial
+    assignments: list = field(compare=False)
 
-    if not assignments:
-        raise ValueError("empty assignment passed to build_tree")
+    def __post_init__(self):
+        self.tree = {}
+        self.add_lineages(self.assignments)
 
-    if not isinstance(assignments, abc.Iterable):
-        raise ValueError("assignments must be an iterable object.")
+    def __eq__(self, other):
+        """
+        Check if trees are identical.
+        """
+        if not isinstance(other, LineageTree):
+            return False
+        return self.tree==other.tree
 
-    for assignment in assignments:
-        node = tree
-
-        if isinstance(assignment, (BaseLineageInfo, RankLineageInfo, LINLineageInfo)):
-            assignment = assignment.filled_lineage
-
-        for lineage_tup in assignment:
+    def add_lineage(self, lineage):
+        if isinstance(lineage, (BaseLineageInfo, RankLineageInfo, LINLineageInfo)):
+            lineage = lineage.filled_lineage
+        node = self.tree
+        for lineage_tup in lineage:
             if lineage_tup.name:
                 child = node.get(lineage_tup, {})
                 node[lineage_tup] = child
-
                 # shift -> down in tree
                 node = child
 
-    return tree
+    def add_lineages(self, lineages):
+        if self.tree is None:
+            raise ValueError("No existing tree to add to.") # should never happen, bc init...
+        if not lineages:
+            raise ValueError("empty assignment passed to build_tree")
+        if not isinstance(lineages, abc.Iterable):
+            raise ValueError("Must pass in an iterable containing LineagePair or LineageInfo objects.")
+        for lineageInf in lineages:
+            self.add_lineage(lineageInf)
 
-
-def find_lca(tree):
-    """
-    Given a tree produced by 'build_tree', find the first node with multiple
-    children, OR the only leaf in the tree.  Return (lineage_tup, reason),
-    where 'reason' is the number of children of the returned node, i.e.
-    0 if it's a leaf and > 1 if it's an internal node.
-    """
-
-    node = tree
-    lineage = []
-    while 1:
-        if len(node) == 1:                # descend to only child; track path
-            lineage_tup = next(iter(node.keys()))
-            lineage.append(lineage_tup)
-            node = node[lineage_tup]
-        elif len(node) == 0:              # at leaf; end
-            return tuple(lineage), 0
-        else:                             # len(node) > 1 => confusion!!
-            return tuple(lineage), len(node)
+    def find_lca(self):
+        node = self.tree
+        lca = []
+        while 1:
+            if len(node) == 1:                # descend to only child; track path
+                lineage_tup = next(iter(node.keys()))
+                lca.append(lineage_tup)
+                node = node[lineage_tup]
+            elif len(node) == 0:              # at leaf; end
+                return tuple(lca), 0
+            else:                             # len(node) > 1 => confusion!!
+                return tuple(lca), len(node)
 
 
 def get_ident(ident, *,

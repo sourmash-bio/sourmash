@@ -17,8 +17,7 @@ from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_re
                                     BaseLineageInfo, RankLineageInfo, LINLineageInfo,
                                     aggregate_by_lineage_at_rank, format_for_krona,
                                     write_krona, write_lineage_sample_frac, read_lingroups,
-                                    build_tree, find_lca,
-                                    LineageDB, LineageDB_Sqlite, MultiLineageDB)
+                                    LineageTree, LineageDB, LineageDB_Sqlite, MultiLineageDB)
 
 # utility functions for testing
 def make_mini_taxonomy(tax_info, LIN=False):
@@ -2854,12 +2853,65 @@ def test_read_lingroups_bad_header(runtmp):
     assert f"'{lg_file}' must contain the following columns: 'LINgroup_prefix', 'LINgroup_name'." in str(exc)
 
 
+def test_LineageTree_init():
+    x = "a;b"
+    lin1 = RankLineageInfo(lineage_str=x)
+    print(lin1)
+    tree = LineageTree([lin1])
+    assert tree.tree == { LineagePair('superkingdom', 'a'):
+                         { LineagePair('phylum', 'b') : {}} }
+
+def test_LineageTree_init_mult():
+    x = "a;b"
+    y = "a;c"
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = RankLineageInfo(lineage_str=y)
+    print(lin1)
+    from sourmash.tax.tax_utils import LineageTree
+    tree = LineageTree([lin1, lin2])
+    assert tree.tree == {LineagePair(rank='superkingdom', name='a', taxid=None): 
+                          {LineagePair(rank='phylum', name='b', taxid=None): {},
+                           LineagePair(rank='phylum', name='c', taxid=None): {}}}
+
+
+def test_LineageTree_init_and_add_lineage():
+    x = "a;b"
+    y = "a;c"
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = RankLineageInfo(lineage_str=y)
+    print(lin1)
+    from sourmash.tax.tax_utils import LineageTree
+    tree = LineageTree([lin1])
+    assert tree.tree == { LineagePair('superkingdom', 'a'):
+                         { LineagePair('phylum', 'b') : {}} }
+    tree.add_lineage(lin2)
+    assert tree.tree == {LineagePair(rank='superkingdom', name='a', taxid=None): 
+                          {LineagePair(rank='phylum', name='b', taxid=None): {},
+                           LineagePair(rank='phylum', name='c', taxid=None): {}}}
+
+
+def test_LineageTree_init_and_add_lineages():
+    x = "a;b"
+    y = "a;c"
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = RankLineageInfo(lineage_str=y)
+    print(lin1)
+    from sourmash.tax.tax_utils import LineageTree
+    tree = LineageTree([lin1])
+    assert tree.tree == { LineagePair('superkingdom', 'a'):
+                         { LineagePair('phylum', 'b') : {}} }
+    tree.add_lineages([lin2])
+    assert tree.tree == {LineagePair(rank='superkingdom', name='a', taxid=None): 
+                          {LineagePair(rank='phylum', name='b', taxid=None): {},
+                           LineagePair(rank='phylum', name='c', taxid=None): {}}}
+
+
 def test_build_tree_RankLineageInfo():
     x = "a;b"
     lin1 = RankLineageInfo(lineage_str=x)
     print(lin1)
-    tree = build_tree([lin1])
-    assert tree == { LineagePair('superkingdom', 'a'):
+    tree = LineageTree([lin1])
+    assert tree.tree == { LineagePair('superkingdom', 'a'):
                          { LineagePair('phylum', 'b') : {}} }
 
 
@@ -2867,8 +2919,8 @@ def test_build_tree_LINLineageInfo():
     x = "0;3"
     lin1 = LINLineageInfo(lineage_str=x)
     print(lin1)
-    tree = build_tree([lin1])
-    assert tree == { LineagePair('0', '0'):
+    tree = LineageTree([lin1])
+    assert tree.tree == { LineagePair('0', '0'):
                          { LineagePair('1', '3') : {}} }
 
 
@@ -2879,19 +2931,19 @@ def test_build_tree_2():
     lin2 = RankLineageInfo(lineage_str=y)
     print(lin1)
     print(lin2)
-    tree = build_tree([lin1,lin2])
+    tree = LineageTree([lin1,lin2])
 
-    assert tree == { LineagePair('superkingdom', 'a'): { LineagePair('phylum', 'b') : {},
+    assert tree.tree == { LineagePair('superkingdom', 'a'): { LineagePair('phylum', 'b') : {},
                                            LineagePair('phylum', 'c') : {}} }
 
 
 def test_build_tree_2_LineagePairs():
     # build tree from LineagePairs
-    tree = build_tree([[LineagePair('superkingdom', 'a'), LineagePair('phylum', 'b')],
+    tree = LineageTree([[LineagePair('superkingdom', 'a'), LineagePair('phylum', 'b')],
                        [LineagePair('superkingdom', 'a'), LineagePair('phylum', 'c')],
                       ])
 
-    assert tree == { LineagePair('superkingdom', 'a'): { LineagePair('phylum', 'b') : {},
+    assert tree.tree == { LineagePair('superkingdom', 'a'): { LineagePair('phylum', 'b') : {},
                                            LineagePair('phylum', 'c') : {}} }
 
 
@@ -2899,46 +2951,46 @@ def test_build_tree_3():
     # empty phylum name
     x='a;'
     lin1 = RankLineageInfo(lineage_str=x)
-    tree = build_tree([lin1])
-    assert tree == { LineagePair('superkingdom', 'a'): {} }
+    tree = LineageTree([lin1])
+    assert tree.tree == { LineagePair('superkingdom', 'a'): {} }
 
 
 def test_build_tree_3_LineagePairs():
     # empty phylum name: LineagePair input
     lin1 = (LineagePair('superkingdom', "a", '3'),
             LineagePair('phylum', '', ''),)
-    tree = build_tree([lin1])
-    assert tree == { LineagePair('superkingdom', 'a', '3'): {} }
+    tree = LineageTree([lin1])
+    assert tree.tree == { LineagePair('superkingdom', 'a', '3'): {} }
 
 
 def test_build_tree_5():
     with pytest.raises(ValueError):
-        tree = build_tree([])
+        tree = LineageTree([])
 
 
 def test_build_tree_5b():
     with pytest.raises(ValueError):
-        tree = build_tree("")
+        tree = LineageTree("")
 
 
 def test_build_tree_iterable():
     with pytest.raises(ValueError) as exc:
-        tree = build_tree(RankLineageInfo())
-    assert "assignments must be an iterable object"  in str(exc)
+        tree = LineageTree(RankLineageInfo())
+    assert "Must pass in an iterable containing LineagePair or LineageInfo objects"  in str(exc)
 
 
 def test_find_lca():
     x='a;b'
     lin1 = RankLineageInfo(lineage_str=x)
-    tree = build_tree([lin1])
-    lca = find_lca(tree)
+    tree = LineageTree([lin1])
+    lca = tree.find_lca()
 
     assert lca == ((LineagePair('superkingdom', 'a'), LineagePair('phylum', 'b'),), 0)
 
 
 def test_find_lca_LineagePairs():
-    tree = build_tree([[LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2')]])
-    lca = find_lca(tree)
+    tree = LineageTree([[LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2')]])
+    lca = tree.find_lca()
 
     assert lca == ((LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2'),), 0)
 
@@ -2949,8 +3001,8 @@ def test_find_lca_2():
     lin1 = RankLineageInfo(lineage_str=x)
     lin2 = RankLineageInfo(lineage_str=y)
 
-    tree = build_tree([lin1, lin2])
-    lca = find_lca(tree)
+    tree = LineageTree([lin1, lin2])
+    lca = tree.find_lca()
 
     assert lca == ((LineagePair('superkingdom', 'a'),), 2)
 
@@ -2961,18 +3013,18 @@ def test_find_lca_LIN():
     lin1 = LINLineageInfo(lineage_str=x)
     lin2 = LINLineageInfo(lineage_str=y)
 
-    tree = build_tree([lin1, lin2])
-    lca = find_lca(tree)
+    tree = LineageTree([lin1, lin2])
+    lca = tree.find_lca()
 
     assert lca == ((LineagePair('0', '5'),), 2)
     print(lca)
 
 
 def test_find_lca_2_LineagePairs():
-    tree = build_tree([[LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2a')],
+    tree = LineageTree([[LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2a')],
                        [LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2b')],
                       ])
-    lca = find_lca(tree)
+    lca = tree.find_lca()
 
     assert lca == ((LineagePair('rank1', 'name1'),), 2)
 
@@ -2981,8 +3033,8 @@ def test_find_lca_3():
     lin1 = RankLineageInfo(lineage_str="a;b;c")
     lin2 = RankLineageInfo(lineage_str="a;b")
 
-    tree = build_tree([lin1, lin2])
-    lca, reason = find_lca(tree)
+    tree = LineageTree([lin1, lin2])
+    lca, reason = tree.find_lca()
     assert lca == lin1.filled_lineage           # find most specific leaf node
     print(lca)
 
@@ -2995,13 +3047,13 @@ def test_build_tree_with_initial():
     lin2 = RankLineageInfo(lineage_str=y)
     lin3 = RankLineageInfo(lineage_str=z)
 
-    tree = build_tree([lin1, lin2])
-    lca = find_lca(tree)
+    tree = LineageTree([lin1, lin2])
+    lca = tree.find_lca()
 
     print(lca)
     assert lca == ((LineagePair(rank='superkingdom', name='a', taxid=None),
                     LineagePair(rank='phylum', name='b', taxid=None)), 2)
-    tree2 = build_tree([lin3], initial=tree)
-    lca2 = find_lca(tree2)
+    tree.add_lineages([lin3])
+    lca2 = tree.find_lca()
     print(lca2)
     assert lca2 == ((LineagePair('superkingdom', 'a'),), 2)
