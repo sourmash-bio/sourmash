@@ -102,7 +102,8 @@ def get_parser():
         'scripts': "Plug-ins",
     }
     alias = {
-        "sig": "signature"
+        "sig": "signature",
+        "ext": "scripts",
     }
     expert = set(['categorize', 'import_csv', 'migrate', 'multigather', 'sbt_combine', 'watch'])
 

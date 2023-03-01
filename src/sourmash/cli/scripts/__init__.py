@@ -29,7 +29,8 @@ def __getattr__(name):
 def subparser(subparsers):
     subparser = subparsers.add_parser('scripts',
                                       usage=argparse.SUPPRESS,
-                                      formatter_class=argparse.RawDescriptionHelpFormatter)
+                                      formatter_class=argparse.RawDescriptionHelpFormatter,
+                                      aliases=['ext'])
 
     # get individual help strings:
     descrs = list(sourmash.plugins.get_cli_scripts_descriptions())
