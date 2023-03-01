@@ -46,7 +46,10 @@ for saving and loading code already used in sourmash.
 
 Note that if the reader function or writer class has a `priority`
 attribute, this will be used to determine the order in which the
-plugins are called.
+plugins are called. Priorities lower than 10 will get called before
+any internal load or save function, while priorities greater than 80
+will get called after almost all internal load/save functions; see
+`src/sourmash/save_load.py` for details and the current priorities.
 
 The `name` attribute of the plugin (`a_reader`, `a_writer`, and `new_cli` in
 `pyproject.toml`, above) is only used in debugging.
