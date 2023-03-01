@@ -501,14 +501,6 @@ class LineageTree:
         self.tree = {}
         self.add_lineages(self.assignments)
 
-    def __eq__(self, other):
-        """
-        Check if trees are identical.
-        """
-        if not isinstance(other, LineageTree):
-            return False
-        return self.tree==other.tree
-
     def add_lineage(self, lineage):
         if isinstance(lineage, (BaseLineageInfo, RankLineageInfo, LINLineageInfo)):
             lineage = lineage.filled_lineage
@@ -521,8 +513,6 @@ class LineageTree:
                 node = child
 
     def add_lineages(self, lineages):
-        if self.tree is None:
-            raise ValueError("No existing tree to add to.") # should never happen, bc init...
         if not lineages:
             raise ValueError("empty assignment passed to build_tree")
         if not isinstance(lineages, abc.Iterable):
