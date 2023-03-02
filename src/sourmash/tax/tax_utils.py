@@ -521,8 +521,10 @@ class LineageTree:
 
     def find_lca(self):
         """
-        Find the LCA from the LineageTree. If single leaf node (unambiguous LCA),
-        return the LCA path and reason = 0.
+        Given a LineageTree tree, find the first node with multiple
+        children, OR the only leaf in the tree.  Return (lineage_tup, reason),
+        where 'reason' is the number of children of the returned node, i.e.
+        0 if it's a leaf and > 1 if it's an internal node.
         """
         node = self.tree
         lca = []
