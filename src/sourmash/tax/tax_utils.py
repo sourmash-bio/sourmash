@@ -2149,14 +2149,12 @@ class QueryTaxResult:
             lg_info = LINLineageInfo(lineage_str=lg_prefix)
             all_lgs.add(lg_info)
             # store rank so we only go through summarized results at these ranks
-            lg_rank = lg_info.lowest_rank
+            lg_rank = int(lg_info.lowest_rank)
             lg_ranks.add(lg_rank)
 
        # find lowest rank, for "assignment" column [do we even want this???]
-        ordered_lg_ranks = list(lg_ranks)
-        ordered_lg_ranks.sort()
-        lowest_rank = str(ordered_lg_ranks[0])
-        # print("lowest_rank: ", lowest_rank)
+        ordered_lg_ranks = sorted(lg_ranks)
+        lowest_rank = str(ordered_lg_ranks[-1])
 
         # grab summarized results matching LINgroup prefixes
         lg_results = {}

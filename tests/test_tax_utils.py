@@ -2792,13 +2792,16 @@ def test_make_lingroup_results():
     header, lgD = q_res.make_lingroup_results(LINgroupsD = lingroupD)
     print(header)
     assert header == ['LINgroup_name', 'LINgroup_prefix', 'percent_containment', 'num_bp_contained', 'num_bp_assigned']
-    print(lgD)
-    assert lgD == [{'percent_containment': '60.00', 'num_bp_contained': '60', 'num_bp_assigned': '0',
-                    'LINgroup_prefix': '1', 'LINgroup_name': 'lg1'},
-                   {'percent_containment': '40.00', 'num_bp_contained': '40', 'num_bp_assigned': '40',
-                    'LINgroup_prefix': '1;0', 'LINgroup_name': 'lg2'},
-                   {'percent_containment': '20.00', 'num_bp_contained': '20', 'num_bp_assigned': '20',
-                    'LINgroup_prefix': '1;1', 'LINgroup_name': 'lg3'}]
+    # order may change, just check that each lg entry is present in list of results
+    lg1 = {'percent_containment': '60.00', 'num_bp_contained': '60', 'num_bp_assigned': '0',
+                    'LINgroup_prefix': '1', 'LINgroup_name': 'lg1'}
+    lg2 = {'percent_containment': '40.00', 'num_bp_contained': '40', 'num_bp_assigned': '40',
+                    'LINgroup_prefix': '1;0', 'LINgroup_name': 'lg2'}
+    lg3 = {'percent_containment': '20.00', 'num_bp_contained': '20', 'num_bp_assigned': '20',
+                    'LINgroup_prefix': '1;1', 'LINgroup_name': 'lg3'}
+    assert lg1 in lgD
+    assert lg2 in lgD
+    assert lg3 in lgD
 
 
 def test_make_lingroup_results_fail_pre_v450():
