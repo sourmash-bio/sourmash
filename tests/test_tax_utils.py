@@ -3057,3 +3057,51 @@ def test_build_tree_with_initial():
     lca2 = tree.find_lca()
     print(lca2)
     assert lca2 == ((LineagePair('superkingdom', 'a'),), 2)
+
+
+def test_LineageTree_find_ordered_paths():
+    x = "a;b;c"
+    y = "a;b;d"
+    z = "a;e"
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = RankLineageInfo(lineage_str=y)
+    lin3 = RankLineageInfo(lineage_str=z)
+
+    tree = LineageTree([lin1, lin2, lin3])
+    paths = tree.ordered_paths()
+
+    print(paths)
+    assert paths == [(LineagePair(rank='superkingdom', name='a', taxid=None),
+                        LineagePair(rank='phylum', name='e', taxid=None)),
+                     (LineagePair(rank='superkingdom', name='a', taxid=None),
+                        LineagePair(rank='phylum', name='b', taxid=None),
+                        LineagePair(rank='class', name='c', taxid=None)),
+                     (LineagePair(rank='superkingdom', name='a', taxid=None),
+                        LineagePair(rank='phylum', name='b', taxid=None),
+                        LineagePair(rank='class', name='d', taxid=None))]
+
+
+def test_LineageTree_find_ordered_paths_include_internal():
+    x = "a;b;c"
+    y = "a;b;d"
+    z = "a;e"
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = RankLineageInfo(lineage_str=y)
+    lin3 = RankLineageInfo(lineage_str=z)
+
+    tree = LineageTree([lin1, lin2, lin3])
+    paths = tree.ordered_paths(include_internal=True)
+
+    print(paths)
+
+    assert paths == [(LineagePair(rank='superkingdom', name='a', taxid=None),),
+                     (LineagePair(rank='superkingdom', name='a', taxid=None),
+                        LineagePair(rank='phylum', name='e', taxid=None)),
+                     (LineagePair(rank='superkingdom', name='a', taxid=None),
+                        LineagePair(rank='phylum', name='b', taxid=None)),
+                     (LineagePair(rank='superkingdom', name='a', taxid=None),
+                        LineagePair(rank='phylum', name='b', taxid=None),
+                        LineagePair(rank='class', name='c', taxid=None)),
+                      (LineagePair(rank='superkingdom', name='a', taxid=None),
+                        LineagePair(rank='phylum', name='b', taxid=None),
+                        LineagePair(rank='class', name='d', taxid=None))]

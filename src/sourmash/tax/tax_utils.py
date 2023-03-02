@@ -258,8 +258,7 @@ class BaseLineageInfo:
         return new
 
     def lineage_at_rank(self, rank):
-        "non-destructive pop_to_rank. Returns tuple of LineagePairs"
-        "Returns tuple of LineagePairs at given rank."
+        "Return tuple of LineagePairs at specified rank."
         # are we already above rank?
         self.check_rank_availability(rank)
         if not self.rank_is_filled(rank):
@@ -521,6 +520,10 @@ class LineageTree:
             self.add_lineage(lineageInf)
 
     def find_lca(self):
+        """
+        Find the LCA from the LineageTree. If single leaf node (unambiguous LCA),
+        return the LCA path and reason = 0.
+        """
         node = self.tree
         lca = []
         while 1:
@@ -532,6 +535,33 @@ class LineageTree:
                 return tuple(lca), 0
             else:                             # len(node) > 1 => confusion!!
                 return tuple(lca), len(node)
+
+    def ordered_paths(self, include_internal=False):
+        """
+        Find all paths in the nested dict in a depth-first manner.
+        Each path is a tuple of lineage tuples that lead from the root
+        to a leaf node. Optionally include internal nodes by building
+        them up from leaf nodes (for ordering).
+        """
+        paths = []
+        stack = [((), self.tree)]
+        while stack:
+            path, node = stack.pop()
+            for key, val in node.items():
+                if len(val) == 0: # leaf node
+                    # if want internal paths, build up from leaf
+                    if include_internal:
+                        internal_path = path
+                        while internal_path:
+                            if internal_path not in paths:
+                                paths.append(internal_path)
+                            if isinstance(internal_path, abc.Iterable):
+                                internal_path = internal_path[:-1]
+                    # now add leaf path
+                    paths.append(path + (key,))
+                else: # not leaf, add to stack
+                    stack.append((path + (key,), val))
+        return paths
 
 
 def get_ident(ident, *,
@@ -2100,79 +2130,57 @@ class QueryTaxResult:
                 kreport_results.append(kresD)
         return header, kreport_results
 
-    def make_lingroup_results(self, LINgroupsD): # dictionary {lg_prefix: lg_name}
+    def make_lingroup_results(self, LINgroupsD): # LingroupsD is dictionary {lg_prefix: lg_name}
+        """
+        Report results for the specified LINGroups.
+        Keep LCA paths in order as much as possible.
+        """
         self.check_summarization()
         header = ["LINgroup_name", "LINgroup_prefix", "percent_containment", "num_bp_contained", "num_bp_assigned"]
+
         if self.query_info.total_weighted_hashes == 0:
             raise ValueError("ERROR: cannot produce 'LINgroup_report' format from gather results before sourmash v4.5.0")
-        all_lg_ranks = set()
-        rank_to_lgprefix = defaultdict(set)
-        all_lgs = list(LINgroupsD.keys())
-        for lg_prefix in all_lgs:
-            lg_prefix_as_list = lg_prefix.split(';')
-            lg_rank = len(lg_prefix_as_list) -1  # bc 0 based
-            all_lg_ranks.add(lg_rank)
-            rank_to_lgprefix[str(lg_rank)].add(lg_prefix)
-        
-        # order lg_ranks low--> high (general --> specific)
-        ordered_lg_ranks = list(all_lg_ranks)
+
+        # find the ranks we need to consider
+        all_lgs = set()
+        lg_ranks = set()
+        for lg_prefix in LINgroupsD.keys():
+            # store lineage info for LCA pathfinding
+            lg_info = LINLineageInfo(lineage_str=lg_prefix)
+            all_lgs.add(lg_info)
+            # store rank so we only go through summarized results at these ranks
+            lg_rank = lg_info.lowest_rank
+            lg_ranks.add(lg_rank)
+
+       # find lowest rank, for "assignment" column [do we even want this???]
+        ordered_lg_ranks = list(lg_ranks)
         ordered_lg_ranks.sort()
-        lowest_rank = str(ordered_lg_ranks[-1])
+        lowest_rank = str(ordered_lg_ranks[0])
+        # print("lowest_rank: ", lowest_rank)
 
-        lingroup_results = []
-
-        for rank in ordered_lg_ranks:
+        # grab summarized results matching LINgroup prefixes
+        lg_results = {}
+        for rank in lg_ranks:
             rank = str(rank)
-            these_lgs = rank_to_lgprefix[rank]
             rank_results = self.summarized_lineage_results[rank]
             for res in rank_results:
-                this_lineage = res.lineage.display_lineage()
-                if this_lineage in these_lgs: # is this lineage in the list of LINgroups at this rank?
-                    this_lingroup_name = LINgroupsD[this_lineage]
+                if res.lineage in all_lgs:# is this lineage in the list of LINgroups?
+                    this_lingroup_name = LINgroupsD[res.lineage.display_lineage(truncate_empty=True)]
                     lg_resD = res.as_lingroup_dict(self.query_info, this_lingroup_name, lowest_rank)
-                    lingroup_results.append(lg_resD)
+                    lg_results[res.lineage] = lg_resD
+
+        # We want to return in ~ depth order: descending each specific path in order
+        # use LineageTree to find ordered paths
+        lg_tree = LineageTree(all_lgs)
+        ordered_paths = lg_tree.ordered_paths(include_internal = True)
+        # store results in order:
+        lingroup_results=[]
+        for lg in ordered_paths:
+            # get LINInfo object
+            lg_LINInfo = LINLineageInfo(lineage=lg)
+            # get result, if we have it
+            lg_res = lg_results.get(lg_LINInfo)
+            if lg_res:
+                lingroup_results.append(lg_res)
+        
         return header, lingroup_results
-
-    # def make_lingroup_results_ordered(self, LINgroupsD): # dictionary {lg_prefix: lg_name}
-    #     self.check_summarization()
-    #     header = ["LINgroup_name", "LINgroup_prefix", "percent_containment", "num_bp_contained", "num_bp_assigned"]
-    #     if self.query_info.total_weighted_hashes == 0:
-    #         raise ValueError("ERROR: cannot produce 'LINgroup_report' format from gather results before sourmash v4.5.0")
-    #     # first, order the LINgroups
-
-    #     all_lgs = set()
-    #     lg_ranks = set()
-    #     for lg_prefix in LINgroupsD.keys():
-    #         # store lineage info for LCA pathfinding
-    #         lg_info = LINLineageInfo(lineage_str=lg_prefix)
-    #         all_lgs.add(lg_info)
-    #         # store rank so we only select summarized results at these ranks
-    #         lg_rank = lg_info.lowest_rank
-    #         lg_ranks.add(str(lg_rank))
-        
-    #     # now build tree from all lineage groups
-    #     lg_tree = build_tree(all_lgs)
-
-    #     # grab summarized results matching LINgroup prefixes
-    #     lg_results = {}
-    #     for rank in lg_ranks:
-    #         rank_results = self.summarized_lineage_results[rank]
-    #         for res in rank_results:
-    #             if res.lineage in all_lgs:# is this lineage in the list of LINgroups? 
-    #                 this_lingroup_name = LINgroupsD[res.lineage.display_lineage(truncate_empty=True)]
-    #                 lg_resD = res.as_lingroup_dict(self.query_info, this_lingroup_name, res.lowest_rank)
-    #                 lg_results[lg_info] = lg_resD
-
-    #     # now find each LCA path and write results for lineage groups there.
-    #     ordered_lg_results = [] 
-        
-    #     while 1:
-    #         this_path_results = []
-    #         lca, reason = find_lca(lg_tree)
-    #         if reason == 0: # this is a leaf node / at bottom of a path
-
-    #             # now reverse this path's results and add to the ordered results
-    #             path_results = this_path_results[::-1]
-    #             ordered_lg_results.extend(path_results)
-        
-    #     return header, lingroup_results
