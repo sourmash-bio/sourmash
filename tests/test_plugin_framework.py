@@ -1,12 +1,12 @@
 """
 Test the plugin framework in sourmash.plugins, which uses importlib.metadata
 entrypoints.
-
-CTB TODO:
-* check name?
 """
 
+import sys
 import pytest
+import collections
+
 import sourmash
 from sourmash.logging import set_quiet
 
@@ -17,16 +17,25 @@ from sourmash.save_load import (Base_SaveSignaturesToLocation,
                                 SaveSignaturesToLocation)
 
 
+_Dist = collections.namedtuple('_Dist', ['version'])
 class FakeEntryPoint:
     """
     A class that stores a name and an object to be returned on 'load()'.
     Mocks the EntryPoint class used by importlib.metadata.
     """
-    def __init__(self, name, load_obj):
+    module = 'test_plugin_framework'
+    dist = _Dist('0.1')
+    group = 'groupfoo'
+
+    def __init__(self, name, load_obj, *,
+                 error_on_import=None):
         self.name = name
         self.load_obj = load_obj
+        self.error_on_import = error_on_import
 
     def load(self):
+        if self.error_on_import is not None:
+            raise self.error_on_import("as requested")
         return self.load_obj
 
 #
@@ -50,7 +59,8 @@ class Test_EntryPointBasics_LoadFrom:
         
     def setup_method(self):
         self.saved_plugins = plugins._plugin_load_from
-        plugins._plugin_load_from = [FakeEntryPoint('test_load', self.get_some_sigs)]
+        plugins._plugin_load_from = [FakeEntryPoint('test_load', self.get_some_sigs),
+                                     FakeEntryPoint('test_load', self.get_some_sigs, error_on_import=ModuleNotFoundError)]
 
     def teardown_method(self):
         plugins._plugin_load_from = self.saved_plugins
@@ -174,7 +184,8 @@ class Test_EntryPointBasics_SaveTo:
     # test the basics
     def setup_method(self):
         self.saved_plugins = plugins._plugin_save_to
-        plugins._plugin_save_to = [FakeEntryPoint('test_save', FakeSaveClass)]
+        plugins._plugin_save_to = [FakeEntryPoint('test_save', FakeSaveClass),
+                                   FakeEntryPoint('test_save', FakeSaveClass, error_on_import=ModuleNotFoundError)]
 
     def teardown_method(self):
         plugins._plugin_save_to = self.saved_plugins
@@ -259,3 +270,272 @@ class Test_EntryPointPriority_SaveTo:
         assert isinstance(x, FakeSaveClass_HighPriority)
         assert x.keep == [sig2, sig47, sig63]
         assert x.priority == 1
+
+
+#
+# Test basic features of the save_to plugin hook.
+#
+
+class FakeCommandClass(plugins.CommandLinePlugin):
+    """
+    A fake CLI class.
+    """
+    command = 'nifty'
+    description = "do somethin' nifty"
+
+    def __init__(self, parser):
+        super().__init__(parser)
+        parser.add_argument('arg1')
+        parser.add_argument('--other', action='store_true')
+        parser.add_argument('--do-fail', action='store_true')
+
+    def main(self, args):
+        super().main(args)
+        print(f"hello, world! argument is: {args.arg1}")
+        print(f"other is {args.other}")
+
+        if args.do_fail:
+            return 1
+        return 0
+
+
+class Test_EntryPointBasics_Command:
+    # test the basics
+    def setup_method(self):
+        _ = plugins.get_cli_script_plugins()
+        self.saved_plugins = plugins._plugin_cli
+        plugins._plugin_cli_once = False
+        plugins._plugin_cli = [FakeEntryPoint('test_command',
+                                              FakeCommandClass)]
+
+    def teardown_method(self):
+        plugins._plugin_cli = self.saved_plugins
+
+    def test_empty(self, runtmp):
+        # empty out script plugins...
+        plugins._plugin_cli = []
+
+        with pytest.raises(utils.SourmashCommandFailed):
+            runtmp.sourmash('scripts')
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+        assert '(No script plugins detected!)' in out
+
+    def test_cmd_0(self, runtmp):
+        # test default output with some plugins
+        with pytest.raises(utils.SourmashCommandFailed):
+            runtmp.sourmash('scripts')
+
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+        assert "do somethin' nifty" in out
+        assert "sourmash scripts nifty" in out
+
+    def test_cmd_1(self):
+        # test descriptions
+        ps = list(plugins.get_cli_scripts_descriptions())
+        print(ps)
+        assert len(ps) == 1
+
+        descr0 = ps[0]
+        assert "do somethin' nifty" in descr0
+        assert "sourmash scripts nifty" in descr0
+
+    def test_cmd_2(self):
+        # test get_cli_script_plugins function
+        ps = list(plugins.get_cli_script_plugins())
+        print(ps)
+        assert len(ps) == 1
+
+    def test_cmd_3(self, runtmp):
+        # test ability to run 'nifty' ;)
+        with pytest.raises(utils.SourmashCommandFailed):
+            runtmp.sourmash('scripts', 'nifty')
+
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+
+        assert 'nifty: error: the following arguments are required: arg1' in err
+        assert 'usage:  nifty [-h] [-q] [-d] [--other] [--do-fail] arg1' in err
+
+    def test_cmd_4(self, runtmp):
+        # test basic argument parsing etc
+        runtmp.sourmash('scripts', 'nifty', '--other', 'some arg')
+
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+
+        assert 'other is True' in out
+        assert 'hello, world! argument is: some arg' in out
+
+    def test_cmd_5(self, runtmp):
+        # test exit code passthru
+        with pytest.raises(utils.SourmashCommandFailed):
+            runtmp.sourmash('scripts', 'nifty', '--do-fail', 'some arg')
+
+        status = runtmp.last_result.status
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+        print(status)
+
+        assert 'other is False' in out
+        assert 'hello, world! argument is: some arg' in out
+
+
+class FakeCommandClass_Second(plugins.CommandLinePlugin):
+    """
+    A fake CLI class.
+    """
+    command = 'more_nifty'
+    description = "do somethin' else nifty"
+
+    def __init__(self, parser):
+        super().__init__(parser)
+        parser.add_argument('arg1')
+        parser.add_argument('--other', action='store_true')
+        parser.add_argument('--do-fail', action='store_true')
+
+    def main(self, args):
+        super().main(args)
+        print(f"hello, world! argument is: {args.arg1}")
+        print(f"other is {args.other}")
+
+        if args.do_fail:
+            return 1
+        return 0
+
+
+class FakeCommandClass_Broken_1:
+    """
+    A fake CLI class.
+    """
+    # command = 'more_nifty' # no command
+
+    def __init__(self, parser):
+        assert 0
+
+    def main(self, args):
+        assert 0
+
+
+class FakeCommandClass_Broken_2:
+    """
+    A fake CLI class.
+    """
+    command = 'broken'
+    # no description
+
+    def __init__(self, parser):
+        pass
+
+    def main(self, args):
+        return 0
+
+
+class Test_EntryPointBasics_TwoCommands:
+    # test a second command
+    def setup_method(self):
+        _ = plugins.get_cli_script_plugins()
+        self.saved_plugins = plugins._plugin_cli
+        plugins._plugin_cli_once = False
+        plugins._plugin_cli = [FakeEntryPoint('test_command',
+                                              FakeCommandClass),
+                               FakeEntryPoint('test_command2',
+                                              FakeCommandClass_Second),
+                               FakeEntryPoint('test_command3',
+                                              FakeCommandClass_Broken_1),
+                               FakeEntryPoint('test_command4',
+                                              FakeCommandClass_Broken_2),
+                               FakeEntryPoint('error-on-import',
+                                              FakeCommandClass,
+                                           error_on_import=ModuleNotFoundError)
+                               ]
+
+    def teardown_method(self):
+        plugins._plugin_cli = self.saved_plugins
+
+    def test_cmd_0(self, runtmp):
+        # test default output for a few plugins
+        with pytest.raises(utils.SourmashCommandFailed):
+            runtmp.sourmash('scripts')
+
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+        assert "do somethin' nifty" in out
+        assert "sourmash scripts nifty" in out
+
+        assert "do somethin' else nifty" in out
+        assert "sourmash scripts more_nifty" in out
+
+    def test_cmd_1(self, runtmp):
+        # test 'nifty'
+        runtmp.sourmash('scripts', 'nifty', 'some arg')
+
+        status = runtmp.last_result.status
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+        print(status)
+
+        assert 'other is False' in out
+        assert 'hello, world! argument is: some arg' in out
+
+    def test_cmd_2(self, runtmp):
+        # test 'more_nifty'
+        runtmp.sourmash('scripts', 'more_nifty', 'some arg')
+
+        status = runtmp.last_result.status
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+        print(status)
+
+        assert 'other is False' in out
+        assert 'hello, world! argument is: some arg' in out
+
+    def test_sourmash_info(self, runtmp):
+        # test 'sourmash info -v' => shows the plugins
+        runtmp.sourmash('info', '-v')
+
+        out = runtmp.last_result.out
+        err = runtmp.last_result.err
+        print(out)
+        print(err)
+
+        expected = """
+groupfoo             test_plugin_framework          0.1   test_command
+groupfoo             test_plugin_framework          0.1   test_command2
+groupfoo             test_plugin_framework          0.1   test_command3
+groupfoo             test_plugin_framework          0.1   test_command4
+""".splitlines()
+        for line in expected:
+            assert line in err
+
+
+def test_cli_scripts_getattr_fail():
+    # test scripts.__getattr__ w/fail
+    from sourmash.cli import scripts
+
+    with pytest.raises(AttributeError):
+        scripts.ThisAttrDoesNotExist
+
+
+def test_cli_scripts_getattr_succ():
+    # test scripts.__getattr__ w/success
+    from sourmash.cli import scripts
+
+    scripts.subparser
