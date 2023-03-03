@@ -599,7 +599,7 @@ def test_load_taxonomy_csv():
 
 
 def test_load_taxonomy_csv_LIN():
-    taxonomy_csv = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+    taxonomy_csv = utils.get_test_data('tax/test.LIN-taxonomy.csv')
     tax_assign = MultiLineageDB.load([taxonomy_csv], LIN_taxonomy=True)
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1']
@@ -617,8 +617,8 @@ def test_load_taxonomy_csv_LIN_fail():
 
 
 def test_load_taxonomy_csv_LIN_mismatch_in_taxfile(runtmp):
-    taxonomy_csv = utils.get_test_data('tax/test.LINS-taxonomy.csv')
-    mimatchLIN_csv = runtmp.output('mmLINS-taxonomy.csv')
+    taxonomy_csv = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+    mimatchLIN_csv = runtmp.output('mmLIN-taxonomy.csv')
     with open(mimatchLIN_csv, 'w') as mm:
         tax21=[]
         tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]

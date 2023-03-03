@@ -90,18 +90,6 @@ def subparser(subparsers):
         '-f', '--force', action = 'store_true',
         help='continue past survivable errors in loading taxonomy database or gather results',
     )
-    subparser.add_argument(
-        '--LIN-taxonomy', action='store_true', default=False,
-        help='use LIN taxonomy in place of standard taxonomic ranks.  Note that the taxonomy CSV must contain LIN lineage information.'
-    )
-    subparser.add_argument(
-        '--LIN-position', type=int, default=None,
-        help='For non-default output formats: summarize taxonomy at this LIN position and above. Replaces "--rank" for standard taxonomy. Note that the taxonomy CSV must contain LIN with information at this position.'
-    )
-    subparser.add_argument(
-        '--LINgroups', metavar='FILE', default=None,
-        help='CSV containing LINgroup_name, LINgroup_prefix. Will produce a "LINgroup_report" file containing taxonomic summarization for each LINgroup.'
-    )
     add_tax_threshold_arg(subparser, 0.1)
 
 
@@ -110,18 +98,6 @@ def main(args):
     try:
         if not args.gather_csv and not args.from_file:
             raise ValueError(f"No gather CSVs found! Please input via '-g' or '--from-file'.")
-        # handle LIN options
-        if args.LIN_taxonomy:
-            if args.LIN_position:
-                args.rank = str(args.LIN_position)
-            if args.LINgroups:
-                if "LINgroup_report" not in args.output_format:
-                    args.output_format.append("LINgroup_report")
-            elif "LINgroup_report" in args.output_format:
-                raise ValueError(f"Must provide LINgroup csv via '--LINgroups' in order to output a LINgroup_report.")
-        elif args.LINgroups or "LINgroup_report" in args.output_format:
-            raise ValueError(f"Must enable LIN taxonomy via '--LIN-taxonomy' in order to output a LINgroup_report.")
-
         # handle output formats
         print(args.output_format)
         if not args.rank:
