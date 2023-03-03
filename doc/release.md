@@ -66,7 +66,7 @@ Developer updates:
 Dependabot updates:
 ```
 
-A convenient way to edit release notes is to put them in a [hackmd.io](https://hackmd.io) document and edit/display them there; then, create a "draft release notes for v..." issue and paste the markdown into the issue.
+A convenient way to edit release notes is to put them in a [hackmd.io](https://hackmd.io) document and edit/display them there; then, create a "draft release notes for v..." issue and paste the markdown into the release PR.
 
 ## Testing a release
 
@@ -186,7 +186,7 @@ NOTE: If you delete the rc tag before the rc wheels are done building, they
 may get added to the wrong release.
 
 ```
-cd ../sourmash
+cd ../../sourmash
 git tag -d v${new_version}${rc}
 git push --delete origin v${new_version}${rc}
 ```
