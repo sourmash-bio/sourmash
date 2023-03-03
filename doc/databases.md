@@ -15,6 +15,13 @@ You can read more about the different database and index types [here](https://so
 
 Note that the SBT and LCA databases can be used with sourmash v3.5 and later, while Zipfile collections can only be used with sourmash v4.1 and up.
 
+## Taxonomic Information (for non-LCA databases)
+
+For each prepared database, we have also made taxonomic information available linking each genome with its assigned lineage (`GTDB` or `NCBI` as appropriate).
+For private databases, users can create their own `taxonomy` files: the critical columns are `ident`, containing the genome accession (e.g. `GCA_1234567.1`) and
+a column for each taxonomic rank, `superkingdom` to `species`. If a `strain` column is provided, it will also be used.
+As of v4.8, we can also use `LIN` taxonomic information in tax commands that accept the `--LIN-taxonomy` flag. If used, `sourmash tax` commands will require a `LIN` column in the taxonomy file which should contain `;`-separated LINs, preferably with a standard number of positions (e.g. all 20 positions in length or all 10 positions in length). Some taxonomy commands also accept a `LINgroups` file, which is a two-column file (`LINgroup_name`, `LINgroup_prefix`) describing the name and `LIN` prefix of LINgroups to be used for taxonomic summarization.
+
 ## Downloading and using the databases
 
 All databases below can be downloaded via the command line with `curl -JLO <url>`, where `<url>` is the URL below. This will download an appropriately named file; you can name it yourself by specify `'-o <output>` to specify the local filename.

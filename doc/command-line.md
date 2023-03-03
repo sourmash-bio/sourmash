@@ -91,6 +91,7 @@ information; these are grouped under the `sourmash tax` and
 * `tax metagenome` - summarize metagenome gather results at each taxonomic rank.
 * `tax genome`     - summarize single-genome gather results and report most likely classification.
 * `tax annotate`   - annotate gather results with lineage information (no summarization or classification).
+* `tax prepare`    - prepare and/or combine taxonomy files.
 * `tax grep` - subset taxonomies and create picklists based on taxonomy string matches.
 * `tax summarize` - print summary information (counts of lineages) for a taxonomy lineages file or database.
 
@@ -491,7 +492,8 @@ The sourmash `tax` or `taxonomy` commands integrate taxonomic
  `gather` command (we cannot combine separate `gather` runs for the
  same query). For supported databases (e.g. GTDB, NCBI), we provide
  taxonomy csv files, but they can also be generated for user-generated
- databases. For more information, see [databases](databases.md).
+ databases. As of v4.8, some sourmash taxonomy commands can also use `LIN`
+ lineage information. For more information, see [databases](databases.md).
 
 `tax` commands rely upon the fact that `gather` provides both the total
  fraction of the query matched to each database matched, as well as a
@@ -530,8 +532,13 @@ sourmash tax metagenome
     --taxonomy gtdb-rs202.taxonomy.v2.csv
 ```
 
-There are three possible output formats, `csv_summary`, `lineage_summary`, and
- `krona`.
+The possible output formats are:
+- `human`
+- `csv_summary`
+- `lineage_summary`
+- `krona`
+- `kreport`
+- `LINgroup_report`
 
 #### `csv_summary` output format
 
@@ -706,6 +713,22 @@ example sourmash `{output-name}.kreport.txt`:
 9.24    2011000         S               Streptococcus mutans
 ```
 
+
+#### `LINgroup_report` output format
+
+When using `LIN` taxonomic information, you can optionally also provide a  `LINgroups` with `LINgroup_name` and `LINgroup_prefix` columns. If provided, we will output a `LINgroup_report` of the format `{base}.lingroup_report.tsv`, where `{base}` is the name provided via the `-o`,` --output-base` option. This output includes just the subset of `LIN` positions that match the provided prefixes (selected from the full summary). The output will the `LINgroup` info and two additional columns: `percent_containment`, the total percent of the dataset contained in this LINgroup and all descendents, and `num_bp_contained`, the estimated number of base pairs contained in this LINgroup and all descendents. Similar to `kreport` above, we use the wording "contained" rather than "assigned," because `sourmash` assigns matches at the genome level, and the `tax` functions simply summarize this information.
+
+example output:
+```
+LINgroup_name	LINgroup_prefix	percent_containment	num_bp_contained
+lg1	0;0;0	5.82	714000
+lg2	1;0;0	5.05	620000
+lg3	2;0;0	1.56	192000
+lg3	1;0;1	0.65	80000
+lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000
+```
+
+LINgroup subpaths will be grouped in output, but exact ordering may change between runs.
 
 ### `sourmash tax genome` - classify a genome using `gather` results
 
