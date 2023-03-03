@@ -83,7 +83,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-F', '--output-format', default=[], nargs='*', action='extend',
-        choices=["csv_summary", "krona", "human", "lineage_csv", "LINgroup_report"],
+        choices=["csv_summary", "krona", "human", "lineage_csv"],
         help='choose output format(s)',
     )
     subparser.add_argument(
