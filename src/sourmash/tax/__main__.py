@@ -193,7 +193,7 @@ def genome(args):
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
-                       force=args.force, LIN_taxonomy=args.LIN_taxonomy)
+                       force=args.force)
         available_ranks = tax_assign.available_ranks
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
