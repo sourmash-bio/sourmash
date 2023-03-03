@@ -290,7 +290,7 @@ def annotate(args):
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
-                       force=args.force)
+                       force=args.force, LIN_taxonomy=args.LIN_taxonomy)
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
@@ -308,7 +308,7 @@ def annotate(args):
                                                                                        fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
                                                                                        keep_full_identifiers=args.keep_full_identifiers,
                                                                                        keep_identifier_versions = args.keep_identifier_versions,
-                                                                                       )
+                                                                                       LIN_taxonomy=args.LIN_taxonomy)
 
         if not query_gather_results:
             continue
