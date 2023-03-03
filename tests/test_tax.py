@@ -3362,9 +3362,8 @@ def test_tax_summarize_LINS(runtmp):
         assert c['4'] == 2
 
 
-def test_metagenome_LINS(runtmp):
+def test_metagenome_LIN(runtmp):
     # test basic metagenome with LIN taxonomy
-    # get/design better test data for this?
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
@@ -3402,8 +3401,8 @@ def test_metagenome_LINS(runtmp):
     assert "test1,19,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
 
 
-def test_metagenome_LINS_LINgroups(runtmp):
-    # get/design better test data for this?
+def test_metagenome_LIN_LINgroups(runtmp):
+    # test LINgroups output
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
@@ -3437,7 +3436,7 @@ def test_metagenome_LINS_LINgroups(runtmp):
     assert "lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000	80000" in c.last_result.out
 
 
-def test_metagenome_LINS_human_summary_no_lin_position(runtmp):
+def test_metagenome_LIN_human_summary_no_lin_position(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
@@ -3461,7 +3460,7 @@ def test_metagenome_LINS_human_summary_no_lin_position(runtmp):
     assert "test1              0.7%     86.4%  1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" in c.last_result.out
 
 
-def test_metagenome_LINS_human_summary_lin_position_5(runtmp):
+def test_metagenome_LIN_human_summary_lin_position_5(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
@@ -3485,7 +3484,7 @@ def test_metagenome_LINS_human_summary_lin_position_5(runtmp):
     assert "test1              0.7%     86.4%  1;0;1;0;0;0" in c.last_result.out
 
 
-def test_metagenome_LINS_krona_lin_position_5(runtmp):
+def test_metagenome_LIN_krona_lin_position_5(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
@@ -3508,7 +3507,7 @@ def test_metagenome_LINS_krona_lin_position_5(runtmp):
     assert "0.7957718388512166	unclassified	unclassified	unclassified	unclassified	unclassified	unclassified" in c.last_result.out
 
 
-def test_metagenome_LINS_LINgroups_empty_lg_file(runtmp):
+def test_metagenome_LIN_LINgroups_empty_lg_file(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
@@ -3531,7 +3530,7 @@ def test_metagenome_LINS_LINgroups_empty_lg_file(runtmp):
     assert f"Cannot read lingroups from '{lg_file}'. Is file empty?" in c.last_result.err
 
 
-def test_metagenome_LINS_LINgroups_bad_cli_inputs(runtmp):
+def test_metagenome_LIN_LINgroups_bad_cli_inputs(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
@@ -3595,7 +3594,7 @@ def test_genome_mult_outputs_stdout_fail(runtmp):
     assert f"Writing to stdout is incompatible with multiple output formats ['lineage_csv', 'csv_summary']" in c.last_result.err
 
 
-def test_metagenome_LINS_LINgroups_lg_only_header(runtmp):
+def test_metagenome_LIN_LINgroups_lg_only_header(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
@@ -3616,29 +3615,3 @@ def test_metagenome_LINS_LINgroups_lg_only_header(runtmp):
     assert c.last_result.status != 0
     assert "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0" in c.last_result.err
     assert f"No LINgroups loaded from {lg_file}" in c.last_result.err
-
-
-# def test_metagenome_LINS_csv_out(runtmp):
-#     # LIN taxonomy:: csv_summary out
-#     c = runtmp
-
-#     g_csv = utils.get_test_data('tax/test1.gather.csv')
-#     tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
-
-#     lg_out = c.output('base.lingroup_report.tsv')
-
-#     c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '--LIN-taxonomy')
-
-#     print(c.last_result.status)
-#     print(c.last_result.out)
-#     print(c.last_result.err)
-
-#     assert c.last_result.status == 0
-#     assert os.path.exists(lg_out)
-
-#     results = [x.rstrip() for x in open(lg_out)]
-#     assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in results[0]
-#     # 0th rank/position
-#     assert "test1,0,0.089,1,md5,test1.sig,0.057,444000,0.925,0" in results[1]
-#     # 19th rank/position
-#     assert "test1,19,0.088,0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,md5,test1.sig,0.058,442000,0.925,0" in results[-4]
