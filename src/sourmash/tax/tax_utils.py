@@ -1729,7 +1729,7 @@ class SummarizedGatherResult:
             sD["num_bp_assigned"] = sD["num_bp_contained"]
         return sD
     
-    def as_lingroup_dict(self, query_info, lg_name, lowest_rank):
+    def as_lingroup_dict(self, query_info, lg_name):
         """
         Produce LINgroup report dict for LINgroups.
         """
@@ -1737,13 +1737,6 @@ class SummarizedGatherResult:
         # total percent containment, weighted to include abundance info
         sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
         sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_bp))
-        sD["num_bp_assigned"] = str(0)
-        if self.lineage.n_lin_positions != 0: #empty lineage
-            # the number of bp actually 'assigned' at this rank. Sourmash assigns everything
-            # at genome level - not sure how we want to handle 'num_bp_assigned' here..
-            if self.lineage.lowest_rank == lowest_rank:
-                sD["num_bp_assigned"] = sD["num_bp_contained"]
-
         sD["LINgroup_prefix"] = self.lineage.display_lineage()
         sD["LINgroup_name"] = lg_name
         return sD
@@ -2138,7 +2131,7 @@ class QueryTaxResult:
         Keep LCA paths in order as much as possible.
         """
         self.check_summarization()
-        header = ["LINgroup_name", "LINgroup_prefix", "percent_containment", "num_bp_contained", "num_bp_assigned"]
+        header = ["LINgroup_name", "LINgroup_prefix", "percent_containment", "num_bp_contained"]
 
         if self.query_info.total_weighted_hashes == 0:
             raise ValueError("ERROR: cannot produce 'LINgroup_report' format from gather results before sourmash v4.5.0")
@@ -2154,10 +2147,6 @@ class QueryTaxResult:
             lg_rank = int(lg_info.lowest_rank)
             lg_ranks.add(lg_rank)
 
-       # find lowest rank, for "assignment" column [do we even want this???]
-        ordered_lg_ranks = sorted(lg_ranks)
-        lowest_rank = str(ordered_lg_ranks[-1])
-
         # grab summarized results matching LINgroup prefixes
         lg_results = {}
         for rank in lg_ranks:
@@ -2166,7 +2155,7 @@ class QueryTaxResult:
             for res in rank_results:
                 if res.lineage in all_lgs:# is this lineage in the list of LINgroups?
                     this_lingroup_name = LINgroupsD[res.lineage.display_lineage(truncate_empty=True)]
-                    lg_resD = res.as_lingroup_dict(self.query_info, this_lingroup_name, lowest_rank)
+                    lg_resD = res.as_lingroup_dict(self.query_info, this_lingroup_name)
                     lg_results[res.lineage] = lg_resD
 
         # We want to return in ~ depth order: descending each specific path in order

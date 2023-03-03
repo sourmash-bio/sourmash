@@ -168,14 +168,14 @@ def test_SummarizedGatherResult_LINs():
     sgr = SummarizedGatherResult(rank="phylum", fraction=0.2, lineage=LINLineageInfo(lineage_str="0;0;1"),
                                  f_weighted_at_rank=0.3, bp_match_at_rank=30)
 
-    lgD = sgr.as_lingroup_dict(query_info=qInf, lg_name="lg_name", lowest_rank="4")
-    print(lgD)
-    assert lgD == {'LINgroup_name': "lg_name", "LINgroup_prefix": "0;0;1", 'num_bp_assigned': "0",
-                   'percent_containment': '30.00', 'num_bp_contained': "600"}
-    lgD = sgr.as_lingroup_dict(query_info=qInf, lg_name="lg_name", lowest_rank="3")
+    lgD = sgr.as_lingroup_dict(query_info=qInf, lg_name="lg_name")
     print(lgD)
     assert lgD == {'LINgroup_name': "lg_name", "LINgroup_prefix": "0;0;1",
-                   'num_bp_assigned': "0",'percent_containment': '30.00', 'num_bp_contained': "600"}
+                   'percent_containment': '30.00', 'num_bp_contained': "600"}
+    lgD = sgr.as_lingroup_dict(query_info=qInf, lg_name="lg_name")
+    print(lgD)
+    assert lgD == {'LINgroup_name': "lg_name", "LINgroup_prefix": "0;0;1",
+                   'percent_containment': '30.00', 'num_bp_contained': "600"}
     with pytest.raises(ValueError) as exc:
         sgr.as_kreport_dict(query_info=qInf)
     print(str(exc))
@@ -2791,13 +2791,13 @@ def test_make_lingroup_results():
 
     header, lgD = q_res.make_lingroup_results(LINgroupsD = lingroupD)
     print(header)
-    assert header == ['LINgroup_name', 'LINgroup_prefix', 'percent_containment', 'num_bp_contained', 'num_bp_assigned']
+    assert header == ['LINgroup_name', 'LINgroup_prefix', 'percent_containment', 'num_bp_contained']
     # order may change, just check that each lg entry is present in list of results
-    lg1 = {'percent_containment': '60.00', 'num_bp_contained': '60', 'num_bp_assigned': '0',
+    lg1 = {'percent_containment': '60.00', 'num_bp_contained': '60',
                     'LINgroup_prefix': '1', 'LINgroup_name': 'lg1'}
-    lg2 = {'percent_containment': '40.00', 'num_bp_contained': '40', 'num_bp_assigned': '40',
+    lg2 = {'percent_containment': '40.00', 'num_bp_contained': '40',
                     'LINgroup_prefix': '1;0', 'LINgroup_name': 'lg2'}
-    lg3 = {'percent_containment': '20.00', 'num_bp_contained': '20', 'num_bp_assigned': '20',
+    lg3 = {'percent_containment': '20.00', 'num_bp_contained': '20',
                     'LINgroup_prefix': '1;1', 'LINgroup_name': 'lg3'}
     assert lg1 in lgD
     assert lg2 in lgD

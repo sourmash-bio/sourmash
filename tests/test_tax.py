@@ -3415,7 +3415,7 @@ def test_metagenome_LIN_LINgroups(runtmp):
         out.write('1;0;0,lg2\n')
         out.write('2;0;0,lg3\n')
         out.write('1;0;1,lg3\n')
-        # write a 19 so we can check 'num_bp_assigned'
+        # write a 19 so we can check the end
         out.write('1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,lg4\n')
 
     c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
@@ -3428,12 +3428,12 @@ def test_metagenome_LIN_LINgroups(runtmp):
     assert c.last_result.status == 0
     assert "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0" in c.last_result.err
     assert "Read 5 LINgroup rows and found 5 distinct LINgroup prefixes." in c.last_result.err
-    assert "LINgroup_name	LINgroup_prefix	percent_containment	num_bp_contained	num_bp_assigned" in c.last_result.out
-    assert "lg1	0;0;0	5.82	714000	0" in c.last_result.out
-    assert "lg2	1;0;0	5.05	620000	0" in c.last_result.out
-    assert "lg3	2;0;0	1.56	192000	0" in c.last_result.out
-    assert "lg3	1;0;1	0.65	80000	0" in c.last_result.out
-    assert "lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000	80000" in c.last_result.out
+    assert "LINgroup_name	LINgroup_prefix	percent_containment	num_bp_contained" in c.last_result.out
+    assert "lg1	0;0;0	5.82	714000" in c.last_result.out
+    assert "lg2	1;0;0	5.05	620000" in c.last_result.out
+    assert "lg3	2;0;0	1.56	192000" in c.last_result.out
+    assert "lg3	1;0;1	0.65	80000" in c.last_result.out
+    assert "lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000" in c.last_result.out
 
 
 def test_metagenome_LIN_human_summary_no_lin_position(runtmp):
