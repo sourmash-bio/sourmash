@@ -25,7 +25,7 @@ Releasing to PyPI:
 After release to PyPI and conda-forge/bioconda packages built:
 
 - [ ] [PyPI page](https://pypi.org/project/sourmash/) updated
-- [ ] Zenodo DOI successfully minted upon new github release - [see search results](https://zenodo.org/search?page=1&size=20&q=sourmash)
+- [ ] Zenodo DOI successfully minted upon new github release - [see search results](https://zenodo.org/search?page=1&size=20&q=sourmash&sort=mostrecent)
 - [ ] `pip install sourmash` installs the correct version
 - [ ] `mamba create -n smash-release -y sourmash` installs the correct version
 ```
