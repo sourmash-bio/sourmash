@@ -2200,7 +2200,7 @@ def test_annotate_0_LIN(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
-    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
     csvout = runtmp.output("test1.gather.with-lineages.csv")
     out_dir = os.path.dirname(csvout)
 
@@ -3320,7 +3320,7 @@ def test_tax_summarize_strain_csv_with_lineages(runtmp):
 
 def test_tax_summarize_LINS(runtmp):
     # test basic operation w/LINs
-    taxfile = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+    taxfile = utils.get_test_data('tax/test.LIN-taxonomy.csv')
     lineage_csv = runtmp.output('annotated-lin.csv')
 
     taxdb = tax_utils.LineageDB.load(taxfile, LIN_taxonomy=True)
@@ -3368,7 +3368,7 @@ def test_metagenome_LINS(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.csv')
-    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
 
     c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '--LIN-taxonomy')
 
@@ -3407,7 +3407,7 @@ def test_metagenome_LINS_LINgroups(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
-    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
 
     lg_file = runtmp.output("test.lg.csv")
     with open(lg_file, 'w') as out:
@@ -3441,7 +3441,7 @@ def test_metagenome_LINS_human_summary_no_lin_position(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
-    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
 
     c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
                    '--LIN-taxonomy', '-F', "human")
@@ -3465,7 +3465,7 @@ def test_metagenome_LINS_human_summary_lin_position_5(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
-    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
 
     c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
                    '--LIN-taxonomy', '-F', "human", '--LIN-position', '5')
@@ -3489,7 +3489,7 @@ def test_metagenome_LINS_krona_lin_position_5(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
-    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
 
     c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
                    '--LIN-taxonomy', '-F', "krona", '--LIN-position', '5')
@@ -3512,7 +3512,7 @@ def test_metagenome_LINS_LINgroups_empty_lg_file(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
-    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
 
     lg_file = runtmp.output("test.lg.csv")
     with open(lg_file, 'w') as out:
@@ -3535,7 +3535,7 @@ def test_metagenome_LINS_LINgroups_bad_cli_inputs(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
-    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
 
     lg_file = runtmp.output("test.lg.csv")
     with open(lg_file, 'w') as out:
@@ -3569,7 +3569,7 @@ def test_metagenome_mult_outputs_stdout_fail(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
-    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
 
     with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
@@ -3584,7 +3584,7 @@ def test_genome_mult_outputs_stdout_fail(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
-    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
 
     with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
@@ -3599,7 +3599,7 @@ def test_metagenome_LINS_LINgroups_lg_only_header(runtmp):
     c = runtmp
 
     g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
-    tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
 
     lg_file = runtmp.output("test.lg.csv")
     with open(lg_file, 'w') as out:
@@ -3623,7 +3623,7 @@ def test_metagenome_LINS_LINgroups_lg_only_header(runtmp):
 #     c = runtmp
 
 #     g_csv = utils.get_test_data('tax/test1.gather.csv')
-#     tax = utils.get_test_data('tax/test.LINS-taxonomy.csv')
+#     tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
 
 #     lg_out = c.output('base.lingroup_report.tsv')
 
