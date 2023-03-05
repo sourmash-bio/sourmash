@@ -164,7 +164,6 @@ python -m pip install sourmash*tar.gz
 tar xzf sourmash-${new_version}.tar.gz
 cd sourmash-${new_version}
 python -m pip install -r requirements.txt
-cp -a ../../sourmash/tests/test-data tests/  ## We don't ship the test data, so let's copy it here
 pytest && cargo test
 ```
 

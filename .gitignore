@@ -17,6 +17,7 @@ sourmash.egg-info
 *.so
 .coverage
 .pytest_cache
+**/*.pyc
 .python-version
 src/sourmash/version.py
 *.DS_Store
