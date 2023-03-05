@@ -10,7 +10,6 @@ from .distance_utils import jaccard_to_distance, containment_to_distance, set_si
 from .logging import notify
 
 import numpy as np
-import screed
 
 
 __all__ = ['get_minhash_default_seed',
@@ -378,6 +377,7 @@ class MinHash(RustObject):
 
         If 'force' is True, invalid k-mers will be represented with 'None'.
         """
+        import screed
 
         bad_kmers_as_zeroes = False
         if force:
