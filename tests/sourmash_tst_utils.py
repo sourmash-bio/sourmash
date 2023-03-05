@@ -6,12 +6,20 @@ import shutil
 import subprocess
 import collections
 import pprint
-
-import pkg_resources
-from pkg_resources import Requirement, resource_filename, ResolutionError
 import traceback
 from io import open  # pylint: disable=redefined-builtin
 from io import StringIO
+
+from importlib import resources
+from importlib.metadata import entry_points
+
+# Remove when we drop support for 3.8
+if sys.version_info < (3, 9):
+    import importlib_resources as resources
+
+# Remove when we drop support for 3.9
+if sys.version_info < (3, 10):
+    from importlib_metadata import entry_points
 
 
 SIG_FILES = [os.path.join('demo', f) for f in (
@@ -43,11 +51,10 @@ def _runscript(scriptname):
     namespace = {"__name__": "__main__"}
     namespace['sys'] = globals()['sys']
 
-    try:
-        pkg_resources.load_entry_point("sourmash", 'console_scripts', scriptname)()
+    (script,) = entry_points(name="sourmash", group="console_scripts")
+    if script:
+        script.load()()
         return 0
-    except pkg_resources.ResolutionError:
-        pass
 
     path = scriptpath()
 
@@ -129,14 +136,8 @@ def runscript(scriptname, args, **kwargs):
 
 
 def get_test_data(filename):
-    filepath = None
-    try:
-        filepath = resource_filename(
-            Requirement.parse("sourmash"), "sourmash/sourmash/test-data/"\
-                + filename)
-    except ResolutionError:
-        pass
-    if not filepath or not os.path.isfile(filepath):
+    filepath = resources.files("sourmash") / "tests" / "test-data" / filename
+    if not filepath.exists() or not os.path.isfile(filepath):
         filepath = os.path.join(os.path.dirname(__file__), 'test-data',
                                 filename)
     return filepath
