@@ -137,8 +137,12 @@ include = [
   { path = "include/sourmash.h", format = ["sdist","wheel"] },
   { path = "requirements.txt", format = ["sdist"] },
   { path = "Cargo.*", format = ["sdist"] },
-  { path = "tests/*.py", format = ["sdist"] },
+  { path = "tests/**/*", format = ["sdist"] },
   { path = "CITATION.cff", format = ["sdist", "wheel"] },
+  { path = "LICENSE", format = ["sdist"] },
+]
+exclude = [
+  { path = "**/__pycache__/*", format = ["sdist", "wheel"] },
 ]
 features = ["maturin"]
 locked = true
