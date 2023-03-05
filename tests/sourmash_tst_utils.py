@@ -51,10 +51,12 @@ def _runscript(scriptname):
     namespace = {"__name__": "__main__"}
     namespace['sys'] = globals()['sys']
 
-    (script,) = entry_points(name="sourmash", group="console_scripts")
-    if script:
+    try:
+        (script,) = entry_points(name=scriptname, group="console_scripts")
         script.load()()
         return 0
+    except ValueError:
+        pass
 
     path = scriptpath()
 
