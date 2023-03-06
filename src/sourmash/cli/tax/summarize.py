@@ -47,7 +47,7 @@ def subparser(subparsers):
         help='continue past errors in file and taxonomy loading',
     )
     subparser.add_argument(
-        '--lins', action='store_true', default=False,
+        '--lins', '--lin-taxonomy', action='store_true', default=False,
         help='use LIN taxonomy in place of standard taxonomic ranks.'
     )
 

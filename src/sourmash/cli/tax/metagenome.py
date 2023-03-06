@@ -77,7 +77,7 @@ def subparser(subparsers):
         help='continue past errors in taxonomy database loading',
     )
     subparser.add_argument(
-        '--lins', action='store_true', default=False,
+        '--lins', '--lin-taxonomy', action='store_true', default=False,
         help='use LIN taxonomy in place of standard taxonomic ranks.  Note that the taxonomy CSV must contain LIN lineage information.'
     )
     subparser.add_argument(
