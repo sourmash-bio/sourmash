@@ -72,7 +72,7 @@ def metagenome(args):
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
-                       force=args.force, LIN_taxonomy=args.LIN_taxonomy)
+                       force=args.force, lins=args.lins)
         available_ranks = tax_assign.available_ranks
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
@@ -93,7 +93,7 @@ def metagenome(args):
                                                                      fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
                                                                      keep_full_identifiers=args.keep_full_identifiers,
                                                                      keep_identifier_versions = args.keep_identifier_versions,
-                                                                     LIN_taxonomy=args.LIN_taxonomy,
+                                                                     lins=args.lins,
                                                                      )
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
@@ -147,7 +147,7 @@ def metagenome(args):
 
         with FileOutput(summary_outfile) as out_fp:
             human_display_rank = args.rank or "species"
-            if args.LIN_taxonomy and not args.rank:
+            if args.lins and not args.rank:
                 human_display_rank = query_gather_results[0].ranks[-1] # lowest rank
 
             tax_utils.write_human_summary(query_gather_results, out_fp, human_display_rank)
@@ -168,9 +168,9 @@ def metagenome(args):
             tax_utils.write_output(header, kreport_results, out_fp, sep="\t", write_header=False)
 
     # write summarized --> LINgroup output tsv
-    if "LINgroup_report" in args.output_format:
+    if "lingroup_report" in args.output_format:
         try:
-            lingroups = tax_utils.read_lingroups(args.LINgroups)
+            lingroups = tax_utils.read_lingroups(args.lingroups)
         except ValueError as exc:
             error(f"ERROR: {str(exc)}")
             sys.exit(-1)
@@ -290,7 +290,7 @@ def annotate(args):
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
-                       force=args.force, LIN_taxonomy=args.LIN_taxonomy)
+                       force=args.force, lins=args.lins)
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
@@ -308,7 +308,7 @@ def annotate(args):
                                                                                        fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
                                                                                        keep_full_identifiers=args.keep_full_identifiers,
                                                                                        keep_identifier_versions = args.keep_identifier_versions,
-                                                                                       LIN_taxonomy=args.LIN_taxonomy)
+                                                                                       lins=args.lins)
 
         if not query_gather_results:
             continue
@@ -417,7 +417,7 @@ def summarize(args):
                                          force=args.force,
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
-                       LIN_taxonomy=args.LIN_taxonomy)
+                       lins=args.lins)
     except ValueError as exc:
         error("ERROR while loading taxonomies!")
         error(str(exc))
@@ -462,7 +462,7 @@ def summarize(args):
             # output in order of most common
             for lineage, count in lineage_counts.most_common():
                 rank = lineage[-1].rank
-                if args.LIN_taxonomy:
+                if args.lins:
                     inf = LINLineageInfo(lineage=lineage)
                 else:
                     inf = RankLineageInfo(lineage=lineage)

@@ -538,7 +538,7 @@ The possible output formats are:
 - `lineage_summary`
 - `krona`
 - `kreport`
-- `LINgroup_report`
+- `lingroup_report`
 
 #### `csv_summary` output format
 
@@ -714,13 +714,13 @@ example sourmash `{output-name}.kreport.txt`:
 ```
 
 
-#### `LINgroup_report` output format
+#### `lingroup_report` output format
 
-When using `LIN` taxonomic information, you can optionally also provide a  `LINgroups` with `LINgroup_name` and `LINgroup_prefix` columns. If provided, we will output a `LINgroup_report` of the format `{base}.lingroup_report.tsv`, where `{base}` is the name provided via the `-o`,` --output-base` option. This output includes just the subset of `LIN` positions that match the provided prefixes (selected from the full summary). The output will the `LINgroup` info and two additional columns: `percent_containment`, the total percent of the dataset contained in this LINgroup and all descendents, and `num_bp_contained`, the estimated number of base pairs contained in this LINgroup and all descendents. Similar to `kreport` above, we use the wording "contained" rather than "assigned," because `sourmash` assigns matches at the genome level, and the `tax` functions simply summarize this information.
+When using LIN taxonomic information, you can optionally also provide a  `lingroups` with `lingroup_name` and `lingroup_prefix` columns. If provided, we will output a `lingroup_report` of the format `{base}.lingroup_report.tsv`, where `{base}` is the name provided via the `-o`,` --output-base` option. This output includes just the subset of LIN positions that match the provided prefixes (selected from the full summary). The output will the `lingroup` info and two additional columns: `percent_containment`, the total percent of the dataset contained in this lingroup and all descendents, and `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendents. Similar to `kreport` above, we use the wording "contained" rather than "assigned," because `sourmash` assigns matches at the genome level, and the `tax` functions simply summarize this information.
 
 example output:
 ```
-LINgroup_name	LINgroup_prefix	percent_containment	num_bp_contained
+lingroup_name	lingroup_prefix	percent_containment	num_bp_contained
 lg1	0;0;0	5.82	714000
 lg2	1;0;0	5.05	620000
 lg3	2;0;0	1.56	192000
@@ -728,7 +728,7 @@ lg3	1;0;1	0.65	80000
 lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000
 ```
 
-LINgroup subpaths will be grouped in output, but exact ordering may change between runs.
+lingroup subpaths will be grouped in output, but exact ordering may change between runs.
 
 ### `sourmash tax genome` - classify a genome using `gather` results
 

@@ -23,6 +23,8 @@ Please see the 'tax metagenome' documentation for more details:
 
 import sourmash
 from sourmash.logging import notify, print_results, error
+from sourmash.cli.utils import add_rank_arg, check_rank, check_tax_outputs
+
 
 
 def subparser(subparsers):
@@ -67,58 +69,31 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-F', '--output-format', default=[], nargs='*', action="extend",
-        choices=["human", "csv_summary", "krona", "lineage_summary",  "kreport", "LINgroup_report"],
+        choices=["human", "csv_summary", "krona", "lineage_summary",  "kreport", "lingroup_report"],
         help='choose output format(s)',
-    )
-    subparser.add_argument(
-        '-r', '--rank', choices=['strain','species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'],
-        help='For non-default output formats: Summarize genome taxonomy at this rank and above. Note that the taxonomy CSV must contain lineage information at this rank.'
     )
     subparser.add_argument(
         '-f', '--force', action = 'store_true',
         help='continue past errors in taxonomy database loading',
     )
     subparser.add_argument(
-        '--LIN-taxonomy', action='store_true', default=False,
+        '--lins', action='store_true', default=False,
         help='use LIN taxonomy in place of standard taxonomic ranks.  Note that the taxonomy CSV must contain LIN lineage information.'
     )
     subparser.add_argument(
-        '--LIN-position', type=int, default=None,
-        help='For non-default output formats: summarize taxonomy at this LIN position and above. Replaces "--rank" for standard taxonomy. Note that the taxonomy CSV must contain LIN with information at this position.'
+        '--lingroups', metavar='FILE', default=None,
+        help='CSV containing lingroup_name, lingroup_prefix. Will produce a "lingroup_report" file containing taxonomic summarization for each lingroup.'
     )
-    subparser.add_argument(
-        '--LINgroups', metavar='FILE', default=None,
-        help='CSV containing LINgroup_name, LINgroup_prefix. Will produce a "LINgroup_report" file containing taxonomic summarization for each LINgroup.'
-    )
-
+    add_rank_arg(subparser)
 
 def main(args):
     import sourmash
     try:
         if not args.gather_csv and not args.from_file:
             raise ValueError(f"No gather CSVs found! Please input via '-g' or '--from-file'.")
-        # handle LIN options
-        if args.LIN_taxonomy:
-            if args.LIN_position:
-                args.rank = str(args.LIN_position)
-            if args.LINgroups:
-                if "LINgroup_report" not in args.output_format:
-                    args.output_format.append("LINgroup_report")
-            elif "LINgroup_report" in args.output_format:
-                raise ValueError(f"Must provide LINgroup csv via '--LINgroups' in order to output a LINgroup_report.")
-        elif args.LINgroups or "LINgroup_report" in args.output_format:
-            raise ValueError(f"Must enable LIN taxonomy via '--LIN-taxonomy' in order to output a LINgroup_report.")
-
-        # handle output formats
-        if not args.rank:
-            if any(x in ["krona", "lineage_summary"] for x in args.output_format):
-                raise ValueError(f"Rank (--rank) is required for krona and lineage_summary output formats.")
-        if len(args.output_format) > 1:
-            if args.output_base == "-":
-                raise ValueError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")
-        elif not args.output_format:
-            # change to "human" for 5.0
-            args.output_format = ["csv_summary"]
+        if args.rank:
+            args.rank = check_rank(args)
+        args.output_format = check_tax_outputs(args, rank_required = ['krona', 'lineage_summary'])
 
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")

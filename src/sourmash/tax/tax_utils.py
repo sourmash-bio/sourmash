@@ -620,22 +620,22 @@ def read_lingroups(lingroup_csv):
         # check for empty file
         if not header:
             raise ValueError(f"Cannot read lingroups from '{lingroup_csv}'. Is file empty?")
-        if "LINgroup_prefix" not in header or "LINgroup_name" not in header:
-            raise ValueError(f"'{lingroup_csv}' must contain the following columns: 'LINgroup_prefix', 'LINgroup_name'.")
+        if "lingroup_prefix" not in header or "lingroup_name" not in header:
+            raise ValueError(f"'{lingroup_csv}' must contain the following columns: 'lingroup_prefix', 'lingroup_name'.")
         for n, row in enumerate(r):
-            lingroupD[row['LINgroup_prefix']] = row['LINgroup_name']
+            lingroupD[row['lingroup_prefix']] = row['lingroup_name']
 
     if n is None:
-        raise ValueError(f'No LINgroups loaded from {lingroup_csv}.')
+        raise ValueError(f'No lingroups loaded from {lingroup_csv}.')
     n_lg = len(lingroupD.keys())
-    notify(f"Read {n+1} LINgroup rows and found {n_lg} distinct LINgroup prefixes.")
+    notify(f"Read {n+1} lingroup rows and found {n_lg} distinct lingroup prefixes.")
     return lingroupD
 
 
 def load_gather_results(gather_csv, tax_assignments, *, seen_queries=None, force=False,
                         skip_idents = None, fail_on_missing_taxonomy=False,
                         keep_full_identifiers=False, keep_identifier_versions=False,
-                        LIN_taxonomy=False):
+                        lins=False):
     "Load a single gather csv"
     if not seen_queries:
         seen_queries=set()
@@ -660,13 +660,13 @@ def load_gather_results(gather_csv, tax_assignments, *, seen_queries=None, force
                 raise ValueError(f"Gather query {gatherRow.query_name} was found in more than one CSV. Cannot load from '{gather_csv}'.")
             taxres = TaxResult(raw=gatherRow, keep_full_identifiers=keep_full_identifiers,
                                                 keep_identifier_versions=keep_identifier_versions,
-                                                LIN_taxonomy=LIN_taxonomy)
+                                                lins=lins)
             taxres.get_match_lineage(tax_assignments=tax_assignments, skip_idents=skip_idents, 
                                         fail_on_missing_taxonomy=fail_on_missing_taxonomy)
             # add to matching QueryTaxResult or create new one
             if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
                 # get existing or initialize new
-                this_querytaxres = gather_results.get(gatherRow.query_name, QueryTaxResult(taxres.query_info, LIN_taxonomy=LIN_taxonomy))
+                this_querytaxres = gather_results.get(gatherRow.query_name, QueryTaxResult(taxres.query_info, lins=lins))
             this_querytaxres.add_taxresult(taxres)
             gather_results[gatherRow.query_name] = this_querytaxres
 
@@ -678,7 +678,7 @@ def load_gather_results(gather_csv, tax_assignments, *, seen_queries=None, force
 
 
 def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False, 
-                               keep_full_identifiers=False,keep_identifier_versions=False, LIN_taxonomy=False):
+                               keep_full_identifiers=False,keep_identifier_versions=False, lins=False):
     '''
     Load gather csvs, checking for empties and ids missing from taxonomic assignments.
     '''
@@ -697,7 +697,7 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
                                                         force=force, keep_full_identifiers=keep_full_identifiers,
                                                         keep_identifier_versions = keep_identifier_versions,
                                                         fail_on_missing_taxonomy=fail_on_missing_taxonomy,
-                                                        LIN_taxonomy=LIN_taxonomy)
+                                                        lins=lins)
         except ValueError as exc:
             if force:
                 if "found in more than one CSV" in str(exc):
@@ -957,7 +957,7 @@ class LineageDB(abc.Mapping):
 
     @classmethod
     def load(cls, filename, *, delimiter=',', force=False,
-             keep_full_identifiers=False, keep_identifier_versions=True, LIN_taxonomy=False):
+             keep_full_identifiers=False, keep_identifier_versions=True, lins=False):
         """
         Load a taxonomy assignment CSV file into a LineageDB.
 
@@ -995,15 +995,15 @@ class LineageDB(abc.Mapping):
                 elif 'name' in header and 'lineage' in header:
                     return cls.load_from_gather_with_lineages(filename,
                                                               force=force,
-                                                              LIN_taxonomy=LIN_taxonomy)
+                                                              lins=lins)
                 else:
                     header_str = ",".join([repr(x) for x in header])
                     raise ValueError(f'No taxonomic identifiers found; headers are {header_str}')
 
-            if LIN_taxonomy and "LIN" not in header:
-                raise ValueError(f"'LIN' column not found: cannot read LIN taxonomy assignments from {filename}.")
+            if lins and "lin" not in header:
+                raise ValueError(f"'lin' column not found: cannot read LIN taxonomy assignments from {filename}.")
 
-            if not LIN_taxonomy:
+            if not lins:
                 # is "strain" an available rank?
                 if "strain" in header:
                     include_strain=True
@@ -1026,8 +1026,8 @@ class LineageDB(abc.Mapping):
             # now parse and load lineages
             for n, row in enumerate(r):
                 num_rows += 1
-                if LIN_taxonomy:
-                    lineageInfo = LINLineageInfo(lineage_str=row['LIN'])
+                if lins:
+                    lineageInfo = LINLineageInfo(lineage_str=row['lin'])
                     if n_pos is not None:
                         if lineageInfo.n_lin_positions != n_pos:
                             raise ValueError(f"For taxonomic summarization, all LIN assignments must use the same number of LIN positions.")
@@ -1056,7 +1056,7 @@ class LineageDB(abc.Mapping):
                     else:
                         assignments[ident] = lineage
 
-                        if not LIN_taxonomy:
+                        if not lins:
                             if lineage[-1].rank == 'species':
                                 n_species += 1
                             elif lineage[-1].rank == 'strain':
@@ -1067,7 +1067,7 @@ class LineageDB(abc.Mapping):
 
 
     @classmethod
-    def load_from_gather_with_lineages(cls, filename, *, force=False, LIN_taxonomy=False):
+    def load_from_gather_with_lineages(cls, filename, *, force=False, lins=False):
         """
         Load an annotated gather-with-lineages CSV file produced by
         'tax annotate' into a LineageDB.
@@ -1101,7 +1101,7 @@ class LineageDB(abc.Mapping):
                 name = row['name']
                 ident = get_ident(name)
 
-                if LIN_taxonomy:
+                if lins:
                     lineageInfo = LINLineageInfo(lineage_str=row['lineage'])
                 else:
                     lineageInfo = RankLineageInfo(lineage_str= row['lineage'])
@@ -1575,7 +1575,7 @@ class TaxResult:
     skipped_ident: bool = False
     missed_ident: bool = False
     match_lineage_attempted: bool = False
-    LIN_taxonomy: bool = False
+    lins: bool = False
 
     def __post_init__(self):
         self.get_ident()
@@ -1593,7 +1593,7 @@ class TaxResult:
         self.f_unique_to_query = float(self.raw.f_unique_to_query)
         self.f_unique_weighted = float(self.raw.f_unique_weighted)
         self.unique_intersect_bp = int(self.raw.unique_intersect_bp)
-        if self.LIN_taxonomy:
+        if self.lins:
             self.lineageInfo = LINLineageInfo()
         else:
             self.lineageInfo = RankLineageInfo()
@@ -1618,7 +1618,7 @@ class TaxResult:
         else:
             lin = tax_assignments.get(self.match_ident)
             if lin:
-                if self.LIN_taxonomy:
+                if self.lins:
                     self.lineageInfo = LINLineageInfo(lineage = lin)
                 else:
                     self.lineageInfo = RankLineageInfo(lineage = lin)
@@ -1737,8 +1737,8 @@ class SummarizedGatherResult:
         # total percent containment, weighted to include abundance info
         sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
         sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_bp))
-        sD["LINgroup_prefix"] = self.lineage.display_lineage()
-        sD["LINgroup_name"] = lg_name
+        sD["lingroup_prefix"] = self.lineage.display_lineage()
+        sD["lingroup_name"] = lg_name
         return sD
 
 
@@ -1799,7 +1799,7 @@ class QueryTaxResult:
     Contains methods for formatting results for different outputs.
     """
     query_info: QueryInfo # initialize with QueryInfo dataclass
-    LIN_taxonomy: bool = False
+    lins: bool = False
 
     def __post_init__(self):
         self.query_name = self.query_info.query_name # for convenience
@@ -1838,7 +1838,7 @@ class QueryTaxResult:
         self.krona_header = []
 
     def is_compatible(self, taxresult):
-        return taxresult.query_info == self.query_info and taxresult.LIN_taxonomy == self.LIN_taxonomy
+        return taxresult.query_info == self.query_info and taxresult.lins == self.lins
 
     @property
     def ascending_ranks(self):
@@ -1931,7 +1931,7 @@ class QueryTaxResult:
                 self.total_bp_classified[rank] += bp_intersect_at_rank
 
             # record unclassified
-            if self.LIN_taxonomy:
+            if self.lins:
                 lineage = LINLineageInfo()
             else:
                 lineage = RankLineageInfo()
@@ -2131,7 +2131,7 @@ class QueryTaxResult:
         Keep LCA paths in order as much as possible.
         """
         self.check_summarization()
-        header = ["LINgroup_name", "LINgroup_prefix", "percent_containment", "num_bp_contained"]
+        header = ["lingroup_name", "lingroup_prefix", "percent_containment", "num_bp_contained"]
 
         if self.query_info.total_weighted_hashes == 0:
             raise ValueError("ERROR: cannot produce 'LINgroup_report' format from gather results before sourmash v4.5.0")

@@ -58,7 +58,7 @@ def make_TaxResult(gather_dict=None, taxD=None, keep_full_ident=False, keep_iden
     """Make TaxResult from artificial gather row (dict)"""
     gRow = make_GatherRow(gather_dict)
     taxres = TaxResult(raw=gRow, keep_full_identifiers=keep_full_ident,
-                       keep_identifier_versions=keep_ident_version, LIN_taxonomy=LIN)
+                       keep_identifier_versions=keep_ident_version, lins=LIN)
     if taxD is not None:
         taxres.get_match_lineage(tax_assignments=taxD, skip_idents=skip_idents)
     return taxres
@@ -77,7 +77,7 @@ def make_QueryTaxResults(gather_info, taxD=None, single_query=False, keep_full_i
         # add to matching QueryTaxResult or create new one
         if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
             # get existing or initialize new
-            this_querytaxres = gather_results.get(query_name, QueryTaxResult(taxres.query_info, LIN_taxonomy=LIN))
+            this_querytaxres = gather_results.get(query_name, QueryTaxResult(taxres.query_info, lins=LIN))
         this_querytaxres.add_taxresult(taxres)
 #        print('missed_ident?', taxres.missed_ident)
         gather_results[query_name] = this_querytaxres
@@ -170,11 +170,11 @@ def test_SummarizedGatherResult_LINs():
 
     lgD = sgr.as_lingroup_dict(query_info=qInf, lg_name="lg_name")
     print(lgD)
-    assert lgD == {'LINgroup_name': "lg_name", "LINgroup_prefix": "0;0;1",
+    assert lgD == {'lingroup_name': "lg_name", "lingroup_prefix": "0;0;1",
                    'percent_containment': '30.00', 'num_bp_contained': "600"}
     lgD = sgr.as_lingroup_dict(query_info=qInf, lg_name="lg_name")
     print(lgD)
-    assert lgD == {'LINgroup_name': "lg_name", "LINgroup_prefix": "0;0;1",
+    assert lgD == {'lingroup_name': "lg_name", "lingroup_prefix": "0;0;1",
                    'percent_containment': '30.00', 'num_bp_contained': "600"}
     with pytest.raises(ValueError) as exc:
         sgr.as_kreport_dict(query_info=qInf)
@@ -600,7 +600,7 @@ def test_load_taxonomy_csv():
 
 def test_load_taxonomy_csv_LIN():
     taxonomy_csv = utils.get_test_data('tax/test.LIN-taxonomy.csv')
-    tax_assign = MultiLineageDB.load([taxonomy_csv], LIN_taxonomy=True)
+    tax_assign = MultiLineageDB.load([taxonomy_csv], lins=True)
     print("taxonomy assignments: \n", tax_assign)
     assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1']
     #assert list(tax_assign.keys()) == ["GCF_000010525.1", "GCF_000007365.1", "GCF_000007725.1", "GCF_000009605.1", "GCF_000021065.1", "GCF_000021085.1"]
@@ -612,8 +612,8 @@ def test_load_taxonomy_csv_LIN():
 def test_load_taxonomy_csv_LIN_fail():
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     with pytest.raises(ValueError) as exc:
-        MultiLineageDB.load([taxonomy_csv], LIN_taxonomy=True)
-    assert f"'LIN' column not found: cannot read LIN taxonomy assignments from {taxonomy_csv}." in str(exc.value)
+        MultiLineageDB.load([taxonomy_csv], lins=True)
+    assert f"'lin' column not found: cannot read LIN taxonomy assignments from {taxonomy_csv}." in str(exc.value)
 
 
 def test_load_taxonomy_csv_LIN_mismatch_in_taxfile(runtmp):
@@ -631,7 +631,7 @@ def test_load_taxonomy_csv_LIN_mismatch_in_taxfile(runtmp):
                 tax21.append(taxline)
         mm.write("\n".join(tax21))
     with pytest.raises(ValueError) as exc:
-        MultiLineageDB.load([mimatchLIN_csv], LIN_taxonomy=True)
+        MultiLineageDB.load([mimatchLIN_csv], lins=True)
     assert "For taxonomic summarization, all LIN assignments must use the same number of LIN positions." in str(exc.value)
 
 
@@ -2791,14 +2791,14 @@ def test_make_lingroup_results():
 
     header, lgD = q_res.make_lingroup_results(LINgroupsD = lingroupD)
     print(header)
-    assert header == ['LINgroup_name', 'LINgroup_prefix', 'percent_containment', 'num_bp_contained']
+    assert header == ['lingroup_name', 'lingroup_prefix', 'percent_containment', 'num_bp_contained']
     # order may change, just check that each lg entry is present in list of results
     lg1 = {'percent_containment': '60.00', 'num_bp_contained': '60',
-                    'LINgroup_prefix': '1', 'LINgroup_name': 'lg1'}
+                    'lingroup_prefix': '1', 'lingroup_name': 'lg1'}
     lg2 = {'percent_containment': '40.00', 'num_bp_contained': '40',
-                    'LINgroup_prefix': '1;0', 'LINgroup_name': 'lg2'}
+                    'lingroup_prefix': '1;0', 'lingroup_name': 'lg2'}
     lg3 = {'percent_containment': '20.00', 'num_bp_contained': '20',
-                    'LINgroup_prefix': '1;1', 'LINgroup_name': 'lg3'}
+                    'lingroup_prefix': '1;1', 'lingroup_name': 'lg3'}
     assert lg1 in lgD
     assert lg2 in lgD
     assert lg3 in lgD
@@ -2818,7 +2818,7 @@ def test_make_lingroup_results_fail_pre_v450():
 def test_read_lingroups(runtmp):
     lg_file = runtmp.output("test.lg.csv")
     with open(lg_file, 'w') as out:
-        out.write('LINgroup_prefix,LINgroup_name\n')
+        out.write('lingroup_prefix,lingroup_name\n')
         out.write('1,lg1\n')
         out.write('1;0,lg2\n')
         out.write('1;1,lg3\n')
@@ -2839,11 +2839,11 @@ def test_read_lingroups_empty_file(runtmp):
 def test_read_lingroups_only_header(runtmp):
     lg_file = runtmp.output("test.lg.csv")
     with open(lg_file, 'w') as out:
-        out.write('LINgroup_prefix,LINgroup_name\n')
+        out.write('lingroup_prefix,lingroup_name\n')
     with pytest.raises(ValueError) as exc:
         read_lingroups(lg_file)
     print(str(exc))
-    assert f"No LINgroups loaded from {lg_file}" in str(exc)
+    assert f"No lingroups loaded from {lg_file}" in str(exc)
 
 
 def test_read_lingroups_bad_header(runtmp):
@@ -2853,7 +2853,7 @@ def test_read_lingroups_bad_header(runtmp):
     with pytest.raises(ValueError) as exc:
         read_lingroups(lg_file)
     print(str(exc))
-    assert f"'{lg_file}' must contain the following columns: 'LINgroup_prefix', 'LINgroup_name'." in str(exc)
+    assert f"'{lg_file}' must contain the following columns: 'lingroup_prefix', 'lingroup_name'." in str(exc)
 
 
 def test_LineageTree_init():
