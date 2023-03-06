@@ -25,7 +25,7 @@ Releasing to PyPI:
 After release to PyPI and conda-forge/bioconda packages built:
 
 - [ ] [PyPI page](https://pypi.org/project/sourmash/) updated
-- [ ] Zenodo DOI successfully minted upon new github release - [see search results](https://zenodo.org/search?page=1&size=20&q=sourmash)
+- [ ] Zenodo DOI successfully minted upon new github release - [see search results](https://zenodo.org/search?page=1&size=20&q=sourmash&sort=mostrecent)
 - [ ] `pip install sourmash` installs the correct version
 - [ ] `mamba create -n smash-release -y sourmash` installs the correct version
 ```
@@ -66,7 +66,7 @@ Developer updates:
 Dependabot updates:
 ```
 
-A convenient way to edit release notes is to put them in a [hackmd.io](https://hackmd.io) document and edit/display them there; then, create a "draft release notes for v..." issue and paste the markdown into the issue.
+A convenient way to edit release notes is to put them in a [hackmd.io](https://hackmd.io) document and edit/display them there; then, create a "draft release notes for v..." issue and paste the markdown into the release PR.
 
 ## Testing a release
 
@@ -164,7 +164,6 @@ python -m pip install sourmash*tar.gz
 tar xzf sourmash-${new_version}.tar.gz
 cd sourmash-${new_version}
 python -m pip install -r requirements.txt
-cp -a ../../sourmash/tests/test-data tests/  ## We don't ship the test data, so let's copy it here
 pytest && cargo test
 ```
 
@@ -186,7 +185,7 @@ NOTE: If you delete the rc tag before the rc wheels are done building, they
 may get added to the wrong release.
 
 ```
-cd ../sourmash
+cd ../../sourmash
 git tag -d v${new_version}${rc}
 git push --delete origin v${new_version}${rc}
 ```
