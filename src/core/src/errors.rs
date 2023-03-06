@@ -63,7 +63,7 @@ pub enum SourmashError {
     #[error(transparent)]
     IOError(#[from] std::io::Error),
 
-    #[cfg(not(all(target_arch = "wasm32", target_vendor = "unknown")))]
+    #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
     #[error(transparent)]
     Panic(#[from] crate::ffi::utils::Panic),
 }
@@ -110,7 +110,7 @@ pub enum SourmashErrorCode {
     NifflerError = 100_005,
 }
 
-#[cfg(not(all(target_arch = "wasm32", target_vendor = "unknown")))]
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 impl SourmashErrorCode {
     pub fn from_error(error: &SourmashError) -> SourmashErrorCode {
         match error {

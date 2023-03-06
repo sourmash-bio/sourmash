@@ -39,7 +39,8 @@ use cfg_if::cfg_if;
 use murmurhash3::murmurhash3_x64_128;
 
 cfg_if! {
-    if #[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))] {
+    if #[cfg(all(target_arch = "wasm32", target_os = "unknown"))] {
+        // Explicitly keeping emscripten and wasi out of this
         pub mod wasm;
     } else {
         pub mod ffi;
