@@ -716,7 +716,14 @@ example sourmash `{output-name}.kreport.txt`:
 
 #### `lingroup` output format
 
-When using LIN taxonomic information, you can optionally also provide a  `lingroups` with `name` and `lin` columns. If provided, we will output a `lingroup` of the format `{base}.lingroups.tsv`, where `{base}` is the name provided via the `-o`,` --output-base` option. This output includes just the subset of LIN positions that match the provided prefixes (selected from the full summary). The output will the `lingroup` info and two additional columns: `percent_containment`, the total percent of the dataset contained in this lingroup and all descendents, and `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendents. Similar to `kreport` above, we use the wording "contained" rather than "assigned," because `sourmash` assigns matches at the genome level, and the `tax` functions simply summarize this information.
+When using LIN taxonomic information, you can optionally also provide a `lingroup` file with two required columns: `name` and `lin`. If provided, we will produce a file, `{base}.lingroups.tsv`, where `{base}` is the name provided via the `-o`,` --output-base` option. This output will select information from the full summary that match the LIN prefixes provided as groups.
+
+This output format consists of four columns:
+- `name`, `lin` columns are taken directly from the `--lingroup` file
+- `percent_containment`, the total percent of the dataset contained in this lingroup and all descendents
+- `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendents.
+
+Similar to `kreport` above, we use the wording "contained" rather than "assigned," because `sourmash` assigns matches at the genome level, and the `tax` functions summarize this information.
 
 example output:
 ```
@@ -728,7 +735,7 @@ lg3	1;0;1	0.65	80000
 lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000
 ```
 
-lingroup subpaths will be grouped in output, but exact ordering may change between runs.
+Related lingroup subpaths will be grouped in output, but exact ordering may change between runs.
 
 ### `sourmash tax genome` - classify a genome using `gather` results
 
