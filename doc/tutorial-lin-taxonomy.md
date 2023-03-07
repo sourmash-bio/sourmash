@@ -3,7 +3,8 @@
 Tessa Pierce Ward
 
 March 2023
-_Requires sourmash v4.8+_
+
+requires sourmash v4.8+
 
 ---
 
@@ -20,7 +21,9 @@ all known pathogenic strains.
 - `barcode3` - lower spike-in (7.5 picogram/microliter pathogen DNA)
 - `barcode5` - no spike-in
 
-The pathogen is `Ralstonia solanacearum` in the `Phylum IIB sequevar 1` group.
+The pathogen is `Ralstonia solanacearum` in the `Phylum IIB sequevar 1` group. 
+
+This data is courtesy of [The Laboratory of Plant & Atmospheric Microbiology & (Meta)Genomics](https://sites.google.com/vt.edu/lab-vinatzer/home).
 
 ## Install sourmash
 
