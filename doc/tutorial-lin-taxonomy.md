@@ -318,7 +318,7 @@ Run:
 ```
 gather_csv_output="barcode1_22141.k51.gather.csv"
 taxonomy_csv="databases/ralstonia-lin.taxonomy.GCA-GCF.csv"
-lingroups_csv="databases/ralstonia.lingroup.csv"
+lingroups_csv="databases/ralstonia.lingroups.csv"
 
 sourmash tax metagenome -g $gather_csv_output -t $taxonomy_csv \
                         --lins --lingroup $lingroups_csv \
@@ -447,9 +447,9 @@ The first column contains the estimated number of base pairs matched between our
 
 **What is happening here?**
 
-When faced with equally good matches, `sourmash gather` makes a random choice about which genome to assign these k-mers to. This happens primarily with highly similar genomes and/or very small sequence matches. If this happens and you need to distinguish between these genomes, we recommend trying a lower scaled value.
+When faced with equally good matches, `sourmash gather` makes a random choice about which genome to assign these k-mers to. This happens primarily with highly similar genomes and/or very small sequence matches. If this happens and you need to distinguish between these genomes, we recommend trying a lower scaled value (higher resolution). "scaled" refers to the systematic downsampling: we keep rougly 1/scaled k-mers (`scaled=1000` keeps ~1 of every 1000 unique k-mers). `scaled=1` keeps all k-mers, but our signature storage is not optimized for this use case.
 
-To see if we could robustly assign the correct sequevar for `barcode3` using a higher resolution sketch, I also ran `gather` using scaled=100.
+To see if we could robustly assign the correct sequevar for `barcode3` using a higher resolution sketch, I also ran `gather` using `scaled=100`.
 
 Here's an abbreviated version of the `gather` results for  `barcode3`, with lingroup information added:
 
@@ -462,14 +462,43 @@ Here's an abbreviated version of the `gather` results for  `barcode3`, with ling
 | **bc3** | 51        | 100        | 14.8 kb          | GCA_002251655.1      | IIB seq1     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;0;0 |
 | **bc3** | 31        | 100        | 21.1 kb          | GCA_002251655.1      | IIB seq1     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;0;0 |
 
-We typically use k=51 for strain-level matching and k=31 for species-level matching. Notice that running at k=31 with scaled 1000 found the right match. However, if you run prefetch for this sample, you see there are three matches with `28kb` overlap, so we just got lucky that `gather` selected the "right" one for this case.
+We typically use k=51 for strain-level matching and k=31 for species-level matching. Notice that running at k=31 with scaled 1000 found the right match. However, if you run prefetch for `k=31`, you see there are three matches with `28kb` overlap, so we just got lucky that `gather` selected the right one for this test case.
 
-In contrast, running at `scaled=100` had sufficient information to correctly assign the sequence to the `IIB seq1` lingroup.
+In contrast, by sketching the `Ralstonia` genomes and metagenome at higher resolution (`scaled=100`), we had sufficient information to correctly assign the sequence to the `IIB seq1` lingroup at either ksize.
 
 
 ### Now try the `barcode5` sample
 
-You can also run the `barcode5` file using the same commands as above and see that no matches are found. If you drop the threshold-bp  to 0 (`--threshold-bp 0`), you can find ~1kbp overlap (a single k-mer match!). **Note, we do not recommend trusting/using results with fewer than 3 k-mer matches (3kbp at scaled=1000)**.
+You can also run the `barcode5` file using the same commands as above:
+
+```
+query="inputs/barcode5_36481.sig.zip"
+database="databases/ralstonia.zip"
+
+gather_csv_output="barcode5_36481.dna.k51.gather.csv"
+
+sourmash gather $query $database -k 51 -o $gather_csv_output
+```
+
+You should see:
+
+```
+selecting specified query k=51
+loaded query: barcode5_36481... (k=51, DNA)
+--
+loaded 81 total signatures from 1 locations.
+after selecting signatures compatible with search, 27 remain.
+
+Starting prefetch sweep across databases.
+Found 0 signatures via prefetch; now doing gather.
+found less than 50.0 kbp in common. => exiting
+
+found 0 matches total;
+the recovered matches hit 0.0% of the query k-mers (unweighted).
+```
+
+
+No matches are found. If you drop the threshold-bp  to 0 (`--threshold-bp 0`), you can find ~1kbp overlap (a single k-mer match!). **Note, we do not recommend trusting/using results with fewer than 3 k-mer matches (3kbp at scaled=1000)**. Especially in larger databases (e.g. NCBI/GTDB), a single k-mer match might actually be from contamination in the reference genome rather than true genome content, so you may end up assigning the wrong lineage. Requiring 3 k-mers (representing ~3kb of matching sequence) makes it more likely your matches represent true genome content.
 
 I then ran this file at higher resolution to see how the results changed. In each case, very few k-mers matched and we could not robustly identify a specific `Ralstonia` genome or lingroup. As it turns out, `barcode5` does not have a `Ralstonia` spike-in, so this is a good thing!
 
@@ -487,7 +516,9 @@ Here's an abbreviated version of the `gather` results for  `barcode5`, with ling
 | **bc5** | 31        | 5          | 500 bp           | all                  |              |                                    |
 
 
-**Again, while I've used a threshold-bp of 0 to get the gather match at scaled=1000, we do not typically trust gather matches with less than `3*scaled` overlap (< 3 k-mers matched).**
+**Again, while I've used a threshold-bp of 0 to get the gather match at scaled=1000, we do not typically trust gather matches with less than `3*scaled` overlap (< 3 k-mers matched).** Even at very high resolution (scaled=5), we matched nearly all Ralstonia genomes and could not distinguish a single lingroup.
+
+We typically recommend running at `scaled=1000` (our default), as this works for most microbial use cases. You can run at higher resolution (lower scaled) if you need to, but higher resolution signatures are larger and can take significantly longer to build and search - use at your own risk :).
 
 ## Summary and concluding thoughts
 
