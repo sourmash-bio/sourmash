@@ -102,7 +102,9 @@ mv barcode5_36481.sig.zip ./inputs
 ls inputs
 ```
 
-## Start with the `barcode1` (highest spike-in) sample
+## Look at the signatures
+
+Let's start with the `barcode1` (highest spike-in) sample
 
 ### First, let's look at the metagenome signature.
 
@@ -309,7 +311,7 @@ sourmash tax metagenome -g $gather_csv_output -t $taxonomy_csv \
 
 > You should see `saving 'lingroup_report' output to 'barcode1.lingroup_report.tsv'` in the output.
 
-#### Optionally, output multiple output formats
+#### Optionally, write multiple output formats
 
 You can use `-F` to specify additional output formats. Here, I've added `csv_summary`. Note that `lingroup_report` will be generated automatically if you specify the `--lingroups` file.
 
@@ -424,7 +426,7 @@ Abbreviated results, `barcode3`:
 
 
 
-## barcode5
+### Now try barcode5
 
 You can also run the `barcode5` file using the same commands as above and see that no matches are found. If you drop the threshold-bp  to 0 (`--threshold-bp 0`), you can find ~1kbp overlap (a single k-mer match!). **Note, we do not recommend trusting/using results with fewer than 3 k-mer matches (3kbp at scaled=1000)**.
 
