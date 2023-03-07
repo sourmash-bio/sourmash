@@ -3412,7 +3412,7 @@ def test_metagenome_LIN_lingroups(runtmp):
 
     lg_file = runtmp.output("test.lg.csv")
     with open(lg_file, 'w') as out:
-        out.write('lingroup_prefix,lingroup_name\n')
+        out.write('lin,name\n')
         out.write('0;0;0,lg1\n')
         out.write('1;0;0,lg2\n')
         out.write('2;0;0,lg3\n')
@@ -3421,7 +3421,7 @@ def test_metagenome_LIN_lingroups(runtmp):
         out.write('1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,lg4\n')
 
     c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
-                   '--lins', '--lingroups', lg_file)
+                   '--lins', '--lingroup', lg_file)
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -3430,7 +3430,7 @@ def test_metagenome_LIN_lingroups(runtmp):
     assert c.last_result.status == 0
     assert "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0" in c.last_result.err
     assert "Read 5 lingroup rows and found 5 distinct lingroup prefixes." in c.last_result.err
-    assert "lingroup_name	lingroup_prefix	percent_containment	num_bp_contained" in c.last_result.out
+    assert "name	lin	percent_containment	num_bp_contained" in c.last_result.out
     assert "lg1	0;0;0	5.82	714000" in c.last_result.out
     assert "lg2	1;0;0	5.05	620000" in c.last_result.out
     assert "lg3	2;0;0	1.56	192000" in c.last_result.out
@@ -3521,7 +3521,7 @@ def test_metagenome_LIN_lingroups_empty_lg_file(runtmp):
 
     with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
-                   '--lins', '--lingroups', lg_file)
+                   '--lins', '--lingroup', lg_file)
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -3544,24 +3544,23 @@ def test_metagenome_LIN_lingroups_bad_cli_inputs(runtmp):
 
     with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
-                   '--lins', '-F', "lingroup_report")
+                   '--lins', '-F', "lingroup")
 
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
 
     assert c.last_result.status != 0
-    assert "Must provide lingroups csv via '--lingroups' in order to output a lingroup_report." in c.last_result.err
+    assert "Must provide lingroup csv via '--lingroup' in order to output a lingroup report." in c.last_result.err
 
     with pytest.raises(SourmashCommandFailed):
-        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-F', "lingroup_report")
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-F', "lingroup")
     print(c.last_result.err)
     assert c.last_result.status != 0
     assert "Must enable LIN taxonomy via '--lins' in order to use lingroups." in c.last_result.err
-    # assert "Must enable LIN taxonomy via '--lins' in order to output a lingroup_report." in c.last_result.err
 
     with pytest.raises(SourmashCommandFailed):
-        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '--lingroups', lg_file)
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '--lingroup', lg_file)
     print(c.last_result.err)
     assert c.last_result.status != 0
     assert "Must enable LIN taxonomy via '--lins' in order to use lingroups." in c.last_result.err
@@ -3605,11 +3604,11 @@ def test_metagenome_LIN_lingroups_lg_only_header(runtmp):
 
     lg_file = runtmp.output("test.lg.csv")
     with open(lg_file, 'w') as out:
-        out.write('lingroup_prefix,lingroup_name\n')
+        out.write('lin,name\n')
 
     with pytest.raises(SourmashCommandFailed):
         c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
-                   '--lins', '--lingroups', lg_file)
+                   '--lins', '--lingroup', lg_file)
 
     print(c.last_result.status)
     print(c.last_result.out)

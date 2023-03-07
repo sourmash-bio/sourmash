@@ -170,11 +170,11 @@ def test_SummarizedGatherResult_LINs():
 
     lgD = sgr.as_lingroup_dict(query_info=qInf, lg_name="lg_name")
     print(lgD)
-    assert lgD == {'lingroup_name': "lg_name", "lingroup_prefix": "0;0;1",
+    assert lgD == {'name': "lg_name", "lin": "0;0;1",
                    'percent_containment': '30.00', 'num_bp_contained': "600"}
     lgD = sgr.as_lingroup_dict(query_info=qInf, lg_name="lg_name")
     print(lgD)
-    assert lgD == {'lingroup_name': "lg_name", "lingroup_prefix": "0;0;1",
+    assert lgD == {'name': "lg_name", "lin": "0;0;1",
                    'percent_containment': '30.00', 'num_bp_contained': "600"}
     with pytest.raises(ValueError) as exc:
         sgr.as_kreport_dict(query_info=qInf)
@@ -2791,14 +2791,14 @@ def test_make_lingroup_results():
 
     header, lgD = q_res.make_lingroup_results(LINgroupsD = lingroupD)
     print(header)
-    assert header == ['lingroup_name', 'lingroup_prefix', 'percent_containment', 'num_bp_contained']
+    assert header == ['name', 'lin', 'percent_containment', 'num_bp_contained']
     # order may change, just check that each lg entry is present in list of results
     lg1 = {'percent_containment': '60.00', 'num_bp_contained': '60',
-                    'lingroup_prefix': '1', 'lingroup_name': 'lg1'}
+                    'lin': '1', 'name': 'lg1'}
     lg2 = {'percent_containment': '40.00', 'num_bp_contained': '40',
-                    'lingroup_prefix': '1;0', 'lingroup_name': 'lg2'}
+                    'lin': '1;0', 'name': 'lg2'}
     lg3 = {'percent_containment': '20.00', 'num_bp_contained': '20',
-                    'lingroup_prefix': '1;1', 'lingroup_name': 'lg3'}
+                    'lin': '1;1', 'name': 'lg3'}
     assert lg1 in lgD
     assert lg2 in lgD
     assert lg3 in lgD
@@ -2818,7 +2818,7 @@ def test_make_lingroup_results_fail_pre_v450():
 def test_read_lingroups(runtmp):
     lg_file = runtmp.output("test.lg.csv")
     with open(lg_file, 'w') as out:
-        out.write('lingroup_prefix,lingroup_name\n')
+        out.write('lin,name\n')
         out.write('1,lg1\n')
         out.write('1;0,lg2\n')
         out.write('1;1,lg3\n')
@@ -2839,7 +2839,7 @@ def test_read_lingroups_empty_file(runtmp):
 def test_read_lingroups_only_header(runtmp):
     lg_file = runtmp.output("test.lg.csv")
     with open(lg_file, 'w') as out:
-        out.write('lingroup_prefix,lingroup_name\n')
+        out.write('lin,name\n')
     with pytest.raises(ValueError) as exc:
         read_lingroups(lg_file)
     print(str(exc))
@@ -2853,7 +2853,7 @@ def test_read_lingroups_bad_header(runtmp):
     with pytest.raises(ValueError) as exc:
         read_lingroups(lg_file)
     print(str(exc))
-    assert f"'{lg_file}' must contain the following columns: 'lingroup_prefix', 'lingroup_name'." in str(exc)
+    assert f"'{lg_file}' must contain the following columns: 'name', 'lin'." in str(exc)
 
 
 def test_LineageTree_init():

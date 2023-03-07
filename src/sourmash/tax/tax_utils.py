@@ -620,10 +620,10 @@ def read_lingroups(lingroup_csv):
         # check for empty file
         if not header:
             raise ValueError(f"Cannot read lingroups from '{lingroup_csv}'. Is file empty?")
-        if "lingroup_prefix" not in header or "lingroup_name" not in header:
-            raise ValueError(f"'{lingroup_csv}' must contain the following columns: 'lingroup_prefix', 'lingroup_name'.")
+        if "lin" not in header or "name" not in header:
+            raise ValueError(f"'{lingroup_csv}' must contain the following columns: 'name', 'lin'.")
         for n, row in enumerate(r):
-            lingroupD[row['lingroup_prefix']] = row['lingroup_name']
+            lingroupD[row['lin']] = row['name']
 
     if n is None:
         raise ValueError(f'No lingroups loaded from {lingroup_csv}.')
@@ -1731,14 +1731,14 @@ class SummarizedGatherResult:
     
     def as_lingroup_dict(self, query_info, lg_name):
         """
-        Produce LINgroup report dict for LINgroups.
+        Produce lingroup report dict for lingroups.
         """
         sD = {}
         # total percent containment, weighted to include abundance info
         sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
         sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_bp))
-        sD["lingroup_prefix"] = self.lineage.display_lineage()
-        sD["lingroup_name"] = lg_name
+        sD["lin"] = self.lineage.display_lineage()
+        sD["name"] = lg_name
         return sD
 
 
@@ -2131,7 +2131,7 @@ class QueryTaxResult:
         Keep LCA paths in order as much as possible.
         """
         self.check_summarization()
-        header = ["lingroup_name", "lingroup_prefix", "percent_containment", "num_bp_contained"]
+        header = ["name", "lin", "percent_containment", "num_bp_contained"]
 
         if self.query_info.total_weighted_hashes == 0:
             raise ValueError("ERROR: cannot produce 'LINgroup_report' format from gather results before sourmash v4.5.0")

@@ -217,7 +217,7 @@ These commands will show the first few lines of each file. If you prefer, you ca
 - **taxonomy_csv:** `databases/ralstonia-lin.taxonomy.GCA-GCF.csv`
   - the essential columns are `lin` (`14;1;0;...`) and `ident` (`GCF_00`...)
 - **lingroups information:** `databases/ralstonia.lingroups.csv`
-  - both columns are essential (`lingroup_name`, `lingroup_prefix`)
+  - both columns are essential (`name`, `lin`)
 
 
 Look at the taxonomy file:
@@ -244,24 +244,24 @@ head -n5 databases/ralstonia.lingroups.csv
 
 You should see:
 ```
-lingroup_name,lingroup_prefix
+name,lin
 Phyl II,14;1;0;0;0;3;0
 Phyl IIA,14;1;0;0;0;3;0;1;0;0
 Phyl IIB,14;1;0;0;0;3;0;0
 Phyl IIB seq1 and seq2,14;1;0;0;0;3;0;0;0;0;1;0;0;0;0
 ```
 > Here, we have two columns:
-> - `lingroup_name` - the name for each lingroup. 
-> - `lingroup_prefix` - the LIN prefix corresponding to each group.
+> - `name` - the name for each lingroup. 
+> - `lin` - the LIN prefix corresponding to each group.
 
 
 ### Now, run `sourmash tax metagenome` to integrate taxonomic information into `gather` results
 
-Using the `gather` output we generated above, we can integrate taxonomic information and summarize up "ranks" (LIN positions). We can produce several different types of outputs, including a `lingroup_report`.
+Using the `gather` output we generated above, we can integrate taxonomic information and summarize up "ranks" (LIN positions). We can produce several different types of outputs, including a `lingroup` report.
 
-`lingroup_report` format summarizes the taxonomic information at the provided `lingroup` levels, and produces a report with 4 columns: 
-- `lingroup_name` (from lingroups file)
-- `lingroup_prefix` (from lingroups file)
+`lingroup` format summarizes the taxonomic information at the provided `lingroup` levels, and produces a report with 4 columns: 
+- `name` (from lingroups file)
+- `lin` (from lingroups file)
 - `percent_containment` - total % of the file matched to this lingroup
 - `num_bp_contained` - estimated number of bp matched to this lingroup
 
@@ -274,8 +274,8 @@ taxonomy_csv="databases/ralstonia-lin.taxonomy.GCA-GCF.csv"
 lingroups_csv="databases/ralstonia.lingroups.csv"
 
 sourmash tax metagenome -g $gather_csv_output -t $taxonomy_csv \
-                        --lins --lingroups $lingroups_csv \
-                        -F lingroup_report
+                        --lins --lingroup $lingroups_csv \
+                        -F lingroup
 ```
 
 You should see:
@@ -288,7 +288,7 @@ Read 11 lingroup rows and found 11 distinct lingroup prefixes.
 
 and the results:
 ```
-lingroup_name	lingroup_prefix	percent_containment	num_bp_contained
+name	lin	percent_containment	num_bp_contained
 Phyl II	14;1;0;0;0;3;0	0.02	108000
 Phyl IIB	14;1;0;0;0;3;0;0	0.02	108000
 Phyl IIB seq1 and seq2	14;1;0;0;0;3;0;0;0;0;1;0;0;0;0	0.02	108000
@@ -299,7 +299,7 @@ Here, the most specific lingroup we assign to is `Phyl IIB seq1`, which is the p
 
 
 
-#### Now output the lingroup_report to a file (instead of to the terminal)
+#### Now output the lingroup report to a file (instead of to the terminal)
 
 use `-o` to provide an output basename for taxonomic output.
 
@@ -309,25 +309,25 @@ taxonomy_csv="databases/ralstonia-lin.taxonomy.GCA-GCF.csv"
 lingroups_csv="databases/ralstonia.lingroups.csv"
 
 sourmash tax metagenome -g $gather_csv_output -t $taxonomy_csv \
-                        --lins --lingroups $lingroups_csv \
-                        -F lingroup_report -o "barcode1"
+                        --lins --lingroup $lingroups_csv \
+                        -F lingroup -o "barcode1"
 ```
 
-> You should see `saving 'lingroup_report' output to 'barcode1.lingroup_report.tsv'` in the output.
+> You should see `saving 'lingroup' output to 'barcode1.lingroup.tsv'` in the output.
 
 #### Optionally, write multiple output formats
 
-You can use `-F` to specify additional output formats. Here, I've added `csv_summary`. Note that `lingroup_report` will be generated automatically if you specify the `--lingroups` file.
+You can use `-F` to specify additional output formats. Here, I've added `csv_summary`. Note that `lingroup` will be generated automatically if you specify the `--lingroup` file.
 
 Run:
 ```
 gather_csv_output="barcode1_22141.k51.gather.csv"
 taxonomy_csv="databases/ralstonia-lin.taxonomy.GCA-GCF.csv"
-lingroups_csv="databases/ralstonia.lingroups.csv"
+lingroups_csv="databases/ralstonia.lingroup.csv"
 
 sourmash tax metagenome -g $gather_csv_output -t $taxonomy_csv \
-                        --lins --lingroups $lingroups_csv \
-                        -F lingroup_report csv_summary -o "barcode1"
+                        --lins --lingroup $lingroups_csv \
+                        -F lingroup csv_summary -o "barcode1"
 ```
 
 
@@ -335,7 +335,7 @@ You should see the following in the output:
 
 ```
 saving 'csv_summary' output to 'barcode1.summarized.csv'.
-saving 'lingroup_report' output to 'barcode1.lingroup_report.txt'.
+saving 'lingroup' output to 'barcode1.lingroup.txt'.
 ```
 
 The `csv_summary` format is the **full** summary of this sample, e.g. the summary at each taxonomic rank (LIN position). It also includes an entry with the `unclassified` portion at each rank.
@@ -344,7 +344,7 @@ The `csv_summary` format is the **full** summary of this sample, e.g. the summar
 
 Abbreviated Results, `barcode1`:
 
-|              | **ksize** | **scaled** | **best overlap** | **gather match(es)** | **lingroup** | **lingroup_prefix**                |
+|              | **ksize** | **scaled** | **best overlap** | **gather match(es)** | **lingroup** | **lin**                            |
 | ------------ | --------- | ---------- | ---------------- | -------------------- | ------------ | ---------------------------------- |
 | **barcode1** | 51        | 1000       | 105 kb           | GCA_002251655.1      | IIB seq1     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;0;0 |
 | **barcode1** | 31        | 1000       | 173 kb           | GCA_002251655.1      | IIB seq1     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;0;0 |
@@ -421,7 +421,7 @@ To see if we could robustly assign the correct sequevar for `barcode3` using a h
 Abbreviated results, `barcode3`:
 
 
-|              | **ksize** | **scaled** | **best overlap** | **gather match(es)** | **lingroup** | **lingroup_prefix**                |
+|              | **ksize** | **scaled** | **best overlap** | **gather match(es)** | **lingroup** | **lin**                            |
 | ------------ | --------- | ---------- | ---------------- | -------------------- | ------------ | ---------------------------------- |
 | **barcode3** | 51        | 1000       | 12kb             | GCA_000750575.1      | IIB seq2     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;1;0 |
 | **barcode3** | 31        | 1000       | 28 kb            | GCA_002251655.1      | IIB seq1     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;0;0 |
@@ -438,7 +438,7 @@ I then ran this file at higher resolution to see how the results changed. In eac
 
 Abbreviated results, `barcode5`:
 
-|              | **ksize** | **scaled** | **best overlap** | **gather match(es)** | **lingroup** | **lingroup_prefix**                |
+|              | **ksize** | **scaled** | **best overlap** | **gather match(es)** | **lingroup** | **lin**                            |
 | ------------ | --------- | ---------- | ---------------- | -------------------- | ------------ | ---------------------------------- |
 | **barcode5** | 51        | 1000       | 1 kbp            | GCA_000750575.1      | IIB seq2     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;1;0 |
 | **barcode5** | 31        | 1000       | 0                | N/A                  |              |                                    |

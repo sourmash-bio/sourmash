@@ -20,7 +20,7 @@ Note that the SBT and LCA databases can be used with sourmash v3.5 and later, wh
 For each prepared database, we have also made taxonomic information available linking each genome with its assigned lineage (`GTDB` or `NCBI` as appropriate).
 For private databases, users can create their own `taxonomy` files: the critical columns are `ident`, containing the genome accession (e.g. `GCA_1234567.1`) and
 a column for each taxonomic rank, `superkingdom` to `species`. If a `strain` column is provided, it will also be used.
-As of v4.8, we can also use LIN taxonomic information in tax commands that accept the `--lins` flag. If used, `sourmash tax` commands will require a `lin` column in the taxonomy file which should contain `;`-separated LINs, preferably with a standard number of positions (e.g. all 20 positions in length or all 10 positions in length). Some taxonomy commands also accept a `lingroups` file, which is a two-column file (`lingroup_name`, `lingroup_prefix`) describing the name and LIN prefix of LINgroups to be used for taxonomic summarization.
+As of v4.8, we can also use LIN taxonomic information in tax commands that accept the `--lins` flag. If used, `sourmash tax` commands will require a `lin` column in the taxonomy file which should contain `;`-separated LINs, preferably with a standard number of positions (e.g. all 20 positions in length or all 10 positions in length). Some taxonomy commands also accept a `lingroups` file, which is a two-column file (`name`, `lin`) describing the name and LIN prefix of LINgroups to be used for taxonomic summarization.
 
 ## Downloading and using the databases
 

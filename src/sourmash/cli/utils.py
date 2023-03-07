@@ -164,14 +164,14 @@ def check_tax_outputs(args, rank_required = ["krona"]):
         if any(x in rank_required for x in args.output_format):
             raise ValueError(f"Rank (--rank) is required for {', '.join(rank_required)} output formats.")
 
-    # check that `--lins` is specified and `--lingroups` file exists if needed
+    # check that `--lins` is specified and `--lingroup` file exists if needed
     if args.lins:
-        if args.lingroups:
-            if "lingroup_report" not in args.output_format:
-                args.output_format.append("lingroup_report")
-        elif "lingroup_report" in args.output_format:
-            raise ValueError(f"Must provide lingroups csv via '--lingroups' in order to output a lingroup_report.")
-    elif args.lingroups or "lingroup_report" in args.output_format:
+        if args.lingroup:
+            if "lingroup" not in args.output_format:
+                args.output_format.append("lingroup")
+        elif "lingroup" in args.output_format:
+            raise ValueError(f"Must provide lingroup csv via '--lingroup' in order to output a lingroup report.")
+    elif args.lingroup or "lingroup" in args.output_format:
         raise ValueError(f"Must enable LIN taxonomy via '--lins' in order to use lingroups.")
 
     # check that only one output format is specified if writing to stdout

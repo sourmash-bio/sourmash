@@ -42,7 +42,7 @@ _output_type_to_ext = {
     'human': '.human.txt',
     'lineage_csv': '.lineage.csv',
     'kreport': ".kreport.txt",
-    'lingroup_report': ".lingroup_report.tsv"
+    'lingroup': ".lingroup.tsv"
     }
 
 def make_outfile(base, output_type, *, output_dir = ""):
@@ -168,16 +168,16 @@ def metagenome(args):
             tax_utils.write_output(header, kreport_results, out_fp, sep="\t", write_header=False)
 
     # write summarized --> LINgroup output tsv
-    if "lingroup_report" in args.output_format:
+    if "lingroup" in args.output_format:
         try:
-            lingroups = tax_utils.read_lingroups(args.lingroups)
+            lingroups = tax_utils.read_lingroups(args.lingroup)
         except ValueError as exc:
             error(f"ERROR: {str(exc)}")
             sys.exit(-1)
 
-        lingroup_reportfile, limit_float = make_outfile(args.output_base, "lingroup_report", output_dir=args.output_dir)
+        lingroupfile, limit_float = make_outfile(args.output_base, "lingroup", output_dir=args.output_dir)
 
-        with FileOutputCSV(lingroup_reportfile) as out_fp:
+        with FileOutputCSV(lingroupfile) as out_fp:
             header, lgreport_results = single_query_results.make_lingroup_results(LINgroupsD = lingroups)
             tax_utils.write_output(header, lgreport_results, out_fp, sep="\t", write_header=True)
 

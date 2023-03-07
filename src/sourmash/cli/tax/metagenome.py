@@ -69,7 +69,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-F', '--output-format', default=[], nargs='*', action="extend",
-        choices=["human", "csv_summary", "krona", "lineage_summary",  "kreport", "lingroup_report"],
+        choices=["human", "csv_summary", "krona", "lineage_summary",  "kreport", "lingroup"],
         help='choose output format(s)',
     )
     subparser.add_argument(
@@ -78,11 +78,11 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '--lins', '--lin-taxonomy', action='store_true', default=False,
-        help='use LIN taxonomy in place of standard taxonomic ranks.  Note that the taxonomy CSV must contain LIN lineage information.'
+        help="use LIN taxonomy in place of standard taxonomic ranks.  Note that the taxonomy CSV must contain 'lin' lineage information."
     )
     subparser.add_argument(
-        '--lingroups', metavar='FILE', default=None,
-        help='CSV containing lingroup_name, lingroup_prefix. Will produce a "lingroup_report" file containing taxonomic summarization for each lingroup.'
+        '--lingroup', metavar='FILE', default=None,
+        help="CSV containing 'name', 'lin' columns, where 'lin' is the lingroup prefix. Will produce a 'lingroup' report containing taxonomic summarization for each group."
     )
     add_rank_arg(subparser)
 

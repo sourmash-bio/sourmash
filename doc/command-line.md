@@ -714,13 +714,13 @@ example sourmash `{output-name}.kreport.txt`:
 ```
 
 
-#### `lingroup_report` output format
+#### `lingroup` output format
 
-When using LIN taxonomic information, you can optionally also provide a  `lingroups` with `lingroup_name` and `lingroup_prefix` columns. If provided, we will output a `lingroup_report` of the format `{base}.lingroup_report.tsv`, where `{base}` is the name provided via the `-o`,` --output-base` option. This output includes just the subset of LIN positions that match the provided prefixes (selected from the full summary). The output will the `lingroup` info and two additional columns: `percent_containment`, the total percent of the dataset contained in this lingroup and all descendents, and `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendents. Similar to `kreport` above, we use the wording "contained" rather than "assigned," because `sourmash` assigns matches at the genome level, and the `tax` functions simply summarize this information.
+When using LIN taxonomic information, you can optionally also provide a  `lingroups` with `name` and `lin` columns. If provided, we will output a `lingroup` of the format `{base}.lingroups.tsv`, where `{base}` is the name provided via the `-o`,` --output-base` option. This output includes just the subset of LIN positions that match the provided prefixes (selected from the full summary). The output will the `lingroup` info and two additional columns: `percent_containment`, the total percent of the dataset contained in this lingroup and all descendents, and `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendents. Similar to `kreport` above, we use the wording "contained" rather than "assigned," because `sourmash` assigns matches at the genome level, and the `tax` functions simply summarize this information.
 
 example output:
 ```
-lingroup_name	lingroup_prefix	percent_containment	num_bp_contained
+name	lin	percent_containment	num_bp_contained
 lg1	0;0;0	5.82	714000
 lg2	1;0;0	5.05	620000
 lg3	2;0;0	1.56	192000
