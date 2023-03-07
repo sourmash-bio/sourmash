@@ -81,7 +81,7 @@ def subparser(subparsers):
         help="use LIN taxonomy in place of standard taxonomic ranks.  Note that the taxonomy CSV must contain 'lin' lineage information."
     )
     subparser.add_argument(
-        '--lingroup', metavar='FILE', default=None,
+        '--lingroup', '--lingroups', metavar='FILE', default=None,
         help="CSV containing 'name', 'lin' columns, where 'lin' is the lingroup prefix. Will produce a 'lingroup' report containing taxonomic summarization for each group."
     )
     add_rank_arg(subparser)
