@@ -13,7 +13,7 @@ requires sourmash v4.8+
 ```
 
 This tutorial uses the `sourmash taxonomy` module, which was introduced via [blog post](https://bluegenes.github.io/sourmash-tax/)
-and was recently shown to perfom well for taxonomic profiling of long (and short!) reads in [Evaluation of taxonomic classification and profiling methods for long-read shotgun metagenomic sequencing datasets](https://link.springer.com/article/10.1186/s12859-022-05103-0), Portik et al., 2022.
+and was recently shown to perfom well for taxonomic profiling of long (and short) reads in [Evaluation of taxonomic classification and profiling methods for long-read shotgun metagenomic sequencing datasets](https://link.springer.com/article/10.1186/s12859-022-05103-0), Portik et al., 2022.
 
 
 In this tutorial, we'll use sourmash gather to analyze metagenomes using the [LIN taxonomic framework](https://dl.acm.org/doi/pdf/10.1145/3535508.3545546).
@@ -27,7 +27,7 @@ all known pathogenic strains.
 
 The pathogen is `Ralstonia solanacearum` in the `Phylum IIB sequevar 1` group. 
 
-This data is courtesy of [The Laboratory of Plant & Atmospheric Microbiology & (Meta)Genomics](https://sites.google.com/vt.edu/lab-vinatzer/home).
+This data is courtesy of [The Laboratory of Plant & Atmospheric Microbiology & (Meta)Genomics](https://sites.google.com/vt.edu/lab-vinatzer/home) in collaboration with USDA APHIS.
 
 ## Install sourmash
 
@@ -47,7 +47,7 @@ conda activate smash
 ```
 
 > Victory conditions: your prompt should start with
-> `(smash)  `
+> `(smash) `
 > and you should now be able to run `sourmash` and have it output usage information!!
 
 ## Create a working subdirectory
@@ -168,7 +168,7 @@ There's a lot of things to digest in this output but the two main ones are:
 ## Run sourmash gather using ksize 51
 
 Now let's run `sourmash gather` to find the closest reference genome(s) in the database.
-If you want to read more about what, exactly, sourmash is doing, please see [Lightweight compositional analysis of metagenomes with FracMinHash and minimum metagenome covers](https://www.biorxiv.org/content/10.1101/2022.01.11.475838v2), Irber et al., 2022.
+If you want to read more about what sourmash is doing, please see [Lightweight compositional analysis of metagenomes with FracMinHash and minimum metagenome covers](https://www.biorxiv.org/content/10.1101/2022.01.11.475838v2), Irber et al., 2022.
 
 Run:
 ```
@@ -201,14 +201,11 @@ the recovered matches hit 0.0% of the abundance-weighted query.
 the recovered matches hit 0.0% of the query k-mers (unweighted).
 ```
 
-We only had one match, and it was a very small percentage of the total dataset. This is expected,
-since the dataset is a plant metagenome with a small `Ralstonia` spike-in.
+The first step of gather found all potential matches (7), and the greedy algorithm narrowed this to a single best match, `GCA_002251655.1` which shared an estimated 105 kbp with the metagenome (a very small percentage of the total dataset.) This is expected, though, since the dataset is a plant metagenome with a small `Ralstonia` spike-in.
 
 ## Add taxonomic information and summarize up lingroups
 
-`sourmash gather` finds the smallest set of reference genomes that contains all the known information (k-mers) in the metagenome.
-In most cases, `gather` will find many metagenome matches. Here, we're only looking for `Ralstonia` matches and we only have a
-single match. Regardless, let's use `sourmash tax metagenome` to add taxonomic information and see if we've correctly assigned the pathogenic sequence.
+`sourmash gather` finds the smallest set of reference genomes that contains all the known information (k-mers) in the metagenome. In most cases, `gather` will find many metagenome matches. Here, we're only looking for `Ralstonia` matches and we only have a single gather result. Regardless, let's use `sourmash tax metagenome` to add taxonomic information and see if we've correctly assigned the pathogenic sequence.
 
 ### First, let's look at the relevant taxonomy files.
 
@@ -257,9 +254,9 @@ Phyl IIB seq1 and seq2,14;1;0;0;0;3;0;0;0;0;1;0;0;0;0
 
 ### Now, run `sourmash tax metagenome` to integrate taxonomic information into `gather` results
 
-Using the `gather` output we generated above, we can integrate taxonomic information and summarize up "ranks" (LIN positions). We can produce several different types of outputs, including a `lingroup` report.
+Using the `gather` output we generated above, we can integrate taxonomic information and summarize up "ranks" (lin positions). We can produce several different types of outputs, including a `lingroup` report.
 
-`lingroup` format summarizes the taxonomic information at the provided `lingroup` levels, and produces a report with 4 columns: 
+`lingroup` format summarizes the taxonomic information at each `lingroup`, and produces a report with 4 columns: 
 - `name` (from lingroups file)
 - `lin` (from lingroups file)
 - `percent_containment` - total % of the file matched to this lingroup
@@ -274,8 +271,7 @@ taxonomy_csv="databases/ralstonia-lin.taxonomy.GCA-GCF.csv"
 lingroups_csv="databases/ralstonia.lingroups.csv"
 
 sourmash tax metagenome -g $gather_csv_output -t $taxonomy_csv \
-                        --lins --lingroup $lingroups_csv \
-                        -F lingroup
+                        --lins --lingroup $lingroups_csv
 ```
 
 You should see:
@@ -295,8 +291,7 @@ Phyl IIB seq1 and seq2	14;1;0;0;0;3;0;0;0;0;1;0;0;0;0	0.02	108000
 IIB seq1	14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;0;0	0.02	108000
 ```
 
-Here, the most specific lingroup we assign to is `Phyl IIB seq1`, which is the pathogenic lingroup that was spiked in, YAY! Note that the other groups in the output all contain this group.
-
+Here, the most specific lingroup we assign to is `Phyl IIB seq1`, which is the pathogenic lingroup that was spiked in, yay! Note that the other groups in the output all contain this group.
 
 
 #### Now output the lingroup report to a file (instead of to the terminal)
@@ -310,14 +305,14 @@ lingroups_csv="databases/ralstonia.lingroups.csv"
 
 sourmash tax metagenome -g $gather_csv_output -t $taxonomy_csv \
                         --lins --lingroup $lingroups_csv \
-                        -F lingroup -o "barcode1"
+                        -o "barcode1"
 ```
 
 > You should see `saving 'lingroup' output to 'barcode1.lingroup.tsv'` in the output.
 
 #### Optionally, write multiple output formats
 
-You can use `-F` to specify additional output formats. Here, I've added `csv_summary`. Note that `lingroup` will be generated automatically if you specify the `--lingroup` file.
+You can use `-F` to specify additional output formats. Here, I've added `csv_summary`. Note that while the `lingroup` format will be generated automatically if you specify the `--lingroup` file, you can also specify it with `-F lingroup` if you want, as I've done here.
 
 Run:
 ```
@@ -342,12 +337,12 @@ The `csv_summary` format is the **full** summary of this sample, e.g. the summar
 
 > Note: Multiple output formats require the `-o` `--output-base` to be specified, as each must be written to a file.
 
-Abbreviated Results, `barcode1`:
+Here's an abbreviated version of the `gather` results for  `barcode1`, with lingroup information added:
 
-|              | **ksize** | **scaled** | **best overlap** | **gather match(es)** | **lingroup** | **lin**                            |
-| ------------ | --------- | ---------- | ---------------- | -------------------- | ------------ | ---------------------------------- |
-| **barcode1** | 51        | 1000       | 105 kb           | GCA_002251655.1      | IIB seq1     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;0;0 |
-| **barcode1** | 31        | 1000       | 173 kb           | GCA_002251655.1      | IIB seq1     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;0;0 |
+|         | **ksize** | **scaled** | **best overlap** | **gather match(es)** | **lingroup** | **lin**                            |
+| ------- | --------- | ---------- | ---------------- | -------------------- | ------------ | ---------------------------------- |
+| **bc1** | 51        | 1000       | 105 kb           | GCA_002251655.1      | IIB seq1     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;0;0 |
+| **bc1** | 31        | 1000       | 173 kb           | GCA_002251655.1      | IIB seq1     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;0;0 |
 
 
 ### Now run with `barcode3` sample
@@ -363,7 +358,23 @@ gather_csv_output="barcode3_31543.dna.k51.gather.csv"
 sourmash gather $query $database -k 51 -o $gather_csv_output
 ```
 
-#### we found no matches! But, we can lower the detection threshold:
+You should see:
+```
+selecting specified query k=51
+loaded query: barcode3_31543... (k=51, DNA)
+loading from 'databases/ralstonia.zip'...
+loaded 81 total signatures from 1 locations.
+after selecting signatures compatible with search, 27 remain.
+Starting prefetch sweep across databases.
+Found 0 signatures via prefetch; now doing gather.
+found less than 50.0 kbp in common. => exiting
+
+
+found 0 matches total;
+the recovered matches hit 0.0% of the query k-mers (unweighted).
+```
+
+#### gather found no sequence matches! But, we can lower the detection threshold:
 
 ```
 query="inputs/barcode3_31543.sig.zip"
@@ -374,10 +385,30 @@ gather_csv_output="barcode3_31543.k51.gather.csv"
 sourmash gather $query $database -k 51 --threshold-bp 10000 -o $gather_csv_output
 ```
 
-We have a match but it's not the right one! If you run `sourmash tax metagenome` on this output, you'll see that this genome belongs to `Phyl IIB seq 2` group, which is a sister group to the correct `Phyl IIB seq` group that we expected.
+This time, you should see:
+```
+selecting specified query k=51
+loaded query: barcode3_31543... (k=51, DNA)
+loading from 'databases/ralstonia.zip'...
+loaded 81 total signatures from 1 locations.
+after selecting signatures compatible with search, 27 remain.
+Starting prefetch sweep across databases.
+Found 6 signatures via prefetch; now doing gather.
 
 
-### Dig in a bit to see what might have happened
+overlap     p_query p_match avg_abund
+---------   ------- ------- ---------
+12.0 kbp       0.0%    0.2%       1.0    GCA_000750575.1 Ralstonia solanacear...
+
+found 1 matches total;
+the recovered matches hit 0.0% of the abundance-weighted query.
+the recovered matches hit 0.0% of the query k-mers (unweighted).
+
+```
+
+You'll notice that while we have an estimated ~12kbp overlap, the matched genome (`GCA_000750575.1`) is different from the one matched above for `barcode5`. If you run `sourmash tax metagenome` on this output, you'll see that this genome belongs to `Phyl IIB seq 2` group, which is a sister group to the correct `Phyl IIB seq 1` group that we expected. So we have a match but it's not the right one -- why not?
+
+### What happened? Use `prefetch` to investigate
 
 `sourmash gather` has two steps: first, it runs a `prefetch` to find ALL genome matches, and then uses a greedy approach to select the smallest set of genomes that contain ('cover') all known sequence content. Let's run `prefetch` independently so we can look at the results of the first step. Here, let's use `--threshold-bp 0` to get all possible matches.
 
@@ -406,11 +437,13 @@ a total of 487031 query hashes remain unmatched.
 final scaled value (max across query and all matches) is 1000
 ```
 
-#### Open the `barcode3_31543.k51.prefetch.csv` file to see what it looks like
+Here, the output is telling us we found matches to 15 of the 27 Ralstonia genomes. But only **12 k-mers** were shared between the metagenome sample and the genomes. Remember that sourmash uses a representative subsample of all k-mers, so here these 12 k-mers represent ~ 12kb of sequence (12 * scaled). We've found that this is sufficient to detect presence of an organism, but at this low level, it can be hard to distinguish between closely-related genomes. Let's open the prefetch output to see how those 12 k-mers matched between different genomes.
+
+#### Look at the `barcode3_31543.k51.prefetch.csv` file
 
 > Use a spreadsheet program on your computer or use `less -S barcode3_31543.k51.prefetch.csv` to see the file on the terminal. If using `less`, hit `q` when you want to exit and return to your terminal prompt.
 
-The first column contains the estimated number of base pairs matched between our query and each matching reference genome. You'll notice there are four genomes that match 12kb of sequence, one of which is the "correct" genome (with the lineage we were expecting).
+The first column contains the estimated number of base pairs matched between our query and each matching reference genome. You'll notice there are four genomes that match 12kb of sequence, one of which is the "correct" genome (`GCA_002251655.1`, which is in the `IIB seq1` lingroup).
 
 **What is happening here?**
 
@@ -418,36 +451,40 @@ When faced with equally good matches, `sourmash gather` makes a random choice ab
 
 To see if we could robustly assign the correct sequevar for `barcode3` using a higher resolution sketch, I also ran `gather` using scaled=100.
 
-Abbreviated results, `barcode3`:
-
-
-|              | **ksize** | **scaled** | **best overlap** | **gather match(es)** | **lingroup** | **lin**                            |
-| ------------ | --------- | ---------- | ---------------- | -------------------- | ------------ | ---------------------------------- |
-| **barcode3** | 51        | 1000       | 12kb             | GCA_000750575.1      | IIB seq2     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;1;0 |
-| **barcode3** | 31        | 1000       | 28 kb            | GCA_002251655.1      | IIB seq1     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;0;0 |
-| **barcode3** | 51        | 100        | 14.8 kb          | GCA_002251655.1      | IIB seq1     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;0;0 |
-| **barcode3** | 31        | 100        | 21.1 kb          | GCA_002251655.1      | IIB seq1     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;0;0 |
+Here's an abbreviated version of the `gather` results for  `barcode3`, with lingroup information added:
 
 
 
-### Now try barcode5
+|         | **ksize** | **scaled** | **best overlap** | **gather match(es)** | **lingroup** | **lin**                            |
+| ------- | --------- | ---------- | ---------------- | -------------------- | ------------ | ---------------------------------- |
+| **bc3** | 51        | 1000       | 12kb             | GCA_000750575.1      | IIB seq2     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;1;0 |
+| **bc3** | 31        | 1000       | 28 kb            | GCA_002251655.1      | IIB seq1     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;0;0 |
+| **bc3** | 51        | 100        | 14.8 kb          | GCA_002251655.1      | IIB seq1     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;0;0 |
+| **bc3** | 31        | 100        | 21.1 kb          | GCA_002251655.1      | IIB seq1     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;0;0 |
+
+We typically use k=51 for strain-level matching and k=31 for species-level matching. Notice that running at k=31 with scaled 1000 found the right match. However, if you run prefetch for this sample, you see there are three matches with `28kb` overlap, so we just got lucky that `gather` selected the "right" one for this case.
+
+In contrast, running at `scaled=100` had sufficient information to correctly assign the sequence to the `IIB seq1` lingroup.
+
+
+### Now try the `barcode5` sample
 
 You can also run the `barcode5` file using the same commands as above and see that no matches are found. If you drop the threshold-bp  to 0 (`--threshold-bp 0`), you can find ~1kbp overlap (a single k-mer match!). **Note, we do not recommend trusting/using results with fewer than 3 k-mer matches (3kbp at scaled=1000)**.
 
 I then ran this file at higher resolution to see how the results changed. In each case, very few k-mers matched and we could not robustly identify a specific `Ralstonia` genome or lingroup. As it turns out, `barcode5` does not have a `Ralstonia` spike-in, so this is a good thing!
 
-Abbreviated results, `barcode5`:
+Here's an abbreviated version of the `gather` results for  `barcode5`, with lingroup information added in cases with a single gather match:
 
-|              | **ksize** | **scaled** | **best overlap** | **gather match(es)** | **lingroup** | **lin**                            |
-| ------------ | --------- | ---------- | ---------------- | -------------------- | ------------ | ---------------------------------- |
-| **barcode5** | 51        | 1000       | 1 kbp            | GCA_000750575.1      | IIB seq2     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;1;0 |
-| **barcode5** | 31        | 1000       | 0                | N/A                  |              |                                    |
-| **barcode5** | 51        | 100        | 300bp            | all                  |              |                                    |
-| **barcode5** | 31        | 100        | 1.2 kb           | all                  |              |                                    |
-| **barcode5** | 51        | 10         | 120 bp           | all                  |              |                                    |
-| **barcode5** | 31        | 10         | 670 bp           | all                  |              |                                    |
-| **barcode5** | 51        | 5          | 150 bp           | all                  |              |                                    |
-| **barcode5** | 31        | 5          | 500 bp           | all                  |              |                                    |
+|         | **ksize** | **scaled** | **best overlap** | **gather match(es)** | **lingroup** | **lin**                            |
+| ------- | --------- | ---------- | ---------------- | -------------------- | ------------ | ---------------------------------- |
+| **bc5** | 51        | 1000       | 1 kbp            | GCA_000750575.1      | IIB seq2     | 14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;1;0 |
+| **bc5** | 31        | 1000       | 0                | N/A                  |              |                                    |
+| **bc5** | 51        | 100        | 300bp            | all                  |              |                                    |
+| **bc5** | 31        | 100        | 1.2 kb           | all                  |              |                                    |
+| **bc5** | 51        | 10         | 120 bp           | all                  |              |                                    |
+| **bc5** | 31        | 10         | 670 bp           | all                  |              |                                    |
+| **bc5** | 51        | 5          | 150 bp           | all                  |              |                                    |
+| **bc5** | 31        | 5          | 500 bp           | all                  |              |                                    |
 
 
 **Again, while I've used a threshold-bp of 0 to get the gather match at scaled=1000, we do not typically trust gather matches with less than `3*scaled` overlap (< 3 k-mers matched).**
@@ -457,4 +494,4 @@ Abbreviated results, `barcode5`:
 The LIN taxonomic framework may be useful distinguishing groups below the species level.
 We can now use LINs and lingroups with `sourmash tax metagenome`. For low level matches, the gather greedy
 approach can struggle. We are working on ways to better warn users about this behavior and welcome
-feedback, issues, or suggestions on our [issue tracker](https://github.com/sourmash-bio/sourmash/issues/new).
+feedback and suggestions on our [issue tracker](https://github.com/sourmash-bio/sourmash/issues/new).
