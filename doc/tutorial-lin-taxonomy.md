@@ -404,7 +404,7 @@ final scaled value (max across query and all matches) is 1000
 
 > Use a spreadsheet program on your computer or use `less -S barcode3_31543.k51.prefetch.csv` to see the file on the terminal. If using `less`, hit `q` when you want to exit and return to your terminal prompt.
 
-The first column contains the estimated number of base pairs matched between our query and each matching reference genomes. You'll notice there are four genomes that match 12kb of sequence, one of which is the "correct" genome (with the lineage we were expecting).
+The first column contains the estimated number of base pairs matched between our query and each matching reference genome. You'll notice there are four genomes that match 12kb of sequence, one of which is the "correct" genome (with the lineage we were expecting).
 
 **What is happening here?**
 
@@ -428,7 +428,7 @@ Abbreviated results, `barcode3`:
 
 You can also run the `barcode5` file using the same commands as above and see that no matches are found. If you drop the threshold-bp  to 0 (`--threshold-bp 0`), you can find ~1kbp overlap (a single k-mer match!). **Note, we do not recommend trusting/using results with fewer than 3 k-mer matches (3kbp at scaled=1000)**.
 
-I then ran this file at higher resolution to see how the results changed. In each case, very few k-mers matched and we could not robustly identify the Ralstonia genome or lingroup. As it turns out, `barcode5` does not have a `Ralstonia` spike-in, so this is a good thing!
+I then ran this file at higher resolution to see how the results changed. In each case, very few k-mers matched and we could not robustly identify a specific `Ralstonia` genome or lingroup. As it turns out, `barcode5` does not have a `Ralstonia` spike-in, so this is a good thing!
 
 Abbreviated results, `barcode5`:
 
