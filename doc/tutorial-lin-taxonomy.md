@@ -288,9 +288,9 @@ Phyl IIB	14;1;0;0;0;3;0;0	0.02	108000
 Phyl IIB seq1 and seq2	14;1;0;0;0;3;0;0;0;0;1;0;0;0;0	0.02	108000
 IIB seq1	14;1;0;0;0;3;0;0;0;0;1;0;0;0;0;0;0	0.02	108000
 ```
-:::info
-Here, the most specific lingroup we assign to is `Phyl IIB seq1`, which is actually the pathogenic lingroup that was spiked in, YAY! Note that the other groups in the output all contain this group.
-:::
+
+Here, the most specific lingroup we assign to is `Phyl IIB seq1`, which is the pathogenic lingroup that was spiked in, YAY! Note that the other groups in the output all contain this group.
+
 
 
 #### Now output the lingroup_report to a file (instead of to the terminal)
@@ -444,7 +444,7 @@ Abbreviated results, `barcode5`:
 | **barcode5** | 31        | 5          | 500 bp           | all                  |              |                                    |
 
 
-**Again, while I've used a threshold-bp of 0 to get the gather match at scaled=1000, we do trust gather matches with less than `3*scaled` overlap (< 3 k-mers matched).**
+**Again, while I've used a threshold-bp of 0 to get the gather match at scaled=1000, we do not typically trust gather matches with less than `3*scaled` overlap (< 3 k-mers matched).**
 
 ## Summary and concluding thoughts
 
