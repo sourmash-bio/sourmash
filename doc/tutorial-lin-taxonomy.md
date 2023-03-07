@@ -12,6 +12,10 @@ requires sourmash v4.8+
    :depth: 2
 ```
 
+This tutorial uses the `sourmash taxonomy` module, which was introduced via [blog post](https://bluegenes.github.io/sourmash-tax/)
+and was recently shown to perfom well for taxonomic profiling of long (and short!) reads in [Evaluation of taxonomic classification and profiling methods for long-read shotgun metagenomic sequencing datasets](https://link.springer.com/article/10.1186/s12859-022-05103-0), Portik et al., 2022.
+
+
 In this tutorial, we'll use sourmash gather to analyze metagenomes using the [LIN taxonomic framework](https://dl.acm.org/doi/pdf/10.1145/3535508.3545546).
 Specifically, we will analyze plant metagenomes with a low-level pathogen spike-in.
 The goal is to see if we can correctly assign the pathogen sequence to its LINgroup, which includes
