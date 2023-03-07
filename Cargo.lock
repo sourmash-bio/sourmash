@@ -428,7 +428,7 @@ dependencies = [
  "capnp",
  "memmap",
  "murmurhash3",
- "needletail",
+ "needletail 0.4.1",
  "numpy",
  "rayon",
  "serde",
@@ -710,6 +710,17 @@ dependencies = [
  "flate2",
  "memchr",
  "xz2",
+]
+
+[[package]]
+name = "needletail"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "50a9c08c2fd39675e80652857b6d609b5ebe8f6dc72ab62b69faef8838afd3df"
+dependencies = [
+ "buf_redux",
+ "bytecount",
+ "memchr",
 ]
 
 [[package]]
@@ -1275,7 +1286,7 @@ dependencies = [
  "md5",
  "memmap2",
  "murmurhash3",
- "needletail",
+ "needletail 0.5.0",
  "niffler",
  "nohash-hasher",
  "num-iter",
