@@ -135,17 +135,17 @@ def add_num_arg(parser, default=0):
 
 
 def check_rank(args):
-    """ Check `--rank`/`--position`/`--lin-position` argument matches selected taxonomy."""
+    """ Check '--rank'/'--position'/'--lin-position' argument matches selected taxonomy."""
     standard_ranks =['strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom']
     if args.lins:
         if args.rank.isdigit(): 
         #if isinstance(args.rank, int):
             return str(args.rank)
-        raise argparse.ArgumentTypeError(f"Invalid `--rank`/`--position` input: {args.rank}. `--lins` is specified. Rank must be an integer corresponding to a LIN position.")
+        raise argparse.ArgumentTypeError(f"Invalid '--rank'/'--position' input: '{args.rank}'. '--lins' is specified. Rank must be an integer corresponding to a LIN position.")
     elif args.rank in standard_ranks:
         return args.rank
     else:
-        raise argparse.ArgumentTypeError(f"Invalid `--rank`/`--position` input: {args.rank}. Please choose: 'strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'")
+        raise argparse.ArgumentTypeError(f"Invalid '--rank'/'--position' input: '{args.rank}'. Please choose: 'strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'")
 
 
 def add_rank_arg(parser):
@@ -164,7 +164,7 @@ def check_tax_outputs(args, rank_required = ["krona"]):
         if any(x in rank_required for x in args.output_format):
             raise ValueError(f"Rank (--rank) is required for {', '.join(rank_required)} output formats.")
 
-    # check that `--lins` is specified and `--lingroup` file exists if needed
+    # check that '--lins' is specified and '--lingroup' file exists if needed
     if args.lins:
         if args.lingroup:
             if "lingroup" not in args.output_format:

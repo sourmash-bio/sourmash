@@ -420,6 +420,22 @@ def test_metagenome_no_rank_krona(runtmp):
     assert "Rank (--rank) is required for krona, lineage_summary output formats." in str(exc.value)
 
 
+def test_metagenome_bad_rank_krona(runtmp):
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona', '--rank', 'NotARank')
+    print(str(exc.value))
+    assert "Invalid '--rank'/'--position' input: 'NotARank'. Please choose: 'strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'" in runtmp.last_result.err
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona', '--rank', '5')
+    print(str(exc.value))
+    assert "Invalid '--rank'/'--position' input: '5'. Please choose: 'strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'" in runtmp.last_result.err
+
+
 def test_genome_no_rank_krona(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
@@ -3507,6 +3523,25 @@ def test_metagenome_LIN_krona_lin_position_5(runtmp):
     assert "0.027522935779816515	2	0	0	0	0	0" in c.last_result.out
     assert "0.010769844435580374	1	0	1	0	0	0" in c.last_result.out
     assert "0.7957718388512166	unclassified	unclassified	unclassified	unclassified	unclassified	unclassified" in c.last_result.out
+
+
+def test_metagenome_LIN_krona_bad_rank(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--lins', '-F', "krona", '--lin-position', 'strain')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status != 0
+    assert "Invalid '--rank'/'--position' input: 'strain'. '--lins' is specified. Rank must be an integer corresponding to a LIN position." in c.last_result.err
+
 
 
 def test_metagenome_LIN_lingroups_empty_lg_file(runtmp):
