@@ -58,7 +58,7 @@ needletail = { version = "0.5.0", default-features = false }
 proptest = { version = "1.1.0", default-features = false, features = ["std"]}
 rand = "0.8.2"
 getrandom = { version = "0.2", features = ["js"] }
-tempfile = "3.1.0"
+tempfile = "3.4.0"
 
 [[bench]]
 name = "index"
