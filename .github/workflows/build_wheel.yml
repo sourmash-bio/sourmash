@@ -66,7 +66,7 @@ jobs:
           pip install 'pyodide-build>=0.22.0'
           pyodide config get emscripten_version  # trigger setup
           echo EMSCRIPTEN_VERSION=$(pyodide config get emscripten_version) >> $GITHUB_ENV
-      - uses: mymindstorm/setup-emsdk@v11
+      - uses: mymindstorm/setup-emsdk@v12
         with:
            version: ${{ env.EMSCRIPTEN_VERSION }}
       - uses: actions-rs/toolchain@v1

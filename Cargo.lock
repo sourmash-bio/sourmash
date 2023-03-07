@@ -1234,9 +1234,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.93"
+version = "1.0.94"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cad406b69c91885b5107daf2c29572f6c8cdb3c66826821e286c533490c0bc76"
+checksum = "1c533a59c9d8a93a09c6ab31f0fd5e5f4dd1b8fc9434804029839884765d04ea"
 dependencies = [
  "itoa 1.0.1",
  "ryu",
@@ -1416,9 +1416,9 @@ dependencies = [
 
 [[package]]
 name = "typed-builder"
-version = "0.12.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6179333b981641242a768f30f371c9baccbfcc03749627000c500ab88bf4528b"
+checksum = "bd5c107dcbf45d40f13749fe0a83dc58a41af3a01c3fc605806f39d3b5ec8f1a"
 dependencies = [
  "proc-macro2",
  "quote",
