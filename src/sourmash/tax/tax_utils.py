@@ -1540,71 +1540,31 @@ class QueryInfo:
     def total_weighted_bp(self):
         return self.total_weighted_hashes * self.scaled
 
+
 @dataclass
-class TaxResult:
+class BaseTaxResult:
     """
-    Class to store taxonomic result of a single row from a gather CSV, including accessible
-    query information (QueryInfo) and matched taxonomic lineage. TaxResult tracks whether
-    lineage matching has been attempted and whether the lineage matching failed
-    due to missing or skipped lineage identifiers.
-
-    Initialize TaxResult using GatherRow, which ensures all required fields are present.
-    The QueryInfo in TaxResult is used to ensure only compatible gather results generated
-    from the same query are summarized during taxonomic summarization.
-
-    Usage:
-
-        with sourmash_args.FileInputCSV(gather_csv) as r:
-            for row in enumerate(r):
-                gatherRow = GatherRow(**row)
-                # initialize TaxResult
-                tax_res = TaxResult(raw=gatherRow)
-
-                # get match lineage
-                tax_res.get_match_lineage(taxD=taxonomic_assignments)
-
-    Uses RankLineageInfo to store lineage information; this may need to be modified in the future.            
+    Base class for sourmash taxonomic annotation.
     """
-    raw: GatherRow
+    raw: dict # csv row
     keep_full_identifiers: bool = False
     keep_identifier_versions: bool = False
-
-    query_name: str = field(init=False)
-    query_info: QueryInfo = field(init=False)
     match_ident: str = field(init=False)
     skipped_ident: bool = False
     missed_ident: bool = False
     match_lineage_attempted: bool = False
     lins: bool = False
 
-    def __post_init__(self):
-        self.get_ident()
-        self.query_name = self.raw.query_name # convenience
-        self.query_info = QueryInfo(query_name = self.raw.query_name,
-                                  query_md5=self.raw.query_md5,
-                                  query_filename = self.raw.query_filename,
-                                  query_bp = self.raw.query_bp,
-                                  query_n_hashes = self.raw.query_n_hashes,
-                                  total_weighted_hashes = self.raw.total_weighted_hashes,
-                                  ksize = self.raw.ksize,
-                                  scaled = self.raw.scaled
-                                  )
-        # cast and store the imp bits
-        self.f_unique_to_query = float(self.raw.f_unique_to_query)
-        self.f_unique_weighted = float(self.raw.f_unique_weighted)
-        self.unique_intersect_bp = int(self.raw.unique_intersect_bp)
-        if self.lins:
-            self.lineageInfo = LINLineageInfo()
-        else:
-            self.lineageInfo = RankLineageInfo()
-
-    def get_ident(self):
+    def get_ident(self, id_col=None):
         # split identifiers = split on whitespace
         # keep identifiers = don't split .[12] from assembly accessions
         "Hack and slash identifiers."
-        self.match_ident = self.raw.name
+        if id_col:
+            self.match_ident = self.raw[id_col]
+        else:
+            self.match_ident = self.raw.name
         if not self.keep_full_identifiers:
-            self.match_ident = self.raw.name.split(' ')[0]
+            self.match_ident = self.match_ident.split(' ')[0]
         else:
             #overrides version bc can't keep full without keeping version
             self.keep_identifier_versions = True
@@ -1627,6 +1587,79 @@ class TaxResult:
         self.match_lineage_attempted = True
         if self.missed_ident and fail_on_missing_taxonomy:
             raise ValueError(f"Error: ident '{self.match_ident}' is not in the taxonomy database. Failing, as requested via --fail-on-missing-taxonomy")
+
+
+@dataclass
+class AnnotateTaxResult(BaseTaxResult):
+    """
+    Class to enable taxonomic annotation of any sourmash CSV.
+    """
+    id_col: str = 'name'
+
+    def __post_init__(self):
+        self.get_ident(id_col=self.id_col)
+        if self.lins:
+            self.lineageInfo = LINLineageInfo()
+        else:
+            self.lineageInfo = RankLineageInfo()
+
+    def row_with_lineages(self):
+        lineage = self.lineageInfo.display_lineage(truncate_empty=True)
+        rl = {"lineage": lineage}
+        rl.update(self.raw)
+        return rl
+
+
+@dataclass
+class TaxResult(BaseTaxResult):
+    """
+    Class to store taxonomic result of a single row from a gather CSV, including accessible
+    query information (QueryInfo) and matched taxonomic lineage. TaxResult tracks whether
+    lineage matching has been attempted and whether the lineage matching failed
+    due to missing or skipped lineage identifiers.
+
+    Initialize TaxResult using GatherRow, which ensures all required fields are present.
+    The QueryInfo in TaxResult is used to ensure only compatible gather results generated
+    from the same query are summarized during taxonomic summarization.
+
+    Usage:
+
+        with sourmash_args.FileInputCSV(gather_csv) as r:
+            for row in enumerate(r):
+                gatherRow = GatherRow(**row)
+                # initialize TaxResult
+                tax_res = TaxResult(raw=gatherRow)
+
+                # get match lineage
+                tax_res.get_match_lineage(taxD=taxonomic_assignments)
+
+    Use RankLineageInfo or LINLineageInfo to store lineage information.
+    """
+    raw: GatherRow
+    query_name: str = field(init=False)
+    query_info: QueryInfo = field(init=False)
+
+    def __post_init__(self):
+        self.get_ident()
+        self.query_name = self.raw.query_name # convenience
+        self.query_info = QueryInfo(query_name = self.raw.query_name,
+                                  query_md5=self.raw.query_md5,
+                                  query_filename = self.raw.query_filename,
+                                  query_bp = self.raw.query_bp,
+                                  query_n_hashes = self.raw.query_n_hashes,
+                                  total_weighted_hashes = self.raw.total_weighted_hashes,
+                                  ksize = self.raw.ksize,
+                                  scaled = self.raw.scaled
+                                  )
+        # cast and store the imp bits
+        self.f_unique_to_query = float(self.raw.f_unique_to_query)
+        self.f_unique_weighted = float(self.raw.f_unique_weighted)
+        self.unique_intersect_bp = int(self.raw.unique_intersect_bp)
+        if self.lins:
+            self.lineageInfo = LINLineageInfo()
+        else:
+            self.lineageInfo = RankLineageInfo()
+
 
 @dataclass
 class SummarizedGatherResult:

@@ -2316,7 +2316,7 @@ def test_annotate_empty_gather_results(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'annotate', '-g', g_csv, '--taxonomy-csv', tax)
 
-    assert f"Cannot read gather results from '{g_csv}'. Is file empty?" in str(exc.value)
+    assert f"Cannot read from '{g_csv}'. Is file empty?" in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
@@ -2327,17 +2327,19 @@ def test_annotate_bad_gather_header(runtmp):
     bad_g_csv = runtmp.output('g.csv')
 
     #creates bad gather result
-    bad_g = [x.replace("query_name", "nope") for x in open(g_csv, 'r')]
+    bad_g = [x.replace("name", "nope") for x in open(g_csv, 'r')]
     with open(bad_g_csv, 'w') as fp:
         for line in bad_g:
             fp.write(line)
-    print("bad_gather_results: \n", bad_g)
+    # print("bad_gather_results: \n", bad_g)
 
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'annotate', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
-    assert 'is missing columns needed for taxonomic summarization.' in str(exc.value)
+    assert f"ERROR: Cannot find taxonomic identifier column in '{bad_g_csv}'. Tried: name, match_name, ident, accession" in str(exc.value)
     assert runtmp.last_result.status == -1
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
 
 def test_annotate_empty_tax_lineage_input(runtmp):
