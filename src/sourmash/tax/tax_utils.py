@@ -19,7 +19,7 @@ import sqlite3
 __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
            'load_gather_results', 'check_and_load_gather_csvs'
            'report_missing_and_skipped_identities', 'aggregate_by_lineage_at_rank'
-           'format_for_krona',
+           'format_for_krona', 'write_output', 'write_bioboxes',
            'combine_sumgather_csvs_by_lineage', 'write_lineage_sample_frac',
            'MultiLineageDB', 'RankLineageInfo', 'LINLineageInfo']
 
@@ -856,7 +856,19 @@ def write_output(header, results, out_fp, *, sep=',', write_header=True):
     if write_header:
         output.writeheader()
     for res in results:
-        output.writerow(res)   
+        output.writerow(res)
+
+
+def write_bioboxes(header_lines, results, out_fp, *, sep='\t'):
+    """
+    write pre-generated results list of rows, with each
+    row being list.
+    """
+    for inf in header_lines:
+        out_fp.write(inf + '\n')
+    for res in results:
+        res = sep.join(res) + '\n'
+        out_fp.write(res)
 
 
 def write_summary(query_gather_results, csv_fp, *, sep=',', limit_float_decimals=False, classification=False):
@@ -1707,6 +1719,7 @@ class SummarizedGatherResult:
         lowest_assignment_rank = 'species'
         sD = {}
         sD['num_bp_assigned'] = str(0)
+        sD['ncbi_taxid'] = None
         # total percent containment, weighted to include abundance info
         sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
         sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_bp))
@@ -1716,7 +1729,9 @@ class SummarizedGatherResult:
             this_rank = self.lineage.lowest_rank
             sD['rank_code'] = RANKCODE[this_rank]
             sD['sci_name'] = self.lineage.lowest_lineage_name
-            sD['ncbi_taxid'] = self.lineage.lowest_lineage_taxid
+            taxid = self.lineage.lowest_lineage_taxid
+            if taxid:
+                sD['ncbi_taxid'] = str(taxid)
             # the number of bp actually 'assigned' at this rank. Sourmash assigns everything
             # at genome level, but since kreport traditionally doesn't include 'strain' or genome,
             # it is reasonable to state that sourmash assigns at 'species' level for this.
@@ -1741,20 +1756,26 @@ class SummarizedGatherResult:
         sD["name"] = lg_name
         return sD
 
-def as_cami_bioboxes(self):
-        '''
+    def as_cami_bioboxes(self):
+        """
         Format taxonomy-summarized gather results
         as CAMI profiling Bioboxes format.
 
         Columns are: TAXID	RANK	TAXPATH	TAXPATHSN	PERCENTAGE 
-
-        '''
-        # if this is filled (should always be true here, right? So don't actually need to check this?)
-        taxid = self.lineage.lowest_lineage_taxid
-        taxpath = self.lineage.display_taxid(sep="|")
-        taxpathsn = self.lineage.display_lineage(sep="|")
-        percentage = f"{(self.f_weighted_at_rank * 100):.2f}" # fix at 2 decimal points
-        return [taxid, self.rank, taxpath, taxpathsn, percentage]
+        """
+        if isinstance(self.lineage, LINLineageInfo):
+            raise ValueError("Cannot produce 'cami' results with LIN taxonomy.")
+        if self.lineage != RankLineageInfo(): # if not unassigned
+            taxid = self.lineage.lowest_lineage_taxid
+            if taxid:
+                taxpath = self.lineage.display_taxid(sep="|")
+                taxid = str(taxid)
+            else:
+                taxpath = None
+            taxpathsn = self.lineage.display_lineage(sep="|")
+            percentage = f"{(self.f_weighted_at_rank * 100):.2f}" # fix at 2 decimal points
+            return [taxid, self.rank, taxpath, taxpathsn, percentage]
+        return []
 
 
 @dataclass
@@ -2189,7 +2210,7 @@ class QueryTaxResult:
         
         return header, lingroup_results
  
- def make_cami_bioboxes(self):
+    def make_cami_bioboxes(self):
         """
         info: https://github.com/CAMI-challenge/contest_information/blob/master/file_formats/CAMI_TP_specification.mkd
 
@@ -2224,7 +2245,7 @@ class QueryTaxResult:
         # see https://github.com/luizirber/2020-cami/blob/master/scripts/gather_to_opal.py
 
         # starting from https://github.com/sourmash-bio/sourmash/pull/1606/files
-        cami_results = []
+        bioboxes_results = []
         # build CAMI header info 
         header_title = "# Taxonomic Profiling Output"
         version_info = "@Version:0.10.0"
@@ -2235,15 +2256,20 @@ class QueryTaxResult:
         # if 'strain' in ranks:
         #     ranks.remove('strain')
         rank_info = f"@Ranks:{'|'.join(ranks)}"
+
         header_lines = [header_title, sample_info, version_info, rank_info, program]
+        header_lines.append("") # blank line
+        colnames = ["@@TAXID","RANK","TAXPATH","TAXPATHSN","PERCENTAGE"]
+        header_lines.append('\t'.join(colnames))
         
         # now build results in CAMI format
         # order results by rank (descending), then percentage
         for rank in ranks:
             rank_results = self.summarized_lineage_results[rank]
             for res in rank_results:
-                cami_info = res.as_cami_bioboxes()
-                cami_results.append(cami_info)
+                bb_info = res.as_cami_bioboxes()
+                if bb_info:
+                    bioboxes_results.append(bb_info)
 
-        return header_lines, cami_results
+        return header_lines, bioboxes_results
 

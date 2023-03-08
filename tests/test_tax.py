@@ -295,6 +295,68 @@ def test_metagenome_kreport_out_fail(runtmp):
     assert "ERROR: cannot produce 'kreport' format from gather results before sourmash v4.5.0" in runtmp.last_result.err
 
 
+def test_metagenome_bioboxes_stdout(runtmp):
+    # test CAMI bioboxes format output
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.ncbi-taxonomy.csv')
+
+    runtmp.run_sourmash('tax', 'metagenome', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-F', "bioboxes")
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+
+    assert "# Taxonomic Profiling Output" in runtmp.last_result.out
+    assert "@SampleID:test1" in runtmp.last_result.out
+    assert "@Version:0.10.0" in runtmp.last_result.out
+    assert "@Ranks:superkingdom|phylum|class|order|family|genus|species|strain" in runtmp.last_result.out
+    assert "@__program__:sourmash" in runtmp.last_result.out
+    assert "2	superkingdom	2	Bacteria	13.08" in runtmp.last_result.out
+    assert "976	phylum	2|976	Bacteria|Bacteroidota	7.27" in runtmp.last_result.out
+    assert "1224	phylum	2|1224	Bacteria|Pseudomonadota	5.82" in runtmp.last_result.out
+    assert "200643	class	2|976|200643	Bacteria|Bacteroidota|Bacteroidia	7.27" in runtmp.last_result.out
+    assert "1236	class	2|1224|1236	Bacteria|Pseudomonadota|Gammaproteobacteria	5.82" in runtmp.last_result.out
+    assert "171549	order	2|976|200643|171549	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales	7.27" in runtmp.last_result.out
+    assert "91347	order	2|1224|1236|91347	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales	5.82" in runtmp.last_result.out
+    assert "171552	family	2|976|200643|171549|171552	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Prevotellaceae	5.70" in runtmp.last_result.out
+    assert "543	family	2|1224|1236|91347|543	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales|Enterobacteriaceae	5.82" in runtmp.last_result.out
+    assert "815	family	2|976|200643|171549|815	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Bacteroidaceae	1.56" in runtmp.last_result.out
+    assert "838	genus	2|976|200643|171549|171552|838	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Prevotellaceae|Prevotella	5.70" in runtmp.last_result.out
+    assert "561	genus	2|1224|1236|91347|543|561	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales|Enterobacteriaceae|Escherichia	5.82" in runtmp.last_result.out
+    assert "909656	genus	2|976|200643|171549|815|909656	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Bacteroidaceae|Phocaeicola	1.56" in runtmp.last_result.out
+    assert "165179	species	2|976|200643|171549|171552|838|165179	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Prevotellaceae|Prevotella|Prevotella copri	5.70" in runtmp.last_result.out
+    assert "562	species	2|1224|1236|91347|543|561|562	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales|Enterobacteriaceae|Escherichia|Escherichia coli	5.82" in runtmp.last_result.out
+    assert "821	species	2|976|200643|171549|815|909656|821	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Bacteroidaceae|Phocaeicola|Phocaeicola vulgatus	1.56" in runtmp.last_result.out
+
+
+def test_metagenome_bioboxes_outfile(runtmp):
+    # test CAMI bioboxes format output
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.ncbi-taxonomy.csv')
+    csv_base = "out"
+    sum_csv = csv_base + ".bioboxes.profile"
+    csvout = runtmp.output(sum_csv)
+    outdir = os.path.dirname(csvout)
+
+    runtmp.run_sourmash('tax', 'metagenome', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-F', "bioboxes", '-o', csv_base, '--output-dir', outdir,)
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+
+    bb_results = [x.rstrip().split('\t') for x in open(csvout)]
+    assert f"saving 'bioboxes' output to '{csvout}'" in runtmp.last_result.err
+    print(bb_results)
+    assert ['# Taxonomic Profiling Output'] == bb_results[0]
+    assert ['@SampleID:test1'] == bb_results[1]
+    assert ['2', 'superkingdom', '2', 'Bacteria', '13.08'] == bb_results[7]
+    assert ['838', 'genus', '2|976|200643|171549|171552|838', 'Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Prevotellaceae|Prevotella', '5.70'] == bb_results[17]
+
+
 def test_metagenome_krona_tsv_out(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
