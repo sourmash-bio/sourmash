@@ -13,7 +13,7 @@ import sourmash_tst_utils as utils
 from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_results,
                                     collect_gather_csvs, check_and_load_gather_csvs,
                                     LineagePair, QueryInfo, GatherRow, TaxResult, QueryTaxResult,
-                                    SummarizedGatherResult, ClassificationResult,
+                                    SummarizedGatherResult, ClassificationResult, AnnotateTaxResult,
                                     BaseLineageInfo, RankLineageInfo, LINLineageInfo,
                                     aggregate_by_lineage_at_rank, format_for_krona,
                                     write_krona, write_lineage_sample_frac, read_lingroups,
@@ -367,6 +367,37 @@ def test_TaxResult_get_ident_default():
     assert taxres.match_ident == "GCF_001881345"
 
 
+def test_AnnotateTaxResult_get_ident_default():
+    gA = {"name": "GCF_001881345.1"}  # gather result with match name as GCF_001881345.1
+    taxres = AnnotateTaxResult(raw=gA)
+    print(taxres.match_ident)
+    assert taxres.match_ident == "GCF_001881345"
+
+
+def test_AnnotateTaxResult_get_ident_idcol():
+    gA = {"name": "n1", "match_name": "n2", "ident": "n3", "accession": "n4"}  # gather result with match name as GCF_001881345.1
+    taxres = AnnotateTaxResult(raw=gA)
+    print(taxres.match_ident)
+    assert taxres.match_ident == "n1"
+    taxres = AnnotateTaxResult(raw=gA, id_col="match_name")
+    print(taxres.match_ident)
+    assert taxres.match_ident == "n2"
+    taxres = AnnotateTaxResult(raw=gA, id_col="ident")
+    print(taxres.match_ident)
+    assert taxres.match_ident == "n3"
+    taxres = AnnotateTaxResult(raw=gA, id_col="accession")
+    print(taxres.match_ident)
+    assert taxres.match_ident == "n4"
+
+
+def test_AnnotateTaxResult_get_ident_idcol_fail():
+    gA = {"name": "n1", "match_name": "n2", "ident": "n3", "accession": "n4"}  # gather result with match name as GCF_001881345.1
+    with pytest.raises(ValueError) as exc:
+        AnnotateTaxResult(raw=gA, id_col="NotACol")
+    print(str(exc))
+    assert "ID column 'NotACol' not found." in str(exc)
+
+
 def test_get_ident_split_but_keep_version():
     ident = "GCF_001881345.1 secondname"
     n_id = get_ident(ident, keep_identifier_versions=True)
@@ -383,6 +414,16 @@ def test_TaxResult_get_ident_split_but_keep_version():
     assert taxres.match_ident == "GCF_001881345.1"
 
 
+def test_AnnotateTaxResult_get_ident_split_but_keep_version():
+    gA = {"name": "GCF_001881345.1 secondname"}
+    taxres = AnnotateTaxResult(gA, keep_identifier_versions=True)
+    print("raw ident: ", taxres.raw['name'])
+    print("keep_full?: ", taxres.keep_full_identifiers)
+    print("keep_version?: ",taxres.keep_identifier_versions)
+    print("final ident: ", taxres.match_ident)
+    assert taxres.match_ident == "GCF_001881345.1"
+
+
 def test_get_ident_no_split():
     ident = "GCF_001881345.1 secondname"
     n_id = get_ident(ident, keep_full_identifiers=True)
@@ -393,6 +434,16 @@ def test_TaxResult_get_ident_keep_full():
     gA = {"name": "GCF_001881345.1 secondname"}
     taxres = make_TaxResult(gA, keep_full_ident=True)
     print("raw ident: ", taxres.raw.name)
+    print("keep_full?: ", taxres.keep_full_identifiers)
+    print("keep_version?: ",taxres.keep_identifier_versions)
+    print("final ident: ", taxres.match_ident)
+    assert taxres.match_ident == "GCF_001881345.1 secondname"
+
+
+def test_AnnotateTaxResult_get_ident_keep_full():
+    gA = {"name": "GCF_001881345.1 secondname"}
+    taxres = AnnotateTaxResult(gA, keep_full_identifiers=True)
+    print("raw ident: ", taxres.raw['name'])
     print("keep_full?: ", taxres.keep_full_identifiers)
     print("keep_version?: ",taxres.keep_identifier_versions)
     print("final ident: ", taxres.match_ident)
@@ -1700,6 +1751,17 @@ def test_TaxResult_get_match_lineage_1():
     taxres = make_TaxResult(gA)
     taxres.get_match_lineage(tax_assignments=taxD)
     assert taxres.lineageInfo.display_lineage() == "a;b;c"
+
+
+def test_AnnotateTaxResult_get_match_lineage_1():
+    gA_tax = ("gA", "a;b;c")
+    taxD = make_mini_taxonomy([gA_tax])
+
+    gA = {"name": "gA.1 name"}
+    taxres = AnnotateTaxResult(gA)
+    taxres.get_match_lineage(tax_assignments=taxD)
+    assert taxres.lineageInfo.display_lineage() == "a;b;c"
+    assert taxres.row_with_lineages() == {"name": "gA.1 name", "lineage": "a;b;c"}
 
 
 def test_TaxResult_get_match_lineage_skip_ident():

@@ -1597,6 +1597,8 @@ class AnnotateTaxResult(BaseTaxResult):
     id_col: str = 'name'
 
     def __post_init__(self):
+        if self.id_col not in self.raw.keys():
+            raise ValueError(f"ID column '{self.id_col}' not found.")
         self.get_ident(id_col=self.id_col)
         if self.lins:
             self.lineageInfo = LINLineageInfo()

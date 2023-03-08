@@ -314,7 +314,6 @@ def annotate(args):
                     raise ValueError(f"Cannot read from '{in_csv}'. Is file empty?")
 
                 # look for the column to match with taxonomic identifier
-                # search: 'name'; prefetch: 'match_name'; gather: 'name'. Also allow: 'ident', 'accession'
                 id_col = None
                 col_options = ['name', 'match_name', 'ident', 'accession']
                 for colname in col_options:
@@ -346,14 +345,15 @@ def annotate(args):
                                                 keep_identifier_versions=args.keep_identifier_versions)
                         taxres.get_match_lineage(tax_assignments=tax_assign, fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
 
-                        if taxres.missed_ident:
+                        if taxres.missed_ident: # could not assign taxonomy
                             n_missed+=1
                         w.writerow(taxres.row_with_lineages())
 
-                    if not n:
+                    rows_annotated = (n+1) - n_missed
+                    if not rows_annotated:
                         raise ValueError(f"Could not annotate any rows from '{in_csv}'.")
                     else:
-                        notify(f"Annotated {(n+1) - n_missed} of {n+1} total rows from '{in_csv}'.")
+                        notify(f"Annotated {rows_annotated} of {n+1} total rows from '{in_csv}'.")
 
         except ValueError as exc:
             if args.force:
