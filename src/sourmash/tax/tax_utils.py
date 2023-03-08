@@ -1764,7 +1764,7 @@ class SummarizedGatherResult:
         Columns are: TAXID	RANK	TAXPATH	TAXPATHSN	PERCENTAGE 
         """
         if isinstance(self.lineage, LINLineageInfo):
-            raise ValueError("Cannot produce 'cami' results with LIN taxonomy.")
+            raise ValueError("Cannot produce 'bioboxes' with LIN taxonomy.")
         if self.lineage != RankLineageInfo(): # if not unassigned
             taxid = self.lineage.lowest_lineage_taxid
             if taxid:

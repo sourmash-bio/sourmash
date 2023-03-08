@@ -233,6 +233,10 @@ def test_SummarizedGatherResult_LINs():
         sgr.as_kreport_dict(query_info=qInf)
     print(str(exc))
     assert "Cannot produce 'kreport' with LIN taxonomy." in str(exc)
+    with pytest.raises(ValueError) as exc:
+        sgr.as_cami_bioboxes()
+    print(str(exc))
+    assert "Cannot produce 'bioboxes' with LIN taxonomy." in str(exc)
 
 
 def test_SummarizedGatherResult_set_query_ani():
