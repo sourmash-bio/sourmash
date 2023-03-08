@@ -12,22 +12,23 @@ import sourmash_tst_utils as utils
 
 from sourmash.tax.tax_utils import (ascending_taxlist, get_ident, load_gather_results,
                                     collect_gather_csvs, check_and_load_gather_csvs,
+                                    LineagePair, QueryInfo, GatherRow, TaxResult, QueryTaxResult,
                                     SummarizedGatherResult, ClassificationResult,
-                                    QueryInfo, GatherRow, TaxResult, QueryTaxResult,
-                                    BaseLineageInfo, RankLineageInfo, LineagePair,
+                                    BaseLineageInfo, RankLineageInfo, LINLineageInfo,
                                     aggregate_by_lineage_at_rank, format_for_krona,
-                                    write_krona, write_lineage_sample_frac,
-                                    LineageDB, LineageDB_Sqlite, MultiLineageDB)
-
-# import lca utils as needed
-from sourmash.lca import lca_utils
+                                    write_krona, write_lineage_sample_frac, read_lingroups,
+                                    LineageTree, LineageDB, LineageDB_Sqlite, MultiLineageDB)
 
 # utility functions for testing
-def make_mini_taxonomy(tax_info):
+def make_mini_taxonomy(tax_info, LIN=False):
     #pass in list of tuples: (name, lineage)
     taxD = {}
-    for (name,lin) in tax_info:
-        taxD[name] = lca_utils.make_lineage(lin)
+    for (name, lin) in tax_info:
+        if LIN:
+            lineage = LINLineageInfo(lineage_str=lin)
+        else:
+            lineage = RankLineageInfo(lineage_str=lin)
+        taxD[name] = lineage.filled_lineage
     return taxD
 
 
@@ -53,28 +54,30 @@ def make_GatherRow(gather_dict=None, exclude_cols=[]):
     return gatherRaw
 
 
-def make_TaxResult(gather_dict=None, taxD=None, keep_full_ident=False, keep_ident_version=False, skip_idents=None):
+def make_TaxResult(gather_dict=None, taxD=None, keep_full_ident=False, keep_ident_version=False, skip_idents=None, LIN=False):
     """Make TaxResult from artificial gather row (dict)"""
     gRow = make_GatherRow(gather_dict)
-    taxres = TaxResult(raw=gRow, keep_full_identifiers=keep_full_ident, keep_identifier_versions=keep_ident_version)
+    taxres = TaxResult(raw=gRow, keep_full_identifiers=keep_full_ident,
+                       keep_identifier_versions=keep_ident_version, lins=LIN)
     if taxD is not None:
         taxres.get_match_lineage(tax_assignments=taxD, skip_idents=skip_idents)
     return taxres
 
 
 def make_QueryTaxResults(gather_info, taxD=None, single_query=False, keep_full_ident=False, keep_ident_version=False,
-                        skip_idents=None, summarize=False, classify=False, classify_rank=None, c_thresh=0.1, ani_thresh=None):
+                        skip_idents=None, summarize=False, classify=False, classify_rank=None, c_thresh=0.1, ani_thresh=None,
+                        LIN=False):
     """Make QueryTaxResult(s) from artificial gather information, formatted as list of gather rows (dicts)"""
     gather_results = {}
     this_querytaxres = None
     for gather_infoD in gather_info:
         taxres = make_TaxResult(gather_infoD, taxD=taxD,  keep_full_ident=keep_full_ident,
-                                keep_ident_version=keep_ident_version, skip_idents=skip_idents)
+                                keep_ident_version=keep_ident_version, skip_idents=skip_idents, LIN=LIN)
         query_name = taxres.query_name
         # add to matching QueryTaxResult or create new one
         if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
             # get existing or initialize new
-            this_querytaxres = gather_results.get(query_name, QueryTaxResult(taxres.query_info))
+            this_querytaxres = gather_results.get(query_name, QueryTaxResult(taxres.query_info, lins=LIN))
         this_querytaxres.add_taxresult(taxres)
 #        print('missed_ident?', taxres.missed_ident)
         gather_results[query_name] = this_querytaxres
@@ -156,6 +159,27 @@ def test_SummarizedGatherResult():
     print(lD)
     assert lD == {'ident': 'q1', 'superkingdom': 'a', 'phylum': 'b', 'class': '', 'order': '',
                   'family': '', 'genus': '', 'species': '', 'strain': ''}
+
+
+def test_SummarizedGatherResult_LINs():
+    "SummarizedGatherResult with LINs"
+    qInf = QueryInfo(query_name='q1', query_md5='md5', query_filename='f1',query_bp='100',
+                     query_n_hashes='10',ksize='31',scaled='10', total_weighted_hashes='200')
+    sgr = SummarizedGatherResult(rank="phylum", fraction=0.2, lineage=LINLineageInfo(lineage_str="0;0;1"),
+                                 f_weighted_at_rank=0.3, bp_match_at_rank=30)
+
+    lgD = sgr.as_lingroup_dict(query_info=qInf, lg_name="lg_name")
+    print(lgD)
+    assert lgD == {'name': "lg_name", "lin": "0;0;1",
+                   'percent_containment': '30.00', 'num_bp_contained': "600"}
+    lgD = sgr.as_lingroup_dict(query_info=qInf, lg_name="lg_name")
+    print(lgD)
+    assert lgD == {'name': "lg_name", "lin": "0;0;1",
+                   'percent_containment': '30.00', 'num_bp_contained': "600"}
+    with pytest.raises(ValueError) as exc:
+        sgr.as_kreport_dict(query_info=qInf)
+    print(str(exc))
+    assert "Cannot produce 'kreport' with LIN taxonomy." in str(exc)
 
 
 def test_SummarizedGatherResult_set_query_ani():
@@ -574,6 +598,43 @@ def test_load_taxonomy_csv():
     assert len(tax_assign) == 6 # should have read 6 rows
 
 
+def test_load_taxonomy_csv_LIN():
+    taxonomy_csv = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+    tax_assign = MultiLineageDB.load([taxonomy_csv], lins=True)
+    print("taxonomy assignments: \n", tax_assign)
+    assert list(tax_assign.keys()) == ['GCF_001881345.1', 'GCF_009494285.1', 'GCF_013368705.1', 'GCF_003471795.1', 'GCF_000017325.1', 'GCF_000021665.1']
+    #assert list(tax_assign.keys()) == ["GCF_000010525.1", "GCF_000007365.1", "GCF_000007725.1", "GCF_000009605.1", "GCF_000021065.1", "GCF_000021085.1"]
+    assert len(tax_assign) == 6 # should have read 6 rows
+    print(tax_assign.available_ranks)
+    assert tax_assign.available_ranks == {str(x) for x in range(0,20)}
+
+
+def test_load_taxonomy_csv_LIN_fail():
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    with pytest.raises(ValueError) as exc:
+        MultiLineageDB.load([taxonomy_csv], lins=True)
+    assert f"'lin' column not found: cannot read LIN taxonomy assignments from {taxonomy_csv}." in str(exc.value)
+
+
+def test_load_taxonomy_csv_LIN_mismatch_in_taxfile(runtmp):
+    taxonomy_csv = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+    mimatchLIN_csv = runtmp.output('mmLIN-taxonomy.csv')
+    with open(mimatchLIN_csv, 'w') as mm:
+        tax21=[]
+        tax = [x.rstrip() for x in open(taxonomy_csv, 'r')]
+        for n, taxline in enumerate(tax):
+            if n == 2: # add ;0 to a LIN
+                taxlist = taxline.split(',')
+                taxlist[1] += ';0' # add 21st position to LIN
+                tax21.append(",".join(taxlist))
+            else:
+                tax21.append(taxline)
+        mm.write("\n".join(tax21))
+    with pytest.raises(ValueError) as exc:
+        MultiLineageDB.load([mimatchLIN_csv], lins=True)
+    assert "For taxonomic summarization, all LIN assignments must use the same number of LIN positions." in str(exc.value)
+
+
 def test_load_taxonomy_csv_gzip(runtmp):
     # test loading a gzipped taxonomy csv file
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
@@ -864,13 +925,13 @@ def test_tax_multi_load_files_shadowed(runtmp):
     assert len(db.shadowed_identifiers()) == 6
 
     # we should have everything including strain
-    assert set(lca_utils.taxlist()) == set(db.available_ranks)
+    assert set(RankLineageInfo().taxlist) == set(db.available_ranks)
 
     db = MultiLineageDB.load([taxonomy_csv, taxonomy_db],
                              keep_full_identifiers=False,
                              keep_identifier_versions=False)
     assert len(db.shadowed_identifiers()) == 6
-    assert set(lca_utils.taxlist(include_strain=False)) == set(db.available_ranks)
+    assert set(RankLineageInfo().taxlist[:-1]) == set(db.available_ranks)
 
 
 def test_tax_multi_save_files(runtmp, keep_identifiers, keep_versions):
@@ -1104,7 +1165,7 @@ def test_BaseLineageInfo_init_not_lineagepair():
     with pytest.raises(ValueError) as exc:
         BaseLineageInfo(lineage=lin_tups, ranks=ranks)
     print(str(exc))
-    assert "is not LineagePair" in str(exc)
+    assert "is not tax_utils LineagePair" in str(exc)
 
 
 def test_RankLineageInfo_taxlist():
@@ -1120,6 +1181,123 @@ def test_RankLineageInfo_init_lineage_str():
     print(taxinf.lineage)
     print(taxinf.lineage_str)
     assert taxinf.zip_lineage()== ['a', 'b', 'c', '', '', '', '', '']
+
+
+def test_LINLineageInfo_init_empty():
+    taxinf = LINLineageInfo()
+    assert taxinf.n_lin_positions == 0
+    assert taxinf.zip_lineage()== []
+    assert taxinf.display_lineage()== ""
+    assert taxinf.filled_ranks == ()
+    assert taxinf.n_filled_pos == 0
+
+
+def test_LINLineageInfo_init_n_pos():
+    n_pos = 5
+    taxinf = LINLineageInfo(n_lin_positions=n_pos)
+    print(taxinf.lineage)
+    print(taxinf.lineage_str)
+    assert taxinf.n_lin_positions == 5
+    assert taxinf.zip_lineage()== ['', '', '', '', '']
+    assert taxinf.filled_ranks == ()
+    assert taxinf.n_filled_pos == 0
+
+
+def test_LINLineageInfo_init_n_pos_and_lineage_str():
+    x = "0;0;1"
+    n_pos = 5
+    taxinf = LINLineageInfo(lineage_str=x, n_lin_positions=n_pos)
+    print(taxinf.lineage)
+    print(taxinf.lineage_str)
+    assert taxinf.n_lin_positions == 5
+    assert taxinf.zip_lineage()== ['0', '0', '1', '', '']
+    assert taxinf.filled_ranks == ("0","1","2")
+    assert taxinf.n_filled_pos == 3
+
+
+def test_LINLineageInfo_init_n_pos_and_lineage_str_fail():
+    x = "0;0;1"
+    n_pos = 2
+    with pytest.raises(ValueError) as exc:
+        LINLineageInfo(lineage_str=x, n_lin_positions=n_pos)
+    print(str(exc))
+    assert "Provided 'n_lin_positions' has fewer positions than provided 'lineage_str'." in str(exc)
+
+
+def test_LINLineageInfo_init_lineage_str_only():
+    x = "0,0,1"
+    taxinf = LINLineageInfo(lineage_str=x)
+    print(taxinf.lineage)
+    print(taxinf.lineage_str)
+    assert taxinf.n_lin_positions == 3
+    assert taxinf.zip_lineage()== ['0', '0', '1']
+    assert taxinf.filled_ranks == ("0","1","2")
+    assert taxinf.n_filled_pos == 3
+
+
+def test_LINLineageInfo_init_not_lineagepair():
+    lin_tups = (("rank1", "name1"),)
+    with pytest.raises(ValueError) as exc:
+        LINLineageInfo(lineage=lin_tups)
+    print(str(exc))
+    assert "is not tax_utils LineagePair" in str(exc)
+
+
+def test_LINLineageInfo_init_lineagepair():
+    lin_tups = (LineagePair("rank1", "name1"), LineagePair("rank2", None),)
+    taxinf = LINLineageInfo(lineage=lin_tups)
+    print(taxinf.lineage)
+    assert taxinf.n_lin_positions == 2
+    assert taxinf.zip_lineage()== ["name1", ""]
+    assert taxinf.zip_lineage(truncate_empty=True)== ["name1"]
+    assert taxinf.filled_ranks == ("rank1",)
+    assert taxinf.ranks == ("rank1", "rank2")
+    assert taxinf.n_filled_pos == 1
+
+
+def test_lca_LINLineageInfo_diff_n_pos():
+    x = "0;0;1"
+    y = '0'
+    lin1 = LINLineageInfo(lineage_str=x)
+    lin2 = LINLineageInfo(lineage_str=y)
+    assert lin1.is_compatible(lin2)
+    assert lin2.is_compatible(lin1)
+    lca_from_lin1 = lin1.find_lca(lin2)
+    lca_from_lin2 = lin2.find_lca(lin1)
+    assert lca_from_lin1 == lca_from_lin2
+    assert lca_from_lin1.display_lineage(truncate_empty=True) == "0"
+
+
+def test_lca_LINLineageInfo_no_lca():
+    x = "0;0;1"
+    y = '12;0;1'
+    lin1 = LINLineageInfo(lineage_str=x)
+    lin2 = LINLineageInfo(lineage_str=y)
+    assert lin1.is_compatible(lin2)
+    assert lin2.is_compatible(lin1)
+    lca_from_lin1 = lin1.find_lca(lin2)
+    lca_from_lin2 = lin2.find_lca(lin1)
+    assert lca_from_lin1 == lca_from_lin2 == None
+
+
+def test_lca_RankLineageInfo_no_lca():
+    x = "a;b;c"
+    y = 'd;e;f;g'
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = RankLineageInfo(lineage_str=y)
+    assert lin1.is_compatible(lin2)
+    assert lin2.is_compatible(lin1)
+    lca_from_lin1 = lin1.find_lca(lin2)
+    lca_from_lin2 = lin2.find_lca(lin1)
+    assert lca_from_lin1 == lca_from_lin2 == None
+
+
+def test_incompatibility_LINLineageInfo_RankLineageInfo():
+    x="a;b;c"
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = LINLineageInfo(lineage_str=x)
+    assert not lin1.is_compatible(lin2)
+    assert not lin2.is_compatible(lin1)
 
 
 def test_RankLineageInfo_init_lineage_str_with_ranks_as_list():
@@ -1348,6 +1526,7 @@ def test_is_lineage_match_1():
     lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__e')
     lin2 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
     print(lin1.lineage)
+    assert lin1.is_compatible(lin2)
     assert lin1.is_lineage_match(lin2, 'superkingdom')
     assert lin2.is_lineage_match(lin1, 'superkingdom')
     assert lin1.is_lineage_match(lin2, 'phylum')
@@ -1364,11 +1543,19 @@ def test_is_lineage_match_1():
     assert not lin1.is_lineage_match(lin2, 'species')
     assert not lin2.is_lineage_match(lin1, 'species')
 
+    lca_from_lin1 = lin1.find_lca(lin2)
+    print(lca_from_lin1.display_lineage())
+    lca_from_lin2 = lin2.find_lca(lin1)
+    assert lca_from_lin1 == lca_from_lin2
+    assert lca_from_lin1.display_lineage() == "d__a;p__b;c__c;o__d"
+    
+
 
 def test_is_lineage_match_2():
     # match at family, and above, levels; no genus or species to match
     lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
     lin2 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
+    assert lin1.is_compatible(lin2)
     assert lin1.is_lineage_match(lin2, 'superkingdom')
     assert lin2.is_lineage_match(lin1, 'superkingdom')
     assert lin1.is_lineage_match(lin2, 'phylum')
@@ -1385,12 +1572,19 @@ def test_is_lineage_match_2():
     assert not lin1.is_lineage_match(lin2, 'species')
     assert not lin2.is_lineage_match(lin1, 'species')
 
+    lca_from_lin1 = lin1.find_lca(lin2)
+    print(lca_from_lin1.display_lineage())
+    lca_from_lin2 = lin2.find_lca(lin1)
+    assert lca_from_lin1 == lca_from_lin2
+    assert lca_from_lin1.display_lineage() == "d__a;p__b;c__c;o__d;f__f"
+
 
 def test_is_lineage_match_3():
     # one lineage is empty
     lin1 = RankLineageInfo()
     lin2 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
 
+    assert lin1.is_compatible(lin2)
     assert not lin1.is_lineage_match(lin2, 'superkingdom')
     assert not lin2.is_lineage_match(lin1, 'superkingdom')
     assert not lin1.is_lineage_match(lin2, 'phylum')
@@ -1413,6 +1607,7 @@ def test_is_lineage_match_incorrect_ranks():
     lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__e', ranks=taxranks[::-1])
     lin2 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
     print(lin1.lineage)
+    assert not lin1.is_compatible(lin2)
     with pytest.raises(ValueError) as exc:
         lin1.is_lineage_match(lin2, 'superkingdom')
     print(str(exc))
@@ -1424,6 +1619,7 @@ def test_is_lineage_match_improper_rank():
     lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__e')
     lin2 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
     print(lin1.lineage)
+    assert lin1.is_compatible(lin2)
     with pytest.raises(ValueError) as exc:
         lin1.is_lineage_match(lin2, 'NotARank')
     print(str(exc))
@@ -2582,11 +2778,333 @@ def test_make_kreport_results_fail_pre_v450():
     assert "cannot produce 'kreport' format from gather results before sourmash v4.5.0" in str(exc)
 
 
-def test_make_kreport_results_fail_pre_v450():
-    taxD = make_mini_taxonomy([("gA", "a;b;c"), ("gB", "a;b;d")])
+def test_make_lingroup_results():
+    taxD = make_mini_taxonomy([("gA", "1;0;0"), ("gB", "1;0;1"), ("gC", "1;1;0")], LIN=True)
+    print(taxD)
+    lingroupD = {"1":"lg1", "1;0":'lg2', '1;1': "lg3"}
+    print(lingroupD)
+    gather_results = [{"total_weighted_hashes":100},
+                      {"name": 'gB', "total_weighted_hashes":100},
+                      {"name": 'gC', "total_weighted_hashes":100}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True, LIN=True)
+    print(q_res.summarized_lineage_results)
+
+    header, lgD = q_res.make_lingroup_results(LINgroupsD = lingroupD)
+    print(header)
+    assert header == ['name', 'lin', 'percent_containment', 'num_bp_contained']
+    # order may change, just check that each lg entry is present in list of results
+    lg1 = {'percent_containment': '60.00', 'num_bp_contained': '60',
+                    'lin': '1', 'name': 'lg1'}
+    lg2 = {'percent_containment': '40.00', 'num_bp_contained': '40',
+                    'lin': '1;0', 'name': 'lg2'}
+    lg3 = {'percent_containment': '20.00', 'num_bp_contained': '20',
+                    'lin': '1;1', 'name': 'lg3'}
+    assert lg1 in lgD
+    assert lg2 in lgD
+    assert lg3 in lgD
+
+
+def test_make_lingroup_results_fail_pre_v450():
+    taxD = make_mini_taxonomy([("gA", "1;0;0"), ("gB", "1;0;1"), ("gC", "1;1;0")], LIN=True)
     gather_results = [{}, {"name": 'gB'}]
-    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True)
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True, LIN=True)
+    lingroupD = {"1":"lg1", "1;0":'lg2', '1;1': "lg3"}
     with pytest.raises(ValueError) as exc:
-        q_res.make_kreport_results()
+        q_res.make_lingroup_results(lingroupD)
     print(str(exc))
-    assert "cannot produce 'kreport' format from gather results before sourmash v4.5.0" in str(exc)
+    assert "cannot produce 'LINgroup_report' format from gather results before sourmash v4.5.0" in str(exc)
+
+
+def test_read_lingroups(runtmp):
+    lg_file = runtmp.output("test.lg.csv")
+    with open(lg_file, 'w') as out:
+        out.write('lin,name\n')
+        out.write('1,lg1\n')
+        out.write('1;0,lg2\n')
+        out.write('1;1,lg3\n')
+    lgD = read_lingroups(lg_file)
+
+    assert lgD == {"1":"lg1", "1;0":'lg2', '1;1': "lg3"}
+
+def test_read_lingroups_empty_file(runtmp):
+    lg_file = runtmp.output("test.lg.csv")
+    with open(lg_file, 'w') as out:
+        out.write("")
+    with pytest.raises(ValueError) as exc:
+        read_lingroups(lg_file)
+    print(str(exc))
+    assert f"Cannot read lingroups from '{lg_file}'. Is file empty?" in str(exc)
+
+
+def test_read_lingroups_only_header(runtmp):
+    lg_file = runtmp.output("test.lg.csv")
+    with open(lg_file, 'w') as out:
+        out.write('lin,name\n')
+    with pytest.raises(ValueError) as exc:
+        read_lingroups(lg_file)
+    print(str(exc))
+    assert f"No lingroups loaded from {lg_file}" in str(exc)
+
+
+def test_read_lingroups_bad_header(runtmp):
+    lg_file = runtmp.output("test.lg.csv")
+    with open(lg_file, 'w') as out:
+        out.write('LINgroup_pfx,LINgroup_nm\n')
+    with pytest.raises(ValueError) as exc:
+        read_lingroups(lg_file)
+    print(str(exc))
+    assert f"'{lg_file}' must contain the following columns: 'name', 'lin'." in str(exc)
+
+
+def test_LineageTree_init():
+    x = "a;b"
+    lin1 = RankLineageInfo(lineage_str=x)
+    print(lin1)
+    tree = LineageTree([lin1])
+    assert tree.tree == { LineagePair('superkingdom', 'a'):
+                         { LineagePair('phylum', 'b') : {}} }
+
+def test_LineageTree_init_mult():
+    x = "a;b"
+    y = "a;c"
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = RankLineageInfo(lineage_str=y)
+    print(lin1)
+    from sourmash.tax.tax_utils import LineageTree
+    tree = LineageTree([lin1, lin2])
+    assert tree.tree == {LineagePair(rank='superkingdom', name='a', taxid=None): 
+                          {LineagePair(rank='phylum', name='b', taxid=None): {},
+                           LineagePair(rank='phylum', name='c', taxid=None): {}}}
+
+
+def test_LineageTree_init_and_add_lineage():
+    x = "a;b"
+    y = "a;c"
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = RankLineageInfo(lineage_str=y)
+    print(lin1)
+    from sourmash.tax.tax_utils import LineageTree
+    tree = LineageTree([lin1])
+    assert tree.tree == { LineagePair('superkingdom', 'a'):
+                         { LineagePair('phylum', 'b') : {}} }
+    tree.add_lineage(lin2)
+    assert tree.tree == {LineagePair(rank='superkingdom', name='a', taxid=None): 
+                          {LineagePair(rank='phylum', name='b', taxid=None): {},
+                           LineagePair(rank='phylum', name='c', taxid=None): {}}}
+
+
+def test_LineageTree_init_and_add_lineages():
+    x = "a;b"
+    y = "a;c"
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = RankLineageInfo(lineage_str=y)
+    print(lin1)
+    from sourmash.tax.tax_utils import LineageTree
+    tree = LineageTree([lin1])
+    assert tree.tree == { LineagePair('superkingdom', 'a'):
+                         { LineagePair('phylum', 'b') : {}} }
+    tree.add_lineages([lin2])
+    assert tree.tree == {LineagePair(rank='superkingdom', name='a', taxid=None): 
+                          {LineagePair(rank='phylum', name='b', taxid=None): {},
+                           LineagePair(rank='phylum', name='c', taxid=None): {}}}
+
+
+def test_build_tree_RankLineageInfo():
+    x = "a;b"
+    lin1 = RankLineageInfo(lineage_str=x)
+    print(lin1)
+    tree = LineageTree([lin1])
+    assert tree.tree == { LineagePair('superkingdom', 'a'):
+                         { LineagePair('phylum', 'b') : {}} }
+
+
+def test_build_tree_LINLineageInfo():
+    x = "0;3"
+    lin1 = LINLineageInfo(lineage_str=x)
+    print(lin1)
+    tree = LineageTree([lin1])
+    assert tree.tree == { LineagePair('0', '0'):
+                         { LineagePair('1', '3') : {}} }
+
+
+def test_build_tree_2():
+    x = "a;b"
+    y = "a;c"
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = RankLineageInfo(lineage_str=y)
+    print(lin1)
+    print(lin2)
+    tree = LineageTree([lin1,lin2])
+
+    assert tree.tree == { LineagePair('superkingdom', 'a'): { LineagePair('phylum', 'b') : {},
+                                           LineagePair('phylum', 'c') : {}} }
+
+
+def test_build_tree_2_LineagePairs():
+    # build tree from LineagePairs
+    tree = LineageTree([[LineagePair('superkingdom', 'a'), LineagePair('phylum', 'b')],
+                       [LineagePair('superkingdom', 'a'), LineagePair('phylum', 'c')],
+                      ])
+
+    assert tree.tree == { LineagePair('superkingdom', 'a'): { LineagePair('phylum', 'b') : {},
+                                           LineagePair('phylum', 'c') : {}} }
+
+
+def test_build_tree_3():
+    # empty phylum name
+    x='a;'
+    lin1 = RankLineageInfo(lineage_str=x)
+    tree = LineageTree([lin1])
+    assert tree.tree == { LineagePair('superkingdom', 'a'): {} }
+
+
+def test_build_tree_3_LineagePairs():
+    # empty phylum name: LineagePair input
+    lin1 = (LineagePair('superkingdom', "a", '3'),
+            LineagePair('phylum', '', ''),)
+    tree = LineageTree([lin1])
+    assert tree.tree == { LineagePair('superkingdom', 'a', '3'): {} }
+
+
+def test_build_tree_5():
+    with pytest.raises(ValueError):
+        tree = LineageTree([])
+
+
+def test_build_tree_5b():
+    with pytest.raises(ValueError):
+        tree = LineageTree("")
+
+
+def test_build_tree_iterable():
+    with pytest.raises(ValueError) as exc:
+        tree = LineageTree(RankLineageInfo())
+    assert "Must pass in an iterable containing LineagePair or LineageInfo objects"  in str(exc)
+
+
+def test_find_lca():
+    x='a;b'
+    lin1 = RankLineageInfo(lineage_str=x)
+    tree = LineageTree([lin1])
+    lca = tree.find_lca()
+
+    assert lca == ((LineagePair('superkingdom', 'a'), LineagePair('phylum', 'b'),), 0)
+
+
+def test_find_lca_LineagePairs():
+    tree = LineageTree([[LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2')]])
+    lca = tree.find_lca()
+
+    assert lca == ((LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2'),), 0)
+
+
+def test_find_lca_2():
+    x = "a;b"
+    y = "a;c"
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = RankLineageInfo(lineage_str=y)
+
+    tree = LineageTree([lin1, lin2])
+    lca = tree.find_lca()
+
+    assert lca == ((LineagePair('superkingdom', 'a'),), 2)
+
+
+def test_find_lca_LIN():
+    x = "5;6"
+    y = "5;10"
+    lin1 = LINLineageInfo(lineage_str=x)
+    lin2 = LINLineageInfo(lineage_str=y)
+
+    tree = LineageTree([lin1, lin2])
+    lca = tree.find_lca()
+
+    assert lca == ((LineagePair('0', '5'),), 2)
+    print(lca)
+
+
+def test_find_lca_2_LineagePairs():
+    tree = LineageTree([[LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2a')],
+                       [LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2b')],
+                      ])
+    lca = tree.find_lca()
+
+    assert lca == ((LineagePair('rank1', 'name1'),), 2)
+
+
+def test_find_lca_3():
+    lin1 = RankLineageInfo(lineage_str="a;b;c")
+    lin2 = RankLineageInfo(lineage_str="a;b")
+
+    tree = LineageTree([lin1, lin2])
+    lca, reason = tree.find_lca()
+    assert lca == lin1.filled_lineage           # find most specific leaf node
+    print(lca)
+
+
+def test_build_tree_with_initial():
+    x = "a;b;c"
+    y = "a;b;d"
+    z = "a;e"
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = RankLineageInfo(lineage_str=y)
+    lin3 = RankLineageInfo(lineage_str=z)
+
+    tree = LineageTree([lin1, lin2])
+    lca = tree.find_lca()
+
+    print(lca)
+    assert lca == ((LineagePair(rank='superkingdom', name='a', taxid=None),
+                    LineagePair(rank='phylum', name='b', taxid=None)), 2)
+    tree.add_lineages([lin3])
+    lca2 = tree.find_lca()
+    print(lca2)
+    assert lca2 == ((LineagePair('superkingdom', 'a'),), 2)
+
+
+def test_LineageTree_find_ordered_paths():
+    x = "a;b;c"
+    y = "a;b;d"
+    z = "a;e"
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = RankLineageInfo(lineage_str=y)
+    lin3 = RankLineageInfo(lineage_str=z)
+
+    tree = LineageTree([lin1, lin2, lin3])
+    paths = tree.ordered_paths()
+
+    print(paths)
+    assert paths == [(LineagePair(rank='superkingdom', name='a', taxid=None),
+                        LineagePair(rank='phylum', name='e', taxid=None)),
+                     (LineagePair(rank='superkingdom', name='a', taxid=None),
+                        LineagePair(rank='phylum', name='b', taxid=None),
+                        LineagePair(rank='class', name='c', taxid=None)),
+                     (LineagePair(rank='superkingdom', name='a', taxid=None),
+                        LineagePair(rank='phylum', name='b', taxid=None),
+                        LineagePair(rank='class', name='d', taxid=None))]
+
+
+def test_LineageTree_find_ordered_paths_include_internal():
+    x = "a;b;c"
+    y = "a;b;d"
+    z = "a;e"
+    lin1 = RankLineageInfo(lineage_str=x)
+    lin2 = RankLineageInfo(lineage_str=y)
+    lin3 = RankLineageInfo(lineage_str=z)
+
+    tree = LineageTree([lin1, lin2, lin3])
+    paths = tree.ordered_paths(include_internal=True)
+
+    print(paths)
+
+    assert paths == [(LineagePair(rank='superkingdom', name='a', taxid=None),),
+                     (LineagePair(rank='superkingdom', name='a', taxid=None),
+                        LineagePair(rank='phylum', name='e', taxid=None)),
+                     (LineagePair(rank='superkingdom', name='a', taxid=None),
+                        LineagePair(rank='phylum', name='b', taxid=None)),
+                     (LineagePair(rank='superkingdom', name='a', taxid=None),
+                        LineagePair(rank='phylum', name='b', taxid=None),
+                        LineagePair(rank='class', name='c', taxid=None)),
+                      (LineagePair(rank='superkingdom', name='a', taxid=None),
+                        LineagePair(rank='phylum', name='b', taxid=None),
+                        LineagePair(rank='class', name='d', taxid=None))]

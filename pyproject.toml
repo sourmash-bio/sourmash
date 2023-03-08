@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "maturin>=0.14.7,<0.15",
+    "maturin>=0.14.13,<0.15",
     "cffi",
 ]
 build-backend = 'maturin'
@@ -9,7 +9,7 @@ build-backend = 'maturin'
 name = "sourmash"
 description = "tools for comparing biological sequences with k-mer sketches"
 readme = "README.md"
-version = "4.6.1"
+version = "4.7.0"
 
 authors = [
   { name="Luiz Irber", orcid="0000-0003-4371-9659" },
@@ -70,7 +70,7 @@ classifiers = [
 ]
 
 dependencies = [
-  "screed>=1.0.5",
+  "screed>=1.1.2,<2",
   "cffi>=1.14.0",
   "numpy",
   "matplotlib",
@@ -78,6 +78,7 @@ dependencies = [
   "deprecation>=2.0.6",
   "cachetools>=4,<6",
   "bitstring>=3.1.9,<5",
+  "importlib_metadata>=3.6;python_version<'3.10'"
 ]
 
 requires-python = ">=3.8"
@@ -103,6 +104,7 @@ test = [
   "pyyaml>=6,<7",
   "recommonmark",
   "hypothesis",
+  "build",
 ]
 demo = [
   "jupyter",
@@ -111,7 +113,7 @@ demo = [
 ]
 doc = [
   "sphinx>=4.4.0,<7",
-  "myst-parser==0.18.1",
+  "myst-parser==0.19.1",
   "Jinja2==3.1.2",
   "alabaster",
   "sphinxcontrib-napoleon",
@@ -133,12 +135,20 @@ manifest-path = "src/core/Cargo.toml"
 bindings = "cffi"
 include = [
   { path = "include/sourmash.h", format = ["sdist","wheel"] },
+  { path = "requirements.txt", format = ["sdist"] },
+  { path = "Cargo.*", format = ["sdist"] },
+  { path = "tests/**/*", format = ["sdist"] },
+  { path = "CITATION.cff", format = ["sdist", "wheel"] },
+  { path = "LICENSE", format = ["sdist"] },
+]
+exclude = [
+  { path = "**/__pycache__/*", format = ["sdist", "wheel"] },
 ]
 features = ["maturin"]
 locked = true
 
 [tool.isort]
-known_third_party = ["deprecation", "hypothesis", "mmh3", "numpy", "pkg_resources", "pytest", "screed", "setuptools", "sourmash_tst_utils"]
+known_third_party = ["deprecation", "hypothesis", "mmh3", "numpy", "pytest", "screed", "sourmash_tst_utils"]
 multi_line_output = 3 
 include_trailing_comma = true
 force_grid_wrap = 0

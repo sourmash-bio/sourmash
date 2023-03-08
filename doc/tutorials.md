@@ -13,7 +13,7 @@ X and Linux. They require about 5 GB of disk space and 5 GB of RAM.
 
 ## Background and details
 
-These next three tutorials are all notebooks that you can view, run
+These next four tutorials are all notebooks that you can view, run
 yourself, or run interactively online via the
 [binder](https://mybinder.org) service.
 
@@ -22,6 +22,8 @@ yourself, or run interactively online via the
 * [Some sourmash command line examples!](sourmash-examples.md)
 
 * [Working with private collections of signatures.](sourmash-collections.md)
+
+* [Using `sourmash taxonomy` with the LIN taxonomic framework.](tutorial-lin-taxonomy.md)
 
 ## More information
 

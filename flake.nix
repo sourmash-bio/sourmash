@@ -26,22 +26,6 @@
         overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs {
           inherit system overlays;
-          config.packageOverrides = pkgs:
-            {
-              maturin = pkgs.rustPlatform.buildRustPackage rec {
-                pname = "maturin";
-                version = "0.14.7";
-                src = pkgs.fetchFromGitHub {
-                  owner = "PyO3";
-                  repo = "maturin";
-                  rev = "v0.14.7";
-                  hash = "sha256-PCE4SvUrS8ass8UPc+t5Ix126Q4tB2yCMU2kWuCfr5Q=";
-                };
-                cargoHash = "sha256-ODMOJOoyra29ZeaG0yKnjPRwcjh/20VsgOz+IGZbQ/s=";
-                nativeBuildInputs = [ pkgs.pkg-config ];
-                doCheck = false;
-              };
-            };
         };
         rustVersion = pkgs.rust-bin.stable.latest.default.override {
           #extensions = [ "rust-src" ];
@@ -59,23 +43,6 @@
 
         python = pkgs.python310Packages;
 
-        screed = python.buildPythonPackage rec {
-          pname = "screed";
-          version = "1.1";
-          #format = "pyproject";
-
-          src = pkgs.fetchFromGitHub {
-            owner = "dib-lab";
-            repo = "screed";
-            rev = "v1.1";
-            hash = "sha256-g1FZJx94RGBPoTiLfwttdYqCJ02pxtOKK708WA63kHE=";
-          };
-
-          SETUPTOOLS_SCM_PRETEND_VERSION = "1.1";
-          propagatedBuildInputs = with python; [ setuptools bz2file setuptools_scm ];
-          doCheck = false;
-        };
-
       in
 
       with pkgs;
@@ -90,7 +57,7 @@
 
           sourmash = python.buildPythonPackage rec {
             pname = "sourmash";
-            version = "4.6.1";
+            version = "4.7.0";
             format = "pyproject";
 
             src = ./.;
@@ -149,7 +116,7 @@
             wasm-pack
             nodejs-16_x
 
-            py-spy
+            #py-spy
             heaptrack
             cargo-watch
             cargo-limit

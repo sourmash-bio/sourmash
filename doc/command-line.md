@@ -91,6 +91,7 @@ information; these are grouped under the `sourmash tax` and
 * `tax metagenome` - summarize metagenome gather results at each taxonomic rank.
 * `tax genome`     - summarize single-genome gather results and report most likely classification.
 * `tax annotate`   - annotate gather results with lineage information (no summarization or classification).
+* `tax prepare`    - prepare and/or combine taxonomy files.
 * `tax grep` - subset taxonomies and create picklists based on taxonomy string matches.
 * `tax summarize` - print summary information (counts of lineages) for a taxonomy lineages file or database.
 
@@ -491,7 +492,8 @@ The sourmash `tax` or `taxonomy` commands integrate taxonomic
  `gather` command (we cannot combine separate `gather` runs for the
  same query). For supported databases (e.g. GTDB, NCBI), we provide
  taxonomy csv files, but they can also be generated for user-generated
- databases. For more information, see [databases](databases.md).
+ databases. As of v4.8, some sourmash taxonomy commands can also use `LIN`
+ lineage information. For more information, see [databases](databases.md).
 
 `tax` commands rely upon the fact that `gather` provides both the total
  fraction of the query matched to each database matched, as well as a
@@ -530,8 +532,13 @@ sourmash tax metagenome
     --taxonomy gtdb-rs202.taxonomy.v2.csv
 ```
 
-There are three possible output formats, `csv_summary`, `lineage_summary`, and
- `krona`.
+The possible output formats are:
+- `human`
+- `csv_summary`
+- `lineage_summary`
+- `krona`
+- `kreport`
+- `lingroup_report`
 
 #### `csv_summary` output format
 
@@ -706,6 +713,29 @@ example sourmash `{output-name}.kreport.txt`:
 9.24    2011000         S               Streptococcus mutans
 ```
 
+
+#### `lingroup` output format
+
+When using LIN taxonomic information, you can optionally also provide a `lingroup` file with two required columns: `name` and `lin`. If provided, we will produce a file, `{base}.lingroups.tsv`, where `{base}` is the name provided via the `-o`,` --output-base` option. This output will select information from the full summary that match the LIN prefixes provided as groups.
+
+This output format consists of four columns:
+- `name`, `lin` columns are taken directly from the `--lingroup` file
+- `percent_containment`, the total percent of the dataset contained in this lingroup and all descendents
+- `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendents.
+
+Similar to `kreport` above, we use the wording "contained" rather than "assigned," because `sourmash` assigns matches at the genome level, and the `tax` functions summarize this information.
+
+example output:
+```
+name	lin	percent_containment	num_bp_contained
+lg1	0;0;0	5.82	714000
+lg2	1;0;0	5.05	620000
+lg3	2;0;0	1.56	192000
+lg3	1;0;1	0.65	80000
+lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000
+```
+
+Related lingroup subpaths will be grouped in output, but exact ordering may change between runs.
 
 ### `sourmash tax genome` - classify a genome using `gather` results
 
@@ -1966,3 +1996,19 @@ situations where you have a **very large** collection of signatures
 in the collection (as you would have to, with a zipfile). This can be
 useful if you want to refer to different subsets of the collection
 without making multiple copies in a zip file.
+
+### Using sourmash plugins
+
+As of sourmash v4.7.0, sourmash has an experimental plugins interface!
+The plugin interface supports extending sourmash to load and save
+signatures in new ways, and also supports the addition of sourmash
+subcommands via `sourmash scripts`.
+
+In order to use a plugin with sourmash, you will need to use `pip`
+or `conda` to install the plugin the same environment that sourmash
+is installed in.
+
+In the future, we will include a list of available sourmash plugins in
+the documentation, and also provide a way to list available plugins.
+
+You can list all installed plugins with `sourmash info -v`.
