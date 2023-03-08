@@ -2258,7 +2258,6 @@ class QueryTaxResult:
         rank_info = f"@Ranks:{'|'.join(ranks)}"
 
         header_lines = [header_title, sample_info, version_info, rank_info, program]
-        header_lines.append("") # blank line
         colnames = ["@@TAXID","RANK","TAXPATH","TAXPATHSN","PERCENTAGE"]
         header_lines.append('\t'.join(colnames))
         

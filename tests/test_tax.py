@@ -353,8 +353,8 @@ def test_metagenome_bioboxes_outfile(runtmp):
     print(bb_results)
     assert ['# Taxonomic Profiling Output'] == bb_results[0]
     assert ['@SampleID:test1'] == bb_results[1]
-    assert ['2', 'superkingdom', '2', 'Bacteria', '13.08'] == bb_results[7]
-    assert ['838', 'genus', '2|976|200643|171549|171552|838', 'Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Prevotellaceae|Prevotella', '5.70'] == bb_results[17]
+    assert ['2', 'superkingdom', '2', 'Bacteria', '13.08'] == bb_results[6]
+    assert ['838', 'genus', '2|976|200643|171549|171552|838', 'Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Prevotellaceae|Prevotella', '5.70'] == bb_results[16]
 
 
 def test_metagenome_krona_tsv_out(runtmp):
