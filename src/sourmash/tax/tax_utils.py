@@ -2242,10 +2242,6 @@ class QueryTaxResult:
         204455	order	2|1224|28211|204455	Bacteria|Proteobacteria|Alphaproteobacteria|Rhodobacterales	8.42263
         2158	order	2157|28890|183925|2158	Archaea|Euryarchaeotes|Methanobacteria|Methanobacteriales	1.18789
         """
-        # see https://github.com/luizirber/2020-cami/blob/master/scripts/gather_to_opal.py
-
-        # starting from https://github.com/sourmash-bio/sourmash/pull/1606/files
-        bioboxes_results = []
         # build CAMI header info 
         header_title = "# Taxonomic Profiling Output"
         version_info = "@Version:0.10.0"
@@ -2262,6 +2258,7 @@ class QueryTaxResult:
         header_lines.append('\t'.join(colnames))
         
         # now build results in CAMI format
+        bioboxes_results = []
         # order results by rank (descending), then percentage
         for rank in ranks:
             rank_results = self.summarized_lineage_results[rank]
