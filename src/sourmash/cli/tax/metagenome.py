@@ -93,7 +93,7 @@ def main(args):
             raise ValueError(f"No gather CSVs found! Please input via '-g' or '--from-file'.")
         if args.rank:
             args.rank = check_rank(args)
-        args.output_format = check_tax_outputs(args, rank_required = ['krona', 'lineage_summary'],  incompatible_with_lins = ['bioboxes', 'kreport'])
+        args.output_format = check_tax_outputs(args, rank_required = ['krona', 'lineage_summary'], incompatible_with_lins = ['bioboxes', 'kreport'])
 
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
