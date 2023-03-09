@@ -92,7 +92,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '--lingroup', '--lingroups', metavar='FILE', default=None,
-        help="CSV containing 'name', 'lin' columns, where 'lin' is the lingroup prefix. Will classify to these groups."
+        help="CSV containing 'name', 'lin' columns, where 'lin' is the lingroup prefix. Will restrict classification to these groups."
     )
     add_tax_threshold_arg(subparser, 0.1)
     add_rank_arg(subparser)
@@ -101,13 +101,10 @@ def subparser(subparsers):
 def main(args):
     import sourmash
     try:
-
         if not args.gather_csv and not args.from_file:
             raise ValueError(f"No gather CSVs found! Please input via '-g' or '--from-file'.")
         if args.rank:
             args.rank = check_rank(args)
-
-        # args.lingroup=None # if we don't have lingroup arg, above, need this.
         args.output_format = check_tax_outputs(args, rank_required = ['krona'])
 
     except ValueError as exc:

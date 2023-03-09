@@ -139,7 +139,6 @@ def check_rank(args):
     standard_ranks =['strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom']
     if args.lins:
         if args.rank.isdigit(): 
-        #if isinstance(args.rank, int):
             return str(args.rank)
         raise argparse.ArgumentTypeError(f"Invalid '--rank'/'--position' input: '{args.rank}'. '--lins' is specified. Rank must be an integer corresponding to a LIN position.")
     elif args.rank in standard_ranks:
@@ -152,8 +151,8 @@ def add_rank_arg(parser):
     parser.add_argument(
         '-r', '--rank',
         '--position', '--lin-position',
-        help="For non-default output formats: Summarize genome taxonomy at this rank (or LIN position) and above. \
-              Note that the taxonomy CSV must contain lineage information at this rank (or LIN position). \
+        help="For non-default output formats. Classify to this rank (tax genome) or summarize taxonomy at this rank and above (tax metagenome). \
+              Note that the taxonomy CSV must contain lineage information at this rank. \
               Choices: 'strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom' or an integer LIN position"
     )
 
