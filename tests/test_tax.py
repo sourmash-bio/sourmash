@@ -443,7 +443,8 @@ def test_genome_no_rank_krona(runtmp):
 
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona')
-    assert "Rank (--rank) is required for krona output format." in str(exc.value)
+    # assert "Rank (--rank) is required for krona output format." in str(exc.value)
+    assert "ERROR: Rank (--rank) is required for krona output formats" in str(exc.value)
 
 
 def test_metagenome_rank_not_available(runtmp):
@@ -1019,8 +1020,10 @@ def test_genome_empty_gather_results(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax)
 
-    assert f"Cannot read gather results from '{g_csv}'. Is file empty?" in str(exc.value)
     assert runtmp.last_result.status == -1
+    print(runtmp.last_result.err)
+    print(runtmp.last_result.out)
+    assert f"Cannot read gather results from '{g_csv}'. Is file empty?" in str(exc.value)
 
 
 def test_genome_bad_gather_header(runtmp):
@@ -1916,6 +1919,7 @@ def test_genome_empty_gather_results_with_csv_force(runtmp):
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000' in c.last_result.out
 
+
 def test_genome_containment_threshold_bounds(runtmp):
     c = runtmp
     g_csv = utils.get_test_data('tax/test1.gather.csv')
@@ -2148,6 +2152,45 @@ def test_annotate_no_gather_csv(runtmp):
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
+
+
+def test_genome_LIN(runtmp):
+    # test basic genome with LIN taxonomy
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax, '--lins', '--ani-threshold', '0.93')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank,query_ani_at_rank" in c.last_result.out
+    assert "test1,below_threshold,0,0.089,1,md5,test1.sig,0.057,444000,0.925" in c.last_result.out
+
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax, '--lins', '--ani-threshold', '0.924')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank,query_ani_at_rank" in c.last_result.out
+    assert "test1,match,19,0.088,0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,md5,test1.sig,0.058,442000,0.925" in c.last_result.out
+
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax, '--lins', '--rank', '4')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank,query_ani_at_rank" in c.last_result.out
+    assert "test1,below_threshold,4,0.088,0;0;0;0;0,md5,test1.sig,0.058,442000,0.925" in c.last_result.out
+
 
 
 def test_annotate_0(runtmp):
