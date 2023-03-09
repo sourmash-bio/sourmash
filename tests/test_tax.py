@@ -443,7 +443,6 @@ def test_genome_no_rank_krona(runtmp):
 
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona')
-    # assert "Rank (--rank) is required for krona output format." in str(exc.value)
     assert "ERROR: Rank (--rank) is required for krona output formats" in str(exc.value)
 
 
