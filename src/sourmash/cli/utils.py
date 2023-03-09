@@ -152,7 +152,7 @@ def add_rank_arg(parser):
         '-r', '--rank',
         '--position', '--lin-position',
         help="For non-default output formats. Classify to this rank (tax genome) or summarize taxonomy at this rank and above (tax metagenome). \
-              Note that the taxonomy CSV must contain lineage information at this rank. \
+              Note that the taxonomy CSV must contain lineage information at this rank, and that LIN positions start at 0. \
               Choices: 'strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom' or an integer LIN position"
     )
 
