@@ -759,8 +759,8 @@ If using `--lins` taxonomy, you can also provide a `--lingroup` file containing 
 columns, `name`, and `lin`, which provide a series of lin prefixes of interest.
 If provided,  genome classification will be restricted to provided lingroups only.
 All other options (`--rank`, `--ani-threshold`, etc) should continue to function.
-However, use caution with `--rank` here, as if you specify a `--rank` that does
-not have an associated lingroup, you eliminate all classification options.
+If you specify a `--rank` that does not have an associated lingroup, sourmash will
+notify you that you eliminated all classification options.
 
 Note that these thresholds and strategies are under active testing.
 
