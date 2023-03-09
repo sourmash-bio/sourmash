@@ -739,7 +739,7 @@ Related lingroup subpaths will be grouped in output, but exact ordering may chan
 
 #### `bioboxes` output format
 
-When using standard taxonomic ranks (not lins), you can choose to output a 'bioboxes' profilie, `{base}.bioboxes.profile`, where `{base}` is the name provided via the `-o`,` --output-base` option. This output fits the [bioboxes profile](https://github.com/bioboxes/rfc/tree/master/data-format) which can be used as input for CAMI challenges.
+When using standard taxonomic ranks (not lins), you can choose to output a 'bioboxes' profile, `{base}.bioboxes.profile`, where `{base}` is the name provided via the `-o`,` --output-base` option. This output is organized according to the [bioboxes profile specifications](https://github.com/bioboxes/rfc/tree/master/data-format) so that this file can be used for CAMI challenges.
 
 This output format starts with some header information:
 ```
