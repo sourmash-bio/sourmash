@@ -2192,6 +2192,44 @@ def test_genome_LIN(runtmp):
     assert "test1,below_threshold,4,0.088,0;0;0;0;0,md5,test1.sig,0.058,442000,0.925" in c.last_result.out
 
 
+def test_genome_LIN_lingroups(runtmp):
+    # test basic genome with LIN taxonomy
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+
+    lg_file = runtmp.output("test.lg.csv")
+
+    with open(lg_file, 'w') as out:
+        out.write('lin,name\n')
+        out.write('0;0;0,lg1\n')
+        out.write('1;0;0,lg2\n')
+        out.write('2;0;0,lg3\n')
+        out.write('1;0;1,lg3\n')
+        # write a 19 so we can check the end
+        out.write('0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,lg4\n')
+
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax, '--lins', '--lingroup', lg_file)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank,query_ani_at_rank" in c.last_result.out
+    assert "test1,below_threshold,2,0.088,0;0;0,md5,test1.sig,0.058,442000,0.925" in c.last_result.out
+
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax, '--lins', '--lingroup', lg_file, '--ani-threshold', '0.924')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank,query_ani_at_rank" in c.last_result.out
+    assert "test1,match,19,0.088,0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,md5,test1.sig,0.058,442000,0.925" in c.last_result.out
+
 
 def test_annotate_0(runtmp):
     # test annotate basics

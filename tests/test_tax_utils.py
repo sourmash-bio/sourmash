@@ -2812,7 +2812,7 @@ def test_make_lingroup_results_fail_pre_v450():
     with pytest.raises(ValueError) as exc:
         q_res.make_lingroup_results(lingroupD)
     print(str(exc))
-    assert "cannot produce 'LINgroup_report' format from gather results before sourmash v4.5.0" in str(exc)
+    assert "cannot produce 'lingroup' format from gather results before sourmash v4.5.0" in str(exc)
 
 
 def test_read_lingroups(runtmp):
