@@ -3660,7 +3660,12 @@ def test_metagenome_LIN_lingroups_bad_cli_inputs(runtmp):
         c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '--lingroup', lg_file)
     print(c.last_result.err)
     assert c.last_result.status != 0
-    assert "Must enable LIN taxonomy via '--lins' in order to use lingroups." in c.last_result.err
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '--lins', '-F', 'bioboxes')
+    print(c.last_result.err)
+    assert c.last_result.status != 0
+    assert "ERROR: The following outputs are incompatible with '--lins': : bioboxes, kreport" in c.last_result.err
 
 
 def test_metagenome_mult_outputs_stdout_fail(runtmp):
