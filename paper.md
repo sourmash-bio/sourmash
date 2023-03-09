@@ -64,9 +64,6 @@ authors:
  - name: David Koslicki
    orcid: 0000-0002-0640-954X
    affiliation: Pennsylvania State University
- - name: Katrin Leinweber
-   orcid: 0000-0001-5135-5758
-   #affiliation: @@@
  - name: Marisa Lim
    orcid: 0000-0003-2097-8818
    affiliation: 10x Genomics
