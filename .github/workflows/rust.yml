@@ -272,7 +272,7 @@ jobs:
           override: true
 
       - name: check if README matches MSRV defined here
-        run: grep '1.56.1' src/core/README.md
+        run: grep '1.60' src/core/README.md
 
       - name: Check if it builds properly
         uses: actions-rs/cargo@v1
