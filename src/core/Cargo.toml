@@ -11,7 +11,7 @@ edition = "2021"
 readme = "README.md"
 autoexamples = false
 autobins = false
-rust-version = "1.56.1"
+rust-version = "1.60.0"
 
 [lib]
 name = "sourmash"
