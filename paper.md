@@ -21,7 +21,6 @@ authors:
    affiliation: Woods Hole Oceanographic Institute
  - name: Abhishek Anant
    orcid:  0000-0002-5751-2010
-   #affiliation: @@@
  - name: Keya Barve
    orcid: 0000-0003-3241-2117
    affiliation: University of California, Davis
@@ -34,21 +33,12 @@ authors:
  - name: Phillip Brooks
    orcid: 0000-0003-3987-244X
    affiliation: Ancestry
- - name: Peter Cock
-   orcid: 0000-0001-9513-9993
-   #affiliation: @@@
  - name: Daniel Dsouza
    orcid: 0000-0001-7843-8596
-   #affiliation: @@@
  - name: Laurent Gautier
    orcid: 0000-0003-0638-3391
-   #affiliation: @@@
- - name: Nick H
-   orcid: 0000-0002-1685-302X
-   #affiliation: @@@
  - name: Tim Head
    orcid: 0000-0003-0931-3698
-   #affiliation: @@@
  - name: Mahmudur Rahman Hera
    orcid: 0000-0002-5992-9012
    affiliation: Pennsylvania State University
@@ -60,7 +50,7 @@ authors:
    affiliation: 10x Genomics
  - name: Fabian Klötzl
    orcid: 0000-0002-6930-0592
-   #affiliation: @@@
+   affiliation: MPI for Evolutionary Biology
  - name: David Koslicki
    orcid: 0000-0002-0640-954X
    affiliation: Pennsylvania State University
@@ -69,10 +59,8 @@ authors:
    affiliation: 10x Genomics
  - name: Ricky Lim
    orcid: 0000-0003-1313-7076
-   #affiliation: @@@
  - name: Ivan Ogasawara
    orcid: 0000-0001-5049-4289
-  #  affiliation: @@@
  - name: Taylor Reiter
    orcid: 0000-0002-7388-421X
    affiliation: University of California, Davis
@@ -81,16 +69,10 @@ authors:
    affiliation: University of California, Davis
  - name: Andreas Sjödin
    orcid: 0000-0001-5350-4219
-   #affiliation: @@@
- - name: Connor Skennerton
-   orcid: 0000-0003-1320-4873
-   #affiliation: @@@
- - name: Jason Stajich
-   orcid: 0000-0002-7591-0020
-   #affiliation: @@@
+   affiliation: Swedish Defence Research Agency (FOI)
  - name: Daniel Standage
    orcid: 0000-0003-0342-8531
-   #affiliation: @@@
+   affiliation: National Bioforensic Analysis Center
  - name: S. Joshua Swamidass
    orcid: 0000-0003-2191-0778
    #affiliation: @@@
@@ -106,7 +88,7 @@ authors:
  - name: C. Titus Brown
    orcid: 0000-0001-6001-2677
    affiliation: University of California, Davis
-date: 23 Jan 2023
+date: 27 Mar 2023
 bibliography: paper.bib
 ---
 
