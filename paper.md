@@ -9,9 +9,11 @@ tags:
 authors:
  - name: Luiz Irber
    orcid: 0000-0003-4371-9659
+   equal-contrib: true
    affiliation: University of California, Davis
  - name: N. Tessa Pierce-Ward
    orcid: 0000-0002-2942-5331
+   equal-contrib: true
    affiliation: University of California, Davis
  - name: Mohamed Abuelanin
    orcid: 0000-0002-3419-4785
@@ -85,6 +87,7 @@ authors:
    affiliation: University of California, Davis
  - name: C. Titus Brown
    orcid: 0000-0001-6001-2677
+   corresponding: true
    affiliation: University of California, Davis
 date: 27 Mar 2023
 bibliography: paper.bib
