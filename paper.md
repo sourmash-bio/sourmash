@@ -75,10 +75,8 @@ authors:
    affiliation: National Bioforensic Analysis Center
  - name: S. Joshua Swamidass
    orcid: 0000-0003-2191-0778
-   #affiliation: @@@
  - name: Connor Tiffany
    orcid: 0000-0001-8188-7720
-   #affiliation: @@@
  - name: Pranathi Vemuri
    orcid: 0000-0002-5748-9594
    affiliation: Chan-Zuckerberg Biohub 
