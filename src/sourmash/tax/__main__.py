@@ -9,7 +9,7 @@ from dataclasses import asdict, fields
 import re
 
 import sourmash
-from ..sourmash_args import FileOutputCSV, FileOutput
+from ..sourmash_args import FileOutputCSV, FileOutput, get_manifest
 from sourmash.logging import set_quiet, error, notify, print_results
 from sourmash.lca.lca_utils import zip_lineage
 
@@ -393,6 +393,8 @@ def grep(args):
 
 def summarize(args):
     "Summarize multiple taxonomy databases."
+    set_quiet(args.quiet)
+
     notify("loading taxonomies...")
     try:
         tax_assign = MultiLineageDB.load(args.taxonomy_files,
@@ -448,6 +450,156 @@ def summarize(args):
 
         n = len(lineage_counts)
         notify(f"saved {n} lineage counts to '{args.output_lineage_information}'")
+
+
+def crosscheck(args):
+    "Cross-check between taxonomies and sketches."
+    set_quiet(args.quiet)
+
+    # @CTB provide output args
+
+    if not args.taxonomy_files:
+        error("Must provide one or more taxonomy files with '--taxonomy'.")
+        sys.exit(-1)
+
+    if not args.database_files:
+        error("Must provide one or more database files with '--database'.")
+        sys.exit(-1)
+        
+    notify("loading taxonomies...")
+    try:
+        tax_assign = MultiLineageDB.load(args.taxonomy_files,
+                                         force=args.force,
+                       keep_full_identifiers=args.keep_full_identifiers,
+                       keep_identifier_versions=args.keep_identifier_versions)
+    except ValueError as exc:
+        error("ERROR while loading taxonomies!")
+        error(str(exc))
+        sys.exit(-1)
+
+    notify(f"...loaded {len(tax_assign)} entries.")
+
+    # now, load the databases/manifests
+    notify("loading sourmash databases...")
+
+    manifests = []
+    total_num_sketches = 0
+    for filename in args.database_files:
+        idx = sourmash.load_file_as_index(filename)
+        # @CTB: test what happens if no manifest/manifest is None
+        mf = get_manifest(idx)
+        total_num_sketches += len(mf)
+        # @CTB do we need to track filename?
+        manifests.append((filename, mf))
+
+    notify(f"...found {total_num_sketches} sketches across {len(manifests)} files")
+    notify("")
+
+    # track various things
+    num_duplicate_idents = 0
+    idents_from_tax = set(tax_assign.keys())
+
+    # iterate over all identifiers in the database & cross-check.
+    idents = set()
+    missing_idents = set()
+    for (filename, mf) in manifests:
+        for row in mf.rows:
+            ident = tax_utils.get_ident(row['name'],
+                                        keep_full_identifiers=args.keep_full_identifiers,
+                                        keep_identifier_versions=args.keep_identifier_versions)
+            if ident in idents:
+                num_duplicate_idents += 1
+
+            if ident in idents_from_tax:
+                idents_from_tax.remove(ident)
+            elif ident not in idents: # don't double-count missing idents
+                missing_idents.add(ident)
+
+            idents.add(ident)
+
+    # hackity hack hack
+    if missing_idents and not args.ignore_genbank:
+        notify("Missing identifiers; checking GenBank to see if we need to demux")
+        notify("GCA_ and GCF_ identifiers.")
+
+        genbank_detected = False
+        alt_idents = {}
+        for ident in idents:
+            alt_ident = None
+            if ident.startswith('GCA_'):
+                genbank_detected = True
+                alt_ident = 'GCF_' + ident[4:]
+                alt_idents[ident] = alt_ident
+            elif ident.startswith('GCF_'):
+                genbank_detected = True
+                alt_ident = 'GCA_' + ident[4:]
+                alt_idents[ident] = alt_ident
+
+        if genbank_detected:
+            notify(f"Found {len(alt_idents)} GenBank identifiers!")
+            notify(f"Turn off GenBank demuxification with --ignore-genbank.")
+            notify("")
+
+            missing_idents_2 = set(missing_idents)
+            for missing_ident in missing_idents:
+                alt_ident = alt_idents.get(missing_ident) # what do we do? @CTB
+                if alt_ident and alt_ident in idents_from_tax:
+                    idents_from_tax.remove(alt_ident)
+                    missing_idents_2.remove(missing_ident)
+
+            # did we find any??
+            if len(missing_idents_2) != len(missing_idents):
+                notify(f"Resolved all but {len(missing_idents_2)} missing identifiers with GenBank demuxification.")
+                missing_idents = missing_idents_2
+    elif missing_idents and args.ignore_genbank:
+        notify("** NOTE: missing identifiers, but --ignore-genbank is set;")
+        notify("** we are NOT checking to see if GCF <=> GCA conversion would resolve.")
+
+    fail = False
+
+    if num_duplicate_idents:
+        notify(f"found {num_duplicate_idents} duplicate identifiers in databases.")
+        if not args.no_fail_duplicate_ident:
+            fail = True
+    else:
+        notify(f"no duplicate identifiers found!")
+
+    if missing_idents:
+        notify(f"found {len(missing_idents)} distinct identifiers with no associated taxonomic lineage.")
+        if not args.no_fail_missing_ident:
+            fail = True
+    else:
+        notify("all identifiers have a taxonomic lineage associated with them!")
+
+    if idents_from_tax:
+        notify(f"found {len(idents_from_tax)} identifiers in the taxonomy that are NOT in any database.")
+        if not args.no_fail_extra_tax:
+            fail = True
+    else:
+        notify("all taxonomy entries have a matching sketch in the databases!")
+
+    if args.output_details:
+        n_output_rows = 0
+        with open(args.output_details, "w", newline="") as outfp:
+            w = csv.writer(outfp)
+            w.writerow(['ident', 'problem', 'details'])
+            for ident in missing_idents:
+                w.writerow([ident, 'missing_from_tax', 'this identifier is in a database but not in a taxonomy'])
+                n_output_rows += 1
+
+            for ident in idents_from_tax:
+                w.writerow([ident, 'missing_from_db', 'this identifier is in a taxonomy but not in a database'])
+                n_output_rows += 1
+
+        notify(f"Output {n_output_rows} entries to '{args.output_details}'")
+
+    if fail:
+        if args.no_fail:
+            notify("(exiting without error because --no-fail was set)")
+            return 0
+        return -1
+
+    return 0
 
 
 def main(arglist=None):
