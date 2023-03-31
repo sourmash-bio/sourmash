@@ -111,7 +111,7 @@ affiliations:
    index: 7
  - name: National Bioforensic Analysis Center
    index: 8
--  name: No affiliation
+ - name: No affiliation
    index: 9
 
 date: 27 Mar 2023
