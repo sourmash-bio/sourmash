@@ -38,10 +38,10 @@ authors:
    affiliation: 1
  - name: Daniel Dsouza
    orcid: 0000-0001-7843-8596
-   affiliation: 9
+   affiliation: 8
  - name: Laurent Gautier
    orcid: 0000-0003-0638-3391
-   affiliation: 9
+   affiliation: 8
  - name: Mahmudur Rahman Hera
    orcid: 0000-0002-5992-9012
    affiliation: 4
@@ -50,22 +50,22 @@ authors:
    affiliation: 1
  - name: Lisa K. Johnson
    orcid: 0000-0002-3600-7218
-   affiliation: 5
+   affiliation: 1
  - name: Fabian Klötzl
    orcid: 0000-0002-6930-0592
-   affiliation: 6
+   affiliation: 5
  - name: David Koslicki
    orcid: 0000-0002-0640-954X
    affiliation: 4
  - name: Marisa Lim
    orcid: 0000-0003-2097-8818
-   affiliation: 5
+   affiliation: 1
  - name: Ricky Lim
    orcid: 0000-0003-1313-7076
    affiliation: 9
  - name: Ivan Ogasawara
    orcid: 0000-0001-5049-4289
-   affiliation: 9
+   affiliation: 8
  - name: Taylor Reiter
    orcid: 0000-0002-7388-421X
    affiliation: 1
@@ -74,16 +74,16 @@ authors:
    affiliation: 1
  - name: Andreas Sjödin
    orcid: 0000-0001-5350-4219
-   affiliation: 7
+   affiliation: 6
  - name: Daniel Standage
    orcid: 0000-0003-0342-8531
-   affiliation: 8
+   affiliation: 7
  - name: S. Joshua Swamidass
    orcid: 0000-0003-2191-0778
-   affiliation: 9
+   affiliation: 8
  - name: Connor Tiffany
    orcid: 0000-0001-8188-7720
-   affiliation: 9
+   affiliation: 8
  - name: Pranathi Vemuri
    orcid: 0000-0002-5748-9594
    affiliation: 3
@@ -103,16 +103,14 @@ affiliations:
    index: 3
  - name:  Pennsylvania State University
    index: 4
- - name: 10x Genomics
-   index: 5
  - name:  MPI for Evolutionary Biology
-   index: 6
+   index: 5
  - name: Swedish Defence Research Agency (FOI)
-   index: 7
+   index: 6
  - name: National Bioforensic Analysis Center
-   index: 8
+   index: 7
  - name: No affiliation
-   index: 9
+   index: 8
 
 date: 27 Mar 2023
 bibliography: paper.bib
