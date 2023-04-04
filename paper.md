@@ -38,10 +38,10 @@ authors:
    affiliation: 1
  - name: Daniel Dsouza
    orcid: 0000-0001-7843-8596
-   affiliation: 8
+   affiliation: 9
  - name: Laurent Gautier
    orcid: 0000-0003-0638-3391
-   affiliation: 8
+   affiliation: 9
  - name: Mahmudur Rahman Hera
    orcid: 0000-0002-5992-9012
    affiliation: 4
@@ -65,7 +65,7 @@ authors:
    affiliation: 9
  - name: Ivan Ogasawara
    orcid: 0000-0001-5049-4289
-   affiliation: 8
+   affiliation: 9
  - name: Taylor Reiter
    orcid: 0000-0002-7388-421X
    affiliation: 1
@@ -83,7 +83,7 @@ authors:
    affiliation: 8
  - name: Connor Tiffany
    orcid: 0000-0001-8188-7720
-   affiliation: 8
+   affiliation: 9
  - name: Pranathi Vemuri
    orcid: 0000-0002-5748-9594
    affiliation: 3
@@ -97,7 +97,7 @@ authors:
 affiliations:
  - name: University of California, Davis
    index: 1
- - name:  Woods Hole Oceanographic Institute
+ - name: Woods Hole Oceanographic Institute
    index: 2
  - name: Chan-Zuckerberg Biohub
    index: 3
@@ -109,8 +109,10 @@ affiliations:
    index: 6
  - name: National Bioforensic Analysis Center
    index: 7
- - name: No affiliation
+ - name: Washington University in St Louis
    index: 8
+ - name: No affiliation
+   index: 9
 
 date: 27 Mar 2023
 bibliography: paper.bib
