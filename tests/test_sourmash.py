@@ -3645,6 +3645,32 @@ def test_gather_metagenome_threshold_bp(runtmp, linear_gather, prefetch_gather):
                 'NC_003198.1 Salmonella enterica subsp' in runtmp.last_result.out))
 
 
+def test_gather_metagenome_threshold_bp_low(runtmp, linear_gather, prefetch_gather):
+    # set a threshold on the gather output => too low
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+
+    runtmp.sourmash(*cmd)
+
+    assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
+
+    runtmp.sourmash('gather', query_sig, 'gcf_all', '-k',  '21',
+                    '--threshold-bp', '1', linear_gather, prefetch_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'found 12 matches total' in runtmp.last_result.out
+    assert 'found less than 1 bp in common. => exiting' in runtmp.last_result.err
+    assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
+
+
 def test_gather_metagenome_threshold_bp_too_high(runtmp, linear_gather, prefetch_gather):
     # set a threshold on the gather output => no results
     testdata_glob = utils.get_test_data('gather/GCF*.sig')

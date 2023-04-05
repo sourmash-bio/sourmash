@@ -551,7 +551,7 @@ def format_bp(bp):
     "Pretty-print bp information."
     bp = float(bp)
     if bp < 500:
-        return '{:.0f} bp '.format(bp)
+        return '{:.0f} bp'.format(bp)
     elif bp <= 500e3:
         return '{:.1f} kbp'.format(round(bp / 1e3, 1))
     elif bp < 500e6:
