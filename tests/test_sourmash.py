@@ -3539,8 +3539,7 @@ def test_gather_nomatch(runtmp, linear_gather, prefetch_gather):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert 'found 0 matches total' in runtmp.last_result.out
-    assert 'the recovered matches hit 0.0% of the query' in runtmp.last_result.out
+    assert "No matches found for --threshold-bp at 50.0 kbp." in runtmp.last_result.err
 
 
 def test_gather_abund_nomatch(runtmp, linear_gather, prefetch_gather):
@@ -3553,8 +3552,7 @@ def test_gather_abund_nomatch(runtmp, linear_gather, prefetch_gather):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert 'found 0 matches total' in runtmp.last_result.out
-    assert 'the recovered matches hit 0.0% of the query' in runtmp.last_result.out
+    assert "No matches found for --threshold-bp at 50.0 kbp." in runtmp.last_result.err
 
 
 def test_gather_metagenome(runtmp):
@@ -4337,7 +4335,7 @@ def test_gather_metagenome_output_unassigned_nomatches(runtmp, prefetch_gather, 
                    prefetch_gather)
 
     print(c.last_result.out)
-    assert 'found 0 matches total;' in c.last_result.out
+    assert "No matches found for --threshold-bp at 50.0 kbp." in c.last_result.err
 
     x = sourmash.load_one_signature(query_sig, ksize=31)
     y = sourmash.load_one_signature(c.output('foo.sig'))
@@ -4357,7 +4355,7 @@ def test_gather_metagenome_output_unassigned_nomatches_protein(runtmp, linear_ga
                    prefetch_gather)
 
     print(c.last_result.out)
-    assert 'found 0 matches total;' in c.last_result.out
+    assert "No matches found for --threshold-bp at 50.0 kbp." in c.last_result.err
 
     c.run_sourmash('sig', 'describe', c.output('foo.sig'))
     print(c.last_result.out)
@@ -4685,7 +4683,6 @@ def test_gather_error_no_sigs_traverse(c):
     err = c.last_result.err
     print(err)
     assert f"Error while reading signatures from '{emptydir}'" in err
-    assert not 'found 0 matches total;' in err
 
 
 def test_gather_error_no_cardinality_query(runtmp, linear_gather, prefetch_gather):
@@ -5973,8 +5970,7 @@ def test_gather_with_prefetch_picklist_4_manifest_excl(runtmp, linear_gather):
     print(out)
 
     # excluded everything, so nothing to match!
-    assert "found 0 matches total;" in out
-    assert "the recovered matches hit 0.0% of the query" in out
+    assert "No matches found for --threshold-bp at 50.0 kbp." in runtmp.last_result.err
 
 
 def test_gather_with_prefetch_picklist_5_search(runtmp):
