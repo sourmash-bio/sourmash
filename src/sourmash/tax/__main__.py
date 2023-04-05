@@ -9,11 +9,11 @@ from dataclasses import asdict, fields
 import re
 
 import sourmash
-from ..sourmash_args import FileOutputCSV, FileOutput
+from ..sourmash_args import FileOutputCSV, FileInputCSV, FileOutput
 from sourmash.logging import set_quiet, error, notify, print_results
 
 from . import tax_utils
-from .tax_utils import MultiLineageDB, GatherRow, RankLineageInfo, LINLineageInfo
+from .tax_utils import MultiLineageDB, RankLineageInfo, LINLineageInfo, AnnotateTaxResult
 
 usage='''
 sourmash taxonomy <command> [<args>] - manipulate/work with taxonomy information.
@@ -302,12 +302,13 @@ def annotate(args):
 
     set_quiet(args.quiet)
 
-    # first, load taxonomic_assignments
     try:
+        # first, load taxonomic_assignments
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
                        force=args.force, lins=args.lins)
+
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
@@ -316,36 +317,68 @@ def annotate(args):
         error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
         sys.exit(-1)
 
-    # get gather_csvs from args
-    gather_csvs = tax_utils.collect_gather_csvs(args.gather_csv, from_file=args.from_file)
+    # get csv from args
+    input_csvs = tax_utils.collect_gather_csvs(args.gather_csv, from_file=args.from_file)
 
     # handle each gather csv separately
-    for n, g_csv in enumerate(gather_csvs):
-        query_gather_results = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
-                                                                                       fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
-                                                                                       keep_full_identifiers=args.keep_full_identifiers,
-                                                                                       keep_identifier_versions = args.keep_identifier_versions,
-                                                                                       lins=args.lins)
+    for n, in_csv in enumerate(input_csvs):
+        try:
+            # Check for a column we can use to find lineage information:
+            with FileInputCSV(in_csv) as r:
+                header = r.fieldnames
+                # check for empty file
+                if not header:
+                    raise ValueError(f"Cannot read from '{in_csv}'. Is file empty?")
 
-        if not query_gather_results:
-            continue
+                # look for the column to match with taxonomic identifier
+                id_col = None
+                col_options = ['name', 'match_name', 'ident', 'accession']
+                for colname in col_options:
+                    if colname in header:
+                        id_col = colname
+                        break
 
-        out_base = os.path.basename(g_csv.rsplit('.csv')[0])
-        this_outfile, limit_float = make_outfile(out_base, "annotate", output_dir=args.output_dir)
+                if not id_col:
+                    raise ValueError(f"Cannot find taxonomic identifier column in '{in_csv}'. Tried: {', '.join(col_options)}")
 
-        header = [field.name for field in fields(GatherRow)]
-        with FileOutputCSV(this_outfile) as out_fp:
-            header.append("lineage")
-            w = csv.DictWriter(out_fp, header, delimiter=',')
-            w.writeheader()
+                notify(f"Starting annotation on '{in_csv}'. Using ID column: '{id_col}'")
 
-            for gather_res in query_gather_results:
-                for taxres in gather_res.raw_taxresults:
-                    gr = asdict(taxres.raw)
-                    write_gr = {key: gr[key] for key in gr if key in header}
-                    write_gr['lineage'] = taxres.lineageInfo.display_lineage(truncate_empty=True)
-                    w.writerow(write_gr)
+                # make output file for this input
+                out_base = os.path.basename(in_csv.rsplit('.csv')[0])
+                this_outfile, _ = make_outfile(out_base, "annotate", output_dir=args.output_dir)
 
+                out_header = header + ['lineage']
+
+                with FileOutputCSV(this_outfile) as out_fp:
+                    w = csv.DictWriter(out_fp, out_header)
+                    w.writeheader()
+
+                    n = 0
+                    n_missed = 0
+                    for n, row in enumerate(r):
+                        # find lineage and write annotated row
+                        taxres = AnnotateTaxResult(raw=row, id_col=id_col, lins=args.lins,
+                                                keep_full_identifiers=args.keep_full_identifiers,
+                                                keep_identifier_versions=args.keep_identifier_versions)
+                        taxres.get_match_lineage(tax_assignments=tax_assign, fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
+
+                        if taxres.missed_ident: # could not assign taxonomy
+                            n_missed+=1
+                        w.writerow(taxres.row_with_lineages())
+
+                    rows_annotated = (n+1) - n_missed
+                    if not rows_annotated:
+                        raise ValueError(f"Could not annotate any rows from '{in_csv}'.")
+                    else:
+                        notify(f"Annotated {rows_annotated} of {n+1} total rows from '{in_csv}'.")
+
+        except ValueError as exc:
+            if args.force:
+                notify(str(exc))
+                notify('--force is set. Attempting to continue to next file.')
+            else:
+                error(f"ERROR: {str(exc)}")
+                sys.exit(-1)
 
 
 def prepare(args):

@@ -2458,28 +2458,104 @@ def test_annotate_empty_gather_results(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'annotate', '-g', g_csv, '--taxonomy-csv', tax)
 
-    assert f"Cannot read gather results from '{g_csv}'. Is file empty?" in str(exc.value)
+    assert f"Cannot read from '{g_csv}'. Is file empty?" in str(exc.value)
     assert runtmp.last_result.status == -1
 
 
-def test_annotate_bad_gather_header(runtmp):
+def test_annotate_prefetch_or_other_header(runtmp):
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    alt_csv = runtmp.output('g.csv')
+    for alt_col in ['match_name', 'ident', 'accession']:
+        #modify 'name' to other acceptable id_columns result
+        alt_g = [x.replace("name", alt_col) for x in open(g_csv, 'r')]
+        with open(alt_csv, 'w') as fp:
+            for line in alt_g:
+                fp.write(line)
+
+        runtmp.run_sourmash('tax', 'annotate', '-g', alt_csv, '--taxonomy-csv', tax)
+
+        assert runtmp.last_result.status == 0
+        print(runtmp.last_result.out)
+        print(runtmp.last_result.err)
+        assert f"Starting annotation on '{alt_csv}'. Using ID column: '{alt_col}'" in runtmp.last_result.err
+        assert f"Annotated 4 of 4 total rows from '{alt_csv}'" in runtmp.last_result.err
+
+
+def test_annotate_bad_header(runtmp):
     tax = utils.get_test_data('tax/test.taxonomy.csv')
     g_csv = utils.get_test_data('tax/test1.gather.csv')
 
     bad_g_csv = runtmp.output('g.csv')
 
     #creates bad gather result
-    bad_g = [x.replace("query_name", "nope") for x in open(g_csv, 'r')]
+    bad_g = [x.replace("name", "nope") for x in open(g_csv, 'r')]
     with open(bad_g_csv, 'w') as fp:
         for line in bad_g:
             fp.write(line)
-    print("bad_gather_results: \n", bad_g)
+    # print("bad_gather_results: \n", bad_g)
 
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'annotate', '-g', bad_g_csv, '--taxonomy-csv', tax)
 
-    assert 'is missing columns needed for taxonomic summarization.' in str(exc.value)
+    assert f"ERROR: Cannot find taxonomic identifier column in '{bad_g_csv}'. Tried: name, match_name, ident, accession" in str(exc.value)
     assert runtmp.last_result.status == -1
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+
+def test_annotate_no_tax_matches(runtmp):
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    bad_g_csv = runtmp.output('g.csv')
+
+    #mess up tax idents
+    bad_g = [x.replace("GCF_", "GGG_") for x in open(g_csv, 'r')]
+    with open(bad_g_csv, 'w') as fp:
+        for line in bad_g:
+            fp.write(line)
+    # print("bad_gather_results: \n", bad_g)
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('tax', 'annotate', '-g', bad_g_csv, '--taxonomy-csv', tax)
+
+    assert f"ERROR: Could not annotate any rows from '{bad_g_csv}'" in str(exc.value)
+    assert runtmp.last_result.status == -1
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    runtmp.run_sourmash('tax', 'annotate', '-g', bad_g_csv, '--taxonomy-csv', tax, '--force')
+
+    assert runtmp.last_result.status == 0
+    assert f"Could not annotate any rows from '{bad_g_csv}'" in runtmp.last_result.err
+    assert f"--force is set. Attempting to continue to next file." in runtmp.last_result.err
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+
+def test_annotate_missed_tax_matches(runtmp):
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+
+    bad_g_csv = runtmp.output('g.csv')
+
+    with open(g_csv, 'r') as gather_lines, open(bad_g_csv, 'w') as fp:
+        for n, line in enumerate(gather_lines):
+            if n > 2:
+                # mess up tax idents of lines 3, 4
+                line = line.replace("GCF_", "GGG_")
+            fp.write(line)
+    # print("bad_gather_results: \n", bad_g)
+
+    runtmp.run_sourmash('tax', 'annotate', '-g', bad_g_csv, '--taxonomy-csv', tax)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+    assert f"Annotated 2 of 4 total rows from '{bad_g_csv}'." in runtmp.last_result.err
 
 
 def test_annotate_empty_tax_lineage_input(runtmp):
