@@ -42,7 +42,8 @@ _output_type_to_ext = {
     'human': '.human.txt',
     'lineage_csv': '.lineage.csv',
     'kreport': ".kreport.txt",
-    'lingroup': ".lingroup.tsv"
+    'lingroup': ".lingroup.tsv",
+    'bioboxes': '.bioboxes.profile'
     }
 
 def make_outfile(base, output_type, *, output_dir = ""):
@@ -180,6 +181,14 @@ def metagenome(args):
         with FileOutputCSV(lingroupfile) as out_fp:
             header, lgreport_results = single_query_results.make_lingroup_results(LINgroupsD = lingroups)
             tax_utils.write_output(header, lgreport_results, out_fp, sep="\t", write_header=True)
+
+    # write cami bioboxes format
+    if "bioboxes" in args.output_format:
+        bbfile, limit_float = make_outfile(args.output_base, "bioboxes", output_dir=args.output_dir)
+
+        with FileOutputCSV(bbfile) as out_fp:
+            header_lines, bb_results = single_query_results.make_cami_bioboxes()
+            tax_utils.write_bioboxes(header_lines, bb_results, out_fp, sep="\t")
 
 
 def genome(args):
