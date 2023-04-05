@@ -42,7 +42,8 @@ _output_type_to_ext = {
     'human': '.human.txt',
     'lineage_csv': '.lineage.csv',
     'kreport': ".kreport.txt",
-    'lingroup': ".lingroup.tsv"
+    'lingroup': ".lingroup.tsv",
+    'bioboxes': '.bioboxes.profile'
     }
 
 def make_outfile(base, output_type, *, output_dir = ""):
@@ -181,6 +182,14 @@ def metagenome(args):
             header, lgreport_results = single_query_results.make_lingroup_results(LINgroupsD = lingroups)
             tax_utils.write_output(header, lgreport_results, out_fp, sep="\t", write_header=True)
 
+    # write cami bioboxes format
+    if "bioboxes" in args.output_format:
+        bbfile, limit_float = make_outfile(args.output_base, "bioboxes", output_dir=args.output_dir)
+
+        with FileOutputCSV(bbfile) as out_fp:
+            header_lines, bb_results = single_query_results.make_cami_bioboxes()
+            tax_utils.write_bioboxes(header_lines, bb_results, out_fp, sep="\t")
+
 
 def genome(args):
     """
@@ -193,8 +202,15 @@ def genome(args):
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
-                       force=args.force)
+                       force=args.force, lins=args.lins)
         available_ranks = tax_assign.available_ranks
+
+        lg_ranks=None
+        all_lgs=None
+        if args.lingroup:
+            lingroups = tax_utils.read_lingroups(args.lingroup)
+            lg_ranks, all_lgs = tax_utils.parse_lingroups(lingroups)
+
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
@@ -215,7 +231,7 @@ def genome(args):
                                                                                        fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
                                                                                        keep_full_identifiers=args.keep_full_identifiers,
                                                                                        keep_identifier_versions = args.keep_identifier_versions,
-                                                                                       )
+                                                                                       lins=args.lins)
 
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
@@ -230,7 +246,8 @@ def genome(args):
         try:
             queryResult.build_classification_result(rank=args.rank,
                                                     ani_threshold=args.ani_threshold,
-                                                    containment_threshold=args.containment_threshold)
+                                                    containment_threshold=args.containment_threshold,
+                                                    lingroup_ranks=lg_ranks, lingroups=all_lgs)
 
         except ValueError as exc:
             error(f"ERROR: {str(exc)}")

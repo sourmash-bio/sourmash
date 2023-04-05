@@ -19,7 +19,7 @@ import sqlite3
 __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
            'load_gather_results', 'check_and_load_gather_csvs'
            'report_missing_and_skipped_identities', 'aggregate_by_lineage_at_rank'
-           'format_for_krona',
+           'format_for_krona', 'write_output', 'write_bioboxes', 'parse_lingroups',
            'combine_sumgather_csvs_by_lineage', 'write_lineage_sample_frac',
            'MultiLineageDB', 'RankLineageInfo', 'LINLineageInfo']
 
@@ -197,17 +197,17 @@ class BaseLineageInfo:
 
         return zipped
 
-    def display_lineage(self, truncate_empty=True, null_as_unclassified=False):
+    def display_lineage(self, truncate_empty=True, null_as_unclassified=False, sep = ';'):
         "Return lineage names as ';'-separated list"
-        lin = ";".join(self.zip_lineage(truncate_empty=truncate_empty))
+        lin = sep.join(self.zip_lineage(truncate_empty=truncate_empty))
         if null_as_unclassified and lin == "" or lin is None:
             return "unclassified"
         else:
             return lin
 
-    def display_taxid(self, truncate_empty=True):
+    def display_taxid(self, truncate_empty=True, sep = ";"):
         "Return lineage taxids as ';'-separated list"
-        return ";".join(self.zip_taxid(truncate_empty=truncate_empty))
+        return sep.join(self.zip_taxid(truncate_empty=truncate_empty))
 
     def check_rank_availability(self, rank):
         if rank in self.ranks: # rank is available
@@ -632,6 +632,20 @@ def read_lingroups(lingroup_csv):
     return lingroupD
 
 
+def parse_lingroups(lingroupD):
+    # find the ranks we need to consider
+    all_lgs = set()
+    lg_ranks = set()
+    for lg_prefix in lingroupD.keys():
+        # store lineage info for LCA pathfinding
+        lg_info = LINLineageInfo(lineage_str=lg_prefix)
+        all_lgs.add(lg_info)
+        # store rank so we only go through summarized results at these ranks
+        lg_rank = str(lg_info.lowest_rank)
+        lg_ranks.add(lg_rank)
+    return lg_ranks, all_lgs
+
+
 def load_gather_results(gather_csv, tax_assignments, *, seen_queries=None, force=False,
                         skip_idents = None, fail_on_missing_taxonomy=False,
                         keep_full_identifiers=False, keep_identifier_versions=False,
@@ -856,7 +870,19 @@ def write_output(header, results, out_fp, *, sep=',', write_header=True):
     if write_header:
         output.writeheader()
     for res in results:
-        output.writerow(res)   
+        output.writerow(res)
+
+
+def write_bioboxes(header_lines, results, out_fp, *, sep='\t'):
+    """
+    write pre-generated results list of rows, with each
+    row being list.
+    """
+    for inf in header_lines:
+        out_fp.write(inf + '\n')
+    for res in results:
+        res = sep.join(res) + '\n'
+        out_fp.write(res)
 
 
 def write_summary(query_gather_results, csv_fp, *, sep=',', limit_float_decimals=False, classification=False):
@@ -1742,6 +1768,7 @@ class SummarizedGatherResult:
         lowest_assignment_rank = 'species'
         sD = {}
         sD['num_bp_assigned'] = str(0)
+        sD['ncbi_taxid'] = None
         # total percent containment, weighted to include abundance info
         sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
         sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_bp))
@@ -1751,7 +1778,9 @@ class SummarizedGatherResult:
             this_rank = self.lineage.lowest_rank
             sD['rank_code'] = RANKCODE[this_rank]
             sD['sci_name'] = self.lineage.lowest_lineage_name
-            sD['ncbi_taxid'] = self.lineage.lowest_lineage_taxid
+            taxid = self.lineage.lowest_lineage_taxid
+            if taxid:
+                sD['ncbi_taxid'] = str(taxid)
             # the number of bp actually 'assigned' at this rank. Sourmash assigns everything
             # at genome level, but since kreport traditionally doesn't include 'strain' or genome,
             # it is reasonable to state that sourmash assigns at 'species' level for this.
@@ -1775,6 +1804,27 @@ class SummarizedGatherResult:
         sD["lin"] = self.lineage.display_lineage()
         sD["name"] = lg_name
         return sD
+
+    def as_cami_bioboxes(self):
+        """
+        Format taxonomy-summarized gather results
+        as CAMI profiling Bioboxes format.
+
+        Columns are: TAXID	RANK	TAXPATH	TAXPATHSN	PERCENTAGE 
+        """
+        if isinstance(self.lineage, LINLineageInfo):
+            raise ValueError("Cannot produce 'bioboxes' with LIN taxonomy.")
+        if self.lineage != RankLineageInfo(): # if not unassigned
+            taxid = self.lineage.lowest_lineage_taxid
+            if taxid:
+                taxpath = self.lineage.display_taxid(sep="|")
+                taxid = str(taxid)
+            else:
+                taxpath = None
+            taxpathsn = self.lineage.display_lineage(sep="|")
+            percentage = f"{(self.f_weighted_at_rank * 100):.2f}" # fix at 2 decimal points
+            return [taxid, self.rank, taxpath, taxpathsn, percentage]
+        return []
 
 
 @dataclass
@@ -1979,7 +2029,7 @@ class QueryTaxResult:
                                               fraction=f_unique, bp_match_at_rank=bp_intersect_at_rank, query_ani_at_rank=query_ani)
                 self.summarized_lineage_results[rank].append(sres)
 
-    def build_classification_result(self, rank=None, ani_threshold=None, containment_threshold=0.1, force_resummarize=False):
+    def build_classification_result(self, rank=None, ani_threshold=None, containment_threshold=0.1, force_resummarize=False, lingroup_ranks=None, lingroups=None):
         if containment_threshold is not None and not 0 <= containment_threshold <= 1:
             raise ValueError(f"Containment threshold must be between 0 and 1 (input value: {containment_threshold}).")
         if ani_threshold is not None and not 0 <= ani_threshold <= 1:
@@ -1995,7 +2045,13 @@ class QueryTaxResult:
                 raise ValueError(f"Error: rank '{rank}' not in summarized rank(s), {','.join(self.summarized_ranks)}")
             else:
                 self.classified_ranks = [rank]
+        if lingroup_ranks:
+            notify("Restricting classification to lingroups.")
+            self.classified_ranks = [x for x in self.classified_ranks if x in lingroup_ranks]
+        if not self.classified_ranks:
+            raise ValueError(f"Error: no ranks remain for classification.")
         # CLASSIFY using summarization--> best only result. Best way = use ANI or containment threshold
+        classif = None
         for this_rank in self.classified_ranks: # ascending order or just single rank
             # reset for this rank
             f_weighted=0.0
@@ -2007,6 +2063,10 @@ class QueryTaxResult:
             sorted_sum_uniq_to_query.sort(key = lambda x: -x[1])
             # select best-at-rank only
             this_lineage, f_unique_at_rank = sorted_sum_uniq_to_query[0]
+            # if in desired lineage groups, continue (or??)
+            if lingroups and this_lineage not in lingroups:
+                # ignore this lineage and continue up
+                continue
             bp_intersect_at_rank = self.sum_uniq_bp[this_rank][this_lineage]
             f_weighted = self.sum_uniq_weighted[this_rank][this_lineage]
 
@@ -2169,23 +2229,14 @@ class QueryTaxResult:
         header = ["name", "lin", "percent_containment", "num_bp_contained"]
 
         if self.query_info.total_weighted_hashes == 0:
-            raise ValueError("ERROR: cannot produce 'LINgroup_report' format from gather results before sourmash v4.5.0")
+            raise ValueError("ERROR: cannot produce 'lingroup' format from gather results before sourmash v4.5.0")
 
         # find the ranks we need to consider
-        all_lgs = set()
-        lg_ranks = set()
-        for lg_prefix in LINgroupsD.keys():
-            # store lineage info for LCA pathfinding
-            lg_info = LINLineageInfo(lineage_str=lg_prefix)
-            all_lgs.add(lg_info)
-            # store rank so we only go through summarized results at these ranks
-            lg_rank = int(lg_info.lowest_rank)
-            lg_ranks.add(lg_rank)
+        lg_ranks, all_lgs = parse_lingroups(LINgroupsD)
 
         # grab summarized results matching LINgroup prefixes
         lg_results = {}
         for rank in lg_ranks:
-            rank = str(rank)
             rank_results = self.summarized_lineage_results[rank]
             for res in rank_results:
                 if res.lineage in all_lgs:# is this lineage in the list of LINgroups?
@@ -2208,3 +2259,63 @@ class QueryTaxResult:
                 lingroup_results.append(lg_res)
         
         return header, lingroup_results
+ 
+    def make_cami_bioboxes(self):
+        """
+        info: https://github.com/CAMI-challenge/contest_information/blob/master/file_formats/CAMI_TP_specification.mkd
+
+        columns:
+        TAXID - specifies a unique alphanumeric ID for a node in a reference tree such as the NCBI taxonomy
+        RANK -  superkingdom --> strain
+        TAXPATH - the path from the root of the reference taxonomy to the respective taxon 
+        TAXPATHSN - scientific names of taxpath
+        PERCENTAGE (0-100) -  field specifies what percentage of the sample was assigned to the respective TAXID
+
+        example:
+        
+        #CAMI Submission for Taxonomic Profiling
+        @Version:0.9.1
+        @SampleID:SAMPLEID
+        @Ranks:superkingdom|phylum|class|order|family|genus|species|strain
+        
+        @@TAXID	RANK	TAXPATH	TAXPATHSN	PERCENTAGE
+        2	superkingdom	2	Bacteria	98.81211
+        2157	superkingdom	2157	Archaea	1.18789
+        1239	phylum	2|1239	Bacteria|Firmicutes	59.75801
+        1224	phylum	2|1224	Bacteria|Proteobacteria	18.94674
+        28890	phylum	2157|28890	Archaea|Euryarchaeotes	1.18789
+        91061	class	2|1239|91061	Bacteria|Firmicutes|Bacilli	59.75801
+        28211	class	2|1224|28211	Bacteria|Proteobacteria|Alphaproteobacteria	18.94674
+        183925	class	2157|28890|183925	Archaea|Euryarchaeotes|Methanobacteria	1.18789
+        1385	order	2|1239|91061|1385	Bacteria|Firmicutes|Bacilli|Bacillales	59.75801
+        356	order	2|1224|28211|356	Bacteria|Proteobacteria|Alphaproteobacteria|Rhizobacteria	10.52311
+        204455	order	2|1224|28211|204455	Bacteria|Proteobacteria|Alphaproteobacteria|Rhodobacterales	8.42263
+        2158	order	2157|28890|183925|2158	Archaea|Euryarchaeotes|Methanobacteria|Methanobacteriales	1.18789
+        """
+        # build CAMI header info 
+        header_title = "# Taxonomic Profiling Output"
+        version_info = "@Version:0.10.0"
+        program = "@__program__:sourmash"
+        sample_info = f"@SampleID:{self.query_info.query_name}"
+        # taxonomy_id = "@TaxonomyID:2021-10-01" # store this with LineageDB, maybe?
+        ranks = list(self.ranks)
+        # if 'strain' in ranks:
+        #     ranks.remove('strain')
+        rank_info = f"@Ranks:{'|'.join(ranks)}"
+
+        header_lines = [header_title, sample_info, version_info, rank_info, program]
+        colnames = ["@@TAXID","RANK","TAXPATH","TAXPATHSN","PERCENTAGE"]
+        header_lines.append('\t'.join(colnames))
+        
+        # now build results in CAMI format
+        bioboxes_results = []
+        # order results by rank (descending), then percentage
+        for rank in ranks:
+            rank_results = self.summarized_lineage_results[rank]
+            for res in rank_results:
+                bb_info = res.as_cami_bioboxes()
+                if bb_info:
+                    bioboxes_results.append(bb_info)
+
+        return header_lines, bioboxes_results
+

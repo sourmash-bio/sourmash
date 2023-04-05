@@ -295,6 +295,68 @@ def test_metagenome_kreport_out_fail(runtmp):
     assert "ERROR: cannot produce 'kreport' format from gather results before sourmash v4.5.0" in runtmp.last_result.err
 
 
+def test_metagenome_bioboxes_stdout(runtmp):
+    # test CAMI bioboxes format output
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.ncbi-taxonomy.csv')
+
+    runtmp.run_sourmash('tax', 'metagenome', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-F', "bioboxes")
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+
+    assert "# Taxonomic Profiling Output" in runtmp.last_result.out
+    assert "@SampleID:test1" in runtmp.last_result.out
+    assert "@Version:0.10.0" in runtmp.last_result.out
+    assert "@Ranks:superkingdom|phylum|class|order|family|genus|species|strain" in runtmp.last_result.out
+    assert "@__program__:sourmash" in runtmp.last_result.out
+    assert "2	superkingdom	2	Bacteria	13.08" in runtmp.last_result.out
+    assert "976	phylum	2|976	Bacteria|Bacteroidota	7.27" in runtmp.last_result.out
+    assert "1224	phylum	2|1224	Bacteria|Pseudomonadota	5.82" in runtmp.last_result.out
+    assert "200643	class	2|976|200643	Bacteria|Bacteroidota|Bacteroidia	7.27" in runtmp.last_result.out
+    assert "1236	class	2|1224|1236	Bacteria|Pseudomonadota|Gammaproteobacteria	5.82" in runtmp.last_result.out
+    assert "171549	order	2|976|200643|171549	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales	7.27" in runtmp.last_result.out
+    assert "91347	order	2|1224|1236|91347	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales	5.82" in runtmp.last_result.out
+    assert "171552	family	2|976|200643|171549|171552	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Prevotellaceae	5.70" in runtmp.last_result.out
+    assert "543	family	2|1224|1236|91347|543	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales|Enterobacteriaceae	5.82" in runtmp.last_result.out
+    assert "815	family	2|976|200643|171549|815	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Bacteroidaceae	1.56" in runtmp.last_result.out
+    assert "838	genus	2|976|200643|171549|171552|838	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Prevotellaceae|Prevotella	5.70" in runtmp.last_result.out
+    assert "561	genus	2|1224|1236|91347|543|561	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales|Enterobacteriaceae|Escherichia	5.82" in runtmp.last_result.out
+    assert "909656	genus	2|976|200643|171549|815|909656	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Bacteroidaceae|Phocaeicola	1.56" in runtmp.last_result.out
+    assert "165179	species	2|976|200643|171549|171552|838|165179	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Prevotellaceae|Prevotella|Prevotella copri	5.70" in runtmp.last_result.out
+    assert "562	species	2|1224|1236|91347|543|561|562	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales|Enterobacteriaceae|Escherichia|Escherichia coli	5.82" in runtmp.last_result.out
+    assert "821	species	2|976|200643|171549|815|909656|821	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Bacteroidaceae|Phocaeicola|Phocaeicola vulgatus	1.56" in runtmp.last_result.out
+
+
+def test_metagenome_bioboxes_outfile(runtmp):
+    # test CAMI bioboxes format output
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.ncbi-taxonomy.csv')
+    csv_base = "out"
+    sum_csv = csv_base + ".bioboxes.profile"
+    csvout = runtmp.output(sum_csv)
+    outdir = os.path.dirname(csvout)
+
+    runtmp.run_sourmash('tax', 'metagenome', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-F', "bioboxes", '-o', csv_base, '--output-dir', outdir,)
+
+    print(runtmp.last_result.status)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert runtmp.last_result.status == 0
+
+    bb_results = [x.rstrip().split('\t') for x in open(csvout)]
+    assert f"saving 'bioboxes' output to '{csvout}'" in runtmp.last_result.err
+    print(bb_results)
+    assert ['# Taxonomic Profiling Output'] == bb_results[0]
+    assert ['@SampleID:test1'] == bb_results[1]
+    assert ['2', 'superkingdom', '2', 'Bacteria', '13.08'] == bb_results[6]
+    assert ['838', 'genus', '2|976|200643|171549|171552|838', 'Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Prevotellaceae|Prevotella', '5.70'] == bb_results[16]
+
+
 def test_metagenome_krona_tsv_out(runtmp):
     g_csv = utils.get_test_data('tax/test1.gather.csv')
     tax = utils.get_test_data('tax/test.taxonomy.csv')
@@ -443,7 +505,7 @@ def test_genome_no_rank_krona(runtmp):
 
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona')
-    assert "Rank (--rank) is required for krona output format." in str(exc.value)
+    assert "ERROR: Rank (--rank) is required for krona output formats" in str(exc.value)
 
 
 def test_metagenome_rank_not_available(runtmp):
@@ -1019,8 +1081,10 @@ def test_genome_empty_gather_results(runtmp):
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax)
 
-    assert f"Cannot read gather results from '{g_csv}'. Is file empty?" in str(exc.value)
     assert runtmp.last_result.status == -1
+    print(runtmp.last_result.err)
+    print(runtmp.last_result.out)
+    assert f"Cannot read gather results from '{g_csv}'. Is file empty?" in str(exc.value)
 
 
 def test_genome_bad_gather_header(runtmp):
@@ -1916,6 +1980,7 @@ def test_genome_empty_gather_results_with_csv_force(runtmp):
     assert 'query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
     assert 'test1,match,species,0.089,d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri,md5,test1.sig,0.057,444000' in c.last_result.out
 
+
 def test_genome_containment_threshold_bounds(runtmp):
     c = runtmp
     g_csv = utils.get_test_data('tax/test1.gather.csv')
@@ -2148,6 +2213,83 @@ def test_annotate_no_gather_csv(runtmp):
     print(runtmp.last_result.status)
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
+
+
+def test_genome_LIN(runtmp):
+    # test basic genome with LIN taxonomy
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax, '--lins', '--ani-threshold', '0.93')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank,query_ani_at_rank" in c.last_result.out
+    assert "test1,below_threshold,0,0.089,1,md5,test1.sig,0.057,444000,0.925" in c.last_result.out
+
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax, '--lins', '--ani-threshold', '0.924')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank,query_ani_at_rank" in c.last_result.out
+    assert "test1,match,19,0.088,0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,md5,test1.sig,0.058,442000,0.925" in c.last_result.out
+
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax, '--lins', '--rank', '4')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank,query_ani_at_rank" in c.last_result.out
+    assert "test1,below_threshold,4,0.088,0;0;0;0;0,md5,test1.sig,0.058,442000,0.925" in c.last_result.out
+
+
+def test_genome_LIN_lingroups(runtmp):
+    # test basic genome with LIN taxonomy
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+
+    lg_file = runtmp.output("test.lg.csv")
+
+    with open(lg_file, 'w') as out:
+        out.write('lin,name\n')
+        out.write('0;0;0,lg1\n')
+        out.write('1;0;0,lg2\n')
+        out.write('2;0;0,lg3\n')
+        out.write('1;0;1,lg3\n')
+        # write a 19 so we can check the end
+        out.write('0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,lg4\n')
+
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax, '--lins', '--lingroup', lg_file)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank,query_ani_at_rank" in c.last_result.out
+    assert "test1,below_threshold,2,0.088,0;0;0,md5,test1.sig,0.058,442000,0.925" in c.last_result.out
+
+    c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax, '--lins', '--lingroup', lg_file, '--ani-threshold', '0.924')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "query_name,status,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank,query_ani_at_rank" in c.last_result.out
+    assert "test1,match,19,0.088,0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,md5,test1.sig,0.058,442000,0.925" in c.last_result.out
 
 
 def test_annotate_0(runtmp):
@@ -3674,7 +3816,12 @@ def test_metagenome_LIN_lingroups_bad_cli_inputs(runtmp):
         c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '--lingroup', lg_file)
     print(c.last_result.err)
     assert c.last_result.status != 0
-    assert "Must enable LIN taxonomy via '--lins' in order to use lingroups." in c.last_result.err
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '--lins', '-F', 'bioboxes')
+    print(c.last_result.err)
+    assert c.last_result.status != 0
+    assert "ERROR: The following outputs are incompatible with '--lins': : bioboxes, kreport" in c.last_result.err
 
 
 def test_metagenome_mult_outputs_stdout_fail(runtmp):

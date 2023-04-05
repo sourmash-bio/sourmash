@@ -31,6 +31,24 @@ def make_mini_taxonomy(tax_info, LIN=False):
         taxD[name] = lineage.filled_lineage
     return taxD
 
+def make_mini_taxonomy_with_taxids(tax_info, LIN=False):
+    taxD = {}
+    for (name, lin, taxids) in tax_info:
+        if LIN:
+            lineage = LINLineageInfo(lineage_str=lin)
+        else:
+            ranks = RankLineageInfo.ranks
+            txs = taxids.split(';')
+            lns = lin.split(';')
+            lineage_tups = []
+            for n, taxname in enumerate(lns):
+                rk = ranks[n]
+                tx = txs[n]
+                this_lineage = LineagePair(rk, name=taxname, taxid=tx)
+                lineage_tups.append(this_lineage)
+            lineage = RankLineageInfo(lineage=lineage_tups)
+        taxD[name] = lineage.filled_lineage
+    return taxD
 
 def make_GatherRow(gather_dict=None, exclude_cols=[]):
     """Load artificial gather row (dict) into GatherRow class"""
@@ -159,6 +177,41 @@ def test_SummarizedGatherResult():
     print(lD)
     assert lD == {'ident': 'q1', 'superkingdom': 'a', 'phylum': 'b', 'class': '', 'order': '',
                   'family': '', 'genus': '', 'species': '', 'strain': ''}
+    cami = sgr.as_cami_bioboxes()
+    print(cami)
+    assert cami == [None, 'phylum', None, 'a|b', '30.00']
+
+
+def test_SummarizedGatherResult_withtaxids():
+    "basic functionality of SummarizedGatherResult dataclass"
+    qInf = QueryInfo(query_name='q1', query_md5='md5', query_filename='f1',query_bp='100',
+                     query_n_hashes='10',ksize='31',scaled='10', total_weighted_hashes='200')
+    lin = [LineagePair(rank='superkingdom', name='a', taxid='1'), LineagePair(rank='phylum', name='b', taxid=2)]
+    sgr = SummarizedGatherResult(rank="phylum", fraction=0.2, lineage=RankLineageInfo(lineage=lin),
+                                 f_weighted_at_rank=0.3, bp_match_at_rank=30)
+    print(sgr)
+    assert sgr.rank=='phylum'
+    sumD = sgr.as_summary_dict(query_info=qInf)
+    print(sumD)
+    assert sumD == {'rank': 'phylum', 'fraction': "0.2", 'lineage': 'a;b', 'f_weighted_at_rank': "0.3",
+                    'bp_match_at_rank': "30", 'query_ani_at_rank': None, 'query_name': 'q1',
+                    'query_md5': 'md5', 'query_filename': 'f1', 'total_weighted_hashes': "200"}
+    hD = sgr.as_human_friendly_dict(query_info=qInf)
+    print(hD)
+    assert hD == {'rank': 'phylum', 'fraction': '0.200', 'lineage': 'a;b', 'f_weighted_at_rank': '30.0%',
+                  'bp_match_at_rank': "30", 'query_ani_at_rank': '-    ', 'query_name': 'q1',
+                  'query_md5': 'md5', 'query_filename': 'f1', 'total_weighted_hashes': "200"}
+    krD = sgr.as_kreport_dict(query_info=qInf)
+    print(krD)
+    assert krD == {'ncbi_taxid': '2', 'sci_name': 'b', 'rank_code': 'P', 'num_bp_assigned': "0",
+                   'percent_containment': '30.00', 'num_bp_contained': "600"}
+    lD = sgr.as_lineage_dict(ranks = RankLineageInfo().ranks, query_info=qInf)
+    print(lD)
+    assert lD == {'ident': 'q1', 'superkingdom': 'a', 'phylum': 'b', 'class': '', 'order': '',
+                  'family': '', 'genus': '', 'species': '', 'strain': ''}
+    cami = sgr.as_cami_bioboxes()
+    print(cami)
+    assert cami == ['2', 'phylum', '1|2', 'a|b', '30.00']
 
 
 def test_SummarizedGatherResult_LINs():
@@ -180,6 +233,10 @@ def test_SummarizedGatherResult_LINs():
         sgr.as_kreport_dict(query_info=qInf)
     print(str(exc))
     assert "Cannot produce 'kreport' with LIN taxonomy." in str(exc)
+    with pytest.raises(ValueError) as exc:
+        sgr.as_cami_bioboxes()
+    print(str(exc))
+    assert "Cannot produce 'bioboxes' with LIN taxonomy." in str(exc)
 
 
 def test_SummarizedGatherResult_set_query_ani():
@@ -2805,7 +2862,7 @@ def test_make_kreport_results():
     assert krepD == [{'num_bp_assigned': '0', 'percent_containment': '40.00', 'num_bp_contained': '40',
                     'rank_code': 'D', 'sci_name': 'a', 'ncbi_taxid': None},
                     {'num_bp_assigned': '60', 'percent_containment': '60.00', 'num_bp_contained': '60',
-                    'sci_name': 'unclassified', 'rank_code': 'U'},
+                    'sci_name': 'unclassified', 'rank_code': 'U', 'ncbi_taxid': None},
                     {'num_bp_assigned': '0', 'percent_containment': '40.00', 'num_bp_contained': '40',
                     'rank_code': 'P', 'sci_name': 'b', 'ncbi_taxid': None},
                     {'num_bp_assigned': '0', 'percent_containment': '40.00', 'num_bp_contained': '40',
@@ -2818,6 +2875,32 @@ def test_make_kreport_results():
                     'rank_code': 'G', 'sci_name': 'f', 'ncbi_taxid': None},
                     {'num_bp_assigned': '20', 'percent_containment': '20.00', 'num_bp_contained': '20',
                     'rank_code': 'S', 'sci_name': 'g', 'ncbi_taxid': None}]
+
+
+def test_make_kreport_results_with_taxids():
+    taxD = make_mini_taxonomy_with_taxids([("gA", "a;b;c", "1;2;3"), ("gB", "a;b;c;d;e;f;g", "1;2;3;4;5;6;7")])
+    print(taxD)
+    #need to go down to species to check that `num_bp_assigned` is happening correctly
+    gather_results = [{"total_weighted_hashes":100}, {"name": 'gB', "total_weighted_hashes":100}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True)
+    header, krepD = q_res.make_kreport_results()
+    print(krepD)
+    assert krepD == [{'num_bp_assigned': '0', 'percent_containment': '40.00', 'num_bp_contained': '40',
+                    'rank_code': 'D', 'sci_name': 'a', 'ncbi_taxid': '1'},
+                    {'num_bp_assigned': '60', 'percent_containment': '60.00', 'num_bp_contained': '60',
+                    'sci_name': 'unclassified', 'rank_code': 'U', 'ncbi_taxid': None},
+                    {'num_bp_assigned': '0', 'percent_containment': '40.00', 'num_bp_contained': '40',
+                    'rank_code': 'P', 'sci_name': 'b', 'ncbi_taxid': '2'},
+                    {'num_bp_assigned': '0', 'percent_containment': '40.00', 'num_bp_contained': '40',
+                    'rank_code': 'C', 'sci_name': 'c', 'ncbi_taxid': '3'},
+                    {'num_bp_assigned': '0', 'percent_containment': '20.00', 'num_bp_contained': '20',
+                    'rank_code': 'O', 'sci_name': 'd', 'ncbi_taxid': '4'},
+                    {'num_bp_assigned': '0', 'percent_containment': '20.00', 'num_bp_contained': '20',
+                    'rank_code': 'F', 'sci_name': 'e', 'ncbi_taxid': '5'},
+                    {'num_bp_assigned': '0', 'percent_containment': '20.00', 'num_bp_contained': '20',
+                    'rank_code': 'G', 'sci_name': 'f', 'ncbi_taxid': '6'},
+                    {'num_bp_assigned': '20', 'percent_containment': '20.00', 'num_bp_contained': '20',
+                    'rank_code': 'S', 'sci_name': 'g', 'ncbi_taxid': '7'}]
 
 
 def test_make_kreport_results_fail():
@@ -2838,6 +2921,23 @@ def test_make_kreport_results_fail_pre_v450():
         q_res.make_kreport_results()
     print(str(exc))
     assert "cannot produce 'kreport' format from gather results before sourmash v4.5.0" in str(exc)
+
+
+def test_make_cami_results_with_taxids():
+    taxD = make_mini_taxonomy_with_taxids([("gA", "a;b;c", "1;2;3"), ("gB", "a;b;c;d;e;f;g", "1;2;3;4;5;6;7")])
+    print(taxD)
+    #need to go down to species to check that `num_bp_assigned` is happening correctly
+    gather_results = [{"total_weighted_hashes":100}, {"name": 'gB', "total_weighted_hashes":100}]
+    q_res = make_QueryTaxResults(gather_info=gather_results, taxD=taxD, single_query=True, summarize=True)
+    header, camires = q_res.make_cami_bioboxes()
+    print(camires)
+    assert camires == [['1', 'superkingdom', '1', 'a', '40.00'],
+                       ['2', 'phylum', '1|2', 'a|b', '40.00'],
+                       ['3', 'class', '1|2|3', 'a|b|c', '40.00'],
+                       ['4', 'order', '1|2|3|4', 'a|b|c|d', '20.00'],
+                       ['5', 'family', '1|2|3|4|5', 'a|b|c|d|e', '20.00'],
+                       ['6', 'genus', '1|2|3|4|5|6', 'a|b|c|d|e|f', '20.00'],
+                       ['7', 'species', '1|2|3|4|5|6|7', 'a|b|c|d|e|f|g', '20.00']]
 
 
 def test_make_lingroup_results():
@@ -2874,7 +2974,7 @@ def test_make_lingroup_results_fail_pre_v450():
     with pytest.raises(ValueError) as exc:
         q_res.make_lingroup_results(lingroupD)
     print(str(exc))
-    assert "cannot produce 'LINgroup_report' format from gather results before sourmash v4.5.0" in str(exc)
+    assert "cannot produce 'lingroup' format from gather results before sourmash v4.5.0" in str(exc)
 
 
 def test_read_lingroups(runtmp):

@@ -34,7 +34,7 @@ Please see the 'tax genome' documentation for more details:
 import argparse
 import sourmash
 from sourmash.logging import notify, print_results, error
-from sourmash.cli.utils import add_tax_threshold_arg
+from sourmash.cli.utils import add_tax_threshold_arg, check_rank, check_tax_outputs, add_rank_arg
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('genome',
@@ -66,10 +66,6 @@ def subparser(subparsers):
         help='directory for output files'
     )
     subparser.add_argument(
-        '-r', '--rank', choices=['strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'],
-        help='Summarize genome taxonomy at this rank and above. Note that the taxonomy CSV must contain lineage information at this rank.'
-    )
-    subparser.add_argument(
         '--keep-full-identifiers', action='store_true',
         help='do not split identifiers on whitespace'
     )
@@ -90,7 +86,16 @@ def subparser(subparsers):
         '-f', '--force', action = 'store_true',
         help='continue past survivable errors in loading taxonomy database or gather results',
     )
+    subparser.add_argument(
+        '--lins', '--lin-taxonomy', action='store_true', default=False,
+        help="use LIN taxonomy in place of standard taxonomic ranks.  Note that the taxonomy CSV must contain 'lin' lineage information."
+    )
+    subparser.add_argument(
+        '--lingroup', '--lingroups', metavar='FILE', default=None,
+        help="CSV containing 'name', 'lin' columns, where 'lin' is the lingroup prefix. Will restrict classification to these groups."
+    )
     add_tax_threshold_arg(subparser, 0.1)
+    add_rank_arg(subparser)
 
 
 def main(args):
@@ -98,17 +103,9 @@ def main(args):
     try:
         if not args.gather_csv and not args.from_file:
             raise ValueError(f"No gather CSVs found! Please input via '-g' or '--from-file'.")
-        # handle output formats
-        print(args.output_format)
-        if not args.rank:
-            if any(x in ["krona"] for x in args.output_format):
-                raise ValueError(f"Rank (--rank) is required for krona output format.")
-        if len(args.output_format) > 1:
-            if args.output_base == "-":
-                raise ValueError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")
-        elif not args.output_format:
-            # change to "human" for 5.0
-            args.output_format = ["csv_summary"]
+        if args.rank:
+            args.rank = check_rank(args)
+        args.output_format = check_tax_outputs(args, rank_required = ['krona'])
 
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
