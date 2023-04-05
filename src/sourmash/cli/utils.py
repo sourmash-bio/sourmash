@@ -156,6 +156,7 @@ def add_rank_arg(parser):
               Choices: 'strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom' or an integer LIN position"
     )
 
+
 def check_tax_outputs(args, rank_required = ["krona"], incompatible_with_lins = None, use_lingroup_format=False):
     "Handle ouput format combinations"
     # check that rank is passed for formats requiring rank.
