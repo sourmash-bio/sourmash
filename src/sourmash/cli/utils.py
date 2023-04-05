@@ -139,7 +139,6 @@ def check_rank(args):
     standard_ranks =['strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom']
     if args.lins:
         if args.rank.isdigit(): 
-        #if isinstance(args.rank, int):
             return str(args.rank)
         raise argparse.ArgumentTypeError(f"Invalid '--rank'/'--position' input: '{args.rank}'. '--lins' is specified. Rank must be an integer corresponding to a LIN position.")
     elif args.rank in standard_ranks:
@@ -152,12 +151,13 @@ def add_rank_arg(parser):
     parser.add_argument(
         '-r', '--rank',
         '--position', '--lin-position',
-        help="For non-default output formats: Summarize genome taxonomy at this rank (or LIN position) and above. \
-              Note that the taxonomy CSV must contain lineage information at this rank (or LIN position). \
+        help="For non-default output formats. Classify to this rank (tax genome) or summarize taxonomy at this rank and above (tax metagenome). \
+              Note that the taxonomy CSV must contain lineage information at this rank, and that LIN positions start at 0. \
               Choices: 'strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom' or an integer LIN position"
     )
 
-def check_tax_outputs(args, rank_required = ["krona"], incompatible_with_lins = None):
+
+def check_tax_outputs(args, rank_required = ["krona"], incompatible_with_lins = None, use_lingroup_format=False):
     "Handle ouput format combinations"
     # check that rank is passed for formats requiring rank.
     if not args.rank:
@@ -171,7 +171,7 @@ def check_tax_outputs(args, rank_required = ["krona"], incompatible_with_lins = 
                 raise ValueError(f"The following outputs are incompatible with '--lins': : {', '.join(incompatible_with_lins)}")
         # check that lingroup file exists if needed
         if args.lingroup:
-            if "lingroup" not in args.output_format:
+            if use_lingroup_format and "lingroup" not in args.output_format:
                 args.output_format.append("lingroup")
         elif "lingroup" in args.output_format:
             raise ValueError(f"Must provide lingroup csv via '--lingroup' in order to output a lingroup report.")

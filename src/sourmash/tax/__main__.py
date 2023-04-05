@@ -202,8 +202,15 @@ def genome(args):
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
-                       force=args.force)
+                       force=args.force, lins=args.lins)
         available_ranks = tax_assign.available_ranks
+
+        lg_ranks=None
+        all_lgs=None
+        if args.lingroup:
+            lingroups = tax_utils.read_lingroups(args.lingroup)
+            lg_ranks, all_lgs = tax_utils.parse_lingroups(lingroups)
+
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
@@ -224,7 +231,7 @@ def genome(args):
                                                                                        fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
                                                                                        keep_full_identifiers=args.keep_full_identifiers,
                                                                                        keep_identifier_versions = args.keep_identifier_versions,
-                                                                                       )
+                                                                                       lins=args.lins)
 
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
@@ -239,7 +246,8 @@ def genome(args):
         try:
             queryResult.build_classification_result(rank=args.rank,
                                                     ani_threshold=args.ani_threshold,
-                                                    containment_threshold=args.containment_threshold)
+                                                    containment_threshold=args.containment_threshold,
+                                                    lingroup_ranks=lg_ranks, lingroups=all_lgs)
 
         except ValueError as exc:
             error(f"ERROR: {str(exc)}")
