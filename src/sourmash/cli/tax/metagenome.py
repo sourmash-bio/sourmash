@@ -69,7 +69,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-F', '--output-format', default=[], nargs='*', action="extend",
-        choices=["human", "csv_summary", "krona", "lineage_summary",  "kreport", "lingroup"],
+        choices=["human", "csv_summary", "krona", "lineage_summary", "kreport", "lingroup", "bioboxes"],
         help='choose output format(s)',
     )
     subparser.add_argument(
@@ -93,7 +93,7 @@ def main(args):
             raise ValueError(f"No gather CSVs found! Please input via '-g' or '--from-file'.")
         if args.rank:
             args.rank = check_rank(args)
-        args.output_format = check_tax_outputs(args, rank_required = ['krona', 'lineage_summary'], use_lingroup_format=True)
+        args.output_format = check_tax_outputs(args, rank_required = ['krona', 'lineage_summary'], incompatible_with_lins = ['bioboxes', 'kreport'], use_lingroup_format=True)
 
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")

@@ -156,15 +156,19 @@ def add_rank_arg(parser):
               Choices: 'strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom' or an integer LIN position"
     )
 
-def check_tax_outputs(args, rank_required = ["krona"], use_lingroup_format=False):
+def check_tax_outputs(args, rank_required = ["krona"], incompatible_with_lins = None, use_lingroup_format=False):
     "Handle ouput format combinations"
     # check that rank is passed for formats requiring rank.
     if not args.rank:
         if any(x in rank_required for x in args.output_format):
             raise ValueError(f"Rank (--rank) is required for {', '.join(rank_required)} output formats.")
 
-    # check that '--lins' is specified and '--lingroup' file exists if needed
     if args.lins:
+        # check for outputs incompatible with lins
+        if incompatible_with_lins:
+            if any(x in args.output_format for x in incompatible_with_lins):
+                raise ValueError(f"The following outputs are incompatible with '--lins': : {', '.join(incompatible_with_lins)}")
+        # check that lingroup file exists if needed
         if args.lingroup:
             if use_lingroup_format and "lingroup" not in args.output_format:
                 args.output_format.append("lingroup")

@@ -737,6 +737,77 @@ lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000
 
 Related lingroup subpaths will be grouped in output, but exact ordering may change between runs.
 
+#### `bioboxes` output format
+
+When using standard taxonomic ranks (not lins), you can choose to output a 'bioboxes' profile, `{base}.bioboxes.profile`, where `{base}` is the name provided via the `-o/--output-base` option. This output is organized according to the [bioboxes profile specifications](https://github.com/bioboxes/rfc/tree/master/data-format) so that this file can be used for CAMI challenges.
+
+This output format starts with some header information:
+```
+#CAMI Submission for Taxonomic Profiling
+@Version:0.9.3
+@SampleID:SAMPLEID
+@Ranks:superkingdom|phylum|class|order|family|genus|species|strain
+@__program__:sourmash
+@@TAXID	RANK	TAXPATH	TAXPATHSN	PERCENTAGE
+```
+and then provides taxonomic profiling information in the tab-separated columns described by the last header line:
+
+- `TAXID` - specifies a unique alphanumeric ID for a node in a reference tree such as the NCBI taxonomy
+- `RANK` -  superkingdom --> strain
+- `TAXPATH` - the path from the root of the reference taxonomy to the respective taxon 
+- `TAXPATHSN` - scientific names of taxpath
+- `PERCENTAGE` (0-100) -  field specifies what percentage of the sample was assigned to the respective TAXID
+
+example output (using small test data):
+```
+# Taxonomic Profiling Output
+@SampleID:test1
+@Version:0.10.0
+@Ranks:superkingdom|phylum|class|order|family|genus|species
+@__program__:sourmash
+@@TAXID	RANK	TAXPATH	TAXPATHSN	PERCENTAGE
+2	superkingdom	2	Bacteria	13.08
+976	phylum	2|976	Bacteria|Bacteroidota	7.27
+1224	phylum	2|1224	Bacteria|Pseudomonadota	5.82
+200643	class	2|976|200643	Bacteria|Bacteroidota|Bacteroidia	7.27
+1236	class	2|1224|1236	Bacteria|Pseudomonadota|Gammaproteobacteria	5.82
+171549	order	2|976|200643|171549	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales	7.27
+91347	order	2|1224|1236|91347	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales	5.82
+171552	family	2|976|200643|171549|171552	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Prevotellaceae	5.70
+543	family	2|1224|1236|91347|543	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales|Enterobacteriaceae	5.82
+815	family	2|976|200643|171549|815	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Bacteroidaceae	1.56
+838	genus	2|976|200643|171549|171552|838	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Prevotellaceae|Prevotella	5.70
+561	genus	2|1224|1236|91347|543|561	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales|Enterobacteriaceae|Escherichia	5.82
+909656	genus	2|976|200643|171549|815|909656	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Bacteroidaceae|Phocaeicola	1.56
+165179	species	2|976|200643|171549|171552|838|165179	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Prevotellaceae|Prevotella|Prevotella copri	5.70
+562	species	2|1224|1236|91347|543|561|562	Bacteria|Pseudomonadota|Gammaproteobacteria|Enterobacterales|Enterobacteriaceae|Escherichia|Escherichia coli	5.82
+821	species	2|976|200643|171549|815|909656|821	Bacteria|Bacteroidota|Bacteroidia|Bacteroidales|Bacteroidaceae|Phocaeicola|Phocaeicola vulgatus	1.56
+```
+
+
+#### `lingroup` output format
+
+When using LIN taxonomic information, you can optionally also provide a `lingroup` file with two required columns: `name` and `lin`. If provided, we will produce a file, `{base}.lingroups.tsv`, where `{base}` is the name provided via the `-o`,` --output-base` option. This output will select information from the full summary that match the LIN prefixes provided as groups.
+
+This output format consists of four columns:
+- `name`, `lin` columns are taken directly from the `--lingroup` file
+- `percent_containment`, the total percent of the dataset contained in this lingroup and all descendents
+- `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendents.
+
+Similar to `kreport` above, we use the wording "contained" rather than "assigned," because `sourmash` assigns matches at the genome level, and the `tax` functions summarize this information.
+
+example output:
+```
+name	lin	percent_containment	num_bp_contained
+lg1	0;0;0	5.82	714000
+lg2	1;0;0	5.05	620000
+lg3	2;0;0	1.56	192000
+lg3	1;0;1	0.65	80000
+lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000
+```
+
+Related lingroup subpaths will be grouped in output, but exact ordering may change between runs.
+
 ### `sourmash tax genome` - classify a genome using `gather` results
 
 `sourmash tax genome` reports likely classification for each query,
