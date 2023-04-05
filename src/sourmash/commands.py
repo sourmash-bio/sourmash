@@ -797,7 +797,8 @@ def gather(args):
             if prefetch_csvout_fp:
                 prefetch_csvout_fp.flush()
 
-        notify(f"Found {len(save_prefetch)} signatures via prefetch; now doing gather.")
+        display_bp = format_bp(args.threshold_bp)
+        notify(f"Prefetch found {len(save_prefetch)} signatures with overlap >= {display_bp}.")
         save_prefetch.close()
         if prefetch_csvout_fp:
             prefetch_csvout_fp.close()
@@ -808,6 +809,7 @@ def gather(args):
         ident_mh = None
 
     ## ok! now do gather -
+    notify("Doing gather to generate minimum metagenome cover.")
 
     found = []
     weighted_missed = 1
@@ -865,16 +867,21 @@ def gather(args):
         notify(f'found less than {format_bp(args.threshold_bp)} in common. => exiting')
 
     # basic reporting:
-    print_results(f'\nfound {len(found)} matches total;')
-    if args.num_results and len(found) == args.num_results:
-        print_results(f'(truncated gather because --num-results={args.num_results})')
+    if found:
+        print_results(f'\nfound {len(found)} matches total;')
+        if len(found) == args.num_results:
+            print_results(f'(truncated gather because --num-results={args.num_results})')
+    else:
+        display_bp = format_bp(args.threshold_bp)
+        notify(f"\nNo matches found for --threshold-bp at {display_bp}.")
 
-    if is_abundance and result:
-        p_covered = result.sum_weighted_found / result.total_weighted_hashes
-        p_covered *= 100
-        print_results(f'the recovered matches hit {p_covered:.1f}% of the abundance-weighted query.')
+    if found:
+        if is_abundance and result:
+            p_covered = result.sum_weighted_found / result.total_weighted_hashes
+            p_covered *= 100
+            print_results(f'the recovered matches hit {p_covered:.1f}% of the abundance-weighted query.')
 
-    print_results(f'the recovered matches hit {sum_f_uniq_found*100:.1f}% of the query k-mers (unweighted).')
+        print_results(f'the recovered matches hit {sum_f_uniq_found*100:.1f}% of the query k-mers (unweighted).')
 
     print_results('')
     if gather_iter.scaled != query.minhash.scaled:
