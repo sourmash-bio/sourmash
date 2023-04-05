@@ -120,10 +120,6 @@ def build_tree(assignments, initial=None):
     for assignment in assignments:
         node = tree
 
-        # when we switch LineagePair over, will need ot add this.
-        #if isinstance(assignment, (BaseLineageInfo, RankLineageInfo, LINSLineageInfo)):
-        #    assignment = assignment.filled_lineage
-
         for lineage_tup in assignment:
             if lineage_tup.name:
                 child = node.get(lineage_tup, {})

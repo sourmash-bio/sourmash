@@ -95,16 +95,23 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
-    if not args.gather_csv and not args.from_file:
-        raise ValueError(f"No gather CSVs found! Please input via '-g' or '--from-file'.")
-    if len(args.output_format) > 1:
-        if args.output_base == "-":
-            raise TypeError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")
-    if not args.rank:
-        if any(x in ["krona"] for x in args.output_format):
-            raise ValueError(f"Rank (--rank) is required for krona output format.")
-    if not args.output_format:
-        # change to "human" for 5.0
-        args.output_format = ["csv_summary"]
+    try:
+        if not args.gather_csv and not args.from_file:
+            raise ValueError(f"No gather CSVs found! Please input via '-g' or '--from-file'.")
+        # handle output formats
+        print(args.output_format)
+        if not args.rank:
+            if any(x in ["krona"] for x in args.output_format):
+                raise ValueError(f"Rank (--rank) is required for krona output format.")
+        if len(args.output_format) > 1:
+            if args.output_base == "-":
+                raise ValueError(f"Writing to stdout is incompatible with multiple output formats {args.output_format}")
+        elif not args.output_format:
+            # change to "human" for 5.0
+            args.output_format = ["csv_summary"]
+
+    except ValueError as exc:
+        error(f"ERROR: {str(exc)}")
+        import sys; sys.exit(-1)
 
     return sourmash.tax.__main__.genome(args)

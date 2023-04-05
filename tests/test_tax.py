@@ -405,7 +405,8 @@ def test_metagenome_no_rank_lineage_summary(runtmp):
 
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'lineage_summary')
-    assert "Rank (--rank) is required for krona and lineage_summary output formats." in str(exc.value)
+    print(str(exc.value))
+    assert "Rank (--rank) is required for krona, lineage_summary output formats." in str(exc.value)
 
 
 def test_metagenome_no_rank_krona(runtmp):
@@ -415,7 +416,24 @@ def test_metagenome_no_rank_krona(runtmp):
 
     with pytest.raises(SourmashCommandFailed) as exc:
         runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona')
-    assert "Rank (--rank) is required for krona and lineage_summary output formats." in str(exc.value)
+    print(str(exc.value))
+    assert "Rank (--rank) is required for krona, lineage_summary output formats." in str(exc.value)
+
+
+def test_metagenome_bad_rank_krona(runtmp):
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.taxonomy.csv')
+    csv_base = "out"
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona', '--rank', 'NotARank')
+    print(str(exc.value))
+    assert "Invalid '--rank'/'--position' input: 'NotARank'. Please choose: 'strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'" in runtmp.last_result.err
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        runtmp.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-o', csv_base, '--output-format', 'krona', '--rank', '5')
+    print(str(exc.value))
+    assert "Invalid '--rank'/'--position' input: '5'. Please choose: 'strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'" in runtmp.last_result.err
 
 
 def test_genome_no_rank_krona(runtmp):
@@ -2195,6 +2213,35 @@ def test_annotate_gzipped_gather(runtmp):
     assert "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri" in lin_gather_results[4]
 
 
+def test_annotate_0_LIN(runtmp):
+    # test annotate basics
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+    csvout = runtmp.output("test1.gather.with-lineages.csv")
+    out_dir = os.path.dirname(csvout)
+
+    c.run_sourmash('tax', 'annotate', '--gather-csv', g_csv, '--taxonomy-csv', tax, '-o', out_dir, "--lins")
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert os.path.exists(csvout)
+
+    lin_gather_results = [x.rstrip() for x in open(csvout)]
+    print("\n".join(lin_gather_results))
+    assert f"saving 'annotate' output to '{csvout}'" in runtmp.last_result.err
+
+    assert "lineage" in lin_gather_results[0]
+    assert "0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" in lin_gather_results[1]
+    assert "1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" in lin_gather_results[2]
+    assert "2;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" in lin_gather_results[3]
+    assert "1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" in lin_gather_results[4]
+
+
 def test_annotate_gather_argparse(runtmp):
     # test annotate with two gather CSVs, second one empty, and --force.
     # this tests argparse handling w/extend.
@@ -3287,3 +3334,321 @@ def test_tax_summarize_strain_csv_with_lineages(runtmp):
         assert c['2'] == 5
         assert c['6'] == 1
         assert c['1'] == 11
+
+
+def test_tax_summarize_LINS(runtmp):
+    # test basic operation w/LINs
+    taxfile = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+    lineage_csv = runtmp.output('annotated-lin.csv')
+
+    taxdb = tax_utils.LineageDB.load(taxfile, lins=True)
+    with open(lineage_csv, 'w', newline="") as fp:
+        w = csv.writer(fp)
+        w.writerow(['name', 'lineage'])
+        for k, v in taxdb.items():
+            lin = tax_utils.LINLineageInfo(lineage=v)
+            linstr = lin.display_lineage(truncate_empty=False)
+            print(linstr)
+            w.writerow([k, linstr])
+
+    runtmp.sourmash('tax', 'summarize', lineage_csv, '-o', 'ranks.csv', '--lins')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(out)
+    print(err)
+
+    assert "number of distinct taxonomic lineages: 6" in out
+    assert "saved 91 lineage counts to" in err
+
+    csv_out = runtmp.output('ranks.csv')
+
+    with sourmash_args.FileInputCSV(csv_out) as r:
+         # count number across ranks as a cheap consistency check
+        c = Counter()
+        for row in r:
+            print(row)
+            val = row['lineage_count']
+            c[val] += 1
+
+        print(list(c.most_common()))
+
+        assert c['1'] == 77
+        assert c['2'] == 1
+        assert c['3'] == 11
+        assert c['4'] == 2
+
+
+def test_metagenome_LIN(runtmp):
+    # test basic metagenome with LIN taxonomy
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '--lins')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert 'query_name,rank,fraction,lineage,query_md5,query_filename,f_weighted_at_rank,bp_match_at_rank' in c.last_result.out
+    # 0th rank/position
+    assert "test1,0,0.089,1,md5,test1.sig,0.057,444000,0.925,0" in c.last_result.out
+    assert "test1,0,0.088,0,md5,test1.sig,0.058,442000,0.925,0" in c.last_result.out
+    assert "test1,0,0.028,2,md5,test1.sig,0.016,138000,0.891,0" in c.last_result.out
+    assert "test1,0,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
+    # 1st rank/position
+    assert "test1,1,0.089,1;0,md5,test1.sig,0.057,444000,0.925,0" in c.last_result.out
+    assert "test1,1,0.088,0;0,md5,test1.sig,0.058,442000,0.925,0" in c.last_result.out
+    assert "test1,1,0.028,2;0,md5,test1.sig,0.016,138000,0.891,0" in c.last_result.out
+    assert "test1,1,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
+    # 2nd rank/position
+    assert "test1,2,0.088,0;0;0,md5,test1.sig,0.058,442000,0.925,0" in c.last_result.out
+    assert "test1,2,0.078,1;0;0,md5,test1.sig,0.050,390000,0.921,0" in c.last_result.out
+    assert "test1,2,0.028,2;0;0,md5,test1.sig,0.016,138000,0.891,0" in c.last_result.out
+    assert "test1,2,0.011,1;0;1,md5,test1.sig,0.007,54000,0.864,0" in c.last_result.out
+    assert "test1,2,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
+    # 19th rank/position
+    assert "test1,19,0.088,0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,md5,test1.sig,0.058,442000,0.925,0" in c.last_result.out
+    assert "test1,19,0.078,1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,md5,test1.sig,0.050,390000,0.921,0" in c.last_result.out
+    assert "test1,19,0.028,2;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,md5,test1.sig,0.016,138000,0.891,0" in c.last_result.out
+    assert "test1,19,0.011,1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,md5,test1.sig,0.007,54000,0.864,0" in c.last_result.out
+    assert "test1,19,0.796,unclassified,md5,test1.sig,0.869,3990000,,0" in c.last_result.out
+
+
+def test_metagenome_LIN_lingroups(runtmp):
+    # test lingroups output
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+
+    lg_file = runtmp.output("test.lg.csv")
+    with open(lg_file, 'w') as out:
+        out.write('lin,name\n')
+        out.write('0;0;0,lg1\n')
+        out.write('1;0;0,lg2\n')
+        out.write('2;0;0,lg3\n')
+        out.write('1;0;1,lg3\n')
+        # write a 19 so we can check the end
+        out.write('1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0,lg4\n')
+
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--lins', '--lingroup', lg_file)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0" in c.last_result.err
+    assert "Read 5 lingroup rows and found 5 distinct lingroup prefixes." in c.last_result.err
+    assert "name	lin	percent_containment	num_bp_contained" in c.last_result.out
+    assert "lg1	0;0;0	5.82	714000" in c.last_result.out
+    assert "lg2	1;0;0	5.05	620000" in c.last_result.out
+    assert "lg3	2;0;0	1.56	192000" in c.last_result.out
+    assert "lg3	1;0;1	0.65	80000" in c.last_result.out
+    assert "lg4	1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0	0.65	80000" in c.last_result.out
+
+
+def test_metagenome_LIN_human_summary_no_lin_position(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--lins', '-F', "human")
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0" in c.last_result.err
+    assert "sample name    proportion   cANI   lineage" in c.last_result.out
+    assert "-----------    ----------   ----   -------" in c.last_result.out
+    assert "test1             86.9%     -      unclassified" in c.last_result.out
+    assert "test1              5.8%     92.5%  0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" in c.last_result.out
+    assert "test1              5.0%     92.1%  1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" in c.last_result.out
+    assert "test1              1.6%     89.1%  2;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" in c.last_result.out
+    assert "test1              0.7%     86.4%  1;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" in c.last_result.out
+
+
+def test_metagenome_LIN_human_summary_lin_position_5(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--lins', '-F', "human", '--lin-position', '5')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0" in c.last_result.err
+    assert "sample name    proportion   cANI   lineage" in c.last_result.out
+    assert "-----------    ----------   ----   -------" in c.last_result.out
+    assert "test1             86.9%     -      unclassified" in c.last_result.out
+    assert "test1              5.8%     92.5%  0;0;0;0;0;0" in c.last_result.out
+    assert "test1              5.0%     92.1%  1;0;0;0;0;0" in c.last_result.out
+    assert "test1              1.6%     89.1%  2;0;0;0;0;0" in c.last_result.out
+    assert "test1              0.7%     86.4%  1;0;1;0;0;0" in c.last_result.out
+
+
+def test_metagenome_LIN_krona_lin_position_5(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+
+    c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--lins', '-F', "krona", '--lin-position', '5')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0" in c.last_result.err
+    assert "fraction	0	1	2	3	4	5" in c.last_result.out
+    assert "0.08815317112086159	0	0	0	0	0	0" in c.last_result.out
+    assert "0.07778220981252493	1	0	0	0	0	0" in c.last_result.out
+    assert "0.027522935779816515	2	0	0	0	0	0" in c.last_result.out
+    assert "0.010769844435580374	1	0	1	0	0	0" in c.last_result.out
+    assert "0.7957718388512166	unclassified	unclassified	unclassified	unclassified	unclassified	unclassified" in c.last_result.out
+
+
+def test_metagenome_LIN_krona_bad_rank(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--lins', '-F', "krona", '--lin-position', 'strain')
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status != 0
+    assert "Invalid '--rank'/'--position' input: 'strain'. '--lins' is specified. Rank must be an integer corresponding to a LIN position." in c.last_result.err
+
+
+
+def test_metagenome_LIN_lingroups_empty_lg_file(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+
+    lg_file = runtmp.output("test.lg.csv")
+    with open(lg_file, 'w') as out:
+        out.write("")
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--lins', '--lingroup', lg_file)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status != 0
+    assert "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0" in c.last_result.err
+    assert f"Cannot read lingroups from '{lg_file}'. Is file empty?" in c.last_result.err
+
+
+def test_metagenome_LIN_lingroups_bad_cli_inputs(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+
+    lg_file = runtmp.output("test.lg.csv")
+    with open(lg_file, 'w') as out:
+        out.write("")
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--lins', '-F', "lingroup")
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status != 0
+    assert "Must provide lingroup csv via '--lingroup' in order to output a lingroup report." in c.last_result.err
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '-F', "lingroup")
+    print(c.last_result.err)
+    assert c.last_result.status != 0
+    assert "Must enable LIN taxonomy via '--lins' in order to use lingroups." in c.last_result.err
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax, '--lingroup', lg_file)
+    print(c.last_result.err)
+    assert c.last_result.status != 0
+    assert "Must enable LIN taxonomy via '--lins' in order to use lingroups." in c.last_result.err
+
+
+def test_metagenome_mult_outputs_stdout_fail(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                       '-F', "kreport", 'csv_summary')
+
+    print(c.last_result.err)
+    assert c.last_result.status != 0
+    assert f"Writing to stdout is incompatible with multiple output formats ['kreport', 'csv_summary']" in c.last_result.err
+
+
+def test_genome_mult_outputs_stdout_fail(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('tax', 'genome', '-g', g_csv, '--taxonomy-csv', tax,
+                       '-F', "lineage_csv", 'csv_summary')
+
+    print(c.last_result.err)
+    assert c.last_result.status != 0
+    assert f"Writing to stdout is incompatible with multiple output formats ['lineage_csv', 'csv_summary']" in c.last_result.err
+
+
+def test_metagenome_LIN_lingroups_lg_only_header(runtmp):
+    c = runtmp
+
+    g_csv = utils.get_test_data('tax/test1.gather.v450.csv')
+    tax = utils.get_test_data('tax/test.LIN-taxonomy.csv')
+
+    lg_file = runtmp.output("test.lg.csv")
+    with open(lg_file, 'w') as out:
+        out.write('lin,name\n')
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('tax', 'metagenome', '-g', g_csv, '--taxonomy-csv', tax,
+                   '--lins', '--lingroup', lg_file)
+
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status != 0
+    assert "Starting summarization up rank(s): 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0" in c.last_result.err
+    assert f"No lingroups loaded from {lg_file}" in c.last_result.err
