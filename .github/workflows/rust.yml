@@ -268,11 +268,11 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.56.1
+          toolchain: "1.60.0"
           override: true
 
       - name: check if README matches MSRV defined here
-        run: grep '1.56.1' src/core/README.md
+        run: grep '1.60.0' src/core/README.md
 
       - name: Check if it builds properly
         uses: actions-rs/cargo@v1
