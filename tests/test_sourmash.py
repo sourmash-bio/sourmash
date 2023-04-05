@@ -3539,8 +3539,7 @@ def test_gather_nomatch(runtmp, linear_gather, prefetch_gather):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert 'found 0 matches total' in runtmp.last_result.out
-    assert 'the recovered matches hit 0.0% of the query' in runtmp.last_result.out
+    assert "No matches found for --threshold-bp at 50.0 kbp." in runtmp.last_result.err
 
 
 def test_gather_abund_nomatch(runtmp, linear_gather, prefetch_gather):
@@ -3553,8 +3552,7 @@ def test_gather_abund_nomatch(runtmp, linear_gather, prefetch_gather):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
-    assert 'found 0 matches total' in runtmp.last_result.out
-    assert 'the recovered matches hit 0.0% of the query' in runtmp.last_result.out
+    assert "No matches found for --threshold-bp at 50.0 kbp." in runtmp.last_result.err
 
 
 def test_gather_metagenome(runtmp):
@@ -3617,7 +3615,7 @@ def test_gather_metagenome_num_results(c):
     assert '4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp' in out
 
 
-def test_gather_metagenome_threshold_bp(runtmp):
+def test_gather_metagenome_threshold_bp(runtmp, linear_gather, prefetch_gather):
     # set a threshold on the gather output
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
@@ -3632,7 +3630,8 @@ def test_gather_metagenome_threshold_bp(runtmp):
 
     assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
 
-    runtmp.sourmash('gather', query_sig, 'gcf_all', '-k',  '21', '--threshold-bp', '2e6')
+    runtmp.sourmash('gather', query_sig, 'gcf_all', '-k',  '21',
+                    '--threshold-bp', '2e6', linear_gather, prefetch_gather)
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
@@ -3642,6 +3641,58 @@ def test_gather_metagenome_threshold_bp(runtmp):
     assert 'the recovered matches hit 33.2% of the query' in runtmp.last_result.out
     assert all(('4.9 Mbp       33.2%  100.0%' in runtmp.last_result.out,
                 'NC_003198.1 Salmonella enterica subsp' in runtmp.last_result.out))
+
+
+def test_gather_metagenome_threshold_bp_low(runtmp, linear_gather, prefetch_gather):
+    # set a threshold on the gather output => too low
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+
+    runtmp.sourmash(*cmd)
+
+    assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
+
+    runtmp.sourmash('gather', query_sig, 'gcf_all', '-k',  '21',
+                    '--threshold-bp', '1', linear_gather, prefetch_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert 'found 12 matches total' in runtmp.last_result.out
+    assert 'found less than 1 bp in common. => exiting' in runtmp.last_result.err
+    assert 'the recovered matches hit 100.0% of the query' in runtmp.last_result.out
+
+
+def test_gather_metagenome_threshold_bp_too_high(runtmp, linear_gather, prefetch_gather):
+    # set a threshold on the gather output => no results
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all']
+    cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
+
+    runtmp.sourmash(*cmd)
+
+    assert os.path.exists(runtmp.output('gcf_all.sbt.zip'))
+
+    runtmp.sourmash('gather', query_sig, 'gcf_all', '-k',  '21',
+                    '--threshold-bp', '5e6', linear_gather, prefetch_gather)
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+    print(out)
+    print(err)
+
+    assert "No matches found for --threshold-bp at 5.0 Mbp." in err
 
 
 def test_multigather_metagenome(runtmp):
@@ -4284,7 +4335,7 @@ def test_gather_metagenome_output_unassigned_nomatches(runtmp, prefetch_gather, 
                    prefetch_gather)
 
     print(c.last_result.out)
-    assert 'found 0 matches total;' in c.last_result.out
+    assert "No matches found for --threshold-bp at 50.0 kbp." in c.last_result.err
 
     x = sourmash.load_one_signature(query_sig, ksize=31)
     y = sourmash.load_one_signature(c.output('foo.sig'))
@@ -4304,7 +4355,7 @@ def test_gather_metagenome_output_unassigned_nomatches_protein(runtmp, linear_ga
                    prefetch_gather)
 
     print(c.last_result.out)
-    assert 'found 0 matches total;' in c.last_result.out
+    assert "No matches found for --threshold-bp at 50.0 kbp." in c.last_result.err
 
     c.run_sourmash('sig', 'describe', c.output('foo.sig'))
     print(c.last_result.out)
@@ -4632,7 +4683,6 @@ def test_gather_error_no_sigs_traverse(c):
     err = c.last_result.err
     print(err)
     assert f"Error while reading signatures from '{emptydir}'" in err
-    assert not 'found 0 matches total;' in err
 
 
 def test_gather_error_no_cardinality_query(runtmp, linear_gather, prefetch_gather):
@@ -5920,8 +5970,7 @@ def test_gather_with_prefetch_picklist_4_manifest_excl(runtmp, linear_gather):
     print(out)
 
     # excluded everything, so nothing to match!
-    assert "found 0 matches total;" in out
-    assert "the recovered matches hit 0.0% of the query" in out
+    assert "No matches found for --threshold-bp at 50.0 kbp." in runtmp.last_result.err
 
 
 def test_gather_with_prefetch_picklist_5_search(runtmp):
