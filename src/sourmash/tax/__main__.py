@@ -11,10 +11,9 @@ import re
 import sourmash
 from ..sourmash_args import FileOutputCSV, FileOutput
 from sourmash.logging import set_quiet, error, notify, print_results
-from sourmash.lca.lca_utils import zip_lineage
 
 from . import tax_utils
-from .tax_utils import MultiLineageDB, GatherRow
+from .tax_utils import MultiLineageDB, GatherRow, RankLineageInfo, LINLineageInfo
 
 usage='''
 sourmash taxonomy <command> [<args>] - manipulate/work with taxonomy information.
@@ -43,6 +42,7 @@ _output_type_to_ext = {
     'human': '.human.txt',
     'lineage_csv': '.lineage.csv',
     'kreport': ".kreport.txt",
+    'lingroup': ".lingroup.tsv"
     }
 
 def make_outfile(base, output_type, *, output_dir = ""):
@@ -72,7 +72,7 @@ def metagenome(args):
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
-                       force=args.force)
+                       force=args.force, lins=args.lins)
         available_ranks = tax_assign.available_ranks
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
@@ -93,6 +93,7 @@ def metagenome(args):
                                                                      fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
                                                                      keep_full_identifiers=args.keep_full_identifiers,
                                                                      keep_identifier_versions = args.keep_identifier_versions,
+                                                                     lins=args.lins,
                                                                      )
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
@@ -145,7 +146,11 @@ def metagenome(args):
         summary_outfile, limit_float = make_outfile(args.output_base, "human", output_dir=args.output_dir)
 
         with FileOutput(summary_outfile) as out_fp:
-            tax_utils.write_human_summary(query_gather_results, out_fp, args.rank or "species")
+            human_display_rank = args.rank or "species"
+            if args.lins and not args.rank:
+                human_display_rank = query_gather_results[0].ranks[-1] # lowest rank
+
+            tax_utils.write_human_summary(query_gather_results, out_fp, human_display_rank)
 
     # write summarized output csv
     single_query_results = query_gather_results[0]
@@ -161,6 +166,20 @@ def metagenome(args):
         with FileOutputCSV(kreport_outfile) as out_fp:
             header, kreport_results = single_query_results.make_kreport_results()
             tax_utils.write_output(header, kreport_results, out_fp, sep="\t", write_header=False)
+
+    # write summarized --> LINgroup output tsv
+    if "lingroup" in args.output_format:
+        try:
+            lingroups = tax_utils.read_lingroups(args.lingroup)
+        except ValueError as exc:
+            error(f"ERROR: {str(exc)}")
+            sys.exit(-1)
+
+        lingroupfile, limit_float = make_outfile(args.output_base, "lingroup", output_dir=args.output_dir)
+
+        with FileOutputCSV(lingroupfile) as out_fp:
+            header, lgreport_results = single_query_results.make_lingroup_results(LINgroupsD = lingroups)
+            tax_utils.write_output(header, lgreport_results, out_fp, sep="\t", write_header=True)
 
 
 def genome(args):
@@ -271,7 +290,7 @@ def annotate(args):
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
-                       force=args.force)
+                       force=args.force, lins=args.lins)
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
@@ -289,7 +308,7 @@ def annotate(args):
                                                                                        fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
                                                                                        keep_full_identifiers=args.keep_full_identifiers,
                                                                                        keep_identifier_versions = args.keep_identifier_versions,
-                                                                                       )
+                                                                                       lins=args.lins)
 
         if not query_gather_results:
             continue
@@ -383,8 +402,7 @@ def grep(args):
     else:
         with FileOutputCSV(args.output) as fp:
             w = csv.writer(fp)
-
-            w.writerow(['ident'] + list(sourmash.lca.taxlist(include_strain=False)))
+            w.writerow(['ident'] + list(RankLineageInfo().taxlist[:-1]))
             for ident, lineage in sorted(match_ident):
                 w.writerow([ident] + [ x.name for x in lineage ])
 
@@ -398,7 +416,8 @@ def summarize(args):
         tax_assign = MultiLineageDB.load(args.taxonomy_files,
                                          force=args.force,
                        keep_full_identifiers=args.keep_full_identifiers,
-                       keep_identifier_versions=args.keep_identifier_versions)
+                       keep_identifier_versions=args.keep_identifier_versions,
+                       lins=args.lins)
     except ValueError as exc:
         error("ERROR while loading taxonomies!")
         error(str(exc))
@@ -443,7 +462,11 @@ def summarize(args):
             # output in order of most common
             for lineage, count in lineage_counts.most_common():
                 rank = lineage[-1].rank
-                lin = ";".join(zip_lineage(lineage, truncate_empty=True))
+                if args.lins:
+                    inf = LINLineageInfo(lineage=lineage)
+                else:
+                    inf = RankLineageInfo(lineage=lineage)
+                lin = inf.display_lineage()
                 w.writerow([rank, str(count), lin])
 
         n = len(lineage_counts)

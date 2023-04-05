@@ -3,8 +3,7 @@ Utility functions for taxonomy analysis tools.
 """
 import os
 import csv
-from collections import namedtuple, defaultdict
-from collections import abc
+from collections import abc, defaultdict
 from itertools import zip_longest
 from typing import NamedTuple
 from dataclasses import dataclass, field, replace, asdict
@@ -22,17 +21,13 @@ __all__ = ['get_ident', 'ascending_taxlist', 'collect_gather_csvs',
            'report_missing_and_skipped_identities', 'aggregate_by_lineage_at_rank'
            'format_for_krona',
            'combine_sumgather_csvs_by_lineage', 'write_lineage_sample_frac',
-           'MultiLineageDB', 'RankLineageInfo']
+           'MultiLineageDB', 'RankLineageInfo', 'LINLineageInfo']
 
 from sourmash.logging import notify
 from sourmash.sourmash_args import load_pathlist_from_file
 
 RANKCODE = { "superkingdom": "D", "kingdom": "K", "phylum": "P", "class": "C",
                         "order": "O", "family":"F", "genus": "G", "species": "S", "unclassified": "U"}
-
-# import lca utils as needed for now
-from sourmash.lca import lca_utils
-from sourmash.lca.lca_utils import (taxlist)
 
 class LineagePair(NamedTuple):
     rank: str
@@ -146,25 +141,21 @@ class BaseLineageInfo:
             new_lineage.append(LineagePair(rank=rank))
         for lin_tup in self.lineage:
             # now add input tuples in correct spots. This corrects for order and allows empty values.
-            if not isinstance(lin_tup, (LineagePair, lca_utils.LineagePair)):
-                raise ValueError(f"{lin_tup} is not LineagePair.")
-                # find index for this rank
+            if not isinstance(lin_tup, LineagePair):
+                raise ValueError(f"{lin_tup} is not tax_utils LineagePair.")
             if lin_tup.rank: # skip this tuple if rank is None or "" (empty lineage tuple. is this needed?)
                 try:
+                    # find index for this rank
                     rank_idx = self.rank_index(lin_tup.rank)
                 except ValueError as e:
                     raise ValueError(f"Rank '{lin_tup.rank}' not present in {', '.join(self.ranks)}") from e
-                # make sure we're adding tax_utils.LineagePairs, not lca_utils.LineagePairs for consistency
-                if isinstance(lin_tup, lca_utils.LineagePair):
-                    new_lineage[rank_idx] = LineagePair(rank=lin_tup.rank, name=lin_tup.name)
-                else:
-                    new_lineage[rank_idx] = lin_tup
-    
+                new_lineage[rank_idx] = lin_tup
+
         # build list of filled ranks
-        filled_ranks = [a.rank for a in new_lineage if a.name]
+        filled_ranks = [a.rank for a in new_lineage if a.name is not None]
         # set lineage and filled_ranks
         object.__setattr__(self, "lineage", tuple(new_lineage))
-        object.__setattr__(self, "filled_ranks", filled_ranks)
+        object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
 
     def _init_from_lineage_str(self):
         """
@@ -175,9 +166,9 @@ class BaseLineageInfo:
             new_lineage = self.lineage_str.split(',')
         new_lineage = [ LineagePair(rank=rank, name=n) for (rank, n) in zip_longest(self.ranks, new_lineage) ]
         # build list of filled ranks
-        filled_ranks = [a.rank for a in new_lineage if a.name]
+        filled_ranks = [a.rank for a in new_lineage if a.name is not None]
         object.__setattr__(self, "lineage", tuple(new_lineage))
-        object.__setattr__(self, "filled_ranks", filled_ranks)
+        object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
 
     def zip_lineage(self, truncate_empty=False):
         """
@@ -222,7 +213,7 @@ class BaseLineageInfo:
         if rank in self.ranks: # rank is available
             return True
         raise ValueError(f"Desired Rank '{rank}' not available for this lineage.")
- 
+
     def rank_is_filled(self, rank, other=None):
         self.check_rank_availability(rank)
         if other is not None:
@@ -232,12 +223,17 @@ class BaseLineageInfo:
             return True
         return False
 
+    def is_compatible(self, other):
+        if self.ranks == other.ranks:
+            return True
+        return False
+
     def is_lineage_match(self, other, rank):
         """
         check to see if two lineages are a match down to given rank.
         """
         self.check_rank_availability(rank)
-        if not other.ranks == self.ranks: # check same ranks
+        if not self.is_compatible(other):
             raise ValueError("Cannot compare lineages from taxonomies with different ranks.")
         # always return false if rank is not filled in either of the two lineages
         if self.rank_is_filled(rank, other=other):
@@ -262,8 +258,7 @@ class BaseLineageInfo:
         return new
 
     def lineage_at_rank(self, rank):
-        "non-destructive pop_to_rank. Returns tuple of LineagePairs"
-        "Returns tuple of LineagePairs at given rank."
+        "Return tuple of LineagePairs at specified rank."
         # are we already above rank?
         self.check_rank_availability(rank)
         if not self.rank_is_filled(rank):
@@ -271,6 +266,16 @@ class BaseLineageInfo:
         # if not, return lineage tuples down to desired rank
         rank_idx = self.rank_index(rank)
         return self.filled_lineage[:rank_idx+1]
+
+    def find_lca(self, other):
+        """
+        If an LCA match exists between self and other,
+        find and report LCA lineage. If not, return None.
+        """
+        for rank in self.ascending_taxlist:
+            if self.is_lineage_match(other, rank):
+                return self.pop_to_rank(rank)
+        return None
 
 
 @dataclass(frozen=True, order=True)
@@ -355,7 +360,210 @@ class RankLineageInfo(BaseLineageInfo):
         filled_ranks = [a.rank for a in new_lineage if a.name]
         # set lineage and filled_ranks
         object.__setattr__(self, "lineage", tuple(new_lineage))
-        object.__setattr__(self, "filled_ranks", filled_ranks)
+        object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
+
+
+@dataclass(frozen=True, order=True)
+class LINLineageInfo(BaseLineageInfo):
+    """
+    This LINLineageInfo class uses the BaseLineageInfo methods for hierarchical LIN taxonomic 'ranks'.
+
+    Inputs (at least one required):
+        n_lin_positions: the number of lineage positions
+        lineage_str: `;`- or `,`-separated LINS string
+
+    If both `n_lin_positions` and `lineage_str` are provided, we will initialize a `LINLineageInfo`
+    with the provided n_lin_positions, and fill positions with `lineage_str` values. If the number of
+    positions is less than provided lineages, initialization will fail. Otherwise, we will insert blanks
+    beyond provided data in `lineage_str`.
+
+    If no information is passed, an empty LINLineageInfo will be initialized (n_lin_positions=0).
+
+    Input lineage information is only used for initialization of the final `lineage`
+    and will not be used or compared in any other class methods.
+    """
+    ranks: tuple = field(default=None, init=False, compare=False)# we will set this within class instead
+    lineage: tuple = None
+    # init with n_positions if you want to set a specific number of positions
+    n_lin_positions: int = field(default=None, compare=False)
+
+    def __post_init__(self):
+        "Initialize according to passed values"
+        # ranks must be tuple for hashability
+        if self.lineage is not None:
+            self._init_from_lineage_tuples()
+        elif self.lineage_str is not None:
+            self._init_from_lineage_str()
+        else:
+            self._init_empty()
+
+    def __eq__(self, other):
+        """
+        Check if two LINLineageInfo match. Since we sometimes want to match LINprefixes, which have fewer
+        total ranks, with full LINs, we only check for the filled_lineage to match and don't check that
+        the number of lin_positions match.
+        """
+        if other == (): # if comparing to a null tuple, don't try to find its lineage before returning False
+            return False
+        return self.filled_lineage==other.filled_lineage
+
+    def _init_ranks_from_n_lin_positions(self):
+        new_ranks = [str(x) for x in range(0, self.n_lin_positions)]
+        object.__setattr__(self, "ranks", new_ranks)
+
+    def _init_empty(self):
+        "initialize empty genome lineage"
+        # first, set ranks from n_positions
+        if self.n_lin_positions is None:
+            # set n_lin_positions to 0 for completely empty LINLineageInfo
+            object.__setattr__(self, "n_lin_positions", 0)
+        self._init_ranks_from_n_lin_positions()
+        new_lineage=[]
+        for rank in self.ranks:
+            new_lineage.append(LineagePair(rank=rank))
+        # set lineage and filled_ranks (because frozen, need to do it this way)
+        object.__setattr__(self, "lineage", tuple(new_lineage))
+        object.__setattr__(self, "filled_ranks", ())
+        object.__setattr__(self, "n_filled_pos", 0)
+
+    def _init_from_lineage_str(self):
+        """
+        Turn a ; or ,-separated set of lineages into a list of LineagePair objs.
+        """
+        new_lineage = self.lineage_str.split(';')
+        if len(new_lineage) == 1:
+            new_lineage = self.lineage_str.split(',')
+        if self.n_lin_positions is not None:
+            if self.n_lin_positions < len(new_lineage):
+                raise(ValueError("Provided 'n_lin_positions' has fewer positions than provided 'lineage_str'."))
+            self._init_ranks_from_n_lin_positions()
+        else:
+            n_lin_positions = len(new_lineage)
+            object.__setattr__(self, "n_lin_positions", n_lin_positions)
+            self._init_ranks_from_n_lin_positions()
+
+        # build lineage and n_filled_pos, filled_ranks
+        new_lineage = [ LineagePair(rank=rank, name=n) for (rank, n) in zip_longest(self.ranks, new_lineage) ]
+        filled_ranks = [a.rank for a in new_lineage if a.name is not None]
+        object.__setattr__(self, "lineage", tuple(new_lineage))
+        object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
+        object.__setattr__(self, "n_filled_pos", len(filled_ranks))
+
+    def _init_from_lineage_tuples(self):    
+        'initialize from tuple/list of LineagePairs, building ranks as you go'
+        new_lineage = []
+        ranks = []
+        # check this is a list or tuple of lineage tuples:
+        for lin_tup in self.lineage:
+            # make sure we're adding tax_utils.LineagePairs
+            if not isinstance(lin_tup, LineagePair):
+                raise ValueError(f"{lin_tup} is not tax_utils LineagePair.")
+            new_lineage.append(lin_tup)
+            ranks.append(lin_tup.rank)
+        # build list of filled ranks
+        filled_ranks = [a.rank for a in new_lineage if a.name is not None]
+        # set lineage and filled_ranks
+        object.__setattr__(self, "lineage", tuple(new_lineage))
+        object.__setattr__(self, "n_lin_positions", len(new_lineage))
+        object.__setattr__(self, "ranks", tuple(ranks))
+        object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
+        object.__setattr__(self, "n_filled_pos", len(filled_ranks))
+
+
+    def is_compatible(self, other):
+        """
+        Since we sometimes want to match LINprefixes with full LINs,
+        we don't want to enforce identical ranks. Here we just look to
+        make sure self and other share any ranks (LIN positions).
+
+        Since ranks are positions, this should be true for LINLineageInfo
+        unless one is empty. However, it should prevent comparison between
+        other LineageInfo instances and LINLineageInfo.
+        """
+        # do self and other share any ranks?
+        if any(x in self.ranks for x in other.ranks):
+            return True
+        return False
+
+
+
+@dataclass
+class LineageTree:
+    """
+    Builds a tree of dictionaries from lists of LineagePair or
+    LineageInfo objects in 'assignments'.  This tree can then be used
+    to find lowest common ancestor agreements/confusion.
+    """
+    assignments: list = field(compare=False)
+
+    def __post_init__(self):
+        self.tree = {}
+        self.add_lineages(self.assignments)
+
+    def add_lineage(self, lineage):
+        if isinstance(lineage, (BaseLineageInfo, RankLineageInfo, LINLineageInfo)):
+            lineage = lineage.filled_lineage
+        node = self.tree
+        for lineage_tup in lineage:
+            if lineage_tup.name:
+                child = node.get(lineage_tup, {})
+                node[lineage_tup] = child
+                # shift -> down in tree
+                node = child
+
+    def add_lineages(self, lineages):
+        if not lineages:
+            raise ValueError("empty assignment passed to build_tree")
+        if not isinstance(lineages, abc.Iterable):
+            raise ValueError("Must pass in an iterable containing LineagePair or LineageInfo objects.")
+        for lineageInf in lineages:
+            self.add_lineage(lineageInf)
+
+    def find_lca(self):
+        """
+        Given a LineageTree tree, find the first node with multiple
+        children, OR the only leaf in the tree.  Return (lineage_tup, reason),
+        where 'reason' is the number of children of the returned node, i.e.
+        0 if it's a leaf and > 1 if it's an internal node.
+        """
+        node = self.tree
+        lca = []
+        while 1:
+            if len(node) == 1:                # descend to only child; track path
+                lineage_tup = next(iter(node.keys()))
+                lca.append(lineage_tup)
+                node = node[lineage_tup]
+            elif len(node) == 0:              # at leaf; end
+                return tuple(lca), 0
+            else:                             # len(node) > 1 => confusion!!
+                return tuple(lca), len(node)
+
+    def ordered_paths(self, include_internal=False):
+        """
+        Find all paths in the nested dict in a depth-first manner.
+        Each path is a tuple of lineage tuples that lead from the root
+        to a leaf node. Optionally include internal nodes by building
+        them up from leaf nodes (for ordering).
+        """
+        paths = []
+        stack = [((), self.tree)]
+        while stack:
+            path, node = stack.pop()
+            for key, val in node.items():
+                if len(val) == 0: # leaf node
+                    # if want internal paths, build up from leaf
+                    if include_internal:
+                        internal_path = path
+                        while internal_path:
+                            if internal_path not in paths:
+                                paths.append(internal_path)
+                            if isinstance(internal_path, abc.Iterable):
+                                internal_path = internal_path[:-1]
+                    # now add leaf path
+                    paths.append(path + (key,))
+                else: # not leaf, add to stack
+                    stack.append((path + (key,), val))
+        return paths
 
 
 def get_ident(ident, *,
@@ -404,9 +612,30 @@ def collect_gather_csvs(cmdline_gather_input, *, from_file=None):
     return gather_csvs
 
 
+def read_lingroups(lingroup_csv):
+    lingroupD = {}
+    n=None
+    with sourmash_args.FileInputCSV(lingroup_csv) as r:
+        header = r.fieldnames
+        # check for empty file
+        if not header:
+            raise ValueError(f"Cannot read lingroups from '{lingroup_csv}'. Is file empty?")
+        if "lin" not in header or "name" not in header:
+            raise ValueError(f"'{lingroup_csv}' must contain the following columns: 'name', 'lin'.")
+        for n, row in enumerate(r):
+            lingroupD[row['lin']] = row['name']
+
+    if n is None:
+        raise ValueError(f'No lingroups loaded from {lingroup_csv}.')
+    n_lg = len(lingroupD.keys())
+    notify(f"Read {n+1} lingroup rows and found {n_lg} distinct lingroup prefixes.")
+    return lingroupD
+
+
 def load_gather_results(gather_csv, tax_assignments, *, seen_queries=None, force=False,
                         skip_idents = None, fail_on_missing_taxonomy=False,
-                        keep_full_identifiers=False, keep_identifier_versions=False):
+                        keep_full_identifiers=False, keep_identifier_versions=False,
+                        lins=False):
     "Load a single gather csv"
     if not seen_queries:
         seen_queries=set()
@@ -430,13 +659,14 @@ def load_gather_results(gather_csv, tax_assignments, *, seen_queries=None, force
                 # do not allow loading of same query from a second CSV.
                 raise ValueError(f"Gather query {gatherRow.query_name} was found in more than one CSV. Cannot load from '{gather_csv}'.")
             taxres = TaxResult(raw=gatherRow, keep_full_identifiers=keep_full_identifiers,
-                                                keep_identifier_versions=keep_identifier_versions)
+                                                keep_identifier_versions=keep_identifier_versions,
+                                                lins=lins)
             taxres.get_match_lineage(tax_assignments=tax_assignments, skip_idents=skip_idents, 
                                         fail_on_missing_taxonomy=fail_on_missing_taxonomy)
             # add to matching QueryTaxResult or create new one
             if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
                 # get existing or initialize new
-                this_querytaxres = gather_results.get(gatherRow.query_name, QueryTaxResult(taxres.query_info))
+                this_querytaxres = gather_results.get(gatherRow.query_name, QueryTaxResult(taxres.query_info, lins=lins))
             this_querytaxres.add_taxresult(taxres)
             gather_results[gatherRow.query_name] = this_querytaxres
 
@@ -448,7 +678,7 @@ def load_gather_results(gather_csv, tax_assignments, *, seen_queries=None, force
 
 
 def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxonomy=False, force=False, 
-                               keep_full_identifiers=False,keep_identifier_versions=False):
+                               keep_full_identifiers=False,keep_identifier_versions=False, lins=False):
     '''
     Load gather csvs, checking for empties and ids missing from taxonomic assignments.
     '''
@@ -466,7 +696,8 @@ def check_and_load_gather_csvs(gather_csvs, tax_assign, *, fail_on_missing_taxon
                                                         seen_queries=gather_results.keys(),
                                                         force=force, keep_full_identifiers=keep_full_identifiers,
                                                         keep_identifier_versions = keep_identifier_versions,
-                                                        fail_on_missing_taxonomy=fail_on_missing_taxonomy)
+                                                        fail_on_missing_taxonomy=fail_on_missing_taxonomy,
+                                                        lins=lins)
         except ValueError as exc:
             if force:
                 if "found in more than one CSV" in str(exc):
@@ -726,7 +957,7 @@ class LineageDB(abc.Mapping):
 
     @classmethod
     def load(cls, filename, *, delimiter=',', force=False,
-             keep_full_identifiers=False, keep_identifier_versions=True):
+             keep_full_identifiers=False, keep_identifier_versions=True, lins=False):
         """
         Load a taxonomy assignment CSV file into a LineageDB.
 
@@ -763,34 +994,49 @@ class LineageDB(abc.Mapping):
                     header = ["ident" if "accession" == x else x for x in header]
                 elif 'name' in header and 'lineage' in header:
                     return cls.load_from_gather_with_lineages(filename,
-                                                              force=force)
+                                                              force=force,
+                                                              lins=lins)
                 else:
                     header_str = ",".join([repr(x) for x in header])
                     raise ValueError(f'No taxonomic identifiers found; headers are {header_str}')
 
-            # is "strain" an available rank?
-            if "strain" in header:
-                include_strain=True
-            # check that all ranks are in header
-            ranks = list(RankLineageInfo().taxlist)
-            if not include_strain:
-                ranks.remove('strain')
-            if not set(ranks).issubset(header):
-                # for now, just raise err if not all ranks are present.
-                # in future, we can define `ranks` differently if desired
-                # return them from this function so we can check the `available` ranks
-                raise ValueError('Not all taxonomy ranks present')
+            if lins and "lin" not in header:
+                raise ValueError(f"'lin' column not found: cannot read LIN taxonomy assignments from {filename}.")
+
+            if not lins:
+                # is "strain" an available rank?
+                if "strain" in header:
+                    include_strain=True
+                # check that all ranks are in header
+                ranks = list(RankLineageInfo().taxlist)
+                if not include_strain:
+                    ranks.remove('strain')
+                if not set(ranks).issubset(header):
+                    # for now, just raise err if not all ranks are present.
+                    # in future, we can define `ranks` differently if desired
+                    # return them from this function so we can check the `available` ranks
+                    raise ValueError('Not all taxonomy ranks present')
 
             assignments = {}
             num_rows = 0
             n_species = 0
             n_strains = 0
+            n_pos = None
 
             # now parse and load lineages
             for n, row in enumerate(r):
                 num_rows += 1
-                # read lineage from row dictionary
-                lineageInfo = RankLineageInfo(lineage_dict=row)
+                if lins:
+                    lineageInfo = LINLineageInfo(lineage_str=row['lin'])
+                    if n_pos is not None:
+                        if lineageInfo.n_lin_positions != n_pos:
+                            raise ValueError(f"For taxonomic summarization, all LIN assignments must use the same number of LIN positions.")
+                    else:
+                        n_pos = lineageInfo.n_lin_positions # set n_pos with first entry
+                        ranks=lineageInfo.ranks
+                else:
+                    # read lineage from row dictionary
+                    lineageInfo = RankLineageInfo(lineage_dict=row)
                 # get identifier
                 ident = row[identifier]
 
@@ -810,17 +1056,18 @@ class LineageDB(abc.Mapping):
                     else:
                         assignments[ident] = lineage
 
-                        if lineage[-1].rank == 'species':
-                            n_species += 1
-                        elif lineage[-1].rank == 'strain':
-                            n_species += 1
-                            n_strains += 1
+                        if not lins:
+                            if lineage[-1].rank == 'species':
+                                n_species += 1
+                            elif lineage[-1].rank == 'strain':
+                                n_species += 1
+                                n_strains += 1
 
         return LineageDB(assignments, ranks)
 
 
     @classmethod
-    def load_from_gather_with_lineages(cls, filename, *, force=False):
+    def load_from_gather_with_lineages(cls, filename, *, force=False, lins=False):
         """
         Load an annotated gather-with-lineages CSV file produced by
         'tax annotate' into a LineageDB.
@@ -841,7 +1088,7 @@ class LineageDB(abc.Mapping):
             if "name" not in header or "lineage" not in header:
                 raise ValueError(f"Expected headers 'name' and 'lineage' not found. Is this a with-lineages file?")
 
-            ranks = list(lca_utils.taxlist(include_strain=include_strain))
+            ranks=None
             assignments = {}
             num_rows = 0
             n_species = 0
@@ -853,24 +1100,32 @@ class LineageDB(abc.Mapping):
 
                 name = row['name']
                 ident = get_ident(name)
-                lineage = row['lineage']
-                lineage = lca_utils.make_lineage(lineage)
 
+                if lins:
+                    lineageInfo = LINLineageInfo(lineage_str=row['lineage'])
+                else:
+                    lineageInfo = RankLineageInfo(lineage_str= row['lineage'])
+
+                if ranks is None:
+                    ranks = lineageInfo.taxlist
+
+                lineage = lineageInfo.filled_lineage
                 # check duplicates
                 if ident in assignments:
-                    if assignments[ident] != tuple(lineage):
+                    if assignments[ident] != lineage:
                         # this should not happen with valid
                         # sourmash tax annotate output, but check anyway.
                         if not force:
                             raise ValueError(f"multiple lineages for identifier {ident}")
                 else:
-                    assignments[ident] = tuple(lineage)
+                    assignments[ident] = lineage
 
-                    if lineage[-1].rank == 'species':
-                        n_species += 1
-                    elif lineage[-1].rank == 'strain':
-                        n_species += 1
-                        n_strains += 1
+                    if isinstance(lineageInfo, RankLineageInfo):
+                        if lineage[-1].rank == 'species':
+                            n_species += 1
+                        elif lineage[-1].rank == 'strain':
+                            n_species += 1
+                            n_strains += 1
 
         return LineageDB(assignments, ranks)
 
@@ -904,7 +1159,7 @@ class LineageDB_Sqlite(abc.Mapping):
 
         # get available ranks...
         ranks = set()
-        for column, rank in zip(self.columns, taxlist(include_strain=True)):
+        for column, rank in zip(self.columns, RankLineageInfo().taxlist):
             query = f'SELECT COUNT({column}) FROM {self.table_name} WHERE {column} IS NOT NULL AND {column} != ""'
             c.execute(query)
             cnt, = c.fetchone()
@@ -948,7 +1203,7 @@ class LineageDB_Sqlite(abc.Mapping):
 
     def _make_tup(self, row):
         "build a tuple of LineagePairs for this sqlite row"
-        tup = [ LineagePair(n, r) for (n, r) in zip(taxlist(True), row) ]
+        tup = [ LineagePair(n, r) for (n, r) in zip(RankLineageInfo().taxlist, row) ]
         return tuple(tup)
 
     def __getitem__(self, ident):
@@ -1148,7 +1403,7 @@ class MultiLineageDB(abc.Mapping):
         db.commit()
 
     def _save_csv(self, fp):
-        headers = ['identifiers'] + list(taxlist(include_strain=True))
+        headers = ['identifiers'] + list(RankLineageInfo().taxlist)
         w = csv.DictWriter(fp, fieldnames=headers)
         w.writeheader()
 
@@ -1317,10 +1572,10 @@ class TaxResult:
     query_name: str = field(init=False)
     query_info: QueryInfo = field(init=False)
     match_ident: str = field(init=False)
-    lineageInfo: RankLineageInfo = RankLineageInfo()
     skipped_ident: bool = False
     missed_ident: bool = False
     match_lineage_attempted: bool = False
+    lins: bool = False
 
     def __post_init__(self):
         self.get_ident()
@@ -1338,6 +1593,10 @@ class TaxResult:
         self.f_unique_to_query = float(self.raw.f_unique_to_query)
         self.f_unique_weighted = float(self.raw.f_unique_weighted)
         self.unique_intersect_bp = int(self.raw.unique_intersect_bp)
+        if self.lins:
+            self.lineageInfo = LINLineageInfo()
+        else:
+            self.lineageInfo = RankLineageInfo()
 
     def get_ident(self):
         # split identifiers = split on whitespace
@@ -1359,7 +1618,10 @@ class TaxResult:
         else:
             lin = tax_assignments.get(self.match_ident)
             if lin:
-                self.lineageInfo = RankLineageInfo(lineage=lin)
+                if self.lins:
+                    self.lineageInfo = LINLineageInfo(lineage = lin)
+                else:
+                    self.lineageInfo = RankLineageInfo(lineage = lin)
             else:
                 self.missed_ident=True
         self.match_lineage_attempted = True
@@ -1439,12 +1701,17 @@ class SummarizedGatherResult:
         return sD
 
     def as_kreport_dict(self, query_info):
+        """
+        Produce kreport dict for named taxonomic groups.
+        """
         lowest_assignment_rank = 'species'
         sD = {}
         sD['num_bp_assigned'] = str(0)
         # total percent containment, weighted to include abundance info
         sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
         sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_bp))
+        if isinstance(self.lineage, LINLineageInfo):
+            raise ValueError("Cannot produce 'kreport' with LIN taxonomy.")
         if self.lineage != RankLineageInfo():
             this_rank = self.lineage.lowest_rank
             sD['rank_code'] = RANKCODE[this_rank]
@@ -1461,6 +1728,19 @@ class SummarizedGatherResult:
             sD['rank_code'] = RANKCODE['unclassified']
             sD["num_bp_assigned"] = sD["num_bp_contained"]
         return sD
+    
+    def as_lingroup_dict(self, query_info, lg_name):
+        """
+        Produce lingroup report dict for lingroups.
+        """
+        sD = {}
+        # total percent containment, weighted to include abundance info
+        sD['percent_containment'] = f'{self.f_weighted_at_rank * 100:.2f}'
+        sD["num_bp_contained"] = str(int(self.f_weighted_at_rank * query_info.total_weighted_bp))
+        sD["lin"] = self.lineage.display_lineage()
+        sD["name"] = lg_name
+        return sD
+
 
 @dataclass
 class ClassificationResult(SummarizedGatherResult):
@@ -1519,6 +1799,7 @@ class QueryTaxResult:
     Contains methods for formatting results for different outputs.
     """
     query_info: QueryInfo # initialize with QueryInfo dataclass
+    lins: bool = False
 
     def __post_init__(self):
         self.query_name = self.query_info.query_name # for convenience
@@ -1557,7 +1838,7 @@ class QueryTaxResult:
         self.krona_header = []
 
     def is_compatible(self, taxresult):
-        return taxresult.query_info == self.query_info
+        return taxresult.query_info == self.query_info and taxresult.lins == self.lins
 
     @property
     def ascending_ranks(self):
@@ -1650,7 +1931,10 @@ class QueryTaxResult:
                 self.total_bp_classified[rank] += bp_intersect_at_rank
 
             # record unclassified
-            lineage = RankLineageInfo()
+            if self.lins:
+                lineage = LINLineageInfo()
+            else:
+                lineage = RankLineageInfo()
             query_ani = None
             f_unique = 1.0 - self.total_f_classified[rank]
             if f_unique > 0:
@@ -1840,3 +2124,52 @@ class QueryTaxResult:
                         unclassified_recorded = True
                 kreport_results.append(kresD)
         return header, kreport_results
+
+    def make_lingroup_results(self, LINgroupsD): # LingroupsD is dictionary {lg_prefix: lg_name}
+        """
+        Report results for the specified LINGroups.
+        Keep LCA paths in order as much as possible.
+        """
+        self.check_summarization()
+        header = ["name", "lin", "percent_containment", "num_bp_contained"]
+
+        if self.query_info.total_weighted_hashes == 0:
+            raise ValueError("ERROR: cannot produce 'LINgroup_report' format from gather results before sourmash v4.5.0")
+
+        # find the ranks we need to consider
+        all_lgs = set()
+        lg_ranks = set()
+        for lg_prefix in LINgroupsD.keys():
+            # store lineage info for LCA pathfinding
+            lg_info = LINLineageInfo(lineage_str=lg_prefix)
+            all_lgs.add(lg_info)
+            # store rank so we only go through summarized results at these ranks
+            lg_rank = int(lg_info.lowest_rank)
+            lg_ranks.add(lg_rank)
+
+        # grab summarized results matching LINgroup prefixes
+        lg_results = {}
+        for rank in lg_ranks:
+            rank = str(rank)
+            rank_results = self.summarized_lineage_results[rank]
+            for res in rank_results:
+                if res.lineage in all_lgs:# is this lineage in the list of LINgroups?
+                    this_lingroup_name = LINgroupsD[res.lineage.display_lineage(truncate_empty=True)]
+                    lg_resD = res.as_lingroup_dict(self.query_info, this_lingroup_name)
+                    lg_results[res.lineage] = lg_resD
+
+        # We want to return in ~ depth order: descending each specific path in order
+        # use LineageTree to find ordered paths
+        lg_tree = LineageTree(all_lgs)
+        ordered_paths = lg_tree.ordered_paths(include_internal = True)
+        # store results in order:
+        lingroup_results=[]
+        for lg in ordered_paths:
+            # get LINInfo object
+            lg_LINInfo = LINLineageInfo(lineage=lg)
+            # get result, if we have it
+            lg_res = lg_results.get(lg_LINInfo)
+            if lg_res:
+                lingroup_results.append(lg_res)
+        
+        return header, lingroup_results
