@@ -137,7 +137,7 @@ python -m venv testenv4
 
 cd testenv1
 source bin/activate
-git clone --depth 1 --branch v${new_version}${rc} https://github.com/sourmash-bio/sourmash.git
+git clone --depth 1 --branch release/v${new_version} https://github.com/sourmash-bio/sourmash.git
 cd sourmash
 python -m pip install -r requirements.txt
 pytest && cargo test
@@ -148,7 +148,7 @@ cd ../../testenv2
 deactivate
 source bin/activate
 python -m pip install build
-python -m pip install -e git+https://github.com/sourmash-bio/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
+python -m pip install -e git+https://github.com/sourmash-bio/sourmash.git@release/v${new_version}#egg=sourmash[test]
 cd src/sourmash
 pytest && cargo test
 make dist
@@ -177,7 +177,7 @@ Wait for the
 [various cibuildwheel actions](https://github.com/sourmash-bio/sourmash/actions)
 to finish and upload; the
 [latest release](https://github.com/sourmash-bio/sourmash/releases)
-should have eight wheel files attached to it.
+should have nine wheel files attached to it.
 
 6\. Remove release candidate tags
 
