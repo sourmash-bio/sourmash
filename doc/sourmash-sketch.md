@@ -258,11 +258,24 @@ and then `sourmash sig rename`.
 
 ### Locations for output files
 
-Signature files can contain multiple signatures and sketches. Use `sourmash sig describe` to get details on the contents of a file.
+Signature files can contain multiple signatures and sketches. Use
+`sourmash sig fileinfo` to summarize the contents of a signature file,
+and `sourmash sig describe` to get details on the contents of a file.
 
 You can use `-o <filename>` to specify a file output location for all the output signatures; `-o -` means stdout. This does not merge signatures unless `--merge` is provided.
 
 Specify `--outdir` to put all the signatures in a specific directory.
+
+### Output file formats
+
+Sourmash can read and write signatures in many different formats, and
+`sourmash sketch ... -o <filename>` supports all of the standard
+output formats. Our recommendation is to output to zip files -
+e.g. `filename.zip` - as this is the smallest and most flexible
+signature storage format.
+
+Please see
+[Choosing signature output formats](command-line.md#choosing-signature-output-formats) for more details.
 
 ### Downsampling and flattening signatures
 
