@@ -52,9 +52,41 @@ By default, `sketch dna` ignores bad k-mers (e.g. non-ACGT characters
 in DNA). If `--check-sequence` is provided, `sketch dna` will error
 exit on the first bad k-mer.
 
+### Building a combined sketch from two or more files
+
+If you have multiple files, sourmash will by default create one sketch
+for _each_ file.  For situations such as paired-end read files from
+Illumina sequencing, you may instead want to build a combined sketch.
+
+You can build a combined sketch in two ways.
+
+First, you can use `--name/--merge` to build
+a single (named) sketch out of multiple input files:
+```
+sourmash sketch dna -p k=31 sample_R1.fq.gz sample_R2.fq.gz \
+    --name "sample" -o sample.sig
+```
+Here you need to specify a name because sourmash does not pick a default
+name when given multiple files; you also need to provide an output file
+name because sourmash doesn't pick a default output name in this situation.
+
+Second, you can stream the input files into `sourmash sketch` via stdin:
+```
+gunzip -c sample_R?.fq.gz | sourmash sketch dna -p k=31 - \
+    -o sample.sig
+```
+As above, you need to specify an output filename because sourmash
+can't guess a good default for streaming input.  The `--name` option
+can still be specified if you want to name the output sketch something
+other than `-`.
+
+Note that the order of sequences or sequence files does not affect
+the output of `sourmash sketch` at all: you do not need to
+interleave reads or provide the input files in a consistent order.
+
 ### Protein sketches for genomes and proteomes
 
-Likewise,
+The command:
 ```
 sourmash sketch translate genome.fna
 ```
