@@ -64,7 +64,7 @@ First, you can use `--name/--merge` to build
 a single (named) sketch out of multiple input files:
 ```
 sourmash sketch dna -p k=31 sample_R1.fq.gz sample_R2.fq.gz \
-    --name "sample" -o sample.sig
+    --name "sample" -o sample.zip
 ```
 Here you need to specify a name because sourmash does not pick a default
 name when given multiple files; you also need to provide an output file
@@ -73,7 +73,7 @@ name because sourmash doesn't pick a default output name in this situation.
 Second, you can stream the input files into `sourmash sketch` via stdin:
 ```
 gunzip -c sample_R?.fq.gz | sourmash sketch dna -p k=31 - \
-    -o sample.sig
+    -o sample.zip
 ```
 As above, you need to specify an output filename because sourmash
 can't guess a good default for streaming input.  The `--name` option
