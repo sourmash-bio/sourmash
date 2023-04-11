@@ -97,7 +97,7 @@ authors:
 affiliations:
  - name: University of California, Davis
    index: 1
- - name: Woods Hole Oceanographic Institute
+ - name: Woods Hole Oceanographic Institution
    index: 2
  - name: Chan-Zuckerberg Biohub
    index: 3
