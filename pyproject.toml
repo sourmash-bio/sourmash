@@ -98,7 +98,7 @@ license = { text = "BSD 3-Clause License" }
 
 [project.optional-dependencies]
 test = [
-  "pytest>=6.2.4,<7.3.0",
+  "pytest>=6.2.4,<7.4.0",
   "pytest-cov>=2.12,<5.0",
   "pytest-xdist",
   "pyyaml>=6,<7",
