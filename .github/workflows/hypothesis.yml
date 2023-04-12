@@ -27,3 +27,9 @@ jobs:
 
       - name: Run Hypothesis tests
         run: tox -e hypothesis,coverage
+
+      - name: Upload Python coverage to codecov
+        uses: codecov/codecov-action@v3
+        with:
+          flags: hypothesis-py
+          fail_ci_if_error: true
