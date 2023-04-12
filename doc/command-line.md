@@ -720,8 +720,8 @@ When using LIN taxonomic information, you can optionally also provide a `lingrou
 
 This output format consists of four columns:
 - `name`, `lin` columns are taken directly from the `--lingroup` file
-- `percent_containment`, the total percent of the dataset contained in this lingroup and all descendents
-- `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendents.
+- `percent_containment`, the total percent of the dataset contained in this lingroup and all descendants
+- `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendants.
 
 Similar to `kreport` above, we use the wording "contained" rather than "assigned," because `sourmash` assigns matches at the genome level, and the `tax` functions summarize this information.
 
@@ -791,8 +791,8 @@ When using LIN taxonomic information, you can optionally also provide a `lingrou
 
 This output format consists of four columns:
 - `name`, `lin` columns are taken directly from the `--lingroup` file
-- `percent_containment`, the total percent of the dataset contained in this lingroup and all descendents
-- `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendents.
+- `percent_containment`, the total percent of the dataset contained in this lingroup and all descendants
+- `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendants.
 
 Similar to `kreport` above, we use the wording "contained" rather than "assigned," because `sourmash` assigns matches at the genome level, and the `tax` functions summarize this information.
 
