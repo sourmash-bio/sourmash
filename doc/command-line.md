@@ -212,7 +212,8 @@ sourmash compare <sourmash signature file> [ <sourmash signature file> ... ]
 
 Options:
 
-* `--output <filename>` -- save the output matrix to this file (as a numpy binary matrix).
+* `--output <filename>` -- save the output matrix to this file, as a numpy binary matrix.
+* `--csv <filename>` -- save the output matrix to this file in CSV format.
 * `--distance-matrix` -- create and output a distance matrix, instead of a similarity matrix.
 * `--ksize <k>` -- do the comparisons at this k-mer size.
 * `--containment` -- calculate containment instead of similarity; `C(i, j) = size(i intersection j) / size(i)`
