@@ -145,6 +145,10 @@ def subparser(subparsers):
         help='continue past databases that contain no compatible signatures'
     )
     subparser.set_defaults(fail_on_empty_database=True)
+    subparser.add_argument(
+        '--create-empty-results', action='store_true',
+        help='create an empty results file even if no matches.'
+    )
 
     add_ksize_arg(subparser)
     add_moltype_args(subparser)
