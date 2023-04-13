@@ -73,3 +73,10 @@ jobs:
         run: tox
         env:
           PYTHONDEVMODE: 1
+
+      - name: Upload Python coverage to codecov
+        uses: codecov/codecov-action@v3
+        with:
+          flags: python
+          fail_ci_if_error: true
+          files: .tox/coverage.xml
