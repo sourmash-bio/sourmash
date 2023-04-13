@@ -488,6 +488,10 @@ def intersect(args):
 
         mins.intersection_update(sigobj.minhash.hashes)
 
+    if first_sig is None:
+        notify("no signatures provided to intersect!?")
+        sys.exit(-1)
+
     # forcibly turn off track_abundance, unless --abundances-from set.
     intersect_mh = first_sig.minhash.copy_and_clear().flatten()
     intersect_mh.add_many(mins)
