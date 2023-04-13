@@ -888,9 +888,9 @@ def gather(args):
         print_results(f'WARNING: final scaled was {gather_iter.scaled}, vs query scaled of {query.minhash.scaled}')
 
     # save CSV?
-    w = None
-    if found and args.output:
+    if (found and args.output) or args.create_empty_results:
         with FileOutputCSV(args.output) as fp:
+            w = None
             for result in found:
                 if w is None:
                     w = result.init_dictwriter(fp)

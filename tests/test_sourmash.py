@@ -3533,13 +3533,39 @@ def test_gather_nomatch(runtmp, linear_gather, prefetch_gather):
         'gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig')
     testdata_match = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
+    out_csv = runtmp.output('results.csv')
+
     runtmp.sourmash('gather', testdata_query, testdata_match,
+                    '-o', out_csv,
                     linear_gather, prefetch_gather)
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
 
     assert "No matches found for --threshold-bp at 50.0 kbp." in runtmp.last_result.err
+    assert not os.path.exists(out_csv)
+
+
+def test_gather_nomatch_create_empty(runtmp, linear_gather, prefetch_gather):
+    testdata_query = utils.get_test_data(
+        'gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig')
+    testdata_match = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+
+    out_csv = runtmp.output('results.csv')
+
+    runtmp.sourmash('gather', testdata_query, testdata_match,
+                    '-o', out_csv, '--create-empty-results',
+                    linear_gather, prefetch_gather)
+
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
+
+    assert "No matches found for --threshold-bp at 50.0 kbp." in runtmp.last_result.err
+    assert os.path.exists(out_csv)
+
+    with open(out_csv, 'rt') as fp:
+        data = fp.read()
+        assert not data
 
 
 def test_gather_abund_nomatch(runtmp, linear_gather, prefetch_gather):

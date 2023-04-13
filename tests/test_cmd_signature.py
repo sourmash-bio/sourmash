@@ -396,6 +396,17 @@ def test_sig_merge_flatten_2(c):
     assert actual_merge_sig.minhash == test_merge_sig.minhash
 
 
+def test_sig_intersect_0(runtmp):
+    # should print usage when no arguments
+    c = runtmp
+
+    with pytest.raises(SourmashCommandFailed):
+        c.run_sourmash('sig', 'intersect')
+
+    err = c.last_result.err
+    assert "no signatures provided to intersect!?" in err
+
+
 def test_sig_intersect_1(runtmp):
     c = runtmp
 
