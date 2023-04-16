@@ -8,7 +8,7 @@ on:
     branches:
       - latest
     tags:
-      - '*'
+      - 'v*'
   pull_request:
   workflow_dispatch:
 
@@ -43,8 +43,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          pip install sourmash --find-links dist --force-reinstall
-          pip install pytest
+          pip install 'sourmash[test]' --find-links dist --force-reinstall
           pytest
       - name: pytest
         if: ${{ !startsWith(matrix.target, 'x86') && matrix.target != 'ppc64' }}
@@ -59,7 +58,7 @@ jobs:
             pip3 install -U pip pytest
           run: |
             set -e
-            pip3 install sourmash --find-links dist --force-reinstall
+            pip3 install 'sourmash[test]' --find-links dist --force-reinstall
             pytest
 
   windows:
@@ -89,8 +88,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          pip install sourmash --find-links dist --force-reinstall
-          pip install pytest
+          pip install 'sourmash[test]' --find-links dist --force-reinstall
           pytest
 
   macos:
@@ -119,8 +117,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          pip install sourmash --find-links dist --force-reinstall
-          pip install pytest
+          pip install 'sourmash[test]' --find-links dist --force-reinstall
           pytest
 
   emscripten:
@@ -157,8 +154,7 @@ jobs:
           set -e
           pyodide venv .venv
           source .venv/bin/activate
-          pip install sourmash --find-links dist --force-reinstall
-          pip install pytest
+          pip install 'sourmash[test]' --find-links dist --force-reinstall
           python -m pytest
 
   sdist:

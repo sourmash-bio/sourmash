@@ -111,6 +111,9 @@
 
             rust-cbindgen
             maturin
+            zig
+
+            act
 
             wasmtime
             wasm-pack

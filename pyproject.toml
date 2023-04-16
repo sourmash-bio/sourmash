@@ -132,6 +132,7 @@ all = ["sourmash[test,demo,doc,storage]"]
 [tool.maturin]
 python-source = "src"
 manifest-path = "src/core/Cargo.toml"
+module-name = "sourmash._lowlevel"
 bindings = "cffi"
 include = [
   { path = "include/sourmash.h", format = ["sdist","wheel"] },
