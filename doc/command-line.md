@@ -212,7 +212,8 @@ sourmash compare <sourmash signature file> [ <sourmash signature file> ... ]
 
 Options:
 
-* `--output <filename>` -- save the output matrix to this file (as a numpy binary matrix).
+* `--output <filename>` -- save the output matrix to this file, as a numpy binary matrix.
+* `--csv <filename>` -- save the output matrix to this file in CSV format.
 * `--distance-matrix` -- create and output a distance matrix, instead of a similarity matrix.
 * `--ksize <k>` -- do the comparisons at this k-mer size.
 * `--containment` -- calculate containment instead of similarity; `C(i, j) = size(i intersection j) / size(i)`
@@ -720,8 +721,8 @@ When using LIN taxonomic information, you can optionally also provide a `lingrou
 
 This output format consists of four columns:
 - `name`, `lin` columns are taken directly from the `--lingroup` file
-- `percent_containment`, the total percent of the dataset contained in this lingroup and all descendents
-- `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendents.
+- `percent_containment`, the total percent of the dataset contained in this lingroup and all descendants
+- `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendants.
 
 Similar to `kreport` above, we use the wording "contained" rather than "assigned," because `sourmash` assigns matches at the genome level, and the `tax` functions summarize this information.
 
@@ -791,8 +792,8 @@ When using LIN taxonomic information, you can optionally also provide a `lingrou
 
 This output format consists of four columns:
 - `name`, `lin` columns are taken directly from the `--lingroup` file
-- `percent_containment`, the total percent of the dataset contained in this lingroup and all descendents
-- `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendents.
+- `percent_containment`, the total percent of the dataset contained in this lingroup and all descendants
+- `num_bp_contained`, the estimated number of base pairs contained in this lingroup and all descendants.
 
 Similar to `kreport` above, we use the wording "contained" rather than "assigned," because `sourmash` assigns matches at the genome level, and the `tax` functions summarize this information.
 
