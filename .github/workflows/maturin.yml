@@ -43,8 +43,8 @@ jobs:
         shell: bash
         run: |
           set -e
-          pip install 'sourmash[test]' --find-links dist --force-reinstall
-          #pytest
+          pip install 'sourmash[test]' --find-links dist --force-reinstall --pre
+          pytest
       - name: pytest
         if: ${{ !startsWith(matrix.target, 'x86') && matrix.target != 'ppc64' }}
         uses: uraimo/run-on-arch-action@v2.5.0
@@ -57,8 +57,8 @@ jobs:
             apt-get install -y --no-install-recommends python3 python3-pip
           run: |
             set -e
-            pip3 install 'sourmash[test]' --find-links dist --force-reinstall
-            #pytest
+            pip3 install 'sourmash[test]' --find-links dist --force-reinstall --pre
+            pytest
 
   windows:
     runs-on: windows-latest
@@ -87,8 +87,8 @@ jobs:
         shell: bash
         run: |
           set -e
-          pip install 'sourmash[test]' --find-links dist --force-reinstall
-          #pytest
+          pip install 'sourmash[test]' --find-links dist --force-reinstall --pre
+          pytest
 
   macos:
     runs-on: macos-latest
@@ -116,8 +116,8 @@ jobs:
         shell: bash
         run: |
           set -e
-          pip install 'sourmash[test]' --find-links dist --force-reinstall
-          #pytest
+          pip install 'sourmash[test]' --find-links dist --force-reinstall --pre
+          pytest
 
   emscripten:
     runs-on: ubuntu-latest
@@ -153,8 +153,8 @@ jobs:
           set -e
           pyodide venv .venv
           source .venv/bin/activate
-          pip install 'sourmash[test]' --find-links dist --force-reinstall
-          #python -m pytest
+          pip install 'sourmash[test]' --find-links dist --force-reinstall --pre
+          python -m pytest
 
   sdist:
     runs-on: ubuntu-latest
