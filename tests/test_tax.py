@@ -952,7 +952,37 @@ def test_metagenome_two_queries_human_output(runtmp):
 
 
 def test_metagenome_two_queries_with_single_query_output_formats_fail(runtmp):
-    # remove single-query outputs when working with multiple queries 
+    # fail on multiple queries with single query output formats
+    c = runtmp
+    taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
+    g_res = utils.get_test_data('tax/test1.gather.csv')
+
+    # make a second query with same output
+    g_res2 = runtmp.output("test2.gather.csv")
+    with open(g_res2, 'w') as fp:
+        for line in open(g_res, 'r'):
+            line = line.replace('test1', 'test2')
+            fp.write(line)
+
+    csv_summary_out = runtmp.output("tst.summarized.csv")
+    kreport_out = runtmp.output("tst.kreport.txt")
+
+    with pytest.raises(SourmashCommandFailed) as exc:
+        c.run_sourmash('tax', 'metagenome',  '--gather-csv', g_res, g_res2,
+                       '--taxonomy-csv', taxonomy_csv, '-F', "csv_summary", "kreport", "--rank", "phylum", "-o", "tst")
+    print(str(exc.value))
+
+    assert not os.path.exists(csv_summary_out)
+    assert not os.path.exists(kreport_out)
+
+    assert c.last_result.status == -1
+    assert "loaded results for 2 queries from 2 gather CSVs" in c.last_result.err
+    assert "WARNING: found results for multiple gather queries. Can only output multi-query result formats: skipping csv_summary, kreport" in c.last_result.err
+    assert "ERROR: No output formats remaining." in c.last_result.err
+
+
+def test_metagenome_two_queries_skip_single_query_output_formats(runtmp):
+    # remove single-query outputs when working with multiple queries
     c = runtmp
     taxonomy_csv = utils.get_test_data('tax/test.taxonomy.csv')
     g_res = utils.get_test_data('tax/test1.gather.csv')
@@ -968,19 +998,16 @@ def test_metagenome_two_queries_with_single_query_output_formats_fail(runtmp):
     kreport_out = runtmp.output("tst.kreport.txt")
     lineage_summary_out = runtmp.output("tst.lineage_summary.tsv")
 
-    with pytest.raises(SourmashCommandFailed) as exc:
-        c.run_sourmash('tax', 'metagenome',  '--gather-csv', g_res, g_res2,
-                       '--taxonomy-csv', taxonomy_csv, '-F', "csv_summary", "kreport", "-F", "lineage_summary", "--rank", "phylum", "-o", "tst")
-    print(str(exc.value))
+    c.run_sourmash('tax', 'metagenome',  '--gather-csv', g_res, g_res2,
+                       '--taxonomy-csv', taxonomy_csv, '-F', "csv_summary", "kreport", "lineage_summary", "--rank", "phylum", "-o", "tst")
 
     assert not os.path.exists(csv_summary_out)
     assert not os.path.exists(kreport_out)
-    assert not os.path.exists(lineage_summary_out)
-    
-    assert c.last_result.status == -1
+    assert os.path.exists(lineage_summary_out)
+
+    assert c.last_result.status == 0
     assert "loaded results for 2 queries from 2 gather CSVs" in c.last_result.err
-    assert "WARNING: found results for multiple gather queries. Can only output multi-query result formats: skipping csv_summary, kreport, lineage_summary" in c.last_result.err
-    assert "ERROR: No output formats remaining." in c.last_result.err
+    assert "WARNING: found results for multiple gather queries. Can only output multi-query result formats: skipping csv_summary, kreport" in c.last_result.err
 
 
 def test_metagenome_two_queries_krona(runtmp):
