@@ -1808,7 +1808,7 @@ def test_fromfile_dna_and_protein_dup_name_report(runtmp):
         runtmp.sourmash('sketch', 'fromfile',
                         'sketch_fromfile/salmonella.csv',
                         'sketch_fromfile/salmonella.csv',
-                        '--report-errors',
+                        '--report-duplicated',
                         '-o', 'out.zip', '-p', 'dna', '-p', 'protein')
 
     out = runtmp.last_result.out

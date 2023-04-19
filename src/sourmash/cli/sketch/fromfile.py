@@ -72,8 +72,8 @@ def subparser(subparsers):
         help='output a manifest file of already-existing signatures'
     )
     file_args.add_argument(
-        '--report-errors', action='store_true',
-        help='report missing or duplicated names'
+        '--report-duplicated', action='store_true',
+        help='report duplicated names'
     )
 
 

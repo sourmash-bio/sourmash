@@ -446,7 +446,7 @@ def fromfile(args):
 
     fail_exit = False
     if n_duplicate_name:
-        if args.report_errors:
+        if args.report_duplicated:
             notify("duplicated:\n" + '\n'.join(sorted(duplicate_names)))
         error(f"** ERROR: {n_duplicate_name} entries have duplicate 'name' records. Exiting!")
         fail_exit = True
