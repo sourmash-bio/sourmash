@@ -424,8 +424,7 @@ def fromfile(args):
     skipped_sigs = 0
     n_missing_name = 0
     n_duplicate_name = 0
-    missing_names = set()
-    duplicate_names=set()
+    duplicate_names = set()
 
     for csvfile in args.csvs:
         with sourmash_args.FileInputCSV(csvfile) as r:
@@ -433,7 +432,6 @@ def fromfile(args):
                 name = row['name']
                 if not name:
                     n_missing_name += 1
-                    missing_names.add(name)
                     continue
 
                 genome = row['genome_filename']
@@ -454,8 +452,6 @@ def fromfile(args):
         fail_exit = True
 
     if n_missing_name:
-        if args.report_errors:
-            notify("missing:\n" + '\n'.join(sorted(missing_names)))
         error(f"** ERROR: {n_missing_name} entries have blank 'name's? Exiting!")
         fail_exit = True
 

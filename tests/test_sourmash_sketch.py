@@ -1799,6 +1799,27 @@ def test_fromfile_dna_and_protein_dup_name(runtmp):
     assert "ERROR: 1 entries have duplicate 'name' records. Exiting!" in err
 
 
+def test_fromfile_dna_and_protein_dup_name_report(runtmp):
+    # duplicate names
+    test_inp = utils.get_test_data('sketch_fromfile')
+    shutil.copytree(test_inp, runtmp.output('sketch_fromfile'))
+
+    with pytest.raises(SourmashCommandFailed):
+        runtmp.sourmash('sketch', 'fromfile',
+                        'sketch_fromfile/salmonella.csv',
+                        'sketch_fromfile/salmonella.csv',
+                        '--report-errors',
+                        '-o', 'out.zip', '-p', 'dna', '-p', 'protein')
+
+    out = runtmp.last_result.out
+    err = runtmp.last_result.err
+
+    print(out)
+    print(err)
+    assert "GCA_903797575 Salmonella enterica" in err
+    assert "ERROR: 1 entries have duplicate 'name' records. Exiting!" in err
+
+
 def test_fromfile_dna_and_protein_missing(runtmp):
     # test what happens when missing protein.
     test_inp = utils.get_test_data('sketch_fromfile')
