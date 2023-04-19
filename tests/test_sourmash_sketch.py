@@ -1796,6 +1796,7 @@ def test_fromfile_dna_and_protein_dup_name(runtmp):
 
     print(out)
     print(err)
+    assert "GCA_903797575 Salmonella enterica" not in err
     assert "ERROR: 1 entries have duplicate 'name' records. Exiting!" in err
 
 
