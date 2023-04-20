@@ -27,6 +27,7 @@ After release to PyPI and conda-forge/bioconda packages built:
 - [ ] [PyPI page](https://pypi.org/project/sourmash/) updated
 - [ ] Zenodo DOI successfully minted upon new github release - [see search results](https://zenodo.org/search?page=1&size=20&q=sourmash&sort=mostrecent)
 - [ ] `pip install sourmash` installs the correct version
+- [ ] [conda-forge sourmash-minimal-feedstock](https://github.com/conda-forge/sourmash-minimal-feedstock) has updated `sourmash-minimal` to the correct version 
 - [ ] `mamba create -n smash-release -y sourmash` installs the correct version
 ```
 
@@ -302,3 +303,7 @@ Examples:
 - [2.1.0](https://twitter.com/luizirber/status/1166910335120314369)
 - [2.0.1](https://twitter.com/luizirber/status/1136786447518711808)
 - [2.0.0](https://twitter.com/luizirber/status/1108846466502520832)
+
+## After release
+
+Update version to next minor version + `-dev`, e.g. [this PR](https://github.com/sourmash-bio/sourmash/pull/2584).
