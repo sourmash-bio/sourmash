@@ -146,6 +146,7 @@ def test_compare_serial(runtmp):
 
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
+    assert len(testsigs) == 4
 
     c.run_sourmash('compare', '-o', 'cmp', '-k', '21', '--dna', *testsigs)
 
