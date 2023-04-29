@@ -80,6 +80,10 @@ def subparser(subparsers):
         'headers)'
     )
     subparser.add_argument(
+        '--labels-to', '--labels-save',
+        help='a CSV file containing label information',
+    )
+    subparser.add_argument(
         '-p', '--processes', metavar='N', type=int, default=None,
         help='Number of processes to use to calculate similarity')
     subparser.add_argument(
