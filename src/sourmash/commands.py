@@ -279,6 +279,9 @@ def plot(args):
 
         labelfilename = args.labels_from
         notify(f"loading labels from CSV file '{labelfilename}'")
+        if not args.labels:
+            notify(f"(NOTE: --labels-from implies --labels)")
+            args.labels = True
 
         labeltext = []
         with sourmash_args.FileInputCSV(labelfilename) as r:

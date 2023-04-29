@@ -16,7 +16,11 @@ The sourmash code is available at github.com/sourmash-bio/sourmash/ under the
 BSD 3-Clause license.
 """
 from deprecation import deprecated
-from importlib.metadata import version
+
+try:
+    from importlib.metadata import version
+except ModuleNotFoundError:
+    from importlib_metadata import version
 
 __all__ = ['MinHash', 'SourmashSignature',
            'load_one_signature',
