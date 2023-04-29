@@ -920,7 +920,7 @@ def test_plot_override_labeltext(runtmp):
 
         print(runtmp.last_result.out)
 
-        assert 'loading labels from new.labels.txt' in runtmp.last_result.err
+        assert "loading labels from text file 'new.labels.txt'" in runtmp.last_result.err
 
         expected = """\
 0\ta
@@ -947,7 +947,7 @@ def test_plot_override_labeltext_fail(runtmp):
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
     assert runtmp.last_result.status != 0
-    assert 'loading labels from new.labels.txt' in runtmp.last_result.err
+    assert "loading labels from text file 'new.labels.txt'" in runtmp.last_result.err
     assert '3 labels != matrix size, exiting' in runtmp.last_result.err
 
 

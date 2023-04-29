@@ -223,16 +223,17 @@ def compare(args):
         notify(f'saving labels to: {labeloutname}')
         with sourmash_args.FileOutputCSV(labeloutname) as fp:
             w = csv.writer(fp)
-            w.writerow(['md5', 'label', 'name', 'filename', 'signature_file'])
+            w.writerow(['order', 'md5', 'label', 'name', 'filename',
+                        'signature_file'])
 
-            for ss, location in siglist:
+            for n, (ss, location) in enumerate(siglist):
                 md5 = ss.md5sum()
                 sigfile = location
                 label = str(ss)
                 name = ss.name
                 filename = ss.filename
 
-                w.writerow([md5, label, name, filename, sigfile])
+                w.writerow([str(n+1), md5, label, name, filename, sigfile])
 
     # output CSV?
     if args.csv:
@@ -271,10 +272,27 @@ def plot(args):
     # not sure how to change this to use f-strings
     notify('...got {} x {} matrix.', *D.shape)
 
-    if args.labeltext:
-        labelfilename = args.labeltext
-    notify(f'loading labels from {labelfilename}')
-    labeltext = [ x.strip() for x in open(labelfilename) ]
+    if args.labels_from:        # use output from --labels-to => labels
+        if args.labeltext:
+            notify("ERROR: cannot supply both --labeltext and --labels-from")
+            sys.exit(-1)
+
+        labelfilename = args.labels_from
+        notify(f"loading labels from CSV file '{labelfilename}'")
+
+        labeltext = []
+        with sourmash_args.FileInputCSV(labelfilename) as r:
+            for row in r:
+                order, label = row['order'], row['label']
+                labeltext.append((int(order), label))
+        labeltext.sort()
+        labeltext = [ t[1] for t in labeltext ]
+    else:                       # use default or --labeltext text file
+        if args.labeltext:
+            labelfilename = args.labeltext
+        notify(f"loading labels from text file '{labelfilename}'")
+        labeltext = [ x.strip() for x in open(labelfilename) ]
+
     if len(labeltext) != D.shape[0]:
         error('{} labels != matrix size, exiting', len(labeltext))
         sys.exit(-1)
