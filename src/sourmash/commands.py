@@ -59,15 +59,15 @@ def compare(args):
                                                        yield_all_files=args.force,
                                                        progress=progress,
                                                        pattern=pattern_search)
-        loaded = list(loaded)
-        if not loaded:
-            notify(f'\nwarning: no signatures loaded at given ksize/molecule type/picklist from {filename}')
-
         # add to siglist; track ksizes/moltypes
+        s = None
         for s in loaded:
             siglist.append((s, filename))
             ksizes.add(s.minhash.ksize)
             moltypes.add(sourmash_args.get_moltype(s))
+
+        if s is None:
+            notify(f'\nwarning: no signatures loaded at given ksize/molecule type/picklist from {filename}')
 
         # error out while loading if we have more than one ksize/moltype
         if len(ksizes) > 1 or len(moltypes) > 1:
@@ -133,6 +133,10 @@ def compare(args):
         track_abundances = any(( s.minhash.track_abundance for s, _ in siglist ))
         if track_abundances:
             notify('NOTE: --containment, --max-containment, --avg-containment, and --estimate-ani ignore signature abundances.')
+
+    # CTB: note, up to this point, we could do everything with manifests
+    # w/o actually loading any signatures. I'm not sure the manifest
+    # API allows it tho.
 
     # if using scaled sketches or --scaled, downsample to common max scaled.
     printed_scaled_msg = False
