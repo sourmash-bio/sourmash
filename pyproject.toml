@@ -146,6 +146,7 @@ exclude = [
 ]
 features = ["maturin"]
 locked = true
+module-name = "sourmash._lowlevel"
 
 [tool.isort]
 known_third_party = ["deprecation", "hypothesis", "mmh3", "numpy", "pytest", "screed", "sourmash_tst_utils"]
