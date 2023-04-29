@@ -57,6 +57,10 @@ def subparser(subparsers):
         help='write clustered matrix and labels out in CSV format (with column'
         ' headers) to this file'
     )
+    subparser.add_argument(
+        '--labels-from', '--labels-load',
+        help='a CSV file containing label information to use on plot',
+    )
 
 
 def main(args):

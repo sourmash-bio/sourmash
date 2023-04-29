@@ -223,16 +223,17 @@ def compare(args):
         notify(f'saving labels to: {labeloutname}')
         with sourmash_args.FileOutputCSV(labeloutname) as fp:
             w = csv.writer(fp)
-            w.writerow(['md5', 'label', 'name', 'filename', 'signature_file'])
+            w.writerow(['order', 'md5', 'label', 'name', 'filename',
+                        'signature_file'])
 
-            for ss, location in siglist:
+            for n, (ss, location) in enumerate(siglist):
                 md5 = ss.md5sum()
                 sigfile = location
                 label = str(ss)
                 name = ss.name
                 filename = ss.filename
 
-                w.writerow([md5, label, name, filename, sigfile])
+                w.writerow([str(n+1), md5, label, name, filename, sigfile])
 
     # output CSV?
     if args.csv:
@@ -271,7 +272,10 @@ def plot(args):
     notify('...got {} x {} matrix.', *D.shape)
 
     # see sourmash#2790 for details :)
-    if args.labeltext or args.labels:
+    if args.labeltext or args.labels or args.labels_from:
+        if args.labeltext and args.labels_from:
+            notify("ERROR: cannot supply both --labeltext and --labels-from")
+            sys.exit(-1)
         display_labels = True
         args.labels = True      # override => labels always true
     elif args.labels is None and not args.indices:
@@ -285,13 +289,24 @@ def plot(args):
     else:
         display_labels = False
 
-    if args.labels:
+    if args.labels_from:
+        labelfilename = args.labels_from
+        notify(f"loading labels from CSV file '{labelfilename}'")
+
+        labeltext = []
+        with sourmash_args.FileInputCSV(labelfilename) as r:
+            for row in r:
+                order, label = row['order'], row['label']
+                labeltext.append((int(order), label))
+        labeltext.sort()
+        labeltext = [ t[1] for t in labeltext ]
+    elif args.labels:
         if args.labeltext:
             labelfilename = args.labeltext
         else:
             labelfilename = D_filename + '.labels.txt'
 
-        notify(f'loading labels from {labelfilename}')
+        notify(f"loading labels from text file '{labelfilename}'")
         labeltext = [ x.strip() for x in open(labelfilename) ]
         
         if len(labeltext) != D.shape[0]:
