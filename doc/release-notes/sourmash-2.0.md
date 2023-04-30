@@ -12,7 +12,7 @@ released version is at http://sourmash.readthedocs.io/en/stable/.
 Python API, command-line, and signature file formats have all changed
 substantially.** Please post questions about migrating to sourmash 2.0
 in the
-[sourmash issue tracker](https://github.com/dib-lab/sourmash/issues/new).
+[sourmash issue tracker](https://github.com/sourmash-bio/sourmash/issues/new).
 
 ## Major new features since 1.0
 

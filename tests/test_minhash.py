@@ -1,4 +1,4 @@
-# This file is part of sourmash, https://github.com/dib-lab/sourmash/, and is
+# This file is part of sourmash, https://github.com/sourmash-bio/sourmash/, and is
 # Copyright (C) 2016, The Regents of the University of California.
 #
 # Redistribution and use in source and binary forms, with or without
