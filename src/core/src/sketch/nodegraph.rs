@@ -197,9 +197,7 @@ impl Nodegraph {
             //wtr.write_u32_from::<LittleEndian>(&count.as_slice()[..div])?;
             let slice = &count.as_slice()[..div];
             let buf = unsafe {
-                use std::mem::size_of;
-
-                let len = size_of::<u32>() * slice.len();
+                let len = std::mem::size_of_val(slice);
                 slice::from_raw_parts(slice.as_ptr() as *const u8, len)
             };
             wtr.write_all(buf)?;
