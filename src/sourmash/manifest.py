@@ -211,6 +211,32 @@ class BaseCollectionManifest:
     def to_picklist(self):
         "Convert manifest to a picklist."
 
+    def ksizes(self):
+        "Return a set of all k-mer sizes 'ksize' in this manifest"
+        return set(( row['ksize'] for row in self.rows ))
+
+    def moltypes(self):
+        "Return a set of all moltypes in this manifest"
+        return set(( row['moltypes'] for row in self.rows ))
+
+    def any_num(self):
+        for row in self.rows:
+            if row['num'] != 0:
+                return True
+        return False
+
+    def any_scaled(self):
+        for row in self.rows:
+            if row['scaled'] != 0:
+                return True
+        return False
+
+    def any_abundance(self):
+        for row in self.rows:
+            if row['with_abundance']:
+                return True
+        return False
+
 
 class CollectionManifest(BaseCollectionManifest):
     """
