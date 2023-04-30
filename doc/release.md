@@ -27,6 +27,7 @@ After release to PyPI and conda-forge/bioconda packages built:
 - [ ] [PyPI page](https://pypi.org/project/sourmash/) updated
 - [ ] Zenodo DOI successfully minted upon new github release - [see search results](https://zenodo.org/search?page=1&size=20&q=sourmash&sort=mostrecent)
 - [ ] `pip install sourmash` installs the correct version
+- [ ] [conda-forge sourmash-minimal-feedstock](https://github.com/conda-forge/sourmash-minimal-feedstock) has updated `sourmash-minimal` to the correct version 
 - [ ] `mamba create -n smash-release -y sourmash` installs the correct version
 ```
 
@@ -105,7 +106,7 @@ sed -i -e "s|version = .*$|version = \"${new_version}\";|g" flake.nix
 Commit the changes and push the branch:
 ```
 git add pyproject.toml flake.nix
-git commit -m "${new_version} release"
+git commit -m "${new_version} release branch"
 git push -u origin release/v${new_version}
 ```
 and then open a PR for the new branch by following the link printed by
@@ -137,7 +138,7 @@ python -m venv testenv4
 
 cd testenv1
 source bin/activate
-git clone --depth 1 --branch v${new_version}${rc} https://github.com/sourmash-bio/sourmash.git
+git clone --depth 1 --branch release/v${new_version} https://github.com/sourmash-bio/sourmash.git
 cd sourmash
 python -m pip install -r requirements.txt
 pytest && cargo test
@@ -148,7 +149,7 @@ cd ../../testenv2
 deactivate
 source bin/activate
 python -m pip install build
-python -m pip install -e git+https://github.com/sourmash-bio/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
+python -m pip install -e git+https://github.com/sourmash-bio/sourmash.git@release/v${new_version}#egg=sourmash[test]
 cd src/sourmash
 pytest && cargo test
 make dist
@@ -177,7 +178,7 @@ Wait for the
 [various cibuildwheel actions](https://github.com/sourmash-bio/sourmash/actions)
 to finish and upload; the
 [latest release](https://github.com/sourmash-bio/sourmash/releases)
-should have eight wheel files attached to it.
+should have nine wheel files attached to it.
 
 6\. Remove release candidate tags
 
@@ -206,7 +207,7 @@ git pull --rebase
 2\. Create the final tag and push to GitHub:
 
 ```
-git tag -a v${new_version} -m "${new_version} release"
+git tag -a v${new_version} -m "${new_version} release tag"
 git push --tags origin
 ```
 
@@ -302,3 +303,7 @@ Examples:
 - [2.1.0](https://twitter.com/luizirber/status/1166910335120314369)
 - [2.0.1](https://twitter.com/luizirber/status/1136786447518711808)
 - [2.0.0](https://twitter.com/luizirber/status/1108846466502520832)
+
+## After release
+
+Update version to next minor version + `-dev`, e.g. [this PR](https://github.com/sourmash-bio/sourmash/pull/2584).
