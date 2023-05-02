@@ -717,9 +717,10 @@ def extract(args):
         # --include/--exclude now do the same thing.
         if filter_fn and not pattern_search:
             sub_manifest = manifest.filter_rows(filter_fn)
+            sub_picklist = sub_manifest.to_picklist()
 
             try:
-                idx = idx.select(filter_manifest=sub_manifest)
+                idx = idx.select(picklist=sub_picklist, filter_manifest=sub_manifest)
             except ValueError:
                 error("** This input collection doesn't support 'extract' with picklists or patterns.")
                 error("** EXITING.")

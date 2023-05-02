@@ -299,7 +299,7 @@ class CollectionManifest(BaseCollectionManifest):
             matching_rows = ( row for row in matching_rows
                               if picklist.matches_manifest_row(row) )
 
-        if filter_manifest:
+        if filter_manifest is not None:
             matching_rows = ( row for row in matching_rows
                               if row in filter_manifest.rows )
 

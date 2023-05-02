@@ -225,7 +225,7 @@ class LCA_Database(Index):
             yield ss, idx
 
     def select(self, ksize=None, moltype=None, num=0, scaled=0, abund=None,
-               containment=False, picklist=None):
+               containment=False, picklist=None, filter_manifest=None):
         """Select a subset of signatures to search.
 
         As with SBTs, queries with higher scaled values than the database
