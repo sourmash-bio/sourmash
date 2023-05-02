@@ -1232,6 +1232,7 @@ def test_BaseLineageInfo_init_lineage_tups():
     print(taxinf.lineage)
     print(taxinf.lineage_str)
     assert taxinf.zip_lineage()== ['a', '', 'b']
+    assert taxinf.lineage_str == 'a;;b'
 
 
 def test_BaseLineageInfo_init_lca_lineage_tups():
@@ -1274,6 +1275,39 @@ def test_BaseLineageInfo_init_not_lineagepair():
         BaseLineageInfo(lineage=lin_tups, ranks=ranks)
     print(str(exc))
     assert "is not tax_utils LineagePair" in str(exc)
+
+
+def test_BaseLineageInfo_init_not_lineagepair_no_kw():
+    # test what happens when no keyword argument is used to construct
+    # BaseLineageInfo - should be TypeError
+    ranks=["A", "B", "C"]
+    lin_tups = (("rank1", "name1"),)
+    with pytest.raises(TypeError) as exc:
+        BaseLineageInfo(lin_tups)
+    print(str(exc))
+    assert "only allows keyword arguments" in str(exc)
+
+
+def test_RankLineageInfo_init_not_lineagepair_no_kw():
+    # test what happens when no keyword argument is used to construct
+    # RankLineageInfo - should be TypeError
+    ranks=["A", "B", "C"]
+    lin_tups = (("rank1", "name1"),)
+    with pytest.raises(TypeError) as exc:
+        RankLineageInfo(lin_tups)
+    print(str(exc))
+    assert "only allows keyword arguments" in str(exc)
+
+
+def test_LINLineageInfo_init_not_lineagepair_no_kw():
+    # test what happens when no keyword argument is used to construct
+    # LINLineageInfo - should be TypeError
+    ranks=["A", "B", "C"]
+    lin_tups = (("rank1", "name1"),)
+    with pytest.raises(TypeError) as exc:
+        LINLineageInfo(lin_tups)
+    print(str(exc))
+    assert "only allows keyword arguments" in str(exc)
 
 
 def test_RankLineageInfo_taxlist():
