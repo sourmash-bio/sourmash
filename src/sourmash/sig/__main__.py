@@ -719,7 +719,7 @@ def extract(args):
             sub_manifest = manifest.filter_rows(filter_fn)
 
             try:
-                idx = idx.select(sub_manifest=sub_manifest)
+                idx = idx.select(filter_manifest=sub_manifest)
             except ValueError:
                 error("** This input collection doesn't support 'extract' with picklists or patterns.")
                 error("** EXITING.")
