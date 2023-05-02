@@ -96,10 +96,8 @@ def main(args):
             print_results(f"{len(sub_manifest)} matches: {filename}")
         elif not args.silent:
             # nope - do output signatures. convert manifest to picklist, apply.
-            sub_picklist = sub_manifest.to_picklist()
-
             try:
-                idx = idx.select(picklist=sub_picklist)
+                idx = idx.select(sub_manifest=sub_manifest)
             except ValueError:
                 error("** This input collection doesn't support 'grep' with picklists.")
                 error("** EXITING.")

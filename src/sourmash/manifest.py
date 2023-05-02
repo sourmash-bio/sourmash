@@ -268,7 +268,7 @@ class CollectionManifest(BaseCollectionManifest):
         return True
 
     def _select(self, *, ksize=None, moltype=None, scaled=0, num=0,
-                containment=False, abund=None, picklist=None):
+                containment=False, abund=None, picklist=None, sub_manifest=None):
         """Yield manifest rows for sigs that match the specified requirements.
 
         Internal method; call `select_to_manifest` instead.
@@ -298,6 +298,10 @@ class CollectionManifest(BaseCollectionManifest):
         if picklist:
             matching_rows = ( row for row in matching_rows
                               if picklist.matches_manifest_row(row) )
+
+        if sub_manifest:
+            matching_rows = ( row for row in matching_rows
+                              if row in sub_manifest.rows )
 
         # return only the internal filenames!
         for row in matching_rows:
