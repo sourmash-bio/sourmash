@@ -1,5 +1,7 @@
 # Using sourmash's built-in taxonomy handling from Python
 
+@CTB zip_lineage
+
 sourmash works with taxonomies by connecting **identifiers** (typically
 Genbank accessions or private identifiers) to **lineages** in lineage
 databases.
@@ -10,7 +12,6 @@ Lineage databases can be loaded from CSV files or SQL databases; see
 For example,
 
 ~~~
->>> import pprint
 >>> from sourmash.tax.tax_utils import MultiLineageDB, RankLineageInfo, LineagePair
 
 >>> taxdb = MultiLineageDB.load(['doc/taxtax.csv'])
@@ -51,17 +52,45 @@ of convenient ways by using `RankLineageInfo`:
 
 ~~~
 >>> lineage = RankLineageInfo(lineage=lineage)
+
+~~~
+
+Format the lineage for display with `display_lineage`:
+
+~~~
 >>> lineage.display_lineage()
 'd__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli'
+
+~~~
+
+Confirm the presence (or absence) of specific ranks:
+
+~~~
 >>> lineage.rank_is_filled('species')
 True
 >>> lineage.rank_is_filled('strain')
 False
+
+~~~
+
+Remove ranks below a particular rank with `pop_to_rank`:
+
+~~~
 >>> lin2 = lineage.pop_to_rank('class')
 >>> lin2.display_lineage()
 'd__Bacteria;p__Proteobacteria;c__Gammaproteobacteria'
 
 ~~~
+
+Get the lineage tuple at a specific rank with `lineage_at_rank`:
+
+~~~
+>> lin2.lineage_at_rank('class')
+c__Gammaproteobacteria
+
+~~~
+
+## Calculating the lowest common ancestor of two or more lineages.
 
 If you have multiple accessions, you can also find the lowest common
 ancestor of their lineages; this functionality is used extensively in
@@ -94,6 +123,14 @@ object that we update each time. Note that the LCA here is at class
 'd__Bacteria;p__Proteobacteria;c__Gammaproteobacteria'
 
 ~~~
+
+Lineages can contain some or all of the ranks - you can use
+
+name_at_rank
+rank_index
+filled_lineage
+lowest_lineage_name
+
 
 ## Creating/initializing "traditional" lineages with `RankLineageInfo`
 
@@ -130,4 +167,17 @@ True
 
 ~~~
 
-## foo
+The taxonomy ranks themselves can be displayed with `taxlist` and
+`ascending_taxlist` -
+
+~~~
+>>> lin1.taxlist
+('superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain')
+
+>>> lin1.ascending_taxlist
+('strain', 'species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom')
+
+~~~
+
+@CTB NCBI taxids, zip_taxid, display_taxid, check_rank_availability, 
+@CTB is_compatible, is_lineage_match, 
