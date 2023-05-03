@@ -209,3 +209,12 @@ The taxonomy ranks themselves can be displayed with `taxlist` and
 
 @CTB NCBI taxids, zip_taxid, display_taxid
 @CTB is_compatible, is_lineage_match, 
+
+~~~
+>>> obj = RankLineageInfo(lineage_str='')
+>>> type(obj)
+<class 'sourmash.tax.tax_utils.RankLineageInfo'>
+>>> obj
+<BLANKLINE>
+
+~~~
