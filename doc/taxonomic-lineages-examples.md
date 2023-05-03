@@ -82,13 +82,23 @@ Remove ranks below a particular rank with `pop_to_rank`:
 
 ~~~
 
-Get the lineage tuple at a specific rank with `lineage_at_rank`:
+If you want to get the name at a given rank, use `name_at_rank`:
+~~~
+>>> lin2.name_at_rank('phylum')
+'p__Proteobacteria'
 
 ~~~
->> lin2.lineage_at_rank('class')
-c__Gammaproteobacteria
+
+and you can get get the lineage tuple at a specific rank with
+`lineage_at_rank`:
 
 ~~~
+>>> lin2.lineage_at_rank('phylum')
+(LineagePair(rank='superkingdom', name='d__Bacteria'), LineagePair(rank='phylum', name='p__Proteobacteria'))
+
+~~~
+
+@CTB what's the difference in use case for `lineage_at_rank` and `pop_to_rank`? How does this differ from pop_to_rank? It appears that it just gives you the tuple of LineagePairs rather htan giving you a new RankLineageInfo object.
 
 ## Calculating the lowest common ancestor of two or more lineages.
 
@@ -124,12 +134,30 @@ object that we update each time. Note that the LCA here is at class
 
 ~~~
 
-Lineages can contain some or all of the ranks - you can use
+Lineages can contain some or all of the ranks - you can get the
+lowest rank in a lineage with `lowest_rank`,
+~~~
+>>> lca.lowest_rank
+'class'
 
-name_at_rank
-rank_index
-filled_lineage
-lowest_lineage_name
+~~~
+
+You can check if a rank is missing with `check_rank_availability`,
+and check if it's filled with `rank_is_filled`:
+
+~~~
+>>> lca.check_rank_availability('class')
+True
+>>> lca.check_rank_availability('family')
+True
+>>> lca.rank_is_filled('class')
+True
+>>> lca.rank_is_filled('family')
+False
+
+~~~
+
+@CTB why is check_rank_availability True for family?
 
 
 ## Creating/initializing "traditional" lineages with `RankLineageInfo`
@@ -159,7 +187,7 @@ d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria
 
 ~~~
 
-And lineages initialized either way are equivalent:
+Of course, lineages initialized either way are equivalent:
 
 ~~~
 >>> lin1 == lin2
@@ -179,5 +207,5 @@ The taxonomy ranks themselves can be displayed with `taxlist` and
 
 ~~~
 
-@CTB NCBI taxids, zip_taxid, display_taxid, check_rank_availability, 
+@CTB NCBI taxids, zip_taxid, display_taxid
 @CTB is_compatible, is_lineage_match, 
