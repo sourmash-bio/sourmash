@@ -172,7 +172,7 @@ You can load from a lineage string with semicolon separators,
 ~~~
 >>> lin1 = RankLineageInfo(lineage_str='d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria')
 >>> lin1
-d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria
+RankLineageInfo('d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria')
 
 ~~~
 
@@ -183,7 +183,7 @@ or build your own `LineagePair` tuples and supply them via `lineage`:
 ...           LineagePair(rank='class', name='c__Gammaproteobacteria'))
 >>> lin2 = RankLineageInfo(lineage=lintup)
 >>> lin2
-d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria
+RankLineageInfo('d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria')
 
 ~~~
 
@@ -215,6 +215,6 @@ The taxonomy ranks themselves can be displayed with `taxlist` and
 >>> type(obj)
 <class 'sourmash.tax.tax_utils.RankLineageInfo'>
 >>> obj
-<BLANKLINE>
+RankLineageInfo('')
 
 ~~~
