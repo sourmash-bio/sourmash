@@ -88,7 +88,7 @@ class BaseLineageInfo:
         return self.lineage_str
 
     def __repr__(self):
-        return f"BaseLineageInfo('{self.lineage_str}')"
+        return f"BaseLineageInfo(lineage_str='{self.lineage_str}')"
 
     @property
     def taxlist(self):
@@ -389,7 +389,7 @@ class RankLineageInfo(BaseLineageInfo):
         return self.lineage_str
 
     def __repr__(self):
-        return f"RankLineageInfo('{self.lineage_str}')"
+        return f"RankLineageInfo(lineage_str='{self.lineage_str}')"
         
 require_kwargs_on_init(RankLineageInfo)
 
@@ -523,7 +523,7 @@ class LINLineageInfo(BaseLineageInfo):
         return self.lineage_str
 
     def __repr__(self):
-        return f"LINLineageInfo('{self.lineage_str}')"
+        return f"LINLineageInfo(lineage_str='{self.lineage_str}')"
         
 require_kwargs_on_init(LINLineageInfo)
 

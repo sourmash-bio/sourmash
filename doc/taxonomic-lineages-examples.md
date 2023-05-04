@@ -1,7 +1,5 @@
 # Using sourmash's built-in taxonomy handling from Python
 
-@CTB zip_lineage
-
 sourmash works with taxonomies by connecting **identifiers** (typically
 Genbank accessions or private identifiers) to **lineages** in lineage
 databases.
@@ -45,13 +43,13 @@ species s__Escherichia coli
 
 ~~~
 
-@CTB: why does `taxdb[accession]` not return a `RankLineageInfo` object?
-
 These lineages can be displayed, queried, and manipulated in a variety
 of convenient ways by using `RankLineageInfo`:
 
 ~~~
 >>> lineage = RankLineageInfo(lineage=lineage)
+>>> lineage
+RankLineageInfo(lineage_str='d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli')
 
 ~~~
 
@@ -98,8 +96,6 @@ and you can get get the lineage tuple at a specific rank with
 
 ~~~
 
-@CTB what's the difference in use case for `lineage_at_rank` and `pop_to_rank`? How does this differ from pop_to_rank? It appears that it just gives you the tuple of LineagePairs rather htan giving you a new RankLineageInfo object.
-
 ## Calculating the lowest common ancestor of two or more lineages.
 
 If you have multiple accessions, you can also find the lowest common
@@ -142,8 +138,9 @@ lowest rank in a lineage with `lowest_rank`,
 
 ~~~
 
-You can check if a rank is missing with `check_rank_availability`,
-and check if it's filled with `rank_is_filled`:
+You can check if a rank is available in the taxonomy with
+`check_rank_availability`, and check if that rank is filled with
+`rank_is_filled`:
 
 ~~~
 >>> lca.check_rank_availability('class')
@@ -157,9 +154,6 @@ False
 
 ~~~
 
-@CTB why is check_rank_availability True for family?
-
-
 ## Creating/initializing "traditional" lineages with `RankLineageInfo`
 
 NCBI and GTDB taxonomies both use the seven ranks - superkingdom
@@ -172,7 +166,7 @@ You can load from a lineage string with semicolon separators,
 ~~~
 >>> lin1 = RankLineageInfo(lineage_str='d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria')
 >>> lin1
-RankLineageInfo('d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria')
+RankLineageInfo(lineage_str='d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria')
 
 ~~~
 
@@ -183,7 +177,7 @@ or build your own `LineagePair` tuples and supply them via `lineage`:
 ...           LineagePair(rank='class', name='c__Gammaproteobacteria'))
 >>> lin2 = RankLineageInfo(lineage=lintup)
 >>> lin2
-RankLineageInfo('d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria')
+RankLineageInfo(lineage_str='d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria')
 
 ~~~
 
@@ -207,14 +201,44 @@ The taxonomy ranks themselves can be displayed with `taxlist` and
 
 ~~~
 
-@CTB NCBI taxids, zip_taxid, display_taxid
-@CTB is_compatible, is_lineage_match, 
-
 ~~~
 >>> obj = RankLineageInfo(lineage_str='')
 >>> type(obj)
 <class 'sourmash.tax.tax_utils.RankLineageInfo'>
 >>> obj
-RankLineageInfo('')
+RankLineageInfo(lineage_str='')
 
 ~~~
+
+## To discuss with Tessa:
+
+1. Why does `taxdb[accession]` not return a `RankLineageInfo` object?
+(And/or should it?)
+
+2. what's the difference in use case for `lineage_at_rank` and `pop_to_rank`? How does this differ from pop_to_rank? It appears that it just gives you the tuple of LineagePairs rather than giving you a new RankLineageInfo object.
+
+~~~
+>>> lineage = RankLineageInfo(lineage_str='d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli')
+>>> lineage.pop_to_rank('class')
+RankLineageInfo(lineage_str='d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria')
+>>> lineage.lineage_at_rank('class')
+(LineagePair(rank='superkingdom', name='d__Bacteria'), LineagePair(rank='phylum', name='p__Proteobacteria'), LineagePair(rank='class', name='c__Gammaproteobacteria'))
+
+~~~
+
+`pop_to_rank` is used twice in the code base, `lineage_at_rank` is
+used once.  Suggest picking one, or making a new method and using
+that - maybe `lineage_to_rank`, which returns a RankLineageInfo
+object?
+
+3. suggest changing `check_rank_availability`
+
+`check_rank_availability` is all about raising an exception, it seems -
+no caller checks its return value. Is it OK to remove the return value?
+
+## TODO items @CTB:
+
+- [ ] discuss/describe NCBI taxids, zip_taxid, display_taxid
+- [ ] describe zip_lineage
+- [ ] document/test is_compatible, is_lineage_match
+
