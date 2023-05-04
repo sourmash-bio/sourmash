@@ -201,6 +201,9 @@ The taxonomy ranks themselves can be displayed with `taxlist` and
 
 ~~~
 
+An empty lineage, representing a "root" lineage only, can be created
+with an empty `lineage_str` like so:
+
 ~~~
 >>> obj = RankLineageInfo(lineage_str='')
 >>> type(obj)
