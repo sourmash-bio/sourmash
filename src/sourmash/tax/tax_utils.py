@@ -281,7 +281,7 @@ class BaseLineageInfo:
 @dataclass(frozen=True, order=True)
 class RankLineageInfo(BaseLineageInfo):
     """
-    This RankLineageInfo class usees the BaseLineageInfo methods for a standard set
+    This RankLineageInfo class uses the BaseLineageInfo methods for a standard set
     of taxonomic ranks.
 
     Inputs:
@@ -361,6 +361,49 @@ class RankLineageInfo(BaseLineageInfo):
         # set lineage and filled_ranks
         object.__setattr__(self, "lineage", tuple(new_lineage))
         object.__setattr__(self, "filled_ranks", tuple(filled_ranks))
+
+
+@dataclass(frozen=True, order=True)
+class ICTVRankLineageInfo(RankLineageInfo):
+    """
+    This ICTV RankLineageInfo class uses the RankLineageInfo methods but uses
+    the 15-rank ICTV taxonomy. It also allows for a 'name' column in the taxonomy,
+    which reflects that virus name is sometimes used as a sub-species rank.
+
+    Inputs:
+        optional:
+            ranks: tuple or list of hierarchical ranks
+                   default: ('realm','subrealm','kingdom','subkingdom','phylum','subphylum',
+                                'class','subclass','order','suborder','family','subfamily',
+                                'genus','subgenus','species','name')
+            lineage: tuple or list of LineagePair
+            lineage_str: `;`- or `,`-separated string of names
+            lineage_dict: dictionary of {rank: name}
+
+    If no inputs are provided, result will be ICTVRankLineageInfo with
+    default ranks and no lineage names.
+
+    Input lineage information is only used for initialization of the final `lineage`
+    and will not be used or compared in any other class methods.
+    """
+    ranks: tuple = ('realm','subrealm','kingdom','subkingdom','phylum','subphylum',
+                    'class','subclass','order','suborder','family','subfamily',
+                    'genus','subgenus','species','name')
+    lineage_dict: dict = field(default=None, compare=False) # dict of rank: name
+
+    def __post_init__(self):
+        "Initialize according to passed values"
+        # ranks must be tuple for hashability
+        if isinstance(self.ranks, list):
+            object.__setattr__(self, "ranks", tuple(self.ranks))
+        if self.lineage is not None:
+            self._init_from_lineage_tuples()
+        elif self.lineage_str is not None:
+            self._init_from_lineage_str()
+        elif self.lineage_dict is not None:
+            self._init_from_lineage_dict()
+        elif self.ranks:
+            self._init_empty()
 
 
 @dataclass(frozen=True, order=True)
