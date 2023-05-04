@@ -152,4 +152,13 @@ to expand in functionality.
 This work is funded in part by the Gordon and Betty Moore Foundation’s
 Data-Driven Discovery Initiative [GBMF4551 to CTB].
 
+Notice: This manuscript has been authored by BNBI under Contract
+No. HSHQDC-15-C-00064 with the DHS. The US Government retains
+and the publisher, by accepting the article for publication, acknowledges
+that the USG retains a non-exclusive, paid-up, irrevocable, world-wide
+license to publish or reproduce the published form of this manuscript,
+or allow others to do so, for USG purposes. Views and conclusions
+contained herein are those of the authors and should not be interpreted
+to represent policies, expressed or implied, of the DHS.
+
 # References
