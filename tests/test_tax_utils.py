@@ -1768,70 +1768,72 @@ def test_is_lineage_match_improper_rank():
     assert "Desired Rank 'NotARank' not available for this lineage" in str(exc)
 
 
-def test_pop_to_rank_1():
+def test_lineage_to_rank_1():
     # basic behavior - pop to order?
     lin1 = RankLineageInfo(lineage_str='d__a;p__b;c__c;o__d')
     lin2 = RankLineageInfo(lineage_str='d__a;p__b;c__c;o__d;f__f')
 
     print(lin1)
-    popped = lin2.pop_to_rank('order')
+    popped = lin2.lineage_to_rank('order')
     print(popped)
     assert popped == lin1
 
 
-def test_pop_to_rank_2():
+def test_lineage_to_rank_2():
     # what if we're already above rank?
     lin2 = RankLineageInfo(lineage_str='d__a;p__b;c__c;o__d;f__f')
-    print(lin2.pop_to_rank('species'))
-    assert lin2.pop_to_rank('species') == lin2
+    print(lin2.lineage_to_rank('species'))
+    assert lin2.lineage_to_rank('species') == lin2
 
 
-def test_pop_to_rank_rank_not_avail():
+def test_lineage_to_rank_rank_not_avail():
     lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
     with pytest.raises(ValueError) as exc:
-        lin1.pop_to_rank("NotARank")
+        lin1.lineage_to_rank("NotARank")
     print(str(exc))
     assert "Desired Rank 'NotARank' not available for this lineage" in str(exc)
 
 
-def test_lineage_at_rank_norank():
+def test_lineage_to_rank_norank():
     lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
     with pytest.raises(TypeError) as exc:
-        lin1.lineage_at_rank()
+        lin1.lineage_to_rank()
     print(str(exc))
-    assert "lineage_at_rank() missing 1 required positional argument: 'rank'" in str(exc)
+    assert "lineage_to_rank() missing 1 required positional argument: 'rank'" in str(exc)
 
 
-def test_lineage_at_rank_rank_not_avail():
+def test_lineage_to_rank_rank_not_avail():
     lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
     with pytest.raises(ValueError) as exc:
-        lin1.lineage_at_rank("NotARank")
+        lin1.lineage_to_rank("NotARank")
     print(str(exc))
     assert "Desired Rank 'NotARank' not available for this lineage" in str(exc)
 
 
-def test_lineage_at_rank_1():
+def test_lineage_to_rank_1():
+    # @CTB
     lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
-    print(lin1.lineage_at_rank('superkingdom'))
+    print(lin1.lineage_to_rank('superkingdom'))
     
-    assert lin1.lineage_at_rank('superkingdom') == (LineagePair(rank='superkingdom', name='d__a', taxid=None),)
-    print(lin1.lineage_at_rank('class'))
-    assert lin1.lineage_at_rank('class') == (LineagePair(rank='superkingdom', name='d__a', taxid=None),
+    assert lin1.lineage_to_rank('superkingdom') == RankLineageInfo(lineage=(LineagePair(rank='superkingdom', name='d__a', taxid=None),))
+    print(lin1.lineage_to_rank('class'))
+    assert lin1.lineage_to_rank('class') == RankLineageInfo(lineage=(LineagePair(rank='superkingdom', name='d__a', taxid=None),
                                              LineagePair(rank='phylum', name='p__b', taxid=None),
-                                             LineagePair(rank='class', name='c__c', taxid=None))
+                                             LineagePair(rank='class', name='c__c', taxid=None)))
 
 
-def test_lineage_at_rank_below_rank():
+def test_lineage_to_rank_below_rank():
+    # @CTB
     lin1 = RankLineageInfo(lineage_str = 'd__a;p__b;c__c;o__d;f__f')
-    print(lin1.lineage_at_rank('superkingdom'))
+    print(lin1.lineage_to_rank('superkingdom'))
     # if rank is not provided, we only return the filled lineage, to follow original pop_to_rank behavior.
 
-    print(lin1.lineage_at_rank('genus'))
-    assert lin1.lineage_at_rank('genus') == (LineagePair(rank='superkingdom', name='d__a', taxid=None),
+    print(lin1.lineage_to_rank('genus'))
+    assert lin1.lineage_to_rank('genus') == RankLineageInfo(lineage=(LineagePair(rank='superkingdom', name='d__a', taxid=None),
                                              LineagePair(rank='phylum', name='p__b', taxid=None),
                                              LineagePair(rank='class', name='c__c', taxid=None),
                                              LineagePair(rank='order', name='o__d', taxid=None),
-                                             LineagePair(rank='family', name='f__f', taxid=None))
+                                             LineagePair(rank='family', name='f__f', taxid=None)))
 
 
 def test_TaxResult_get_match_lineage_1():

@@ -228,9 +228,9 @@ class BaseLineageInfo:
         return sep.join(self.zip_taxid(truncate_empty=truncate_empty))
 
     def check_rank_availability(self, rank):
-        if rank in self.ranks: # rank is available
-            return True
-        raise ValueError(f"Desired Rank '{rank}' not available for this lineage.")
+        "Raise exception if given rank is not available in this taxonomy"
+        if rank not in self.ranks:
+            raise ValueError(f"Desired Rank '{rank}' not available for this lineage.")
 
     def rank_is_filled(self, rank, other=None):
         self.check_rank_availability(rank)
@@ -262,28 +262,20 @@ class BaseLineageInfo:
                 return 1
         return 0
 
-    def pop_to_rank(self, rank):
+    def lineage_to_rank(self, rank):
         "Return new LineageInfo with ranks only filled to desired rank"
         # are we already above rank?
         self.check_rank_availability(rank)
         if not self.rank_is_filled(rank):
             return replace(self)
         # if not, make filled_lineage at this rank + use to generate new LineageInfo
-        new_lineage = self.lineage_at_rank(rank)
+
+        rank_idx = self.rank_index(rank)
+        new_lineage = self.filled_lineage[:rank_idx+1]
         new = replace(self, lineage = new_lineage)
         # replace doesn't run the __post_init__ properly. reinitialize.
         new._init_from_lineage_tuples()
         return new
-
-    def lineage_at_rank(self, rank):
-        "Return tuple of LineagePairs at specified rank."
-        # are we already above rank?
-        self.check_rank_availability(rank)
-        if not self.rank_is_filled(rank):
-            return self.filled_lineage
-        # if not, return lineage tuples down to desired rank
-        rank_idx = self.rank_index(rank)
-        return self.filled_lineage[:rank_idx+1]
 
     def find_lca(self, other):
         """
@@ -292,7 +284,7 @@ class BaseLineageInfo:
         """
         for rank in self.ascending_taxlist:
             if self.is_lineage_match(other, rank):
-                return self.pop_to_rank(rank)
+                return self.lineage_to_rank(rank)
         return None
 
 require_kwargs_on_init(BaseLineageInfo)
@@ -2014,7 +2006,7 @@ class QueryTaxResult:
                 # add this taxresult to summary
                 for rank in self.summarized_ranks:
                     if rank in lininfo.filled_ranks: # only store if this rank is filled.
-                        lin_at_rank = lininfo.pop_to_rank(rank)
+                        lin_at_rank = lininfo.lineage_to_rank(rank)
                         self.sum_uniq_weighted[rank][lin_at_rank] += taxres.f_unique_weighted
                         self.sum_uniq_to_query[rank][lin_at_rank] += taxres.f_unique_to_query
                         self.sum_uniq_bp[rank][lin_at_rank] += taxres.unique_intersect_bp
@@ -2039,8 +2031,6 @@ class QueryTaxResult:
             sorted_sum_uniq_to_query = list(sum_uniq_to_query.items())
             sorted_sum_uniq_to_query.sort(key = lambda x: -x[1])
             for lineage, f_unique in sorted_sum_uniq_to_query:
-                print('XXX', lineage.lineage, lineage.lineage_str)
-                print(lineage)
                 # does this ever happen? do we need it?
                 if f_unique == 0: #no annotated results for this query. do we need to handle this differently now?
                     continue
