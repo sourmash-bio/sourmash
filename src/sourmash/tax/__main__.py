@@ -13,7 +13,7 @@ from ..sourmash_args import FileOutputCSV, FileInputCSV, FileOutput
 from sourmash.logging import set_quiet, error, notify, print_results
 
 from . import tax_utils
-from .tax_utils import MultiLineageDB, RankLineageInfo, LINLineageInfo, AnnotateTaxResult
+from .tax_utils import MultiLineageDB, RankLineageInfo, LINLineageInfo, AnnotateTaxResult, ICTVRankLineageInfo
 
 usage='''
 sourmash taxonomy <command> [<args>] - manipulate/work with taxonomy information.
@@ -73,7 +73,7 @@ def metagenome(args):
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
-                       force=args.force, lins=args.lins)
+                       force=args.force, lins=args.lins, ictv=args.ictv)
         available_ranks = tax_assign.available_ranks
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
@@ -94,7 +94,7 @@ def metagenome(args):
                                                                      fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
                                                                      keep_full_identifiers=args.keep_full_identifiers,
                                                                      keep_identifier_versions = args.keep_identifier_versions,
-                                                                     lins=args.lins,
+                                                                     lins=args.lins, ictv=args.ictv
                                                                      )
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
@@ -202,7 +202,7 @@ def genome(args):
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
-                       force=args.force, lins=args.lins)
+                       force=args.force, lins=args.lins, ictv=args.ictv)
         available_ranks = tax_assign.available_ranks
 
         lg_ranks=None
@@ -231,7 +231,7 @@ def genome(args):
                                                                                        fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
                                                                                        keep_full_identifiers=args.keep_full_identifiers,
                                                                                        keep_identifier_versions = args.keep_identifier_versions,
-                                                                                       lins=args.lins)
+                                                                                       lins=args.lins, ictv=args.ictv)
 
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
@@ -307,7 +307,7 @@ def annotate(args):
         tax_assign = MultiLineageDB.load(args.taxonomy_csv,
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
-                       force=args.force, lins=args.lins)
+                       force=args.force, lins=args.lins, ictv=args.ictv)
 
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
@@ -357,7 +357,7 @@ def annotate(args):
                     n_missed = 0
                     for n, row in enumerate(r):
                         # find lineage and write annotated row
-                        taxres = AnnotateTaxResult(raw=row, id_col=id_col, lins=args.lins,
+                        taxres = AnnotateTaxResult(raw=row, id_col=id_col, lins=args.lins, ictv=args.ictv,
                                                 keep_full_identifiers=args.keep_full_identifiers,
                                                 keep_identifier_versions=args.keep_identifier_versions)
                         taxres.get_match_lineage(tax_assignments=tax_assign, fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
@@ -467,7 +467,7 @@ def summarize(args):
                                          force=args.force,
                        keep_full_identifiers=args.keep_full_identifiers,
                        keep_identifier_versions=args.keep_identifier_versions,
-                       lins=args.lins)
+                       lins=args.lins, ictv=args.ictv)
     except ValueError as exc:
         error("ERROR while loading taxonomies!")
         error(str(exc))
@@ -514,6 +514,8 @@ def summarize(args):
                 rank = lineage[-1].rank
                 if args.lins:
                     inf = LINLineageInfo(lineage=lineage)
+                elif args.ictv:
+                    inf = ICTVRankLineageInfo(lineage=lineage)
                 else:
                     inf = RankLineageInfo(lineage=lineage)
                 lin = inf.display_lineage()

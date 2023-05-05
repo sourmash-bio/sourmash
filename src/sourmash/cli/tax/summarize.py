@@ -50,6 +50,10 @@ def subparser(subparsers):
         '--lins', '--lin-taxonomy', action='store_true', default=False,
         help='use LIN taxonomy in place of standard taxonomic ranks.'
     )
+    subparser.add_argument(
+        '--ictv', '--ictv-taxonomy', action='store_true', default=False,
+        help="use ICTV taxonomy in place of standard taxonomic ranks.  Note that the taxonomy CSV must contain ICTV ranks."
+    )
 
 def main(args):
     import sourmash

@@ -84,6 +84,10 @@ def subparser(subparsers):
         '--lingroup', '--lingroups', metavar='FILE', default=None,
         help="CSV containing 'name', 'lin' columns, where 'lin' is the lingroup prefix. Will produce a 'lingroup' report containing taxonomic summarization for each group."
     )
+    subparser.add_argument(
+        '--ictv', '--ictv-taxonomy', action='store_true', default=False,
+        help="use ICTV taxonomy in place of standard taxonomic ranks.  Note that the taxonomy CSV must contain ICTV ranks."
+    )
     add_rank_arg(subparser)
 
 def main(args):
