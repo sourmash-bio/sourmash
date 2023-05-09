@@ -469,9 +469,10 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) {
     let mut vcounts = Histogram::new();
     let mut datasets: Datasets = Default::default();
 
-    for (key, value) in iter {
-        let _k = (&key[..]).read_u64::<LittleEndian>().unwrap();
-        kcount += key.len();
+    for item in iter {
+        if let Ok((key, value)) = item {
+            let _k = (&key[..]).read_u64::<LittleEndian>().unwrap();
+                kcount += key.len();
 
         //println!("Saw {} {:?}", k, Datasets::from_slice(&value));
         vcount += value.len();
@@ -481,6 +482,9 @@ fn stats_for_cf(db: Arc<DB>, cf_name: &str, deep_check: bool, quick: bool) {
             vcounts.increment(v.len() as u64).unwrap();
             datasets.union(v);
         }
+    } else {
+        println!("Error: {:?}", item);
+    }
         //println!("Saw {} {:?}", k, value);
     }
 
