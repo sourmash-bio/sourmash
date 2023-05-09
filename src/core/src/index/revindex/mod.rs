@@ -279,7 +279,11 @@ impl Hash for Datasets {
         match self {
             Self::Empty => todo!(),
             Self::Unique(v) => v.hash(state),
-            Self::Many(v) => todo!(),
+            Self::Many(v) => {
+                for value in v.iter() {
+                    value.hash(state);
+                }
+            }
         }
     }
 }
