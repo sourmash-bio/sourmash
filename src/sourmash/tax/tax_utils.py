@@ -723,7 +723,7 @@ def load_gather_results(gather_csv, tax_assignments, *, seen_queries=None, force
             # add to matching QueryTaxResult or create new one
             if not this_querytaxres or not this_querytaxres.is_compatible(taxres):
                 # get existing or initialize new
-                this_querytaxres = gather_results.get(gatherRow.query_name, QueryTaxResult(taxres.query_info, lins=lins))
+                this_querytaxres = gather_results.get(gatherRow.query_name, QueryTaxResult(taxres.query_info, lins=lins, ictv=ictv))
             this_querytaxres.add_taxresult(taxres)
             gather_results[gatherRow.query_name] = this_querytaxres
 
@@ -1071,12 +1071,19 @@ class LineageDB(abc.Mapping):
                     header_str = ",".join([repr(x) for x in header])
                     raise ValueError(f'No taxonomic identifiers found; headers are {header_str}')
 
-            if lins and "lin" not in header:
-                raise ValueError(f"'lin' column not found: cannot read LIN taxonomy assignments from {filename}.")
-            if ictv and "realm" not in header:
-                raise ValueError(f"'realm' column not found: cannot read ICTV taxonomy assignments from {filename}.")
+            if lins:
+                notify('Trying to read LIN taxonomy assignments.')
+                if "lin" not in header:
+                    raise ValueError(f"'lin' column not found: cannot read LIN taxonomy assignments from {filename}.")
 
-            if not lins:
+            if ictv:
+                notify('Trying to read ICTV taxonomy assignments.')
+                # check that all ranks are in header
+                ranks = list(ICTVRankLineageInfo().taxlist)
+                if not set(ranks).issubset(header):
+                    raise ValueError('Not all taxonomy ranks present')
+
+            if not lins and not ictv:
                 # is "strain" an available rank?
                 if "strain" in header:
                     include_strain=True
