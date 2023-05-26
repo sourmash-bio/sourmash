@@ -52,9 +52,9 @@ These are databases for the full GTDB release, each containing 402,709  genomes.
 
 | K-mer size | Zipfile collection | SBT | LCA |
 | -------- | -------- | -------- | ---- |
-| 21 | [download (12 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs214-k21.zip) | [download (23 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs214-k21.sbt.zip) | [download (406 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs214-k21.lca.json.gz) |
-| 31 | [download (12 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs214-k31.zip) | [download (23 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs214-k31.sbt.zip) | [download (438 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs214-k31.lca.json.gz) |
-| 51 | [download (12 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs214-k51.zip) | [download (23 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs214-k51.sbt.zip) | [download (460 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs207/gtdb-rs214-k51.lca.json.gz) |
+| 21 | [download (12 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-k21.zip) | [download (23 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-k21.sbt.zip) | [download (406 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-k21.lca.json.gz) |
+| 31 | [download (12 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-k31.zip) | [download (23 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-k31.sbt.zip) | [download (438 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-k31.lca.json.gz) |
+| 51 | [download (12 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-k51.zip) | [download (23 GB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-k51.sbt.zip) | [download (460 MB)](https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db/gtdb-rs214/gtdb-rs214-k51.lca.json.gz) |
 
 ## Genbank genomes from March 2022
 
