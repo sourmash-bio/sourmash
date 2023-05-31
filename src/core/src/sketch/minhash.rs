@@ -1057,7 +1057,7 @@ impl<'de> Deserialize<'de> for KmerMinHashBTree {
             values.sort();
             let mins: BTreeSet<_> = values.iter().map(|(v, _)| **v).collect();
             let abunds = values.into_iter().map(|(v, x)| (*v, *x)).collect();
-            current_max = *mins.iter().rev().next().unwrap_or(&0);
+            current_max = *mins.iter().next_back().unwrap_or(&0);
             (mins, Some(abunds))
         } else {
             current_max = 0;
@@ -1244,13 +1244,13 @@ impl KmerMinHashBTree {
 
             // is it too big now?
             if self.num != 0 && self.mins.len() > (self.num as usize) {
-                let last = *self.mins.iter().rev().next().unwrap();
+                let last = *self.mins.iter().next_back().unwrap();
                 self.mins.remove(&last);
                 self.reset_md5sum();
                 if let Some(ref mut abunds) = self.abunds {
                     abunds.remove(&last);
                 }
-                self.current_max = *self.mins.iter().rev().next().unwrap();
+                self.current_max = *self.mins.iter().next_back().unwrap();
             }
         }
     }
@@ -1268,7 +1268,7 @@ impl KmerMinHashBTree {
             }
         }
         if hash == self.current_max {
-            self.current_max = *self.mins.iter().rev().next().unwrap_or(&0);
+            self.current_max = *self.mins.iter().next_back().unwrap_or(&0);
         }
     }
 
