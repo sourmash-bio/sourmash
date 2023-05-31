@@ -98,7 +98,7 @@
           ];
 
           buildInputs = [
-            rustPlatform.rust.cargo
+            rustVersion
             openssl
             pkgconfig
 
@@ -114,7 +114,7 @@
 
             wasmtime
             wasm-pack
-            nodejs-16_x
+            nodejs_20
 
             #py-spy
             heaptrack
