@@ -3,10 +3,11 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - sourmash
+  - sourmash>=4.8.2
   - screed
   - matplotlib
   - pandas
+  - pip
   - pip:
     - matplotlib_venn
     - mmh3
