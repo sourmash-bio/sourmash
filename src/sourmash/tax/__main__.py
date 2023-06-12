@@ -328,6 +328,9 @@ def annotate(args):
                 header = r.fieldnames
                 # check for empty file
                 if not header:
+                    if args.force:
+                        notify(f"WARNING: '{in_csv}' is empty (no gather results). Allowing due to '--force'.")
+                        continue
                     raise ValueError(f"Cannot read from '{in_csv}'. Is file empty?")
 
                 # look for the column to match with taxonomic identifier
