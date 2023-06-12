@@ -239,7 +239,7 @@ def genome(args):
 
     if not query_gather_results:
         notify('No results for classification. Exiting.')
-        sys.exit(-1)
+        sys.exit(0)
 
     # for each queryResult, summarize at rank and classify according to thresholds, reporting any errors that occur.
     for queryResult in query_gather_results:
