@@ -117,7 +117,7 @@
             nodejs_20
 
             #py-spy
-            heaptrack
+            #heaptrack
             cargo-watch
             cargo-limit
             cargo-outdated
