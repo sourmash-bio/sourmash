@@ -27,7 +27,7 @@ yourself, or run interactively online via the
 
 For more information on analyzing sequencing data with sourmash, check out our [longer tutorial](tutorial-long.md).
 
-Read [using `sourmash taxonomy` with the LIN taxonomic framework.](tutorial-lin-taxonomy.md) for some of our newer taxonomic features.
+Read [using `sourmash taxonomy` with the  Life Identification Number (LIN) taxonomic framework.](tutorial-lin-taxonomy.md) for some of our newer taxonomic features.
 
 If you are a Python programmer, you might also be interested in our [API examples](api-example.md) as well as a short guide to [Using the `LCA_Database` API.](using-LCA-database-API.ipynb)
 
