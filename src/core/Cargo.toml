@@ -32,7 +32,7 @@ counter = "0.5.7"
 finch = { version = "0.5.0", optional = true }
 fixedbitset = "0.4.0"
 getset = "0.1.1"
-log = "0.4.18"
+log = "0.4.19"
 md5 = "0.7.0"
 murmurhash3 = "0.0.5"
 niffler = { version = "2.3.1", default-features = false, features = [ "gz" ] }
@@ -40,16 +40,16 @@ nohash-hasher = "0.2.0"
 num-iter = "0.1.43"
 once_cell = "1.18.0" # once_cell 1.14+ requires Rust 1.56+
 rayon = { version = "1.7.0", optional = true }
-serde = { version = "1.0.163", features = ["derive"] }
-serde_json = "1.0.96"
+serde = { version = "1.0.164", features = ["derive"] }
+serde_json = "1.0.97"
 primal-check = "0.3.1"
 thiserror = "1.0"
 typed-builder = "0.14.0"
 twox-hash = "1.6.0"
 vec-collections = "0.3.4"
 piz = "0.4.0"  # piz 0.5.1 requires Rust 1.63+
-memmap2 = "0.6.2"
-ouroboros = "0.15.6"
+memmap2 = "0.7.0"
+ouroboros = "0.17.0"
 
 [dev-dependencies]
 assert_matches = "1.3.0"
@@ -58,7 +58,7 @@ needletail = { version = "0.5.1", default-features = false }
 proptest = { version = "1.2.0", default-features = false, features = ["std"]}
 rand = "0.8.2"
 getrandom = { version = "0.2", features = ["js"] }
-tempfile = "3.5.0"
+tempfile = "3.6.0"
 
 [[bench]]
 name = "index"
@@ -79,11 +79,11 @@ harness = false
 ## Wasm section. Crates only used for WASM, as well as specific configurations
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dependencies.wasm-bindgen]
-version = "0.2.86"
+version = "0.2.87"
 features = ["serde-serialize"]
 
 [target.'cfg(all(target_arch = "wasm32", target_os="unknown"))'.dependencies.web-sys]
-version = "0.3.63"
+version = "0.3.64"
 features = ["console", "File"]
 
 [target.'cfg(all(target_arch = "wasm32"))'.dependencies.chrono]
