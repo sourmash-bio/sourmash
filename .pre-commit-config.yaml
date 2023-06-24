@@ -28,10 +28,10 @@ repos:
 # format using black
 # when the full codebase is black, use it directly;
 #  while it isn't, let's use darker to format new/changed code
--   repo: https://github.com/akaihola/darker
-    rev: 1.2.1
-    hooks:
-    -   id: darker
+- repo: https://github.com/akaihola/darker
+  rev: 1.7.1
+  hooks:
+    - id: darker
 #- repo: https://github.com/psf/black
 #  rev: 20.8b1
 #  hooks:

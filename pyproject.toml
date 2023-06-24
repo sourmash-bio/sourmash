@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "maturin>=0.14.13,<0.15",
+    "maturin>=1,<2",
     "cffi",
 ]
 build-backend = 'maturin'
@@ -112,14 +112,14 @@ demo = [
   "ipython",
 ]
 doc = [
-  "sphinx>=4.4.0,<7",
-  "myst-parser==1.0.0",
+  "sphinx>=4.4.0,<8",
+  "myst-parser==2.0.0",
   "Jinja2==3.1.2",
   "alabaster",
   "sphinxcontrib-napoleon",
   "nbsphinx",
   "ipython",
-  "docutils>=0.17.1,<0.20",
+  "docutils>=0.17.1,<0.21",
 ]
 storage = [
   "ipfshttpclient>=0.4.13",

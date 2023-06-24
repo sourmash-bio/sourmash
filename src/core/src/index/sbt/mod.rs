@@ -391,9 +391,7 @@ where
         let mut visited = HashSet::new();
         let mut queue = vec![0u64];
 
-        while !queue.is_empty() {
-            let pos = queue.pop().unwrap();
-
+        while let Some(pos) = queue.pop() {
             if !visited.contains(&pos) {
                 visited.insert(pos);
 
@@ -708,9 +706,7 @@ where
     // - datasets
     // - first level of internal nodes
     info!("Start processing leaves");
-    while !datasets.is_empty() {
-        let next_leaf = datasets.pop().unwrap();
-
+    while let Some(next_leaf) = datasets.pop() {
         let (simleaf_tree, in_common) = if datasets.is_empty() {
             (BinaryTree::Empty, next_leaf.mins().into_iter().collect())
         } else {
@@ -773,8 +769,7 @@ where
     let mut visited = HashSet::new();
     let mut queue = vec![(0u64, root)];
 
-    while !queue.is_empty() {
-        let (pos, cnode) = queue.pop().unwrap();
+    while let Some((pos, cnode)) = queue.pop() {
         if !visited.contains(&pos) {
             visited.insert(pos);
 
@@ -804,9 +799,7 @@ impl BinaryTree {
     fn process_internal_level(mut current_round: Vec<BinaryTree>) -> Vec<BinaryTree> {
         let mut next_round = Vec::with_capacity(current_round.len() + 1);
 
-        while !current_round.is_empty() {
-            let next_node = current_round.pop().unwrap();
-
+        while let Some(next_node) = current_round.pop() {
             let similar_node = if current_round.is_empty() {
                 BinaryTree::Empty
             } else {
