@@ -112,8 +112,8 @@ demo = [
   "ipython",
 ]
 doc = [
-  "sphinx>=4.4.0,<7",
-  "myst-parser==1.0.0",
+  "sphinx>=4.4.0,<8",
+  "myst-parser==2.0.0",
   "Jinja2==3.1.2",
   "alabaster",
   "sphinxcontrib-napoleon",
