@@ -49,6 +49,13 @@ from sourmash.minhash import (flatten_and_downsample_scaled,
                               flatten_and_downsample_num,
                               flatten_and_intersect_scaled)
 
+def _check_for_unknown_select_params(kwargs):
+    legit_param_names = { 'ksize', 'moltype', 'scaled', 'num', 'abund',
+                          'containment', 'picklist', 'filter_manifest' } # @CTB picklist
+    kk = set(kwargs.keys())
+    assert kk.issubset(legit_param_names), kk - legit_param_names
+
+
 # generic return tuple for Index.search and Index.gather
 IndexSearchResult = namedtuple('Result', 'score, signature, location')
 
@@ -413,6 +420,8 @@ class LinearIndex(Index):
 
         Does not raise ValueError, but may return an empty Index.
         """
+        _check_for_unknown_select_params(kwargs)
+
         siglist = []
         for ss in self._signatures:
             if select_signature(ss, **kwargs):
@@ -484,6 +493,8 @@ class LazyLinearIndex(Index):
 
         Does not raise ValueError, but may return an empty Index.
         """
+        _check_for_unknown_select_params(kwargs)
+
         selection_dict = dict(self.selection_dict)
         for k, v in kwargs.items():
             if k in selection_dict:
@@ -644,6 +655,7 @@ class ZipFileLinearIndex(Index):
 
     def select(self, **kwargs):
         "Select signatures in zip file based on ksize/moltype/etc."
+        _check_for_unknown_select_params(kwargs)
 
         # if we have a manifest, run 'select' on the manifest.
         manifest = self.manifest
@@ -1055,6 +1067,8 @@ class MultiIndex(Index):
 
     def select(self, **kwargs):
         "Run 'select' on the manifest."
+        _check_for_unknown_select_params(kwargs)
+
         new_manifest = self.manifest.select_to_manifest(**kwargs)
         return MultiIndex(new_manifest, self.parent,
                           prepend_location=self.prepend_location)
@@ -1164,6 +1178,8 @@ class StandaloneManifestIndex(Index):
 
     def select(self, **kwargs):
         "Run 'select' on the manifest."
+        _check_for_unknown_select_params(kwargs)
+
         new_manifest = self.manifest.select_to_manifest(**kwargs)
         return StandaloneManifestIndex(new_manifest, self._location,
                                        prefix=self.prefix)
