@@ -126,6 +126,8 @@
             cargo-codspeed
             cargo-semver-checks
             nixpkgs-fmt
+
+            pixi
           ];
 
           shellHook = ''

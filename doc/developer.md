@@ -12,33 +12,52 @@ git clone https://github.com/sourmash-bio/sourmash.git
 ```
 sourmash runs under Python 3.10 and later.
 
-We recommend using `conda` or `Nix` for setting up an environment for developing
+We recommend using `conda` for setting up an environment for developing
 new features, running tests and code quality checks.
-Here are some suggestions on how to set them up (note: you only need one =])
+Here are some suggestions on how to set them up
 
-### Using mamba (conda alternative)
+:::{note}
+You only need one of these, no need to install them all!
+:::
+
+::::{tab-set}
+
+:::{tab-item} conda
 
 Follow the [installation instructions](https://github.com/conda-forge/miniforge#install) for
-installing `mambaforge` (a conda distribution that uses
-[`mamba`](https://github.com/TheSnakePit/mamba)
-and the [`conda-forge`](https://conda-forge.org/) channel by default).
+installing `Miniforge3` (a conda distribution that uses
+the [`conda-forge`](https://conda-forge.org/) channel by default).
 
-Once `mamba` is installed, run
+Once `conda` is installed, run
 ```
-mamba create -n sourmash_dev 'tox>=3.27,<4' tox-conda rust git compilers pandoc libstdcxx-ng
+conda env create -n sourmash_dev --file dev.yml
 ```
 to create an environment called `sourmash_dev` containing the programs needed
 for development.
 
-To activate the new environment, run
+Once the environment is created, you can activate it for development with
 ```
 conda activate sourmash_dev
 ```
+
+:::
+
+:::{tab-item} pixi
+
+Follow the [installation instructions](https://github.com/prefix-dev/pixi) for
+installing `pixi`.
+
+To activate the new environment, run
+```
+pixi shell
+```
 and proceed to the ["Running tests and checks"](#running-tests-and-checks) section.
 
-### Using Nix
+:::
 
-Follow the [installation instructions](https://nixos.org/manual/nix/stable/#chap-installation)
+:::{tab-item} nix
+
+Follow the [installation instructions](https://zero-to-nix.com/start/install)
 for setting up Nix in your system (Linux or macOS).
 
 Once Nix is installed, run
@@ -47,18 +66,22 @@ nix develop
 ```
 to start an environment ready for [running tests and checks](#running-tests-and-checks).
 
-### General instructions
+:::
+
+:::{tab-item} General instructions
 
 As long as you have `tox` and a Rust compiler available,
-you can skip `mamba` or `Nix`.
+you can skip `pixi` or `Nix`.
 
 For Rust, we suggest using `rustup` to install the Rust environment:
 ```
 curl https://sh.rustup.rs -sSf | sh
 ```
-And for `tox` you can run
+
+And for `tox` you can use [pipx](https://pipx.pypa.io/latest/installation/) for
+installing it without interfering with other Python environments:
 ```
-python -m pip install tox
+pipx install tox
 ```
 
 We suggest working on sourmash in a virtualenv; e.g. from within the
@@ -74,11 +97,14 @@ pip install -r requirements.txt
 ```
 (but they are already installed in the virtualenv created with `tox -e dev`).
 
-## Updating your developer environment
-
 To update rust to the latest version, use `rustup update`.
 
 To update your Python dependencies to the latest required for sourmash, you can run `pip install -r requirements.txt`.
+
+:::
+
+::::
+
 
 ## Running tests and checks
 
