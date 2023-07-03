@@ -482,9 +482,7 @@ where
         sig: &'a L,
         threshold: f64,
     ) -> bool {
-        SBTFindIter::new(self, search_fn, sig, threshold)
-            .next()
-            .is_some()
+        self.find_one(search_fn, sig, threshold).is_some()
     }
 
     /// Finds an element in the SBT that satisfies the provided `search_fn` function for the given threshold.
@@ -502,7 +500,7 @@ where
         sig: &'a L,
         threshold: f64,
     ) -> Option<&'a L> {
-        SBTFindIter::new(self, search_fn, sig, threshold).next()
+        self.find_iter(search_fn, sig, threshold).next()
     }
 }
 
