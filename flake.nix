@@ -130,6 +130,8 @@
             cargo-deny
             #cargo-semver-checks
             nixpkgs-fmt
+
+            pixi
           ];
 
           shellHook = ''
