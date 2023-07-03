@@ -374,7 +374,7 @@ where
     }
 }
 
-pub struct SBTFindIter<'a, N, L, F> 
+pub struct SBTFindIter<'a, N, L, F>
 where
     N: Comparable<N> + Comparable<L> + Update<N> + Debug + Default,
     L: Comparable<L> + Update<N> + Clone + Debug + Default,
@@ -410,8 +410,8 @@ where
     }
 }
 
-impl<'a, N, L, F> Iterator for SBTFindIter<'a, N, L, F> 
-where 
+impl<'a, N, L, F> Iterator for SBTFindIter<'a, N, L, F>
+where
     N: Comparable<N> + Comparable<L> + Update<N> + Debug + Default,
     L: Comparable<L> + Update<N> + Clone + Debug + Default,
     F: Fn(&dyn Comparable<L>, &L, f64) -> bool,
@@ -450,20 +450,59 @@ where
     SBT<N, L>: FromFactory<N>,
     SigStore<L>: From<L> + ReadData<L>,
 {
-    pub fn find_iter(&'a self, search_fn: impl Fn(&dyn Comparable<L>, &L, f64) -> bool, sig: &'a L, threshold: f64) -> SBTFindIter<'a, N, L, impl Fn(&dyn Comparable<L>, &L, f64) -> bool> {
+    /// Creates an iterator that will visit each element in the SBT that satisfies
+    /// the provided `search_fn` function.
+    ///
+    /// # Arguments
+    ///
+    /// * `search_fn` - A function that takes a reference to a `Comparable` item,
+    ///   a reference to an `L` item, and a `f64` threshold value, and returns true if the comprable elements are within `threshold`.
+    /// * `sig` - A signature against which the `search_fn` will compare each item.
+    /// * `threshold` - A threshold value passed to `search_fn`.
+    pub fn find_iter(
+        &'a self,
+        search_fn: impl Fn(&dyn Comparable<L>, &L, f64) -> bool,
+        sig: &'a L,
+        threshold: f64,
+    ) -> SBTFindIter<'a, N, L, impl Fn(&dyn Comparable<L>, &L, f64) -> bool> {
         SBTFindIter::new(self, search_fn, sig, threshold)
     }
 
-    pub fn find_any(&'a self, search_fn: impl Fn(&dyn Comparable<L>, &L, f64) -> bool, sig: &'a L, threshold: f64) -> bool {
-        SBTFindIter::new(self, search_fn, sig, threshold).next().is_some()
+    /// Checks if there exists at least one element in the SBT that satisfies the provided `search_fn` function for the given threshold.
+    ///
+    /// # Arguments
+    ///
+    /// * `search_fn` - A function that takes a reference to a `Comparable` item,
+    ///   a reference to an `L` item, and a `f64` threshold value, and returns true if the comprable elements are within `threshold`.
+    /// * `sig` - A signature against which the `search_fn` will compare each item.
+    /// * `threshold` - A threshold value passed to `search_fn`.
+    pub fn find_any(
+        &'a self,
+        search_fn: impl Fn(&dyn Comparable<L>, &L, f64) -> bool,
+        sig: &'a L,
+        threshold: f64,
+    ) -> bool {
+        SBTFindIter::new(self, search_fn, sig, threshold)
+            .next()
+            .is_some()
     }
 
-    pub fn find_one(&'a self, search_fn: impl Fn(&dyn Comparable<L>, &L, f64) -> bool, sig: &'a L, threshold: f64) -> Option<&'a L> {
+    /// Finds an element in the SBT that satisfies the provided `search_fn` function for the given threshold.
+    /// There is no guarantee that the element returned is the closest to the provided signature.
+    ///
+    /// # Arguments
+    ///
+    /// * `search_fn` - A function that takes a reference to a `Comparable` item,
+    ///   a reference to an `L` item, and a `f64` threshold value, and returns true if the comprable elements are within `threshold`.
+    /// * `sig` - A signature against which the `search_fn` will compare each item.
+    /// * `threshold` - A threshold value passed to `search_fn`.
+    pub fn find_one(
+        &'a self,
+        search_fn: impl Fn(&dyn Comparable<L>, &L, f64) -> bool,
+        sig: &'a L,
+        threshold: f64,
+    ) -> Option<&'a L> {
         SBTFindIter::new(self, search_fn, sig, threshold).next()
-    }
-
-    pub fn find_n(&'a self, search_fn: impl Fn(&dyn Comparable<L>, &L, f64) -> bool, sig: &'a L, threshold: f64) -> std::iter::Take<SBTFindIter<'_, N, L, impl Fn(&dyn Comparable<L>, &L, f64) -> bool>> {
-        SBTFindIter::new(self, search_fn, sig, threshold).take(n)
     }
 }
 
