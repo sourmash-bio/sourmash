@@ -44,9 +44,9 @@ pub trait Index<'a> {
     //type SignatureIterator: Iterator<Item = Self::Item>;
 
     fn find<F>(
-        &self,
+        &'a self,
         search_fn: F,
-        sig: &Self::Item,
+        sig: &'a Self::Item,
         threshold: f64,
     ) -> Result<Vec<&Self::Item>, Error>
     where
@@ -66,8 +66,8 @@ pub trait Index<'a> {
     }
 
     fn search(
-        &self,
-        sig: &Self::Item,
+        &'a self,
+        sig: &'a Self::Item,
         threshold: f64,
         containment: bool,
     ) -> Result<Vec<&Self::Item>, Error> {

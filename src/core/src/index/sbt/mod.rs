@@ -374,6 +374,99 @@ where
     }
 }
 
+pub struct SBTFindIter<'a, N, L, F> 
+where
+    N: Comparable<N> + Comparable<L> + Update<N> + Debug + Default,
+    L: Comparable<L> + Update<N> + Clone + Debug + Default,
+    F: Fn(&dyn Comparable<L>, &L, f64) -> bool,
+    SBT<N, L>: FromFactory<N>,
+    SigStore<L>: From<L> + ReadData<L>,
+{
+    queue: Vec<u64>,
+    visited: HashSet<u64>,
+    sbt: &'a SBT<N, L>,
+    search_fn: F,
+    sig: &'a L,
+    threshold: f64,
+}
+
+impl<'a, N, L, F> SBTFindIter<'a, N, L, F>
+where
+    N: Comparable<N> + Comparable<L> + Update<N> + Debug + Default,
+    L: Comparable<L> + Update<N> + Clone + Debug + Default,
+    F: Fn(&dyn Comparable<L>, &L, f64) -> bool,
+    SBT<N, L>: FromFactory<N>,
+    SigStore<L>: From<L> + ReadData<L>,
+{
+    pub fn new(sbt: &'a SBT<N, L>, search_fn: F, sig: &'a L, threshold: f64) -> Self {
+        SBTFindIter {
+            queue: vec![0u64],
+            visited: HashSet::new(),
+            sbt,
+            search_fn,
+            sig,
+            threshold,
+        }
+    }
+}
+
+impl<'a, N, L, F> Iterator for SBTFindIter<'a, N, L, F> 
+where 
+    N: Comparable<N> + Comparable<L> + Update<N> + Debug + Default,
+    L: Comparable<L> + Update<N> + Clone + Debug + Default,
+    F: Fn(&dyn Comparable<L>, &L, f64) -> bool,
+    SBT<N, L>: FromFactory<N>,
+    SigStore<L>: From<L> + ReadData<L>,
+{
+    type Item = &'a L;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(pos) = self.queue.pop() {
+            if !self.visited.contains(&pos) {
+                self.visited.insert(pos);
+
+                if let Some(node) = self.sbt.nodes.get(&pos) {
+                    if (self.search_fn)(&node, self.sig, self.threshold) {
+                        for c in self.sbt.children(pos) {
+                            self.queue.push(c);
+                        }
+                    }
+                } else if let Some(leaf) = self.sbt.leaves.get(&pos) {
+                    let data = leaf.data().expect("Error reading data");
+                    if (self.search_fn)(data, self.sig, self.threshold) {
+                        return Some(data);
+                    }
+                }
+            }
+        }
+        None
+    }
+}
+
+impl<'a, N, L> SBT<N, L>
+where
+    N: Comparable<N> + Comparable<L> + Update<N> + Debug + Default,
+    L: Comparable<L> + Update<N> + Clone + Debug + Default,
+    SBT<N, L>: FromFactory<N>,
+    SigStore<L>: From<L> + ReadData<L>,
+{
+    pub fn find_iter(&'a self, search_fn: impl Fn(&dyn Comparable<L>, &L, f64) -> bool, sig: &'a L, threshold: f64) -> SBTFindIter<'a, N, L, impl Fn(&dyn Comparable<L>, &L, f64) -> bool> {
+        SBTFindIter::new(self, search_fn, sig, threshold)
+    }
+
+    pub fn find_any(&'a self, search_fn: impl Fn(&dyn Comparable<L>, &L, f64) -> bool, sig: &'a L, threshold: f64) -> bool {
+        SBTFindIter::new(self, search_fn, sig, threshold).next().is_some()
+    }
+
+    pub fn find_one(&'a self, search_fn: impl Fn(&dyn Comparable<L>, &L, f64) -> bool, sig: &'a L, threshold: f64) -> Option<&'a L> {
+        SBTFindIter::new(self, search_fn, sig, threshold).next()
+    }
+
+    pub fn find_n(&'a self, search_fn: impl Fn(&dyn Comparable<L>, &L, f64) -> bool, sig: &'a L, threshold: f64) -> std::iter::Take<SBTFindIter<'_, N, L, impl Fn(&dyn Comparable<L>, &L, f64) -> bool>> {
+        SBTFindIter::new(self, search_fn, sig, threshold).take(n)
+    }
+}
+
 impl<'a, N, L> Index<'a> for SBT<N, L>
 where
     N: Comparable<N> + Comparable<L> + Update<N> + Debug + Default,
@@ -383,34 +476,11 @@ where
 {
     type Item = L;
 
-    fn find<F>(&self, search_fn: F, sig: &L, threshold: f64) -> Result<Vec<&L>, Error>
+    fn find<F>(&'a self, search_fn: F, sig: &'a L, threshold: f64) -> Result<Vec<&L>, Error>
     where
         F: Fn(&dyn Comparable<Self::Item>, &Self::Item, f64) -> bool,
     {
-        let mut matches = Vec::new();
-        let mut visited = HashSet::new();
-        let mut queue = vec![0u64];
-
-        while let Some(pos) = queue.pop() {
-            if !visited.contains(&pos) {
-                visited.insert(pos);
-
-                if let Some(node) = self.nodes.get(&pos) {
-                    if search_fn(&node, sig, threshold) {
-                        for c in self.children(pos) {
-                            queue.push(c);
-                        }
-                    }
-                } else if let Some(leaf) = self.leaves.get(&pos) {
-                    let data = leaf.data().expect("Error reading data");
-                    if search_fn(data, sig, threshold) {
-                        matches.push(data);
-                    }
-                }
-            }
-        }
-
-        Ok(matches)
+        Ok(self.find_iter(search_fn, sig, threshold).collect())
     }
 
     fn insert(&mut self, dataset: L) -> Result<(), Error> {
