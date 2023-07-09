@@ -314,6 +314,8 @@ def plot(args):
 
     ### do clustering
     Y = sch.linkage(D, method='single')
+    if not args.labels:
+        labeltext = [str(i) for i in range(len(labeltext))]
     sch.dendrogram(Y, orientation='right', labels=labeltext)
     fig.savefig(dendrogram_out)
     notify(f'wrote dendrogram to: {dendrogram_out}')
