@@ -65,7 +65,7 @@ jobs:
         with:
            python-version: "3.11.2"
       - run: |
-          pip install pyodide-build==${PYODIDE_VERSION}
+          pip install pyodide-build==${PYODIDE_VERSION} "pydantic<2"
           pyodide config get emscripten_version  # trigger setup
           echo EMSCRIPTEN_VERSION=$(pyodide config get emscripten_version) >> $GITHUB_ENV
       - uses: mymindstorm/setup-emsdk@v12
