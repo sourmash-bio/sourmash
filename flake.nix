@@ -37,11 +37,11 @@
           rustc = rustVersion;
         };
         naersk-lib = naersk.lib."${system}".override {
-          cargo = rustPlatform.rust.cargo;
-          rustc = rustPlatform.rust.rustc;
+          cargo = rustVersion;
+          rustc = rustVersion;
         };
 
-        python = pkgs.python310Packages;
+        python = pkgs.python311Packages;
 
       in
 
@@ -104,8 +104,8 @@
 
             git
             stdenv.cc.cc.lib
-            (python310.withPackages (ps: with ps; [ virtualenv tox cffi ]))
-            (python311.withPackages (ps: with ps; [ virtualenv ]))
+            (python311.withPackages (ps: with ps; [ virtualenv tox cffi ]))
+            (python310.withPackages (ps: with ps; [ virtualenv ]))
             (python39.withPackages (ps: with ps; [ virtualenv ]))
             (python38.withPackages (ps: with ps; [ virtualenv ]))
 
