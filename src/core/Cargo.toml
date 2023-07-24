@@ -50,7 +50,7 @@ twox-hash = "1.6.0"
 vec-collections = "0.3.4"
 piz = "0.4.0"  # piz 0.5.1 requires Rust 1.63+
 memmap2 = "0.7.1"
-ouroboros = "0.17.0"
+ouroboros = "0.17.2"
 
 [dev-dependencies]
 assert_matches = "1.3.0"
