@@ -612,7 +612,7 @@ sourmash tax metagenome
     --gather-csv HSMA33MX_gather_x_gtdbrs202_k31.csv \
     --gather-csv PSM6XBW3_gather_x_gtdbrs202_k31.csv \
     --taxonomy gtdb-rs202.taxonomy.v2.csv \
-    --output-format krona --rank species
+    --output-format lineage_summary --rank species
 ```
 
 example `lineage_summary`:
