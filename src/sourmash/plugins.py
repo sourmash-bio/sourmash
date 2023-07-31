@@ -16,6 +16,7 @@ DEFAULT_LOAD_FROM_PRIORITY = 99
 DEFAULT_SAVE_TO_PRIORITY = 99
 
 import itertools
+import argparse
 
 from .logging import (debug_literal, error, notify, set_quiet)
 
@@ -150,7 +151,17 @@ def add_cli_scripts(parser):
         name = plugin.name
         script_cls = plugin.load()
 
-        subparser = parser.add_parser(script_cls.command)
+        usage = getattr(script_cls, 'usage', None)
+        description = getattr(script_cls, 'description', None)
+        epilog = getattr(script_cls, 'epilog', None)
+        formatter_class = getattr(script_cls, 'formatter_class',
+                                  argparse.HelpFormatter)
+
+        subparser = parser.add_parser(script_cls.command,
+                                      usage=usage,
+                                      description=description,
+                                      epilog=epilog,
+                                      formatter_class=formatter_class)
         debug_literal(f"cls_script plugin '{name}' adding command '{script_cls.command}'")
         obj = script_cls(subparser)
         d[script_cls.command] = obj
