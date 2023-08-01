@@ -42,7 +42,7 @@ num-iter = "0.1.43"
 once_cell = "1.18.0" # once_cell 1.14+ requires Rust 1.56+
 rayon = { version = "1.7.0", optional = true }
 serde = { version = "1.0.168", features = ["derive"] }
-serde_json = "1.0.103"
+serde_json = "1.0.104"
 primal-check = "0.3.1"
 thiserror = "1.0"
 typed-builder = "0.14.0"
