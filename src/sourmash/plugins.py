@@ -138,8 +138,11 @@ def get_cli_scripts_descriptions():
         script_cls = plugin.load()
 
         command = getattr(script_cls, 'command')
-        description = getattr(script_cls, 'description',
-                              f"(no description provided by plugin '{name}')")
+        description = getattr(script_cls, 'description', "")
+        description = description.splitlines()[0]
+        if not description:
+            description = f"(no description provided by plugin '{name}')"
+
         yield f"sourmash scripts {command:16s} - {description}"
 
 
