@@ -1479,6 +1479,11 @@ then the merged signature will have the sum of all abundances across
 the individual signatures.  The `--flatten` flag will override this
 behavior and allow merging of mixtures by removing all abundances.
 
+`sig merge` can only merge compatible sketches - if there are multiple
+k-mer sizes or molecule types present in any of the signature files,
+you will need to choose one k-mer size with `-k/--ksize`, and/or one
+moltype with `--dna/--protein/--hp/--dayhoff`.
+
 Note: `merge` only creates one output file, with one signature in it.
 
 ### `sourmash signature rename` - rename a signature
