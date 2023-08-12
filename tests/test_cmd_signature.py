@@ -45,6 +45,15 @@ def test_run_sourmash_sig_cmd():
     assert status != 0                    # no args provided, ok ;)
 
 
+def test_run_cat_via_parse_args():
+    # run a command ('sourmash.sig.cat') with args constructed via parse_args
+    import sourmash.sig, sourmash.cli
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    args = sourmash.cli.parse_args(['sig', 'cat', sig47])
+    sourmash.sig.cat(args)
+
+
 def test_sig_merge_1_use_full_signature_in_cmd(runtmp):
     c = runtmp
 
