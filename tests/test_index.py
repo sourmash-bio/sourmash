@@ -1947,13 +1947,15 @@ def test_standalone_manifest_signatures_prefix_fail(runtmp):
         row['internal_location'] = os.path.basename(row['internal_location'])
 
     ## got a manifest! ok, now test out StandaloneManifestIndex
-    mm = StandaloneManifestIndex(mi.manifest, None, prefix='foo')
+    mm = StandaloneManifestIndex(mi.manifest, None,
+                                 prefix=runtmp.output('foo'))
 
     # should fail
     with pytest.raises(ValueError) as exc:
         list(mm.signatures())
 
-    assert "Error while reading signatures from 'foo/47.fa.sig'" in str(exc)
+    assert "Error while reading signatures from " in str(exc)
+    assert "foo/47.fa.sig'" in str(exc)
 
 
 def test_standalone_manifest_load_from_dir(runtmp):
