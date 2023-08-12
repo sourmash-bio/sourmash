@@ -59,6 +59,10 @@ def subparser(subparsers):
         '--from-file',
         help='a text file containing a list of files to load signatures from'
     )
+    subparser.add_argument(
+        '-E', '--extension', type=str, default='.sig',
+        help="write files with this extension ('.sig' by default)"
+    )
     add_ksize_arg(subparser)
     add_moltype_args(subparser)
     add_picklist_args(subparser)
